@@ -16,6 +16,21 @@ internal protocol APIProtocol: Sendable {
     /// - Remark: HTTP `GET /health`.
     /// - Remark: Generated from `#/paths//health/get(health)`.
     func health(_ input: Operations.Health.Input) async throws -> Operations.Health.Output
+    /// List paired devices, revoked ones included. Never returns a token or a key
+    ///
+    /// - Remark: HTTP `GET /operator/devices`.
+    /// - Remark: Generated from `#/paths//operator/devices/get(operator.listDevices)`.
+    func operator_listDevices(_ input: Operations.Operator_listDevices.Input) async throws -> Operations.Operator_listDevices.Output
+    /// Soft-revoke a device and kill its refresh-token family in one transaction
+    ///
+    /// - Remark: HTTP `DELETE /operator/devices/{id}`.
+    /// - Remark: Generated from `#/paths//operator/devices/{id}/delete(operator.revokeDevice)`.
+    func operator_revokeDevice(_ input: Operations.Operator_revokeDevice.Input) async throws -> Operations.Operator_revokeDevice.Output
+    /// Mint a single-use pairing code. The plaintext is returned once and never again
+    ///
+    /// - Remark: HTTP `POST /operator/pairing/codes`.
+    /// - Remark: Generated from `#/paths//operator/pairing/codes/post(operator.issuePairingCode)`.
+    func operator_issuePairingCode(_ input: Operations.Operator_issuePairingCode.Input) async throws -> Operations.Operator_issuePairingCode.Output
 }
 
 /// Convenience overloads for operation inputs.
@@ -26,6 +41,39 @@ extension APIProtocol {
     /// - Remark: Generated from `#/paths//health/get(health)`.
     internal func health(headers: Operations.Health.Input.Headers = .init()) async throws -> Operations.Health.Output {
         try await health(Operations.Health.Input(headers: headers))
+    }
+    /// List paired devices, revoked ones included. Never returns a token or a key
+    ///
+    /// - Remark: HTTP `GET /operator/devices`.
+    /// - Remark: Generated from `#/paths//operator/devices/get(operator.listDevices)`.
+    internal func operator_listDevices(headers: Operations.Operator_listDevices.Input.Headers = .init()) async throws -> Operations.Operator_listDevices.Output {
+        try await operator_listDevices(Operations.Operator_listDevices.Input(headers: headers))
+    }
+    /// Soft-revoke a device and kill its refresh-token family in one transaction
+    ///
+    /// - Remark: HTTP `DELETE /operator/devices/{id}`.
+    /// - Remark: Generated from `#/paths//operator/devices/{id}/delete(operator.revokeDevice)`.
+    internal func operator_revokeDevice(
+        path: Operations.Operator_revokeDevice.Input.Path,
+        headers: Operations.Operator_revokeDevice.Input.Headers = .init()
+    ) async throws -> Operations.Operator_revokeDevice.Output {
+        try await operator_revokeDevice(Operations.Operator_revokeDevice.Input(
+            path: path,
+            headers: headers
+        ))
+    }
+    /// Mint a single-use pairing code. The plaintext is returned once and never again
+    ///
+    /// - Remark: HTTP `POST /operator/pairing/codes`.
+    /// - Remark: Generated from `#/paths//operator/pairing/codes/post(operator.issuePairingCode)`.
+    internal func operator_issuePairingCode(
+        headers: Operations.Operator_issuePairingCode.Input.Headers = .init(),
+        body: Operations.Operator_issuePairingCode.Input.Body? = nil
+    ) async throws -> Operations.Operator_issuePairingCode.Output {
+        try await operator_issuePairingCode(Operations.Operator_issuePairingCode.Input(
+            headers: headers,
+            body: body
+        ))
     }
 }
 
@@ -201,6 +249,1025 @@ internal enum Operations {
                     default:
                         try throwUnexpectedResponseStatus(
                             expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
+        }
+        internal enum AcceptableContentType: AcceptableProtocol {
+            case json
+            case other(Swift.String)
+            internal init?(rawValue: Swift.String) {
+                switch rawValue.lowercased() {
+                case "application/json":
+                    self = .json
+                default:
+                    self = .other(rawValue)
+                }
+            }
+            internal var rawValue: Swift.String {
+                switch self {
+                case let .other(string):
+                    return string
+                case .json:
+                    return "application/json"
+                }
+            }
+            internal static var allCases: [Self] {
+                [
+                    .json
+                ]
+            }
+        }
+    }
+    /// List paired devices, revoked ones included. Never returns a token or a key
+    ///
+    /// - Remark: HTTP `GET /operator/devices`.
+    /// - Remark: Generated from `#/paths//operator/devices/get(operator.listDevices)`.
+    internal enum Operator_listDevices {
+        internal static let id: Swift.String = "operator.listDevices"
+        internal struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/operator/devices/GET/header`.
+            internal struct Headers: Sendable, Hashable {
+                internal var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.Operator_listDevices.AcceptableContentType>]
+                /// Creates a new `Headers`.
+                ///
+                /// - Parameters:
+                ///   - accept:
+                internal init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.Operator_listDevices.AcceptableContentType>] = .defaultValues()) {
+                    self.accept = accept
+                }
+            }
+            internal var headers: Operations.Operator_listDevices.Input.Headers
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - headers:
+            internal init(headers: Operations.Operator_listDevices.Input.Headers = .init()) {
+                self.headers = headers
+            }
+        }
+        internal enum Output: Sendable, Hashable {
+            internal struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/operator/devices/GET/responses/200/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/operator/devices/GET/responses/200/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/operator/devices/GET/responses/200/content/json/DevicesPayload`.
+                        internal struct DevicesPayloadPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/operator/devices/GET/responses/200/content/json/DevicesPayload/createdAt`.
+                            internal var createdAt: Foundation.Date
+                            /// - Remark: Generated from `#/paths/operator/devices/GET/responses/200/content/json/DevicesPayload/id`.
+                            internal var id: Swift.String
+                            /// - Remark: Generated from `#/paths/operator/devices/GET/responses/200/content/json/DevicesPayload/lastSeenAt`.
+                            internal var lastSeenAt: Foundation.Date
+                            /// - Remark: Generated from `#/paths/operator/devices/GET/responses/200/content/json/DevicesPayload/model`.
+                            internal var model: Swift.String
+                            /// - Remark: Generated from `#/paths/operator/devices/GET/responses/200/content/json/DevicesPayload/name`.
+                            internal var name: Swift.String
+                            /// - Remark: Generated from `#/paths/operator/devices/GET/responses/200/content/json/DevicesPayload/revokedAt`.
+                            internal var revokedAt: Foundation.Date?
+                            /// Creates a new `DevicesPayloadPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - createdAt:
+                            ///   - id:
+                            ///   - lastSeenAt:
+                            ///   - model:
+                            ///   - name:
+                            ///   - revokedAt:
+                            internal init(
+                                createdAt: Foundation.Date,
+                                id: Swift.String,
+                                lastSeenAt: Foundation.Date,
+                                model: Swift.String,
+                                name: Swift.String,
+                                revokedAt: Foundation.Date? = nil
+                            ) {
+                                self.createdAt = createdAt
+                                self.id = id
+                                self.lastSeenAt = lastSeenAt
+                                self.model = model
+                                self.name = name
+                                self.revokedAt = revokedAt
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case createdAt
+                                case id
+                                case lastSeenAt
+                                case model
+                                case name
+                                case revokedAt
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.createdAt = try container.decode(
+                                    Foundation.Date.self,
+                                    forKey: .createdAt
+                                )
+                                self.id = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .id
+                                )
+                                self.lastSeenAt = try container.decode(
+                                    Foundation.Date.self,
+                                    forKey: .lastSeenAt
+                                )
+                                self.model = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .model
+                                )
+                                self.name = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .name
+                                )
+                                self.revokedAt = try container.decodeIfPresent(
+                                    Foundation.Date.self,
+                                    forKey: .revokedAt
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "createdAt",
+                                    "id",
+                                    "lastSeenAt",
+                                    "model",
+                                    "name",
+                                    "revokedAt"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/operator/devices/GET/responses/200/content/json/devices`.
+                        internal typealias DevicesPayload = [Operations.Operator_listDevices.Output.Ok.Body.JsonPayload.DevicesPayloadPayload]
+                        /// - Remark: Generated from `#/paths/operator/devices/GET/responses/200/content/json/devices`.
+                        internal var devices: Operations.Operator_listDevices.Output.Ok.Body.JsonPayload.DevicesPayload
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - devices:
+                        internal init(devices: Operations.Operator_listDevices.Output.Ok.Body.JsonPayload.DevicesPayload) {
+                            self.devices = devices
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case devices
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.devices = try container.decode(
+                                Operations.Operator_listDevices.Output.Ok.Body.JsonPayload.DevicesPayload.self,
+                                forKey: .devices
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "devices"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/operator/devices/GET/responses/200/content/application\/json`.
+                    case json(Operations.Operator_listDevices.Output.Ok.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.Operator_listDevices.Output.Ok.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.Operator_listDevices.Output.Ok.Body
+                /// Creates a new `Ok`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.Operator_listDevices.Output.Ok.Body) {
+                    self.body = body
+                }
+            }
+            /// 200
+            ///
+            /// - Remark: Generated from `#/paths//operator/devices/get(operator.listDevices)/responses/200`.
+            ///
+            /// HTTP response code: `200 ok`.
+            case ok(Operations.Operator_listDevices.Output.Ok)
+            /// The associated value of the enum case if `self` is `.ok`.
+            ///
+            /// - Throws: An error if `self` is not `.ok`.
+            /// - SeeAlso: `.ok`.
+            internal var ok: Operations.Operator_listDevices.Output.Ok {
+                get throws {
+                    switch self {
+                    case let .ok(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct Unauthorized: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/operator/devices/GET/responses/401/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/operator/devices/GET/responses/401/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/operator/devices/GET/responses/401/content/json/code`.
+                        internal var code: Swift.String
+                        /// - Remark: Generated from `#/paths/operator/devices/GET/responses/401/content/json/message`.
+                        internal var message: Swift.String
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - message:
+                        internal init(
+                            code: Swift.String,
+                            message: Swift.String
+                        ) {
+                            self.code = code
+                            self.message = message
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case message
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Swift.String.self,
+                                forKey: .code
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "message"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/operator/devices/GET/responses/401/content/application\/json`.
+                    case json(Operations.Operator_listDevices.Output.Unauthorized.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.Operator_listDevices.Output.Unauthorized.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.Operator_listDevices.Output.Unauthorized.Body
+                /// Creates a new `Unauthorized`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.Operator_listDevices.Output.Unauthorized.Body) {
+                    self.body = body
+                }
+            }
+            /// 401
+            ///
+            /// - Remark: Generated from `#/paths//operator/devices/get(operator.listDevices)/responses/401`.
+            ///
+            /// HTTP response code: `401 unauthorized`.
+            case unauthorized(Operations.Operator_listDevices.Output.Unauthorized)
+            /// The associated value of the enum case if `self` is `.unauthorized`.
+            ///
+            /// - Throws: An error if `self` is not `.unauthorized`.
+            /// - SeeAlso: `.unauthorized`.
+            internal var unauthorized: Operations.Operator_listDevices.Output.Unauthorized {
+                get throws {
+                    switch self {
+                    case let .unauthorized(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "unauthorized",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
+        }
+        internal enum AcceptableContentType: AcceptableProtocol {
+            case json
+            case other(Swift.String)
+            internal init?(rawValue: Swift.String) {
+                switch rawValue.lowercased() {
+                case "application/json":
+                    self = .json
+                default:
+                    self = .other(rawValue)
+                }
+            }
+            internal var rawValue: Swift.String {
+                switch self {
+                case let .other(string):
+                    return string
+                case .json:
+                    return "application/json"
+                }
+            }
+            internal static var allCases: [Self] {
+                [
+                    .json
+                ]
+            }
+        }
+    }
+    /// Soft-revoke a device and kill its refresh-token family in one transaction
+    ///
+    /// - Remark: HTTP `DELETE /operator/devices/{id}`.
+    /// - Remark: Generated from `#/paths//operator/devices/{id}/delete(operator.revokeDevice)`.
+    internal enum Operator_revokeDevice {
+        internal static let id: Swift.String = "operator.revokeDevice"
+        internal struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/operator/devices/{id}/DELETE/path`.
+            internal struct Path: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/operator/devices/{id}/DELETE/path/id`.
+                internal var id: Swift.String
+                /// Creates a new `Path`.
+                ///
+                /// - Parameters:
+                ///   - id:
+                internal init(id: Swift.String) {
+                    self.id = id
+                }
+            }
+            internal var path: Operations.Operator_revokeDevice.Input.Path
+            /// - Remark: Generated from `#/paths/operator/devices/{id}/DELETE/header`.
+            internal struct Headers: Sendable, Hashable {
+                internal var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.Operator_revokeDevice.AcceptableContentType>]
+                /// Creates a new `Headers`.
+                ///
+                /// - Parameters:
+                ///   - accept:
+                internal init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.Operator_revokeDevice.AcceptableContentType>] = .defaultValues()) {
+                    self.accept = accept
+                }
+            }
+            internal var headers: Operations.Operator_revokeDevice.Input.Headers
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - path:
+            ///   - headers:
+            internal init(
+                path: Operations.Operator_revokeDevice.Input.Path,
+                headers: Operations.Operator_revokeDevice.Input.Headers = .init()
+            ) {
+                self.path = path
+                self.headers = headers
+            }
+        }
+        internal enum Output: Sendable, Hashable {
+            internal struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/operator/devices/{id}/DELETE/responses/200/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/operator/devices/{id}/DELETE/responses/200/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/operator/devices/{id}/DELETE/responses/200/content/json/alreadyRevoked`.
+                        internal var alreadyRevoked: Swift.Bool
+                        /// - Remark: Generated from `#/paths/operator/devices/{id}/DELETE/responses/200/content/json/id`.
+                        internal var id: Swift.String
+                        /// - Remark: Generated from `#/paths/operator/devices/{id}/DELETE/responses/200/content/json/revokedAt`.
+                        internal var revokedAt: Foundation.Date
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - alreadyRevoked:
+                        ///   - id:
+                        ///   - revokedAt:
+                        internal init(
+                            alreadyRevoked: Swift.Bool,
+                            id: Swift.String,
+                            revokedAt: Foundation.Date
+                        ) {
+                            self.alreadyRevoked = alreadyRevoked
+                            self.id = id
+                            self.revokedAt = revokedAt
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case alreadyRevoked
+                            case id
+                            case revokedAt
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.alreadyRevoked = try container.decode(
+                                Swift.Bool.self,
+                                forKey: .alreadyRevoked
+                            )
+                            self.id = try container.decode(
+                                Swift.String.self,
+                                forKey: .id
+                            )
+                            self.revokedAt = try container.decode(
+                                Foundation.Date.self,
+                                forKey: .revokedAt
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "alreadyRevoked",
+                                "id",
+                                "revokedAt"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/operator/devices/{id}/DELETE/responses/200/content/application\/json`.
+                    case json(Operations.Operator_revokeDevice.Output.Ok.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.Operator_revokeDevice.Output.Ok.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.Operator_revokeDevice.Output.Ok.Body
+                /// Creates a new `Ok`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.Operator_revokeDevice.Output.Ok.Body) {
+                    self.body = body
+                }
+            }
+            /// 200
+            ///
+            /// - Remark: Generated from `#/paths//operator/devices/{id}/delete(operator.revokeDevice)/responses/200`.
+            ///
+            /// HTTP response code: `200 ok`.
+            case ok(Operations.Operator_revokeDevice.Output.Ok)
+            /// The associated value of the enum case if `self` is `.ok`.
+            ///
+            /// - Throws: An error if `self` is not `.ok`.
+            /// - SeeAlso: `.ok`.
+            internal var ok: Operations.Operator_revokeDevice.Output.Ok {
+                get throws {
+                    switch self {
+                    case let .ok(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct Unauthorized: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/operator/devices/{id}/DELETE/responses/401/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/operator/devices/{id}/DELETE/responses/401/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/operator/devices/{id}/DELETE/responses/401/content/json/code`.
+                        internal var code: Swift.String
+                        /// - Remark: Generated from `#/paths/operator/devices/{id}/DELETE/responses/401/content/json/message`.
+                        internal var message: Swift.String
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - message:
+                        internal init(
+                            code: Swift.String,
+                            message: Swift.String
+                        ) {
+                            self.code = code
+                            self.message = message
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case message
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Swift.String.self,
+                                forKey: .code
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "message"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/operator/devices/{id}/DELETE/responses/401/content/application\/json`.
+                    case json(Operations.Operator_revokeDevice.Output.Unauthorized.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.Operator_revokeDevice.Output.Unauthorized.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.Operator_revokeDevice.Output.Unauthorized.Body
+                /// Creates a new `Unauthorized`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.Operator_revokeDevice.Output.Unauthorized.Body) {
+                    self.body = body
+                }
+            }
+            /// 401
+            ///
+            /// - Remark: Generated from `#/paths//operator/devices/{id}/delete(operator.revokeDevice)/responses/401`.
+            ///
+            /// HTTP response code: `401 unauthorized`.
+            case unauthorized(Operations.Operator_revokeDevice.Output.Unauthorized)
+            /// The associated value of the enum case if `self` is `.unauthorized`.
+            ///
+            /// - Throws: An error if `self` is not `.unauthorized`.
+            /// - SeeAlso: `.unauthorized`.
+            internal var unauthorized: Operations.Operator_revokeDevice.Output.Unauthorized {
+                get throws {
+                    switch self {
+                    case let .unauthorized(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "unauthorized",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct NotFound: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/operator/devices/{id}/DELETE/responses/404/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/operator/devices/{id}/DELETE/responses/404/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/operator/devices/{id}/DELETE/responses/404/content/json/code`.
+                        internal var code: Swift.String
+                        /// - Remark: Generated from `#/paths/operator/devices/{id}/DELETE/responses/404/content/json/message`.
+                        internal var message: Swift.String
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - message:
+                        internal init(
+                            code: Swift.String,
+                            message: Swift.String
+                        ) {
+                            self.code = code
+                            self.message = message
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case message
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Swift.String.self,
+                                forKey: .code
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "message"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/operator/devices/{id}/DELETE/responses/404/content/application\/json`.
+                    case json(Operations.Operator_revokeDevice.Output.NotFound.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.Operator_revokeDevice.Output.NotFound.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.Operator_revokeDevice.Output.NotFound.Body
+                /// Creates a new `NotFound`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.Operator_revokeDevice.Output.NotFound.Body) {
+                    self.body = body
+                }
+            }
+            /// 404
+            ///
+            /// - Remark: Generated from `#/paths//operator/devices/{id}/delete(operator.revokeDevice)/responses/404`.
+            ///
+            /// HTTP response code: `404 notFound`.
+            case notFound(Operations.Operator_revokeDevice.Output.NotFound)
+            /// The associated value of the enum case if `self` is `.notFound`.
+            ///
+            /// - Throws: An error if `self` is not `.notFound`.
+            /// - SeeAlso: `.notFound`.
+            internal var notFound: Operations.Operator_revokeDevice.Output.NotFound {
+                get throws {
+                    switch self {
+                    case let .notFound(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "notFound",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
+        }
+        internal enum AcceptableContentType: AcceptableProtocol {
+            case json
+            case other(Swift.String)
+            internal init?(rawValue: Swift.String) {
+                switch rawValue.lowercased() {
+                case "application/json":
+                    self = .json
+                default:
+                    self = .other(rawValue)
+                }
+            }
+            internal var rawValue: Swift.String {
+                switch self {
+                case let .other(string):
+                    return string
+                case .json:
+                    return "application/json"
+                }
+            }
+            internal static var allCases: [Self] {
+                [
+                    .json
+                ]
+            }
+        }
+    }
+    /// Mint a single-use pairing code. The plaintext is returned once and never again
+    ///
+    /// - Remark: HTTP `POST /operator/pairing/codes`.
+    /// - Remark: Generated from `#/paths//operator/pairing/codes/post(operator.issuePairingCode)`.
+    internal enum Operator_issuePairingCode {
+        internal static let id: Swift.String = "operator.issuePairingCode"
+        internal struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/operator/pairing/codes/POST/header`.
+            internal struct Headers: Sendable, Hashable {
+                internal var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.Operator_issuePairingCode.AcceptableContentType>]
+                /// Creates a new `Headers`.
+                ///
+                /// - Parameters:
+                ///   - accept:
+                internal init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.Operator_issuePairingCode.AcceptableContentType>] = .defaultValues()) {
+                    self.accept = accept
+                }
+            }
+            internal var headers: Operations.Operator_issuePairingCode.Input.Headers
+            /// - Remark: Generated from `#/paths/operator/pairing/codes/POST/requestBody`.
+            internal enum Body: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/operator/pairing/codes/POST/requestBody/json`.
+                internal struct JsonPayload: Codable, Hashable, Sendable {
+                    /// Creates a new `JsonPayload`.
+                    internal init() {}
+                    internal init(from decoder: any Swift.Decoder) throws {
+                        try decoder.ensureNoAdditionalProperties(knownKeys: [])
+                    }
+                }
+                /// - Remark: Generated from `#/paths/operator/pairing/codes/POST/requestBody/content/application\/json`.
+                case json(Operations.Operator_issuePairingCode.Input.Body.JsonPayload)
+            }
+            internal var body: Operations.Operator_issuePairingCode.Input.Body?
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - headers:
+            ///   - body:
+            internal init(
+                headers: Operations.Operator_issuePairingCode.Input.Headers = .init(),
+                body: Operations.Operator_issuePairingCode.Input.Body? = nil
+            ) {
+                self.headers = headers
+                self.body = body
+            }
+        }
+        internal enum Output: Sendable, Hashable {
+            internal struct Created: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/operator/pairing/codes/POST/responses/201/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/operator/pairing/codes/POST/responses/201/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/operator/pairing/codes/POST/responses/201/content/json/code`.
+                        internal var code: Swift.String
+                        /// - Remark: Generated from `#/paths/operator/pairing/codes/POST/responses/201/content/json/expiresAt`.
+                        internal var expiresAt: Foundation.Date
+                        /// - Remark: Generated from `#/paths/operator/pairing/codes/POST/responses/201/content/json/pairingUrl`.
+                        internal var pairingUrl: Swift.String
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - expiresAt:
+                        ///   - pairingUrl:
+                        internal init(
+                            code: Swift.String,
+                            expiresAt: Foundation.Date,
+                            pairingUrl: Swift.String
+                        ) {
+                            self.code = code
+                            self.expiresAt = expiresAt
+                            self.pairingUrl = pairingUrl
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case expiresAt
+                            case pairingUrl
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Swift.String.self,
+                                forKey: .code
+                            )
+                            self.expiresAt = try container.decode(
+                                Foundation.Date.self,
+                                forKey: .expiresAt
+                            )
+                            self.pairingUrl = try container.decode(
+                                Swift.String.self,
+                                forKey: .pairingUrl
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "expiresAt",
+                                "pairingUrl"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/operator/pairing/codes/POST/responses/201/content/application\/json`.
+                    case json(Operations.Operator_issuePairingCode.Output.Created.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.Operator_issuePairingCode.Output.Created.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.Operator_issuePairingCode.Output.Created.Body
+                /// Creates a new `Created`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.Operator_issuePairingCode.Output.Created.Body) {
+                    self.body = body
+                }
+            }
+            /// 201
+            ///
+            /// - Remark: Generated from `#/paths//operator/pairing/codes/post(operator.issuePairingCode)/responses/201`.
+            ///
+            /// HTTP response code: `201 created`.
+            case created(Operations.Operator_issuePairingCode.Output.Created)
+            /// The associated value of the enum case if `self` is `.created`.
+            ///
+            /// - Throws: An error if `self` is not `.created`.
+            /// - SeeAlso: `.created`.
+            internal var created: Operations.Operator_issuePairingCode.Output.Created {
+                get throws {
+                    switch self {
+                    case let .created(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "created",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct Unauthorized: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/operator/pairing/codes/POST/responses/401/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/operator/pairing/codes/POST/responses/401/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/operator/pairing/codes/POST/responses/401/content/json/code`.
+                        internal var code: Swift.String
+                        /// - Remark: Generated from `#/paths/operator/pairing/codes/POST/responses/401/content/json/message`.
+                        internal var message: Swift.String
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - message:
+                        internal init(
+                            code: Swift.String,
+                            message: Swift.String
+                        ) {
+                            self.code = code
+                            self.message = message
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case message
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Swift.String.self,
+                                forKey: .code
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "message"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/operator/pairing/codes/POST/responses/401/content/application\/json`.
+                    case json(Operations.Operator_issuePairingCode.Output.Unauthorized.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.Operator_issuePairingCode.Output.Unauthorized.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.Operator_issuePairingCode.Output.Unauthorized.Body
+                /// Creates a new `Unauthorized`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.Operator_issuePairingCode.Output.Unauthorized.Body) {
+                    self.body = body
+                }
+            }
+            /// 401
+            ///
+            /// - Remark: Generated from `#/paths//operator/pairing/codes/post(operator.issuePairingCode)/responses/401`.
+            ///
+            /// HTTP response code: `401 unauthorized`.
+            case unauthorized(Operations.Operator_issuePairingCode.Output.Unauthorized)
+            /// The associated value of the enum case if `self` is `.unauthorized`.
+            ///
+            /// - Throws: An error if `self` is not `.unauthorized`.
+            /// - SeeAlso: `.unauthorized`.
+            internal var unauthorized: Operations.Operator_issuePairingCode.Output.Unauthorized {
+                get throws {
+                    switch self {
+                    case let .unauthorized(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "unauthorized",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct TooManyRequests: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/operator/pairing/codes/POST/responses/429/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/operator/pairing/codes/POST/responses/429/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/operator/pairing/codes/POST/responses/429/content/json/code`.
+                        internal var code: Swift.String
+                        /// - Remark: Generated from `#/paths/operator/pairing/codes/POST/responses/429/content/json/message`.
+                        internal var message: Swift.String
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - message:
+                        internal init(
+                            code: Swift.String,
+                            message: Swift.String
+                        ) {
+                            self.code = code
+                            self.message = message
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case message
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Swift.String.self,
+                                forKey: .code
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "message"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/operator/pairing/codes/POST/responses/429/content/application\/json`.
+                    case json(Operations.Operator_issuePairingCode.Output.TooManyRequests.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.Operator_issuePairingCode.Output.TooManyRequests.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.Operator_issuePairingCode.Output.TooManyRequests.Body
+                /// Creates a new `TooManyRequests`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.Operator_issuePairingCode.Output.TooManyRequests.Body) {
+                    self.body = body
+                }
+            }
+            /// 429
+            ///
+            /// - Remark: Generated from `#/paths//operator/pairing/codes/post(operator.issuePairingCode)/responses/429`.
+            ///
+            /// HTTP response code: `429 tooManyRequests`.
+            case tooManyRequests(Operations.Operator_issuePairingCode.Output.TooManyRequests)
+            /// The associated value of the enum case if `self` is `.tooManyRequests`.
+            ///
+            /// - Throws: An error if `self` is not `.tooManyRequests`.
+            /// - SeeAlso: `.tooManyRequests`.
+            internal var tooManyRequests: Operations.Operator_issuePairingCode.Output.TooManyRequests {
+                get throws {
+                    switch self {
+                    case let .tooManyRequests(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "tooManyRequests",
                             response: self
                         )
                     }

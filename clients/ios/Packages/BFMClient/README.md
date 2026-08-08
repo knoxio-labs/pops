@@ -20,6 +20,8 @@ Drift between the two is caught by [`scripts/ci/check-vendored-contracts.mjs`](.
 
 Generating at build time was the alternative. Committed output is reviewable, makes the diff check trivial, and keeps `xcodebuild` off a plugin that needs the network.
 
+**The whole document is generated, including the `/operator/*` routes the phone will never call.** The generator's `filter` is include-only, so narrowing it means naming every phone-facing path in `openapi-generator-config.yaml` and keeping that list current — and the moment the list is what decides the client's contents, the diff gate stops proving the client tracks the contract and starts proving it tracks the list. The operator methods are `internal`, unreachable from any other module and unreferenced by the façade, so they are dead-stripped at link. Reconsider this when the operator surface grows enough that its churn is the reason a macOS CI job runs, not before.
+
 ## Why the generator is not a dependency of this package
 
 It lives in [`Tools/OpenAPIGenerator`](../../Tools/OpenAPIGenerator/Package.swift), a manifest with no targets whose only job is to make `swift run swift-openapi-generator` resolvable.
