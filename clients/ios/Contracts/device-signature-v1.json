@@ -1,0 +1,14 @@
+{
+  "curve": "P-256",
+  "digest": "SHA-256",
+  "messageBase64": "cG9wcy9kZXZpY2Utc2lnbmF0dXJlL3YxIGVuY29kaW5nIGZpeHR1cmUg4oCUIG9wYXF1ZSBieXRlcywgbm90IHRoZSByZWZyZXNoIG1lc3NhZ2UgZm9ybWF0",
+  "note": "Pins the ECDSA P-256 encodings the iOS app produces and the BFM verifies. Both sides assert against this file. The message bytes are opaque: the refresh message format is the BFM's to define.",
+  "publicKeyEncoding": "spki-der",
+  "publicKeySpkiDerBase64": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAExgeJEZErXCsEg3UKx3MzBMh82sBCR+qDVTvISmr57spowa4SE8LmfwZuSx0Bmwb8rcRtzERNw6EFbvrXCQmiHA==",
+  "publicKeyX963Base64": "BMYHiRGRK1wrBIN1CsdzMwTIfNrAQkfqg1U7yEpq+e7KaMGuEhPC5n8GbksdAZsG/K3EbcxETcOhBW761wkJohw=",
+  "signatureDerBase64": "MEYCIQD5hcQBibaCjcuTbMGD1N01jKk2dCfftRI/9RL4d5HO+wIhAMganJJjwwlp61wRmmJTQ6mAf6ZVD283Qd7Bm/XJfa2g",
+  "signatureEncoding": "asn1-der",
+  "signatureRawBase64": "+YXEAYm2go3Lk2zBg9TdNYypNnQn37USP/US+HeRzvvIGpySY8MJaetcEZpiU0OpgH+mVQ9vN0HewZv1yX2toA==",
+  "transportEncoding": "base64",
+  "version": 1
+}
