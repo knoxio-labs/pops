@@ -51,10 +51,17 @@ describe('parseBareOrigin', () => {
     ).toThrow(/^FINANCE_SELF_BASE_URL "http:\/\/finance-api:3004\/"/u);
   });
 
-  it('redacts the password rather than echoing it into the thrown message', () => {
-    expect(() => parseBareOrigin('X', 'http://admin:hunter2@finance-api:3004')).toThrow(
-      /^(?!.*hunter2).*$/su
-    );
+  it('redacts the username and password from the thrown message, keeping the label and host', () => {
+    let message = '';
+    try {
+      parseBareOrigin('FINANCE_SELF_BASE_URL', 'http://admin:hunter2@finance-api:3004');
+    } catch (err) {
+      message = err instanceof Error ? err.message : String(err);
+    }
+    expect(message).toContain('FINANCE_SELF_BASE_URL');
+    expect(message).toContain('finance-api:3004');
+    expect(message).not.toContain('admin');
+    expect(message).not.toContain('hunter2');
   });
 
   it.each([
