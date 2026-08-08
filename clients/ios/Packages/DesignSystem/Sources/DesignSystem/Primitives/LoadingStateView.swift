@@ -2,6 +2,10 @@ import SwiftUI
 
 /// The one spinner. A feature that rolls its own is a feature whose loading
 /// state will not follow the next redesign.
+///
+/// `message` is caller-supplied, not baked in — see "Copy" in
+/// `DesignSystem/README.md` for why the package stops at an English fallback
+/// rather than owning translation itself.
 public struct LoadingStateView: View {
     public static let fallbackMessage = "Loading…"
 

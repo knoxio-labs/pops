@@ -2,7 +2,7 @@
 
 The device's identity: a P-256 key generated inside the Secure Enclave, the access and refresh tokens the BFM issues against it, and the one operation that has to destroy both together.
 
-Pairing, the refresh call and the authenticating transport are not here yet — this package is the storage layer they will be built on.
+Pairing is here: `BFMDevicePairingService` owns the order the key, the code exchange and the token write have to happen in, and the cleanup for each way one of them can fail. The refresh call and the authenticating transport are not.
 
 ## The property everything else rests on
 

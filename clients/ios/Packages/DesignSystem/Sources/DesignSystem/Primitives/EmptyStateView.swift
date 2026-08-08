@@ -3,6 +3,10 @@ import SwiftUI
 /// Shown when a request succeeded and returned nothing. Distinct from
 /// `ErrorStateView` on purpose: "no results" and "the call failed" read the
 /// same to a user only when a screen conflates them.
+///
+/// `message` is caller-supplied, not baked in — see "Copy" in
+/// `DesignSystem/README.md` for why the package stops at an English fallback
+/// rather than owning translation itself.
 public struct EmptyStateView: View {
     public static let fallbackMessage = "Nothing here yet."
 

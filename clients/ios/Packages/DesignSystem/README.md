@@ -22,6 +22,12 @@ Generated sources are the one exclusion. A generator makes none of these choices
 
 The scan stops at `Packages/`. `App/` (POPS-1542) and `Tools/` (POPS-1515) are outside it.
 
+## Copy
+
+`LoadingStateView`, `EmptyStateView` and `ErrorStateView` take their user-facing text — `message`, and `ErrorStateView`'s `retryTitle` — from the caller, not from a string this package owns. A blank or whitespace-only string falls back to a plain English default (`fallbackMessage`, `fallbackRetryTitle`); `LoadingStateView.message` and `ErrorStateView.retryTitle` also default to that fallback when the caller omits them, since both parameters carry a default value — `EmptyStateView.message` and `ErrorStateView.message` are required, so a blank string is the only route to the fallback there. Those defaults are `String`, not `LocalizedStringKey`, on purpose.
+
+That is a module-boundary decision, not an oversight. This package renders whatever text a caller hands it and has no way to know what locale that text should be in — deciding that belongs to the feature that owns the data behind the message, not to the primitive that displays it. Translation is out of scope for this package by design: no feature module localises anything, so a `.xcstrings` catalogue here would be infrastructure with no consumer to exercise it. A feature that needs translated copy supplies its own localized string to these parameters exactly as it supplies any other message — whether the app localises at all is a decision for the app as a whole, and this package does not make it on the app's behalf.
+
 ## Light and dark diverge in the asset catalogue, and nowhere else
 
 Each colour token is one `.colorset` carrying a light and a dark appearance. No call site branches on `colorScheme`, and no view has a dark-mode variant. Adding a colour means adding a colorset; there is no other correct place to put one.

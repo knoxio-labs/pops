@@ -32,28 +32,33 @@ the validator refuses to start the bot until at least one ID is configured.
 The bot calls the pillars as a machine client using a service-account key. The
 key is hashed at rest; the plaintext is shown exactly once at creation time.
 
-Service accounts are owned by the `registry` pillar. From a logged-in shell
-(Cloudflare Access session) mint one with its admin-only REST endpoint.
+Service accounts are owned by the `registry` pillar, minted via its
+admin-only REST endpoint — see
+[`infra/secrets.example/moltbot/README.md`](../../infra/secrets.example/moltbot/README.md)
+for the exact command, the Cloudflare Access identity it requires, and the
+scopes moltbot needs.
 
-The response includes the one-time `plaintextKey`. Add `finance.transactions`,
-`finance.budgets`, etc. to the scope list only if you actually run the
-finance skill.
+The response includes the one-time `plaintextKey`.
 
 The plaintext key looks like `pops_sa_abc12345.<32-char-secret>`. Save the
 output in a password manager **before** writing it to disk — you cannot
 recover it.
 
-### 4. Drop secrets into `infra/secrets/`
+### 4. Drop secrets into the repo-root `secrets/`
+
+Compose resolves each secret's `file: ../secrets/<name>` from `infra/`, so the
+live directory is `secrets/` at the repo root, not `infra/secrets/` — see
+[`infra/secrets.example/bfm/README.md`](../../infra/secrets.example/bfm/README.md)
+for the full explanation. Run from the repo root:
 
 ```bash
-cd infra
 mkdir -p secrets
 chmod 700 secrets
-for f in secrets.example/moltbot/*.example; do
+for f in infra/secrets.example/moltbot/*.example; do
   name=$(basename "$f" .example)
   cp -n "$f" "secrets/$name"
+  chmod 600 "secrets/$name"
 done
-chmod 600 secrets/*
 $EDITOR secrets/telegram_bot_token   # paste step 1 token, no quotes
 $EDITOR secrets/claude_api_key       # Anthropic API key
 $EDITOR secrets/pops_api_key         # paste step 3 plaintext key

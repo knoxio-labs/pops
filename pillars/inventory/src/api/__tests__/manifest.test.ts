@@ -1,10 +1,9 @@
 /**
  * Manifest contract test — confirms the inventory pillar manifest
  * payload validates against `ManifestPayloadSchema` and surfaces the
- * `inventoryManifest` settings contribution
- * (docs/themes/federation/prds/settings-as-manifest-dimension) plus the
- * `nav` and `pages` UI dimensions
- * (docs/themes/federation/prds/registry-driven-shell-ui).
+ * `inventoryManifest` settings contribution (ADR-037) plus the `nav` and
+ * `pages` UI dimensions the shell's registry walk mounts
+ * (`pillars/shell/src/app/installed-modules.ts`).
  */
 import { describe, expect, it } from 'vitest';
 

@@ -1,6 +1,6 @@
 import { INSTALLED_MODULES } from '@pops/module-registry';
 /**
- * Shell-level overlay registry (docs/themes/foundation/prds/overlay-surfaces).
+ * Shell-level overlay registry.
  *
  * Joins the build-time module registry (`@pops/module-registry`) with each
  * overlay package's live manifest export. The build-time registry tells us
@@ -39,8 +39,7 @@ function projectOverlay(manifest: ModuleManifest): InstalledOverlay | null {
 /**
  * Filter a list of known overlay manifests by an install set. Pure so tests
  * can inject either real `MODULES` ids or a synthetic set to exercise the
- * absent-module path
- * (docs/themes/foundation/prds/overlay-surfaces acceptance criterion).
+ * absent-module path.
  */
 export function selectInstalledOverlays(
   manifests: readonly ModuleManifest[],

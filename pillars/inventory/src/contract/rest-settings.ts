@@ -1,7 +1,7 @@
 /**
  * `settings.*` sub-router — inventory's own federated Read/Update/Reset surface,
  * served via the shared `@pops/pillar-settings` contract factory
- * (settings-federation S2; see `docs/plans/02-settings-federation.md`).
+ * (ADR-037).
  *
  * Inventory owns its `inventory.*` keys in its own DB. The `:key` enum is
  * derived from inventory's OWN manifest (`deriveKeySet([inventoryManifest])`),

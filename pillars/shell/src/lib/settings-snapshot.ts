@@ -1,6 +1,6 @@
 /**
  * Browser-side live-registry snapshot fetch for the admin Settings UI
- * (settings-federation S3 / GAP-256-C; see `docs/plans/02-settings-federation.md`).
+ * (ADR-037).
  *
  * The Settings page renders per-pillar settings sections and routes each
  * section's read/write to the OWNING pillar — both driven by the LIVE registry

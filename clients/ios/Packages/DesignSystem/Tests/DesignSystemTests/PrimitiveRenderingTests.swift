@@ -14,7 +14,7 @@ import Testing
 internal struct PrimitiveRenderingTests {
     private static let canvas = CGSize(width: 320, height: 240)
 
-    private static func render(_ view: some View, in scheme: ColorScheme) -> Data? {
+    internal static func render(_ view: some View, in scheme: ColorScheme) -> Data? {
         let renderer = ImageRenderer(
             content:
                 view
@@ -51,6 +51,36 @@ internal struct PrimitiveRenderingTests {
     func errorState() throws {
         try Self.check(
             ErrorStateView(message: "Could not reach the server.") {}, named: "ErrorStateView")
+    }
+
+    @Test("ErrorStateView renders a caller-supplied retryTitle")
+    func errorStateCustomRetryTitle() throws {
+        let stock = ErrorStateView(message: "boom") {}
+        let custom = ErrorStateView(message: "boom", retryTitle: "Réessayer") {}
+
+        let stockRender = try #require(Self.render(stock, in: .light))
+        let customRender = try #require(Self.render(custom, in: .light))
+
+        #expect(
+            stockRender != customRender,
+            "a custom retryTitle rendered identically to the default — the parameter is not reaching the button"
+        )
+    }
+
+    @Test("ErrorStateView falls back to the English retry title when the caller passes blank")
+    func errorStateBlankRetryTitleFallsBack() throws {
+        let blank = ErrorStateView(message: "boom", retryTitle: "   ") {}
+        let stock = ErrorStateView(message: "boom") {}
+
+        let blankRender = try #require(Self.render(blank, in: .light))
+        let stockRender = try #require(Self.render(stock, in: .light))
+
+        #expect(blankRender == stockRender)
+    }
+
+    @Test("PopsButton")
+    func button() throws {
+        try Self.check(PopsButton("Pair") {}, named: "PopsButton")
     }
 
     @Test("PopsRow")
