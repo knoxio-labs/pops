@@ -128,6 +128,12 @@ export function pruneDeadRefreshTokens(db: BfmDb, options: PruneOptions = {}): n
   const nowIso = at.toISOString();
   const cutoff = new Date(at.getTime() - retentionMs).toISOString();
 
+  // A row that is still live — unrevoked, unconsumed, and not yet past its
+  // own `expiresAt` — can never be eligible, so excluding it here is a real
+  // reduction of the candidate set rather than a formality: over a family's
+  // lifetime almost every row it ever had ends up dead, but the one row that
+  // is never allowed to leave this loop early is the live tail, and this is
+  // where it does.
   const candidates = db
     .select({
       tokenHash: refreshTokens.tokenHash,
@@ -136,17 +142,25 @@ export function pruneDeadRefreshTokens(db: BfmDb, options: PruneOptions = {}): n
       expiresAt: refreshTokens.expiresAt,
     })
     .from(refreshTokens)
+    .where(
+      or(
+        isNotNull(refreshTokens.revokedAt),
+        isNotNull(refreshTokens.consumedAt),
+        lte(refreshTokens.expiresAt, nowIso)
+      )
+    )
     .orderBy(asc(refreshTokens.createdAt))
     .all();
 
   let deleted = 0;
   for (const row of candidates) {
-    const deadAt =
-      row.revokedAt ?? row.consumedAt ?? (row.expiresAt <= nowIso ? row.expiresAt : null);
-    if (deadAt === null || deadAt > cutoff) continue;
+    const deadAt = row.revokedAt ?? row.consumedAt ?? row.expiresAt;
+    if (deadAt > cutoff) continue;
 
-    db.delete(refreshTokens).where(eq(refreshTokens.tokenHash, row.tokenHash)).run();
-    deleted += 1;
+    deleted += db
+      .delete(refreshTokens)
+      .where(eq(refreshTokens.tokenHash, row.tokenHash))
+      .run().changes;
   }
   return deleted;
 }
