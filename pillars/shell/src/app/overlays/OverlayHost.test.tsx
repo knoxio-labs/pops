@@ -1,6 +1,6 @@
 import { useUIStore } from '@/store/uiStore';
 /**
- * Tests for `OverlayHost` (docs/themes/foundation/prds/overlay-surfaces).
+ * Tests for `OverlayHost`.
  *
  * Three scenarios:
  *   1. Default — an installed overlay declares the `assistant` slot;

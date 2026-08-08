@@ -1,7 +1,6 @@
 #!/usr/bin/env tsx
 /**
- * CLI entrypoint for the nginx event-reload watcher
- * (docs/themes/federation/prds/dynamic-pillar-registration). Reads env,
+ * CLI entrypoint for the nginx event-reload watcher. Reads env,
  * wires up the optional health endpoint, and runs the watcher until
  * SIGINT/SIGTERM. Kept thin so the watcher core
  * (`watchRegistryAndReload`) stays test-friendly.

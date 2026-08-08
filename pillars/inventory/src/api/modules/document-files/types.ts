@@ -42,8 +42,8 @@ export const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 /**
  * Read the maximum file size. The env override (`INVENTORY_MAX_FILE_SIZE_BYTES`)
  * lets a deployment tune the cap without a code change; it falls back to the
- * compiled default when unset or invalid. See
- * docs/themes/foundation/prds/unified-settings for the broader settings story.
+ * compiled default when unset or invalid. This is an out-of-band env knob, not
+ * a declared setting — ADR-037 is where settings become a manifest dimension.
  */
 export function getMaxFileSizeBytes(): number {
   const raw = process.env['INVENTORY_MAX_FILE_SIZE_BYTES'];

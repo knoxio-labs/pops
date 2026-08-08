@@ -1,7 +1,7 @@
 /**
  * `settings.*` sub-router — core's own federated Read/Update/Reset surface,
  * served via the shared `@pops/pillar-settings` contract factory
- * (settings-federation S1; see `docs/plans/02-settings-federation.md`).
+ * (ADR-037).
  *
  * The factory mounts the byte-identical federated surface every pillar serves:
  *
@@ -27,11 +27,11 @@
  * keys: each owning pillar advertises `capabilities.settings`, so the shell
  * routes those keys to the pillar that owns them rather than to the registry.
  *
- * On top of the shared protocol, core ALSO serves the federation aggregator
- * (settings-federation S3): `GET /settings/aggregate` fans out over the live
- * registry to every federated pillar's `GET /settings` and returns the unified
- * admin view (sensitive redacted). It is identity-gated (`core.settings.aggregate`);
- * the in-cluster fan-out itself carries the shared internal token (OD-7).
+ * On top of the shared protocol, core ALSO serves the federation aggregator:
+ * `GET /settings/aggregate` fans out over the live registry to every federated
+ * pillar's `GET /settings` and returns the unified admin view (sensitive
+ * redacted). It is identity-gated (`core.settings.aggregate`); the in-cluster
+ * fan-out itself carries the shared internal token.
  */
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';

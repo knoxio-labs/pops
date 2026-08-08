@@ -3,9 +3,9 @@
  * `src/db/schema.ts` barrel with the expected drizzle SQL `name`.
  *
  * Catches "table moved but the export forgot to flip" mistakes during
- * follow-up shuffles. The set MUST cover every table named in
- * `us-01-relocate-cerebrum-schemas.md` so a regression on either side
- * trips this file.
+ * follow-up shuffles. The set MUST cover every table the pillar's schema
+ * barrel exports (`../schema`), so a table added on one side and forgotten
+ * on the other trips this file.
  */
 import { getTableName } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';

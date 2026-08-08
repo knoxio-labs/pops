@@ -1,6 +1,5 @@
 /**
- * Registry-driven settings discovery (PRD-240 US-02 / ADR-037;
- * settings-federation S3 — see `docs/plans/02-settings-federation.md`).
+ * Registry-driven settings discovery (ADR-037).
  *
  * `discoverSettings()` walks the live discovery snapshot, filters to
  * pillars whose manifest declares a `settings` block, flattens the
@@ -13,7 +12,7 @@
  *
  * `ownerPillar` is the pillar the descriptor came from; the shell resolves
  * its settings transport from it. `capabilities` is the pillar's live
- * self-reported capability map (settings-federation GAP-256-D) — the shell
+ * self-reported capability map — the shell
  * routes a section's writes to `/<ownerPillar>-api/settings` only when
  * `capabilities.settings === true`, and otherwise falls back to core.
  *
