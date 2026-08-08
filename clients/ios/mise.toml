@@ -441,6 +441,10 @@ exit $status
 
 [tasks.format]
 description = "Rewrite the Swift sources with swift-format (the fixer for half of `lint`)"
+# The write-path version of the same defect `lint` guards against: a mismatched
+# Xcode wouldn't just misreport `lint` results, it would rewrite files to a
+# DIFFERENT toolchain's rules and commit bytes CI's swift-format then rejects.
+depends = ["verify:xcode-version"]
 run = "mise run swift-format format"
 
 # Generates this client's canonical copy and stops there. The BFM vendors its
