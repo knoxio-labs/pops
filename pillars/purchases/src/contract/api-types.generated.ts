@@ -65,7 +65,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Read a photographed receipt and create the purchase it describes */
+    /** Read an uploaded receipt — photograph, PDF or pasted body — and create its purchase */
     post: operations['receipt.upload'];
     delete?: never;
     options?: never;
@@ -762,10 +762,16 @@ export interface operations {
     requestBody?: {
       content: {
         'application/json': {
-          images: {
+          parts: {
             dataBase64: string;
             /** @enum {string} */
-            mediaType: 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif';
+            mediaType:
+              | 'image/jpeg'
+              | 'image/png'
+              | 'image/webp'
+              | 'image/gif'
+              | 'application/pdf'
+              | 'text/plain';
           }[];
         };
       };

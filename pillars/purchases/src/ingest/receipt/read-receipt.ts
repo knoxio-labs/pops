@@ -1,10 +1,11 @@
 /**
- * Photograph in, decision out.
+ * Receipt in, decision out.
  *
  * Three steps, deliberately separable: ask the model, parse what it said,
  * check the arithmetic. Only the first needs a network, which is why it is
  * a port — everything that decides whether a reading may be believed is
- * pure and tested against fixtures.
+ * pure and tested against fixtures. Nothing below the port knows whether
+ * the receipt arrived as a photograph, a PDF or a pasted body.
  *
  * There is no retry-until-it-sums loop. Re-rolling until the arithmetic
  * agrees selects for readings that pass the gate rather than readings that
@@ -15,7 +16,7 @@ import { gateExtraction } from './gate.js';
 
 import type { ExtractedReceipt } from './extraction.js';
 import type { GateResult } from './gate.js';
-import type { ReceiptImage, ReceiptVision } from './vision.js';
+import type { ReceiptPart, ReceiptVision } from './vision.js';
 
 export type ReadOutcome =
   /** The model read it and the arithmetic agrees. Admissible as fact. */
@@ -31,11 +32,11 @@ export type ReadOutcome =
 
 export async function readReceipt(
   vision: ReceiptVision,
-  images: readonly ReceiptImage[]
+  parts: readonly ReceiptPart[]
 ): Promise<ReadOutcome> {
   let raw: string | null;
   try {
-    raw = await vision.read(images);
+    raw = await vision.read(parts);
   } catch (error) {
     // A transport failure is not a statement about the receipt. Saying so
     // keeps "the model was down" from being filed as "we read it and it

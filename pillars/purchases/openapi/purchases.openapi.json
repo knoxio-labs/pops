@@ -2170,7 +2170,7 @@
               "schema": {
                 "additionalProperties": false,
                 "properties": {
-                  "images": {
+                  "parts": {
                     "items": {
                       "additionalProperties": false,
                       "properties": {
@@ -2179,7 +2179,14 @@
                           "type": "string"
                         },
                         "mediaType": {
-                          "enum": ["image/jpeg", "image/png", "image/webp", "image/gif"],
+                          "enum": [
+                            "image/jpeg",
+                            "image/png",
+                            "image/webp",
+                            "image/gif",
+                            "application/pdf",
+                            "text/plain"
+                          ],
                           "type": "string"
                         }
                       },
@@ -2191,7 +2198,7 @@
                     "type": "array"
                   }
                 },
-                "required": ["images"],
+                "required": ["parts"],
                 "type": "object"
               }
             }
@@ -3138,7 +3145,7 @@
             "description": "503"
           }
         },
-        "summary": "Read a photographed receipt and create the purchase it describes",
+        "summary": "Read an uploaded receipt — photograph, PDF or pasted body — and create its purchase",
         "tags": ["receipt"]
       }
     },

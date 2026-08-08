@@ -20,14 +20,16 @@ import {
   purchasesTelemetryDeps,
 } from '../../api/ai-telemetry-deps.js';
 import { resolveAnthropicApiKey } from '../../api/anthropic-key.js';
-import { EXTRACTION_PROMPT } from './vision.js';
+import { extractionPrompt, isImageMediaType } from './vision.js';
 
-import type { ReceiptImage, ReceiptVision } from './vision.js';
+import type { ReceiptPart, ReceiptVision } from './vision.js';
 
 /**
  * Reading a crumpled thermal receipt is the hard end of vision, so this is
- * not a place to economise on the model. The env override exists because
- * the right answer will change before this file does.
+ * not a place to economise on the model. The same model reads the PDFs and
+ * pasted bodies, which are easier — splitting them onto a cheaper one would
+ * buy very little and give the drop-zone two answers to explain. The env
+ * override exists because the right answer will change before this file does.
  */
 export const DEFAULT_RECEIPT_MODEL = 'claude-sonnet-5';
 
@@ -42,6 +44,45 @@ const MAX_TOKENS = 8_000;
 export function receiptModel(): string {
   const override = process.env['PURCHASES_RECEIPT_MODEL'];
   return override === undefined || override === '' ? DEFAULT_RECEIPT_MODEL : override;
+}
+
+/**
+ * One uploaded part → the content block that carries it.
+ *
+ * A PDF is a `document` block rather than something this pillar rasterises
+ * or runs text extraction over: the model reads the file itself, which is
+ * why the drop-zone grew PDF support without gaining a dependency.
+ *
+ * A pasted body travels as a `document` too, with a plain-text source,
+ * rather than being concatenated into the instruction. Keeping it a document
+ * is what preserves the distinction the whole prompt relies on — this is the
+ * thing being read, not part of what is being asked.
+ */
+function toContentBlock(part: ReceiptPart): Anthropic.ContentBlockParam {
+  if (isImageMediaType(part.mediaType)) {
+    return {
+      type: 'image',
+      source: { type: 'base64', media_type: part.mediaType, data: part.dataBase64 },
+    };
+  }
+
+  if (part.mediaType === 'application/pdf') {
+    return {
+      type: 'document',
+      source: { type: 'base64', media_type: 'application/pdf', data: part.dataBase64 },
+    };
+  }
+
+  return {
+    type: 'document',
+    source: {
+      type: 'text',
+      media_type: 'text/plain',
+      // Stored and transported as bytes like every other part, so the
+      // decode happens here — at the one boundary that needs characters.
+      data: Buffer.from(part.dataBase64, 'base64').toString('utf8'),
+    },
+  };
 }
 
 /**
@@ -60,7 +101,7 @@ export function createAnthropicVision(): ReceiptVision | null {
   const model = receiptModel();
 
   return {
-    async read(images: readonly ReceiptImage[]): Promise<string | null> {
+    async read(parts: readonly ReceiptPart[]): Promise<string | null> {
       return callWithLogging(
         {
           domain: PURCHASES_DOMAIN,
@@ -80,19 +121,16 @@ export function createAnthropicVision(): ReceiptVision | null {
               messages: [
                 {
                   role: 'user',
-                  // Images first, in order, then the instruction: the model
-                  // reads them as one receipt top to bottom, and the prompt
-                  // is what tells it they overlap.
+                  // The receipt first, in the order it was sent, then the
+                  // instruction: the model reads the parts as one document
+                  // top to bottom, and the prompt is what tells it how the
+                  // shapes it was given can mislead it.
                   content: [
-                    ...images.map((image) => ({
-                      type: 'image' as const,
-                      source: {
-                        type: 'base64' as const,
-                        media_type: image.mediaType,
-                        data: image.dataBase64,
-                      },
-                    })),
-                    { type: 'text' as const, text: EXTRACTION_PROMPT },
+                    ...parts.map(toContentBlock),
+                    {
+                      type: 'text' as const,
+                      text: extractionPrompt(parts.map((part) => part.mediaType)),
+                    },
                   ],
                 },
               ],
