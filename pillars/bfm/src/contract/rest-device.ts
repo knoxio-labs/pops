@@ -1,7 +1,9 @@
 /**
  * `device.*` sub-router — the routes a phone reaches directly.
  *
- *   - `pair` (mutation) → `POST /devices/pair`
+ *   - `pair`      (mutation) → `POST /devices/pair`
+ *   - `challenge` (mutation) → `POST /devices/challenge`
+ *   - `refresh`   (mutation) → `POST /devices/refresh`
  *
  * ## Why this is a separate sub-router from `operator`
  *
@@ -19,28 +21,42 @@
  *
  * ## What guards it
  *
- * Nothing that resolves an identity — by definition. A phone arriving here has
- * no Access session, no device row and no token; possession of a valid pairing
- * code is the entire credential. Two things stand in for a principal:
+ * Nothing that resolves an identity — by definition. Every route here either
+ * predates having a token or exists because the one the phone had is no longer
+ * usable, so none of them can require presenting one. What stands in for a
+ * principal is different per route, and in each case it is the credential
+ * carried in the body rather than a gate in front of it:
  *
- * - a per-source request budget in `api/auth/pairing-rate-limit.ts`, mounted
- *   ahead of the body parser, because a code short enough to read off a screen
- *   is short enough to guess if the attempt rate is unbounded;
- * - the code's own ~59 bits and five-minute life, which is what makes the
- *   guessing pointless rather than merely slow.
+ * - **`pair`** — possession of a live pairing code. It is short enough for a
+ *   human to type, so `api/auth/pairing-rate-limit.ts` bounds guessing, and
+ *   the code's own ~59 bits over a five-minute life is what makes guessing
+ *   pointless rather than merely slow.
+ * - **`refresh`** — possession of a 256-bit refresh token AND a signature from
+ *   the handset's Secure Enclave key over a nonce this server just issued.
+ *   Neither half is enough alone: that is the whole point of proof of
+ *   possession, and `api/auth/refresh-exchange.ts` is where it is checked.
+ * - **`challenge`** — nothing at all, deliberately. It hands out a random
+ *   value that is worthless without the other two. It is rate-limited because
+ *   it allocates, not because the nonce is a secret.
  *
  * `/mobile/*` is a different surface with a different gate: those routes need
- * a device that already exists, which is what this one creates.
+ * a device that already exists and a live access token, which is what `pair`
+ * creates and `refresh` renews.
  */
 import { initContract } from '@ts-rest/core';
+import { z } from 'zod';
 
 import {
+  DeviceInvalidRequestErrorSchema,
   PairDeviceRequestSchema,
   PairedDeviceSchema,
-  PairingInvalidRequestErrorSchema,
   PairingRejectedErrorSchema,
+  RefreshChallengeSchema,
+  RefreshedSessionSchema,
+  RefreshErrorSchema,
+  RefreshSessionRequestSchema,
 } from './rest-device-schemas.js';
-import { RateLimitErrorSchema } from './rest-schemas.js';
+import { DeviceRevokedErrorSchema, RateLimitErrorSchema } from './rest-schemas.js';
 
 const c = initContract();
 
@@ -54,11 +70,50 @@ export const bfmDeviceContract = c.router({
       // A literal `code` per status, not one enum on both — see the schemas'
       // own note for why the document must not promise a combination this
       // route cannot produce.
-      400: PairingInvalidRequestErrorSchema,
+      400: DeviceInvalidRequestErrorSchema,
       403: PairingRejectedErrorSchema,
       429: RateLimitErrorSchema,
     },
     summary: 'Spend a pairing code for a device identity. The tokens are returned once',
+  },
+  challenge: {
+    method: 'POST',
+    path: '/devices/challenge',
+    // POST rather than GET, and no body. It is not idempotent — each call
+    // allocates a nonce that the caller is expected to spend — so it must not
+    // sit behind anything that may cache or prefetch a GET.
+    body: z.object({}).optional(),
+    responses: {
+      201: RefreshChallengeSchema,
+      // Declared even though this route reads nothing from the body. An
+      // optional object schema still rejects a JSON array or a number, so the
+      // 400 is reachable — and a status the document omits is a status the
+      // generated client has no case for.
+      400: DeviceInvalidRequestErrorSchema,
+      429: RateLimitErrorSchema,
+    },
+    summary: 'Mint a single-use nonce for a refresh. Carries no credential and needs none',
+  },
+  refresh: {
+    method: 'POST',
+    path: '/devices/refresh',
+    body: RefreshSessionRequestSchema,
+    responses: {
+      200: RefreshedSessionSchema,
+      // The same reshaped body the pairing route answers with, and for the
+      // same two reasons: the generated client needs a case for it, and
+      // ts-rest's native validation body names this server's schema fields on
+      // a route reachable from the public internet. `rest/request-validation.ts`
+      // does the reshaping.
+      400: DeviceInvalidRequestErrorSchema,
+      // Two codes on one status, which is not the shape the routes above use.
+      // `RefreshErrorSchema`'s own note says why: there `code` restated the
+      // status, here both codes share 401 and select different recoveries.
+      401: RefreshErrorSchema,
+      403: DeviceRevokedErrorSchema,
+      429: RateLimitErrorSchema,
+    },
+    summary: 'Rotate a refresh token, proving possession of the device key. Detects reuse',
   },
 });
 

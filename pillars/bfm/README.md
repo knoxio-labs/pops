@@ -27,6 +27,8 @@ It also holds a service-account credential and one way to spend it — see
 | `GET /health`                          | Liveness shape. Served from the ts-rest contract, so it cannot drift from the doc.  |
 | `GET /openapi`                         | The committed contract projection, served verbatim so peers build a route map.      |
 | `POST /devices/pair`                   | Spends a pairing code for a device identity. Unauthenticated by definition.         |
+| `POST /devices/challenge`              | Mints a single-use nonce for a refresh. Carries no credential and needs none.       |
+| `POST /devices/refresh`                | Rotates a refresh token against a Secure Enclave signature. Detects reuse.          |
 | `POST /operator/pairing/codes`         | Mints a single-use pairing code. The plaintext is returned once and never again.    |
 | `GET /operator/devices`                | Paired handsets, revoked ones included. Never returns a token or a key.             |
 | `DELETE /operator/devices/:id`         | Soft-revokes, and kills the device's refresh-token family in the same transaction.  |
@@ -54,8 +56,8 @@ Access.**
 - The shell's nginx reaches it at `/bfm-api/`, behind Access. That is where an
   operator arrives.
 - Its own Cloudflare Tunnel hostname has Access **bypassed** (POPS-1389),
-  because the phone has to reach the pairing exchange and refresh (POPS-1375)
-  without an Access session.
+  because the phone has to reach the pairing exchange and refresh without an
+  Access session.
 
 One Express app serves both, so it carries two independent gates on two
 different axes: one authenticates a **phone**, the other a **human**. A third
@@ -71,9 +73,9 @@ not `404`.
 
 That directory's README carries the whole of the reasoning: why a rejected
 token is a `401` and a revoked device a `403`, why a missing device row is a
-`401` rather than either, what is never logged, why `lastSeenAt` is written
-here on a coalesced schedule rather than on every request, and what is
-deliberately absent (refresh — POPS-1375).
+`401` rather than either, why reuse detection runs before the signature check,
+what is never logged, and why `lastSeenAt` is written here on a coalesced
+schedule rather than on every request.
 
 ### `POST /devices/pair` — the way in
 
@@ -103,6 +105,43 @@ like details and are neither:
 
 `src/api/auth/pairing-exchange.ts` states the rest, including why nothing
 fallible runs inside the transaction.
+
+### `POST /devices/challenge` + `POST /devices/refresh` — the way back in
+
+An access token lives ten minutes. These two routes are what a handset does at
+minute nine, and they are the subtlest thing in this pillar.
+
+A refresh token is a long-lived bearer credential; on its own, a leaked one is
+a permanent compromise. Two mechanisms answer that, and both have to hold:
+
+- **Proof of possession.** `challenge` mints a single-use nonce. `refresh`
+  takes the token, the nonce, and an ECDSA P-256 signature the handset's Secure
+  Enclave key made over both. The key never leaves the phone, so a token stolen
+  without the phone verifies against nothing.
+- **Rotation with reuse detection.** Every success spends the presented token
+  and issues its successor in the same family. A token that comes back already
+  spent means two parties hold what should be one credential — a replay or a
+  theft, with no third reading — so the family dies and the phone pairs again.
+  It is never silently reissued.
+
+Two things to know before reading the handler:
+
+- **The signed message format lives in exactly one place**, the header of
+  `src/api/auth/refresh-exchange.ts`. `clients/ios` reproduces it byte for
+  byte, and no compiler checks the two against each other; getting it wrong
+  fails as a `401` indistinguishable from an expired token, which is why it is
+  stated there and nowhere else.
+- **Reuse detection runs before the signature is verified.** That looks
+  backwards and is not: reaching it needs a token this server issued, so
+  possession is the evidence, and checking the signature first would let a
+  thief who stole the token but not the phone avoid tripping it entirely.
+  [`src/api/auth/README.md`](src/api/auth/README.md) argues it in full,
+  including what it costs an honest client that submits the same refresh twice.
+
+The nonce lives in memory rather than in `bfm.db` — worthless once spent,
+worthless a minute after issue, and a table would hand an unauthenticated
+internet-facing route a write primitive. That makes it process-local
+(POPS-1537).
 
 ### `/operator/*` — the human gate
 
@@ -293,12 +332,6 @@ registration is a separate mechanism and still goes through the
 
 ## What deliberately does not live here
 
-- **Refresh.** `POST /auth/challenge` and `POST /auth/refresh` are POPS-1375,
-  with the proof-of-possession signature, the rotation and the reuse detection
-  the `refresh_tokens` columns were shaped for. Pairing opens a family and
-  writes its head; nothing yet rotates it, so a handset that lets its ten
-  minutes lapse has to pair again. `src/api/auth/device-signature.ts` is the
-  primitive that ticket verifies with.
 - **Writes.** The mobile surface is read-only; mutations are tracked
   separately. Nothing under `/mobile` uses a verb other than `GET`.
 - **The bootstrap route and the nginx route.** `GET /mobile/bootstrap`
@@ -409,7 +442,7 @@ pillars/bfm/
     ├── contract/                 the wire contract — the only description of it
     │   ├── rest.ts               health + the device, operator and mobile sub-routers
     │   ├── rest-schemas.ts        the mobile shapes + the error envelopes
-    │   ├── rest-device.ts        the pairing exchange, and what guards it instead
+    │   ├── rest-device.ts        pair, challenge, refresh — and what guards each
     │   ├── rest-device-schemas.ts
     │   ├── rest-operator.ts      the three Access-gated routes, and why /operator
     │   ├── rest-operator-schemas.ts
@@ -421,7 +454,7 @@ pillars/bfm/
     │   ├── schema/                one file per table
     │   └── services/              what the API does to those tables
     │       ├── pairing-codes.ts   mint, normalize, redeem-exactly-once
-    │       ├── refresh-tokens.ts  draw, digest, insert the head of a family
+    │       ├── refresh-tokens.ts  draw, digest, rotate, and burn a family
     │       └── devices.ts         insert, list, and the transactional revoke
     └── api/
         ├── server.ts              HTTP entrypoint (port 3014) — wiring only

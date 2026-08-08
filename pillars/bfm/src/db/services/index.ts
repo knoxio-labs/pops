@@ -14,11 +14,17 @@ export {
 
 export {
   DEFAULT_REFRESH_TOKEN_TTL_MS,
+  findRefreshTokenByHash,
   generateRefreshToken,
   hashRefreshToken,
   insertRefreshToken,
   REFRESH_TOKEN_BYTES,
+  revokeRefreshTokenFamily,
+  rotateRefreshToken,
   type InsertRefreshTokenValues,
+  type RefreshTokenRecord,
+  type RotateRefreshTokenResult,
+  type RotateRefreshTokenValues,
 } from './refresh-tokens.js';
 
 export {

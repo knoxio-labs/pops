@@ -30,8 +30,8 @@
  *
  * The middleware RESOLVES identity and never rejects globally — per-route
  * gating is the handler's job, via {@link requireOperator}. That matters here
- * because the device-facing routes (POPS-1374, POPS-1375) mount on this same
- * app and are unauthenticated by design.
+ * because the `/devices/*` routes mount on this same app and are
+ * unauthenticated by design.
  */
 import { readCloudflareAccessConfig, verifyCloudflareAccessJwt } from '@pops/pillar-sdk/access';
 
