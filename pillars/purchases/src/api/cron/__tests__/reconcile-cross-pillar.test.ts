@@ -21,9 +21,12 @@ import {
 import {
   parseSoftUri,
   startReconcileCrossPillarWorker,
+  type ReconcileLegStats,
   type ReconcileLookupFn,
   type ReconcileLookupResult,
+  type ReconcileTickStats,
   type ReconcileWorkerHandle,
+  type ReconcileWorkerLogger,
 } from '../reconcile-cross-pillar.js';
 
 import type { OpenedPurchasesDb } from '../../../db/index.js';
@@ -48,8 +51,23 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-/** Seed one order carrying an optional unit reference and an optional document reference. */
-function seed(options: { itemUri?: string; documentUri?: string } = {}): void {
+/**
+ * Seed one order whose single line carries a unit per entry in `itemUris`,
+ * plus an optional document reference.
+ *
+ * An empty `itemUris` still writes one unit, unreferenced — the lazily
+ * populated shape the schema documents as normal, and the shape the
+ * inventory leg sees on every real row today.
+ */
+function seed(options: { itemUris?: readonly string[]; documentUri?: string } = {}): void {
+  const itemUris = options.itemUris ?? [];
+  const units =
+    itemUris.length === 0
+      ? [{ serialNumber: 'SN-1' }]
+      : itemUris.map((uri, index) => ({
+          serialNumber: `SN-${String(index + 1)}`,
+          inventoryItemUri: uri,
+        }));
   createPurchase(
     opened.db,
     amazonOrder({
@@ -57,16 +75,11 @@ function seed(options: { itemUri?: string; documentUri?: string } = {}): void {
       items: [
         {
           name: 'Nanoleaf bulb',
-          quantity: 1,
+          quantity: units.length,
           unitPriceCents: 5000,
           lineTotalCents: 5000,
           kind: 'durable',
-          units: [
-            {
-              serialNumber: 'SN-1',
-              ...(options.itemUri === undefined ? {} : { inventoryItemUri: options.itemUri }),
-            },
-          ],
+          units,
         },
       ],
       ...(options.documentUri === undefined
@@ -101,11 +114,18 @@ const unreachableLookup: ReconcileLookupFn = () => {
   throw new Error('lookup should not have been called');
 };
 
-/** Start a worker with a far-future interval so only the immediate tick runs. */
+/**
+ * Start a worker with a far-future interval so only the immediate tick runs.
+ *
+ * The logger stays optional and unset by default: most tests here assert on
+ * the returned stats and on the database, and a worker with no logger is
+ * the configuration that once silently reconciled nothing.
+ */
 function start(options: {
   inventoryItem?: ReconcileLookupFn;
   document?: ReconcileLookupFn;
   intervalMs?: number;
+  logger?: ReconcileWorkerLogger;
 }): ReconcileWorkerHandle {
   const handle = startReconcileCrossPillarWorker({
     db: opened.db,
@@ -115,9 +135,17 @@ function start(options: {
     },
     intervalMs: options.intervalMs ?? 60 * 60 * 1000,
     now: () => NOW,
+    ...(options.logger === undefined ? {} : { logger: options.logger }),
   });
   handles.push(handle);
   return handle;
+}
+
+/** The named leg's line from a tick, or a failure that says which leg went missing. */
+function legStats(stats: ReconcileTickStats, label: string): ReconcileLegStats {
+  const found = stats.legs.find((leg) => leg.leg === label);
+  if (found === undefined) throw new Error(`tick reported no '${label}' leg`);
+  return found;
 }
 
 describe('parseSoftUri', () => {
@@ -139,7 +167,7 @@ describe('parseSoftUri', () => {
 
 describe('the inventory leg', () => {
   it('leaves a resolving reference clear', async () => {
-    seed({ itemUri: ITEM_URI });
+    seed({ itemUris: [ITEM_URI] });
 
     const stats = await start({ inventoryItem: always({ kind: 'ok' }) }).runOnce();
 
@@ -148,7 +176,7 @@ describe('the inventory leg', () => {
   });
 
   it('stamps staleAt when the owning pillar reports 404', async () => {
-    seed({ itemUri: ITEM_URI });
+    seed({ itemUris: [ITEM_URI] });
 
     const stats = await start({ inventoryItem: always({ kind: 'not-found' }) }).runOnce();
 
@@ -157,7 +185,7 @@ describe('the inventory leg', () => {
   });
 
   it('clears a stale flag once the reference resolves again', async () => {
-    seed({ itemUri: ITEM_URI });
+    seed({ itemUris: [ITEM_URI] });
     markInventoryItemUriStale(opened.db, ITEM_URI, '2026-01-01T00:00:00.000Z');
 
     await start({ inventoryItem: always({ kind: 'ok' }) }).runOnce();
@@ -166,7 +194,7 @@ describe('the inventory leg', () => {
   });
 
   it('probes the id, not the whole URI', async () => {
-    seed({ itemUri: ITEM_URI });
+    seed({ itemUris: [ITEM_URI] });
     const lookup = vi.fn<ReconcileLookupFn>().mockResolvedValue({ kind: 'ok' });
 
     await start({ inventoryItem: lookup }).runOnce();
@@ -180,7 +208,7 @@ describe('the inventory leg', () => {
 
     const stats = await start({}).runOnce();
 
-    expect(stats).toEqual({ resolved: 0, staleMarked: 0, badUri: 0, unavailable: 0 });
+    expect(stats).toMatchObject({ resolved: 0, staleMarked: 0, badUri: 0, unavailable: 0 });
   });
 });
 
@@ -189,7 +217,7 @@ describe('an unreachable owning pillar', () => {
     ['unavailable', { kind: 'unavailable', reason: 'unavailable' } as const],
     ['a lookup that throws', 'throw' as const],
   ])('leaves a clear flag clear on %s', async (_label, outcome) => {
-    seed({ itemUri: ITEM_URI });
+    seed({ itemUris: [ITEM_URI] });
     const lookup: ReconcileLookupFn =
       outcome === 'throw' ? () => Promise.reject(new Error('ECONNREFUSED')) : always(outcome);
 
@@ -200,7 +228,7 @@ describe('an unreachable owning pillar', () => {
   });
 
   it('leaves an ALREADY-stale flag stale rather than clearing it', async () => {
-    seed({ itemUri: ITEM_URI });
+    seed({ itemUris: [ITEM_URI] });
     markInventoryItemUriStale(opened.db, ITEM_URI, '2026-01-01T00:00:00.000Z');
 
     await start({ inventoryItem: always({ kind: 'unavailable', reason: 'degraded' }) }).runOnce();
@@ -211,7 +239,7 @@ describe('an unreachable owning pillar', () => {
 
 describe('a URI the owning pillar cannot make sense of', () => {
   it('preserves the row and counts it as a bad URI', async () => {
-    seed({ itemUri: ITEM_URI });
+    seed({ itemUris: [ITEM_URI] });
 
     const stats = await start({
       inventoryItem: always({ kind: 'bad-uri', reason: 'id must be an integer' }),
@@ -226,7 +254,7 @@ describe('a URI the owning pillar cannot make sense of', () => {
     ['the wrong type', 'pops://inventory/thing/1'],
     ['an unparseable string', 'inventory/item/1'],
   ])('never probes a reference addressed to %s', async (_label, uri) => {
-    seed({ itemUri: uri });
+    seed({ itemUris: [uri] });
 
     const stats = await start({ inventoryItem: unreachableLookup }).runOnce();
 
@@ -255,7 +283,7 @@ describe('the documents leg', () => {
   });
 
   it('runs independently of the inventory leg in one tick', async () => {
-    seed({ itemUri: ITEM_URI, documentUri: DOC_URI });
+    seed({ itemUris: [ITEM_URI], documentUri: DOC_URI });
 
     const stats = await start({
       inventoryItem: always({ kind: 'ok' }),
@@ -278,6 +306,86 @@ describe('the documents leg', () => {
   });
 });
 
+describe('per-leg work-set reporting', () => {
+  /**
+   * The reason this reporting exists. Nothing writes
+   * `purchase_item_units.inventory_item_uri` — no adapter creates unit rows
+   * at all — so the inventory leg's work set is empty on every real
+   * deployment, while the documents leg is live off the receipt adapter.
+   *
+   * Against the flat totals alone that tick is indistinguishable from one
+   * where every inventory reference resolved, and the cron reports success
+   * over a column it never looked at. Only `checked` separates them.
+   */
+  it('separates a leg with no work from a leg where everything resolved', async () => {
+    seed({ documentUri: DOC_URI });
+
+    const stats = await start({ document: always({ kind: 'ok' }) }).runOnce();
+
+    expect(stats.legs).toEqual([
+      { leg: 'inventory-item', checked: 0, resolved: 0, staleMarked: 0, badUri: 0, unavailable: 0 },
+      { leg: 'document', checked: 1, resolved: 1, staleMarked: 0, badUri: 0, unavailable: 0 },
+    ]);
+    // The totals both legs collapse into, and which on their own say nothing
+    // about the inventory leg having been skipped entirely.
+    expect(stats).toMatchObject({ resolved: 1, staleMarked: 0, badUri: 0, unavailable: 0 });
+  });
+
+  it('accounts for every URI in the work set exactly once, whatever became of it', async () => {
+    seed({
+      itemUris: [ITEM_URI, 'pops://inventory/item/def', 'pops://finance/item/1'],
+      documentUri: DOC_URI,
+    });
+    const byId = new Map<string, ReconcileLookupResult>([
+      ['abc', { kind: 'ok' }],
+      ['def', { kind: 'not-found' }],
+    ]);
+
+    const stats = await start({
+      inventoryItem: (id) => Promise.resolve(byId.get(id) ?? { kind: 'unavailable', reason: 'x' }),
+      document: always({ kind: 'ok' }),
+    }).runOnce();
+
+    // Three distinct URIs: one resolves, one 404s, one is addressed to the
+    // wrong pillar and is counted without ever being probed.
+    const inventory = legStats(stats, 'inventory-item');
+    expect(inventory).toEqual({
+      leg: 'inventory-item',
+      checked: 3,
+      resolved: 1,
+      staleMarked: 1,
+      badUri: 1,
+      unavailable: 0,
+    });
+    expect(inventory.resolved + inventory.staleMarked + inventory.badUri + inventory.unavailable) //
+      .toBe(inventory.checked);
+  });
+
+  it('sums the leg counters into the tick totals', async () => {
+    seed({ itemUris: [ITEM_URI], documentUri: DOC_URI });
+
+    const stats = await start({
+      inventoryItem: always({ kind: 'ok' }),
+      document: always({ kind: 'not-found' }),
+    }).runOnce();
+
+    expect(stats).toMatchObject({ resolved: 1, staleMarked: 1, badUri: 0, unavailable: 0 });
+    expect(stats.legs.map((leg) => leg.checked)).toEqual([1, 1]);
+  });
+
+  it('tells the logger an empty leg was empty', async () => {
+    seed({ documentUri: DOC_URI });
+    const info = vi.fn();
+
+    await start({ document: always({ kind: 'ok' }), logger: { info } }).runOnce();
+
+    expect(info).toHaveBeenCalledWith(
+      'purchases reconcile leg complete',
+      expect.objectContaining({ leg: 'inventory-item', checked: 0 })
+    );
+  });
+});
+
 describe('logging', () => {
   /**
    * Regression: the mark/clear writes once lived inside the argument list of
@@ -286,33 +394,18 @@ describe('logging', () => {
    * reconciled nothing while reporting a full set of stats.
    */
   it('writes whether or not a logger is configured', async () => {
-    seed({ itemUri: ITEM_URI });
+    seed({ itemUris: [ITEM_URI] });
 
-    const handle = startReconcileCrossPillarWorker({
-      db: opened.db,
-      lookups: { inventoryItem: always({ kind: 'not-found' }), document: unreachableLookup },
-      intervalMs: 60 * 60 * 1000,
-      now: () => NOW,
-    });
-    handles.push(handle);
-    await handle.runOnce();
+    await start({ inventoryItem: always({ kind: 'not-found' }) }).runOnce();
 
     expect(unitStaleAt()).toEqual([NOW.toISOString()]);
   });
 
   it('reports the row count it touched to a logger that is configured', async () => {
-    seed({ itemUri: ITEM_URI });
+    seed({ itemUris: [ITEM_URI] });
     const info = vi.fn();
 
-    const handle = startReconcileCrossPillarWorker({
-      db: opened.db,
-      lookups: { inventoryItem: always({ kind: 'not-found' }), document: unreachableLookup },
-      intervalMs: 60 * 60 * 1000,
-      now: () => NOW,
-      logger: { info },
-    });
-    handles.push(handle);
-    await handle.runOnce();
+    await start({ inventoryItem: always({ kind: 'not-found' }), logger: { info } }).runOnce();
 
     expect(info).toHaveBeenCalledWith(
       'purchases reconcile uri marked stale',
@@ -324,7 +417,7 @@ describe('logging', () => {
 describe('the tick timer', () => {
   it('arms the next tick only after the current one settles', async () => {
     vi.useFakeTimers();
-    seed({ itemUri: ITEM_URI });
+    seed({ itemUris: [ITEM_URI] });
     let inFlight = 0;
     let maxConcurrent = 0;
     const lookup: ReconcileLookupFn = async () => {
@@ -344,7 +437,7 @@ describe('the tick timer', () => {
 
   it('stops arming once stopped', async () => {
     vi.useFakeTimers();
-    seed({ itemUri: ITEM_URI });
+    seed({ itemUris: [ITEM_URI] });
     const lookup = vi.fn<ReconcileLookupFn>().mockResolvedValue({ kind: 'ok' });
 
     const handle = start({ inventoryItem: lookup, intervalMs: 1000 });
@@ -358,7 +451,7 @@ describe('the tick timer', () => {
 
   it('keeps ticking after a pass throws', async () => {
     vi.useFakeTimers();
-    seed({ itemUri: ITEM_URI });
+    seed({ itemUris: [ITEM_URI] });
     const lookup = vi
       .fn<ReconcileLookupFn>()
       .mockImplementationOnce(() => {

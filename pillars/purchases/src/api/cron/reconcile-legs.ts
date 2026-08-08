@@ -50,11 +50,35 @@ export interface ReconcileWorkerLogger {
   warn?: (msg: string, meta?: Record<string, unknown>) => void;
 }
 
-export interface ReconcileTickStats {
+/** The four outcomes a probed URI can have, tallied per leg and again per tick. */
+export interface ReconcileCounts {
   resolved: number;
   staleMarked: number;
   badUri: number;
   unavailable: number;
+}
+
+/**
+ * One leg's tick.
+ *
+ * `checked` is the size of the work set — every distinct URI the leg had to
+ * consider, including those rejected on shape and never probed — so it
+ * always equals the sum of the four counters.
+ *
+ * It is reported because the counters alone cannot express an empty leg. A
+ * leg no writer populates yet and a leg whose every reference resolved both
+ * tally four zeros against a healthy-looking tick, and a column that is
+ * never checked reads exactly like a column where nothing is wrong. That
+ * ambiguity is the whole reason the `staleAt` companions exist.
+ */
+export interface ReconcileLegStats extends ReconcileCounts {
+  leg: string;
+  checked: number;
+}
+
+/** Totals across every leg of one tick, plus each leg's own line. */
+export interface ReconcileTickStats extends ReconcileCounts {
+  legs: ReconcileLegStats[];
 }
 
 export interface ParsedUri {
@@ -107,8 +131,16 @@ export const LEGS: readonly ReconcileLeg[] = [
   },
 ];
 
-export function emptyStats(): ReconcileTickStats {
+export function emptyCounts(): ReconcileCounts {
   return { resolved: 0, staleMarked: 0, badUri: 0, unavailable: 0 };
+}
+
+/** Fold one leg's counters into a running total. */
+export function addCounts(into: ReconcileCounts, from: ReconcileCounts): void {
+  into.resolved += from.resolved;
+  into.staleMarked += from.staleMarked;
+  into.badUri += from.badUri;
+  into.unavailable += from.unavailable;
 }
 
 async function safeLookup(
@@ -132,7 +164,7 @@ interface ApplyContext {
   leg: ReconcileLeg;
   uri: string;
   nowIso: string;
-  stats: ReconcileTickStats;
+  stats: ReconcileCounts;
   logger: ReconcileWorkerLogger | undefined;
 }
 
@@ -187,7 +219,6 @@ export interface RunLegContext {
   db: PurchasesDb;
   leg: ReconcileLeg;
   lookups: ReconcileLookups;
-  stats: ReconcileTickStats;
   logger: ReconcileWorkerLogger | undefined;
   now: () => Date;
 }
@@ -203,11 +234,16 @@ function shapeMatches(parsed: ParsedUri | null, leg: ReconcileLeg): parsed is Pa
  * match the leg is never probed — probing it would ask the wrong pillar a
  * question about someone else's id — so it is counted as a bad URI, logged
  * for ops, and its row preserved.
+ *
+ * The leg reports its own line before returning, so an empty leg is visible
+ * in the nightly log rather than disappearing into the tick totals.
  */
-export async function runLeg(ctx: RunLegContext): Promise<void> {
-  const { db, leg, stats, logger } = ctx;
+export async function runLeg(ctx: RunLegContext): Promise<ReconcileLegStats> {
+  const { db, leg, logger } = ctx;
   const lookup = leg.lookup(ctx.lookups);
-  for (const uri of leg.listUris(db)) {
+  const uris = leg.listUris(db);
+  const stats: ReconcileLegStats = { leg: leg.label, checked: uris.length, ...emptyCounts() };
+  for (const uri of uris) {
     const parsed = parseSoftUri(uri);
     if (!shapeMatches(parsed, leg)) {
       stats.badUri += 1;
@@ -220,4 +256,6 @@ export async function runLeg(ctx: RunLegContext): Promise<void> {
     const result = await safeLookup(lookup, parsed.id, logger);
     applyResult({ db, leg, uri, nowIso: ctx.now().toISOString(), stats, logger }, result);
   }
+  logger?.info?.('purchases reconcile leg complete', { ...stats });
+  return stats;
 }
