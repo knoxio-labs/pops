@@ -3080,7 +3080,23 @@ export type DiscoveryTrendingPlexResponses = {
    * 200
    */
   200: {
-    data: null;
+    data: Array<{
+      backdropPath: string | null;
+      genreIds: Array<number>;
+      inLibrary: boolean;
+      isWatched: boolean;
+      onWatchlist: boolean;
+      overview: string;
+      popularity: number;
+      posterPath: string | null;
+      posterUrl: string | null;
+      releaseDate: string;
+      rotationExpiresAt?: string;
+      title: string;
+      tmdbId: number;
+      voteAverage: number;
+      voteCount: number;
+    }> | null;
   };
 };
 
@@ -6491,6 +6507,635 @@ export type TvShowsCreateEpisodeResponses = {
 
 export type TvShowsCreateEpisodeResponse =
   TvShowsCreateEpisodeResponses[keyof TvShowsCreateEpisodeResponses];
+
+export type SettingsListData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/settings';
+};
+
+export type SettingsListErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type SettingsListError = SettingsListErrors[keyof SettingsListErrors];
+
+export type SettingsListResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: Array<{
+      key: string;
+      value: string;
+    }>;
+  };
+};
+
+export type SettingsListResponse = SettingsListResponses[keyof SettingsListResponses];
+
+export type SettingsGetManyData = {
+  /**
+   * Body
+   */
+  body?: {
+    keys: Array<string>;
+  };
+  path?: never;
+  query?: never;
+  url: '/settings/get-many';
+};
+
+export type SettingsGetManyErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type SettingsGetManyError = SettingsGetManyErrors[keyof SettingsGetManyErrors];
+
+export type SettingsGetManyResponses = {
+  /**
+   * 200
+   */
+  200: {
+    settings: {
+      [key: string]: string;
+    };
+  };
+};
+
+export type SettingsGetManyResponse = SettingsGetManyResponses[keyof SettingsGetManyResponses];
+
+export type SettingsResetData = {
+  /**
+   * Body
+   */
+  body?: {
+    keys?: Array<string>;
+  };
+  path?: never;
+  query?: never;
+  url: '/settings/reset';
+};
+
+export type SettingsResetErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type SettingsResetError = SettingsResetErrors[keyof SettingsResetErrors];
+
+export type SettingsResetResponses = {
+  /**
+   * 200
+   */
+  200: {
+    reset: Array<string>;
+    settings: {
+      [key: string]: string;
+    };
+  };
+};
+
+export type SettingsResetResponse = SettingsResetResponses[keyof SettingsResetResponses];
+
+export type SettingsSetManyData = {
+  /**
+   * Body
+   */
+  body?: {
+    entries: Array<{
+      key: string;
+      value: string;
+    }>;
+  };
+  path?: never;
+  query?: never;
+  url: '/settings/set-many';
+};
+
+export type SettingsSetManyErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type SettingsSetManyError = SettingsSetManyErrors[keyof SettingsSetManyErrors];
+
+export type SettingsSetManyResponses = {
+  /**
+   * 200
+   */
+  200: {
+    settings: {
+      [key: string]: string;
+    };
+  };
+};
+
+export type SettingsSetManyResponse = SettingsSetManyResponses[keyof SettingsSetManyResponses];
+
+export type SettingsGetData = {
+  body?: never;
+  path: {
+    key:
+      | 'plex_url'
+      | 'plex_token'
+      | 'plex_movie_section_id'
+      | 'plex_tv_section_id'
+      | 'plex_scheduler_enabled'
+      | 'plex_scheduler_interval_ms'
+      | 'radarr_url'
+      | 'radarr_api_key'
+      | 'sonarr_url'
+      | 'sonarr_api_key'
+      | 'rotation_quality_profile_id'
+      | 'rotation_root_folder_path'
+      | 'rotation_enabled'
+      | 'rotation_cron_expression'
+      | 'rotation_target_free_gb'
+      | 'rotation_avg_movie_gb'
+      | 'rotation_protected_days'
+      | 'rotation_daily_additions'
+      | 'rotation_leaving_days'
+      | 'media.comparisons.eloK'
+      | 'media.comparisons.defaultScore'
+      | 'media.comparisons.maxTierListMovies'
+      | 'media.comparisons.stalenessThreshold'
+      | 'media.comparisons.defaultLimit'
+      | 'media.discovery.sessionTargetMin'
+      | 'media.discovery.sessionTargetMax'
+      | 'media.discovery.maxSeedShelves'
+      | 'media.discovery.maxGenreShelves'
+      | 'media.discovery.maxActiveCollections'
+      | 'media.discovery.maxBecauseYouWatchedSeeds'
+      | 'media.discovery.maxCreditsSeeds'
+      | 'media.discovery.maxBestInGenre'
+      | 'media.discovery.maxCrossoverPairs'
+      | 'media.thetvdb.rateLimitCapacity'
+      | 'media.thetvdb.rateLimitRefillRate'
+      | 'media.thetvdb.maxRetries'
+      | 'media.tmdb.genreCacheTtlMs'
+      | 'media.tmdb.imageMaxRetries'
+      | 'media.tmdb.imageRetryDelayMs'
+      | 'media.plex.rateLimitDelayMs'
+      | 'media.plex.clientPageSize'
+      | 'media.plex.friendsPageSize'
+      | 'media.defaultLimit'
+      | 'media.rotation.tmdbDefaultPages'
+      | 'media.rotation.tmdbMaxPages'
+      | 'media.rotation.tmdbMinVoteCount'
+      | 'media.rotation.letterboxdMaxPages';
+  };
+  query?: never;
+  url: '/settings/{key}';
+};
+
+export type SettingsGetErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type SettingsGetError = SettingsGetErrors[keyof SettingsGetErrors];
+
+export type SettingsGetResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: {
+      key: string;
+      value: string;
+    } | null;
+  };
+};
+
+export type SettingsGetResponse = SettingsGetResponses[keyof SettingsGetResponses];
+
+export type SettingsSetData = {
+  /**
+   * Body
+   */
+  body?: {
+    value: string;
+  };
+  path: {
+    key:
+      | 'plex_url'
+      | 'plex_token'
+      | 'plex_movie_section_id'
+      | 'plex_tv_section_id'
+      | 'plex_scheduler_enabled'
+      | 'plex_scheduler_interval_ms'
+      | 'radarr_url'
+      | 'radarr_api_key'
+      | 'sonarr_url'
+      | 'sonarr_api_key'
+      | 'rotation_quality_profile_id'
+      | 'rotation_root_folder_path'
+      | 'rotation_enabled'
+      | 'rotation_cron_expression'
+      | 'rotation_target_free_gb'
+      | 'rotation_avg_movie_gb'
+      | 'rotation_protected_days'
+      | 'rotation_daily_additions'
+      | 'rotation_leaving_days'
+      | 'media.comparisons.eloK'
+      | 'media.comparisons.defaultScore'
+      | 'media.comparisons.maxTierListMovies'
+      | 'media.comparisons.stalenessThreshold'
+      | 'media.comparisons.defaultLimit'
+      | 'media.discovery.sessionTargetMin'
+      | 'media.discovery.sessionTargetMax'
+      | 'media.discovery.maxSeedShelves'
+      | 'media.discovery.maxGenreShelves'
+      | 'media.discovery.maxActiveCollections'
+      | 'media.discovery.maxBecauseYouWatchedSeeds'
+      | 'media.discovery.maxCreditsSeeds'
+      | 'media.discovery.maxBestInGenre'
+      | 'media.discovery.maxCrossoverPairs'
+      | 'media.thetvdb.rateLimitCapacity'
+      | 'media.thetvdb.rateLimitRefillRate'
+      | 'media.thetvdb.maxRetries'
+      | 'media.tmdb.genreCacheTtlMs'
+      | 'media.tmdb.imageMaxRetries'
+      | 'media.tmdb.imageRetryDelayMs'
+      | 'media.plex.rateLimitDelayMs'
+      | 'media.plex.clientPageSize'
+      | 'media.plex.friendsPageSize'
+      | 'media.defaultLimit'
+      | 'media.rotation.tmdbDefaultPages'
+      | 'media.rotation.tmdbMaxPages'
+      | 'media.rotation.tmdbMinVoteCount'
+      | 'media.rotation.letterboxdMaxPages';
+  };
+  query?: never;
+  url: '/settings/{key}';
+};
+
+export type SettingsSetErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type SettingsSetError = SettingsSetErrors[keyof SettingsSetErrors];
+
+export type SettingsSetResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: {
+      key: string;
+      value: string;
+    };
+    message: string;
+  };
+};
+
+export type SettingsSetResponse = SettingsSetResponses[keyof SettingsSetResponses];
+
+export type SettingsEnsureData = {
+  /**
+   * Body
+   */
+  body?: {
+    value: string;
+  };
+  path: {
+    key:
+      | 'plex_url'
+      | 'plex_token'
+      | 'plex_movie_section_id'
+      | 'plex_tv_section_id'
+      | 'plex_scheduler_enabled'
+      | 'plex_scheduler_interval_ms'
+      | 'radarr_url'
+      | 'radarr_api_key'
+      | 'sonarr_url'
+      | 'sonarr_api_key'
+      | 'rotation_quality_profile_id'
+      | 'rotation_root_folder_path'
+      | 'rotation_enabled'
+      | 'rotation_cron_expression'
+      | 'rotation_target_free_gb'
+      | 'rotation_avg_movie_gb'
+      | 'rotation_protected_days'
+      | 'rotation_daily_additions'
+      | 'rotation_leaving_days'
+      | 'media.comparisons.eloK'
+      | 'media.comparisons.defaultScore'
+      | 'media.comparisons.maxTierListMovies'
+      | 'media.comparisons.stalenessThreshold'
+      | 'media.comparisons.defaultLimit'
+      | 'media.discovery.sessionTargetMin'
+      | 'media.discovery.sessionTargetMax'
+      | 'media.discovery.maxSeedShelves'
+      | 'media.discovery.maxGenreShelves'
+      | 'media.discovery.maxActiveCollections'
+      | 'media.discovery.maxBecauseYouWatchedSeeds'
+      | 'media.discovery.maxCreditsSeeds'
+      | 'media.discovery.maxBestInGenre'
+      | 'media.discovery.maxCrossoverPairs'
+      | 'media.thetvdb.rateLimitCapacity'
+      | 'media.thetvdb.rateLimitRefillRate'
+      | 'media.thetvdb.maxRetries'
+      | 'media.tmdb.genreCacheTtlMs'
+      | 'media.tmdb.imageMaxRetries'
+      | 'media.tmdb.imageRetryDelayMs'
+      | 'media.plex.rateLimitDelayMs'
+      | 'media.plex.clientPageSize'
+      | 'media.plex.friendsPageSize'
+      | 'media.defaultLimit'
+      | 'media.rotation.tmdbDefaultPages'
+      | 'media.rotation.tmdbMaxPages'
+      | 'media.rotation.tmdbMinVoteCount'
+      | 'media.rotation.letterboxdMaxPages';
+  };
+  query?: never;
+  url: '/settings/{key}/ensure';
+};
+
+export type SettingsEnsureErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type SettingsEnsureError = SettingsEnsureErrors[keyof SettingsEnsureErrors];
+
+export type SettingsEnsureResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: {
+      key: string;
+      value: string;
+    };
+  };
+};
+
+export type SettingsEnsureResponse = SettingsEnsureResponses[keyof SettingsEnsureResponses];
+
+export type SettingsResetKeyData = {
+  /**
+   * Body
+   */
+  body?: {
+    [key: string]: never;
+  };
+  path: {
+    key:
+      | 'plex_url'
+      | 'plex_token'
+      | 'plex_movie_section_id'
+      | 'plex_tv_section_id'
+      | 'plex_scheduler_enabled'
+      | 'plex_scheduler_interval_ms'
+      | 'radarr_url'
+      | 'radarr_api_key'
+      | 'sonarr_url'
+      | 'sonarr_api_key'
+      | 'rotation_quality_profile_id'
+      | 'rotation_root_folder_path'
+      | 'rotation_enabled'
+      | 'rotation_cron_expression'
+      | 'rotation_target_free_gb'
+      | 'rotation_avg_movie_gb'
+      | 'rotation_protected_days'
+      | 'rotation_daily_additions'
+      | 'rotation_leaving_days'
+      | 'media.comparisons.eloK'
+      | 'media.comparisons.defaultScore'
+      | 'media.comparisons.maxTierListMovies'
+      | 'media.comparisons.stalenessThreshold'
+      | 'media.comparisons.defaultLimit'
+      | 'media.discovery.sessionTargetMin'
+      | 'media.discovery.sessionTargetMax'
+      | 'media.discovery.maxSeedShelves'
+      | 'media.discovery.maxGenreShelves'
+      | 'media.discovery.maxActiveCollections'
+      | 'media.discovery.maxBecauseYouWatchedSeeds'
+      | 'media.discovery.maxCreditsSeeds'
+      | 'media.discovery.maxBestInGenre'
+      | 'media.discovery.maxCrossoverPairs'
+      | 'media.thetvdb.rateLimitCapacity'
+      | 'media.thetvdb.rateLimitRefillRate'
+      | 'media.thetvdb.maxRetries'
+      | 'media.tmdb.genreCacheTtlMs'
+      | 'media.tmdb.imageMaxRetries'
+      | 'media.tmdb.imageRetryDelayMs'
+      | 'media.plex.rateLimitDelayMs'
+      | 'media.plex.clientPageSize'
+      | 'media.plex.friendsPageSize'
+      | 'media.defaultLimit'
+      | 'media.rotation.tmdbDefaultPages'
+      | 'media.rotation.tmdbMaxPages'
+      | 'media.rotation.tmdbMinVoteCount'
+      | 'media.rotation.letterboxdMaxPages';
+  };
+  query?: never;
+  url: '/settings/{key}/reset';
+};
+
+export type SettingsResetKeyErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type SettingsResetKeyError = SettingsResetKeyErrors[keyof SettingsResetKeyErrors];
+
+export type SettingsResetKeyResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: {
+      key: string;
+      value: string;
+    };
+    message: string;
+  };
+};
+
+export type SettingsResetKeyResponse = SettingsResetKeyResponses[keyof SettingsResetKeyResponses];
 
 export type ShelfImpressionsRecordData = {
   /**
