@@ -48,7 +48,7 @@
     "@ts-rest/core": "3.53.0-rc.1",
     "@ts-rest/express": "3.53.0-rc.1",
     "@ts-rest/open-api": "3.53.0-rc.1",
-    "better-sqlite3": "^12.10.0",
+    "better-sqlite3": "^13.0.3",
     "bullmq": "^5.78.0",
     "chokidar": "^5.0.0",
     "cron-parser": "^5.7.0",
