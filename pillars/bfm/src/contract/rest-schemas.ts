@@ -34,13 +34,20 @@ export type HealthResponse = z.infer<typeof HealthResponseSchema>;
  * They live in the contract rather than beside the middleware because the
  * `/mobile/*` routes declare these two statuses on their own ts-rest
  * responses, and two definitions of one wire shape drift.
+ *
+ * Only one of them is `Mobile`-prefixed, and the asymmetry is the point.
+ * `invalid_token` is a statement about a bearer token, which exists only on
+ * this perimeter. "This handset is revoked" is a statement about the device,
+ * and `POST /devices/refresh` has to make exactly the same one — same shape,
+ * same code, same recovery — so the unprefixed name is shared rather than
+ * copied, on the same reasoning as {@link RateLimitErrorSchema} below.
  */
 export const MobileInvalidTokenErrorSchema = z.object({
   code: z.literal('invalid_token'),
   message: z.string(),
 });
 
-export const MobileDeviceRevokedErrorSchema = z.object({
+export const DeviceRevokedErrorSchema = z.object({
   code: z.literal('device_revoked'),
   message: z.string(),
 });
@@ -52,11 +59,11 @@ export const MobileDeviceRevokedErrorSchema = z.object({
  */
 export const MobileAuthErrorSchema = z.discriminatedUnion('code', [
   MobileInvalidTokenErrorSchema,
-  MobileDeviceRevokedErrorSchema,
+  DeviceRevokedErrorSchema,
 ]);
 
 export type MobileInvalidTokenError = z.infer<typeof MobileInvalidTokenErrorSchema>;
-export type MobileDeviceRevokedError = z.infer<typeof MobileDeviceRevokedErrorSchema>;
+export type DeviceRevokedError = z.infer<typeof DeviceRevokedErrorSchema>;
 export type MobileAuthError = z.infer<typeof MobileAuthErrorSchema>;
 
 /**

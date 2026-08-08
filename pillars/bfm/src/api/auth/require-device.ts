@@ -36,7 +36,7 @@ import type { KeyObject } from 'node:crypto';
 import type { NextFunction, Request, RequestHandler, Response } from 'express';
 
 import type {
-  MobileDeviceRevokedError,
+  DeviceRevokedError,
   MobileInvalidTokenError,
 } from '../../contract/rest-schemas.js';
 import type { BfmDb, DeviceRow } from '../../db/index.js';
@@ -76,7 +76,7 @@ function readBearerToken(req: Request): string | null {
  */
 type MobileRefusal =
   | { readonly status: 401; readonly body: MobileInvalidTokenError }
-  | { readonly status: 403; readonly body: MobileDeviceRevokedError };
+  | { readonly status: 403; readonly body: DeviceRevokedError };
 
 function refuse(res: Response, refusal: MobileRefusal): void {
   if (refusal.status === 401) {

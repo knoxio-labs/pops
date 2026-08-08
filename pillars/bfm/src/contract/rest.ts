@@ -44,7 +44,7 @@ import { bfmOperatorContract } from './rest-operator.js';
 import {
   HealthResponseSchema,
   MobileBootstrapResponseSchema,
-  MobileDeviceRevokedErrorSchema,
+  DeviceRevokedErrorSchema,
   MobileInvalidTokenErrorSchema,
   MobileRequestErrorSchema,
   MobileTransactionDetailSchema,
@@ -73,7 +73,7 @@ const MOBILE_PERIMETER_RESPONSES = {
   // every generated client branch on it. `require-device.ts` pairs them at the
   // point the response is built, which is the half a schema cannot enforce.
   401: MobileInvalidTokenErrorSchema,
-  403: MobileDeviceRevokedErrorSchema,
+  403: DeviceRevokedErrorSchema,
   429: RateLimitErrorSchema,
 } as const;
 

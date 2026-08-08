@@ -1,20 +1,24 @@
 /**
  * Handlers for the `device.*` sub-router — the routes a phone reaches with no
- * Access session, no device row and no token.
+ * Access session, no device row and no usable token.
  *
  * There is no `requireOperator` here and there is nothing standing in for it.
- * That is the design, not an omission: the pairing exchange is how a caller
- * *becomes* someone, so it cannot require being someone first. What guards it
- * is possession of a live pairing code, the budget mounted on the path in
- * `app.ts`, and the fact that every branch below answers the same way for
- * every reason a code can fail.
+ * That is the design, not an omission: pairing is how a caller *becomes*
+ * someone and refresh is what it does when the token proving it has lapsed, so
+ * neither can require presenting one. What guards them is the credential in
+ * the body, the budgets mounted on the paths in `app.ts`, and the fact that
+ * every failure branch below answers the same way for every reason of its
+ * class.
  *
- * The decisions — validate the key before the code, 403 rather than 401, why
- * the two failure statuses are safe to distinguish — are in
- * `auth/pairing-exchange.ts` and `contract/rest-device-schemas.ts`. This file
- * is the mapping and nothing more.
+ * The decisions live with the operations, not here — validate the key before
+ * the code in `auth/pairing-exchange.ts`; the signed-message format, the order
+ * of the refresh checks and why reuse detection precedes signature
+ * verification in `auth/refresh-exchange.ts`; and which refusal is which
+ * status in `contract/rest-device-schemas.ts`. This file is the mapping and
+ * nothing more.
  */
 import { completePairingExchange } from '../auth/pairing-exchange.js';
+import { completeRefreshExchange } from '../auth/refresh-exchange.js';
 
 import type { KeyObject } from 'node:crypto';
 
@@ -22,14 +26,24 @@ import type { ServerInferRequest } from '@ts-rest/core';
 
 import type { bfmDeviceContract } from '../../contract/rest-device.js';
 import type { BfmDb } from '../../db/index.js';
+import type { RefreshChallengeStore } from '../auth/refresh-challenge.js';
 
 type Req = ServerInferRequest<typeof bfmDeviceContract>;
 
 export interface DeviceHandlerDeps {
   db: BfmDb;
-  /** Signs the access token the exchange returns. */
+  /** Signs the access token both exchanges return. */
   accessTokenSigningKey: KeyObject;
-  /** Lifetime of the refresh token minted at pairing. Defaults to the service's own TTL. */
+  /**
+   * Where `challenge` puts a nonce and `refresh` spends it. ONE store shared by
+   * both handlers — two would mean a nonce issued by one route could never be
+   * spent at the other, which is the only thing either of them is for.
+   */
+  refreshChallenges: RefreshChallengeStore;
+  /**
+   * Lifetime of the refresh token minted at pairing AND of every successor
+   * rotation issues. Defaults to the service's own TTL.
+   */
   refreshTokenTtlMs?: number;
 }
 
@@ -78,6 +92,67 @@ export function makeDeviceHandlers(deps: DeviceHandlerDeps) {
         status: 201 as const,
         body: {
           deviceId: result.deviceId,
+          accessToken: result.accessToken,
+          refreshToken: result.refreshToken,
+          expiresIn: result.expiresInSeconds,
+        },
+      };
+    },
+
+    challenge: async () => {
+      const challenge = deps.refreshChallenges.issue();
+      return {
+        status: 201 as const,
+        body: { nonce: challenge.nonce, expiresIn: challenge.expiresInSeconds },
+      };
+    },
+
+    refresh: async ({ body }: Req['refresh']) => {
+      const result = completeRefreshExchange(body, {
+        db: deps.db,
+        accessTokenSigningKey: deps.accessTokenSigningKey,
+        challenges: deps.refreshChallenges,
+        ...(deps.refreshTokenTtlMs === undefined
+          ? {}
+          : { refreshTokenTtlMs: deps.refreshTokenTtlMs }),
+      });
+
+      if (result.outcome === 'challenge-expired') {
+        return {
+          status: 401 as const,
+          body: {
+            code: 'challenge_expired' as const,
+            message: 'That challenge is spent or expired. Request another and retry.',
+          },
+        };
+      }
+
+      if (result.outcome === 'device-revoked') {
+        return {
+          status: 403 as const,
+          body: {
+            code: 'device_revoked' as const,
+            message: 'This device has been revoked. Pair again.',
+          },
+        };
+      }
+
+      if (result.outcome === 'rejected') {
+        return {
+          status: 401 as const,
+          body: {
+            code: 'invalid_grant' as const,
+            // One sentence for five causes — unknown, expired, revoked,
+            // already spent, and signed by the wrong key. A constant, so the
+            // response is byte-identical across them.
+            message: 'That refresh token cannot be used. Pair this device again.',
+          },
+        };
+      }
+
+      return {
+        status: 200 as const,
+        body: {
           accessToken: result.accessToken,
           refreshToken: result.refreshToken,
           expiresIn: result.expiresInSeconds,

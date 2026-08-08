@@ -4,6 +4,43 @@ export type ClientOptions = {
   baseUrl: `${string}://${string}` | (string & {});
 };
 
+export type DeviceChallengeData = {
+  /**
+   * Body
+   */
+  body?: {
+    [key: string]: never;
+  };
+  path?: never;
+  query?: never;
+  url: '/devices/challenge';
+};
+
+export type DeviceChallengeErrors = {
+  /**
+   * 429
+   */
+  429: {
+    code: 'rate_limited';
+    message: string;
+    retryAfterSeconds: number;
+  };
+};
+
+export type DeviceChallengeError = DeviceChallengeErrors[keyof DeviceChallengeErrors];
+
+export type DeviceChallengeResponses = {
+  /**
+   * 201
+   */
+  201: {
+    expiresIn: number;
+    nonce: string;
+  };
+};
+
+export type DeviceChallengeResponse = DeviceChallengeResponses[keyof DeviceChallengeResponses];
+
 export type DevicePairData = {
   /**
    * Body
@@ -59,6 +96,67 @@ export type DevicePairResponses = {
 };
 
 export type DevicePairResponse = DevicePairResponses[keyof DevicePairResponses];
+
+export type DeviceRefreshData = {
+  /**
+   * Body
+   */
+  body?: {
+    nonce: string;
+    refreshToken: string;
+    signature: string;
+  };
+  path?: never;
+  query?: never;
+  url: '/devices/refresh';
+};
+
+export type DeviceRefreshErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code: 'invalid_request';
+    message: string;
+  };
+  /**
+   * 401
+   */
+  401: {
+    code: 'challenge_expired' | 'invalid_grant';
+    message: string;
+  };
+  /**
+   * 403
+   */
+  403: {
+    code: 'device_revoked';
+    message: string;
+  };
+  /**
+   * 429
+   */
+  429: {
+    code: 'rate_limited';
+    message: string;
+    retryAfterSeconds: number;
+  };
+};
+
+export type DeviceRefreshError = DeviceRefreshErrors[keyof DeviceRefreshErrors];
+
+export type DeviceRefreshResponses = {
+  /**
+   * 200
+   */
+  200: {
+    accessToken: string;
+    expiresIn: number;
+    refreshToken: string;
+  };
+};
+
+export type DeviceRefreshResponse = DeviceRefreshResponses[keyof DeviceRefreshResponses];
 
 export type HealthData = {
   body?: never;
