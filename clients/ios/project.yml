@@ -50,6 +50,6 @@ targets:
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         PRODUCT_BUNDLE_IDENTIFIER: com.knoxiolabs.pops
         TARGETED_DEVICE_FAMILY: '1'
-        # Real signing and a per-configuration BFM base URL are POPS-1392; until
+        # Signing and a per-configuration BFM base URL are a later change; until
         # then the only supported destination is the simulator, which needs none.
         CODE_SIGNING_ALLOWED: NO

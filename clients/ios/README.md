@@ -1,6 +1,8 @@
 # iOS client
 
-A native SwiftUI iPhone app that reaches the federation over HTTP through the BFM pillar and is imported by nothing in this repo — the two halves of what [ADR-043](../../docs/architecture/adr-043-clients-as-a-unit-kind.md) means by a client. It is in neither the pnpm workspace nor the cargo workspace; `pnpm`, `tsc` and `cargo` have nothing to say about this directory.
+A native SwiftUI iPhone app that reaches the federation over HTTP through one pillar and is imported by nothing in this repo — the two halves of what [ADR-043](../../docs/architecture/adr-043-clients-as-a-unit-kind.md) means by a client. It is in neither the pnpm workspace nor the cargo workspace; `pnpm`, `tsc` and `cargo` have nothing to say about this directory.
+
+That pillar is the BFM, and it is not in the tree yet (POPS-1364) — nor is any code here that would call it. Read every mention of it below as the shape this app is being built into, not as something you can go and look at.
 
 The consequence worth internalising before changing anything here: this app is **distributed, not deployed**. It leaves through App Store Connect onto hardware the operator does not control, so a build already on a phone keeps calling yesterday's contract for as long as its owner declines to update. Every other consumer of a pillar contract in this repo redeploys with its producer; this one cannot.
 
@@ -37,7 +39,7 @@ The dependency direction is one-way:
 
 This is enforced rather than agreed: a package can only `import` what its own `Package.swift` declares, so a forbidden import fails to compile. What is _not_ enforced is a wrong edge being added to a `Package.swift` in the first place, which is a review concern.
 
-Each package is a shell with a placeholder type; what goes inside them is a separate ticket per module, named in the placeholder's doc comment.
+Each package is a shell whose placeholder type says what the module is for. Filling them in is one ticket per module.
 
 ## Known gaps
 

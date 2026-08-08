@@ -6,8 +6,8 @@ import FeatureTransactions
 import SwiftUI
 
 /// The app target is the only place that imports every module, and this view is
-/// the only thing asserting they all link. POPS-1391 replaces it with the real
-/// session-routing root.
+/// the only thing asserting they all link. The real session-routing root
+/// replaces it.
 struct PlaceholderView: View {
     private let linkedModules = [
         AppCore.moduleName,
