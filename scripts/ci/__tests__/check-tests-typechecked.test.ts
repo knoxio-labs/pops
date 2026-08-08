@@ -98,3 +98,45 @@ describe('discoverUnitDirs + offendingExcludes', () => {
     expect(offendingExcludes(join(root, 'pillars/no-exclude'))).toEqual([]);
   });
 });
+
+describe('offendingExcludes + extends', () => {
+  let root: string;
+
+  beforeAll(() => {
+    root = mkdtempSync(join(tmpdir(), 'tests-typechecked-guard-extends-'));
+    writeFileSync(join(root, 'tsconfig.base.json'), JSON.stringify({ compilerOptions: {} }));
+    writeFileSync(
+      join(root, 'tsconfig.hiding-base.json'),
+      JSON.stringify({ exclude: ['**/__tests__/**'] })
+    );
+
+    const write = (dir: string, config: unknown): void => {
+      mkdirSync(join(root, dir), { recursive: true });
+      writeFileSync(join(root, dir, 'tsconfig.json'), JSON.stringify(config));
+    };
+    write('pillars/no-own-exclude-clean-base', { extends: '../../tsconfig.base.json' });
+    write('pillars/no-own-exclude-hiding-base', { extends: '../../tsconfig.hiding-base.json' });
+    write('pillars/own-exclude-wins', {
+      extends: '../../tsconfig.hiding-base.json',
+      exclude: ['node_modules', 'dist'],
+    });
+  });
+
+  afterAll(() => {
+    rmSync(root, { recursive: true, force: true });
+  });
+
+  it('inherits a clean base as clean', () => {
+    expect(offendingExcludes(join(root, 'pillars/no-own-exclude-clean-base'))).toEqual([]);
+  });
+
+  it('inherits a test-hiding exclude from a base the unit does not declare its own exclude over', () => {
+    expect(offendingExcludes(join(root, 'pillars/no-own-exclude-hiding-base'))).toEqual([
+      '**/__tests__/**',
+    ]);
+  });
+
+  it("a unit's own exclude replaces the base's rather than merging with it", () => {
+    expect(offendingExcludes(join(root, 'pillars/own-exclude-wins'))).toEqual([]);
+  });
+});

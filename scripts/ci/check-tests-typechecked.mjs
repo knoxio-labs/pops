@@ -25,9 +25,20 @@
  * Exit 0 = clean. Exit 1 = at least one unit hides its tests. Exit 2 = usage.
  */
 
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+const EXTENSIONED_PATH = /\.[cm]?[tj]s$|\.json$/;
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..');
@@ -134,19 +145,86 @@ export function discoverUnitDirs(root) {
 }
 
 /**
+ * Resolve a tsconfig's effective `exclude` list, following `extends` when the
+ * config itself declares none. This mirrors tsc's real inheritance rule: a
+ * config that declares its own `exclude` (even an empty array) fully replaces
+ * whatever a base would otherwise contribute — arrays are never merged across
+ * an extends chain. Every unit here extends `tsconfig.base.json`, which today
+ * carries no `exclude` of its own; if that ever changed, a unit with no
+ * `exclude` of its own (several already have none post-POPS-1448) would
+ * silently inherit it, and a check that only reads the unit's own file would
+ * miss it.
+ *
+ * @param {string} configPath Absolute path to a tsconfig.json.
+ * @param {Set<string>} [seen] Visited config paths, guards an extends cycle.
+ * @returns {string[]}
+ */
+export function resolveEffectiveExclude(configPath, seen = new Set()) {
+  if (seen.has(configPath) || !existsSync(configPath)) return [];
+  seen.add(configPath);
+  const source = readFileSync(configPath, 'utf8');
+  /** @type {{ exclude?: unknown; extends?: unknown }} */
+  const config = JSON.parse(stripJsonComments(source));
+  if (Array.isArray(config.exclude)) return config.exclude;
+
+  let bases = /** @type {unknown[]} */ ([]);
+  if (Array.isArray(config.extends)) bases = config.extends;
+  else if (typeof config.extends === 'string') bases = [config.extends];
+
+  let resolvedExclude = /** @type {string[]} */ ([]);
+  for (const base of bases) {
+    if (typeof base !== 'string' || !base.startsWith('.')) continue;
+    const baseFile = EXTENSIONED_PATH.test(base) ? base : `${base}.json`;
+    const baseExclude = resolveEffectiveExclude(resolve(dirname(configPath), baseFile), seen);
+    if (baseExclude.length > 0) resolvedExclude = baseExclude;
+  }
+  return resolvedExclude;
+}
+
+/**
  * Read a unit's type-check project and report the exclude globs that hide its
- * tests.
+ * tests, resolving its `extends` chain when the unit declares no `exclude` of
+ * its own.
  *
  * @param {string} unitDir
  * @returns {string[]} Offending globs (empty when the unit is clean).
  */
 export function offendingExcludes(unitDir) {
-  const source = readFileSync(join(unitDir, 'tsconfig.json'), 'utf8');
-  /** @type {{ exclude?: unknown }} */
-  const config = JSON.parse(stripJsonComments(source));
-  const exclude = config.exclude;
-  if (!Array.isArray(exclude)) return [];
+  const exclude = resolveEffectiveExclude(join(unitDir, 'tsconfig.json'));
   return exclude.filter((glob) => typeof glob === 'string' && hidesTests(glob));
+}
+
+/**
+ * Prove `offendingExcludes` resolves an `extends` chain: a unit that declares
+ * no `exclude` of its own inherits one from its base, and a unit that
+ * declares its own `exclude` overrides the base's entirely (tsc never merges
+ * the two).
+ *
+ * @returns {boolean}
+ */
+function checkExtendsResolution() {
+  const root = mkdtempSync(join(tmpdir(), 'tests-typechecked-selftest-'));
+  try {
+    writeFileSync(join(root, 'base.json'), JSON.stringify({ exclude: ['**/__tests__/**'] }));
+
+    mkdirSync(join(root, 'inherits'), { recursive: true });
+    writeFileSync(
+      join(root, 'inherits', 'tsconfig.json'),
+      JSON.stringify({ extends: '../base.json', include: ['src'] })
+    );
+
+    mkdirSync(join(root, 'overrides'), { recursive: true });
+    writeFileSync(
+      join(root, 'overrides', 'tsconfig.json'),
+      JSON.stringify({ extends: '../base.json', exclude: ['node_modules', 'dist'] })
+    );
+
+    const inherited = offendingExcludes(join(root, 'inherits'));
+    const overridden = offendingExcludes(join(root, 'overrides'));
+    return inherited.length === 1 && inherited[0] === '**/__tests__/**' && overridden.length === 0;
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 }
 
 /**
@@ -174,12 +252,15 @@ function selfTest() {
   const parsed = stripJsonComments('{\n// a comment\n"a": "http://x//y", /* block */ "b": 1\n}');
   const commentsOk = JSON.parse(parsed).a === 'http://x//y' && JSON.parse(parsed).b === 1;
 
-  const ok = catchesHidden && passesAllowed && commentsOk;
+  const extendsOk = checkExtendsResolution();
+
+  const ok = catchesHidden && passesAllowed && commentsOk && extendsOk;
   if (!ok) {
     console.error('SELF-TEST FAILED — guard did not behave as expected:');
     console.error(`  caught every test-hiding glob:  ${catchesHidden}`);
     console.error(`  passed legitimate excludes:     ${passesAllowed}`);
     console.error(`  stripped JSONC comments:        ${commentsOk}`);
+    console.error(`  resolved extends correctly:     ${extendsOk}`);
   } else {
     console.log('self-test OK — guard catches test-hiding excludes, passes build-only ones.');
   }
