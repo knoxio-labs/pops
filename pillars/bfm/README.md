@@ -38,9 +38,6 @@ registry that refuses every call and asserts `/health` still answers.
   routes (POPS-1378, POPS-1379), the Dockerfile and compose service
   (POPS-1385) and the nginx route (POPS-1386) are each their own ticket. This
   pillar currently runs from `pnpm dev` only.
-- **A shared bare-origin parser.** `src/api/boot-env.ts` re-implements the rule
-  every pillar's `src/api/pillars/env.ts` carries rather than importing it;
-  lifting it into `@pops/pillar-sdk` across the fleet is POPS-1406.
 
 ## Layout
 

@@ -15,10 +15,10 @@
  * explicit deregister.
  */
 import { bootstrapPillar, type PillarBootstrapHandle } from '@pops/pillar-sdk/bootstrap';
+import { resolveSelfBaseUrl } from '@pops/pillar-sdk/pillar-env';
 
 import { createDocumentsApiApp } from './app.js';
 import { buildDocumentsManifest } from './manifest.js';
-import { parseBareOrigin } from './pillars/env.js';
 
 const DEFAULT_PORT = 3012;
 
@@ -35,21 +35,11 @@ function resolvePort(): number {
 const port = resolvePort();
 const version = process.env['BUILD_VERSION'] ?? 'dev';
 
-// Normalise DOCUMENTS_SELF_BASE_URL (or the localhost fallback) through the
-// shared bare-origin parser so a misconfigured env crashes boot loudly
-// instead of publishing an invalid PillarRegistryEntry.baseUrl.
-function resolveSelfBaseUrl(): string {
-  const raw = process.env['DOCUMENTS_SELF_BASE_URL'] ?? `http://localhost:${port}`;
-  try {
-    return parseBareOrigin('DOCUMENTS_SELF_BASE_URL', raw);
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    throw new Error(`[documents-api] DOCUMENTS_SELF_BASE_URL ${raw} is invalid — ${message}`, {
-      cause: err,
-    });
-  }
-}
-const selfBaseUrl = resolveSelfBaseUrl();
+const selfBaseUrl = resolveSelfBaseUrl({
+  envVar: 'DOCUMENTS_SELF_BASE_URL',
+  port,
+  processLabel: 'documents-api',
+});
 
 const app = createDocumentsApiApp({ version, selfBaseUrl });
 
