@@ -71,8 +71,9 @@ not `404`.
 
 That directory's README carries the whole of the reasoning: why a rejected
 token is a `401` and a revoked device a `403`, why a missing device row is a
-`401` rather than either, what is never logged, and what is deliberately absent
-(refresh — POPS-1375, `lastSeenAt` — POPS-1469).
+`401` rather than either, what is never logged, why `lastSeenAt` is written
+here on a coalesced schedule rather than on every request, and what is
+deliberately absent (refresh — POPS-1375).
 
 ### `POST /devices/pair` — the way in
 
@@ -175,8 +176,11 @@ four values the cross-pillar gateway speaks. The probe's two-source design, why
 it reads `/openapi` rather than `/health`, and why a registry outage still
 answers `200` are in [`src/api/mobile/README.md`](src/api/mobile/README.md).
 
-It is also the one route that writes: `devices.lastSeenAt` advances here and
-nowhere else (POPS-1469).
+It also writes: bootstrap's own uncoalesced write to `devices.lastSeenAt`
+happens before the registry is even read, because a check-in is true
+regardless of how the rest of the call goes. Every other `/mobile/*` route
+moves the same column through the guard instead, coalesced — see
+[`src/api/auth/README.md`](src/api/auth/README.md).
 
 ## The mobile shape
 
