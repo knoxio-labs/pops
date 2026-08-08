@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# cargo-sandbox — the Rust analogue of the TS EX-2 sandbox extraction
-# (docs/plans/repo-federation/04-isolation-enforcement.md §8, RUST-3).
+# cargo-sandbox — the Rust analogue of the TS sandbox extraction, so the Rust
+# members face the same extract-to-own-repo litmus as the TS units (ADR-039).
 #
 # Proves a workspace member crate builds ALONE, with no workspace path
 # resolution: it is copied out, every `{ workspace = true }` dep and every

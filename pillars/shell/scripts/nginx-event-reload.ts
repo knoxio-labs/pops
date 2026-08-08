@@ -1,9 +1,9 @@
 /**
- * Event-driven nginx regen + reload
- * (docs/themes/federation/prds/dynamic-pillar-registration).
+ * Event-driven nginx regen + reload, so a pillar that registers at runtime
+ * (ADR-027) gets routed without a fresh shell image.
  *
  * Subscribes to the registry SSE event bus
- * (docs/themes/federation/prds/subscription-model) and, on each
+ * (`pillars/registry/src/api/modules/registry/subscribe.ts`) and, on each
  * `pillar.registered` / `pillar.deregistered` / `pillar.health-changed`
  * frame, regenerates the dynamic dispatcher conf and signals nginx to
  * reload. A trailing 250ms debounce coalesces bursts (multi-pillar

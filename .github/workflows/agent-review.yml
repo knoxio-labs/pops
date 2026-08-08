@@ -1,12 +1,19 @@
 name: Agent Review
 
-# Federation review gate. Two deterministic isolation guards (load-bearing,
-# blocking) plus an advisory LLM reviewer (degrades to a no-op without
-# ANTHROPIC_API_KEY). See docs/plans/repo-federation/05-cicd-deployment.md §A.3.
+# Federation review gate: a row of deterministic structural guards
+# (load-bearing, blocking) plus an advisory LLM reviewer (degrades to a no-op
+# without ANTHROPIC_API_KEY). The two halves share a job but not authority —
+# the guards decide whether a change may merge, the reviewer only comments, so
+# an unreachable model can never gate a PR.
+#
+# The guards live here rather than in `quality.yml` because each is a
+# zero-dependency Node script reading the source tree: no `pnpm install`, so
+# the whole gate answers in seconds. Every guard runs its own `--self-test`
+# first, so one that has quietly stopped catching anything fails the job
+# instead of passing.
 #
 # Runs on every non-draft PR so the `agent-review` required check always
 # reports a result (a never-triggered required check would block forever).
-# The guards are zero-dependency Node scripts — no pnpm install needed.
 
 on:
   pull_request:
@@ -49,7 +56,7 @@ jobs:
         run: node scripts/ci/check-node-pin.mjs
       - name: Homelab-service isolation guard (ADR-039 Inv 4 — HA/MQTT/Zigbee2MQTT/Matter never a pops service)
         run: node scripts/ci/check-homelab-service-isolation.mjs
-      - name: Docs-model guard (ADR-041 — every unit has a README; no PRD/theme/ideas tree returns)
+      - name: Docs-model guard (ADR-041 — unit READMEs; no PRD/theme/ideas tree returns; every doc path a doc or comment names resolves)
         run: node scripts/ci/check-docs-model.mjs
       - name: LLM review (advisory — federation invariants rubric)
         env:

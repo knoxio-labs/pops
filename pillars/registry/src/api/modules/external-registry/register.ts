@@ -12,7 +12,8 @@ import { validateManifestPayload } from '@pops/pillar-sdk';
  * registry paths from external traffic, then carves a sibling allow-list
  * covering both the `^/core\.registry\.(register|heartbeat|deregister)$`
  * and `^/registry/(register|heartbeat|deregister)$` forms for this plain
- * HTTP-JSON surface (see docs/themes/federation/prds/nginx-config-generator).
+ * HTTP-JSON surface. Both blocks are rendered by
+ * `pillars/shell/scripts/generate-nginx-conf.ts`.
  *
  * Trust model (ADR-027): the docker network is the boundary. Anything
  * able to POST here is already inside the compose network — the

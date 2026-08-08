@@ -1,7 +1,6 @@
 /**
  * Cerebrum's federated settings table — the flat key/value store the shared
- * `@pops/pillar-settings` Read/Update/Reset surface operates over
- * (see `docs/ideas/settings-federation.md`).
+ * `@pops/pillar-settings` Read/Update/Reset surface operates over (ADR-037).
  *
  * Re-exports the shared `settingsTable` factory so the cerebrum pillar owns its
  * own `settings` table in its own database, identical in shape to every other
