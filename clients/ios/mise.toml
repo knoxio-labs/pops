@@ -119,7 +119,14 @@ description = "swift-format over the Swift sources — `lint` to check, `format`
 hide = true
 usage = 'arg "<mode>"'
 run = '''
-set -u
+# mise already runs task scripts under `sh -e`, but NOT under pipefail, and
+# every check below reads the head of a pipe. Without this, a failing
+# `swift-format dump-configuration` leaves jq succeeding on empty input, both
+# rule lists come out empty, and the drift check "passes" having compared
+# nothing against nothing. Verified: mise reports `$-` as `ehBc`.
+set -eu
+set -o pipefail
+
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 
@@ -161,6 +168,14 @@ fi
 # reason next to it.
 xcrun swift-format dump-configuration | jq -r '.rules | keys[]' > "$work/shipped"
 xcrun swift-format dump-configuration --effective | jq -r '.rules | keys[]' > "$work/listed"
+# Belt to pipefail's braces: two empty lists compare equal, so an empty one has
+# to be a failure in its own right rather than something the diff waves through.
+if [ ! -s "$work/shipped" ] || [ ! -s "$work/listed" ]; then
+  echo "swift-format: could not read the rule list from the toolchain or from" >&2
+  echo "              .swift-format, so the drift check would have compared" >&2
+  echo "              nothing against nothing." >&2
+  exit 1
+fi
 if ! diff -u "$work/shipped" "$work/listed" > "$work/drift"; then
   echo "swift-format: .swift-format does not list every rule this toolchain ships." >&2
   echo "      '-' shipped but unlisted (silently off); '+' listed but withdrawn." >&2
@@ -195,3 +210,4 @@ exit $status
 [tasks.format]
 description = "Rewrite the Swift sources with swift-format (the fixer for half of `lint`)"
 run = "mise run swift-format format"
+

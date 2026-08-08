@@ -1,11 +1,19 @@
-// swift-format — layout only. SwiftLint (.swiftlint.yml) is the linter.
+// swift-format — the mechanical half. SwiftLint (.swiftlint.yml) is the linter.
 //
-// The split is deliberate and load-bearing: this tool decides what the code
-// LOOKS like and rewrites it in place; SwiftLint decides what the code may DO
-// and never rewrites anything. Where both ship an opinion on the same defect,
-// it is turned off here and left on there, so a defect is reported once, by
-// the tool that owns it. They also run as two separate commands with two exit
-// codes, so reformatting can never drown out a lint regression.
+// The split is deliberate and load-bearing, and it is not quite "layout here,
+// everything else there". The line is whether a defect has ONE mechanical
+// answer: if it does, it belongs to this tool, which rewrites it and moves on.
+// That is mostly layout, but it also covers rewrites like `Optional<Int>` to
+// `Int?` and a redundant initialiser to none — and a handful of checks only a
+// syntax tree can see, `AmbiguousTrailingClosureOverload` among them, which
+// swift-format reports and cannot fix. SwiftLint takes everything whose answer
+// is a judgement: what is too big, too complex, or too dangerous. It rewrites
+// nothing, ever.
+//
+// Where both ship an opinion on the same defect, it is turned off here and left
+// on there, so a defect is reported once, by the tool that owns it. They also
+// run as two separate commands with two exit codes, so reformatting can never
+// drown out a lint regression.
 //
 // `rules` REPLACES the defaults — it does not merge into them. Naming three
 // rules here silently disables the other forty, including semicolon removal
