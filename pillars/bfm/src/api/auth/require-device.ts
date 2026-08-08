@@ -19,8 +19,16 @@
  * Collapsing those into one status makes the app's recovery logic guesswork,
  * which is why `clients/ios`'s `SessionReducer` already switches on exactly
  * this split.
+ *
+ * A third thing happens once those two questions both come back clean: the
+ * device's `lastSeenAt` moves forward, coalesced to {@link
+ * LAST_SEEN_COALESCE_WINDOW_MS} so a phone making several calls in quick
+ * succession costs at most one write. This is the only place that check-in is
+ * recorded for routes other than `/mobile/bootstrap`, which writes its own
+ * uncoalesced instant because its response promises the exact value it wrote
+ * — see `api/mobile/bootstrap.ts`.
  */
-import { findDeviceById } from '../../db/index.js';
+import { findDeviceById, touchDeviceIfStale } from '../../db/index.js';
 import { AccessTokenError, verifyAccessToken } from './access-token.js';
 
 import type { KeyObject } from 'node:crypto';
@@ -86,6 +94,16 @@ const INVALID_TOKEN: MobileRefusal = {
 };
 
 /**
+ * How stale `lastSeenAt` must be before a request bothers to move it.
+ *
+ * A minute is frequent enough that the operator's Devices page reads as live
+ * while a phone is actually in use, and coarse enough that a screen's worth of
+ * pagination calls costs the database one write rather than one per call. The
+ * mechanism this number feeds is {@link touchDeviceIfStale}.
+ */
+export const LAST_SEEN_COALESCE_WINDOW_MS = 60_000;
+
+/**
  * Build the guard bound to a database handle and the signing key.
  *
  * Mount it as a path prefix — `app.use('/mobile', requireDevice)` — rather
@@ -147,7 +165,12 @@ export function createRequireDevice(deps: RequireDeviceDeps): RequestHandler {
       return;
     }
 
-    (res.locals as DeviceLocals).device = device;
+    (res.locals as DeviceLocals).device = touchDeviceIfStale(
+      deps.db,
+      device,
+      new Date(),
+      LAST_SEEN_COALESCE_WINDOW_MS
+    );
     next();
   };
 }

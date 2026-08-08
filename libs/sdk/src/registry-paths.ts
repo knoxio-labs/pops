@@ -31,3 +31,16 @@ export const LEGACY_REGISTRY_PATHS = {
 
 /** A registry operation key shared by the canonical and legacy path maps. */
 export type RegistryPathKey = keyof typeof REGISTRY_PATHS;
+
+/**
+ * Service-account self-introspection: the presenting `X-API-Key` is
+ * authenticated against the registry's own table and its principal returned.
+ *
+ * Deliberately outside {@link REGISTRY_PATHS}, which pairs every entry with a
+ * dotted legacy alias — this route never had a tRPC-era name and needs no
+ * fallback leg. It is how a producer other than the registry learns whether a
+ * presented key is live and what it is granted; the caller must hold the key to
+ * learn anything, so the route is no more of an oracle than the registry
+ * already is.
+ */
+export const REGISTRY_SERVICE_ACCOUNT_SELF_PATH = '/service-accounts/self';

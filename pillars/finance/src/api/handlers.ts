@@ -7,6 +7,7 @@
 import { getLastImportInfo } from '../db/services/transactions-reads.js';
 import { getPillarRegistry } from './pillars/registry.js';
 
+import type { ServiceAccountVerifier } from '@pops/pillar-sdk/server';
 import type { PillarRegistryEntry } from '@pops/types';
 
 import type { OpenedFinanceDb } from '../db/index.js';
@@ -37,6 +38,12 @@ export interface FinanceApiDeps {
    * Defaults to a `pillar('contacts')`-backed impl; tests inject a fake.
    */
   contacts: ContactsClient;
+  /**
+   * Resolves a presented `X-API-Key` to its service account. Defaults to a
+   * registry-backed verifier; tests inject a fake so no test needs a live
+   * registry.
+   */
+  serviceAccountVerifier?: ServiceAccountVerifier;
 }
 
 export interface HealthResponse {
