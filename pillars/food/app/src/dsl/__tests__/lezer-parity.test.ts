@@ -22,9 +22,15 @@ import { parseRecipeDsl } from '@pops/food/dsl';
 import { parser as lezerParser } from '../dsl-parser';
 import { ALL_SAMPLES } from './samples';
 
-import type { SyntaxNode, Tree } from '@lezer/common';
-
 import type { RecipeAst } from '@pops/food/dsl';
+
+/**
+ * `@lezer/common` is a transitive dep of `@lezer/lr`, not a direct one, so
+ * its module specifier is not resolvable from here. Both types are reachable
+ * off the parser's own return type.
+ */
+type Tree = ReturnType<typeof lezerParser.parse>;
+type SyntaxNode = Tree['topNode'];
 
 interface CallSignature {
   name: string;

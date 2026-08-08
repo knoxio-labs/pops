@@ -15,7 +15,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { openCerebrumDb, type OpenedCerebrumDb } from '../../db/index.js';
 import { createCerebrumApiApp } from '../app.js';
-import { makeClient, makeEmptyPeerClients, makeTemplateRegistry } from './test-utils.js';
+import { makeCerebrumApiDeps, makeClient } from './test-utils.js';
 
 let tmpDir: string;
 let engramRoot: string;
@@ -34,16 +34,7 @@ afterEach(() => {
 });
 
 function client() {
-  return makeClient(
-    createCerebrumApiApp({
-      cerebrumDb,
-      templateRegistry: makeTemplateRegistry(),
-      engramRoot,
-      version: '0.0.1-test',
-      selfBaseUrl: 'http://localhost:3007',
-      peerClients: makeEmptyPeerClients(),
-    })
-  );
+  return makeClient(createCerebrumApiApp(makeCerebrumApiDeps({ cerebrumDb, tmpDir, engramRoot })));
 }
 
 describe('POST /engrams (create)', () => {

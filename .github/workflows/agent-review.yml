@@ -44,6 +44,7 @@ jobs:
           node scripts/ci/check-node-pin.mjs --self-test
           node scripts/ci/check-homelab-service-isolation.mjs --self-test
           node scripts/ci/check-docs-model.mjs --self-test
+          node scripts/ci/check-tests-typechecked.mjs --self-test
       - name: Isolation litmus — no cross-contract reach-behind
         run: node scripts/ci/check-contract-isolation.mjs --base "origin/${{ github.base_ref }}"
       - name: Lib-never-imports-pillar guard
@@ -58,6 +59,8 @@ jobs:
         run: node scripts/ci/check-homelab-service-isolation.mjs
       - name: Docs-model guard (ADR-041 — unit READMEs; no PRD/theme/ideas tree returns; every doc path a doc or comment names resolves)
         run: node scripts/ci/check-docs-model.mjs
+      - name: Test-typecheck guard (a unit's tsconfig.json may not hide its own tests from tsc)
+        run: node scripts/ci/check-tests-typechecked.mjs
       - name: LLM review (advisory — federation invariants rubric)
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}

@@ -29,13 +29,34 @@ The rule is worth holding to because the lanes do not cost the same. `mise run t
 ## What is here
 
 - **`AppBundleTests`** — everything between a build setting in `project.yml` and the value the running app reads back. The per-configuration BFM base URL, whether the key survived into the built `Info.plist` at all, and the camera purpose string whose absence is a crash rather than a build failure. [`Packages/BFMClient`](../Packages/BFMClient) can only test the pure resolver underneath.
-- **`DataProtectionKeychainTests`** — that the data-protection keychain is reachable from this target. It asserts the _environment_, not `KeychainTokenStore`: the point is that this is a place the gated suites in [`Packages/Auth`](../Packages/Auth) can be moved to and pass (POPS-1439), and that is a claim worth having a test behind rather than a commit message.
+- **`DataProtectionKeychainTests`** — that the data-protection keychain is reachable from this target. It asserts the _environment_, not `KeychainTokenStore`, and it is what keeps a red `KeychainTokenStoreTests` pointing at the code rather than at the harness.
+- **`KeychainTokenStoreTests`** — `KeychainTokenStore` against a real Keychain: the accessibility class the item is actually written with, whether anything it writes is synchronizable, the `SecItemUpdate`-then-`SecItemAdd` branch in `save(_:)`, and whether `wipe()` removes what its documentation says it removes. Attributes are read back out of the Keychain rather than off the source, because a downgrade there has no symptom — an item written `AfterFirstUnlock`, or written synchronizable, stores and loads exactly as well as a correct one and is only wrong on a locked phone and on somebody else's hardware.
+- **`SecureEnclaveKeyStoreTests`** — `SecureEnclaveKeyStore` against a real Secure Enclave. See below, because this one used to be impossible.
+
+## The Secure Enclave suite, and why it is no longer gated
+
+It was gated behind `POPS_IOS_HARDWARE_TESTS=1` on a premise that has stopped being true: that a simulator has no Secure Enclave, so `SecKeyCreateRandomKey` with `kSecAttrTokenIDSecureEnclave` fails there and the suite could only ever run on a phone.
+
+**Measured on an Apple Silicon host, it does not fail.** The simulator reaches the host Mac's Enclave. The key it returns reports `kSecAttrTokenIDSecureEnclave` as its token, and its private half refuses to export. So the gate came off and the suite runs on every CI run.
+
+Two of its tests exist only to keep that from being a comfortable lie, because a software key generated after a silently-ignored Enclave request creates, signs, verifies, persists and deletes exactly like a real one — every other test in the suite passes against a fake:
+
+- `privateKeyIsNonExtractable` — `SecKeyCopyExternalRepresentation` on the stored private key must fail.
+- `softwareKeysAreExtractable` — the control. The same call on an ordinary P-256 key must succeed, or the refusal above is a property of the API rather than of the Enclave, and the test above is vacuous.
+
+If a future toolchain, runner image or architecture withdraws simulator Enclave support, this suite goes **red**, loudly, rather than quietly skipping. That is the intended behaviour and the reason it is not gated: a skipped suite inside a passing run is indistinguishable from one that ran. Re-gating it would be a decision to stop testing the app's central security property, and should look like one.
+
+What the suite proves is that the Security-framework calls in `SecureEnclaveKeyStore.swift` are correct — the access-control flags, the query shapes, the whole lifecycle. What it cannot prove is anything about one particular phone's hardware; no test can. `mise run test:device` runs the same suite on an attached iPhone, and CI never runs it because no runner has a phone.
+
+It lives in this target rather than in `Packages/Auth` for the same reason `KeychainTokenStoreTests` does: the key is created `kSecAttrIsPermanent` in the data-protection keychain, so an unhosted package test bundle would fail on the keychain before reaching the Enclave, with a failure nobody could attribute.
 
 ## Running it
 
 ```bash
-mise run test:app   # this lane alone
-mise run test       # both simulator lanes, which is what CI invokes
+mise run test:app     # this lane alone, on the simulator
+mise run test         # both simulator lanes, which is what CI invokes
+
+POPS_IOS_DEVICE='<your iPhone>' mise run test:device   # this lane on real hardware
 ```
 
 `test:app` regenerates the project, asserts the target is still hosted and still compiles under the app's own Swift 6 and warnings-as-errors settings (`mise run verify:app-test-target`), runs the scheme's test action on `POPS_IOS_SIMULATOR`, and **fails if the number of tests it executed is zero**.

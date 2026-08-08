@@ -140,6 +140,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      # `run-all-clients-discovery.test.ts` shells out to the real `mise`
+      # binary against a disposable fixture tree, and
+      # `check-mise-tool-overrides.test.ts` runs `mise current -C <dir>
+      # <tool>` against this repo's own units expecting the real root pin
+      # back — so the tools stay installed rather than disabled the way
+      # ios-quality.yml disables them for its Xcode-only job. This job
+      # ends up installing the same node/pnpm actions/setup-node and
+      # pnpm/action-setup would have set up anyway; the two don't fight
+      # over PATH because both resolve to the same pinned major.
+      - uses: jdx/mise-action@v4
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
@@ -386,6 +396,16 @@ jobs:
     # `contacts` leg additionally vendors its OpenAPI snapshot (ADR-033); that
     # copy's own drift is covered separately by the `vendored-contracts` job
     # above — this job only re-runs codegen against whatever is committed.
+    #
+    # Both legs are ALSO re-checked, more generally, by app-quality.yml's own
+    # per-app `Codegen drift` step (`@pops/app-food` and `@pops/app-finance`
+    # each own a matrix row that regenerates every one of their generate:*
+    # scripts, cross-pillar ones included). That duplication is deliberate,
+    # not drift to clean up: this job stays the ADR-040-scoped, explicit
+    # source of truth for "which legs are sanctioned cross-pillar consumers"
+    # — the list every doc above points at — while app-quality's gate is the
+    # general one that would still catch a regression here even if this job
+    # were ever deleted.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -407,6 +427,31 @@ jobs:
             echo "Run the owning app's generate:*-client script locally and commit the result."
             exit 1
           fi
+
+  generated-clients:
+    name: Generated Hey API clients outside the app matrix
+    # app-quality.yml's per-app matrix gates every `pillars/<id>/app` unit's
+    # generated Hey API client(s). Two more exist outside that matrix — the
+    # shell's registry client and overlay-ego's ego client — and had no drift
+    # gate at all until now. Rather than hardcode those two names, this calls
+    # the same `scripts/ci/check-generated-clients.mjs` app-quality.yml uses,
+    # with `--exclude-app-matrix`: it discovers every generate:* Hey API
+    # script in the workspace and runs whichever ones are NOT already covered
+    # by an app-quality.yml matrix row, so a future non-app unit that adds a
+    # generate:* script is picked up with no edit here.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Gate self-test (proves it catches drift, a generator error, and missing output)
+        run: node scripts/ci/check-generated-clients.mjs --self-test
+      - name: Regenerate and verify every non-app-matrix generated client
+        run: node scripts/ci/check-generated-clients.mjs --exclude-app-matrix
 
   escape-hatches:
     name: Escape-hatch ratchet

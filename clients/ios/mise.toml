@@ -73,8 +73,7 @@ description = "Run every package's tests on the host toolchain, without Xcode"
 run = '''
 for package in Packages/*/; do
   # `swift test` fails outright on a package with no test target, so a package
-  # whose tests are still a later ticket must not fail the run. Hardware-backed
-  # suites skip themselves — see Packages/Auth/README.md.
+  # whose tests are still a later ticket must not fail the run.
   if [ -d "$package/Tests" ]; then
     swift test --package-path "$package" || exit 1
   fi
@@ -213,6 +212,13 @@ exit $status
 
 # Reached through `test` rather than run on its own in CI, but nameable so a
 # developer changing the app target can run this lane alone.
+#
+# `--forbid-skips` here, not just on `test:device` below: this is the lane CI
+# runs on every push, and app-test-lane.sh's own reasoning for the flag —
+# "nobody re-reads a green check" — describes an automatic, unattended run far
+# more than it describes a manual one. Without it, the Secure Enclave and
+# Keychain suites this target exists for could start skipping on the runner
+# and CI would stay green.
 [tasks."test:app"]
 description = "Run the app's test target on the iOS Simulator, and assert it ran something"
 depends = ["generate"]
@@ -222,60 +228,42 @@ set -o pipefail
 
 mise run verify:app-test-target
 
-work=$(mktemp -d)
-trap 'rm -rf "$work"' EXIT
-result="$work/test.xcresult"
+scripts/app-test-lane.sh "platform=iOS Simulator,name=$POPS_IOS_SIMULATOR,OS=latest" \
+  --forbid-skips
+'''
 
-status=0
-xcodebuild test -project Pops.xcodeproj -scheme Pops \
-  -destination "platform=iOS Simulator,name=$POPS_IOS_SIMULATOR,OS=latest" \
-  -resultBundlePath "$result" > "$work/test.log" 2>&1 || status=1
+# The same target on real hardware. Not reachable from `test` and never run in
+# CI — no runner has a phone attached.
+#
+# It is no longer the only place `SecureEnclaveKeyStore` can be exercised: an
+# Apple Silicon simulator reaches the host Mac's Enclave, so `test:app` covers
+# that code on every run and this lane covers the one thing it cannot, which is
+# a particular phone. Worth keeping for exactly that, and for the pairing QA on
+# a device.
+#
+# `--forbid-skips` here too, for the same reason as `test:app`: nothing in the
+# app target skips today, and a lane that starts skipping should have to argue
+# for it here rather than pass unnoticed — a device run being rare and manual
+# is, if anything, more reason a skip would go unremarked, not less.
+[tasks."test:device"]
+description = "Run the app's test target on a physical iPhone"
+depends = ["generate"]
+run = '''
+set -eu
+set -o pipefail
 
-# A run that died before producing a bundle has no count to report, and the
-# reason is in the log rather than in anything below.
-if [ ! -e "$result" ]; then
-  tail -60 "$work/test.log" >&2
-  echo "test:app: xcodebuild produced no result bundle." >&2
+if [ -z "${POPS_IOS_DEVICE:-}" ]; then
+  echo "test:device: set POPS_IOS_DEVICE to the attached iPhone's name." >&2
+  echo "             'xcrun xctrace list devices' lists what is attached. Unlike" >&2
+  echo "             POPS_IOS_SIMULATOR this is not pinned in this file: it names" >&2
+  echo "             one person's phone, which is not a property of the repo." >&2
   exit 1
 fi
 
-summary=$(xcrun xcresulttool get test-results summary --path "$result") || {
-  tail -60 "$work/test.log" >&2
-  echo "test:app: could not read a summary out of the result bundle." >&2
-  exit 1
-}
+mise run verify:app-test-target
 
-if [ "$status" -ne 0 ]; then
-  tail -60 "$work/test.log" >&2
-  # `// []` because a build failure produces a bundle with no failed *tests* in
-  # it. Without it jq aborts on `null[]`, and under `set -e` that replaces the
-  # failure this branch exists to report with a jq error about reporting it.
-  printf '%s' "$summary" \
-    | jq -r '(.testFailures // [])[] | "FAILED  \(.testName): \(.failureText // "no message")"' >&2
-  exit 1
-fi
-
-# Absence is a failure, not a pass — a summary with no counts in it would make
-# the guard below compare nothing against zero and wave the run through.
-total=$(printf '%s' "$summary" | jq -r '.totalTestCount // empty')
-skipped=$(printf '%s' "$summary" | jq -r '.skippedTests // empty')
-if [ -z "$total" ] || [ -z "$skipped" ]; then
-  echo "test:app: the result bundle reports no test counts, so nothing here is checking anything." >&2
-  exit 1
-fi
-
-# The defect this whole target was created for. A lane that runs nothing and
-# reports success is worse than no lane: it is a green signal for an empty set,
-# and nobody re-reads a green check. Skipped tests count towards the total the
-# bundle reports, so subtracting them is what makes this a claim about what
-# actually executed rather than about what was collected.
-if [ "$((total - skipped))" -le 0 ]; then
-  echo "test:app: the test action executed 0 tests ($total collected, $skipped skipped)." >&2
-  echo "          Check that project.yml still lists PopsTests under the Pops scheme." >&2
-  exit 1
-fi
-
-echo "test:app: executed $((total - skipped)) tests ($skipped skipped)."
+scripts/app-test-lane.sh "platform=iOS,name=$POPS_IOS_DEVICE" \
+  --forbid-skips --allow-provisioning-updates
 '''
 
 [tasks."verify:release-carries-no-host"]

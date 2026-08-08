@@ -371,14 +371,16 @@ describe('startCrossPillarReconciliationWorker', () => {
       proxies: { finance, registry },
     });
 
+    const financeCalls = vi.mocked(finance.callDynamic);
+
     await vi.advanceTimersByTimeAsync(0);
-    const afterImmediate = finance.callDynamic.mock.calls.length;
+    const afterImmediate = financeCalls.mock.calls.length;
     expect(afterImmediate).toBeGreaterThanOrEqual(1);
 
     await vi.advanceTimersByTimeAsync(60_000);
-    expect(finance.callDynamic.mock.calls.length).toBeGreaterThan(afterImmediate);
+    expect(financeCalls.mock.calls.length).toBeGreaterThan(afterImmediate);
 
-    const beforeStop = finance.callDynamic.mock.calls.length;
+    const beforeStop = financeCalls.mock.calls.length;
     handle.stop();
     await vi.advanceTimersByTimeAsync(120_000);
     expect(finance.callDynamic).toHaveBeenCalledTimes(beforeStop);

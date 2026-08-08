@@ -9,11 +9,12 @@
  */
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { FINANCE_UNAVAILABLE, financeReturning } from '../../api/finance/__tests__/fixtures.js';
 import { openTempDb, seedAmazonSource } from '../../db/__tests__/helpers.js';
 import { confirmLink, createPurchase, listConfirmedLinks } from '../../db/index.js';
 import { runSweep } from '../sweep.js';
 
-import type { CandidateFetch, FinanceClient } from '../../api/finance/client.js';
+import type { FinanceClient } from '../../api/finance/client.js';
 import type { OpenedPurchasesDb } from '../../db/index.js';
 import type { PurchasesDb } from '../../db/index.js';
 
@@ -32,26 +33,6 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
 });
-
-function financeReturning(...transactions: { uri: string; amountCents: number; date: string }[]) {
-  return {
-    fetchCandidates: () =>
-      Promise.resolve<CandidateFetch>({
-        kind: 'ok',
-        transactions: transactions.map((t) => ({
-          uri: t.uri,
-          description: 'AMAZON MKTPLACE AU',
-          amountCents: t.amountCents,
-          date: t.date,
-        })),
-      }),
-  } satisfies FinanceClient;
-}
-
-const UNAVAILABLE: FinanceClient = {
-  fetchCandidates: () =>
-    Promise.resolve<CandidateFetch>({ kind: 'unavailable', reason: 'unavailable' }),
-};
 
 function anAmazonOrder(totalCents: number, checksum: string) {
   return createPurchase(db, {
@@ -106,7 +87,7 @@ describe('derived charges', () => {
     const result = await runSweep(
       deps(
         financeReturning({
-          uri: 'pops://finance/transaction/t1',
+          id: 't1',
           amountCents: 4128,
           date: '2026-03-06',
         })
@@ -128,7 +109,7 @@ describe('an unreachable finance', () => {
     await runSweep(
       deps(
         financeReturning({
-          uri: 'pops://finance/transaction/t1',
+          id: 't1',
           amountCents: 4128,
           date: '2026-03-06',
         })
@@ -137,7 +118,7 @@ describe('an unreachable finance', () => {
 
     expect(linkRows()).toHaveLength(1);
 
-    const skipped = await runSweep(deps(UNAVAILABLE));
+    const skipped = await runSweep(deps(FINANCE_UNAVAILABLE));
     expect(skipped.kind).toBe('skipped');
 
     // The row itself must survive, not merely a counter reading zero.
@@ -153,7 +134,7 @@ describe('an unreachable finance', () => {
     // did nothing.
     anAmazonOrder(4128, 'a');
 
-    const result = await runSweep(deps(UNAVAILABLE));
+    const result = await runSweep(deps(FINANCE_UNAVAILABLE));
     expect(result.kind).toBe('skipped');
 
     const charges = opened.raw.prepare('SELECT COUNT(*) as n FROM purchase_charges').get() as {
@@ -164,7 +145,7 @@ describe('an unreachable finance', () => {
 
   it('reports why it skipped', async () => {
     anAmazonOrder(4128, 'a');
-    const result = await runSweep(deps(UNAVAILABLE));
+    const result = await runSweep(deps(FINANCE_UNAVAILABLE));
     expect(result.kind).toBe('skipped');
     if (result.kind !== 'skipped') return;
     expect(result.reason).toBe('unavailable');
@@ -175,7 +156,7 @@ describe('idempotency', () => {
   it('reaches the same state when run twice over unchanged data', async () => {
     anAmazonOrder(4128, 'a');
     const finance = financeReturning({
-      uri: 'pops://finance/transaction/t1',
+      id: 't1',
       amountCents: 4128,
       date: '2026-03-06',
     });
@@ -239,7 +220,7 @@ describe('confirmed links are never torn down', () => {
   it('survives a sweep that would otherwise re-derive them', async () => {
     anAmazonOrder(4128, 'a');
     const finance = financeReturning({
-      uri: 'pops://finance/transaction/t1',
+      id: 't1',
       amountCents: 4128,
       date: '2026-03-06',
     });

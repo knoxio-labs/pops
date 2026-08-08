@@ -3,6 +3,13 @@ import { describe, expect, it, vi } from 'vitest';
 import { createSnapshotResolverLeg, fetchRegistrySnapshot } from '../fetcher.js';
 import { jsonResponse, pillar, wirePayload } from './fixtures.js';
 
+import type { Mock } from 'vitest';
+
+function requestUrl(input: Parameters<typeof fetch>[0]): string {
+  if (typeof input === 'string') return input;
+  return input instanceof URL ? input.href : input.url;
+}
+
 describe('fetchRegistrySnapshot', () => {
   it('parses a healthy tRPC envelope into PillarSnapshots', async () => {
     const fin = pillar('finance', 'http://finance-api:3004');
@@ -179,12 +186,12 @@ describe('fetchRegistrySnapshot', () => {
 
   describe('slash-first path resolution with legacy fallback', () => {
     function routedFetch(routes: Record<string, () => Response>): {
-      fetchImpl: ReturnType<typeof vi.fn>;
+      fetchImpl: Mock<typeof fetch>;
       paths: string[];
     } {
       const paths: string[] = [];
-      const fetchImpl = vi.fn((url: string) => {
-        const path = new URL(url).pathname;
+      const fetchImpl = vi.fn<typeof fetch>((input) => {
+        const path = new URL(requestUrl(input)).pathname;
         paths.push(path);
         const make = routes[path];
         if (!make) throw new Error(`unrouted path ${path}`);
@@ -225,8 +232,8 @@ describe('fetchRegistrySnapshot', () => {
       const fin = pillar('finance', 'http://finance-api:3004');
       let live = new Set(['/registry/pillars', '/core.registry.list']);
       const paths: string[] = [];
-      const fetchImpl = vi.fn((url: string) => {
-        const path = new URL(url).pathname;
+      const fetchImpl = vi.fn<typeof fetch>((input) => {
+        const path = new URL(requestUrl(input)).pathname;
         paths.push(path);
         return Promise.resolve(
           live.has(path) ? jsonResponse(wirePayload(fin)) : new Response('', { status: 404 })

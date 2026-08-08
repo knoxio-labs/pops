@@ -53,8 +53,10 @@ vi.mock('../../../../food-api/index.js', () => ({
 
 import { InspectorPage } from '../InspectorPage.js';
 
-function buildReview(overrides?: Partial<InspectorResult>): InspectorResult {
-  const base: InspectorResult = {
+type InspectorOk = Extract<InspectorResult, { ok: true }>;
+
+function buildReview(overrides?: Partial<InspectorOk>): InspectorOk {
+  const base: InspectorOk = {
     ok: true,
     review: {
       source: {
@@ -92,7 +94,7 @@ function buildReview(overrides?: Partial<InspectorResult>): InspectorResult {
       },
     },
   };
-  return { ...base, ...overrides } as InspectorResult;
+  return { ...base, ...overrides };
 }
 
 function LocationProbe(): ReactElement {
@@ -176,15 +178,14 @@ describe('InspectorPage', () => {
     mockReview({
       ok: true,
       review: {
-        ...buildReview().review!,
+        ...buildReview().review,
         draft: null,
         source: {
-          ...buildReview().review!.source,
+          ...buildReview().review.source,
           state: 'processing',
-          draftRecipeId: null as never,
         },
       },
-    } as InspectorResult);
+    });
     render(<Wrapper />);
     expect(await screen.findByTestId('inspector-no-draft')).toBeInTheDocument();
   });
@@ -210,13 +211,13 @@ describe('InspectorPage', () => {
     mockReview({
       ok: true,
       review: {
-        ...buildReview().review!,
+        ...buildReview().review,
         draft: {
-          ...buildReview().review!.draft!,
+          ...buildReview().review.draft!,
           quality: { band: 'blocked', score: 5, signals: [] },
         },
       },
-    } as InspectorResult);
+    });
     render(<Wrapper />);
     expect(await screen.findByTestId('inspector-approve-button')).toBeDisabled();
   });
@@ -225,10 +226,10 @@ describe('InspectorPage', () => {
     mockReview({
       ok: true,
       review: {
-        ...buildReview().review!,
-        draft: { ...buildReview().review!.draft!, compileStatus: 'failed' },
+        ...buildReview().review,
+        draft: { ...buildReview().review.draft!, compileStatus: 'failed' },
       },
-    } as InspectorResult);
+    });
     render(<Wrapper />);
     expect(await screen.findByTestId('inspector-approve-button')).toBeDisabled();
   });
@@ -254,9 +255,9 @@ describe('InspectorPage', () => {
     mockReview({
       ok: true,
       review: {
-        ...buildReview().review!,
+        ...buildReview().review,
         draft: {
-          ...buildReview().review!.draft!,
+          ...buildReview().review.draft!,
           status: 'archived',
           rejection: {
             reason: 'duplicate',
@@ -265,7 +266,7 @@ describe('InspectorPage', () => {
           },
         },
       },
-    } as InspectorResult);
+    });
     render(<Wrapper />);
     expect(await screen.findByTestId('inspector-rejection-details')).toBeInTheDocument();
     expect(screen.getByTestId('dsl-editor-mock')).toHaveAttribute('data-readonly', 'true');
@@ -279,14 +280,14 @@ describe('InspectorPage', () => {
     mockReview({
       ok: true,
       review: {
-        ...buildReview().review!,
+        ...buildReview().review,
         source: {
-          ...buildReview().review!.source,
+          ...buildReview().review.source,
           state: 'partial',
           partialReason: 'auth-dead',
         },
       },
-    } as InspectorResult);
+    });
     render(<Wrapper />);
     const rerun = await screen.findByTestId('inspector-rerun-button');
     expect(rerun).toBeDisabled();
@@ -296,9 +297,9 @@ describe('InspectorPage', () => {
     mockReview({
       ok: true,
       review: {
-        ...buildReview().review!,
+        ...buildReview().review,
         draft: {
-          ...buildReview().review!.draft!,
+          ...buildReview().review.draft!,
           proposedSlugs: [
             {
               slug: 'mystery-ingredient',
@@ -309,7 +310,7 @@ describe('InspectorPage', () => {
           ],
         },
       },
-    } as InspectorResult);
+    });
     render(<Wrapper />);
     const user = userEvent.setup();
     await user.click(await screen.findByTestId('inspector-proposed-slug-mystery-ingredient'));

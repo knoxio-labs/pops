@@ -44,9 +44,15 @@ import Security
 ///
 /// ## Hardware
 ///
-/// None of this runs in the simulator: there is no Secure Enclave to generate
-/// into, and `SecKeyCreateRandomKey` fails. The tests covering this type are
-/// gated off by default and the gap is tracked — see the package README.
+/// On an Apple Silicon host the simulator reaches the host Mac's Secure
+/// Enclave: `SecKeyCreateRandomKey` with `kSecAttrTokenIDSecureEnclave`
+/// succeeds there, and the key it returns is genuinely non-extractable, not a
+/// software stand-in. What this package's own tests still cannot do is create
+/// one — the key is stored `kSecAttrIsPermanent`, which needs a
+/// keychain-access-group entitlement no unhosted `swift test` binary carries —
+/// so the suite that exercises this type lives in the app's hosted test
+/// target instead. See `clients/ios/AppTests/SecureEnclaveKeyStoreTests.swift`
+/// and the package README.
 public struct SecureEnclaveKeyStore: DeviceKeyStore {
     private let tag: Data
 

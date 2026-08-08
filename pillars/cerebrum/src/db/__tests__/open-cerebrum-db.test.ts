@@ -127,7 +127,7 @@ describe('openCerebrumDb', () => {
         .returning({ id: embeddings.id })
         .all();
       expect(inserted).toHaveLength(1);
-      expect(typeof inserted[0].id).toBe('number');
+      expect(typeof inserted[0]?.id).toBe('number');
 
       const indexes = raw
         .prepare(`SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='embeddings'`)
@@ -176,10 +176,10 @@ describe('openCerebrumDb', () => {
         .returning({ id: debriefSessions.id })
         .all();
       expect(session).toHaveLength(1);
+      const sessionId = session[0]?.id;
+      if (sessionId === undefined) throw new Error('debrief session insert returned no id');
 
-      db.insert(debriefResults)
-        .values({ sessionId: session[0].id, dimensionId: 1, comparisonId: null })
-        .run();
+      db.insert(debriefResults).values({ sessionId, dimensionId: 1, comparisonId: null }).run();
 
       db.insert(debriefStatus).values({ mediaType: 'movie', mediaId: 7, dimensionId: 1 }).run();
       expect(() =>

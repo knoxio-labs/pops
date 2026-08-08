@@ -21,6 +21,7 @@ import {
 } from '../services/imports.js';
 
 import type { ContactEntity } from '../../api/contacts/client.js';
+import type { InsertImportTransactionInput } from '../services/imports.js';
 import type { FinanceDb } from '../services/internal.js';
 
 const SCHEMA_DDL = `
@@ -93,7 +94,7 @@ function seedTransaction(
       account: input.account ?? 'amex',
       amountCents: -1000,
       date: input.date ?? '2026-01-01',
-      type: 'Expense',
+      type: 'purchase',
       tags: '[]',
       entityId: null,
       entityName: null,
@@ -218,7 +219,7 @@ describe('insertImportTransaction', () => {
       account: 'amex',
       amountCents: -450,
       date: '2026-02-14',
-      type: 'Expense',
+      type: 'purchase',
       tags: ['Coffee', 'Outings'],
       // A contacts entity id with no local referent — the dropped FK lets it in.
       entityId: 'contacts-entity-id',
@@ -241,7 +242,7 @@ describe('insertImportTransaction', () => {
       account: 'amex',
       amountCents: -100,
       date: '2026-02-15',
-      type: 'Expense',
+      type: 'purchase',
       tags: [],
       entityId: null,
       entityName: null,
@@ -253,11 +254,11 @@ describe('insertImportTransaction', () => {
   });
 
   it('honours the transactions.checksum unique index', () => {
-    const base = {
+    const base: Omit<InsertImportTransactionInput, 'description'> = {
       account: 'amex',
       amountCents: -100,
       date: '2026-02-15',
-      type: 'Expense',
+      type: 'purchase',
       tags: [],
       entityId: null,
       entityName: null,
@@ -278,7 +279,7 @@ describe('insertImportTransaction', () => {
           account: 'amex',
           amountCents: -100,
           date: '2026-02-15',
-          type: 'Expense',
+          type: 'purchase',
           tags: [],
           entityId: null,
           entityName: null,

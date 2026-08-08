@@ -4,13 +4,13 @@ import Testing
 
 /// That the data-protection keychain is reachable from here at all.
 ///
-/// This is a claim about the *environment*, not about any type in `Auth`. The
-/// suites that exercise `KeychainTokenStore` are that package's, and they are
-/// gated off because a `swift test` binary carries no keychain-access-group
+/// This is a claim about the *environment*, not about any type in `Auth`.
+/// `KeychainTokenStoreTests` is the suite that exercises the type, and it lives
+/// here because a `swift test` binary carries no keychain-access-group
 /// entitlement and gets `errSecMissingEntitlement` (-34018) for its trouble.
-/// Moving them here is only worth doing if this target is somewhere they can
-/// pass — so that has to be something a test asserts, not something a commit
-/// message claims.
+/// That suite would fail for two quite different reasons — a wrong query and an
+/// unentitled process — and this one separates them, so a red run points at the
+/// code rather than at the harness.
 ///
 /// It fails loudly if this target ever stops being hosted by the app. An
 /// unhosted test bundle runs in a bare `xctest` process with the same absent

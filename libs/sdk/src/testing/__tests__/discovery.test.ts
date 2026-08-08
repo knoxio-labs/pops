@@ -14,7 +14,7 @@ function emptySnapshot(source: RegistrySnapshot['source'] = 'fresh'): RegistrySn
   return { pillars: [], fetchedAt: new Date(), ttlMs: 30_000, source };
 }
 
-describe('@pops/pillar-sdk/testing/discovery', () => {
+describe('@pops/pillar-sdk/testing', () => {
   beforeEach(() => {
     configureDiscoveryForTest({
       registryUrl: 'http://registry-api:3001',

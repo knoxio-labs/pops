@@ -15,9 +15,21 @@ import type { RecipesGetForRenderingResponses } from '../food-api/types.gen.js';
 
 type RenderPayload = RecipesGetForRenderingResponses[200];
 
-export type RecipeVersionWithCompiledData = RenderPayload;
+/**
+ * The wire schema declares `temperatureUnit` as a nullable enum
+ * (`rest-recipe-render-schemas.ts`), but OpenAPI 3.0 expresses that as
+ * `nullable: true` alongside `enum`, and the codegen drops the null —
+ * so the generated type claims a unit is always present. A step without a
+ * temperature ships `null`, which is why `RecipeStepList` guards on it.
+ */
+export type RecipeStepRow = Omit<RenderPayload['steps'][number], 'temperatureUnit'> & {
+  temperatureUnit: RenderPayload['steps'][number]['temperatureUnit'] | null;
+};
+
+export type RecipeVersionWithCompiledData = Omit<RenderPayload, 'steps'> & {
+  steps: RecipeStepRow[];
+};
 export type RecipeLineWithResolved = RenderPayload['lines'][number];
-export type RecipeStepRow = RenderPayload['steps'][number];
 export type RecipeVersionRow = RenderPayload['version'];
 export type RecipeRow = RenderPayload['recipe'];
 export type IngredientRow = NonNullable<RenderPayload['yieldIngredient']>;

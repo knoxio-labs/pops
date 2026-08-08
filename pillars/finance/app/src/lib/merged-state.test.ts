@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { elementAt } from '../test-utils';
 import { computeMergedEntities, computeMergedRules } from './merged-state';
 
 import type { Correction, Entity } from '@pops/finance';
@@ -76,6 +77,7 @@ describe('computeMergedRules', () => {
             matchType: 'exact',
             entityId: 'entity-2',
             entityName: 'Coles',
+            tags: [],
             confidence: 0.9,
           },
         },
@@ -84,8 +86,8 @@ describe('computeMergedRules', () => {
 
     const result = computeMergedRules(dbRules, [cs]);
     expect(result).toHaveLength(2);
-    expect(result[1].descriptionPattern).toBe('COLES');
-    expect(result[1].id).toMatch(/^temp:/);
+    expect(elementAt(result, 1).descriptionPattern).toBe('COLES');
+    expect(elementAt(result, 1).id).toMatch(/^temp:/);
   });
 
   it('applies a single edit operation', () => {
@@ -96,7 +98,7 @@ describe('computeMergedRules', () => {
 
     const result = computeMergedRules(dbRules, [cs]);
     expect(result).toHaveLength(1);
-    expect(result[0].confidence).toBe(0.99);
+    expect(elementAt(result, 0).confidence).toBe(0.99);
   });
 
   it('applies multiple sequential ChangeSets (add then edit same rule)', () => {
@@ -111,6 +113,7 @@ describe('computeMergedRules', () => {
             matchType: 'exact',
             entityId: 'entity-3',
             entityName: 'Aldi',
+            tags: [],
             confidence: 0.8,
           },
         },
@@ -119,7 +122,7 @@ describe('computeMergedRules', () => {
 
     // cs2 must edit the temp id that cs1's add assigns, so read it back first.
     const intermediateResult = computeMergedRules(dbRules, [cs1]);
-    const addedRuleId = intermediateResult[0].id;
+    const addedRuleId = elementAt(intermediateResult, 0).id;
 
     const cs2 = makePendingChangeSet({
       ops: [{ op: 'edit', id: addedRuleId, data: { confidence: 0.95 } }],
@@ -127,7 +130,7 @@ describe('computeMergedRules', () => {
 
     const result = computeMergedRules(dbRules, [cs1, cs2]);
     expect(result).toHaveLength(1);
-    expect(result[0].confidence).toBe(0.95);
+    expect(elementAt(result, 0).confidence).toBe(0.95);
   });
 
   it('throws when a ChangeSet references a removed rule', () => {
@@ -159,6 +162,7 @@ describe('computeMergedRules', () => {
             matchType: 'exact',
             entityId: 'entity-3',
             entityName: 'Aldi',
+            tags: [],
             confidence: 0.8,
           },
         },
@@ -188,7 +192,7 @@ describe('computeMergedRules', () => {
     const dbRules = [makeRule({ id: 'rule-1' })];
     const addOp = (descriptionPattern: string, entityName: string): ChangeSet['ops'][number] => ({
       op: 'add',
-      data: { descriptionPattern, matchType: 'exact', entityName, confidence: 0.8 },
+      data: { descriptionPattern, matchType: 'exact', entityName, tags: [], confidence: 0.8 },
     });
     const pending = [
       makePendingChangeSet({ ops: [addOp('aldi', 'Aldi')] }),
@@ -207,13 +211,22 @@ describe('computeMergedRules', () => {
     const pending = [
       makePendingChangeSet({
         ops: [
-          { op: 'add', data: { descriptionPattern: 'aldi', matchType: 'exact', confidence: 0.8 } },
-          { op: 'add', data: { descriptionPattern: 'kmart', matchType: 'exact', confidence: 0.8 } },
+          {
+            op: 'add',
+            data: { descriptionPattern: 'aldi', matchType: 'exact', tags: [], confidence: 0.8 },
+          },
+          {
+            op: 'add',
+            data: { descriptionPattern: 'kmart', matchType: 'exact', tags: [], confidence: 0.8 },
+          },
         ],
       }),
       makePendingChangeSet({
         ops: [
-          { op: 'add', data: { descriptionPattern: 'ikea', matchType: 'exact', confidence: 0.8 } },
+          {
+            op: 'add',
+            data: { descriptionPattern: 'ikea', matchType: 'exact', tags: [], confidence: 0.8 },
+          },
         ],
       }),
     ];
@@ -256,8 +269,8 @@ describe('computeMergedRules', () => {
     const result1 = computeMergedRules(dbRules, pending1);
     const result2 = computeMergedRules(dbRules, pending2);
     expect(result1).not.toBe(result2);
-    expect(result1[0].confidence).toBe(0.8);
-    expect(result2[0].confidence).toBe(0.9);
+    expect(elementAt(result1, 0).confidence).toBe(0.8);
+    expect(elementAt(result2, 0).confidence).toBe(0.9);
   });
 
   it('preserves tags as string[] (not a JSON-encoded string) after applying ops', () => {
@@ -286,19 +299,19 @@ describe('computeMergedEntities', () => {
 
     const result = computeMergedEntities(dbEntities, pending);
     expect(result).toHaveLength(2);
-    expect(result[0].name).toBe('Coles');
-    expect(result[0].id).toMatch(/^temp:entity:/);
-    expect(result[1].name).toBe('Woolworths');
+    expect(elementAt(result, 0).name).toBe('Coles');
+    expect(elementAt(result, 0).id).toMatch(/^temp:entity:/);
+    expect(elementAt(result, 1).name).toBe('Woolworths');
   });
 
   it('replaces DB entity when pending entity has same name', () => {
     const dbEntities = [makeEntity({ id: 'e1', name: 'Woolworths' })];
-    const pending = [makePendingEntity({ name: 'Woolworths', type: 'supermarket' })];
+    const pending = [makePendingEntity({ name: 'Woolworths' })];
 
     const result = computeMergedEntities(dbEntities, pending);
     expect(result).toHaveLength(1);
-    expect(result[0].id).toMatch(/^temp:entity:/);
-    expect(result[0].name).toBe('Woolworths');
+    expect(elementAt(result, 0).id).toMatch(/^temp:entity:/);
+    expect(elementAt(result, 0).name).toBe('Woolworths');
   });
 
   it('handles multiple collisions', () => {
@@ -308,28 +321,28 @@ describe('computeMergedEntities', () => {
       makeEntity({ id: 'e3', name: 'Aldi' }),
     ];
     const pending = [
-      makePendingEntity({ name: 'Woolworths', type: 'updated' }),
-      makePendingEntity({ name: 'Coles', type: 'updated' }),
+      makePendingEntity({ name: 'Woolworths' }),
+      makePendingEntity({ name: 'Coles' }),
     ];
 
     const result = computeMergedEntities(dbEntities, pending);
     expect(result).toHaveLength(3);
-    expect(result[0].name).toBe('Aldi');
-    expect(result[0].id).toBe('e3');
-    expect(result[1].name).toBe('Coles');
-    expect(result[1].id).toMatch(/^temp:entity:/);
-    expect(result[2].name).toBe('Woolworths');
-    expect(result[2].id).toMatch(/^temp:entity:/);
+    expect(elementAt(result, 0).name).toBe('Aldi');
+    expect(elementAt(result, 0).id).toBe('e3');
+    expect(elementAt(result, 1).name).toBe('Coles');
+    expect(elementAt(result, 1).id).toMatch(/^temp:entity:/);
+    expect(elementAt(result, 2).name).toBe('Woolworths');
+    expect(elementAt(result, 2).id).toMatch(/^temp:entity:/);
   });
 
   it('handles case-insensitive collision', () => {
     const dbEntities = [makeEntity({ id: 'e1', name: 'Woolworths' })];
-    const pending = [makePendingEntity({ name: 'woolworths', type: 'updated' })];
+    const pending = [makePendingEntity({ name: 'woolworths' })];
 
     const result = computeMergedEntities(dbEntities, pending);
     expect(result).toHaveLength(1);
-    expect(result[0].name).toBe('woolworths');
-    expect(result[0].id).toMatch(/^temp:entity:/);
+    expect(elementAt(result, 0).name).toBe('woolworths');
+    expect(elementAt(result, 0).id).toMatch(/^temp:entity:/);
   });
 
   it('handles empty DB list with pending entities', () => {
@@ -340,13 +353,13 @@ describe('computeMergedEntities', () => {
 
     const result = computeMergedEntities([], pending);
     expect(result).toHaveLength(2);
-    expect(result[0].name).toBe('Another Corp');
-    expect(result[1].name).toBe('New Corp');
-    expect(result[0].aliases).toEqual([]);
-    expect(result[0].id).toMatch(/^temp:entity:/);
+    expect(elementAt(result, 0).name).toBe('Another Corp');
+    expect(elementAt(result, 1).name).toBe('New Corp');
+    expect(elementAt(result, 0).aliases).toEqual([]);
+    expect(elementAt(result, 0).id).toMatch(/^temp:entity:/);
     // A fixed placeholder, never a wall-clock read — a `new Date()` here would
     // make computeMergedEntities impure (see the purity test below).
-    expect(result[0].lastEditedTime).toBe('1970-01-01T00:00:00.000Z');
+    expect(elementAt(result, 0).lastEditedTime).toBe('1970-01-01T00:00:00.000Z');
   });
 
   it('is pure — same input refs recompute a fresh but equal output (no internal caching, CF082/#3670)', () => {

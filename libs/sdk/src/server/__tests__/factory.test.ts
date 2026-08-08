@@ -17,6 +17,8 @@ import {
   SERVER_SDK_API_KEY_ENV,
 } from '../index.js';
 
+import type { FinanceRouter } from '../../client/__tests__/fixtures.js';
+
 type FetchCall = { url: string; headers: Record<string, string>; body: unknown };
 
 /**
@@ -48,12 +50,6 @@ function recordingFetch(responder: (url: string) => Response | Promise<Response>
   });
   return { fetchImpl, calls };
 }
-
-type WishlistRouter = {
-  wishlist: {
-    list: (input: { limit: number }) => Promise<readonly { id: string }[]>;
-  };
-};
 
 const ORIGINAL_API_KEY = process.env[SERVER_SDK_API_KEY_ENV];
 
@@ -127,7 +123,7 @@ describe('server pillar() — outbound auth header', () => {
     const { fetchImpl, calls } = recordingFetch(() =>
       jsonResponse({ result: { data: [{ id: 'wish-1' }] } })
     );
-    const finance = pillar<WishlistRouter>('finance', { transport, fetchImpl });
+    const finance = pillar<FinanceRouter>('finance', { transport, fetchImpl });
     const result = await finance.wishlist.list({ limit: 1 });
     expect(isOk(result)).toBe(true);
     expect(calls[0]?.headers['x-api-key']).toBe('svc-key-123');
@@ -136,7 +132,7 @@ describe('server pillar() — outbound auth header', () => {
   it('does not pass through nginx — uses the registry-published baseUrl directly', async () => {
     const transport = new FakeRegistryTransport({ pillars: [discoveredPillar()] });
     const { fetchImpl, calls } = recordingFetch(() => jsonResponse({ result: { data: null } }));
-    const finance = pillar<WishlistRouter>('finance', { transport, fetchImpl });
+    const finance = pillar<FinanceRouter>('finance', { transport, fetchImpl });
     await finance.wishlist.list({ limit: 1 });
     expect(calls[0]?.url).toBe('http://finance-api:3004/wishlist/list');
   });
@@ -146,7 +142,7 @@ describe('server pillar() — outbound auth header', () => {
     process.env[SERVER_SDK_API_KEY_ENV] = 'env-a';
     const transport = new FakeRegistryTransport({ pillars: [discoveredPillar()] });
     const { fetchImpl, calls } = recordingFetch(() => jsonResponse({ result: { data: null } }));
-    const finance = pillar('finance', { transport, fetchImpl });
+    const finance = pillar<FinanceRouter>('finance', { transport, fetchImpl });
     await finance.wishlist.list({});
     expect(calls.at(-1)?.headers['x-api-key']).toBe('env-a');
 
@@ -172,8 +168,8 @@ describe('server pillar() — handle reuse + discovery cache', () => {
   it('memoises the per-pillar handle so the discovery cache survives across pillar() calls', async () => {
     const transport = new FakeRegistryTransport({ pillars: [discoveredPillar()] });
     const { fetchImpl } = recordingFetch(() => jsonResponse({ result: { data: null } }));
-    const a = pillar('finance', { transport, fetchImpl, cacheTtlMs: 60_000 });
-    const b = pillar('finance', { transport, fetchImpl, cacheTtlMs: 60_000 });
+    const a = pillar<FinanceRouter>('finance', { transport, fetchImpl, cacheTtlMs: 60_000 });
+    const b = pillar<FinanceRouter>('finance', { transport, fetchImpl, cacheTtlMs: 60_000 });
     expect(a).toBe(b);
     await a.wishlist.list({});
     await b.wishlist.list({});
@@ -207,7 +203,7 @@ describe('server pillar() — internal base URL overrides', () => {
     configureServerSdk({ internalBaseUrls: { finance: 'http://localhost:3104' } });
     const transport = new FakeRegistryTransport({ pillars: [discoveredPillar()] });
     const { fetchImpl, calls } = recordingFetch(() => jsonResponse({ result: { data: null } }));
-    const finance = pillar('finance', { transport, fetchImpl });
+    const finance = pillar<FinanceRouter>('finance', { transport, fetchImpl });
     await finance.wishlist.list({});
     expect(calls[0]?.url).toBe('http://localhost:3104/wishlist/list');
   });
@@ -216,7 +212,7 @@ describe('server pillar() — internal base URL overrides', () => {
     configureServerSdk({ internalBaseUrls: { media: 'http://localhost:3105' } });
     const transport = new FakeRegistryTransport({ pillars: [discoveredPillar()] });
     const { fetchImpl, calls } = recordingFetch(() => jsonResponse({ result: { data: null } }));
-    const finance = pillar('finance', { transport, fetchImpl });
+    const finance = pillar<FinanceRouter>('finance', { transport, fetchImpl });
     await finance.wishlist.list({});
     expect(calls[0]?.url).toBe('http://finance-api:3004/wishlist/list');
   });
@@ -238,7 +234,7 @@ describe('server pillar() — error-mapping parity with client', () => {
   it("returns 'unavailable' when the pillar is missing from the registry", async () => {
     const transport = new FakeRegistryTransport({ pillars: [] });
     const { fetchImpl } = recordingFetch(() => jsonResponse({}));
-    const finance = pillar('finance', { transport, fetchImpl });
+    const finance = pillar<FinanceRouter>('finance', { transport, fetchImpl });
     const result = await finance.wishlist.list({});
     expect(result.kind).toBe('unavailable');
   });
@@ -246,7 +242,7 @@ describe('server pillar() — error-mapping parity with client', () => {
   it("returns 'not-found' on a 404 from the pillar", async () => {
     const transport = new FakeRegistryTransport({ pillars: [discoveredPillar()] });
     const { fetchImpl } = recordingFetch(() => new Response('not found', { status: 404 }));
-    const finance = pillar('finance', { transport, fetchImpl });
+    const finance = pillar<FinanceRouter>('finance', { transport, fetchImpl });
     const result = await finance.wishlist.list({});
     expect(result.kind).toBe('not-found');
   });
@@ -267,7 +263,7 @@ describe('server pillar() — error-mapping parity with client', () => {
       ],
     });
     const { fetchImpl } = recordingFetch(() => jsonResponse({}));
-    const finance = pillar('finance', {
+    const finance = pillar<FinanceRouter>('finance', {
       transport,
       fetchImpl,
       contractVersion: '1.4.0',

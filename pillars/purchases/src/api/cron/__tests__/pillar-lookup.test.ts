@@ -39,7 +39,11 @@ const CASES: readonly [string, CallResult<unknown>, unknown][] = [
     { kind: 'unavailable', pillar: 'p' },
     { kind: 'unavailable', reason: 'unavailable' },
   ],
-  ['degraded', { kind: 'degraded', pillar: 'p' }, { kind: 'unavailable', reason: 'degraded' }],
+  [
+    'degraded',
+    { kind: 'degraded', pillar: 'p', reason: 'reconciling' },
+    { kind: 'unavailable', reason: 'degraded' },
+  ],
   [
     'unauthorized',
     { kind: 'unauthorized', pillar: 'p' },

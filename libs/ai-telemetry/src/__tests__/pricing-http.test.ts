@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { httpLookupPricing } from '../pricing-http.js';
 
-type FetchImpl = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+type FetchImpl = typeof fetch;
 
 const json = (body: unknown, status = 200): Response =>
   new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });

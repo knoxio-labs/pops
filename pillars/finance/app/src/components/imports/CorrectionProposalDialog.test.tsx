@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { type ReactElement } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { elementAt } from '../../test-utils';
 import {
   CorrectionProposalDialog,
   type LocalOp,
@@ -205,6 +206,7 @@ function makeRule(overrides: Partial<CorrectionRule> = {}): CorrectionRule {
     tags: [],
     transactionType: null,
     isActive: true,
+    priority: 0,
     confidence: 0.95,
     timesApplied: 3,
     createdAt: '2026-01-01T00:00:00.000Z',
@@ -361,7 +363,6 @@ const SIGNAL = {
   entityName: 'Woolworths',
   location: null,
   tags: [],
-  transactionType: null,
 };
 
 const TRIGGERING_TRANSACTION = {
@@ -513,7 +514,7 @@ describe('CorrectionProposalDialog', () => {
 
     const deleteButtons = screen.getAllByLabelText('Delete operation');
     expect(deleteButtons).toHaveLength(2);
-    fireEvent.click(deleteButtons[0]);
+    fireEvent.click(elementAt(deleteButtons, 0));
 
     await waitFor(() => {
       expect(screen.getByText(/Operations \(1\)/)).toBeInTheDocument();

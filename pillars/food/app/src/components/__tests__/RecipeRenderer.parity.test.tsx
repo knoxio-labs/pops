@@ -208,7 +208,6 @@ const TOMATO: RecipeVersionWithCompiledData = {
     name: 'Roma tomato',
     slug: 'roma',
     defaultUnit: 'count',
-    densityGPerMl: null,
     defaultShelfLifeDaysFridge: null,
     defaultShelfLifeDaysFreezer: null,
     packageSizeG: null,

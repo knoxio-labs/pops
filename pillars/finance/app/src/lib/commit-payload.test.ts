@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { elementAt } from '../test-utils';
 import { buildCommitPayload, type DanglingEntityRefError } from './commit-payload';
 
 import type { ChangeSet, ConfirmedTransaction, TagRuleChangeSet } from '@pops/finance';
@@ -66,7 +67,7 @@ function makeConfirmedTransaction(
 const sampleChangeSet: ChangeSet = {
   source: 'test',
   reason: 'unit test',
-  ops: [{ op: 'add', data: { descriptionPattern: 'TEST', matchType: 'exact' } }],
+  ops: [{ op: 'add', data: { descriptionPattern: 'TEST', matchType: 'exact', tags: [] } }],
 };
 
 const sampleTagRuleChangeSet: TagRuleChangeSet = {
@@ -97,7 +98,7 @@ describe('buildCommitPayload', () => {
     const entity = makePendingEntity({ name: 'Coles' });
     const payload = buildCommitPayload([entity], [], [], []);
     expect(payload.entities).toHaveLength(1);
-    expect(payload.entities[0].name).toBe('Coles');
+    expect(elementAt(payload.entities, 0).name).toBe('Coles');
     expect(payload.changeSets).toEqual([]);
     expect(payload.tagRuleChangeSets).toEqual([]);
     expect(payload.transactions).toEqual([]);
@@ -135,6 +136,7 @@ describe('buildCommitPayload', () => {
             matchType: 'exact',
             entityId: entity.tempId,
             entityName: 'New Corp',
+            tags: [],
           },
         },
       ],
@@ -146,7 +148,7 @@ describe('buildCommitPayload', () => {
     expect(payload.entities).toHaveLength(1);
     expect(payload.changeSets).toHaveLength(1);
     expect(payload.transactions).toHaveLength(1);
-    expect(payload.transactions[0].entityId).toBe(entity.tempId);
+    expect(elementAt(payload.transactions, 0).entityId).toBe(entity.tempId);
   });
 
   it('throws descriptive error for dangling entity reference in add op', () => {
@@ -160,6 +162,7 @@ describe('buildCommitPayload', () => {
             descriptionPattern: 'BAD',
             matchType: 'exact',
             entityId: danglingId,
+            tags: [],
           },
         },
       ],
@@ -220,6 +223,7 @@ describe('buildCommitPayload', () => {
             descriptionPattern: 'OK',
             matchType: 'exact',
             entityId: 'real-entity-id',
+            tags: [],
           },
         },
       ],
@@ -232,21 +236,21 @@ describe('buildCommitPayload', () => {
     const pcs1 = makePendingChangeSet(
       {
         source: 'first',
-        ops: [{ op: 'add', data: { descriptionPattern: 'A', matchType: 'exact' } }],
+        ops: [{ op: 'add', data: { descriptionPattern: 'A', matchType: 'exact', tags: [] } }],
       },
       { appliedAt: '2026-04-12T01:00:00Z' }
     );
     const pcs2 = makePendingChangeSet(
       {
         source: 'second',
-        ops: [{ op: 'add', data: { descriptionPattern: 'B', matchType: 'exact' } }],
+        ops: [{ op: 'add', data: { descriptionPattern: 'B', matchType: 'exact', tags: [] } }],
       },
       { appliedAt: '2026-04-12T02:00:00Z' }
     );
     const pcs3 = makePendingChangeSet(
       {
         source: 'third',
-        ops: [{ op: 'add', data: { descriptionPattern: 'C', matchType: 'exact' } }],
+        ops: [{ op: 'add', data: { descriptionPattern: 'C', matchType: 'exact', tags: [] } }],
       },
       { appliedAt: '2026-04-12T03:00:00Z' }
     );
@@ -262,8 +266,8 @@ describe('buildCommitPayload', () => {
 
     const payload = buildCommitPayload([entity], [], [], [txn1, txn2]);
     expect(payload.transactions).toHaveLength(2);
-    expect(payload.transactions[0].entityId).toBe(entity.tempId);
-    expect(payload.transactions[1].entityId).toBe('real-id');
+    expect(elementAt(payload.transactions, 0).entityId).toBe(entity.tempId);
+    expect(elementAt(payload.transactions, 1).entityId).toBe('real-id');
   });
 
   it('passes through transactions with dangling temp entity IDs (commit endpoint resolves them)', () => {
@@ -277,7 +281,7 @@ describe('buildCommitPayload', () => {
     // Temp entity ID resolution in transactions is the commit endpoint's job.
     const payload = buildCommitPayload([], [], [], [txn]);
     expect(payload.transactions).toHaveLength(1);
-    expect(payload.transactions[0].entityId).toBe(danglingTempId);
+    expect(elementAt(payload.transactions, 0).entityId).toBe(danglingTempId);
   });
 
   it('returns a snapshot, not a live reference', () => {

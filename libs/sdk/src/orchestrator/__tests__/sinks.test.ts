@@ -9,11 +9,7 @@ import type { ManifestPayload } from '../../manifest-schema/schema.js';
 
 function withSink(
   base: PillarSnapshot,
-  descriptors: ManifestPayload['sinks'] extends infer T
-    ? T extends { descriptors: infer D } | undefined
-      ? D
-      : never
-    : never
+  descriptors: NonNullable<ManifestPayload['sinks']>['descriptors']
 ): PillarSnapshot {
   return {
     ...base,

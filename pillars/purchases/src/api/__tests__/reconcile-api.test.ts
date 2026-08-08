@@ -12,38 +12,19 @@ import { openTempDb, seedAmazonSource } from '../../db/__tests__/helpers.js';
 import { createPurchase } from '../../db/index.js';
 import { runSweep } from '../../reconcile/sweep.js';
 import { createPurchasesApiApp } from '../app.js';
+import { FINANCE_UNAVAILABLE, financeReturning } from '../finance/__tests__/fixtures.js';
 import { __resetPillarRegistryCache } from '../pillars/registry.js';
 
 import type { Express } from 'express';
 
 import type { OpenedPurchasesDb } from '../../db/index.js';
-import type { CandidateFetch, FinanceClient } from '../finance/client.js';
+import type { FinanceClient } from '../finance/client.js';
 
 let opened: OpenedPurchasesDb;
 let cleanup: () => void;
 let app: Express;
 
 const TXN = 'pops://finance/transaction/t1';
-
-function financeWith(transactions: { uri: string; amountCents: number; date: string }[]) {
-  return {
-    fetchCandidates: () =>
-      Promise.resolve<CandidateFetch>({
-        kind: 'ok',
-        transactions: transactions.map((t) => ({
-          uri: t.uri,
-          description: 'AMAZON MKTPLACE AU',
-          amountCents: t.amountCents,
-          date: t.date,
-        })),
-      }),
-  } satisfies FinanceClient;
-}
-
-const UNAVAILABLE: FinanceClient = {
-  fetchCandidates: () =>
-    Promise.resolve<CandidateFetch>({ kind: 'unavailable', reason: 'unavailable' }),
-};
 
 function order(totalCents: number, checksum: string) {
   return createPurchase(opened.db, {
@@ -57,7 +38,7 @@ function order(totalCents: number, checksum: string) {
   });
 }
 
-function build(finance: FinanceClient = financeWith([])): Express {
+function build(finance: FinanceClient = financeReturning()): Express {
   return createPurchasesApiApp({
     vision: null,
     purchasesDb: opened,
@@ -89,7 +70,7 @@ describe('the queue', () => {
 
   it('lists an unexplained charge with no proposal', async () => {
     order(4128, 'a');
-    await runSweep({ db: opened.db, finance: financeWith([]), defaultWindowDays: 21 });
+    await runSweep({ db: opened.db, finance: financeReturning(), defaultWindowDays: 21 });
 
     const res = await request(app).get('/reconcile/queue').expect(200);
     expect(res.body.items).toHaveLength(1);
@@ -102,7 +83,7 @@ describe('the queue', () => {
     order(4128, 'a');
     await runSweep({
       db: opened.db,
-      finance: financeWith([{ uri: TXN, amountCents: 4128, date: '2026-03-06' }]),
+      finance: financeReturning({ id: 't1', amountCents: 4128, date: '2026-03-06' }),
       defaultWindowDays: 21,
     });
 
@@ -116,7 +97,7 @@ describe('the queue', () => {
     order(5000, 'a');
     await runSweep({
       db: opened.db,
-      finance: financeWith([{ uri: TXN, amountCents: 3000, date: '2026-03-06' }]),
+      finance: financeReturning({ id: 't1', amountCents: 3000, date: '2026-03-06' }),
       defaultWindowDays: 21,
     });
 
@@ -130,7 +111,7 @@ describe('the queue', () => {
     order(9999, 'unmatched');
     await runSweep({
       db: opened.db,
-      finance: financeWith([{ uri: TXN, amountCents: 4128, date: '2026-03-06' }]),
+      finance: financeReturning({ id: 't1', amountCents: 4128, date: '2026-03-06' }),
       defaultWindowDays: 21,
     });
 
@@ -148,7 +129,7 @@ describe('the queue', () => {
     order(4128, 'a');
     await runSweep({
       db: opened.db,
-      finance: financeWith([{ uri: TXN, amountCents: 4128, date: '2026-03-06' }]),
+      finance: financeReturning({ id: 't1', amountCents: 4128, date: '2026-03-06' }),
       defaultWindowDays: 21,
     });
     const before = await request(app).get('/reconcile/queue').expect(200);
@@ -165,7 +146,7 @@ describe('the queue', () => {
 
   it('filters by source', async () => {
     order(4128, 'a');
-    await runSweep({ db: opened.db, finance: financeWith([]), defaultWindowDays: 21 });
+    await runSweep({ db: opened.db, finance: financeReturning(), defaultWindowDays: 21 });
 
     const mine = await request(app).get('/reconcile/queue?source=amazon').expect(200);
     const other = await request(app).get('/reconcile/queue?source=woolworths').expect(200);
@@ -177,7 +158,7 @@ describe('the queue', () => {
     order(1000, 'a');
     order(2000, 'b');
     order(3000, 'c');
-    await runSweep({ db: opened.db, finance: financeWith([]), defaultWindowDays: 21 });
+    await runSweep({ db: opened.db, finance: financeReturning(), defaultWindowDays: 21 });
 
     const first = await request(app).get('/reconcile/queue?limit=2').expect(200);
     const second = await request(app).get('/reconcile/queue?limit=2&offset=2').expect(200);
@@ -208,7 +189,7 @@ describe('the queue', () => {
       totalCents: 8765,
       checksum: 'shop-1',
     });
-    await runSweep({ db: opened.db, finance: financeWith([]), defaultWindowDays: 21 });
+    await runSweep({ db: opened.db, finance: financeReturning(), defaultWindowDays: 21 });
 
     const queue = await request(app).get('/reconcile/queue').expect(200);
     expect(queue.body.items).toEqual([]);
@@ -230,7 +211,7 @@ describe('the queue', () => {
       totalCents: 8765,
       checksum: 'shop-1',
     });
-    await runSweep({ db: opened.db, finance: financeWith([]), defaultWindowDays: 21 });
+    await runSweep({ db: opened.db, finance: financeReturning(), defaultWindowDays: 21 });
 
     const queue = await request(app).get('/reconcile/queue?includeAuto=true').expect(200);
     expect(queue.body.items).toHaveLength(1);
@@ -254,7 +235,7 @@ describe('the queue', () => {
       totalCents: 8765,
       checksum: 'shop-1',
     });
-    await runSweep({ db: opened.db, finance: financeWith([]), defaultWindowDays: 21 });
+    await runSweep({ db: opened.db, finance: financeReturning(), defaultWindowDays: 21 });
 
     const off = await request(app).get('/reconcile/queue?includeAuto=false').expect(200);
     expect(off.body.items).toEqual([]);
@@ -278,7 +259,7 @@ describe('the queue', () => {
       checksum: 'shop-1',
     });
     order(4128, 'amazon-1');
-    await runSweep({ db: opened.db, finance: financeWith([]), defaultWindowDays: 21 });
+    await runSweep({ db: opened.db, finance: financeReturning(), defaultWindowDays: 21 });
 
     const queue = await request(app).get('/reconcile/queue').expect(200);
     expect(queue.body.items).toHaveLength(1);
@@ -296,7 +277,7 @@ describe('the queue', () => {
       settlementMode: 'cash',
       checksum: 'cash',
     });
-    await runSweep({ db: opened.db, finance: financeWith([]), defaultWindowDays: 21 });
+    await runSweep({ db: opened.db, finance: financeReturning(), defaultWindowDays: 21 });
 
     const res = await request(app).get('/reconcile/queue').expect(200);
     expect(res.body.items).toEqual([]);
@@ -308,7 +289,7 @@ describe('decisions', () => {
     order(4128, 'a');
     await runSweep({
       db: opened.db,
-      finance: financeWith([{ uri: TXN, amountCents: 4128, date: '2026-03-06' }]),
+      finance: financeReturning({ id: 't1', amountCents: 4128, date: '2026-03-06' }),
       defaultWindowDays: 21,
     });
     const res = await request(app).get('/reconcile/queue').expect(200);
@@ -323,7 +304,7 @@ describe('decisions', () => {
       .expect(200);
 
     // A sweep where the transaction has vanished entirely.
-    await runSweep({ db: opened.db, finance: financeWith([]), defaultWindowDays: 21 });
+    await runSweep({ db: opened.db, finance: financeReturning(), defaultWindowDays: 21 });
 
     const detail = await request(app).get('/purchases').expect(200);
     const purchaseId = detail.body.items[0].id;
@@ -371,7 +352,7 @@ describe('the explicit sweep', () => {
     // A caller conflating the two would read an outage as a clean, empty
     // reconciliation.
     order(4128, 'a');
-    const unavailableApp = build(UNAVAILABLE);
+    const unavailableApp = build(FINANCE_UNAVAILABLE);
     const res = await request(unavailableApp).post('/reconcile/sweep').send({}).expect(200);
 
     expect(res.body.kind).toBe('skipped');

@@ -75,6 +75,7 @@ describe('GET /api/inventory/photos/items/:itemId/:filename', () => {
     writePhoto('photo_002.jpg', JPEG_BYTES);
     const first = await request(app()).get(`/api/inventory/photos/items/${ITEM_ID}/photo_002.jpg`);
     const etag = first.headers['etag'];
+    if (etag === undefined) throw new Error('photo response carried no ETag to revalidate against');
 
     const res = await request(app())
       .get(`/api/inventory/photos/items/${ITEM_ID}/photo_002.jpg`)
