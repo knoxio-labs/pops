@@ -39,20 +39,18 @@ export function listRejectedVersions(
 ): ListPage<RejectedRow> {
   const rows = selectRejectedRows(db, filter);
   const trimmed = rows.slice(0, filter.limit);
-  const items = trimmed.map(
-    (r): RejectedRow => ({
-      versionId: r.versionId,
-      recipeSlug: r.recipeSlug,
-      sourceId: r.sourceId,
-      title: r.title,
-      reason: r.reason as RejectionReason,
-      note: r.note,
-      rejectedAt: r.rejectedAt,
-      ingestKind: r.ingestKind,
-      sourceUrl: r.sourceUrl,
-      ingestCostUsd: r.ingestCostUsd,
-    })
-  );
+  const items = trimmed.map((r): RejectedRow => ({
+    versionId: r.versionId,
+    recipeSlug: r.recipeSlug,
+    sourceId: r.sourceId,
+    title: r.title,
+    reason: r.reason as RejectionReason,
+    note: r.note,
+    rejectedAt: r.rejectedAt,
+    ingestKind: r.ingestKind,
+    sourceUrl: r.sourceUrl,
+    ingestCostUsd: r.ingestCostUsd,
+  }));
   const last = trimmed[trimmed.length - 1];
   const nextCursor =
     rows.length > filter.limit && last !== undefined

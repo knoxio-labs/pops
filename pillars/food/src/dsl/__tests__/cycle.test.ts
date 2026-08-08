@@ -90,22 +90,20 @@ function makeCandidateAst(
       yieldQty: 1,
       yieldUnit: 'count',
     },
-    blocks: refs.map(
-      (r): ResolvedIngredientBlock => ({
-        kind: 'ingredient',
-        index: r.index,
-        ingredientId: null,
-        variantId: null,
-        prepStateId: null,
-        qty: 1,
-        unit: 'count',
-        optional: false,
-        notes: null,
-        isRecipeRef: true,
-        recipeRef: r.recipeRef,
-        loc: { startLine: r.line, startCol: 1, endLine: r.line, endCol: 30 },
-      })
-    ),
+    blocks: refs.map((r): ResolvedIngredientBlock => ({
+      kind: 'ingredient',
+      index: r.index,
+      ingredientId: null,
+      variantId: null,
+      prepStateId: null,
+      qty: 1,
+      unit: 'count',
+      optional: false,
+      notes: null,
+      isRecipeRef: true,
+      recipeRef: r.recipeRef,
+      loc: { startLine: r.line, startCol: 1, endLine: r.line, endCol: 30 },
+    })),
   };
 }
 

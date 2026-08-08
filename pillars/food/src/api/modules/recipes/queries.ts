@@ -68,22 +68,20 @@ interface JoinedRecipeRow {
 export function listRecipes(db: FoodDb, filter: ListRecipesFilter): ListRecipesResult {
   const rows = selectRecipeRows(db, filter);
   const trimmed = rows.slice(0, filter.limit);
-  const items = trimmed.map(
-    (r): RecipeListItem => ({
-      id: r.id,
-      slug: r.slug,
-      title: r.title,
-      recipeType: r.recipeType as RecipeType,
-      heroImagePath: r.heroImagePath,
-      prepMinutes: r.prepMinutes,
-      cookMinutes: r.cookMinutes,
-      servings: r.servings,
-      tags: [],
-      hasCurrentVersion: r.currentVersionId !== null,
-      archivedAt: r.archivedAt,
-      createdAt: r.createdAt,
-    })
-  );
+  const items = trimmed.map((r): RecipeListItem => ({
+    id: r.id,
+    slug: r.slug,
+    title: r.title,
+    recipeType: r.recipeType as RecipeType,
+    heroImagePath: r.heroImagePath,
+    prepMinutes: r.prepMinutes,
+    cookMinutes: r.cookMinutes,
+    servings: r.servings,
+    tags: [],
+    hasCurrentVersion: r.currentVersionId !== null,
+    archivedAt: r.archivedAt,
+    createdAt: r.createdAt,
+  }));
   hydrateTags(
     db,
     items,

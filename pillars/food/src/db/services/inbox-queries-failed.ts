@@ -30,21 +30,19 @@ import { type FoodDb } from './internal.js';
 export function listFailedSources(db: FoodDb, filter: ListFailedFilter): ListPage<FailedRow> {
   const rows = selectFailedRows(db, filter);
   const trimmed = rows.slice(0, filter.limit);
-  const items = trimmed.map(
-    (r): FailedRow => ({
-      sourceId: r.sourceId,
-      ingestKind: r.ingestKind,
-      sourceUrl: r.sourceUrl,
-      errorCode: r.errorCode,
-      // `buildWhere` enforces `error_message IS NOT NULL` so the column type
-      // is structurally nullable but the value never is. The empty-string
-      // fallback stays as defence in depth in case the predicate ever
-      // moves.
-      errorMessage: r.errorMessage ?? '',
-      ingestedAt: r.ingestedAt,
-      attempts: r.attempts,
-    })
-  );
+  const items = trimmed.map((r): FailedRow => ({
+    sourceId: r.sourceId,
+    ingestKind: r.ingestKind,
+    sourceUrl: r.sourceUrl,
+    errorCode: r.errorCode,
+    // `buildWhere` enforces `error_message IS NOT NULL` so the column type
+    // is structurally nullable but the value never is. The empty-string
+    // fallback stays as defence in depth in case the predicate ever
+    // moves.
+    errorMessage: r.errorMessage ?? '',
+    ingestedAt: r.ingestedAt,
+    attempts: r.attempts,
+  }));
   const last = trimmed[trimmed.length - 1];
   const nextCursor =
     rows.length > filter.limit && last !== undefined
