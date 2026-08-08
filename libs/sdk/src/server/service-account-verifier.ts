@@ -70,13 +70,17 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  * a registry serving a shape this SDK cannot read is a broken registry, not
  * proof that the key is bad.
  */
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((entry) => typeof entry === 'string');
+}
+
 function parsePrincipal(body: unknown): ServiceAccountPrincipal | undefined {
   if (!isRecord(body)) return undefined;
   const { id, name, scopes } = body;
   if (typeof id !== 'string' || id === '') return undefined;
   if (typeof name !== 'string' || name === '') return undefined;
-  if (!Array.isArray(scopes) || scopes.some((s) => typeof s !== 'string')) return undefined;
-  return { id, name, scopes: scopes as string[] };
+  if (!isStringArray(scopes)) return undefined;
+  return { id, name, scopes };
 }
 
 function describe(cause: unknown, fallback: string): string {

@@ -7,7 +7,7 @@
  * ask: the caller forwards the key it received, and gets back the account that
  * key resolves to, or a 401 if it resolves to nothing. `@pops/pillar-sdk/server`'s
  * `createRegistryServiceAccountVerifier` is the client half; the path is shared
- * through {@link REGISTRY_SERVICE_ACCOUNT_SELF_PATH} so the two cannot drift.
+ * through `REGISTRY_SERVICE_ACCOUNT_SELF_PATH` so the two cannot drift.
  *
  * Authentication is the identity middleware's existing service-account leg,
  * which is also where revocation is checked — so a revoked key stops resolving

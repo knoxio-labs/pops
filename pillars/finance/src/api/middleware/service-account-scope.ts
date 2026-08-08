@@ -43,10 +43,15 @@ import type { NextFunction, Request, RequestHandler, Response } from 'express';
  */
 const FINANCE_SCOPE_ROOT = 'finance';
 
-const scopeMap: ContractScopeMap = buildContractScopeMap(financeContract, FINANCE_SCOPE_ROOT);
-
-/** The contract route table, exported so a test can assert it is not empty. */
-export const financeScopeMap = scopeMap;
+/**
+ * Every contract route projected onto the scope it requires. Built once at
+ * module load; exported so a test can assert it actually covers the contract,
+ * since an empty table would gate nothing and still pass every other test.
+ */
+export const financeScopeMap: ContractScopeMap = buildContractScopeMap(
+  financeContract,
+  FINANCE_SCOPE_ROOT
+);
 
 function readApiKey(req: Request): string | undefined {
   // `req.get` collapses a repeated header to one string, so a client sending
@@ -91,7 +96,7 @@ export function createServiceAccountScopeMiddleware(
 ): RequestHandler {
   return (req: Request, res: Response, next: NextFunction): void => {
     void authorizeServiceAccountRequest({
-      requiredScope: resolveContractScope(scopeMap, req.method, req.path),
+      requiredScope: resolveContractScope(financeScopeMap, req.method, req.path),
       apiKey: readApiKey(req),
       verify,
     })
