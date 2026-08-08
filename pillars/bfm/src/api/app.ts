@@ -30,7 +30,6 @@ import { MOBILE_PATH_PREFIX, PAIRING_PATH } from './paths.js';
 import { type BfmRestHandlerDeps, makeBfmRestHandlers } from './rest/handlers.js';
 import { createRequestValidationErrorHandler } from './rest/request-validation.js';
 
-
 /**
  * The committed OpenAPI projection, served verbatim at `GET /openapi` so the
  * pillar SDK builds its `operationId` route map from the live pillar rather
