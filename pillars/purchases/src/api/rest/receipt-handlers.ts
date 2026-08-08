@@ -15,7 +15,7 @@ import {
 } from '../../db/index.js';
 import { RECEIPT_SOURCE_ID, receiptToPurchase } from '../../ingest/receipt/purchase.js';
 import { readReceipt } from '../../ingest/receipt/read-receipt.js';
-import { looksLikeImage, storeReceiptImage } from '../../ingest/receipt/store.js';
+import { canonicalBase64, looksLikeImage, storeReceiptImage } from '../../ingest/receipt/store.js';
 import { createMerchantResolver, type MerchantResolver } from '../contacts/merchant.js';
 import { tryMapServiceError } from './error-mapping.js';
 import { toPurchaseDetailBody } from './serializers.js';
@@ -179,9 +179,10 @@ export function makeReceiptHandlers(
   return {
     upload: async ({ body }: { body: UploadBody }) => {
       if (vision === null) return visionUnavailable();
-      if (!looksLikeImage(body.dataBase64, body.mediaType)) return notAnImage(body.mediaType);
+      const dataBase64 = canonicalBase64(body.dataBase64);
+      if (!looksLikeImage(dataBase64, body.mediaType)) return notAnImage(body.mediaType);
 
-      const image = { mediaType: body.mediaType, dataBase64: body.dataBase64 };
+      const image = { mediaType: body.mediaType, dataBase64 };
       const stored = storeReceiptImage(image);
 
       // Before the model, not after. The photograph's hash IS the key, so a

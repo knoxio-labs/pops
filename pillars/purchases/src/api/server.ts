@@ -17,6 +17,7 @@ import { DEFAULT_SETTLEMENT_WINDOW_DAYS } from '../contract/constants.js';
  * explicit deregister.
  */
 import { openPurchasesDb } from '../db/index.js';
+import { createAnthropicVision } from '../ingest/receipt/anthropic-vision.js';
 import { resolveSweepIntervals } from '../reconcile/config.js';
 import { createSweepRunner } from '../reconcile/runner.js';
 import { createPurchasesApiApp } from './app.js';
@@ -89,6 +90,9 @@ const app = createPurchasesApiApp({
   purchasesDb,
   version,
   selfBaseUrl,
+  // Null when no API key is configured, which the drop-zone reports as a
+  // 503 at the edge rather than accepting uploads it cannot read.
+  vision: createAnthropicVision(),
   onIngest: () => {
     sweepRunner.request();
   },

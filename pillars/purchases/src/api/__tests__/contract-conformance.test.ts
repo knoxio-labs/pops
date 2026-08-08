@@ -48,6 +48,7 @@ beforeEach(() => {
   __resetPillarRegistryCache();
   delete process.env['POPS_PILLARS'];
   app = createPurchasesApiApp({
+    vision: null,
     purchasesDb: opened,
     version: '1.2.3',
     selfBaseUrl: 'http://localhost:3013',

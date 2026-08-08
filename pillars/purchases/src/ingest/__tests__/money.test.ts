@@ -99,4 +99,30 @@ describe('parseAmountCents', () => {
     expect(parseAmountCents('-$4.95')).toBe(-495);
     expect(parseAmountCents('$-4.95')).toBe(-495);
   });
+
+  it('refuses a three-letter label wearing a currency code’s clothes', () => {
+    // These are what a receipt prints beside an amount accounted for
+    // elsewhere. Read as a line total, each one describes a shop the paper
+    // does not — and the sum still reconciles, so the gate cannot object.
+    for (const labelled of ['TAX 2.75', 'GST 1.50', 'SUB 10.00', 'NET 5.00', 'VAT 1.20']) {
+      expect(parseAmountCents(labelled)).toBeNull();
+    }
+  });
+
+  it('reads an ISO code only when the receipt stated that currency', () => {
+    // Nothing about the characters distinguishes AUD from TAX, so the
+    // stated currency is what makes the difference — and absent one,
+    // refusing is the cheap direction to be wrong in.
+    expect(parseAmountCents('AUD 12.50')).toBeNull();
+    expect(parseAmountCents('AUD 12.50', { currency: 'AUD' })).toBe(1250);
+    expect(parseAmountCents('AUD 12.50', { currency: 'EUR' })).toBeNull();
+  });
+
+  it('reads currency symbols that are spelled with letters', () => {
+    // The exclusion of letters must not cost the currencies whose symbol
+    // is one, which no stated ISO code would rescue.
+    expect(parseAmountCents('12.50 kr', { currency: 'SEK' })).toBe(1250);
+    expect(parseAmountCents('R$ 12,50', { currency: 'BRL' })).toBe(1250);
+    expect(parseAmountCents('RM 12.50', { currency: 'MYR' })).toBe(1250);
+  });
 });

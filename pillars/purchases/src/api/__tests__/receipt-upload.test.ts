@@ -181,6 +181,30 @@ describe('re-uploading the same photograph', () => {
     expect(second.status).toBe(409);
   });
 
+  it('hands the model base64 with no line breaks in it', async () => {
+    // A pasted or `base64`-piped payload arrives wrapped. It decodes fine,
+    // but some providers refuse it, which would turn a good upload into a
+    // model-call failure the user cannot act on.
+    let seen: string | null = null;
+    const capturing: ReceiptVision = {
+      read: async (image) => {
+        seen = image.dataBase64;
+        return GOOD_READING;
+      },
+    };
+    const app = appWith(capturing);
+    const wrapped = JPEG_BASE64.replace(/(.{8})/u, '$1\n  ');
+    expect(wrapped).toMatch(/\s/u);
+
+    const response = await request(app)
+      .post('/receipts')
+      .send({ mediaType: 'image/jpeg', dataBase64: wrapped });
+
+    expect(response.status).toBe(200);
+    expect(seen).not.toBeNull();
+    expect(seen).not.toMatch(/\s/u);
+  });
+
   it('does not pay for a vision call to discover the duplicate', async () => {
     // The photograph's hash IS the key, so a re-upload is knowable before
     // the model is asked. Re-photographing a receipt you already sent is an

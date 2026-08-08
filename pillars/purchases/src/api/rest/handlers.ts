@@ -26,18 +26,13 @@ export function makePurchasesRestHandlers(deps: {
   /** Runs a sweep on demand, for `POST /reconcile/sweep`. */
   sweep?: SweepTrigger;
   /** Reads photographed receipts. Null declines every upload with a 503. */
-  vision?: ReceiptVision | null;
+  vision: ReceiptVision | null;
   /** Names the merchant against contacts. Injectable so tests stay offline. */
   merchant?: MerchantResolver;
 }): ReturnType<typeof server.router<typeof purchasesContract>> {
   return server.router(purchasesContract, {
     purchase: makePurchaseHandlers(deps.purchasesDb.db, deps.onIngest),
-    receipt: makeReceiptHandlers(
-      deps.purchasesDb.db,
-      deps.vision ?? null,
-      deps.onIngest,
-      deps.merchant
-    ),
+    receipt: makeReceiptHandlers(deps.purchasesDb.db, deps.vision, deps.onIngest, deps.merchant),
     reconcile: makeReconcileHandlers(deps.purchasesDb.db, deps.sweep),
     source: makeSourceHandlers(deps.purchasesDb.db),
   });

@@ -102,8 +102,20 @@ const BASE64_RE = /^[A-Za-z0-9+/]+={0,2}$/u;
  * magic-number check is deliberately shallow — it catches a mislabelled or
  * truncated upload, not a hostile one.
  */
+/**
+ * Base64 with the line breaks taken out.
+ *
+ * A pasted or `base64`-piped payload arrives wrapped, which decodes fine
+ * here but is not universally accepted — some providers refuse it outright.
+ * Canonicalising once, at the edge, keeps validation, storage and the model
+ * looking at the same bytes.
+ */
+export function canonicalBase64(dataBase64: string): string {
+  return dataBase64.replaceAll(/\s/gu, '');
+}
+
 export function looksLikeImage(dataBase64: string, mediaType: ReceiptMediaType): boolean {
-  const compact = dataBase64.replaceAll(/\s/gu, '');
+  const compact = canonicalBase64(dataBase64);
   if (compact.length % 4 !== 0 || !BASE64_RE.test(compact)) return false;
 
   const bytes = Buffer.from(compact, 'base64');

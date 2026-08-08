@@ -28,11 +28,15 @@ export interface PurchasesApiDeps {
   /** Runs a sweep on demand, for `POST /reconcile/sweep`. */
   sweep?: SweepTrigger;
   /**
-   * Reads photographed receipts. Omitted or null declines every upload with
-   * a 503 — the drop-zone is optional, and a pillar without an API key
-   * should say so at the edge rather than accept uploads it cannot read.
+   * Reads photographed receipts. Null declines every upload with a 503 —
+   * the drop-zone is optional, and a pillar without an API key should say
+   * so at the edge rather than accept uploads it cannot read.
+   *
+   * Required, not optional: an omitted port is indistinguishable from a
+   * deliberate null, and that is exactly how the production wiring came to
+   * be missing while every test injected its own fake and passed.
    */
-  vision?: ReceiptVision | null;
+  vision: ReceiptVision | null;
   /** Names the merchant against contacts. Injectable so tests stay offline. */
   merchant?: MerchantResolver;
 }

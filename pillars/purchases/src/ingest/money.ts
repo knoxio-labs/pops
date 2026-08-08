@@ -53,11 +53,65 @@ const COMMA_DECIMAL_CURRENCIES = new Set([
 ]);
 
 /**
- * A currency marker at either end: a symbol (`$`, `€`, `kr`) or an ISO code
- * (`AUD`, `EUR`). Bounded deliberately — the point is to allow what sits
- * beside an amount, not to let arbitrary text through.
+ * A currency symbol at either end: `$`, `€`, `£`, `R$`. Letters are
+ * excluded here on purpose.
+ *
+ * Allowing up to three arbitrary non-digits read `TAX 2.75` as $2.75, and
+ * `GST`, `SUB`, `NET` and `VAT` with it — every one of them a label a
+ * receipt prints *beside* an amount that is accounted for elsewhere.
+ * Admitting one as a line total is how a reading passes the gate while
+ * describing a different shop than the paper does.
  */
-const CURRENCY_EDGE = String.raw`(?:[^\d\s,.-]{1,3}|[A-Za-z]{3})`;
+const SYMBOL_EDGE = String.raw`[^\d\s,.\-A-Za-z]{1,3}`;
+
+/**
+ * Currency symbols that are spelled with Latin letters, and so cannot be
+ * told from a label by shape alone.
+ *
+ * Enumerated rather than inferred: `kr` and `R$` are money, `TAX` and `SUB`
+ * are not, and nothing about the characters says which is which. Symbols
+ * outside this alphabet — `€`, `₩`, `zł`, `Kč` — need no entry, since
+ * {@link SYMBOL_EDGE} already admits any non-Latin mark.
+ */
+const LETTER_SYMBOLS = [
+  'kr',
+  'R$',
+  'RM',
+  'Rp',
+  'Rs',
+  'Ft',
+  'lei',
+  'Bs',
+  'A$',
+  'C$',
+  'S$',
+  'NT$',
+  'HK$',
+  'US$',
+  'RD$',
+];
+
+function escapeForRegex(text: string): string {
+  return text.replaceAll(/[$()*+.?[\\\]^{|}]/gu, String.raw`\$&`);
+}
+
+/**
+ * Letters are a currency marker only when they are *the* currency the
+ * receipt stated, or a known symbol. Absent that, `AUD` and `TAX` are
+ * indistinguishable, and guessing in favour of money is the expensive
+ * direction to be wrong in: a refusal is a located failure a human reviews,
+ * while an invented amount is silent.
+ */
+function currencyEdge(locale: MoneyLocale | undefined): string {
+  const alternatives = [SYMBOL_EDGE, ...LETTER_SYMBOLS.map(escapeForRegex)];
+  const currency = locale?.currency;
+  if (typeof currency === 'string' && /^[A-Za-z]{3}$/u.test(currency)) {
+    alternatives.push(currency.toUpperCase());
+  }
+  return `(?:${alternatives.join('|')})`;
+}
+
+const MONEY_RE_CACHE = new Map<string, RegExp>();
 
 /**
  * The whole string must be an amount, not merely contain one.
@@ -67,10 +121,18 @@ const CURRENCY_EDGE = String.raw`(?:[^\d\s,.-]{1,3}|[A-Za-z]{3})`;
  * That contradicts this module's one promise — null for anything that is
  * not money — and let malformed model output through the gate as fact.
  */
-const MONEY_RE = new RegExp(
-  `^(?:-\\s*)?(?:${CURRENCY_EDGE}\\s*)?(?:-\\s*)?(?<digits>[\\d.,]+)\\s*(?:${CURRENCY_EDGE})?$`,
-  'u'
-);
+function moneyPattern(locale: MoneyLocale | undefined): RegExp {
+  const edge = currencyEdge(locale);
+  const cached = MONEY_RE_CACHE.get(edge);
+  if (cached !== undefined) return cached;
+
+  const pattern = new RegExp(
+    `^(?:-\\s*)?(?:${edge}\\s*)?(?:-\\s*)?(?<digits>[\\d.,]+)\\s*(?:${edge})?$`,
+    'iu'
+  );
+  MONEY_RE_CACHE.set(edge, pattern);
+  return pattern;
+}
 
 export interface MoneyLocale {
   /** ISO-4217 from the receipt. Null when it does not say. */
@@ -155,7 +217,7 @@ export function parseAmountCents(
 ): number | null {
   if (raw === null || raw === undefined) return null;
 
-  const match = MONEY_RE.exec(raw.trim());
+  const match = moneyPattern(locale).exec(raw.trim());
   if (match === null) return null;
   const text = match.groups?.['digits'] ?? '';
   if (text === '') return null;
