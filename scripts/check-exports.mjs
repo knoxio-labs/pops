@@ -20,7 +20,7 @@
  *      falls under one of its globs — the **extraction firewall**: a target
  *      outside `files` would 404 once the package is packed/extracted;
  *   4. no `"./*"` catch-all that re-exports the whole tree, except the audited
- *      wide surfaces (`@pops/ui` `./primitives/*`, `@pops/locales` asset tree);
+ *      wide surfaces (`@pops/locales` asset tree);
  *   5. `version` is a real (publishable) semver, even though workspace deps
  *      consume it as `workspace:*`.
  *
@@ -50,16 +50,21 @@ const repoRoot = resolve(here, '..');
  * set of wildcard export *keys* it is permitted to declare. Anything else with
  * a `*` in the key is a violation. Keep this set tiny and justified.
  *
- *   - `@pops/ui` `./primitives/*` — the one audited intentional wide surface
- *     (a design-system primitive barrel; consumers cherry-pick primitives).
  *   - `@pops/locales` `./*` — a pure JSON asset tree consumed as
  *     `@pops/locales/<locale>/<ns>.json`; the package *is* its asset surface,
  *     there is no compiled/internal half to hide.
  *
+ * `@pops/ui` `./primitives/*` was here once, but the directory it pointed at
+ * mixes `.tsx` and `.ts` files, and no single extension-bearing target (nor a
+ * fallback array — Vite takes the array's first candidate unconditionally
+ * and never retries the rest) can serve both through tsc *and* a bundler. The
+ * subpath never actually resolved; it was removed rather than fixed because
+ * every primitive it would have exposed is already reachable through the
+ * package's own barrel (`@pops/ui`).
+ *
  * @type {Record<string, Set<string>>}
  */
 const ALLOWED_WILDCARD_EXPORTS = {
-  '@pops/ui': new Set(['./primitives/*']),
   '@pops/locales': new Set(['./*']),
 };
 

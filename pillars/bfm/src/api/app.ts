@@ -24,9 +24,10 @@ import express, { type Express, type Request, type Response } from 'express';
 import { bfmContract } from '../contract/rest.js';
 import { createMobileRateLimit, type MobileRateLimitOptions } from './auth/mobile-rate-limit.js';
 import { createPairingRateLimit, type PairingRateLimitOptions } from './auth/pairing-rate-limit.js';
+import { createRefreshRateLimit, type RefreshRateLimitOptions } from './auth/refresh-rate-limit.js';
 import { createRequireDevice } from './auth/require-device.js';
 import { createIdentityMiddleware } from './middleware/identity.js';
-import { MOBILE_PATH_PREFIX, PAIRING_PATH } from './paths.js';
+import { CHALLENGE_PATH, MOBILE_PATH_PREFIX, PAIRING_PATH, REFRESH_PATH } from './paths.js';
 import { type BfmRestHandlerDeps, makeBfmRestHandlers } from './rest/handlers.js';
 import { createRequestValidationErrorHandler } from './rest/request-validation.js';
 
@@ -52,7 +53,7 @@ const openapiDocument: unknown = JSON.parse(
 );
 
 /** Re-exported so existing callers keep one import; defined in `paths.ts`. */
-export { MOBILE_PATH_PREFIX, PAIRING_PATH } from './paths.js';
+export { CHALLENGE_PATH, MOBILE_PATH_PREFIX, PAIRING_PATH, REFRESH_PATH } from './paths.js';
 
 export interface BfmApiDeps extends BfmRestHandlerDeps {
   /**
@@ -64,6 +65,8 @@ export interface BfmApiDeps extends BfmRestHandlerDeps {
   mobileRateLimit?: MobileRateLimitOptions;
   /** Same, for the pairing exchange's budget. See {@link PAIRING_PATH}. */
   pairingRateLimit?: PairingRateLimitOptions;
+  /** Same, for the budget the challenge and refresh routes share. */
+  refreshRateLimit?: RefreshRateLimitOptions;
 }
 
 export interface CreateBfmApiAppOptions {
@@ -98,6 +101,15 @@ export function createBfmApiApp(deps: BfmApiDeps, options: CreateBfmApiAppOption
   // spend the pairing budget and lock out a handset trying to pair.
   app.use(PAIRING_PATH, createPairingRateLimit(deps.pairingRateLimit).handler);
 
+  // ONE limiter instance across both refresh routes, not one per path. They are
+  // two halves of a single exchange, so separate budgets would be one budget an
+  // attacker could spend twice by alternating between them. Its global tier is
+  // also what bounds the nonce map — `auth/refresh-challenge.ts` states the
+  // invariant, and a test pins the two constants against each other.
+  const refreshBudget = createRefreshRateLimit(deps.refreshRateLimit).handler;
+  app.use(CHALLENGE_PATH, refreshBudget);
+  app.use(REFRESH_PATH, refreshBudget);
+
   // Then the guard, still ahead of the body parser. It reads headers only, so
   // an unauthenticated caller never gets bfm to parse a request body — which
   // is the cheapest work an internet-facing pillar can be made to do.
@@ -124,9 +136,8 @@ export function createBfmApiApp(deps: BfmApiDeps, options: CreateBfmApiAppOption
   // that one authenticates a phone, this one authenticates a human through
   // Cloudflare Access for the `/operator/*` routes. Mounted before the
   // endpoints so every handler sees it on `res.locals`. It resolves and never
-  // rejects — `/health`, `/openapi` and the device-facing pairing exchange
-  // (POPS-1374) are anonymous by design, and per-route gating is the handler's
-  // job.
+  // rejects — `/health`, `/openapi` and every `/devices/*` route are anonymous
+  // by design, and per-route gating is the handler's job.
   app.use(createIdentityMiddleware(options.env));
 
   createExpressEndpoints(bfmContract, makeBfmRestHandlers(deps), app, {
