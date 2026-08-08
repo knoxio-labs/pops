@@ -35,14 +35,22 @@
  * and the first is the one that matters:
  *
  * 1. the tiered budget mounted on the route in `app.ts`, whose global tier
- *    caps issuance per window. {@link CHALLENGE_TTL_MS} is at or below that
- *    window, so live entries cannot exceed one window's global limit;
+ *    caps issuance per window, combined with {@link CHALLENGE_TTL_MS} being at
+ *    or below that window. The bound that follows is **twice** the global
+ *    limit, not once: the limiter is a fixed-window counter, so a caller can
+ *    spend a whole window's budget just before a boundary and the next one's
+ *    just after, and a TTL as long as the window keeps both bursts alive at
+ *    the same instant. Twice a bounded number is still bounded, which is the
+ *    property that matters — but the factor is stated because a reader
+ *    checking the ceiling below against the limit above would otherwise find
+ *    it twice as generous as it looks;
  * 2. expiry pruning on every issue, which is cheap because entries expire in
  *    insertion order — see {@link pruneExpired};
  * 3. {@link DEFAULT_MAX_LIVE_CHALLENGES}, a hard ceiling that (1) should make
- *    unreachable. It is here for the case where (1) is misconfigured rather
- *    than as the primary defence, and it evicts the oldest entry, which costs
- *    a phone one retry rather than costing this process its heap.
+ *    unreachable — it sits above 2× the shipped global limit with room to
+ *    spare. It is here for the case where (1) is misconfigured rather than as
+ *    the primary defence, and it evicts the oldest entry, which costs a phone
+ *    one retry rather than costing this process its heap.
  */
 import { randomBytes } from 'node:crypto';
 

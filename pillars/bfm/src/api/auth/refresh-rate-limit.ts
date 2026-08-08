@@ -59,9 +59,12 @@ export const REFRESH_PER_CLIENT_LIMIT = 20;
  * Across both routes, per window, whoever is calling.
  *
  * Ten clients' worth — the same ratio the other two surfaces use. It is also
- * the number that bounds the nonce map: at most this many challenges can be
- * issued per window, and none outlives one. Raising it raises that ceiling,
- * which is the second thing to think about before touching it.
+ * the number that bounds the nonce map, at twice this many live entries:
+ * `rate-limit.ts` is a fixed-window counter, so a caller can spend one
+ * window's budget just before a boundary and the next one's just after, and a
+ * nonce TTL as long as the window keeps both alive at once.
+ * `refresh-challenge.ts` carries the full argument. Raising this raises that
+ * ceiling by two, which is the second thing to think about before touching it.
  */
 export const REFRESH_GLOBAL_LIMIT = 200;
 

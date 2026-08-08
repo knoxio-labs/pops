@@ -16,7 +16,7 @@ import {
   DEFAULT_MAX_LIVE_CHALLENGES,
   generateChallengeNonce,
 } from '../refresh-challenge.js';
-import { REFRESH_RATE_LIMIT_WINDOW_MS } from '../refresh-rate-limit.js';
+import { REFRESH_GLOBAL_LIMIT, REFRESH_RATE_LIMIT_WINDOW_MS } from '../refresh-rate-limit.js';
 
 /** A clock a test moves by hand. */
 function fakeClock(start = 1_000_000): { now: () => number; advance: (ms: number) => void } {
@@ -176,7 +176,12 @@ describe('the bound on live challenges', () => {
     expect(CHALLENGE_TTL_MS).toBeLessThanOrEqual(REFRESH_RATE_LIMIT_WINDOW_MS);
   });
 
-  it('has a backstop the rate limiter should keep out of reach', () => {
-    expect(DEFAULT_MAX_LIVE_CHALLENGES).toBeGreaterThan(0);
+  it('has a backstop above what a fixed-window burst can reach', () => {
+    // Twice the global limit, not once: a caller can spend one window's budget
+    // just before a boundary and the next one's just after, and a TTL as long
+    // as the window keeps both alive at the same instant. The ceiling has to
+    // sit above that or it would be the thing doing the bounding, evicting
+    // honest phones' nonces on traffic the limiter was happy to admit.
+    expect(DEFAULT_MAX_LIVE_CHALLENGES).toBeGreaterThan(2 * REFRESH_GLOBAL_LIMIT);
   });
 });
