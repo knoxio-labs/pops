@@ -166,7 +166,10 @@ jobs:
               conclusion: failed.length > 0 ? "failure" : "success",
               details_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
               output: {
-                title: verdict,
+                // The checks API caps `title` at 255 characters and rejects a
+                // longer one outright, which would turn a reported failure into
+                // an unreported gate. The full list is in `summary`.
+                title: verdict.length > 255 ? `${verdict.slice(0, 252)}...` : verdict,
                 summary: ["Gated workflow states at this commit:", "", ...lines].join("\n"),
               },
             });
