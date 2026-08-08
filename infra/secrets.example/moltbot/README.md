@@ -1,20 +1,23 @@
 # Moltbot secrets
 
 Templates for the Docker secret files moltbot mounts. These are committed
-under `.example` so the structure is discoverable; the live files live
-under `infra/secrets/` (gitignored) on each deployer host.
+under `.example` so the structure is discoverable; the live files live in the
+gitignored **repo-root** `secrets/` on each deployer host — compose writes
+`file: ../secrets/<name>` and resolves it from `infra/`, so `infra/secrets/`
+is not where it looks (see [`infra/secrets.example/bfm/README.md`](../bfm/README.md)
+for the full explanation).
 
 ## First-run
 
+Run from the repo root:
+
 ```sh
-cd infra
 mkdir -p secrets
-for f in secrets.example/moltbot/*.example; do
+chmod 700 secrets
+for f in infra/secrets.example/moltbot/*.example; do
   name=$(basename "$f" .example)
-  if [ ! -f "secrets/$name" ]; then
-    cp "$f" "secrets/$name"
-    chmod 600 "secrets/$name"
-  fi
+  [ -f "secrets/$name" ] || cp "$f" "secrets/$name"
+  chmod 600 "secrets/$name"
 done
 $EDITOR secrets/telegram_bot_token secrets/claude_api_key secrets/pops_api_key
 ```
