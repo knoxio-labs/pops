@@ -8,6 +8,14 @@ export default defineConfig({
     // environment and its own setup file. Without this it would be swept up
     // by the pillar's node-environment run and fail on a missing `document`.
     exclude: [...configDefaults.exclude, 'app/**'],
+    // The default reporter's per-test detail only prints in the final
+    // summary, after every file has finished — if the run is ever killed or
+    // its output truncated before that (a CI timeout, a piped command that
+    // drops early lines) a failure's name and count are the last thing
+    // still visible. Verbose prints each test as it completes, so a failure
+    // is named the moment it happens rather than only if the run survives
+    // to report it.
+    reporters: ['verbose'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json-summary', 'html'],

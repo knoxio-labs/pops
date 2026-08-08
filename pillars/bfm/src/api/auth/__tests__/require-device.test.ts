@@ -7,7 +7,6 @@
  */
 import { eq } from 'drizzle-orm';
 import express, { type Express } from 'express';
-import request from 'supertest';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -18,6 +17,7 @@ import {
 import { deviceRow, openTempDb, requireRow } from '../../../db/__tests__/helpers.js';
 import { devices } from '../../../db/index.js';
 import { testSigningKey } from '../../__tests__/harness.js';
+import { requestOn } from '../../__tests__/test-http.js';
 import { ACCESS_TOKEN_TTL_SECONDS, mintAccessToken } from '../access-token.js';
 import {
   createRequireDevice,
@@ -91,7 +91,9 @@ describe('a valid token', () => {
     const deviceId = insertDevice(h.opened);
     const { token } = mintAccessToken(deviceId, signingKey);
 
-    const res = await request(h.app).get('/mobile/whoami').set('Authorization', `Bearer ${token}`);
+    const res = await requestOn(h.app, (r) =>
+      r.get('/mobile/whoami').set('Authorization', `Bearer ${token}`)
+    );
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ deviceId });
@@ -102,7 +104,9 @@ describe('a valid token', () => {
     const deviceId = insertDevice(h.opened);
     const { token } = mintAccessToken(deviceId, signingKey);
 
-    const res = await request(h.app).get('/mobile/whoami').set('Authorization', `bearer ${token}`);
+    const res = await requestOn(h.app, (r) =>
+      r.get('/mobile/whoami').set('Authorization', `bearer ${token}`)
+    );
 
     expect(res.status).toBe(200);
   });
@@ -112,7 +116,7 @@ describe('401 — the app should refresh', () => {
   it('rejects a request with no Authorization header', async () => {
     const h = open();
 
-    const res = await request(h.app).get('/mobile/whoami');
+    const res = await requestOn(h.app, (r) => r.get('/mobile/whoami'));
 
     expect(res.status).toBe(401);
     expect(res.body).toEqual({ code: 'invalid_token', message: expect.any(String) });
@@ -128,7 +132,9 @@ describe('401 — the app should refresh', () => {
     const deviceId = insertDevice(h.opened);
     const { token } = mintAccessToken(deviceId, signingKey);
 
-    const res = await request(h.app).get('/mobile/whoami').set('Authorization', build(token));
+    const res = await requestOn(h.app, (r) =>
+      r.get('/mobile/whoami').set('Authorization', build(token))
+    );
 
     expect(res.status).toBe(401);
   });
@@ -141,7 +147,9 @@ describe('401 — the app should refresh', () => {
     const { token } = mintAccessToken(deviceId, signingKey);
     vi.setSystemTime(new Date(Date.now() + (ACCESS_TOKEN_TTL_SECONDS + 1) * 1000));
 
-    const res = await request(h.app).get('/mobile/whoami').set('Authorization', `Bearer ${token}`);
+    const res = await requestOn(h.app, (r) =>
+      r.get('/mobile/whoami').set('Authorization', `Bearer ${token}`)
+    );
 
     expect(res.status).toBe(401);
   });
@@ -151,7 +159,9 @@ describe('401 — the app should refresh', () => {
     const deviceId = insertDevice(h.opened);
     const { token } = mintAccessToken(deviceId, otherKey);
 
-    const res = await request(h.app).get('/mobile/whoami').set('Authorization', `Bearer ${token}`);
+    const res = await requestOn(h.app, (r) =>
+      r.get('/mobile/whoami').set('Authorization', `Bearer ${token}`)
+    );
 
     expect(res.status).toBe(401);
   });
@@ -162,7 +172,9 @@ describe('401 — the app should refresh', () => {
     const h = open();
     const { token } = mintAccessToken(crypto.randomUUID(), signingKey);
 
-    const res = await request(h.app).get('/mobile/whoami').set('Authorization', `Bearer ${token}`);
+    const res = await requestOn(h.app, (r) =>
+      r.get('/mobile/whoami').set('Authorization', `Bearer ${token}`)
+    );
 
     expect(res.status).toBe(401);
     expect(res.body.code).toBe('invalid_token');
@@ -171,7 +183,7 @@ describe('401 — the app should refresh', () => {
   it('sends a Bearer challenge, so the client knows what it failed to present', async () => {
     const h = open();
 
-    const res = await request(h.app).get('/mobile/whoami');
+    const res = await requestOn(h.app, (r) => r.get('/mobile/whoami'));
 
     expect(res.headers['www-authenticate']).toBe('Bearer error="invalid_token"');
   });
@@ -183,7 +195,9 @@ describe('403 — the app should re-pair', () => {
     const deviceId = insertDevice(h.opened, { revokedAt: '2026-08-01T09:00:00.000Z' });
     const { token } = mintAccessToken(deviceId, signingKey);
 
-    const res = await request(h.app).get('/mobile/whoami').set('Authorization', `Bearer ${token}`);
+    const res = await requestOn(h.app, (r) =>
+      r.get('/mobile/whoami').set('Authorization', `Bearer ${token}`)
+    );
 
     expect(res.status).toBe(403);
     expect(res.body).toEqual({ code: 'device_revoked', message: expect.any(String) });
@@ -194,7 +208,9 @@ describe('403 — the app should re-pair', () => {
     const deviceId = insertDevice(h.opened, { revokedAt: '2026-08-01T09:00:00.000Z' });
     const { token } = mintAccessToken(deviceId, signingKey);
 
-    const res = await request(h.app).get('/mobile/whoami').set('Authorization', `Bearer ${token}`);
+    const res = await requestOn(h.app, (r) =>
+      r.get('/mobile/whoami').set('Authorization', `Bearer ${token}`)
+    );
 
     expect(res.headers['www-authenticate']).toBeUndefined();
   });
@@ -205,7 +221,7 @@ describe('403 — the app should re-pair', () => {
     const deviceId = insertDevice(h.opened, { revokedAt: '2026-08-01T09:00:00.000Z' });
     const { token } = mintAccessToken(deviceId, signingKey);
 
-    await request(h.app).get('/mobile/whoami').set('Authorization', `Bearer ${token}`);
+    await requestOn(h.app, (r) => r.get('/mobile/whoami').set('Authorization', `Bearer ${token}`));
 
     expect(warn).toHaveBeenCalledTimes(1);
     expect(warn.mock.calls[0]?.[0]).toContain(deviceId);
@@ -221,8 +237,8 @@ describe('what never reaches the logs', () => {
     const h = open();
     const { token } = mintAccessToken(crypto.randomUUID(), otherKey);
 
-    await request(h.app).get('/mobile/whoami');
-    await request(h.app).get('/mobile/whoami').set('Authorization', `Bearer ${token}`);
+    await requestOn(h.app, (r) => r.get('/mobile/whoami'));
+    await requestOn(h.app, (r) => r.get('/mobile/whoami').set('Authorization', `Bearer ${token}`));
 
     expect(warn).not.toHaveBeenCalled();
     expect(error).not.toHaveBeenCalled();
@@ -239,7 +255,9 @@ describe('the refusal body', () => {
     const deviceId = insertDevice(h.opened, revokedAt === undefined ? {} : { revokedAt });
     const { token } = mintAccessToken(deviceId, revokedAt === undefined ? otherKey : signingKey);
 
-    const res = await request(h.app).get('/mobile/whoami').set('Authorization', `Bearer ${token}`);
+    const res = await requestOn(h.app, (r) =>
+      r.get('/mobile/whoami').set('Authorization', `Bearer ${token}`)
+    );
 
     expect(MobileAuthErrorSchema.safeParse(res.body).success).toBe(true);
   });
@@ -255,7 +273,9 @@ describe('the refusal body', () => {
     const deviceId = insertDevice(h.opened);
     const { token } = mintAccessToken(deviceId, otherKey);
 
-    const res = await request(h.app).get('/mobile/whoami').set('Authorization', `Bearer ${token}`);
+    const res = await requestOn(h.app, (r) =>
+      r.get('/mobile/whoami').set('Authorization', `Bearer ${token}`)
+    );
 
     expect(res.status).toBe(401);
     expect(MobileInvalidTokenErrorSchema.safeParse(res.body).success).toBe(true);
@@ -268,7 +288,9 @@ describe('the refusal body', () => {
     const deviceId = insertDevice(h.opened, { revokedAt: '2026-08-01T09:00:00.000Z' });
     const { token } = mintAccessToken(deviceId, signingKey);
 
-    const res = await request(h.app).get('/mobile/whoami').set('Authorization', `Bearer ${token}`);
+    const res = await requestOn(h.app, (r) =>
+      r.get('/mobile/whoami').set('Authorization', `Bearer ${token}`)
+    );
 
     expect(res.status).toBe(403);
     expect(DeviceRevokedErrorSchema.safeParse(res.body).success).toBe(true);
@@ -298,7 +320,7 @@ describe('lastSeenAt', () => {
     const { token } = mintAccessToken(deviceId, signingKey);
 
     vi.setSystemTime(new Date(Date.parse(PAIRED_AT) + LAST_SEEN_COALESCE_WINDOW_MS + 1));
-    await request(h.app).get('/mobile/whoami').set('Authorization', `Bearer ${token}`);
+    await requestOn(h.app, (r) => r.get('/mobile/whoami').set('Authorization', `Bearer ${token}`));
 
     expect(lastSeenAt(h.opened, deviceId)).toBe('2027-01-01T00:01:00.001Z');
   });
@@ -311,11 +333,11 @@ describe('lastSeenAt', () => {
     const { token } = mintAccessToken(deviceId, signingKey);
 
     vi.setSystemTime(new Date(Date.parse(PAIRED_AT) + LAST_SEEN_COALESCE_WINDOW_MS + 1));
-    await request(h.app).get('/mobile/whoami').set('Authorization', `Bearer ${token}`);
+    await requestOn(h.app, (r) => r.get('/mobile/whoami').set('Authorization', `Bearer ${token}`));
     const afterFirst = lastSeenAt(h.opened, deviceId);
 
     vi.setSystemTime(new Date(Date.now() + LAST_SEEN_COALESCE_WINDOW_MS - 1));
-    await request(h.app).get('/mobile/whoami').set('Authorization', `Bearer ${token}`);
+    await requestOn(h.app, (r) => r.get('/mobile/whoami').set('Authorization', `Bearer ${token}`));
 
     expect(lastSeenAt(h.opened, deviceId)).toBe(afterFirst);
   });
@@ -328,11 +350,11 @@ describe('lastSeenAt', () => {
     const { token } = mintAccessToken(deviceId, signingKey);
 
     vi.setSystemTime(new Date(Date.parse(PAIRED_AT) + LAST_SEEN_COALESCE_WINDOW_MS + 1));
-    await request(h.app).get('/mobile/whoami').set('Authorization', `Bearer ${token}`);
+    await requestOn(h.app, (r) => r.get('/mobile/whoami').set('Authorization', `Bearer ${token}`));
     const afterFirst = lastSeenAt(h.opened, deviceId);
 
     vi.setSystemTime(new Date(Date.now() + LAST_SEEN_COALESCE_WINDOW_MS + 1));
-    await request(h.app).get('/mobile/whoami').set('Authorization', `Bearer ${token}`);
+    await requestOn(h.app, (r) => r.get('/mobile/whoami').set('Authorization', `Bearer ${token}`));
 
     expect(lastSeenAt(h.opened, deviceId) > afterFirst).toBe(true);
   });
@@ -341,7 +363,7 @@ describe('lastSeenAt', () => {
     const h = open();
     const deviceId = pairedDevice(h);
 
-    await request(h.app).get('/mobile/whoami');
+    await requestOn(h.app, (r) => r.get('/mobile/whoami'));
 
     expect(lastSeenAt(h.opened, deviceId)).toBe(PAIRED_AT);
   });
@@ -352,7 +374,7 @@ describe('lastSeenAt', () => {
     const deviceId = pairedDevice(h, { revokedAt: '2026-08-01T09:00:00.000Z' });
     const { token } = mintAccessToken(deviceId, signingKey);
 
-    await request(h.app).get('/mobile/whoami').set('Authorization', `Bearer ${token}`);
+    await requestOn(h.app, (r) => r.get('/mobile/whoami').set('Authorization', `Bearer ${token}`));
 
     expect(lastSeenAt(h.opened, deviceId)).toBe(PAIRED_AT);
   });
@@ -366,7 +388,7 @@ describe('lastSeenAt', () => {
     const { token } = mintAccessToken(deviceId, signingKey);
 
     vi.setSystemTime(new Date(Date.parse(PAIRED_AT) + LAST_SEEN_COALESCE_WINDOW_MS + 1));
-    await request(h.app).get('/mobile/whoami').set('Authorization', `Bearer ${token}`);
+    await requestOn(h.app, (r) => r.get('/mobile/whoami').set('Authorization', `Bearer ${token}`));
 
     expect(lastSeenAt(h.opened, otherId)).toBe(PAIRED_AT);
   });
