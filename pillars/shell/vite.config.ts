@@ -122,6 +122,11 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (urlPath: string) => urlPath.replace(/^\/purchases-api/, ''),
       },
+      '/bfm-api': {
+        target: 'http://localhost:3014',
+        changeOrigin: true,
+        rewrite: (urlPath: string) => urlPath.replace(/^\/bfm-api/, ''),
+      },
       // The orchestrator (ADR-029, epic 06) federates search over the pillars
       // and serves `POST /search` at root. The shell's global search panel
       // (`@pops/navigation` useSearchInputData) posts to `/orchestrator-api/search`;
