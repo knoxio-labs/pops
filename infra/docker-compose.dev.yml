@@ -504,17 +504,21 @@ services:
       POPS_REGISTRY_ENABLED: 'true'
       POPS_REGISTRY_URL: ${POPS_REGISTRY_URL:-http://registry-api:3001}
       # The dev source for the service-account key: inline, where production
-      # mounts a file secret. Empty by default, and deliberately not defaulted
-      # to a stand-in — once the cross-pillar wiring lands (POPS-1367) an
-      # absent key crashes boot with a message naming this variable, which is
-      # a better dev experience than a container that starts and 401s.
+      # mounts a file secret at /run/secrets/pops_bfm_api_key. bfm refuses to
+      # boot without one, so the placeholder is what keeps `up -d bfm-api`
+      # working on a clean checkout with no secrets provisioned.
+      #
+      # It is a real string and not a real key: nothing in the fleet verifies
+      # `X-API-Key` except the registry, and bfm calls no sibling yet. Export
+      # POPS_INTERNAL_API_KEY with a minted key before exercising anything
+      # cross-pillar, or the first such call 401s rather than failing at boot.
       #
       # Deliberately NOT given POPS_PILLARS, which every service above sets to
       # a static six-pillar roster. bfm discovers through the registry; reading
       # that roster as overrides would bypass discovery in dev and nowhere
       # else, which is the routing-seam disagreement this fleet has already
       # paid for once.
-      POPS_INTERNAL_API_KEY: ${POPS_INTERNAL_API_KEY:-}
+      POPS_INTERNAL_API_KEY: ${POPS_INTERNAL_API_KEY:-pops_sa_dev.unprovisioned-placeholder}
     expose:
       - '3014'
     depends_on:
