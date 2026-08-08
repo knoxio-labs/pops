@@ -6,8 +6,10 @@ import Testing
 @testable import AuthTestSupport
 
 /// The full key lifecycle against the fake. The real Secure Enclave path
-/// implements the same protocol and is covered — only on hardware — by
-/// ``SecureEnclaveHardwareTests``.
+/// implements the same protocol and is covered, on the simulator and on
+/// hardware, by `SecureEnclaveKeyStoreTests` in the app's hosted test target
+/// (`clients/ios/AppTests`) — this package's own tests cannot create that key,
+/// see `SecureEnclaveKeyStore`'s doc comment for why.
 @Suite("device key lifecycle")
 internal struct DeviceKeyStoreTests {
     @Test("a created key is retrievable and stable")
