@@ -277,6 +277,7 @@ export interface operations {
               /** @enum {string} */
               status: 'awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored';
               subtotalCents: number;
+              surchargeCents: number;
               taxCents: number;
               totalCents: number;
               updatedAt: string;
@@ -368,6 +369,7 @@ export interface operations {
           source: string;
           sourceOrderId?: string | null;
           subtotalCents?: number;
+          surchargeCents?: number;
           taxCents?: number;
           totalCents: number;
         };
@@ -491,6 +493,7 @@ export interface operations {
               /** @enum {string} */
               status: 'awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored';
               subtotalCents: number;
+              surchargeCents: number;
               taxCents: number;
               totalCents: number;
               updatedAt: string;
@@ -668,6 +671,7 @@ export interface operations {
               /** @enum {string} */
               status: 'awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored';
               subtotalCents: number;
+              surchargeCents: number;
               taxCents: number;
               totalCents: number;
               updatedAt: string;
@@ -758,9 +762,11 @@ export interface operations {
     requestBody?: {
       content: {
         'application/json': {
-          dataBase64: string;
-          /** @enum {string} */
-          mediaType: 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif';
+          images: {
+            dataBase64: string;
+            /** @enum {string} */
+            mediaType: 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif';
+          }[];
         };
       };
     };
@@ -897,6 +903,7 @@ export interface operations {
                       | 'settled_cash'
                       | 'ignored';
                     subtotalCents: number;
+                    surchargeCents: number;
                     taxCents: number;
                     totalCents: number;
                     updatedAt: string;
@@ -935,6 +942,8 @@ export interface operations {
                   merchantName: string | null;
                   purchasedAt: string | null;
                   purchasedOn: string | null;
+                  /** @default [] */
+                  surcharges: string[];
                   tax: string | null;
                   /** @default null */
                   timeZone: string | null;
@@ -956,13 +965,13 @@ export interface operations {
                 }[];
                 /** @enum {string} */
                 kind: 'needs-review';
-                receiptUri: string;
+                receiptUris: string[];
               }
             | {
                 /** @enum {string} */
                 kind: 'unreadable';
                 reason: string;
-                receiptUri: string;
+                receiptUris: string[];
               };
         };
       };

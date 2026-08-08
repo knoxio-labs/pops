@@ -1,4 +1,5 @@
 import { bootstrapPillar, type PillarBootstrapHandle } from '@pops/pillar-sdk/bootstrap';
+import { resolveSelfBaseUrl } from '@pops/pillar-sdk/pillar-env';
 
 /**
  * Entry point for the food pillar HTTP server.
@@ -17,7 +18,6 @@ import { openFoodDb } from '../db/index.js';
 import { createFoodApiApp } from './app.js';
 import { resolveFoodSqlitePath } from './food-sqlite-path.js';
 import { buildFoodManifest } from './manifest.js';
-import { parseBareOrigin } from './pillars/env.js';
 import { closeFoodIngestQueue } from './queue.js';
 
 function resolvePort(): number {
@@ -34,27 +34,11 @@ function resolvePort(): number {
 
 const port = resolvePort();
 const version = process.env['BUILD_VERSION'] ?? 'dev';
-// Normalise FOOD_SELF_BASE_URL (or the localhost fallback) through
-// the shared bare-origin parser so a misconfigured env crashes boot
-// loudly instead of publishing an invalid PillarRegistryEntry.baseUrl
-// that breaks downstream consumers appending `/uri/resolve`, `/health`,
-// etc. parseBareOrigin throws a PillarsEnvParseError prefixed with
-// `POPS_PILLARS:` — fine when the parser is consulted from
-// parsePillarsEnv, but misleading when the failing env is actually
-// FOOD_SELF_BASE_URL. Wrap + rethrow with a food-api-scoped message
-// so operators look at the right env var.
-function resolveSelfBaseUrl(): string {
-  const raw = process.env['FOOD_SELF_BASE_URL'] ?? `http://localhost:${port}`;
-  try {
-    return parseBareOrigin('FOOD_SELF_BASE_URL', raw);
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    throw new Error(`[food-api] FOOD_SELF_BASE_URL ${raw} is invalid — ${message}`, {
-      cause: err,
-    });
-  }
-}
-const selfBaseUrl = resolveSelfBaseUrl();
+const selfBaseUrl = resolveSelfBaseUrl({
+  envVar: 'FOOD_SELF_BASE_URL',
+  port,
+  processLabel: 'food-api',
+});
 
 const foodDb = openFoodDb(resolveFoodSqlitePath());
 const app = createFoodApiApp({ foodDb, version, selfBaseUrl });

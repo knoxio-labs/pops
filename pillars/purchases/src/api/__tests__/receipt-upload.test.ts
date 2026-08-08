@@ -98,7 +98,13 @@ afterEach(() => {
 });
 
 const upload = (app: Express, dataBase64 = JPEG_BASE64, mediaType = 'image/jpeg') =>
-  request(app).post('/receipts').send({ mediaType, dataBase64 });
+  request(app)
+    .post('/receipts')
+    .send({ images: [{ mediaType, dataBase64 }] });
+
+/** One receipt sent as several photographs, in order. */
+const uploadAll = (app: Express, images: { mediaType: string; dataBase64: string }[]) =>
+  request(app).post('/receipts').send({ images });
 
 describe('a receipt the model reads and the paper agrees with', () => {
   it('creates the purchase, its line items and its charge', async () => {
@@ -213,8 +219,8 @@ describe('re-uploading the same photograph', () => {
     // model-call failure the user cannot act on.
     let seen: string | null = null;
     const capturing: ReceiptVision = {
-      read: async (image) => {
-        seen = image.dataBase64;
+      read: async (images) => {
+        seen = images[0]?.dataBase64 ?? null;
         return GOOD_READING;
       },
     };
@@ -224,7 +230,7 @@ describe('re-uploading the same photograph', () => {
 
     const response = await request(app)
       .post('/receipts')
-      .send({ mediaType: 'image/jpeg', dataBase64: wrapped });
+      .send({ images: [{ mediaType: 'image/jpeg', dataBase64: wrapped }] });
 
     expect(response.status).toBe(200);
     expect(seen).not.toBeNull();
@@ -248,6 +254,57 @@ describe('re-uploading the same photograph', () => {
     await upload(app);
 
     expect(calls).toBe(1);
+  });
+
+  it('stores the fee the merchant added, not just the total it produced', async () => {
+    // The gate reconciles with the surcharge either way, because the total
+    // is read off the paper — so a write path that drops it looks correct
+    // from the outside while the stored breakdown no longer adds up.
+    const withFee = JSON.stringify({
+      ...JSON.parse(GOOD_READING),
+      total: '$27.62',
+      surcharges: ['0.12'],
+    });
+
+    const response = await upload(appWith(saying(withFee)));
+
+    expect(response.body.kind).toBe('created');
+    expect(response.body.purchase.purchase.surchargeCents).toBe(12);
+    expect(response.body.purchase.purchase.totalCents).toBe(2762);
+  });
+
+  it('reads one receipt sent as several photographs', async () => {
+    // A full shop does not fit in one frame. Both images go to the model in
+    // one call, and the result is one purchase carrying both as evidence.
+    let sawImages = 0;
+    const counting: ReceiptVision = {
+      read: async (images) => {
+        sawImages = images.length;
+        return GOOD_READING;
+      },
+    };
+
+    const response = await uploadAll(appWith(counting), [
+      { mediaType: 'image/jpeg', dataBase64: JPEG_BASE64 },
+      { mediaType: 'image/jpeg', dataBase64: OTHER_JPEG_BASE64 },
+    ]);
+
+    expect(response.status).toBe(200);
+    expect(response.body.kind).toBe('created');
+    expect(sawImages).toBe(2);
+    expect(response.body.purchase.documents).toHaveLength(2);
+    expect(readdirSync(receiptDir)).toHaveLength(2);
+  });
+
+  it('names which photograph was not an image', async () => {
+    // Re-taking one picture of six beats re-taking all six.
+    const response = await uploadAll(appWith(saying(GOOD_READING)), [
+      { mediaType: 'image/jpeg', dataBase64: JPEG_BASE64 },
+      { mediaType: 'image/jpeg', dataBase64: Buffer.from('not a jpeg').toString('base64') },
+    ]);
+
+    expect(response.status).toBe(400);
+    expect(response.body.message).toContain('2 of 2');
   });
 
   it('does not write the image twice', async () => {
@@ -332,7 +389,8 @@ describe('a reading the paper disagrees with', () => {
     expect(response.body.kind).toBe('needs-review');
     expect(response.body.failures[0].kind).toBe('sum-mismatch');
     // The evidence survives even though nothing was written.
-    expect(response.body.receiptUri).toMatch(/^pops:\/\/purchases\/receipt\//u);
+    expect(response.body.receiptUris).toHaveLength(1);
+    expect(response.body.receiptUris[0]).toMatch(/^pops:\/\/purchases\/receipt\//u);
     expect(readdirSync(receiptDir)).toHaveLength(1);
 
     const listed = await request(appWith(saying(wrong))).get('/purchases');
@@ -378,7 +436,8 @@ describe('a model that says nothing usable', () => {
     const response = await upload(appWith(saying('I cannot read this receipt.')));
     expect(response.status).toBe(200);
     expect(response.body.kind).toBe('unreadable');
-    expect(response.body.receiptUri).toMatch(/^pops:\/\/purchases\/receipt\//u);
+    expect(response.body.receiptUris).toHaveLength(1);
+    expect(response.body.receiptUris[0]).toMatch(/^pops:\/\/purchases\/receipt\//u);
   });
 
   it('keeps the photograph even then, so it can be read again later', async () => {

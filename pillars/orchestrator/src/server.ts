@@ -24,10 +24,10 @@
  */
 import { bootstrapPillar, type PillarBootstrapHandle } from '@pops/pillar-sdk/bootstrap';
 import { setRegistryUrl } from '@pops/pillar-sdk/discovery';
+import { parseBareOrigin, resolveSelfBaseUrl } from '@pops/pillar-sdk/pillar-env';
 
 import { createOrchestratorApp } from './app.js';
 import { buildOrchestratorManifest } from './manifest.js';
-import { parseBareOrigin } from './pillars/env.js';
 
 const DEFAULT_PORT = 3009;
 
@@ -44,21 +44,11 @@ function resolvePort(): number {
 const port = resolvePort();
 const version = process.env['BUILD_VERSION'] ?? 'dev';
 
-// Normalise ORCHESTRATOR_SELF_BASE_URL (or the localhost fallback) through
-// the shared bare-origin parser so a misconfigured env crashes boot loudly
-// instead of publishing an invalid PillarRegistryEntry.baseUrl.
-function resolveSelfBaseUrl(): string {
-  const raw = process.env['ORCHESTRATOR_SELF_BASE_URL'] ?? `http://localhost:${port}`;
-  try {
-    return parseBareOrigin('ORCHESTRATOR_SELF_BASE_URL', raw);
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    throw new Error(`[orchestrator] ORCHESTRATOR_SELF_BASE_URL ${raw} is invalid — ${message}`, {
-      cause: err,
-    });
-  }
-}
-const selfBaseUrl = resolveSelfBaseUrl();
+const selfBaseUrl = resolveSelfBaseUrl({
+  envVar: 'ORCHESTRATOR_SELF_BASE_URL',
+  port,
+  processLabel: 'orchestrator',
+});
 
 // Point the SDK discovery client (the `GET /pillars` registry-first source) at
 // the registry pillar. When unset, the SDK keeps its `http://registry-api:3001`
@@ -72,9 +62,7 @@ if (registryUrl !== undefined && registryUrl !== '') {
     setRegistryUrl(parseBareOrigin('POPS_REGISTRY_URL', registryUrl));
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    throw new Error(`[orchestrator] POPS_REGISTRY_URL ${registryUrl} is invalid — ${message}`, {
-      cause: err,
-    });
+    throw new Error(`[orchestrator] ${message}`, { cause: err });
   }
 }
 

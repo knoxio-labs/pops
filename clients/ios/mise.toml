@@ -19,9 +19,11 @@ done
 '''
 
 [tasks."test:packages"]
-description = "Run every package's tests on the host toolchain, without a simulator"
+description = "Run every package's tests on the host toolchain, without Xcode"
 run = '''
 for package in Packages/*/; do
+  # `swift test` fails outright on a package with no test target, so a package
+  # whose tests are still a later ticket must not fail the run.
   if [ -d "$package/Tests" ]; then
     swift test --package-path "$package" || exit 1
   fi

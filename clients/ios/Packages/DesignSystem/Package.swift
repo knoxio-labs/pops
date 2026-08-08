@@ -1,13 +1,12 @@
 // swift-tools-version: 6.0
 import PackageDescription
 
-// macOS appears here only so `swift build` and `swift test` work: they compile
-// for the host, and SwiftPM's default host deployment target predates every
-// SwiftUI symbol this module uses. 14.0 is the floor those symbols need. The
-// module ships in an iOS app and nothing else — see README.md.
+// `swift build` and `swift test` compile this package for the *host*, so macOS
+// needs a floor too — without one it defaults low enough that `Color.resolve`
+// and `#Preview` are unavailable and the package only builds through Xcode.
 let package = Package(
     name: "DesignSystem",
-    platforms: [.iOS("27.0"), .macOS("14.0")],
+    platforms: [.iOS("27.0"), .macOS("15.0")],
     products: [.library(name: "DesignSystem", targets: ["DesignSystem"])],
     targets: [
         .target(

@@ -21,6 +21,10 @@
       "types": "./dist/bootstrap/index.d.ts",
       "default": "./dist/bootstrap/index.js"
     },
+    "./pillar-env": {
+      "types": "./dist/pillar-env/index.d.ts",
+      "default": "./dist/pillar-env/index.js"
+    },
     "./client": {
       "types": "./dist/client/index.d.ts",
       "default": "./dist/client/index.js"
@@ -71,6 +75,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@pops/types": "workspace:*",
     "zod": "^4.4.3"
   },
   "devDependencies": {

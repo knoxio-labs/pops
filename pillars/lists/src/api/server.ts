@@ -1,4 +1,5 @@
 import { bootstrapPillar, type PillarBootstrapHandle } from '@pops/pillar-sdk/bootstrap';
+import { resolveSelfBaseUrl } from '@pops/pillar-sdk/pillar-env';
 
 /**
  * Entry point for the lists pillar HTTP server.
@@ -18,7 +19,6 @@ import { openListsDb } from '../db/index.js';
 import { createListsApiApp } from './app.js';
 import { resolveListsSqlitePath } from './lists-sqlite-path.js';
 import { buildListsManifest } from './manifest.js';
-import { parseBareOrigin } from './pillars/env.js';
 
 function resolvePort(): number {
   const raw = process.env['PORT'];
@@ -32,24 +32,11 @@ function resolvePort(): number {
 
 const port = resolvePort();
 const version = process.env['BUILD_VERSION'] ?? 'dev';
-// Normalise LISTS_SELF_BASE_URL (or the localhost fallback) through the
-// shared bare-origin parser so a misconfigured env crashes boot loudly
-// instead of publishing an invalid PillarRegistryEntry.baseUrl. The
-// parser's own error is prefixed `POPS_PILLARS:`, which misleads when
-// the failing env is LISTS_SELF_BASE_URL — wrap + rethrow with a
-// lists-api-scoped message so operators look at the right env var.
-function resolveSelfBaseUrl(): string {
-  const raw = process.env['LISTS_SELF_BASE_URL'] ?? `http://localhost:${port}`;
-  try {
-    return parseBareOrigin('LISTS_SELF_BASE_URL', raw);
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    throw new Error(`[lists-api] LISTS_SELF_BASE_URL ${raw} is invalid — ${message}`, {
-      cause: err,
-    });
-  }
-}
-const selfBaseUrl = resolveSelfBaseUrl();
+const selfBaseUrl = resolveSelfBaseUrl({
+  envVar: 'LISTS_SELF_BASE_URL',
+  port,
+  processLabel: 'lists-api',
+});
 
 const listsDb = openListsDb(resolveListsSqlitePath());
 const app = createListsApiApp({ listsDb, version, selfBaseUrl });

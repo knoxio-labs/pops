@@ -295,6 +295,11 @@
                             "minimum": 0,
                             "type": "integer"
                           },
+                          "surchargeCents": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
                           "taxCents": {
                             "maximum": 9007199254740991,
                             "minimum": 0,
@@ -318,6 +323,7 @@
                           "orderedAt",
                           "currency",
                           "subtotalCents",
+                          "surchargeCents",
                           "shippingCents",
                           "taxCents",
                           "discountCents",
@@ -648,6 +654,11 @@
                     "type": "string"
                   },
                   "subtotalCents": {
+                    "maximum": 9007199254740991,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "surchargeCents": {
                     "maximum": 9007199254740991,
                     "minimum": 0,
                     "type": "integer"
@@ -1198,6 +1209,11 @@
                           "minimum": 0,
                           "type": "integer"
                         },
+                        "surchargeCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
                         "taxCents": {
                           "maximum": 9007199254740991,
                           "minimum": 0,
@@ -1221,6 +1237,7 @@
                         "orderedAt",
                         "currency",
                         "subtotalCents",
+                        "surchargeCents",
                         "shippingCents",
                         "taxCents",
                         "discountCents",
@@ -1978,6 +1995,11 @@
                           "minimum": 0,
                           "type": "integer"
                         },
+                        "surchargeCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
                         "taxCents": {
                           "maximum": 9007199254740991,
                           "minimum": 0,
@@ -2001,6 +2023,7 @@
                         "orderedAt",
                         "currency",
                         "subtotalCents",
+                        "surchargeCents",
                         "shippingCents",
                         "taxCents",
                         "discountCents",
@@ -2147,16 +2170,28 @@
               "schema": {
                 "additionalProperties": false,
                 "properties": {
-                  "dataBase64": {
-                    "minLength": 1,
-                    "type": "string"
-                  },
-                  "mediaType": {
-                    "enum": ["image/jpeg", "image/png", "image/webp", "image/gif"],
-                    "type": "string"
+                  "images": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "dataBase64": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "mediaType": {
+                          "enum": ["image/jpeg", "image/png", "image/webp", "image/gif"],
+                          "type": "string"
+                        }
+                      },
+                      "required": ["mediaType", "dataBase64"],
+                      "type": "object"
+                    },
+                    "maxItems": 8,
+                    "minItems": 1,
+                    "type": "array"
                   }
                 },
-                "required": ["mediaType", "dataBase64"],
+                "required": ["images"],
                 "type": "object"
               }
             }
@@ -2707,6 +2742,11 @@
                                   "minimum": 0,
                                   "type": "integer"
                                 },
+                                "surchargeCents": {
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                },
                                 "taxCents": {
                                   "maximum": 9007199254740991,
                                   "minimum": 0,
@@ -2730,6 +2770,7 @@
                                 "orderedAt",
                                 "currency",
                                 "subtotalCents",
+                                "surchargeCents",
                                 "shippingCents",
                                 "taxCents",
                                 "discountCents",
@@ -2915,6 +2956,14 @@
                               "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
                               "type": "string"
                             },
+                            "surcharges": {
+                              "default": [],
+                              "items": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "type": "array"
+                            },
                             "tax": {
                               "minLength": 1,
                               "nullable": true,
@@ -2949,6 +2998,7 @@
                             "total",
                             "tax",
                             "discounts",
+                            "surcharges",
                             "lines",
                             "unreadable"
                           ],
@@ -2987,12 +3037,16 @@
                           "enum": ["needs-review"],
                           "type": "string"
                         },
-                        "receiptUri": {
-                          "pattern": "^pops:\\/\\/[a-z0-9-]+\\/[a-z0-9-]+\\/[^/\\s]+$",
-                          "type": "string"
+                        "receiptUris": {
+                          "items": {
+                            "pattern": "^pops:\\/\\/[a-z0-9-]+\\/[a-z0-9-]+\\/[^/\\s]+$",
+                            "type": "string"
+                          },
+                          "minItems": 1,
+                          "type": "array"
                         }
                       },
-                      "required": ["kind", "receiptUri", "failures", "extracted"],
+                      "required": ["kind", "receiptUris", "failures", "extracted"],
                       "type": "object"
                     },
                     {
@@ -3005,12 +3059,16 @@
                         "reason": {
                           "type": "string"
                         },
-                        "receiptUri": {
-                          "pattern": "^pops:\\/\\/[a-z0-9-]+\\/[a-z0-9-]+\\/[^/\\s]+$",
-                          "type": "string"
+                        "receiptUris": {
+                          "items": {
+                            "pattern": "^pops:\\/\\/[a-z0-9-]+\\/[a-z0-9-]+\\/[^/\\s]+$",
+                            "type": "string"
+                          },
+                          "minItems": 1,
+                          "type": "array"
                         }
                       },
-                      "required": ["kind", "receiptUri", "reason"],
+                      "required": ["kind", "receiptUris", "reason"],
                       "type": "object"
                     }
                   ]

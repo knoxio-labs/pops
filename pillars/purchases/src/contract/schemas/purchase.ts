@@ -81,6 +81,8 @@ export const PurchaseSchema = z.object({
   orderedAt: IsoTimestampSchema,
   currency: CurrencySchema,
   subtotalCents: NonNegativeCentsSchema,
+  /** A fee the merchant added: a card surcharge, a small-order fee. */
+  surchargeCents: NonNegativeCentsSchema,
   shippingCents: NonNegativeCentsSchema,
   taxCents: NonNegativeCentsSchema,
   discountCents: NonNegativeCentsSchema,

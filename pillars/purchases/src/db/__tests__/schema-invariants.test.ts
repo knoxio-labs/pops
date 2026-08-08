@@ -81,6 +81,16 @@ describe('purchases constraints', () => {
     }).toThrow(/CHECK constraint failed/i);
   });
 
+  it('rejects a negative surcharge, which would silently deflate a total', () => {
+    // The column carries its own CHECK: SQLite does not extend the table's
+    // existing non-negative constraint to a column added by a later
+    // migration, so without one this invariant would hold for every
+    // component except the newest.
+    expect(() => {
+      insertOrderRaw({ surchargeCents: -100 });
+    }).toThrow(/CHECK constraint failed/i);
+  });
+
   it('accepts a total that disagrees with its component columns', () => {
     // Deliberate: real merchant exports disagree with their own subtotals,
     // and rejecting those at ingest would lose valid orders.

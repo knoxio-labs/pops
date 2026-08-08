@@ -24,11 +24,26 @@ import { PopsUriSchema, PurchaseDetailSchema } from './schemas/purchase.js';
 
 const c = initContract();
 
-export const UploadReceiptBodySchema = z.object({
+export const ReceiptImageSchema = z.object({
   /** Closed to what a vision model accepts — see `ingest/receipt/vision.ts`. */
   mediaType: z.enum(MEDIA_TYPES),
   /** The image, base64 with no data-URI prefix. */
   dataBase64: z.string().min(1),
+});
+
+/** How many photographs one receipt may be sent as. */
+export const MAX_RECEIPT_IMAGES = 8;
+
+export const UploadReceiptBodySchema = z.object({
+  /**
+   * One receipt, in order, top to bottom. A full supermarket shop does not
+   * fit in one frame, so several photographs of one piece of paper are one
+   * upload and one purchase — not several receipts.
+   *
+   * Bounded because every image is paid for in the same model call, and a
+   * receipt needing more than eight frames is a scanner's job.
+   */
+  images: z.array(ReceiptImageSchema).min(1).max(MAX_RECEIPT_IMAGES),
 });
 
 /** One thing the gate objected to, in the receipt's own terms. */
@@ -63,7 +78,8 @@ export const ReceiptOutcomeSchema = z.discriminatedUnion('kind', [
    */
   z.object({
     kind: z.literal('needs-review'),
-    receiptUri: PopsUriSchema,
+    /** Every photograph, in the order it was sent. */
+    receiptUris: z.array(PopsUriSchema).min(1),
     failures: z.array(GateFailureSchema),
     /**
      * What the model read, typed. A reviewer's whole job is to compare this
@@ -73,7 +89,11 @@ export const ReceiptOutcomeSchema = z.discriminatedUnion('kind', [
     extracted: ExtractedReceiptSchema,
   }),
   /** Nothing usable came back. Not a purchase, and not an empty receipt. */
-  z.object({ kind: z.literal('unreadable'), receiptUri: PopsUriSchema, reason: z.string() }),
+  z.object({
+    kind: z.literal('unreadable'),
+    receiptUris: z.array(PopsUriSchema).min(1),
+    reason: z.string(),
+  }),
 ]);
 
 export const purchasesReceiptContract = c.router({

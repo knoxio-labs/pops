@@ -38,7 +38,7 @@ const receipt = (over: Partial<ExtractedReceipt> = {}): ExtractedReceipt =>
 
 const UPLOADED_AT = '2026-08-06T23:11:00.000Z';
 
-const map = (over: Partial<ExtractedReceipt> = {}, stored = STORED) => {
+const map = (over: Partial<ExtractedReceipt> = {}, stored: StoredReceipt[] = [STORED]) => {
   const extracted = receipt(over);
   return receiptToPurchase(extracted, gateExtraction(extracted), stored, UPLOADED_AT);
 };
@@ -226,6 +226,22 @@ describe('the checksum', () => {
 
   it('differs between two photographs read identically', () => {
     const other = { ...STORED, sha256: 'b'.repeat(64) };
-    expect(map({}, other).purchase.checksum).not.toBe(map().purchase.checksum);
+    expect(map({}, [other]).purchase.checksum).not.toBe(map().purchase.checksum);
+  });
+
+  it('differs when the same receipt is sent as more photographs', () => {
+    // The key is over the whole set, so one picture of a receipt and two
+    // are different submissions of it — which is what stops a second,
+    // fuller set being mistaken for the first and silently dropped.
+    const second = { ...STORED, sha256: 'b'.repeat(64) };
+    expect(map({}, [STORED, second]).purchase.sourceOrderId).not.toBe(map().purchase.sourceOrderId);
+  });
+
+  it('carries every photograph as evidence, in order', () => {
+    const second = { ...STORED, sha256: 'b'.repeat(64), uri: receiptUri('b'.repeat(64)) };
+    expect(map({}, [STORED, second]).purchase.documents).toEqual([
+      { documentUri: receiptUri(SHA), kind: 'receipt' },
+      { documentUri: receiptUri('b'.repeat(64)), kind: 'receipt' },
+    ]);
   });
 });

@@ -241,3 +241,37 @@ describe('the two conventions for stated tax', () => {
     expect(result.failures[0]?.kind).toBe('sum-mismatch');
   });
 });
+
+describe('a fee the merchant added', () => {
+  it('reconciles a real ALDI receipt with its card surcharge', () => {
+    // The receipt: $24.05 of groceries, a 0.50% credit surcharge of 12c,
+    // and a $24.17 total. Without somewhere to put the surcharge this is
+    // out by 12c forever, and card surcharges are on most Australian card
+    // receipts.
+    const aldi = receipt({
+      total: '$24.17',
+      tax: null,
+      surcharges: ['0.12'],
+      lines: [
+        { description: 'BeefChuckCass CW', amount: '17.56' },
+        { description: 'ChsBlockColby500g', amount: '6.49' },
+      ],
+    });
+
+    const result = gateExtraction(aldi);
+
+    expect(result.admissible).toBe(true);
+    expect(result.surchargeCents).toBe(12);
+  });
+
+  it('does not let a surcharge excuse a genuine mismatch', () => {
+    const wrong = receipt({
+      total: '$30.00',
+      tax: null,
+      surcharges: ['0.12'],
+      lines: [{ description: 'BeefChuckCass CW', amount: '17.56' }],
+    });
+
+    expect(gateExtraction(wrong).admissible).toBe(false);
+  });
+});

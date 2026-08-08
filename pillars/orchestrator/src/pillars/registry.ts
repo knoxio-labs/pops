@@ -13,8 +13,7 @@
  * sees the federating service alongside the pillars it aggregates over.
  */
 import { pillarRegistry, RegistryUnreachableError } from '@pops/pillar-sdk/discovery';
-
-import { parseBareOrigin, parsePillarsEnv } from './env.js';
+import { parseBareOrigin, parsePillarsEnv } from '@pops/pillar-sdk/pillar-env';
 
 import type { PillarSnapshot } from '@pops/pillar-sdk/discovery';
 import type { PillarRegistryEntry } from '@pops/types';

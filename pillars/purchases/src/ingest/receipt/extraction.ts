@@ -82,6 +82,12 @@ export const ExtractedReceiptSchema = z.object({
   tax: z.string().trim().min(1).nullable(),
   /** Stated discounts, as positive printed amounts. */
   discounts: z.array(z.string().trim().min(1)).default([]),
+  /**
+   * Fees the merchant added: a card surcharge, a small-order fee. Positive
+   * printed amounts, like discounts, and separate from them because they
+   * move the total the other way.
+   */
+  surcharges: z.array(z.string().trim().min(1)).default([]),
   lines: z.array(ExtractedLineSchema),
   /**
    * Where the model could not read the paper — a torn corner, a smudged

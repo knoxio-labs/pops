@@ -6,6 +6,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json .oxfmtrc
 
 # Copy workspace package.json files (for dep resolution)
 COPY libs/sdk/package.json ./libs/sdk/
+COPY libs/types/package.json ./libs/types/
 COPY pillars/mcp/package.json ./pillars/mcp/
 
 # Install pnpm and all workspace dependencies
@@ -14,16 +15,17 @@ RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
 
 # Copy shared package sources
 COPY libs/sdk/ ./libs/sdk/
+COPY libs/types/ ./libs/types/
 
 # Copy pops-mcp source
 COPY pillars/mcp/tsconfig.json ./pillars/mcp/
 COPY pillars/mcp/src ./pillars/mcp/src
 
-# Build shared packages first (pops-mcp consumes @pops/pillar-sdk).
-WORKDIR /app/libs/sdk
-RUN pnpm build
+# Build the shared deps in pnpm topology order, then pops-mcp. Ordering is
+# derived from the workspace graph rather than hardcoded, so a new @pops/*
+# dependency does not silently build before the package it references.
+RUN pnpm --filter "@pops/mcp^..." build
 
-# Build pops-mcp
 WORKDIR /app/pillars/mcp
 RUN pnpm build
 

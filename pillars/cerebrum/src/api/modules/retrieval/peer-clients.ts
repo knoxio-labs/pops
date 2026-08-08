@@ -17,7 +17,7 @@
  * yield `null` metadata). A live fetch failure surfaces as a thrown error
  * caught by the hybrid fallback.
  */
-import { parsePillarsEnv } from '../../pillars/env.js';
+import { parsePillarsEnv } from '@pops/pillar-sdk/pillar-env';
 
 export interface FinanceTransactionRow {
   description?: string | null;

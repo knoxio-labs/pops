@@ -1,4 +1,5 @@
 import { bootstrapPillar, type PillarBootstrapHandle } from '@pops/pillar-sdk/bootstrap';
+import { resolveSelfBaseUrl } from '@pops/pillar-sdk/pillar-env';
 
 /**
  * Entry point for the registry pillar HTTP server.
@@ -20,7 +21,6 @@ import { assertFeatureKeysAreCoreOwned } from './modules/features/key-ownership.
 import { reconcileRegistryOnBoot } from './modules/registry/boot.js';
 import { startEvictionTicker } from './modules/registry/eviction-ticker.js';
 import { startHeartbeatTicker } from './modules/registry/ticker.js';
-import { parseBareOrigin } from './pillars/env.js';
 import { buildRegistryManifest } from './registry-manifest.js';
 
 function resolvePort(): number {
@@ -35,15 +35,11 @@ function resolvePort(): number {
 
 const port = resolvePort();
 const version = process.env['BUILD_VERSION'] ?? 'dev';
-// Normalise REGISTRY_SELF_BASE_URL (or the localhost fallback) through the
-// shared bare-origin parser so a misconfigured env crashes boot loudly
-// instead of publishing an invalid PillarRegistryEntry.baseUrl that
-// breaks downstream consumers appending `/uri/resolve`, `/health`, etc.
-const selfBaseUrlEnv = process.env['REGISTRY_SELF_BASE_URL'];
-const selfBaseUrl = parseBareOrigin(
-  'REGISTRY_SELF_BASE_URL',
-  selfBaseUrlEnv ?? `http://localhost:${port}`
-);
+const selfBaseUrl = resolveSelfBaseUrl({
+  envVar: 'REGISTRY_SELF_BASE_URL',
+  port,
+  processLabel: 'core-api',
+});
 
 const coreDb = openCoreDb(resolveCoreSqlitePath());
 

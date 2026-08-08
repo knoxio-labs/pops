@@ -26,6 +26,7 @@ import { createHash } from 'node:crypto';
 
 import { instantFromLocalParts, isKnownTimeZone, storeTimeZone } from '../local-time.js';
 import { parseAmountCents } from '../money.js';
+import { receiptKey } from './store.js';
 
 import type { CreateItemInput, CreatePurchaseInput } from '../../db/services/purchase-input.js';
 import type { ExtractedReceipt } from './extraction.js';
@@ -120,12 +121,9 @@ function occurredAt(extracted: ExtractedReceipt, zone: string): string | null {
  * change detection: re-reading the same photograph with a better model
  * should look different, because it is.
  */
-function checksumFor(
-  stored: StoredReceipt,
-  purchase: Omit<CreatePurchaseInput, 'checksum'>
-): string {
+function checksumFor(key: string, purchase: Omit<CreatePurchaseInput, 'checksum'>): string {
   const hash = createHash('sha256');
-  hash.update(`${RECEIPT_SOURCE_ID}:${stored.sha256}:${purchase.orderedAt}`);
+  hash.update(`${RECEIPT_SOURCE_ID}:${key}:${purchase.orderedAt}`);
   hash.update(`:${String(purchase.totalCents)}:${String(purchase.discountCents ?? 0)}`);
   for (const item of purchase.items ?? []) {
     hash.update(
@@ -157,9 +155,14 @@ function checksumFor(
 export function receiptToPurchase(
   extracted: ExtractedReceipt,
   gate: GateResult,
-  stored: StoredReceipt,
+  stored: readonly StoredReceipt[],
   uploadedAt: string = new Date().toISOString()
 ): ReceiptPurchaseResult {
+  const key = receiptKey(stored);
+  const [first] = stored;
+  if (first === undefined) {
+    throw new Error('receiptToPurchase needs at least one stored photograph');
+  }
   const { zone, certain: zoneCertain } = resolveZone(extracted);
   const stated = occurredAt(extracted, zone);
   const orderedAt = stated ?? uploadedAt;
@@ -184,7 +187,7 @@ export function receiptToPurchase(
   const withoutChecksum: Omit<CreatePurchaseInput, 'checksum'> = {
     source: RECEIPT_SOURCE_ID,
     // The photograph is the key. See the file comment.
-    sourceOrderId: stored.sha256,
+    sourceOrderId: key,
     ingestMethod: 'upload',
     orderedAt,
     currency: extracted.currency ?? DEFAULT_CURRENCY,
@@ -194,6 +197,7 @@ export function receiptToPurchase(
     // here as well would make it appear twice in any sum of parts — the
     // same reason the Woolworths adapter drops GST.
     taxCents: gate.taxIncluded ? 0 : gate.taxCents,
+    surchargeCents: gate.surchargeCents,
     discountCents: gate.discountCents,
     totalCents,
     // Unknown is a valid outcome, not a failure — the escape hatch exists
@@ -203,7 +207,7 @@ export function receiptToPurchase(
     // `cash` is terminal — a real card shop marked that way is excluded
     // from reconciliation forever. The reviewer sets it (ADR-042).
     settlementMode: 'unknown',
-    rawRef: stored.uri,
+    rawRef: first.uri,
     tags,
     items,
     charges: [
@@ -214,8 +218,11 @@ export function receiptToPurchase(
         origin: 'merchant',
       },
     ],
-    documents: [{ documentUri: stored.uri, kind: 'receipt' }],
+    // Every photograph, in the order it was taken: each is evidence for
+    // the same shop, and a reviewer needs all of them to check a long
+    // receipt against what was read from it.
+    documents: stored.map((one) => ({ documentUri: one.uri, kind: 'receipt' as const })),
   };
 
-  return { purchase: { ...withoutChecksum, checksum: checksumFor(stored, withoutChecksum) } };
+  return { purchase: { ...withoutChecksum, checksum: checksumFor(key, withoutChecksum) } };
 }
