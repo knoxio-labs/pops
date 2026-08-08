@@ -122,13 +122,23 @@ jobs:
       # without this every run recompiles OpenAPIKit, Yams and ArgumentParser
       # before it can read a 2 kB contract. Separate from the cache above because
       # it is a separate package graph — `Tools/OpenAPIGenerator` is what keeps
-      # the generator out of the app's dependencies (ADR-040), and the price of
-      # that is a second thing to cache.
+      # the generator out of the app's dependencies, and the price of that is a
+      # second thing to cache.
+      #
+      # ~500 MB uncompressed, which is not free either. It is worth it because
+      # the key only moves when the generator pin does, and that is a deliberate
+      # bump rather than something an ordinary PR touches — so this is a near-
+      # permanent hit that saves a from-scratch dependency build on every run.
+      # The restore-keys fall back to any build from the same toolchain: SwiftPM
+      # re-resolves and rebuilds what actually changed, so a near-miss is still
+      # most of the work already done.
       - name: Cache the OpenAPI generator's build products
         uses: actions/cache@v6
         with:
           path: clients/ios/Tools/OpenAPIGenerator/.build
           key: openapi-generator-${{ runner.os }}-${{ env.POPS_XCODE_VERSION }}-${{ hashFiles('clients/ios/Tools/OpenAPIGenerator/Package.resolved') }}
+          restore-keys: |
+            openapi-generator-${{ runner.os }}-${{ env.POPS_XCODE_VERSION }}-
 
       # The iOS half of ADR-040's regenerate-and-diff discipline, and the reason
       # `pillars/bfm/openapi/**` is in this workflow's path filter. Its TypeScript
