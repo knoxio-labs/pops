@@ -3,7 +3,19 @@
 import { client } from './client.gen';
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
-import type { HealthData, HealthResponses } from './types.gen';
+import type {
+  HealthData,
+  HealthResponses,
+  OperatorIssuePairingCodeData,
+  OperatorIssuePairingCodeErrors,
+  OperatorIssuePairingCodeResponses,
+  OperatorListDevicesData,
+  OperatorListDevicesErrors,
+  OperatorListDevicesResponses,
+  OperatorRevokeDeviceData,
+  OperatorRevokeDeviceErrors,
+  OperatorRevokeDeviceResponses,
+} from './types.gen';
 
 export type Options<
   TData extends TDataShape = TDataShape,
@@ -32,4 +44,47 @@ export const health = <ThrowOnError extends boolean = false>(
   (options?.client ?? client).get<HealthResponses, unknown, ThrowOnError>({
     url: '/health',
     ...options,
+  });
+
+/**
+ * List paired devices, revoked ones included. Never returns a token or a key
+ */
+export const operatorListDevices = <ThrowOnError extends boolean = false>(
+  options?: Options<OperatorListDevicesData, ThrowOnError>
+): RequestResult<OperatorListDevicesResponses, OperatorListDevicesErrors, ThrowOnError> =>
+  (options?.client ?? client).get<
+    OperatorListDevicesResponses,
+    OperatorListDevicesErrors,
+    ThrowOnError
+  >({ url: '/operator/devices', ...options });
+
+/**
+ * Soft-revoke a device and kill its refresh-token family in one transaction
+ */
+export const operatorRevokeDevice = <ThrowOnError extends boolean = false>(
+  options: Options<OperatorRevokeDeviceData, ThrowOnError>
+): RequestResult<OperatorRevokeDeviceResponses, OperatorRevokeDeviceErrors, ThrowOnError> =>
+  (options.client ?? client).delete<
+    OperatorRevokeDeviceResponses,
+    OperatorRevokeDeviceErrors,
+    ThrowOnError
+  >({ url: '/operator/devices/{id}', ...options });
+
+/**
+ * Mint a single-use pairing code. The plaintext is returned once and never again
+ */
+export const operatorIssuePairingCode = <ThrowOnError extends boolean = false>(
+  options?: Options<OperatorIssuePairingCodeData, ThrowOnError>
+): RequestResult<OperatorIssuePairingCodeResponses, OperatorIssuePairingCodeErrors, ThrowOnError> =>
+  (options?.client ?? client).post<
+    OperatorIssuePairingCodeResponses,
+    OperatorIssuePairingCodeErrors,
+    ThrowOnError
+  >({
+    url: '/operator/pairing/codes',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
   });
