@@ -88,6 +88,10 @@ jobs:
           echo "pinning Xcode to $version (from clients/ios/mise.toml)"
           sudo xcode-select -s "$app/Contents/Developer"
           xcodebuild -version
+          # Exported so the generator cache below can key on it. A `.build`
+          # produced by another toolchain is not a cache — Swift rebuilds it
+          # from scratch and the stale one just wastes the restore.
+          echo "POPS_XCODE_VERSION=$version" >> "$GITHUB_ENV"
 
       - uses: jdx/mise-action@v4
         with:
@@ -96,14 +100,13 @@ jobs:
       - name: Generate Pops.xcodeproj
         run: mise run generate
 
-      # Keyed on the Package.swift files as well as Package.resolved because
-      # there is currently NO Package.resolved in the tree: every package
-      # depends only on its siblings by path, so nothing is fetched and nothing
-      # is pinned. `hashFiles` over a pattern that matches nothing contributes
-      # an empty string, so keying on Package.resolved alone would produce one
-      # constant key that restores a stale cache at every future commit. Both
-      # this cache and the resolve step below start earning their keep at
-      # POPS-1380, which adds Apple's swift-openapi packages.
+      # Keyed on the Package.swift files as well as Package.resolved. Most
+      # packages here depend only on their siblings by path and pin nothing;
+      # only `Packages/BFMClient` reaches outside the repo, for Apple's
+      # swift-openapi runtime. `hashFiles` over a pattern that matches nothing
+      # contributes an empty string, so a key built from Package.resolved alone
+      # would go constant the moment that one file moved or was removed, and
+      # restore a stale cache at every commit after.
       - name: Cache resolved SPM dependencies
         uses: actions/cache@v6
         with:
@@ -114,6 +117,60 @@ jobs:
 
       - name: Resolve SPM dependencies
         run: xcodebuild -project Pops.xcodeproj -scheme Pops -resolvePackageDependencies
+
+      # The generator's own build products. Regenerating is a `swift run`, so
+      # without this every run recompiles OpenAPIKit, Yams and ArgumentParser
+      # before it can read a 2 kB contract. Separate from the cache above because
+      # it is a separate package graph — `Tools/OpenAPIGenerator` is what keeps
+      # the generator out of the app's dependencies (ADR-040), and the price of
+      # that is a second thing to cache.
+      - name: Cache the OpenAPI generator's build products
+        uses: actions/cache@v6
+        with:
+          path: clients/ios/Tools/OpenAPIGenerator/.build
+          key: openapi-generator-${{ runner.os }}-${{ env.POPS_XCODE_VERSION }}-${{ hashFiles('clients/ios/Tools/OpenAPIGenerator/Package.resolved') }}
+
+      # The iOS half of ADR-040's regenerate-and-diff discipline, and the reason
+      # `pillars/bfm/openapi/**` is in this workflow's path filter. Its TypeScript
+      # counterpart is the `cross-pillar-clients` job in `quality.yml`.
+      #
+      # This app is DISTRIBUTED, not deployed: a build already on a phone keeps
+      # calling yesterday's contract for as long as its owner declines to update.
+      # That makes the gate worth more here than anywhere else in the repo — a
+      # producer-side change the client has not followed is not a broken deploy,
+      # it is a broken install someone else owns.
+      - name: Re-vendor the BFM contract and regenerate the Swift client
+        run: mise run generate:bfm-client
+
+      - name: Verify the vendored contract and generated client are up to date
+        run: |
+          set -euo pipefail
+          vendored=Contracts/bfm.openapi.json
+          generated=Packages/BFMClient/Sources/BFMClient/Generated
+
+          # Tracked-ness first. `git diff` says nothing about an untracked file,
+          # so a client that was generated but never committed — or a rename that
+          # left the old path behind — would sail through the diff below having
+          # compared a file against itself. Same reasoning as the OpenAPI gate in
+          # rust-quality.yml.
+          for path in "$vendored" "$generated"; do
+            if ! git ls-files --error-unmatch "$path" > /dev/null 2>&1; then
+              echo "::error::$path is not committed. Run 'mise run generate:bfm-client' in clients/ios and commit the result."
+              exit 1
+            fi
+          done
+
+          # `git status --porcelain` rather than `git diff --exit-code`: the
+          # generator emits one file per mode, so a config change that adds a
+          # mode arrives as a NEW file, which a diff does not see.
+          drift=$(git status --porcelain -- "$vendored" "$generated")
+          if [ -n "$drift" ]; then
+            git diff -- "$vendored" "$generated" || true
+            echo "$drift"
+            echo "::error::The vendored BFM contract or its generated Swift client is out of date."
+            echo "Run 'mise run generate:bfm-client' in clients/ios and commit the result."
+            exit 1
+          fi
 
       # Every step below is a `mise run` of the task a developer runs locally,
       # never a hand-copied command. A second copy of the command is a copy that

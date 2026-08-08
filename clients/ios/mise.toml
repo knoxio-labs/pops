@@ -433,3 +433,40 @@ run = "mise run swift-format format"
 [tasks."fixture:device-signature:generate"]
 description = "Regenerate this client's copy of the iOS↔BFM signature fixture (the repo root's `fixture:device-signature` also re-vendors)"
 run = "swift Tools/generate-device-signature-fixture.swift > Contracts/device-signature-v1.json"
+
+# Re-vendor the BFM contract and regenerate the Swift client from it, in that
+# order and in one command. Two commands would be two things to remember, and
+# the one people forget is the copy — which is the failure the vendored-contract
+# gate exists to catch, arriving as a red CI run instead of a local diff.
+#
+# The counterpart of `pnpm --filter <app> generate:<pillar>-client` on the
+# TypeScript side, named to match. Both are re-run by CI and diffed (ADR-040).
+[tasks."generate:bfm-client"]
+description = "Re-vendor the BFM OpenAPI snapshot and regenerate the Swift client from it"
+run = '''
+set -eu
+
+canonical=../../pillars/bfm/openapi/bfm.openapi.json
+vendored=Contracts/bfm.openapi.json
+
+# The producer's snapshot is a build artefact of the bfm pillar, so a clone that
+# has never built it has no file here. Copying nothing would leave the previous
+# vendored bytes in place and regenerate an identical client — a silent no-op
+# that looks exactly like "already up to date".
+if [ ! -f "$canonical" ]; then
+  echo "generate:bfm-client: no canonical snapshot at $canonical." >&2
+  echo "                     Run 'pnpm --filter @pops/bfm generate:openapi' first." >&2
+  exit 1
+fi
+
+cp "$canonical" "$vendored"
+
+# Generated FROM THE VENDORED COPY, never from the pillar's path: the copy is
+# what makes this unit extraction-ready (ADR-033), and generating from the
+# original would make that copy decorative — it could rot without breaking
+# anything here.
+swift run --package-path Tools/OpenAPIGenerator swift-openapi-generator generate \
+  "$vendored" \
+  --config Packages/BFMClient/openapi-generator-config.yaml \
+  --output-directory Packages/BFMClient/Sources/BFMClient/Generated
+'''

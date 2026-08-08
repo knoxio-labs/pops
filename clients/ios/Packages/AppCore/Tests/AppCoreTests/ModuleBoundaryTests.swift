@@ -14,6 +14,19 @@ internal struct ModuleBoundaryTests {
     /// calls that carry them.
     private let implementationPackages: Set<String> = ["Auth", "BFMClient"]
 
+    /// The modules the generated BFM client is written against. Naming one is
+    /// how a generated type would reach a second module — the types themselves
+    /// are `internal` to `BFMClient`, so the compiler already refuses the direct
+    /// route, but nothing stops a feature importing `OpenAPIRuntime` and
+    /// building its own client against the same contract.
+    private let generatedClientRuntime: Set<String> = [
+        "OpenAPIRuntime", "OpenAPIURLSession", "HTTPTypes",
+    ]
+
+    /// The package that owns the generated code, and the only one that may name
+    /// any of the above.
+    private let generatedClientPackage = "BFMClient"
+
     @Test("the scan finds the packages it is asserting about")
     func scanIsWiredUp() throws {
         let packages = try packageNames()
@@ -63,6 +76,62 @@ internal struct ModuleBoundaryTests {
                 )
             }
         }
+    }
+
+    /// The import half of "no generated type appears outside `BFMClient`".
+    ///
+    /// Its `Generated/` sources are emitted `internal`, which already makes the
+    /// types unnameable elsewhere. This is about the module that would have to
+    /// be imported first: a second module reaching for `OpenAPIRuntime` is a
+    /// second client being built against the same contract, outside the one
+    /// directory the regenerate-and-diff gate covers.
+    @Test("only the package that owns the generated code names its runtime")
+    func onlyOnePackageNamesTheGeneratedClientRuntime() throws {
+        // The owning package must name them, or every assertion below holds for
+        // a tree where the client was deleted.
+        let owned = try sourceFiles(inPackage: generatedClientPackage)
+            .reduce(into: Set<String>()) { $0.formUnion(try importedModules(in: $1)) }
+        #expect(!owned.isDisjoint(with: generatedClientRuntime))
+
+        let elsewhere =
+            try packageNames().filter { $0 != generatedClientPackage }
+            .flatMap { try sourceFiles(inPackage: $0) } + swiftFiles(under: appDirectory)
+        for file in elsewhere {
+            let forbidden = try importedModules(in: file).intersection(generatedClientRuntime)
+            #expect(
+                forbidden.isEmpty,
+                "\(file.lastPathComponent) imports \(forbidden.sorted().joined(separator: ", "))"
+            )
+        }
+    }
+
+    /// The manifest half of the same rule, plus the one dependency no shipping
+    /// package may declare at all.
+    ///
+    /// The generator lives in `Tools/OpenAPIGenerator`, which nothing under
+    /// `Packages/` resolves — that is what keeps a code generator and its four
+    /// transitive dependencies out of an iPhone app's build graph. Moving it
+    /// back is a one-line edit to a manifest that builds and tests clean.
+    @Test("no shipping package depends on the generator, and only one on its runtime")
+    func manifestsDeclareTheGeneratorNowhere() throws {
+        for package in try packageNames() {
+            let manifest = try manifestSource(ofPackage: package)
+            #expect(
+                !manifest.contains("swift-openapi-generator"),
+                "\(package)/Package.swift depends on the generator; it belongs in Tools/"
+            )
+            guard package != generatedClientPackage else { continue }
+            #expect(
+                !manifest.contains("swift-openapi-"),
+                "\(package)/Package.swift depends on the generated client's runtime"
+            )
+        }
+
+        // Same wiring check as above, one layer down: the rule is vacuous if the
+        // owning manifest stopped declaring them.
+        #expect(
+            try manifestSource(ofPackage: generatedClientPackage).contains("swift-openapi-runtime")
+        )
     }
 
     /// Everything that ships: every package's `Sources`, and the app target.
@@ -155,12 +224,16 @@ extension ModuleBoundaryTests {
         return enumerator.compactMap { $0 as? URL }.filter { $0.pathExtension == "swift" }
     }
 
+    private func manifestSource(ofPackage package: String) throws -> String {
+        let manifest = packagesDirectory.appending(path: package).appending(path: "Package.swift")
+        return try String(contentsOf: manifest, encoding: .utf8)
+    }
+
     /// Any sibling-package path the manifest mentions, however the `.package`
     /// call is spelled — matching the whole call shape would let a `name:`
     /// argument or a line break slip an edge past this.
     private func declaredDependencies(ofPackage package: String) throws -> Set<String> {
-        let manifest = packagesDirectory.appending(path: package).appending(path: "Package.swift")
-        let source = try String(contentsOf: manifest, encoding: .utf8)
+        let source = try manifestSource(ofPackage: package)
         return Set(source.matches(of: #/"\.\./([A-Za-z_][A-Za-z0-9_]*)"/#).map { String($0.1) })
     }
 

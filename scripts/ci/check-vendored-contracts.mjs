@@ -2,16 +2,16 @@
 /**
  * Vendored-contract drift guard.
  *
- * Some app units consume a sibling pillar's OpenAPI contract at codegen time
- * but cannot depend on it through a `@pops/*` package — the producing pillar
- * has no npm package (e.g. `contacts`, a Rust pillar invisible to pnpm by
- * design, see docs/plans/repo-federation/02-build-system.md). Per ADR-033 the
- * OpenAPI snapshot IS that pillar's cross-language contract, so the consumer
- * vendors a copy of the published snapshot inside its OWN unit boundary
- * (`pillars/<consumer>/app/contracts/<pillar>.openapi.json`) and generates its
- * client from the local copy. That keeps the unit black-box-isolated and
- * extraction-ready: it never reaches into the sibling pillar's folder, and on
- * extraction it carries its own contract input.
+ * Some units consume a sibling pillar's OpenAPI contract at codegen time
+ * but cannot depend on it through a `@pops/*` package — either the producing
+ * pillar has no npm package (e.g. `contacts`, a Rust pillar invisible to pnpm
+ * by design, see docs/plans/repo-federation/02-build-system.md) or the consumer
+ * is not in the pnpm workspace at all (`clients/ios`, a Swift app; ADR-043).
+ * Per ADR-033 the OpenAPI snapshot IS that pillar's cross-language contract, so
+ * the consumer vendors a copy of the published snapshot inside its OWN unit
+ * boundary and generates its client from the local copy. That keeps the unit
+ * black-box-isolated and extraction-ready: it never reaches into the sibling
+ * pillar's folder, and on extraction it carries its own contract input.
  *
  * The one risk a vendored copy introduces is drift: the snapshot the consumer
  * ships could lag the producer's canonical spec. This guard closes that gap —
@@ -21,11 +21,11 @@
  * client), so the seam stays honest.
  *
  * It is a whole-tree check (reads the working tree directly, pulls in no
- * third-party deps) and is mapping-driven: a vendored file
- * `.../contracts/<name>.openapi.json` is paired with the canonical producer
- * spec `pillars/<name>/openapi/<name>.openapi.json` by filename. A vendored
- * file with no matching producer spec is itself a failure (stale or
- * mis-named) so the convention can't rot silently.
+ * third-party deps) and is mapping-driven: a vendored file under one of the
+ * VENDOR_DIRECTORIES below is paired with the canonical producer spec
+ * `pillars/<name>/openapi/<name>.openapi.json` by filename. A vendored file
+ * with no matching producer spec is itself a failure (stale or mis-named) so
+ * the convention can't rot silently.
  *
  * Usage:
  *   node scripts/ci/check-vendored-contracts.mjs
@@ -34,7 +34,15 @@
  * Exit 0 = every vendored copy matches its source. Exit 1 = drift / orphan.
  */
 
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -45,6 +53,24 @@ const repoRoot = resolve(here, '..', '..');
 const VENDORED_SUFFIX = '.openapi.json';
 
 /**
+ * Where a consumer is allowed to keep a vendored snapshot, as
+ * `<unit-kind-root>/<consumer>/<path...>`. Each entry names the directory the
+ * consumer's units live under and the path, inside one unit, that holds the
+ * copies. Spelling differs per unit kind because each follows its own
+ * language's convention — lowercase for the TS apps, `Contracts/` for the Swift
+ * client, which keeps every artefact the app and the BFM agree on byte-for-byte
+ * in one place.
+ *
+ * A directory NOT listed here is not scanned, so a copy that lands somewhere
+ * else is invisible to this guard rather than silently allowed — which is why
+ * the consuming unit's own docs point at this list.
+ */
+const VENDOR_DIRECTORIES = [
+  ['pillars', 'app', 'contracts'],
+  ['clients', 'Contracts'],
+];
+
+/**
  * @typedef {object} VendoredContract
  * @property {string} copy        Absolute path to the vendored snapshot.
  * @property {string} source      Absolute path to the canonical producer spec.
@@ -52,8 +78,8 @@ const VENDORED_SUFFIX = '.openapi.json';
  */
 
 /**
- * Discover every vendored contract under `pillars/<consumer>/app/contracts/`
- * and pair each with the canonical producer spec it must mirror.
+ * Discover every vendored contract under one of ``VENDOR_DIRECTORIES`` and pair
+ * each with the canonical producer spec it must mirror.
  *
  * @param {string} root Repo root to scan.
  * @returns {VendoredContract[]}
@@ -62,20 +88,24 @@ export function discoverVendoredContracts(root) {
   /** @type {VendoredContract[]} */
   const found = [];
   const pillarsDir = join(root, 'pillars');
-  if (!existsSync(pillarsDir)) return found;
 
-  for (const consumer of readdirSync(pillarsDir, { withFileTypes: true })) {
-    if (!consumer.isDirectory()) continue;
-    const contractsDir = join(pillarsDir, consumer.name, 'app', 'contracts');
-    if (!existsSync(contractsDir)) continue;
-    for (const entry of readdirSync(contractsDir, { withFileTypes: true })) {
-      if (!entry.isFile() || !entry.name.endsWith(VENDORED_SUFFIX)) continue;
-      const pillarId = entry.name.slice(0, -VENDORED_SUFFIX.length);
-      found.push({
-        copy: join(contractsDir, entry.name),
-        source: join(pillarsDir, pillarId, 'openapi', entry.name),
-        pillarId,
-      });
+  for (const [unitKind, ...withinUnit] of VENDOR_DIRECTORIES) {
+    const unitKindDir = join(root, unitKind);
+    if (!existsSync(unitKindDir)) continue;
+
+    for (const consumer of readdirSync(unitKindDir, { withFileTypes: true })) {
+      if (!consumer.isDirectory()) continue;
+      const contractsDir = join(unitKindDir, consumer.name, ...withinUnit);
+      if (!existsSync(contractsDir)) continue;
+      for (const entry of readdirSync(contractsDir, { withFileTypes: true })) {
+        if (!entry.isFile() || !entry.name.endsWith(VENDORED_SUFFIX)) continue;
+        const pillarId = entry.name.slice(0, -VENDORED_SUFFIX.length);
+        found.push({
+          copy: join(contractsDir, entry.name),
+          source: join(pillarsDir, pillarId, 'openapi', entry.name),
+          pillarId,
+        });
+      }
     }
   }
   return found.toSorted((a, b) => a.copy.localeCompare(b.copy));
@@ -127,13 +157,69 @@ function rel(to) {
 }
 
 /**
- * Self-test: prove the detector flags drift and an orphan, and passes an
- * identical pair. CI runs this so a regression that neuters the matcher is
+ * Self-test half one: every directory shape in ``VENDOR_DIRECTORIES`` is
+ * actually scanned, and each copy is paired with the right producer spec.
+ *
+ * This half exists because the script treats "found nothing" as success — a
+ * mis-typed entry, or a consuming unit whose layout moved, would take a whole
+ * unit kind out of the scan and still exit 0 with an approving message. Built
+ * from `VENDOR_DIRECTORIES` rather than from a fixed list of paths, so a new
+ * entry is covered the moment it is added.
+ *
+ * @returns {boolean}
+ */
+function selfTestDiscovery() {
+  const root = mkdtempSync(join(tmpdir(), 'vendored-discovery-'));
+  try {
+    /** @type {string[]} */
+    const expected = [];
+    for (const [index, [unitKind, ...withinUnit]] of VENDOR_DIRECTORIES.entries()) {
+      const pillarId = `producer${index}`;
+      mkdirSync(join(root, 'pillars', pillarId, 'openapi'), { recursive: true });
+      writeFileSync(join(root, 'pillars', pillarId, 'openapi', `${pillarId}.openapi.json`), '{}\n');
+
+      const contractsDir = join(root, unitKind, `consumer${index}`, ...withinUnit);
+      mkdirSync(contractsDir, { recursive: true });
+      const copy = join(contractsDir, `${pillarId}.openapi.json`);
+      writeFileSync(copy, '{}\n');
+      expected.push(copy);
+
+      // A neighbour that must NOT be picked up: `Contracts/` also holds
+      // artefacts that are not vendored pillar snapshots.
+      writeFileSync(join(contractsDir, 'not-a-snapshot.json'), '{}\n');
+    }
+
+    const discovered = discoverVendoredContracts(root);
+    const paths = discovered.map((c) => c.copy);
+    const foundAll = expected.every((p) => paths.includes(p));
+    const noExtras = discovered.length === expected.length;
+    const pairedRight = discovered.every((c) => existsSync(c.source));
+
+    if (!(foundAll && noExtras && pairedRight)) {
+      console.error('SELF-TEST FAILED (discovery):');
+      console.error(`  scanned every VENDOR_DIRECTORIES entry: ${foundAll}`);
+      console.error(`  picked up nothing else:                 ${noExtras}`);
+      console.error(`  paired each copy with a producer spec:  ${pairedRight}`);
+      console.error(`  expected ${expected.length}, found ${discovered.length}`);
+      return false;
+    }
+    console.log(
+      `self-test OK — scans all ${VENDOR_DIRECTORIES.length} vendored-contract location(s).`
+    );
+    return true;
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+}
+
+/**
+ * Self-test half two: prove the detector flags drift and an orphan, and passes
+ * an identical pair. CI runs this so a regression that neuters the matcher is
  * caught deterministically.
  *
  * @returns {boolean}
  */
-function selfTest() {
+function selfTestDrift() {
   const dir = mkdtempSync(join(tmpdir(), 'vendored-contracts-'));
   try {
     const files = new Map([
@@ -162,7 +248,7 @@ function selfTest() {
 
     const ok = Boolean(drift) && Boolean(orphan) && matchedAllowed && findings.length === 2;
     if (!ok) {
-      console.error('SELF-TEST FAILED:');
+      console.error('SELF-TEST FAILED (drift):');
       console.error(`  caught drift:          ${Boolean(drift)}`);
       console.error(`  caught orphan:         ${Boolean(orphan)}`);
       console.error(`  allowed identical:     ${matchedAllowed}`);
@@ -183,7 +269,11 @@ function main() {
     process.exit(2);
   }
   if (argv.includes('--self-test')) {
-    process.exit(selfTest() ? 0 : 1);
+    // Both halves run even when the first fails, so one invocation reports
+    // every problem.
+    const discovery = selfTestDiscovery();
+    const drift = selfTestDrift();
+    process.exit(discovery && drift ? 0 : 1);
   }
 
   const contracts = discoverVendoredContracts(repoRoot);
