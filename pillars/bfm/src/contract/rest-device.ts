@@ -85,6 +85,11 @@ export const bfmDeviceContract = c.router({
     body: z.object({}).optional(),
     responses: {
       201: RefreshChallengeSchema,
+      // Declared even though this route reads nothing from the body. An
+      // optional object schema still rejects a JSON array or a number, so the
+      // 400 is reachable — and a status the document omits is a status the
+      // generated client has no case for.
+      400: DeviceInvalidRequestErrorSchema,
       429: RateLimitErrorSchema,
     },
     summary: 'Mint a single-use nonce for a refresh. Carries no credential and needs none',

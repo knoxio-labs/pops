@@ -18,6 +18,13 @@ export type DeviceChallengeData = {
 
 export type DeviceChallengeErrors = {
   /**
+   * 400
+   */
+  400: {
+    code: 'invalid_request';
+    message: string;
+  };
+  /**
    * 429
    */
   429: {

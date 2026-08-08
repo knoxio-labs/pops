@@ -127,6 +127,21 @@ describe('POST /devices/challenge', () => {
     expect(drawn.size).toBe(3);
   });
 
+  it('answers the 400 its contract declares when the body is not an object', async () => {
+    // The route reads nothing from the body, but `z.object({}).optional()`
+    // still rejects a JSON array — so the status is reachable, and the
+    // contract has to describe it or the generated client cannot decode it.
+    const app = open();
+
+    const res = await request(app.app)
+      .post(CHALLENGE_PATH)
+      .set('content-type', 'application/json')
+      .send('[1,2]');
+
+    expect(res.status).toBe(400);
+    expect(DeviceInvalidRequestErrorSchema.parse(res.body).code).toBe('invalid_request');
+  });
+
   it('is refused once the shared budget is spent', async () => {
     const app = open({ refreshRateLimit: { globalLimit: 2, perClientLimit: 2 } });
     await challenge(app);
