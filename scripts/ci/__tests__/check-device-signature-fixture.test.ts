@@ -5,16 +5,23 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
-import { checkFixture } from '../check-device-signature-fixture.mjs';
+import {
+  checkAllCopies,
+  checkFixture,
+  FIXTURE_COPIES,
+} from '../check-device-signature-fixture.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..', '..');
 
 type Fixture = Parameters<typeof checkFixture>[0];
 
-const committed: Fixture = JSON.parse(
-  readFileSync(join(repoRoot, 'clients', 'ios', 'Contracts', 'device-signature-v1.json'), 'utf8')
-);
+const [canonical, vendored] = FIXTURE_COPIES;
+
+const readCommitted = (repoRelativePath: string) =>
+  readFileSync(join(repoRoot, repoRelativePath), 'utf8');
+
+const committed: Fixture = JSON.parse(readCommitted(canonical.path));
 
 /**
  * Build a fresh, internally consistent fixture with `node:crypto` alone.
@@ -52,6 +59,16 @@ function generateEquivalentFixture(): Fixture {
 describe('the committed fixture', () => {
   it('passes every encoding assertion', () => {
     expect(checkFixture(committed)).toEqual([]);
+  });
+
+  it('exists once per consumer, byte-identical', () => {
+    expect(FIXTURE_COPIES.length).toBeGreaterThan(1);
+    expect(checkAllCopies(readCommitted)).toEqual([]);
+  });
+
+  it('is vendored inside the BFM rather than read from clients/ — ADR-043', () => {
+    expect(vendored.path.startsWith('pillars/bfm/')).toBe(true);
+    expect(canonical.path.startsWith('clients/')).toBe(true);
   });
 
   it('carries a 64-byte raw signature and a 65-byte uncompressed point', () => {
@@ -150,5 +167,67 @@ describe('checkFixture', () => {
 
     expect(failures).toHaveLength(1);
     expect(failures[0]).toContain('not a parseable SPKI key');
+  });
+});
+
+describe('checkAllCopies', () => {
+  const text = JSON.stringify(committed);
+  const identical = new Map(FIXTURE_COPIES.map(({ path }) => [path, text]));
+  const readerOver = (files: Map<string, string>) => (path: string) => files.get(path) ?? null;
+  const withVendored = (contents: string | null) => {
+    const files = new Map(identical);
+    if (contents === null) files.delete(vendored.path);
+    else files.set(vendored.path, contents);
+    return readerOver(files);
+  };
+
+  it('passes when every copy is byte-identical', () => {
+    expect(checkAllCopies(readerOver(identical))).toEqual([]);
+  });
+
+  it('catches a vendored copy edited on its own', () => {
+    const drifted = JSON.stringify({ ...committed, version: 2 });
+
+    expect(checkAllCopies(withVendored(drifted)).join('\n')).toContain('drifted from');
+  });
+
+  it('catches a canonical copy edited on its own', () => {
+    const files = new Map(identical).set(
+      canonical.path,
+      JSON.stringify({ ...committed, version: 2 })
+    );
+
+    expect(checkAllCopies(readerOver(files)).join('\n')).toContain('drifted from');
+  });
+
+  it('catches a copy that is only reformatted, not semantically changed', () => {
+    // Byte-equality is the point: `oxfmt` runs over both copies at commit time,
+    // so a copy that survived a different formatter is exactly how they part.
+    expect(checkAllCopies(withVendored(JSON.stringify(committed, null, 4))).join('\n')).toContain(
+      'drifted from'
+    );
+  });
+
+  it('catches a missing copy rather than silently checking one', () => {
+    expect(checkAllCopies(withVendored(null)).join('\n')).toContain('missing');
+  });
+
+  it('reports unparseable JSON against the copy it came from', () => {
+    const failures = checkAllCopies(withVendored('{ not json'));
+
+    expect(failures.join('\n')).toContain(vendored.path);
+    expect(failures.join('\n')).toContain('not parseable as JSON');
+  });
+
+  it('attributes an encoding failure to the copy that carries it', () => {
+    const broken = JSON.stringify({
+      ...committed,
+      signatureDerBase64: committed.signatureRawBase64,
+    });
+
+    const failures = checkAllCopies(withVendored(broken));
+
+    expect(failures.some((f) => f.startsWith(`${vendored.path}: `))).toBe(true);
+    expect(failures.some((f) => f.startsWith(`${canonical.path}: `))).toBe(false);
   });
 });

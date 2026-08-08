@@ -277,6 +277,11 @@ exit $status
 description = "Rewrite the Swift sources with swift-format (the fixer for half of `lint`)"
 run = "mise run swift-format format"
 
-[tasks."fixture:device-signature"]
-description = "Regenerate the iOS↔BFM signature fixture — only when the encoding contract changes"
+# Generates this client's canonical copy and stops there. The BFM vendors its
+# own copy and a repo-root guard fails on drift, so regenerating without
+# re-vendoring breaks the build — but the re-vendor step cannot live here:
+# ADR-043 says a client never reaches into a pillar's directory. The task that
+# does both is `fixture:device-signature` at the repo root; prefer it.
+[tasks."fixture:device-signature:generate"]
+description = "Regenerate this client's copy of the iOS↔BFM signature fixture (the repo root's `fixture:device-signature` also re-vendors)"
 run = "swift Tools/generate-device-signature-fixture.swift > Contracts/device-signature-v1.json"

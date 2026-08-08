@@ -112,6 +112,8 @@ Artefacts this app and the BFM must agree on byte for byte, kept outside any one
 
 Today that is `device-signature-v1.json`, the ECDSA P-256 encoding vector. The generated Swift BFM client will vendor the OpenAPI snapshot here too (POPS-1380), following the same rule the rest of the repo uses for a contract that crosses a unit boundary: the consumer keeps a copy inside its own boundary and a CI guard fails on drift.
 
+That rule points both ways, and this directory is the producing side of it. The copy here is canonical — only the Swift side can generate the vector — and the BFM keeps its own at [`pillars/bfm/contracts/device-signature-v1.json`](../../pillars/bfm/contracts/device-signature-v1.json), because ADR-043 forbids a pillar reading a path under `clients/`. Regenerate through the repo root's `mise run fixture:device-signature`, which re-vendors as its second step; `mise run fixture:device-signature:generate` from here writes this copy alone and leaves the guard red.
+
 ## What CI does with this
 
 `.github/workflows/ios-quality.yml` — one job, `runs-on: macos-latest`, the only workflow in the repo that is not on Ubuntu. It selects the pinned Xcode, then runs `mise run build`, `mise run test` and `mise run lint` and nothing else, because a command written out a second time in a workflow file is a command that drifts.

@@ -23,6 +23,14 @@ export default {
     // copy under `**/app/contracts/<name>.openapi.json` must stay byte-identical
     // to it (the check-vendored-contracts drift gate enforces equality).
     // Formatting either would create silent drift at commit time.
+    //
+    // The other byte-identical pair in the repo — the device-signature fixture,
+    // canonical under `clients/ios/Contracts/` and vendored into
+    // `pillars/bfm/contracts/` — is deliberately NOT exempt. Both copies are
+    // plain `*.json` at paths this rule covers, so both go through the same
+    // formatter and land on the same bytes; excluding one and not the other is
+    // what would break the gate. `pillars/bfm`'s own `oxfmt --check .` covers
+    // the vendored copy too, so exempting it here would only move the failure.
     const isOpenApiSnapshot = (/** @type {string} */ f) =>
       /\/openapi\/[^/]+\.openapi\.json$/.test(f) ||
       /\/app\/contracts\/[^/]+\.openapi\.json$/.test(f);

@@ -98,6 +98,29 @@ run = "tsx libs/module-registry/scripts/build.ts"
 description = "Regenerate every pillar's OpenAPI snapshot + typed client (fans out to each pillar's build codegen)"
 run = "mise run run-all build"
 
+# The iOS↔BFM signature fixture exists twice on purpose — canonical under
+# `clients/ios`, vendored inside the BFM's unit boundary (ADR-043) — and the
+# copy step belongs to neither unit: a pillar must not read a path under
+# `clients/`, and a client must not write into `pillars/`. So it lives here,
+# above both, next to the guard that fails on drift
+# (scripts/ci/check-device-signature-fixture.mjs).
+[tasks."fixture:device-signature:vendor"]
+description = "Re-vendor the iOS↔BFM signature fixture into the BFM"
+dir = "{{config_root}}"
+run = "cp clients/ios/Contracts/device-signature-v1.json pillars/bfm/contracts/device-signature-v1.json"
+
+# Regenerating replaces a reviewed, cross-verified vector with an unreviewed
+# one — ECDSA draws a fresh nonce per signature, so every run produces
+# different bytes. Run it only when the encoding contract itself changes.
+[tasks."fixture:device-signature"]
+description = "Regenerate the iOS↔BFM signature fixture (Swift) and re-vendor it — only when the encoding contract changes"
+dir = "{{config_root}}"
+run = [
+  "mise -C clients/ios run fixture:device-signature:generate",
+  "oxfmt --write clients/ios/Contracts/device-signature-v1.json",
+  "mise run fixture:device-signature:vendor",
+]
+
 # ============================================================================
 # Development Servers
 # ============================================================================

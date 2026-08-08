@@ -22,6 +22,19 @@ a paired phone                        bfm
                                       res.locals.device ─► the route
 ```
 
+`device-signature.ts` sits off to one side of that diagram: it is the bytes half
+of proof of possession, not part of the bearer-token path. It decodes the SPKI
+public key stored at pairing and checks an ECDSA P-256 signature the phone
+produced, and nothing else — the refresh route that will call it is POPS-1375,
+and the message format it signs over belongs to that route rather than here.
+
+Its tests are the only place in this repo where `node:crypto` is shown to accept
+what CryptoKit actually emits. Everything else about refresh can be exercised
+with keys this process generated itself, which agree with the verifier by
+construction and prove nothing about a real handset. They read the vector
+vendored at `pillars/bfm/contracts/device-signature-v1.json`, never the
+canonical copy under `clients/` — see the pillar README.
+
 ## Why 401 and 403 are different answers
 
 They ask the phone to do different things, and it cannot guess which.
@@ -108,6 +121,8 @@ not a credential.
   something else can mint a replacement. Until that ticket lands, nothing in
   this pillar issues an access token at all: `mintAccessToken` is called by the
   pairing exchange (POPS-1374) and the refresh route, neither of which exists.
+  `device-signature.ts` is the primitive that ticket verifies with; the nonce,
+  the signed-message format and the rotation state machine are all its.
 - **A budget on the pairing exchange** (POPS-1374). `mobile-rate-limit.ts`
   bounds the `/mobile` prefix; the pairing exchange is a separate surface and
   the more attractive target of the two, because a code short enough to read
