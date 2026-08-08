@@ -71,6 +71,10 @@ describe('a device row', () => {
   });
 
   it('refuses a row with no public key', () => {
+    // Raw SQL because drizzle will not let the invalid row be expressed: the
+    // insert type requires `publicKeyDer`, which is exactly the constraint
+    // under test. Going around the ORM is the only way to prove the database
+    // itself refuses it rather than the types.
     expect(() =>
       opened.raw
         .prepare(`INSERT INTO devices (id, name, model) VALUES ('d1', 'phone', 'iPhone17,1')`)
