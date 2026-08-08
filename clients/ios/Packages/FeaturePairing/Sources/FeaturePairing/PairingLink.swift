@@ -49,7 +49,7 @@ extension PairingLink {
             matchesContractPath(components.percentEncodedPath),
             let code = components.queryItems?.first(where: { $0.name == codeQueryItem })?.value,
             !code.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-            let baseURL = origin(of: components)
+            let baseURL = ServerOrigin.of(components)
         else { return nil }
 
         return PairingLink(
@@ -62,35 +62,5 @@ extension PairingLink {
     /// one and it addresses the same resource; nothing else is.
     private static func matchesContractPath(_ candidate: String) -> Bool {
         candidate == path || candidate == path + "/"
-    }
-
-    /// Scheme, host and port — the path and query are the link's, not the
-    /// server's. Built through `URLComponents` rather than by trimming the
-    /// string, so a port, an IPv6 literal or percent-encoding in the host all
-    /// survive intact.
-    ///
-    /// The scheme bar matches `BuiltInBaseURL`'s deliberately: `http` is
-    /// accepted because a BFM on a home LAN or a Debug build on localhost is
-    /// not served over TLS, and rejecting it here would make the local
-    /// development path the one that cannot be exercised.
-    private static func origin(of components: URLComponents) -> URL? {
-        // `percentEncodedHost` on both sides of the round trip, not `host`: the
-        // decoded accessor hands back an IPv6 literal without its brackets, and
-        // writing that back produces a URL that will not parse.
-        guard let scheme = components.scheme?.lowercased(),
-            scheme == "http" || scheme == "https",
-            let host = components.percentEncodedHost,
-            !host.isEmpty
-        else { return nil }
-
-        var origin = URLComponents()
-        origin.scheme = scheme
-        // Scheme and host are both case-insensitive per RFC 3986 §3.2.2, and
-        // normalising them here is what makes two scans of the same server
-        // produce one base URL rather than two that only a byte comparison can
-        // tell apart.
-        origin.percentEncodedHost = host.lowercased()
-        origin.port = components.port
-        return origin.url
     }
 }

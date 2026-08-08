@@ -66,16 +66,20 @@ internal enum PairingField {
     /// Higher than `URL(string:)`, which accepts a bare path and would turn a
     /// half-typed `bfm.example.com` into a relative URL that fails much later,
     /// at the request, as an unreachable server.
+    ///
+    /// Reduced to the origin, which is not merely tidying. The generated client
+    /// appends the contract's paths to whatever it is given, so a path here
+    /// becomes a prefix on every request — and bfm itself composes the pairing
+    /// URL as `new URL('/devices/pair', publicBaseUrl)`, which discards any
+    /// path on the base. A server that cannot be reached under a path prefix is
+    /// not one this field should accept typing one for. It also makes the
+    /// obvious paste — the whole pairing URL, copied out of the QR — do the
+    /// right thing instead of failing as unreachable.
     internal static func baseURL(_ raw: String) -> URL? {
         guard let trimmed = trimmed(raw),
-            let components = URLComponents(string: trimmed),
-            let scheme = components.scheme?.lowercased(),
-            scheme == "http" || scheme == "https",
-            let host = components.host,
-            !host.isEmpty,
-            let url = components.url
+            let components = URLComponents(string: trimmed)
         else { return nil }
 
-        return url
+        return ServerOrigin.of(components)
     }
 }

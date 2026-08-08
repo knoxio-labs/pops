@@ -53,16 +53,36 @@ internal struct PairingFieldTests {
         #expect(clamped.data(using: .utf8) != nil)
     }
 
+    /// Everything reduces to the origin, including the obvious paste: someone
+    /// copying the pairing URL out of the QR into the server field gets a
+    /// working address rather than a request to `/devices/pair/devices/pair`.
     @Test(
-        "a usable server address",
+        "a usable server address, reduced to its origin",
         arguments: [
-            "https://bfm.example.com",
-            "http://localhost:3014",
-            "  https://bfm.example.com  ",
-            "https://bfm.example.com/",
+            ("https://bfm.example.com", "https://bfm.example.com"),
+            ("http://localhost:3014", "http://localhost:3014"),
+            ("  https://bfm.example.com  ", "https://bfm.example.com"),
+            ("https://bfm.example.com/", "https://bfm.example.com"),
+            ("HTTPS://BFM.example.com", "https://bfm.example.com"),
+            ("https://bfm.example.com/devices/pair?code=ABC", "https://bfm.example.com"),
+            ("https://bfm.example.com:8443/some/prefix", "https://bfm.example.com:8443"),
         ])
-    func acceptsUsableAddresses(raw: String) {
-        #expect(PairingField.baseURL(raw) != nil)
+    func acceptsUsableAddresses(raw: String, expected: String) throws {
+        let url = try #require(PairingField.baseURL(raw))
+
+        #expect(url.absoluteString == expected)
+    }
+
+    /// The two routes to a base URL have to agree, or `PairedDevice.baseURL`
+    /// depends on whether the person scanned or typed.
+    @Test("a scanned link and the same URL typed produce one base URL")
+    func scanAndTypeAgree() throws {
+        let payload = "https://bfm.example.com/devices/pair?code=7QK4"
+
+        let scanned = try #require(PairingLink.parse(payload)).baseURL
+        let typed = try #require(PairingField.baseURL(payload))
+
+        #expect(scanned == typed)
     }
 
     /// The bar is higher than `URL(string:)` on purpose: that initialiser

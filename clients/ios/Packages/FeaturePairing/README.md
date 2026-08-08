@@ -33,21 +33,22 @@ The pairing code's alphabet, length and grouping are bfm's rules and appear nowh
 
 The one bound that _is_ enforced is the contract's own `maxLength`, because the generated client does not enforce it and an over-long field returns a 400 that reads to the user as a broken app. `PairingFieldBoundsTests` reads the vendored snapshot and fails if the constant and the contract disagree. It is measured in UTF-16 code units — see `PairingField.swift` for why that is stricter than both Swift's `String.count` and JSON Schema's own definition, and why stricter is the only safe direction.
 
-## The host build, and the four `#if`s
+## The host build, and where the `#if`s are allowed to be
 
-The package declares macOS as well as iOS so `swift build` and `swift test` run on a developer machine and a CI runner without booting a simulator. Keeping that working costs four platform conditionals, and they are all there is:
+The package declares macOS as well as iOS so `swift build` and `swift test` run on a developer machine and a CI runner without booting a simulator. Keeping that working costs platform conditionals, and the rule is that they stay at the edges:
 
-- `QRScannerView.swift` and `QRScannerCoordinator.swift` — whole-file. There is no honest macOS build of a phone's QR scanner, and a stub that compiled would be something a test could pass against.
-- `PairingView.scannerSheet` — presents the scanner on iOS, `EmptyView` otherwise.
-- `PairingFormFields.swift` — two text-entry modifiers (`keyboardType`, `textInputAutocapitalization`) that exist only on iOS.
-- `FeaturePairing.swift` — `SystemSettings.url`, isolated so one conditional covers every call site.
-- `DeviceDescription.swift` — `UIDevice` for the suggested name.
+- **Whole-file**, for the camera — `QRScannerView.swift`, `QRScannerCoordinator.swift`, `CaptureSessionHolder.swift`. There is no honest macOS build of a phone's QR scanner, and a stub that compiled would be something a test could pass against.
+- **One expression**, for a platform API with no counterpart — the scanner sheet in `PairingView`, the two iOS-only text-entry modifiers in `PairingFormFields`, `SystemSettings.url`, and `UIDevice.current.name` in `DeviceDescription`. Each is isolated so one conditional covers every call site rather than appearing at each.
 
-Everything the screen _decides_ is outside them, which is the point: which sentence a failure produces, what a scanned payload means, and when the form may be submitted are all answered in under a second by `swift test`.
+Nothing the screen _decides_ sits inside one, which is the point: which sentence a failure produces, what a scanned payload means, and when the form may be submitted are all answered in under a second by `swift test`.
+
+`CaptureSessionHolder` is the one `@unchecked Sendable` in the package, and it is an assertion rather than a silencing — the reasoning, and why it is preferred to `@preconcurrency import AVFoundation`, is in the file.
 
 ## Verification gap: Dynamic Type and VoiceOver
 
-Nothing automated exercises this screen at accessibility text sizes or under VoiceOver. What the code does about it — a `ScrollView` that is unconditional rather than conditional on overflow, text styles rather than point sizes, a label per field, an accessibility hint naming the field that is blocking submission, and a spoken announcement when a pairing fails — is all reasoning, not measurement. Tracked as a gap rather than claimed as covered.
+Nothing automated exercises this screen at accessibility text sizes or under VoiceOver. What the code does about it — a `ScrollView` that is unconditional rather than conditional on overflow, text styles rather than point sizes, a label per field, an accessibility hint naming the field that is blocking submission, and a spoken announcement when a pairing fails — is all reasoning, not measurement. There are `#Preview`s at `.accessibility5`, and a preview is something a person looks at, which is not a gate.
+
+Filed against the whole app rather than this package, because it applies to every screen the app grows. Delete this section when it lands.
 
 ## Running the tests
 
