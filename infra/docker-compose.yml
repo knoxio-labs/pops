@@ -448,17 +448,24 @@ services:
       - pops-bfm-data:/data/sqlite
     secrets:
       - pops_bfm_api_key
+      - bfm_jwt_signing_key
     environment:
       NODE_ENV: production
       PORT: '3014'
       BFM_SQLITE_PATH: /data/sqlite/bfm.db
       BFM_SELF_BASE_URL: http://bfm-api:3014
       POPS_REGISTRY_ENABLED: 'true'
-      # A PATH, not the key. The file-based secret keeps the credential out of
-      # the process environment and out of `docker inspect`; an env var
-      # carrying the value itself would be readable by anyone who can run
-      # either. Provisioning: infra/secrets.example/bfm/README.md.
+      # Both are a PATH, not the value. The file-based secret keeps the
+      # credential out of the process environment and out of `docker inspect`;
+      # an env var carrying the value itself would be readable by anyone who
+      # can run either. Provisioning: infra/secrets.example/bfm/README.md.
+      #
+      # bfm refuses to boot without either one, which is deliberate: the
+      # container healthcheck answers from `/health` and cannot see that the
+      # service account is missing or that no phone can be authenticated, so
+      # a process that started anyway would report healthy and serve nothing.
       POPS_INTERNAL_API_KEY_FILE: /run/secrets/pops_bfm_api_key
+      BFM_ACCESS_TOKEN_SECRET_FILE: /run/secrets/bfm_jwt_signing_key
     expose:
       - '3014'
     depends_on:
@@ -1254,12 +1261,11 @@ secrets:
   # per-consumer. Mounted by `bfm-api`.
   pops_bfm_api_key:
     file: ../secrets/pops_bfm_api_key
-  # The HS256 key bfm signs mobile access tokens with. Declared, not yet
-  # mounted: the minting path and the `requireDevice` guard that verifies
-  # against it are POPS-1370, and no process reads this file until then.
-  # Compose materialises a secret only for services that reference it, so a
-  # declaration is inert — which is what lets the value be provisioned on the
-  # host ahead of the release that starts needing it, rather than during it.
+  # The HS256 key bfm signs mobile access tokens with, and verifies every
+  # `/mobile/*` request against. Mounted by `bfm-api`, which refuses to boot
+  # without it. Rotating the value invalidates every live access token, which
+  # costs each paired handset one refresh round-trip and nothing else —
+  # refresh tokens are opaque database rows rather than JWTs.
   bfm_jwt_signing_key:
     file: ../secrets/bfm_jwt_signing_key
   pops_api_internal_token:

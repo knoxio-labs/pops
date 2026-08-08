@@ -33,12 +33,12 @@ gitignored repo-root `secrets/`): `bfm_jwt_signing_key`, `claude_api_key`,
 `finance_api_key`, `instagram_cookies`, `notion_api_token`,
 `paperless_admin_password`, `paperless_secret_key`, `pops_api_internal_token`,
 `pops_api_key`, `pops_bfm_api_key`, `telegram_bot_token`, `thetvdb_api_key`,
-`tmdb_api_key`, `up_bank_token`, `up_webhook_secret`. Only 8 are mounted into a
+`tmdb_api_key`, `up_bank_token`, `up_webhook_secret`. Only 9 are mounted into a
 service (`pops-worker-food`, `paperless-ngx`, `pops-mcp`, `moltbot`,
-`moltbot-validator`, `bfm-api`); the other 7 are declared and mounted nowhere.
+`moltbot-validator`, `bfm-api`); the other 6 are declared and mounted nowhere.
 A declared secret is inert — compose materialises one only for services that
 reference it — which is what lets a value be provisioned on the host before the
-service that will mount it exists (`bfm_jwt_signing_key`, POPS-1370).
+release that starts reading it.
 
 **Host env vars** — `POPS_IMAGE_TAG`, `POPS_DOMAIN`, `POPS_REGISTRY_URL`,
 `BUILD_VERSION`, `MCP_BIND_ADDR`, `MCP_INBOUND_TOKEN`, `PAPERLESS_BASE_URL`,
