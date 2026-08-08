@@ -251,6 +251,11 @@ interface E2eEnv {
 
 let env: E2eEnv | undefined;
 
+function activeEnv(): E2eEnv {
+  if (env === undefined) throw new Error('e2e environment was not initialised');
+  return env;
+}
+
 beforeEach(async () => {
   const tmpDir = mkdtempSync(join(tmpdir(), 'prd-242-us-04-'));
   const coreDb = openCoreDb(join(tmpDir, 'core.db'));
@@ -283,9 +288,10 @@ afterEach(async () => {
     // noop — best-effort cleanup
   }
   try {
-    if (env?.coreApiServer) {
+    const server = env?.coreApiServer;
+    if (server) {
       await new Promise<void>((resolve, reject) =>
-        env.coreApiServer.close((err) => (err ? reject(err) : resolve()))
+        server.close((err) => (err ? reject(err) : resolve()))
       );
     }
   } catch {
@@ -310,9 +316,11 @@ function makePillarHandle(coreApiBaseUrl: string): PillarHandle<unknown> {
 
 describe('external pillar register + callDynamic + deregister', () => {
   it('registers an external pillar, calls both procedure kinds via callDynamic, then deregisters', async () => {
-    const registration = await request(env.coreApiBaseUrl).post('/core.registry.register').send({
+    const { coreApiBaseUrl, coreDb, throwaway } = activeEnv();
+
+    const registration = await request(coreApiBaseUrl).post('/core.registry.register').send({
       pillarId: PILLAR_ID,
-      baseUrl: env.throwaway.baseUrl,
+      baseUrl: throwaway.baseUrl,
       manifest: echoManifest(),
     });
     expect(registration.status, JSON.stringify(registration.body)).toBe(200);
@@ -321,13 +329,13 @@ describe('external pillar register + callDynamic + deregister', () => {
       pillarId: PILLAR_ID,
     });
 
-    const persisted = pillarRegistryService.getPillarRegistration(env.coreDb.db, PILLAR_ID);
+    const persisted = pillarRegistryService.getPillarRegistration(coreDb.db, PILLAR_ID);
     expect(persisted).not.toBeNull();
     expect(persisted?.origin).toBe('external');
     expect(persisted?.status).toBe('healthy');
-    expect(persisted?.baseUrl).toBe(env.throwaway.baseUrl);
+    expect(persisted?.baseUrl).toBe(throwaway.baseUrl);
 
-    const snapshot = await request(env.coreApiBaseUrl).get('/core.registry.list');
+    const snapshot = await request(coreApiBaseUrl).get('/core.registry.list');
     expect(snapshot.status).toBe(200);
     const snapshotPillars = snapshot.body?.pillars as
       | Array<{ pillarId: string; baseUrl: string }>
@@ -335,10 +343,10 @@ describe('external pillar register + callDynamic + deregister', () => {
     expect(Array.isArray(snapshotPillars)).toBe(true);
     expect(snapshotPillars?.find((p) => p.pillarId === PILLAR_ID)).toMatchObject({
       pillarId: PILLAR_ID,
-      baseUrl: env.throwaway.baseUrl,
+      baseUrl: throwaway.baseUrl,
     });
 
-    const handle = makePillarHandle(env.coreApiBaseUrl);
+    const handle = makePillarHandle(coreApiBaseUrl);
 
     const queryResult = await handle.callDynamic('echo', 'echo', { value: 'ping' }, 'query');
     expect(queryResult.kind).toBe('ok');
@@ -357,17 +365,17 @@ describe('external pillar register + callDynamic + deregister', () => {
       expect(mutationResult.value).toEqual({ ok: true });
     }
 
-    expect(env.throwaway.calls).toEqual([
+    expect(throwaway.calls).toEqual([
       { path: '/echo/echo', input: { value: 'ping' } },
       { path: '/echo/store', input: { key: 'k', value: 'v' } },
     ]);
 
-    const dereg = await request(env.coreApiBaseUrl).post('/core.registry.deregister').send({
+    const dereg = await request(coreApiBaseUrl).post('/core.registry.deregister').send({
       pillarId: PILLAR_ID,
     });
     expect(dereg.status).toBe(200);
     expect(dereg.body).toMatchObject({ ok: true, removed: true });
-    expect(pillarRegistryService.getPillarRegistration(env.coreDb.db, PILLAR_ID)).toBeNull();
+    expect(pillarRegistryService.getPillarRegistration(coreDb.db, PILLAR_ID)).toBeNull();
 
     const afterDereg = await handle.callDynamic('echo', 'echo', { value: 'ping' }, 'query');
     expect(afterDereg.kind).toBe('unavailable');
@@ -375,6 +383,6 @@ describe('external pillar register + callDynamic + deregister', () => {
       expect(afterDereg.pillar).toBe(PILLAR_ID);
     }
 
-    expect(env.throwaway.calls).toHaveLength(2);
+    expect(throwaway.calls).toHaveLength(2);
   });
 });

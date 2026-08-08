@@ -24,7 +24,7 @@ function makeMockClient(genres = TEST_GENRES): GenreListSource {
 
 describe('GenreCache', () => {
   let cache: GenreCache;
-  let client: TmdbClient;
+  let client: GenreListSource;
 
   beforeEach(() => {
     client = makeMockClient();

@@ -71,7 +71,8 @@ describe('plex token crypto', () => {
     const db = opened.db;
     const cipher = encryptToken(db, 'tamper-target');
     const buf = Buffer.from(cipher, 'base64');
-    buf[buf.length - 1] ^= 0xff;
+    const lastByte = buf.length - 1;
+    buf.writeUInt8(buf.readUInt8(lastByte) ^ 0xff, lastByte);
     const tampered = buf.toString('base64');
     expect(() => decryptToken(db, tampered)).toThrow();
   });

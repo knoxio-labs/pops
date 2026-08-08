@@ -21,7 +21,8 @@
  * `git diff --exit-code libs/module-registry/src/generated.ts` is
  * non-zero (drizzle-style guard).
  *
- * See `docs/themes/01-foundation/prds/101-plugin-contract/us-02-build-time-registry.md`.
+ * The shape every selected manifest must satisfy is `ModuleManifest`
+ * (`libs/types/src/module-manifest.ts`).
  */
 import { spawn } from 'node:child_process';
 import { mkdir, writeFile } from 'node:fs/promises';

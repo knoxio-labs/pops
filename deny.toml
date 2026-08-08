@@ -6,8 +6,7 @@
 # only from crates.io.
 #
 # Run locally with `cargo deny check`; wired into `.github/workflows/
-# rust-quality.yml`. See docs/plans/repo-federation/04-isolation-enforcement.md
-# §8 (RUST-1).
+# rust-quality.yml`.
 
 [graph]
 # Evaluate the dependency graph for every target the workspace builds for.

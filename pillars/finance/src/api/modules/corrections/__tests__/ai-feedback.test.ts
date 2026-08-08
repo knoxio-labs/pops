@@ -30,7 +30,14 @@ describe('interpretRejectionFeedback — degrades on ClaudeCompletionError', () 
 
     const result = await interpretRejectionFeedback(
       originalSignal,
-      { ops: [{ op: 'add', data: { descriptionPattern: 'WOOLWORTHS', matchType: 'contains' } }] },
+      {
+        ops: [
+          {
+            op: 'add',
+            data: { descriptionPattern: 'WOOLWORTHS', matchType: 'contains', tags: [] },
+          },
+        ],
+      },
       'too broad'
     );
 
@@ -45,7 +52,14 @@ describe('interpretRejectionFeedback — degrades on ClaudeCompletionError', () 
     await expect(
       interpretRejectionFeedback(
         originalSignal,
-        { ops: [{ op: 'add', data: { descriptionPattern: 'WOOLWORTHS', matchType: 'contains' } }] },
+        {
+          ops: [
+            {
+              op: 'add',
+              data: { descriptionPattern: 'WOOLWORTHS', matchType: 'contains', tags: [] },
+            },
+          ],
+        },
         'too broad'
       )
     ).rejects.toThrow('boom');

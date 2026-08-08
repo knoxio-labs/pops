@@ -12,8 +12,35 @@ import {
 } from '../transport.js';
 
 import type { ManifestPayload } from '../../manifest-schema/schema.js';
+import type { HealthApp, HealthResponseLike } from '../health-route.js';
 
 const TEST_BASE_URL = 'http://finance-api:3004';
+
+type HealthHandler = (req: unknown, res: HealthResponseLike) => void;
+
+/** The minimal express-like surface `bootstrapPillar` mounts /healthz on. */
+function healthApp(routes: Record<string, HealthHandler>): HealthApp {
+  return {
+    get(path: string, handler: HealthHandler): unknown {
+      routes[path] = handler;
+      return undefined;
+    },
+  };
+}
+
+function recordingResponse(): { res: HealthResponseLike; bodies: unknown[] } {
+  const bodies: unknown[] = [];
+  const res: HealthResponseLike = {
+    json(body: unknown): unknown {
+      bodies.push(body);
+      return undefined;
+    },
+    status(): HealthResponseLike {
+      return res;
+    },
+  };
+  return { res, bodies };
+}
 
 interface RecordedTransport extends RegistryTransport {
   registerCalls: number;
@@ -445,23 +472,8 @@ describe('bootstrapPillar', () => {
   });
 
   it('mounts a /health route on the provided app', async () => {
-    type HealthHandler = (
-      req: unknown,
-      res: {
-        json: (body: unknown) => unknown;
-        status: (code: number) => {
-          json: (body: unknown) => unknown;
-          status: (code: number) => unknown;
-        };
-      }
-    ) => void;
     const routes: Record<string, HealthHandler> = {};
-    const app = {
-      get(path: string, handler: HealthHandler): unknown {
-        routes[path] = handler;
-        return undefined;
-      },
-    };
+    const app = healthApp(routes);
 
     const transport = makeTransport();
     const handle = await bootstrapPillar({
@@ -476,19 +488,10 @@ describe('bootstrapPillar', () => {
     const handler = routes['/healthz'];
     expect(handler).toBeDefined();
 
-    const body: { json: unknown }[] = [];
-    const res = {
-      json(b: unknown): unknown {
-        body.push({ json: b });
-        return undefined;
-      },
-      status(): { json: (b: unknown) => unknown; status: (c: number) => unknown } {
-        return res;
-      },
-    };
+    const { res, bodies } = recordingResponse();
     handler?.({}, res);
 
-    expect(body[0]?.json).toMatchObject({
+    expect(bodies[0]).toMatchObject({
       ok: true,
       pillar: 'finance',
       version: '1.2.3',
@@ -501,17 +504,8 @@ describe('bootstrapPillar', () => {
     // Regression test for the registry-boot SPOF: bootstrapPillar must mount
     // the health route and return a handle synchronously, never blocking on
     // (or crashing from) a registry that is down when the pillar boots.
-    type HealthHandler = (
-      req: unknown,
-      res: { json: (body: unknown) => unknown; status: (code: number) => unknown }
-    ) => void;
     const routes: Record<string, HealthHandler> = {};
-    const app = {
-      get(path: string, handler: HealthHandler): unknown {
-        routes[path] = handler;
-        return undefined;
-      },
-    };
+    const app = healthApp(routes);
 
     const logger = silentLogger();
     const transport = makeTransport({
@@ -535,19 +529,10 @@ describe('bootstrapPillar', () => {
     const handler = routes['/healthz'];
     expect(handler).toBeDefined();
 
-    const body: { json: unknown }[] = [];
-    const res = {
-      json(b: unknown): unknown {
-        body.push({ json: b });
-        return undefined;
-      },
-      status(): unknown {
-        return res;
-      },
-    };
+    const { res, bodies } = recordingResponse();
     handler?.({}, res);
 
-    expect(body[0]?.json).toMatchObject({ ok: true, pillar: 'finance', version: '1.2.3' });
+    expect(bodies[0]).toMatchObject({ ok: true, pillar: 'finance', version: '1.2.3' });
 
     // The registry is still down; registration keeps retrying in the
     // background but never surfaces as a crash or an unhandled rejection.

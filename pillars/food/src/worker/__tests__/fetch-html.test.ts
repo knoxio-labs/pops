@@ -12,7 +12,7 @@ function makeResponse(body: string, init: ResponseInit = {}): Response {
 
 describe('fetchHtml', () => {
   it('returns the body on a 200 text/html response', async () => {
-    const fetchImpl = (async () => makeResponse('<html>ok</html>')) as typeof fetch;
+    const fetchImpl: typeof fetch = async () => makeResponse('<html>ok</html>');
     const result = await fetchHtml('https://example.test/ok', { fetchImpl });
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error('unreachable');
@@ -22,7 +22,7 @@ describe('fetchHtml', () => {
 
   it('follows redirects and reports the final URL', async () => {
     const calls: string[] = [];
-    const fetchImpl: typeof fetch = (async (input) => {
+    const fetchImpl: typeof fetch = async (input) => {
       const url = typeof input === 'string' ? input : input.toString();
       calls.push(url);
       if (url.endsWith('/start')) {
@@ -32,7 +32,7 @@ describe('fetchHtml', () => {
         });
       }
       return makeResponse('<html>end</html>');
-    }) as unknown as typeof fetch;
+    };
     const result = await fetchHtml('https://example.test/start', { fetchImpl });
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error('unreachable');
@@ -41,11 +41,11 @@ describe('fetchHtml', () => {
   });
 
   it('rejects when the redirect chain exceeds the cap', async () => {
-    const fetchImpl: typeof fetch = (async (input) => {
+    const fetchImpl: typeof fetch = async (input) => {
       const url = typeof input === 'string' ? input : input.toString();
       const next = url + '/x';
       return new Response(null, { status: 302, headers: { location: next } });
-    }) as unknown as typeof fetch;
+    };
     const result = await fetchHtml('https://example.test/loop', { fetchImpl, maxRedirects: 2 });
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error('unreachable');
@@ -53,11 +53,11 @@ describe('fetchHtml', () => {
   });
 
   it('rejects non-HTML content types', async () => {
-    const fetchImpl = (async () =>
+    const fetchImpl: typeof fetch = async () =>
       new Response('{}', {
         status: 200,
         headers: { 'content-type': 'application/json' },
-      })) as typeof fetch;
+      });
     const result = await fetchHtml('https://example.test/json', { fetchImpl });
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error('unreachable');
@@ -65,11 +65,11 @@ describe('fetchHtml', () => {
   });
 
   it('rejects 4xx as FetchFailed with the status', async () => {
-    const fetchImpl = (async () =>
+    const fetchImpl: typeof fetch = async () =>
       new Response('nope', {
         status: 404,
         headers: { 'content-type': 'text/html' },
-      })) as typeof fetch;
+      });
     const result = await fetchHtml('https://example.test/404', { fetchImpl });
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error('unreachable');
@@ -79,7 +79,7 @@ describe('fetchHtml', () => {
 
   it('rejects bodies larger than the configured cap', async () => {
     const big = 'x'.repeat(2048);
-    const fetchImpl = (async () => makeResponse(big)) as typeof fetch;
+    const fetchImpl: typeof fetch = async () => makeResponse(big);
     const result = await fetchHtml('https://example.test/big', {
       fetchImpl,
       maxBodyBytes: 1024,
@@ -90,11 +90,11 @@ describe('fetchHtml', () => {
   });
 
   it('returns FetchTimeout when the underlying fetch times out', async () => {
-    const fetchImpl: typeof fetch = (async () => {
+    const fetchImpl: typeof fetch = async () => {
       const err = new Error('signal aborted');
       err.name = 'TimeoutError';
       throw err;
-    }) as unknown as typeof fetch;
+    };
     const result = await fetchHtml('https://example.test/slow', { fetchImpl });
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error('unreachable');
@@ -102,9 +102,9 @@ describe('fetchHtml', () => {
   });
 
   it('returns FetchFailed when fetch throws a generic error', async () => {
-    const fetchImpl: typeof fetch = (async () => {
+    const fetchImpl: typeof fetch = async () => {
       throw new Error('connection reset');
-    }) as unknown as typeof fetch;
+    };
     const result = await fetchHtml('https://example.test/boom', { fetchImpl });
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error('unreachable');

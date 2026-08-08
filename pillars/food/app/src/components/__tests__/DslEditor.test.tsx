@@ -12,6 +12,7 @@ import { createInstance as i18nCreateInstance } from 'i18next';
 import { I18nextProvider, initReactI18next as i18nReactInit } from 'react-i18next';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { elementAt } from '../../test-utils';
 import { issuesField } from '../dsl-editor/issues-state';
 import { renderTooltipDom } from '../dsl-editor/issues-tooltip';
 import { DslEditor } from '../DslEditor';
@@ -451,18 +452,18 @@ describe('DslEditor — issues prop', () => {
     render(<DslEditor initialValue={SAMPLE} onChange={() => {}} issues={[INFO_ISSUE]} />);
     const marks = decorationData(getEditorView());
     expect(marks).toHaveLength(1);
-    expect(marks[0]['data-dsl-issue-severity']).toBe('info');
-    expect(marks[0].class).toBe('cm-dsl-issue cm-dsl-issue--info');
+    expect(elementAt(marks, 0)['data-dsl-issue-severity']).toBe('info');
+    expect(elementAt(marks, 0).class).toBe('cm-dsl-issue cm-dsl-issue--info');
   });
 
   it('replaces the decoration set when issues change', () => {
     const { rerender } = render(
       <DslEditor initialValue={SAMPLE} onChange={() => {}} issues={[ERROR_ISSUE]} />
     );
-    expect(decorationData(getEditorView())[0]['data-dsl-issue-severity']).toBe('error');
+    expect(elementAt(decorationData(getEditorView()), 0)['data-dsl-issue-severity']).toBe('error');
 
     rerender(<DslEditor initialValue={SAMPLE} onChange={() => {}} issues={[INFO_ISSUE]} />);
-    expect(decorationData(getEditorView())[0]['data-dsl-issue-severity']).toBe('info');
+    expect(elementAt(decorationData(getEditorView()), 0)['data-dsl-issue-severity']).toBe('info');
   });
 
   it('clears all decorations when issues is emptied', () => {
@@ -489,8 +490,8 @@ describe('DslEditor — issues prop', () => {
     const dom = renderTooltipDom([ERROR_ISSUE, INFO_ISSUE]);
     const rows = dom.querySelectorAll('.cm-dsl-issue-tooltip__row');
     expect(rows).toHaveLength(2);
-    expect(rows[0].getAttribute('data-dsl-issue-severity')).toBe('error');
-    expect(rows[1].getAttribute('data-dsl-issue-severity')).toBe('info');
+    expect(elementAt(rows, 0).getAttribute('data-dsl-issue-severity')).toBe('error');
+    expect(elementAt(rows, 1).getAttribute('data-dsl-issue-severity')).toBe('info');
   });
 
   it('drops decorations whose span no longer fits the document', () => {

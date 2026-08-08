@@ -31,6 +31,7 @@ import { PurchaseItemSchema } from '../../contract/schemas/purchase.js';
 import { openTempDb, seedAmazonSource } from '../../db/__tests__/helpers.js';
 import { runSweep } from '../../reconcile/sweep.js';
 import { createPurchasesApiApp } from '../app.js';
+import { financeReturning } from '../finance/__tests__/fixtures.js';
 import { __resetPillarRegistryCache } from '../pillars/registry.js';
 
 import type { Express } from 'express';
@@ -57,7 +58,7 @@ beforeEach(() => {
     sweep: () =>
       runSweep({
         db: opened.db,
-        finance: { fetchCandidates: () => Promise.resolve({ kind: 'ok', transactions: [] }) },
+        finance: financeReturning(),
         defaultWindowDays: 21,
       }),
   });
@@ -252,24 +253,10 @@ describe('reconcile responses', () => {
     await request(app).post('/purchases').send(RICH_ORDER);
     await runSweep({
       db: opened.db,
-      finance: {
-        fetchCandidates: () =>
-          Promise.resolve({
-            kind: 'ok',
-            transactions: [
-              {
-                // Exactly the rich order's first charge, so the sweep
-                // produces a real proposal — otherwise `proposed` is empty
-                // and QueuedLinkSchema, the part that was tightened, never
-                // gets parsed at all.
-                uri: 'pops://finance/transaction/conformance-1',
-                description: 'AMAZON MKTPLACE AU',
-                amountCents: 4499,
-                date: '2026-02-03',
-              },
-            ],
-          }),
-      },
+      // Exactly the rich order's first charge, so the sweep produces a real
+      // proposal — otherwise `proposed` is empty and QueuedLinkSchema, the
+      // part that was tightened, never gets parsed at all.
+      finance: financeReturning({ id: 'conformance-1', amountCents: 4499, date: '2026-02-03' }),
       defaultWindowDays: 21,
     });
 

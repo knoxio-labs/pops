@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
+import { elementAt } from '../test-utils';
 import { type ChangeSet, type ProcessedTransaction, useImportStore } from './importStore';
 
 import type { ParsedTransaction } from '@pops/finance';
@@ -150,7 +151,7 @@ describe('importStore — step range', () => {
 const sampleChangeSet: ChangeSet = {
   source: 'ai',
   reason: 'test',
-  ops: [{ op: 'add', data: { descriptionPattern: 'TEST', matchType: 'exact' } }],
+  ops: [{ op: 'add', data: { descriptionPattern: 'TEST', matchType: 'exact', tags: [] } }],
 };
 
 describe('importStore — pendingEntities (local-first-import)', () => {
@@ -178,8 +179,8 @@ describe('importStore — pendingEntities (local-first-import)', () => {
 
     const entities = useImportStore.getState().pendingEntities;
     expect(entities).toHaveLength(2);
-    expect(entities[0].name).toBe('First');
-    expect(entities[1].name).toBe('Second');
+    expect(elementAt(entities, 0).name).toBe('First');
+    expect(elementAt(entities, 1).name).toBe('Second');
   });
 
   it('addPendingEntity rejects duplicate name in pending list (case-insensitive)', () => {
@@ -210,7 +211,7 @@ describe('importStore — pendingEntities (local-first-import)', () => {
 
     const entities = useImportStore.getState().pendingEntities;
     expect(entities).toHaveLength(1);
-    expect(entities[0].name).toBe('Second');
+    expect(elementAt(entities, 0).name).toBe('Second');
   });
 
   it('removePendingEntity with unknown id is a no-op', () => {
@@ -274,8 +275,8 @@ describe('importStore — pendingChangeSets (local-first-import)', () => {
 
     const list = useImportStore.getState().pendingChangeSets;
     expect(list).toHaveLength(2);
-    expect(list[0].source).toBe('first');
-    expect(list[1].source).toBe('second');
+    expect(elementAt(list, 0).source).toBe('first');
+    expect(elementAt(list, 1).source).toBe('second');
   });
 
   it('listPendingChangeSets returns all in insertion order', () => {
@@ -314,8 +315,8 @@ describe('importStore — pendingChangeSets (local-first-import)', () => {
 
     const list = useImportStore.getState().pendingChangeSets;
     expect(list).toHaveLength(2);
-    expect(list[0].tempId).toBe(cs1.tempId);
-    expect(list[1].tempId).toBe(cs3.tempId);
+    expect(elementAt(list, 0).tempId).toBe(cs1.tempId);
+    expect(elementAt(list, 1).tempId).toBe(cs3.tempId);
   });
 
   it('removePendingChangeSet with unknown id is a no-op', () => {

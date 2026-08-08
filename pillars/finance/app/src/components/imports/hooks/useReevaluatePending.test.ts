@@ -34,7 +34,7 @@ const pendingChangeSet: ChangeSet = {
   ops: [
     {
       op: 'add',
-      data: { descriptionPattern: 'COLES', matchType: 'exact', transactionType: null },
+      data: { descriptionPattern: 'COLES', matchType: 'exact', tags: [], transactionType: null },
     },
   ],
 };
@@ -44,7 +44,7 @@ const restPendingChangeSets = [
     changeSet: {
       source: 'correction-proposal',
       reason: 'user approved rule',
-      ops: [{ op: 'add', data: { descriptionPattern: 'COLES', matchType: 'exact' } }],
+      ops: [{ op: 'add', data: { descriptionPattern: 'COLES', matchType: 'exact', tags: [] } }],
     },
   },
 ];

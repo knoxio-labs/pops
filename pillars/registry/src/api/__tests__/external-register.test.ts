@@ -100,7 +100,7 @@ describe('POST /core.registry.register — happy path', () => {
 
     const registered = capturedEvents.filter((e) => e.event === 'registered');
     expect(registered).toHaveLength(1);
-    expect(registered[0].pillarId).toBe('recipes');
+    expect(registered[0]?.pillarId).toBe('recipes');
   });
 
   it('accepts a multi-segment kebab pillar slug', async () => {

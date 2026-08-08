@@ -1,9 +1,11 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { elementAt } from '../../../test-utils';
 import { useTransactionEditing } from './useTransactionEditing';
 
 import type { ProcessedTransaction } from '../../../store/importStore';
+import type { LocalTxState } from './local-tx-reconcile';
 
 const toastMock = vi.hoisted(() => ({ success: vi.fn(), info: vi.fn(), error: vi.fn() }));
 vi.mock('sonner', () => ({ toast: toastMock }));
@@ -29,7 +31,7 @@ function makeTransaction(overrides: Partial<ProcessedTransaction> = {}): Process
   };
 }
 
-function emptyLocalTx() {
+function emptyLocalTx(): LocalTxState {
   return { matched: [], uncertain: [], failed: [], skipped: [] };
 }
 
@@ -87,7 +89,7 @@ describe('useTransactionEditing — rule-matched inline edits', () => {
 
     expect(generateProposal).not.toHaveBeenCalled();
     expect(setLocalTransactions).toHaveBeenCalledTimes(1);
-    const updater = setLocalTransactions.mock.calls[0][0] as (
+    const updater = elementAt(setLocalTransactions.mock.calls, 0)[0] as (
       prev: ReturnType<typeof emptyLocalTx>
     ) => ReturnType<typeof emptyLocalTx>;
     const next = updater({ ...emptyLocalTx(), matched: [transaction] });
@@ -133,7 +135,7 @@ describe('useTransactionEditing — rule-matched inline edits', () => {
       });
     });
 
-    const updater = setLocalTransactions.mock.calls[0][0] as (
+    const updater = elementAt(setLocalTransactions.mock.calls, 0)[0] as (
       prev: ReturnType<typeof emptyLocalTx>
     ) => ReturnType<typeof emptyLocalTx>;
     const next = updater({ ...emptyLocalTx(), failed: [{ ...transaction, status: 'failed' }] });
@@ -171,7 +173,7 @@ describe('useTransactionEditing — entity-optional bucket routing (#3757 nit 4)
       });
     });
 
-    const updater = setLocalTransactions.mock.calls[0][0] as (
+    const updater = elementAt(setLocalTransactions.mock.calls, 0)[0] as (
       prev: ReturnType<typeof emptyLocalTx>
     ) => ReturnType<typeof emptyLocalTx>;
     return updater({ ...emptyLocalTx(), uncertain: [transaction] });

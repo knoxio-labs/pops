@@ -17,7 +17,10 @@ import { callWithLogging } from '@pops/ai-telemetry';
 
 import { ANTHROPIC_PROVIDER, FOOD_DOMAIN, foodTelemetryDeps } from './ai-telemetry-deps.js';
 
-import type { Message } from '@anthropic-ai/sdk/resources/messages';
+import type {
+  ContentBlock,
+  MessageCreateParamsNonStreaming,
+} from '@anthropic-ai/sdk/resources/messages';
 
 export const SCREENSHOT_OPERATION = 'recipe-extract-screenshot';
 
@@ -65,7 +68,27 @@ export interface VisionCallResult {
   latencyMs: number;
 }
 
-type AnthropicLike = Pick<Anthropic, 'messages'>;
+export type AnthropicCreateParams = MessageCreateParamsNonStreaming;
+
+/** The slice of an SDK `Message` this module reads back. */
+export interface AnthropicMessage {
+  model: string;
+  content: ContentBlock[];
+  usage: { input_tokens: number; output_tokens: number };
+}
+
+/**
+ * The structural slice of the SDK this module consumes: a single
+ * non-streaming `messages.create`. `Pick<Anthropic, 'messages'>` would drag
+ * in the whole `Messages` resource class, which no test double can supply —
+ * see the sibling seams in `./web-llm-anthropic.ts` and
+ * `../handlers/instagram/anthropic-client.ts`.
+ */
+export interface AnthropicLike {
+  messages: {
+    create: (params: AnthropicCreateParams) => Promise<AnthropicMessage>;
+  };
+}
 
 let cachedClient: AnthropicLike | null = null;
 
@@ -99,8 +122,8 @@ const ALLOWED_VISION_MIMES = new Set(['image/jpeg', 'image/png', 'image/webp']);
  * Returns the raw text response plus usage; the caller is responsible
  * for JSON-parsing and validating against its handler-specific schema.
  */
-function callVision(client: AnthropicLike, input: VisionCallInput): Promise<Message> {
-  return callWithLogging<Message>(
+function callVision(client: AnthropicLike, input: VisionCallInput): Promise<AnthropicMessage> {
+  return callWithLogging<AnthropicMessage>(
     {
       provider: ANTHROPIC_PROVIDER,
       model: input.model,

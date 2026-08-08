@@ -5,10 +5,9 @@
  * chips, multi-select tag chips, and a max-time dropdown. Every filter
  * is optional; clearing them all is the equivalent of unfiltered.
  *
- * The tags control is a free-text comma-separated input: there is no
- * tag-taxonomy read surface, so the user types tags directly. Replacing
- * it with a discoverable chip group is tracked in
- * pillars/food/docs/ideas/solver-tag-taxonomy-filter.md.
+ * The tags control is a free-text comma-separated input rather than a chip
+ * group because the food contract exposes no tag-taxonomy read surface — a
+ * discoverable control would have nothing to enumerate from.
  */
 import { useTranslation } from 'react-i18next';
 

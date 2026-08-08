@@ -68,8 +68,8 @@ describe('fetchCandidates', () => {
 
     expect(result.kind).toBe('ok');
     if (result.kind !== 'ok') return;
-    expect(result.transactions[0].amountCents).toBe(1999);
-    expect(result.transactions[0].uri).toBe('pops://finance/transaction/txn-1');
+    expect(result.transactions[0]?.amountCents).toBe(1999);
+    expect(result.transactions[0]?.uri).toBe('pops://finance/transaction/txn-1');
   });
 
   it('passes the window and descriptor through as finance query params', async () => {
@@ -87,7 +87,7 @@ describe('fetchCandidates', () => {
   it('requests at most the 500 finance caps its limit at', async () => {
     const { handle, calls } = stubHandle([page([])]);
     await createFinanceClient(() => handle).fetchCandidates(WINDOW);
-    expect(calls[0]['limit']).toBe(500);
+    expect(calls[0]?.['limit']).toBe(500);
   });
 
   it('pages until the producer says there is no more', async () => {
@@ -100,7 +100,7 @@ describe('fetchCandidates', () => {
     expect(result.kind).toBe('ok');
     if (result.kind !== 'ok') return;
     expect(result.transactions.map((t) => t.id)).toEqual(['a', 'b']);
-    expect(calls[1]['offset']).toBe(500);
+    expect(calls[1]?.['offset']).toBe(500);
   });
 });
 

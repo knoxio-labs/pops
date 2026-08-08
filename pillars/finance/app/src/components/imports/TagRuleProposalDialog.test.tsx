@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { type ReactElement } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { elementAt } from '../../test-utils';
 import { TagRuleProposalDialog } from './TagRuleProposalDialog';
 
 // ---------------------------------------------------------------------------
@@ -149,7 +150,7 @@ describe('TagRuleProposalDialog', () => {
     fireEvent.click(screen.getByRole('button', { name: /confirm reject/i }));
 
     await waitFor(() => expect(mockReject).toHaveBeenCalledOnce());
-    const callArg = mockReject.mock.calls[0][0] as { body: Record<string, unknown> };
+    const callArg = elementAt(mockReject.mock.calls, 0)[0] as { body: Record<string, unknown> };
     expect(callArg.body.feedback).toBe('Too broad');
     expect(callArg.body.signal).toBeDefined();
     expect(callArg.body.transactions).toBeDefined();

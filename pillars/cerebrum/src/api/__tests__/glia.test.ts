@@ -22,12 +22,7 @@ import {
   type TrustPhase,
 } from '../../db/index.js';
 import { createCerebrumApiApp } from '../app.js';
-import {
-  makeClient,
-  makeEmptyPeerClients,
-  makeReflexService,
-  makeTemplateRegistry,
-} from './test-utils.js';
+import { makeCerebrumApiDeps, makeClient } from './test-utils.js';
 
 let tmpDir: string;
 let cerebrumDb: OpenedCerebrumDb;
@@ -44,17 +39,14 @@ afterEach(() => {
 
 function client() {
   return makeClient(
-    createCerebrumApiApp({
-      cerebrumDb,
-      templateRegistry: makeTemplateRegistry(),
-      reflexService: makeReflexService(cerebrumDb.db, join(tmpDir, 'reflexes.toml')),
-      // Point glia.toml at a non-existent file so the hardcoded ADR-021
-      // defaults apply deterministically.
-      gliaConfigPath: join(tmpDir, '.config', 'glia.toml'),
-      version: '0.0.1-test',
-      selfBaseUrl: 'http://localhost:3007',
-      peerClients: makeEmptyPeerClients(),
-    })
+    createCerebrumApiApp(
+      makeCerebrumApiDeps(
+        { cerebrumDb, tmpDir },
+        // Point glia.toml at a non-existent file so the hardcoded ADR-021
+        // defaults apply deterministically.
+        { gliaConfigPath: join(tmpDir, '.config', 'glia.toml') }
+      )
+    )
   );
 }
 

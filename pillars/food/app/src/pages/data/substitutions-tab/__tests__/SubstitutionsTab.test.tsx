@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { type ReactNode } from 'react';
+import { type JSX, type ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const substitutionsListHydratedMock = vi.hoisted(() => vi.fn());
@@ -20,6 +20,7 @@ vi.mock('../../../../food-api/index.js', () => ({
   substitutionsDelete: substitutionsDeleteMock,
 }));
 
+import { elementAt } from '../../../../test-utils';
 import { SubstitutionsTab } from '../../SubstitutionsTab';
 
 function withClient(children: ReactNode): JSX.Element {
@@ -164,7 +165,9 @@ describe('pillars/food/docs/prds/substitution-model — SubstitutionsTab', () =>
     renderTab();
 
     const form = screen.getByRole('form', { name: /add substitution/i });
-    const [fromBox, toBox] = within(form).getAllByPlaceholderText(/search slug/i);
+    const slugBoxes = within(form).getAllByPlaceholderText(/search slug/i);
+    const fromBox = elementAt(slugBoxes, 0);
+    const toBox = elementAt(slugBoxes, 1);
     await userEvent.type(fromBox, 'butter');
     await userEvent.click(await within(form).findByRole('option', { name: /butter/i }));
     await userEvent.type(toBox, 'butter');

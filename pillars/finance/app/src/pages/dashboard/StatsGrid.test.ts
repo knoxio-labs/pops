@@ -6,7 +6,14 @@ import type { TransactionsListResponse } from '../../finance-api/types.gen.js';
 
 type Transaction = NonNullable<TransactionsListResponse['data']>[number];
 
-function makeTx(amount: number, overrides: Partial<Transaction> = {}): Transaction {
+/**
+ * `type` widens to `string`: the tile mapping has to survive values the REST
+ * contract does not list (legacy casing, types added server-side), and those
+ * cases are exactly what the suite below pins down.
+ */
+type TransactionOverrides = Omit<Partial<Transaction>, 'type'> & { type?: string };
+
+function makeTx(amount: number, overrides: TransactionOverrides = {}): Transaction {
   return {
     id: `tx-${amount}`,
     date: '2026-04-29',

@@ -132,8 +132,8 @@ describe('POST /core.registry.heartbeat — happy path', () => {
 
     const healthChanged = capturedEvents.filter((e) => e.event === 'health-changed');
     expect(healthChanged).toHaveLength(1);
-    expect(healthChanged[0].pillarId).toBe('recipes');
-    expect(healthChanged[0].origin).toBe('external');
+    expect(healthChanged[0]?.pillarId).toBe('recipes');
+    expect(healthChanged[0]?.origin).toBe('external');
   });
 });
 

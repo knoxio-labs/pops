@@ -1,6 +1,6 @@
 /**
- * Settings aggregator fan-out (settings-federation S3, OD-7; see
- * `docs/plans/02-settings-federation.md` §4.5).
+ * Settings aggregator fan-out over the registry-discovered settings dimension
+ * (ADR-037).
  *
  * Builds the unified admin settings view by fanning out over the live
  * registry to each pillar's federated `GET /settings` collection. The

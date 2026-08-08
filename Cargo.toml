@@ -1,15 +1,15 @@
 # POPS Cargo workspace root — lives at the repo root.
 #
-# Owned by the `contacts` extraction plan (the first Rust pillar) — see
-# `docs/plans/01-contacts-pillar-rust.md` and the sequencing overview in
-# `docs/plans/00-overview-and-sequencing.md` (both on `main`). Future Rust
-# libraries (`pops-ai`, `pops-settings`) join `[workspace].members` here; they
-# do NOT create a second workspace. One lockfile, one shared dependency set,
-# one Rust CI lane.
+# Introduced for `pillars/contacts`, the first Rust pillar (ADR-033 covers why
+# a pillar may be written in another language at all). Future Rust libraries
+# (`pops-ai`, `pops-settings`) join `[workspace].members` here; they do NOT
+# create a second workspace. One lockfile, one shared dependency set, one Rust
+# CI lane — a second workspace would fork all three and break `cargo deny`'s
+# single-graph view.
 #
 # Members are referenced by repo-relative path: shared libraries under `libs/`
-# and pillar crates under `pillars/` (each pillar crate colocated with its TS
-# frontend, mirroring the PRD-253 pillar layout).
+# and pillar crates under `pillars/`, each pillar crate colocated with its TS
+# frontend so a pillar stays one directory.
 [workspace]
 resolver = "2"
 members = ["pillars/contacts", "libs/pops-ai", "libs/pops-settings"]

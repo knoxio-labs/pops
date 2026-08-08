@@ -1,6 +1,6 @@
 /**
  * Handler for core's `settings.aggregate` route — the federation aggregator
- * (settings-federation S3; see `docs/plans/02-settings-federation.md` §4.5).
+ * (ADR-037).
  *
  * `GET /settings/aggregate` is identity-gated (`core.settings.aggregate`) like
  * every other core settings route, then fans out over the live DB registry

@@ -102,6 +102,28 @@ export const FINANCE_OPENAPI = {
   },
 } as const;
 
+/**
+ * The consumer-side router type for {@link FINANCE_OPENAPI} — what a pillar
+ * contract package would export and what call sites pass to `pillar<T>()`.
+ *
+ * `unknownRouter` is deliberately part of it and deliberately absent from the
+ * OpenAPI document: that skew between a compiled contract and a deployed
+ * pillar is what the `contract-mismatch` cases exercise.
+ */
+export type FinanceRouter = {
+  wishlist: {
+    list: (input?: { limit?: number }) => Promise<readonly { id: string }[]>;
+  };
+  transactions: {
+    imports: {
+      create: (input: { id: string }) => Promise<unknown>;
+    };
+  };
+  unknownRouter: {
+    list: (input?: unknown) => Promise<unknown>;
+  };
+};
+
 const OPENAPI_SUFFIX = '/openapi';
 
 /**

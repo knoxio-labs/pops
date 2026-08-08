@@ -20,7 +20,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { openCerebrumDb, type OpenedCerebrumDb } from '../../db/index.js';
 import { createCerebrumApiApp } from '../app.js';
-import { makeClient, makeEmptyPeerClients, makeTemplateRegistry } from './test-utils.js';
+import { makeCerebrumApiDeps, makeClient, makeEmptyPeerClients } from './test-utils.js';
 
 import type { EmbeddingClient } from '../modules/retrieval/embedding-client.js';
 import type { PeerClients } from '../modules/retrieval/peer-clients.js';
@@ -49,15 +49,15 @@ interface AppOpts {
 
 function client(opts: AppOpts = {}) {
   return makeClient(
-    createCerebrumApiApp({
-      cerebrumDb: opts.db ?? cerebrumDb,
-      templateRegistry: makeTemplateRegistry(),
-      engramRoot,
-      version: '0.0.1-test',
-      selfBaseUrl: 'http://localhost:3007',
-      peerClients: opts.peers ?? makeEmptyPeerClients(),
-      embeddingClient: opts.embeddingClient,
-    })
+    createCerebrumApiApp(
+      makeCerebrumApiDeps(
+        { cerebrumDb: opts.db ?? cerebrumDb, tmpDir, engramRoot },
+        {
+          peerClients: opts.peers ?? makeEmptyPeerClients(),
+          embeddingClient: opts.embeddingClient,
+        }
+      )
+    )
   );
 }
 
@@ -250,6 +250,7 @@ describe('POST /retrieval/search — semantic + cross-pillar enrichment', () => 
             notes: 'morning',
           };
         },
+        listTransactions: () => Promise.resolve({ rows: [], hasMore: false }),
       },
     };
 

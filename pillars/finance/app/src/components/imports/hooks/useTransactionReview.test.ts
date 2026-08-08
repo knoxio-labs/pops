@@ -27,7 +27,7 @@ import { useTransactionReview } from './useTransactionReview';
 const sampleChangeSet: ChangeSet = {
   source: 'ai',
   reason: 'test',
-  ops: [{ op: 'add', data: { descriptionPattern: 'TEST', matchType: 'exact' } }],
+  ops: [{ op: 'add', data: { descriptionPattern: 'TEST', matchType: 'exact', tags: [] } }],
 };
 
 function makeTx(

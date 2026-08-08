@@ -1,8 +1,8 @@
 //! `pops-settings` — the Rust mirror of the TS `@pops/pillar-settings` package.
 //!
 //! It provides the federated Read/Update/Reset settings surface every pillar
-//! serves byte-identically (`docs/plans/02-settings-federation.md` §4.4/§4.6,
-//! US-S6): the wire types ([`Setting`] and the per-route response bodies), the
+//! serves byte-identically (ADR-037, settings as a manifest dimension): the
+//! wire types ([`Setting`] and the per-route response bodies), the
 //! storage-agnostic RU+reset+seed [`service`] over an injected
 //! [`SettingsStore`], read-side sensitive redaction ([`redact_sensitive`]) to a
 //! fixed `__redacted__` sentinel, manifest → key-authority derivation

@@ -31,6 +31,7 @@ import type { AddressInfo } from 'node:net';
 
 import type { Express } from 'express';
 
+import type { ChangeSet } from '../../contract/rest-corrections-schemas.js';
 import type { Budget } from '../modules/budgets-types.js';
 import type { ImportProgress } from '../modules/imports/index.js';
 import type {
@@ -519,14 +520,14 @@ export function makeClient(app: Express) {
         }>((r) => r.post('/corrections/generate-rules').send(body)),
       proposeChangeSet: (body: Record<string, unknown>) =>
         call<{
-          changeSet: { source?: string; reason?: string; ops: { op: string; id?: string }[] };
+          changeSet: ChangeSet;
           rationale: string;
           preview: { counts: { affected: number }; affected: unknown[] };
           targetRules: Record<string, Correction>;
         }>((r) => r.post('/corrections/propose-changeset').send(body)),
       reviseChangeSet: (body: Record<string, unknown>) =>
         call<{
-          changeSet: { ops: { op: string }[] };
+          changeSet: ChangeSet;
           rationale: string;
           targetRules: Record<string, Correction>;
         }>((r) => r.post('/corrections/revise-changeset').send(body)),

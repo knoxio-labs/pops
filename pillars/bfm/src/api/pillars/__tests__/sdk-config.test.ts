@@ -13,7 +13,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { disposeDiscoveryClient, pillarRegistry } from '@pops/pillar-sdk/discovery';
 import { getServerSdkConfig, __resetServerSdkConfig } from '@pops/pillar-sdk/server';
-import { configureDiscoveryForTest } from '@pops/pillar-sdk/testing/discovery';
+import { configureDiscoveryForTest } from '@pops/pillar-sdk/testing';
 
 import { configureBfmServerSdk } from '../sdk-config.js';
 

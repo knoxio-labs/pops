@@ -88,7 +88,7 @@ describe('aggregateSettings', () => {
   });
 
   it('fans out to a capability-advertising remote pillar over the trusted network', async () => {
-    const fetchStub = vi.fn(async () =>
+    const fetchStub = vi.fn<typeof fetch>(async () =>
       jsonResponse({ data: [{ key: 'finance.aiCategorizer.model', value: 'claude-haiku-4-5' }] })
     );
     const result = await aggregateSettings([REGISTRY, FINANCE], {

@@ -3,7 +3,7 @@
  * integration tests. Non-2xx responses throw `HttpError` carrying the parsed
  * `{ status, body }` so tests assert on `.rejects.toMatchObject({ status })`.
  */
-import { dirname, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import supertest from 'supertest';
@@ -102,7 +102,8 @@ import type {
   StalenessResultWire,
   WorkerRunResultWire,
 } from '../../contract/rest-workers-schemas.js';
-import type { CerebrumDb } from '../../db/index.js';
+import type { CerebrumDb, OpenedCerebrumDb } from '../../db/index.js';
+import type { CerebrumApiDeps } from '../handlers.js';
 import type { EgoLlm, EgoStreamEvent } from '../modules/ego/llm.js';
 import type { GenerationLlm } from '../modules/emit/llm.js';
 import type { IngestLlm, IngestLlmRequest } from '../modules/ingest/llm.js';
@@ -250,6 +251,50 @@ export function makeReflexService(db: CerebrumDb, configPath: string): ReflexSer
  */
 export function makeEmptyPeerClients(): PeerClients {
   return {};
+}
+
+/** Per-suite fixtures the default {@link CerebrumApiDeps} are derived from. */
+export interface CerebrumTestDepsBase {
+  /** Open handle the app and the suite's seeding helpers share. */
+  cerebrumDb: OpenedCerebrumDb;
+  /** The suite's per-test temp directory; backs the two derived paths below. */
+  tmpDir: string;
+  /**
+   * Engram Markdown root. Defaults to a path under `tmpDir` that is never
+   * created — suites exercising engram file IO pass their own `mkdtemp` root.
+   */
+  engramRoot?: string;
+  /**
+   * Path to `reflexes.toml`. Defaults to a path under `tmpDir` that does not
+   * exist, which the service tolerates as an empty reflex set.
+   */
+  reflexConfigPath?: string;
+}
+
+/**
+ * Build a complete {@link CerebrumApiDeps} for the api integration suites.
+ *
+ * Every required member has a default, so a suite only names what it actually
+ * exercises (an LLM fake, a queue accessor, a peer-client set) and stays
+ * correct when a new required dependency lands on the interface.
+ */
+export function makeCerebrumApiDeps(
+  base: CerebrumTestDepsBase,
+  overrides: Partial<CerebrumApiDeps> = {}
+): CerebrumApiDeps {
+  return {
+    cerebrumDb: base.cerebrumDb,
+    templateRegistry: makeTemplateRegistry(),
+    engramRoot: base.engramRoot ?? join(base.tmpDir, 'engrams'),
+    reflexService: makeReflexService(
+      base.cerebrumDb.db,
+      base.reflexConfigPath ?? join(base.tmpDir, 'reflexes.toml')
+    ),
+    version: '0.0.1-test',
+    selfBaseUrl: 'http://localhost:3007',
+    peerClients: makeEmptyPeerClients(),
+    ...overrides,
+  };
 }
 
 export class HttpError extends Error {
