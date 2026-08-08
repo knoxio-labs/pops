@@ -60,6 +60,10 @@ export const PROMPT_FIELDS: Readonly<Record<string, string>> = {
   total: 'the total the receipt states, exactly as printed',
   tax: 'tax stated as a separate line, exactly as printed, or null. Do NOT report tax that the receipt says is already included in the prices',
   discounts: 'each stated discount, exactly as printed, as an array',
+  surcharges:
+    'each fee the merchant added, exactly as printed, as an array — a card ' +
+    'or credit surcharge, a small-order fee. These are added to the total, ' +
+    'not subtracted like a discount. Do not include tax here',
   lines: 'one entry per product, in printed order',
   description: 'the product text verbatim, including abbreviations. Do not expand or tidy them',
   amount:

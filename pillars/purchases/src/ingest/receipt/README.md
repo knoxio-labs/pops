@@ -17,8 +17,23 @@ A receipt prints its own total. That single fact is what makes a model's
 reading admissible:
 
 ```
-Σ lines + tax − discounts === the total the paper states
+Σ lines − discounts + surcharges (+ tax, if the prices exclude it) === the stated total
 ```
+
+Tax is tried both ways, because two conventions exist and both are
+ordinary: Australia, the UK and the EU print prices with tax already in
+them and state it as a fact about the total, while the United States adds
+it. Which one applies is not inferred from the merchant or the address —
+the receipt's own numbers answer it, and only one can reconcile unless the
+tax is zero, when they are the same sum. When the price contained it,
+`taxCents` is stored as zero, because carrying it as a component too would
+make it appear twice in any sum of parts.
+
+Surcharges are the other direction: a card surcharge or small-order fee is
+real money the merchant added, and none of the other components describe
+it. A real ALDI receipt is $24.05 of groceries, a 12c credit surcharge and
+a $24.17 total — without somewhere to put the fee it can never reconcile,
+and most Australian card receipts carry one.
 
 Exactly, to the cent (`gate.ts`). It is not a confidence score and there is
 no threshold to tune. Getting the sum to agree by accident requires the

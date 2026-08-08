@@ -194,6 +194,7 @@ export function receiptToPurchase(
     // here as well would make it appear twice in any sum of parts — the
     // same reason the Woolworths adapter drops GST.
     taxCents: gate.taxIncluded ? 0 : gate.taxCents,
+    surchargeCents: gate.surchargeCents,
     discountCents: gate.discountCents,
     totalCents,
     // Unknown is a valid outcome, not a failure — the escape hatch exists

@@ -7,6 +7,7 @@
  */
 import { describe, expect, it } from 'vitest';
 
+import { ExtractedLineSchema, ExtractedReceiptSchema } from '../extraction.js';
 import { readReceipt } from '../read-receipt.js';
 import { EXTRACTION_PROMPT, PROMPT_FIELDS } from '../vision.js';
 
@@ -116,24 +117,16 @@ describe('the prompt', () => {
   });
 
   it('covers every key the extraction schema names', () => {
+    // Read off the schema itself rather than a hand-kept copy. A literal
+    // list here is a third statement of the contract, and the one most
+    // likely to be forgotten: it passed while the schema and the prompt had
+    // both gained `surcharges`, which is the exact drift this guards.
     const schemaKeys = [
-      'merchantName',
-      'address',
-      'timeZone',
-      'purchasedOn',
-      'purchasedAt',
-      'currency',
-      'total',
-      'tax',
-      'discounts',
-      'lines',
-      'unreadable',
-      'description',
-      'amount',
-      'quantity',
-      'unitNote',
+      ...Object.keys(ExtractedReceiptSchema.shape),
+      ...Object.keys(ExtractedLineSchema.shape),
     ];
-    expect(Object.keys(PROMPT_FIELDS).toSorted()).toEqual(schemaKeys.toSorted());
+
+    expect(Object.keys(PROMPT_FIELDS).toSorted()).toEqual([...new Set(schemaKeys)].toSorted());
   });
 
   it('tells the model not to make the arithmetic work', () => {

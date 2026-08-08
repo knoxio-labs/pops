@@ -295,6 +295,11 @@
                             "minimum": 0,
                             "type": "integer"
                           },
+                          "surchargeCents": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
                           "taxCents": {
                             "maximum": 9007199254740991,
                             "minimum": 0,
@@ -318,6 +323,7 @@
                           "orderedAt",
                           "currency",
                           "subtotalCents",
+                          "surchargeCents",
                           "shippingCents",
                           "taxCents",
                           "discountCents",
@@ -1198,6 +1204,11 @@
                           "minimum": 0,
                           "type": "integer"
                         },
+                        "surchargeCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
                         "taxCents": {
                           "maximum": 9007199254740991,
                           "minimum": 0,
@@ -1221,6 +1232,7 @@
                         "orderedAt",
                         "currency",
                         "subtotalCents",
+                        "surchargeCents",
                         "shippingCents",
                         "taxCents",
                         "discountCents",
@@ -1978,6 +1990,11 @@
                           "minimum": 0,
                           "type": "integer"
                         },
+                        "surchargeCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
                         "taxCents": {
                           "maximum": 9007199254740991,
                           "minimum": 0,
@@ -2001,6 +2018,7 @@
                         "orderedAt",
                         "currency",
                         "subtotalCents",
+                        "surchargeCents",
                         "shippingCents",
                         "taxCents",
                         "discountCents",
@@ -2707,6 +2725,11 @@
                                   "minimum": 0,
                                   "type": "integer"
                                 },
+                                "surchargeCents": {
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                },
                                 "taxCents": {
                                   "maximum": 9007199254740991,
                                   "minimum": 0,
@@ -2730,6 +2753,7 @@
                                 "orderedAt",
                                 "currency",
                                 "subtotalCents",
+                                "surchargeCents",
                                 "shippingCents",
                                 "taxCents",
                                 "discountCents",
@@ -2915,6 +2939,14 @@
                               "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
                               "type": "string"
                             },
+                            "surcharges": {
+                              "default": [],
+                              "items": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "type": "array"
+                            },
                             "tax": {
                               "minLength": 1,
                               "nullable": true,
@@ -2949,6 +2981,7 @@
                             "total",
                             "tax",
                             "discounts",
+                            "surcharges",
                             "lines",
                             "unreadable"
                           ],
