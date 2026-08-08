@@ -1,6 +1,16 @@
 FROM node:24-alpine AS builder
 WORKDIR /app
 
+# `--filter "@pops/shell..."` selects six database-owning pillars, so this
+# builder installs better-sqlite3 just as they do. It installs as
+# `prebuild-install || node-gyp rebuild`, and this base has neither Python nor
+# a compiler — so the second half of that `||` cannot run, and any failure to
+# FETCH the prebuilt binary takes the whole build down with an error about
+# Python that names neither cause nor fix. The prebuild stays the fast path;
+# this is only what makes the fallback real. Builder stage only: the shell
+# ships from nginx and gets none of it.
+RUN apk add --no-cache python3 make g++
+
 # The shell composes every pillar app (`@pops/app-*`), and those apps import
 # contract/dsl types from their pillar packages (`@pops/finance`,
 # `@pops/food/dsl`, …). The full workspace closure of `@pops/shell` therefore

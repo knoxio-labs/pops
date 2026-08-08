@@ -10,6 +10,15 @@
 FROM node:24-slim AS builder
 WORKDIR /app
 
+# better-sqlite3 installs as `prebuild-install || node-gyp rebuild`, and this
+# base has neither Python nor a compiler — so the second half of that `||`
+# cannot run, and any failure to FETCH the prebuilt binary takes the whole
+# build down with an error about Python that names neither cause nor fix. The
+# prebuild stays the fast path; this is only what makes the fallback real.
+# Builder stage only: the runtime image is a separate FROM and gets none of it.
+RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ \
+    && rm -rf /var/lib/apt/lists/*
+
 # Workspace root manifests — needed for pnpm install to resolve.
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json .oxfmtrc.json ./
 

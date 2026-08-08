@@ -28,6 +28,90 @@ function readDockerfile(pillarId: string): string {
   return readFileSync(join(repoRoot, 'pillars', pillarId, 'Dockerfile'), 'utf8');
 }
 
+interface WorkspacePackage {
+  readonly name?: string;
+  readonly dependencies?: Readonly<Record<string, string>>;
+  readonly devDependencies?: Readonly<Record<string, string>>;
+}
+
+function readPackageJson(path: string): WorkspacePackage {
+  return JSON.parse(readFileSync(path, 'utf8')) as WorkspacePackage;
+}
+
+/** Every workspace member, by package name. Mirrors `packages:` in pnpm-workspace.yaml. */
+function workspaceMembers(): Map<string, WorkspacePackage> {
+  const members = new Map<string, WorkspacePackage>();
+  for (const group of ['pillars', 'libs']) {
+    for (const entry of readdirSync(join(repoRoot, group), { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      const candidates = [join(repoRoot, group, entry.name)];
+      if (group === 'pillars') {
+        for (const nested of readdirSync(join(repoRoot, group, entry.name), {
+          withFileTypes: true,
+        })) {
+          if (nested.isDirectory()) candidates.push(join(repoRoot, group, entry.name, nested.name));
+        }
+      }
+      for (const dir of candidates) {
+        const manifest = join(dir, 'package.json');
+        if (!existsSync(manifest)) continue;
+        const pkg = readPackageJson(manifest);
+        if (pkg.name !== undefined) members.set(pkg.name, pkg);
+      }
+    }
+  }
+  return members;
+}
+
+/**
+ * The workspace packages `pnpm install --filter "<name>..."` selects: the
+ * package plus the transitive closure of its workspace dependencies, dev
+ * dependencies included — which is what pnpm's `...` suffix resolves to, and
+ * why a lib that only tests against better-sqlite3 still drags it into an
+ * image.
+ */
+function selectedWorkspacePackages(
+  entry: string,
+  members: ReadonlyMap<string, WorkspacePackage>
+): Set<string> {
+  const selected = new Set<string>();
+  const pending = [entry];
+  while (pending.length > 0) {
+    const current = pending.pop();
+    if (current === undefined || selected.has(current)) continue;
+    const pkg = members.get(current);
+    if (pkg === undefined) continue;
+    selected.add(current);
+    for (const field of ['dependencies', 'devDependencies'] as const) {
+      for (const dep of Object.keys(pkg[field] ?? {})) {
+        if (members.has(dep)) pending.push(dep);
+      }
+    }
+  }
+  return selected;
+}
+
+/** Pillar ids whose image installs better-sqlite3, derived rather than listed. */
+function pillarsInstallingBetterSqlite3(): string[] {
+  const members = workspaceMembers();
+  return pillarsWith('Dockerfile', 'package.json').filter((id) => {
+    const name = readPackageJson(join(repoRoot, 'pillars', id, 'package.json')).name;
+    if (name === undefined) return false;
+    return [...selectedWorkspacePackages(name, members)].some((selected) => {
+      const pkg = members.get(selected);
+      return (
+        pkg?.dependencies?.['better-sqlite3'] !== undefined ||
+        pkg?.devDependencies?.['better-sqlite3'] !== undefined
+      );
+    });
+  });
+}
+
+/** Everything before the final `FROM` — the stages that build but do not ship. */
+function builderStages(dockerfile: string): string {
+  return dockerfile.slice(0, dockerfile.length - runtimeStage(dockerfile).length);
+}
+
 describe('parseExposedPort', () => {
   it('reads the exposed port', () => {
     expect(parseExposedPort('FROM node:24-slim\nEXPOSE 3004\nCMD ["node", "x.js"]\n')).toBe(3004);
@@ -207,5 +291,141 @@ describe('the fresh-volume contract, for every pillar image that owns a database
     expect(runtimeStage(readDockerfile(id))).toMatch(
       /^\s*ENV\s+[A-Z_]*SQLITE_PATH=\/data\/sqlite\/\S+/mu
     );
+  });
+});
+
+/** What node-gyp needs on Debian and Alpine alike to build a native addon. */
+const NODE_GYP_PACKAGES = ['python3', 'make', 'g++'] as const;
+
+function installsNodeGypToolchain(line: string): boolean {
+  if (!/\b(?:apt-get install|apk add)\b/u.test(line)) return false;
+  const tokens = new Set(line.split(/\s+/u));
+  return NODE_GYP_PACKAGES.every((pkg) => tokens.has(pkg));
+}
+
+/**
+ * Line index of the first INSTRUCTION matching the predicate, comments blanked
+ * rather than dropped so the index still refers to the real line. These
+ * Dockerfiles narrate their own `pnpm install --filter …` in a header comment,
+ * which an unfiltered scan reads as the install itself.
+ */
+function lineIndexMatching(text: string, predicate: (line: string) => boolean): number {
+  return text
+    .split('\n')
+    .map((line) => (/^\s*#/u.test(line) ? '' : line))
+    .findIndex(predicate);
+}
+
+describe('the native-build fallback, for every pillar image that installs better-sqlite3', () => {
+  // better-sqlite3's install script is `prebuild-install || node-gyp rebuild`.
+  // On a bare `node:24-*` base the second half cannot run, so fetching the
+  // prebuilt binary is an undeclared hard requirement of the build: a GitHub
+  // releases hiccup, a rate limit, or a release that ships no prebuild for the
+  // Node/arch pair does not degrade to a compile, it fails the image — and it
+  // fails with `Could not find any Python installation to use`, which names
+  // neither the real cause nor the fix.
+  //
+  // The toolchain in the builder stage is what makes that `||` real. The
+  // prebuild remains the fast path; the compile is what happens when it is
+  // missing, at the cost of builder-stage size and a few seconds of apt.
+  //
+  // Which images are exposed is DERIVED from the workspace graph, not listed:
+  // each Dockerfile installs `--filter "@pops/<id>..."`, whose selection is the
+  // transitive workspace closure. That is why `shell` is in here despite owning
+  // no database — its closure spans six pillars that do.
+  const nativePillars = pillarsInstallingBetterSqlite3();
+
+  it('finds better-sqlite3 images (the derivation itself is not silently empty)', () => {
+    expect(nativePillars.length).toBeGreaterThan(0);
+  });
+
+  it('derives shell too, whose closure pulls in database pillars it does not own', () => {
+    // Guards the derivation itself: a naive "ships migrations" rule — the one
+    // the fresh-volume contract above can afford — would miss this image.
+    expect(nativePillars).toContain('shell');
+    expect(existsSync(join(repoRoot, 'pillars', 'shell', 'migrations'))).toBe(false);
+  });
+
+  it.each(nativePillars)('pillars/%s installs a node-gyp toolchain to build with', (id) => {
+    expect(
+      lineIndexMatching(builderStages(readDockerfile(id)), installsNodeGypToolchain)
+    ).toBeGreaterThanOrEqual(0);
+  });
+
+  it.each(nativePillars)('pillars/%s installs it before the install that needs it', (id) => {
+    const builder = builderStages(readDockerfile(id));
+    const toolchain = lineIndexMatching(builder, installsNodeGypToolchain);
+    const install = lineIndexMatching(builder, (line) => /\bpnpm install\b/u.test(line));
+    expect(install).toBeGreaterThan(toolchain);
+  });
+
+  it.each(nativePillars)('pillars/%s keeps the toolchain out of the shipped image', (id) => {
+    // The whole size argument for this rests on the toolchain never leaving the
+    // builder. A runtime stage that grew a compiler would pass every assertion
+    // above and quietly add a few hundred MB to what deployers pull.
+    expect(lineIndexMatching(runtimeStage(readDockerfile(id)), installsNodeGypToolchain)).toBe(-1);
+  });
+});
+
+describe('installsNodeGypToolchain', () => {
+  it('accepts the Debian and Alpine forms', () => {
+    expect(
+      installsNodeGypToolchain(
+        'RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ \\'
+      )
+    ).toBe(true);
+    expect(installsNodeGypToolchain('RUN apk add --no-cache python3 make g++')).toBe(true);
+  });
+
+  it('rejects a partial toolchain — a compiler with no Python still cannot run node-gyp', () => {
+    expect(installsNodeGypToolchain('RUN apk add --no-cache make g++')).toBe(false);
+    expect(installsNodeGypToolchain('RUN apt-get install -y python3 make')).toBe(false);
+  });
+
+  it('does not mistake the runtime stage curl install for a toolchain', () => {
+    expect(
+      installsNodeGypToolchain(
+        'RUN apt-get update && apt-get install -y --no-install-recommends curl'
+      )
+    ).toBe(false);
+  });
+
+  it('does not match a mere mention of the packages outside an install', () => {
+    expect(installsNodeGypToolchain('# needs python3 make g++ to compile')).toBe(false);
+  });
+});
+
+describe('lineIndexMatching', () => {
+  it('ignores comments, so a header narrating `pnpm install` is not the install', () => {
+    const dockerfile = [
+      'FROM node:24-slim AS builder',
+      '# installs with `pnpm install --filter "@pops/food..."`',
+      'RUN apt-get install -y python3 make g++',
+      'RUN corepack enable && pnpm install --frozen-lockfile',
+      '',
+    ].join('\n');
+    expect(lineIndexMatching(dockerfile, (line) => /\bpnpm install\b/u.test(line))).toBe(3);
+  });
+
+  it('returns -1 when nothing matches', () => {
+    expect(lineIndexMatching('FROM x\n', installsNodeGypToolchain)).toBe(-1);
+  });
+});
+
+describe('builderStages', () => {
+  it('excludes the final stage, so a runtime install is not read as a builder one', () => {
+    const dockerfile = [
+      'FROM node:24-slim AS builder',
+      'RUN apt-get install -y python3 make g++',
+      'FROM node:24-slim',
+      'RUN apt-get install -y curl',
+      '',
+    ].join('\n');
+    expect(builderStages(dockerfile)).toContain('python3');
+    expect(builderStages(dockerfile)).not.toContain('curl');
+  });
+
+  it('is empty for a single-stage Dockerfile', () => {
+    expect(builderStages('FROM nginx:1.31.3-alpine\nEXPOSE 80\n')).toBe('');
   });
 });
