@@ -28,3 +28,20 @@ allowBuilds:
 overrides:
   cssstyle: 6.0.2
   ioredis: 5.11.0
+
+# pnpm 11 added an implicit "are deps up to date" install before running any
+# script. That is incompatible with how the pillar images build: each Dockerfile
+# installs a deliberate subset (`pnpm install --frozen-lockfile --filter
+# @pops/<id>...`) and then runs `pnpm build`, so the re-check walks a partial
+# workspace. pnpm 11 also turned an unresolvable `workspace:*` into a hard
+# error, so the two together fail the build — pillars/docs copies every pillar
+# manifest but no libs, and `pillars/ai` declares `@pops/ai-telemetry:
+# workspace:*`:
+#
+#   ERR_PNPM_WORKSPACE_PKG_NOT_FOUND  no package named "@pops/ai-telemetry"
+#
+# Disabled rather than worked around, because pnpm 10 did not run this check at
+# all — so this keeps the bump behaviour-preserving instead of adopting a new
+# behaviour at the same time. The real guarantee is `--frozen-lockfile` at
+# install time, which is stronger and already enforced everywhere.
+verifyDepsBeforeRun: false
