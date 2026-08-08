@@ -7,15 +7,15 @@
  * whatever router type the consumer declares, and resolves the call at
  * runtime by matching the property chain against an `operationId` in the
  * producer's published OpenAPI. Nothing checks the two agree. A producer
- * that renames an operation, moves a path, or drops a query parameter
- * breaks the consumer silently, at runtime, in production.
+ * that renames an operation, moves a path, or renames a parameter breaks
+ * the consumer silently, at runtime, in production.
  *
  * The frontend equivalent of this seam is gated by regenerating a client
  * and diffing it (`cross-pillar-clients` in quality.yml). There is no
  * codegen on the backend side to diff, so this guard asserts the narrow
  * thing the consumer actually depends on instead: that the operation still
  * exists, at the path and method expected, carrying the query parameters
- * the consumer sends.
+ * the consumer sends and the path parameters it substitutes.
  *
  * Deliberately NOT a vendored copy of the producer's whole spec. Finance's
  * document is 17k lines describing its entire API; vendoring it to pin one
@@ -45,6 +45,7 @@ const repoRoot = resolve(here, '..', '..');
  * @property {string} path       Expected path in the producer's OpenAPI.
  * @property {string} method     Expected HTTP method, lowercase.
  * @property {string[]} query    Query parameters the consumer sends.
+ * @property {string[]} [pathParams] Path parameters the consumer fills in.
  * @property {string} usedBy     Where the consumer's call lives.
  */
 
@@ -64,6 +65,26 @@ export const EXPECTATIONS = [
     method: 'get',
     query: ['startDate', 'endDate', 'search', 'limit', 'offset'],
     usedBy: 'pillars/purchases/src/api/finance/client.ts',
+  },
+  {
+    consumer: 'purchases',
+    producer: 'inventory',
+    operationId: 'items.get',
+    path: '/items/{id}',
+    method: 'get',
+    query: [],
+    pathParams: ['id'],
+    usedBy: 'pillars/purchases/src/api/cron/pillar-lookup.ts',
+  },
+  {
+    consumer: 'purchases',
+    producer: 'documents',
+    operationId: 'paperless.get',
+    path: '/paperless/documents/{id}',
+    method: 'get',
+    query: [],
+    pathParams: ['id'],
+    usedBy: 'pillars/purchases/src/api/cron/pillar-lookup.ts',
   },
 ];
 
@@ -107,13 +128,8 @@ export function checkExpectation(expectation, doc) {
     );
   }
 
-  const declared = new Set(
-    (Array.isArray(found.operation['parameters']) ? found.operation['parameters'] : [])
-      .filter((p) => isRecord(p) && p['in'] === 'query')
-      .map((p) => String(isRecord(p) ? p['name'] : ''))
-  );
   for (const name of expectation.query) {
-    if (!declared.has(name)) {
+    if (!declaredParams(found.operation, 'query').has(name)) {
       failures.push(
         `${expectation.operationId} no longer declares query parameter '${name}', which ` +
           `${expectation.consumer} sends`
@@ -121,7 +137,35 @@ export function checkExpectation(expectation, doc) {
     }
   }
 
+  // A renamed path parameter is the quietest break of the lot: the SDK
+  // substitutes `{name}` from the input keys, so a producer renaming `:id`
+  // to `:itemId` leaves the literal placeholder in the URL and the consumer
+  // reads the resulting 404 as a real answer.
+  for (const name of expectation.pathParams ?? []) {
+    if (!declaredParams(found.operation, 'path').has(name)) {
+      failures.push(
+        `${expectation.operationId} no longer declares path parameter '${name}', which ` +
+          `${expectation.consumer} substitutes into the URL`
+      );
+    }
+  }
+
   return failures;
+}
+
+/**
+ * Names of an operation's declared parameters in one location.
+ *
+ * @param {Record<string, unknown>} operation
+ * @param {'query' | 'path'} location
+ * @returns {Set<string>}
+ */
+function declaredParams(operation, location) {
+  return new Set(
+    (Array.isArray(operation['parameters']) ? operation['parameters'] : [])
+      .filter((p) => isRecord(p) && p['in'] === location)
+      .map((p) => String(isRecord(p) ? p['name'] : ''))
+  );
 }
 
 function isRecord(value) {
@@ -213,7 +257,45 @@ function selfTest() {
     'a dropped query parameter must fail'
   );
 
-  console.log('self-test OK — flags a renamed operation, a moved path, a dropped parameter.');
+  const withPathParam = {
+    consumer: 'c',
+    producer: 'p',
+    operationId: 'items.get',
+    path: '/items/{id}',
+    method: 'get',
+    query: [],
+    pathParams: ['id'],
+    usedBy: 'nowhere',
+  };
+  const renamedPathParam = {
+    paths: {
+      '/items/{id}': {
+        get: { operationId: 'items.get', parameters: [{ name: 'itemId', in: 'path' }] },
+      },
+    },
+  };
+  assert(
+    checkExpectation(withPathParam, renamedPathParam).some((f) =>
+      f.includes("path parameter 'id'")
+    ),
+    'a renamed path parameter must fail'
+  );
+
+  const intactPathParam = {
+    paths: {
+      '/items/{id}': {
+        get: { operationId: 'items.get', parameters: [{ name: 'id', in: 'path' }] },
+      },
+    },
+  };
+  assert(
+    checkExpectation(withPathParam, intactPathParam).length === 0,
+    'a matching path parameter must pass'
+  );
+
+  console.log(
+    'self-test OK — flags a renamed operation, a moved path, a dropped query parameter, a renamed path parameter.'
+  );
 }
 
 function assert(condition, message) {
