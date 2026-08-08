@@ -1,9 +1,8 @@
 #!/usr/bin/env tsx
 /**
  * Bundle the nginx render + watcher CLIs into standalone ESM so the
- * production `nginx:alpine` image can run them with a bare node binary
- * and **no** `node_modules`
- * (docs/themes/federation/prds/prod-registry-driven-nginx).
+ * production nginx image (pinned in `pillars/shell/Dockerfile`) can run
+ * them with a bare node binary and **no** `node_modules`.
  *
  * The generator (`generate-nginx-conf.ts`) and watcher
  * (`watch-registry-and-reload-cli.ts`) import `@pops/pillar-sdk`, which

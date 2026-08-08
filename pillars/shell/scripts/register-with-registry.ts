@@ -1,10 +1,10 @@
 #!/usr/bin/env tsx
 /**
  * Ops CLI: register the running shell with `pops-registry`'s pillar
- * registry (docs/themes/federation/prds/dynamic-pillar-registration +
- * ADR-035).
+ * registry (ADR-035).
  *
- * The shell's production image is `nginx:alpine` — there is no Node
+ * The shell's production image is nginx (pinned in
+ * `pillars/shell/Dockerfile`) — there is no Node
  * runtime at request time. This script is invoked from outside the
  * shell container (a deploy step, a Compose `oneshot` service, or
  * `mise run shell:register`) with the same secrets every other pillar
