@@ -322,6 +322,27 @@ jobs:
       - name: Every vendored contract matches its canonical source
         run: node scripts/ci/check-vendored-contracts.mjs
 
+  device-signature-fixture:
+    name: Device signature encoding (iOS ↔ BFM)
+    # The iOS app signs refresh requests with a Secure Enclave P-256 key and the
+    # BFM verifies them with `node:crypto`. CryptoKit and `node:crypto` do not
+    # default to the same ECDSA signature encoding, and a mismatch surfaces only
+    # as a 401 — indistinguishable from a wrong token in either log. The choice
+    # is therefore pinned by a committed fixture that both languages assert
+    # against; this job is the Node half, and it runs everywhere rather than
+    # under the iOS path filter because the BFM can break the contract without
+    # touching a line of Swift. Needs no `pnpm install` — `node:crypto` only.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Gate self-test (proves the guard catches a swapped encoding)
+        run: node scripts/ci/check-device-signature-fixture.mjs --self-test
+      - name: The committed fixture verifies under node:crypto
+        run: node scripts/ci/check-device-signature-fixture.mjs
+
   cross-pillar-expectations:
     name: Backend cross-pillar expectations (ADR-040)
     # The backend counterpart to `cross-pillar-clients` below. A pillar's

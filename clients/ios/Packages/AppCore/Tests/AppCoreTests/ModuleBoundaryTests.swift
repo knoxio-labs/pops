@@ -69,15 +69,23 @@ internal struct ModuleBoundaryTests {
     /// Only a `Tests` tree may reach for the fakes.
     @Test("fakes stay out of shipping code")
     func fakesAreTestOnly() throws {
+        let fakes = try testSupportModules()
+        // The scan has to find every one of them, or this passes vacuously the
+        // moment the naming convention it infers from stops holding.
+        #expect(fakes.contains("AppCoreFakes"))
+        #expect(fakes.contains("AuthTestSupport"))
+
         let shipping =
             try packageNames().flatMap { try sourceFiles(inPackage: $0) }
             + swiftFiles(under: appDirectory)
         #expect(!shipping.isEmpty)
 
-        for file in shipping where !file.path.contains("/Sources/AppCoreFakes/") {
+        for file in shipping where !fakes.contains(where: { file.path.contains("/Sources/\($0)/") })
+        {
+            let forbidden = try importedModules(in: file).intersection(fakes)
             #expect(
-                !(try importedModules(in: file).contains("AppCoreFakes")),
-                "\(file.lastPathComponent) imports AppCoreFakes outside a test target"
+                forbidden.isEmpty,
+                "\(file.lastPathComponent) imports \(forbidden.sorted().joined(separator: ", ")) outside a test target"
             )
         }
     }
@@ -108,6 +116,31 @@ extension ModuleBoundaryTests {
     /// The app target, the one shipping tree that is not a package.
     private var appDirectory: URL {
         packagesDirectory.deletingLastPathComponent().appending(path: "App")
+    }
+
+    /// Every module that exists only so tests have something to substitute,
+    /// discovered by name rather than listed. A hand-maintained list is written
+    /// by whoever owns this guard and grown by whoever adds a fake, and those
+    /// are not the same person — the second such module arrived from a
+    /// different package and would have gone unguarded.
+    private func testSupportModules() throws -> Set<String> {
+        var found: Set<String> = []
+        for package in try packageNames() {
+            let sources = packagesDirectory.appending(path: package).appending(path: "Sources")
+            let entries =
+                (try? FileManager.default.contentsOfDirectory(
+                    at: sources,
+                    includingPropertiesForKeys: [.isDirectoryKey]
+                )) ?? []
+            for entry in entries
+            where (try? entry.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true {
+                let module = entry.lastPathComponent
+                if module.hasSuffix("Fakes") || module.hasSuffix("TestSupport") {
+                    found.insert(module)
+                }
+            }
+        }
+        return found
     }
 
     private func sourceFiles(inPackage package: String) throws -> [URL] {

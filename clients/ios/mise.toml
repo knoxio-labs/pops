@@ -55,7 +55,8 @@ description = "Run every package's tests on the host toolchain, without Xcode"
 run = '''
 for package in Packages/*/; do
   # `swift test` fails outright on a package with no test target, so a package
-  # whose tests are still a later ticket must not fail the run.
+  # whose tests are still a later ticket must not fail the run. Hardware-backed
+  # suites skip themselves — see Packages/Auth/README.md.
   if [ -d "$package/Tests" ]; then
     swift test --package-path "$package" || exit 1
   fi
@@ -211,3 +212,6 @@ exit $status
 description = "Rewrite the Swift sources with swift-format (the fixer for half of `lint`)"
 run = "mise run swift-format format"
 
+[tasks."fixture:device-signature"]
+description = "Regenerate the iOS↔BFM signature fixture — only when the encoding contract changes"
+run = "swift Tools/generate-device-signature-fixture.swift > Contracts/device-signature-v1.json"

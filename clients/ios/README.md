@@ -93,10 +93,17 @@ Half of that is compiler-enforced — a package can only `import` what its own `
 
 `Packages/DesignSystem` carries a second constraint on every feature, orthogonal to the import graph: a feature may not name a colour, a type size or a gap. See [Packages/DesignSystem/README.md](Packages/DesignSystem/README.md).
 
-Each package other than `AppCore` and `DesignSystem` is a shell whose placeholder type says what the module is for; `BFMClient` carries the base-URL resolver and nothing else yet. Filling them in is one ticket per module.
+`AppCore`, `DesignSystem` and the storage half of `Auth` are written — see [Packages/Auth/README.md](Packages/Auth/README.md) for the last of those. `BFMClient` carries the base-URL resolver and nothing else yet. Every other package is still a shell whose placeholder type says what the module is for, and filling them in is one ticket per module.
+
+## `Contracts/`
+
+Artefacts this app and the BFM must agree on byte for byte, kept outside any one package because more than one module will assert against them and because the BFM asserts against the same bytes from TypeScript.
+
+Today that is `device-signature-v1.json`, the ECDSA P-256 encoding vector. The generated Swift BFM client will vendor the OpenAPI snapshot here too (POPS-1380), following the same rule the rest of the repo uses for a contract that crosses a unit boundary: the consumer keeps a copy inside its own boundary and a CI guard fails on drift.
 
 ## Known gaps
 
 - **Nothing consumes the resolved base URL yet.** `BuiltInBaseURL` answers where the BFM is; no transport asks it, because there is no transport (POPS-1380) and no pairing store to fall back on in Release (POPS-1383).
-- **No CI job builds or lints this.** `.github/workflows/_discover-units.yml` scans `pillars/` and `libs/` only, so nothing in the existing matrix compiles or lints a line of Swift, and a green PR says nothing about this directory. `mise run lint` is written to be the command that job invokes, but until it exists running it is a courtesy. The iOS workflow is POPS-1376.
+- **No CI job builds or lints this.** `.github/workflows/_discover-units.yml` scans `pillars/` and `libs/` only, so nothing in the existing matrix compiles or lints a line of Swift, and a green PR says almost nothing about this directory. `mise run lint` is written to be the command that job invokes, but until it exists running it is a courtesy. The one exception is the `Device signature encoding (iOS ↔ BFM)` job in [`quality.yml`](../../.github/workflows/quality.yml), which asserts the committed vector in `Contracts/` from the Node side — it checks the contract, not the code. The iOS workflow is POPS-1376.
 - **The pre-push hook does not run `mise run lint`.** It would put Xcode on the push path for every contributor, including on the TypeScript-only pushes that are almost all of them. Until the CI job lands, nothing mechanically stops unformatted Swift from reaching `main`.
+- **Nothing automated exercises the Secure Enclave or the Keychain.** Both need hardware or entitlements a test runner does not have. See [`Packages/Auth/README.md`](Packages/Auth/README.md).
