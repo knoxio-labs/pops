@@ -179,6 +179,21 @@ describe('transactions — filters & pagination', () => {
       status: 400,
     });
   });
+
+  it('names both halves and which one is missing, on the wire', async () => {
+    // The invalid state is the pair, so a caller told only that `beforeDate`
+    // is wrong has to guess whether to drop it or to supply its partner. It
+    // has to be in `message`: the error envelope carries no details field, so
+    // anything put there reaches the logs and nobody else.
+    const failure = await client()
+      .transactions.list({ beforeDate: '2026-02-15' })
+      .catch((error: unknown) => error);
+
+    const body = (failure as { body?: { message?: string } }).body;
+    expect(body?.message).toBe(
+      'beforeDate and beforeId must be supplied together; beforeId is missing'
+    );
+  });
 });
 
 describe('transactions — error mapping', () => {

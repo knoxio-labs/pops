@@ -53,10 +53,18 @@ export function makeTransactionsHandlers(db: FinanceDb, contacts: ContactsClient
         // would answer with page one of an unfiltered list — a plausible
         // 200 that a paging caller reads as "start again", re-showing rows it
         // already has instead of failing where the bug is.
+        //
+        // The message names both halves and which one is absent, because the
+        // invalid state is the pair rather than either half: a caller told only
+        // that `beforeDate` is wrong has to guess whether to drop it or to
+        // supply its partner. It goes in the message and not the details —
+        // the wire envelope carries no details.
         if ((query.beforeDate === undefined) !== (query.beforeId === undefined)) {
-          throw new ValidationError({
-            beforeDate: 'beforeDate and beforeId must be supplied together',
-          });
+          const missing = query.beforeDate === undefined ? 'beforeDate' : 'beforeId';
+          throw new ValidationError(
+            { beforeDate: query.beforeDate, beforeId: query.beforeId },
+            `beforeDate and beforeId must be supplied together; ${missing} is missing`
+          );
         }
 
         const { rows, total } = transactionsService.listTransactions(
