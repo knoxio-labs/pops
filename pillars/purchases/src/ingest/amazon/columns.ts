@@ -76,6 +76,9 @@ export interface AmazonAnomaly {
     | 'concatenated-ship-date'
     | 'dropped-line'
     | 'dropped-order'
+    | 'dropped-refund'
+    | 'orphan-refund'
+    | 'refund-currency-mismatch'
     | 'unparseable-money'
     | 'zero-quantity-line';
   readonly sourceOrderId: string;
