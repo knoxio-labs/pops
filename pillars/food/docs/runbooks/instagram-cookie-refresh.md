@@ -4,7 +4,6 @@ When the food ingest pipeline reports "Instagram cookies need refresh", this run
 
 ## Symptoms
 
-- Review queue (Epic 03; exact route to be defined when that epic ships) shows pending Instagram ingests with a banner indicating the cookies need refresh.
 - `pops-worker-food` logs include yt-dlp errors matching `login required` / `cookies invalid` / `Please log in`.
 - `POST /ingest/list` with `{ state: 'partial' }` returns ingests with `partialReason='auth-dead'`.
 - New Instagram ingests created via `POST /ingest/start` complete quickly with `state='partial'` instead of processing fully.
@@ -42,7 +41,23 @@ When the food ingest pipeline reports "Instagram cookies need refresh", this run
    docker compose -f infra/docker-compose.yml restart pops-worker-food
    ```
 
-5. **Retry failed ingests.** Open the review queue (Epic 03 surface). For each ingest with the "cookies need refresh" banner, trigger the retry action — this calls `POST /ingest/retry` and the job re-enqueues with fresh cookies. (Exact UI affordance is defined when Epic 03 ships; until then, `POST /ingest/retry` can be called directly from the food pillar's REST API or pops-cli.)
+5. **Retry failed ingests.** `food-api` (the HTTP server, not the worker) trusts the docker network for these routes, so call it from inside the `food-api` container rather than through the public hostname. List the affected sources, then retry each by id:
+
+   ```bash
+   docker compose -f infra/docker-compose.yml exec food-api \
+     curl -sS -X POST http://localhost:3005/ingest/list \
+     -H 'Content-Type: application/json' \
+     -d '{ "state": "partial", "limit": 100 }'
+   ```
+
+   For each item with `partialReason='auth-dead'`, re-enqueue it with fresh cookies:
+
+   ```bash
+   docker compose -f infra/docker-compose.yml exec food-api \
+     curl -sS -X POST http://localhost:3005/ingest/retry \
+     -H 'Content-Type: application/json' \
+     -d '{ "sourceId": <id from the list above> }'
+   ```
 
 6. **Verify a fresh ingest.** Submit one new Instagram URL via `POST /ingest/start`. Confirm it completes with `state='completed'` (not `'partial'`).
 

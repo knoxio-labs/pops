@@ -550,11 +550,11 @@ services:
       retries: 3
 
   # ── FOOD INGEST WORKER ───────────────────────────────────────────
-  # PRD-126 — consumes the `food.ingest` BullMQ queue produced by
-  # pops-api (PRD-125) and runs the per-kind ingest pipelines (PRDs
-  # 127–132). Results post back to pops-api via the internal-token
-  # gated `food.ingest.workerComplete` mutation. Stateless with respect
-  # to SQLite — all DB writes happen server-side.
+  # Consumes the `food.ingest` BullMQ queue produced by the food
+  # pillar's REST API and runs the per-kind ingest pipelines. Results
+  # post back via `POST /ingest/worker-complete` (internal-token
+  # gated, see below). Stateless with respect to SQLite — all DB
+  # writes happen server-side.
   pops-worker-food:
     build:
       context: ..
