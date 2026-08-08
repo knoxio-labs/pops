@@ -104,6 +104,7 @@ internal struct PairingViewModelTests {
         arguments: [
             PairingError.codeRejected,
             .rateLimited(retryAfterSeconds: 30),
+            .rateLimited(retryAfterSeconds: nil),
             .invalidRequest,
             .unreachable,
             .keyGenerationFailed,

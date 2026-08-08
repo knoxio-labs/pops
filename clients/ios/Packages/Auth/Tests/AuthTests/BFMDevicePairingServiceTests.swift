@@ -135,6 +135,13 @@ internal struct BFMDevicePairingServiceTests {
                 BFMClientError.pairingRefused(.rateLimited(retryAfterSeconds: 30)),
                 PairingError.rateLimited(retryAfterSeconds: 30)
             ),
+            // A rate limit whose wait the BFM did not state — an HTML page from
+            // an intermediary. Must not collapse into `unreachable`, which is
+            // the opposite advice.
+            (
+                BFMClientError.pairingRefused(.rateLimited(retryAfterSeconds: nil)),
+                PairingError.rateLimited(retryAfterSeconds: nil)
+            ),
             (
                 BFMClientError.undocumentedResponse(operation: "device.pair", statusCode: 502),
                 PairingError.unreachable

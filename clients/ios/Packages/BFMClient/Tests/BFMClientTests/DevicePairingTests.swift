@@ -119,6 +119,61 @@ internal struct DevicePairingTests {
         }
     }
 
+    /// The case the generated client hides.
+    ///
+    /// Its deserializer decodes eagerly, so a documented status carrying a body
+    /// this contract cannot read never reaches the `switch` in `pairDevice` —
+    /// it throws a `ClientError` from inside `device_pair`. That is not
+    /// hypothetical: an intermediary in front of this BFM answers a rate limit
+    /// with an HTML page, and without the mapping under test the person is told
+    /// to check their connection while the server is telling them to wait.
+    ///
+    /// The status survives, and it is the half that decides what to do.
+    @Test(
+        "a documented status with an unreadable body still refuses for the right reason",
+        arguments: [
+            (HTTPResponse.Status.badRequest, DevicePairingRefusal.invalidRequest),
+            (HTTPResponse.Status.forbidden, DevicePairingRefusal.codeRejected),
+            (
+                HTTPResponse.Status.tooManyRequests,
+                DevicePairingRefusal.rateLimited(retryAfterSeconds: nil)
+            ),
+        ])
+    func unreadableBodyOnDocumentedStatus(
+        status: HTTPResponse.Status,
+        expected: DevicePairingRefusal
+    ) async throws {
+        // What a rate-limiting proxy actually returns.
+        let transport = StubTransport { _, _ in
+            (
+                HTTPResponse(status: status, headerFields: [.contentType: "text/html"]),
+                HTTPBody("<html><body>Too many requests</body></html>")
+            )
+        }
+
+        await #expect(throws: BFMClientError.pairingRefused(expected)) {
+            try await pair(transport)
+        }
+    }
+
+    /// The counterpart: an *undocumented* status with an unreadable body is a
+    /// transport-shaped failure and must not be dressed up as a refusal.
+    @Test("an unreadable body on an undocumented status is not turned into a refusal")
+    func unreadableBodyOnUndocumentedStatusIsNotARefusal() async throws {
+        let transport = StubTransport { _, _ in
+            (
+                HTTPResponse(status: .badGateway, headerFields: [.contentType: "text/html"]),
+                HTTPBody("<html>502</html>")
+            )
+        }
+
+        await #expect(
+            throws: BFMClientError.undocumentedResponse(operation: "device.pair", statusCode: 502)
+        ) {
+            try await pair(transport)
+        }
+    }
+
     /// Nothing answered at all.
     ///
     /// Asserted rather than assumed, because the shape is not the obvious one:
@@ -127,6 +182,11 @@ internal struct DevicePairingTests {
     /// is what a reader expects a dead network to produce — matches nothing.
     /// This is the whole reason `Auth` maps "not a documented refusal" to
     /// unreachable by exclusion instead of by naming the error it expects.
+    ///
+    /// Expecting `ClientError` is also the assertion that the status-based
+    /// mapping above does not overreach: nothing answered, so there is no
+    /// status, and inventing a refusal from one would be worse than the
+    /// misclassification that mapping exists to prevent.
     @Test("a transport failure reaches the caller, wrapped by the generated client")
     func transportFailurePropagates() async throws {
         let transport = StubTransport { _, _ in throw StubTransportFailure() }
@@ -134,7 +194,7 @@ internal struct DevicePairingTests {
         let thrown = await #expect(throws: ClientError.self) { try await pair(transport) }
 
         #expect(try #require(thrown).underlyingError is StubTransportFailure)
-        #expect(!(thrown is BFMClientError))
+        #expect(thrown?.response == nil)
     }
 
     /// The tokens exist in memory for as long as it takes to store them, and a

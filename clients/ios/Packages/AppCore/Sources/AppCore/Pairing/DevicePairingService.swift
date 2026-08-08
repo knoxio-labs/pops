@@ -38,8 +38,13 @@ public enum PairingError: Error, Hashable, Sendable {
     case codeRejected
 
     /// Too many attempts from this address. Waiting is the only thing that
-    /// helps, and the BFM says for how long.
-    case rateLimited(retryAfterSeconds: Int)
+    /// helps.
+    ///
+    /// `retryAfterSeconds` is `nil` when the refusal arrived without a body the
+    /// contract can read — an HTML rate-limit page from an intermediary. The
+    /// wait is then unknown; that waiting is the answer is not, and telling
+    /// someone to check their connection instead would be wrong twice.
+    case rateLimited(retryAfterSeconds: Int?)
 
     /// The BFM refused the request itself rather than the code — a public key
     /// it could not parse, or a field outside the contract's bounds. The user

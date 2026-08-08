@@ -62,5 +62,11 @@ public enum DevicePairingRefusal: Hashable, Sendable {
     case codeRejected
 
     /// `429 rate_limited` — too many attempts from this address.
-    case rateLimited(retryAfterSeconds: Int)
+    ///
+    /// `retryAfterSeconds` is `nil` when the status arrived without a body this
+    /// contract can read — an HTML rate-limit page from an intermediary is the
+    /// realistic case, and this deployment sits behind one. The wait is
+    /// unknown; that the caller is rate limited is not, and it is the half that
+    /// decides what to tell them.
+    case rateLimited(retryAfterSeconds: Int?)
 }

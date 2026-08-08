@@ -44,9 +44,13 @@ internal enum PairingCopy {
         switch error {
         case .codeRejected:
             return "That code did not work. Generate a new one and try again."
-        case .rateLimited(let retryAfterSeconds):
+        case .rateLimited(.some(let retryAfterSeconds)):
             let unit = retryAfterSeconds == 1 ? "second" : "seconds"
             return "Too many attempts. Try again in \(retryAfterSeconds) \(unit)."
+        case .rateLimited(.none):
+            // No number to give, and inventing one would be a promise the
+            // server never made. Still says the thing that decides what to do.
+            return "Too many attempts. Wait a minute and try again."
         case .invalidRequest:
             // Deliberately not "check your code". The server refused the
             // request itself, which is this build's fault, and sending someone

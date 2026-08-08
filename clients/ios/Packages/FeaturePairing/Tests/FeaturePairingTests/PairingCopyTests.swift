@@ -17,6 +17,7 @@ internal struct PairingCopyTests {
     private static let everyFailure: [PairingError] = [
         .codeRejected,
         .rateLimited(retryAfterSeconds: 30),
+        .rateLimited(retryAfterSeconds: nil),
         .invalidRequest,
         .unreachable,
         .keyGenerationFailed,
@@ -49,6 +50,19 @@ internal struct PairingCopyTests {
         // The wait is in the words, not just in the enum — a message that
         // omitted it would leave "try again" meaning "immediately".
         #expect(limited.contains("30"))
+
+        // And when the server did not say how long, it still says to wait
+        // rather than falling back on the connection-is-broken sentence.
+        let unknown = PairingCopy.message(for: .rateLimited(retryAfterSeconds: nil))
+        #expect(unknown != PairingCopy.message(for: .unreachable))
+        #expect(unknown != PairingCopy.message(for: .codeRejected))
+    }
+
+    /// One second is one second.
+    @Test("the wait is not pluralised when it is one")
+    func waitIsPluralised() {
+        #expect(PairingCopy.message(for: .rateLimited(retryAfterSeconds: 1)).contains("1 second."))
+        #expect(PairingCopy.message(for: .rateLimited(retryAfterSeconds: 2)).contains("2 seconds."))
     }
 
     @Test("every reason the button is disabled names a field")

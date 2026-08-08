@@ -1,4 +1,5 @@
 import Foundation
+import HTTPTypes
 import OpenAPIRuntime
 import OpenAPIURLSession
 
@@ -98,16 +99,22 @@ public struct BFMHTTPClient: Sendable {
         deviceName: String,
         deviceModel: String
     ) async throws -> IssuedDeviceCredentials {
-        let output = try await generated.device_pair(
-            body: .json(
-                .init(
-                    code: code,
-                    deviceModel: deviceModel,
-                    deviceName: deviceName,
-                    publicKey: publicKeyBase64DER
+        let output: Operations.Device_pair.Output
+        do {
+            output = try await generated.device_pair(
+                body: .json(
+                    .init(
+                        code: code,
+                        deviceModel: deviceModel,
+                        deviceName: deviceName,
+                        publicKey: publicKeyBase64DER
+                    )
                 )
             )
-        )
+        } catch let error as ClientError {
+            guard let refusal = Self.refusal(readableFrom: error.response) else { throw error }
+            throw BFMClientError.pairingRefused(refusal)
+        }
 
         switch output {
         case .created(let created):
@@ -131,6 +138,29 @@ public struct BFMHTTPClient: Sendable {
                 operation: Operations.Device_pair.id,
                 statusCode: statusCode
             )
+        }
+    }
+
+    /// The refusal a documented status means, for a response whose *body* the
+    /// generated client could not read.
+    ///
+    /// The generated deserializer decodes eagerly, so a `429` carrying an HTML
+    /// rate-limit page — which is what an intermediary in front of this BFM
+    /// returns, and there is one — never reaches the `switch` above. It throws
+    /// a `ClientError` from inside `device_pair`, and without this that becomes
+    /// indistinguishable from a dead network: `Auth` maps anything it does not
+    /// recognise to `unreachable`, so the person is told to check their
+    /// connection while the server is telling them to wait.
+    ///
+    /// The status is the actionable half and it is intact. `nil` for anything
+    /// this contract does not document, including the no-response case, because
+    /// those genuinely are transport failures.
+    private static func refusal(readableFrom response: HTTPResponse?) -> DevicePairingRefusal? {
+        switch response?.status.code {
+        case 400: .invalidRequest
+        case 403: .codeRejected
+        case 429: .rateLimited(retryAfterSeconds: nil)
+        default: nil
         }
     }
 }
