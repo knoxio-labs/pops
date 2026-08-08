@@ -81,6 +81,20 @@ describe('parseBareOrigin', () => {
     expect(message).not.toContain('hunter2');
   });
 
+  it('redacts credentials on the parse-failure path even with leading whitespace', () => {
+    // The redaction regex matches on anything-but-a-slash before `//`, not
+    // on a well-formed scheme, so surrounding whitespace does not defeat it.
+    let message = '';
+    try {
+      parseBareOrigin('FINANCE_SELF_BASE_URL', '  http://admin:hunter2@finance-api:99999');
+    } catch (err) {
+      message = err instanceof Error ? err.message : String(err);
+    }
+    expect(message).toMatch(/not a valid URL/u);
+    expect(message).not.toContain('admin');
+    expect(message).not.toContain('hunter2');
+  });
+
   it.each([
     ['ftp', 'ftp://finance-api:3004'],
     ['file', 'file:///srv/finance'],
