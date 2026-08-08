@@ -1,0 +1,55 @@
+name: Pops
+
+options:
+  bundleIdPrefix: com.knoxiolabs
+  deploymentTarget:
+    iOS: '27.0'
+  createIntermediateGroups: true
+  groupSortPosition: none
+
+settings:
+  base:
+    SWIFT_VERSION: '6.0'
+    SWIFT_STRICT_CONCURRENCY: complete
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    GCC_TREAT_WARNINGS_AS_ERRORS: YES
+    SWIFT_TREAT_WARNINGS_AS_ERRORS: YES
+
+packages:
+  AppCore:
+    path: Packages/AppCore
+  Auth:
+    path: Packages/Auth
+  BFMClient:
+    path: Packages/BFMClient
+  DesignSystem:
+    path: Packages/DesignSystem
+  FeatureTransactions:
+    path: Packages/FeatureTransactions
+
+targets:
+  Pops:
+    type: application
+    platform: iOS
+    sources:
+      - App
+    dependencies:
+      - package: AppCore
+      - package: Auth
+      - package: BFMClient
+      - package: DesignSystem
+      - package: FeatureTransactions
+    # A shared scheme, so `xcodebuild -scheme Pops` resolves on a clean checkout
+    # rather than relying on Xcode autocreating one into xcuserdata.
+    scheme:
+      testTargets: []
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.knoxiolabs.pops
+        TARGETED_DEVICE_FAMILY: '1'
+        # Signing and a per-configuration BFM base URL are a later change; until
+        # then the only supported destination is the simulator, which needs none.
+        CODE_SIGNING_ALLOWED: NO
