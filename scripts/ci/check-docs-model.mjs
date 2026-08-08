@@ -2,7 +2,7 @@
 /**
  * Documentation-model guard (ADR-041).
  *
- * Enforces three things, and deliberately nothing else:
+ * Enforces the following, and deliberately nothing else:
  *
  *   1. Every top-level unit — `pillars/<id>`, `libs/<lib>` and
  *      `clients/<client>` — has a `README.md`. These are published units
@@ -21,6 +21,17 @@
  *      reads them. `libs/db-types` was named in three files and had never
  *      existed. A path that no longer resolves is a lie the reader cannot
  *      detect, so it fails the build instead.
+ *
+ *   4. The same, for the doc paths a **comment** points at — in TypeScript,
+ *      Rust, Swift, workflow YAML, shell and TOML. Check 3 only ever saw
+ *      markdown, so when the doc trees were deleted the pointers living in
+ *      source survived with nothing red to show for it, several of them on
+ *      repo-wide CI guards where the dead link was the only surviving
+ *      explanation of why the guard exists. A comment is where the WHY
+ *      lives (ADR-041), which makes a dangling pointer there the most
+ *      expensive kind.
+ *
+ *   5. A README that states an absence names the Huly issue tracking it.
  *
  * Check 1 is NOT a coverage quota. Per ADR-041 a README is warranted only
  * where the code cannot speak for itself, and a directory without one is a
@@ -314,34 +325,275 @@ export function allRepoPaths(root) {
  */
 
 /**
- * Every path claim across every markdown file that does not resolve on disk.
+ * @typedef {{ file: string, raw: string, candidates: string[] }} PathClaim
+ */
+
+/**
+ * Resolve a batch of path claims and return the ones that name nothing.
+ *
+ * Deliberately extractor-agnostic: markdown links, backticked prose tokens and
+ * comment pointers all arrive here as the same `{ file, raw, candidates }`
+ * shape. Existence, abbreviated-suffix tolerance and the gitignore filter are
+ * one implementation so the rules cannot drift between file types.
  *
  * @param {string} root
+ * @param {PathClaim[]} claims
  * @returns {BrokenPath[]}
  */
-export function findBrokenDocPaths(root) {
+export function resolvePathClaims(root, claims) {
   const allPaths = allRepoPaths(root);
   /** @type {(BrokenPath & { candidates: string[] })[]} */
   const misses = [];
-  for (const mdPath of findMarkdownFiles(root)) {
-    if (isHistoricalRecord(mdPath)) continue;
-    const source = readFileSync(join(root, mdPath), 'utf8');
-    for (const { raw, candidates } of extractPathClaims(source, mdPath)) {
-      const targets = candidates.map((c) => c.replace(/\/$/u, '')).filter((c) => c !== '');
-      if (targets.length === 0) continue;
-      if (targets.some((t) => existsSync(join(root, t)))) continue;
-      // Prose abbreviates cross-unit references — `worker/ai/client.ts` for
-      // `pillars/food/src/worker/ai/client.ts`. Accept when some real file
-      // ends with the token; only a path matching nothing at all is a lie.
-      if (allPaths.some((p) => p.endsWith('/' + targets[0]))) continue;
-      misses.push({ file: mdPath, claim: raw, candidates: targets });
-    }
+  for (const { file, raw, candidates } of claims) {
+    const targets = candidates.map((c) => c.replace(/\/$/u, '')).filter((c) => c !== '');
+    if (targets.length === 0) continue;
+    if (targets.some((t) => existsSync(join(root, t)))) continue;
+    // Prose abbreviates cross-unit references — `worker/ai/client.ts` for
+    // `pillars/food/src/worker/ai/client.ts`. Accept when some real file
+    // ends with the token; only a path matching nothing at all is a lie.
+    if (allPaths.some((p) => p.endsWith('/' + targets[0]))) continue;
+    misses.push({ file, claim: raw, candidates: targets });
   }
 
   const ignored = gitIgnoredSubset(root, [...new Set(misses.flatMap((m) => m.candidates))]);
   return misses
     .filter((m) => !m.candidates.some((c) => ignored.has(c)))
     .map(({ file, claim }) => ({ file, claim }));
+}
+
+/**
+ * Every path claim across every markdown file that does not resolve on disk.
+ *
+ * @param {string} root
+ * @returns {BrokenPath[]}
+ */
+export function findBrokenDocPaths(root) {
+  /** @type {PathClaim[]} */
+  const claims = [];
+  for (const mdPath of findMarkdownFiles(root)) {
+    if (isHistoricalRecord(mdPath)) continue;
+    const source = readFileSync(join(root, mdPath), 'utf8');
+    for (const claim of extractPathClaims(source, mdPath)) {
+      claims.push({ file: mdPath, ...claim });
+    }
+  }
+  return resolvePathClaims(root, claims);
+}
+
+/** Extensions with C-style comments — line comments and slash-star blocks. */
+export const SLASH_COMMENT_EXTS = new Set(['ts', 'tsx', 'js', 'jsx', 'mjs', 'cjs', 'rs', 'swift']);
+
+/** Extensions whose comments start with `#`. */
+export const HASH_COMMENT_EXTS = new Set(['yml', 'yaml', 'sh', 'bash', 'toml']);
+
+/**
+ * Dot-directories the source walk descends into. Everything under a dot is
+ * skipped by default, but the workflow files are exactly where the CI-guard
+ * rationale lives, so `.github` is not optional.
+ */
+const SCANNED_DOT_DIRS = new Set(['.github']);
+
+/**
+ * Every source, workflow and shell file whose comments are scanned. Markdown
+ * is excluded — {@link findBrokenDocPaths} already covers it, with richer
+ * rules (links, backticked prose) that do not apply to code.
+ *
+ * @param {string} root
+ * @returns {string[]} Sorted repo-relative paths.
+ */
+export function findSourceFiles(root) {
+  /** @type {string[]} */
+  const out = [];
+  /** @param {string} dir */
+  const collect = (dir) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (!entry.isFile()) continue;
+      const ext = (/\.([\w]+)$/u.exec(entry.name) ?? ['', ''])[1];
+      if (!SLASH_COMMENT_EXTS.has(ext) && !HASH_COMMENT_EXTS.has(ext)) continue;
+      out.push(relative(root, join(dir, entry.name)));
+    }
+  };
+  /** @param {string} dir */
+  const descend = (dir) => {
+    /** @type {import('node:fs').Dirent[]} */
+    let entries;
+    try {
+      entries = readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+      if (SKIP_DIRS.has(entry.name)) continue;
+      if (entry.name.startsWith('.') && !SCANNED_DOT_DIRS.has(entry.name)) continue;
+      const full = join(dir, entry.name);
+      collect(full);
+      descend(full);
+    }
+  };
+  collect(root);
+  descend(root);
+  return out.toSorted((a, b) => a.localeCompare(b));
+}
+
+/**
+ * The comment text of a source file, as one string per contiguous run of
+ * comment lines.
+ *
+ * Runs are joined rather than reported per line because a long path wraps: a
+ * hyphenated ADR filename can break mid-token across two comment lines, and
+ * checking the halves separately would report a false break. A line ending in
+ * `-` or `/` is treated as a mid-token wrap and joined with no separator;
+ * anything else joins with a space.
+ *
+ * Only comments are read. A doc path appearing in code is usually a runtime
+ * value or a test fixture — including the deliberately unresolvable fixture
+ * paths this file's own self-test feeds to {@link extractPathClaims}, which
+ * are correct exactly as they are.
+ *
+ * @param {string} source
+ * @param {string} ext Lowercase extension without the dot.
+ * @returns {string[]}
+ */
+export function extractComments(source, ext) {
+  const slash = SLASH_COMMENT_EXTS.has(ext);
+  if (!slash && !HASH_COMMENT_EXTS.has(ext)) return [];
+
+  /** @type {string[]} */
+  const runs = [];
+  /** @type {string[]} */
+  let run = [];
+  let inBlock = false;
+
+  const flush = () => {
+    if (run.length === 0) return;
+    let text = '';
+    for (const piece of run) {
+      const part = piece.trim();
+      if (part === '') continue;
+      if (text === '') text = part;
+      else text += /[-/]$/u.test(text) ? part : ' ' + part;
+    }
+    if (text !== '') runs.push(text);
+    run = [];
+  };
+
+  for (const line of source.split('\n')) {
+    if (inBlock) {
+      const end = line.indexOf('*/');
+      run.push((end === -1 ? line : line.slice(0, end)).replace(/^\s*\*+/u, ''));
+      if (end !== -1) {
+        inBlock = false;
+        flush();
+      }
+      continue;
+    }
+    const start = findCommentStart(line, slash);
+    if (start === null) {
+      flush();
+      continue;
+    }
+    if (start.block) {
+      const end = line.indexOf('*/', start.index + 2);
+      if (end === -1) {
+        inBlock = true;
+        run.push(line.slice(start.index + 2));
+      } else {
+        run.push(line.slice(start.index + 2, end));
+        flush();
+      }
+      continue;
+    }
+    run.push(line.slice(start.index + start.marker.length));
+  }
+  flush();
+  return runs;
+}
+
+/**
+ * Where a line's comment begins, skipping markers that sit inside a string
+ * literal — `'https://…'` and `sed 's/#//'` are code, not comments.
+ *
+ * @param {string} line
+ * @param {boolean} slash True for `//` + block comments, false for `#`.
+ * @returns {{ index: number, marker: string, block: boolean } | null}
+ */
+function findCommentStart(line, slash) {
+  /** @type {string | null} */
+  let quote = null;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (quote !== null) {
+      if (ch === '\\') i++;
+      else if (ch === quote) quote = null;
+      continue;
+    }
+    if (ch === "'" || ch === '"' || (slash && ch === '`')) {
+      quote = ch;
+      continue;
+    }
+    if (!slash && ch === '#') return { index: i, marker: '#', block: false };
+    if (slash && ch === '/' && line[i + 1] === '/') return { index: i, marker: '//', block: false };
+    if (slash && ch === '/' && line[i + 1] === '*') return { index: i, marker: '/*', block: true };
+  }
+  return null;
+}
+
+/**
+ * A path-like token naming something under a `docs/` tree, with the delimiter
+ * that must precede it so a URL's `…/docs/…` tail is not mistaken for a repo
+ * path.
+ */
+export const DOC_PATH_TOKEN_RE = /(?:^|[\s`'"([<])((?:[\w.-]+\/)*docs\/[\w./-]*[\w])/gu;
+
+/**
+ * The doc paths a source file's comments claim exist.
+ *
+ * Two shapes count, and the line is drawn where a token stops being prose and
+ * starts being a pointer the reader is meant to follow:
+ *
+ *   - a markdown file under any `docs/` tree, root-level or a pillar's own;
+ *   - a directory two or more levels inside the repo-root `docs/` tree, so a
+ *     whole deleted sub-tree is caught even when no file is named. One level
+ *     is not enough: a comment writing "docs/code-only PRs" is using the
+ *     slash as an "or", not naming `docs/code-only`.
+ *
+ * @param {string} source
+ * @param {string} filePath Repo-relative path of the source file.
+ * @returns {PathClaim[]}
+ */
+export function extractSourceDocClaims(source, filePath) {
+  const ext = (/\.([\w]+)$/u.exec(filePath) ?? ['', ''])[1].toLowerCase();
+  const fromDir = dirname(filePath);
+  /** @type {PathClaim[]} */
+  const claims = [];
+  for (const comment of extractComments(source, ext)) {
+    for (const match of comment.matchAll(DOC_PATH_TOKEN_RE)) {
+      const token = match[1];
+      if (token.includes('://') || isPlaceholderPath(token)) continue;
+      const namesAFile = token.endsWith('.md');
+      const deepRootDocsDir = token.startsWith('docs/') && token.split('/').length > 2;
+      if (!namesAFile && !deepRootDocsDir) continue;
+      claims.push({ file: filePath, raw: token, candidates: [token, join(fromDir, token)] });
+    }
+  }
+  return claims;
+}
+
+/**
+ * Every doc path claimed by a comment, anywhere in the tree, that resolves to
+ * nothing.
+ *
+ * @param {string} root
+ * @returns {BrokenPath[]}
+ */
+export function findBrokenSourceDocPaths(root) {
+  /** @type {PathClaim[]} */
+  const claims = [];
+  for (const filePath of findSourceFiles(root)) {
+    claims.push(...extractSourceDocClaims(readFileSync(join(root, filePath), 'utf8'), filePath));
+  }
+  return resolvePathClaims(root, claims);
 }
 
 /** Heading that introduces a section describing work that is not done. */
@@ -391,6 +643,7 @@ export function findUntrackedAbsences(root) {
  *   missingReadme: string[],
  *   bannedDirs: string[],
  *   brokenPaths: BrokenPath[],
+ *   brokenSourcePaths: BrokenPath[],
  *   untrackedAbsences: { file: string, heading: string }[],
  * }} DocsModelReport
  */
@@ -407,6 +660,7 @@ export function checkDocsModel(root) {
     missingReadme,
     bannedDirs: findBannedDocDirs(root),
     brokenPaths: findBrokenDocPaths(root),
+    brokenSourcePaths: findBrokenSourceDocPaths(root),
     untrackedAbsences: findUntrackedAbsences(root),
   };
 }
@@ -417,8 +671,8 @@ function main() {
     console.log(
       'Usage: node scripts/ci/check-docs-model.mjs [--self-test]\n' +
         'Fails if a pillar/lib/client lacks a README.md, an abolished doc tree ' +
-        '(prds/, themes/, epics/, ideas/) has reappeared, or a markdown file ' +
-        'points at a repo path that does not exist. See ADR-041.'
+        '(prds/, themes/, epics/, ideas/) has reappeared, or a markdown file or ' +
+        'source comment points at a doc path that does not exist. See ADR-041.'
     );
     process.exit(2);
   }
@@ -426,12 +680,14 @@ function main() {
     process.exit(selfTest() ? 0 : 1);
   }
 
-  const { missingReadme, bannedDirs, brokenPaths, untrackedAbsences } = checkDocsModel(repoRoot);
+  const { missingReadme, bannedDirs, brokenPaths, brokenSourcePaths, untrackedAbsences } =
+    checkDocsModel(repoRoot);
 
   if (
     missingReadme.length === 0 &&
     bannedDirs.length === 0 &&
     brokenPaths.length === 0 &&
+    brokenSourcePaths.length === 0 &&
     untrackedAbsences.length === 0
   ) {
     console.log(
@@ -455,6 +711,13 @@ function main() {
   }
   for (const { file, claim } of brokenPaths) {
     console.error(`FAIL — ${file} points at "${claim}", which does not exist.`);
+  }
+  for (const { file, claim } of brokenSourcePaths) {
+    console.error(
+      `FAIL — a comment in ${file} points at "${claim}", which does not exist. ` +
+        'Replace it with the ADR that superseded it, an in-tree path that demonstrates ' +
+        'the thing, or the reason written out (ADR-041) — never a ticket or PR id.'
+    );
   }
   for (const { file, heading } of untrackedAbsences) {
     console.error(
@@ -574,6 +837,93 @@ function selfTest() {
     rmSync(swiftFixtureRoot, { recursive: true, force: true });
   }
 
+  // Comment extraction, per comment style. A `#` or `//` inside a string
+  // literal is code; a slash-star block spans lines; a wrapped path rejoins.
+  const ok13 =
+    extractComments("const u = 'https://x/#frag'; // see docs/a.md\n", 'ts').join('|') ===
+      'see docs/a.md' &&
+    extractComments('/**\n * see docs/architecture/adr-039-pillar-\n * isolation.md\n */\n', 'ts')
+      .join('|')
+      .includes('docs/architecture/adr-039-pillar-isolation.md') &&
+    extractComments('run: echo "# not a comment"\n# see docs/b.md\n', 'yml').join('|') ===
+      'see docs/b.md' &&
+    extractComments('# see docs/c.md\n', 'toml').join('|') === 'see docs/c.md';
+
+  // A URL's `/docs/` tail is not a repo path; a bare nested doc directory is
+  // prose; a one-level `docs/x` is a prose slash. A markdown file anywhere
+  // under a docs tree, and a deep root-docs directory, are claims.
+  const sourceClaims = extractSourceDocClaims(
+    '// see https://mise.jdx.dev/docs/tasks and docs/gone/x.md and docs/gone/deeper\n' +
+      '// and pillars/food/docs/architecture/adr-001-a.md and pillars/food/docs/gone/dsl\n' +
+      '// which keeps validation off docs/code-only PRs\n',
+    'pillars/food/src/x.ts'
+  ).map((c) => c.raw);
+  const ok14 =
+    sourceClaims.includes('docs/gone/x.md') &&
+    sourceClaims.includes('docs/gone/deeper') &&
+    sourceClaims.includes('pillars/food/docs/architecture/adr-001-a.md') &&
+    !sourceClaims.some((c) => c.includes('mise.jdx.dev')) &&
+    !sourceClaims.includes('pillars/food/docs/gone/dsl') &&
+    !sourceClaims.includes('docs/code-only');
+
+  // End-to-end against a real tree: one dangling doc pointer per newly
+  // scanned file type is reported, a resolving one is not, and the string
+  // literals this guard's own self-test uses as fixtures are left alone.
+  const sourceFixtureRoot = mkdtempSync(join(tmpdir(), 'docs-model-source-'));
+  let ok15 = false;
+  let ok16 = false;
+  try {
+    execFileSync('git', ['init', '-q'], { cwd: sourceFixtureRoot });
+    mkdirSync(join(sourceFixtureRoot, 'docs', 'architecture'), { recursive: true });
+    writeFileSync(join(sourceFixtureRoot, 'docs', 'architecture', 'adr-001-real.md'), '# real\n');
+    mkdirSync(join(sourceFixtureRoot, '.github', 'workflows'), { recursive: true });
+    mkdirSync(join(sourceFixtureRoot, 'scripts'), { recursive: true });
+    mkdirSync(join(sourceFixtureRoot, 'libs', 'x', 'src'), { recursive: true });
+    writeFileSync(
+      join(sourceFixtureRoot, 'libs', 'x', 'src', 'a.ts'),
+      '/** See docs/plans/ghost-ts.md. */\nexport const a = 1;\n'
+    );
+    writeFileSync(
+      join(sourceFixtureRoot, 'libs', 'x', 'src', 'b.rs'),
+      '//! See docs/plans/ghost-rs.md.\npub fn b() {}\n'
+    );
+    writeFileSync(
+      join(sourceFixtureRoot, '.github', 'workflows', 'w.yml'),
+      '# See docs/plans/ghost-yml.md.\nname: w\n'
+    );
+    writeFileSync(
+      join(sourceFixtureRoot, 'scripts', 's.sh'),
+      '#!/usr/bin/env bash\n# See docs/plans/ghost-sh.md.\n'
+    );
+    writeFileSync(
+      join(sourceFixtureRoot, 'Cargo.toml'),
+      '# See docs/plans/ghost-toml.md and docs/architecture/adr-001-real.md.\n'
+    );
+    // The fixture strings this guard's own self-test passes to
+    // `extractPathClaims` are deliberately unresolvable. They live in string
+    // literals, not comments, and must not be reported.
+    writeFileSync(
+      join(sourceFixtureRoot, 'scripts', 'guard.mjs'),
+      "extractPathClaims('`x`', 'docs/thing.md');\n" +
+        "extractPathClaims('`y`', 'docs/x.md');\n" +
+        "const t = '`docs/architecture/adr-NNN-slug.md`';\n"
+    );
+    const brokenSource = findBrokenSourceDocPaths(sourceFixtureRoot);
+    const claimed = brokenSource.map((b) => b.claim);
+    ok15 =
+      ['ts', 'rs', 'yml', 'sh', 'toml'].every((kind) =>
+        claimed.includes(`docs/plans/ghost-${kind}.md`)
+      ) && !claimed.includes('docs/architecture/adr-001-real.md');
+    ok16 = !claimed.some((c) => ['docs/thing.md', 'docs/x.md'].includes(c));
+  } finally {
+    rmSync(sourceFixtureRoot, { recursive: true, force: true });
+  }
+
+  // The fixtures live in this very file, so the real tree must be clean too.
+  const ok17 = !findBrokenSourceDocPaths(repoRoot).some((b) =>
+    b.file.endsWith('scripts/ci/check-docs-model.mjs')
+  );
+
   if (!ok1) console.error('self-test FAILED: unit discovery missed a known unit');
   if (!ok2) console.error('self-test FAILED: banned-dir walk misbehaved');
   if (!ok3) console.error('self-test FAILED: path-claim extraction wrong');
@@ -587,7 +937,31 @@ function selfTest() {
   if (!ok11)
     console.error('self-test FAILED: a backticked .swift path is not extracted as a claim');
   if (!ok12) console.error('self-test FAILED: a dangling Swift path was not caught end-to-end');
-  return ok1 && ok2 && ok3 && ok4 && ok5 && ok6 && ok7 && ok8 && ok9 && ok10 && ok11 && ok12;
+  if (!ok13) console.error('self-test FAILED: comment extraction wrong for some file type');
+  if (!ok14) console.error('self-test FAILED: source doc-claim selection wrong');
+  if (!ok15)
+    console.error('self-test FAILED: a dangling comment pointer was missed in some file type');
+  if (!ok16) console.error("self-test FAILED: this guard's own fixture strings were reported");
+  if (!ok17) console.error('self-test FAILED: this guard reports itself against the real tree');
+  return (
+    ok1 &&
+    ok2 &&
+    ok3 &&
+    ok4 &&
+    ok5 &&
+    ok6 &&
+    ok7 &&
+    ok8 &&
+    ok9 &&
+    ok10 &&
+    ok11 &&
+    ok12 &&
+    ok13 &&
+    ok14 &&
+    ok15 &&
+    ok16 &&
+    ok17
+  );
 }
 
 if (resolve(fileURLToPath(import.meta.url)) === resolve(process.argv[1] ?? '')) {
