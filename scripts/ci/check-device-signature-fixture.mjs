@@ -376,12 +376,24 @@ function main() {
   };
 
   if (argv.includes('--self-test')) {
+    // The self-test needs a fixture it can corrupt, and the canonical copy is
+    // the only source of one. Both failure modes are reported rather than
+    // thrown: this runs as the FIRST step of its CI job, so an unhandled
+    // SyntaxError here would report a broken fixture as a broken guard.
     const canonical = read(CANONICAL.path);
     if (canonical === null) {
       console.error(`FAIL — cannot read ${CANONICAL.path}`);
       process.exit(1);
     }
-    process.exit(selfTest(JSON.parse(canonical)) ? 0 : 1);
+    /** @type {Fixture} */
+    let valid;
+    try {
+      valid = JSON.parse(canonical);
+    } catch (error) {
+      console.error(`FAIL — ${CANONICAL.path} is not parseable as JSON: ${String(error)}`);
+      process.exit(1);
+    }
+    process.exit(selfTest(valid) ? 0 : 1);
   }
 
   const failures = checkAllCopies(read);
