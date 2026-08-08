@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -412,6 +412,75 @@ describe('DevicesPage — revoking a device', () => {
     await user.click(screen.getByRole('button', { name: 'Revoke' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(/refused the request/);
+  });
+
+  /**
+   * Cancel and the action are disabled mid-request, but Escape reaches Radix
+   * directly. Letting it close would be worse than useless: the DELETE is
+   * already on the wire and cannot be called back, so the dialog would vanish
+   * looking cancelled while the revocation went ahead.
+   */
+  it('refuses to close on Escape while the revocation is in flight', async () => {
+    let landRevoke!: (value: unknown) => void;
+    revokeDeviceMock.mockReturnValue(
+      new Promise((resolve) => {
+        landRevoke = resolve;
+      })
+    );
+    const user = renderPage();
+
+    await user.click(await screen.findByRole('button', { name: "Revoke Joao's iPhone" }));
+    await user.click(screen.getByRole('button', { name: 'Revoke' }));
+    await screen.findByRole('button', { name: 'Revoking…' });
+
+    await user.keyboard('{Escape}');
+
+    expect(screen.getByRole('alertdialog')).toBeInTheDocument();
+
+    await act(async () => {
+      landRevoke({
+        data: { id: 'dev-1', revokedAt: '2026-08-08T12:00:00.000Z', alreadyRevoked: false },
+      });
+    });
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
+  });
+
+  /**
+   * The worse half of the same bug: a failure landing after an Escape-close
+   * would render into a dialog that no longer exists, silently losing the one
+   * message that says the handset is still trusted.
+   */
+  it('still surfaces a failure that lands after an attempted Escape', async () => {
+    let landRevoke!: (value: unknown) => void;
+    revokeDeviceMock.mockReturnValue(
+      new Promise((resolve) => {
+        landRevoke = resolve;
+      })
+    );
+    const user = renderPage();
+
+    await user.click(await screen.findByRole('button', { name: "Revoke Joao's iPhone" }));
+    await user.click(screen.getByRole('button', { name: 'Revoke' }));
+    await screen.findByRole('button', { name: 'Revoking…' });
+
+    await user.keyboard('{Escape}');
+
+    await act(async () => {
+      landRevoke(errorResponse(503, 'bfm down'));
+    });
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/still trusted/);
+    expect(screen.getByRole('alertdialog')).toBeInTheDocument();
+  });
+
+  it('still closes on Escape when no revocation is running', async () => {
+    const user = renderPage();
+
+    await user.click(await screen.findByRole('button', { name: "Revoke Joao's iPhone" }));
+    await user.keyboard('{Escape}');
+
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
+    expect(revokeDeviceMock).not.toHaveBeenCalled();
   });
 
   it('retries after a failure without reopening the dialog', async () => {

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 
 import { unwrap } from '../../bfm-api-helpers.js';
 import { operatorListDevices, operatorRevokeDevice } from '../../bfm-api/index.js';
@@ -67,11 +67,20 @@ function useDeviceList(): DeviceListModel {
  * A failed revoke leaves the dialog open. Closing it on failure would read as
  * "done" for an operation that did not happen — and the device is still
  * trusted until this succeeds.
+ *
+ * Cancelling is refused while the request is on the wire, and the refusal
+ * lives here rather than in the dialog on purpose. A guard written against the
+ * rendered `isRevoking` reads a value from the last commit, so an Escape
+ * arriving between the click and React flushing that re-render would still
+ * cancel — a window a person cannot hit but a test can, which is how this was
+ * found. The ref below is set synchronously inside `confirm`, so there is no
+ * window at all.
  */
 function useRevocation(): RevocationModel {
   const queryClient = useQueryClient();
   const [target, setTarget] = useState<PairedDevice | null>(null);
   const [failure, setFailure] = useState<OperatorFailure | null>(null);
+  const isOnTheWire = useRef(false);
 
   const mutation = useMutation({
     mutationFn: async (id: string) => unwrap(await operatorRevokeDevice({ path: { id } })),
@@ -80,6 +89,7 @@ function useRevocation(): RevocationModel {
 
   const request = useCallback(
     (device: PairedDevice) => {
+      if (isOnTheWire.current) return;
       setFailure(null);
       reset();
       setTarget(device);
@@ -88,21 +98,26 @@ function useRevocation(): RevocationModel {
   );
 
   const cancel = useCallback(() => {
+    if (isOnTheWire.current) return;
     setTarget(null);
     setFailure(null);
     reset();
   }, [reset]);
 
   const confirm = useCallback(() => {
-    if (target === null) return;
+    if (target === null || isOnTheWire.current) return;
 
+    isOnTheWire.current = true;
     setFailure(null);
     void mutateAsync(target.id)
       .then(async () => {
         setTarget(null);
         await queryClient.invalidateQueries({ queryKey: DEVICES_QUERY_KEY });
       })
-      .catch((err: unknown) => setFailure(classifyOperatorFailure(err)));
+      .catch((err: unknown) => setFailure(classifyOperatorFailure(err)))
+      .finally(() => {
+        isOnTheWire.current = false;
+      });
   }, [mutateAsync, queryClient, target]);
 
   return { target, isRevoking: mutation.isPending, failure, request, confirm, cancel };

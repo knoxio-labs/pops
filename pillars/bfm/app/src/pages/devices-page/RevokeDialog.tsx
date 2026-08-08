@@ -22,6 +22,18 @@ import type { RevocationModel } from './useDevicesPageModel.js';
  *
  * Stays open on failure: the device is still trusted until the call succeeds,
  * and a dialog that closes anyway reads as "done".
+ *
+ * It also refuses to close *during* the request. Cancel and the action are
+ * disabled then, but Escape still reaches Radix, and letting it through would
+ * be worse than useless: the DELETE is already on the wire and cannot be
+ * called back, so the dialog would vanish looking cancelled while the
+ * revocation went ahead — and a failure would render into a dialog that no
+ * longer exists, losing the one message that says the handset is still
+ * trusted. Both outcomes are terminal, so waiting costs the operator nothing.
+ *
+ * The refusal itself is the model's: `cancel` is a no-op while the request is
+ * on the wire. Deciding it here instead would mean testing the rendered
+ * `isRevoking`, which lags a commit behind the click.
  */
 export function RevokeDialog({ revocation }: { revocation: RevocationModel }): ReactElement | null {
   const { t } = useTranslation('bfm');

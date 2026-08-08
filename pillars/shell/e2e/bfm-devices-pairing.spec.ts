@@ -173,6 +173,54 @@ test.describe('bfm — Devices', () => {
     );
   });
 
+  /**
+   * Real-browser check, because jsdom is not authoritative about how Escape
+   * reaches Radix. The DELETE is already on the wire and cannot be called
+   * back, so a dialog that vanished here would read as cancelled while the
+   * revocation went ahead regardless.
+   */
+  test('Escape does not dismiss the confirmation mid-revocation', async ({ page }) => {
+    let announceReached!: () => void;
+    const revokeReached = new Promise<void>((resolve) => {
+      announceReached = resolve;
+    });
+
+    // Held open so the assertions below land while the request is genuinely in
+    // flight, and released by the test rather than by a timer.
+    let releaseRevoke!: () => void;
+    const revokeHeld = new Promise<void>((resolve) => {
+      releaseRevoke = resolve;
+    });
+
+    await stubOperatorApi(page);
+    await page.route(`**/bfm-api/operator/devices/${TRUSTED_DEVICE.id}`, async (route) => {
+      announceReached();
+      await revokeHeld;
+      return json(route, 200, {
+        id: TRUSTED_DEVICE.id,
+        revokedAt: '2026-08-08T12:00:00.000Z',
+        alreadyRevoked: false,
+      });
+    });
+
+    await openDevices(page);
+    await page.getByRole('button', { name: "Revoke Joao's iPhone" }).click();
+
+    const confirm = page.getByRole('alertdialog');
+    await confirm.getByRole('button', { name: 'Revoke' }).click();
+    await revokeReached;
+
+    await page.keyboard.press('Escape');
+    await expect(confirm.getByRole('button', { name: 'Revoking…' })).toBeVisible();
+    await expect(confirm).toBeVisible();
+
+    // Closes once the request settles, not before. The row flipping to revoked
+    // is the other test's job — this one replaces the DELETE route, so it does
+    // not drive the stub's revocation state.
+    releaseRevoke();
+    await expect(confirm).toBeHidden();
+  });
+
   test('a failed revocation says so and leaves the dialog open', async ({ page }) => {
     await stubOperatorApi(page, { revokeStatus: 503 });
     await openDevices(page);

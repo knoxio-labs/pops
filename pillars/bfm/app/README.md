@@ -81,6 +81,15 @@ Collapsing the last into "Unavailable" would send the operator after the wrong
 bug. Revocation keeps its dialog open on any of them: the handset stays
 trusted until the call succeeds, and a dialog that closes reads as "done".
 
+It also refuses to close _during_ the request. Cancel and the action are
+disabled then, but Escape reaches Radix regardless, and the DELETE is already
+on the wire and cannot be called back — so a dialog that vanished would read
+as cancelled while the revocation went ahead, and a failure arriving after it
+would render into a dialog that no longer exists, losing the only message that
+says the handset is still trusted. The refusal lives in `useRevocation`, not in
+the dialog: a guard written against the rendered `isRevoking` reads a value one
+commit behind the click, which real Chromium loses and jsdom does not.
+
 ## Tests
 
 `src/pages/__tests__/DevicesPage.test.tsx` drives the whole page against a
