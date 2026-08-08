@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest';
 
 import { ExtractedLineSchema, ExtractedReceiptSchema } from '../extraction.js';
 import { readReceipt } from '../read-receipt.js';
-import { extractionPrompt, MEDIA_TYPES, PROMPT_FIELDS } from '../vision.js';
+import { extractionPrompt, kindOf, MEDIA_TYPES, PROMPT_FIELDS } from '../vision.js';
 
 import type { ReceiptMediaType, ReceiptPart, ReceiptVision } from '../vision.js';
 
@@ -104,6 +104,22 @@ describe('a reading that does not', () => {
     if (outcome.kind !== 'unreadable') return;
     for (const missing of ['purchasedOn', 'purchasedAt', 'currency', 'tax', 'lines']) {
       expect(outcome.reason).toContain(missing);
+    }
+  });
+});
+
+describe('what a media type is taken to be', () => {
+  it('classifies every accepted media type deliberately', () => {
+    // Not "everything unrecognised is text". A media type added to the
+    // contract without a decision here would previously have been sent to
+    // the model as a pasted email body, under the prompt written for one,
+    // and named "Text" in its refusals.
+    expect(MEDIA_TYPES.map(kindOf)).toEqual(['image', 'image', 'image', 'image', 'pdf', 'text']);
+  });
+
+  it('leaves no media type unclassified', () => {
+    for (const mediaType of MEDIA_TYPES) {
+      expect(['image', 'pdf', 'text']).toContain(kindOf(mediaType));
     }
   });
 });

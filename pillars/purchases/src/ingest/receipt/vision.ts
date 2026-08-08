@@ -47,13 +47,35 @@ export type ReceiptMediaType = (typeof MEDIA_TYPES)[number];
  */
 export type ReceiptKind = 'image' | 'pdf' | 'text';
 
+/**
+ * Total, and deliberately not a fallback.
+ *
+ * Written as a record over every accepted media type so that adding one to
+ * {@link MEDIA_TYPES} without deciding what it is fails to compile. A
+ * `return 'text'` for anything unrecognised would have been shorter and
+ * would have silently sent the next media type — `text/html`, say — to the
+ * model as a plain-text document, under the prompt written for pasted email
+ * bodies, and named it "Text" in its refusals.
+ */
+const KINDS: Readonly<Record<ReceiptMediaType, ReceiptKind>> = {
+  'image/jpeg': 'image',
+  'image/png': 'image',
+  'image/webp': 'image',
+  'image/gif': 'image',
+  'application/pdf': 'pdf',
+  'text/plain': 'text',
+};
+
+/**
+ * Narrowing, for the one place that needs the image types as their own
+ * union: an image content block accepts four media types and not six.
+ */
 export function isImageMediaType(mediaType: ReceiptMediaType): mediaType is ReceiptImageMediaType {
   return IMAGE_MEDIA_TYPES.some((candidate) => candidate === mediaType);
 }
 
 export function kindOf(mediaType: ReceiptMediaType): ReceiptKind {
-  if (isImageMediaType(mediaType)) return 'image';
-  return mediaType === 'application/pdf' ? 'pdf' : 'text';
+  return KINDS[mediaType];
 }
 
 /** One piece of what was uploaded: a photograph, a PDF, or a pasted body. */

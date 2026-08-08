@@ -57,6 +57,10 @@ export function receiptModel(): string {
  * rather than being concatenated into the instruction. Keeping it a document
  * is what preserves the distinction the whole prompt relies on — this is the
  * thing being read, not part of what is being asked.
+ *
+ * Every media type is named. The `never` below is what makes adding one to
+ * `MEDIA_TYPES` a compile error here rather than a new file type quietly
+ * reaching the model as plain text.
  */
 function toContentBlock(part: ReceiptPart): Anthropic.ContentBlockParam {
   if (isImageMediaType(part.mediaType)) {
@@ -73,16 +77,21 @@ function toContentBlock(part: ReceiptPart): Anthropic.ContentBlockParam {
     };
   }
 
-  return {
-    type: 'document',
-    source: {
-      type: 'text',
-      media_type: 'text/plain',
-      // Stored and transported as bytes like every other part, so the
-      // decode happens here — at the one boundary that needs characters.
-      data: Buffer.from(part.dataBase64, 'base64').toString('utf8'),
-    },
-  };
+  if (part.mediaType === 'text/plain') {
+    return {
+      type: 'document',
+      source: {
+        type: 'text',
+        media_type: 'text/plain',
+        // Stored and transported as bytes like every other part, so the
+        // decode happens here — at the one boundary that needs characters.
+        data: Buffer.from(part.dataBase64, 'base64').toString('utf8'),
+      },
+    };
+  }
+
+  const unhandled: never = part.mediaType;
+  throw new Error(`no content block is defined for media type ${String(unhandled)}`);
 }
 
 /**

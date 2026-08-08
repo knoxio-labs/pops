@@ -5,6 +5,7 @@ import { dirname, join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
 
 import { looksLikeMediaType, receiptUri, storeReceiptPart } from '../store.js';
+import { MEDIA_TYPES } from '../vision.js';
 
 import type { ReceiptPart } from '../vision.js';
 
@@ -217,10 +218,36 @@ describe('checking an upload before the model sees it', () => {
     expect(looksLikeMediaType(wrapped, 'image/jpeg')).toBe(true);
   });
 
+  it('accepts a paste too short to be a JPEG', () => {
+    // The binary formats need twelve bytes to identify themselves; text
+    // does not, and inheriting that floor made a short paste impossible to
+    // send while the contract advertised a one-character minimum.
+    for (const body of ['Tea $3', 'x', 'Итого 5']) {
+      expect(looksLikeMediaType(Buffer.from(body, 'utf8').toString('base64'), 'text/plain')).toBe(
+        true
+      );
+    }
+  });
+
   it('refuses an upload too short to be anything', () => {
     expect(looksLikeMediaType('', 'image/jpeg')).toBe(false);
+    // Two bytes that satisfy the JPEG magic number and are not a JPEG. The
+    // floor is what catches this, not the magic check.
     expect(looksLikeMediaType(Buffer.from([0xff, 0xd8]).toString('base64'), 'image/jpeg')).toBe(
       false
     );
+    expect(looksLikeMediaType(Buffer.from('%PDF-').toString('base64'), 'application/pdf')).toBe(
+      false
+    );
+  });
+
+  it('has a rule for every media type the drop-zone accepts', () => {
+    // A media type added to the contract without a magic check or a minimum
+    // would throw at the edge rather than refuse cleanly. The records that
+    // back this are exhaustive by type, so the compiler catches it first;
+    // this is what catches it if the records ever stop being exhaustive.
+    for (const mediaType of MEDIA_TYPES) {
+      expect(() => looksLikeMediaType(JPEG.toString('base64'), mediaType)).not.toThrow();
+    }
   });
 });

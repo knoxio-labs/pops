@@ -152,22 +152,40 @@ const MAGIC: Readonly<Record<ReceiptMediaType, (probe: Buffer) => boolean>> = {
 };
 
 /**
+ * How many bytes each type needs before the question is even meaningful.
+ *
+ * Twelve for the binary formats, because that is what identifies them — the
+ * WebP check reads bytes 8 through 12, and a two-byte "JPEG" would satisfy
+ * its magic number while being nothing at all.
+ *
+ * Text has no such threshold, and inheriting the binary one would have made
+ * a short paste impossible to upload while the contract advertised
+ * `min(1)`. What stops an empty paste is that it must decode as UTF-8 and
+ * hold something other than whitespace, which is a statement about the
+ * content rather than an arbitrary length.
+ */
+const MINIMUM_BYTES: Readonly<Record<ReceiptMediaType, number>> = {
+  'image/jpeg': 12,
+  'image/png': 12,
+  'image/webp': 12,
+  'image/gif': 12,
+  'application/pdf': 12,
+  'text/plain': 1,
+};
+
+/**
  * Does this upload look like the type it claims?
  *
  * Checked at the edge rather than discovered by the vision model, because
  * "that is not a JPEG" is an answer the user can act on immediately and a
  * model's confusion about it is not, and costs a call to obtain.
- *
- * The twelve-byte floor is a real constraint for the binary formats — the
- * WebP check reads bytes 8 through 12 — and an arbitrary but harmless one
- * for text, since nothing shorter than twelve characters is a receipt.
  */
 export function looksLikeMediaType(dataBase64: string, mediaType: ReceiptMediaType): boolean {
   const compact = canonicalBase64(dataBase64);
   if (compact.length % 4 !== 0 || !BASE64_RE.test(compact)) return false;
 
   const bytes = Buffer.from(compact, 'base64');
-  if (bytes.length < 12) return false;
+  if (bytes.length < MINIMUM_BYTES[mediaType]) return false;
 
   return MAGIC[mediaType](bytes);
 }
