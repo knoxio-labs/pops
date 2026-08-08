@@ -9,11 +9,16 @@
  */
 import {
   createPurchase,
+  findPurchaseAtInstantForAmount,
   findPurchaseBySourceOrderId,
   getPurchase,
   upsertSource,
 } from '../../db/index.js';
-import { RECEIPT_SOURCE_ID, receiptToPurchase } from '../../ingest/receipt/purchase.js';
+import {
+  DATE_UNCERTAIN,
+  RECEIPT_SOURCE_ID,
+  receiptToPurchase,
+} from '../../ingest/receipt/purchase.js';
 import { readReceipt } from '../../ingest/receipt/read-receipt.js';
 import { canonicalBase64, looksLikeImage, storeReceiptImage } from '../../ingest/receipt/store.js';
 import { createMerchantResolver, type MerchantResolver } from '../contacts/merchant.js';
@@ -145,6 +150,27 @@ type Persisted =
   | { readonly kind: 'written'; readonly detail: PurchaseDetail }
   | { readonly kind: 'refused'; readonly status: 400 | 409; readonly body: ErrorBody };
 
+/**
+ * Has this shop already been recorded from a different photograph?
+ *
+ * Only asked when the receipt stated its own date. An inferred date is the
+ * moment of upload, which differs between two uploads of the same paper —
+ * so it would never match, and matching on it would be wrong anyway, since
+ * two undated receipts uploaded in the same second are not one receipt.
+ */
+function sameShopAlreadyRecorded(
+  db: PurchasesDb,
+  purchase: CreatePurchaseInput
+): { id: string } | undefined {
+  if (purchase.tags?.includes(DATE_UNCERTAIN) === true) return undefined;
+  return findPurchaseAtInstantForAmount(
+    db,
+    RECEIPT_SOURCE_ID,
+    purchase.orderedAt,
+    purchase.totalCents
+  );
+}
+
 function persist(db: PurchasesDb, input: CreatePurchaseInput): Persisted {
   ensureReceiptSource(db);
 
@@ -225,6 +251,19 @@ export function makeReceiptHandlers(
       // photograph exists, so losing it would be worse than carrying an
       // inferred date the tag stops anyone mistaking for a stated one.
       const shaped = receiptToPurchase(outcome.extracted, outcome.gate, stored, uploadedAt);
+
+      const alreadyHave = sameShopAlreadyRecorded(db, shaped.purchase);
+      if (alreadyHave !== undefined) {
+        return {
+          status: 409 as const,
+          body: {
+            message:
+              `This looks like purchase ${alreadyHave.id}, already recorded from ` +
+              'another photograph of the same receipt',
+            code: 'ALREADY_IMPORTED',
+          },
+        };
+      }
 
       // Best-effort, and deliberately after the reading rather than part of
       // it: the entity link is something this fleet knows, not something

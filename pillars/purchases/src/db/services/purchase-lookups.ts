@@ -39,3 +39,36 @@ export function findPurchaseBySourceOrderId(
     .where(and(eq(purchases.source, source), eq(purchases.sourceOrderId, sourceOrderId)))
     .all()[0];
 }
+
+/**
+ * A purchase from the same source, shop-moment and amount.
+ *
+ * The photograph's hash catches an identical file, which is not what a
+ * person does: they take a second picture, from a slightly different
+ * angle, of the same piece of paper. Those bytes differ, so the store
+ * dedup cannot see it and two records of one shop get written.
+ *
+ * The merchant name cannot be part of the key — the same Kmart receipt
+ * read twice gave "K MART ASHFIELD" and "K mart" — but the printed
+ * timestamp and total were identical every time, and a second genuine
+ * purchase in the same minute for the same amount is not a thing that
+ * happens to one person.
+ */
+export function findPurchaseAtInstantForAmount(
+  db: PurchasesDb,
+  source: string,
+  orderedAt: string,
+  totalCents: number
+): PurchaseRow | undefined {
+  return db
+    .select()
+    .from(purchases)
+    .where(
+      and(
+        eq(purchases.source, source),
+        eq(purchases.orderedAt, orderedAt),
+        eq(purchases.totalCents, totalCents)
+      )
+    )
+    .all()[0];
+}
