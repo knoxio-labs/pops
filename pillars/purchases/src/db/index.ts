@@ -23,10 +23,11 @@ export {
   listPurchases,
   setPurchaseStatus,
   type ListPurchasesFilter,
-  type PurchaseChargeDetail,
   type PurchaseDetail,
   type PurchaseItemDetail,
 } from './services/purchase-reads.js';
+
+export { type PurchaseChargeDetail } from './services/purchase-read-charges.js';
 
 export {
   findPurchaseByChecksum,

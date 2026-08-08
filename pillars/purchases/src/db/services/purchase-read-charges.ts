@@ -10,8 +10,19 @@ import { asc, eq, inArray } from 'drizzle-orm';
 import { purchaseChargeLinks, purchaseCharges, purchaseItemAllocations } from '../schema.js';
 import { groupBy } from './group-by.js';
 
-import type { PurchasesDb } from '../index.js';
-import type { PurchaseChargeDetail } from './purchase-reads.js';
+import type {
+  PurchaseChargeLinkRow,
+  PurchaseChargeRow,
+  PurchaseItemAllocationRow,
+} from '../schema.js';
+import type { PurchasesDb } from './internal.js';
+
+/** A charge, the transactions backing it (if any), and what it paid for. */
+export interface PurchaseChargeDetail {
+  readonly charge: PurchaseChargeRow;
+  readonly links: readonly PurchaseChargeLinkRow[];
+  readonly allocations: readonly PurchaseItemAllocationRow[];
+}
 
 export function selectChargeDetails(
   db: PurchasesDb,

@@ -20,14 +20,11 @@ import {
 import { computeAccounting, landedCostCents, type PurchaseAccounting } from './accounting.js';
 import { groupBy } from './group-by.js';
 import { nowIso, type PurchasesDb } from './internal.js';
-import { selectChargeDetails } from './purchase-read-charges.js';
+import { selectChargeDetails, type PurchaseChargeDetail } from './purchase-read-charges.js';
 
 import type { PurchaseStatus } from '../../contract/constants.js';
 import type {
-  PurchaseChargeLinkRow,
-  PurchaseChargeRow,
   PurchaseDocumentRow,
-  PurchaseItemAllocationRow,
   PurchaseItemRow,
   PurchaseItemUnitRow,
   PurchaseRow,
@@ -52,13 +49,6 @@ export interface PurchaseItemDetail {
   readonly units: readonly PurchaseItemUnitRow[];
   /** `lineTotal + allocatedShipping + allocatedAdjustment`. */
   readonly landedCostCents: number;
-}
-
-/** A charge, the transactions backing it (if any), and what it paid for. */
-export interface PurchaseChargeDetail {
-  readonly charge: PurchaseChargeRow;
-  readonly links: readonly PurchaseChargeLinkRow[];
-  readonly allocations: readonly PurchaseItemAllocationRow[];
 }
 
 /** An order and every list hanging off it. */
