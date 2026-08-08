@@ -9,6 +9,7 @@ import { getPillarRegistry } from './pillars/registry.js';
 import type { PillarRegistryEntry } from '@pops/types';
 
 import type { OpenedPurchasesDb } from '../db/index.js';
+import type { ReceiptVision } from '../ingest/receipt/vision.js';
 import type { SweepTrigger } from './rest/reconcile-handlers.js';
 
 export interface PurchasesApiDeps {
@@ -25,6 +26,12 @@ export interface PurchasesApiDeps {
   onIngest?: () => void;
   /** Runs a sweep on demand, for `POST /reconcile/sweep`. */
   sweep?: SweepTrigger;
+  /**
+   * Reads photographed receipts. Omitted or null declines every upload with
+   * a 503 — the drop-zone is optional, and a pillar without an API key
+   * should say so at the edge rather than accept uploads it cannot read.
+   */
+  vision?: ReceiptVision | null;
 }
 
 export interface HealthResponse {

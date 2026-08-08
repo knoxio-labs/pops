@@ -86,6 +86,44 @@ Usage, cost and latency go to the ai pillar through `@pops/ai-telemetry`,
 so a drop-zone that quietly becomes expensive shows up where everything
 else does.
 
+## The endpoint
+
+`POST /receipts` with `{ mediaType, dataBase64 }`. JSON rather than
+multipart because a receipt is a phone photo — hundreds of kilobytes, not
+hundreds of megabytes — and it keeps the surface describable in the same
+ts-rest contract as everything else.
+
+**The response is a discriminated union, not a purchase.** Collapsing the
+three outcomes would lose the distinction the whole feature rests on:
+
+| `kind`         | meaning                                     | written?                           |
+| -------------- | ------------------------------------------- | ---------------------------------- |
+| `created`      | the reading agreed with the paper           | yes                                |
+| `needs-review` | read, but the figures disagree — or no date | no; the photo is kept and returned |
+| `unreadable`   | nothing usable came back                    | no; the photo is kept              |
+
+Two refusals happen before a model call is spent: `503` when no vision
+model is configured, and `400` when the upload is not the image type it
+claims. Both are answers the user can act on immediately, where the same
+facts discovered inside the model come back as confusion that costs money.
+
+**The photograph is stored before it is read.** If the model is down, or
+reads it wrongly, or the figures disagree, the image is still on disk and
+addressable — so a failed upload leaves evidence. Reading first and storing
+only on success would discard exactly the receipts a human needs to see.
+
+Re-uploading the same photograph is a `409`, because `sourceOrderId` is the
+image's SHA-256. A merchant order id would be better and does not exist: a
+till slip carries a transaction number in a different place and format for
+every chain, and a date-plus-total key would merge two identical coffees
+bought an hour apart.
+
+The drop-zone registers its own `receipt` source on first use — sources are
+rows rather than a compiled enum (ADR-035), and every other one is
+registered by whoever ingests through it. On use rather than at boot, so a
+deployment that has never received an upload does not claim a source it has
+never written to.
+
 ## Keeping the photograph
 
 The image is not a by-product. When the gate refuses a reading, the only
