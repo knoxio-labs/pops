@@ -30,12 +30,15 @@
  * Together the two invocations partition the full set with no overlap and
  * no gap — see the `inAppMatrix` field below.
  *
- * A regeneration is trusted only after three independent checks, per
- * POPS-1589 (guards that report success under exactly the condition they
- * exist to detect): the generator must exit zero, its declared output
- * directory must exist and be non-empty, and `git diff` against it must be
- * empty. Any other outcome — including a `generate:*` script with no
- * parseable `--write` target — is a reported violation, never a silent pass.
+ * A regeneration is trusted only after three independent checks, deliberately
+ * distinct from "the diff step didn't complain": the generator must exit
+ * zero, its declared output directory must exist and be non-empty, and only
+ * then does `git diff` against it decide drift. A guard that skips the first
+ * two would report success on a generator that silently no-ops or a client
+ * directory that was deleted out from under it — those are reported
+ * violations here, same as an actual diff, never a silent pass. A
+ * `generate:*` script with no parseable `--write` target is likewise a
+ * violation rather than something quietly skipped.
  *
  * Usage:
  *   node scripts/ci/check-generated-clients.mjs [--pkg <name>] [--exclude-app-matrix]
