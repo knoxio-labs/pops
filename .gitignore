@@ -23,6 +23,9 @@ clients/**/*.xcodeproj
 DerivedData/
 *.xcuserstate
 .swiftpm/
+# Points the committed signing xcconfig at this machine's Apple team. Written by
+# `mise run generate`; never committed, because the path in it is machine-local.
+clients/**/Config/Signing.local.xcconfig
 
 # Environment and secrets
 .env
