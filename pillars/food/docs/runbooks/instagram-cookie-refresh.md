@@ -39,7 +39,7 @@ When the food ingest pipeline reports "Instagram cookies need refresh", this run
 4. **Restart the worker.** Cookies are mounted read-only and read at yt-dlp invocation time, so a process restart is the cleanest way to pick up the new file:
 
    ```bash
-   docker compose -f infra/docker-compose.yml restart worker-food
+   docker compose -f infra/docker-compose.yml restart pops-worker-food
    ```
 
 5. **Retry failed ingests.** Open the review queue (Epic 03 surface). For each ingest with the "cookies need refresh" banner, trigger the retry action — this calls `POST /ingest/retry` and the job re-enqueues with fresh cookies. (Exact UI affordance is defined when Epic 03 ships; until then, `POST /ingest/retry` can be called directly from the food pillar's REST API or pops-cli.)
