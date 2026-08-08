@@ -1,6 +1,6 @@
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 
 import { afterAll, describe, expect, it } from 'vitest';
 
@@ -42,6 +42,30 @@ describe('storing a photograph', () => {
     expect(second.sha256).toBe(first.sha256);
     expect(second.path).toBe(first.path);
     expect(second.alreadyPresent).toBe(true);
+  });
+
+  it('repairs a half-written file instead of letting it win forever', () => {
+    // writeFileSync straight to the final path is not atomic, so a crash
+    // part-way through leaves a short file under a name that claims to be
+    // the hash of the whole thing. Testing only that the path exists would
+    // make that truncated file permanent: every later upload of the same
+    // photograph finds it and skips past.
+    const stored = storeReceiptImage(image(JPEG), root);
+    writeFileSync(stored.path, JPEG.subarray(0, 4));
+    expect(readFileSync(stored.path).length).toBe(4);
+
+    const again = storeReceiptImage(image(JPEG), root);
+
+    expect(again.path).toBe(stored.path);
+    expect(again.alreadyPresent).toBe(false);
+    expect(again.bytes).toBe(JPEG.length);
+    expect(readFileSync(again.path).equals(JPEG)).toBe(true);
+  });
+
+  it('leaves no scratch files behind', () => {
+    const stored = storeReceiptImage(image(PNG, 'image/png'), root);
+    const siblings = readdirSync(dirname(stored.path));
+    expect(siblings.some((name) => name.endsWith('.partial'))).toBe(false);
   });
 
   it('keeps different photographs apart', () => {

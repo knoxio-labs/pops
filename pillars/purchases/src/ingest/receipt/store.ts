@@ -16,8 +16,8 @@
  * It also means a corrupted or truncated upload cannot quietly overwrite a
  * good one: different bytes, different name.
  */
-import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, statSync, writeFileSync } from 'node:fs';
+import { createHash, randomUUID } from 'node:crypto';
+import { existsSync, mkdirSync, renameSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
 import { resolvePurchasesSqlitePath } from '../../api/purchases-sqlite-path.js';
@@ -53,6 +53,20 @@ export function receiptUri(sha256: string): string {
 }
 
 /**
+ * Write, then move into place.
+ *
+ * `writeFileSync` straight to the final path is not atomic: a crash or a
+ * full disk part-way through leaves a short file under a name that claims
+ * to be the hash of the whole thing. Writing beside it and renaming makes
+ * the file appear complete or not at all.
+ */
+function writeAtomically(path: string, bytes: Buffer): void {
+  const scratch = `${path}.${randomUUID()}.partial`;
+  writeFileSync(scratch, bytes);
+  renameSync(scratch, path);
+}
+
+/**
  * Write the image, or notice it is already there.
  *
  * Sharded one level on the hash prefix. A few thousand receipts in one
@@ -68,18 +82,23 @@ export function storeReceiptImage(
   const directory = join(root, sha256.slice(0, 2));
   const path = join(directory, `${sha256}.${EXTENSIONS[image.mediaType]}`);
 
-  if (existsSync(path)) {
+  // Existing *and* the right length. `existsSync` alone lets a half-written
+  // file win permanently: the name is the hash, so every later upload of
+  // the same photograph would find the truncated one and skip past it, and
+  // the store would never repair itself. We know exactly how long the file
+  // should be, so the check is free.
+  if (existsSync(path) && statSync(path).size === bytes.length) {
     return {
       sha256,
       path,
       uri: receiptUri(sha256),
-      bytes: statSync(path).size,
+      bytes: bytes.length,
       alreadyPresent: true,
     };
   }
 
   mkdirSync(directory, { recursive: true });
-  writeFileSync(path, bytes);
+  writeAtomically(path, bytes);
   return { sha256, path, uri: receiptUri(sha256), bytes: bytes.length, alreadyPresent: false };
 }
 
