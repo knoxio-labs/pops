@@ -78,6 +78,10 @@ function isRetryable(status: UpstreamErrorStatus): boolean {
   return status === 503;
 }
 
+/**
+ * For a route that addresses one resource by path, where 404 is a fact about
+ * the user's data and the route declares it.
+ */
 export function toUpstreamErrorResponse(failure: GatewayFailure): UpstreamErrorResponse {
   const { status, code, summary } = classify(failure);
 
@@ -89,5 +93,44 @@ export function toUpstreamErrorResponse(failure: GatewayFailure): UpstreamErrorR
   return {
     status,
     body: { code, pillar: failure.pillar, retryable: isRetryable(status), message },
+  };
+}
+
+/** The subset a collection route can answer — 404 is not among them. */
+export type CollectionUpstreamErrorStatus = Exclude<UpstreamErrorStatus, 404>;
+
+export interface CollectionUpstreamErrorResponse {
+  readonly status: CollectionUpstreamErrorStatus;
+  readonly body: MobileUpstreamError;
+}
+
+/**
+ * The same mapping for a route that addresses no single resource.
+ *
+ * A list has nothing to be "not found". A 404 from finance on a collection
+ * means the path bfm built is not one finance serves — a contract fault, not a
+ * fact about anybody's data — so it folds into the same 502 a shape mismatch
+ * gets.
+ *
+ * The narrowed return type is the load-bearing part. A collection route does
+ * not declare 404, so emitting one would put a status in the response that the
+ * OpenAPI document does not carry, which means the generated Swift client has
+ * no case for it: the app would meet a status it cannot decode, at runtime, on
+ * a handset. `Exclude<…, 404>` makes that a compile error here instead.
+ */
+export function toCollectionUpstreamErrorResponse(
+  failure: GatewayFailure
+): CollectionUpstreamErrorResponse {
+  const mapped = toUpstreamErrorResponse(failure);
+  if (mapped.status !== 404) return { status: mapped.status, body: mapped.body };
+
+  return {
+    status: 502,
+    body: {
+      ...mapped.body,
+      code: 'upstream_contract_mismatch',
+      retryable: false,
+      message: `${failure.pillar} does not serve the collection this pillar asked for`,
+    },
   };
 }

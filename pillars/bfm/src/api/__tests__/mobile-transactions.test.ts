@@ -406,6 +406,19 @@ describe('finance answering with something bfm cannot read', () => {
     expect(res.status).toBe(502);
   });
 
+  it('does not let a 404 escape the LIST route, which never declares one', async () => {
+    // The list contract declares 200/400/401/403/502/503. A 404 reaching the
+    // wire would be absent from the OpenAPI document and therefore absent from
+    // the generated Swift client — an undecodable response on a handset.
+    const fake = createFinanceFake([], { kind: 'not-found', pillar: 'finance' });
+    const { app, token } = openWith(fake.factory);
+
+    const res = await get(app, token, LIST_PATH);
+
+    expect(res.status).toBe(502);
+    expect(res.body.code).toBe('upstream_contract_mismatch');
+  });
+
   it('an outage and a mismatch never collapse to the same answer', async () => {
     const outage = openWith(
       createFinanceFake([], { kind: 'unavailable', pillar: 'finance' }).factory

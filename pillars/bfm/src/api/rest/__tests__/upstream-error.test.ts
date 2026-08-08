@@ -9,7 +9,7 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { toUpstreamErrorResponse } from '../upstream-error.js';
+import { toCollectionUpstreamErrorResponse, toUpstreamErrorResponse } from '../upstream-error.js';
 
 import type { GatewayFailure } from '../../pillars/gateway.js';
 
@@ -90,6 +90,55 @@ describe('the mappings that are not the obvious one', () => {
 
     expect(down.status).not.toBe(broken.status);
     expect(down.body.retryable).not.toBe(broken.body.retryable);
+  });
+});
+
+/**
+ * A list has nothing to be "not found", and its route does not declare 404.
+ * Emitting one anyway would put a status on the wire that the OpenAPI document
+ * does not carry — so the generated Swift client would have no case for it and
+ * the app would meet an undecodable response on a handset.
+ */
+describe('a collection route', () => {
+  it('never answers a status its contract does not declare', () => {
+    for (const failure of everyFailure) {
+      expect([502, 503]).toContain(toCollectionUpstreamErrorResponse(failure).status);
+    }
+  });
+
+  it('folds an upstream 404 into the contract fault it actually is', () => {
+    const mapped = toCollectionUpstreamErrorResponse({
+      kind: 'not-found',
+      pillar: 'finance',
+      status: 404,
+    });
+
+    expect(mapped.status).toBe(502);
+    expect(mapped.body.code).toBe('upstream_contract_mismatch');
+    expect(mapped.body.retryable).toBe(false);
+    expect(mapped.body.message).toContain('collection');
+  });
+
+  it('leaves every other failure exactly as the resource route maps it', () => {
+    for (const failure of everyFailure.filter((f) => f.kind !== 'not-found')) {
+      expect(toCollectionUpstreamErrorResponse(failure)).toEqual(toUpstreamErrorResponse(failure));
+    }
+  });
+
+  it('still separates an outage from a contract fault after the fold', () => {
+    const down = toCollectionUpstreamErrorResponse({
+      kind: 'unavailable',
+      pillar: 'finance',
+      status: 503,
+    });
+    const missing = toCollectionUpstreamErrorResponse({
+      kind: 'not-found',
+      pillar: 'finance',
+      status: 404,
+    });
+
+    expect(down.status).not.toBe(missing.status);
+    expect(down.body.retryable).not.toBe(missing.body.retryable);
   });
 });
 

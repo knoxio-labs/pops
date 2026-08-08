@@ -59,6 +59,14 @@ export type MobileFinanceListTransactionsErrors = {
     message: string;
   };
   /**
+   * 429
+   */
+  429: {
+    code: 'rate_limited';
+    message: string;
+    retryAfterSeconds: number;
+  };
+  /**
    * 502
    */
   502: {
@@ -156,6 +164,14 @@ export type MobileFinanceGetTransactionErrors = {
     message: string;
     pillar: string;
     retryable: boolean;
+  };
+  /**
+   * 429
+   */
+  429: {
+    code: 'rate_limited';
+    message: string;
+    retryAfterSeconds: number;
   };
   /**
    * 502

@@ -12,7 +12,7 @@
  */
 import { decodePageCursor } from '../finance/cursor.js';
 import { isGatewayOk } from '../pillars/gateway.js';
-import { toUpstreamErrorResponse } from './upstream-error.js';
+import { toCollectionUpstreamErrorResponse, toUpstreamErrorResponse } from './upstream-error.js';
 
 import type { ServerInferRequest } from '@ts-rest/core';
 
@@ -53,7 +53,10 @@ export function makeMobileFinanceHandlers(deps: MobileFinanceHandlerDeps) {
 
       // Not an empty page. An empty page says "you have no transactions",
       // which the user cannot tell from the truth.
-      if (!isGatewayOk(outcome)) return toUpstreamErrorResponse(outcome);
+      //
+      // The collection variant, so a 404 from finance cannot escape as a status
+      // this route never declared — see its header.
+      if (!isGatewayOk(outcome)) return toCollectionUpstreamErrorResponse(outcome);
 
       return { status: 200 as const, body: outcome.value };
     },

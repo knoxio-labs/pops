@@ -8,116 +8,18 @@
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
 
-import { TRANSACTION_MATCH_TYPES } from '../db/index.js';
-import { TransactionTypeSchema } from './rest-corrections-schemas.js';
-import { ERR_RESPONSES, LimitQuery, OffsetQuery } from './rest-schemas.js';
+import { ERR_RESPONSES } from './rest-schemas.js';
+import {
+  CreateTransactionBody,
+  TransactionQuery,
+  TransactionSchema,
+  TransactionSnapshotSchema,
+  UpdateTransactionBody,
+} from './rest-transactions-schemas.js';
+
+export { TransactionSchema, TransactionSnapshotSchema } from './rest-transactions-schemas.js';
 
 const c = initContract();
-
-/** Wire shape served by the transaction handlers. */
-export const TransactionSchema = z.object({
-  id: z.string(),
-  description: z.string(),
-  account: z.string(),
-  amount: z.number(),
-  date: z.string(),
-  type: TransactionTypeSchema,
-  tags: z.array(z.string()),
-  entityId: z.string().nullable(),
-  entityName: z.string().nullable(),
-  location: z.string().nullable(),
-  country: z.string().nullable(),
-  relatedTransactionId: z.string().nullable(),
-  notes: z.string().nullable(),
-  lastEditedTime: z.string(),
-});
-
-/**
- * Full SQLite row snapshot returned by `delete` and accepted by `restore`
- * — preserves the original id, dedup metadata (`checksum`, `rawRow`),
- * and `notionId` so an Undo restores everything a re-import would dedupe
- * against. `tags` is the raw JSON string here (not the parsed array).
- */
-export const TransactionSnapshotSchema = z.object({
-  id: z.string(),
-  notionId: z.string().nullable(),
-  description: z.string(),
-  account: z.string(),
-  amount: z.number(),
-  date: z.string(),
-  type: TransactionTypeSchema,
-  tags: z.string(),
-  entityId: z.string().nullable(),
-  entityName: z.string().nullable(),
-  location: z.string().nullable(),
-  country: z.string().nullable(),
-  relatedTransactionId: z.string().nullable(),
-  notes: z.string().nullable(),
-  checksum: z.string().nullable(),
-  rawRow: z.string().nullable(),
-  lastEditedTime: z.string(),
-  matchType: z.enum(TRANSACTION_MATCH_TYPES).nullable(),
-  matchRuleId: z.string().min(1).nullable(),
-  matchConfidence: z.number().min(0).max(1).nullable(),
-});
-
-const CreateTransactionBody = z.object({
-  description: z.string().min(1, 'Description is required'),
-  account: z.string().min(1, 'Account is required'),
-  amount: z.number(),
-  date: z.string().min(1, 'Date is required'),
-  type: TransactionTypeSchema,
-  tags: z.array(z.string()).optional().default([]),
-  entityId: z.string().nullable().optional(),
-  entityName: z.string().nullable().optional(),
-  location: z.string().nullable().optional(),
-  country: z.string().nullable().optional(),
-  relatedTransactionId: z.string().nullable().optional(),
-  notes: z.string().nullable().optional(),
-  rawRow: z.string().optional(),
-  checksum: z.string().optional(),
-});
-
-const UpdateTransactionBody = z.object({
-  description: z.string().min(1, 'Description cannot be empty').optional(),
-  account: z.string().min(1, 'Account cannot be empty').optional(),
-  amount: z.number().optional(),
-  date: z.string().min(1, 'Date cannot be empty').optional(),
-  type: TransactionTypeSchema.optional(),
-  tags: z.array(z.string()).optional(),
-  entityId: z.string().nullable().optional(),
-  entityName: z.string().nullable().optional(),
-  location: z.string().nullable().optional(),
-  country: z.string().nullable().optional(),
-  relatedTransactionId: z.string().nullable().optional(),
-  notes: z.string().nullable().optional(),
-});
-
-const TransactionQuery = z.object({
-  search: z.string().optional(),
-  account: z.string().optional(),
-  startDate: z.string().optional(),
-  endDate: z.string().optional(),
-  tag: z.string().optional(),
-  entityId: z.string().optional(),
-  type: TransactionTypeSchema.optional(),
-  limit: LimitQuery,
-  offset: OffsetQuery,
-  /**
-   * Keyset anchor — the `date` of the last row the caller already has. Sent
-   * with {@link beforeId}; the pair selects rows sorting strictly after that
-   * row under the list's `date DESC, id DESC` order.
-   *
-   * Prefer this over `offset` for anything that pages a list which can change
-   * underneath it: an insertion shifts every offset by one, so an infinite
-   * scroll re-shows one row and never shows another. A keyset anchor names a
-   * position in the data rather than a distance from the start, so it is
-   * unaffected. `offset` stays for callers that jump to a page.
-   */
-  beforeDate: z.string().optional(),
-  /** Keyset anchor — the `id` of the last row the caller already has. Sent with {@link beforeDate}. */
-  beforeId: z.string().optional(),
-});
 
 export const financeTransactionsContract = c.router({
   list: {
