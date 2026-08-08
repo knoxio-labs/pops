@@ -4,7 +4,7 @@
 # the @pops/orchestrator subgraph so unrelated pillars never enter this
 # image's context. Keep it narrow: only @pops/orchestrator and its
 
-FROM node:24-slim AS builder
+FROM node:25-slim AS builder
 WORKDIR /app
 
 # Workspace root manifests — needed for pnpm install to resolve.
@@ -41,7 +41,7 @@ RUN pnpm --filter "@pops/orchestrator" build
 # Standalone deployment (production deps only, no symlinks).
 RUN pnpm --filter @pops/orchestrator deploy --prod --legacy /app/deploy
 
-FROM node:24-slim
+FROM node:25-slim
 WORKDIR /app
 
 COPY --from=builder --chown=node:node /app/deploy ./
