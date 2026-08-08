@@ -95,6 +95,18 @@ describe('parseBareOrigin', () => {
     expect(message).not.toContain('hunter2');
   });
 
+  it('does not redact a schemeless credential-shaped value — documented tradeoff', () => {
+    // No `//` here, so `new URL` reads this as the opaque scheme `user:`
+    // rather than an authority with userinfo (see the schemeless-host:port
+    // test below). Indistinguishable at the regex level from a legitimate
+    // opaque scheme whose path contains an `@`, e.g. a mailto URI, so this
+    // one shape is deliberately left unredacted rather than risk mangling
+    // that case for a value `parseBareOrigin` was always going to reject.
+    expect(() => parseBareOrigin('X', 'user:pass@finance-api:3004')).toThrow(
+      /user:pass@finance-api:3004/u
+    );
+  });
+
   it.each([
     ['ftp', 'ftp://finance-api:3004'],
     ['file', 'file:///srv/finance'],
