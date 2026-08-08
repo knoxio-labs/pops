@@ -12,10 +12,10 @@
  * Everything the run needs is derived from the Dockerfile itself — the
  * published port from `EXPOSE`, the health route from the runtime stage's
  * base image — so a new pillar is covered the moment its Dockerfile lands,
- * with no per-pillar table to keep in sync. The only environment supplied is
- * `PORT` and the shared `SQLITE_PATH` every DB-owning pillar already honours;
- * a pillar needing more than that to answer a health probe is a finding, not
- * a smoke-test configuration problem.
+ * with no per-pillar table to keep in sync. The environment supplied is the
+ * small set of workspace-wide vars documented on the constants below — never
+ * anything pillar-specific; a pillar needing more than that to answer a
+ * health probe is a finding, not a smoke-test configuration problem.
  *
  * Usage:
  *   node scripts/ci/smoke-image.mjs <dockerfile> <image-ref>
@@ -44,6 +44,15 @@ const POLL_INTERVAL_MS = 1_000;
  * is root-owned and the runtime stage runs as `node`.
  */
 const SMOKE_SQLITE_PATH = '/tmp/pops-smoke.db';
+
+/**
+ * `bfm` refuses to boot without a service-account key (POPS-1367), and it is
+ * the shape every pillar that later grows cross-pillar calls will take. The
+ * key only ever authenticates OUTBOUND calls — nothing gates an inbound
+ * health probe on it — so a placeholder satisfies the boot check without
+ * weakening what the smoke asserts.
+ */
+const SMOKE_INTERNAL_API_KEY = 'ci-smoke-placeholder';
 
 /**
  * The port the runtime stage publishes.
@@ -241,6 +250,8 @@ async function main() {
     `PORT=${port}`,
     '--env',
     `SQLITE_PATH=${SMOKE_SQLITE_PATH}`,
+    '--env',
+    `POPS_INTERNAL_API_KEY=${SMOKE_INTERNAL_API_KEY}`,
     image,
   ]);
 
