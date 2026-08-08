@@ -10,12 +10,52 @@
  *
  * `messageKey` is carried through on the body so the FE can drive i18n off it.
  */
+import { RequestValidationError } from '@ts-rest/express';
+
 import { HttpError } from '../shared/errors.js';
+
+import type { NextFunction, Response } from 'express';
 
 export interface ErrorBody {
   message: string;
   code?: string;
   messageKey?: string;
+}
+
+/**
+ * What every route declaring `ERR_RESPONSES` promises a 400 looks like.
+ * Matches what a handler-thrown `ValidationError` maps to, so the two paths to
+ * a 400 are indistinguishable on the wire.
+ */
+const VALIDATION_ERROR_BODY: ErrorBody = {
+  message: 'Validation failed',
+  code: 'ValidationError',
+  messageKey: 'common.validationFailed',
+};
+
+/**
+ * ts-rest rejects a request that does not match a route's `query`/`params`/
+ * `body` schema **before** the handler runs, and answers with its own body —
+ * `{ name: 'ValidationError', issues: [...] }`. Every route here that declares
+ * a 400 declares {@link ErrorBody}, so without this the contract promises one
+ * shape and the server sends another, and the generated clients built from
+ * that document cannot decode it.
+ *
+ * Reachable from ordinary input: a non-numeric `limit`, or a `beforeDate` that
+ * is not `YYYY-MM-DD`.
+ *
+ * The issues are deliberately dropped rather than forwarded. They name this
+ * server's internal schema fields and are not localised, which is exactly what
+ * `messageKey` exists to avoid — the FE resolves its own string from that.
+ */
+export function createRequestValidationErrorHandler() {
+  return (error: unknown, _req: unknown, res: Response, next: NextFunction): void => {
+    if (!(error instanceof RequestValidationError)) {
+      next(error);
+      return;
+    }
+    res.status(400).json(VALIDATION_ERROR_BODY);
+  };
 }
 
 export type ErrorStatus = 400 | 404 | 409 | 412;

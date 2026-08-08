@@ -9,6 +9,12 @@ import type {
   MobileBootstrapData,
   MobileBootstrapErrors,
   MobileBootstrapResponses,
+  MobileFinanceGetTransactionData,
+  MobileFinanceGetTransactionErrors,
+  MobileFinanceGetTransactionResponses,
+  MobileFinanceListTransactionsData,
+  MobileFinanceListTransactionsErrors,
+  MobileFinanceListTransactionsResponses,
   OperatorIssuePairingCodeData,
   OperatorIssuePairingCodeErrors,
   OperatorIssuePairingCodeResponses,
@@ -59,6 +65,38 @@ export const mobileBootstrap = <ThrowOnError extends boolean = false>(
     url: '/mobile/bootstrap',
     ...options,
   });
+
+/**
+ * One cursor-paginated page of transaction list rows
+ */
+export const mobileFinanceListTransactions = <ThrowOnError extends boolean = false>(
+  options?: Options<MobileFinanceListTransactionsData, ThrowOnError>
+): RequestResult<
+  MobileFinanceListTransactionsResponses,
+  MobileFinanceListTransactionsErrors,
+  ThrowOnError
+> =>
+  (options?.client ?? client).get<
+    MobileFinanceListTransactionsResponses,
+    MobileFinanceListTransactionsErrors,
+    ThrowOnError
+  >({ url: '/mobile/finance/transactions', ...options });
+
+/**
+ * The fuller record behind one list row, for the detail screen
+ */
+export const mobileFinanceGetTransaction = <ThrowOnError extends boolean = false>(
+  options: Options<MobileFinanceGetTransactionData, ThrowOnError>
+): RequestResult<
+  MobileFinanceGetTransactionResponses,
+  MobileFinanceGetTransactionErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).get<
+    MobileFinanceGetTransactionResponses,
+    MobileFinanceGetTransactionErrors,
+    ThrowOnError
+  >({ url: '/mobile/finance/transactions/{id}', ...options });
 
 /**
  * List paired devices, revoked ones included. Never returns a token or a key

@@ -30,8 +30,15 @@ export class NotFoundError extends HttpError {
 }
 
 export class ValidationError extends HttpError {
-  constructor(details: unknown) {
-    super(400, 'Validation failed', details, 'common.validationFailed');
+  /**
+   * @param details Structured context for logs. It does NOT reach the client —
+   *   the wire envelope carries `message`, `code` and `messageKey` only — so
+   *   anything the caller has to act on belongs in `message`, not here.
+   * @param message Overrides the generic default. Worth supplying whenever the
+   *   caller can fix the request from reading it.
+   */
+  constructor(details: unknown, message = 'Validation failed') {
+    super(400, message, details, 'common.validationFailed');
     this.name = 'ValidationError';
   }
 }

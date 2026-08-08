@@ -7160,6 +7160,10 @@ export interface operations {
           | 'tax';
         limit?: number;
         offset?: number;
+        /** @description Keyset anchor: the `date` of the last row you already have, as `YYYY-MM-DD`. Must be sent together with `beforeId` — supplying one without the other is a 400, because a date alone cannot separate rows that share it. Returns rows sorting strictly after that row under `date DESC, id DESC`. Prefer this over `offset` when paging a list that can change underneath you. */
+        beforeDate?: string;
+        /** @description Keyset anchor: the `id` of the last row you already have. Must be sent together with `beforeDate` — supplying one without the other is a 400. This half is what separates rows sharing a date. */
+        beforeId?: string;
       };
       header?: never;
       path?: never;
@@ -7205,6 +7209,45 @@ export interface operations {
               offset: number;
               total: number;
             };
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
           };
         };
       };

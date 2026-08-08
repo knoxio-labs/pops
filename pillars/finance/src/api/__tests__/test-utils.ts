@@ -209,6 +209,8 @@ export interface TransactionQuery {
   type?: string;
   limit?: number;
   offset?: number;
+  beforeDate?: string;
+  beforeId?: string;
 }
 
 interface TagSuggestion {

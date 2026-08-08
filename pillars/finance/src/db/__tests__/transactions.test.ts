@@ -321,6 +321,178 @@ describe('listTransactions', () => {
   });
 });
 
+/**
+ * `date` is date-only, so a real dataset is mostly ties — and offset paging
+ * over a tie group SQLite may order differently per query duplicates and drops
+ * rows without failing. These tests are about the total order and the keyset
+ * anchor that depends on it, so almost everything here shares one date on
+ * purpose.
+ */
+describe('listTransactions ordering and keyset pagination', () => {
+  let db: FinanceDb;
+
+  const SHARED_DATE = '2025-06-15';
+
+  function seedSameDay(count: number): void {
+    for (let index = 0; index < count; index++) {
+      createTransaction(db, {
+        description: `Same day ${String(index)}`,
+        account: 'Up Savings',
+        amountCents: -100 * (index + 1),
+        date: SHARED_DATE,
+        type: 'purchase',
+      });
+    }
+  }
+
+  /** Walk the whole list one keyset page at a time, as an infinite scroll does. */
+  function pageThrough(
+    pageSize: number,
+    mutateBetweenPages?: (pageIndex: number) => void
+  ): string[] {
+    const seen: string[] = [];
+    let anchor: { date: string; id: string } | undefined;
+
+    for (let pageIndex = 0; pageIndex < 50; pageIndex++) {
+      const { rows } = listTransactions(
+        db,
+        { beforeDate: anchor?.date, beforeId: anchor?.id },
+        pageSize,
+        0
+      );
+      if (rows.length === 0) return seen;
+      seen.push(...rows.map((row) => row.id));
+
+      const last = rows.at(-1);
+      if (last === undefined) return seen;
+      anchor = { date: last.date, id: last.id };
+      mutateBetweenPages?.(pageIndex);
+    }
+
+    throw new Error('pageThrough did not terminate — the keyset anchor is not advancing');
+  }
+
+  beforeEach(() => {
+    db = freshDb();
+  });
+
+  it('breaks date ties on id DESC, so repeated queries agree', () => {
+    seedSameDay(6);
+
+    const first = listTransactions(db, {}, 50, 0).rows.map((row) => row.id);
+    const second = listTransactions(db, {}, 50, 0).rows.map((row) => row.id);
+
+    expect(first).toEqual(second);
+    expect(first).toEqual([...first].toSorted().toReversed());
+  });
+
+  it('orders across dates first, then by id within a date', () => {
+    seedSameDay(3);
+    const older = createTransaction(db, {
+      description: 'Older',
+      account: 'Up Savings',
+      amountCents: -500,
+      date: '2025-06-14',
+      type: 'purchase',
+    });
+
+    const rows = listTransactions(db, {}, 50, 0).rows;
+
+    expect(rows.at(-1)?.id).toBe(older.id);
+    expect(rows.slice(0, 3).every((row) => row.date === SHARED_DATE)).toBe(true);
+  });
+
+  it('walks a single date group exactly once, with no duplicates and no gaps', () => {
+    seedSameDay(7);
+    const everyId = listTransactions(db, {}, 50, 0).rows.map((row) => row.id);
+
+    const paged = pageThrough(2);
+
+    expect(paged).toEqual(everyId);
+    expect(new Set(paged).size).toBe(paged.length);
+  });
+
+  it('is unaffected by an insertion at the head between pages', () => {
+    seedSameDay(6);
+    const originalIds = listTransactions(db, {}, 50, 0).rows.map((row) => row.id);
+
+    const inserted: string[] = [];
+    const paged = pageThrough(2, (pageIndex) => {
+      if (pageIndex > 1) return;
+      inserted.push(
+        createTransaction(db, {
+          description: `Inserted after page ${String(pageIndex)}`,
+          account: 'Up Savings',
+          amountCents: -999,
+          date: '2025-07-01',
+          type: 'purchase',
+        }).id
+      );
+    });
+
+    // Every pre-existing row, once. The new rows sort ahead of the anchor and
+    // are correctly absent — an offset walk would instead have shifted the
+    // window and re-served rows it already returned.
+    expect(paged).toEqual(originalIds);
+    expect(paged.some((id) => inserted.includes(id))).toBe(false);
+  });
+
+  it('an anchor past the last row yields nothing rather than wrapping', () => {
+    seedSameDay(3);
+    const last = listTransactions(db, {}, 50, 0).rows.at(-1);
+
+    const result = listTransactions(db, { beforeDate: last?.date, beforeId: last?.id }, 50, 0);
+
+    expect(result.rows).toEqual([]);
+  });
+
+  it('combines the anchor with the other filters rather than replacing them', () => {
+    seedSameDay(4);
+    createTransaction(db, {
+      description: 'Same day other account',
+      account: 'ANZ Visa',
+      amountCents: -100,
+      date: SHARED_DATE,
+      type: 'purchase',
+    });
+
+    const filtered = listTransactions(db, { account: 'Up Savings' }, 50, 0).rows;
+    const anchor = filtered[0];
+
+    const next = listTransactions(
+      db,
+      { account: 'Up Savings', beforeDate: anchor?.date, beforeId: anchor?.id },
+      50,
+      0
+    ).rows;
+
+    expect(next.every((row) => row.account === 'Up Savings')).toBe(true);
+    expect(next.map((row) => row.id)).toEqual(filtered.slice(1).map((row) => row.id));
+  });
+
+  it('treats an empty anchor as a position before every row, matching nothing', () => {
+    // Documented rather than defended here: `date < ''` is a perfectly valid
+    // predicate that happens to match nothing, so the service cannot tell it
+    // from a genuine end-of-list. That is exactly why the REST layer refuses
+    // an empty anchor instead — see the contract's `beforeId`/`beforeDate`.
+    seedSameDay(3);
+
+    const result = listTransactions(db, { beforeDate: '', beforeId: '' }, 50, 0);
+
+    expect(result.rows).toEqual([]);
+  });
+
+  it('ignores a half-supplied anchor at the service layer (the HTTP layer rejects it)', () => {
+    seedSameDay(3);
+
+    const dateOnly = listTransactions(db, { beforeDate: SHARED_DATE }, 50, 0);
+    const idOnly = listTransactions(db, { beforeId: 'whatever' }, 50, 0);
+
+    expect(dateOnly.rows).toHaveLength(3);
+    expect(idOnly.rows).toHaveLength(3);
+  });
+});
+
 describe('updateTransaction', () => {
   let db: FinanceDb;
   beforeEach(() => {

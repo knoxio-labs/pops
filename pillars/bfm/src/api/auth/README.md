@@ -59,9 +59,8 @@ deployment). Sending the phone through refresh gets it a truthful
 ## Why the guard mounts on a prefix
 
 `app.ts` mounts it as `app.use('/mobile', …)` rather than per route, so it
-covers paths no route has been written for yet. `mobile.bootstrap` sits behind
-it and so will the transactions surface (POPS-1379); neither can arrive
-accidentally public.
+covers paths no route has been written for yet — including the mobile surfaces
+still to land. None of them can arrive accidentally public.
 
 The cost is that an unrouted `/mobile/*` answers 401 rather than 404. That is
 the right trade twice over: it fails closed, and it declines to tell an

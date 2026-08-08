@@ -86,6 +86,223 @@ export type MobileBootstrapResponses = {
 
 export type MobileBootstrapResponse = MobileBootstrapResponses[keyof MobileBootstrapResponses];
 
+export type MobileFinanceListTransactionsData = {
+  body?: never;
+  path?: never;
+  query?: {
+    limit?: number;
+    cursor?: string;
+  };
+  url: '/mobile/finance/transactions';
+};
+
+export type MobileFinanceListTransactionsErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code: 'invalid_cursor' | 'invalid_request';
+    message: string;
+  };
+  /**
+   * 401
+   */
+  401: {
+    code: 'invalid_token';
+    message: string;
+  };
+  /**
+   * 403
+   */
+  403: {
+    code: 'device_revoked';
+    message: string;
+  };
+  /**
+   * 429
+   */
+  429: {
+    code: 'rate_limited';
+    message: string;
+    retryAfterSeconds: number;
+  };
+  /**
+   * 502
+   */
+  502: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+  /**
+   * 503
+   */
+  503: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+};
+
+export type MobileFinanceListTransactionsError =
+  MobileFinanceListTransactionsErrors[keyof MobileFinanceListTransactionsErrors];
+
+export type MobileFinanceListTransactionsResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: Array<{
+      amount: number;
+      currency: 'AUD';
+      date: string;
+      description: string;
+      entityName: string | null;
+      id: string;
+      tags: Array<string>;
+      type: string;
+    }>;
+    nextCursor: string | null;
+  };
+};
+
+export type MobileFinanceListTransactionsResponse =
+  MobileFinanceListTransactionsResponses[keyof MobileFinanceListTransactionsResponses];
+
+export type MobileFinanceGetTransactionData = {
+  body?: never;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/mobile/finance/transactions/{id}';
+};
+
+export type MobileFinanceGetTransactionErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code: 'invalid_cursor' | 'invalid_request';
+    message: string;
+  };
+  /**
+   * 401
+   */
+  401: {
+    code: 'invalid_token';
+    message: string;
+  };
+  /**
+   * 403
+   */
+  403: {
+    code: 'device_revoked';
+    message: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+  /**
+   * 429
+   */
+  429: {
+    code: 'rate_limited';
+    message: string;
+    retryAfterSeconds: number;
+  };
+  /**
+   * 502
+   */
+  502: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+  /**
+   * 503
+   */
+  503: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+};
+
+export type MobileFinanceGetTransactionError =
+  MobileFinanceGetTransactionErrors[keyof MobileFinanceGetTransactionErrors];
+
+export type MobileFinanceGetTransactionResponses = {
+  /**
+   * 200
+   */
+  200: {
+    account: string;
+    amount: number;
+    country: string | null;
+    currency: 'AUD';
+    date: string;
+    description: string;
+    entityId: string | null;
+    entityName: string | null;
+    id: string;
+    lastEditedTime: string;
+    location: string | null;
+    notes: string | null;
+    relatedTransactionId: string | null;
+    tags: Array<string>;
+    type: string;
+  };
+};
+
+export type MobileFinanceGetTransactionResponse =
+  MobileFinanceGetTransactionResponses[keyof MobileFinanceGetTransactionResponses];
+
 export type OperatorListDevicesData = {
   body?: never;
   path?: never;

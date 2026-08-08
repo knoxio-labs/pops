@@ -14,6 +14,10 @@ import {
   PAIRING_CODE_RATE_WINDOW_MS,
   type RateLimiter,
 } from '../rate-limit.js';
+import {
+  makeMobileFinanceHandlers,
+  type MobileFinanceHandlerDeps,
+} from './mobile-finance-handlers.js';
 import { makeOperatorHandlers } from './operator-handlers.js';
 
 import type { Response } from 'express';
@@ -23,14 +27,10 @@ import type { MobileBootstrapDeps } from '../mobile/bootstrap.js';
 
 const server: ReturnType<typeof initServer> = initServer();
 
-export interface BfmRestHandlerDeps {
+export interface BfmRestHandlerDeps extends MobileFinanceHandlerDeps {
   /** Build version, surfaced on the health response. */
   version: string;
-  /**
-   * Open handle to `bfm.db` — the device allow-list. Read by the guard on
-   * every `/mobile/*` request and written by the bootstrap route, which
-   * records the check-in.
-   */
+  /** Open handle to `bfm.db`. */
   db: BfmDb;
   /**
    * The BFM's public, Access-bypassed origin — the base the pairing QR points
@@ -48,8 +48,8 @@ export interface BfmRestHandlerDeps {
   /**
    * `pillarId → baseUrl` overrides, as resolved once at boot by
    * `configureBfmServerSdk`. Threaded in rather than re-read from the
-   * environment here so the reachability probe and the outbound calls it
-   * predicts cannot end up aimed at different hosts.
+   * environment here so the bootstrap route's reachability probe and the
+   * outbound calls it predicts cannot end up aimed at different hosts.
    */
   internalBaseUrls?: Readonly<Record<string, string>>;
   /**
@@ -97,5 +97,6 @@ export function makeBfmRestHandlers(
         body: await buildMobileBootstrap(readDevice(res), bootstrapDeps),
       }),
     },
+    mobileFinance: makeMobileFinanceHandlers(deps),
   });
 }

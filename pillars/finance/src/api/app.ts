@@ -19,6 +19,7 @@ import express, { type Express, type Request, type Response } from 'express';
 
 import { financeContract } from '../contract/rest.js';
 import { type FinanceApiDeps, makeRequestHandler } from './handlers.js';
+import { createRequestValidationErrorHandler } from './rest/error-mapping.js';
 import { makeFinanceRestHandlers } from './rest/handlers.js';
 import { createUpBankWebhookRouter } from './webhooks/up-bank.js';
 
@@ -78,7 +79,13 @@ export function createFinanceApiApp(deps: FinanceApiDeps): Express {
     res.json(openapiDocument);
   });
 
-  createExpressEndpoints(financeContract, makeFinanceRestHandlers(deps), app);
+  createExpressEndpoints(financeContract, makeFinanceRestHandlers(deps), app, {
+    // ts-rest answers a schema mismatch itself, ahead of any handler, with its
+    // own error body. Every route declaring a 400 declares `ErrorBody`, so
+    // without this the document promises one shape and the server sends
+    // another — see `rest/error-mapping.ts`.
+    requestValidationErrorHandler: createRequestValidationErrorHandler(),
+  });
 
   // Raw (non-ts-rest) webhook route. Mounted after the contract endpoints; its
   // `/webhooks/up` paths don't collide with any contract path, so it adds no

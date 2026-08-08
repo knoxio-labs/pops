@@ -114,4 +114,26 @@ describe('GET /openapi', () => {
     const contractPaths = contractRoutes.map((route) => openApiPath(route.path));
     expect(Object.keys(body.paths ?? {}).toSorted()).toEqual(contractPaths.toSorted());
   });
+
+  it('leaves nothing under /mobile out of the document the iOS client is generated from', async () => {
+    // A mobile route missing here is a route the generated Swift client has no
+    // method for — the app cannot call it, and nothing in this repo fails.
+    const body = await fetchDocument();
+
+    const mobilePaths = Object.keys(body.paths ?? {}).filter((path) => path.startsWith('/mobile'));
+    expect(mobilePaths.toSorted()).toEqual([
+      '/mobile/bootstrap',
+      '/mobile/finance/transactions',
+      '/mobile/finance/transactions/{id}',
+    ]);
+  });
+
+  it('namespaces the mobile sub-routers in their operationIds', async () => {
+    const body = await fetchDocument();
+
+    expect(body.paths?.['/mobile/bootstrap']?.['get']?.operationId).toBe('mobile.bootstrap');
+    expect(body.paths?.['/mobile/finance/transactions']?.['get']?.operationId).toBe(
+      'mobileFinance.listTransactions'
+    );
+  });
 });

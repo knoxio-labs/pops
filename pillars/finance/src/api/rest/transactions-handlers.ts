@@ -22,7 +22,7 @@ import {
   toTransactionSnapshot,
   toUpdateTransactionInput,
 } from '../modules/transactions-types.js';
-import { ConflictError, NotFoundError } from '../shared/errors.js';
+import { ConflictError, NotFoundError, ValidationError } from '../shared/errors.js';
 import { paginationMeta } from '../shared/pagination.js';
 import { runHttp } from './error-mapping.js';
 
@@ -49,6 +49,24 @@ export function makeTransactionsHandlers(db: FinanceDb, contacts: ContactsClient
         const limit = query.limit ?? DEFAULT_LIMIT;
         const offset = query.offset ?? DEFAULT_OFFSET;
 
+        // Half a keyset anchor is rejected rather than ignored. Dropping it
+        // would answer with page one of an unfiltered list — a plausible
+        // 200 that a paging caller reads as "start again", re-showing rows it
+        // already has instead of failing where the bug is.
+        //
+        // The message names both halves and which one is absent, because the
+        // invalid state is the pair rather than either half: a caller told only
+        // that `beforeDate` is wrong has to guess whether to drop it or to
+        // supply its partner. It goes in the message and not the details —
+        // the wire envelope carries no details.
+        if ((query.beforeDate === undefined) !== (query.beforeId === undefined)) {
+          const missing = query.beforeDate === undefined ? 'beforeDate' : 'beforeId';
+          throw new ValidationError(
+            { beforeDate: query.beforeDate, beforeId: query.beforeId },
+            `beforeDate and beforeId must be supplied together; ${missing} is missing`
+          );
+        }
+
         const { rows, total } = transactionsService.listTransactions(
           db,
           {
@@ -59,6 +77,8 @@ export function makeTransactionsHandlers(db: FinanceDb, contacts: ContactsClient
             tag: query.tag,
             entityId: query.entityId,
             type: query.type,
+            beforeDate: query.beforeDate,
+            beforeId: query.beforeId,
           },
           limit,
           offset

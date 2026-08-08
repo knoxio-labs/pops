@@ -16,16 +16,16 @@
  * any downstream link that still points at the original id resolves
  * again.
  */
-import { and, count, desc, eq, gte, like, lte, type SQL, sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 
 import { TransactionAlreadyExistsError, TransactionNotFoundError } from '../errors.js';
 import { transactions } from '../schema.js';
 
 import type { TransactionType } from '../../contract/corrections-constants.js';
-import type { FinanceDb } from './internal.js';
+import type { FinanceDb, TransactionRow } from './internal.js';
 
 /** Raw drizzle row shape — exposed so callers can reuse the inferred select type. */
-export type TransactionRow = typeof transactions.$inferSelect;
+export type { TransactionRow };
 
 /** Mutable subset accepted on create. `notionId` stays the import/sync layer's job. */
 export interface CreateTransactionInput {
@@ -63,73 +63,13 @@ export interface UpdateTransactionInput {
   notes?: string | null;
 }
 
-/** Filters accepted by `listTransactions`. */
-export interface TransactionFilters {
-  search?: string | undefined;
-  account?: string | undefined;
-  startDate?: string | undefined;
-  endDate?: string | undefined;
-  tag?: string | undefined;
-  entityId?: string | undefined;
-  type?: TransactionType | undefined;
-}
-
-/** Count + rows for a paginated list. */
-export interface TransactionListResult {
-  rows: TransactionRow[];
-  total: number;
-}
-
-function buildListConditions(filters: TransactionFilters): SQL[] {
-  const conditions: SQL[] = [];
-  if (filters.search) {
-    conditions.push(like(transactions.description, `%${filters.search}%`));
-  }
-  if (filters.account) {
-    conditions.push(eq(transactions.account, filters.account));
-  }
-  if (filters.startDate) {
-    conditions.push(gte(transactions.date, filters.startDate));
-  }
-  if (filters.endDate) {
-    conditions.push(lte(transactions.date, filters.endDate));
-  }
-  if (filters.tag) {
-    conditions.push(
-      sql`EXISTS (SELECT 1 FROM json_each(${transactions.tags}) WHERE json_each.value = ${filters.tag})`
-    );
-  }
-  if (filters.entityId) {
-    conditions.push(eq(transactions.entityId, filters.entityId));
-  }
-  if (filters.type) {
-    conditions.push(eq(transactions.type, filters.type));
-  }
-  return conditions;
-}
-
-/** List transactions with optional filters. Sorted by date DESC, newest first. */
-export function listTransactions(
-  db: FinanceDb,
-  filters: TransactionFilters,
-  limit: number,
-  offset: number
-): TransactionListResult {
-  const conditions = buildListConditions(filters);
-  const where = conditions.length > 0 ? and(...conditions) : undefined;
-
-  const rows = db
-    .select()
-    .from(transactions)
-    .where(where)
-    .orderBy(desc(transactions.date))
-    .limit(limit)
-    .offset(offset)
-    .all();
-  const countRow = db.select({ total: count() }).from(transactions).where(where).all()[0];
-
-  return { rows, total: countRow?.total ?? 0 };
-}
+/**
+ * The list read lives in `transactions-list.js` — its ordering and its keyset
+ * anchor are one idea and must be read together. Re-exported so
+ * `transactionsService.listTransactions` stays one import for callers.
+ */
+export { listTransactions } from './transactions-list.js';
+export type { TransactionFilters, TransactionListResult } from './transactions-list.js';
 
 /** Get a single transaction by id. Throws `TransactionNotFoundError` if missing. */
 export function getTransaction(db: FinanceDb, id: string): TransactionRow {

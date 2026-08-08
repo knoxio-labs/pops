@@ -9,7 +9,7 @@ server.ts
        ├─ resolveServiceAccountKey()   service-account.ts
        ├─ resolveRegistryUrl()         env.ts
        ├─ resolveInternalBaseUrls()    env.ts
-       └─ returns BfmSdkConfig ────────────────► createBfmApiApp({ internalBaseUrls })
+       └─ returns BfmSdkConfig ────────► createBfmApiApp({ internalBaseUrls })
 
 a request handler
   └─ createPillarGateway().call(id, …)  gateway.ts
@@ -17,19 +17,24 @@ a request handler
             → CallResult  ──translated──→  GatewayOutcome
 ```
 
+The one caller today is `../finance/`, which turns finance's transaction list
+into the mobile one — see "The mobile shape" in the pillar README for what that
+reshaping is allowed to do. `../rest/upstream-error.ts` is where a
+`GatewayOutcome`'s failure arm becomes the status a phone sees, and it is the
+only place that translation happens.
+
 ## Two registry origins, set from one value
 
 The SDK has two surfaces that each keep their own registry origin: the server
 `pillar()` factory, configured through `configureServerSdk`, and the discovery
-cache behind `pillarRegistry()`, which
-[`../mobile/`](../mobile/README.md) reads the pillar roster from.
-`sdk-config.ts` sets both from the same resolved value, because a deployment
-that discovered a roster from one registry and called pillars discovered by
-another would report a federation it cannot reach.
+cache behind `pillarRegistry()`, which [`../mobile/`](../mobile/README.md) reads
+the pillar roster from. `sdk-config.ts` sets both from the same resolved value,
+because a deployment that discovered a roster from one registry and called
+pillars discovered by another would report a federation it cannot reach.
 
 It returns the resolved base-URL overrides for the same reason. The mobile
-reachability probe has to aim at the hosts outbound calls will actually use,
-and re-reading the environment somewhere else is how the two come to disagree.
+reachability probe has to aim at the hosts outbound calls will actually use, and
+re-reading the environment somewhere else is how the two come to disagree.
 
 ## The trap this directory exists to avoid
 

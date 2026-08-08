@@ -83,6 +83,138 @@ export const MobileRateLimitErrorSchema = z.object({
 export type MobileRateLimitError = z.infer<typeof MobileRateLimitErrorSchema>;
 
 /**
+ * What a `/mobile` route answers when the request itself is wrong — as opposed
+ * to unauthenticated (`MobileAuthErrorSchema`) or upstream-broken
+ * (`MobileUpstreamErrorSchema`). Always a 400, and always the app's own bug.
+ *
+ * Two codes because the app can act on one of them and not the other.
+ * `invalid_cursor` means restart the list from the top — a recovery the app
+ * can perform. `invalid_request` means it built a request this server does not
+ * accept, which no retry fixes.
+ *
+ * Both arrive here even though only one comes from a handler: contract-level
+ * validation (`limit` past its cap, say) is rejected by ts-rest before any
+ * handler runs, and its native error body is nothing like this shape. `app.ts`
+ * reshapes those, because a 400 that does not match the one the route declares
+ * is a 400 the generated client cannot decode.
+ */
+export const MobileRequestErrorSchema = z.object({
+  code: z.enum(['invalid_cursor', 'invalid_request']),
+  message: z.string(),
+});
+
+export type MobileRequestError = z.infer<typeof MobileRequestErrorSchema>;
+
+/**
+ * What a `/mobile` route answers when a pillar behind bfm could not serve the
+ * request.
+ *
+ * The point of this shape is that it is NOT an empty success. A list endpoint
+ * that answers `[]` when finance is down has told the phone "you have no
+ * transactions", which is a lie the user cannot distinguish from the truth;
+ * a bare 500 tells it nothing it can act on.
+ *
+ * `code` preserves the gateway's distinctions all the way to the app —
+ * "nobody answered" and "answered, but not with a contract we can call" are
+ * different operational facts and stay different values. `retryable` is the
+ * one decision the app actually makes, carried explicitly rather than
+ * re-derived from the status code in a second, drifting table on the client.
+ */
+export const MobileUpstreamErrorSchema = z.object({
+  code: z.enum([
+    'upstream_unavailable',
+    'upstream_degraded',
+    'upstream_contract_mismatch',
+    'upstream_misconfigured',
+    'upstream_invalid_request',
+    'upstream_conflict',
+    'not_found',
+  ]),
+  /** The pillar that could not serve it, by registered id. Operator-facing. */
+  pillar: z.string(),
+  /** Whether trying the same request again can plausibly succeed. */
+  retryable: z.boolean(),
+  message: z.string(),
+});
+
+export type MobileUpstreamError = z.infer<typeof MobileUpstreamErrorSchema>;
+
+/**
+ * The currency every amount on the mobile surface is denominated in.
+ *
+ * Finance carries no currency field at all — the fleet is single-currency and
+ * has always assumed it. Stating the assumption on the wire rather than
+ * leaving the phone to guess is the whole point: it is a `literal`, so the
+ * generated Swift client gets a constant, and the day finance grows real
+ * multi-currency support this contract fails to describe it loudly instead of
+ * mislabelling somebody's money.
+ */
+export const MOBILE_CURRENCY = 'AUD';
+
+/**
+ * One row of the mobile transaction list. Deliberately only what a list row
+ * renders — the detail screen fetches the rest, and a phone on cellular does
+ * not pay for fields it will not draw.
+ */
+export const MobileTransactionSchema = z.object({
+  id: z.string(),
+  description: z.string(),
+  /**
+   * Signed decimal dollars, mirroring finance's own wire field exactly:
+   * expenses are negative, income positive. Finance persists integer cents
+   * and converts once at its REST edge; re-deriving cents here would be a
+   * second money representation and a second chance to round differently.
+   */
+  amount: z.number(),
+  currency: z.literal(MOBILE_CURRENCY),
+  /** Date-only `YYYY-MM-DD`. Finance's transactions carry no time component. */
+  date: z.string(),
+  /**
+   * Finance's semantic transaction type (`purchase`, `income`, `transfer`, …).
+   * Left an open string rather than an enum on purpose: finance adding a type
+   * must not make every transaction fail to render on the phone. It never
+   * carries direction — that is the sign of {@link MobileTransactionSchema.shape.amount}.
+   */
+  type: z.string(),
+  /** Display name of the counterparty, or null when finance has none. */
+  entityName: z.string().nullable(),
+  tags: z.array(z.string()),
+});
+
+export type MobileTransaction = z.infer<typeof MobileTransactionSchema>;
+
+/** The fuller record behind one list row, for the detail screen. */
+export const MobileTransactionDetailSchema = MobileTransactionSchema.extend({
+  account: z.string(),
+  entityId: z.string().nullable(),
+  location: z.string().nullable(),
+  country: z.string().nullable(),
+  notes: z.string().nullable(),
+  /** The other leg of a matched transfer, when finance paired one. */
+  relatedTransactionId: z.string().nullable(),
+  /** ISO-8601 timestamp of finance's last write to this row. */
+  lastEditedTime: z.string(),
+});
+
+export type MobileTransactionDetail = z.infer<typeof MobileTransactionDetailSchema>;
+
+/**
+ * One page of the transaction list.
+ *
+ * `nextCursor` is opaque and `null` on the last page — the app asks for the
+ * next page by echoing it back, never by counting rows. Cursors rather than
+ * offsets because the underlying list mutates: an import that lands while
+ * somebody is scrolling shifts every offset by one, so an offset walk re-shows
+ * a row it already served and skips one it never did.
+ */
+export const MobileTransactionsPageSchema = z.object({
+  data: z.array(MobileTransactionSchema),
+  nextCursor: z.string().nullable(),
+});
+
+export type MobileTransactionsPage = z.infer<typeof MobileTransactionsPageSchema>;
+
+/**
  * How reachable one member of the federation is, as bfm observed it.
  *
  * Four values rather than a boolean, and the same four the cross-pillar

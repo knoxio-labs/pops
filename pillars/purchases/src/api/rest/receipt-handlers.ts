@@ -1,11 +1,15 @@
 /**
  * Handlers for the `receipt.*` sub-router.
  *
- * The order of operations is deliberate: **store the photograph first**,
- * then read it. If the model is down, or reads it wrongly, or the figures
- * disagree, the image is still on disk and addressable — so a failed upload
+ * The order of operations is deliberate: **store the upload first**, then
+ * read it. If the model is down, or reads it wrongly, or the figures
+ * disagree, the file is still on disk and addressable — so a failed upload
  * leaves evidence rather than nothing. Reading first and storing only on
  * success would discard exactly the receipts a human needs to look at.
+ *
+ * Nothing here branches on how the receipt arrived beyond the wording of
+ * its refusals. A photograph, a PDF invoice and a pasted order confirmation
+ * are stored, keyed, gated and written by the same code.
  */
 import {
   createPurchase,
@@ -22,11 +26,12 @@ import {
 import { readReceipt } from '../../ingest/receipt/read-receipt.js';
 import {
   canonicalBase64,
-  looksLikeImage,
+  looksLikeMediaType,
   receiptKey,
-  storeReceiptImage,
+  storeReceiptPart,
   type StoredReceipt,
 } from '../../ingest/receipt/store.js';
+import { kindOf } from '../../ingest/receipt/vision.js';
 import { createMerchantResolver, type MerchantResolver } from '../contacts/merchant.js';
 import { tryMapServiceError } from './error-mapping.js';
 import { toPurchaseDetailBody } from './serializers.js';
@@ -39,7 +44,7 @@ import type {
 } from '../../contract/rest-receipts.js';
 import type { PurchaseDetail, PurchasesDb } from '../../db/index.js';
 import type { CreatePurchaseInput } from '../../db/services/purchase-input.js';
-import type { ReceiptVision } from '../../ingest/receipt/vision.js';
+import type { ReceiptKind, ReceiptMediaType, ReceiptVision } from '../../ingest/receipt/vision.js';
 import type { ErrorBody } from './error-mapping.js';
 
 type UploadBody = z.infer<typeof UploadReceiptBodySchema>;
@@ -69,25 +74,32 @@ const visionUnavailable = () => ({
   },
 });
 
+/** What to call the thing that was wrong, in the sender's own terms. */
+const NOUNS: Readonly<Record<ReceiptKind, string>> = {
+  image: 'Photograph',
+  pdf: 'Document',
+  text: 'Text',
+};
+
 /**
- * Which photograph was not what it claimed, when there is more than one.
+ * Which part was not what it claimed, when there is more than one.
  *
  * Naming the position matters for a long receipt: "the upload is not a
  * valid image/jpeg file" leaves the sender re-taking all six pictures
  * rather than the third.
  */
-const notAnImage = (mediaType: string, index: number, count: number) => ({
+const notWhatItClaims = (mediaType: ReceiptMediaType, index: number, count: number) => ({
   status: 400 as const,
   body: {
     message:
       count === 1
         ? `The upload is not a valid ${mediaType} file`
-        : `Photograph ${String(index + 1)} of ${String(count)} is not a valid ${mediaType} file`,
-    code: 'NOT_AN_IMAGE',
+        : `${NOUNS[kindOf(mediaType)]} ${String(index + 1)} of ${String(count)} is not a valid ${mediaType} file`,
+    code: 'NOT_THE_STATED_TYPE',
   },
 });
 
-/** Every stored photograph's address, in the order it was sent. */
+/** Every stored part's address, in the order it was sent. */
 const uris = (stored: readonly StoredReceipt[]): string[] => stored.map((one) => one.uri);
 
 /**
@@ -128,7 +140,7 @@ function fireIngest(onIngest: () => void): void {
 function ensureReceiptSource(db: PurchasesDb): void {
   upsertSource(db, {
     id: RECEIPT_SOURCE_ID,
-    label: 'Photographed receipts',
+    label: 'Uploaded receipts',
     descriptorPattern: null,
     autoLinkPolicy: 'review',
     ingestAdapter: 'receipt-vision',
@@ -170,10 +182,16 @@ type Persisted =
   | { readonly kind: 'refused'; readonly status: 400 | 409; readonly body: ErrorBody };
 
 /**
- * Has this shop already been recorded from a different photograph?
+ * Has this shop already been recorded from a different file?
+ *
+ * The content-addressed key catches the same bytes sent twice. This catches
+ * what people actually do: photograph the same paper twice, or photograph a
+ * receipt and later upload the merchant's PDF of it. Those are different
+ * bytes and therefore different keys, and only the receipt's own stated
+ * instant and amount can recognise them as one shop.
  *
  * Only asked when the receipt stated its own date. An inferred date is the
- * moment of upload, which differs between two uploads of the same paper —
+ * moment of upload, which differs between two uploads of the same receipt —
  * so it would never match, and matching on it would be wrong anyway, since
  * two undated receipts uploaded in the same second are not one receipt.
  */
@@ -228,22 +246,22 @@ export function makeReceiptHandlers(
       // a shop uploaded at 23:59 into the following day.
       const uploadedAt = new Date().toISOString();
       if (vision === null) return visionUnavailable();
-      const images = body.images.map((one) => ({
+      const parts = body.parts.map((one) => ({
         mediaType: one.mediaType,
         dataBase64: canonicalBase64(one.dataBase64),
       }));
-      const notAnImageAt = images.findIndex(
-        (one) => !looksLikeImage(one.dataBase64, one.mediaType)
+      const badPartAt = parts.findIndex(
+        (one) => !looksLikeMediaType(one.dataBase64, one.mediaType)
       );
-      if (notAnImageAt !== -1) {
-        const bad = images[notAnImageAt];
-        if (bad !== undefined) return notAnImage(bad.mediaType, notAnImageAt, images.length);
+      if (badPartAt !== -1) {
+        const bad = parts[badPartAt];
+        if (bad !== undefined) return notWhatItClaims(bad.mediaType, badPartAt, parts.length);
       }
 
-      const stored = images.map((one) => storeReceiptImage(one));
+      const stored = parts.map((one) => storeReceiptPart(one));
 
-      // Before the model, not after. The photographs' digest IS the key, so
-      // a re-upload is already knowable here — and letting it reach the
+      // Before the model, not after. The parts' digest IS the key, so a
+      // re-upload is already knowable here — and letting it reach the
       // vision call means paying for an answer whose only possible outcome
       // is 409. Re-sending a receipt you already sent is an ordinary
       // mistake, and it should be free.
@@ -252,13 +270,13 @@ export function makeReceiptHandlers(
         return {
           status: 409 as const,
           body: {
-            message: `These photographs have already been read as purchase ${existing.id}`,
+            message: `This upload has already been read as purchase ${existing.id}`,
             code: 'ALREADY_IMPORTED',
           },
         };
       }
 
-      const outcome = await readReceipt(vision, images);
+      const outcome = await readReceipt(vision, parts);
 
       if (outcome.kind === 'unreadable') {
         return ok({ kind: 'unreadable', receiptUris: uris(stored), reason: outcome.reason });
@@ -275,7 +293,7 @@ export function makeReceiptHandlers(
 
       // Always maps: a receipt with no readable date is dated from its
       // upload and tagged, rather than refused. The shop happened and the
-      // photograph exists, so losing it would be worse than carrying an
+      // evidence exists, so losing it would be worse than carrying an
       // inferred date the tag stops anyone mistaking for a stated one.
       const shaped = receiptToPurchase(outcome.extracted, outcome.gate, stored, uploadedAt);
 
@@ -286,7 +304,7 @@ export function makeReceiptHandlers(
           body: {
             message:
               `This looks like purchase ${alreadyHave.id}, already recorded from ` +
-              'another photograph of the same receipt',
+              'another upload of the same receipt',
             code: 'ALREADY_IMPORTED',
           },
         };
@@ -305,8 +323,8 @@ export function makeReceiptHandlers(
       return ok({
         kind: 'created',
         purchase: toPurchaseDetailBody(written.detail),
-        // True only when every photograph was already on disk: a partly
-        // familiar set is a new submission, not a stored one.
+        // True only when every part was already on disk: a partly familiar
+        // set is a new submission, not a stored one.
         alreadyStored: stored.every((one) => one.alreadyPresent),
       });
     },
