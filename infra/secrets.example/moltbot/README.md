@@ -40,9 +40,10 @@ unconditionally, so a service account can never mint another, and this is
 deliberately an operator step done once per environment.
 
 `userOnly` means a Cloudflare Access identity specifically: the handler reads
-`cf-access-jwt-assertion` and verifies it. A bare `curl` carries no identity
-and gets a `401` — mint a token for the app first (`cloudflared access token`)
-and send it in that header:
+`cf-access-jwt-assertion` and verifies it. Wherever Access is actually
+configured for this call (production, `CLOUDFLARE_ACCESS_TEAM_NAME` set), a
+bare `curl` carries no identity and gets a `401` — mint a token for the app
+first (`cloudflared access token`) and send it in that header:
 
 ```bash
 curl -sS -X POST https://pops.local/registry-api/service-accounts \
