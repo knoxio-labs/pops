@@ -40,6 +40,7 @@ describe('parseBareOrigin', () => {
   it.each([
     ['a username only', 'http://user@finance-api:3004'],
     ['a username and password', 'http://user:pass@finance-api:3004'],
+    ['credentials plus a disallowed scheme', 'ftp://user:pass@finance-api:3004'],
   ])('rejects a URL carrying credentials (%s)', (_label, raw) => {
     expect(() => parseBareOrigin('X', raw)).toThrow(/credentials/u);
   });
@@ -47,7 +48,13 @@ describe('parseBareOrigin', () => {
   it('names the offending label in the credentials-rejection message', () => {
     expect(() =>
       parseBareOrigin('FINANCE_SELF_BASE_URL', 'http://user:pass@finance-api:3004')
-    ).toThrow(/^FINANCE_SELF_BASE_URL "http:\/\/user:pass@finance-api:3004"/u);
+    ).toThrow(/^FINANCE_SELF_BASE_URL "http:\/\/finance-api:3004\/"/u);
+  });
+
+  it('redacts the password rather than echoing it into the thrown message', () => {
+    expect(() => parseBareOrigin('X', 'http://admin:hunter2@finance-api:3004')).toThrow(
+      /^(?!.*hunter2).*$/su
+    );
   });
 
   it.each([

@@ -20,8 +20,8 @@ export class BareOriginParseError extends Error {
  *   (`FINANCE_SELF_BASE_URL`) or a description of the source (`pillar 'food'
  *   baseUrl`).
  * @param raw The candidate origin.
- * @throws {BareOriginParseError} If `raw` is not a URL, does not use http(s),
- *   carries a path, query, or fragment, or carries credentials (userinfo).
+ * @throws {BareOriginParseError} If `raw` is not a URL, carries credentials
+ *   (userinfo), does not use http(s), or carries a path, query, or fragment.
  */
 export function parseBareOrigin(label: string, raw: string): string {
   let url: URL;
@@ -30,14 +30,22 @@ export function parseBareOrigin(label: string, raw: string): string {
   } catch {
     throw new BareOriginParseError(`${label} "${raw}" is not a valid URL`);
   }
+  if (url.username !== '' || url.password !== '') {
+    // Checked before every other branch, and reported via a redacted URL
+    // rather than `raw`: this error message reaches operator logs, and the
+    // whole point of rejecting instead of silently stripping is to surface
+    // the problem without also leaking the credential into it.
+    const redacted = new URL(url.href);
+    redacted.username = '';
+    redacted.password = '';
+    throw new BareOriginParseError(
+      `${label} "${redacted.href}" must not carry credentials (redacted here) — ` +
+        `\`URL.origin\` would otherwise drop them silently, and every outbound call to the ` +
+        `resulting baseUrl would then go out unauthenticated`
+    );
+  }
   if (url.protocol !== 'http:' && url.protocol !== 'https:') {
     throw new BareOriginParseError(`${label} "${raw}" must use http or https; got ${url.protocol}`);
-  }
-  if (url.username !== '' || url.password !== '') {
-    throw new BareOriginParseError(
-      `${label} "${raw}" must not carry credentials — \`URL.origin\` would silently drop them, ` +
-        `and every outbound call to the resulting baseUrl would then go out unauthenticated`
-    );
   }
   if ((url.pathname !== '/' && url.pathname !== '') || url.search !== '' || url.hash !== '') {
     throw new BareOriginParseError(
