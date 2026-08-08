@@ -1877,6 +1877,12 @@ importers:
 
   pillars/purchases:
     dependencies:
+      '@anthropic-ai/sdk':
+        specifier: ^0.115.0
+        version: 0.115.0(zod@4.4.3)
+      '@pops/ai-telemetry':
+        specifier: workspace:*
+        version: link:../../libs/ai-telemetry
       '@pops/pillar-sdk':
         specifier: workspace:*
         version: link:../../libs/sdk

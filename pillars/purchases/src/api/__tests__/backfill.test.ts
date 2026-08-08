@@ -39,6 +39,7 @@ beforeEach(() => {
   seedAmazonSource(opened);
   __resetPillarRegistryCache();
   app = createPurchasesApiApp({
+    vision: null,
     purchasesDb: opened,
     version: '1.2.3',
     selfBaseUrl: 'http://localhost:3013',
@@ -120,6 +121,7 @@ describe('the ingest trigger', () => {
   it('fires once per successful create', async () => {
     const fired = vi.fn();
     const triggered = createPurchasesApiApp({
+      vision: null,
       purchasesDb: opened,
       version: '1.2.3',
       selfBaseUrl: 'http://localhost:3013',
@@ -139,6 +141,7 @@ describe('the ingest trigger', () => {
     // for work that did not happen.
     const fired = vi.fn();
     const triggered = createPurchasesApiApp({
+      vision: null,
       purchasesDb: opened,
       version: '1.2.3',
       selfBaseUrl: 'http://localhost:3013',
@@ -157,6 +160,7 @@ describe('the ingest trigger', () => {
     // Reconciliation must never be the reason an ingest fails. The order is
     // already written by the time this runs.
     const triggered = createPurchasesApiApp({
+      vision: null,
       purchasesDb: opened,
       version: '1.2.3',
       selfBaseUrl: 'http://localhost:3013',

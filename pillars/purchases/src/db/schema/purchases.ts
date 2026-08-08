@@ -21,7 +21,7 @@
  * Finance carries the same invariant on `transaction_corrections`.
  */
 import { sql } from 'drizzle-orm';
-import { index, integer, sqliteTable, text, unique } from 'drizzle-orm/sqlite-core';
+import { index, integer, primaryKey, sqliteTable, text, unique } from 'drizzle-orm/sqlite-core';
 
 import {
   INGEST_METHODS,
@@ -162,5 +162,36 @@ export const purchaseShipments = sqliteTable(
     index('idx_purchase_shipments_status').on(t.status),
     index('idx_purchase_shipments_delivered_at').on(t.deliveredAt),
     unique('uq_purchase_shipments_source_ref').on(t.purchaseId, t.sourceShipmentRef),
+  ]
+);
+
+/**
+ * Facts about a whole order that are not fields.
+ *
+ * Mirrors `purchase_item_tags` deliberately — same shape, same freedom from
+ * a vocabulary — because the need is the same one level up. The first use
+ * is `date-uncertain`: a receipt that stated no date is dated from its
+ * upload so the purchase exists and can be reviewed, and the tag is what
+ * stops that inferred date reading as a fact the paper stated.
+ *
+ * Free-form on purpose. `merchant-uncertain` and `total-uncertain` will
+ * want the same treatment, and a closed enum would mean a migration for
+ * each.
+ */
+export const purchaseTags = sqliteTable(
+  'purchase_tags',
+  {
+    purchaseId: text('purchase_id')
+      .notNull()
+      .references(() => purchases.id, { onDelete: 'cascade' }),
+    tag: text('tag').notNull(),
+    createdAt: text('created_at')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+  },
+  (t) => [
+    primaryKey({ columns: [t.purchaseId, t.tag] }),
+    // "Show me everything needing a human" across every order.
+    index('idx_purchase_tags_tag').on(t.tag),
   ]
 );

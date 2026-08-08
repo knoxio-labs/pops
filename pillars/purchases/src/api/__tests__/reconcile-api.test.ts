@@ -59,6 +59,7 @@ function order(totalCents: number, checksum: string) {
 
 function build(finance: FinanceClient = financeWith([])): Express {
   return createPurchasesApiApp({
+    vision: null,
     purchasesDb: opened,
     version: '1.2.3',
     selfBaseUrl: 'http://localhost:3013',
@@ -379,6 +380,7 @@ describe('the explicit sweep', () => {
 
   it('503s when no runner is wired, rather than pretending it swept', async () => {
     const noRunner = createPurchasesApiApp({
+      vision: null,
       purchasesDb: opened,
       version: '1.2.3',
       selfBaseUrl: 'http://localhost:3013',

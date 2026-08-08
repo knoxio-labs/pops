@@ -9,25 +9,22 @@
 import { and, asc, desc, eq, gte, inArray, lte } from 'drizzle-orm';
 
 import {
-  purchaseChargeLinks,
-  purchaseCharges,
   purchaseDocuments,
-  purchaseItemAllocations,
   purchaseItems,
   purchaseItemTags,
   purchaseItemUnits,
   purchases,
   purchaseShipments,
+  purchaseTags,
 } from '../schema.js';
 import { computeAccounting, landedCostCents, type PurchaseAccounting } from './accounting.js';
+import { groupBy } from './group-by.js';
 import { nowIso, type PurchasesDb } from './internal.js';
+import { selectChargeDetails, type PurchaseChargeDetail } from './purchase-read-charges.js';
 
 import type { PurchaseStatus } from '../../contract/constants.js';
 import type {
-  PurchaseChargeLinkRow,
-  PurchaseChargeRow,
   PurchaseDocumentRow,
-  PurchaseItemAllocationRow,
   PurchaseItemRow,
   PurchaseItemUnitRow,
   PurchaseRow,
@@ -54,16 +51,15 @@ export interface PurchaseItemDetail {
   readonly landedCostCents: number;
 }
 
-/** A charge, the transactions backing it (if any), and what it paid for. */
-export interface PurchaseChargeDetail {
-  readonly charge: PurchaseChargeRow;
-  readonly links: readonly PurchaseChargeLinkRow[];
-  readonly allocations: readonly PurchaseItemAllocationRow[];
-}
-
 /** An order and every list hanging off it. */
 export interface PurchaseDetail {
   readonly purchase: PurchaseRow;
+  /**
+   * Facts about the order that are not fields — `date-uncertain` when the
+   * receipt stated no date, `timezone-uncertain` when the shop's zone had
+   * to be guessed. Read back because a mark nobody can see is not a mark.
+   */
+  readonly tags: readonly string[];
   readonly shipments: readonly PurchaseShipmentRow[];
   readonly items: readonly PurchaseItemDetail[];
   readonly charges: readonly PurchaseChargeDetail[];
@@ -106,6 +102,14 @@ export function getPurchase(db: PurchasesDb, id: string): PurchaseDetail | undef
     .orderBy(asc(purchaseShipments.position), asc(purchaseShipments.id))
     .all();
 
+  const tags = db
+    .select()
+    .from(purchaseTags)
+    .where(eq(purchaseTags.purchaseId, id))
+    .orderBy(asc(purchaseTags.tag))
+    .all()
+    .map((row) => row.tag);
+
   const items = selectItemDetails(db, id);
   const charges = selectChargeDetails(db, id);
   const documents = db
@@ -122,7 +126,7 @@ export function getPurchase(db: PurchasesDb, id: string): PurchaseDetail | undef
     linksByChargeId
   );
 
-  return { purchase, shipments, items, charges, documents, accounting };
+  return { purchase, tags, shipments, items, charges, documents, accounting };
 }
 
 function selectItemDetails(db: PurchasesDb, purchaseId: string): readonly PurchaseItemDetail[] {
@@ -157,50 +161,6 @@ function selectItemDetails(db: PurchasesDb, purchaseId: string): readonly Purcha
     units: unitsByItem.get(item.id) ?? [],
     landedCostCents: landedCostCents(item),
   }));
-}
-
-function selectChargeDetails(db: PurchasesDb, purchaseId: string): readonly PurchaseChargeDetail[] {
-  const rows = db
-    .select()
-    .from(purchaseCharges)
-    .where(eq(purchaseCharges.purchaseId, purchaseId))
-    .orderBy(asc(purchaseCharges.position), asc(purchaseCharges.id))
-    .all();
-  if (rows.length === 0) return [];
-
-  const ids = rows.map((row) => row.id);
-  const linkRows = db
-    .select()
-    .from(purchaseChargeLinks)
-    .where(inArray(purchaseChargeLinks.chargeId, ids))
-    .orderBy(asc(purchaseChargeLinks.createdAt), asc(purchaseChargeLinks.id))
-    .all();
-  const allocationRows = db
-    .select()
-    .from(purchaseItemAllocations)
-    .where(inArray(purchaseItemAllocations.chargeId, ids))
-    .orderBy(asc(purchaseItemAllocations.createdAt), asc(purchaseItemAllocations.id))
-    .all();
-
-  const linksByCharge = groupBy(linkRows, (row) => row.chargeId);
-  const allocationsByCharge = groupBy(allocationRows, (row) => row.chargeId);
-
-  return rows.map((charge) => ({
-    charge,
-    links: linksByCharge.get(charge.id) ?? [],
-    allocations: allocationsByCharge.get(charge.id) ?? [],
-  }));
-}
-
-function groupBy<T>(rows: readonly T[], key: (row: T) => string): Map<string, T[]> {
-  const out = new Map<string, T[]>();
-  for (const row of rows) {
-    const k = key(row);
-    const bucket = out.get(k);
-    if (bucket === undefined) out.set(k, [row]);
-    else bucket.push(row);
-  }
-  return out;
 }
 
 /**

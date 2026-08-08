@@ -236,6 +236,13 @@ export const PurchaseChargeDetailSchema = z.object({
 
 /** An order and every list hanging off it. */
 export const PurchaseDetailSchema = z.object({
+  /**
+   * Facts about the order that are not fields — `date-uncertain` when the
+   * receipt stated no date, `timezone-uncertain` when the shop's zone had
+   * to be guessed. A reviewer needs these to know which figures the source
+   * actually stated.
+   */
+  tags: z.array(z.string()),
   purchase: PurchaseSchema,
   shipments: z.array(PurchaseShipmentSchema),
   items: z.array(PurchaseItemDetailSchema),

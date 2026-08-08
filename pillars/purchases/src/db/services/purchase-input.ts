@@ -105,4 +105,9 @@ export interface CreatePurchaseInput {
   readonly items?: readonly CreateItemInput[];
   readonly charges?: readonly CreateChargeInput[];
   readonly documents?: readonly CreateDocumentInput[];
+  /**
+   * Facts about the whole order that are not fields — `date-uncertain` and
+   * its future siblings. Free-form; see `schema/purchases.ts`.
+   */
+  readonly tags?: readonly string[];
 }

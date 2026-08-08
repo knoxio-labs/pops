@@ -14,6 +14,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json .oxfmtrc
 # resolution to that subgraph; unrelated pillars never need to exist in
 # this image's build context.
 COPY pillars/purchases/package.json ./pillars/purchases/
+COPY libs/ai-telemetry/package.json ./libs/ai-telemetry/
 COPY libs/sdk/package.json ./libs/sdk/
 COPY libs/types/package.json ./libs/types/
 
@@ -23,6 +24,10 @@ RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
 
 # Phase 2: source for the transitive @pops/* deps of @pops/purchases.
 # @pops/pillar-sdk
+COPY libs/ai-telemetry/src ./libs/ai-telemetry/src
+COPY libs/ai-telemetry/tsconfig.json ./libs/ai-telemetry/tsconfig.json
+COPY libs/ai-telemetry/tsconfig.build.json ./libs/ai-telemetry/tsconfig.build.json
+
 COPY libs/sdk/src ./libs/sdk/src
 COPY libs/sdk/tsconfig.json ./libs/sdk/tsconfig.json
 COPY libs/sdk/tsconfig.build.json ./libs/sdk/tsconfig.build.json

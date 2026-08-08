@@ -21,6 +21,7 @@ export type PurchaseDetailBody = z.infer<typeof PurchaseDetailSchema>;
 
 export function toPurchaseDetailBody(detail: PurchaseDetail): PurchaseDetailBody {
   return {
+    tags: [...detail.tags],
     purchase: detail.purchase,
     shipments: [...detail.shipments],
     items: detail.items.map((entry) => ({
