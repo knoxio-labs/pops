@@ -36,3 +36,26 @@ export const MobileAuthErrorSchema = z.object({
 });
 
 export type MobileAuthError = z.infer<typeof MobileAuthErrorSchema>;
+
+/**
+ * What the `/mobile` perimeter answers when a caller exceeds its request
+ * budget (POPS-1468).
+ *
+ * Separate from {@link MobileAuthErrorSchema} rather than another `code` in
+ * its enum, because a 429 is not a statement about the caller's credentials:
+ * it is reachable with a perfectly good token, and the phone's recovery —
+ * back off, then retry the same request unchanged — is neither of the two
+ * recoveries that schema's statuses select between.
+ *
+ * `retryAfterSeconds` duplicates the `Retry-After` header on purpose. The
+ * header is the standard and a proxy may act on it; the body is what the
+ * generated Swift client can read as a typed field without reaching for
+ * `HTTPURLResponse.allHeaderFields`.
+ */
+export const MobileRateLimitErrorSchema = z.object({
+  code: z.literal('rate_limited'),
+  message: z.string(),
+  retryAfterSeconds: z.number().int().positive(),
+});
+
+export type MobileRateLimitError = z.infer<typeof MobileRateLimitErrorSchema>;

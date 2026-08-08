@@ -19,6 +19,7 @@ import type { Express } from 'express';
 
 import type { BfmDb, OpenedBfmDb } from '../../db/index.js';
 import type { BfmApiDeps } from '../app.js';
+import type { MobileRateLimitOptions } from '../auth/mobile-rate-limit.js';
 
 /** Long enough to satisfy the resolver's floor; fixed so a failure is reproducible. */
 export const TEST_SIGNING_SECRET = 'test-signing-key-0123456789abcdef';
@@ -67,6 +68,13 @@ export interface TestAppOptions {
   pairingCodeTtlMs?: number;
   publicBaseUrl?: string;
   accessTokenSigningKey?: KeyObject;
+  /**
+   * Overrides for the `/mobile` perimeter budget. Left absent, the app applies
+   * the shipped numbers — which is what every suite that is not about rate
+   * limiting should exercise, since one running against a quietly relaxed
+   * perimeter would stop noticing if the real one broke.
+   */
+  mobileRateLimit?: MobileRateLimitOptions;
 }
 
 export function createTestApp(options: TestAppOptions = {}): TestApp {
@@ -86,6 +94,7 @@ export function createTestApp(options: TestAppOptions = {}): TestApp {
     ...(options.pairingCodeTtlMs === undefined
       ? {}
       : { pairingCodeTtlMs: options.pairingCodeTtlMs }),
+    ...(options.mobileRateLimit === undefined ? {} : { mobileRateLimit: options.mobileRateLimit }),
   };
 
   const appOptions: CreateBfmApiAppOptions = options.env === undefined ? {} : { env: options.env };

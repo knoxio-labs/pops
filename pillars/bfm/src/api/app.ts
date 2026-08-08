@@ -22,6 +22,7 @@ import { createExpressEndpoints } from '@ts-rest/express';
 import express, { type Express, type Request, type Response } from 'express';
 
 import { bfmContract } from '../contract/rest.js';
+import { createMobileRateLimit, type MobileRateLimitOptions } from './auth/mobile-rate-limit.js';
 import { createRequireDevice } from './auth/require-device.js';
 import { createIdentityMiddleware } from './middleware/identity.js';
 import { type BfmRestHandlerDeps, makeBfmRestHandlers } from './rest/handlers.js';
@@ -53,7 +54,7 @@ const openapiDocument: unknown = JSON.parse(
 
 /**
  * The path prefix every route the phone calls lives under, and therefore the
- * one the guard mounts on.
+ * one the perimeter mounts on.
  *
  * A single prefix rather than a per-route list is the point: `app.use` matches
  * on whole path segments, so everything below `/mobile` is gated the moment it
@@ -70,6 +71,13 @@ export interface BfmApiDeps extends BfmRestHandlerDeps {
    * whose perimeter can go missing silently.
    */
   accessTokenSigningKey: KeyObject;
+  /**
+   * Overrides for the perimeter's request budget. Optional because *whether*
+   * the limiter runs is not a choice — it is mounted unconditionally below —
+   * only what its numbers and clock are, which is what a test needs to drive
+   * the limit rather than assert the configuration object.
+   */
+  mobileRateLimit?: MobileRateLimitOptions;
 }
 
 export interface CreateBfmApiAppOptions {
@@ -87,15 +95,25 @@ export function createBfmApiApp(deps: BfmApiDeps, options: CreateBfmApiAppOption
   const app = express();
   app.disable('x-powered-by');
 
-  // FIRST, ahead of the body parser. The guard reads headers only, so an
-  // unauthenticated caller never gets bfm to parse a request body — which is
-  // the cheapest work an internet-facing pillar can be made to do, and there
-  // is nothing bounding how often it can be asked for (POPS-1468).
+  // FIRST, ahead of everything, including the guard.
   //
-  // It is also ahead of the contract routes, so it covers the `/mobile/*`
+  // `requireDevice` fails closed and costs little, but an HMAC verification
+  // per attempt with nothing bounding the attempt rate is still unbounded
+  // work, and this hostname has Cloudflare Access bypassed so no other
+  // limiter stands in front of it (POPS-1468). A refused request costs a map
+  // lookup instead of a signature check.
+  app.use(MOBILE_PATH_PREFIX, createMobileRateLimit(deps.mobileRateLimit).handler);
+
+  // Then the guard, still ahead of the body parser. It reads headers only, so
+  // an unauthenticated caller never gets bfm to parse a request body — which
+  // is the cheapest work an internet-facing pillar can be made to do.
+  //
+  // Both are ahead of the contract routes, so they cover the `/mobile/*`
   // paths that do not exist yet. `/health` and `/openapi` sit outside the
-  // prefix and are deliberately unauthenticated — the fleet's probes and the
-  // SDK's route-map build both reach them without a device.
+  // prefix and are deliberately unauthenticated and unlimited — the fleet's
+  // probes and the SDK's route-map build both reach them without a device,
+  // and a liveness probe that a stranger's traffic can rate-limit out of
+  // existence would report this pillar down for the wrong reason.
   app.use(
     MOBILE_PATH_PREFIX,
     createRequireDevice({ db: deps.db, accessTokenSigningKey: deps.accessTokenSigningKey })
