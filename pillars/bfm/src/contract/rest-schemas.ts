@@ -25,15 +25,38 @@ export type HealthResponse = z.infer<typeof HealthResponseSchema>;
  * a human reading a proxy log; it is never shown to a user and never carries
  * any part of the presented token.
  *
- * It lives in the contract rather than beside the middleware because the
+ * They are TWO schemas rather than one with a two-member enum precisely
+ * because `code` restates the status. One schema would let the document
+ * promise a `401 device_revoked` — a combination the guard cannot produce and
+ * a generated client would still have to branch on. A literal per status
+ * removes the impossible half from every consumer's type.
+ *
+ * They live in the contract rather than beside the middleware because the
  * `/mobile/*` routes declare these two statuses on their own ts-rest
  * responses, and two definitions of one wire shape drift.
  */
-export const MobileAuthErrorSchema = z.object({
-  code: z.enum(['invalid_token', 'device_revoked']),
+export const MobileInvalidTokenErrorSchema = z.object({
+  code: z.literal('invalid_token'),
   message: z.string(),
 });
 
+export const MobileDeviceRevokedErrorSchema = z.object({
+  code: z.literal('device_revoked'),
+  message: z.string(),
+});
+
+/**
+ * Either refusal, for the one place that handles both — the guard's own
+ * response helper, and the test that parses whichever came back. No contract
+ * route references this: a route knows which status it is describing.
+ */
+export const MobileAuthErrorSchema = z.discriminatedUnion('code', [
+  MobileInvalidTokenErrorSchema,
+  MobileDeviceRevokedErrorSchema,
+]);
+
+export type MobileInvalidTokenError = z.infer<typeof MobileInvalidTokenErrorSchema>;
+export type MobileDeviceRevokedError = z.infer<typeof MobileDeviceRevokedErrorSchema>;
 export type MobileAuthError = z.infer<typeof MobileAuthErrorSchema>;
 
 /**

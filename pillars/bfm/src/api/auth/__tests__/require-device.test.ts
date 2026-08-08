@@ -9,7 +9,11 @@ import express, { type Express } from 'express';
 import request from 'supertest';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { MobileAuthErrorSchema } from '../../../contract/rest-schemas.js';
+import {
+  MobileAuthErrorSchema,
+  MobileDeviceRevokedErrorSchema,
+  MobileInvalidTokenErrorSchema,
+} from '../../../contract/rest-schemas.js';
 import { deviceRow, openTempDb } from '../../../db/__tests__/helpers.js';
 import { devices } from '../../../db/index.js';
 import { testSigningKey } from '../../__tests__/harness.js';
@@ -228,6 +232,37 @@ describe('the refusal body', () => {
     const res = await request(h.app).get('/mobile/whoami').set('Authorization', `Bearer ${token}`);
 
     expect(MobileAuthErrorSchema.safeParse(res.body).success).toBe(true);
+  });
+
+  /**
+   * The contract declares a literal `code` per status rather than one two-member
+   * enum on both, so a generated client never has to branch on a combination
+   * the guard cannot produce. That only stays true while the guard agrees, and
+   * the guard is the half a schema cannot enforce on its own.
+   */
+  it('pairs 401 with invalid_token and nothing else', async () => {
+    const h = open();
+    const deviceId = insertDevice(h.opened);
+    const { token } = mintAccessToken(deviceId, otherKey);
+
+    const res = await request(h.app).get('/mobile/whoami').set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(401);
+    expect(MobileInvalidTokenErrorSchema.safeParse(res.body).success).toBe(true);
+    expect(MobileDeviceRevokedErrorSchema.safeParse(res.body).success).toBe(false);
+  });
+
+  it('pairs 403 with device_revoked and nothing else', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const h = open();
+    const deviceId = insertDevice(h.opened, { revokedAt: '2026-08-01T09:00:00.000Z' });
+    const { token } = mintAccessToken(deviceId, signingKey);
+
+    const res = await request(h.app).get('/mobile/whoami').set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(403);
+    expect(MobileDeviceRevokedErrorSchema.safeParse(res.body).success).toBe(true);
+    expect(MobileInvalidTokenErrorSchema.safeParse(res.body).success).toBe(false);
   });
 });
 

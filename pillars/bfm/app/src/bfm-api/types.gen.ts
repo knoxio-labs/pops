@@ -38,14 +38,14 @@ export type MobileBootstrapErrors = {
    * 401
    */
   401: {
-    code: 'invalid_token' | 'device_revoked';
+    code: 'invalid_token';
     message: string;
   };
   /**
    * 403
    */
   403: {
-    code: 'invalid_token' | 'device_revoked';
+    code: 'device_revoked';
     message: string;
   };
   /**

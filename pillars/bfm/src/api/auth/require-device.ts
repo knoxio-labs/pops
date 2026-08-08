@@ -27,7 +27,10 @@ import type { KeyObject } from 'node:crypto';
 
 import type { NextFunction, Request, RequestHandler, Response } from 'express';
 
-import type { MobileAuthError } from '../../contract/rest-schemas.js';
+import type {
+  MobileDeviceRevokedError,
+  MobileInvalidTokenError,
+} from '../../contract/rest-schemas.js';
 import type { BfmDb, DeviceRow } from '../../db/index.js';
 
 export interface RequireDeviceDeps {
@@ -56,19 +59,30 @@ function readBearerToken(req: Request): string | null {
   return match?.groups?.['token'] ?? null;
 }
 
-function refuse(res: Response, status: 401 | 403, body: MobileAuthError): void {
-  if (status === 401) {
+/**
+ * A refusal carries its status and its body together, so the pairing the
+ * contract promises — 401 is always `invalid_token`, 403 always
+ * `device_revoked` — is unrepresentable the other way round. Passing them as
+ * two arguments let a future edit ship a combination the OpenAPI document says
+ * cannot occur, and nothing would have failed.
+ */
+type MobileRefusal =
+  | { readonly status: 401; readonly body: MobileInvalidTokenError }
+  | { readonly status: 403; readonly body: MobileDeviceRevokedError };
+
+function refuse(res: Response, refusal: MobileRefusal): void {
+  if (refusal.status === 401) {
     // RFC 6750 §3: a bearer-protected resource says how to authenticate. The
     // challenge carries no description — the reason belongs in the body,
     // where it cannot be mistaken for a machine-readable hint.
     res.setHeader('WWW-Authenticate', 'Bearer error="invalid_token"');
   }
-  res.status(status).json(body);
+  res.status(refusal.status).json(refusal.body);
 }
 
-const INVALID_TOKEN: MobileAuthError = {
-  code: 'invalid_token',
-  message: 'Missing or invalid access token.',
+const INVALID_TOKEN: MobileRefusal = {
+  status: 401,
+  body: { code: 'invalid_token', message: 'Missing or invalid access token.' },
 };
 
 /**
@@ -84,7 +98,7 @@ export function createRequireDevice(deps: RequireDeviceDeps): RequestHandler {
   return (req: Request, res: Response, next: NextFunction): void => {
     const token = readBearerToken(req);
     if (token === null) {
-      refuse(res, 401, INVALID_TOKEN);
+      refuse(res, INVALID_TOKEN);
       return;
     }
 
@@ -99,7 +113,7 @@ export function createRequireDevice(deps: RequireDeviceDeps): RequestHandler {
         next(error);
         return;
       }
-      refuse(res, 401, INVALID_TOKEN);
+      refuse(res, INVALID_TOKEN);
       return;
     }
 
@@ -112,7 +126,7 @@ export function createRequireDevice(deps: RequireDeviceDeps): RequestHandler {
     // through refresh gets it a truthful `credentialsRejected` instead of a
     // revocation that never happened.
     if (device === undefined) {
-      refuse(res, 401, INVALID_TOKEN);
+      refuse(res, INVALID_TOKEN);
       return;
     }
 
@@ -126,9 +140,9 @@ export function createRequireDevice(deps: RequireDeviceDeps): RequestHandler {
       console.warn(
         `[bfm-api] rejected a request from revoked device ${device.id} (revoked at ${device.revokedAt})`
       );
-      refuse(res, 403, {
-        code: 'device_revoked',
-        message: 'This device has been revoked. Pair again.',
+      refuse(res, {
+        status: 403,
+        body: { code: 'device_revoked', message: 'This device has been revoked. Pair again.' },
       });
       return;
     }

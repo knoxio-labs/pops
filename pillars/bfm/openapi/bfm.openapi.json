@@ -140,7 +140,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
-                      "enum": ["invalid_token", "device_revoked"],
+                      "enum": ["invalid_token"],
                       "type": "string"
                     },
                     "message": {
@@ -161,7 +161,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
-                      "enum": ["invalid_token", "device_revoked"],
+                      "enum": ["device_revoked"],
                       "type": "string"
                     },
                     "message": {

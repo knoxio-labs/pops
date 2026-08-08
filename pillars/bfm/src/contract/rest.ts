@@ -28,8 +28,9 @@ import { initContract } from '@ts-rest/core';
 import { bfmOperatorContract } from './rest-operator.js';
 import {
   HealthResponseSchema,
-  MobileAuthErrorSchema,
   MobileBootstrapResponseSchema,
+  MobileDeviceRevokedErrorSchema,
+  MobileInvalidTokenErrorSchema,
   MobileRateLimitErrorSchema,
 } from './rest-schemas.js';
 
@@ -50,8 +51,8 @@ export const bfmContract = c.router(
         path: '/mobile/bootstrap',
         responses: {
           200: MobileBootstrapResponseSchema,
-          401: MobileAuthErrorSchema,
-          403: MobileAuthErrorSchema,
+          401: MobileInvalidTokenErrorSchema,
+          403: MobileDeviceRevokedErrorSchema,
           // Answered by the perimeter middleware, never by the handler, but
           // declared here because the generated Swift client is the only thing
           // that decides what the phone can parse — and a launching app that

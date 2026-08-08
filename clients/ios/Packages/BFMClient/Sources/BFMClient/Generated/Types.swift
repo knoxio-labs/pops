@@ -623,7 +623,6 @@ internal enum Operations {
                         /// - Remark: Generated from `#/paths/mobile/bootstrap/GET/responses/401/content/json/code`.
                         internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
                             case invalidToken = "invalid_token"
-                            case deviceRevoked = "device_revoked"
                         }
                         /// - Remark: Generated from `#/paths/mobile/bootstrap/GET/responses/401/content/json/code`.
                         internal var code: Operations.Mobile_bootstrap.Output.Unauthorized.Body.JsonPayload.CodePayload
@@ -716,7 +715,6 @@ internal enum Operations {
                     internal struct JsonPayload: Codable, Hashable, Sendable {
                         /// - Remark: Generated from `#/paths/mobile/bootstrap/GET/responses/403/content/json/code`.
                         internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
-                            case invalidToken = "invalid_token"
                             case deviceRevoked = "device_revoked"
                         }
                         /// - Remark: Generated from `#/paths/mobile/bootstrap/GET/responses/403/content/json/code`.
