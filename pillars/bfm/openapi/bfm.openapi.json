@@ -46,7 +46,7 @@
             "description": "200"
           }
         },
-        "summary": "Liveness shape. No DB round-trip — this pillar owns no schema yet",
+        "summary": "Liveness shape. Answers without a database round-trip",
         "tags": []
       }
     }
