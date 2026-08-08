@@ -94,6 +94,8 @@ export interface CreatePurchaseInput {
   readonly shippingCents?: number;
   readonly taxCents?: number;
   readonly discountCents?: number;
+  /** A fee the merchant added: a card surcharge, a small-order fee. */
+  readonly surchargeCents?: number;
   readonly totalCents: number;
   readonly merchantEntityId?: string | null;
   readonly merchantEntityName?: string | null;

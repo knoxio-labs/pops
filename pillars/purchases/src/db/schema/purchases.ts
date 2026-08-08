@@ -60,6 +60,12 @@ export const purchases = sqliteTable(
      */
     shippingCents: integer('shipping_cents').notNull().default(0),
     taxCents: integer('tax_cents').notNull().default(0),
+    /**
+     * A fee the merchant adds at the till — a card surcharge, a small-order
+     * fee. Real money paid, and none of the other components describe it:
+     * not goods, not tax, not shipping, and not a discount.
+     */
+    surchargeCents: integer('surcharge_cents').notNull().default(0),
     /** Non-negative magnitude of the discount, subtracted from the total. */
     discountCents: integer('discount_cents').notNull().default(0),
     /**

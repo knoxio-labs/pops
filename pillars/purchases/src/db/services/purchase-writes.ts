@@ -26,7 +26,7 @@ import {
 } from '../schema.js';
 import { expectRow, nowIso, type PurchasesDb } from './internal.js';
 import { findPurchaseByChecksum, findPurchaseBySourceOrderId } from './purchase-lookups.js';
-import { shipmentIdFor, type IngestContext } from './purchase-write-context.js';
+import { componentCents, shipmentIdFor, type IngestContext } from './purchase-write-context.js';
 import { insertItem } from './purchase-write-items.js';
 import { assertAllocationsFit, resolveOrderAmount } from './purchase-write-validation.js';
 import { getSource } from './sources.js';
@@ -130,10 +130,7 @@ function insertOrder(tx: PurchasesDb, input: CreatePurchaseInput, now: string): 
       ingestMethod: input.ingestMethod,
       orderedAt: input.orderedAt,
       currency: input.currency,
-      subtotalCents: input.subtotalCents ?? 0,
-      shippingCents: input.shippingCents ?? 0,
-      taxCents: input.taxCents ?? 0,
-      discountCents: input.discountCents ?? 0,
+      ...componentCents(input),
       totalCents: input.totalCents,
       merchantEntityId: input.merchantEntityId ?? null,
       merchantEntityName: input.merchantEntityName ?? null,

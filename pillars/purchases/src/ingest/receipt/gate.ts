@@ -46,6 +46,8 @@ export interface GateResult {
   readonly lineTotalCents: number;
   readonly taxCents: number;
   readonly discountCents: number;
+  /** Fees the merchant added — a card surcharge, a small-order fee. */
+  readonly surchargeCents: number;
   /**
    * True when the stated tax was already inside the line prices — which is
    * what made the sum agree. The figure is then a statement about the
@@ -114,6 +116,7 @@ interface Totals {
   readonly lineTotalCents: number;
   readonly taxCents: number;
   readonly discountCents: number;
+  readonly surchargeCents: number;
 }
 
 /**
@@ -134,7 +137,7 @@ function reconcile(totals: Totals): { taxIncluded: boolean; failure: GateFailure
   const { totalCents, lineTotalCents, taxCents, discountCents } = totals;
   if (totalCents === null) return { taxIncluded: false, failure: null };
 
-  const net = lineTotalCents - discountCents;
+  const net = lineTotalCents - discountCents + totals.surchargeCents;
   const inclusiveDelta = net - totalCents;
   const exclusiveDelta = net + taxCents - totalCents;
 
@@ -152,8 +155,9 @@ function reconcile(totals: Totals): { taxIncluded: boolean; failure: GateFailure
       deltaCents: delta,
       detail:
         `lines total ${String(lineTotalCents)}c less ${String(discountCents)}c discounts ` +
-        `is ${String(net)}c, or ${String(net + taxCents)}c with the stated ${String(taxCents)}c ` +
-        `of tax added, but the receipt states ${String(totalCents)}c`,
+        `plus ${String(totals.surchargeCents)}c surcharges is ${String(net)}c, or ` +
+        `${String(net + taxCents)}c with the stated ${String(taxCents)}c of tax added, ` +
+        `but the receipt states ${String(totalCents)}c`,
     },
   };
 }
@@ -195,12 +199,21 @@ export function gateExtraction(extracted: ExtractedReceipt): GateResult {
   const discountCents = sumAmounts(extracted.discounts, locale, (amount) =>
     failures.push({ kind: 'unreadable-line', detail: `stated discount "${amount}" is not money` })
   );
+  const surchargeCents = sumAmounts(extracted.surcharges, locale, (amount) =>
+    failures.push({ kind: 'unreadable-line', detail: `stated surcharge "${amount}" is not money` })
+  );
 
   for (const note of extracted.unreadable) {
     failures.push({ kind: 'damaged', detail: `the model could not read: ${note}` });
   }
 
-  const reconciliation = reconcile({ totalCents, lineTotalCents, taxCents, discountCents });
+  const reconciliation = reconcile({
+    totalCents,
+    lineTotalCents,
+    taxCents,
+    discountCents,
+    surchargeCents,
+  });
   if (reconciliation.failure !== null) failures.push(reconciliation.failure);
 
   return {
@@ -209,6 +222,7 @@ export function gateExtraction(extracted: ExtractedReceipt): GateResult {
     lineTotalCents,
     taxCents,
     discountCents,
+    surchargeCents,
     taxIncluded: reconciliation.taxIncluded,
     failures,
   };

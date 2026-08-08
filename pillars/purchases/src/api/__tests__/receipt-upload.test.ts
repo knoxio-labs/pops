@@ -250,6 +250,23 @@ describe('re-uploading the same photograph', () => {
     expect(calls).toBe(1);
   });
 
+  it('stores the fee the merchant added, not just the total it produced', async () => {
+    // The gate reconciles with the surcharge either way, because the total
+    // is read off the paper — so a write path that drops it looks correct
+    // from the outside while the stored breakdown no longer adds up.
+    const withFee = JSON.stringify({
+      ...JSON.parse(GOOD_READING),
+      total: '$27.62',
+      surcharges: ['0.12'],
+    });
+
+    const response = await upload(appWith(saying(withFee)));
+
+    expect(response.body.kind).toBe('created');
+    expect(response.body.purchase.purchase.surchargeCents).toBe(12);
+    expect(response.body.purchase.purchase.totalCents).toBe(2762);
+  });
+
   it('does not write the image twice', async () => {
     const app = appWith(saying(GOOD_READING));
     await upload(app);

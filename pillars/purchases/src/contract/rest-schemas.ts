@@ -127,6 +127,7 @@ export const CreatePurchaseBodySchema = z.object({
   subtotalCents: NonNegativeCentsSchema.optional(),
   shippingCents: NonNegativeCentsSchema.optional(),
   taxCents: NonNegativeCentsSchema.optional(),
+  surchargeCents: NonNegativeCentsSchema.optional(),
   discountCents: NonNegativeCentsSchema.optional(),
   totalCents: CentsSchema,
   merchantEntityId: z.string().nullable().optional(),

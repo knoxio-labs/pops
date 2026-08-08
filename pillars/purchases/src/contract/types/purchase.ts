@@ -34,6 +34,8 @@ export interface Purchase {
   /** Order-level postage as the merchant stated it. Per-delivery postage is on the shipment. */
   shippingCents: number;
   taxCents: number;
+  /** A fee the merchant added: a card surcharge, a small-order fee. */
+  surchargeCents: number;
   /** Non-negative magnitude of the discount applied. */
   discountCents: number;
   /** What the order is expected to cost. Not necessarily the sum of the components above. */
