@@ -67,6 +67,23 @@ export type DeviceRevokedError = z.infer<typeof DeviceRevokedErrorSchema>;
 export type MobileAuthError = z.infer<typeof MobileAuthErrorSchema>;
 
 /**
+ * The one 403 body, written once.
+ *
+ * Two independent places answer it — the `/mobile` guard on every request, and
+ * `POST /devices/refresh` when the token is fine but its handset is not — and
+ * a caller comparing the two responses should find them identical, because the
+ * fact they report is identical. Two copies of the sentence would be two
+ * things to keep in step for no benefit.
+ *
+ * It lives beside the schema rather than beside either caller for the same
+ * reason the schema does: neither of them owns it.
+ */
+export const DEVICE_REVOKED_ERROR: DeviceRevokedError = {
+  code: 'device_revoked',
+  message: 'This device has been revoked. Pair again.',
+};
+
+/**
  * What an internet-facing surface answers when a caller exceeds its request
  * budget. Shared by the `/mobile` perimeter (POPS-1468) and the pairing
  * exchange (POPS-1374) — two budgets charged for different reasons, giving the

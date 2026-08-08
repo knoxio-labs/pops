@@ -28,6 +28,7 @@
  * uncoalesced instant because its response promises the exact value it wrote
  * — see `api/mobile/bootstrap.ts`.
  */
+import { DEVICE_REVOKED_ERROR } from '../../contract/rest-schemas.js';
 import { findDeviceById, touchDeviceIfStale } from '../../db/index.js';
 import { AccessTokenError, verifyAccessToken } from './access-token.js';
 
@@ -155,10 +156,7 @@ export function createRequireDevice(deps: RequireDeviceDeps): RequestHandler {
       console.warn(
         `[bfm-api] rejected a request from revoked device ${device.id} (revoked at ${device.revokedAt})`
       );
-      refuse(res, {
-        status: 403,
-        body: { code: 'device_revoked', message: 'This device has been revoked. Pair again.' },
-      });
+      refuse(res, { status: 403, body: DEVICE_REVOKED_ERROR });
       return;
     }
 

@@ -17,6 +17,7 @@
  * status in `contract/rest-device-schemas.ts`. This file is the mapping and
  * nothing more.
  */
+import { DEVICE_REVOKED_ERROR } from '../../contract/rest-schemas.js';
 import { completePairingExchange } from '../auth/pairing-exchange.js';
 import { completeRefreshExchange } from '../auth/refresh-exchange.js';
 
@@ -150,13 +151,7 @@ export function makeDeviceHandlers(deps: DeviceHandlerDeps) {
       }
 
       if (result.outcome === 'device-revoked') {
-        return {
-          status: 403 as const,
-          body: {
-            code: 'device_revoked' as const,
-            message: 'This device has been revoked. Pair again.',
-          },
-        };
+        return { status: 403 as const, body: DEVICE_REVOKED_ERROR };
       }
 
       if (result.outcome === 'rejected') {
