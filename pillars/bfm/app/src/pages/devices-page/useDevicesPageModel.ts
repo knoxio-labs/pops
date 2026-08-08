@@ -117,9 +117,13 @@ function useRevocation(): RevocationModel {
     isOnTheWire.current = true;
     setFailure(null);
     void mutateAsync(target.id)
-      .then(async () => {
+      .then(() => {
         setTarget(null);
-        await queryClient.invalidateQueries({ queryKey: DEVICES_QUERY_KEY });
+        // Deliberately outside the `catch` below, and not awaited. A refetch
+        // that fails is a *list* failure — the query owns that error and the
+        // table already renders it. Letting it reach this `catch` would report
+        // "the device is still trusted" about a revocation that succeeded.
+        void queryClient.invalidateQueries({ queryKey: DEVICES_QUERY_KEY });
       })
       .catch((err: unknown) => setFailure(classifyOperatorFailure(err)))
       .finally(() => {

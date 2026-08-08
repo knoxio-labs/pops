@@ -497,6 +497,24 @@ describe('DevicesPage — revoking a device', () => {
     expect(revokeDeviceMock).not.toHaveBeenCalled();
   });
 
+  /**
+   * The refetch that follows a successful revoke is the list's business, not
+   * the revocation's. If it fails, the operator needs to know the *list* is
+   * stale — telling them the handset is "still trusted" would be the opposite
+   * of what just happened.
+   */
+  it('does not report a revocation failure when only the refresh fails', async () => {
+    const user = renderPage();
+
+    await user.click(await screen.findByRole('button', { name: "Revoke Joao's iPhone" }));
+    listDevicesMock.mockResolvedValue(errorResponse(503, 'bfm down'));
+    await user.click(screen.getByRole('button', { name: 'Revoke' }));
+
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
+    expect(await screen.findByText(/did not answer\./)).toBeInTheDocument();
+    expect(screen.queryByText(/still trusted/)).not.toBeInTheDocument();
+  });
+
   it('retries after a failure without reopening the dialog', async () => {
     revokeDeviceMock.mockResolvedValueOnce(errorResponse(503, 'bfm down'));
     const user = renderPage();

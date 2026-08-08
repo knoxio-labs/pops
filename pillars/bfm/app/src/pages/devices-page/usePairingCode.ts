@@ -145,11 +145,19 @@ export function usePairingCode(): PairingCodeModel {
   const visible = isSpent ? null : issued;
 
   return {
+    /**
+     * `hasExpired` is a memory for after the effect below has cleared
+     * `issued`; `isSpent` is the same fact one render earlier. The state has
+     * to read both, because the code stops being *shown* the instant `isSpent`
+     * flips — deriving expiry from the state cell alone left one painted frame
+     * reporting `idle`, which renders the expired message with no way to mint
+     * another.
+     */
     state: derivePairingState({
       isMinting: pendingMint !== null,
       hasFailure: failure !== null,
       hasCode: visible !== null,
-      hasExpired,
+      hasExpired: hasExpired || isSpent,
     }),
     issued: visible,
     remainingMs,
