@@ -82,4 +82,65 @@ struct TokenDisciplineTests {
 
         #expect(violations.map(\.line) == [3])
     }
+
+    @Test("a nested block comment closes where Swift closes it, not at the first */")
+    func nestedBlockCommentClosesOnce() throws {
+        let source = """
+        /* outer /* inner */ .padding(16)
+        */
+        """
+
+        let violations = try TokenDisciplineScanner.violations(inSource: source, file: "nested.swift")
+
+        #expect(violations.isEmpty, "\(violations.map(\.description).joined(separator: "\n"))")
+    }
+
+    @Test("a comment opener inside a multi-line string cannot swallow the code after it")
+    func multiLineStringIsNotAComment() throws {
+        let source = #"""
+        let copy = """
+        /* this is prose, not a comment
+        """
+        VStack(spacing: 4) {
+        """#
+
+        let violations = try TokenDisciplineScanner.violations(inSource: source, file: "multiline.swift")
+
+        #expect(violations.map(\.line) == [4])
+    }
+
+    @Test("the same holds for a raw multi-line string, whose delimiter carries a pound count")
+    func rawMultiLineStringIsNotAComment() throws {
+        let source = ##"""
+        let copy = #"""
+        /* this is prose, not a comment
+        """#
+        VStack(spacing: 4) {
+        """##
+
+        let violations = try TokenDisciplineScanner.violations(inSource: source, file: "rawmultiline.swift")
+
+        #expect(violations.map(\.line) == [4])
+    }
+
+    @Test("a backslash in a raw string is content, so it cannot eat the closing quote")
+    func rawStringBackslashIsNotAnEscape() throws {
+        let source = ##"""
+        let path = #"a\"#
+        VStack(spacing: 4) {
+        """##
+
+        let violations = try TokenDisciplineScanner.violations(inSource: source, file: "raw.swift")
+
+        #expect(violations.map(\.line) == [2])
+    }
+
+    @Test("a hex literal inside a raw string is still a hex literal")
+    func rawStringHexIsCaught() throws {
+        let source = ##"let brand = #"#FF0000"#"##
+
+        let violations = try TokenDisciplineScanner.violations(inSource: source, file: "rawhex.swift")
+
+        #expect(violations.map(\.rule) == ["hex colour literal"])
+    }
 }

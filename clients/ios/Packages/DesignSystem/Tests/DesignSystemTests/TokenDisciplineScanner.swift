@@ -70,61 +70,131 @@ enum TokenDisciplineScanner {
         return found
     }
 
+    private enum Mode {
+        case code
+        case blockComment(depth: Int)
+        case string(pounds: Int, multiline: Bool)
+    }
+
     /// Drops comments while preserving line numbering, so a violation reports
-    /// the line a reader will open. String literals are kept — a hex colour
+    /// the line a reader will open. String literals are *kept* — a hex colour
     /// usually arrives as `"#FF0000"`, and dropping strings would hide it.
+    ///
+    /// The state carries across lines, and that is the whole difficulty. A
+    /// per-line scanner treats a `/*` inside a multi-line string as a comment
+    /// opener and silently swallows every line after it, which turns the guard
+    /// into one that reports nothing; and a `Bool` for block comments makes
+    /// `/* a /* b */ c */` end early, so `c` is scanned as code. So: nesting
+    /// depth is counted, and string state tracks the `#` delimiter count so a
+    /// raw string's `\"` is content rather than an escape.
     static func strippingComments(_ source: String) -> [String] {
-        var output: [String] = []
-        var inBlockComment = false
+        let characters = Array(source)
+        var lines: [String] = []
+        var current = ""
+        var mode = Mode.code
+        var index = 0
 
-        for line in source.split(separator: "\n", omittingEmptySubsequences: false) {
-            var kept = ""
-            var inString = false
-            var escaped = false
-            var index = line.startIndex
-
-            while index < line.endIndex {
-                let character = line[index]
-                let after = line.index(after: index)
-                let next = after < line.endIndex ? line[after] : nil
-
-                if inBlockComment {
-                    if character == "*", next == "/" {
-                        inBlockComment = false
-                        index = line.index(index, offsetBy: 2)
-                    } else {
-                        index = after
-                    }
-                    continue
-                }
-
-                if inString {
-                    kept.append(character)
-                    if escaped {
-                        escaped = false
-                    } else if character == "\\" {
-                        escaped = true
-                    } else if character == "\"" {
-                        inString = false
-                    }
-                    index = after
-                    continue
-                }
-
-                if character == "/", next == "/" { break }
-                if character == "/", next == "*" {
-                    inBlockComment = true
-                    index = line.index(index, offsetBy: 2)
-                    continue
-                }
-                if character == "\"" { inString = true }
-                kept.append(character)
-                index = after
+        func keep(_ character: Character) {
+            if character == "\n" {
+                lines.append(current)
+                current = ""
+            } else {
+                current.append(character)
             }
-
-            output.append(kept)
         }
 
-        return output
+        func keep(_ range: Range<Int>) {
+            for position in range where position < characters.count { keep(characters[position]) }
+        }
+
+        func drop(_ character: Character) {
+            if character == "\n" {
+                lines.append(current)
+                current = ""
+            }
+        }
+
+        func matches(_ token: String, at start: Int) -> Bool {
+            let token = Array(token)
+            guard start >= 0, start + token.count <= characters.count else { return false }
+            return !zip(token.indices, token).contains { characters[start + $0.0] != $0.1 }
+        }
+
+        func poundRun(from start: Int) -> Int {
+            var count = 0
+            while start + count < characters.count, characters[start + count] == "#" { count += 1 }
+            return count
+        }
+
+        while index < characters.count {
+            let character = characters[index]
+
+            switch mode {
+            case .code:
+                if matches("//", at: index) {
+                    while index < characters.count, characters[index] != "\n" { index += 1 }
+                    continue
+                }
+                if matches("/*", at: index) {
+                    mode = .blockComment(depth: 1)
+                    index += 2
+                    continue
+                }
+                let pounds = poundRun(from: index)
+                if matches("\"", at: index + pounds) {
+                    let multiline = matches("\"\"\"", at: index + pounds)
+                    let opener = pounds + (multiline ? 3 : 1)
+                    keep(index ..< index + opener)
+                    mode = .string(pounds: pounds, multiline: multiline)
+                    index += opener
+                    continue
+                }
+                keep(character)
+                index += 1
+
+            case .blockComment(let depth):
+                if matches("/*", at: index) {
+                    mode = .blockComment(depth: depth + 1)
+                    index += 2
+                    continue
+                }
+                if matches("*/", at: index) {
+                    mode = depth <= 1 ? .code : .blockComment(depth: depth - 1)
+                    index += 2
+                    continue
+                }
+                drop(character)
+                index += 1
+
+            case .string(let pounds, let multiline):
+                // A single-line literal cannot span a newline, so an unbalanced
+                // quote desyncs one line rather than the rest of the file.
+                if character == "\n", !multiline {
+                    mode = .code
+                    keep(character)
+                    index += 1
+                    continue
+                }
+                if character == "\\", poundRun(from: index + 1) == pounds {
+                    let escape = 1 + pounds + 1
+                    keep(index ..< index + escape)
+                    index += escape
+                    continue
+                }
+                let quote = multiline ? "\"\"\"" : "\""
+                if matches(quote, at: index), poundRun(from: index + quote.count) == pounds {
+                    let closer = quote.count + pounds
+                    keep(index ..< index + closer)
+                    mode = .code
+                    index += closer
+                    continue
+                }
+                keep(character)
+                index += 1
+            }
+        }
+
+        lines.append(current)
+        return lines
     }
 }
