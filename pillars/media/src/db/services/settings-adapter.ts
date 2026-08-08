@@ -1,6 +1,6 @@
 /**
  * Translation adapter backing media's federated `/settings/*` surface
- * (settings-federation S2, OD-2; see `docs/plans/02-settings-federation.md`).
+ * (ADR-037).
  *
  * Media keeps its pre-existing carve-out tables (`plex_settings`,
  * `rotation_settings`) as the backing store for the federated surface rather

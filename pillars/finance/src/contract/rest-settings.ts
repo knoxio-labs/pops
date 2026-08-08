@@ -1,7 +1,7 @@
 /**
  * `settings.*` sub-router — finance's own federated Read/Update/Reset surface,
  * served via the shared `@pops/pillar-settings` contract factory
- * (settings-federation S2; see `docs/plans/02-settings-federation.md`).
+ * (ADR-037).
  *
  * Finance owns its `finance.*` keys in its own DB. The `:key` enum is derived
  * from finance's OWN manifest (`deriveKeySet([financeManifest])`), NOT the

@@ -20,7 +20,7 @@
  * advertised URL and mounts it like an in-repo module. A failed remote load
  * degrades to skipping the pillar's UI, never crashing the shell.
  *
- * See `docs/themes/federation/prds/registry-driven-shell-ui`.
+ * The registry-as-source-of-truth stance this walk implements is ADR-027.
  */
 import { isInstalledModule } from '@pops/module-registry';
 

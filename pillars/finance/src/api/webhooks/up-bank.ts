@@ -12,10 +12,11 @@
  *
  * Explicit no-op: the handler verifies the signature and acknowledges every
  * event with `200`, as Up requires, but does not fetch or persist the
- * transaction — batch + webhook persistence is tracked in full at
- * `docs/ideas/up-bank-api-import.md` and knoxio/pops#1874. Ingestion staying
- * silent is surfaced separately via the `import` staleness fields on
- * `GET /health` (see `handlers.ts`), not by this route.
+ * transaction. Acknowledging without persisting is deliberate — Up retries an
+ * unacknowledged delivery and eventually disables the webhook, so dropping the
+ * event silently is cheaper than holding the endpoint open until ingestion
+ * exists. That the route ingests nothing is surfaced via the `import`
+ * staleness fields on `GET /health` (see `handlers.ts`), not by this route.
  */
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { readFileSync } from 'node:fs';
@@ -24,7 +25,7 @@ import { type Router as ExpressRouter, Router } from 'express';
 
 // Cached after the first successful resolution — the secret is a Docker
 // secret/env var fixed for the process lifetime, so re-reading the file on
-// every webhook delivery is a pointless synchronous disk hit (CF083/#3670).
+// every webhook delivery is a pointless synchronous disk hit.
 let cachedWebhookSecret: string | null = null;
 
 function getWebhookSecret(): string {

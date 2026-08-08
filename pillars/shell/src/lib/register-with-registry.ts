@@ -1,6 +1,6 @@
 /**
- * Shell self-registration with the `registry` pillar
- * (docs/themes/federation/prds/registry-driven-shell-ui + ADR-035 UI-pillar variant).
+ * Shell self-registration with the `registry` pillar (ADR-027 runtime
+ * registry; ADR-035 UI-pillar variant).
  *
  * The shell is the first **UI pillar** to register itself: a pillar that
  * owns no data, exposes no procedures, and ships an empty manifest

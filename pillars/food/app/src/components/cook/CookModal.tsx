@@ -4,10 +4,10 @@
  * shortfall resolution state from `useCookResolution`.
  *
  * The modal feeds `useCookResolution` an empty shortfall set because
- * `prepareCook` does not yet emit server shortfalls, so the gate is
- * currently inert (`unresolvedShortfallCount` stays 0). The live
- * server→modal shortfall feed is tracked in
- * `pillars/food/docs/ideas/fifo-consumption-ui-live-wiring.md`.
+ * `prepareCook` returns no server shortfalls, so the gate is inert
+ * (`unresolvedShortfallCount` stays 0). The wiring is kept in place rather
+ * than removed so that the day `prepareCook` does report shortfalls, the
+ * gate starts working without a component rewrite.
  *
  * The mutation is one transactional `markCooked` round-trip; success
  * closes the modal — the parent `CookNowPortal` owns the toast.

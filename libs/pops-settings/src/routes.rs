@@ -4,8 +4,7 @@
 //! Every `#[utoipa::path]` pins `operation_id` to the DOTTED `settings.<proc>`
 //! string (`settings.list`, `settings.get`, `settings.getMany`,
 //! `settings.set`, `settings.setMany`, `settings.resetKey`, `settings.reset`,
-//! and the internal `settings.ensure`). This is load-bearing (mustFix #2 /
-//! crossPlanConflict #1 in `docs/plans/02-settings-federation.md`): the ts-rest
+//! and the internal `settings.ensure`). This is load-bearing: the ts-rest
 //! projection emits the same dot-form ids, so the contacts pillar's generated
 //! hey-api client derives identical method names to every TS pillar and the
 //! single contacts OpenAPI doc never mixes two operationId styles. utoipa's
