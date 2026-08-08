@@ -196,7 +196,7 @@ function main() {
   }
   console.error(
     '\nImport another unit only through its published name or declared subpath ' +
-      'exports — never its src/dist/internal (00-architecture.md §2).'
+      'exports — never its src/dist/internal (ADR-039).'
   );
   process.exit(1);
 }

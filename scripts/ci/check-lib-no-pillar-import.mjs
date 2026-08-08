@@ -332,7 +332,7 @@ function main() {
     console.error(`  ${v.lib} → ${v.pillar}  (${v.via})`);
   }
   console.error(
-    '\nA lib must be extractable to its own repo (00-architecture.md §3). ' +
+    '\nA lib must be extractable to its own repo (ADR-039). ' +
       'Consume a pillar only through its REST contract at runtime, never as a ' +
       'workspace dependency or source import.'
   );

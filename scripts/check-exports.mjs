@@ -46,7 +46,7 @@ const repoRoot = resolve(here, '..');
 
 /**
  * Audited wide-surface exceptions to the `"./*"`-catch-all ban
- * (04-isolation-enforcement.md §3). Each entry is a package name mapped to the
+ *. Each entry is a package name mapped to the
  * set of wildcard export *keys* it is permitted to declare. Anything else with
  * a `*` in the key is a violation. Keep this set tiny and justified.
  *
@@ -346,8 +346,8 @@ export function checkUnit(unit, exists = targetExists) {
   const hasFiles = Array.isArray(filesField) && filesField.length > 0;
 
   // Compiled units (any export/entry target lands under `dist/`) MUST carry a
-  // `files` whitelist — the extraction firewall (04-isolation-enforcement.md §3
-  // invariant table). Without it `npm pack` ships the whole tree, defeating the
+  // `files` whitelist — the extraction firewall.
+  // Without it `npm pack` ships the whole tree, defeating the
   // contract boundary. Source units (targets under `src/`) ship whole and need
   // none, so the requirement keys on "points at dist", not on unit location.
   const isCompiled = targets.some((t) => toUnitRelative(t.relPath).startsWith('dist/'));
@@ -616,7 +616,7 @@ function main() {
     for (const err of report.errors) console.error(`    - ${err}`);
   }
   console.error(
-    '\nThe exports map + files whitelist is the contract surface (04-isolation-enforcement.md §3). ' +
+    '\nThe exports map + files whitelist is the contract surface (ADR-039). ' +
       'A target that is missing, or reachable but excluded from files, breaks resolution after extraction.'
   );
   process.exit(1);
