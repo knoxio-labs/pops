@@ -21,12 +21,12 @@ import { ORDER_HISTORY_CSV } from '../../ingest/amazon/__tests__/__fixtures__/or
 import { parseAmazonOrderHistory } from '../../ingest/amazon/order-history.js';
 import { runSweep } from '../../reconcile/sweep.js';
 import { createPurchasesApiApp } from '../app.js';
+import { financeReturning } from '../finance/__tests__/fixtures.js';
 import { __resetPillarRegistryCache } from '../pillars/registry.js';
 
 import type { Express } from 'express';
 
 import type { OpenedPurchasesDb } from '../../db/index.js';
-import type { CandidateFetch, FinanceClient } from '../finance/client.js';
 
 let opened: OpenedPurchasesDb;
 let cleanup: () => void;
@@ -61,23 +61,6 @@ async function postAll(): Promise<number[]> {
     statuses.push(response.status);
   }
   return statuses;
-}
-
-function financeWith(
-  transactions: { uri: string; amountCents: number; date: string; description?: string }[]
-): FinanceClient {
-  return {
-    fetchCandidates: () =>
-      Promise.resolve<CandidateFetch>({
-        kind: 'ok',
-        transactions: transactions.map((t) => ({
-          uri: t.uri,
-          description: t.description ?? 'AMAZON MKTPLACE AU',
-          amountCents: t.amountCents,
-          date: t.date,
-        })),
-      }),
-  };
 }
 
 describe('the parser output is acceptable to the real API', () => {
@@ -204,13 +187,11 @@ describe('a backfilled order reconciles', () => {
 
     const swept = await runSweep({
       db: opened.db,
-      finance: financeWith([
-        {
-          uri: 'pops://finance/transaction/t1',
-          amountCents: target.totalCents,
-          date: String(target.orderedAt).slice(0, 10),
-        },
-      ]),
+      finance: financeReturning({
+        id: 't1',
+        amountCents: target.totalCents,
+        date: String(target.orderedAt).slice(0, 10),
+      }),
       defaultWindowDays: 21,
     });
     expect(swept.kind).toBe('swept');
@@ -233,13 +214,11 @@ describe('a backfilled order reconciles', () => {
 
     await runSweep({
       db: opened.db,
-      finance: financeWith([
-        {
-          uri: 'pops://finance/transaction/t1',
-          amountCents: target.totalCents,
-          date: String(target.orderedAt).slice(0, 10),
-        },
-      ]),
+      finance: financeReturning({
+        id: 't1',
+        amountCents: target.totalCents,
+        date: String(target.orderedAt).slice(0, 10),
+      }),
       defaultWindowDays: 21,
     });
 

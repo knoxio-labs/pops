@@ -178,7 +178,7 @@ describe('the totals', () => {
   it('carries a stated discount', () => {
     const purchase = mapped({ total: '$22.50', discounts: ['$5.00'] });
     expect(purchase.discountCents).toBe(500);
-    expect(purchase.subtotalCents - (purchase.discountCents ?? 0)).toBe(purchase.totalCents);
+    expect(purchase.totalCents + (purchase.discountCents ?? 0)).toBe(purchase.subtotalCents);
   });
 });
 

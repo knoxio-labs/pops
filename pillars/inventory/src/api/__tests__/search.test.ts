@@ -49,11 +49,11 @@ describe('search — inventory items adapter', () => {
     const { hits } = await client().search.run({ query: { text: 'ast-001' } });
     expect(hits).toHaveLength(1);
     const [hit] = hits;
-    expect(hit.uri).toBe(`/inventory/items/${created.data.id}`);
-    expect(hit.score).toBe(1.0);
-    expect(hit.matchField).toBe('assetId');
-    expect(hit.matchType).toBe('exact');
-    expect(hit.data).toMatchObject({ itemName: 'Laptop', assetId: 'AST-001' });
+    expect(hit?.uri).toBe(`/inventory/items/${created.data.id}`);
+    expect(hit?.score).toBe(1.0);
+    expect(hit?.matchField).toBe('assetId');
+    expect(hit?.matchType).toBe('exact');
+    expect(hit?.data).toMatchObject({ itemName: 'Laptop', assetId: 'AST-001' });
   });
 
   it('orders asset-exact (1.0) > asset-prefix (0.9) and dedups the same row across tiers', async () => {
@@ -89,9 +89,9 @@ describe('search — inventory items adapter', () => {
     await client().items.create({ itemName: 'CAM-1 spare battery' });
 
     const { hits } = await client().search.run({ query: { text: 'cam-1' } });
-    expect(hits[0].uri).toBe(`/inventory/items/${asset.data.id}`);
-    expect(hits[0].score).toBe(1.0);
-    expect(hits[0].matchField).toBe('assetId');
+    expect(hits[0]?.uri).toBe(`/inventory/items/${asset.data.id}`);
+    expect(hits[0]?.score).toBe(1.0);
+    expect(hits[0]?.matchField).toBe('assetId');
   });
 
   it('returns an empty list for an empty or whitespace query', async () => {
