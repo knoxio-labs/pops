@@ -1,20 +1,30 @@
 # AppTests
 
-The app's test target. This is the only place in this tree where a test runs **inside an app bundle**, on a simulator, in a process carrying the app's entitlements — `PopsTests` is hosted by `Pops`, so `Bundle.main` is the app and the Security framework treats the process as the app.
+The app's test target. This is the only place in this tree where a test runs **inside an app bundle** — `PopsTests` is hosted by `Pops`, so the tests are injected into the running app: `Bundle.main` is the app, and the Security framework treats the process as the app rather than as a test runner.
 
-Everything else is an SPM test target under `Packages/*/Tests/`, run on the host by `swift test` with no Xcode and no simulator anywhere in the picture.
+Everything else is an SPM test target under `Packages/*/Tests/`, and those already get two lanes of their own — `mise run test:packages` on the host, and `mise run test` through `xcodebuild` against the iOS SDK on a simulator.
 
-## Which of the two a suite belongs in
+## Which of them a suite belongs in
 
-**A suite goes here only if it needs an app bundle, an entitlement, or a booted simulator.** Everything else stays in the package that owns the code, and a suite here that would also pass under `swift test` is in the wrong place.
+**A suite goes here only if it needs an app bundle or an entitlement.** Everything else stays in the package that owns the code.
 
-Three questions that decide it:
+Note what is _not_ on that list: needing iOS, or needing a simulator. Those used to imply the app target and no longer do — a package's suite runs on a booted simulator against the iOS SDK too. What a package's suite still cannot have is a **bundle** and the **entitlements** that come with one, because `xcodebuild test` on a `Package.swift` produces a test bundle with no host app.
 
-- **Does it read `Bundle.main` and mean the app?** In a `swift test` binary `Bundle.main` is the `xctest` runner, so anything asserting about `Info.plist`, the bundle identifier or a bundled resource is asserting about the wrong bundle there.
-- **Does the call need an entitlement?** Keychain access groups, the Secure Enclave, the camera. A `swift test` binary carries none and gets `errSecMissingEntitlement` (-34018) rather than a wrong answer.
-- **Does it need iOS itself?** Every package here declares macOS alongside iOS precisely so `swift test` can run it on a developer machine, which means an iOS-only behaviour is invisible to it.
+Measured on the same simulator, same Xcode, one probe run in each lane:
 
-The rule is worth holding to because the two lanes do not cost the same. `mise run test:packages` compiles for the host and finishes in seconds; `mise run test:app` builds an app, boots a simulator, installs and injects. A suite that did not have to be here is a tax on every run from then on, paid to test the same thing more slowly.
+|                               | `Bundle.main.bundleIdentifier` | `SecItemAdd` with `kSecUseDataProtectionKeychain` |
+| ----------------------------- | ------------------------------ | ------------------------------------------------- |
+| package lane (`Auth-Package`) | `com.apple.dt.xctest.tool`     | `-34018` `errSecMissingEntitlement`               |
+| this target, hosted by `Pops` | `com.knoxiolabs.pops`          | `errSecSuccess`                                   |
+
+Two questions decide it:
+
+- **Does it read `Bundle.main` and mean the app?** Anywhere else `Bundle.main` is the `xctest` runner, so anything asserting about `Info.plist`, the bundle identifier or a bundled resource is asserting about the wrong bundle.
+- **Does the call need an entitlement?** Keychain access groups, the Secure Enclave, the camera. An unhosted test process carries none and gets `errSecMissingEntitlement` (-34018) rather than a wrong answer.
+
+A third case arrives on its own: code under `App/` is in no package, so a test of the composition root has nowhere else to live.
+
+The rule is worth holding to because the lanes do not cost the same. `mise run test:packages` compiles for the host and finishes in seconds; this one builds an app, boots a simulator, installs and injects. A suite that did not have to be here is a tax on every run from then on, paid to test the same thing more slowly.
 
 ## What is here
 
@@ -24,11 +34,10 @@ The rule is worth holding to because the two lanes do not cost the same. `mise r
 ## Running it
 
 ```bash
-mise run test:app
+mise run test:app   # this lane alone
+mise run test       # both simulator lanes, which is what CI invokes
 ```
 
-It regenerates the project, asserts the target is still hosted and still compiles under the app's own Swift 6 and warnings-as-errors settings (`mise run verify:app-test-target`), picks the newest available iPhone simulator, runs the scheme's test action, and **fails if the number of tests it executed is zero**.
+`test:app` regenerates the project, asserts the target is still hosted and still compiles under the app's own Swift 6 and warnings-as-errors settings (`mise run verify:app-test-target`), runs the scheme's test action on `POPS_IOS_SIMULATOR`, and **fails if the number of tests it executed is zero**.
 
-That last check is the reason this target exists at all. A test lane that runs nothing and exits 0 is worse than no lane — it is a green signal for an empty set, and nobody looks at a green check. Skipped tests count towards the total the result bundle reports, so the check subtracts them: six collected and six skipped is zero executed, and it goes red.
-
-Set `POPS_IOS_TEST_DESTINATION` to an `xcodebuild` destination specifier to aim a run at a specific simulator.
+That last check is the reason this target exists at all. A lane that runs nothing and exits 0 is worse than no lane — it is a green signal for an empty set, and nobody re-reads a green check. Skipped tests count towards the total the result bundle reports, so the check subtracts them: six collected and six skipped is zero executed, and it goes red.
