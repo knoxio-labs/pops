@@ -32,6 +32,14 @@ model would produce a plausible partition and nothing could tell.
 exists. It goes to review with the discrepancy stated in cents, because
 "waiting to settle" and "we could not read it" must never look alike.
 
+**The sum agreeing is necessary, not sufficient.** A discount the model
+files among the `lines` instead of in `discounts` reconciles perfectly —
+`$10.00` and `−$2.00` against a stated `$8.00` — so the arithmetic check
+alone would admit it, and the purchase would carry an item worth less than
+nothing while per-item spend quietly nets out. A negative line is therefore
+refused outright (`negative-line`), because `discounts` is the channel for
+a reduction and it normalises the sign.
+
 What the gate cannot catch, and does not pretend to: a reading whose
 amounts are all correct and whose product names are all wrong. Money is
 what reconciliation and spend analysis run on, and a wrong name is visible

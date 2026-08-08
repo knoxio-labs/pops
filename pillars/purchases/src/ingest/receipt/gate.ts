@@ -35,6 +35,7 @@ export type GateFailure =
   | { readonly kind: 'unreadable-total'; readonly detail: string }
   | { readonly kind: 'unreadable-line'; readonly detail: string }
   | { readonly kind: 'no-lines'; readonly detail: string }
+  | { readonly kind: 'negative-line'; readonly detail: string }
   | { readonly kind: 'sum-mismatch'; readonly detail: string; readonly deltaCents: number }
   | { readonly kind: 'damaged'; readonly detail: string };
 
@@ -65,6 +66,43 @@ function sumAmounts(
 }
 
 /**
+ * Total the product lines, recording anything that is not one.
+ *
+ * A negative amount is readable but misfiled: `discounts` is the channel
+ * for a reduction, and it normalises the sign. A negative sitting among the
+ * lines still sums correctly against the stated total — that is exactly the
+ * danger, since nothing else here would object — while the purchase it
+ * produces carries an item worth less than nothing.
+ */
+function sumLines(
+  lines: ExtractedReceipt['lines'],
+  locale: MoneyLocale,
+  failures: GateFailure[]
+): number {
+  let total = 0;
+  for (const [index, line] of lines.entries()) {
+    const cents = parseAmountCents(line.amount, locale);
+    if (cents === null) {
+      failures.push({
+        kind: 'unreadable-line',
+        detail: `line ${String(index + 1)} "${line.description}" has amount "${line.amount}", which is not money`,
+      });
+      continue;
+    }
+    if (cents < 0) {
+      failures.push({
+        kind: 'negative-line',
+        detail:
+          `line ${String(index + 1)} "${line.description}" is negative (${line.amount}); ` +
+          'a discount belongs in `discounts`, not among the lines',
+      });
+    }
+    total += cents;
+  }
+  return total;
+}
+
+/**
  * Decide whether an extraction may be written as fact.
  *
  * Tax is added rather than assumed included. A receipt that separates tax
@@ -85,18 +123,7 @@ export function gateExtraction(extracted: ExtractedReceipt): GateResult {
     });
   }
 
-  let lineTotalCents = 0;
-  for (const [index, line] of extracted.lines.entries()) {
-    const cents = parseAmountCents(line.amount, locale);
-    if (cents === null) {
-      failures.push({
-        kind: 'unreadable-line',
-        detail: `line ${String(index + 1)} "${line.description}" has amount "${line.amount}", which is not money`,
-      });
-      continue;
-    }
-    lineTotalCents += cents;
-  }
+  const lineTotalCents = sumLines(extracted.lines, locale, failures);
 
   if (extracted.lines.length === 0) {
     failures.push({

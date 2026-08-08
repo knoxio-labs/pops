@@ -950,6 +950,7 @@ export interface operations {
                     | 'unreadable-total'
                     | 'unreadable-line'
                     | 'no-lines'
+                    | 'negative-line'
                     | 'sum-mismatch'
                     | 'damaged';
                 }[];

@@ -33,7 +33,14 @@ export const UploadReceiptBodySchema = z.object({
 
 /** One thing the gate objected to, in the receipt's own terms. */
 export const GateFailureSchema = z.object({
-  kind: z.enum(['unreadable-total', 'unreadable-line', 'no-lines', 'sum-mismatch', 'damaged']),
+  kind: z.enum([
+    'unreadable-total',
+    'unreadable-line',
+    'no-lines',
+    'negative-line',
+    'sum-mismatch',
+    'damaged',
+  ]),
   detail: z.string(),
   /** `Σ lines + tax − discounts − total`, present only on a sum mismatch. */
   deltaCents: z.int().optional(),

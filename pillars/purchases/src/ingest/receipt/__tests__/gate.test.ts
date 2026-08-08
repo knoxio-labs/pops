@@ -144,3 +144,43 @@ describe('what the gate cannot catch, and does not pretend to', () => {
     expect(result.admissible).toBe(true);
   });
 });
+
+describe('a discount the model filed among the lines', () => {
+  it('is refused, even though the arithmetic reconciles', () => {
+    // This is the case nothing else here would catch. Σ lines still equals
+    // the stated total, so the sum check is satisfied and the reading looks
+    // admissible — while the purchase it produces carries an item worth
+    // less than nothing, and per-item spend silently nets out.
+    const misfiled = receipt({
+      total: '$8.00',
+      lines: [
+        { description: 'Timber Pine DAR 42x19', amount: '$10.00' },
+        { description: 'MEMBER DISCOUNT', amount: '-$2.00' },
+      ],
+    });
+
+    const result = gateExtraction(misfiled);
+
+    expect(result.admissible).toBe(false);
+    expect(result.failures).toHaveLength(1);
+    expect(result.failures[0]?.kind).toBe('negative-line');
+    expect(result.failures[0]?.detail).toContain('MEMBER DISCOUNT');
+    // The arithmetic is reported as it truly is, so a reviewer sees that
+    // the total does agree and the filing is the only fault.
+    expect(result.lineTotalCents).toBe(800);
+    expect(result.totalCents).toBe(800);
+  });
+
+  it('accepts the same receipt with the discount in its proper place', () => {
+    const proper = receipt({
+      total: '$8.00',
+      discounts: ['$2.00'],
+      lines: [{ description: 'Timber Pine DAR 42x19', amount: '$10.00' }],
+    });
+
+    const result = gateExtraction(proper);
+
+    expect(result.admissible).toBe(true);
+    expect(result.failures).toEqual([]);
+  });
+});
