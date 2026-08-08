@@ -57,7 +57,7 @@ It carries no credentials. Attaching and refreshing an access token is a `Client
 
 ## Where the base URL comes from
 
-`BuiltInBaseURL` resolves what a build ships with, which in Release is nothing — see [Where the BFM base URL comes from](../../README.md#where-the-bfm-base-url-comes-from). Nothing constructs a `BFMHTTPClient` from it yet: the composition root binds implementations to `AppCore` protocols, and this package declares none, because the contract exposes no operation a feature needs.
+`BuiltInBaseURL` resolves what a build ships with, which in Release is nothing — see [Where the BFM base URL comes from](../../README.md#where-the-bfm-base-url-comes-from). Nothing constructs a `BFMHTTPClient` from it yet: the composition root binds implementations to `AppCore` protocols, and this package declares none. That is now a gap on this side rather than on the contract's — the BFM publishes a mobile transaction list and detail, and the generated client has `mobileFinance_listTransactions` and `mobileFinance_getTransaction` for them; no feature has been written that asks.
 
 ## Running the tests
 

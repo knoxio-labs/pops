@@ -13,6 +13,8 @@ import { createSecretKey, type KeyObject } from 'node:crypto';
 
 import { openTempDb } from '../../db/__tests__/helpers.js';
 import { createBfmApiApp, type CreateBfmApiAppOptions } from '../app.js';
+import { createMobileFinanceClient } from '../finance/client.js';
+import { createPillarGateway } from '../pillars/gateway.js';
 import { createRateLimiter, type RateLimiter } from '../rate-limit.js';
 
 import type { Express } from 'express';
@@ -20,6 +22,8 @@ import type { Express } from 'express';
 import type { BfmDb, OpenedBfmDb } from '../../db/index.js';
 import type { BfmApiDeps } from '../app.js';
 import type { MobileRateLimitOptions } from '../auth/mobile-rate-limit.js';
+import type { MobileFinanceClient } from '../finance/client.js';
+import type { PillarHandleFactory } from '../pillars/gateway.js';
 
 /** Long enough to satisfy the resolver's floor; fixed so a failure is reproducible. */
 export const TEST_SIGNING_SECRET = 'test-signing-key-0123456789abcdef';
@@ -75,7 +79,19 @@ export interface TestAppOptions {
    * perimeter would stop noticing if the real one broke.
    */
   mobileRateLimit?: MobileRateLimitOptions;
+  /**
+   * Where the `/mobile/finance/*` routes get their data. Defaults to a client
+   * over a gateway whose handle factory throws — a test that reaches finance
+   * without saying how fails loudly instead of hanging on a real network call.
+   */
+  finance?: MobileFinanceClient;
 }
+
+const unreachableHandleFactory: PillarHandleFactory = (pillarId: string) => {
+  throw new Error(
+    `[bfm-test] this test called ${pillarId} without supplying a fake — pass \`finance\` to createTestApp`
+  );
+};
 
 export function createTestApp(options: TestAppOptions = {}): TestApp {
   const { opened, cleanup } = openTempDb();
@@ -83,6 +99,8 @@ export function createTestApp(options: TestAppOptions = {}): TestApp {
 
   const deps: BfmApiDeps = {
     version: options.version ?? '0.0.1-test',
+    finance:
+      options.finance ?? createMobileFinanceClient(createPillarGateway(unreachableHandleFactory)),
     db: opened.db,
     accessTokenSigningKey,
     publicBaseUrl: options.publicBaseUrl ?? TEST_PUBLIC_BASE_URL,

@@ -42,7 +42,9 @@ import {
   resolveVersion,
   shouldSelfRegister,
 } from './boot-env.js';
+import { createMobileFinanceClient } from './finance/client.js';
 import { buildBfmManifest } from './manifest.js';
+import { createPillarGateway } from './pillars/gateway.js';
 import { configureBfmServerSdk } from './pillars/sdk-config.js';
 
 const port = resolvePort();
@@ -62,11 +64,16 @@ const sqlitePath = resolveSqlitePath();
 const bfmDb = openBfmDb(sqlitePath);
 console.warn(`[bfm-api] SQLite at ${sqlitePath}`);
 
+// Built after `configureBfmServerSdk()` — the gateway's default handle factory
+// is the authenticated `/server` one, which reads that configuration.
+const finance = createMobileFinanceClient(createPillarGateway());
+
 const app = createBfmApiApp({
   version,
   db: bfmDb.db,
   accessTokenSigningKey,
   publicBaseUrl,
+  finance,
 });
 
 const server = app.listen(port, () => {

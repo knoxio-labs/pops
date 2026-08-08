@@ -7,8 +7,8 @@ It listens on port **3014**.
 
 It owns a database — the device allow-list, described under
 [Persistence](#persistence) below — which makes it a data pillar by kind
-(ADR-035). It has no mobile route yet (POPS-1378, POPS-1379), though the
-perimeter those routes will sit behind is already in place, alongside the
+(ADR-035). Its first mobile surface is the transaction list and detail under
+`/mobile/finance/*`, behind the perimeter that guards it and alongside the
 operator surface that mints the codes a phone pairs with — see
 [The perimeter](#the-perimeter). `/health` is a pure liveness shape rather
 than a DB round-trip, which is deliberate for a container healthcheck and is
@@ -20,14 +20,16 @@ It also holds a service-account credential and one way to spend it — see
 [Reaching sibling pillars](#reaching-sibling-pillars) and
 [`src/api/pillars/README.md`](src/api/pillars/README.md).
 
-| Surface                        | What it does                                                                               |
-| ------------------------------ | ------------------------------------------------------------------------------------------ |
-| `GET /health`                  | Liveness shape. Served from the ts-rest contract, so it cannot drift from the doc.         |
-| `GET /openapi`                 | The committed contract projection, served verbatim so peers build a route map.             |
-| `POST /operator/pairing/codes` | Mints a single-use pairing code. The plaintext is returned once and never again.           |
-| `GET /operator/devices`        | Paired handsets, revoked ones included. Never returns a token or a key.                    |
-| `DELETE /operator/devices/:id` | Soft-revokes, and kills the device's refresh-token family in the same transaction.         |
-| `/mobile/*`                    | Reserved for the phone and gated by `requireDevice`. No route lives there yet — see below. |
+| Surface                                | What it does                                                                        |
+| -------------------------------------- | ----------------------------------------------------------------------------------- |
+| `GET /health`                          | Liveness shape. Served from the ts-rest contract, so it cannot drift from the doc.  |
+| `GET /openapi`                         | The committed contract projection, served verbatim so peers build a route map.      |
+| `POST /operator/pairing/codes`         | Mints a single-use pairing code. The plaintext is returned once and never again.    |
+| `GET /operator/devices`                | Paired handsets, revoked ones included. Never returns a token or a key.             |
+| `DELETE /operator/devices/:id`         | Soft-revokes, and kills the device's refresh-token family in the same transaction.  |
+| `GET /mobile/finance/transactions`     | One cursor-paginated page of list rows — see [The mobile shape](#the-mobile-shape). |
+| `GET /mobile/finance/transactions/:id` | The fuller record behind one row, for the detail screen.                            |
+| `/mobile/*`                            | Everything the phone calls, gated by `requireDevice`.                               |
 
 `/health` answers without a database round-trip, which is why an unreachable
 `bfm.db` still reads as live.
@@ -58,10 +60,9 @@ different axes: one authenticates a **phone**, the other a **human**.
 
 Everything under `/mobile` is behind the access-token guard in
 [`src/api/auth/`](src/api/auth/README.md), mounted as a path prefix in
-`src/api/app.ts`. The routes it protects arrive later (POPS-1374, POPS-1378,
-POPS-1379); the guard is in front of the prefix now so none of them can arrive
-public. A request to an unrouted `/mobile/*` therefore answers `401`, not
-`404`.
+`src/api/app.ts` rather than per route — so a mobile route added later cannot
+arrive public. A request to an unrouted `/mobile/*` therefore answers `401`,
+not `404`.
 
 That directory's README carries the whole of the reasoning: why a rejected
 token is a `401` and a revoked device a `403`, why a missing device row is a
@@ -112,6 +113,51 @@ The gate runs _before_ the limiter, deliberately. Limiting first would let an
 anonymous flood exhaust the real operator's budget and lock them out of pairing
 — a denial of service handed to an unauthenticated caller. A test pins the
 ordering.
+
+## The mobile shape
+
+`/mobile/finance/*` is a **mobile-shaped contract, not a proxy**. Three
+properties follow, and each is asserted in
+`src/api/__tests__/mobile-transactions.test.ts`:
+
+- **A list row carries what a list row draws, and nothing else.** Finance's
+  `account`, `notes`, `location` and the rest reach the phone only from the
+  detail route. The path segment says `finance` because that is what the data
+  is about, not where the phone should look — the app holds no notion that
+  finance is a separate service.
+- **The money is finance's, mirrored.** `amount` is signed decimal dollars
+  (expenses negative), exactly as finance publishes it; finance persists
+  integer cents and divides once at its own REST edge. bfm does no arithmetic
+  on it at all, because a second conversion is a second rounding rule and that
+  is how two services come to disagree about what somebody spent. `type` is a
+  semantic label and never the direction. `currency` is a literal `AUD`: the
+  fleet has always been single-currency and finance carries no such field, so
+  stating the assumption on the wire beats leaving the phone to guess it.
+- **A degraded federation is a typed answer, never an empty page.** A list that
+  answered `[]` while finance was down would be telling the user they have no
+  transactions, which they cannot tell from the truth. `unavailable`,
+  `degraded` and `contract-mismatch` stay distinct all the way out —
+  `src/api/rest/upstream-error.ts` is the whole mapping and is total over the
+  gateway's failure kinds, so a new kind fails the build rather than falling
+  through to something plausible.
+
+### Paging
+
+The list is **cursor**-paginated. `nextCursor` is opaque, `null` on the last
+page, and the app echoes it back unmodified — it must never construct one.
+
+Underneath, that cursor is finance's `(date, id)` keyset anchor. Offsets were
+not an option: the underlying list mutates, and an import landing at the head
+mid-scroll shifts every offset by one, so the walk re-serves a row it already
+showed and skips one it never did. finance's `transactions.list` grew the
+anchor and a total `date DESC, id DESC` order for this (POPS-1379); the two
+halves have to be read together, and
+`pillars/finance/src/db/services/transactions-list.ts` says so on the finance
+side.
+
+bfm asks finance for one row more than the page. That extra row's existence is
+what proves another page exists — asking for a total instead would be a second
+count query per scroll tick, and a total that is stale the moment it is read.
 
 ## Persistence
 
@@ -192,12 +238,14 @@ registration is a separate mechanism and still goes through the
   exercised, but its two callers do not: the pairing exchange (POPS-1374) and
   the refresh route (POPS-1375). Until one lands, no phone can obtain a token
   and every `/mobile/*` request is a `401` by construction.
-- **The mobile contract and the nginx route.** The mobile-facing routes
-  (POPS-1378, POPS-1379) and the nginx route plus the compiled pillar roster
-  (POPS-1386) are each their own ticket. Revocation here sets
-  `devices.revokedAt`, which is the column `requireDevice` already reads — so
-  "a revoked phone fails its very next request" is live for `/mobile/*` and
-  will extend to every route added under it.
+- **Writes.** The mobile surface is read-only; mutations are tracked
+  separately. Nothing under `/mobile` uses a verb other than `GET`.
+- **The bootstrap route and the nginx route.** `GET /mobile/bootstrap`
+  (POPS-1378) and the nginx route plus the compiled pillar roster (POPS-1386)
+  are each their own ticket. Revocation here sets `devices.revokedAt`, which is
+  the column `requireDevice` already reads — so "a revoked phone fails its very
+  next request" is live for every route under `/mobile/*`, including the two
+  that exist.
 - **Any pruning of the credential tables.** Consumed and expired pairing codes
   and dead refresh tokens accumulate; nothing deletes them (POPS-1449).
 - **Any enforcement of what the service account may reach.** The grant is
@@ -295,8 +343,8 @@ pillars/bfm/
 ├── app/                         @pops/app-bfm — the shell's Devices surface
 └── src/
     ├── contract/                 the wire contract — the only description of it
-    │   ├── rest.ts               health + the operator sub-router
-    │   ├── rest-schemas.ts
+    │   ├── rest.ts               health + the operator and mobile sub-routers
+    │   ├── rest-schemas.ts        the mobile shapes + the error envelopes
     │   ├── rest-operator.ts      the three Access-gated routes, and why /operator
     │   ├── rest-operator-schemas.ts
     │   ├── manifest.ts
@@ -317,8 +365,10 @@ pillars/bfm/
         ├── auth/                  the /mobile perimeter — has its own README
         ├── middleware/identity.ts the operator principal, and the two legs it drops
         ├── pillars/               calling siblings — has its own README
+        ├── finance/               the finance leg: paging, wire validation, cursor
         ├── shared/errors.ts       HTTP-shaped domain errors
         └── rest/                  ts-rest handler composers
+            └── upstream-error.ts  gateway failure → the status the phone sees
 ```
 
 `server.ts` holds no decisions — importing it binds a port and installs signal

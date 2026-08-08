@@ -6,23 +6,124 @@
  * `GET /openapi`. Nothing else in the tree describes the bfm wire format:
  * don't hand-author OpenAPI, and don't hand-author paths in `app.ts`.
  *
+
  * Two surfaces live here, on two hostnames, and the split is the pillar's
  * whole security model:
  *
  * - **operator** (`/operator/*`) — behind Cloudflare Access via the shell's
  *   nginx at `/bfm-api/`, gated per route on a resolved principal.
- * - **device** — on bfm's own tunnel hostname with Access bypassed. The
- *   pairing exchange (POPS-1374), refresh (POPS-1375) and the mobile routes
- *   (POPS-1378, POPS-1379) land there, not beside the operator router.
+ * - **device** (`/mobile/*`) — on bfm's own tunnel hostname with Access
+ *   bypassed, behind `requireDevice`. The pairing exchange (POPS-1374) and
+ *   refresh (POPS-1375) land there too, not beside the operator router.
  *
  * `/health` belongs to neither and answers on both.
+ *
+ * The iOS client is generated from the projection of this file, so a field
+ * renamed under `/mobile` renames it on a handset. That is the intended
+ * failure mode (the app stops building), but only for changes somebody meant
+ * to make.
+ *
+ * The mobile routes are **mobile-shaped**, not a proxy: one round trip per
+ * screen, payloads holding what that screen draws and nothing else, and no
+ * hint that `finance` exists as a separate service. The path segment says
+ * `finance` because that is what the data is about, not where the phone should
+ * look.
  */
 import { initContract } from '@ts-rest/core';
+import { z } from 'zod';
 
 import { bfmOperatorContract } from './rest-operator.js';
-import { HealthResponseSchema } from './rest-schemas.js';
+import {
+  HealthResponseSchema,
+  MobileAuthErrorSchema,
+  MobileRateLimitErrorSchema,
+  MobileRequestErrorSchema,
+  MobileTransactionDetailSchema,
+  MobileTransactionsPageSchema,
+  MobileUpstreamErrorSchema,
+} from './rest-schemas.js';
 
 const c = initContract();
+
+/**
+ * The three the `/mobile` perimeter answers itself, before any handler runs —
+ * the rate limiter and then `requireDevice`, both mounted on the prefix in
+ * `app.ts`.
+ *
+ * Declared on every route anyway. The phone switches on all three and they
+ * select three different recoveries — back off and retry unchanged, refresh
+ * the access token, or return to pairing and wipe the keychain — so they
+ * belong in the document the phone's client is generated from. A status the
+ * document omits is a status that client has no case for.
+ */
+const MOBILE_PERIMETER_RESPONSES = {
+  401: MobileAuthErrorSchema,
+  403: MobileAuthErrorSchema,
+  429: MobileRateLimitErrorSchema,
+} as const;
+
+/**
+ * The request itself was wrong. Declared on every mobile route rather than
+ * only the ones with a query to get wrong: ts-rest rejects contract-level
+ * validation failures before a handler runs, so any route can answer 400 the
+ * moment it grows a validated input, and `app.ts` reshapes those into this
+ * schema so the wire never carries a 400 the document does not describe.
+ */
+const MOBILE_REQUEST_RESPONSES = {
+  400: MobileRequestErrorSchema,
+} as const;
+
+/**
+ * A pillar behind bfm could not serve the request. Both statuses carry the
+ * same shape and are told apart by it: 503 is worth retrying, 502 is not.
+ */
+const MOBILE_UPSTREAM_RESPONSES = {
+  502: MobileUpstreamErrorSchema,
+  503: MobileUpstreamErrorSchema,
+} as const;
+
+/**
+ * Page size. Capped well below what a scroll would ever render at once —
+ * bfm's whole premise is that the phone is on cellular, and a caller asking
+ * for a thousand rows is asking for a screen it cannot draw.
+ */
+const MobilePageLimit = z.coerce.number().int().positive().max(100).optional();
+
+const mobileFinanceContract = c.router({
+  listTransactions: {
+    method: 'GET',
+    path: '/mobile/finance/transactions',
+    query: z.object({
+      limit: MobilePageLimit,
+      /**
+       * Opaque continuation token from a previous page's `nextCursor`. Its
+       * contents are bfm's business and may change; the app must echo it back
+       * unmodified and must never construct one.
+       */
+      cursor: z.string().optional(),
+    }),
+    responses: {
+      200: MobileTransactionsPageSchema,
+      ...MOBILE_REQUEST_RESPONSES,
+      ...MOBILE_PERIMETER_RESPONSES,
+      ...MOBILE_UPSTREAM_RESPONSES,
+    },
+    summary: 'One cursor-paginated page of transaction list rows',
+  },
+  getTransaction: {
+    method: 'GET',
+    path: '/mobile/finance/transactions/:id',
+    pathParams: z.object({ id: z.string() }),
+    responses: {
+      200: MobileTransactionDetailSchema,
+      ...MOBILE_REQUEST_RESPONSES,
+      ...MOBILE_PERIMETER_RESPONSES,
+      404: MobileUpstreamErrorSchema,
+      ...MOBILE_UPSTREAM_RESPONSES,
+    },
+    summary: 'The fuller record behind one list row, for the detail screen',
+  },
+});
 
 export const bfmContract = c.router(
   {
@@ -33,6 +134,7 @@ export const bfmContract = c.router(
       summary: 'Liveness shape. Answers without a database round-trip',
     },
     operator: bfmOperatorContract,
+    mobileFinance: mobileFinanceContract,
   },
   {
     pathPrefix: '',

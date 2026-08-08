@@ -342,6 +342,8 @@ export type {
   TransactionsGetResponse,
   TransactionsGetResponses,
   TransactionsListData,
+  TransactionsListError,
+  TransactionsListErrors,
   TransactionsListResponse,
   TransactionsListResponses,
   TransactionsRestoreData,

@@ -14770,6 +14770,24 @@
               "minimum": 0,
               "type": "integer"
             }
+          },
+          {
+            "description": "Keyset anchor: the `date` of the last row you already have, as `YYYY-MM-DD`. Must be sent together with `beforeId` — supplying one without the other is a 400, because a date alone cannot separate rows that share it. Returns rows sorting strictly after that row under `date DESC, id DESC`. Prefer this over `offset` when paging a list that can change underneath you.",
+            "in": "query",
+            "name": "beforeDate",
+            "schema": {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Keyset anchor: the `id` of the last row you already have. Must be sent together with `beforeDate` — supplying one without the other is a 400. This half is what separates rows sharing a date.",
+            "in": "query",
+            "name": "beforeId",
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -14891,6 +14909,75 @@
               }
             },
             "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "409"
           }
         },
         "summary": "List transactions with optional filters and pagination",
