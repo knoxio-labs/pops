@@ -24,7 +24,7 @@ export type Options<
 };
 
 /**
- * Liveness shape. No DB round-trip — this pillar owns no schema yet
+ * Liveness shape. Answers without a database round-trip
  */
 export const health = <ThrowOnError extends boolean = false>(
   options?: Options<HealthData, ThrowOnError>
