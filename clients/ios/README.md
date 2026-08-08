@@ -14,7 +14,7 @@ mise run build         # xcodebuild, iOS Simulator
 mise run build:device  # signed Release, physical iPhone
 ```
 
-`mise run build:packages` type-checks every package with `swift build` alone, without Xcode or a simulator, and `mise run test:packages` runs every package's tests the same way.
+`mise run build:packages` type-checks every package with `swift build` alone, without Xcode or a simulator, and `mise run test:packages` runs every package's tests the same way. Both compile for the host, which means macOS rather than iOS — an iOS-only regression survives them, and is caught by `mise run build` instead.
 
 `mise run verify:release-carries-no-host` builds Release and fails if the result names a BFM host — see [Where the BFM base URL comes from](#where-the-bfm-base-url-comes-from).
 
@@ -76,7 +76,9 @@ The dependency direction is one-way:
 
 Half of that is compiler-enforced — a package can only `import` what its own `Package.swift` declares. The other half, a wrong edge being added to a `Package.swift` in the first place, is asserted by a test in `AppCore` rather than by any tool.
 
-Each package other than `AppCore` is a shell whose placeholder type says what the module is for; `BFMClient` carries the base-URL resolver and nothing else yet. Filling them in is one ticket per module.
+`Packages/DesignSystem` carries a second constraint on every feature, orthogonal to the import graph: a feature may not name a colour, a type size or a gap. See [Packages/DesignSystem/README.md](Packages/DesignSystem/README.md).
+
+Each package other than `AppCore` and `DesignSystem` is a shell whose placeholder type says what the module is for; `BFMClient` carries the base-URL resolver and nothing else yet. Filling them in is one ticket per module.
 
 ## Known gaps
 
