@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 import {
+  collectStreams,
   parseExposedPort,
   parseRuntimeBaseImage,
   planSmoke,
@@ -58,6 +59,34 @@ describe('resolveHealthPath', () => {
 
   it('does not treat a lookalike name as nginx', () => {
     expect(resolveHealthPath('nginxinc-unofficial:1')).toBe('/health');
+  });
+});
+
+describe('collectStreams', () => {
+  it('returns both captured streams from a failed execFile rejection', () => {
+    const err = Object.assign(new Error('Command failed: docker logs x'), {
+      stdout: 'out\n',
+      stderr: 'boom\n',
+    });
+    expect(collectStreams(err)).toBe('out\nboom\n');
+  });
+
+  it('returns whichever stream is populated', () => {
+    expect(collectStreams(Object.assign(new Error('x'), { stdout: '', stderr: 'only-err' }))).toBe(
+      'only-err'
+    );
+  });
+
+  it('returns empty for a rejection carrying no streams, so the caller falls back to the message', () => {
+    expect(collectStreams(new Error('spawn ENOENT'))).toBe('');
+    expect(collectStreams('not an error')).toBe('');
+    expect(collectStreams(null)).toBe('');
+  });
+
+  it('ignores non-string stream fields', () => {
+    expect(collectStreams(Object.assign(new Error('x'), { stdout: 42, stderr: undefined }))).toBe(
+      ''
+    );
   });
 });
 

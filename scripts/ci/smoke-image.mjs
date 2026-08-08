@@ -129,6 +129,11 @@ async function docker(args) {
 }
 
 /**
+ * Run docker for its output, never for its exit code. Used on the diagnostic
+ * paths, where a failing command's own output is the thing worth printing —
+ * so a rejection surrenders its captured streams too, not just the
+ * `Command failed: …` message wrapping them.
+ *
  * @param {readonly string[]} args docker CLI arguments.
  * @returns {Promise<string>} Combined output, or the failure text.
  */
@@ -139,8 +144,23 @@ async function dockerBestEffort(args) {
     });
     return `${stdout}${stderr}`;
   } catch (err) {
+    const captured = collectStreams(err);
+    if (captured !== '') return captured;
     return err instanceof Error ? err.message : String(err);
   }
+}
+
+/**
+ * The `stdout`/`stderr` Node attaches to a failed `execFile` rejection.
+ *
+ * @param {unknown} err
+ * @returns {string} Both streams concatenated, or `''` when neither is present.
+ */
+export function collectStreams(err) {
+  if (typeof err !== 'object' || err === null) return '';
+  const { stdout, stderr } = /** @type {{ stdout?: unknown, stderr?: unknown }} */ (err);
+  const parts = [stdout, stderr].filter((part) => typeof part === 'string' && part !== '');
+  return parts.join('');
 }
 
 /**
