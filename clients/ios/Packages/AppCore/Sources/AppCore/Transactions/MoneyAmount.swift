@@ -1,4 +1,5 @@
 import Foundation
+import Synchronization
 
 /// A monetary value as the number of minor units of its currency — 1999 `AUD`
 /// is $19.99, 500 `JPY` is ¥500.
@@ -25,20 +26,24 @@ public struct MoneyAmount: Hashable, Sendable {
 
     /// Formatted for display. The sign is whatever the server sent.
     public func formatted(locale: Locale = .autoupdatingCurrent) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.locale = locale
-        formatter.currencyCode = currencyCode
-        return formatter.string(from: decimalValue as NSDecimalNumber)
-            ?? "\(decimalValue) \(currencyCode)"
+        decimalValue.formatted(.currency(code: currencyCode).locale(locale))
     }
 
     /// How many minor units make one major unit, which is a property of the
     /// currency and not of the reader's locale — yen has none, dinar has three.
+    ///
+    /// Cached because a `NumberFormatter` costs far more to build than a row
+    /// costs to draw, and a scrolling list asks this of every row it renders.
     private static func minorUnitDigits(for currencyCode: String) -> Int {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencyCode = currencyCode
-        return formatter.maximumFractionDigits
+        minorUnitDigitsByCurrency.withLock { cache in
+            if let cached = cache[currencyCode] { return cached }
+            let formatter = NumberFormatter()
+            formatter.numberStyle = .currency
+            formatter.currencyCode = currencyCode
+            cache[currencyCode] = formatter.maximumFractionDigits
+            return formatter.maximumFractionDigits
+        }
     }
 }
+
+private let minorUnitDigitsByCurrency = Mutex<[String: Int]>([:])

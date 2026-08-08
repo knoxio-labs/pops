@@ -109,11 +109,13 @@ extension ModuleBoundaryTests {
         return enumerator.compactMap { $0 as? URL }.filter { $0.pathExtension == "swift" }
     }
 
+    /// Any sibling-package path the manifest mentions, however the `.package`
+    /// call is spelled — matching the whole call shape would let a `name:`
+    /// argument or a line break slip an edge past this.
     private func declaredDependencies(ofPackage package: String) throws -> Set<String> {
         let manifest = packagesDirectory.appending(path: package).appending(path: "Package.swift")
         let source = try String(contentsOf: manifest, encoding: .utf8)
-        let pattern = #/\.package\(path:\s*"\.\./([A-Za-z_][A-Za-z0-9_]*)"\)/#
-        return Set(source.matches(of: pattern).map { String($0.1) })
+        return Set(source.matches(of: #/"\.\./([A-Za-z_][A-Za-z0-9_]*)"/#).map { String($0.1) })
     }
 
     /// A line scan rather than a parse: an `import` inside a block comment or a
