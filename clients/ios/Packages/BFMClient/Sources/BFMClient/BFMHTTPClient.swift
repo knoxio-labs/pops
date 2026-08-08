@@ -1,4 +1,5 @@
 import Foundation
+import HTTPTypes
 import OpenAPIRuntime
 import OpenAPIURLSession
 
@@ -12,6 +13,11 @@ import OpenAPIURLSession
 public enum BFMClientError: Error, Hashable, Sendable {
     /// A status code the OpenAPI snapshot does not document for this operation.
     case undocumentedResponse(operation: String, statusCode: Int)
+
+    /// The BFM answered a documented refusal. Carried as an error rather than
+    /// returned, so a caller that ignores the distinction cannot mistake a
+    /// refusal for a paired device.
+    case pairingRefused(DevicePairingRefusal)
 }
 
 /// The BFM, as this app calls it.
@@ -22,9 +28,11 @@ public enum BFMClientError: Error, Hashable, Sendable {
 ///
 /// Carries no credentials. Attaching and refreshing an access token is a
 /// `ClientMiddleware` this module does not have yet, which is why the only
-/// operation exposed below is the one the BFM answers unauthenticated. Adding
-/// an authenticated call means adding that middleware first, not adding a
-/// header at a call site.
+/// operations exposed below are the two the BFM answers unauthenticated —
+/// `GET /health` and the pairing exchange, which is unauthenticated by
+/// definition because it is where a device's credentials come from. Adding an
+/// authenticated call means adding that middleware first, not adding a header
+/// at a call site.
 ///
 /// The generated client also carries the contract's `/operator/*` operations.
 /// They are not surfaced here and never will be: that perimeter is fronted by
@@ -66,6 +74,93 @@ public struct BFMHTTPClient: Sendable {
                 operation: Operations.Health.id,
                 statusCode: statusCode
             )
+        }
+    }
+
+    /// Spends a pairing code for this device's identity.
+    ///
+    /// - Parameters:
+    ///   - code: The code as the QR carried it or the operator read it out. The
+    ///     BFM normalises grouping and case on its side, so this is passed
+    ///     through rather than reshaped here.
+    ///   - publicKeyBase64DER: Base64 of the SPKI/DER encoding of the device's
+    ///     P-256 public key. `Auth`'s `DevicePublicKey` produces exactly this;
+    ///     assembling it anywhere else is how the two ends of the exchange end
+    ///     up disagreeing about a byte and failing as a 401 much later.
+    ///   - deviceName: Operator-facing label.
+    ///   - deviceModel: Hardware identifier, e.g. `iPhone17,1`.
+    /// - Throws: ``BFMClientError/pairingRefused(_:)`` for a documented refusal,
+    ///   ``BFMClientError/undocumentedResponse(operation:statusCode:)`` for
+    ///   anything else the BFM said, and the transport's own error when nothing
+    ///   answered.
+    public func pairDevice(
+        code: String,
+        publicKeyBase64DER: String,
+        deviceName: String,
+        deviceModel: String
+    ) async throws -> IssuedDeviceCredentials {
+        let output: Operations.Device_pair.Output
+        do {
+            output = try await generated.device_pair(
+                body: .json(
+                    .init(
+                        code: code,
+                        deviceModel: deviceModel,
+                        deviceName: deviceName,
+                        publicKey: publicKeyBase64DER
+                    )
+                )
+            )
+        } catch let error as ClientError {
+            guard let refusal = Self.refusal(readableFrom: error.response) else { throw error }
+            throw BFMClientError.pairingRefused(refusal)
+        }
+
+        switch output {
+        case .created(let created):
+            let payload = try created.body.json
+            return IssuedDeviceCredentials(
+                deviceId: payload.deviceId,
+                accessToken: payload.accessToken,
+                refreshToken: payload.refreshToken,
+                expiresInSeconds: payload.expiresIn
+            )
+        case .badRequest:
+            throw BFMClientError.pairingRefused(.invalidRequest)
+        case .forbidden:
+            throw BFMClientError.pairingRefused(.codeRejected)
+        case .tooManyRequests(let limited):
+            throw BFMClientError.pairingRefused(
+                .rateLimited(retryAfterSeconds: try limited.body.json.retryAfterSeconds)
+            )
+        case .undocumented(let statusCode, _):
+            throw BFMClientError.undocumentedResponse(
+                operation: Operations.Device_pair.id,
+                statusCode: statusCode
+            )
+        }
+    }
+
+    /// The refusal a documented status means, for a response whose *body* the
+    /// generated client could not read.
+    ///
+    /// The generated deserializer decodes eagerly, so a `429` carrying an HTML
+    /// rate-limit page — which is what an intermediary in front of this BFM
+    /// returns, and there is one — never reaches the `switch` above. It throws
+    /// a `ClientError` from inside `device_pair`, and without this that becomes
+    /// indistinguishable from a dead network: `Auth` maps anything it does not
+    /// recognise to `unreachable`, so the person is told to check their
+    /// connection while the server is telling them to wait.
+    ///
+    /// The status is the actionable half and it is intact. `nil` for anything
+    /// this contract does not document, including the no-response case, because
+    /// those genuinely are transport failures.
+    private static func refusal(readableFrom response: HTTPResponse?) -> DevicePairingRefusal? {
+        switch response?.status.code {
+        case 400: .invalidRequest
+        case 403: .codeRejected
+        case 429: .rateLimited(retryAfterSeconds: nil)
+        default: nil
         }
     }
 }

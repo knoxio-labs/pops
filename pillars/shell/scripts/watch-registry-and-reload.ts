@@ -1,8 +1,7 @@
 /**
- * Long-running watcher that ties the registry SSE stream
- * (docs/themes/federation/prds/subscription-model) to the dynamic nginx
- * generator (docs/themes/federation/prds/nginx-config-generator). Part of
- * docs/themes/federation/prds/dynamic-pillar-registration.
+ * Long-running watcher that ties the registry SSE stream to the dynamic nginx
+ * generator (`./generate-nginx-conf.ts`), so a pillar registering at runtime
+ * (ADR-027) picks up edge routing without a fresh shell image.
  *
  * Opens `GET <registry-url>/registry/subscribe`, ignores the initial
  * `pillar.snapshot` frame, and on every subsequent registered /

@@ -2,8 +2,8 @@
 /**
  * cargo-extract — materialize a single workspace member crate as a standalone,
  * workspace-free package in an output dir, ready to `cargo build` in isolation.
- * The cargo analogue of the TS `rewrite-deps.mjs` step (docs/plans/repo-
- * federation/04-isolation-enforcement.md §8, RUST-3).
+ * The cargo analogue of the TS `rewrite-deps.mjs` step, so the Rust members
+ * face the same extract-to-own-repo litmus as the TS units (ADR-039).
  *
  * The single mutation it performs — the "changing only where shared deps come
  * from" clause — is to break every workspace inheritance edge:

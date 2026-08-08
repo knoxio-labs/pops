@@ -2,6 +2,7 @@ import AppCore
 import Auth
 import BFMClient
 import DesignSystem
+import FeaturePairing
 import FeatureTransactions
 import SwiftUI
 
@@ -13,6 +14,7 @@ internal struct PlaceholderView: View {
         Auth.moduleName,
         BFMClient.moduleName,
         DesignSystem.moduleName,
+        FeaturePairing.moduleName,
         FeatureTransactions.moduleName,
     ]
 

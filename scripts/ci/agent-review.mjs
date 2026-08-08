@@ -10,7 +10,7 @@
  * credential, or API hiccup degrades to exit 0), so a flaky model call can
  * never block a green PR. The deterministic guards are what gate.
  *
- * Rubric (00-architecture.md §6, README hard constraints):
+ * Rubric (the hard rules in AGENTS.md):
  *   - no `as any` / `as unknown as T` / `eslint-disable` / `ts-ignore`
  *   - no cross-contract reach-behind; a lib never depends on a pillar
  *   - no orphan TODO (file an issue + reference, or omit)

@@ -9,9 +9,10 @@
  * generated Swift client has no case for, reached by something as ordinary as
  * `?limit=500`.
  *
- * Only the **device-facing** routes are reshaped: `/mobile/*` and the pairing
- * exchange, which declares its own 400 for the same reason and answers the
- * same `invalid_request` body. The operator routes declare no 400 at all, so
+ * Only the **device-facing** routes are reshaped: `/mobile/*` and the routes
+ * in `paths.ts`'s `DEVICE_FACING_PATHS`, each of which declares its own 400 for
+ * the same reason and answers the same `invalid_request` body. The operator
+ * routes declare no 400 at all, so
  * there is nothing there for a native body to contradict, and quietly changing
  * what they answer is not this ticket's business — they keep ts-rest's default
  * verbatim, which is why the default is reproduced below rather than delegated
@@ -19,18 +20,20 @@
  * default at all, which would turn every operator validation failure into a
  * 500.
  *
- * There is a second reason to reshape the pairing route specifically, beyond
- * the client having a case for it: ts-rest's body names the fields it rejected,
- * and that route is reachable unauthenticated on an Access-bypassed hostname.
- * A description of the schema is not something to hand whoever asks.
+ * There is a second reason to reshape the `/devices/*` routes specifically,
+ * beyond the client having a case for it: ts-rest's body names the fields it
+ * rejected, and those routes are reachable unauthenticated on an
+ * Access-bypassed hostname. A description of the schema — which for refresh
+ * means the names and bounds of the three fields a credential is presented in
+ * — is not something to hand whoever asks.
  */
 import { RequestValidationError } from '@ts-rest/express';
 
-import { MOBILE_PATH_PREFIX, PAIRING_PATH } from '../paths.js';
+import { DEVICE_FACING_PATHS, MOBILE_PATH_PREFIX } from '../paths.js';
 
 import type { NextFunction, Response } from 'express';
 
-import type { PairingInvalidRequestError } from '../../contract/rest-device-schemas.js';
+import type { DeviceInvalidRequestError } from '../../contract/rest-device-schemas.js';
 import type { MobileRequestError } from '../../contract/rest-schemas.js';
 
 /**
@@ -47,7 +50,7 @@ type PathOnlyRequest = { readonly path: string };
  * twice is what keeps them from drifting apart silently: drop `invalid_request`
  * from either and this stops compiling.
  */
-const INVALID_REQUEST: MobileRequestError & PairingInvalidRequestError = {
+const INVALID_REQUEST: MobileRequestError & DeviceInvalidRequestError = {
   code: 'invalid_request',
   message: 'This request does not match what the server accepts.',
 };
@@ -68,7 +71,8 @@ function isUnderPrefix(path: string, prefix: string): boolean {
 }
 
 function isDeviceFacingPath(req: PathOnlyRequest): boolean {
-  return isUnderPrefix(req.path, MOBILE_PATH_PREFIX) || isUnderPrefix(req.path, PAIRING_PATH);
+  if (isUnderPrefix(req.path, MOBILE_PATH_PREFIX)) return true;
+  return DEVICE_FACING_PATHS.some((path) => isUnderPrefix(req.path, path));
 }
 
 export function createRequestValidationErrorHandler() {

@@ -15,11 +15,21 @@ name: Quality
 # waiting for status" forever and blocks the PR. The ruleset flag
 # `strict_required_status_checks_policy: false` governs only the
 # branch-up-to-date requirement — it does NOT make a never-reported check
-# non-blocking. Excluding docs paths here is exactly
-# what left docs-only PRs (#3672, #3324) permanently unmergeable — the required
-# `Lint`/`Format`/`Module boundaries`/`Duplication check` contexts were never
-# emitted. On a docs-only PR the scoped jobs run over `scripts/` (always clean)
-# and report green, satisfying the ruleset without weakening any code PR.
+# non-blocking. Excluding docs paths here is exactly what once left docs-only
+# PRs permanently unmergeable — the required `Lint`/`Format`/`Module
+# boundaries`/`Duplication check` contexts were never emitted. On a docs-only PR
+# the scoped jobs run over `scripts/` (always clean) and report green,
+# satisfying the ruleset without weakening any code PR.
+#
+# EVERY JOB BELOW IS LOAD-BEARING. `ci-gate.yml` observes this workflow's
+# WORKFLOW-LEVEL conclusion, so a red job anywhere in this file makes the whole
+# `Quality` run conclude `failure` and turns the aggregated `CI Gate` context
+# red — whether or not that job's own name is listed in the branch ruleset.
+# "Not in the ruleset" therefore does NOT mean "cannot block": the only way to
+# make a job here advisory is `continue-on-error: true`, which hides it from the
+# workflow conclusion entirely. Nothing in this file is advisory, and
+# scripts/ci/check-ci-gate-wiring.mjs asserts that no job reintroduces
+# `continue-on-error`. See .github/workflows/README.md.
 
 on:
   pull_request:
@@ -126,7 +136,7 @@ jobs:
     # no per-unit mise.toml and so are invisible to the `run-all` fan-out and to
     # the Unit/App/FE Quality matrices; without this job they only ran if a human
     # typed `vitest` locally. This job lands in the Quality workflow, which the
-    # required `CI Gate` aggregator observes, so the scripts suite is gated.
+    # `CI Gate` aggregator observes, so the scripts suite reaches that context.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -140,12 +150,10 @@ jobs:
 
   exports:
     name: Exports discipline
-    # NON-required gate (P6-T02 / ISO-EXPORTS): proves every unit's
-    # exports/files whitelist is self-consistent — every exports/main/types
-    # target exists and falls under `files`. The compiled units' targets live
-    # in `dist/`, so it builds before checking. Intentionally NOT added to the
-    # required-checks ruleset; it reports a result without blocking merges while
-    # the federation isolation phase lands.
+    # P6-T02 / ISO-EXPORTS: proves every unit's exports/files whitelist is
+    # self-consistent — every exports/main/types target exists and falls under
+    # `files`. The compiled units' targets live in `dist/`, so it builds before
+    # checking.
     #
     # On a PR this only builds + checks the CHANGED units — each already owns
     # its own `tsconfig.build.json` sub-graph (referencing just its transitive
@@ -155,7 +163,6 @@ jobs:
     # building the full root `tsconfig.build.json` graph + checking every unit,
     # since exports/files self-consistency is a whole-tree invariant and main
     # must never silently accumulate a break the per-PR scoping missed.
-    # See docs/plans/repo-federation/04-isolation-enforcement.md §3.
     needs: scope
     runs-on: ubuntu-latest
     steps:
@@ -223,12 +230,10 @@ jobs:
       - run: npx jscpd@^4 --threshold 5 --min-lines 8 --min-tokens 70 --ignore "**/*.test.{ts,tsx},**/*.spec.{ts,tsx},**/dist/**,**/node_modules/**,**/*.snap,**/*.d.ts,**/generated.ts,**/src/*-api/**,**/db/schema.ts,**/db/seeder.ts" --reporters "console" .
 
   # --- Extractability fast gates (EX-1 / EX-3) -------------------------------
-  # NON-REQUIRED by design: these jobs are deliberately kept out of the branch
-  # ruleset's required-checks set during the federation migration. They surface
-  # phantom-dependency and baseline-growth regressions as signal without
-  # blocking merges while units are still being normalised. Promote to required
-  # once the tree is clean. EX-2 (full sandbox) is heavy and runs nightly, not
-  # here.
+  # These surface phantom-dependency and baseline-growth regressions. Like every
+  # other job in this workflow they are load-bearing through the aggregated
+  # `CI Gate` context — see the file header. EX-2 (full sandbox) is heavy and
+  # runs nightly, not here.
   extractability-deps:
     name: Extractability — declared deps (EX-1)
     runs-on: ubuntu-latest
@@ -262,16 +267,12 @@ jobs:
 
   bundle-map-coverage:
     name: Bundle-map coverage (RD-10)
-    # NON-required gate (P7-T08 / RD-10): asserts every in-repo
-    # `pillars/*/app` package is referenced by the shell's static
-    # `bundle-map.tsx`, so adding a pillar app and forgetting its entry fails
-    # loudly here instead of silently shipping no UI. ADR-002 keeps the bundle
-    # map static (one optimized SPA importing the published `@pops/app-*`
-    # contract); this guard keeps it complete. Intentionally NOT in the
-    # required-checks ruleset while the federation phase lands. The guard reads
-    # the source tree directly and pulls in no third-party deps, so it skips
-    # `pnpm install`. See docs/plans/repo-federation/06-registry-decoupling.md
-    # RD-10.
+    # Asserts every in-repo `pillars/*/app` package is referenced by the shell's
+    # static `bundle-map.tsx`, so adding a pillar app and forgetting its entry
+    # fails loudly here instead of silently shipping no UI. ADR-002 keeps the
+    # bundle map static (one optimized SPA importing the published `@pops/app-*`
+    # contract); this guard keeps it complete. The guard reads the source tree
+    # directly and pulls in no third-party deps, so it skips `pnpm install`.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -285,8 +286,8 @@ jobs:
 
   tailwind-source-coverage:
     name: Tailwind @source coverage
-    # NON-required gate: asserts every `@source` glob in the single Tailwind
-    # theme entry (libs/ui/src/theme/globals.css) matches real files, and that
+    # Asserts every `@source` glob in the single Tailwind theme entry
+    # (libs/ui/src/theme/globals.css) matches real files, and that
     # no className-bearing UI file falls outside those globs. Tailwind v4 never
     # errors on an empty `@source` glob, so the pillars/libs rename silently
     # voided the old `apps/*`/`packages/*` globs and collapsed the UI with no

@@ -6,8 +6,9 @@ bfm's hostname has Cloudflare Access bypassed — that is what lets a native app
 reach it without a browser login (POPS-1389) — so this directory is not one
 layer of defence among several. It is the only one.
 
-A phone passes through here twice: once to become a device, and thereafter on
-every request it makes as one.
+A phone passes through here three times: once to become a device, on every
+request it makes as one, and every ten minutes to renew the credential that
+lets it keep making them.
 
 ```
 an unpaired phone                     bfm
@@ -36,22 +37,47 @@ a paired phone                        bfm
                                       require-device.ts
                                           │ token intact and current?  no ─► 401
                                           │ device row still trusted?  no ─► 403
+                                          │ lastSeenAt stale?         yes ─► touched
                                           ▼
                                       res.locals.device ─► the route
+
+a phone whose ten minutes lapsed     bfm
+────────────────────────────────     ───
+  POST /devices/challenge ────────►   refresh-rate-limit.ts ──► refresh-challenge.ts
+                                          │                         nonce, 60s, single use
+                                      ◄───┘
+  POST /devices/refresh ──────────►   refresh-rate-limit.ts   (the SAME budget)
+    { refreshToken, nonce,                │ either tier spent?       yes ─► 429
+      signature }                         ▼
+                                      refresh-exchange.ts
+                                          │ nonce live + unspent?     no ─► 401 challenge_expired
+                                          │ token known?              no ─► 401 invalid_grant
+                                          │ device still trusted?     no ─► 403 device_revoked
+                                          │ token already spent?     YES ─► burn the family,
+                                          │                                 401 invalid_grant
+                                          │ token expired?            no ─┐
+                                          │ signature over            no ─┴► 401 invalid_grant
+                                          │   DOMAIN\n nonce \n sha256(token)?
+                                          ▼
+                                      insert successor, consume predecessor
+                                          ▼
+                                      { accessToken, refreshToken }
 ```
 
-Both budgets are the same mechanism with different numbers —
+All three budgets are the same mechanism with different numbers —
 `api/tiered-rate-limit.ts`, one directory up, because it is not specific to
 authentication. They keep separate counters: sharing one would let ordinary
-phone traffic lock a handset out of pairing.
+phone traffic lock a handset out of pairing, or a handset failing to refresh
+stop a different one from pairing. The two refresh routes deliberately share
+ONE, because they are two halves of a single exchange and separate budgets
+would be one budget spendable twice by alternating paths.
 
-`device-signature.ts` sits off to one side of both paths. It is the bytes half
-of proof of possession: it decodes an SPKI public key and checks an ECDSA P-256
-signature the phone produced. The pairing exchange uses only the first half of
-that — parsing the key it is about to store, and rejecting anything that is not
-P-256 before a row is written. The signature half has no caller until refresh
-(POPS-1375), and the message format it signs over belongs to that route rather
-than here.
+`device-signature.ts` is the bytes half of proof of possession, used by two
+paths for two different halves of itself. Pairing uses only the key parsing —
+rejecting anything that is not P-256 before a row is written. Refresh uses the
+verification, and **defines the message those bytes cover**; that format lives
+in `refresh-exchange.ts`'s header, which is the only description of it anywhere
+and the one `clients/ios` has to reproduce.
 
 Its tests are the only place in this repo where `node:crypto` is shown to accept
 what CryptoKit actually emits. Everything else about refresh can be exercised
@@ -129,16 +155,62 @@ produced, which makes it a revoked handset still calling — the exact event an
 operator wants after reporting a phone stolen. A device id is an identifier,
 not a credential.
 
+## Why reuse detection runs before the signature check
+
+It is the one ordering in this directory that looks wrong and is not.
+
+An unauthenticated caller can revoke a whole token family by presenting a
+spent token with garbage in the `signature` field. That reads like a denial of
+service, and it is the correct behaviour. Reaching the check needs a token this
+server issued, and a refresh token is 256 CSPRNG bits — it cannot be guessed,
+so presenting one **is** the evidence. Verifying the signature first would mean
+a thief who stole the token but not the phone never trips the detector, and the
+family they stole from stays alive. That is the compromise the whole mechanism
+exists to end.
+
+The cost lands on the honest client too, and it is worth stating plainly: a
+handset that submits the same refresh twice — a lost response and a naive
+retry, or two requests in flight at once — burns its own family and has to be
+paired again. That is inherent to rotation with reuse detection, not a bug in
+this implementation: nothing here can tell that case apart from a theft. The
+app's single-flight logic is what keeps a real phone out of it, and re-pairing
+is a QR scan rather than data loss.
+
+## Why the lastSeenAt write is coalesced
+
+`require-device.ts` moves `devices.lastSeenAt` forward on every request that
+gets past both checks above, not just on `/mobile/bootstrap` — a device that
+only ever calls, say, `/mobile/finance/transactions` used to read as "not seen
+since pairing" forever, which is the defect POPS-1469 tracked.
+
+The write is coalesced to once a minute (`LAST_SEEN_COALESCE_WINDOW_MS`)
+rather than run on every request, because every request is exactly what passes
+through here: an uncoalesced write would turn this perimeter into a write path
+on a Litestream-replicated database at the pace of a phone scrolling a list.
+A 403 does not count as contact — the write sits after the revocation check,
+so a rejected handset never moves the column a stolen phone's operator is
+about to read.
+
+`/mobile/bootstrap` still writes its own uncoalesced instant on top of this
+(`api/mobile/bootstrap.ts`), because its response contract promises the exact
+value it wrote, not a value that might be up to a minute stale. That is one
+extra write, at most once a minute, on the one route a launching app always
+calls first — negligible next to what coalescing saves everywhere else.
+
 ## What is not here
 
-- **Refresh and rotation** (POPS-1375). Access tokens are deliberately short —
-  the TTL constant in `access-token.ts` says why — which only works because
-  something else can mint a replacement. `mintAccessToken` has one caller,
-  `pairing-exchange.ts`, so a handset that lets its ten minutes lapse has to
-  pair again until that ticket lands. It also writes the head of a refresh-token
-  family that nothing yet rotates. `device-signature.ts` is the primitive that
-  ticket verifies with; the nonce, the signed-message format and the rotation
-  state machine are all its.
+- **A visible incident trail for a burned family.** Reuse detection writes
+  `revokedAt` across the family and logs one warning with the device and family
+  ids. It does not touch `devices.revokedAt`, so the Devices page still shows
+  the handset as trusted while its refresh chain is dead, and the operator's
+  first signal is a phone that asks to be paired again. It also leaves the
+  device's current access token working for up to its remaining ten minutes.
+  POPS-1536 tracks surfacing the event and deciding what, if anything, should
+  happen to the live access token.
+- **A shared nonce store.** `refresh-challenge.ts` keeps challenges in a
+  per-process map, which is exact for one container and breaks refresh outright
+  for two — a nonce minted by one replica cannot be spent at the other.
+  POPS-1537, with the same trigger as POPS-1474 below.
 - **App Attest binding** (POPS-1394). Pairing trusts that whoever holds the code
   is the phone the operator meant to pair. Attestation would additionally prove
   the request came from a genuine build of this app on genuine hardware. It is
@@ -155,10 +227,3 @@ not a credential.
   database rows rather than JWTs. A second verification key would buy a
   seamless rotation nobody needs and double the surface an attacker can forge
   against.
-- **Anything about `lastSeenAt`** (POPS-1469). `/mobile/bootstrap` writes it,
-  which covers an app launch; the guard still does not, so a device that only
-  ever calls other `/mobile` routes reads as last seen at its last launch. The
-  guard is the natural place to close that, and deliberately has not, because a
-  write on every authenticated request turns the perimeter into a write path on
-  a Litestream-replicated database and the coalescing rule is a decision of its
-  own.

@@ -19,18 +19,24 @@
  * Collapsing those into one status makes the app's recovery logic guesswork,
  * which is why `clients/ios`'s `SessionReducer` already switches on exactly
  * this split.
+ *
+ * A third thing happens once those two questions both come back clean: the
+ * device's `lastSeenAt` moves forward, coalesced to {@link
+ * LAST_SEEN_COALESCE_WINDOW_MS} so a phone making several calls in quick
+ * succession costs at most one write. This is the only place that check-in is
+ * recorded for routes other than `/mobile/bootstrap`, which writes its own
+ * uncoalesced instant because its response promises the exact value it wrote
+ * — see `api/mobile/bootstrap.ts`.
  */
-import { findDeviceById } from '../../db/index.js';
+import { DEVICE_REVOKED_ERROR } from '../../contract/rest-schemas.js';
+import { findDeviceById, touchDeviceIfStale } from '../../db/index.js';
 import { AccessTokenError, verifyAccessToken } from './access-token.js';
 
 import type { KeyObject } from 'node:crypto';
 
 import type { NextFunction, Request, RequestHandler, Response } from 'express';
 
-import type {
-  MobileDeviceRevokedError,
-  MobileInvalidTokenError,
-} from '../../contract/rest-schemas.js';
+import type { DeviceRevokedError, MobileInvalidTokenError } from '../../contract/rest-schemas.js';
 import type { BfmDb, DeviceRow } from '../../db/index.js';
 
 export interface RequireDeviceDeps {
@@ -68,7 +74,7 @@ function readBearerToken(req: Request): string | null {
  */
 type MobileRefusal =
   | { readonly status: 401; readonly body: MobileInvalidTokenError }
-  | { readonly status: 403; readonly body: MobileDeviceRevokedError };
+  | { readonly status: 403; readonly body: DeviceRevokedError };
 
 function refuse(res: Response, refusal: MobileRefusal): void {
   if (refusal.status === 401) {
@@ -84,6 +90,16 @@ const INVALID_TOKEN: MobileRefusal = {
   status: 401,
   body: { code: 'invalid_token', message: 'Missing or invalid access token.' },
 };
+
+/**
+ * How stale `lastSeenAt` must be before a request bothers to move it.
+ *
+ * A minute is frequent enough that the operator's Devices page reads as live
+ * while a phone is actually in use, and coarse enough that a screen's worth of
+ * pagination calls costs the database one write rather than one per call. The
+ * mechanism this number feeds is {@link touchDeviceIfStale}.
+ */
+export const LAST_SEEN_COALESCE_WINDOW_MS = 60_000;
 
 /**
  * Build the guard bound to a database handle and the signing key.
@@ -140,14 +156,16 @@ export function createRequireDevice(deps: RequireDeviceDeps): RequestHandler {
       console.warn(
         `[bfm-api] rejected a request from revoked device ${device.id} (revoked at ${device.revokedAt})`
       );
-      refuse(res, {
-        status: 403,
-        body: { code: 'device_revoked', message: 'This device has been revoked. Pair again.' },
-      });
+      refuse(res, { status: 403, body: DEVICE_REVOKED_ERROR });
       return;
     }
 
-    (res.locals as DeviceLocals).device = device;
+    (res.locals as DeviceLocals).device = touchDeviceIfStale(
+      deps.db,
+      device,
+      new Date(),
+      LAST_SEEN_COALESCE_WINDOW_MS
+    );
     next();
   };
 }

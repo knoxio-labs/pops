@@ -9,11 +9,13 @@ xcodegen = "2.46.0"
 # formats, one intended scope, so they move together.
 SWIFT_SOURCES = "App AppTests Packages"
 
-# Xcode cannot be a `[tools]` pin — mise does not install it — so this is a
-# declaration the CI job reads and acts on, not something that changes anything
-# locally. It matters because `swift-format` ships inside the toolchain and is
-# therefore the one check whose verdict depends on which Xcode ran it; a local
-# Xcode other than this one can format-lint differently from CI.
+# Xcode cannot be a `[tools]` pin — mise does not install it — so this is the
+# one committed declaration both the CI job and `verify:xcode-version` below
+# read, rather than two hand-kept copies. It matters because `swift-format`
+# ships inside the toolchain and is therefore the one check whose verdict
+# depends on which Xcode ran it; a local Xcode other than this one can
+# format-lint differently from CI, and `mise run lint` refuses to trust that
+# difference rather than let it pass silently.
 # The value must be an Xcode the GitHub macOS runner image actually carries, and
 # that image is the reason the iOS floor is 26 and not the newest SDK — see the
 # `deploymentTarget` note in project.yml.
@@ -393,11 +395,27 @@ scripts/swift-sources.sh check $SWIFT_SOURCES || status=1
 exit $status
 '''
 
-# The one entry point. The iOS CI job does not exist yet; when it does it is to
-# invoke this task rather than restate the commands, because the moment the two
-# are written out separately they drift and a green local run means nothing.
+# swift-format's verdict depends on which Xcode ran it. Self-test first, same
+# reasoning as `generated-boundary` above: the pure parsing and message logic
+# is exercised on every run rather than only on a machine that happens to have
+# the wrong Xcode installed.
+[tasks."verify:xcode-version"]
+description = "Local Xcode matches the version CI pins (POPS_XCODE_VERSION in [env] above)"
+hide = true
+run = '''
+set -u
+status=0
+scripts/check-xcode-version.sh self-test || status=1
+scripts/check-xcode-version.sh check "$POPS_XCODE_VERSION" || status=1
+exit $status
+'''
+
+# The one entry point. `.github/workflows/ios-quality.yml` invokes this task
+# rather than restating the commands, because the moment the two are written
+# out separately they drift and a green local run means nothing.
 [tasks.lint]
 description = "swift-format + SwiftLint over the Swift sources"
+depends = ["verify:xcode-version"]
 run = '''
 set -u
 # All three run even when an earlier one fails, so one invocation reports every
@@ -411,6 +429,10 @@ exit $status
 
 [tasks.format]
 description = "Rewrite the Swift sources with swift-format (the fixer for half of `lint`)"
+# The write-path version of the same defect `lint` guards against: a mismatched
+# Xcode wouldn't just misreport `lint` results, it would rewrite files to a
+# DIFFERENT toolchain's rules and commit bytes CI's swift-format then rejects.
+depends = ["verify:xcode-version"]
 run = "mise run swift-format format"
 
 # Generates this client's canonical copy and stops there. The BFM vendors its

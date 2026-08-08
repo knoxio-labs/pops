@@ -2,7 +2,7 @@
 
 A native SwiftUI iPhone app that reaches the federation over HTTP through one pillar and is imported by nothing in this repo — the two halves of what [ADR-043](../../docs/architecture/adr-043-clients-as-a-unit-kind.md) means by a client. It is in neither the pnpm workspace nor the cargo workspace; `pnpm`, `tsc` and `cargo` have nothing to say about this directory.
 
-That pillar is the BFM. Its contract is vendored here and a Swift client is generated from it — see [`Packages/BFMClient`](Packages/BFMClient/README.md) — but nothing in the app calls that client yet. The contract now carries operations a screen would want (the mobile transaction list and detail); what is missing is the screen, and the session that would authenticate it.
+That pillar is the BFM. Its contract is vendored here and a Swift client is generated from it — see [`Packages/BFMClient`](Packages/BFMClient/README.md). The pairing exchange is the first call the app makes through it; the authenticated ones are not written, because the transport that would attach and refresh a token is not either.
 
 The consequence worth internalising before changing anything here: this app is **distributed, not deployed**. It leaves through App Store Connect onto hardware the operator does not control, so a build already on a phone keeps calling yesterday's contract for as long as its owner declines to update. Every other consumer of a pillar contract in this repo redeploys with its producer; this one cannot.
 
@@ -28,7 +28,7 @@ Both lanes refuse to pass having run nothing — the package lane fails if no pa
 
 `mise run generate:bfm-client` re-vendors the BFM's OpenAPI snapshot and regenerates the Swift client from it. Run it after any change to `pillars/bfm`'s contract; CI runs the same command and fails on any diff. See [`Packages/BFMClient`](Packages/BFMClient/README.md).
 
-`mise install` here pins XcodeGen and SwiftLint; Xcode itself is not managed by mise, and `POPS_XCODE_VERSION` in `mise.toml` is a declaration CI acts on rather than something that changes anything locally. **The deployment target is capped by that Xcode, not chosen freely.** An SDK older than the deployment target does not build and an SPM `platforms:` floor cannot be overridden from the command line, so the floor can only be the newest iOS the GitHub-hosted macOS runner can build — the latest released major, never the one a beta Xcode is previewing. Raising it is a single commit that moves `POPS_XCODE_VERSION`, `project.yml`'s `deploymentTarget` and every `platforms:` floor under `Packages/` together, and it can only happen after the runner image ships that Xcode.
+`mise install` here pins XcodeGen and SwiftLint; Xcode itself is not managed by mise, so `POPS_XCODE_VERSION` in `mise.toml` is a declaration rather than something mise can install — but `mise run lint` reads and enforces it (see [Linting and formatting](#linting-and-formatting) below), so it is not CI-only the way it once was. **The deployment target is capped by that Xcode, not chosen freely.** An SDK older than the deployment target does not build and an SPM `platforms:` floor cannot be overridden from the command line, so the floor can only be the newest iOS the GitHub-hosted macOS runner can build — the latest released major, never the one a beta Xcode is previewing. Raising it is a single commit that moves `POPS_XCODE_VERSION`, `project.yml`'s `deploymentTarget` and every `platforms:` floor under `Packages/` together, and it can only happen after the runner image ships that Xcode.
 
 ## Linting and formatting
 
@@ -43,7 +43,7 @@ They divide the work along a line worth knowing before adding a rule to either: 
 
 Both files carry their reasoning in a header comment — every limit is a number someone picked over an alternative, and the alternative is written down. That is the source of truth; this README deliberately does not repeat it, because two copies of a rule list means one of them is wrong and you cannot tell which.
 
-Neither tool is pinned the same way. SwiftLint is a mise tool, so its version is in `mise.toml` and everyone gets the same one. `swift-format` ships inside the Xcode toolchain and cannot be pinned that way at all — which is why `POPS_XCODE_VERSION` exists and why the CI job selects that Xcode before it lints. It is also the one check whose verdict depends on which Xcode ran it: a local Xcode other than the pinned one can disagree with CI about what "formatted" means, and `mise run lint`'s rule-list drift check will say so rather than let the difference pass silently.
+Neither tool is pinned the same way. SwiftLint is a mise tool, so its version is in `mise.toml` and everyone gets the same one. `swift-format` ships inside the Xcode toolchain and cannot be pinned that way at all — which is why `POPS_XCODE_VERSION` exists and why the CI job selects that Xcode before it lints. It is also the one check whose verdict depends on which Xcode ran it, so `mise run lint` opens by comparing `xcodebuild -version` against that pin (`verify:xcode-version` in `mise.toml`) and refuses to run at all on a mismatch, naming both versions. `xcrun swift-format --version` cannot do this job — on a beta toolchain it reports the single word `main`, not something you can compare against anything — which is why the check reads the Xcode build instead, the same line CI itself parses to select the pinned Xcode. Beneath that, `mise run lint`'s rule-list drift check catches a narrower thing: an Xcode that ships a different `swift-format` rule set entirely, on the (already Xcode-version-checked) toolchain that ran it.
 
 ### Generated code
 
@@ -113,7 +113,7 @@ Half of that is compiler-enforced — a package can only `import` what its own `
 
 `Packages/DesignSystem` carries a second constraint on every feature, orthogonal to the import graph: a feature may not name a colour, a type size or a gap. See [Packages/DesignSystem/README.md](Packages/DesignSystem/README.md).
 
-`AppCore`, `DesignSystem`, the storage half of `Auth` and `BFMClient` are written — see [Packages/Auth/README.md](Packages/Auth/README.md) and [Packages/BFMClient/README.md](Packages/BFMClient/README.md). Every other package is still a shell whose placeholder type says what the module is for, and filling them in is one ticket per module.
+`AppCore`, `DesignSystem`, `BFMClient`, `Auth` and `FeaturePairing` are written — see [Packages/Auth/README.md](Packages/Auth/README.md), [Packages/BFMClient/README.md](Packages/BFMClient/README.md) and [Packages/FeaturePairing/README.md](Packages/FeaturePairing/README.md). `FeatureTransactions` is still a shell whose placeholder type says what the module is for, and so is the app's root view — the pairing screen is built and unit-tested but nothing presents it yet, which is the root shell's ticket.
 
 ## `Contracts/`
 
@@ -143,7 +143,8 @@ It is not quite the only job that touches this directory. The `Device signature 
 
 ## Known gaps
 
-- **Nothing consumes the resolved base URL yet.** `BuiltInBaseURL` answers where the BFM is and `BFMHTTPClient` takes one, but nothing constructs the pair: the composition root binds implementations to `AppCore` protocols, and the BFM contract exposes no operation a feature needs. In Release there is also no pairing store to fall back on (POPS-1383).
+- **Nothing constructs the app's dependencies yet.** `AppDependencies.unbound` is what the environment still holds: `BFMDevicePairingService` and `PairingView` are both written and tested, and nothing builds either, because the root view that would switch on the session and bind them is a placeholder (POPS-1391). Until it lands the pairing screen is reachable only from `#Preview`.
+- **Nothing automated checks Dynamic Type or VoiceOver on any screen.** The pairing screen is laid out for both and neither is measured; the reasoning and the candidate checks are in POPS-1583. See [`Packages/FeaturePairing/README.md`](Packages/FeaturePairing/README.md).
 - **`mise run verify:release-carries-no-host` runs nowhere but a laptop.** The invariant it guards — a shipped binary naming no BFM host — is the one thing here that is not caught by building, testing or linting, and it is the only task in this directory that no job invokes (POPS-1475).
 - **The pre-push hook does not run `mise run lint`.** It would put Xcode on the push path for every contributor, including on the TypeScript-only pushes that are almost all of them. Unformatted Swift can still reach a branch; it can no longer reach `main`, because the CI job rejects it.
 - **The app has never run on a physical iPhone under test.** Both production credential stores are now covered on every CI run — `KeychainTokenStoreTests` and `SecureEnclaveKeyStoreTests` in [`AppTests`](AppTests), which is an entitled app process and, on an Apple Silicon host, reaches a real Secure Enclave. What that cannot cover is one particular phone: its Enclave, its passcode state, its provisioning. `mise run test:device` is the lane for that and nothing in CI runs it.

@@ -2,10 +2,9 @@
 //!
 //! Sensitive keys read back as a fixed [`REDACTED`] sentinel; writes are never
 //! passed through here, so the stored value stays intact and only outbound
-//! reads are masked. This matches OD-8 in `docs/plans/02-settings-federation.md`:
-//! the shell renders a field holding the sentinel as an empty password input
-//! and only sends edited fields, so a no-op save never persists the sentinel
-//! over the real secret.
+//! reads are masked. The shell relies on that asymmetry: it renders a field
+//! holding the sentinel as an empty password input and only sends edited
+//! fields, so a no-op save never persists the sentinel over the real secret.
 
 use std::collections::{BTreeMap, BTreeSet};
 

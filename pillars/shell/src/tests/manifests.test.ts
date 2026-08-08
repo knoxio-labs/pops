@@ -4,8 +4,6 @@
  * The manifest set is derived from `installedFrontendManifests()` — the same
  * registry-walk getter the shell uses at boot — so adding a new in-repo pillar
  * requires no edit here.
- *
- * See `docs/themes/federation/prds/registry-driven-shell-ui`.
  */
 import { describe, expect, it } from 'vitest';
 

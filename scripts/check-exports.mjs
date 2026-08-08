@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 /**
- * Exports/files self-consistency gate (ISO-EXPORTS, P6-T02).
+ * Exports/files self-consistency gate.
  *
- * The resolution-time complement to the ISO-R3 dep-cruiser rule
- * (docs/plans/repo-federation/04-isolation-enforcement.md §3): dep-cruiser
- * rules are advisory unless a package *physically cannot* be imported wrong.
- * The `exports` map + `files` whitelist enforce the contract at resolution
- * time, identically in-workspace and post-extraction. This script proves the
- * manifest is *honest* about that surface — it does not invent or widen it.
+ * The resolution-time complement to the whole-tree boundary rules in
+ * `.dependency-cruiser.cjs`: a lint rule is advisory unless a package
+ * *physically cannot* be imported wrong. The `exports` map + `files`
+ * whitelist enforce the contract at resolution time, identically in-workspace
+ * and post-extraction. This script proves the manifest is *honest* about that
+ * surface — it does not invent or widen it.
  *
  * For every workspace unit (a `libs` dir, a `pillars` dir, or a pillar's
  * nested `app` dir, each carrying a package.json) it asserts:
@@ -20,7 +20,7 @@
  *      falls under one of its globs — the **extraction firewall**: a target
  *      outside `files` would 404 once the package is packed/extracted;
  *   4. no `"./*"` catch-all that re-exports the whole tree, except the audited
- *      wide surfaces (`@pops/ui` `./primitives/*`, `@pops/locales` asset tree);
+ *      wide surfaces (`@pops/locales` asset tree);
  *   5. `version` is a real (publishable) semver, even though workspace deps
  *      consume it as `workspace:*`.
  *
@@ -45,21 +45,26 @@ const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..');
 
 /**
- * Audited wide-surface exceptions to the `"./*"`-catch-all ban
- * (04-isolation-enforcement.md §3). Each entry is a package name mapped to the
- * set of wildcard export *keys* it is permitted to declare. Anything else with
- * a `*` in the key is a violation. Keep this set tiny and justified.
+ * Audited wide-surface exceptions to the `"./*"`-catch-all ban. Each entry is
+ * a package name mapped to the set of wildcard export *keys* it is permitted
+ * to declare. Anything else with a `*` in the key is a violation. Keep this
+ * set tiny and justified.
  *
- *   - `@pops/ui` `./primitives/*` — the one audited intentional wide surface
- *     (a design-system primitive barrel; consumers cherry-pick primitives).
  *   - `@pops/locales` `./*` — a pure JSON asset tree consumed as
  *     `@pops/locales/<locale>/<ns>.json`; the package *is* its asset surface,
  *     there is no compiled/internal half to hide.
  *
+ * `@pops/ui` `./primitives/*` was here once, but the directory it pointed at
+ * mixes `.tsx` and `.ts` files, and no single extension-bearing target (nor a
+ * fallback array — Vite takes the array's first candidate unconditionally
+ * and never retries the rest) can serve both through tsc *and* a bundler. The
+ * subpath never actually resolved; it was removed rather than fixed because
+ * every primitive it would have exposed is already reachable through the
+ * package's own barrel (`@pops/ui`).
+ *
  * @type {Record<string, Set<string>>}
  */
 const ALLOWED_WILDCARD_EXPORTS = {
-  '@pops/ui': new Set(['./primitives/*']),
   '@pops/locales': new Set(['./*']),
 };
 
@@ -341,8 +346,8 @@ export function checkUnit(unit, exists = targetExists) {
   const hasFiles = Array.isArray(filesField) && filesField.length > 0;
 
   // Compiled units (any export/entry target lands under `dist/`) MUST carry a
-  // `files` whitelist — the extraction firewall (04-isolation-enforcement.md §3
-  // invariant table). Without it `npm pack` ships the whole tree, defeating the
+  // `files` whitelist — the extraction firewall.
+  // Without it `npm pack` ships the whole tree, defeating the
   // contract boundary. Source units (targets under `src/`) ship whole and need
   // none, so the requirement keys on "points at dist", not on unit location.
   const isCompiled = targets.some((t) => toUnitRelative(t.relPath).startsWith('dist/'));
@@ -611,7 +616,7 @@ function main() {
     for (const err of report.errors) console.error(`    - ${err}`);
   }
   console.error(
-    '\nThe exports map + files whitelist is the contract surface (04-isolation-enforcement.md §3). ' +
+    '\nThe exports map + files whitelist is the contract surface (ADR-039). ' +
       'A target that is missing, or reachable but excluded from files, breaks resolution after extraction.'
   );
   process.exit(1);
