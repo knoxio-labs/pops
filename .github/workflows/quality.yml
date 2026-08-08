@@ -332,6 +332,13 @@ jobs:
     # against; this job is the Node half, and it runs everywhere rather than
     # under the iOS path filter because the BFM can break the contract without
     # touching a line of Swift. Needs no `pnpm install` — `node:crypto` only.
+    #
+    # The fixture exists twice — canonical under `clients/ios`, vendored inside
+    # the BFM's unit boundary because ADR-043 forbids a pillar reading a path
+    # under `clients/` — so this job also enforces byte-equality between the
+    # copies. That lives here rather than in `vendored-contracts` above: this
+    # pair's producer is the CLIENT, which inverts the direction that guard's
+    # filename-convention discovery is built around.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7

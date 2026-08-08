@@ -5,16 +5,59 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
-import { checkFixture } from '../check-device-signature-fixture.mjs';
+import {
+  checkAllCopies,
+  checkFixture,
+  FIXTURE_COPIES,
+  isFileNotFound,
+} from '../check-device-signature-fixture.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..', '..');
 
 type Fixture = Parameters<typeof checkFixture>[0];
 
-const committed: Fixture = JSON.parse(
-  readFileSync(join(repoRoot, 'clients', 'ios', 'Contracts', 'device-signature-v1.json'), 'utf8')
-);
+/**
+ * Locate a copy by where it lives rather than by position. `FIXTURE_COPIES` is
+ * meant to grow — the guard's docblock says a third consumer needs no new code
+ * — and an index would quietly start pointing at the wrong copy the day one is
+ * added.
+ */
+function copyUnder(prefix: string) {
+  const found = FIXTURE_COPIES.find((copy) => copy.path.startsWith(prefix));
+  if (found === undefined) throw new Error(`no device-signature fixture copy under ${prefix}`);
+  return found;
+}
+
+const canonical = copyUnder('clients/');
+const vendored = copyUnder('pillars/bfm/');
+
+/**
+ * Reads a committed copy under the same `string | null` contract
+ * {@link checkAllCopies} is given in production — `null` means absent, and only
+ * absent. It shares the production reader's predicate rather than repeating the
+ * errno check, so the two cannot drift into disagreeing about what `null` means:
+ * a copy that goes missing fails as the guard's own "missing" message, while a
+ * copy that is present but unreadable surfaces the real error instead of being
+ * misreported as one that was never there.
+ */
+const readCommitted = (repoRelativePath: string) => {
+  try {
+    return readFileSync(join(repoRoot, repoRelativePath), 'utf8');
+  } catch (error) {
+    if (isFileNotFound(error)) return null;
+    throw error;
+  }
+};
+
+/** The suite cannot run without the canonical copy, so its absence is fatal here. */
+function requireCommitted(repoRelativePath: string) {
+  const text = readCommitted(repoRelativePath);
+  if (text === null) throw new Error(`missing committed fixture copy: ${repoRelativePath}`);
+  return text;
+}
+
+const committed: Fixture = JSON.parse(requireCommitted(canonical.path));
 
 /**
  * Build a fresh, internally consistent fixture with `node:crypto` alone.
@@ -52,6 +95,21 @@ function generateEquivalentFixture(): Fixture {
 describe('the committed fixture', () => {
   it('passes every encoding assertion', () => {
     expect(checkFixture(committed)).toEqual([]);
+  });
+
+  it('exists once per consumer, byte-identical', () => {
+    expect(FIXTURE_COPIES.length).toBeGreaterThan(1);
+    expect(checkAllCopies(readCommitted)).toEqual([]);
+  });
+
+  it('is vendored inside every consumer rather than read from clients/ — ADR-043', () => {
+    // Exactly one copy may live under `clients/`, and it must be the canonical
+    // one the equality check restores from. Every other copy is a consumer's
+    // own, which is the whole point of vendoring it.
+    const underClients = FIXTURE_COPIES.filter((copy) => copy.path.startsWith('clients/'));
+
+    expect(underClients).toEqual([canonical]);
+    expect(FIXTURE_COPIES.length).toBeGreaterThan(underClients.length);
   });
 
   it('carries a 64-byte raw signature and a 65-byte uncompressed point', () => {
@@ -150,5 +208,67 @@ describe('checkFixture', () => {
 
     expect(failures).toHaveLength(1);
     expect(failures[0]).toContain('not a parseable SPKI key');
+  });
+});
+
+describe('checkAllCopies', () => {
+  const text = JSON.stringify(committed);
+  const identical = new Map(FIXTURE_COPIES.map(({ path }) => [path, text]));
+  const readerOver = (files: Map<string, string>) => (path: string) => files.get(path) ?? null;
+  const withVendored = (contents: string | null) => {
+    const files = new Map(identical);
+    if (contents === null) files.delete(vendored.path);
+    else files.set(vendored.path, contents);
+    return readerOver(files);
+  };
+
+  it('passes when every copy is byte-identical', () => {
+    expect(checkAllCopies(readerOver(identical))).toEqual([]);
+  });
+
+  it('catches a vendored copy edited on its own', () => {
+    const drifted = JSON.stringify({ ...committed, version: 2 });
+
+    expect(checkAllCopies(withVendored(drifted)).join('\n')).toContain('drifted from');
+  });
+
+  it('catches a canonical copy edited on its own', () => {
+    const files = new Map(identical).set(
+      canonical.path,
+      JSON.stringify({ ...committed, version: 2 })
+    );
+
+    expect(checkAllCopies(readerOver(files)).join('\n')).toContain('drifted from');
+  });
+
+  it('catches a copy that is only reformatted, not semantically changed', () => {
+    // Byte-equality is the point: `oxfmt` runs over both copies at commit time,
+    // so a copy that survived a different formatter is exactly how they part.
+    expect(checkAllCopies(withVendored(JSON.stringify(committed, null, 4))).join('\n')).toContain(
+      'drifted from'
+    );
+  });
+
+  it('catches a missing copy rather than silently checking one', () => {
+    expect(checkAllCopies(withVendored(null)).join('\n')).toContain('missing');
+  });
+
+  it('reports unparseable JSON against the copy it came from', () => {
+    const failures = checkAllCopies(withVendored('{ not json'));
+
+    expect(failures.join('\n')).toContain(vendored.path);
+    expect(failures.join('\n')).toContain('not parseable as JSON');
+  });
+
+  it('attributes an encoding failure to the copy that carries it', () => {
+    const broken = JSON.stringify({
+      ...committed,
+      signatureDerBase64: committed.signatureRawBase64,
+    });
+
+    const failures = checkAllCopies(withVendored(broken));
+
+    expect(failures.some((f) => f.startsWith(`${vendored.path}: `))).toBe(true);
+    expect(failures.some((f) => f.startsWith(`${canonical.path}: `))).toBe(false);
   });
 });

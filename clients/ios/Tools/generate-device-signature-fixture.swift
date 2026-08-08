@@ -14,11 +14,13 @@
 // the fixture pins is the wire format, which is the part the two ends can
 // disagree about.
 //
-// Usage, from clients/ios:
+// Prefer `mise run fixture:device-signature` from the repo root, which runs
+// this, formats the result, and re-vendors the BFM's copy — the fixture exists
+// twice and a guard fails if only one is updated. Directly, from clients/ios:
 //   swift Tools/generate-device-signature-fixture.swift > Contracts/device-signature-v1.json
 //
-// Then run `oxfmt --write` over the result, and re-run the Swift and Node
-// assertions before committing.
+// Then run `oxfmt --write` over the result, re-vendor, and re-run the Swift and
+// Node assertions before committing.
 
 import CryptoKit
 import Foundation
@@ -33,10 +35,15 @@ let signature = try privateKey.signature(for: message)
 
 let fixture: [String: Any] = [
     "version": 1,
+    // Every word of this has to stay true in BOTH locations: the file is
+    // committed byte-identically to clients/ios/Contracts/ and to
+    // pillars/bfm/contracts/, so a note that says "this copy" is wrong in one
+    // of them. Name the paths instead.
     "note":
         "Pins the ECDSA P-256 encodings the iOS app produces and the BFM verifies. "
-        + "Both sides assert against this file. The message bytes are opaque: the "
-        + "refresh message format is the BFM's to define.",
+        + "clients/ios/Contracts/ holds the canonical copy; pillars/bfm/contracts/ "
+        + "holds a vendored one, and a CI guard fails on any drift between them. "
+        + "The message bytes are opaque: the refresh message format is the BFM's to define.",
     "curve": "P-256",
     "digest": "SHA-256",
     "publicKeyEncoding": "spki-der",

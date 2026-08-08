@@ -36,12 +36,13 @@ The choice is pinned as a committed vector at [`clients/ios/Contracts/device-sig
 
 - Swift: `Tests/AuthTests/DeviceSignatureFixtureTests.swift`
 - Node: [`scripts/ci/check-device-signature-fixture.mjs`](../../../../scripts/ci/check-device-signature-fixture.mjs), run by the `Device signature encoding (iOS ↔ BFM)` job in [`quality.yml`](../../../../.github/workflows/quality.yml), with a unit suite at [`scripts/ci/__tests__/check-device-signature-fixture.test.ts`](../../../../scripts/ci/__tests__/check-device-signature-fixture.test.ts) under the `Scripts tests` gate
+- The BFM itself, against its own vendored copy of the same bytes: [`pillars/bfm/src/api/auth/device-signature.ts`](../../../../pillars/bfm/src/api/auth/device-signature.ts) is the verifier a refresh request actually meets, and its tests are the only place in the repo where `node:crypto` is shown to accept what CryptoKit produced
 
 Both sides also assert the negative controls: the raw `r‖s` encoding of the _same_ signature must be rejected where DER is expected. Without those, "we chose DER" would be a comment rather than something a test can fail on.
 
 `DeviceSignatureContract` in the source states the chosen encodings and the reasoning for each. The _content_ of the signed message — how a nonce and a refresh token are bound into bytes — is deliberately not fixed here; that is the BFM's to define, because the server is the party that rejects a wrong one.
 
-Regenerate the fixture with `mise run fixture:device-signature` **only** when the encoding contract itself changes. ECDSA draws a fresh nonce per signature, so every run produces different bytes and replaces a reviewed, cross-verified vector with an unreviewed one.
+Regenerate the fixture with `mise run fixture:device-signature` **from the repo root** — that task regenerates this copy and re-vendors the BFM's, and the guard fails if you do only the first half. **Only** when the encoding contract itself changes: ECDSA draws a fresh nonce per signature, so every run produces different bytes and replaces a reviewed, cross-verified vector with an unreviewed one.
 
 ## Running the tests
 

@@ -290,6 +290,7 @@ pillars/bfm/
 ├── mise.toml                    per-pillar tasks
 ├── scripts/generate-openapi.ts  ts-rest contract → openapi/bfm.openapi.json
 ├── openapi/bfm.openapi.json
+├── contracts/                    vendored from clients/ios — see below
 ├── migrations/                   committed SQL journal, applied by openBfmDb
 ├── app/                         @pops/app-bfm — the shell's Devices surface
 └── src/
@@ -325,6 +326,27 @@ handlers, so anything in it can only be tested by spawning a child process.
 Every boot-time choice therefore lives in `boot-env.ts`, which is unit-tested;
 `server.ts` is excluded from coverage on exactly that basis. Adding logic back
 to it invalidates the exclusion.
+
+### `contracts/` — the one artefact this pillar did not author
+
+`contracts/device-signature-v1.json` pins the ECDSA P-256 encodings the phone
+signs under and `src/api/auth/device-signature.ts` verifies against. It can only
+be produced by the Swift side, so the canonical copy lives at
+`clients/ios/Contracts/device-signature-v1.json` and this is a vendored copy —
+the shape ADR-033 established for a contract crossing a unit boundary, applied
+here because ADR-043 forbids any unit depending on a client. Nothing in this
+pillar reads a path under `clients/`.
+
+The two copies must stay byte-identical, and
+`scripts/ci/check-device-signature-fixture.mjs` fails the build if they do not
+— in either direction, and whether the difference is a value or only
+whitespace. To re-vendor after the canonical copy changes, run
+`mise run fixture:device-signature:vendor` from the repo root; that root task is
+the only place the copy step lives, because neither unit may reach into the
+other's directory.
+
+`openapi/` is the mirror image: this pillar authors that one, and `clients/ios`
+will vendor it (POPS-1380).
 
 ## Commands
 
