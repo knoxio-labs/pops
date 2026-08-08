@@ -66,16 +66,18 @@ struct ModuleBoundaryTests {
         }
     }
 
+    /// Everything that ships: every package's `Sources`, and the app target.
+    /// Only a `Tests` tree may reach for the fakes.
     @Test("fakes stay out of shipping code")
     func fakesAreTestOnly() throws {
-        for package in try packageNames() {
-            for file in try sourceFiles(inPackage: package)
-            where !file.path.contains("/Sources/AppCoreFakes/") {
-                #expect(
-                    !(try importedModules(in: file).contains("AppCoreFakes")),
-                    "\(package)/\(file.lastPathComponent) imports AppCoreFakes outside a test target"
-                )
-            }
+        let shipping = try packageNames().flatMap { try sourceFiles(inPackage: $0) } + swiftFiles(under: appDirectory)
+        #expect(!shipping.isEmpty)
+
+        for file in shipping where !file.path.contains("/Sources/AppCoreFakes/") {
+            #expect(
+                !(try importedModules(in: file).contains("AppCoreFakes")),
+                "\(file.lastPathComponent) imports AppCoreFakes outside a test target"
+            )
         }
     }
 }
@@ -102,9 +104,17 @@ extension ModuleBoundaryTests {
         )
     }
 
+    /// The app target, the one shipping tree that is not a package.
+    private var appDirectory: URL {
+        packagesDirectory.deletingLastPathComponent().appending(path: "App")
+    }
+
     private func sourceFiles(inPackage package: String) throws -> [URL] {
-        let sources = packagesDirectory.appending(path: package).appending(path: "Sources")
-        guard let enumerator = FileManager.default.enumerator(at: sources, includingPropertiesForKeys: nil)
+        swiftFiles(under: packagesDirectory.appending(path: package).appending(path: "Sources"))
+    }
+
+    private func swiftFiles(under directory: URL) -> [URL] {
+        guard let enumerator = FileManager.default.enumerator(at: directory, includingPropertiesForKeys: nil)
         else { return [] }
         return enumerator.compactMap { $0 as? URL }.filter { $0.pathExtension == "swift" }
     }

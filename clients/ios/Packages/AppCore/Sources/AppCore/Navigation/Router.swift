@@ -1,3 +1,4 @@
+import Observation
 import SwiftUI
 
 /// The observable navigation path a `NavigationStack` is driven from.

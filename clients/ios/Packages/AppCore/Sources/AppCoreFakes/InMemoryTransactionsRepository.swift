@@ -11,6 +11,7 @@ public actor InMemoryTransactionsRepository: TransactionsRepository {
     private var rows: [Transaction]
     private let pageSize: Int
     private var failures: [Int: RepositoryError] = [:]
+    private var mintedCursors: Set<String> = []
 
     /// - Parameter pageSize: how many rows a page carries. Small by default so
     ///   a test can exercise several pages without inventing hundreds of rows.
@@ -20,8 +21,11 @@ public actor InMemoryTransactionsRepository: TransactionsRepository {
     }
 
     /// Replaces the backing rows, which is what a refresh reads afterwards.
+    /// Cursors minted against the old rows point into a list that no longer
+    /// exists, so they stop being accepted — a refresh restarts paging.
     public func replace(with rows: [Transaction]) {
         self.rows = rows
+        mintedCursors = []
     }
 
     /// Fails the `call`-th call (1-based) with `error`, for the failure that
@@ -36,17 +40,22 @@ public actor InMemoryTransactionsRepository: TransactionsRepository {
 
         let start = try offset(for: cursor)
         let end = min(start + pageSize, rows.count)
-        return TransactionPage(
-            transactions: Array(rows[start..<end]),
-            nextCursor: end < rows.count ? String(end) : nil
-        )
+        guard end < rows.count else {
+            return TransactionPage(transactions: Array(rows[start..<end]), nextCursor: nil)
+        }
+
+        let nextCursor = String(end)
+        mintedCursors.insert(nextCursor)
+        return TransactionPage(transactions: Array(rows[start..<end]), nextCursor: nextCursor)
     }
 
-    /// The cursor is opaque to callers, so a value this fake never minted is
-    /// the same mistake as a real client inventing one: a contract mismatch.
+    /// The cursor is opaque to callers, so only one this fake actually handed
+    /// out is valid. Anything else is a client inventing a cursor — an offset
+    /// it derived, or one held across a refresh — which is a contract mismatch
+    /// rather than an empty page.
     private func offset(for cursor: String?) throws -> Int {
         guard let cursor else { return 0 }
-        guard let offset = Int(cursor), offset >= 0, offset <= rows.count else {
+        guard mintedCursors.contains(cursor), let offset = Int(cursor), offset <= rows.count else {
             throw RepositoryError.contractMismatch
         }
         return offset

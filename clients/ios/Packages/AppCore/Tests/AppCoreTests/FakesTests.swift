@@ -80,6 +80,27 @@ struct FakesTests {
         }
     }
 
+    @Test("an offset a client derived for itself is rejected, not answered")
+    func rejectsDerivedCursor() async {
+        let repository = InMemoryTransactionsRepository(rows: Transaction.fakes(count: 4), pageSize: 2)
+
+        await #expect(throws: RepositoryError.contractMismatch) {
+            try await repository.transactions(after: "0")
+        }
+    }
+
+    @Test("a cursor held across a refresh is rejected rather than reading the new rows")
+    func rejectsCursorHeldAcrossRefresh() async throws {
+        let repository = InMemoryTransactionsRepository(rows: Transaction.fakes(count: 4), pageSize: 2)
+        let cursor = try #require(try await repository.transactions(after: nil).nextCursor)
+
+        await repository.replace(with: Transaction.fakes(count: 4))
+
+        await #expect(throws: RepositoryError.contractMismatch) {
+            try await repository.transactions(after: cursor)
+        }
+    }
+
     @Test("replacing the rows is what a refresh reads")
     func replaceRows() async throws {
         let repository = InMemoryTransactionsRepository(rows: Transaction.fakes(count: 4))
