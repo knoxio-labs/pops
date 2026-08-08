@@ -27,9 +27,9 @@ PRICE REDUCED BY $7.26 each
 ```
 
 Read one row as one product and you get a product called `Qty 2 @ $9.24
-each` costing $18.48, another called `PRICE REDUCED BY $7.26 each` costing
+each` costing $18.48, another called `PRICE REDUCED BY $7.26 each`costing
 nothing — **and the total still reconciles exactly.** No arithmetic check
-catches this, which is why `rows.ts` has its own tests asserting the
+catches this, which is why`rows.ts` has its own tests asserting the
 grouping rather than the sum. See the header comment there.
 
 **The time is a local wall clock with no zone.** `20:39 24/07/2026` read as

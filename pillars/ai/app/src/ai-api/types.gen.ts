@@ -1049,6 +1049,12 @@ export type AiIngestRecordErrors = {
     code?: string;
     message: string;
   };
+  /**
+   * 403
+   */
+  403: {
+    message: string;
+  };
 };
 
 export type AiIngestRecordError = AiIngestRecordErrors[keyof AiIngestRecordErrors];

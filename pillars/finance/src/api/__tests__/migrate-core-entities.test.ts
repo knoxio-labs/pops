@@ -106,9 +106,8 @@ describe('migrateCoreEntities', () => {
       coreEntity({ name: 'Old' }),
       coreEntity({ name: 'AlsoNew' }),
     ];
-    const createContact = vi.fn(
-      async (body: ContactCreateBody): Promise<MigrateOutcome> =>
-        body.name === 'Old' ? 'already-exists' : 'created'
+    const createContact = vi.fn(async (body: ContactCreateBody): Promise<MigrateOutcome> =>
+      body.name === 'Old' ? 'already-exists' : 'created'
     );
 
     const summary = await migrateCoreEntities({

@@ -57,14 +57,12 @@ export function useSubstitutionResolution(
   const rankedCandidates = useMemo<readonly SubCandidate[]>(() => {
     if (resolution === undefined) return [];
     const contextTags = JSON.parse(contextTagsKey) as readonly string[];
-    const rankable = resolution.candidates.map(
-      (c): RankableCandidate => ({
-        ratio: c.ratio,
-        contextTags: c.contextTags,
-        ingredientName: c.substituteIngredientName,
-        earliestExpiry: earliestExpiry(c.batches),
-      })
-    );
+    const rankable = resolution.candidates.map((c): RankableCandidate => ({
+      ratio: c.ratio,
+      contextTags: c.contextTags,
+      ingredientName: c.substituteIngredientName,
+      earliestExpiry: earliestExpiry(c.batches),
+    }));
     const order = rankSubstitutionCandidates(rankable, contextTags);
     return order.map((i) => resolution.candidates[i] as SubCandidate);
   }, [resolution, contextTagsKey]);

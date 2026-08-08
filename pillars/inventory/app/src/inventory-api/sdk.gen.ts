@@ -132,6 +132,32 @@ import type {
   ReportsValueByTypeResponses,
   ReportsWarrantiesData,
   ReportsWarrantiesResponses,
+  SearchSearchData,
+  SearchSearchResponses,
+  SettingsEnsureData,
+  SettingsEnsureErrors,
+  SettingsEnsureResponses,
+  SettingsGetData,
+  SettingsGetErrors,
+  SettingsGetManyData,
+  SettingsGetManyErrors,
+  SettingsGetManyResponses,
+  SettingsGetResponses,
+  SettingsListData,
+  SettingsListErrors,
+  SettingsListResponses,
+  SettingsResetData,
+  SettingsResetErrors,
+  SettingsResetKeyData,
+  SettingsResetKeyErrors,
+  SettingsResetKeyResponses,
+  SettingsResetResponses,
+  SettingsSetData,
+  SettingsSetErrors,
+  SettingsSetManyData,
+  SettingsSetManyErrors,
+  SettingsSetManyResponses,
+  SettingsSetResponses,
 } from './types.gen';
 
 export type Options<
@@ -779,6 +805,133 @@ export const reportsWarranties = <ThrowOnError extends boolean = false>(
   (options?.client ?? client).get<ReportsWarrantiesResponses, unknown, ThrowOnError>({
     url: '/reports/warranties',
     ...options,
+  });
+
+/**
+ * Search the inventory pillar's items for the unified search engine
+ */
+export const searchSearch = <ThrowOnError extends boolean = false>(
+  options?: Options<SearchSearchData, ThrowOnError>
+): RequestResult<SearchSearchResponses, unknown, ThrowOnError> =>
+  (options?.client ?? client).post<SearchSearchResponses, unknown, ThrowOnError>({
+    url: '/search',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  });
+
+/**
+ * List effective values for every declared key (sensitive redacted)
+ */
+export const settingsList = <ThrowOnError extends boolean = false>(
+  options?: Options<SettingsListData, ThrowOnError>
+): RequestResult<SettingsListResponses, SettingsListErrors, ThrowOnError> =>
+  (options?.client ?? client).get<SettingsListResponses, SettingsListErrors, ThrowOnError>({
+    url: '/settings',
+    ...options,
+  });
+
+/**
+ * Batch-read settings by key (missing omitted; sensitive redacted)
+ */
+export const settingsGetMany = <ThrowOnError extends boolean = false>(
+  options?: Options<SettingsGetManyData, ThrowOnError>
+): RequestResult<SettingsGetManyResponses, SettingsGetManyErrors, ThrowOnError> =>
+  (options?.client ?? client).post<SettingsGetManyResponses, SettingsGetManyErrors, ThrowOnError>({
+    url: '/settings/get-many',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  });
+
+/**
+ * Reset declared keys to defaults (omit keys ⇒ reset all)
+ */
+export const settingsReset = <ThrowOnError extends boolean = false>(
+  options?: Options<SettingsResetData, ThrowOnError>
+): RequestResult<SettingsResetResponses, SettingsResetErrors, ThrowOnError> =>
+  (options?.client ?? client).post<SettingsResetResponses, SettingsResetErrors, ThrowOnError>({
+    url: '/settings/reset',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  });
+
+/**
+ * Transactional batch write (all-or-nothing); returns the written mirror
+ */
+export const settingsSetMany = <ThrowOnError extends boolean = false>(
+  options?: Options<SettingsSetManyData, ThrowOnError>
+): RequestResult<SettingsSetManyResponses, SettingsSetManyErrors, ThrowOnError> =>
+  (options?.client ?? client).post<SettingsSetManyResponses, SettingsSetManyErrors, ThrowOnError>({
+    url: '/settings/set-many',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  });
+
+/**
+ * Read a single setting (null on unset; sensitive redacted)
+ */
+export const settingsGet = <ThrowOnError extends boolean = false>(
+  options: Options<SettingsGetData, ThrowOnError>
+): RequestResult<SettingsGetResponses, SettingsGetErrors, ThrowOnError> =>
+  (options.client ?? client).get<SettingsGetResponses, SettingsGetErrors, ThrowOnError>({
+    url: '/settings/{key}',
+    ...options,
+  });
+
+/**
+ * Upsert a single declared setting
+ */
+export const settingsSet = <ThrowOnError extends boolean = false>(
+  options: Options<SettingsSetData, ThrowOnError>
+): RequestResult<SettingsSetResponses, SettingsSetErrors, ThrowOnError> =>
+  (options.client ?? client).put<SettingsSetResponses, SettingsSetErrors, ThrowOnError>({
+    url: '/settings/{key}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Internal-only write-once seed (encryption seed / client id)
+ */
+export const settingsEnsure = <ThrowOnError extends boolean = false>(
+  options: Options<SettingsEnsureData, ThrowOnError>
+): RequestResult<SettingsEnsureResponses, SettingsEnsureErrors, ThrowOnError> =>
+  (options.client ?? client).post<SettingsEnsureResponses, SettingsEnsureErrors, ThrowOnError>({
+    url: '/settings/{key}/ensure',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Reset a single setting to its manifest default
+ */
+export const settingsResetKey = <ThrowOnError extends boolean = false>(
+  options: Options<SettingsResetKeyData, ThrowOnError>
+): RequestResult<SettingsResetKeyResponses, SettingsResetKeyErrors, ThrowOnError> =>
+  (options.client ?? client).post<SettingsResetKeyResponses, SettingsResetKeyErrors, ThrowOnError>({
+    url: '/settings/{key}/reset',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
   });
 
 /**
