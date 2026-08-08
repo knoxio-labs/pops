@@ -15,7 +15,7 @@ name: Unit Quality
 # The unit list + changed-set come from `_discover-units.yml`. Each lane is
 # selected by `matrix.unit.lang`; the per-unit `mise.toml` pins the toolchain
 # so the steps are uniform regardless of unit. jdx/mise-action@v4 is the sole
-# Node manager (no setup-node); `MISE_ENV=ci` pins node 22 via `mise.ci.toml`.
+# Node manager (no setup-node); `MISE_ENV=ci` pins node 24 via `mise.ci.toml`.
 #
 # Selectors use `matrix.unit.pkg` (the manifest name) EXCLUSIVELY — never
 # `@pops/${name}`: libs/sdk publishes `@pops/pillar-sdk`, and
