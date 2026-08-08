@@ -44,7 +44,9 @@ Two rules follow, and neither is optional:
 
 - **Never float a gateway promise.** An un-awaited call discards the failure
   discriminant in total silence. `typescript/no-floating-promises` is an error
-  repo-wide and catches it.
+  in `.oxlintrc.json` and catches it — but the rule is switched **off** for
+  test files, so a floated call in a `__tests__/` file passes lint and then
+  passes the assertion it was supposed to make.
 - **Never call `.orThrow()`.** No production call site in this repo does.
 
 Nothing here catches, either. The SDK already folds its own discovery and
