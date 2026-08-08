@@ -22,10 +22,13 @@ public struct DeviceCredentialStore: Sendable {
     /// Unavailable on macOS deliberately. The package declares macOS so
     /// `swift test` can run the fake-backed suites on a host, and that made
     /// this factory reachable from a process where neither store can work — an
-    /// unsigned test binary has no Secure Enclave and no keychain-access-group
-    /// entitlement. Host tooling that reaches for it gets a compile error
-    /// rather than a runtime `errSecMissingEntitlement` it will be tempted to
-    /// catch. Construct the stores directly if you genuinely mean to.
+    /// unsigned test binary carries no keychain-access-group entitlement, and
+    /// both stores need one: `KeychainTokenStore` to write the data-protection
+    /// keychain, `SecureEnclaveKeyStore` to persist its key as
+    /// `kSecAttrIsPermanent`. Host tooling that reaches for it gets a compile
+    /// error rather than a runtime `errSecMissingEntitlement` it will be
+    /// tempted to catch. Construct the stores directly if you genuinely mean
+    /// to.
     @available(macOS, unavailable)
     public static func live() -> DeviceCredentialStore {
         DeviceCredentialStore(keyStore: SecureEnclaveKeyStore(), tokenStore: KeychainTokenStore())
