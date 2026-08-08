@@ -129,12 +129,28 @@ opt_in_rules:
 todo:
   severity: error
 
+# SwiftLint's default floor of 3 rejects `xs`, `sm`, `md`, `lg` and `xl` while
+# accepting `xxl`, which is not a distinction anyone would make on purpose — a
+# spacing scale is named that way in every design system there is. Two is the
+# shortest name that can carry a convention (a scale step, `id`, `db`); one
+# character cannot, and the rule still rejects those.
+identifier_name:
+  min_length: 2
+
 disabled_rules:
-  # Contradicts the formatter outright. swift-format is configured to ADD a
-  # trailing comma to every multi-element literal (smaller diffs); this rule's
-  # default is to reject exactly those commas. Not a preference to reconcile —
-  # with both on, formatted code is unlintable and linted code is unformatted.
+  # Both of these contradict the formatter outright, and a rule the formatter
+  # re-breaks on every run is not a rule — it is a file nobody can make pass
+  # without the suppression comment this config forbids.
+  #
+  # swift-format ADDS a trailing comma to every multi-element literal (smaller
+  # diffs); this rule's default rejects exactly those commas.
   - trailing_comma
+  # swift-format puts `{` on its own line when it has had to wrap a declaration
+  # across lines, which is its documented layout for that case; this rule wants
+  # the brace on the declaration's line, which after wrapping does not exist.
+  # Seen on `DesignSystem`'s contrast tests the moment a signature got long
+  # enough to wrap.
+  - opening_brace
 
 # Not enabled: the analyzer rules (`unused_declaration`, `unused_import`). They
 # need a full xcodebuild compiler log, which would make linting depend on a

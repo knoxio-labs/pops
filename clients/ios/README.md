@@ -34,6 +34,7 @@ They divide the work along a line worth knowing before adding a rule to either: 
 Both files carry their reasoning in a header comment — every limit is a number someone picked over an alternative, and the alternative is written down. That is the source of truth; this README deliberately does not repeat it, because two copies of a rule list means one of them is wrong and you cannot tell which.
 
 Neither tool is pinned the same way. SwiftLint is a mise tool, so its version is in `mise.toml` and everyone gets the same one. `swift-format` ships inside the Xcode toolchain and cannot be pinned here at all — which is why the CI job has to pin its Xcode explicitly, and why a local run only matches CI when the Xcode versions agree.
+
 ## Signing, and installing on a phone
 
 Signing is automatic, and the only input it needs is an Apple Developer team.

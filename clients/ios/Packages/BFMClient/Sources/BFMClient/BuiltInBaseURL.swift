@@ -50,7 +50,8 @@ public enum BuiltInBaseURL {
         bakedInValue: String?,
         allowsEnvironmentOverride: Bool
     ) -> URL? {
-        let candidates = allowsEnvironmentOverride
+        let candidates =
+            allowsEnvironmentOverride
             ? [environmentValue, bakedInValue]
             : [bakedInValue]
 
@@ -65,7 +66,8 @@ public enum BuiltInBaseURL {
     /// URL that fails much later, at the first request.
     private static func usableURL(_ raw: String) -> URL? {
         guard
-            let components = URLComponents(string: raw.trimmingCharacters(in: .whitespacesAndNewlines)),
+            let components = URLComponents(
+                string: raw.trimmingCharacters(in: .whitespacesAndNewlines)),
             let scheme = components.scheme?.lowercased(),
             scheme == "http" || scheme == "https",
             let host = components.host,

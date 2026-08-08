@@ -11,18 +11,21 @@ import Testing
 /// comparison meaningful rather than noise.
 @Suite("Primitive rendering")
 @MainActor
-struct PrimitiveRenderingTests {
+internal struct PrimitiveRenderingTests {
     private static let canvas = CGSize(width: 320, height: 240)
 
     private static func render(_ view: some View, in scheme: ColorScheme) -> Data? {
         let renderer = ImageRenderer(
-            content: view
+            content:
+                view
                 .environment(\.colorScheme, scheme)
                 .frame(width: canvas.width, height: canvas.height)
                 .background(Color.popsBackground.environment(\.colorScheme, scheme))
         )
         renderer.scale = 1
-        guard let image = renderer.cgImage, let pixels = image.dataProvider?.data else { return nil }
+        guard let image = renderer.cgImage, let pixels = image.dataProvider?.data else {
+            return nil
+        }
         return pixels as Data
     }
 
@@ -31,18 +34,23 @@ struct PrimitiveRenderingTests {
         let dark = try #require(render(view, in: .dark), "\(name) failed to rasterise in dark")
         let lightAgain = try #require(render(view, in: .light))
 
-        #expect(light == lightAgain, "\(name) renders non-deterministically — the light/dark comparison below proves nothing")
+        #expect(
+            light == lightAgain,
+            "\(name) renders non-deterministically — the light/dark comparison below proves nothing"
+        )
         #expect(light != dark, "\(name) renders identically in light and dark")
     }
 
     @Test("EmptyStateView")
     func emptyState() throws {
-        try Self.check(EmptyStateView(message: "No transactions in this period."), named: "EmptyStateView")
+        try Self.check(
+            EmptyStateView(message: "No transactions in this period."), named: "EmptyStateView")
     }
 
     @Test("ErrorStateView")
     func errorState() throws {
-        try Self.check(ErrorStateView(message: "Could not reach the server.") {}, named: "ErrorStateView")
+        try Self.check(
+            ErrorStateView(message: "Could not reach the server.") {}, named: "ErrorStateView")
     }
 
     @Test("PopsRow")
@@ -52,7 +60,9 @@ struct PrimitiveRenderingTests {
 
     @Test("PopsCard")
     func card() throws {
-        try Self.check(PopsCard { PopsRow(title: "Groceries", subtitle: "12 transactions") }, named: "PopsCard")
+        try Self.check(
+            PopsCard { PopsRow(title: "Groceries", subtitle: "12 transactions") }, named: "PopsCard"
+        )
     }
 
     // LoadingStateView is excluded from the byte-comparison: `ProgressView`

@@ -13,8 +13,10 @@ public struct EmptyStateView: View {
     }
 
     public var body: some View {
-        StateView(message: StateMessage.resolve(message, fallback: Self.fallbackMessage),
-                  messageColor: .popsMutedForeground) {
+        StateView(
+            message: StateMessage.resolve(message, fallback: Self.fallbackMessage),
+            messageColor: .popsMutedForeground
+        ) {
             EmptyView()
         }
     }
