@@ -178,6 +178,10 @@ export function makeReceiptHandlers(
 ) {
   return {
     upload: async ({ body }: { body: UploadBody }) => {
+      // Stamped before the model, not after. An undated receipt is dated
+      // from its upload, and a vision call takes seconds — enough to carry
+      // a shop uploaded at 23:59 into the following day.
+      const uploadedAt = new Date().toISOString();
       if (vision === null) return visionUnavailable();
       const dataBase64 = canonicalBase64(body.dataBase64);
       if (!looksLikeImage(dataBase64, body.mediaType)) return notAnImage(body.mediaType);
@@ -220,7 +224,7 @@ export function makeReceiptHandlers(
       // upload and tagged, rather than refused. The shop happened and the
       // photograph exists, so losing it would be worse than carrying an
       // inferred date the tag stops anyone mistaking for a stated one.
-      const shaped = receiptToPurchase(outcome.extracted, outcome.gate, stored);
+      const shaped = receiptToPurchase(outcome.extracted, outcome.gate, stored, uploadedAt);
 
       // Best-effort, and deliberately after the reading rather than part of
       // it: the entity link is something this fleet knows, not something

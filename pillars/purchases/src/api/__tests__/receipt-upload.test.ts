@@ -14,7 +14,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import request from 'supertest';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { openTempDb } from '../../db/__tests__/helpers.js';
 import { RECEIPT_SOURCE_ID } from '../../ingest/receipt/purchase.js';
@@ -125,6 +125,32 @@ describe('a receipt the model reads and the paper agrees with', () => {
     const undated = JSON.stringify({ ...JSON.parse(GOOD_READING), purchasedOn: null });
     const response = await upload(appWith(saying(undated)));
     expect(response.body.purchase.tags).toContain('date-uncertain');
+  });
+
+  it('dates an undated receipt from the upload, not from when the model replied', async () => {
+    // The inferred date is the upload instant, and a vision call takes
+    // seconds. Stamping it after the call lets model latency carry a shop
+    // uploaded at 23:59 into the next day — the one moment the difference
+    // between "when you sent it" and "when the model answered" is a
+    // different date entirely.
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date('2026-08-01T13:59:58.000Z'));
+      const undated = JSON.stringify({ ...JSON.parse(GOOD_READING), purchasedOn: null });
+      const slow: ReceiptVision = {
+        read: async () => {
+          vi.advanceTimersByTime(5_000);
+          return undated;
+        },
+      };
+
+      const response = await upload(appWith(slow));
+
+      expect(response.body.purchase.tags).toContain('date-uncertain');
+      expect(response.body.purchase.purchase.orderedAt).toBe('2026-08-01T13:59:58.000Z');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('carries no tags for a receipt that stated everything', async () => {
