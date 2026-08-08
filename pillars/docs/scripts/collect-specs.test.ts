@@ -21,6 +21,7 @@ const DIST_DIR = resolve(APP_ROOT, 'dist');
  */
 const EXPECTED_PILLARS = [
   'ai',
+  'bfm',
   'cerebrum',
   'contacts',
   'documents',
