@@ -7,10 +7,9 @@ import SwiftUI
 
 /// The app target is the only place that imports every module, and this view is
 /// the only thing asserting they all link. The real session-routing root
-/// replaces it.
+/// replaces it (POPS-1391).
 struct PlaceholderView: View {
     private let linkedModules = [
-        AppCore.moduleName,
         Auth.moduleName,
         BFMClient.moduleName,
         DesignSystem.moduleName,
@@ -18,9 +17,19 @@ struct PlaceholderView: View {
     ]
 
     var body: some View {
-        List(linkedModules, id: \.self) { module in
-            Text(module)
-                .font(.body.monospaced())
+        List {
+            Section("AppCore") {
+                Text(String(describing: SessionState.unpaired))
+                    .font(.body.monospaced())
+                Text(String(describing: FeatureTransactions.entryRoute))
+                    .font(.body.monospaced())
+            }
+            Section("Modules") {
+                ForEach(linkedModules, id: \.self) { module in
+                    Text(module)
+                        .font(.body.monospaced())
+                }
+            }
         }
     }
 }

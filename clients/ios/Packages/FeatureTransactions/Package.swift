@@ -3,17 +3,16 @@ import PackageDescription
 
 let package = Package(
     name: "FeatureTransactions",
-    platforms: [.iOS("27.0")],
+    platforms: [.iOS("27.0"), .macOS("15.0")],
     products: [.library(name: "FeatureTransactions", targets: ["FeatureTransactions"])],
     dependencies: [
         .package(path: "../AppCore"),
-        .package(path: "../BFMClient"),
         .package(path: "../DesignSystem"),
     ],
     targets: [
         .target(
             name: "FeatureTransactions",
-            dependencies: ["AppCore", "BFMClient", "DesignSystem"],
+            dependencies: ["AppCore", "DesignSystem"],
             swiftSettings: [.swiftLanguageMode(.v6)]
         )
     ]
