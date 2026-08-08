@@ -28,10 +28,16 @@ The ladder, best first:
    `store-POS-transaction-date` gives 413 distinct keys from 413 receipts,
    including all 37 back-to-back occasions, because two registers never
    share a transaction number at the same moment.
-3. **The bytes of the evidence.** A photographed receipt has neither, so
-   `receipt` uses the SHA-256 of the image. Re-uploading the same photograph
-   is then a 409 by construction rather than by a check someone remembered
-   to write.
+3. **The bytes of the evidence.** An uploaded receipt has neither, so
+   `receipt` uses the SHA-256 of the file. Re-uploading the same photograph,
+   PDF or pasted body is then a 409 by construction rather than by a check
+   someone remembered to write.
+
+   Its weakness is the one a hash cannot fix: a photograph of a receipt and
+   the merchant's PDF of the same purchase are different bytes and so
+   different keys. `receipt/` therefore carries a second check on the
+   receipt's stated instant and amount — see its README. No other adapter
+   needs one, because the merchant already named the order.
 
 **Never derive a key from date and total alone.** It cannot separate two
 identical purchases, and the failure is silent — a merged pair looks exactly
@@ -51,8 +57,8 @@ second copy.
 Unsolved, deliberately, and tracked as POPS-243.
 
 Amazon states an ASIN and it is stored as `sku`. Woolworths states nothing —
-line items carry a name and a price and no identifier at all — and a
-photographed receipt states less. So the same product bought at two shops,
+line items carry a name and a price and no identifier at all — and an
+uploaded receipt states less. So the same product bought at two shops,
 or at one shop twice under slightly different receipt-speak, does not group.
 
 That kills the highest-signal output of the whole feature, which is why it
