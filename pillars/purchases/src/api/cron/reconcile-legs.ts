@@ -50,7 +50,11 @@ export interface ReconcileWorkerLogger {
   warn?: (msg: string, meta?: Record<string, unknown>) => void;
 }
 
-/** The four outcomes a probed URI can have, tallied per leg and again per tick. */
+/**
+ * The four outcomes a URI in the work set can have, tallied per leg and
+ * again per tick. Not just probed URIs: one addressed to the wrong pillar
+ * is counted as `badUri` by {@link runLeg} without ever being probed.
+ */
 export interface ReconcileCounts {
   resolved: number;
   staleMarked: number;
