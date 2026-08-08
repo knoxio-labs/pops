@@ -17,7 +17,7 @@ void i18n.use(initReactI18next).init({
   defaultNS: 'finance',
   interpolation: { escapeValue: false },
   resources: { 'en-AU': { finance: enAUFinance }, 'pt-BR': { finance: ptBRFinance } },
-  initImmediate: false,
+  initAsync: false,
 });
 const t = i18n.getFixedT<'finance'>('en-AU', 'finance');
 const tPt = i18n.getFixedT<'finance'>('pt-BR', 'finance');
@@ -90,7 +90,7 @@ describe('buildTransactionFilters', () => {
 
   it('translates the new type labels for pt-BR, proving locale routing (#3757 nit 1)', () => {
     const typeFilter = buildTransactionFilters(tPt, []).find((f) => f.id === 'type');
-    const byValue = new Map(typeFilter?.options.map((o) => [o.value, o.label]));
+    const byValue = new Map(typeFilter?.options?.map((o) => [o.value, o.label]));
 
     expect(byValue.get('refund')).toBe('Reembolso');
     expect(byValue.get('reversal')).toBe('Estorno');

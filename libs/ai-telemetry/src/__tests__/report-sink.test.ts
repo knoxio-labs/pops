@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi, type Mock } from 'vitest';
 
 import { type InferenceRecord } from '../record-schema.js';
 import { createEnvReportSink } from '../report-sink.js';
@@ -16,10 +16,8 @@ const record: InferenceRecord = {
   cached: false,
 };
 
-const okFetch = (): ((input: RequestInfo | URL, init?: RequestInit) => Promise<Response>) =>
-  vi.fn((_input: RequestInfo | URL, _init?: RequestInit) =>
-    Promise.resolve(new Response(null, { status: 200 }))
-  );
+const okFetch = (): Mock<typeof fetch> =>
+  vi.fn<typeof fetch>(() => Promise.resolve(new Response(null, { status: 200 })));
 
 afterEach(() => {
   delete process.env['AI_API_URL'];
@@ -55,9 +53,7 @@ describe('createEnvReportSink', () => {
 
   it('never throws when the transport rejects (best-effort contract)', async () => {
     const onError = vi.fn();
-    const fetchImpl = vi.fn((_input: RequestInfo | URL, _init?: RequestInit) =>
-      Promise.reject(new Error('ECONNREFUSED'))
-    );
+    const fetchImpl = vi.fn<typeof fetch>(() => Promise.reject(new Error('ECONNREFUSED')));
     await expect(
       createEnvReportSink({ baseUrl: 'http://ai-api:3008', fetchImpl, onError })(record)
     ).resolves.toBeUndefined();

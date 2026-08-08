@@ -52,7 +52,7 @@ function insertTransaction(db: FinanceDb, id: string, lastEditedTime: string): v
       account: 'Up',
       amountCents: 100,
       date: '2025-01-01',
-      type: 'Purchase',
+      type: 'purchase',
       lastEditedTime,
     })
     .run();

@@ -62,7 +62,7 @@ function seedTxn(entityId: string, entityName: string): void {
       account: 'Amex',
       amountCents: -1000,
       date: '2026-01-01',
-      type: 'Expense',
+      type: 'purchase',
       lastEditedTime: '2026-01-01T00:00:00.000Z',
       entityId,
       entityName,

@@ -117,7 +117,7 @@ describe('runEvictionTick — external pillars past the threshold', () => {
 
     const evictions = runEvictionTick(coreDb.db, { now });
     expect(evictions).toHaveLength(1);
-    expect(evictions[0].reason).toBe('lost-heartbeat');
+    expect(evictions[0]?.reason).toBe('lost-heartbeat');
     const dereg = capturedEvents.filter((e) => e.event === 'deregistered');
     expect(dereg[0]?.reason).toBe('lost-heartbeat');
   });

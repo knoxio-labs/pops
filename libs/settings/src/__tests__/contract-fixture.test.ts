@@ -25,7 +25,10 @@ const contract = makeSettingsContract(['theme', 'core.appName', 'finance.apiToke
 
 /** Pull a route's 200-response schema off the built contract. */
 function okResponse(route: keyof typeof contract): z.ZodType {
-  return (contract[route].responses as Record<number, z.ZodType>)[200];
+  const ok = (contract[route].responses as Record<number, z.ZodType | undefined>)[200];
+  if (ok === undefined)
+    throw new Error(`contract route '${String(route)}' declares no 200 response`);
+  return ok;
 }
 
 describe('shared settings wire fixture', () => {

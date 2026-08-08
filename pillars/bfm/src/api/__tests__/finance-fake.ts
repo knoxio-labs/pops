@@ -12,7 +12,9 @@
  * that pair. `pillars/finance/src/db/__tests__/transactions.test.ts` is what
  * holds finance to the same semantics; the two must be read as a pair.
  */
-import type { CallResult, PillarHandle } from '@pops/pillar-sdk/server';
+import { fakePillarHandle } from '@pops/pillar-sdk/testing';
+
+import type { CallResult } from '@pops/pillar-sdk/server';
 
 import type { PillarHandleFactory } from '../pillars/gateway.js';
 
@@ -81,6 +83,22 @@ function isAfterAnchor(row: FinanceFakeRow, anchor: { date: string; id: string }
 }
 
 /**
+ * Read the wire input the SDK hands a procedure. The transport carries
+ * `unknown`, so the fake narrows it the way finance's zod layer would rather
+ * than trusting the caller.
+ */
+function readListCall(input: unknown): ListCall {
+  if (input === null || typeof input !== 'object') return {};
+  return {
+    limit: 'limit' in input && typeof input.limit === 'number' ? input.limit : undefined,
+    beforeDate:
+      'beforeDate' in input && typeof input.beforeDate === 'string' ? input.beforeDate : undefined,
+    beforeId:
+      'beforeId' in input && typeof input.beforeId === 'string' ? input.beforeId : undefined,
+  };
+}
+
+/**
  * A fake finance holding `rows`, answering the two operations bfm calls.
  *
  * `failWith` short-circuits every call with one SDK failure, for the
@@ -93,7 +111,8 @@ export function createFinanceFake(
   const store = [...rows];
   const listCalls: ListCall[] = [];
 
-  const list = (input: ListCall): Promise<CallResult<unknown>> => {
+  const list = (rawInput: unknown): Promise<CallResult<unknown>> => {
+    const input = readListCall(rawInput);
     listCalls.push(input);
     if (failWith !== undefined) return Promise.resolve(failWith);
 
@@ -116,19 +135,18 @@ export function createFinanceFake(
     });
   };
 
-  const get = (input: { id: string }): Promise<CallResult<unknown>> => {
+  const get = (input: unknown): Promise<CallResult<unknown>> => {
     if (failWith !== undefined) return Promise.resolve(failWith);
-    const found = store.find((row) => row.id === input.id);
+    const id = input !== null && typeof input === 'object' && 'id' in input ? input.id : undefined;
+    const found = store.find((row) => row.id === id);
     if (found === undefined) {
       return Promise.resolve({ kind: 'not-found', pillar: 'finance' });
     }
     return Promise.resolve({ kind: 'ok', value: { data: found } });
   };
 
-  const handle = { transactions: { list, get } };
-
   return {
-    factory: <TRouter>(): PillarHandle<TRouter> => handle as PillarHandle<TRouter>,
+    factory: <TRouter>() => fakePillarHandle<TRouter>('finance', { transactions: { list, get } }),
     listCalls,
     insert: (row: FinanceFakeRow) => {
       store.push(row);
@@ -142,11 +160,11 @@ export function createFinanceFake(
  * an outage.
  */
 export function createMalformedFinanceFake(value: unknown): PillarHandleFactory {
-  const handle = {
+  const routes = {
     transactions: {
-      list: () => Promise.resolve({ kind: 'ok', value }),
-      get: () => Promise.resolve({ kind: 'ok', value }),
+      list: (): CallResult<unknown> => ({ kind: 'ok', value }),
+      get: (): CallResult<unknown> => ({ kind: 'ok', value }),
     },
   };
-  return <TRouter>(): PillarHandle<TRouter> => handle as PillarHandle<TRouter>;
+  return <TRouter>() => fakePillarHandle<TRouter>('finance', routes);
 }

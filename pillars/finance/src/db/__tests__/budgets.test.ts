@@ -68,7 +68,9 @@ CREATE TABLE transactions (
 CREATE INDEX idx_transactions_date ON transactions (date);
 `;
 
-function freshDb(): FinanceDb {
+type FinanceTestDb = FinanceDb & { $client: Database.Database };
+
+function freshDb(): FinanceTestDb {
   const raw = new Database(':memory:');
   raw.pragma('foreign_keys = ON');
   raw.exec(BUDGETS_DDL);
@@ -84,8 +86,8 @@ interface SeedTransactionInput {
   account?: string;
 }
 
-function seedTransaction(db: FinanceDb, input: SeedTransactionInput): void {
-  const raw = db.$client as Database.Database;
+function seedTransaction(db: FinanceTestDb, input: SeedTransactionInput): void {
+  const raw = db.$client;
   raw
     .prepare(
       `INSERT INTO transactions (id, description, account, amount_cents, date, type, tags, last_edited_time)
@@ -104,7 +106,7 @@ function seedTransaction(db: FinanceDb, input: SeedTransactionInput): void {
 }
 
 describe('createBudget', () => {
-  let db: FinanceDb;
+  let db: FinanceTestDb;
   beforeEach(() => {
     db = freshDb();
   });
@@ -179,7 +181,7 @@ describe('createBudget', () => {
 });
 
 describe('getBudget', () => {
-  let db: FinanceDb;
+  let db: FinanceTestDb;
   beforeEach(() => {
     db = freshDb();
   });
@@ -196,7 +198,7 @@ describe('getBudget', () => {
 });
 
 describe('listBudgets', () => {
-  let db: FinanceDb;
+  let db: FinanceTestDb;
   beforeEach(() => {
     db = freshDb();
     createBudget(db, { category: 'Apple monitor', period: 'Monthly', active: true });
@@ -261,7 +263,7 @@ describe('listBudgets', () => {
 });
 
 describe('updateBudget', () => {
-  let db: FinanceDb;
+  let db: FinanceTestDb;
   beforeEach(() => {
     db = freshDb();
   });
@@ -348,7 +350,7 @@ describe('updateBudget', () => {
 });
 
 describe('createBudget — UNIQUE constraint mapping (race-survivor)', () => {
-  let db: FinanceDb;
+  let db: FinanceTestDb;
   beforeEach(() => {
     db = freshDb();
   });
@@ -356,7 +358,7 @@ describe('createBudget — UNIQUE constraint mapping (race-survivor)', () => {
   it('maps a UNIQUE violation on INSERT to BudgetConflictError when the pre-check is bypassed', () => {
     createBudget(db, { category: 'Groceries', period: 'Monthly', amountCents: 10000 });
 
-    const raw = db.$client as Database.Database;
+    const raw = db.$client;
     raw.exec(`
       CREATE TRIGGER inject_duplicate
       BEFORE INSERT ON budgets
@@ -382,7 +384,7 @@ describe('createBudget — UNIQUE constraint mapping (race-survivor)', () => {
 });
 
 describe('deleteBudget', () => {
-  let db: FinanceDb;
+  let db: FinanceTestDb;
   beforeEach(() => {
     db = freshDb();
   });
@@ -399,7 +401,7 @@ describe('deleteBudget', () => {
 });
 
 describe('withSpend', () => {
-  let db: FinanceDb;
+  let db: FinanceTestDb;
   beforeEach(() => {
     db = freshDb();
   });
@@ -423,7 +425,7 @@ describe('withSpend', () => {
 });
 
 describe('listBudgets — spend aggregation', () => {
-  let db: FinanceDb;
+  let db: FinanceTestDb;
   const NOW = new Date('2026-02-15T12:00:00.000Z');
 
   beforeEach(() => {
@@ -625,7 +627,7 @@ describe('listBudgets — spend aggregation', () => {
 });
 
 describe('computeSpent', () => {
-  let db: FinanceDb;
+  let db: FinanceTestDb;
   beforeEach(() => {
     db = freshDb();
   });

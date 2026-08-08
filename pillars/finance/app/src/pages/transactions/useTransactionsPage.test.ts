@@ -56,14 +56,20 @@ function makeValues(overrides: Partial<TransactionFormValues> = {}): Transaction
   };
 }
 
-function makeTransaction(overrides: Partial<Transaction> = {}): Transaction {
+/**
+ * `type` widens to `string` so the suite can feed the empty type the API still
+ * emits for older rows — the case the form prefill's `|| 'purchase'` exists for.
+ */
+type TransactionOverrides = Omit<Partial<Transaction>, 'type'> & { type?: string };
+
+function makeTransaction({ type, ...overrides }: TransactionOverrides = {}): Transaction {
   return {
     id: 'txn-1',
     date: '2026-02-10',
     amount: -87.45,
     description: 'Woolworths Metro',
     account: 'Credit Card',
-    type: 'purchase',
+    type: (type ?? 'purchase') as Transaction['type'],
     entityId: 'ent-1',
     entityName: 'Woolworths',
     location: 'Sydney CBD',

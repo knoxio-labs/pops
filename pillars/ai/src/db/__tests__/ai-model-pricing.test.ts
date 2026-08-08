@@ -33,11 +33,11 @@ const CREATE_TABLE_SQL = `
   );
 `;
 
-function freshDb(): AiDb {
+function freshDb(): { db: AiDb; raw: Database.Database } {
   const raw = new Database(':memory:');
   raw.pragma('foreign_keys = ON');
   raw.exec(CREATE_TABLE_SQL);
-  return drizzle(raw);
+  return { db: drizzle(raw), raw };
 }
 
 function seedClaude(db: AiDb): void {
@@ -58,8 +58,9 @@ function seedClaude(db: AiDb): void {
 
 describe('createPricingCache', () => {
   let db: AiDb;
+  let raw: Database.Database;
   beforeEach(() => {
-    db = freshDb();
+    ({ db, raw } = freshDb());
   });
 
   describe('lookup', () => {
@@ -113,7 +114,7 @@ describe('createPricingCache', () => {
       const cache = createPricingCache(db, { ttlMs: 1_000, now: () => now });
       expect(cache.lookup('claude', 'sonnet-4-5').input).toBe(3.0);
 
-      db.$client.exec(`UPDATE ai_model_pricing SET input_cost_per_mtok = 4.0`);
+      raw.exec(`UPDATE ai_model_pricing SET input_cost_per_mtok = 4.0`);
 
       now = 5_000;
       expect(cache.lookup('claude', 'sonnet-4-5').input).toBe(4.0);

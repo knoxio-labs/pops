@@ -3,14 +3,20 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { computeMergedRules } from '../../lib/merged-state';
+import { elementAt } from '../../test-utils';
 import { BrowseRulesSidebar } from './BrowseRulesSidebar';
+
+import type { Mock } from 'vitest';
 
 import type { ChangeSet, PendingChangeSet } from '../../store/importStore';
 import type { CorrectionRule } from './RulePicker';
 
 function pendingAdd(descriptionPattern: string, entityName: string): PendingChangeSet {
   const ops: ChangeSet['ops'] = [
-    { op: 'add', data: { descriptionPattern, matchType: 'exact', entityName, confidence: 0.8 } },
+    {
+      op: 'add',
+      data: { descriptionPattern, matchType: 'exact', entityName, tags: [], confidence: 0.8 },
+    },
   ];
   return {
     tempId: `temp:changeset:${crypto.randomUUID()}`,
@@ -45,7 +51,7 @@ function renderSidebar(rules: CorrectionRule[], selectedRuleId: string | null) {
 }
 
 describe('BrowseRulesSidebar — pending rule identity (#3596)', () => {
-  let consoleError: ReturnType<typeof vi.spyOn>;
+  let consoleError: Mock<typeof console.error>;
 
   beforeEach(() => {
     consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -74,16 +80,16 @@ describe('BrowseRulesSidebar — pending rule identity (#3596)', () => {
     const rules = threePendingRules();
     const { onSelectRule } = renderSidebar(rules, null);
 
-    await userEvent.click(screen.getAllByRole('listitem')[1]);
+    await userEvent.click(elementAt(screen.getAllByRole('listitem'), 1));
 
     expect(onSelectRule).toHaveBeenCalledTimes(1);
-    expect(onSelectRule).toHaveBeenCalledWith(rules[1].id);
-    expect(rules[1].id).not.toBe(rules[0].id);
+    expect(onSelectRule).toHaveBeenCalledWith(elementAt(rules, 1).id);
+    expect(elementAt(rules, 1).id).not.toBe(elementAt(rules, 0).id);
   });
 
   it('highlights only the selected pending row', () => {
     const rules = threePendingRules();
-    const { container } = renderSidebar(rules, rules[1].id);
+    const { container } = renderSidebar(rules, elementAt(rules, 1).id);
 
     const highlighted = container.querySelectorAll('li.bg-muted');
     expect(highlighted).toHaveLength(1);

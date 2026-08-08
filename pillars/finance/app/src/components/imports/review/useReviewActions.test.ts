@@ -1,6 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { elementAt } from '../../../test-utils';
 import { moveOneToMatched, useReviewActions, type LocalTxState } from './useReviewActions';
 
 import type { ProcessedTransaction } from '../../../store/importStore';
@@ -236,7 +237,9 @@ describe('useReviewActions — correcting a wrong match offers a rule', () => {
       result.current.handleEntitySelect(transaction, 'ent-mcd', "McDonald's");
     });
 
-    const updater = setLocalTransactions.mock.calls[0][0] as (p: LocalTxState) => LocalTxState;
+    const updater = elementAt(setLocalTransactions.mock.calls, 0)[0] as (
+      p: LocalTxState
+    ) => LocalTxState;
     const next = updater(emptyState({ uncertain: [transaction] }));
     expect(next.uncertain).toHaveLength(0);
     expect(next.matched).toHaveLength(1);
@@ -300,7 +303,9 @@ describe('useReviewActions — correcting a wrong match offers a rule', () => {
       result.current.handleEntitySelect(transaction, 'ent-sauna', 'SaunaX');
     });
 
-    const updater = setLocalTransactions.mock.calls[0][0] as (p: LocalTxState) => LocalTxState;
+    const updater = elementAt(setLocalTransactions.mock.calls, 0)[0] as (
+      p: LocalTxState
+    ) => LocalTxState;
     const next = updater(emptyState({ matched: [transaction] }));
     expect(next.matched[0]?.entity).toMatchObject({
       entityId: 'ent-sauna',

@@ -8,7 +8,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const configureServerSdk = vi.fn();
-const pillar = vi.fn(() => ({ finance: {} }));
+const pillar = vi.fn<(...args: unknown[]) => { finance: Record<string, unknown> }>(() => ({
+  finance: {},
+}));
 
 vi.mock('@pops/pillar-sdk/server', () => ({
   configureServerSdk: (...args: unknown[]) => configureServerSdk(...args),

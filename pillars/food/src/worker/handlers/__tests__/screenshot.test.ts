@@ -10,6 +10,11 @@ import { PROMPT_VERSION_SCREENSHOT, SCREENSHOT_DEFAULT_MODEL } from '../../promp
 import { runScreenshotIngest } from '../screenshot.js';
 
 import type { IngestJobData } from '../../../contract/queue/index.js';
+import type {
+  AnthropicCreateParams,
+  AnthropicLike,
+  AnthropicMessage,
+} from '../../ai/anthropic-client.js';
 import type { HandlerContext } from '../types.js';
 
 const FIXTURES_DIR = fileURLToPath(new URL('./fixtures/screenshots/', import.meta.url));
@@ -56,18 +61,21 @@ const emptyRecipeJson = {
   steps: [],
 };
 
-type MockUsage = { input_tokens: number; output_tokens: number };
-type MockResponse = {
-  model?: string;
-  content: Array<{ type: 'text'; text: string }>;
-  usage: MockUsage;
-};
+function makeMockClient(response: AnthropicMessage | (() => Promise<AnthropicMessage>)) {
+  const create = vi.fn<AnthropicLike['messages']['create']>(async () =>
+    typeof response === 'function' ? await response() : response
+  );
+  return { messages: { create } };
+}
 
-function makeMockClient(response: MockResponse | (() => Promise<MockResponse>)) {
-  const create = vi.fn(async () => (typeof response === 'function' ? await response() : response));
-  return { messages: { create } } as Parameters<typeof __setAnthropicClientForTests>[0] & {
-    messages: { create: typeof create };
-  };
+/** Digs the base64 image out of the params the handler sent to the SDK. */
+function base64ImageSource(params: AnthropicCreateParams) {
+  const content = params.messages[0]?.content;
+  if (!Array.isArray(content)) throw new Error('expected structured content blocks');
+  const image = content.find((block) => block.type === 'image');
+  if (image === undefined) throw new Error('expected an image block');
+  if (image.source.type !== 'base64') throw new Error('expected a base64 image source');
+  return image.source;
 }
 
 function jobData(
@@ -82,10 +90,10 @@ function jobData(
   };
 }
 
-function assistantText(payload: unknown): MockResponse {
+function assistantText(payload: unknown): AnthropicMessage {
   return {
     model: SCREENSHOT_DEFAULT_MODEL,
-    content: [{ type: 'text', text: JSON.stringify(payload) }],
+    content: [{ type: 'text', text: JSON.stringify(payload), citations: null }],
     usage: { input_tokens: 1280, output_tokens: 420 },
   };
 }
@@ -130,21 +138,12 @@ describe('runScreenshotIngest', () => {
     expect(stages['dsl_build']).toMatchObject({ ok: true });
     expect(result.meta.total_cost_usd).toBeGreaterThan(0);
     expect(client.messages.create).toHaveBeenCalledTimes(1);
-    const callArg = client.messages.create.mock.calls[0]?.[0] as {
-      model: string;
-      messages: Array<{
-        content: Array<
-          | { type: 'image'; source: { type: 'base64'; media_type: string; data: string } }
-          | { type: 'text'; text: string }
-        >;
-      }>;
-    };
+    const callArg = client.messages.create.mock.calls[0]?.[0];
+    if (callArg === undefined) throw new Error('unreachable');
     expect(callArg.model).toBe(SCREENSHOT_DEFAULT_MODEL);
-    const imageBlock = callArg.messages[0]?.content.find((b) => b.type === 'image');
-    expect(imageBlock).toBeTruthy();
-    if (!imageBlock || imageBlock.type !== 'image') throw new Error('unreachable');
-    expect(imageBlock.source.media_type).toBe('image/png');
-    expect(imageBlock.source.data.length).toBeGreaterThan(0);
+    const source = base64ImageSource(callArg);
+    expect(source.media_type).toBe('image/png');
+    expect(source.data.length).toBeGreaterThan(0);
   });
 
   it('respects FOOD_SCREENSHOT_VISION_MODEL override', async () => {
@@ -157,8 +156,8 @@ describe('runScreenshotIngest', () => {
 
     const result = await runScreenshotIngest(jobData(), neverCancelled);
     expect(result.ok).toBe(true);
-    const callArg = client.messages.create.mock.calls[0]?.[0] as { model: string };
-    expect(callArg.model).toBe('claude-haiku-4-5');
+    const callArg = client.messages.create.mock.calls[0]?.[0];
+    expect(callArg?.model).toBe('claude-haiku-4-5');
   });
 
   it('marks the result partial when ingredients/steps are empty', async () => {
@@ -175,7 +174,7 @@ describe('runScreenshotIngest', () => {
     __setAnthropicClientForTests(
       makeMockClient({
         model: SCREENSHOT_DEFAULT_MODEL,
-        content: [{ type: 'text', text: 'sure, here you go!\n{not-json' }],
+        content: [{ type: 'text', text: 'sure, here you go!\n{not-json', citations: null }],
         usage: { input_tokens: 100, output_tokens: 20 },
       })
     );
@@ -269,13 +268,9 @@ describe('runScreenshotIngest', () => {
       neverCancelled
     );
 
-    const callArg = client.messages.create.mock.calls[0]?.[0] as {
-      messages: Array<{ content: Array<{ type: string; source?: { media_type: string } }> }>;
-    };
-    const image = callArg.messages[0]?.content.find((b) => b.type === 'image') as
-      | { source: { media_type: string } }
-      | undefined;
-    expect(image?.source.media_type).toBe('image/jpeg');
+    const callArg = client.messages.create.mock.calls[0]?.[0];
+    if (callArg === undefined) throw new Error('unreachable');
+    expect(base64ImageSource(callArg).media_type).toBe('image/jpeg');
   });
 
   it('accepts a WebP payload', async () => {

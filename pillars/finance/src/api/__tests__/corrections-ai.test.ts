@@ -273,8 +273,9 @@ describe('corrections.proposeChangeSet', () => {
       },
     });
 
-    expect(res.changeSet.ops[0]?.op).toBe('edit');
-    expect(res.changeSet.ops[0]?.id).toBe(existing.id);
+    const editOp = res.changeSet.ops[0];
+    expect(editOp?.op).toBe('edit');
+    expect(editOp && 'id' in editOp ? editOp.id : null).toBe(existing.id);
     expect(res.rationale).toContain(`Edit correction rule ${existing.id}`);
     expect(res.targetRules[existing.id]).toBeDefined();
   });

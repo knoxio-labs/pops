@@ -74,7 +74,10 @@ import type { ManifestPayload } from '@pops/pillar-sdk/manifest-schema';
 
 const INTERNAL_API_KEY_ENV = 'POPS_INTERNAL_API_KEY';
 
-interface CoreSettingsShape {
+// A `type` alias, not an `interface`: PillarHandle<T> only projects per-router
+// procedure nodes when `T extends Record<string, unknown>`, and an interface has
+// no implicit index signature, so it silently falls back to the untyped branch.
+type CoreSettingsShape = {
   settings: {
     get: (input: { key: string }) => { data: { key: string; value: string } | null };
     set: (input: { key: string; value: string }) => {
@@ -83,7 +86,7 @@ interface CoreSettingsShape {
     };
     getMany: (input: { keys: string[] }) => { settings: Record<string, string> };
   };
-}
+};
 
 function buildCoreManifest(): ManifestPayload {
   return {

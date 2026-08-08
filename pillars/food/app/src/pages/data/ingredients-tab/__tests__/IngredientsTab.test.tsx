@@ -40,6 +40,7 @@ vi.mock('../../../../food-api/index.js', () => ({
   variantsDelete: variantsDeleteMock,
 }));
 
+import { elementAt } from '../../../../test-utils';
 import { IngredientsTab } from '../../IngredientsTab';
 
 interface ListItem {
@@ -281,7 +282,9 @@ describe('detail-panel CRUD', () => {
     await userEvent.click(await screen.findByText('Banana'));
     await userEvent.click(await screen.findByRole('button', { name: /^delete$/i }));
     const dialog = await screen.findByRole('dialog');
-    await userEvent.click(within(dialog).getAllByRole('button', { name: /^delete$/i })[0]);
+    await userEvent.click(
+      elementAt(within(dialog).getAllByRole('button', { name: /^delete$/i }), 0)
+    );
     await waitFor(() => {
       expect(ingredientsDeleteMock).toHaveBeenCalledWith({ path: { id: 5 } });
     });
@@ -318,7 +321,9 @@ describe('detail-panel CRUD', () => {
     seedSelectedBanana([variant]);
     renderWithRouter();
     await userEvent.click(await screen.findByText('Banana'));
-    await userEvent.click((await screen.findAllByRole('button', { name: /edit raw/i }))[0]);
+    await userEvent.click(
+      elementAt(await screen.findAllByRole('button', { name: /edit raw/i }), 0)
+    );
     const dialog = screen.getByRole('dialog');
     const nameInput = within(dialog).getByLabelText(/^name$/i);
     await userEvent.clear(nameInput);
@@ -339,9 +344,13 @@ describe('detail-panel CRUD', () => {
     seedSelectedBanana([variant]);
     renderWithRouter();
     await userEvent.click(await screen.findByText('Banana'));
-    await userEvent.click((await screen.findAllByRole('button', { name: /delete raw/i }))[0]);
+    await userEvent.click(
+      elementAt(await screen.findAllByRole('button', { name: /delete raw/i }), 0)
+    );
     const dialog = screen.getByRole('dialog');
-    await userEvent.click(within(dialog).getAllByRole('button', { name: /^delete$/i })[0]);
+    await userEvent.click(
+      elementAt(within(dialog).getAllByRole('button', { name: /^delete$/i }), 0)
+    );
     await waitFor(() => {
       expect(variantsDeleteMock).toHaveBeenCalledWith({ path: { id: 11 } });
     });

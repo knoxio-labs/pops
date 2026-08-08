@@ -14,12 +14,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { openCerebrumDb, reflexExecutions, type OpenedCerebrumDb } from '../../db/index.js';
 import { createCerebrumApiApp } from '../app.js';
-import {
-  makeClient,
-  makeEmptyPeerClients,
-  makeReflexService,
-  makeTemplateRegistry,
-} from './test-utils.js';
+import { makeCerebrumApiDeps, makeClient } from './test-utils.js';
 
 const FIXTURE_TOML = `
 [[reflex]]
@@ -64,14 +59,7 @@ afterEach(() => {
 function clientWith(toml: string | null) {
   if (toml !== null) writeFileSync(configPath, toml, 'utf8');
   return makeClient(
-    createCerebrumApiApp({
-      cerebrumDb,
-      templateRegistry: makeTemplateRegistry(),
-      reflexService: makeReflexService(cerebrumDb.db, configPath),
-      version: '0.0.1-test',
-      selfBaseUrl: 'http://localhost:3007',
-      peerClients: makeEmptyPeerClients(),
-    })
+    createCerebrumApiApp(makeCerebrumApiDeps({ cerebrumDb, tmpDir, reflexConfigPath: configPath }))
   );
 }
 

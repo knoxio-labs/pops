@@ -85,10 +85,10 @@ describe('screenshot vision — telemetry', () => {
   it('reports a recipe-extract-screenshot success record and returns the result unchanged', async () => {
     const { extractWithClaudeVision } = await import('../anthropic-client.js');
     const message: ScreenshotMessage = {
-      content: [{ type: 'text', text: RECIPE_JSON }],
+      content: [{ type: 'text', text: RECIPE_JSON, citations: null }],
       usage: { input_tokens: 321, output_tokens: 88 },
       model: 'claude-haiku-4-5-20251001',
-    } as ScreenshotMessage;
+    };
     const client: ScreenshotAnthropicLike = {
       messages: { create: () => Promise.resolve(message) },
     };

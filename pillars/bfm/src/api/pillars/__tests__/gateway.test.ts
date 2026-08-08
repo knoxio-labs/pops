@@ -9,6 +9,8 @@
  */
 import { describe, expect, it } from 'vitest';
 
+import { fakePillarHandle } from '@pops/pillar-sdk/testing';
+
 import {
   createPillarGateway,
   isGatewayOk,
@@ -27,20 +29,18 @@ type TransactionsRouter = {
 
 /**
  * A handle that answers every call with `result`, and records how it was
- * asked for. Deliberately not the SDK proxy: this file must fail when the
- * MAPPING changes, not when the SDK's discovery does.
+ * asked for. Discovery and the network are replaced, not the proxy: this file
+ * must fail when the MAPPING changes, not when discovery does.
  */
 function stubHandle(result: CallResult<unknown>): {
   factory: PillarHandleFactory;
   requestedIds: string[];
 } {
   const requestedIds: string[] = [];
-  const handle = {
-    transactions: { list: () => Promise.resolve(result) },
-  };
+  const routes = { transactions: { list: () => result } };
   const factory = <TRouter>(pillarId: string): PillarHandle<TRouter> => {
     requestedIds.push(pillarId);
-    return handle as PillarHandle<TRouter>;
+    return fakePillarHandle<TRouter>(pillarId, routes);
   };
   return { factory, requestedIds };
 }

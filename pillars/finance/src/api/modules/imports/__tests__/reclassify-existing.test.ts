@@ -25,9 +25,11 @@ import {
   reclassifyExistingTransactions,
 } from '../reclassify-existing.js';
 
+import type { TransactionType } from '../../../../contract/corrections-constants.js';
+
 interface SeedTxn {
   description: string;
-  type: string;
+  type: TransactionType;
   entityId?: string | null;
   entityName?: string | null;
   location?: string | null;

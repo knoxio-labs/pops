@@ -6,7 +6,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { useState, type ReactElement } from 'react';
+import { useState, type ReactElement, type ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import type {
@@ -44,10 +44,8 @@ function makeNeed(over: Partial<LineConsumeNeed> = {}): LineConsumeNeed {
 function makeShortfall(over: Partial<LineShortfall> = {}): LineShortfall {
   return {
     lineIndex: 1,
-    ingredientId: 100,
     ingredientName: 'Onion',
     variantName: 'Diced',
-    prepStateLabel: null,
     needed: 100,
     available: 0,
     unit: 'g',
@@ -124,7 +122,7 @@ function renderHost(props: HostProps): ReturnType<typeof render> {
       mutations: { retry: false },
     },
   });
-  function Wrapper({ children }: { children: ReactElement }): ReactElement {
+  function Wrapper({ children }: { children: ReactNode }): ReactElement {
     return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
   }
   return render(<ShortfallHost {...props} />, { wrapper: Wrapper });

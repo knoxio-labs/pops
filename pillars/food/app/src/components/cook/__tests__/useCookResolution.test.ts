@@ -24,10 +24,8 @@ function makeNeed(over: Partial<LineConsumeNeed> = {}): LineConsumeNeed {
 function makeShortfall(over: Partial<LineShortfall> = {}): LineShortfall {
   return {
     lineIndex: 1,
-    ingredientId: 100,
     ingredientName: 'Onion',
     variantName: 'Diced',
-    prepStateLabel: null,
     needed: 100,
     available: 0,
     unit: 'g',

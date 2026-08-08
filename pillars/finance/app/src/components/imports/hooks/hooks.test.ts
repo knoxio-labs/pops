@@ -46,11 +46,13 @@ const fakeRule: CorrectionRule = {
   entityName: 'Entity One',
   location: null,
   tags: ['tag-a'],
-  transactionType: 'debit',
+  transactionType: 'purchase',
   isActive: true,
+  priority: 0,
   confidence: 0.9,
+  timesApplied: 0,
   createdAt: '2025-01-01',
-  updatedAt: '2025-01-01',
+  lastUsedAt: null,
 };
 
 const targetRules: Record<string, CorrectionRule> = { 'rule-1': fakeRule };
@@ -176,19 +178,18 @@ describe('localOpsToChangeSet', () => {
   });
 
   it('builds a change set from ops', () => {
-    const ops: LocalOp[] = [
-      {
-        kind: 'add',
-        clientId: 'add-1',
-        data: { descriptionPattern: 'X', matchType: 'contains', tags: [] },
-        dirty: false,
-      },
-    ];
+    const addOp: Extract<LocalOp, { kind: 'add' }> = {
+      kind: 'add',
+      clientId: 'add-1',
+      data: { descriptionPattern: 'X', matchType: 'contains', tags: [] },
+      dirty: false,
+    };
+    const ops: LocalOp[] = [addOp];
     const cs = localOpsToChangeSet(ops);
     expect(cs).not.toBeNull();
     expect(cs!.source).toBe('correction-proposal-dialog');
     expect(cs!.ops).toHaveLength(1);
-    expect(cs!.ops[0]).toEqual({ op: 'add', data: ops[0].data });
+    expect(cs!.ops[0]).toEqual({ op: 'add', data: addOp.data });
   });
 
   it('accepts custom source and reason', () => {

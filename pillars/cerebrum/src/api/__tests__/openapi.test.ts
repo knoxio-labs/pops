@@ -15,7 +15,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { openCerebrumDb, type OpenedCerebrumDb } from '../../db/index.js';
 import { createCerebrumApiApp } from '../app.js';
-import { makeEmptyPeerClients, makeReflexService, makeTemplateRegistry } from './test-utils.js';
+import { makeCerebrumApiDeps } from './test-utils.js';
 
 let tmpDir: string;
 let cerebrumDb: OpenedCerebrumDb;
@@ -31,14 +31,7 @@ afterEach(() => {
 });
 
 function makeApp(): ReturnType<typeof createCerebrumApiApp> {
-  return createCerebrumApiApp({
-    cerebrumDb,
-    templateRegistry: makeTemplateRegistry(),
-    reflexService: makeReflexService(cerebrumDb.db, join(tmpDir, 'reflexes.toml')),
-    version: '0.0.1-test',
-    selfBaseUrl: 'http://localhost:3007',
-    peerClients: makeEmptyPeerClients(),
-  });
+  return createCerebrumApiApp(makeCerebrumApiDeps({ cerebrumDb, tmpDir }));
 }
 
 type OpenApiBody = {

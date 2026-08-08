@@ -106,14 +106,14 @@ describe('money', () => {
   });
 
   it('keeps the discount signed on the line it applied to', () => {
-    expect(order(ORDER_APOSTROPHE_DISCOUNT).items?.[0].allocatedAdjustmentCents).toBe(-550);
+    expect(order(ORDER_APOSTROPHE_DISCOUNT).items?.[0]?.allocatedAdjustmentCents).toBe(-550);
   });
 
   it('ingests a thousands-separated amount rather than dropping the line', () => {
     const result = order(ORDER_THOUSANDS_SEPARATOR);
     expect(result.totalCents).toBe(149500);
     expect(result.items).toHaveLength(1);
-    expect(result.items?.[0].unitPriceCents).toBe(149500);
+    expect(result.items?.[0]?.unitPriceCents).toBe(149500);
     expect(anomalyKinds(ORDER_THOUSANDS_SEPARATOR)).not.toContain('dropped-line');
   });
 
@@ -168,14 +168,14 @@ describe('anomalies', () => {
     // Three cancelled rows in the real bundle carry a non-zero total, so
     // "cancelled ⇒ drop it" would lose real money from the reconciliation.
     expect(result.totalCents).toBe(1125);
-    expect(result.items?.[0].quantity).toBe(1);
+    expect(result.items?.[0]?.quantity).toBe(1);
   });
 
   it('survives Amazon own concatenated ship date and says which order it hit', () => {
     expect(anomalyKinds(ORDER_CONCATENATED_SHIP_DATE)).toContain('concatenated-ship-date');
     const result = order(ORDER_CONCATENATED_SHIP_DATE);
-    expect(result.shipments?.[0].shippedAt).toBe('2025-08-02T00:00:00.000Z');
-    expect(result.shipments?.[0].status).toBe('shipped');
+    expect(result.shipments?.[0]?.shippedAt).toBe('2025-08-02T00:00:00.000Z');
+    expect(result.shipments?.[0]?.status).toBe('shipped');
   });
 });
 
@@ -248,7 +248,11 @@ describe('rows the parser cannot fully take', () => {
   it('reports an order whose date or currency is unreadable', () => {
     // The largest thing this parser can drop, so the one that must never be
     // silent.
-    for (const override of [{ 'Order Date': 'nonsense' }, { Currency: 'Not Available' }]) {
+    const overrides: readonly Readonly<Record<string, string>>[] = [
+      { 'Order Date': 'nonsense' },
+      { Currency: 'Not Available' },
+    ];
+    for (const override of overrides) {
       const result = parseAmazonOrderHistory(csvWithRows([rowWith(override)]));
       expect(result.orders).toHaveLength(0);
       expect(result.anomalies.map((anomaly) => anomaly.kind)).toContain('dropped-order');
@@ -266,7 +270,7 @@ describe('rows the parser cannot fully take', () => {
     const result = parseAmazonOrderHistory(
       csvWithRows([rowWith({ 'Shipment Status': 'Teleported' })])
     );
-    expect(result.orders[0]?.shipments?.[0].status).toBe('pending');
+    expect(result.orders[0]?.shipments?.[0]?.status).toBe('pending');
   });
 
   it('treats an unshipped row as one shipment rather than none', () => {
@@ -274,7 +278,7 @@ describe('rows the parser cannot fully take', () => {
       csvWithRows([rowWith({ 'Ship Date': 'Not Available' })])
     );
     expect(result.orders[0]?.shipments).toHaveLength(1);
-    expect(result.orders[0]?.shipments?.[0].shippedAt).toBeNull();
+    expect(result.orders[0]?.shipments?.[0]?.shippedAt).toBeNull();
   });
 
   it('rejects a file with no header row at all', () => {

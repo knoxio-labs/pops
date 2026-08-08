@@ -73,7 +73,7 @@ describe('createTransaction', () => {
       account: 'Up Savings',
       amountCents: 5000,
       date: '2025-06-15',
-      type: 'Purchase',
+      type: 'purchase',
     });
 
     expect(created.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
@@ -81,7 +81,7 @@ describe('createTransaction', () => {
     expect(created.account).toBe('Up Savings');
     expect(created.amountCents).toBe(5000);
     expect(created.date).toBe('2025-06-15');
-    expect(created.type).toBe('Purchase');
+    expect(created.type).toBe('purchase');
     expect(created.tags).toBe('[]');
     expect(created.lastEditedTime).toMatch(/^\d{4}-\d{2}-\d{2}T/);
   });
@@ -130,7 +130,7 @@ describe('createTransaction', () => {
       account: 'Up Savings',
       amountCents: 15075,
       date: '2025-06-15',
-      type: 'Purchase',
+      type: 'purchase',
       tags: ['Groceries'],
       entityId: 'ent-123',
       entityName: 'Woolworths',
@@ -194,7 +194,7 @@ describe('listTransactions', () => {
       account: 'Up Savings',
       amountCents: 5000,
       date: '2025-06-15',
-      type: 'Purchase',
+      type: 'purchase',
       tags: ['Groceries', 'Online'],
       entityId: 'ent-123',
     });
@@ -203,7 +203,7 @@ describe('listTransactions', () => {
       account: 'ANZ Visa',
       amountCents: 3000,
       date: '2025-06-14',
-      type: 'Purchase',
+      type: 'purchase',
       tags: ['Groceries'],
       entityId: 'ent-456',
     });
@@ -212,7 +212,7 @@ describe('listTransactions', () => {
       account: 'Up Savings',
       amountCents: 6000,
       date: '2025-06-13',
-      type: 'Purchase',
+      type: 'purchase',
       tags: ['Transport'],
     });
     createTransaction(db, {
@@ -220,7 +220,7 @@ describe('listTransactions', () => {
       account: 'Up Savings',
       amountCents: 500000,
       date: '2025-05-30',
-      type: 'Income',
+      type: 'income',
     });
   });
 
@@ -286,7 +286,7 @@ describe('listTransactions', () => {
   });
 
   it('filters by type', () => {
-    const result = listTransactions(db, { type: 'Income' }, 50, 0);
+    const result = listTransactions(db, { type: 'income' }, 50, 0);
     expect(result.total).toBe(1);
     expect(result.rows[0]?.description).toBe('Salary');
   });
@@ -294,7 +294,7 @@ describe('listTransactions', () => {
   it('combines multiple filters as AND', () => {
     const result = listTransactions(
       db,
-      { account: 'Up Savings', type: 'Purchase', tag: 'Transport' },
+      { account: 'Up Savings', type: 'purchase', tag: 'Transport' },
       50,
       0
     );
