@@ -77,10 +77,12 @@ outage.
 ## What the account can actually reach
 
 `BFM_SERVICE_ACCOUNT_SCOPES` in `service-account.ts` is the grant, and it is
-narrow on purpose. It is also, today, enforced by nobody bfm calls: the
-registry pillar is the only one in the fleet that checks `X-API-Key`, and its
-scope gate covers `core.features.*` / `core.settings.*` only. Whether that
-stays the model is POPS-1447.
+narrow on purpose. It is also enforced: `finance` — the only pillar bfm calls —
+resolves the presented `X-API-Key` against the registry and refuses any
+operation the grant does not cover, so widening the mobile surface to a second
+finance module means widening the grant in the same change. Producers that have
+not adopted the guard yet still serve any in-network caller; each has its own
+adoption ticket.
 
 ## What is not here
 

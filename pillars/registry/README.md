@@ -59,6 +59,31 @@ Additional raw HTTP routes that ts-rest cannot model:
   proxies to the owning pillar).
 - `GET /openapi` — serves the committed OpenAPI projection verbatim so the
   pillar SDK can build its route map from the live pillar.
+- `GET /service-accounts/self` — resolves the presenting `X-API-Key` to its
+  account (`{ id, name, scopes }`), or 401. See below.
+
+## Service-account introspection
+
+The registry owns the `service_accounts` table, so no other producer can turn a
+presented `X-API-Key` into a principal on its own. `GET /service-accounts/self`
+is how they ask: a pillar forwards the key it received and gets back the account
+it resolves to. `@pops/pillar-sdk/server`'s
+`createRegistryServiceAccountVerifier` is the client half, and the path is
+shared through `REGISTRY_SERVICE_ACCOUNT_SELF_PATH` so the two cannot drift.
+
+It authenticates through the same identity-middleware leg the rest of the REST
+surface uses, which is also where revocation is checked — so a revoked key stops
+resolving here immediately, and asking pillars learn it within their verifier's
+cache TTL. Presenting the key is the price of admission, so the route reveals
+nothing a caller could not learn by using the key directly.
+
+It is a raw route rather than a contract route, like `POST /uri/resolve`: a
+machine-to-machine federation primitive, kept out of the OpenAPI projection the
+frontend clients are generated from. The contract's `GET /service-accounts`
+list is a different, `userOnly` route and is unaffected.
+
+Which producers act on the answer is [ADR-044](../../docs/architecture/adr-044-inbound-service-account-scope-enforcement.md):
+`registry` and `finance` today, the rest under their own issues.
 
 ## Registration trust model
 
