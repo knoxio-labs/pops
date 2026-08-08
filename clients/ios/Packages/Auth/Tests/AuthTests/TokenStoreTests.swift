@@ -98,7 +98,10 @@ struct TokenStoreTests {
         #expect(keychain.description.contains("-25300"))
         #expect(!corrupted.description.isEmpty)
         #expect(DeviceKeyStoreError.keychain(-34018).description.contains("-34018"))
-        #expect(DeviceKeyStoreError.signingFailed.description == "secure enclave declined to sign")
+        #expect(DeviceKeyStoreError.signingFailed(code: -25308).description.contains("-25308"))
+        #expect(
+            DeviceKeyStoreError.secureEnclaveUnavailable(code: -26275).description.contains("-26275")
+        )
     }
 
     /// `KeychainTokenStore` encodes with an ISO-8601 date strategy; a default

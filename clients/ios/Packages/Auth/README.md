@@ -35,7 +35,7 @@ The BFM verifies these signatures with `node:crypto`. CryptoKit and `node:crypto
 The choice is pinned as a committed vector at [`clients/ios/Contracts/device-signature-v1.json`](../../Contracts/device-signature-v1.json) — a real key, a real message and a real signature — and asserted from both languages:
 
 - Swift: `Tests/AuthTests/DeviceSignatureFixtureTests.swift`
-- Node: [`scripts/ci/check-device-signature-fixture.mjs`](../../../../scripts/ci/check-device-signature-fixture.mjs), run by the `Device signature encoding (iOS ↔ BFM)` job in [`quality.yml`](../../../../.github/workflows/quality.yml)
+- Node: [`scripts/ci/check-device-signature-fixture.mjs`](../../../../scripts/ci/check-device-signature-fixture.mjs), run by the `Device signature encoding (iOS ↔ BFM)` job in [`quality.yml`](../../../../.github/workflows/quality.yml), with a unit suite at [`scripts/ci/__tests__/check-device-signature-fixture.test.ts`](../../../../scripts/ci/__tests__/check-device-signature-fixture.test.ts) under the `Scripts tests` gate
 
 Both sides also assert the negative controls: the raw `r‖s` encoding of the _same_ signature must be rejected where DER is expected. Without those, "we chose DER" would be a comment rather than something a test can fail on.
 

@@ -45,8 +45,10 @@ public protocol DeviceKeyStore: Sendable {
 ///
 /// No case carries key material, token material or signature bytes; a
 /// `localizedDescription` reaching a log must stay useless to whoever reads it.
-/// `OSStatus` is the exception worth carrying — it is a Security-framework
-/// error code, not a secret, and without it a Keychain failure is undiagnosable.
+/// The numeric codes are the exception worth carrying — they are
+/// Security-framework error codes, not secrets, and they are the only
+/// diagnostics the Enclave path has: `-25293` (device locked) and `-26275`
+/// (no Enclave) are the same failure without them.
 public enum DeviceKeyStoreError: Error, Equatable {
     /// A device key is already present. Delete it before creating another.
     case keyAlreadyExists
@@ -59,14 +61,14 @@ public enum DeviceKeyStoreError: Error, Equatable {
 
     /// The Secure Enclave refused to produce a key. Simulators and Macs without
     /// the hardware land here, and so does a device whose Enclave is unavailable.
-    case secureEnclaveUnavailable
+    case secureEnclaveUnavailable(code: Int)
 
     /// The Keychain rejected the operation.
     case keychain(OSStatus)
 
     /// The Enclave declined to sign. Most often a device locked between the
     /// decision to refresh and the signature.
-    case signingFailed
+    case signingFailed(code: Int)
 }
 
 extension DeviceKeyStoreError: CustomStringConvertible {
@@ -75,9 +77,9 @@ extension DeviceKeyStoreError: CustomStringConvertible {
         case .keyAlreadyExists: "a device key already exists"
         case .keyNotFound: "no device key"
         case .malformedPublicKey: "malformed P-256 public key"
-        case .secureEnclaveUnavailable: "secure enclave unavailable"
+        case .secureEnclaveUnavailable(let code): "secure enclave unavailable (\(code))"
         case .keychain(let status): "keychain error \(status)"
-        case .signingFailed: "secure enclave declined to sign"
+        case .signingFailed(let code): "secure enclave declined to sign (\(code))"
         }
     }
 }

@@ -93,11 +93,14 @@ public struct KeychainTokenStore: TokenStore {
 
     public func wipe() throws {
         // Scoped to the service rather than to `account`, so an item written by
-        // an older build under a different account name is removed too. A wipe
+        // an older build under a different account name is removed too, and
+        // `kSecAttrSynchronizableAny` because omitting it matches only
+        // non-synchronizable items — this store never writes one, but a wipe
         // that only removes what this build happens to know about is not a wipe.
         let query: [CFString: Any] = [
             kSecClass: kSecClassGenericPassword,
             kSecAttrService: service,
+            kSecAttrSynchronizable: kSecAttrSynchronizableAny,
             kSecUseDataProtectionKeychain: true,
         ]
         let status = SecItemDelete(query as CFDictionary)

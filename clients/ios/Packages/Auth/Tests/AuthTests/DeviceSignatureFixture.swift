@@ -20,12 +20,19 @@ struct DeviceSignatureFixture: Decodable {
     let signatureDerBase64: String
     let signatureRawBase64: String
 
+    static let relativePath = "Contracts/device-signature-v1.json"
+
+    /// Walks up from this source file until the fixture appears, rather than
+    /// counting directory levels — moving this file would otherwise break the
+    /// lookup with a "no such file" that says nothing about why.
     static let url: URL = {
-        var directory = URL(fileURLWithPath: #filePath)
-        for _ in 0..<5 { directory.deleteLastPathComponent() }
-        return directory
-            .appendingPathComponent("Contracts")
-            .appendingPathComponent("device-signature-v1.json")
+        var directory = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+        while directory.path != "/" {
+            let candidate = directory.appendingPathComponent(relativePath)
+            if FileManager.default.fileExists(atPath: candidate.path) { return candidate }
+            directory.deleteLastPathComponent()
+        }
+        fatalError("no \(relativePath) above \(#filePath)")
     }()
 
     static func load() throws -> DeviceSignatureFixture {

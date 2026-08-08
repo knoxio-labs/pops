@@ -115,7 +115,7 @@ export function checkFixture(fixture) {
   const failures = [];
 
   for (const [field, expected] of Object.entries(CONTRACT)) {
-    const actual = fixture[/** @type {keyof CONTRACT} */ (field)];
+    const actual = fixture[/** @type {keyof typeof CONTRACT} */ (field)];
     if (actual !== expected) {
       failures.push(
         `${field}: fixture says ${JSON.stringify(actual)}, contract says ${JSON.stringify(expected)}`
@@ -263,4 +263,6 @@ function main() {
   process.exit(1);
 }
 
-main();
+if (resolve(fileURLToPath(import.meta.url)) === resolve(process.argv[1] ?? '')) {
+  main();
+}

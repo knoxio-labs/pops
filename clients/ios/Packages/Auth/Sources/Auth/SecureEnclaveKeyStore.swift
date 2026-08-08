@@ -70,8 +70,7 @@ public struct SecureEnclaveKeyStore: DeviceKeyStore {
                 &accessControlError
             )
         else {
-            accessControlError?.release()
-            throw DeviceKeyStoreError.secureEnclaveUnavailable
+            throw DeviceKeyStoreError.secureEnclaveUnavailable(code: Self.code(of: accessControlError))
         }
 
         let attributes: [CFString: Any] = [
@@ -89,8 +88,7 @@ public struct SecureEnclaveKeyStore: DeviceKeyStore {
         guard
             let privateKey = SecKeyCreateRandomKey(attributes as CFDictionary, &creationError)
         else {
-            creationError?.release()
-            throw DeviceKeyStoreError.secureEnclaveUnavailable
+            throw DeviceKeyStoreError.secureEnclaveUnavailable(code: Self.code(of: creationError))
         }
 
         return try Self.publicKey(of: privateKey)
@@ -113,8 +111,7 @@ public struct SecureEnclaveKeyStore: DeviceKeyStore {
                 &signingError
             )
         else {
-            signingError?.release()
-            throw DeviceKeyStoreError.signingFailed
+            throw DeviceKeyStoreError.signingFailed(code: Self.code(of: signingError))
         }
         return signature as Data
     }
@@ -161,11 +158,23 @@ public struct SecureEnclaveKeyStore: DeviceKeyStore {
         guard let publicKey = SecKeyCopyPublicKey(privateKey) else {
             throw DeviceKeyStoreError.malformedPublicKey
         }
+        // An export refusal is the framework declining, not bad bytes — the
+        // public half of an Enclave key is always exportable when the key is
+        // reachable at all — so it carries the code rather than reporting as
+        // a malformed key.
         var exportError: Unmanaged<CFError>?
         guard let x963 = SecKeyCopyExternalRepresentation(publicKey, &exportError) as Data? else {
-            exportError?.release()
-            throw DeviceKeyStoreError.malformedPublicKey
+            throw DeviceKeyStoreError.secureEnclaveUnavailable(code: Self.code(of: exportError))
         }
         return try DevicePublicKey(x963Representation: x963)
+    }
+
+    /// Consumes a Security-framework `CFError` out-parameter and returns its
+    /// code. These are `+1` references the caller owns, so they must be taken
+    /// rather than left; `takeRetainedValue` hands them to ARC and reading the
+    /// code on the way past is the only diagnostic this path ever gets.
+    private static func code(of error: Unmanaged<CFError>?) -> Int {
+        guard let error else { return 0 }
+        return CFErrorGetCode(error.takeRetainedValue())
     }
 }
