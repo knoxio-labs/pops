@@ -12,8 +12,10 @@
  * The file source is preferred over the environment one because production
  * delivers the key as a Docker file-based secret mounted under `/run/secrets/`,
  * which keeps it out of the process environment and out of `docker inspect`.
- * The value itself is never logged; only its absence and the path it was
- * looked for at are.
+ *
+ * The value itself is never logged. A configured-but-unreadable file is warned
+ * about by path; the no-key-at-all failure names the two variables and no path,
+ * because there was none to name.
  */
 import { readFileSync } from 'node:fs';
 

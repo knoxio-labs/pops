@@ -3,9 +3,16 @@
  *
  * `pillar()` from `@pops/pillar-sdk/server` reads a process-wide config: the
  * service-account key it attaches as `X-API-Key`, where to discover peers, and
- * which discovered base URLs to override. Nothing else in bfm may call
- * `configureServerSdk` — repeated calls shallow-merge, so a second one would
- * silently reconfigure every existing handle.
+ * which discovered base URLs to override.
+ *
+ * Nothing else in bfm may call `configureServerSdk`, because a second call
+ * lands unevenly rather than cleanly. It shallow-merges into the process
+ * config, and the SDK reads the key through a closure evaluated per request —
+ * so an already-built handle starts sending the NEW key while still using the
+ * transport, base-URL overrides and TTL captured when it was built. Nothing
+ * reports that split. bfm's gateway resolves its handle through `pillar()` on
+ * every call, so it would pick the rebuilt one up; anything that holds a
+ * handle across calls would not.
  *
  * `@pops/pillar-sdk/client` exports a `pillar()` of the same name and shape
  * that is UNAUTHENTICATED. A backend import from `/client` compiles, runs, and
