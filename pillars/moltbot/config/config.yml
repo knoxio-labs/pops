@@ -7,7 +7,7 @@
 #   2. Find your Telegram user ID (e.g. message @userinfobot) and add it to
 #      `allowed_user_ids` below — the bot rejects messages from any sender
 #      that isn't in this allow-list.
-#   3. Mint a pops-api service-account key (see
+#   3. Mint a registry service-account key (see
 #      `infra/secrets.example/moltbot/README.md`) and put the plaintext in
 #      the repo-root `secrets/pops_api_key`.
 #
