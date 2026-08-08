@@ -1,6 +1,5 @@
 /**
- * Manifest type generator for `@pops/lists`
- * (docs/themes/federation/prds/manifest-type-generation).
+ * Manifest type generator for `@pops/lists`.
  *
  * Emits `src/contract/manifest.generated.ts` from the contract's
  * hand-maintained surface (`types/list-item.ts`, `errors.ts`) plus the

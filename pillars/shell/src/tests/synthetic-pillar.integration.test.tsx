@@ -14,8 +14,6 @@
  * The synthetic pillar's manifest, nav config, route fixture, and bundle
  * entry are all declared **inline in this test file**, so the test would
  * fail if any of those structures required a per-pillar source edit.
- *
- * See `docs/themes/federation/prds/registry-driven-shell-ui`.
  */
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Outlet, Route, Routes } from 'react-router';

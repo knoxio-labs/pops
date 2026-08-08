@@ -1,7 +1,7 @@
 /**
  * `settings.*` sub-router — media's own federated Read/Update/Reset surface,
  * served via the shared `@pops/pillar-settings` contract factory
- * (settings-federation S2; see `docs/plans/02-settings-federation.md`).
+ * (ADR-037).
  *
  * Media owns its `plex_*`/`rotation_*`/`radarr_*`/`sonarr_*`/`media.*` keys in
  * its OWN database. The `:key` enum is derived from media's OWN manifests

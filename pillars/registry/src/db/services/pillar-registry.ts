@@ -3,8 +3,8 @@
  *
  * One row per pillar; the latest `register` wins (UPSERT semantics).
  * The router validates the manifest payload against the manifest schema
- * (docs/themes/federation/prds/manifest-schema-validator) before calling
- * into this service — the service trusts the shape it is handed and just
+ * (`libs/sdk/src/manifest-schema/schema.ts`) before calling into this
+ * service — the service trusts the shape it is handed and just
  * persists / queries.
  *
  * `registeredAt` is set on first INSERT and preserved across UPSERTs so

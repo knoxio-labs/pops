@@ -5,7 +5,10 @@ import { InvalidSlugError } from '../db/errors.js';
  * matching `[a-z0-9]+(-[a-z0-9]+)*`. Empty strings, leading/trailing
  * hyphens, double hyphens, uppercase, and any non-ASCII are rejected.
  *
- * See `pillars/food/docs/prds/106-ingredient-model/README.md` Business Rules.
+ * The slug is the ingredient's identity across the DSL, the URL and the
+ * import path (ADR-022), so the grammar has to be the intersection of what
+ * all three accept — hence ASCII-only and no separator run that could
+ * round-trip differently.
  */
 const SLUG_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 

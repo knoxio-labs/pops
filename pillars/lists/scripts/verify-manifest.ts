@@ -1,6 +1,6 @@
 /**
- * Drift check for `src/contract/manifest.generated.ts`
- * (docs/themes/federation/prds/manifest-type-generation).
+ * Drift check for `src/contract/manifest.generated.ts`, the output of
+ * `./generate-manifest.ts`.
  *
  * Re-renders the manifest in-memory, normalises via oxfmt (mirroring
  * what `generate:manifest` does after writing), byte-compares against

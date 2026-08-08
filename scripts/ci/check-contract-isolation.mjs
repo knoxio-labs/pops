@@ -2,13 +2,15 @@
 /**
  * Federation isolation guard: **no cross-contract reach-behind.**
  *
- * The contract-seam rule (docs/plans/repo-federation/00-architecture.md §2):
- * consume *across* contracts freely (a unit may import another unit's
- * published name / declared subpath exports), but **never reach behind** a
- * contract into another unit's internals. Importing another package's build
- * internals — `@pops/<pkg>/src/…`, `@pops/<pkg>/dist/…`, `@pops/<pkg>/internal…`
- * — bypasses its `exports` map and couples to internals that an extracted
- * repo would not publish. That is the unambiguous reach-behind this guard
+ * The contract-seam rule: consume *across* contracts freely (a unit may
+ * import another unit's published name / declared subpath exports), but
+ * **never reach behind** a contract into another unit's internals. Importing
+ * another package's build internals — `@pops/<pkg>/src/…`,
+ * `@pops/<pkg>/dist/…`, `@pops/<pkg>/internal…` — bypasses its `exports` map
+ * and couples to internals that an extracted repo would not publish. Every
+ * unit here is meant to survive being lifted into its own repo (ADR-039), so
+ * an import the `exports` map does not sanction resolves today and breaks on
+ * the day the unit moves. That is the unambiguous reach-behind this guard
  * catches.
  *
  * This is the **diff-scoped fast pass** (only files changed in the PR are
@@ -16,7 +18,7 @@
  * pass. It is deliberately conservative: it flags only deep imports into
  * another package's `src`/`dist`/`internal`, which can never be legitimate
  * (declared subpath exports such as `@pops/types/foo` are NOT flagged). The
- * structural cross-unit rules (ISO-R1..R4) live in dep-cruiser (P6-T01).
+ * structural cross-unit rules live in `.dependency-cruiser.cjs`.
  *
  * Degrades gracefully: if the base ref cannot be resolved (shallow clone,
  * detached state) it inspects nothing and exits 0 rather than blocking — the
@@ -194,7 +196,7 @@ function main() {
   }
   console.error(
     '\nImport another unit only through its published name or declared subpath ' +
-      'exports — never its src/dist/internal (00-architecture.md §2).'
+      'exports — never its src/dist/internal (ADR-039).'
   );
   process.exit(1);
 }
