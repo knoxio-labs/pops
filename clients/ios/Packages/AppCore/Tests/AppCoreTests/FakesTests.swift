@@ -4,10 +4,11 @@ import Testing
 
 /// Every feature's tests are only as trustworthy as these are.
 @Suite("Fakes")
-struct FakesTests {
+internal struct FakesTests {
     @Test("pages are served in order and the last one terminates")
     func pagesTerminate() async throws {
-        let repository = InMemoryTransactionsRepository(rows: Transaction.fakes(count: 3), pageSize: 2)
+        let repository = InMemoryTransactionsRepository(
+            rows: Transaction.fakes(count: 3), pageSize: 2)
 
         let first = try await repository.transactions(after: nil)
         #expect(first.transactions.map(\.id) == ["txn-0", "txn-1"])
@@ -28,7 +29,8 @@ struct FakesTests {
 
     @Test("a page boundary landing exactly on the end does not offer another page")
     func exactPageBoundary() async throws {
-        let repository = InMemoryTransactionsRepository(rows: Transaction.fakes(count: 2), pageSize: 2)
+        let repository = InMemoryTransactionsRepository(
+            rows: Transaction.fakes(count: 2), pageSize: 2)
 
         let page = try await repository.transactions(after: nil)
 
@@ -61,7 +63,8 @@ struct FakesTests {
 
     @Test("a failure can be injected partway through a scroll")
     func injectsFailureMidScroll() async throws {
-        let repository = InMemoryTransactionsRepository(rows: Transaction.fakes(count: 4), pageSize: 2)
+        let repository = InMemoryTransactionsRepository(
+            rows: Transaction.fakes(count: 4), pageSize: 2)
         await repository.fail(onCall: 2, with: .unauthorized)
 
         _ = try await repository.transactions(after: nil)
@@ -82,7 +85,8 @@ struct FakesTests {
 
     @Test("an offset a client derived for itself is rejected, not answered")
     func rejectsDerivedCursor() async {
-        let repository = InMemoryTransactionsRepository(rows: Transaction.fakes(count: 4), pageSize: 2)
+        let repository = InMemoryTransactionsRepository(
+            rows: Transaction.fakes(count: 4), pageSize: 2)
 
         await #expect(throws: RepositoryError.contractMismatch) {
             try await repository.transactions(after: "0")
@@ -91,7 +95,8 @@ struct FakesTests {
 
     @Test("a cursor held across a refresh is rejected rather than reading the new rows")
     func rejectsCursorHeldAcrossRefresh() async throws {
-        let repository = InMemoryTransactionsRepository(rows: Transaction.fakes(count: 4), pageSize: 2)
+        let repository = InMemoryTransactionsRepository(
+            rows: Transaction.fakes(count: 4), pageSize: 2)
         let cursor = try #require(try await repository.transactions(after: nil).nextCursor)
 
         await repository.replace(with: Transaction.fakes(count: 4))

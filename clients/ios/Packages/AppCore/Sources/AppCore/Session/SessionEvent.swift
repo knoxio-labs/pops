@@ -11,7 +11,7 @@ public enum SessionEvent: Hashable, Sendable {
 public enum SessionReducer {
     public static func reduce(_ state: SessionState, applying event: SessionEvent) -> SessionState {
         switch (state, event) {
-        case let (_, .paired(device)):
+        case (_, .paired(let device)):
             return .paired(device)
         case (.unpaired, .revoked):
             // There is nothing to revoke. A `403` racing a sign-out must not
@@ -21,7 +21,7 @@ public enum SessionReducer {
             // Concurrent requests all fail once the device is gone. The first
             // reason is the one that explains it; later ones must not overwrite it.
             return state
-        case let (.paired, .revoked(reason)):
+        case (.paired, .revoked(let reason)):
             return .revoked(reason)
         case (_, .signedOut):
             return .unpaired

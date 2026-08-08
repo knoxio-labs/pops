@@ -3,7 +3,7 @@ import Foundation
 import Testing
 
 @Suite("Money")
-struct MoneyAmountTests {
+internal struct MoneyAmountTests {
     @Test("a two-digit currency converts minor units to major")
     func twoDigitCurrency() {
         let amount = MoneyAmount(minorUnits: 1999, currencyCode: "AUD")
@@ -63,6 +63,7 @@ struct MoneyAmountTests {
         let tenCents = MoneyAmount(minorUnits: 10, currencyCode: "AUD").decimalValue
         let twentyCents = MoneyAmount(minorUnits: 20, currencyCode: "AUD").decimalValue
 
-        #expect(tenCents + twentyCents == MoneyAmount(minorUnits: 30, currencyCode: "AUD").decimalValue)
+        #expect(
+            tenCents + twentyCents == MoneyAmount(minorUnits: 30, currencyCode: "AUD").decimalValue)
     }
 }

@@ -3,7 +3,7 @@ import Testing
 
 @MainActor
 @Suite("Router")
-struct RouterTests {
+internal struct RouterTests {
     @Test("starts empty")
     func startsEmpty() {
         #expect(Router().path.isEmpty)

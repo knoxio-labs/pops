@@ -103,13 +103,6 @@
     "UseLetInEveryBoundCaseVariable": true,
     "UseSynthesizedInitializer": true,
 
-    // Checks that a doc comment which exists agrees with the signature it sits
-    // above — parameters named, return documented, no phantom parameters. It
-    // does not demand that any doc comment exist, so it costs nothing on
-    // undocumented code and catches the stale-docstring case, which is the one
-    // that actively misleads.
-    "ValidateDocumentationComments": true,
-
     // ---- Off: SwiftLint owns these. Reporting twice is noise, not rigour. ----
     // force_unwrapping, force_try, implicitly_unwrapped_optional.
     "NeverForceUnwrap": false,
@@ -139,6 +132,17 @@
     "AllPublicDeclarationsHaveDocumentation": false,
     // Prescribes prose shape (one-sentence summary paragraph). Same objection.
     "BeginDocumentationCommentWithOneLineSummary": false,
+    // Same objection again, and this one was switched on before being tried
+    // against real code. It sounds like it only checks documentation that
+    // already exists — but documenting ONE parameter makes documenting every
+    // parameter mandatory, plus a `- Returns:` and a `- Throws:`. Measured, on
+    // the AppCore repository protocol: a comment explaining the single
+    // non-obvious argument (why a cursor and not an offset) failed, and passing
+    // required adding a `- Returns:` restating the return type and a
+    // `- Throws:` restating the error. Partial documentation is exactly what
+    // "document the reason, not the mechanics" produces, so a rule that makes
+    // it illegal argues for writing no doc comment at all.
+    "ValidateDocumentationComments": false,
 
     // ---- Off: wrong for SwiftUI. ----
     // `@State private var x` synthesises `_x`, and property-wrapper storage is

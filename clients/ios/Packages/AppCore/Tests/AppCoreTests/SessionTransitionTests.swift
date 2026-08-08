@@ -5,7 +5,7 @@ import Testing
 /// The whole transition table: three states by three events, none of it left to
 /// a screen to work out for itself.
 @Suite("Session transitions")
-struct SessionTransitionTests {
+internal struct SessionTransitionTests {
     private let device = PairedDevice.fake(id: "device-1")
     private let otherDevice = PairedDevice.fake(id: "device-2")
 
@@ -16,7 +16,8 @@ struct SessionTransitionTests {
 
     @Test("unpaired + revoked -> unpaired")
     func unpairedIgnoresRevocation() {
-        #expect(SessionReducer.reduce(.unpaired, applying: .revoked(.revokedByOperator)) == .unpaired)
+        #expect(
+            SessionReducer.reduce(.unpaired, applying: .revoked(.revokedByOperator)) == .unpaired)
     }
 
     @Test("unpaired + signedOut -> unpaired")
@@ -70,7 +71,8 @@ struct SessionTransitionTests {
 
     @Test("revoked + signedOut -> unpaired")
     func revokedSignsOut() {
-        #expect(SessionReducer.reduce(.revoked(.revokedByOperator), applying: .signedOut) == .unpaired)
+        #expect(
+            SessionReducer.reduce(.revoked(.revokedByOperator), applying: .signedOut) == .unpaired)
     }
 
     @Test("a burst of revocations from concurrent requests settles on one state")

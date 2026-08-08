@@ -4,7 +4,7 @@ import Testing
 
 @MainActor
 @Suite("Session store")
-struct SessionStoreTests {
+internal struct SessionStoreTests {
     @Test("starts unpaired")
     func startsUnpaired() {
         #expect(SessionStore().state == .unpaired)
