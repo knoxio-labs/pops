@@ -380,7 +380,6 @@ internal enum Operations {
                         /// - Remark: Generated from `#/paths/devices/pair/POST/responses/400/content/json/code`.
                         internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
                             case invalidRequest = "invalid_request"
-                            case pairingRejected = "pairing_rejected"
                         }
                         /// - Remark: Generated from `#/paths/devices/pair/POST/responses/400/content/json/code`.
                         internal var code: Operations.Device_pair.Output.BadRequest.Body.JsonPayload.CodePayload
@@ -473,7 +472,6 @@ internal enum Operations {
                     internal struct JsonPayload: Codable, Hashable, Sendable {
                         /// - Remark: Generated from `#/paths/devices/pair/POST/responses/403/content/json/code`.
                         internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
-                            case invalidRequest = "invalid_request"
                             case pairingRejected = "pairing_rejected"
                         }
                         /// - Remark: Generated from `#/paths/devices/pair/POST/responses/403/content/json/code`.

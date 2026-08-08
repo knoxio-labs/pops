@@ -83,7 +83,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
-                      "enum": ["invalid_request", "pairing_rejected"],
+                      "enum": ["invalid_request"],
                       "type": "string"
                     },
                     "message": {
@@ -104,7 +104,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
-                      "enum": ["invalid_request", "pairing_rejected"],
+                      "enum": ["pairing_rejected"],
                       "type": "string"
                     },
                     "message": {

@@ -93,10 +93,33 @@ export type PairedDevice = z.infer<typeof PairedDeviceSchema>;
  * `WWW-Authenticate` challenge this route has none to offer. §15.5.4's "the
  * server does not wish to reveal exactly why the request has been refused" is
  * this route's requirement stated in the spec's own words.
+ *
+ * They are TWO schemas rather than one with a two-member enum, the same call
+ * `MobileAuthErrorSchema` makes next door and for the same reason: `code`
+ * restates the status, so one schema on both would have the document promise a
+ * `400 pairing_rejected` the handler cannot produce, and every generated client
+ * would still have to branch on it. A literal per status removes the impossible
+ * half from every consumer's type.
  */
-export const PairingErrorSchema = z.object({
-  code: z.enum(['invalid_request', 'pairing_rejected']),
+export const PairingInvalidRequestErrorSchema = z.object({
+  code: z.literal('invalid_request'),
   message: z.string(),
 });
 
+export const PairingRejectedErrorSchema = z.object({
+  code: z.literal('pairing_rejected'),
+  message: z.string(),
+});
+
+/**
+ * Either refusal, for a reader that handles both. No contract route references
+ * this — a route knows which status it is describing.
+ */
+export const PairingErrorSchema = z.discriminatedUnion('code', [
+  PairingInvalidRequestErrorSchema,
+  PairingRejectedErrorSchema,
+]);
+
+export type PairingInvalidRequestError = z.infer<typeof PairingInvalidRequestErrorSchema>;
+export type PairingRejectedError = z.infer<typeof PairingRejectedErrorSchema>;
 export type PairingError = z.infer<typeof PairingErrorSchema>;

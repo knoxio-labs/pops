@@ -37,7 +37,8 @@ import { initContract } from '@ts-rest/core';
 import {
   PairDeviceRequestSchema,
   PairedDeviceSchema,
-  PairingErrorSchema,
+  PairingInvalidRequestErrorSchema,
+  PairingRejectedErrorSchema,
 } from './rest-device-schemas.js';
 import { RateLimitErrorSchema } from './rest-schemas.js';
 
@@ -50,8 +51,11 @@ export const bfmDeviceContract = c.router({
     body: PairDeviceRequestSchema,
     responses: {
       201: PairedDeviceSchema,
-      400: PairingErrorSchema,
-      403: PairingErrorSchema,
+      // A literal `code` per status, not one enum on both — see the schemas'
+      // own note for why the document must not promise a combination this
+      // route cannot produce.
+      400: PairingInvalidRequestErrorSchema,
+      403: PairingRejectedErrorSchema,
       429: RateLimitErrorSchema,
     },
     summary: 'Spend a pairing code for a device identity. The tokens are returned once',

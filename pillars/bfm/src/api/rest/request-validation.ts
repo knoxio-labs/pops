@@ -30,7 +30,7 @@ import { MOBILE_PATH_PREFIX, PAIRING_PATH } from '../paths.js';
 
 import type { NextFunction, Response } from 'express';
 
-import type { PairingError } from '../../contract/rest-device-schemas.js';
+import type { PairingInvalidRequestError } from '../../contract/rest-device-schemas.js';
 import type { MobileRequestError } from '../../contract/rest-schemas.js';
 
 /**
@@ -41,13 +41,13 @@ import type { MobileRequestError } from '../../contract/rest-schemas.js';
 type PathOnlyRequest = { readonly path: string };
 
 /**
- * One constant, typed against both contracts that declare it. The two schemas
- * are independent — `MobileRequestErrorSchema` also carries `invalid_cursor`,
- * `PairingErrorSchema` also carries `pairing_rejected` — and they overlap on
- * exactly this value. Annotating it twice is what keeps them from drifting
- * apart silently: drop `invalid_request` from either and this stops compiling.
+ * One constant, typed against both contracts that declare it — the `/mobile`
+ * routes' `MobileRequestErrorSchema` and the pairing route's own 400. The two
+ * are independent shapes that happen to agree on this value, so annotating it
+ * twice is what keeps them from drifting apart silently: drop `invalid_request`
+ * from either and this stops compiling.
  */
-const INVALID_REQUEST: MobileRequestError & PairingError = {
+const INVALID_REQUEST: MobileRequestError & PairingInvalidRequestError = {
   code: 'invalid_request',
   message: 'This request does not match what the server accepts.',
 };

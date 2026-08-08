@@ -24,14 +24,14 @@ export type DevicePairErrors = {
    * 400
    */
   400: {
-    code: 'invalid_request' | 'pairing_rejected';
+    code: 'invalid_request';
     message: string;
   };
   /**
    * 403
    */
   403: {
-    code: 'invalid_request' | 'pairing_rejected';
+    code: 'pairing_rejected';
     message: string;
   };
   /**
