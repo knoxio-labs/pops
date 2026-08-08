@@ -22,8 +22,13 @@ set -euo pipefail
 die() {
     printf 'check-xcode-version: %s\n' "$1" >&2
     shift
-    for line in "$@"; do
-        printf '                      %s\n' "$line" >&2
+    # Each remaining argument can itself be multi-line (a captured tool's
+    # stdout), so split on newlines rather than assuming one argument is one
+    # line — otherwise every line after the chunk's first prints unindented.
+    for chunk in "$@"; do
+        while IFS= read -r line; do
+            printf '                      %s\n' "$line" >&2
+        done <<<"$chunk"
     done
     exit 1
 }
@@ -43,7 +48,9 @@ report_mismatch() {
             "$actual" "$pinned"
         printf '                      swift-format ships inside the toolchain, so this Xcode can\n'
         printf '                      format-lint differently than CI without warning. Install Xcode\n'
-        printf '                      %s and switch to it:\n' "$pinned"
+        printf '                      %s and point xcode-select at it — adjust the path below to\n' \
+            "$pinned"
+        printf '                      match how Xcode is installed on this machine, e.g.:\n'
         printf '                        sudo xcode-select -s /Applications/Xcode_%s.app/Contents/Developer\n' \
             "$pinned"
     } >&2
