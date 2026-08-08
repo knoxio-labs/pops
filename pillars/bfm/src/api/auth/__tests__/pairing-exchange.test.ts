@@ -188,6 +188,33 @@ describe('what a successful exchange produces', () => {
     });
   });
 
+  it('binds one device id to the token, the response and the row', () => {
+    // The id is drawn before the transaction opens, because the access token's
+    // `sub` is that id and minting it after the insert would put a fallible
+    // step after the write it must be atomic with. Injecting the draw is how
+    // that ordering is observable: the same value has to reach all three
+    // places, and a `.returning()`-based implementation could not produce it
+    // before the row existed.
+    withDb((db) => {
+      const drawn = 'a1b2c3d4-0000-4000-8000-000000000000';
+      const { code } = issuePairingCode(db);
+
+      const result = completePairingExchange(input({ code }), {
+        db,
+        accessTokenSigningKey: testSigningKey(),
+        generateDeviceId: () => drawn,
+      });
+
+      if (result.outcome !== 'paired') throw new Error(`expected paired, got ${result.outcome}`);
+      expect(result.deviceId).toBe(drawn);
+      expect(verifyAccessToken(result.accessToken, testSigningKey()).sub).toBe(drawn);
+      expect(db.select({ id: devices.id }).from(devices).all()).toEqual([{ id: drawn }]);
+      expect(db.select({ deviceId: refreshTokens.deviceId }).from(refreshTokens).all()).toEqual([
+        { deviceId: drawn },
+      ]);
+    });
+  });
+
   it('stores the refresh token only as a digest of the value it returned', () => {
     withDb((db) => {
       const { code } = issuePairingCode(db);
