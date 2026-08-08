@@ -313,6 +313,31 @@ agree — `src/db/__tests__/schema-migration-drift.test.ts` is what keeps them
 honest, introspecting the migrated database and diffing it against the schema
 in both directions.
 
+### Credential retention
+
+`pairing_codes` and `refresh_tokens` both accumulate rows nothing else
+deletes — a consumed or expired pairing code, a refresh token spent by
+rotation or killed by revocation. `startPruneCredentialsWorker`
+(`src/api/cron/prune-credentials.ts`) is a background sweep, started
+unconditionally from `server.ts` on boot and stopped on shutdown, that walks
+both tables once a day and removes what has aged out of its retention window.
+The retention decision and the delete itself live in
+`src/db/services/prune-credentials.ts`.
+
+The two tables do not share one window. `pairing_codes` has no equivalent of
+reuse detection — a dead row carries no security function once it can no
+longer be redeemed — so it is pruned a week after it dies. `refresh_tokens`
+is pruned on a window equal to the token's own TTL (thirty days), because a
+**consumed** row is what `screenPresentedGrant` in
+`api/auth/refresh-exchange.ts` checks to catch a stolen token being replayed:
+deleting it early would let that exact replay go undetected against a family
+that might still be live. Pinning the window to the TTL rather than to an
+independent number is what keeps that safe — see the header of
+`src/db/services/prune-credentials.ts` for the full argument. Deletion walks
+the table oldest-`createdAt`-first, because the self-referential `replacedBy`
+column is `ON DELETE NO ACTION` and refuses to let a successor be removed
+while its predecessor still names it.
+
 ## The operator surface
 
 `app/` is the `@pops/app-bfm` frontend module — the operator's device surface,
@@ -340,8 +365,6 @@ registration is a separate mechanism and still goes through the
   the column `requireDevice` already reads — so "a revoked phone fails its very
   next request" is live for every route under `/mobile/*`, including the two
   that exist.
-- **Any pruning of the credential tables.** Consumed and expired pairing codes
-  and dead refresh tokens accumulate; nothing deletes them (POPS-1449).
 - **Enforcement of the grant anywhere except `registry` and `finance`.** Those
   two check the presented `X-API-Key` against the account behind it and refuse
   an operation the grant does not cover. `inventory`, `media`, `lists`,
@@ -455,6 +478,7 @@ pillars/bfm/
     │   └── services/              what the API does to those tables
     │       ├── pairing-codes.ts   mint, normalize, redeem-exactly-once
     │       ├── refresh-tokens.ts  draw, digest, rotate, and burn a family
+    │       ├── prune-credentials.ts the retention windows + the oldest-first delete
     │       └── devices.ts         insert, list, and the transactional revoke
     └── api/
         ├── server.ts              HTTP entrypoint (port 3014) — wiring only
@@ -464,6 +488,7 @@ pillars/bfm/
         ├── rate-limit.ts          the fixed-window counter every budget uses
         ├── tiered-rate-limit.ts   the shape the device-facing budgets use it in
         ├── paths.ts               the paths middleware mounts on, off the contract
+        ├── cron/prune-credentials.ts the daily sweep scheduling — see Persistence above
         ├── auth/                  the perimeter and the exchange — has its own README
         ├── mobile/                what the phone is told — has its own README
         ├── middleware/identity.ts the operator principal, and the two legs it drops

@@ -42,6 +42,7 @@ import {
   resolveVersion,
   shouldSelfRegister,
 } from './boot-env.js';
+import { startPruneCredentialsWorker } from './cron/prune-credentials.js';
 import { createMobileFinanceClient } from './finance/client.js';
 import { buildBfmManifest } from './manifest.js';
 import { createPillarGateway } from './pillars/gateway.js';
@@ -63,6 +64,21 @@ const accessTokenSigningKey = resolveAccessTokenSigningKey();
 const sqlitePath = resolveSqlitePath();
 const bfmDb = openBfmDb(sqlitePath);
 console.warn(`[bfm-api] SQLite at ${sqlitePath}`);
+
+// Unconditional, like the rest of bfm's background work: a tick against a
+// table with nothing to prune is a no-op, so there is no deployment shape
+// gating this would protect.
+const pruneCredentialsWorker = startPruneCredentialsWorker({
+  db: bfmDb.db,
+  logger: {
+    info: (message, context) => {
+      console.warn(`[bfm-api] ${message}`, context ?? {});
+    },
+    warn: (message, context) => {
+      console.error(`[bfm-api] ${message}`, context ?? {});
+    },
+  },
+});
 
 // Built after `configureBfmServerSdk()` — the gateway's default handle factory
 // is the authenticated `/server` one, which reads that configuration.
@@ -94,6 +110,7 @@ function shutdown(signal: NodeJS.Signals): void {
   if (shuttingDown) return;
   shuttingDown = true;
   console.warn(`[bfm-api] Shutting down (${signal})`);
+  pruneCredentialsWorker.stop();
   // The database closes only once the last request has been answered — an
   // in-flight handler holding the handle would otherwise fail on a closed
   // connection rather than finish. Closing at all is what checkpoints the WAL,
