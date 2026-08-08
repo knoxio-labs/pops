@@ -255,6 +255,12 @@ export function completeRefreshExchange(
   if (screened.verdict === 'refused') return { outcome: screened.outcome };
   const { token: presented, device } = screened;
 
+  // Deliberately unguarded. `parseDevicePublicKey` throws only for a stored key
+  // that is not a P-256 SPKI key, and the pairing exchange parses and re-encodes
+  // before it writes the column — so reaching that throw means this pillar's own
+  // data is wrong, not that the request is. A 500 says so; catching it here
+  // would report a corrupt row to the handset as a rejected credential and send
+  // it to pair again, which cannot fix it.
   const publicKey = parseDevicePublicKey(device.publicKeyDer);
   const message = refreshSignatureMessage(input.nonce, presentedHash);
   if (!verifyDeviceSignature(publicKey, message, Buffer.from(input.signature, 'base64'))) {
