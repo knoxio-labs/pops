@@ -27,6 +27,14 @@ internal struct ModuleBoundaryTests {
     /// any of the above.
     private let generatedClientPackage = "BFMClient"
 
+    /// Every SPM dependency the app is allowed to resolve from outside this
+    /// repo, by URL. Two, both Apple's, both there because a generated OpenAPI
+    /// client does not compile without them.
+    private let allowedExternalPackages: Set<String> = [
+        "https://github.com/apple/swift-openapi-runtime",
+        "https://github.com/apple/swift-openapi-urlsession",
+    ]
+
     @Test("the scan finds the packages it is asserting about")
     func scanIsWiredUp() throws {
         let packages = try packageNames()
@@ -105,33 +113,34 @@ internal struct ModuleBoundaryTests {
         }
     }
 
-    /// The manifest half of the same rule, plus the one dependency no shipping
-    /// package may declare at all.
+    /// The manifest half of the same rule, and the app's entire external
+    /// dependency surface in one assertion.
     ///
-    /// The generator lives in `Tools/OpenAPIGenerator`, which nothing under
-    /// `Packages/` resolves — that is what keeps a code generator and its four
-    /// transitive dependencies out of an iPhone app's build graph. Moving it
-    /// back is a one-line edit to a manifest that builds and tests clean.
-    @Test("no shipping package depends on the generator, and only one on its runtime")
-    func manifestsDeclareTheGeneratorNowhere() throws {
+    /// Two things are being held at once. Only `BFMClient` may reach outside the
+    /// repo at all — every other package depends on its siblings by path. And
+    /// the set it reaches for is exactly these two: notably NOT
+    /// `swift-openapi-generator`, which lives in `Tools/OpenAPIGenerator` so
+    /// that a code generator and its four transitive dependencies stay out of an
+    /// iPhone app's build graph. Moving it back here is a one-line edit to a
+    /// manifest that builds, tests and lints clean.
+    @Test("the app links no external package but the two it is allowed")
+    func externalDependenciesAreTheAllowedOnes() throws {
+        var declared: Set<String> = []
         for package in try packageNames() {
-            let manifest = try manifestSource(ofPackage: package)
+            let urls = try externalPackageURLs(ofPackage: package)
+            declared.formUnion(urls)
+            let expected = package == generatedClientPackage ? allowedExternalPackages : []
+            let unexpected = urls.subtracting(expected)
             #expect(
-                !manifest.contains("swift-openapi-generator"),
-                "\(package)/Package.swift depends on the generator; it belongs in Tools/"
-            )
-            guard package != generatedClientPackage else { continue }
-            #expect(
-                !manifest.contains("swift-openapi-"),
-                "\(package)/Package.swift depends on the generated client's runtime"
+                unexpected.isEmpty,
+                "\(package)/Package.swift depends on \(unexpected.sorted().joined(separator: ", "))"
             )
         }
 
-        // Same wiring check as above, one layer down: the rule is vacuous if the
-        // owning manifest stopped declaring them.
-        #expect(
-            try manifestSource(ofPackage: generatedClientPackage).contains("swift-openapi-runtime")
-        )
+        // The allowlist is a description of the tree, not an aspiration: if
+        // `BFMClient` stopped declaring these, every check above would pass on a
+        // tree with no generated client in it.
+        #expect(declared == allowedExternalPackages)
     }
 
     /// Everything that ships: every package's `Sources`, and the app target.
@@ -227,6 +236,16 @@ extension ModuleBoundaryTests {
     private func manifestSource(ofPackage package: String) throws -> String {
         let manifest = packagesDirectory.appending(path: package).appending(path: "Package.swift")
         return try String(contentsOf: manifest, encoding: .utf8)
+    }
+
+    /// Every remote package URL the manifest declares. Matched on the `url:`
+    /// label rather than on the whole `.package(...)` call, so a line break
+    /// between the two — which is how a formatter renders a long dependency
+    /// list — does not hide an edge from this. Prose in a comment cannot match:
+    /// the label has to be there.
+    private func externalPackageURLs(ofPackage package: String) throws -> Set<String> {
+        let source = try manifestSource(ofPackage: package)
+        return Set(source.matches(of: #/url:\s*"([^"]+)"/#).map { String($0.1) })
     }
 
     /// Any sibling-package path the manifest mentions, however the `.package`
