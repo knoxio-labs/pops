@@ -38,5 +38,5 @@ fi
 docker run --rm \
   -v "$NGINX_CONF":/etc/nginx/conf.d/default.conf:ro \
   -v "$PARTIAL":/etc/nginx/snippets/_pillar-proxy.conf:ro \
-  nginx:alpine \
+  nginx:1.31.3-alpine \
   nginx -t

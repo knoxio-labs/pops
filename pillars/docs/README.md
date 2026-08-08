@@ -7,7 +7,7 @@ the full request/response/schema surface of any pillar without grep'ing the
 codebase or booting a single service.
 
 `docs` owns no database, serves no contract of its own, and does not
-self-register with `registry`. It is a pure static surface: an `nginx:alpine`
+self-register with `registry`. It is a pure static surface: an `nginx:1.31.3-alpine`
 image whose entire content is generated at image build time.
 
 ## What it serves
@@ -40,7 +40,7 @@ The same tasks are exposed through `mise.toml` (`mise run build`, `dev`,
 ## nginx and Dockerfile
 
 `Dockerfile` is a two-stage build. The `node:24-alpine` builder runs
-`pnpm build` to populate `dist/`; the production image is `nginx:alpine` with
+`pnpm build` to populate `dist/`; the production image is `nginx:1.31.3-alpine` with
 `dist/` copied to `/usr/share/nginx/html` and `nginx/default.conf` installed as
 the server config. The image exposes port `80` and ships a `HEALTHCHECK` that
 hits `/healthz`.
@@ -61,5 +61,5 @@ pillars/docs/
 │   ├── collect-specs.ts    # build: walk pillars/*, emit dist/ + catalog.json
 │   └── dev-serve.ts        # `pnpm dev` — collect + watch + serve locally
 ├── nginx/default.conf      # prod static server (/, /catalog.json, /openapi, /healthz)
-└── Dockerfile              # node:24-alpine builder → nginx:alpine
+└── Dockerfile              # node:24-alpine builder → nginx:1.31.3-alpine
 ```
