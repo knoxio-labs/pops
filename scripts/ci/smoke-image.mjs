@@ -54,9 +54,10 @@ const POLL_INTERVAL_MS = 1_000;
  * Mounted for EVERY image rather than only the DB-owning ones, so there is no
  * list of which pillars have a database to keep in sync. An image that never
  * writes there is unaffected by an extra empty volume; an image that does is
- * held to the fresh-mount contract. Each pillar's own `ENV SQLITE_PATH` puts
- * its database on this path — see the runtime stage of any pillar Dockerfile
- * with a `migrations/` directory.
+ * held to the fresh-mount contract. Each of those images defaults its own
+ * database onto this path in its runtime stage — the Dockerfile of any pillar
+ * that ships a `migrations/` directory, held to it by the drift test in
+ * `scripts/ci/__tests__/smoke-image.test.ts`.
  */
 const SMOKE_DATA_MOUNT = '/data/sqlite';
 
