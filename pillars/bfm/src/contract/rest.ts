@@ -5,18 +5,23 @@
  * `openapi/bfm.openapi.json`, which the pillar serves verbatim at
  * `GET /openapi`. Nothing else in the tree describes the bfm wire format:
  * don't hand-author OpenAPI, and don't hand-author paths in `app.ts`.
- *
-
  * Three surfaces live here, on two hostnames, and the split is the pillar's
- * whole security model:
+ * whole security model. Each is named below by its **sub-router key**, which
+ * is also the prefix of the `operationId`s it projects and therefore the name
+ * a generated client will call it by:
  *
- * - **operator** (`/operator/*`) — behind Cloudflare Access via the shell's
+ * - **`operator`** (`/operator/*`) — behind Cloudflare Access via the shell's
  *   nginx at `/bfm-api/`, gated per route on a resolved principal.
- * - **device** (`/mobile/*`) — on bfm's own tunnel hostname with Access
- *   bypassed, behind `requireDevice`. Refresh (POPS-1375) lands there too.
- * - **pairing** (`/devices/pair`) — the same bypassed hostname, and gated by
- *   nothing that resolves an identity, because it is how a caller acquires
- *   one. `rest-device.ts` says what stands in for a gate.
+ * - **`device`** (`/devices/*`) — on bfm's own tunnel hostname with Access
+ *   bypassed, and gated by nothing that resolves an identity, because this is
+ *   how a caller acquires one. Just the pairing exchange today; refresh
+ *   (POPS-1375) joins it. `rest-device.ts` says what stands in for a gate.
+ * - **`mobile` / `mobileFinance`** (`/mobile/*`) — the same bypassed hostname,
+ *   behind `requireDevice`. Everything a phone calls once it has paired.
+ *
+ * The two device-facing surfaces are one hostname but not one gate, and the
+ * naming keeps them apart on purpose: `/devices/*` is what a caller reaches
+ * *without* a device, `/mobile/*` is what it reaches *with* one.
  *
  * `/health` belongs to none of them and answers on both hostnames.
  *
