@@ -6,7 +6,7 @@ import { Badge } from '@pops/ui';
 import { isUnavailableError, unwrap } from '../bfm-api-helpers.js';
 import { health } from '../bfm-api/index.js';
 
-import type { ReactElement } from 'react';
+import type { ComponentProps, ReactElement } from 'react';
 
 /**
  * `/bfm` — placeholder for the operator's device surface.
@@ -41,10 +41,9 @@ export function DevicesPage(): ReactElement {
 }
 
 /**
- * The three states the placeholder distinguishes. `unavailable` means the
- * pillar was unreachable or answered 5xx; `error` is a refusal that carried a
- * status, which is a different operator problem (routing, auth) and must not
- * be collapsed into "bfm is down".
+ * `unavailable` means the pillar was unreachable or answered 5xx; `error` is a
+ * refusal that carried a status, which is a different operator problem
+ * (routing, auth) and must not be collapsed into "bfm is down".
  */
 type ReachabilityState = 'loading' | 'reachable' | 'unavailable' | 'error';
 
@@ -60,15 +59,16 @@ function useBfmReachability(): ReachabilityState {
   return 'reachable';
 }
 
-const REACHABILITY_BADGES: Record<
-  ReachabilityState,
-  { variant: 'secondary' | 'default' | 'destructive' | 'outline'; labelKey: string }
-> = {
-  loading: { variant: 'secondary', labelKey: 'devices.reachability.loading' },
-  reachable: { variant: 'default', labelKey: 'devices.reachability.reachable' },
-  unavailable: { variant: 'destructive', labelKey: 'devices.reachability.unavailable' },
-  error: { variant: 'outline', labelKey: 'devices.reachability.error' },
-};
+/** Sourced from `Badge` so a variant rename in `@pops/ui` breaks here, not silently. */
+type BadgeVariant = NonNullable<ComponentProps<typeof Badge>['variant']>;
+
+const REACHABILITY_BADGES: Record<ReachabilityState, { variant: BadgeVariant; labelKey: string }> =
+  {
+    loading: { variant: 'secondary', labelKey: 'devices.reachability.loading' },
+    reachable: { variant: 'default', labelKey: 'devices.reachability.reachable' },
+    unavailable: { variant: 'destructive', labelKey: 'devices.reachability.unavailable' },
+    error: { variant: 'outline', labelKey: 'devices.reachability.error' },
+  };
 
 function ReachabilityBadge({ state }: { state: ReachabilityState }): ReactElement {
   const { t } = useTranslation('bfm');
