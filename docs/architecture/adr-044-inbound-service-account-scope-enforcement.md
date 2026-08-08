@@ -1,0 +1,52 @@
+# ADR-044: Service-account scopes are enforced by the producer, not by the registry alone
+
+## Status
+
+Accepted — 2026-08-09. Lifts inbound `X-API-Key` verification and scope enforcement into `@pops/pillar-sdk/server`, and adopts it in `finance` (POPS-1447).
+
+## Context
+
+Every server-side cross-pillar call already carries a credential. `pillar()` from `@pops/pillar-sdk/server` refuses to construct a handle without a service-account key and attaches it as `X-API-Key` on every request (`libs/sdk/src/server/factory.ts`). The registry mints those accounts with an explicit scope list, checks a presented key against a scrypt hash, and refuses a revoked one (`pillars/registry/src/db/services/service-accounts.ts`).
+
+None of that reached the other side. Before this decision, `pillars/registry/src/api/middleware/identity.ts` held the fleet's only inbound reader of that header, and its scope gate covered four call sites, all under `core.features.*` and `core.settings.*`. Every other producer accepted whatever arrived on the docker backend network, credential or not. Two things followed:
+
+- **A grant constrained nothing outside the registry.** The `bfm` account is provisioned against `finance.transactions` alone (`pillars/bfm/src/api/pillars/service-account.ts`), written narrow precisely so it would be auditable. The same key reached `finance.budgets.list` or `inventory.items.delete` just as easily, because nothing on the receiving end looked.
+- **Revocation did not revoke.** The revoked check lives inside `authenticateServiceAccount`, which only the registry called. A revoked key kept working against every other pillar indefinitely.
+
+The model was not an accident — `pillars/registry/README.md` attributes it to ADR-027, "the docker network is the boundary". But ADR-027's text is about push-with-heartbeat registration and never discusses a trust boundary, so the model existed only in handler comments; and the same README records that the shell's generic `/registry-api/` nginx block forwards whatever follows its prefix, so the network is not sealed from outside either.
+
+## Options Considered
+
+| Option                                                                                                           | Pros                                                                                                                                                                                                                    | Cons                                                                                                                                                                                                                                                                     |
+| ---------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Affirm the model: write the network boundary down, and document `hasScopeFor` and every grant as registry-scoped | Cheapest honest answer; no new failure mode; no registry dependency added to any call path                                                                                                                              | Leaves `BFM_SERVICE_ACCOUNT_SCOPES` and its test asserting a control that does not exist, and leaves revocation ineffective everywhere but the registry. The perimeter it relies on is already documented as porous                                                      |
+| Per-pillar enforcement, each pillar checking the header its own way                                              | No shared abstraction to get wrong; each pillar keeps its own posture                                                                                                                                                   | Eleven implementations of one security decision, which is how the `authenticateInternal` / `X-API-Key` split arose in the first place. `AGENTS.md` names the three deliberate per-pillar duplications; a second answer to "is this caller authorised" is not one of them |
+| Push the check to the edge — have nginx or a gateway resolve the key and inject a trusted principal header       | One enforcement point; producers stay simple                                                                                                                                                                            | The backend network is reachable without traversing nginx (that is the whole hole), so an injected principal header would itself be forgeable by any in-network caller. It moves the trust assumption rather than removing it                                            |
+| Extend the shared-secret `authenticateInternal` mechanism to cover cross-pillar calls                            | Already exists, already framework-agnostic, no registry round-trip                                                                                                                                                      | It is a static caller list compiled into each callee with secrets in env, not a service account. It cannot express revocation, has no central grant to audit, and would leave two credential systems where the problem is that one of them is unenforced                 |
+| **Lift verification and scope enforcement into `@pops/pillar-sdk/server` and adopt it per producer (chosen)**    | One decision, one scope vocabulary, one place to fix. Makes an existing grant load-bearing and makes revocation effective wherever it is adopted. Adoption is incremental, so a pillar joins when its callers are known | Puts the registry on the credential path of every adopting producer, which needs a cache and an answer for the registry being down. Adoption is per-pillar work, so the fleet is enforced unevenly until it is finished                                                  |
+
+## Decision
+
+Enforcement is lifted into the SDK. `@pops/pillar-sdk/server` now owns three things:
+
+1. **The scope vocabulary.** `hasScopeFor` moved out of the registry pillar and is re-exported back into it, so a dot-prefix grant means exactly one thing fleet-wide. `buildContractScopeMap` projects a ts-rest router onto `(method, path) → dotted scope`, so a producer's gate is derived from its contract rather than from a hand-kept list that a new route can be omitted from.
+2. **The decision.** `authorizeServiceAccountRequest` is a pure function over an already-read header and an already-resolved scope, matching `authenticateInternal`'s shape so the SDK keeps binding to no HTTP framework.
+3. **The verification path.** `createRegistryServiceAccountVerifier` asks the registry, over the new `GET /service-accounts/self`, who a presented key belongs to. The registry answers from its existing authentication leg, so the revocation check is the same one it applies to itself.
+
+Three sub-decisions carry the weight.
+
+**A registry round-trip per request would be unacceptable, so results are cached by key digest for a short TTL.** That TTL is the revocation lag and is the deliberate trade; the alternatives are a lookup on every cross-pillar call or a revocation that never propagates. Rejections cache far more briefly and the cache is size-capped, so invented keys cannot grow it.
+
+**An unverifiable credential is a rejected credential.** A registry that cannot be reached yields `503`, not admission — the guard never falls back to network trust once a key has been presented. This does make the registry a hard dependency of any credentialled call to an adopting producer, which is the honest cost of the alternative being a permanent hole.
+
+**The gate answers for credentialled callers only.** A request with no `X-API-Key` is left to the perimeter that already governs it. This is not a softening of the fail-closed rule — it is a scoping of what this ADR decides. Browser traffic arrives through the shell's nginx with no key at all, so requiring one would break every pillar's own frontend; closing the unauthenticated in-network path is a separate decision about ADR-027's boundary, and the SDK carries a `requireCredential` flag for the producer that is ready to make it.
+
+`finance` adopts first: it is the only producer a repo-declared grant currently targets (bfm's), and its scope map is derived from `financeContract`, so the whole surface is covered. Every remaining producer adopts under its own issue.
+
+## Consequences
+
+- The `bfm` grant is now a control rather than a declaration, on the one leg bfm uses. Widening the mobile surface to a second finance module requires widening `BFM_SERVICE_ACCOUNT_SCOPES` in the same change, or the call gets a `403`.
+- Revoking a service account now takes effect against `finance` within the verifier's cache TTL, not never.
+- **The fleet is enforced unevenly until adoption finishes.** `inventory`, `media`, `lists`, `cerebrum`, `purchases`, `ai`, `food`, `orchestrator`, `documents` and the Rust `contacts` pillar still serve any in-network caller. Each README must say so where it describes its own auth posture; a README that implies fleet-wide enforcement is the same class of defect this ADR fixes.
+- **An account whose grant is narrower than its traffic now fails loudly.** The `pops_api_key` account shared by the `mcp` and `moltbot` compose profiles is provisioned by the operator and its scopes are not visible from this repo. If it reaches finance without `finance.*`, those profiles get a `403` naming the account and the exact scope, which is the recovery instruction.
+- Producers on the new SDK are still callable by pillars on the old one: an old caller either presents a valid key, which verifies, or presents none, which is ungated. The one regression window is an adopting producer whose registry has not yet rolled forward — `GET /service-accounts/self` 404s, which reads as unavailable, so credentialled calls get `503` until the registry image lands. Uncredentialled traffic is unaffected throughout.

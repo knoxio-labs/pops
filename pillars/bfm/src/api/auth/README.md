@@ -36,6 +36,7 @@ a paired phone                        bfm
                                       require-device.ts
                                           │ token intact and current?  no ─► 401
                                           │ device row still trusted?  no ─► 403
+                                          │ lastSeenAt stale?         yes ─► touched
                                           ▼
                                       res.locals.device ─► the route
 ```
@@ -129,6 +130,27 @@ produced, which makes it a revoked handset still calling — the exact event an
 operator wants after reporting a phone stolen. A device id is an identifier,
 not a credential.
 
+## Why the lastSeenAt write is coalesced
+
+`require-device.ts` moves `devices.lastSeenAt` forward on every request that
+gets past both checks above, not just on `/mobile/bootstrap` — a device that
+only ever calls, say, `/mobile/finance/transactions` used to read as "not seen
+since pairing" forever, which is the defect POPS-1469 tracked.
+
+The write is coalesced to once a minute (`LAST_SEEN_COALESCE_WINDOW_MS`)
+rather than run on every request, because every request is exactly what passes
+through here: an uncoalesced write would turn this perimeter into a write path
+on a Litestream-replicated database at the pace of a phone scrolling a list.
+A 403 does not count as contact — the write sits after the revocation check,
+so a rejected handset never moves the column a stolen phone's operator is
+about to read.
+
+`/mobile/bootstrap` still writes its own uncoalesced instant on top of this
+(`api/mobile/bootstrap.ts`), because its response contract promises the exact
+value it wrote, not a value that might be up to a minute stale. That is one
+extra write, at most once a minute, on the one route a launching app always
+calls first — negligible next to what coalescing saves everywhere else.
+
 ## What is not here
 
 - **Refresh and rotation** (POPS-1375). Access tokens are deliberately short —
@@ -155,10 +177,3 @@ not a credential.
   database rows rather than JWTs. A second verification key would buy a
   seamless rotation nobody needs and double the surface an attacker can forge
   against.
-- **Anything about `lastSeenAt`** (POPS-1469). `/mobile/bootstrap` writes it,
-  which covers an app launch; the guard still does not, so a device that only
-  ever calls other `/mobile` routes reads as last seen at its last launch. The
-  guard is the natural place to close that, and deliberately has not, because a
-  write on every authenticated request turns the perimeter into a write path on
-  a Litestream-replicated database and the coalescing rule is a decision of its
-  own.

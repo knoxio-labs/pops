@@ -43,6 +43,37 @@ single source of truth:
 `src/contract/api-types.generated.ts`. No hand-authored OpenAPI, no
 hand-authored paths; CI gates on drift.
 
+## Who may call it
+
+Auth splits by whether the caller presents a credential, and the split is the
+whole design ([ADR-044](../../docs/architecture/adr-044-inbound-service-account-scope-enforcement.md)).
+
+A request carrying **no** `X-API-Key` is served as before: the shell's nginx and
+Cloudflare Access are the perimeter for browser traffic, and finance does not
+re-litigate it. Closing that path is a separate decision about the
+docker-network trust boundary.
+
+A request carrying one is a machine, and is held to the service account behind
+that key. `src/api/middleware/service-account-scope.ts` resolves it against the
+registry and refuses any operation the grant does not cover. The required scope
+is derived from `financeContract` itself, so every contract route is gated the
+moment it exists and there is no second list to update; `/health`, `/pillars`,
+`/openapi` and the signature-checked Up webhook are outside the contract and
+are untouched.
+
+Failure modes, in the order they bite: an unrecognised or revoked key is `401`;
+a live account whose grant does not reach the operation is `403`, logged with
+the account name and the exact scope it was missing, which is the instruction
+for widening it; a registry that cannot be reached is `503`, because a
+credential that cannot be verified is never waved through.
+
+The one account with a repo-declared grant is `bfm`'s
+(`pillars/bfm/src/api/pillars/service-account.ts`, `finance.transactions`),
+which covers the two calls bfm makes. Accounts minted by an operator — notably
+the `pops_api_key` shared by the `mcp` and `moltbot` compose profiles — are not
+visible from this repo, so a profile that reaches finance with a narrower grant
+than its traffic will see the `403` above (POPS-1551).
+
 ## Domains
 
 The contract (`src/contract/rest.ts`) composes these sub-routers:
