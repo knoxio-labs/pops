@@ -12,6 +12,20 @@ export class BareOriginParseError extends Error {
 }
 
 /**
+ * Matches a `scheme://userinfo@` prefix so it can be dropped before an
+ * unparseable value is echoed into an error message. Requires the `//` that
+ * marks an authority component — without it, `user:pass@host` is at least as
+ * likely to be an opaque scheme (`mailto:name@example.com`) as a botched
+ * origin, and blanket-stripping would mangle the former while giving no
+ * stronger guarantee for the latter.
+ */
+const USERINFO_PREFIX_RE = /^([^/]*\/\/)[^/?#]*@/u;
+
+function redactUserinfo(raw: string): string {
+  return raw.replace(USERINFO_PREFIX_RE, '$1');
+}
+
+/**
  * Parse `raw` as a bare http(s) origin, returning the normalised origin with
  * any trailing slash dropped.
  *
@@ -28,7 +42,11 @@ export function parseBareOrigin(label: string, raw: string): string {
   try {
     url = new URL(raw);
   } catch {
-    throw new BareOriginParseError(`${label} "${raw}" is not a valid URL`);
+    // `raw` never reached a `URL` here, so there is no parsed `username`/
+    // `password` to clear — this best-effort regex redaction is what stands
+    // between a malformed-but-credential-shaped value (an invalid port,
+    // `http://user:pass@host:99999`) and an operator's boot log.
+    throw new BareOriginParseError(`${label} "${redactUserinfo(raw)}" is not a valid URL`);
   }
   if (url.username !== '' || url.password !== '') {
     // Checked before every other branch, and reported via a redacted URL
@@ -45,7 +63,13 @@ export function parseBareOrigin(label: string, raw: string): string {
     );
   }
   if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-    throw new BareOriginParseError(`${label} "${raw}" must use http or https; got ${url.protocol}`);
+    // `raw` cannot carry recognised userinfo by this point — the branch
+    // above already caught and threw for it — but it is redacted anyway so
+    // this throw site does not silently regain a leak if that ordering ever
+    // changes.
+    throw new BareOriginParseError(
+      `${label} "${redactUserinfo(raw)}" must use http or https; got ${url.protocol}`
+    );
   }
   if ((url.pathname !== '/' && url.pathname !== '') || url.search !== '' || url.hash !== '') {
     throw new BareOriginParseError(

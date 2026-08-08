@@ -64,6 +64,23 @@ describe('parseBareOrigin', () => {
     expect(message).not.toContain('hunter2');
   });
 
+  it('redacts credentials even when the value fails to parse as a URL at all', () => {
+    // An invalid port means `new URL` throws before username/password are
+    // ever available to clear — this is the parse-failure branch, not the
+    // credentials branch above, and needs its own redaction.
+    let message = '';
+    try {
+      parseBareOrigin('FINANCE_SELF_BASE_URL', 'http://admin:hunter2@finance-api:99999');
+    } catch (err) {
+      message = err instanceof Error ? err.message : String(err);
+    }
+    expect(message).toContain('FINANCE_SELF_BASE_URL');
+    expect(message).toContain('finance-api');
+    expect(message).toMatch(/not a valid URL/u);
+    expect(message).not.toContain('admin');
+    expect(message).not.toContain('hunter2');
+  });
+
   it.each([
     ['ftp', 'ftp://finance-api:3004'],
     ['file', 'file:///srv/finance'],
