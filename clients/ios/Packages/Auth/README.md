@@ -62,7 +62,7 @@ swift test --package-path Packages/Auth
 Neither can run where the suite runs:
 
 - The Secure Enclave does not exist in the simulator, so `SecKeyCreateRandomKey` fails outright, and a Mac's Enclave is not reachable from an unsigned `swift test` binary.
-- The data-protection keychain requires the process to carry a keychain-access-group entitlement. A `swift test` binary carries none and gets `errSecMissingEntitlement`.
+- The data-protection keychain requires the process to carry a keychain-access-group entitlement. A `swift test` binary carries none and gets `errSecMissingEntitlement`. The app's own test target does carry one — [`clients/ios/AppTests`](../../AppTests) runs hosted by the app and asserts that the keychain answers there — so the keychain half of this gap is a move rather than a missing environment (POPS-1439).
 
 So `SecureEnclaveHardwareTests.swift` holds suites for both, gated behind `POPS_IOS_HARDWARE_TESTS=1` and skipped otherwise. Enabling them by default would turn every run red, and the usual response to that — deleting the assertions, or catching the error — leaves a suite that passes while testing nothing.
 

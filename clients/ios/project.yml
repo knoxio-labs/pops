@@ -47,9 +47,12 @@ targets:
       - package: DesignSystem
       - package: FeatureTransactions
     # A shared scheme, so `xcodebuild -scheme Pops` resolves on a clean checkout
-    # rather than relying on Xcode autocreating one into xcuserdata.
+    # rather than relying on Xcode autocreating one into xcuserdata. Its test
+    # action names PopsTests, which is what makes `xcodebuild test` run anything
+    # at all — an empty list here leaves the scheme with no testables.
     scheme:
-      testTargets: []
+      testTargets:
+        - PopsTests
     # The team lives outside the repo; see Config/Signing.xcconfig. Nothing here
     # may set DEVELOPMENT_TEAM — target build settings outrank a target xcconfig,
     # so doing so would silently win over the developer's own value.
@@ -78,3 +81,49 @@ targets:
         # QR, so re-pointing the app at another deployment needs no rebuild.
         Release:
           POPS_BFM_BASE_URL: ''
+
+  # The app's test target. What belongs here rather than in a package's own
+  # suite is argued in AppTests/README.md; the short version is that this is the
+  # only place a test runs inside an app bundle, on a simulator, carrying the
+  # app's entitlements.
+  #
+  # It sets nothing that affects how Swift is compiled. Swift 6, complete
+  # concurrency and warnings-as-errors are project-level above, so they reach
+  # this target the same way they reach the app — a test target compiled under
+  # looser rules would be testing a different compilation than the one that
+  # ships. `mise run test:app` asserts that they still agree rather than
+  # trusting it.
+  PopsTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - AppTests
+    dependencies:
+      # An application dependency is what makes this a *hosted* test bundle:
+      # XcodeGen turns it into TEST_HOST and BUNDLE_LOADER, so the tests are
+      # injected into the running app rather than into a bare `xctest` runner.
+      # That is not a detail — it is the whole reason this target exists.
+      # `Bundle.main` becomes the app bundle, and the process carries the app's
+      # entitlements, which is the environment the data-protection keychain
+      # needs and the one `swift test` cannot provide.
+      - target: Pops
+      # Linked into the host already; the test bundle needs the module on its
+      # import path, not a second static copy of it.
+      - package: BFMClient
+        link: false
+    # The same team as the app, for the day these run on a physical device: a
+    # test bundle signed by nobody cannot be installed alongside a host that is.
+    configFiles:
+      Debug: Config/Signing.xcconfig
+      Release: Config/Signing.xcconfig
+    settings:
+      base:
+        # A test bundle is code-signed like anything else, and signing needs a
+        # plist. Without this the build fails outright — it does not silently
+        # produce an unsigned bundle.
+        GENERATE_INFOPLIST_FILE: YES
+        # Under the app's identifier rather than beside it, so the pair reads as
+        # host-and-tests wherever bundle IDs are listed. XcodeGen would
+        # otherwise derive `com.knoxiolabs.PopsTests` from the target name.
+        PRODUCT_BUNDLE_IDENTIFIER: com.knoxiolabs.pops.tests
+        CODE_SIGN_STYLE: Automatic

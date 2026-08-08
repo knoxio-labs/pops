@@ -11,13 +11,18 @@ The consequence worth internalising before changing anything here: this app is *
 ```bash
 mise run generate      # xcodegen generate — writes Pops.xcodeproj
 mise run build         # xcodebuild, iOS Simulator
-mise run test          # every package's tests, on the iOS Simulator
+mise run test          # every suite, on the iOS Simulator
 mise run build:device  # signed Release, physical iPhone
 ```
 
 `mise run build:packages` type-checks every package with `swift build` alone, without Xcode or a simulator, and `mise run test:packages` runs every package's tests the same way. Both compile for the host, which means macOS rather than iOS — an iOS-only regression survives them, and is caught by `mise run build` and `mise run test`. Reach for the `:packages` pair as the fast inner loop; the two without the suffix are what CI runs and what a result has to be reproduced against.
 
-`mise run test` runs each package through `xcodebuild` rather than `swift test`, which is the only way to get these tests onto the iOS SDK — a directory holding a `Package.swift` is a project as far as `xcodebuild` is concerned. The scheme it picks is not the obvious one: a package with more than one product gets an aggregate `<name>-Package` scheme and **only the aggregate carries the test action**, so the task reads the scheme list back out of `xcodebuild` instead of guessing.
+`mise run test` runs two lanes, and the CI job invokes this one task rather than naming them separately, so a lane cannot exist locally and be missing from the gate:
+
+- **Each package**, through `xcodebuild` rather than `swift test`, which is the only way to get those tests onto the iOS SDK — a directory holding a `Package.swift` is a project as far as `xcodebuild` is concerned. The scheme it picks is not the obvious one: a package with more than one product gets an aggregate `<name>-Package` scheme and **only the aggregate carries the test action**, so the task reads the scheme list back out of `xcodebuild` instead of guessing.
+- **The app's own test target** (`mise run test:app`), which is the only lane that runs inside an app bundle carrying the app's entitlements. Which of the two a new suite belongs in is decided by the rule in [AppTests/README.md](AppTests/README.md); the short version is that a suite goes in the app target only if it needs an app bundle, an entitlement or a booted simulator.
+
+Both lanes refuse to pass having run nothing — the package lane fails if no package has a `Tests` directory, and the app lane fails if the test action executed zero tests. That is not defensive decoration. The `Pops` scheme declared an empty test-target list until the app target existed, and a lane that runs nothing while reporting success is a green check nobody would think to question.
 
 `mise run verify:release-carries-no-host` builds Release and fails if the result names a BFM host — see [Where the BFM base URL comes from](#where-the-bfm-base-url-comes-from).
 
@@ -130,4 +135,4 @@ It is not quite the only job that touches this directory. The `Device signature 
 - **Nothing consumes the resolved base URL yet.** `BuiltInBaseURL` answers where the BFM is; no transport asks it, because there is no transport (POPS-1380) and no pairing store to fall back on in Release (POPS-1383).
 - **`mise run verify:release-carries-no-host` runs nowhere but a laptop.** The invariant it guards — a shipped binary naming no BFM host — is the one thing here that is not caught by building, testing or linting, and it is the only task in this directory that no job invokes (POPS-1475).
 - **The pre-push hook does not run `mise run lint`.** It would put Xcode on the push path for every contributor, including on the TypeScript-only pushes that are almost all of them. Unformatted Swift can still reach a branch; it can no longer reach `main`, because the CI job rejects it.
-- **Nothing automated exercises the Secure Enclave or the Keychain.** Both need hardware or entitlements a test runner does not have. See [`Packages/Auth/README.md`](Packages/Auth/README.md).
+- **Nothing automated exercises the Secure Enclave or the Keychain.** The suites for both live in `Packages/Auth` and skip unless `POPS_IOS_HARDWARE_TESTS=1`. The keychain half is now a move rather than a missing environment — `mise run test:app` runs in an entitled app process, and [AppTests/README.md](AppTests/README.md) asserts the data-protection keychain answers there — but until that move happens (POPS-1439) neither store is covered. The Secure Enclave half needs a physical device and cannot close on a simulator at all. See [`Packages/Auth/README.md`](Packages/Auth/README.md).

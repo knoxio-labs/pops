@@ -1,4 +1,6 @@
-// Signing for the Pops app target. Automatic signing needs a team, and the team
+// Signing for the Pops app target and its test bundle — a test bundle signed by
+// nobody cannot be installed alongside a host that is, so both read this file.
+// Automatic signing needs a team, and the team
 // is the one part of this configuration that is not the same for everyone who
 // clones a public repo — so it is read from outside the tree rather than
 // committed.
