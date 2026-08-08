@@ -14,15 +14,38 @@ updates:
           - minor
           - patch
 
-  # ── Docker (infra/docker-compose.yml) ───────────────────────────────────────
+  # ── Docker (infra compose files + every pillar's Dockerfile) ────────────────
+  # `/infra` alone only covered the compose files, leaving the 15
+  # `pillars/<id>/Dockerfile` base images (node, nginx, rust, debian) with no
+  # update coverage at all.
   - package-ecosystem: docker
-    directory: /infra
+    directories:
+      - /infra
+      - /pillars/*
     schedule:
       interval: weekly
       day: monday
     open-pull-requests-limit: 5
     groups:
       docker-minor-patch:
+        update-types:
+          - minor
+          - patch
+
+  # ── Cargo (Rust workspace at the repo root) ─────────────────────────────────
+  # There was never a cargo entry, so Rust dependencies got no scheduled
+  # updates — only unsolicited security-advisory PRs, which Dependabot then
+  # refuses to rebase ("the dependabot.yml entry that created this PR has been
+  # deleted"), stranding them. The workspace is a single root Cargo.toml, so
+  # one entry at / covers every member crate and the shared Cargo.lock.
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: weekly
+      day: tuesday
+    open-pull-requests-limit: 5
+    groups:
+      cargo-minor-patch:
         update-types:
           - minor
           - patch
