@@ -472,7 +472,7 @@ The reason is downstream: the client generators target 3.0. A pillar that emits 
 
 ### Structural guards
 
-Repo-wide invariants are enforced by scripts under `scripts/ci/`, each self-testing and wired into `.github/workflows/agent-review.yml`. They cover lib-never-imports-pillar, contract isolation, the known-pillars tuple against disk, mise toolchain overrides, homelab-service isolation, vendored contracts, and the docs model. Run one directly with `--self-test` to see what it claims to catch.
+Repo-wide invariants are enforced by scripts under `scripts/ci/`, each self-testing and wired into `.github/workflows/agent-review.yml`. They cover lib-never-imports-pillar, contract isolation, the known-pillars tuple against disk, mise toolchain overrides, homelab-service isolation, vendored contracts, the docs model, and that no unit's `tsconfig.json` hides its own tests from `tsc`. Run one directly with `--self-test` to see what it claims to catch.
 
 ### Generated clients across a unit boundary
 
