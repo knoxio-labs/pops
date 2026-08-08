@@ -81,7 +81,7 @@ const HEADER = [
   ' * CI verifies this file is up to date as a drift guard; commit regenerated',
   ' * output alongside any change to the source manifest list.',
   ' *',
-  ' * See `docs/themes/01-foundation/prds/101-plugin-contract/us-02-build-time-registry.md`.',
+  ' * Every entry satisfies `ModuleManifest` (`libs/types/src/module-manifest.ts`).',
   ' */',
 ].join('\n');
 

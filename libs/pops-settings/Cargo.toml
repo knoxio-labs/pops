@@ -5,11 +5,11 @@ version = "0.1.0"
 # (a sibling of `pops-ai` and of the `pillars/contacts` crate). 1:1 Rust mirror
 # of the TS
 # `@pops/pillar-settings` federated RU+reset settings surface — the byte-
-# identical `/settings/*` wire contract every pillar serves
-# (`docs/plans/02-settings-federation.md` §4.4/§4.6, US-S6). Standalone
-# library: it has no in-tree consumer yet (the contacts Rust pillar will mount
-# it), so it ships compiled + tested-but-unused, with a golden-fixture parity
-# test pinning the wire bytes against the TS schema.
+# identical `/settings/*` wire contract every pillar serves, so that settings
+# ride the manifest like every other cross-pillar dimension (ADR-037).
+# Standalone library: it has no in-tree consumer yet (the contacts Rust pillar
+# will mount it), so it ships compiled + tested-but-unused, with a
+# golden-fixture parity test pinning the wire bytes against the TS schema.
 edition.workspace = true
 license.workspace = true
 publish.workspace = true

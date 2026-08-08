@@ -12,8 +12,8 @@ import { Outlet, useLocation } from 'react-router';
  * Mobile (<768px): Hamburger opens Sidebar overlay with all pages.
  *
  * Overlays are mounted from the module registry via `OverlayHost`; `RootLayout`
- * itself does not import overlay components
- * (docs/themes/foundation/prds/overlay-surfaces).
+ * itself does not import overlay components, so an overlay that is not
+ * installed never enters the shell bundle.
  */
 import { AppContextProvider } from '@pops/navigation';
 import { cn, ErrorBoundary } from '@pops/ui';

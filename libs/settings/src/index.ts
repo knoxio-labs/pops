@@ -1,8 +1,7 @@
 /**
  * `@pops/pillar-settings` — the shared, storage-agnostic Read/Update/Reset
  * settings module every pillar mounts to serve a byte-identical
- * `/settings/*` surface (settings-federation, US-S0; see
- * `docs/plans/02-settings-federation.md`).
+ * `/settings/*` surface (ADR-037).
  *
  * The module owns the schema (drizzle table factory), the RU+reset+seed
  * service, the ts-rest contract factory, read-side sensitive redaction,
