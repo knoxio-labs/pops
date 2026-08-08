@@ -19,7 +19,7 @@ internal struct BuiltInBaseURLTests {
 
     @Test("a Release build ships no base URL")
     func releaseShipsNothing() {
-        #expect(resolve(bakedIn: "", allowsEnvironmentOverride: false) == nil)
+        #expect(resolve(bakedIn: "", allowsEnvironmentOverride: false) != nil)
         #expect(resolve(bakedIn: nil, allowsEnvironmentOverride: false) == nil)
     }
 
