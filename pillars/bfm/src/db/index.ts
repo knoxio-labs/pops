@@ -9,3 +9,4 @@
 export * from './schema.js';
 
 export { openBfmDb, type BfmDb, type OpenedBfmDb } from './open-bfm-db.js';
+export { findDeviceById } from './queries/devices.js';

@@ -7,10 +7,10 @@
  * pillar's own build. See AGENTS.md "The OpenAPI version pin".
  */
 import request from 'supertest';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import { bfmContract } from '../../contract/rest.js';
-import { createBfmApiApp } from '../app.js';
+import { createTestApp, type TestApp } from './harness.js';
 
 type Operation = { operationId?: unknown };
 type OpenApiBody = {
@@ -19,9 +19,18 @@ type OpenApiBody = {
   paths?: Record<string, Record<string, Operation> | undefined>;
 };
 
+const apps: TestApp[] = [];
+
+afterEach(() => {
+  while (apps.length > 0) {
+    apps.pop()?.cleanup();
+  }
+});
+
 async function fetchDocument(): Promise<OpenApiBody> {
-  const app = createBfmApiApp({ version: '0.0.1-test' });
-  const res = await request(app).get('/openapi');
+  const created = createTestApp();
+  apps.push(created);
+  const res = await request(created.app).get('/openapi');
   expect(res.status).toBe(200);
   return res.body as OpenApiBody;
 }
