@@ -83,16 +83,18 @@ export function parseAmazonOrderHistory(
     else existing.push(row);
   }
 
-  const attached = new Set<string>();
+  const builtOrderIds = new Set<string>();
   for (const [orderId, orderRows] of byOrderId) {
     const orderRefunds = refunds.refundsByOrderId.get(orderId) ?? [];
     const order = buildOrder(orderId, orderRows, orderRefunds, anomalies);
     if (order === null) continue;
     orders.push(order);
-    attached.add(orderId);
+    builtOrderIds.add(orderId);
   }
 
-  reportOrphanRefunds(refunds.refundsByOrderId, attached, anomalies);
+  // A refund whose order WAS built but whose currency disagreed is not an
+  // orphan — `buildRefundCharges` has already reported that separately.
+  reportOrphanRefunds(refunds.refundsByOrderId, builtOrderIds, anomalies);
 
   return { orders, anomalies };
 }

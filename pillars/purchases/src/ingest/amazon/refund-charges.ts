@@ -80,11 +80,11 @@ export function buildRefundCharges(
  */
 export function reportOrphanRefunds(
   refundsByOrderId: ReadonlyMap<string, readonly AmazonRefund[]>,
-  attached: ReadonlySet<string>,
+  builtOrderIds: ReadonlySet<string>,
   anomalies: AmazonAnomaly[]
 ): void {
   for (const [sourceOrderId, orderRefunds] of refundsByOrderId) {
-    if (attached.has(sourceOrderId)) continue;
+    if (builtOrderIds.has(sourceOrderId)) continue;
     for (const refund of orderRefunds) {
       anomalies.push({
         kind: 'orphan-refund',
