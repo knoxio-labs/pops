@@ -84,7 +84,7 @@ pub fn router() -> Router<AppState> {
     Router::new()
         .route("/entities", get(list).post(create))
         .route(
-            "/entities/:id",
+            "/entities/{id}",
             get(get_one).patch(update).delete(delete_one),
         )
         .route("/entities/lookup", post(lookup))
