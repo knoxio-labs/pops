@@ -8,10 +8,7 @@
  */
 
 export class BareOriginParseError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'BareOriginParseError';
-  }
+  override readonly name = 'BareOriginParseError' as const;
 }
 
 /**

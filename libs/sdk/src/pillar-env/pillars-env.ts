@@ -27,9 +27,10 @@ export interface ParsePillarsEnvOptions {
 }
 
 export class PillarsEnvParseError extends Error {
+  override readonly name = 'PillarsEnvParseError' as const;
+
   constructor(message: string, options?: ErrorOptions) {
     super(`POPS_PILLARS: ${message}`, options);
-    this.name = 'PillarsEnvParseError';
   }
 }
 
