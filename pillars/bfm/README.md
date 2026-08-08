@@ -207,15 +207,22 @@ pnpm --filter @pops/bfm build
 | `POPS_REGISTRY_URL`          | `http://registry-api:3001` | Registry base URL — where bfm both registers and discovers.              |
 | `POPS_INTERNAL_API_KEY_FILE` | —                          | Path to the mounted service-account secret. Preferred over the next row. |
 | `POPS_INTERNAL_API_KEY`      | —                          | The key inline, for local dev. One of these two is **required**.         |
-| `POPS_PILLARS`               | —                          | `id:baseUrl[,…]`. Overrides the discovered base URL for those ids only.  |
+| `POPS_INTERNAL_BASE_URLS`    | —                          | `id:baseUrl[,…]`. Overrides the discovered base URL for those ids only.  |
+
+`POPS_INTERNAL_BASE_URLS` is deliberately not `POPS_PILLARS`, which carries the
+same shape and a different meaning: production stopped plumbing it once the
+registry became the source of truth (ADR-039 E25), while
+`infra/docker-compose.dev.yml` still sets a static six-pillar roster on every
+service. Honouring that here would bypass discovery in dev and nowhere else.
+bfm ignores it.
 
 Boot crashes rather than starting misconfigured, in three places:
 
 - A malformed `BFM_SELF_BASE_URL` would publish an invalid
   `PillarRegistryEntry.baseUrl`, and a base URL carrying a path silently breaks
   every consumer that appends a route to it.
-- A malformed `POPS_REGISTRY_URL` or `POPS_PILLARS` entry would surface later
-  as an indistinguishable `unavailable` on every outbound call.
+- A malformed `POPS_REGISTRY_URL` or `POPS_INTERNAL_BASE_URLS` entry would
+  surface later as an indistinguishable `unavailable` on every outbound call.
 - **No service-account key at all.** bfm exists to fan out to the federation;
   a process that starts without a credential looks healthy right up until the
   first request from a phone. This is why bare `pnpm dev` now needs

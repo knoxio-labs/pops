@@ -67,8 +67,12 @@ The gateway classifies failures bfm sees when it calls **out**. Classifying
 deliberately does not own — see the "Unavailable-classification is not the
 SDK's" section of [`libs/sdk/README.md`](../../../../../libs/sdk/README.md).
 
-Nor is any parsing. `env.ts` reads variables and shapes the result;
-`parseBareOrigin` and `parsePillarsEnv` belong to
+Nor is any parsing. `env.ts` chooses which variables to read and shapes the
+result; `parseBareOrigin` and `parsePillarsEnv` belong to
 `@pops/pillar-sdk/pillar-env`, which is the fleet's single definition of what
 a pillar base URL may look like. A rule that needs tightening is tightened
 there, not copied here.
+
+The one thing `env.ts` does not borrow is the variable name: overrides come
+from `POPS_INTERNAL_BASE_URLS`, not `POPS_PILLARS`. Its header says why, and
+the reason is worth reading before anyone "simplifies" it back.

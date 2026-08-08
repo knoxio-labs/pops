@@ -13,11 +13,23 @@
  */
 import { parseBareOrigin, parsePillarsEnv } from '@pops/pillar-sdk/pillar-env';
 
+import { BootEnvError } from '../boot-env.js';
+
 /** Where discovery reads the pillar snapshot from. */
 export const REGISTRY_URL_ENV = 'POPS_REGISTRY_URL';
 
-/** The fleet-wide `id:baseUrl[,…]` map, read here as per-pillar overrides. */
-export const PILLARS_ENV = 'POPS_PILLARS';
+/**
+ * Per-pillar base-URL overrides, in the fleet's `id:baseUrl[,…]` shape.
+ *
+ * Deliberately NOT `POPS_PILLARS`, which shares the shape but not the meaning:
+ * production stopped plumbing it when the registry became the source of truth
+ * (ADR-039 E25), while `infra/docker-compose.dev.yml` still sets a static
+ * six-pillar roster on every service. Reading that as overrides would bypass
+ * discovery for six pillars in dev and nowhere else — a routing seam that
+ * disagrees with production is the one shape of bug this fleet has already
+ * paid for.
+ */
+export const INTERNAL_BASE_URLS_ENV = 'POPS_INTERNAL_BASE_URLS';
 
 /** In-cluster registry host, matching the compose service name. */
 export const DEFAULT_REGISTRY_URL = 'http://registry-api:3001';
@@ -53,12 +65,23 @@ export function resolveRegistryUrl(env: NodeJS.ProcessEnv = process.env): string
  * @returns The override map, or `undefined` when nothing is configured — which
  *   is what the SDK wants for "no overrides", an empty object being a
  *   different and pointlessly wrapped way to say it.
- * @throws {PillarsEnvParseError} If an entry is malformed or an id repeats.
+ * @throws {BootEnvError} If an entry is malformed or an id repeats. The SDK
+ *   parser labels its own errors `POPS_PILLARS`, so the wrapper names the
+ *   variable actually being read and carries the parser's complaint as
+ *   `cause` — an operator told to fix the wrong variable fixes nothing.
  */
 export function resolveInternalBaseUrls(
   env: NodeJS.ProcessEnv = process.env
 ): Record<string, string> | undefined {
-  const entries = parsePillarsEnv(env[PILLARS_ENV]);
+  const raw = env[INTERNAL_BASE_URLS_ENV];
+  let entries: readonly { id: string; baseUrl: string }[];
+  try {
+    entries = parsePillarsEnv(raw);
+  } catch (cause) {
+    throw new BootEnvError(`[bfm-api] ${INTERNAL_BASE_URLS_ENV} is malformed: "${raw ?? ''}"`, {
+      cause,
+    });
+  }
   if (entries.length === 0) return undefined;
   return Object.fromEntries(entries.map((entry) => [entry.id, entry.baseUrl]));
 }

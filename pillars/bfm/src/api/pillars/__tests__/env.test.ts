@@ -9,8 +9,9 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { BareOriginParseError, PillarsEnvParseError } from '@pops/pillar-sdk/pillar-env';
+import { BareOriginParseError } from '@pops/pillar-sdk/pillar-env';
 
+import { BootEnvError } from '../../boot-env.js';
 import { DEFAULT_REGISTRY_URL, resolveInternalBaseUrls, resolveRegistryUrl } from '../env.js';
 
 describe('resolveRegistryUrl', () => {
@@ -47,13 +48,13 @@ describe('resolveInternalBaseUrls', () => {
     // `undefined` and `{}` mean the same thing to the SDK, but only one of
     // them leaves the config field off entirely.
     expect(resolveInternalBaseUrls({})).toBeUndefined();
-    expect(resolveInternalBaseUrls({ POPS_PILLARS: '  ' })).toBeUndefined();
+    expect(resolveInternalBaseUrls({ POPS_INTERNAL_BASE_URLS: '  ' })).toBeUndefined();
   });
 
   it('shapes the entries into the id → baseUrl map configureServerSdk wants', () => {
     expect(
       resolveInternalBaseUrls({
-        POPS_PILLARS: 'finance:http://localhost:3004, lists:http://localhost:3006',
+        POPS_INTERNAL_BASE_URLS: 'finance:http://localhost:3004, lists:http://localhost:3006',
       })
     ).toEqual({
       finance: 'http://localhost:3004',
@@ -63,8 +64,22 @@ describe('resolveInternalBaseUrls', () => {
 
   it('keeps the colons inside the URL out of the id split', () => {
     expect(
-      resolveInternalBaseUrls({ POPS_PILLARS: 'finance:https://finance.example.com:8443' })
+      resolveInternalBaseUrls({
+        POPS_INTERNAL_BASE_URLS: 'finance:https://finance.example.com:8443',
+      })
     ).toEqual({ finance: 'https://finance.example.com:8443' });
+  });
+
+  /**
+   * `POPS_PILLARS` carries the same shape fleet-wide and a different meaning:
+   * production stopped plumbing it once the registry became the source of
+   * truth, while dev compose still sets a static roster on every service.
+   * Honouring it here would bypass discovery in dev and nowhere else.
+   */
+  it('ignores POPS_PILLARS, which shares the shape but not the meaning', () => {
+    expect(
+      resolveInternalBaseUrls({ POPS_PILLARS: 'finance:http://finance-api:3004' })
+    ).toBeUndefined();
   });
 
   it.each([
@@ -73,6 +88,25 @@ describe('resolveInternalBaseUrls', () => {
     ['a duplicate id', 'finance:http://localhost:3004,finance:http://localhost:9999'],
     ['a base URL carrying a path', 'finance:http://localhost:3004/api'],
   ])('rejects %s rather than dropping the entry', (_label, value) => {
-    expect(() => resolveInternalBaseUrls({ POPS_PILLARS: value })).toThrow(PillarsEnvParseError);
+    expect(() => resolveInternalBaseUrls({ POPS_INTERNAL_BASE_URLS: value })).toThrow(BootEnvError);
+  });
+
+  it('names the variable it actually read, not the one the SDK parser labels', () => {
+    // The SDK's PillarsEnvParseError says "POPS_PILLARS:"; an operator sent to
+    // fix that variable would change nothing and conclude the error is a lie.
+    expect(() => resolveInternalBaseUrls({ POPS_INTERNAL_BASE_URLS: 'finance' })).toThrow(
+      /POPS_INTERNAL_BASE_URLS/
+    );
+  });
+
+  it('keeps the parser complaint reachable as the cause', () => {
+    try {
+      resolveInternalBaseUrls({ POPS_INTERNAL_BASE_URLS: 'finance' });
+      throw new Error('expected a throw');
+    } catch (error) {
+      expect(error).toBeInstanceOf(BootEnvError);
+      expect((error as BootEnvError).cause).toBeInstanceOf(Error);
+      expect(String((error as { cause?: Error }).cause?.message)).toContain('missing a colon');
+    }
   });
 });
