@@ -1159,6 +1159,14 @@ secrets:
     file: ../secrets/finance_api_key
   pops_api_key:
     file: ../secrets/pops_api_key
+  # The bfm pillar's own service account, deliberately NOT the shared
+  # pops_api_key: separate accounts are what make revocation and the audit
+  # trail per-consumer. Declared ahead of the bfm-api service (POPS-1385) so
+  # the secret can be provisioned on the host before the container that mounts
+  # it exists. Compose materialises a secret only for services that reference
+  # one, so this is inert until then.
+  pops_bfm_api_key:
+    file: ../secrets/pops_bfm_api_key
   pops_api_internal_token:
     file: ../secrets/pops_api_internal_token
   instagram_cookies:

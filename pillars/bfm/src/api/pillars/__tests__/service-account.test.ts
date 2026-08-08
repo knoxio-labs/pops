@@ -17,7 +17,7 @@ import {
   resolveServiceAccountKey,
 } from '../service-account.js';
 
-const KEY = 'sa_test_prefix.test_secret_not_a_real_key';
+const KEY = 'pops_sa_TESTTEST.testsecret_not_a_real_key_000000';
 
 let dir: string;
 
@@ -53,7 +53,7 @@ describe('resolveServiceAccountKey', () => {
     expect(
       resolveServiceAccountKey({
         POPS_INTERNAL_API_KEY_FILE: path,
-        POPS_INTERNAL_API_KEY: 'sa_env.would_be_wrong',
+        POPS_INTERNAL_API_KEY: 'pops_sa_ENVENVEN.env_key_that_must_not_win_000000',
       })
     ).toBe(KEY);
   });

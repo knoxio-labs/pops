@@ -2,23 +2,25 @@
  * The federation half of bfm's boot environment: where peers are discovered,
  * and which discovered base URLs to override.
  *
- * `../boot-env.ts` covers what the HTTP server itself needs; this covers what
- * the cross-pillar SDK needs. Both carry the same bias — crash on a malformed
- * value rather than start and fail every outbound call afterwards, where the
- * symptom is an indistinguishable `unavailable` rather than a stack trace.
+ * `../boot-env.ts` covers what this pillar's own HTTP surface needs; this
+ * covers what the cross-pillar SDK needs. Both carry the same bias — crash on
+ * a malformed value rather than start and fail every outbound call afterwards,
+ * where the symptom is an indistinguishable `unavailable` rather than
+ * something with a variable name in it.
+ *
+ * Neither parser is bfm's. Both come from `@pops/pillar-sdk/pillar-env`, which
+ * is the fleet's single definition of what a pillar base URL may look like.
  */
-import { BootEnvError, parseBareOrigin } from '../boot-env.js';
+import { parseBareOrigin, parsePillarsEnv } from '@pops/pillar-sdk/pillar-env';
 
 /** Where discovery reads the pillar snapshot from. */
 export const REGISTRY_URL_ENV = 'POPS_REGISTRY_URL';
 
-/** Per-pillar base-URL overrides, `id:baseUrl[,id:baseUrl…]`. */
-export const INTERNAL_BASE_URLS_ENV = 'POPS_INTERNAL_BASE_URLS';
+/** The fleet-wide `id:baseUrl[,…]` map, read here as per-pillar overrides. */
+export const PILLARS_ENV = 'POPS_PILLARS';
 
 /** In-cluster registry host, matching the compose service name. */
 export const DEFAULT_REGISTRY_URL = 'http://registry-api:3001';
-
-const PILLAR_ID_RE = /^[a-z0-9-]+$/;
 
 /**
  * Resolve the registry origin used for DISCOVERY.
@@ -27,59 +29,36 @@ const PILLAR_ID_RE = /^[a-z0-9-]+$/;
  * deployment cannot register in one place and discover from another — a split
  * that produces a pillar which joins the fleet correctly and then fails every
  * cross-pillar call.
+ *
+ * @throws {BareOriginParseError} If the value is not a bare http(s) origin.
  */
 export function resolveRegistryUrl(env: NodeJS.ProcessEnv = process.env): string {
   const raw = env[REGISTRY_URL_ENV];
+  // A Compose interpolation that resolved to nothing leaves `VAR=` behind;
+  // that is an unset variable, not an instruction to discover from nowhere.
   if (raw === undefined || raw.trim() === '') return DEFAULT_REGISTRY_URL;
   return parseBareOrigin(REGISTRY_URL_ENV, raw.trim());
 }
 
 /**
- * Parse the per-pillar base-URL override map.
+ * Resolve the per-pillar base-URL overrides handed to `configureServerSdk`.
  *
  * The escape hatch for running bfm outside Docker: the registry publishes each
  * pillar's in-network `baseUrl`, which does not resolve from a laptop. An
  * override replaces the discovered URL for that id and nothing else — an id
  * absent from the map still resolves through the registry, which stays the
- * source of truth. There is deliberately no compiled roster of pillar ids
- * here; the map is whatever the operator names.
+ * source of truth. There is deliberately no compiled roster of pillar ids;
+ * the map is whatever the operator names.
  *
- * @returns The override map, or `undefined` when the variable is unset or
- *   blank — which the SDK reads as "no overrides" rather than "override
- *   nothing", the two being the same thing but only one being expressible.
+ * @returns The override map, or `undefined` when nothing is configured — which
+ *   is what the SDK wants for "no overrides", an empty object being a
+ *   different and pointlessly wrapped way to say it.
+ * @throws {PillarsEnvParseError} If an entry is malformed or an id repeats.
  */
-export function parseInternalBaseUrls(raw: string | undefined): Record<string, string> | undefined {
-  const trimmed = (raw ?? '').trim();
-  if (trimmed === '') return undefined;
-
-  const overrides: Record<string, string> = {};
-  for (const rawPair of trimmed.split(',')) {
-    const [id, baseUrl] = parseOverride(rawPair);
-    if (Object.hasOwn(overrides, id)) {
-      throw new BootEnvError(`${INTERNAL_BASE_URLS_ENV}: duplicate pillar id "${id}"`);
-    }
-    overrides[id] = baseUrl;
-  }
-  return overrides;
-}
-
-function parseOverride(rawPair: string): [string, string] {
-  const pair = rawPair.trim();
-  const colon = pair.indexOf(':');
-  if (colon === -1) {
-    throw new BootEnvError(
-      `${INTERNAL_BASE_URLS_ENV}: entry "${pair}" is missing a colon — expected id:baseUrl`
-    );
-  }
-  const id = pair.slice(0, colon).trim();
-  if (!PILLAR_ID_RE.test(id)) {
-    throw new BootEnvError(
-      `${INTERNAL_BASE_URLS_ENV}: id "${id}" is not lowercase kebab-case ([a-z0-9-]+)`
-    );
-  }
-  const baseUrl = parseBareOrigin(
-    `${INTERNAL_BASE_URLS_ENV} entry "${id}"`,
-    pair.slice(colon + 1).trim()
-  );
-  return [id, baseUrl];
+export function resolveInternalBaseUrls(
+  env: NodeJS.ProcessEnv = process.env
+): Record<string, string> | undefined {
+  const entries = parsePillarsEnv(env[PILLARS_ENV]);
+  if (entries.length === 0) return undefined;
+  return Object.fromEntries(entries.map((entry) => [entry.id, entry.baseUrl]));
 }

@@ -1,7 +1,8 @@
 /**
  * The environment `server.ts` reads to stand up its own HTTP surface, and the
  * validation each variable gets. The variables the cross-pillar SDK needs live
- * next door in `pillars/env.ts` and share this file's `parseBareOrigin`.
+ * next door in `pillars/env.ts`; both defer to `@pops/pillar-sdk/pillar-env`
+ * for the fleet's base-URL rules.
  *
  * They live here rather than inline in the entrypoint so the decisions are
  * testable in-process: `server.ts` binds a port and installs signal handlers

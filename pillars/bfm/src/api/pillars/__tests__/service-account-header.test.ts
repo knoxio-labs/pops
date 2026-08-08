@@ -35,7 +35,7 @@ import { createPillarGateway } from '../gateway.js';
 import { configureBfmServerSdk } from '../sdk-config.js';
 import { MissingServiceAccountKeyError } from '../service-account.js';
 
-const SERVICE_ACCOUNT_KEY = 'sa_test_prefix.test_secret_not_a_real_key';
+const SERVICE_ACCOUNT_KEY = 'pops_sa_TESTTEST.testsecret_not_a_real_key_000000';
 
 type TransactionsRouter = {
   transactions: {
@@ -158,7 +158,7 @@ describe('an outbound call configured through configureBfmServerSdk', () => {
 
     configureBfmServerSdk({
       POPS_INTERNAL_API_KEY_FILE: keyFile,
-      POPS_INTERNAL_API_KEY: 'sa_env.would_be_wrong',
+      POPS_INTERNAL_API_KEY: 'pops_sa_ENVENVEN.env_key_that_must_not_win_000000',
       POPS_REGISTRY_URL: baseUrl,
     });
 

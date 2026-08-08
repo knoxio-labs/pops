@@ -16,16 +16,16 @@
  */
 import { configureServerSdk } from '@pops/pillar-sdk/server';
 
-import { INTERNAL_BASE_URLS_ENV, parseInternalBaseUrls, resolveRegistryUrl } from './env.js';
+import { resolveInternalBaseUrls, resolveRegistryUrl } from './env.js';
 import { MissingServiceAccountKeyError, resolveServiceAccountKey } from './service-account.js';
 
 /**
  * Bind the process-wide server SDK config from the environment.
  *
  * Called once, before the server listens. Throws
- * {@link MissingServiceAccountKeyError} when no key is available and
- * `BootEnvError` when the registry origin or an override entry is malformed —
- * both fatal, both by design (see `../boot-env.ts` for the reasoning).
+ * {@link MissingServiceAccountKeyError} when no key is available, and the
+ * SDK's own parse errors when the registry origin or an override entry is
+ * malformed — all fatal, all by design (see `./env.ts` for the reasoning).
  *
  * @param env Process environment to read; injectable for tests.
  */
@@ -33,7 +33,7 @@ export function configureBfmServerSdk(env: NodeJS.ProcessEnv = process.env): voi
   const apiKey = resolveServiceAccountKey(env);
   if (apiKey === undefined) throw new MissingServiceAccountKeyError();
 
-  const internalBaseUrls = parseInternalBaseUrls(env[INTERNAL_BASE_URLS_ENV]);
+  const internalBaseUrls = resolveInternalBaseUrls(env);
 
   configureServerSdk({
     // Passed explicitly rather than left to the SDK's own env fallback: only
