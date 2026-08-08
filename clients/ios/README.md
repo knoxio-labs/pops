@@ -11,29 +11,32 @@ The consequence worth internalising before changing anything here: this app is *
 ```bash
 mise run generate      # xcodegen generate — writes Pops.xcodeproj
 mise run build         # xcodebuild, iOS Simulator
+mise run test          # every package's tests, on the iOS Simulator
 mise run build:device  # signed Release, physical iPhone
 ```
 
-`mise run build:packages` type-checks every package with `swift build` alone, without Xcode or a simulator, and `mise run test:packages` runs every package's tests the same way. Both compile for the host, which means macOS rather than iOS — an iOS-only regression survives them, and is caught by `mise run build` instead.
+`mise run build:packages` type-checks every package with `swift build` alone, without Xcode or a simulator, and `mise run test:packages` runs every package's tests the same way. Both compile for the host, which means macOS rather than iOS — an iOS-only regression survives them, and is caught by `mise run build` and `mise run test`. Reach for the `:packages` pair as the fast inner loop; the two without the suffix are what CI runs and what a result has to be reproduced against.
+
+`mise run test` runs each package through `xcodebuild` rather than `swift test`, which is the only way to get these tests onto the iOS SDK — a directory holding a `Package.swift` is a project as far as `xcodebuild` is concerned. The scheme it picks is not the obvious one: a package with more than one product gets an aggregate `<name>-Package` scheme and **only the aggregate carries the test action**, so the task reads the scheme list back out of `xcodebuild` instead of guessing.
 
 `mise run verify:release-carries-no-host` builds Release and fails if the result names a BFM host — see [Where the BFM base URL comes from](#where-the-bfm-base-url-comes-from).
 
-Requires an iOS 27 SDK. `mise install` here pins XcodeGen; Xcode itself is not managed by mise.
+`mise install` here pins XcodeGen and SwiftLint; Xcode itself is not managed by mise, and `POPS_XCODE_VERSION` in `mise.toml` is a declaration CI acts on rather than something that changes anything locally. **The deployment target is capped by that Xcode, not chosen freely.** An SDK older than the deployment target does not build and an SPM `platforms:` floor cannot be overridden from the command line, so the floor can only be the newest iOS the GitHub-hosted macOS runner can build — the latest released major, never the one a beta Xcode is previewing. Raising it is a single commit that moves `POPS_XCODE_VERSION`, `project.yml`'s `deploymentTarget` and every `platforms:` floor under `Packages/` together, and it can only happen after the runner image ships that Xcode.
 
 ## Linting and formatting
 
 ```bash
-mise run lint     # both tools; the single command the CI job will invoke
+mise run lint     # both tools; the single command the CI job invokes
 mise run format   # rewrites the sources; the fixer for the half of `lint` that has one
 ```
 
-`mise run lint` is a single task rather than a documented pair of commands on purpose. The iOS CI job (POPS-1376, not yet written) is meant to invoke this task and nothing else, so that there is never a second copy of the command to drift from — a hand-copied pair in a workflow file is how a green local run stops meaning anything. It runs two tools, both of them, even when the first has already failed, so one run tells you everything.
+`mise run lint` is a single task rather than a documented pair of commands on purpose. The iOS CI job invokes this task and nothing else, so that there is never a second copy of the command to drift from — a hand-copied pair in a workflow file is how a green local run stops meaning anything. It runs two tools, both of them, even when the first has already failed, so one run tells you everything.
 
 They divide the work along a line worth knowing before adding a rule to either: **`.swift-format` owns what the code looks like** and rewrites it; **`.swiftlint.yml` owns what the code may do** and rewrites nothing. A defect belongs to exactly one of them, and where both had an opinion the loser was switched off rather than left to report the same thing twice.
 
 Both files carry their reasoning in a header comment — every limit is a number someone picked over an alternative, and the alternative is written down. That is the source of truth; this README deliberately does not repeat it, because two copies of a rule list means one of them is wrong and you cannot tell which.
 
-Neither tool is pinned the same way. SwiftLint is a mise tool, so its version is in `mise.toml` and everyone gets the same one. `swift-format` ships inside the Xcode toolchain and cannot be pinned here at all — which is why the CI job has to pin its Xcode explicitly, and why a local run only matches CI when the Xcode versions agree.
+Neither tool is pinned the same way. SwiftLint is a mise tool, so its version is in `mise.toml` and everyone gets the same one. `swift-format` ships inside the Xcode toolchain and cannot be pinned that way at all — which is why `POPS_XCODE_VERSION` exists and why the CI job selects that Xcode before it lints. It is also the one check whose verdict depends on which Xcode ran it: a local Xcode other than the pinned one can disagree with CI about what "formatted" means, and `mise run lint`'s rule-list drift check will say so rather than let the difference pass silently.
 
 ## Signing, and installing on a phone
 
@@ -101,9 +104,22 @@ Artefacts this app and the BFM must agree on byte for byte, kept outside any one
 
 Today that is `device-signature-v1.json`, the ECDSA P-256 encoding vector. The generated Swift BFM client will vendor the OpenAPI snapshot here too (POPS-1380), following the same rule the rest of the repo uses for a contract that crosses a unit boundary: the consumer keeps a copy inside its own boundary and a CI guard fails on drift.
 
+## What CI does with this
+
+`.github/workflows/ios-quality.yml` — one job, `runs-on: macos-latest`, the only workflow in the repo that is not on Ubuntu. It selects the pinned Xcode, then runs `mise run build`, `mise run test` and `mise run lint` and nothing else, because a command written out a second time in a workflow file is a command that drifts.
+
+Two things about it are worth knowing before you touch either side:
+
+- **It is path-filtered to `clients/ios/**` and `pillars/bfm/openapi/**`.** The BFM contract is the input the Swift client is generated from, so a contract change has to re-run this job or the generated client rots with nothing red to show for it.
+- **It is wired into `ci-gate.yml`, which is what makes it block a merge.** The gate is the one static required context in the branch ruleset; `iOS Quality` appears in both the `on.workflow_run.workflows` trigger array and the `gated` array inside the script, and either one alone is inert — trigger-only is never evaluated, gated-only never fires. A TypeScript-only PR is unaffected: this job is path-filtered out, and the gate reads an absent workflow as passing.
+
+`mise install` is run with `MISE_DISABLE_TOOLS=rust,node,pnpm` there. mise merges config up the tree, so without it the job would download a full Rust toolchain to compile Swift.
+
+It is not quite the only job that touches this directory. The `Device signature encoding (iOS ↔ BFM)` job in [`quality.yml`](../../.github/workflows/quality.yml) asserts the committed vector in `Contracts/` from the Node side — it checks the contract, not the code, and would stay green through a Swift tree that does not compile.
+
 ## Known gaps
 
 - **Nothing consumes the resolved base URL yet.** `BuiltInBaseURL` answers where the BFM is; no transport asks it, because there is no transport (POPS-1380) and no pairing store to fall back on in Release (POPS-1383).
-- **No CI job builds or lints this.** `.github/workflows/_discover-units.yml` scans `pillars/` and `libs/` only, so nothing in the existing matrix compiles or lints a line of Swift, and a green PR says almost nothing about this directory. `mise run lint` is written to be the command that job invokes, but until it exists running it is a courtesy. The one exception is the `Device signature encoding (iOS ↔ BFM)` job in [`quality.yml`](../../.github/workflows/quality.yml), which asserts the committed vector in `Contracts/` from the Node side — it checks the contract, not the code. The iOS workflow is POPS-1376.
-- **The pre-push hook does not run `mise run lint`.** It would put Xcode on the push path for every contributor, including on the TypeScript-only pushes that are almost all of them. Until the CI job lands, nothing mechanically stops unformatted Swift from reaching `main`.
+- **`mise run verify:release-carries-no-host` runs nowhere but a laptop.** The invariant it guards — a shipped binary naming no BFM host — is the one thing here that is not caught by building, testing or linting, and it is the only task in this directory that no job invokes (POPS-1475).
+- **The pre-push hook does not run `mise run lint`.** It would put Xcode on the push path for every contributor, including on the TypeScript-only pushes that are almost all of them. Unformatted Swift can still reach a branch; it can no longer reach `main`, because the CI job rejects it.
 - **Nothing automated exercises the Secure Enclave or the Keychain.** Both need hardware or entitlements a test runner does not have. See [`Packages/Auth/README.md`](Packages/Auth/README.md).

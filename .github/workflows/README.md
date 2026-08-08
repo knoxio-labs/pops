@@ -1,12 +1,14 @@
 # .github/workflows
 
-18 workflows. Every job runs on `ubuntu-latest`.
+19 workflows. Every job runs on `ubuntu-latest` except `ios-quality.yml`, which needs macOS to compile Swift at all.
 
 ## `ci-gate.yml` — the one static required context
 
 `ci-gate.yml` publishes a single job named `CI Gate`, triggered
-`on: workflow_run` `types: [completed]` of six workflows: Unit Quality, FE
-Quality, Rust Quality, App Quality, Quality, Registry Generated Quality. It reads
+`on: workflow_run` `types: [completed]` of seven workflows: Unit Quality, FE
+Quality, Rust Quality, App Quality, Quality, Registry Generated Quality, iOS
+Quality. Each name appears twice in that file — in the trigger array and in the
+`gated` array inside the script — and either alone is inert. It reads
 their conclusions through the Actions API and runs nothing itself
 (`permissions:` are `actions`/`checks`/`contents: read`). The file header carries
 the argument for `workflow_run` over `needs:` and for why the verdict converges;
@@ -51,6 +53,7 @@ files only, no install.
 | `fe-quality.yml`                 | PR/push on `pillars/shell/**`, apps, openapi, FE libs         | the shell's `Quality Checks` job                                                                                     |
 | `rust-quality.yml`               | PR/push on Cargo files, `deny.toml`, `pillars/contacts/**`, `libs/pops-*`, `scripts/extractability/**` | `fmt + clippy + build + test`                                       |
 | `registry-generated-quality.yml` | PR/push on `libs/module-registry/**`, `libs/types/**`         | `generated.ts` drift                                                                                                |
+| `ios-quality.yml`                | PR/push on `clients/ios/**`, `pillars/bfm/openapi/**`         | `macos-latest`; selects the Xcode pinned in `clients/ios/mise.toml`, then `mise run build` / `test` / `lint`         |
 | `agent-review.yml`               | non-draft PR                                                  | six guard scripts under `scripts/ci/`, each `--self-test`ed first, then an advisory LLM review                       |
 | `docker-build.yml`               | PR/push on Dockerfiles, `infra/docker*`, lockfile             | builder stage of every `pillars/*/Dockerfile`; `docker compose config --quiet` on both compose files after stubbing 12 secret files |
 | `pillar-quality.yml`             | push to `main` only                                           | full image (`push: false`) per `pillars/<x>` that has a `package.json`                                               |

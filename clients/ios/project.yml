@@ -2,8 +2,15 @@ name: Pops
 
 options:
   bundleIdPrefix: com.knoxiolabs
+  # The latest RELEASED major iOS, not the latest one an Xcode beta can build.
+  # A deployment target above the SDK does not compile, and the GitHub-hosted
+  # macOS runner that gates this app carries no beta Xcode — so a floor set to
+  # the unreleased major is a floor nothing but a developer's own laptop can
+  # build, which is a merge gate that cannot exist. Raising this means waiting
+  # for the runner image to ship that Xcode, then bumping POPS_XCODE_VERSION in
+  # mise.toml and every `platforms:` floor under Packages/ in the same commit.
   deploymentTarget:
-    iOS: '27.0'
+    iOS: '26.0'
   createIntermediateGroups: true
   groupSortPosition: none
 
