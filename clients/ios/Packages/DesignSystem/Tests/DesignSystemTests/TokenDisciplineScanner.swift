@@ -1,9 +1,10 @@
 import Foundation
 
-/// Scans Swift source for the two things this package exists to make
-/// impossible: a colour that is not a token, and a metric that is not a step on
-/// the scale. It is a text scan rather than a compiler check because Swift has
-/// no way to withdraw `Color.red` from a module that imports SwiftUI.
+/// Scans Swift source for the things this package exists to make impossible:
+/// a colour that is not a token, a metric that is not a step on the scale, and
+/// a font size that bypasses the type scale. It is a text scan rather than a
+/// compiler check because Swift has no way to withdraw `Color.red` from a
+/// module that imports SwiftUI.
 ///
 /// A text scan is also what lets the rule reach past this package: the scan
 /// reads files, so it never needs to import the module it is judging.

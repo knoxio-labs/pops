@@ -80,11 +80,14 @@ internal struct TokenDisciplineTests {
         var emptyRoots: [URL] = []
         var violations: [TokenDisciplineScanner.Violation] = []
         for root in roots {
-            // An absent `Sources` is the only failure this launders into "this
-            // module contributed nothing", because that is the module a rename
-            // left behind. Anything else the filesystem objects to is a real
-            // error and has to arrive as one, or the report says a module is
-            // empty when what happened was a permission or an IO fault.
+            // An absent `Sources` is the only failure *this check* launders
+            // into "this module contributed nothing" — a `Sources` that
+            // exists but holds no hand-written Swift (nothing, or only
+            // `Generated` code) is the other, legitimate route to
+            // `emptyRoots`, handled by the `files.isEmpty` check below.
+            // Anything else the filesystem objects to here is a real error
+            // and has to arrive as one, or the report says a module is empty
+            // when what happened was a permission or an IO fault.
             //
             // `fileExists(atPath:)` cannot draw that line — it returns `false`
             // for a permission or IO failure exactly as it does for "missing",
@@ -113,7 +116,9 @@ internal struct TokenDisciplineTests {
             violations: violations)
     }
 
-    @Test("no module under Packages/ names a colour or a metric outside the token layer")
+    @Test(
+        "no module under Packages/ names a colour, a metric or a font size outside the token layer"
+    )
     func everyModuleIsClean() throws {
         let scan = try Self.scanModules(under: Self.packagesRoot)
 
