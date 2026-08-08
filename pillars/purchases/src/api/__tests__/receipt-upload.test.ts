@@ -164,13 +164,15 @@ describe('a reading the paper disagrees with', () => {
     expect(listed.body.items).toHaveLength(0);
   });
 
-  it('reports a receipt it cannot place in time the same way', async () => {
-    // The arithmetic agreed but there is no date, which is the same problem
-    // for a human: a real purchase needing a decision.
+  it('still creates a receipt that states no date, tagged rather than refused', async () => {
+    // The shop happened and the photograph exists. Losing it would be worse
+    // than carrying an inferred date, provided the tag stops anyone
+    // mistaking that date for something the paper stated.
     const undated = JSON.stringify({ ...JSON.parse(GOOD_READING), purchasedOn: null });
     const response = await upload(appWith(saying(undated)));
-    expect(response.body.kind).toBe('needs-review');
-    expect(response.body.failures[0].detail).toContain('no date');
+    expect(response.status).toBe(200);
+    expect(response.body.kind).toBe('created');
+    expect(response.body.purchase.purchase.totalCents).toBe(2750);
   });
 });
 

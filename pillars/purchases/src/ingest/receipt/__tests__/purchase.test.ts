@@ -23,6 +23,8 @@ const receipt = (over: Partial<ExtractedReceipt> = {}): ExtractedReceipt =>
     purchasedOn: '2026-08-01',
     purchasedAt: '14:32',
     currency: 'AUD',
+    address: '123 Example St, Sydney NSW',
+    timeZone: 'Australia/Sydney',
     total: '$27.50',
     tax: null,
     discounts: [],
@@ -34,16 +36,14 @@ const receipt = (over: Partial<ExtractedReceipt> = {}): ExtractedReceipt =>
     ...over,
   });
 
+const UPLOADED_AT = '2026-08-06T23:11:00.000Z';
+
 const map = (over: Partial<ExtractedReceipt> = {}, stored = STORED) => {
   const extracted = receipt(over);
-  return receiptToPurchase(extracted, gateExtraction(extracted), stored);
+  return receiptToPurchase(extracted, gateExtraction(extracted), stored, UPLOADED_AT);
 };
 
-const mapped = (over: Partial<ExtractedReceipt> = {}) => {
-  const result = map(over);
-  if (result.kind !== 'mapped') throw new Error(`expected mapped, got ${result.kind}`);
-  return result.purchase;
-};
+const mapped = (over: Partial<ExtractedReceipt> = {}) => map(over).purchase;
 
 describe('an admitted reading', () => {
   it('becomes an uploaded purchase with one charge for the whole receipt', () => {
@@ -76,11 +76,38 @@ describe('an admitted reading', () => {
     expect(mapped().orderedAt).toBe('2026-08-01T04:32:00.000Z');
   });
 
-  it('assumes midday when the receipt prints no time', () => {
-    // Midnight sits against a day boundary, so any error in the zone guess
-    // moves the purchase to the adjacent day. Midday is the reading
-    // furthest from being wrong about which day it was.
-    expect(mapped({ purchasedAt: null }).orderedAt).toBe('2026-08-01T02:00:00.000Z');
+  it('assumes midnight, local to the shop, when the receipt prints no time', () => {
+    // A day boundary the paper does not state is the start of the day it
+    // names. Safe only because the zone is the receipt's own — an inferred
+    // midnight in the wrong zone lands on the adjacent day.
+    expect(mapped({ purchasedAt: null }).orderedAt).toBe('2026-07-31T14:00:00.000Z');
+  });
+
+  it('places a receipt in its own timezone, not the configured one', () => {
+    // Perth is two hours behind Sydney; a US receipt up to fifteen. Reading
+    // every receipt as local would misplace a holiday's worth of them.
+    const perth = mapped({ timeZone: 'Australia/Perth', purchasedAt: '14:32' });
+    const paris = mapped({ timeZone: 'Europe/Paris', purchasedAt: '14:32' });
+    expect(perth.orderedAt).toBe('2026-08-01T06:32:00.000Z');
+    expect(paris.orderedAt).toBe('2026-08-01T12:32:00.000Z');
+  });
+
+  it('falls back and says so when the model names a zone that does not exist', () => {
+    // The zone is the one field the model infers, so it can invent one.
+    const purchase = mapped({ timeZone: 'Australia/Woolloomooloo' });
+    expect(purchase.tags).toContain('timezone-uncertain');
+    expect(purchase.orderedAt).toBe('2026-08-01T04:32:00.000Z');
+  });
+
+  it('accepts a real alias rather than treating it as an invention', () => {
+    // `Australia/Canberra` is a genuine link to `Australia/Sydney`. Checking
+    // against the runtime rather than a hand-kept list is what gets this
+    // right without maintaining one.
+    expect(mapped({ timeZone: 'Australia/Canberra' }).tags).not.toContain('timezone-uncertain');
+  });
+
+  it('does not claim uncertainty when the zone is real', () => {
+    expect(mapped().tags).not.toContain('timezone-uncertain');
   });
 
   it('says it does not know how it was paid for', () => {
@@ -155,21 +182,26 @@ describe('the totals', () => {
   });
 });
 
-describe('a receipt it cannot place in time', () => {
-  it('refuses one with no date rather than dating it from the upload', () => {
-    // A fabricated date looks exactly like a fact, and a purchase that can
-    // never match a transaction is indistinguishable from one that simply
-    // has not settled yet.
-    const result = map({ purchasedOn: null });
-    expect(result.kind).toBe('undatable');
-    if (result.kind !== 'undatable') return;
-    expect(result.reason).toContain('no date');
+describe('a receipt that does not say when it happened', () => {
+  it('is dated from the upload and tagged, rather than refused', () => {
+    // The shop happened and the photograph exists. Losing it would be worse
+    // than carrying an inferred date — provided the tag stops anyone
+    // mistaking that date for something the paper stated.
+    const purchase = mapped({ purchasedOn: null });
+    expect(purchase.orderedAt).toBe(UPLOADED_AT);
+    expect(purchase.tags).toContain('date-uncertain');
   });
 
-  it('refuses a date that is not a real day', () => {
-    // `Date.UTC` normalises 31 February into 3 March without complaint.
-    const result = map({ purchasedOn: '2026-02-31' });
-    expect(result.kind).toBe('undatable');
+  it('treats a date the receipt states badly the same as none at all', () => {
+    // `Date.UTC` normalises 31 February into 3 March without complaint, and
+    // a normalised date is a fabrication however it arrived.
+    const purchase = mapped({ purchasedOn: '2026-02-31' });
+    expect(purchase.orderedAt).toBe(UPLOADED_AT);
+    expect(purchase.tags).toContain('date-uncertain');
+  });
+
+  it('does not tag a receipt whose date it could read', () => {
+    expect(mapped().tags).not.toContain('date-uncertain');
   });
 });
 
@@ -194,10 +226,6 @@ describe('the checksum', () => {
 
   it('differs between two photographs read identically', () => {
     const other = { ...STORED, sha256: 'b'.repeat(64) };
-    const first = map();
-    const second = map({}, other);
-    if (first.kind !== 'mapped' || second.kind !== 'mapped')
-      throw new Error('expected both mapped');
-    expect(second.purchase.checksum).not.toBe(first.purchase.checksum);
+    expect(map({}, other).purchase.checksum).not.toBe(map().purchase.checksum);
   });
 });

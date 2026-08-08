@@ -16,7 +16,7 @@
  * still exists; it goes to review with the discrepancy stated, because
  * `awaiting_settlement` and "we could not read it" must not look alike.
  */
-import { parseAmountCents } from '../money.js';
+import { parseAmountCents, type MoneyLocale } from '../money.js';
 
 import type { ExtractedReceipt } from './extraction.js';
 
@@ -49,9 +49,13 @@ export interface GateResult {
   readonly failures: readonly GateFailure[];
 }
 
-function sumAmounts(amounts: readonly string[], onUnreadable: (amount: string) => void): number {
+function sumAmounts(
+  amounts: readonly string[],
+  locale: MoneyLocale,
+  onUnreadable: (amount: string) => void
+): number {
   return amounts.reduce((total, amount) => {
-    const cents = parseAmountCents(amount);
+    const cents = parseAmountCents(amount, locale);
     if (cents === null) {
       onUnreadable(amount);
       return total;
@@ -71,7 +75,9 @@ function sumAmounts(amounts: readonly string[], onUnreadable: (amount: string) =
 export function gateExtraction(extracted: ExtractedReceipt): GateResult {
   const failures: GateFailure[] = [];
 
-  const totalCents = parseAmountCents(extracted.total);
+  // The receipt's own currency decides `1,495` — see `../money.ts`.
+  const locale: MoneyLocale = { currency: extracted.currency };
+  const totalCents = parseAmountCents(extracted.total, locale);
   if (totalCents === null) {
     failures.push({
       kind: 'unreadable-total',
@@ -81,7 +87,7 @@ export function gateExtraction(extracted: ExtractedReceipt): GateResult {
 
   let lineTotalCents = 0;
   for (const [index, line] of extracted.lines.entries()) {
-    const cents = parseAmountCents(line.amount);
+    const cents = parseAmountCents(line.amount, locale);
     if (cents === null) {
       failures.push({
         kind: 'unreadable-line',
@@ -101,10 +107,10 @@ export function gateExtraction(extracted: ExtractedReceipt): GateResult {
     });
   }
 
-  const taxCents = sumAmounts(extracted.tax === null ? [] : [extracted.tax], (amount) =>
+  const taxCents = sumAmounts(extracted.tax === null ? [] : [extracted.tax], locale, (amount) =>
     failures.push({ kind: 'unreadable-line', detail: `stated tax "${amount}" is not money` })
   );
-  const discountCents = sumAmounts(extracted.discounts, (amount) =>
+  const discountCents = sumAmounts(extracted.discounts, locale, (amount) =>
     failures.push({ kind: 'unreadable-line', detail: `stated discount "${amount}" is not money` })
   );
 

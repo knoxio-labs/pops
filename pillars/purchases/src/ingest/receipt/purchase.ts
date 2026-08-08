@@ -15,7 +15,7 @@
  */
 import { createHash } from 'node:crypto';
 
-import { instantFromLocalParts } from '../local-time.js';
+import { instantFromLocalParts, isKnownTimeZone, storeTimeZone } from '../local-time.js';
 import { parseAmountCents } from '../money.js';
 
 import type { CreateItemInput, CreatePurchaseInput } from '../../db/services/purchase-input.js';
@@ -26,24 +26,31 @@ import type { StoredReceipt } from './store.js';
 export const RECEIPT_SOURCE_ID = 'receipt';
 
 /**
- * When the receipt prints a date but no time.
+ * When the receipt prints a date but no time: midnight, local to the shop.
  *
- * Midday, not midnight. The zone is a configured guess (`../local-time.ts`)
- * and midnight sits against a day boundary, so any error in that guess
- * moves the purchase to the adjacent day — and the reconciliation window is
- * measured in days. Midday is the reading furthest from being wrong about
- * which day it was.
+ * A day boundary that cannot be inferred from the paper is the start of the
+ * day it names. That is only safe because the zone is now the receipt's own
+ * rather than a global guess — an inferred midnight in the wrong zone would
+ * land on the adjacent day, which is why this was midday while every
+ * receipt was assumed to be in Sydney.
  */
-const ASSUMED_HOUR = 12;
+const ASSUMED_HOUR = 0;
+
+/** Facts about the order that the paper did not actually state. */
+export const DATE_UNCERTAIN = 'date-uncertain';
+export const TIMEZONE_UNCERTAIN = 'timezone-uncertain';
 
 const DEFAULT_CURRENCY = 'AUD';
 
-export type ReceiptPurchaseResult =
-  | { readonly kind: 'mapped'; readonly purchase: CreatePurchaseInput }
-  | { readonly kind: 'undatable'; readonly reason: string };
+export interface ReceiptPurchaseResult {
+  readonly purchase: CreatePurchaseInput;
+}
 
-function toItem(line: ExtractedReceipt['lines'][number]): CreateItemInput | null {
-  const lineTotalCents = parseAmountCents(line.amount);
+function toItem(
+  line: ExtractedReceipt['lines'][number],
+  locale: { currency?: string | null }
+): CreateItemInput | null {
+  const lineTotalCents = parseAmountCents(line.amount, locale);
   if (lineTotalCents === null) return null;
 
   // Absent means the receipt did not state a count, which is not the same
@@ -59,7 +66,29 @@ function toItem(line: ExtractedReceipt['lines'][number]): CreateItemInput | null
   };
 }
 
-function occurredAt(extracted: ExtractedReceipt): string | null {
+/**
+ * Where the shop is, and how sure we are.
+ *
+ * The model infers a zone from the printed address, so it can name one that
+ * does not exist. A rejected guess falls back to the configured default and
+ * says so, rather than throwing inside a date calculation or silently
+ * placing a Paris receipt in Sydney.
+ */
+function resolveZone(extracted: ExtractedReceipt): { zone: string; certain: boolean } {
+  return isKnownTimeZone(extracted.timeZone)
+    ? { zone: extracted.timeZone, certain: true }
+    : { zone: storeTimeZone(), certain: false };
+}
+
+/**
+ * The moment the shop happened, or null when the paper does not say.
+ *
+ * Null is not a failure here — the caller dates it from the upload and marks
+ * it — but a date the receipt states badly (`2026-02-31`) is treated the
+ * same as none at all, because a normalised 3 March is a fabrication either
+ * way.
+ */
+function occurredAt(extracted: ExtractedReceipt, zone: string): string | null {
   if (extracted.purchasedOn === null) return null;
   const [year, month, day] = extracted.purchasedOn.split('-').map(Number);
   if (year === undefined || month === undefined || day === undefined) return null;
@@ -69,13 +98,10 @@ function occurredAt(extracted: ExtractedReceipt): string | null {
       ? [ASSUMED_HOUR, 0]
       : extracted.purchasedAt.split(':').map(Number);
 
-  return instantFromLocalParts({
-    year,
-    month,
-    day,
-    hour: hour ?? ASSUMED_HOUR,
-    minute: minute ?? 0,
-  });
+  return instantFromLocalParts(
+    { year, month, day, hour: hour ?? ASSUMED_HOUR, minute: minute ?? 0 },
+    zone
+  );
 }
 
 /**
@@ -109,30 +135,34 @@ function checksumFor(
 /**
  * Shape an admitted reading into a purchase.
  *
- * Refuses only one thing: a receipt with no readable date. `orderedAt` is
- * what the reconciliation window is measured against, so a purchase without
- * one can never match a transaction and can never be told apart from one
- * that simply has not settled yet. Dating it from the upload instead would
- * be a fabrication that looks exactly like a fact.
+ * Always produces one. A receipt that states no date is dated from its
+ * upload and tagged `date-uncertain`, rather than refused: the shop
+ * happened and the photograph exists, so losing it would be worse than
+ * carrying an inferred date — provided the inference is never mistaken for
+ * something the paper said, which is what the tag is for.
+ *
+ * The upload instant, not midnight on the upload day: it is a guess either
+ * way, and pretending to a precision the guess does not have would make it
+ * harder to spot. A reviewer setting the real date replaces it wholesale.
  */
 export function receiptToPurchase(
   extracted: ExtractedReceipt,
   gate: GateResult,
-  stored: StoredReceipt
+  stored: StoredReceipt,
+  uploadedAt: string = new Date().toISOString()
 ): ReceiptPurchaseResult {
-  const orderedAt = occurredAt(extracted);
-  if (orderedAt === null) {
-    return {
-      kind: 'undatable',
-      reason:
-        extracted.purchasedOn === null
-          ? 'the receipt states no date, and a purchase without one can never match a transaction'
-          : `"${extracted.purchasedOn}" is not a real date`,
-    };
-  }
+  const { zone, certain: zoneCertain } = resolveZone(extracted);
+  const stated = occurredAt(extracted, zone);
+  const orderedAt = stated ?? uploadedAt;
 
+  const tags = [
+    ...(stated === null ? [DATE_UNCERTAIN] : []),
+    ...(zoneCertain ? [] : [TIMEZONE_UNCERTAIN]),
+  ];
+
+  const locale = { currency: extracted.currency };
   const items = extracted.lines
-    .map(toItem)
+    .map((line) => toItem(line, locale))
     .filter((item): item is CreateItemInput => item !== null);
   const totalCents = gate.totalCents ?? 0;
 
@@ -155,6 +185,7 @@ export function receiptToPurchase(
     // from reconciliation forever. The reviewer sets it (ADR-042).
     settlementMode: 'unknown',
     rawRef: stored.uri,
+    tags,
     items,
     charges: [
       {
@@ -167,8 +198,5 @@ export function receiptToPurchase(
     documents: [{ documentUri: stored.uri, kind: 'receipt' }],
   };
 
-  return {
-    kind: 'mapped',
-    purchase: { ...withoutChecksum, checksum: checksumFor(stored, withoutChecksum) },
-  };
+  return { purchase: { ...withoutChecksum, checksum: checksumFor(stored, withoutChecksum) } };
 }

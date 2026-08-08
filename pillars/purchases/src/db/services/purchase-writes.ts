@@ -22,6 +22,7 @@ import {
   purchaseItemAllocations,
   purchases,
   purchaseShipments,
+  purchaseTags,
 } from '../schema.js';
 import { expectRow, nowIso, type PurchasesDb } from './internal.js';
 import { findPurchaseByChecksum, findPurchaseBySourceOrderId } from './purchase-lookups.js';
@@ -77,6 +78,12 @@ export function createPurchase(db: PurchasesDb, input: CreatePurchaseInput): str
       itemIds: new Map(),
       now,
     };
+
+    // A Set so a caller that repeats a tag does not trip the
+    // (purchase_id, tag) primary key.
+    for (const tag of new Set(input.tags ?? [])) {
+      tx.insert(purchaseTags).values({ purchaseId: ctx.purchase.id, tag, createdAt: now }).run();
+    }
 
     for (const [position, shipment] of (input.shipments ?? []).entries()) {
       insertShipment(ctx, shipment, position);

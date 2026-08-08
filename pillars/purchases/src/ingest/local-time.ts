@@ -29,6 +29,27 @@ export function storeTimeZone(): string {
 }
 
 /**
+ * Is this a zone the runtime actually knows?
+ *
+ * The receipt's zone is the one field a model is asked to infer, so it can
+ * come back as a plausible-looking string that names nothing — a city with
+ * no zone of its own, or a region invented to fit. Checked against the
+ * runtime rather than a list, so aliases like `Australia/Canberra` (a real
+ * link to `Australia/Sydney`) are accepted while inventions are not, and a
+ * bad guess falls back to the default instead of throwing inside a date
+ * calculation.
+ */
+export function isKnownTimeZone(zone: string | null | undefined): zone is string {
+  if (zone === null || zone === undefined || zone === '') return false;
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: zone });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Minutes the zone was ahead of UTC at `instant`.
  *
  * `longOffset` yields `GMT+10:00` / `GMT+11:00`; `GMT` alone appears for

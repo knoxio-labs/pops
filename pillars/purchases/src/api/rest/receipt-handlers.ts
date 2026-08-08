@@ -163,18 +163,11 @@ export function makeReceiptHandlers(
         });
       }
 
+      // Always maps: a receipt with no readable date is dated from its
+      // upload and tagged, rather than refused. The shop happened and the
+      // photograph exists, so losing it would be worse than carrying an
+      // inferred date the tag stops anyone mistaking for a stated one.
       const shaped = receiptToPurchase(outcome.extracted, outcome.gate, stored);
-      if (shaped.kind === 'undatable') {
-        // The arithmetic agreed but the receipt cannot be placed in time,
-        // which is the same problem for a human as a mismatch: a real
-        // purchase that needs a decision. Reported the same way.
-        return ok({
-          kind: 'needs-review',
-          receiptUri: stored.uri,
-          failures: [{ kind: 'damaged', detail: shaped.reason }],
-          extracted: outcome.extracted,
-        });
-      }
 
       const written = persist(db, shaped.purchase);
       if (written.kind === 'refused') return { status: written.status, body: written.body };
