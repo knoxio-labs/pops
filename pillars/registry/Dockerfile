@@ -7,7 +7,7 @@
 # NOTE: not build-verified in the authoring environment (no Docker available);
 # mirrors pillars/finance/Dockerfile with the registry dep set + port 3001.
 
-FROM node:24-slim AS builder
+FROM node:25-slim AS builder
 WORKDIR /app
 
 # Workspace root manifests — needed for pnpm install to resolve.
@@ -50,7 +50,7 @@ RUN pnpm --filter "@pops/registry" build
 # Standalone deployment (production deps only, no symlinks).
 RUN pnpm --filter @pops/registry deploy --prod --legacy /app/deploy
 
-FROM node:24-slim
+FROM node:25-slim
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
 
