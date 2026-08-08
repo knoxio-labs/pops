@@ -52,6 +52,12 @@ nowhere else. Three consequences that are easy to undo by accident:
   code is dropped, not merely hidden. A dead code left on screen looking valid
   is the failure this is built to avoid, which is also why an `expiresAt` that
   will not parse counts as _already_ expired rather than as no deadline.
+- Dismissal wins against a request still in flight. `usePairingCode` keeps a
+  mint nonce that `dismiss` bumps, so a response that lands after the operator
+  closed the dialog is discarded instead of putting the plaintext back into
+  state — where it would be invisible, but alive, with a countdown running
+  against a code nobody is looking at. The same nonce is why a superseded mint
+  cannot overwrite a newer one.
 - Nothing writes it to `localStorage`, the URL, or a log line. Reloading the
   page means minting another; there is nothing to recover.
 
