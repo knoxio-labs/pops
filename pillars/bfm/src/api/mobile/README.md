@@ -81,10 +81,16 @@ An error that is _not_ a registry outage propagates. The SDK folds every
 reachability failure into a value, so an exception arriving here is a fault in
 this process and must not be dressed up as an unhealthy federation.
 
-## `lastSeenAt` is written here, and only here
+## `lastSeenAt` is written here, and also in the guard
 
 The device's check-in is recorded before the registry is read, because it is
-true regardless of how the rest of the call goes. The guard deliberately does
-not write it — a write on every authenticated request turns the perimeter into
-a write path on a Litestream-replicated database, and whether that is worth
-coalescing is POPS-1469.
+true regardless of how the rest of the call goes. This route's write is
+unconditional and uses its own instant (`deps.now()`) rather than the
+coalesced one `require-device.ts` may or may not have just written, because
+`BootstrapDeviceSchema` promises the response carries the exact value this
+request wrote — not a value up to a minute stale.
+
+Every other `/mobile/*` route relies on the guard's coalesced write instead
+(`auth/README.md`); bootstrap is the one place that needs an uncoalesced
+instant, so it is the one place that takes the extra write rather than reading
+back what the guard already did.

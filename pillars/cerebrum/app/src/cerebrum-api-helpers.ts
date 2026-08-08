@@ -8,7 +8,6 @@
  * data payload, throwing `CerebrumApiError` (carrying the HTTP status) on
  * failure. The status lets call sites distinguish UX states:
  *   - 404            → "not found"    (isNotFoundError)
- *   - 503            → "unavailable"  (isUnavailableError — e.g. worker queue down)
  *   - 5xx / no status → "unavailable" (isUnavailableError)
  */
 
@@ -45,11 +44,7 @@ export function isNotFoundError(err: unknown): boolean {
   return err instanceof CerebrumApiError && err.status === 404;
 }
 
-/** True when the pillar was unreachable or errored server-side (no status / 5xx),
- *  or a downstream queue was unavailable (503). */
+/** True when the pillar was unreachable or errored server-side (no status / 5xx). */
 export function isUnavailableError(err: unknown): boolean {
-  return (
-    err instanceof CerebrumApiError &&
-    (err.status === undefined || err.status === 503 || err.status >= 500)
-  );
+  return err instanceof CerebrumApiError && (err.status === undefined || err.status >= 500);
 }
