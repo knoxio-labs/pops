@@ -12,8 +12,10 @@
  * Shared workspace packages available to pillar frontends: @pops/ui,
  * @pops/navigation, @pops/types.
  *
- * See docs/themes/01-foundation/prds/097-module-import-boundaries/ and
- * docs/themes/13-pillar-finale/prds/156-consumer-import-discipline/.
+ * ADR-040 records why a consumer reaches a producer through its published
+ * contract and REST surface rather than its internals. These are the
+ * whole-tree rules; `scripts/ci/check-contract-isolation.mjs` is the
+ * diff-scoped fast pass that complements them.
  */
 module.exports = {
   forbidden: [

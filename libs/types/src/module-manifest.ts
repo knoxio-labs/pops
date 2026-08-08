@@ -5,14 +5,13 @@
  * assemble themselves from metadata rather than from hard-coded import lists
  * or side-effect registrations.
  *
- * PRD-098 introduced the metadata-only shape; PRD-100 added the env-driven
- * loader; PRD-101 (this iteration) extends the shape with the slots the
- * cross-cutting concerns need so a module is a single file describing
- * everything the platform reads from it.
+ * A module is a single file describing everything the platform reads from it,
+ * so adding one costs no edit to any consumer's import list.
  *
- * See `docs/themes/01-foundation/prds/101-plugin-contract/` for the PRD
- * (`README.md`) and the per-slot user stories (`us-NN-*.md`). This file is
- * types + structural validation only — consumer wiring lands in US-03..US-10.
+ * This file is types + structural validation only. The consumers that read
+ * each slot wire themselves up: `libs/module-registry` validates the set at
+ * build time, and the shell's registry walk
+ * (`pillars/shell/src/app/installed-modules.ts`) mounts the frontend slots.
  */
 import {
   assertBackend,

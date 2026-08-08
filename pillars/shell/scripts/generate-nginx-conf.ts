@@ -2,7 +2,8 @@
 /**
  * Generate `pillars/shell/nginx.conf` from a single source of truth.
  *
- * See docs/themes/federation/prds/nginx-config-generator. Two render
+ * Routing is derived from the registry rather than hand-written per pillar,
+ * which is what makes ADR-038's discovery protocol reach the edge. Two render
  * modes share the same template:
  *
  *   - **Static** (default) — reads `PILLARS` from `@pops/pillar-sdk` and

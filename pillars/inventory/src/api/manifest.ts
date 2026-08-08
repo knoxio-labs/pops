@@ -1,8 +1,9 @@
 /**
  * Inventory pillar manifest payload builder.
  *
- * Hand-rolled until docs/themes/federation/prds/manifest-type-generation
- * generates this from the contract. Declares the inventory settings UI
+ * Hand-rolled: nothing generates this from the contract for this pillar yet
+ * (`pillars/lists/scripts/generate-manifest.ts` is the only manifest codegen
+ * in the tree). Declares the inventory settings UI
  * contribution under `settings.manifests` and the `nav` + `pages` UI
  * dimensions so the shell can mount the inventory app-rail entry and
  * routes from the registry walk. The `nav` and `pages` values mirror

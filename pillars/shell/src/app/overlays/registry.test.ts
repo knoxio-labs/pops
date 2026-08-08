@@ -1,6 +1,5 @@
 /**
- * Tests for the shell-level overlay registry
- * (docs/themes/foundation/prds/overlay-surfaces).
+ * Tests for the shell-level overlay registry.
  *
  * The runtime export `installedOverlays` is the join of the live overlay
  * manifests and the runtime `INSTALLED_MODULES` install set (`POPS_APPS` /

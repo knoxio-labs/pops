@@ -1,6 +1,6 @@
 /**
  * Health surface for the event-driven nginx reloader
- * (docs/themes/federation/prds/dynamic-pillar-registration). Exposes
+ * (`./nginx-event-reload.ts`). Exposes
  * `nginx_generator_last_error_at` so the registry — or any operator
  * dashboard — can detect a stuck dispatcher generator.
  *

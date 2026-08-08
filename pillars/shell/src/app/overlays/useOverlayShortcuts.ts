@@ -95,8 +95,8 @@ function compileBindings(): readonly ShortcutBinding[] {
 
 /**
  * Bind per-overlay keyboard shortcuts declared in module manifests.
- * Centralised in the shell (docs/themes/foundation/prds/overlay-surfaces) so
- * individual overlay packages don't each install their own listener — easier
+ * Centralised in the shell so individual overlay packages don't each install
+ * their own listener — easier
  * to audit conflicts and easier to disable in non-shell hosts (tests,
  * storybook).
  */

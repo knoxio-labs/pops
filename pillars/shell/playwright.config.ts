@@ -13,7 +13,8 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
  * is dormant — `fe-test-e2e.yml` is gated to `workflow_dispatch` until the
  * specs are rewritten against the REST stack.
  *
- * Install-set switching (see docs/themes/foundation/prds/plugin-contract):
+ * Install-set switching (`POPS_APPS` / `POPS_OVERLAYS`, resolved in
+ * `libs/module-registry/src/install-set.ts`):
  *
  *   The shell consumes `MODULES` from `@pops/module-registry` at build
  *   time. To exercise the install-set boundary across two distinct shell
