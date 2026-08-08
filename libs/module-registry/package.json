@@ -30,7 +30,7 @@
   "devDependencies": {
     "@types/node": "^25.9.3",
     "@vitest/coverage-v8": "^4.1.10",
-    "tsx": "^4.23.7",
+    "tsx": "^4.23.10",
     "typescript": "^6.0.3",
     "vitest": "^4.1.10"
   }
