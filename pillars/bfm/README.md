@@ -9,7 +9,8 @@ It owns a database — the device allow-list, described under
 [Persistence](#persistence) below — which makes it a data pillar by kind
 (ADR-035). It serves `/health` alone: it calls no sibling pillar (POPS-1367)
 and has no mobile surface (POPS-1378, POPS-1379), so `/health` is a pure
-liveness shape rather than a DB round-trip.
+liveness shape rather than a DB round-trip. It does carry a shell-side
+operator surface, under [`app/`](./app/README.md).
 
 | Surface        | What it does                                                                       |
 | -------------- | ---------------------------------------------------------------------------------- |
@@ -64,16 +65,25 @@ agree — `src/db/__tests__/schema-migration-drift.test.ts` is what keeps them
 honest, introspecting the migrated database and diffing it against the schema
 in both directions.
 
+## The operator surface
+
+`app/` is the `@pops/app-bfm` frontend module — the operator's device surface,
+mounted by the shell at `/bfm` and labelled **Devices** on the app rail. It
+lives in the shell rather than on the phone because the shell already sits
+behind Cloudflare Access, which is what makes "only the operator can mint a
+pairing code" true. See [`app/README.md`](./app/README.md).
+
+That app is why `src/contract/manifest.ts` now exports a runtime
+`ModuleManifest` alongside the contract type: `libs/module-registry` discovers
+it through the `./manifest` export and turns it into an installed module in
+the shell's static registry, which is what makes `bfm` a gateable id in
+`POPS_APPS`. Before there was a shell surface to install, that value would
+have installed a phantom app — which is why it waited for the app. Registry
+registration is a separate mechanism and still goes through the
+`ManifestPayload` in `src/api/manifest.ts`.
+
 ## What deliberately does not live here
 
-- **A `ModuleManifest`.** `src/contract/manifest.ts` exports a type only. The
-  runtime `ModuleManifest` that other pillars export is what
-  `libs/module-registry` discovers through the `./manifest` export and turns
-  into an installed module in the shell's static registry — its `surfaces`
-  field must name at least one shell surface. bfm mounts none today, so one
-  here would install a phantom app; it arrives with the frontend app
-  (POPS-1384). Registry registration is unaffected — that goes through the
-  separate `ManifestPayload` in `src/api/manifest.ts`.
 - **A call to `openBfmDb`.** The schema exists; nothing in `src/api/` opens it,
   so a running `pnpm dev` creates no `bfm.db` and the tests are its only
   caller. The handle, the `BFM_SQLITE_PATH` resolver and the boot-time migrate
@@ -95,6 +105,7 @@ pillars/bfm/
 ├── scripts/generate-openapi.ts  ts-rest contract → openapi/bfm.openapi.json
 ├── openapi/bfm.openapi.json
 ├── migrations/                   committed SQL journal, applied by openBfmDb
+├── app/                         @pops/app-bfm — the shell's Devices surface
 └── src/
     ├── contract/                 the wire contract — the only description of it
     │   ├── rest.ts

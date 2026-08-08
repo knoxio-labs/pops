@@ -38,6 +38,10 @@ const config: StorybookConfig = {
             replacement: path.resolve(__dirname, '../../../pillars/ai/app/src'),
           },
           {
+            find: '@pops/app-bfm',
+            replacement: path.resolve(__dirname, '../../../pillars/bfm/app/src'),
+          },
+          {
             find: '@pops/app-cerebrum',
             replacement: path.resolve(__dirname, '../../../pillars/cerebrum/app/src'),
           },

@@ -1,0 +1,10 @@
+{
+  "devices.title": "Devices",
+  "devices.intro": "The iPhone clients paired with this household.",
+  "devices.pending": "Pairing and revocation land here next.",
+  "devices.reachability.heading": "Backend-for-Mobile",
+  "devices.reachability.loading": "Checking…",
+  "devices.reachability.reachable": "Reachable",
+  "devices.reachability.unavailable": "Unavailable",
+  "devices.reachability.error": "Refused the request"
+}

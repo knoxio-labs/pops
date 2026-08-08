@@ -53,7 +53,8 @@ export function buildRegisteredAppsFromBundleMap(
  * The static app-rail floor: every in-repo pillar in the workspace bundle
  * map, sorted by `navOrder` ascending with a stable lexicographic tiebreak
  * on `id`. The display order (`finance, media, inventory, food, lists,
- * cerebrum, ai`) follows the sparse `navOrder` scheme in `bundle-map.tsx`.
+ * cerebrum, ai, bfm`) follows the sparse `navOrder` scheme in
+ * `bundle-map.tsx`.
  *
  * The live app rail does not read this constant — it reads the
  * boot-resolved install set from `BootRegistryProvider`

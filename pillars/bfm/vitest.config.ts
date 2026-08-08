@@ -1,9 +1,13 @@
 /// <reference types="vitest/config" />
-import { defineConfig } from 'vitest/config';
+import { configDefaults, defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
     environment: 'node',
+    // `app/` is its own workspace member (`@pops/app-bfm`) with a jsdom
+    // environment and its own setup file. Without this it would be swept up
+    // by the pillar's node-environment run and fail on a missing `document`.
+    exclude: [...configDefaults.exclude, 'app/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json-summary', 'html'],

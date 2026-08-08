@@ -58,6 +58,7 @@ export type IconName =
   | 'Settings'
   | 'ShieldCheck'
   | 'Shuffle'
+  | 'Smartphone'
   | 'Star'
   | 'Tag'
   | 'Trophy'

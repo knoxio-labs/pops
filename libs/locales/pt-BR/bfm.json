@@ -1,0 +1,10 @@
+{
+  "devices.title": "Dispositivos",
+  "devices.intro": "Os clientes iPhone pareados com esta casa.",
+  "devices.pending": "Pareamento e revogação chegam aqui em seguida.",
+  "devices.reachability.heading": "Backend-for-Mobile",
+  "devices.reachability.loading": "Verificando…",
+  "devices.reachability.reachable": "Acessível",
+  "devices.reachability.unavailable": "Indisponível",
+  "devices.reachability.error": "Recusou a requisição"
+}

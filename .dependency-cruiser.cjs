@@ -15,6 +15,18 @@
  * See docs/themes/01-foundation/prds/097-module-import-boundaries/ and
  * docs/themes/13-pillar-finale/prds/156-consumer-import-discipline/.
  */
+/**
+ * A generated Hey API client directory (`src/<name>-api/`) and the hand-authored
+ * runtime-config file the codegen is pointed at (`src/<name>-api-runtime-config.ts`).
+ *
+ * Every one of these is `@hey-api/openapi-ts` output regenerated wholesale from
+ * an OpenAPI spec, plus the one file its `runtimeConfigPath` option forces to be
+ * imported back. The import cycle between them is a property of that codegen
+ * contract, not of authored structure, and no edit here can break it — the only
+ * way out would be hand-editing generated output.
+ */
+const GENERATED_CLIENT = '(^|/)[a-z0-9-]+-api(/|-runtime-config\\.ts$)';
+
 module.exports = {
   forbidden: [
     {
@@ -53,9 +65,9 @@ module.exports = {
       name: 'no-circular',
       severity: 'error',
       comment:
-        'ISO-R4: cyclic dependency between units — a cycle means neither can be extracted independently.',
-      from: {},
-      to: { circular: true },
+        'ISO-R4: cyclic dependency between units — a cycle means neither can be extracted independently. Generated Hey API clients are exempt: their cycles are a property of the codegen, and a directory regenerated wholesale from an OpenAPI spec extracts as one unit regardless.',
+      from: { pathNot: GENERATED_CLIENT },
+      to: { circular: true, pathNot: GENERATED_CLIENT },
     },
     {
       name: 'lib-layering',
