@@ -27,10 +27,14 @@ When the food ingest pipeline reports "Instagram cookies need refresh", this run
 3. **Place the file on the host.** Copy the exported file to:
 
    ```
-   infra/secrets/instagram-cookies.txt
+   secrets/instagram_cookies
    ```
 
-   on the host running `pops-worker-food`. Overwrite the existing file. (`infra/secrets/.gitignore` excludes this file from git.)
+   at the repo root on the host running `pops-worker-food` — that's the path
+   `infra/docker-compose.yml` mounts as the `instagram_cookies` Docker secret
+   (`file: ../secrets/instagram_cookies`, resolved from `infra/`), and the
+   name must match exactly: no extension, underscore not hyphen. Overwrite
+   the existing file; it's gitignored so nothing tracks the change.
 
 4. **Restart the worker.** Cookies are mounted read-only and read at yt-dlp invocation time, so a process restart is the cleanest way to pick up the new file:
 

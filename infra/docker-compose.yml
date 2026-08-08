@@ -576,9 +576,10 @@ services:
       - pops_api_internal_token
       # Cookie file is operator-managed (see PRD-129's runbook). Mounted
       # via a Docker secret rather than a bind-mount so an empty
-      # placeholder under `infra/secrets/instagram_cookies` is enough to
-      # start the stack — yt-dlp falls back to anonymous mode when the
-      # file is empty, which the inbox surfaces as `auth-dead` partials.
+      # placeholder under the repo-root `secrets/instagram_cookies` is
+      # enough to start the stack — yt-dlp falls back to anonymous mode
+      # when the file is empty, which the inbox surfaces as `auth-dead`
+      # partials.
       - instagram_cookies
     environment:
       NODE_ENV: production

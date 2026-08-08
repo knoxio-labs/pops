@@ -43,13 +43,17 @@ The plaintext key looks like `pops_sa_abc12345.<32-char-secret>`. Save the
 output in a password manager **before** writing it to disk — you cannot
 recover it.
 
-### 4. Drop secrets into `infra/secrets/`
+### 4. Drop secrets into the repo-root `secrets/`
+
+Compose resolves each secret's `file: ../secrets/<name>` from `infra/`, so the
+live directory is `secrets/` at the repo root, not `infra/secrets/` — see
+[`infra/secrets.example/bfm/README.md`](../../infra/secrets.example/bfm/README.md)
+for the full explanation. Run from the repo root:
 
 ```bash
-cd infra
 mkdir -p secrets
 chmod 700 secrets
-for f in secrets.example/moltbot/*.example; do
+for f in infra/secrets.example/moltbot/*.example; do
   name=$(basename "$f" .example)
   cp -n "$f" "secrets/$name"
 done
