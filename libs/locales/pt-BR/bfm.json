@@ -16,6 +16,7 @@
   "devices.empty.description": "Pareie um novo dispositivo para dar a um iPhone acesso a esta casa.",
   "devices.failure.title": "Não foi possível carregar os dispositivos",
   "devices.failure.unavailable": "O Backend-for-Mobile não respondeu. Verifique se o pilar está no ar.",
+  "devices.failure.rateLimited": "O Backend-for-Mobile está recusando requisições no momento. Espere um momento e recarregue.",
   "devices.failure.refused": "O Backend-for-Mobile recusou a requisição. Verifique se sua sessão do Cloudflare Access ainda é válida.",
   "pairing.action": "Parear um novo dispositivo",
   "pairing.title": "Parear um novo dispositivo",

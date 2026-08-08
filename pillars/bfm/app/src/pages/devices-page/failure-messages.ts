@@ -16,3 +16,9 @@ export const REVOKE_FAILURE_KEYS: Record<OperatorFailure, string> = {
   'rate-limited': 'revoke.failure.rateLimited',
   refused: 'revoke.failure.refused',
 };
+
+export const DEVICE_LIST_FAILURE_KEYS: Record<OperatorFailure, string> = {
+  unavailable: 'devices.failure.unavailable',
+  'rate-limited': 'devices.failure.rateLimited',
+  refused: 'devices.failure.refused',
+};

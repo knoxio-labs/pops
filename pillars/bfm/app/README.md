@@ -71,22 +71,26 @@ so a code-only QR would scan perfectly and pair nothing.
 Failures are split rather than pooled, because they send the operator after
 different bugs:
 
-| Shape        | Meaning                                                            | Where it can appear |
-| ------------ | ------------------------------------------------------------------ | ------------------- |
-| Unavailable  | No status, or 5xx — the pillar is down.                            | anywhere            |
-| Refused      | A status the pillar chose (401, 404 …) — Access/routing, not down. | anywhere            |
-| Rate limited | 429 — the issuance budget is spent; the fix is to wait.            | minting only        |
+| Shape        | Meaning                                                            |
+| ------------ | ------------------------------------------------------------------ |
+| Unavailable  | No status, or 5xx — the pillar is down.                            |
+| Refused      | A status the pillar chose (401, 404 …) — Access/routing, not down. |
+| Rate limited | 429 — the fix is to wait, not to go looking for a broken thing.    |
 
-`classifyOperatorFailure` can return all three for any call, but only
-`POST /operator/pairing/codes` is metered — the limiter is applied in that
-handler alone, and the list and revoke contracts declare no 429. So the device
-list resolves to two states (`DeviceListState`), not three; the third arm
-exists so a limiter added to another route later degrades into a sensible
-message instead of "refused".
+One classifier (`classifyOperatorFailure`), and all three surfaces map its
+verdict through their own exhaustive `Record<OperatorFailure, string>` in
+`failure-messages.ts`. Adding a member to `OperatorFailure` is therefore a type
+error at each of the three, rather than a silently untranslated screen.
 
-Collapsing the last into "Unavailable" would send the operator after the wrong
-bug. Revocation keeps its dialog open on any of them: the handset stays
-trusted until the call succeeds, and a dialog that closes reads as "done".
+Only `POST /operator/pairing/codes` is metered today — the limiter is applied
+in that handler alone, and the list and revoke contracts declare no 429 — so in
+practice that is the only route the third shape can come back from. It is still
+carried end to end rather than folded into "refused" on the other two, because
+folding it would have meant metering the list one day and telling the operator
+to go check their Cloudflare Access session.
+
+Revocation keeps its dialog open on any of the three: the handset stays trusted
+until the call succeeds, and a dialog that closes reads as "done".
 
 It also refuses to close _during_ the request. Cancel and the action are
 disabled then, but Escape reaches Radix regardless, and the DELETE is already

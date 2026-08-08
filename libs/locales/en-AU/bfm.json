@@ -16,6 +16,7 @@
   "devices.empty.description": "Pair a new device to give an iPhone access to this household.",
   "devices.failure.title": "Could not load devices",
   "devices.failure.unavailable": "The Backend-for-Mobile did not answer. Check that the pillar is running.",
+  "devices.failure.rateLimited": "The Backend-for-Mobile is refusing requests for now. Wait a moment and reload.",
   "devices.failure.refused": "The Backend-for-Mobile refused the request. Check that your Cloudflare Access session is still valid.",
   "pairing.action": "Pair a new device",
   "pairing.title": "Pair a new device",

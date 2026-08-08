@@ -17,6 +17,8 @@ import {
   TableRow,
 } from '@pops/ui';
 
+import { DEVICE_LIST_FAILURE_KEYS } from './failure-messages.js';
+
 import type { ReactElement } from 'react';
 
 import type { DeviceListModel, PairedDevice } from './useDevicesPageModel.js';
@@ -34,13 +36,11 @@ export function DeviceTable({
     return <Skeleton role="status" aria-label={t('devices.loading')} className="h-40 w-full" />;
   }
 
-  if (list.state !== 'ready') {
+  if (list.state === 'failed') {
     return (
       <ErrorAlert
         title={t('devices.failure.title')}
-        message={t(
-          list.state === 'unavailable' ? 'devices.failure.unavailable' : 'devices.failure.refused'
-        )}
+        message={t(DEVICE_LIST_FAILURE_KEYS[list.failure ?? 'refused'])}
       />
     );
   }

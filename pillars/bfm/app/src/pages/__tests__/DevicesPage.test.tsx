@@ -156,6 +156,20 @@ describe('DevicesPage — the device list', () => {
     expect(await screen.findByText(/did not answer\./)).toBeInTheDocument();
   });
 
+  /**
+   * The list is not metered today, so this cannot fire against the current
+   * server. It is asserted anyway because the failure mode is silent: folding
+   * a 429 into "refused" would tell the operator to go check their Cloudflare
+   * Access session the day anyone meters this route.
+   */
+  it('keeps a 429 distinct from a refusal rather than folding the two together', async () => {
+    listDevicesMock.mockResolvedValue(errorResponse(429, 'slow down'));
+    renderPage();
+
+    expect(await screen.findByText(/Wait a moment and reload/)).toBeInTheDocument();
+    expect(screen.queryByText(/Cloudflare Access session/)).not.toBeInTheDocument();
+  });
+
   it('does not call a 401 "unavailable" — that is a lapsed Access session', async () => {
     listDevicesMock.mockResolvedValue(errorResponse(401, 'no principal'));
     renderPage();

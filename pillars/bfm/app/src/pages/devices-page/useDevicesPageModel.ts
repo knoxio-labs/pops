@@ -12,10 +12,12 @@ export type PairedDevice = OperatorListDevicesResponses['200']['devices'][number
 
 const DEVICES_QUERY_KEY = ['bfm', 'operator', 'devices'] as const;
 
-export type DeviceListState = 'loading' | 'ready' | 'unavailable' | 'refused';
+export type DeviceListState = 'loading' | 'ready' | 'failed';
 
 export interface DeviceListModel {
   state: DeviceListState;
+  /** Why the list failed, verbatim from the classifier; `null` unless failed. */
+  failure: OperatorFailure | null;
   devices: PairedDevice[];
 }
 
@@ -43,6 +45,12 @@ export function useDevicesPageModel(): DevicesPageModel {
   };
 }
 
+/**
+ * The classifier's verdict is carried through rather than folded down to the
+ * two shapes this route can currently produce. Folding it meant a 429 arriving
+ * here would have rendered "check your Cloudflare Access session" — advice for
+ * a different problem entirely — the day anyone metered the list.
+ */
 function useDeviceList(): DeviceListModel {
   const query = useQuery({
     queryKey: DEVICES_QUERY_KEY,
@@ -50,13 +58,12 @@ function useDeviceList(): DeviceListModel {
     retry: false,
   });
 
-  if (query.isPending) return { state: 'loading', devices: [] };
+  if (query.isPending) return { state: 'loading', failure: null, devices: [] };
   if (query.error !== null) {
-    const failure = classifyOperatorFailure(query.error);
-    return { state: failure === 'unavailable' ? 'unavailable' : 'refused', devices: [] };
+    return { state: 'failed', failure: classifyOperatorFailure(query.error), devices: [] };
   }
 
-  return { state: 'ready', devices: query.data.devices };
+  return { state: 'ready', failure: null, devices: query.data.devices };
 }
 
 /**
