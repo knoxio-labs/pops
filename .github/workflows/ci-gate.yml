@@ -9,7 +9,7 @@ name: CI Gate
 # typecheck could still merge. This job is the ONE static context the ruleset
 # can require to make all of that load-bearing.
 #
-# WHY workflow_run (not needs:): the gated jobs live across SIX separate
+# WHY workflow_run (not needs:): the gated jobs live across SEVEN separate
 # workflows, each with its OWN path filters. `needs:` only sees jobs in the
 # same run, and folding them into one workflow would (a) double-run every job
 # or (b) rename the existing required `Lint`/`Format`/… contexts and break the
@@ -43,6 +43,7 @@ on:
       - "App Quality"
       - "Quality"
       - "Registry Generated Quality"
+      - "iOS Quality"
     types: [completed]
 
 # Key on the observed head SHA, not the gate's own ref: every sibling
@@ -78,6 +79,7 @@ jobs:
               "App Quality",
               "Quality",
               "Registry Generated Quality",
+              "iOS Quality",
             ];
             const failing = new Set(["failure", "cancelled", "timed_out", "startup_failure", "action_required", "stale"]);
 

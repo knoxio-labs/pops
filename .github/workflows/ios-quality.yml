@@ -1,0 +1,128 @@
+name: iOS Quality
+
+# The only workflow in this repo that does not run on `ubuntu-latest`, because
+# Swift does not build anywhere else. `knoxio-labs/pops` is public, so
+# GitHub-hosted macOS runners cost nothing and carry no minute cap; a
+# self-hosted Mac was considered and rejected as infrastructure this earns no
+# right to yet.
+#
+# Until this existed, `clients/ios` had no CI at all — `_discover-units.yml`
+# scans `pillars/` and `libs/` only, so a Swift-only PR was green having
+# compiled nothing (ADR-043). This job is wired into `ci-gate.yml` (both the
+# `on.workflow_run.workflows` trigger array AND the `gated` array inside the
+# script — either alone is inert) so a broken Swift build blocks the merge.
+#
+# WHY THE Xcode PIN, and why it is not decoration: the runner image ships seven
+# Xcodes and moves its default without notice, which turns an unrelated PR red.
+# Worse, `swift-format` ships INSIDE the toolchain rather than being pinned in
+# `mise.toml` like SwiftLint, so the Xcode version is what decides which rules
+# "formatted" means — and `mise run lint` fails outright when the toolchain's
+# rule list and `.swift-format` disagree. The pin lives in `clients/ios/mise.toml`
+# next to the tool pins it belongs with, and is read from there rather than
+# restated here (the same shape as `rust-quality.yml` reading the Rust pin).
+#
+# THE SDK CEILING RUNS THE OTHER WAY. The runner image's newest iOS SDK is what
+# caps the app's deployment target, not the reverse: an SDK older than the
+# deployment target does not build, and an SPM `platforms:` floor cannot be
+# overridden from the command line. That constraint is why the app targets iOS
+# 26 — see the `deploymentTarget` note in `clients/ios/project.yml`.
+#
+# `pillars/bfm/openapi/**` is in the path filter deliberately. The BFM contract
+# is the input the Swift client is generated from, so a contract change has to
+# re-run this job or the generated client rots without a single red check.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "clients/ios/**"
+      - "pillars/bfm/openapi/**"
+      - ".github/workflows/ios-quality.yml"
+  pull_request:
+    paths:
+      - "clients/ios/**"
+      - "pillars/bfm/openapi/**"
+      - ".github/workflows/ios-quality.yml"
+
+concurrency:
+  group: ios-quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: build + test + lint
+    runs-on: macos-latest
+    # A wedged simulator is the classic macOS-CI failure and it does not fail —
+    # it hangs. Without a ceiling that burns the job's full 6h default.
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: clients/ios
+    env:
+      # mise merges config UP the tree, so a bare `mise install` here would also
+      # install the root `mise.toml`'s node, pnpm and Rust — a full rustup
+      # toolchain download in a job that compiles no Rust. Disabling them leaves
+      # exactly the three tools `clients/ios/mise.toml` declares.
+      MISE_DISABLE_TOOLS: rust,node,pnpm
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Select the pinned Xcode
+        run: |
+          set -euo pipefail
+          version=$(sed -nE 's/^POPS_XCODE_VERSION *= *"([^"]+)".*/\1/p' mise.toml | head -1)
+          if [ -z "$version" ]; then
+            echo "::error::no POPS_XCODE_VERSION pin found in clients/ios/mise.toml [env]"
+            exit 1
+          fi
+          app="/Applications/Xcode_${version}.app"
+          if [ ! -d "$app" ]; then
+            echo "::error::clients/ios/mise.toml pins Xcode $version, which this runner image does not carry. Available:"
+            ls -d /Applications/Xcode*.app
+            exit 1
+          fi
+          echo "pinning Xcode to $version (from clients/ios/mise.toml)"
+          sudo xcode-select -s "$app/Contents/Developer"
+          xcodebuild -version
+
+      - uses: jdx/mise-action@v4
+        with:
+          working_directory: clients/ios
+
+      - name: Generate Pops.xcodeproj
+        run: mise run generate
+
+      # Keyed on the Package.swift files as well as Package.resolved because
+      # there is currently NO Package.resolved in the tree: every package
+      # depends only on its siblings by path, so nothing is fetched and nothing
+      # is pinned. `hashFiles` over a pattern that matches nothing contributes
+      # an empty string, so keying on Package.resolved alone would produce one
+      # constant key that restores a stale cache at every future commit. Both
+      # this cache and the resolve step below start earning their keep at
+      # POPS-1380, which adds Apple's swift-openapi packages.
+      - name: Cache resolved SPM dependencies
+        uses: actions/cache@v6
+        with:
+          path: ~/Library/Caches/org.swift.swiftpm
+          key: spm-${{ runner.os }}-${{ hashFiles('clients/ios/Packages/*/Package.swift', 'clients/ios/**/Package.resolved') }}
+          restore-keys: |
+            spm-${{ runner.os }}-
+
+      - name: Resolve SPM dependencies
+        run: xcodebuild -project Pops.xcodeproj -scheme Pops -resolvePackageDependencies
+
+      # Every step below is a `mise run` of the task a developer runs locally,
+      # never a hand-copied command. A second copy of the command is a copy that
+      # drifts, and the moment it does a green local run stops meaning anything.
+      - name: Build (iOS Simulator)
+        run: mise run build
+
+      - name: Test (iOS Simulator)
+        run: mise run test
+
+      - name: Lint (swift-format + SwiftLint)
+        run: mise run lint

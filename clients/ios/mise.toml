@@ -9,6 +9,21 @@ xcodegen = "2.46.0"
 # formats, one intended scope, so they move together.
 SWIFT_SOURCES = "App Packages"
 
+# Xcode cannot be a `[tools]` pin — mise does not install it — so this is a
+# declaration the CI job reads and acts on, not something that changes anything
+# locally. It matters because `swift-format` ships inside the toolchain and is
+# therefore the one check whose verdict depends on which Xcode ran it; a local
+# Xcode other than this one can format-lint differently from CI.
+# The value must be an Xcode the GitHub macOS runner image actually carries, and
+# that image is the reason the iOS floor is 26 and not the newest SDK — see the
+# `deploymentTarget` note in project.yml.
+POPS_XCODE_VERSION = "26.6"
+
+# The simulator `mise run test` boots. Named rather than left to xcodebuild's
+# choice so the local run and the CI run test the same device, and chosen from
+# the intersection of what the runner image and a current Xcode both ship.
+POPS_IOS_SIMULATOR = "iPhone 17"
+
 [tasks.generate]
 description = "Regenerate Pops.xcodeproj from project.yml"
 run = '''
@@ -61,6 +76,56 @@ for package in Packages/*/; do
     swift test --package-path "$package" || exit 1
   fi
 done
+'''
+
+[tasks.test]
+description = "Run every package's tests on the iOS Simulator"
+run = '''
+set -eu
+set -o pipefail
+
+ran=0
+for package in Packages/*/; do
+  # `xcodebuild test` fails outright on a package with no test target, so a
+  # package whose tests are still a later ticket must not fail the run.
+  [ -d "$package/Tests" ] || continue
+
+  # A directory holding a Package.swift is a project as far as xcodebuild is
+  # concerned, which is what lets these tests run against the iOS SDK instead of
+  # the host's macOS one — the gap `test:packages` cannot close.
+  #
+  # Which scheme is testable is not a free choice. Xcode synthesises one scheme
+  # per product plus an aggregate `<name>-Package` when a package has more than
+  # one, and ONLY the aggregate carries the test action: `xcodebuild test
+  # -scheme AppCore` fails with "not currently configured for the test action"
+  # while `-scheme AppCore-Package` runs all 58 tests. A single-product package
+  # has no aggregate and its lone scheme is testable. Both the name and the
+  # scheme list are read back out of xcodebuild rather than guessed from the
+  # directory name, so a package renamed on one side only fails here by name.
+  listing=$(cd "$package" && xcodebuild -list -json 2>/dev/null) || listing=''
+  scheme=$(printf '%s' "$listing" | jq -er '
+    .workspace.name as $n
+    | .workspace.schemes as $s
+    | if ($s | index($n + "-Package")) then $n + "-Package"
+      elif ($s | index($n)) then $n
+      else error("no scheme named \($n) or \($n)-Package among \($s)") end
+  ') || {
+    echo "test: could not resolve a testable scheme for '$package'." >&2
+    exit 1
+  }
+
+  (cd "$package" && xcodebuild test \
+    -scheme "$scheme" \
+    -destination "platform=iOS Simulator,name=$POPS_IOS_SIMULATOR,OS=latest") || exit 1
+  ran=$((ran + 1))
+done
+
+# Every package's tests being "a later ticket" is a green run that asserted
+# nothing, and looks identical to a passing one.
+if [ "$ran" -eq 0 ]; then
+  echo "test: no package under Packages/ has a Tests directory — this run checked nothing." >&2
+  exit 1
+fi
 '''
 
 [tasks."verify:release-carries-no-host"]
