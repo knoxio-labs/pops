@@ -99,7 +99,7 @@ internal struct TokenDisciplineTests {
         try #require(
             scan.unrecognised.isEmpty,
             """
-            these directories under Packages/ hold no Package.swift, so the scan \
+            these entries under Packages/ hold no Package.swift, so the scan \
             never looked inside them: \
             \(scan.unrecognised.map(\.lastPathComponent).joined(separator: ", "))
             """)
