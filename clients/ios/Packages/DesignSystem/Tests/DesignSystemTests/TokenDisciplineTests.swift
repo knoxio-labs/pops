@@ -43,19 +43,22 @@ internal struct TokenDisciplineTests {
     /// rather than being passed over: a module whose manifest was renamed away
     /// drops silently out of scope, and silence is what this scan cannot afford.
     private static func scanModules(under packages: URL) throws -> ModuleScan {
+        // Every visible entry, classified into exactly one of the two buckets
+        // and never filtered out. An earlier version asked each entry whether
+        // it was a directory, which meant a metadata failure dropped it from
+        // `roots` AND from `unrecognised` — the bucket that exists to notice
+        // things going missing could not notice this one. Holding a
+        // `Package.swift` is the whole question, and asking it needs no
+        // metadata call to fail.
         let candidates =
             try FileManager.default
             .contentsOfDirectory(
-                at: packages, includingPropertiesForKeys: [.isDirectoryKey],
-                options: [.skipsHiddenFiles]
+                at: packages, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]
             )
-            .filter {
-                (try? $0.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true
-            }
             .sorted { $0.path < $1.path }
 
-        let isModule = { (directory: URL) in
-            FileManager.default.fileExists(atPath: directory.appending(path: "Package.swift").path)
+        let isModule = { (entry: URL) in
+            FileManager.default.fileExists(atPath: entry.appending(path: "Package.swift").path)
         }
         let roots = candidates.filter(isModule).map { $0.appending(path: "Sources") }
         let unrecognised = candidates.filter { !isModule($0) }
@@ -147,6 +150,33 @@ internal struct TokenDisciplineTests {
 
         #expect(
             scan.emptyRoots.map { $0.deletingLastPathComponent().lastPathComponent } == ["Renamed"])
+    }
+
+    /// The property the two buckets exist to have, stated once so it survives
+    /// whichever `FileManager` call gets rewritten next: an entry under
+    /// `Packages/` is either a module the scan looked inside or a directory it
+    /// reports as unrecognised, and there is no third outcome. A classification
+    /// step that can drop an entry silently puts a module out of scope while
+    /// every assertion in this suite still passes.
+    @Test("every visible entry under Packages/ lands in exactly one bucket")
+    func classificationLosesNothing() throws {
+        let packages = try Self.makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: packages) }
+        try Self.plantModule(named: "Module", in: packages, source: "let ok = true\n")
+        try FileManager.default.createDirectory(
+            at: packages.appending(path: "NotAModule"), withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(
+            at: packages.appending(path: ".hidden"), withIntermediateDirectories: true)
+        try "stray\n"
+            .write(to: packages.appending(path: "loose.txt"), atomically: true, encoding: .utf8)
+
+        let scan = try Self.scanModules(under: packages)
+
+        let classified =
+            Set(scan.roots.map { $0.deletingLastPathComponent().lastPathComponent })
+            .union(scan.unrecognised.map(\.lastPathComponent))
+        #expect(classified == ["Module", "NotAModule", "loose.txt"])
+        #expect(scan.roots.count + scan.unrecognised.count == classified.count)
     }
 
     @Test("a module whose manifest went missing is reported, not quietly dropped")

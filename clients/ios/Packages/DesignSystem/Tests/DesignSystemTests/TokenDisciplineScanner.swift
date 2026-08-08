@@ -79,12 +79,19 @@ internal enum TokenDisciplineScanner {
         else {
             throw CocoaError(.fileNoSuchFile)
         }
-        return
-            walker
-            .compactMap { $0 as? URL }
-            .filter { $0.pathExtension == "swift" }
-            .filter { !$0.pathComponents.dropLast().contains(generatedDirectoryName) }
-            .sorted { $0.path < $1.path }
+        var files: [URL] = []
+        for element in walker {
+            // The enumerator is documented to yield `URL`s. Casting with `as?`
+            // and compacting would turn "this walk is not what we think it is"
+            // into a file quietly dropped from the scan, which is the one
+            // failure this whole check exists to make impossible.
+            guard let file = element as? URL else { throw CocoaError(.fileReadUnknown) }
+            guard file.pathExtension == "swift",
+                !file.pathComponents.dropLast().contains(generatedDirectoryName)
+            else { continue }
+            files.append(file)
+        }
+        return files.sorted { $0.path < $1.path }
     }
 
     static func violations(in file: URL, relativeTo root: URL) throws -> [Violation] {
