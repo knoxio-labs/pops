@@ -2,7 +2,7 @@ name: App Quality
 
 # Runs each `pillars/*/app` frontend unit's OWN typecheck + test suite.
 #
-# These 7 members (`@pops/app-{ai,cerebrum,finance,food,inventory,lists,
+# These 8 members (`@pops/app-{ai,bfm,cerebrum,finance,food,inventory,lists,
 # media}`, real pnpm workspace members per `pnpm-workspace.yaml`'s
 # `pillars/*/*`) live at maxdepth 2 and collide on basename `app`, so they are
 # deliberately OUT of `unit-quality.yml`'s `find -maxdepth 1` disk-discovery.
@@ -12,21 +12,23 @@ name: App Quality
 # discovered matrix that runs each app's `typecheck` + `test` script directly.
 #
 # App units have NO standalone `build` script (they build via the shell), so
-# this lane is typecheck + test (plus a codegen-drift check for app-finance) —
+# this lane is typecheck + test (plus a codegen-drift check, see below) —
 # there is nothing to `pnpm build` on the unit itself. The dependency closure
 # IS built (`^...`) so the app's compiled deps (`@pops/types`, `@pops/ui`, the
 # owning pillar's generated client, …) resolve before typecheck/test import
 # them. This generalises the former single-app `ai-quality.yml` (now retired
-# — app-ai is just another row in this matrix) to all 7 app units.
+# — app-ai is just another row in this matrix) to all 8 app units.
 #
-# Codegen drift: app-finance's generated Hey API client (`generate:*`
-# scripts, i.e. `generate:finance-client` / `generate:contacts-client`) is
+# Codegen drift: every app's generated Hey API client(s) (`generate:*`
+# scripts — an app's own client, plus a cross-pillar consumer client where it
+# has one, e.g. app-finance also owns `generate:contacts-client`) are
 # checked-in output, not built at image time — `unit-quality.yml`'s own
-# codegen-drift gate never sees it (maxdepth-1 exclusion above), so this lane
-# runs its `generate:*` scripts and diffs (#3638). Scoped to app-finance only:
-# the other 6 app units have their own pre-existing, untracked generated-
-# client drift — widening this gate to them is a separate cleanup, not this
-# fix.
+# codegen-drift gate never sees them (maxdepth-1 exclusion above). This lane
+# regenerates and diffs every one via `scripts/ci/check-generated-clients.mjs
+# --pkg <app>`, which runs for every row in the matrix (each app's
+# pre-existing drift was regenerated and committed ahead of widening this).
+# `quality.yml`'s `generated-clients` job covers the Hey API clients that
+# live OUTSIDE this matrix (the shell, overlay-ego, …) with the same script.
 #
 # Selectors use the manifest `name` (`@pops/app-<id>`) discovered from disk,
 # never a hardcoded list, so a newly added pillar app is covered with no edit.
@@ -151,35 +153,20 @@ jobs:
         # materialises the compiled .d.ts the app's typecheck + test import.
         run: pnpm --filter "${{ matrix.app.pkg }}^..." build
 
+      - name: Gate self-test (proves it catches drift, a generator error, and missing output)
+        run: node scripts/ci/check-generated-clients.mjs --self-test
+
       - name: Codegen drift
-        # Scoped to app-finance only (#3638) — its generated Hey API client(s)
-        # (`generate:finance-client` / `generate:contacts-client`) are checked-
-        # in output with no CI gate catching drift against the committed
-        # OpenAPI contract. The other app units have their own pre-existing,
-        # untracked drift; widening this gate to them is a separate cleanup.
-        if: matrix.app.pkg == '@pops/app-finance'
-        run: |
-          set -euo pipefail
-          dir='${{ matrix.app.dir }}'
-          scripts=$(node -e "const s=require('./$dir/package.json').scripts||{};process.stdout.write(Object.keys(s).filter(k=>k.startsWith('generate:')).join('\n'))")
-          if [ -z "$scripts" ]; then
-            echo "no generate:* scripts for ${{ matrix.app.pkg }} — skip codegen drift"
-          else
-            while IFS= read -r s; do
-              [ -z "$s" ] && continue
-              echo "::group::pnpm --filter ${{ matrix.app.pkg }} $s"
-              pnpm --filter "${{ matrix.app.pkg }}" "$s"
-              echo "::endgroup::"
-            done <<< "$scripts"
-            git add --intent-to-add "$dir/"
-            drift=$(git status --porcelain -- "$dir/")
-            if [ -n "$drift" ]; then
-              echo "::error::codegen drift under $dir/ — commit the regenerated output"
-              echo "$drift"
-              git diff -- "$dir/"
-              exit 1
-            fi
-          fi
+        # Runs for every app unit in the matrix — every app's pre-existing
+        # drift was regenerated and committed ahead of widening this from
+        # app-finance only. `--pkg` scopes discovery to exactly this matrix
+        # row's package and fails if it matches zero generate:* scripts, on
+        # purpose: every app unit today owns at least one Hey API client, so
+        # "found none" means the app's script got renamed or the matrix
+        # passed a stale package name, not that there is nothing to check. A
+        # future app unit that genuinely has no Hey API client would need
+        # this step scoped away from it explicitly, not silently skipped.
+        run: node scripts/ci/check-generated-clients.mjs --pkg "${{ matrix.app.pkg }}"
 
       - name: Typecheck
         run: pnpm --filter "${{ matrix.app.pkg }}" typecheck

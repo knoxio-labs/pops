@@ -12,7 +12,7 @@
 import { defineConfig } from '@hey-api/openapi-ts';
 
 export default defineConfig({
-  input: '../openapi/cerebrum.openapi.json',
+  input: '../../pillars/cerebrum/openapi/cerebrum.openapi.json',
   output: {
     path: 'src/ego-api',
   },
