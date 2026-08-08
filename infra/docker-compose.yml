@@ -454,6 +454,20 @@ services:
       PORT: '3014'
       BFM_SQLITE_PATH: /data/sqlite/bfm.db
       BFM_SELF_BASE_URL: http://bfm-api:3014
+      # The origin the PHONE dials — bfm's own Access-BYPASSED tunnel hostname,
+      # not the in-cluster one above. It is baked into the pairing QR, so an
+      # unset value produces a code that scans and then points the handset at
+      # `http://bfm-api:3014`, which resolves nowhere outside this network.
+      # The hostname itself is POPS-1389; provisioning both is POPS-1475.
+      BFM_PUBLIC_BASE_URL: ${BFM_PUBLIC_BASE_URL:-}
+      # bfm is the one pillar that cannot fall back to trusting the tunnel:
+      # its own hostname bypasses Cloudflare Access so the phone can pair, and
+      # the same Express app answers there, so "no team name means trust the
+      # caller" would hand the public internet an operator session. Unset here
+      # therefore means the /operator routes refuse EVERYONE — closed, not
+      # open, but the Devices page is dark until POPS-1475 supplies these.
+      CLOUDFLARE_ACCESS_TEAM_NAME: ${CLOUDFLARE_ACCESS_TEAM_NAME:-}
+      CLOUDFLARE_ACCESS_AUD: ${CLOUDFLARE_ACCESS_AUD:-}
       POPS_REGISTRY_ENABLED: 'true'
       # Both are a PATH, not the value. The file-based secret keeps the
       # credential out of the process environment and out of `docker inspect`;
