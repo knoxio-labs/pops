@@ -32,11 +32,10 @@ export const BFM_SERVICE_ACCOUNT_NAME = 'bfm';
  * prefix, so `finance.transactions` authorises `finance.transactions.list`
  * but not `finance.budgets.list`.
  *
- * Enforcement today is narrower than the list implies: the registry pillar is
- * the only one that checks `X-API-Key` at all, and its scope gate covers
- * `core.features.*` / `core.settings.*`. finance accepts any in-network
- * caller. The grant is the declaration of intent, and becomes load-bearing the
- * moment a producer starts checking.
+ * finance enforces this: it resolves the presented key against the registry and
+ * refuses anything the grant does not cover, so a mobile surface that reaches a
+ * second finance module has to widen the list here in the same change or get a
+ * 403.
  */
 export const BFM_SERVICE_ACCOUNT_SCOPES: readonly string[] = ['finance.transactions'];
 
