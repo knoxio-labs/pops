@@ -13,7 +13,7 @@ mise run generate   # xcodegen generate — writes Pops.xcodeproj
 mise run build      # xcodebuild, iOS Simulator
 ```
 
-`mise run build:packages` type-checks every package with `swift build` alone, without Xcode or a simulator.
+`mise run build:packages` type-checks every package with `swift build` alone, without Xcode or a simulator, and `mise run test:packages` runs every package's tests the same way.
 
 Requires an iOS 27 SDK. `mise install` here pins XcodeGen; Xcode itself is not managed by mise.
 
@@ -34,12 +34,13 @@ Two consequences follow, and both bite:
 
 The dependency direction is one-way:
 
-- A feature depends on `AppCore`, `DesignSystem` and `BFMClient`.
+- A feature depends on `AppCore` and `DesignSystem`. It may **not** name a concrete implementation of anything — it reads a protocol from `AppCore`, and only `App/` knows what implements it. See [Packages/AppCore/README.md](Packages/AppCore/README.md).
+- Concrete implementations live in the package that owns the mechanism: `Auth` for pairing, key material and the authenticating transport; `BFMClient` for the generated types and the calls that carry them. Both depend on `AppCore`; `App/` binds them.
 - **Nothing depends on a feature.** A `Feature*` module importing another `Feature*` module is the failure this layout exists to prevent — it is what turns a set of screens back into one screen-shaped monolith.
 
-This is enforced rather than agreed: a package can only `import` what its own `Package.swift` declares, so a forbidden import fails to compile. What is _not_ enforced is a wrong edge being added to a `Package.swift` in the first place, which is a review concern.
+Half of that is compiler-enforced — a package can only `import` what its own `Package.swift` declares. The other half, a wrong edge being added to a `Package.swift` in the first place, is asserted by a test in `AppCore` rather than by any tool.
 
-Each package is a shell whose placeholder type says what the module is for. Filling them in is one ticket per module.
+Each package other than `AppCore` is a shell whose placeholder type says what the module is for. Filling them in is one ticket per module.
 
 ## Known gaps
 
