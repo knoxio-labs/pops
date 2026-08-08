@@ -59,7 +59,7 @@
     "better-sqlite3": "^12.10.0",
     "jsdom": "^29.1.1",
     "tsx": "^4.23.5",
-    "typescript": "^6.0.3",
+    "typescript": "^7.0.2",
     "vitest": "^4.1.10"
   }
 }
