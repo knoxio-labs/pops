@@ -56,20 +56,23 @@ or, for this package alone:
 swift test --package-path Packages/Auth
 ```
 
-## Known gap: nothing automated exercises the real hardware path
+## The two real stores are not tested from here
 
-`SecureEnclaveKeyStore` and `KeychainTokenStore` — the only two implementations that will ever run in production — **are not covered by any test that runs by default**, anywhere. This is stated plainly because it is the kind of gap that a passing test suite otherwise conceals.
+`SecureEnclaveKeyStore` and `KeychainTokenStore` are the only implementations that will ever run in production, and **neither has a suite in this package**. Not an oversight — this package's tests cannot reach either type:
 
-Neither can run where the suite runs:
+- The data-protection keychain requires the process to carry a keychain-access-group entitlement. A `swift test` binary has none, and neither does an unhosted `xcodebuild test` bundle; both get `errSecMissingEntitlement` (-34018).
+- The Secure Enclave does not exist in a simulator at all, so `SecKeyCreateRandomKey` with `kSecAttrTokenIDSecureEnclave` fails outright, and a Mac's Enclave is not reachable from an unsigned test binary either.
 
-- The Secure Enclave does not exist in the simulator, so `SecKeyCreateRandomKey` fails outright, and a Mac's Enclave is not reachable from an unsigned `swift test` binary.
-- The data-protection keychain requires the process to carry a keychain-access-group entitlement. A `swift test` binary carries none and gets `errSecMissingEntitlement`. The app's own test target does carry one — [`clients/ios/AppTests`](../../AppTests) runs hosted by the app and asserts that the keychain answers there — so the keychain half of this gap is a move rather than a missing environment (POPS-1439).
+Both suites therefore live in the app's test target, [`clients/ios/AppTests`](../../AppTests), which is hosted by the app and so runs with the app's bundle and entitlements:
 
-So `SecureEnclaveHardwareTests.swift` holds suites for both, gated behind `POPS_IOS_HARDWARE_TESTS=1` and skipped otherwise. Enabling them by default would turn every run red, and the usual response to that — deleting the assertions, or catching the error — leaves a suite that passes while testing nothing.
+| Suite                        | Where it runs                          | Covered by CI            |
+| ---------------------------- | -------------------------------------- | ------------------------ |
+| `KeychainTokenStoreTests`    | any simulator, hosted by the app       | yes, every `iOS Quality` |
+| `SecureEnclaveHardwareTests` | a physical iPhone, gated on an env var | no — nothing to run it   |
 
-What the default suite does cover is the protocol contract, exercised against fakes that really sign, plus the encoding contract against bytes independently verified by `node:crypto`. What it does not cover is whether the Security-framework calls in those two files are correct. That is a real gap, it is tracked in Huly rather than left as a paragraph, and it closes when the app runs against the BFM on a real phone.
+The Enclave half is the residual gap and it is a hardware one, not a code one. It closes on a real phone through `mise run test:device`, which forwards the gate to the test process and **fails on a run that skipped anything** — because a passing run in which the gated suites quietly skipped is indistinguishable from a real one by every other signal. Until someone runs that, treat `SecureEnclaveKeyStore.swift` as unverified. [`AppTests/README.md`](../../AppTests/README.md) is where that arrangement is argued.
 
-To run them meanwhile: build the app to a physical device with `POPS_IOS_HARDWARE_TESTS=1` in the test scheme's environment. Both suites use their own Keychain service and application tag, so a run cannot destroy the credentials of a genuinely paired app on the same phone.
+What this package's own suites do cover: the protocol contract, exercised against fakes that really sign; the whole-pair and partial-wipe semantics; redaction; and the encoding contract against bytes independently verified by `node:crypto`.
 
 ## Logging
 

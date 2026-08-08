@@ -29,13 +29,32 @@ The rule is worth holding to because the lanes do not cost the same. `mise run t
 ## What is here
 
 - **`AppBundleTests`** — everything between a build setting in `project.yml` and the value the running app reads back. The per-configuration BFM base URL, whether the key survived into the built `Info.plist` at all, and the camera purpose string whose absence is a crash rather than a build failure. [`Packages/BFMClient`](../Packages/BFMClient) can only test the pure resolver underneath.
-- **`DataProtectionKeychainTests`** — that the data-protection keychain is reachable from this target. It asserts the _environment_, not `KeychainTokenStore`: the point is that this is a place the gated suites in [`Packages/Auth`](../Packages/Auth) can be moved to and pass (POPS-1439), and that is a claim worth having a test behind rather than a commit message.
+- **`DataProtectionKeychainTests`** — that the data-protection keychain is reachable from this target. It asserts the _environment_, not `KeychainTokenStore`, and it is what keeps a red `KeychainTokenStoreTests` pointing at the code rather than at the harness.
+- **`KeychainTokenStoreTests`** — `KeychainTokenStore` against a real Keychain: the accessibility class the item is actually written with, whether anything it writes is synchronizable, the `SecItemUpdate`-then-`SecItemAdd` branch in `save(_:)`, and whether `wipe()` removes what its documentation says it removes. Attributes are read back out of the Keychain rather than off the source, because a downgrade there has no symptom — an item written `AfterFirstUnlock`, or written synchronizable, stores and loads exactly as well as a correct one and is only wrong on a locked phone and on somebody else's hardware.
+- **`SecureEnclaveHardwareTests`** — `SecureEnclaveKeyStore` against a real Enclave, and **the one suite here that does not run on a simulator**. See below.
+
+## The one gated suite, and why it is gated
+
+`SecureEnclaveHardwareTests` runs only when `POPS_IOS_HARDWARE_TESTS=1`, and skips otherwise. There is no simulator answer to this: a simulator has no Secure Enclave, so `SecKeyCreateRandomKey` with `kSecAttrTokenIDSecureEnclave` fails outright. Enabling it by default would turn every run red, and the usual response to that — deleting the assertions, or catching the error — leaves a suite that passes while testing nothing.
+
+It is in this target rather than in `Packages/Auth` for the same reason `KeychainTokenStoreTests` is: the Enclave key is created `kSecAttrIsPermanent` in the data-protection keychain, so even on a phone an unhosted package test bundle would fail on the keychain before reaching the Enclave, and the failure would be unattributable.
+
+**A skipped suite inside a passing run is the failure this arrangement could create**, so the run that closes it is a task rather than a runbook step:
+
+```bash
+POPS_IOS_DEVICE='<your iPhone>' mise run test:device
+```
+
+That lane forwards the gate to the test process as `TEST_RUNNER_POPS_IOS_HARDWARE_TESTS` — xcodebuild strips the prefix, which is how the variable reaches the tests rather than only `xcodebuild` — and then **fails if anything skipped**. Enabling the suite and watching a green run is not evidence of anything: the gate is read inside the test process, so a variable that never arrived produces a passing run in which the hardware suites quietly skipped, and nothing distinguishes that from a real one except the skip count. It is stated as "nothing skipped" rather than as a list of suite names so it cannot rot when one is renamed, and so a new gated suite has to justify itself there rather than arriving unnoticed.
+
+CI never runs `test:device` — no runner has a phone attached.
 
 ## Running it
 
 ```bash
-mise run test:app   # this lane alone
-mise run test       # both simulator lanes, which is what CI invokes
+mise run test:app     # this lane alone, on the simulator
+mise run test         # both simulator lanes, which is what CI invokes
+mise run test:device  # this lane on a physical iPhone, hardware suites included
 ```
 
 `test:app` regenerates the project, asserts the target is still hosted and still compiles under the app's own Swift 6 and warnings-as-errors settings (`mise run verify:app-test-target`), runs the scheme's test action on `POPS_IOS_SIMULATOR`, and **fails if the number of tests it executed is zero**.

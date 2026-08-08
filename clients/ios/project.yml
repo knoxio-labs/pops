@@ -111,6 +111,8 @@ targets:
       # import path, not a second static copy of it.
       - package: BFMClient
         link: false
+      - package: Auth
+        link: false
     # The same team as the app, for the day these run on a physical device: a
     # test bundle signed by nobody cannot be installed alongside a host that is.
     configFiles:
