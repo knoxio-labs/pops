@@ -552,9 +552,9 @@ services:
   # ── FOOD INGEST WORKER ───────────────────────────────────────────
   # Consumes the `food.ingest` BullMQ queue produced by the food
   # pillar's REST API and runs the per-kind ingest pipelines. Results
-  # post back via `POST /ingest/worker-complete` (internal-token
-  # gated, see below). Stateless with respect to SQLite — all DB
-  # writes happen server-side.
+  # post back via `POST /ingest/worker-complete`, gated by a per-caller
+  # `x-pops-internal-credential` (see below). Stateless with respect
+  # to SQLite — all DB writes happen server-side.
   pops-worker-food:
     build:
       context: ..
