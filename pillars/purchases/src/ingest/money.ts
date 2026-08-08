@@ -70,31 +70,28 @@ const COMMA_DECIMAL_CURRENCIES = new Set([
 const SYMBOL_EDGE = String.raw`[^\d\s,.\-A-Za-z]{1,3}`;
 
 /**
- * Currency symbols that are spelled with Latin letters, and so cannot be
- * told from a label by shape alone.
+ * A currency symbol carrying a country prefix: `AU$`, `US$`, `NZ$`, `R$`.
  *
- * Enumerated rather than inferred: `kr` and `R$` are money, `TAX` and `SUB`
- * are not, and nothing about the characters says which is which. Symbols
- * outside this alphabet — `€`, `₩`, `zł`, `Kč` — need no entry, since
- * {@link SYMBOL_EDGE} already admits any non-Latin mark.
+ * Structural rather than enumerated. A list of these was tried and the
+ * first real Australian receipt was refused, because `AU$` was not on it —
+ * the list can only ever contain the ones somebody thought of. What makes
+ * these money is the shape: Latin letters immediately followed by an actual
+ * currency sign (`\p{Sc}`), which `TAX` and `SUB` do not have and cannot
+ * acquire by accident. `TAX:` does not qualify either — a colon is not a
+ * currency sign.
  */
-const LETTER_SYMBOLS = [
-  'kr',
-  'R$',
-  'RM',
-  'Rp',
-  'Rs',
-  'Ft',
-  'lei',
-  'Bs',
-  'A$',
-  'C$',
-  'S$',
-  'NT$',
-  'HK$',
-  'US$',
-  'RD$',
-];
+const PREFIXED_SYMBOL = String.raw`[A-Za-z]{1,3}\p{Sc}`;
+
+/**
+ * Currency symbols spelled entirely in Latin letters, which no shape can
+ * distinguish from a label.
+ *
+ * These genuinely have to be listed: nothing separates `kr` from `TAX`
+ * except knowing that one is money. Symbols outside the Latin alphabet —
+ * `€`, `₩`, `zł`, `Kč` — need no entry, since {@link SYMBOL_EDGE} already
+ * admits any non-Latin mark.
+ */
+const LETTER_SYMBOLS = ['kr', 'RM', 'Rp', 'Rs', 'Ft', 'lei', 'Bs'];
 
 function escapeForRegex(text: string): string {
   return text.replaceAll(/[$()*+.?[\\\]^{|}]/gu, String.raw`\$&`);
@@ -108,7 +105,7 @@ function escapeForRegex(text: string): string {
  * while an invented amount is silent.
  */
 function currencyEdge(locale: MoneyLocale | undefined): string {
-  const alternatives = [SYMBOL_EDGE, ...LETTER_SYMBOLS.map(escapeForRegex)];
+  const alternatives = [PREFIXED_SYMBOL, SYMBOL_EDGE, ...LETTER_SYMBOLS.map(escapeForRegex)];
   const currency = locale?.currency;
   if (typeof currency === 'string' && /^[A-Za-z]{3}$/u.test(currency)) {
     alternatives.push(currency.toUpperCase());

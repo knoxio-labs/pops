@@ -118,6 +118,25 @@ describe('parseAmountCents', () => {
     expect(parseAmountCents('AUD 12.50', { currency: 'EUR' })).toBeNull();
   });
 
+  it('reads a country-prefixed currency sign', () => {
+    // The first real Australian receipt sent through the drop-zone was
+    // refused for exactly this: an enumerated list of letter-bearing
+    // symbols cannot contain the ones nobody thought of. What makes these
+    // money is the shape — letters against an actual currency sign.
+    expect(parseAmountCents('AU$66.00', { currency: 'AUD' })).toBe(6600);
+    expect(parseAmountCents('US$5.00', { currency: 'USD' })).toBe(500);
+    expect(parseAmountCents('NZ$4.50', { currency: 'NZD' })).toBe(450);
+    expect(parseAmountCents('66.00 AU$', { currency: 'AUD' })).toBe(6600);
+    expect(parseAmountCents('-AU$4.95', { currency: 'AUD' })).toBe(-495);
+  });
+
+  it('does not mistake a label for a prefixed currency sign', () => {
+    // The shape rule must not readmit what excluding letters was for: a
+    // colon is not a currency sign, so this stays refused.
+    expect(parseAmountCents('TAX: 2.75')).toBeNull();
+    expect(parseAmountCents('GST: 1.50')).toBeNull();
+  });
+
   it('reads currency symbols that are spelled with letters', () => {
     // The exclusion of letters must not cost the currencies whose symbol
     // is one, which no stated ISO code would rescue.
