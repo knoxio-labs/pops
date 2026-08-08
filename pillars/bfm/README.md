@@ -305,10 +305,13 @@ registration is a separate mechanism and still goes through the
   that exist.
 - **Any pruning of the credential tables.** Consumed and expired pairing codes
   and dead refresh tokens accumulate; nothing deletes them (POPS-1449).
-- **Any enforcement of what the service account may reach.** The grant is
-  narrow and auditable, but the registry pillar is the only one in the fleet
-  that reads `X-API-Key` at all — every other producer serves any in-network
-  caller. Whether that stays the model is POPS-1447.
+- **Enforcement of the grant anywhere except `registry` and `finance`.** Those
+  two check the presented `X-API-Key` against the account behind it and refuse
+  an operation the grant does not cover. `inventory`, `media`, `lists`,
+  `cerebrum`, `purchases`, `ai`, `food`, `orchestrator`, `documents` and the
+  Rust `contacts` pillar still serve any in-network caller, credential or not —
+  each has its own adoption ticket. bfm calls only `finance`, so its own grant
+  is enforced end to end today.
 
 ## Reaching sibling pillars
 

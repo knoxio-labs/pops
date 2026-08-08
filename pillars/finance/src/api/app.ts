@@ -6,9 +6,11 @@
  * factory so the test suite can spin up an in-process `supertest`
  * instance without binding a real port.
  *
- * The pillar trusts the docker network — the dispatcher/gateway in front
- * authenticates; there is no per-request auth here (parity with lists /
- * inventory / food).
+ * Auth is split by who is calling. An uncredentialled caller is still trusted
+ * on the docker network — the shell's nginx and Cloudflare Access are the
+ * perimeter for browser traffic. A caller that presents an `X-API-Key` is a
+ * machine, and it is held to the service account behind that key: see
+ * `middleware/service-account-scope.ts`.
  */
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -17,8 +19,11 @@ import { fileURLToPath } from 'node:url';
 import { createExpressEndpoints } from '@ts-rest/express';
 import express, { type Express, type Request, type Response } from 'express';
 
+import { createRegistryServiceAccountVerifier } from '@pops/pillar-sdk/server';
+
 import { financeContract } from '../contract/rest.js';
 import { type FinanceApiDeps, makeRequestHandler } from './handlers.js';
+import { createServiceAccountScopeMiddleware } from './middleware/service-account-scope.js';
 import { createRequestValidationErrorHandler } from './rest/error-mapping.js';
 import { makeFinanceRestHandlers } from './rest/handlers.js';
 import { createUpBankWebhookRouter } from './webhooks/up-bank.js';
@@ -78,6 +83,15 @@ export function createFinanceApiApp(deps: FinanceApiDeps): Express {
   app.get('/openapi', (_req: Request, res: Response) => {
     res.json(openapiDocument);
   });
+
+  // Inbound service-account gate. Mounted after the raw probes (which carry no
+  // scope) and before the contract surface, so every contract route is covered
+  // without enumerating them here.
+  app.use(
+    createServiceAccountScopeMiddleware(
+      deps.serviceAccountVerifier ?? createRegistryServiceAccountVerifier()
+    )
+  );
 
   createExpressEndpoints(financeContract, makeFinanceRestHandlers(deps), app, {
     // ts-rest answers a schema mismatch itself, ahead of any handler, with its

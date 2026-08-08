@@ -4,10 +4,10 @@
  *
  * The shared `makeSettingsHandlers` owns the RU+reset logic, the declared-key
  * assertion, and read-side sensitive redaction. Finance injects its `FinanceDb`
- * settings store, the `finance.settings` scope prefix, and a NO-OP gate: the
- * finance pillar trusts the docker network and runs no per-request auth (parity
- * with every other finance route), so there is no principal to enforce a scope
- * against.
+ * settings store, the `finance.settings` scope prefix, and a NO-OP gate: scope
+ * enforcement for a credentialled caller happens ahead of every handler in
+ * `middleware/service-account-scope.ts`, and an uncredentialled caller has no
+ * principal for this gate to inspect.
  *
  * `UnknownSettingKeyError` (a free-form `setMany`/`set` addressing an undeclared
  * key) is remapped to the pillar's `ValidationError` so `runHttp` returns a 400
@@ -32,7 +32,7 @@ type Req = ServerInferRequest<typeof financeSettingsContract>;
 
 const SCOPE_PREFIX = 'finance.settings';
 
-/** Finance runs no per-request auth, so the gate is a no-op. */
+/** Scope is enforced upstream in the middleware, so the gate is a no-op. */
 const gate: SettingsGate<unknown> = () => {};
 
 /**
