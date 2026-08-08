@@ -1,20 +1,22 @@
 /**
- * A gated reading plus its photograph → one {@link CreatePurchaseInput}.
+ * A gated reading plus the file it came from → one {@link CreatePurchaseInput}.
  *
  * Only runs on readings the gate admitted. That is the whole arrangement:
  * nothing a model said becomes a purchase until the receipt's own total has
  * agreed with it, so this file contains no judgement about whether the
  * figures are believable — only about how to shape them.
  *
- * **The natural key is the photograph.** `sourceOrderId` is the image's
- * SHA-256, which is what makes re-sending the same file a 409 rather than a
- * twin. A merchant order id would be better and does not exist: a till slip
+ * **The natural key is the uploaded file.** `sourceOrderId` is its SHA-256,
+ * which is what makes re-sending the same file a 409 rather than a twin. A
+ * merchant order id would be better and is not available: a till slip
  * carries a transaction number in a different place and format for every
- * chain.
+ * chain, and a PDF invoice states one this schema does not ask the model
+ * for.
  *
  * The hash is necessary and not sufficient. It identifies a *file*, and
  * what people actually do is photograph the same paper twice — three shots
- * of one Salvos receipt wrote three $66.00 purchases at the same minute.
+ * of one Salvos receipt wrote three $66.00 purchases at the same minute —
+ * or photograph a receipt and later upload the merchant's PDF of it.
  * So the write path also refuses a shop it already holds at the same stated
  * instant for the same amount, which is a check on the receipt rather than
  * on the bytes. It cannot use the merchant name: the same Kmart receipt
@@ -115,11 +117,11 @@ function occurredAt(extracted: ExtractedReceipt, zone: string): string | null {
 }
 
 /**
- * Content hash over what was mapped, plus the image it came from.
+ * Content hash over what was mapped, plus the file it came from.
  *
- * The image hash alone would be enough for dedup, and is not enough for
- * change detection: re-reading the same photograph with a better model
- * should look different, because it is.
+ * The file hash alone would be enough for dedup, and is not enough for
+ * change detection: re-reading the same upload with a better model should
+ * look different, because it is.
  */
 function checksumFor(key: string, purchase: Omit<CreatePurchaseInput, 'checksum'>): string {
   const hash = createHash('sha256');
@@ -144,9 +146,9 @@ function checksumFor(key: string, purchase: Omit<CreatePurchaseInput, 'checksum'
  *
  * Always produces one. A receipt that states no date is dated from its
  * upload and tagged `date-uncertain`, rather than refused: the shop
- * happened and the photograph exists, so losing it would be worse than
+ * happened and the evidence exists, so losing it would be worse than
  * carrying an inferred date — provided the inference is never mistaken for
- * something the paper said, which is what the tag is for.
+ * something the receipt said, which is what the tag is for.
  *
  * The upload instant, not midnight on the upload day: it is a guess either
  * way, and pretending to a precision the guess does not have would make it
@@ -161,7 +163,7 @@ export function receiptToPurchase(
   const key = receiptKey(stored);
   const [first] = stored;
   if (first === undefined) {
-    throw new Error('receiptToPurchase needs at least one stored photograph');
+    throw new Error('receiptToPurchase needs at least one stored part');
   }
   const { zone, certain: zoneCertain } = resolveZone(extracted);
   const stated = occurredAt(extracted, zone);
@@ -218,9 +220,9 @@ export function receiptToPurchase(
         origin: 'merchant',
       },
     ],
-    // Every photograph, in the order it was taken: each is evidence for
-    // the same shop, and a reviewer needs all of them to check a long
-    // receipt against what was read from it.
+    // Every part, in the order it was sent: each is evidence for the same
+    // shop, and a reviewer needs all of them to check a long receipt
+    // against what was read from it.
     documents: stored.map((one) => ({ documentUri: one.uri, kind: 'receipt' as const })),
   };
 

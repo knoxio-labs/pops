@@ -38,6 +38,27 @@ const OTHER_JPEG_BASE64 = Buffer.concat([
   Buffer.alloc(32, 4),
 ]).toString('base64');
 
+/** Enough of a PDF to clear the edge check; the model is canned anyway. */
+const PDF_BASE64 = Buffer.from('%PDF-1.7\n1 0 obj\n<<>>\nendobj\ntrailer\n%%EOF\n').toString(
+  'base64'
+);
+
+/** An order confirmation as it would be pasted out of a mail client. */
+const EMAIL_BASE64 = Buffer.from(
+  [
+    'Thanks for your order!',
+    'Order #A-4471 placed 1 August 2026',
+    '',
+    'Timber Pine DAR 42x19    $12.50',
+    'Screws Bugle 8g 65mm     $15.00',
+    'Total                    $27.50',
+    '',
+    'Track your parcel: https://example.test/track/A-4471',
+    'Unsubscribe: https://example.test/unsubscribe',
+  ].join('\n'),
+  'utf8'
+).toString('base64');
+
 const GOOD_READING = JSON.stringify({
   merchantName: 'Bunnings Warehouse',
   address: '123 Example St, Sydney NSW 2000',
@@ -100,11 +121,11 @@ afterEach(() => {
 const upload = (app: Express, dataBase64 = JPEG_BASE64, mediaType = 'image/jpeg') =>
   request(app)
     .post('/receipts')
-    .send({ images: [{ mediaType, dataBase64 }] });
+    .send({ parts: [{ mediaType, dataBase64 }] });
 
-/** One receipt sent as several photographs, in order. */
-const uploadAll = (app: Express, images: { mediaType: string; dataBase64: string }[]) =>
-  request(app).post('/receipts').send({ images });
+/** One receipt sent as several parts, in order. */
+const uploadAll = (app: Express, parts: { mediaType: string; dataBase64: string }[]) =>
+  request(app).post('/receipts').send({ parts });
 
 describe('a receipt the model reads and the paper agrees with', () => {
   it('creates the purchase, its line items and its charge', async () => {
@@ -219,8 +240,8 @@ describe('re-uploading the same photograph', () => {
     // model-call failure the user cannot act on.
     let seen: string | null = null;
     const capturing: ReceiptVision = {
-      read: async (images) => {
-        seen = images[0]?.dataBase64 ?? null;
+      read: async (parts) => {
+        seen = parts[0]?.dataBase64 ?? null;
         return GOOD_READING;
       },
     };
@@ -230,7 +251,7 @@ describe('re-uploading the same photograph', () => {
 
     const response = await request(app)
       .post('/receipts')
-      .send({ images: [{ mediaType: 'image/jpeg', dataBase64: wrapped }] });
+      .send({ parts: [{ mediaType: 'image/jpeg', dataBase64: wrapped }] });
 
     expect(response.status).toBe(200);
     expect(seen).not.toBeNull();
@@ -276,10 +297,10 @@ describe('re-uploading the same photograph', () => {
   it('reads one receipt sent as several photographs', async () => {
     // A full shop does not fit in one frame. Both images go to the model in
     // one call, and the result is one purchase carrying both as evidence.
-    let sawImages = 0;
+    let sawParts = 0;
     const counting: ReceiptVision = {
-      read: async (images) => {
-        sawImages = images.length;
+      read: async (parts) => {
+        sawParts = parts.length;
         return GOOD_READING;
       },
     };
@@ -291,12 +312,12 @@ describe('re-uploading the same photograph', () => {
 
     expect(response.status).toBe(200);
     expect(response.body.kind).toBe('created');
-    expect(sawImages).toBe(2);
+    expect(sawParts).toBe(2);
     expect(response.body.purchase.documents).toHaveLength(2);
     expect(readdirSync(receiptDir)).toHaveLength(2);
   });
 
-  it('names which photograph was not an image', async () => {
+  it('names which photograph was not what it claimed', async () => {
     // Re-taking one picture of six beats re-taking all six.
     const response = await uploadAll(appWith(saying(GOOD_READING)), [
       { mediaType: 'image/jpeg', dataBase64: JPEG_BASE64 },
@@ -380,6 +401,136 @@ describe('re-uploading the same photograph', () => {
   });
 });
 
+describe('the shapes a receipt arrives in other than a photograph', () => {
+  it('creates a purchase from a PDF invoice, through the same gate', async () => {
+    const response = await upload(appWith(saying(GOOD_READING)), PDF_BASE64, 'application/pdf');
+
+    expect(response.status).toBe(200);
+    expect(response.body.kind).toBe('created');
+    expect(response.body.purchase.purchase.totalCents).toBe(2750);
+    expect(response.body.purchase.purchase.ingestMethod).toBe('upload');
+    expect(response.body.purchase.items).toHaveLength(2);
+  });
+
+  it('creates a purchase from a pasted order confirmation', async () => {
+    const response = await upload(appWith(saying(GOOD_READING)), EMAIL_BASE64, 'text/plain');
+
+    expect(response.status).toBe(200);
+    expect(response.body.kind).toBe('created');
+    expect(response.body.purchase.purchase.totalCents).toBe(2750);
+    expect(response.body.purchase.items).toHaveLength(2);
+  });
+
+  it('sends the model what was uploaded, not a re-encoding of it', async () => {
+    // The port is what the adapter turns into a content block, so a media
+    // type lost here is a PDF sent as an image — which the API rejects with
+    // an error that reads as though the file were corrupt.
+    const seen: { mediaType: string; dataBase64: string }[] = [];
+    const capturing: ReceiptVision = {
+      read: async (parts) => {
+        seen.push(...parts);
+        return GOOD_READING;
+      },
+    };
+
+    await upload(appWith(capturing), PDF_BASE64, 'application/pdf');
+
+    expect(seen).toHaveLength(1);
+    expect(seen[0]?.mediaType).toBe('application/pdf');
+    expect(seen[0]?.dataBase64).toBe(PDF_BASE64);
+  });
+
+  it('keeps every shape as evidence, under its own extension', async () => {
+    // Two different shops, not one read twice: both uploads meet the same
+    // database, and identical readings would be refused as a repeat of the
+    // same receipt — which is the behaviour a later test asserts on purpose.
+    const anHourLater = JSON.stringify({ ...JSON.parse(GOOD_READING), purchasedAt: '15:32' });
+    const pdf = await upload(appWith(saying(GOOD_READING)), PDF_BASE64, 'application/pdf');
+    const paste = await upload(appWith(saying(anHourLater)), EMAIL_BASE64, 'text/plain');
+
+    for (const response of [pdf, paste]) {
+      expect(response.body.purchase.documents).toHaveLength(1);
+      expect(response.body.purchase.documents[0].documentUri).toMatch(
+        /^pops:\/\/purchases\/receipt\/[0-9a-f]{64}$/u
+      );
+    }
+
+    const stored = readdirSync(receiptDir, { recursive: true }).map(String);
+    expect(stored.some((name) => name.endsWith('.pdf'))).toBe(true);
+    expect(stored.some((name) => name.endsWith('.txt'))).toBe(true);
+  });
+
+  it('keeps a PDF that failed the gate, so a reviewer can open it', async () => {
+    // The whole reason evidence is stored before the reading: a mismatch is
+    // exactly when someone has to look at the original.
+    const wrong = JSON.stringify({ ...JSON.parse(GOOD_READING), total: '$99.99' });
+    const response = await upload(appWith(saying(wrong)), PDF_BASE64, 'application/pdf');
+
+    expect(response.status).toBe(200);
+    expect(response.body.kind).toBe('needs-review');
+    expect(response.body.receiptUris).toHaveLength(1);
+    expect(readdirSync(receiptDir, { recursive: true }).map(String)).toContainEqual(
+      expect.stringMatching(/\.pdf$/u)
+    );
+  });
+
+  it('refuses the same PDF twice without paying for a second reading', async () => {
+    let calls = 0;
+    const counting: ReceiptVision = {
+      read: async () => {
+        calls += 1;
+        return GOOD_READING;
+      },
+    };
+    const app = appWith(counting);
+
+    const first = await upload(app, PDF_BASE64, 'application/pdf');
+    const second = await upload(app, PDF_BASE64, 'application/pdf');
+
+    expect(first.body.kind).toBe('created');
+    expect(second.status).toBe(409);
+    expect(second.body.code).toBe('ALREADY_IMPORTED');
+    expect(calls).toBe(1);
+  });
+
+  it('recognises a PDF of a receipt already photographed', async () => {
+    // Different bytes, so the content-addressed key cannot see it — this is
+    // the one case where the receipt's own stated instant and amount are
+    // all there is. Getting it wrong writes the same $27.50 shop twice.
+    const app = appWith(saying(GOOD_READING));
+    const photographed = await upload(app, JPEG_BASE64, 'image/jpeg');
+    const invoiced = await upload(app, PDF_BASE64, 'application/pdf');
+
+    expect(photographed.body.kind).toBe('created');
+    expect(invoiced.status).toBe(409);
+    expect(invoiced.body.code).toBe('ALREADY_IMPORTED');
+    expect(invoiced.body.message).toContain('another upload of the same receipt');
+  });
+
+  it('reads a photograph and the merchant PDF as one submission', async () => {
+    // Nothing forbids sending both, and one purchase carrying both as
+    // evidence is a better answer than a 409 the sender cannot act on.
+    const response = await uploadAll(appWith(saying(GOOD_READING)), [
+      { mediaType: 'image/jpeg', dataBase64: JPEG_BASE64 },
+      { mediaType: 'application/pdf', dataBase64: PDF_BASE64 },
+    ]);
+
+    expect(response.status).toBe(200);
+    expect(response.body.kind).toBe('created');
+    expect(response.body.purchase.documents).toHaveLength(2);
+  });
+
+  it('names which part was not what it claimed, in that part’s own terms', async () => {
+    const response = await uploadAll(appWith(saying(GOOD_READING)), [
+      { mediaType: 'image/jpeg', dataBase64: JPEG_BASE64 },
+      { mediaType: 'application/pdf', dataBase64: JPEG_BASE64 },
+    ]);
+
+    expect(response.status).toBe(400);
+    expect(response.body.message).toBe('Document 2 of 2 is not a valid application/pdf file');
+  });
+});
+
 describe('a reading the paper disagrees with', () => {
   it('goes to review, writes nothing, and keeps the photograph', async () => {
     const wrong = JSON.stringify({ ...JSON.parse(GOOD_READING), total: '$99.99' });
@@ -414,11 +565,25 @@ describe('uploads it declines before the model sees them', () => {
     const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0]);
     const response = await upload(appWith(saying(GOOD_READING)), png.toString('base64'));
     expect(response.status).toBe(400);
-    expect(response.body.code).toBe('NOT_AN_IMAGE');
+    expect(response.body.code).toBe('NOT_THE_STATED_TYPE');
   });
 
-  it('refuses a media type no vision model accepts', async () => {
-    const response = await upload(appWith(saying(GOOD_READING)), JPEG_BASE64, 'application/pdf');
+  it('refuses a JPEG claiming to be a PDF, and a PDF claiming to be a JPEG', async () => {
+    // The inverse of the check this endpoint used to make. `application/pdf`
+    // is now an accepted media type, so the question stopped being "is this
+    // an image" and became "are these the bytes you said they were".
+    const asPdf = await upload(appWith(saying(GOOD_READING)), JPEG_BASE64, 'application/pdf');
+    expect(asPdf.status).toBe(400);
+    expect(asPdf.body.code).toBe('NOT_THE_STATED_TYPE');
+
+    const asJpeg = await upload(appWith(saying(GOOD_READING)), PDF_BASE64, 'image/jpeg');
+    expect(asJpeg.status).toBe(400);
+    expect(asJpeg.body.code).toBe('NOT_THE_STATED_TYPE');
+  });
+
+  it('refuses a media type the drop-zone does not accept at all', async () => {
+    // Rejected by the contract's own enum, before any handler runs.
+    const response = await upload(appWith(saying(GOOD_READING)), JPEG_BASE64, 'application/zip');
     expect(response.status).toBe(400);
   });
 
