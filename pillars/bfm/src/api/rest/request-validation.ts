@@ -68,9 +68,7 @@ function isUnderPrefix(path: string, prefix: string): boolean {
 }
 
 function isDeviceFacingPath(req: PathOnlyRequest): boolean {
-  return (
-    isUnderPrefix(req.path, MOBILE_PATH_PREFIX) || isUnderPrefix(req.path, PAIRING_PATH)
-  );
+  return isUnderPrefix(req.path, MOBILE_PATH_PREFIX) || isUnderPrefix(req.path, PAIRING_PATH);
 }
 
 export function createRequestValidationErrorHandler() {

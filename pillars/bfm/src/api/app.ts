@@ -30,7 +30,6 @@ import { MOBILE_PATH_PREFIX, PAIRING_PATH } from './paths.js';
 import { type BfmRestHandlerDeps, makeBfmRestHandlers } from './rest/handlers.js';
 import { createRequestValidationErrorHandler } from './rest/request-validation.js';
 
-import type { KeyObject } from 'node:crypto';
 
 /**
  * The committed OpenAPI projection, served verbatim at `GET /openapi` so the
