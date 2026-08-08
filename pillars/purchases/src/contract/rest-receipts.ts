@@ -17,9 +17,10 @@
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
 
+import { ExtractedReceiptSchema } from '../ingest/receipt/extraction.js';
 import { MEDIA_TYPES } from '../ingest/receipt/vision.js';
 import { ErrorBodySchema } from './rest-schemas.js';
-import { PurchaseDetailSchema } from './schemas/purchase.js';
+import { PopsUriSchema, PurchaseDetailSchema } from './schemas/purchase.js';
 
 const c = initContract();
 
@@ -55,12 +56,17 @@ export const ReceiptOutcomeSchema = z.discriminatedUnion('kind', [
    */
   z.object({
     kind: z.literal('needs-review'),
-    receiptUri: z.string(),
+    receiptUri: PopsUriSchema,
     failures: z.array(GateFailureSchema),
-    extracted: z.unknown(),
+    /**
+     * What the model read, typed. A reviewer's whole job is to compare this
+     * against the photograph, so a client that cannot render it without
+     * ad-hoc parsing cannot do the one thing this outcome exists for.
+     */
+    extracted: ExtractedReceiptSchema,
   }),
   /** Nothing usable came back. Not a purchase, and not an empty receipt. */
-  z.object({ kind: z.literal('unreadable'), receiptUri: z.string(), reason: z.string() }),
+  z.object({ kind: z.literal('unreadable'), receiptUri: PopsUriSchema, reason: z.string() }),
 ]);
 
 export const purchasesReceiptContract = c.router({

@@ -2850,7 +2850,110 @@
                     {
                       "additionalProperties": false,
                       "properties": {
-                        "extracted": {},
+                        "extracted": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "address": {
+                              "default": null,
+                              "minLength": 1,
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "currency": {
+                              "nullable": true,
+                              "pattern": "^[A-Z]{3}$",
+                              "type": "string"
+                            },
+                            "discounts": {
+                              "default": [],
+                              "items": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "type": "array"
+                            },
+                            "lines": {
+                              "items": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "amount": {
+                                    "minLength": 1,
+                                    "type": "string"
+                                  },
+                                  "description": {
+                                    "minLength": 1,
+                                    "type": "string"
+                                  },
+                                  "quantity": {
+                                    "exclusiveMinimum": true,
+                                    "maximum": 9007199254740991,
+                                    "minimum": 0,
+                                    "type": "integer"
+                                  },
+                                  "unitNote": {
+                                    "minLength": 1,
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["description", "amount"],
+                                "type": "object"
+                              },
+                              "type": "array"
+                            },
+                            "merchantName": {
+                              "minLength": 1,
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "purchasedAt": {
+                              "nullable": true,
+                              "pattern": "^\\d{2}:\\d{2}$",
+                              "type": "string"
+                            },
+                            "purchasedOn": {
+                              "nullable": true,
+                              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                              "type": "string"
+                            },
+                            "tax": {
+                              "minLength": 1,
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "timeZone": {
+                              "default": null,
+                              "minLength": 1,
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "total": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "unreadable": {
+                              "default": [],
+                              "items": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "type": "array"
+                            }
+                          },
+                          "required": [
+                            "merchantName",
+                            "address",
+                            "timeZone",
+                            "purchasedOn",
+                            "purchasedAt",
+                            "currency",
+                            "total",
+                            "tax",
+                            "discounts",
+                            "lines",
+                            "unreadable"
+                          ],
+                          "type": "object"
+                        },
                         "failures": {
                           "items": {
                             "additionalProperties": false,
@@ -2884,6 +2987,7 @@
                           "type": "string"
                         },
                         "receiptUri": {
+                          "pattern": "^pops:\\/\\/[a-z0-9-]+\\/[a-z0-9-]+\\/[^/\\s]+$",
                           "type": "string"
                         }
                       },
@@ -2901,6 +3005,7 @@
                           "type": "string"
                         },
                         "receiptUri": {
+                          "pattern": "^pops:\\/\\/[a-z0-9-]+\\/[a-z0-9-]+\\/[^/\\s]+$",
                           "type": "string"
                         }
                       },

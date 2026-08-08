@@ -920,7 +920,28 @@ export interface operations {
                 };
               }
             | {
-                extracted: unknown;
+                extracted: {
+                  /** @default null */
+                  address: string | null;
+                  currency: string | null;
+                  /** @default [] */
+                  discounts: string[];
+                  lines: {
+                    amount: string;
+                    description: string;
+                    quantity?: number;
+                    unitNote?: string;
+                  }[];
+                  merchantName: string | null;
+                  purchasedAt: string | null;
+                  purchasedOn: string | null;
+                  tax: string | null;
+                  /** @default null */
+                  timeZone: string | null;
+                  total: string;
+                  /** @default [] */
+                  unreadable: string[];
+                };
                 failures: {
                   deltaCents?: number;
                   detail: string;

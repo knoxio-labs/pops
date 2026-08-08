@@ -60,7 +60,10 @@ const visionUnavailable = () => ({
 
 const notAnImage = (mediaType: string) => ({
   status: 400 as const,
-  body: { message: `The upload is not a ${mediaType}`, code: 'NOT_AN_IMAGE' },
+  body: {
+    message: `The upload is not a valid ${mediaType} file`,
+    code: 'NOT_AN_IMAGE',
+  },
 });
 
 /**

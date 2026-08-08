@@ -59,9 +59,3 @@ export function selectChargeDetails(
     allocations: allocationsByCharge.get(charge.id) ?? [],
   }));
 }
-
-/**
- * Every line carrying a given tag, across every order. The query
- * `purchase_item_tags` exists to serve — a JSON array column would answer
- * it only with a full scan.
- */
