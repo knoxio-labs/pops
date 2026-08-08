@@ -139,6 +139,13 @@ export interface MobileRateLimit {
  * reads `X-Forwarded-For` once `trust proxy` is set, and no app in this fleet
  * sets it. Depending on it would make this limiter's key silently change the
  * day someone did.
+ *
+ * Not normalized beyond that: `203.0.113.7` and its IPv4-mapped spelling
+ * `::ffff:203.0.113.7` are two keys for one address, so a forger willing to
+ * send both gets two buckets. Left alone because the ceiling that matters is
+ * the global tier, and doubling a budget below it changes nothing an attacker
+ * can use — canonicalizing would add a parser to the perimeter's hot path to
+ * close a factor of two.
  */
 export function resolveClientKey(req: Request): string {
   const forwarded = req.headers['cf-connecting-ip'];
