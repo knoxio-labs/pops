@@ -196,35 +196,16 @@ set -o pipefail
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 
-# Every root, checked individually and before anything else. Checking only the
-# combined result is not enough: with two roots and one of them renamed, `find`
-# still returns the other's files, so a non-empty result would say "fine" while
-# an entire directory went unlinted. Each root is asserted by name so the
-# message names the one that moved.
-for root in $SWIFT_SOURCES; do
-  if [ ! -d "$root" ]; then
-    echo "swift-format: '$root' from SWIFT_SOURCES is not a directory." >&2
-    exit 1
-  fi
-done
-
 # The file set, enumerated rather than left to `--recursive`. swift-format walks
 # past dot-directories on its own today, so `.build` happens not to be visited —
 # but the failure mode if that ever changes is `format` rewriting SwiftPM's
 # dependency checkouts in place, which is not a bet worth taking to save a
-# `find`. Naming the exclusion also keeps this honest against `.swiftlint.yml`,
-# which excludes `.build` explicitly; the two now describe the same set. `-prune`
-# rather than a path filter, so a large checkout is skipped rather than walked.
-find $SWIFT_SOURCES -name '.build' -type d -prune -o -name '*.swift' -print0 > "$work/sources"
-
-# The roots exist by now, so an empty result means they hold no Swift at all.
-# swift-format exits 0 both on a path that does not exist and on one with
-# nothing to check — no message either time — so without this the tools would
-# report success having read nothing. Verified against swift-format from Xcode 27.
-if [ ! -s "$work/sources" ]; then
-  echo "swift-format: no Swift sources under '$SWIFT_SOURCES' — SWIFT_SOURCES is stale." >&2
-  exit 1
-fi
+# `find`. It is also the only place the formatter can be told to leave generated
+# code alone, since swift-format honours no ignore file. Both exclusions, the
+# reasons for them, and the roots' own existence checks live in the script,
+# which is what `check` and `self-test` below reason about — an enumeration
+# written out twice is one that can disagree with the guard that polices it.
+scripts/swift-sources.sh list $SWIFT_SOURCES > "$work/sources"
 
 # `.swift-format`'s `rules` map replaces the defaults rather than merging into
 # them, so a rule the file does not name is a rule that is off. A toolchain bump
@@ -259,6 +240,23 @@ case "$usage_mode" in
 esac
 '''
 
+# The boundary that keeps generated code out of both tools, and the proof that
+# both tools respect it. Part of `lint` rather than a task of its own: the two
+# exclusions exist to stop someone reaching for a suppression comment, so a
+# check that only runs when remembered is one that runs after the damage.
+[tasks."generated-boundary"]
+description = "Generated code is where the tools' exclusions say it is — and only there"
+hide = true
+run = '''
+set -u
+status=0
+# Self-test first: with no generated sources in the tree yet, `check` alone
+# compares an empty set against an empty set and passes having read nothing.
+scripts/swift-sources.sh self-test || status=1
+scripts/swift-sources.sh check $SWIFT_SOURCES || status=1
+exit $status
+'''
+
 # The one entry point. The iOS CI job does not exist yet; when it does it is to
 # invoke this task rather than restate the commands, because the moment the two
 # are written out separately they drift and a green local run means nothing.
@@ -266,10 +264,12 @@ esac
 description = "swift-format + SwiftLint over the Swift sources"
 run = '''
 set -u
-# Both run even when the first fails, so one invocation reports every problem.
+# All three run even when an earlier one fails, so one invocation reports every
+# problem.
 status=0
 mise run swift-format lint || status=1
 swiftlint lint --strict --quiet || status=1
+mise run generated-boundary || status=1
 exit $status
 '''
 

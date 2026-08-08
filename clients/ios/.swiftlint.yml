@@ -28,6 +28,25 @@ excluded:
   # readability, and the rules below are all about application code. The
   # formatter still covers it.
   - 'Packages/*/Package.swift'
+  # Generated code. Every rule below describes code a person wrote, and
+  # generated OpenAPI Swift breaks four of them by construction: a schema type
+  # is `Components.Schemas.X`, which is two levels of nesting; a `Types.swift`
+  # for a real contract is thousands of lines; long signatures pass 120
+  # columns; and an optional boolean in the contract becomes `Bool?`. Holding a
+  # generator to rules written for people has one outcome — the blanket
+  # `swiftlint:disable` this file's header forbids — so the generator's output
+  # is out of scope instead, and the hand-written wrapper around it is not.
+  #
+  # Keyed on the directory name and nothing else, so it cannot quietly grow
+  # into "the BFMClient module": a generated file that lands anywhere else is
+  # still linted, and still fails. That both halves hold is checked rather than
+  # hoped — scripts/swift-sources.sh, run by `mise run lint`, fails on a
+  # generated file outside one of these directories AND on a hand-written file
+  # inside one, and self-tests both against fixtures built from this file.
+  #
+  # swift-format is excluded from the same directories, for a different reason
+  # that is written down in scripts/swift-sources.sh.
+  - '**/Generated'
 
 # ---------------------------------------------------------------------------
 # Size
