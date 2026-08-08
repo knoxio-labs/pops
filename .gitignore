@@ -15,6 +15,15 @@ dist-scripts/
 # Cargo.lock IS committed for the workspace (reproducible bin builds).
 target/
 
+# Xcode + SwiftPM output (clients/, ADR-043). The .xcodeproj is generated from
+# project.yml by XcodeGen and never committed: a pbxproj is a generated XML blob
+# that conflicts on every parallel branch and that no tool here can edit safely.
+clients/**/*.xcodeproj
+.build/
+DerivedData/
+*.xcuserstate
+.swiftpm/
+
 # Environment and secrets
 .env
 .env.*

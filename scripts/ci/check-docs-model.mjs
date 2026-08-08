@@ -4,9 +4,10 @@
  *
  * Enforces three things, and deliberately nothing else:
  *
- *   1. Every top-level unit — `pillars/<id>` and `libs/<lib>` — has a
- *      `README.md`. These are published units whose README is the entry
- *      point a reader lands on, so one is always warranted.
+ *   1. Every top-level unit — `pillars/<id>`, `libs/<lib>` and
+ *      `clients/<client>` — has a `README.md`. These are published units
+ *      whose README is the entry point a reader lands on, so one is always
+ *      warranted.
  *
  *   2. The abolished doc trees do not come back. `prds/`, `themes/`,
  *      `epics/`, and `ideas/` directories anywhere in the repo are a
@@ -46,7 +47,15 @@ const repoRoot = resolve(here, '..', '..');
 export const BANNED_DOC_DIRS = ['prds', 'themes', 'epics', 'ideas'];
 
 /** Repo-root directories a backticked token must start with to be treated as a path claim. */
-export const PATH_ROOTS = ['pillars/', 'libs/', 'docs/', 'infra/', 'scripts/', '.github/'];
+export const PATH_ROOTS = [
+  'pillars/',
+  'libs/',
+  'clients/',
+  'docs/',
+  'infra/',
+  'scripts/',
+  '.github/',
+];
 
 /** A backticked token naming a source file, so a directory-relative path is still checked. */
 export const SOURCE_FILE_RE = /\/[\w.-]+\.(?:tsx?|mjs|cjs|jsx?|json|css|md|ya?ml|rs|toml)$/u;
@@ -55,9 +64,10 @@ export const SOURCE_FILE_RE = /\/[\w.-]+\.(?:tsx?|mjs|cjs|jsx?|json|css|md|ya?ml
 const SKIP_DIRS = new Set(['node_modules', '.git', 'dist', 'build', 'target', 'coverage', '.next']);
 
 /**
- * Discover the repo's top-level units: every immediate child of `pillars/`
- * and `libs/`. A unit is a directory — `moltbot` ships no package.json and
- * still counts, because a reader still lands on it.
+ * Discover the repo's top-level units: every immediate child of `pillars/`,
+ * `libs/` and `clients/` (ADR-043). A unit is a directory — `moltbot` ships no
+ * package.json and `clients/ios` is a Swift tree the workspace cannot see, and
+ * both still count, because a reader still lands on them.
  *
  * @param {string} root
  * @returns {string[]} Sorted repo-relative unit dirs.
@@ -65,7 +75,7 @@ const SKIP_DIRS = new Set(['node_modules', '.git', 'dist', 'build', 'target', 'c
 export function discoverUnits(root) {
   /** @type {string[]} */
   const out = [];
-  for (const base of ['pillars', 'libs']) {
+  for (const base of ['pillars', 'libs', 'clients']) {
     const baseDir = join(root, base);
     if (!existsSync(baseDir)) continue;
     for (const entry of readdirSync(baseDir, { withFileTypes: true })) {
@@ -397,7 +407,7 @@ function main() {
   if (args.includes('--help') || args.includes('-h')) {
     console.log(
       'Usage: node scripts/ci/check-docs-model.mjs [--self-test]\n' +
-        'Fails if a pillar/lib lacks a README.md, an abolished doc tree ' +
+        'Fails if a pillar/lib/client lacks a README.md, an abolished doc tree ' +
         '(prds/, themes/, epics/, ideas/) has reappeared, or a markdown file ' +
         'points at a repo path that does not exist. See ADR-041.'
     );
@@ -450,7 +460,8 @@ function main() {
 /** @returns {boolean} */
 function selfTest() {
   const units = discoverUnits(repoRoot);
-  const ok1 = units.includes('libs/ui') && units.includes('pillars/finance');
+  const ok1 =
+    units.includes('libs/ui') && units.includes('pillars/finance') && units.includes('clients/ios');
 
   const banned = findBannedDocDirs(repoRoot, ['__tests__']);
   const ok2 =
@@ -509,6 +520,18 @@ function selfTest() {
     HULY_KEY_RE.test('no per-bank parsing (POPS-29).') &&
     !HULY_KEY_RE.test('no per-bank parsing.');
 
+  // Every unit root resolves a bare directory token. None of these three names
+  // a source file, so each is a claim only because its root is in PATH_ROOTS —
+  // dropping one would make paths under it invisible rather than reported.
+  const rootedTokens = extractPathClaims(
+    'see `pillars/finance/src` and `libs/ui/src` and `clients/ios/Packages`',
+    'docs/thing.md'
+  ).map((c) => c.raw);
+  const ok10 =
+    rootedTokens.includes('pillars/finance/src') &&
+    rootedTokens.includes('libs/ui/src') &&
+    rootedTokens.includes('clients/ios/Packages');
+
   if (!ok1) console.error('self-test FAILED: unit discovery missed a known unit');
   if (!ok2) console.error('self-test FAILED: banned-dir walk misbehaved');
   if (!ok3) console.error('self-test FAILED: path-claim extraction wrong');
@@ -518,7 +541,8 @@ function selfTest() {
   if (!ok7) console.error('self-test FAILED: directory-relative source path not resolved');
   if (!ok8) console.error('self-test FAILED: npm specifier treated as a path claim');
   if (!ok9) console.error('self-test FAILED: absence-heading or Huly-key detection wrong');
-  return ok1 && ok2 && ok3 && ok4 && ok5 && ok6 && ok7 && ok8 && ok9;
+  if (!ok10) console.error('self-test FAILED: a unit root no longer yields a path claim');
+  return ok1 && ok2 && ok3 && ok4 && ok5 && ok6 && ok7 && ok8 && ok9 && ok10;
 }
 
 if (resolve(fileURLToPath(import.meta.url)) === resolve(process.argv[1] ?? '')) {
