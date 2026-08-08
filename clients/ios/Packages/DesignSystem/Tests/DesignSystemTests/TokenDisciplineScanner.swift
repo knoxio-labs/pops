@@ -1,9 +1,13 @@
 import Foundation
 
-/// Scans Swift source for the two things this package exists to make
-/// impossible: a colour that is not a token, and a metric that is not a step on
-/// the scale. It is a text scan rather than a compiler check because Swift has
-/// no way to withdraw `Color.red` from a module that imports SwiftUI.
+/// Scans Swift source for the things this package exists to make impossible:
+/// a colour that is not a token, a metric that is not a step on the scale, and
+/// a font size that bypasses the type scale. It is a text scan rather than a
+/// compiler check because Swift has no way to withdraw `Color.red` from a
+/// module that imports SwiftUI.
+///
+/// A text scan is also what lets the rule reach past this package: the scan
+/// reads files, so it never needs to import the module it is judging.
 internal enum TokenDisciplineScanner {
     struct Rule {
         let name: String
@@ -55,24 +59,100 @@ internal enum TokenDisciplineScanner {
         try Regex(pattern).wordBoundaryKind(.simple)
     }
 
-    /// Every `.swift` file under `directory`, sorted for a stable report.
+    /// The directory name that means "a generator wrote this", spelled the same
+    /// way `scripts/swift-sources.sh` and `.swiftlint.yml` spell it.
+    static let generatedDirectoryName = "Generated"
+
+    /// Whether `error` means "the path in question does not exist", as
+    /// opposed to a permission or IO fault encountered while checking.
+    ///
+    /// `.fileReadNoSuchFile` is the direct case. The other is asking about a
+    /// path *underneath* an entry that turns out not to be a directory at
+    /// all — a stray file where a module was expected — which `stat` reports
+    /// as `ENOTDIR`, not "no such file", even though the honest answer is
+    /// the same "no". Anything else is a real fault and has to propagate as
+    /// one; this is the one place that distinction is made, so every caller
+    /// that has to draw it calls here instead of re-deriving it.
+    static func meansPathDoesNotExist(_ error: Error) -> Bool {
+        if case CocoaError.fileReadNoSuchFile = error { return true }
+        let underlying = (error as NSError).userInfo[NSUnderlyingErrorKey] as? NSError
+        return underlying?.domain == NSPOSIXErrorDomain && underlying?.code == Int(ENOTDIR)
+    }
+
+    /// Every hand-written `.swift` file under `directory`, sorted for a stable
+    /// report.
+    ///
+    /// Generated sources are skipped, because the rules below describe choices a
+    /// person made and a generator makes none of them: an OpenAPI enum case
+    /// named `secondary` reaches its own call sites as `.secondary`, which the
+    /// system-colour rule cannot tell from a colour — and generated code is the
+    /// one place a violation cannot be fixed at the call site. Skipping is safe
+    /// only because `scripts/swift-sources.sh check` fails on hand-written code
+    /// inside a `Generated` directory, so this cannot become somewhere to hide.
     static func swiftFiles(under directory: URL) throws -> [URL] {
+        // `enumerator(at:)` returns `nil` for more than one reason, and `nil`
+        // carries no error to tell them apart — the ambiguity `try?` caused
+        // elsewhere in this scan, reached a different way. Asking the
+        // filesystem directly first trades that guess for the real error.
+        _ = try FileManager.default.attributesOfItem(atPath: directory.path)
+
+        // Without an `errorHandler`, a fault partway through the walk — a
+        // permission-denied subdirectory two levels down, say — stops
+        // enumeration with no signal at all: the scan looks identical to one
+        // that reached the end cleanly. Capturing the error here and
+        // rethrowing after the walk is what turns that silence into a
+        // failure.
+        var walkError: Error?
         guard
             let walker = FileManager.default.enumerator(
-                at: directory, includingPropertiesForKeys: nil)
+                at: directory, includingPropertiesForKeys: nil,
+                errorHandler: { _, error in
+                    walkError = error
+                    return false
+                })
         else {
-            throw CocoaError(.fileNoSuchFile)
+            throw CocoaError(.fileReadUnknown)
         }
-        return
-            walker
-            .compactMap { $0 as? URL }
-            .filter { $0.pathExtension == "swift" }
-            .sorted { $0.path < $1.path }
+        var files: [URL] = []
+        for element in walker {
+            // The enumerator is documented to yield `URL`s. Casting with `as?`
+            // and compacting would turn "this walk is not what we think it is"
+            // into a file quietly dropped from the scan, which is the one
+            // failure this whole check exists to make impossible.
+            guard let file = element as? URL else { throw CocoaError(.fileReadUnknown) }
+            guard file.pathExtension == "swift",
+                !file.pathComponents.dropLast().contains(generatedDirectoryName)
+            else { continue }
+            files.append(file)
+        }
+        if let walkError { throw walkError }
+        return files.sorted { $0.path < $1.path }
     }
 
     static func violations(in file: URL, relativeTo root: URL) throws -> [Violation] {
-        let name = file.path.replacingOccurrences(of: root.path + "/", with: "")
-        return try violations(inSource: String(contentsOf: file, encoding: .utf8), file: name)
+        return try violations(
+            inSource: String(contentsOf: file, encoding: .utf8),
+            file: relativePath(of: file, under: root))
+    }
+
+    /// `/var` and `/private/var` are the same directory and `FileManager` hands
+    /// back whichever spelling it prefers, which is not always the one the root
+    /// was written with. Reduce both to one spelling before stripping one from
+    /// the other, or a report comes out as absolute paths nobody can scan.
+    ///
+    /// The root is removed only as a genuine prefix. `replacingOccurrences`
+    /// removes its target from anywhere in the string, so a file whose path
+    /// happens to contain the root's path a second time — nested under a
+    /// directory that repeats it — would have that occurrence stripped too,
+    /// producing a relative path that is wrong rather than merely long. A
+    /// file the root does not actually contain returns its full resolved
+    /// path instead: absolute and honest beats short and wrong in a report a
+    /// developer has to act on.
+    private static func relativePath(of file: URL, under root: URL) -> String {
+        let resolvedFile = file.resolvingSymlinksInPath().path
+        let prefix = root.resolvingSymlinksInPath().path + "/"
+        guard resolvedFile.hasPrefix(prefix) else { return resolvedFile }
+        return String(resolvedFile.dropFirst(prefix.count))
     }
 
     static func violations(inSource source: String, file: String) throws -> [Violation] {
