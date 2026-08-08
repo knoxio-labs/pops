@@ -67,10 +67,9 @@ function useCountdownTo(expiresAt: string | null): number {
  *
  * The plaintext lives in this hook's state and nowhere else — not in
  * `localStorage`, not in the URL, not in a log line, and deliberately not left
- * behind in React Query's mutation cache, which is why the mutation is `reset`
- * the moment its payload has been read. bfm keeps only a digest, so this
- * string is the single copy in existence; when it expires the state cell is
- * cleared rather than merely hidden.
+ * behind in React Query's mutation cache, which is why every settled mint is
+ * `reset`. bfm keeps only a digest, so this string is the single copy in
+ * existence; expiry and dismissal both clear the cell rather than hide it.
  */
 export function usePairingCode(): PairingCodeModel {
   const [issued, setIssued] = useState<IssuedPairingCode | null>(null);
