@@ -35,6 +35,14 @@ Both files carry their reasoning in a header comment — every limit is a number
 
 Neither tool is pinned the same way. SwiftLint is a mise tool, so its version is in `mise.toml` and everyone gets the same one. `swift-format` ships inside the Xcode toolchain and cannot be pinned here at all — which is why the CI job has to pin its Xcode explicitly, and why a local run only matches CI when the Xcode versions agree.
 
+### Generated code
+
+**A directory named `Generated` is a generator's output, and neither tool looks inside one.** Both rule sets describe code a person wrote, and a generated OpenAPI client breaks several of them by construction — the first person to hit that would reach for the blanket suppression comment `.swiftlint.yml` forbids.
+
+The two exclusions are separate decisions with separate reasons, and the formatter's goes against the TypeScript side, where generated clients _are_ formatted. Both reasons are written down in [`scripts/swift-sources.sh`](scripts/swift-sources.sh), which also owns the formatter's file list, so the exclusion exists once rather than once per tool.
+
+The name is the whole boundary, so `mise run lint` polices it in both directions: generated code outside a `Generated` directory fails, and hand-written code inside one fails too — otherwise the directory is somewhere to hide code from the linter. That the tools actually honour the exclusion is a self-test against fixtures built from the real `.swiftlint.yml`, not a claim in a comment; with no generated sources committed yet, it is the only part of this that is checking anything.
+
 ## Signing, and installing on a phone
 
 Signing is automatic, and the only input it needs is an Apple Developer team.
