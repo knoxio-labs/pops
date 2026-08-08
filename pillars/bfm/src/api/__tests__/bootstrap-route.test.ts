@@ -62,10 +62,28 @@ function registryServing(...pillars: PillarSnapshot[]): { fetches: number } {
   return counter;
 }
 
+/**
+ * The instant the route writes, pinned.
+ *
+ * The row's own `last_seen_at` default comes from SQLite's `'now'`, which can
+ * land in the same millisecond as a `new Date()` taken microseconds later — so
+ * asserting that the column "advanced" against a production clock is a test
+ * that passes on a slow machine and fails on a fast one. A fixed instant well
+ * ahead of the insert makes the comparison mean what it says.
+ */
+const CHECKED_IN_AT = '2027-01-01T00:00:00.000Z';
+
 function open(options: TestAppOptions): TestApp {
-  const created = createTestApp(options);
+  const created = createTestApp({
+    ...options,
+    bootstrap: { now: () => new Date(CHECKED_IN_AT), ...options.bootstrap },
+  });
   apps.push(created);
   return created;
+}
+
+function storedLastSeenAt(app: TestApp): string | undefined {
+  return app.db.select().from(devices).all()[0]?.lastSeenAt;
 }
 
 /** A paired, trusted handset and a token it can present. */
@@ -129,11 +147,12 @@ describe('the perimeter in front of the route', () => {
     vi.spyOn(console, 'warn').mockImplementation(() => {});
     const app = open({ bootstrap: { probe: healthyProbe('finance') } });
     const device = pairedDevice(app, { revokedAt: '2026-08-01T00:00:00.000Z' });
-    const before = app.db.select().from(devices).all()[0]?.lastSeenAt;
+    const before = storedLastSeenAt(app);
 
     await request(app.app).get('/mobile/bootstrap').set('Authorization', device.authorization);
 
-    expect(app.db.select().from(devices).all()[0]?.lastSeenAt).toBe(before);
+    expect(storedLastSeenAt(app)).toBe(before);
+    expect(storedLastSeenAt(app)).not.toBe(CHECKED_IN_AT);
   });
 });
 
@@ -186,15 +205,15 @@ describe('a paired device asking what to render', () => {
   it('advances lastSeenAt, and says so in the payload', async () => {
     const app = open({ bootstrap: { probe: healthyProbe('finance') } });
     const device = pairedDevice(app);
-    const before = app.db.select().from(devices).all()[0]?.lastSeenAt;
+    const before = storedLastSeenAt(app);
 
     const res = await request(app.app)
       .get('/mobile/bootstrap')
       .set('Authorization', device.authorization);
 
-    const stored = app.db.select().from(devices).all()[0]?.lastSeenAt;
-    expect(res.body.device.lastSeenAt).toBe(stored);
-    expect(String(stored) > String(before)).toBe(true);
+    expect(storedLastSeenAt(app)).toBe(CHECKED_IN_AT);
+    expect(res.body.device.lastSeenAt).toBe(CHECKED_IN_AT);
+    expect(CHECKED_IN_AT > String(before)).toBe(true);
   });
 
   it('never returns the device key or model — the phone knows those already', async () => {
@@ -257,12 +276,11 @@ describe('the federation half-broken, seen from the phone', () => {
     vi.spyOn(console, 'warn').mockImplementation(() => {});
     const app = open({ bootstrap: { probe: healthyProbe('finance') } });
     const device = pairedDevice(app);
-    const before = app.db.select().from(devices).all()[0]?.lastSeenAt;
     registryServing(pillarSnapshot('finance'));
     failNextRegistryFetches(1, new Error('registry down'));
 
     await request(app.app).get('/mobile/bootstrap').set('Authorization', device.authorization);
 
-    expect(String(app.db.select().from(devices).all()[0]?.lastSeenAt) > String(before)).toBe(true);
+    expect(storedLastSeenAt(app)).toBe(CHECKED_IN_AT);
   });
 });

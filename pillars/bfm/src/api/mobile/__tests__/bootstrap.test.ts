@@ -77,6 +77,29 @@ describe('a federation that is entirely healthy', () => {
     expect(payload.features).toEqual([{ id: 'transactions', reachability: 'healthy' }]);
   });
 
+  it('leaves bfm out of the list it is answering with', async () => {
+    // bfm self-registers, so it is in its own snapshot. Probing it would ask,
+    // over the network, whether the process writing this response is up — and
+    // a route that does not resolve from inside the container would declare
+    // bfm unavailable in a payload bfm is serving.
+    const { db, device } = seededDb(deviceRow());
+    const { fetchImpl, requested } = fakeFetch({
+      'http://finance-api:3000/openapi': contractResponse,
+    });
+
+    const payload = await buildMobileBootstrap(
+      device,
+      depsFor(db, {
+        readRegistry: () =>
+          Promise.resolve(registrySnapshot([pillarSnapshot('bfm'), pillarSnapshot('finance')])),
+        probe: { fetchImpl, timeoutMs: 50, baseUrlOverrides: {} },
+      })
+    );
+
+    expect(payload.pillars).toEqual([{ id: 'finance', reachability: 'healthy' }]);
+    expect(requested).toEqual(['http://finance-api:3000/openapi']);
+  });
+
   it('names the device back to itself', async () => {
     const { db, device } = seededDb(deviceRow({ name: 'Spare handset' }));
 

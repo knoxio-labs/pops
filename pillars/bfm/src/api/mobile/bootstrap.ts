@@ -29,6 +29,7 @@
 import { pillarRegistry, RegistryUnreachableError } from '@pops/pillar-sdk/discovery';
 
 import { touchDevice } from '../../db/index.js';
+import { BFM_PILLAR_ID } from '../manifest.js';
 import { deriveFeatures } from './features.js';
 import { defaultProbeDeps, probeFederation, type ReachabilityProbeDeps } from './reachability.js';
 
@@ -66,7 +67,7 @@ export async function buildMobileBootstrap(
   touchDevice(deps.db, device.id, seenAt);
 
   const registry = await readRegistry(deps.readRegistry);
-  const pillars = await probeFederation(registry.pillars, deps.probe);
+  const pillars = await probeFederation(withoutSelf(registry.pillars), deps.probe);
 
   return {
     device: { id: device.id, name: device.name, lastSeenAt: seenAt },
@@ -74,6 +75,20 @@ export async function buildMobileBootstrap(
     pillars,
     features: deriveFeatures(pillars),
   };
+}
+
+/**
+ * Drop bfm's own registration before probing.
+ *
+ * bfm self-registers, so it is in its own snapshot. Probing it would mean
+ * asking, over the network and through whatever proxy its advertised base URL
+ * points at, whether the process currently writing this response is up — and a
+ * deployment where that route does not resolve from inside the container would
+ * produce a payload declaring bfm unavailable while bfm answers it. The phone
+ * is holding the answer already; the list is of the peers behind it.
+ */
+function withoutSelf(pillars: readonly PillarSnapshot[]): PillarSnapshot[] {
+  return pillars.filter((entry) => entry.pillarId !== BFM_PILLAR_ID);
 }
 
 async function readRegistry(read: () => Promise<RegistrySnapshot>): Promise<{
