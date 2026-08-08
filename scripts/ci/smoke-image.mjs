@@ -14,11 +14,20 @@
  * base image — so a new pillar is covered the moment its Dockerfile lands,
  * with no port or route table to keep in sync.
  *
+ * The image is started against a NAMED VOLUME THAT HAS NEVER EXISTED, mounted
+ * where production mounts one. Docker seeds an empty named volume from the
+ * image's contents at the mount point, ownership included, so a runtime stage
+ * that does not create and own that directory gets a `root:root` volume and
+ * dies on `SQLITE_CANTOPEN`. A recycled volume already carries whatever
+ * permissions the first mount established and would pass regardless — the
+ * volume being new on every run is the whole assertion.
+ *
  * The environment supplied is deliberately minimal and is documented on the
- * constants below: `PORT`, the shared `SQLITE_PATH`, and placeholders for
- * the secrets some pillars choose to crash on at boot. Nothing else. A
- * pillar that needs more than that to answer a health probe is a finding,
- * not a smoke-test configuration problem.
+ * constants below: `PORT` and placeholders for the secrets some pillars
+ * choose to crash on at boot. Nothing else — in particular no database path,
+ * because each image now defaults its own onto the mount. A pillar that needs
+ * more than that to answer a health probe is a finding, not a smoke-test
+ * configuration problem.
  *
  * Usage:
  *   node scripts/ci/smoke-image.mjs <dockerfile> <image-ref>
@@ -28,7 +37,9 @@
  */
 
 import { execFile } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
+import { basename, dirname } from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { promisify } from 'node:util';
 
@@ -38,15 +49,17 @@ const HEALTH_TIMEOUT_MS = 90_000;
 const POLL_INTERVAL_MS = 1_000;
 
 /**
- * Every DB-owning pillar resolves its SQLite file as
- * `<dirname(SQLITE_PATH)>/<id>.db` when its own `<ID>_SQLITE_PATH` is unset
- * (see `pillars/<id>/src/api/<id>-sqlite-path.ts`). Production points that at a
- * mounted volume; the smoke points it at the container's own writable `/tmp`,
- * which gives all nine pillars a bootable DB from one env var instead of a
- * per-pillar table. Without it they die on `EACCES: mkdir './data'` — `/app`
- * is root-owned and the runtime stage runs as `node`.
+ * Where every pillar's SQLite volume is mounted, in compose and here alike.
+ *
+ * Mounted for EVERY image rather than only the DB-owning ones, so there is no
+ * list of which pillars have a database to keep in sync. An image that never
+ * writes there is unaffected by an extra empty volume; an image that does is
+ * held to the fresh-mount contract. Each of those images defaults its own
+ * database onto this path in its runtime stage — the Dockerfile of any pillar
+ * that ships a `migrations/` directory, held to it by the drift test in
+ * `scripts/ci/__tests__/smoke-image.test.ts`.
  */
-const SMOKE_SQLITE_PATH = '/tmp/pops-smoke.db';
+const SMOKE_DATA_MOUNT = '/data/sqlite';
 
 /**
  * Secrets a pillar deliberately crashes on at boot rather than discovering
@@ -88,6 +101,24 @@ export function parseExposedPort(dockerfile) {
 }
 
 /**
+ * The final stage's text: from its `FROM` to the end of the file.
+ *
+ * Only this stage ships. A directory created or owned in the builder is
+ * discarded with it, so anything asserted about what the running image
+ * contains has to be asserted here and not on the file as a whole.
+ *
+ * @param {string} dockerfile Dockerfile contents.
+ * @returns {string}
+ * @throws {Error} When the Dockerfile has no FROM.
+ */
+export function runtimeStage(dockerfile) {
+  const froms = [...dockerfile.matchAll(/^\s*FROM\s+\S+/gimu)];
+  const last = froms.at(-1);
+  if (last?.index === undefined) throw new Error('no FROM directive — not a Dockerfile?');
+  return dockerfile.slice(last.index);
+}
+
+/**
  * The base image of the final (runtime) stage.
  *
  * @param {string} dockerfile Dockerfile contents.
@@ -95,10 +126,9 @@ export function parseExposedPort(dockerfile) {
  * @throws {Error} When the Dockerfile has no FROM.
  */
 export function parseRuntimeBaseImage(dockerfile) {
-  const froms = [...dockerfile.matchAll(/^\s*FROM\s+(\S+)/gimu)].map((match) => match[1]);
-  const last = froms.at(-1);
-  if (last === undefined) throw new Error('no FROM directive — not a Dockerfile?');
-  return last;
+  const base = /^\s*FROM\s+(\S+)/imu.exec(runtimeStage(dockerfile))?.[1];
+  if (base === undefined) throw new Error('no FROM directive — not a Dockerfile?');
+  return base;
 }
 
 /**
@@ -116,6 +146,23 @@ export function parseRuntimeBaseImage(dockerfile) {
  */
 export function resolveHealthPath(baseImage) {
   return /^nginx(:|$)/u.test(baseImage) ? '/' : '/health';
+}
+
+/**
+ * A volume name no previous run can have used.
+ *
+ * The pillar id is in there for a human reading `docker volume ls` after a
+ * crashed run; the random suffix is what makes the mount genuinely first-ever.
+ * Deriving the name from the Dockerfile path alone would recycle it across
+ * runs on the same machine, and a recycled volume already carries the
+ * ownership the fix installs — it would pass on an image that has regressed.
+ *
+ * @param {string} dockerfilePath e.g. `pillars/finance/Dockerfile`.
+ * @returns {string}
+ */
+export function freshVolumeName(dockerfilePath) {
+  const pillarId = basename(dirname(dockerfilePath)) || 'pillar';
+  return `pops-smoke-${pillarId}-${randomUUID().slice(0, 8)}`;
 }
 
 /**
@@ -233,8 +280,10 @@ async function waitForHealth({ containerId, url, timeoutMs }) {
 
 /**
  * Dump everything a reader needs to diagnose the failure without a local
- * rebuild — including the `@pops/*` link shape, which is what breaks when
- * the deploy step regresses to a workspace-escaping symlink.
+ * rebuild — the `@pops/*` link shape, which is what breaks when the deploy
+ * step regresses to a workspace-escaping symlink, and the numeric ownership
+ * of the data directory IN THE IMAGE, which is what a fresh volume inherits.
+ * `0 0` there against a `USER node` runtime is the whole of a SQLITE_CANTOPEN.
  *
  * @param {string} containerId
  * @param {string} image
@@ -255,6 +304,18 @@ async function reportFailure(containerId, image) {
       'ls -la /app/node_modules/@pops 2>&1 || echo "(no /app/node_modules/@pops)"',
     ])
   );
+  console.error(`\n--- ${SMOKE_DATA_MOUNT} in the image (uid/gid a fresh volume inherits) ---`);
+  console.error(
+    await dockerBestEffort([
+      'run',
+      '--rm',
+      '--entrypoint',
+      'sh',
+      image,
+      '-c',
+      `ls -ldn /data ${SMOKE_DATA_MOUNT} 2>&1; id`,
+    ])
+  );
 }
 
 async function main() {
@@ -265,55 +326,63 @@ async function main() {
   }
 
   const { port, healthPath, baseImage } = planSmoke(readFileSync(dockerfilePath, 'utf8'));
+  const volume = freshVolumeName(dockerfilePath);
   console.log(
     `Smoking ${image} (${dockerfilePath}): runtime base ${baseImage}, ` +
-      `expecting ${healthPath} on container port ${port}.`
+      `expecting ${healthPath} on container port ${port}, ` +
+      `with the never-before-mounted volume ${volume} at ${SMOKE_DATA_MOUNT}.`
   );
 
-  // Deliberately NOT `--rm`: a container that dies on its first import is
-  // exactly the failure this exists to catch, and its logs are the evidence.
-  // `--rm` would delete them the instant it exited.
-  const containerId = await docker([
-    'run',
-    '--detach',
-    '--publish',
-    `127.0.0.1::${port}`,
-    '--env',
-    `PORT=${port}`,
-    '--env',
-    `SQLITE_PATH=${SMOKE_SQLITE_PATH}`,
-    ...Object.entries(BOOT_PLACEHOLDER_SECRETS).flatMap(([name, value]) => [
-      '--env',
-      `${name}=${value}`,
-    ]),
-    image,
-  ]);
-
+  await docker(['volume', 'create', volume]);
   try {
-    // An image that dies on its first import is gone before `docker port`
-    // can answer, so a failure here is a smoke failure like any other — it
-    // must still surface the logs rather than throw a raw docker error.
-    const result = await resolveHostPort(containerId, port).then(
-      (hostPort) =>
-        waitForHealth({
-          containerId,
-          url: `http://127.0.0.1:${hostPort}${healthPath}`,
-          timeoutMs: HEALTH_TIMEOUT_MS,
-        }),
-      (err) => ({
-        ok: /** @type {const} */ (false),
-        reason: `could not reach the published port: ${err instanceof Error ? err.message : String(err)}`,
-      })
-    );
-    if (result.ok) {
-      console.log(`OK — ${image} answered ${healthPath}: ${result.body}`);
-      return;
+    // Deliberately NOT `--rm`: a container that dies on its first import is
+    // exactly the failure this exists to catch, and its logs are the evidence.
+    // `--rm` would delete them the instant it exited.
+    const containerId = await docker([
+      'run',
+      '--detach',
+      '--publish',
+      `127.0.0.1::${port}`,
+      '--volume',
+      `${volume}:${SMOKE_DATA_MOUNT}`,
+      '--env',
+      `PORT=${port}`,
+      ...Object.entries(BOOT_PLACEHOLDER_SECRETS).flatMap(([name, value]) => [
+        '--env',
+        `${name}=${value}`,
+      ]),
+      image,
+    ]);
+
+    try {
+      // An image that dies on its first import is gone before `docker port`
+      // can answer, so a failure here is a smoke failure like any other — it
+      // must still surface the logs rather than throw a raw docker error.
+      const result = await resolveHostPort(containerId, port).then(
+        (hostPort) =>
+          waitForHealth({
+            containerId,
+            url: `http://127.0.0.1:${hostPort}${healthPath}`,
+            timeoutMs: HEALTH_TIMEOUT_MS,
+          }),
+        (err) => ({
+          ok: /** @type {const} */ (false),
+          reason: `could not reach the published port: ${err instanceof Error ? err.message : String(err)}`,
+        })
+      );
+      if (result.ok) {
+        console.log(`OK — ${image} answered ${healthPath}: ${result.body}`);
+        return;
+      }
+      console.error(`FAIL — ${image} never answered ${healthPath}: ${result.reason}`);
+      await reportFailure(containerId, image);
+      process.exitCode = 1;
+    } finally {
+      await dockerBestEffort(['rm', '--force', containerId]);
     }
-    console.error(`FAIL — ${image} never answered ${healthPath}: ${result.reason}`);
-    await reportFailure(containerId, image);
-    process.exitCode = 1;
   } finally {
-    await dockerBestEffort(['rm', '--force', containerId]);
+    // After the container, never before: a volume still in use will not go.
+    await dockerBestEffort(['volume', 'rm', '--force', volume]);
   }
 }
 

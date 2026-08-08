@@ -58,6 +58,20 @@ FROM node:24-slim
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
 
+# Both data volume mount points this pillar declares in compose, created here
+# and owned by the runtime user. Docker seeds an empty named volume from the
+# image's contents at the mount point, ownership included — so a directory
+# missing here arrives root-owned on the volume's FIRST EVER mount and the
+# pillar cannot write there. `media-images-data` fails the same way as the
+# database volume, just later: at the first poster write rather than at boot.
+RUN mkdir -p /data/sqlite /data/media/images && chown -R node:node /data
+
+# The image's own database default, so it boots with no environment at all.
+# `SQLITE_PATH` is the lowest-precedence path the resolver reads (see
+# pillars/media/src/api/media-sqlite-path.ts), so compose's per-pillar
+# MEDIA_SQLITE_PATH still wins; on its own it lands on /data/sqlite/media.db.
+ENV SQLITE_PATH=/data/sqlite/pops.db
+
 COPY --from=builder --chown=node:node /app/deploy ./
 COPY --from=builder --chown=node:node /app/pillars/media/dist ./dist
 COPY --from=builder --chown=node:node /app/pillars/media/migrations ./migrations
