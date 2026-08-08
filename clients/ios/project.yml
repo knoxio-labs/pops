@@ -31,6 +31,8 @@ packages:
     path: Packages/BFMClient
   DesignSystem:
     path: Packages/DesignSystem
+  FeaturePairing:
+    path: Packages/FeaturePairing
   FeatureTransactions:
     path: Packages/FeatureTransactions
 
@@ -45,6 +47,7 @@ targets:
       - package: Auth
       - package: BFMClient
       - package: DesignSystem
+      - package: FeaturePairing
       - package: FeatureTransactions
     # A shared scheme, so `xcodebuild -scheme Pops` resolves on a clean checkout
     # rather than relying on Xcode autocreating one into xcuserdata. Its test

@@ -2,17 +2,17 @@
 
 19 workflows. Every job runs on `ubuntu-latest` except `ios-quality.yml`, which needs macOS to compile Swift at all.
 
-## `ci-gate.yml` — the one static required context
+## `ci-gate.yml` — the one static aggregate context
 
-`ci-gate.yml` publishes a single job named `CI Gate`, triggered
-`on: workflow_run` `types: [completed]` of seven workflows: Unit Quality, FE
+`ci-gate.yml` runs a job named `Publish CI Gate verdict`, triggered
+`on: workflow_run` `types: [completed]` of eight workflows: Unit Quality, FE
 Quality, Rust Quality, App Quality, Quality, Registry Generated Quality, iOS
-Quality. Each name appears twice in that file — in the trigger array and in the
-`gated` array inside the script — and either alone is inert. It reads
-their conclusions through the Actions API and runs nothing itself
-(`permissions:` are `actions`/`checks`/`contents: read`). The file header carries
-the argument for `workflow_run` over `needs:` and for why the verdict converges;
-the rules the `github-script` step implements:
+Quality, Docker Build. Each name appears twice in that file — in the trigger
+array and in the `gated` array inside the script — and either alone is inert. It
+reads their conclusions through the Actions API and runs none of them itself. The
+file header carries the argument for `workflow_run` over `needs:`, for why the
+verdict converges, and for why it publishes its own check run; the rules the
+`github-script` step implements:
 
 - Concurrency is keyed `ci-gate-${{ github.event.workflow_run.head_sha }}` with
   `cancel-in-progress: true`, so every sibling completion for a commit collapses
@@ -23,7 +23,69 @@ the rules the `github-script` step implements:
   `action_required` or `stale`.
 - A gated workflow with no run at the SHA is logged as `did not run —
   path-filtered, treated as pass`.
-- A run that is not yet `completed` is reported as pending and does not fail.
+- A run that is not yet `completed` is pending: it does not fail the gate, but it
+  does hold it at `in_progress`. A failure concludes immediately (nothing can
+  clear it); `success` is only ever published once nothing is left in flight.
+- The verdict is POSTed as a **check run named `CI Gate` against
+  `github.event.workflow_run.head_sha`** (hence `permissions: checks: write`).
+  That is the context to put in the branch ruleset.
+
+### Rules this file exists to stop people relearning
+
+**A `workflow_run` job's implicit check run lands on the default branch's tip,
+not on the head it judged.** Until the gate began POSTing its own check run it
+had never once appeared on a pull request, however green or red it was. If the
+`checks.create` call is ever dropped, the gate silently reverts to being a
+post-hoc signal on `main`.
+
+**"Not in the ruleset" does not mean "cannot block".** The gate aggregates the
+**workflow-level** conclusion of each gated workflow, so one red job anywhere in
+`quality.yml`, `unit-quality.yml`, … turns the single `CI Gate` context red
+regardless of that job's own name. The only way to make a job advisory is
+`continue-on-error: true`, which erases it from its workflow's conclusion; a
+comment claiming a job is non-blocking because the ruleset does not list it by
+name is wrong. Nothing in `quality.yml` is advisory today.
+
+**Green must mean "everything finished and passed", not "nothing has failed
+yet".** The gate fires on each sibling's completion, so the earliest evaluation
+sees seven workflows still running. Concluding `success` there would put the
+context green — and, once it is required, the PR mergeable — minutes before the
+slowest gated workflow has an opinion, and the failure would land after the
+merge. Hence `in_progress` until nothing is pending.
+
+**A guard must be exercised against the condition it exists to detect, not
+against a healthy tree.** Everything above shares one shape — a check that
+looked fine precisely because it was never put in the state it was built for.
+The implicit check run was green on `main` while judging nothing. A premature
+`success` was green while seven workflows were still running. The wiring guard
+threw a `TypeError` instead of reporting when `Quality` was renamed. And it
+matched keys with regexes anchored at end-of-line, so every one of them was
+blind to an inline value or a trailing comment — including the
+`paths: ["**"] # …` form this repo already uses in `unit-quality.yml`, meaning a
+path filter added to `Quality` that way would have slipped straight past. Green
+from a check that was never made to fail is not evidence.
+
+Concretely, when matching YAML by text here: **never anchor a key match on
+end-of-line.** `key:`, `key: value` and `key: value # note` are all the same
+declaration, and a matcher that only accepts the first silently matches nothing
+and reports success. `matchKey` in the wiring guard is the single place that
+rule lives; route new checks through it rather than writing another regex.
+
+`scripts/ci/check-ci-gate-wiring.mjs` asserts the rules above, plus the
+trigger/`gated` agreement and that every gated name still resolves to a real
+workflow. It runs in `quality.yml`'s `Scripts tests` job.
+
+### Current state of the ruleset
+
+The `main` branch ruleset requires `agent-review`, `Lint`, `Format`,
+`Module boundaries` and `Duplication check`. **`CI Gate` is not among them**, so
+today it reports on the PR but does not block it — typecheck, test, build,
+clippy, exports, extractability, bundle-map, drift and the Docker image smoke
+are all still advisory in the ruleset's eyes. Adding `CI Gate` to the required
+contexts is a repository setting, not a change to this repo, and it is safe only
+while `Quality` stays gated and unfiltered (that is what guarantees the context
+reports on every PR, docs-only ones included — a required context that never
+reports blocks its PR forever).
 
 ## `_discover-units.yml`
 
@@ -47,7 +109,7 @@ files only, no install.
 
 | File                             | Trigger                                                       | Runs                                                                                                             |
 | -------------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `quality.yml`                    | every PR + push to `main` — **no path filter, deliberately**  | 15 jobs incl. `Lint`, `Format`, `Module boundaries`, `Duplication check`; scoped to changed units on PRs, whole tree on `main` |
+| `quality.yml`                    | every PR + push to `main` — **no path filter, deliberately**  | 15 jobs incl. `Lint`, `Format`, `Module boundaries`, `Duplication check`; scoped to changed units on PRs, whole tree on `main`. No job is advisory — see the `CI Gate` rules above |
 | `unit-quality.yml`               | PR/push on unit + shared-root paths                           | ts and rust lanes over the changed-unit matrix                                                                      |
 | `app-quality.yml`                | PR/push on `pillars/*/app/**`, `pillars/*/openapi/**`, FE libs | each `@pops/app-*`'s own typecheck + test                                                                           |
 | `fe-quality.yml`                 | PR/push on `pillars/shell/**`, apps, openapi, FE libs         | the shell's `Quality Checks` job                                                                                     |
