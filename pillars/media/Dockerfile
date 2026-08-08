@@ -49,8 +49,10 @@ COPY pillars/media/tsconfig.build.json ./pillars/media/tsconfig.build.json
 RUN pnpm --filter "@pops/media^..." build
 RUN pnpm --filter "@pops/media" build
 
-# Standalone deployment (production deps only, no symlinks).
-RUN pnpm --filter @pops/media deploy --prod --legacy /app/deploy
+# Standalone deployment: --config.inject-workspace-packages=true inlines the
+# @pops/* workspace deps into /app/deploy. The --legacy path instead writes
+# relative symlinks that escape the deploy dir and 404 in the runtime stage.
+RUN pnpm --filter @pops/media --config.inject-workspace-packages=true deploy --prod /app/deploy
 
 FROM node:24-slim
 WORKDIR /app
