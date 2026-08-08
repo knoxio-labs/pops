@@ -84,21 +84,29 @@ export function storeReceiptImage(
 }
 
 /**
- * Is this base64 actually decodable, and does it look like the image type
- * it claims?
+ * Base64 that decodes to what it claims to be.
+ *
+ * `Buffer.from(s, 'base64')` never throws — it skips characters it does not
+ * recognise and returns whatever it managed to decode, so a truncated or
+ * corrupted upload silently becomes a short buffer rather than an error.
+ * The shape is therefore checked before decoding rather than after.
+ */
+const BASE64_RE = /^[A-Za-z0-9+/]+={0,2}$/u;
+
+/**
+ * Does this upload look like the image type it claims?
  *
  * Checked at the edge rather than discovered by the vision model, because
  * "that is not a JPEG" is an answer the user can act on immediately and a
- * model's confusion about it is not. The magic-number check is deliberately
- * shallow — it catches a mislabelled or truncated upload, not a hostile one.
+ * model's confusion about it is not, and costs a call to obtain. The
+ * magic-number check is deliberately shallow — it catches a mislabelled or
+ * truncated upload, not a hostile one.
  */
 export function looksLikeImage(dataBase64: string, mediaType: ReceiptMediaType): boolean {
-  let bytes: Buffer;
-  try {
-    bytes = Buffer.from(dataBase64, 'base64');
-  } catch {
-    return false;
-  }
+  const compact = dataBase64.replaceAll(/\s/gu, '');
+  if (compact.length % 4 !== 0 || !BASE64_RE.test(compact)) return false;
+
+  const bytes = Buffer.from(compact, 'base64');
   if (bytes.length < 12) return false;
 
   const magic: Readonly<Record<ReceiptMediaType, (probe: Buffer) => boolean>> = {

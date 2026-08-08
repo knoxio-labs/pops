@@ -77,4 +77,26 @@ describe('parseAmountCents', () => {
       expect(parseAmountCents(raw)).toBeNull();
     }
   });
+
+  it('requires the whole string to be an amount, not merely to contain one', () => {
+    // An earlier version deleted every non-numeric character and read what
+    // survived, so `TOTAL $27.50` became $27.50 and `1-2` became −12. That
+    // let malformed model output through the gate as fact.
+    expect(parseAmountCents('TOTAL $27.50')).toBeNull();
+    expect(parseAmountCents('1-2')).toBeNull();
+    expect(parseAmountCents('12 items')).toBeNull();
+    expect(parseAmountCents('approx 5.00')).toBeNull();
+    expect(parseAmountCents('5.00 each')).toBeNull();
+  });
+
+  it('still accepts a currency marker at either end', () => {
+    // What the exclusion must not break: symbols and ISO codes sit beside
+    // amounts on real receipts, on either side.
+    expect(parseAmountCents('$27.50')).toBe(2750);
+    expect(parseAmountCents('27,50 EUR', { currency: 'EUR' })).toBe(2750);
+    expect(parseAmountCents('€27,50', { currency: 'EUR' })).toBe(2750);
+    expect(parseAmountCents('kr 27,50', { currency: 'SEK' })).toBe(2750);
+    expect(parseAmountCents('-$4.95')).toBe(-495);
+    expect(parseAmountCents('$-4.95')).toBe(-495);
+  });
 });

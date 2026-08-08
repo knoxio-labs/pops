@@ -52,6 +52,26 @@ const COMMA_DECIMAL_CURRENCIES = new Set([
   'IDR',
 ]);
 
+/**
+ * A currency marker at either end: a symbol (`$`, `€`, `kr`) or an ISO code
+ * (`AUD`, `EUR`). Bounded deliberately — the point is to allow what sits
+ * beside an amount, not to let arbitrary text through.
+ */
+const CURRENCY_EDGE = String.raw`(?:[^\d\s,.-]{1,3}|[A-Za-z]{3})`;
+
+/**
+ * The whole string must be an amount, not merely contain one.
+ *
+ * An earlier version deleted every non-numeric character and read whatever
+ * survived, which turned `TOTAL $27.50` into $27.50 and `1-2` into −12.
+ * That contradicts this module's one promise — null for anything that is
+ * not money — and let malformed model output through the gate as fact.
+ */
+const MONEY_RE = new RegExp(
+  `^(?:-\\s*)?(?:${CURRENCY_EDGE}\\s*)?(?:-\\s*)?(?<digits>[\\d.,]+)\\s*(?:${CURRENCY_EDGE})?$`,
+  'u'
+);
+
 export interface MoneyLocale {
   /** ISO-4217 from the receipt. Null when it does not say. */
   readonly currency?: string | null;
@@ -135,13 +155,12 @@ export function parseAmountCents(
 ): number | null {
   if (raw === null || raw === undefined) return null;
 
-  // Sign and currency symbol appear in both orders and on either side, so
-  // both are lifted off wherever they sit rather than matched at a fixed
-  // position.
-  const trimmed = raw.trim();
-  const negative = trimmed.includes('-');
-  const text = trimmed.replaceAll(/[^\d.,]/gu, '');
+  const match = MONEY_RE.exec(raw.trim());
+  if (match === null) return null;
+  const text = match.groups?.['digits'] ?? '';
   if (text === '') return null;
+  // A minus anywhere before the digits: `-$4.95` and `$-4.95` both occur.
+  const negative = raw.slice(0, raw.indexOf(text)).includes('-');
 
   const split = splitAmount(text, locale);
   if (split === null) return null;

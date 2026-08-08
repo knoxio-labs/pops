@@ -100,6 +100,21 @@ describe('checking an upload before the model sees it', () => {
     expect(looksLikeImage(Buffer.from('hello there').toString('base64'), 'image/png')).toBe(false);
   });
 
+  it('refuses base64 that is not base64', () => {
+    // `Buffer.from(s, 'base64')` never throws — it skips what it does not
+    // recognise and returns a short buffer — so a corrupted upload used to
+    // reach the model as a plausible-looking image.
+    expect(looksLikeImage('not base64 at all!!', 'image/jpeg')).toBe(false);
+    expect(looksLikeImage('////@@@@////', 'image/jpeg')).toBe(false);
+    // Truncated: a valid alphabet, but not a whole number of quanta.
+    expect(looksLikeImage(JPEG.toString('base64').slice(0, -1), 'image/jpeg')).toBe(false);
+  });
+
+  it('tolerates the line breaks a base64 encoder may insert', () => {
+    const wrapped = JPEG.toString('base64').replace(/(.{4})/u, '$1\n');
+    expect(looksLikeImage(wrapped, 'image/jpeg')).toBe(true);
+  });
+
   it('refuses an upload too short to be anything', () => {
     expect(looksLikeImage('', 'image/jpeg')).toBe(false);
     expect(looksLikeImage(Buffer.from([0xff, 0xd8]).toString('base64'), 'image/jpeg')).toBe(false);

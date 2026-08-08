@@ -46,7 +46,9 @@ const ok = (body: ReceiptOutcome) => ({ status: 200 as const, body });
 const visionUnavailable = () => ({
   status: 503 as const,
   body: {
-    message: 'No vision model is configured; set ANTHROPIC_API_KEY to accept receipts',
+    message:
+      'No vision model is configured; set ANTHROPIC_API_KEY, or ' +
+      'ANTHROPIC_API_KEY_FILE pointing at a mounted secret, to accept receipts',
     code: 'VISION_UNAVAILABLE',
   },
 });
