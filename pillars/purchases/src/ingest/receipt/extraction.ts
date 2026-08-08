@@ -4,9 +4,13 @@
  * Deliberately small. Every field here is something a human can read off a
  * photograph and check in a second, because everything a model emits has to
  * be checkable — see `gate.ts`. Anything the model would have to *infer*
- * (a category, a merchant id, whether a line is a discount) is absent on
- * purpose: an inference cannot be validated against the paper, so it would
- * be a guess wearing the same clothes as a reading.
+ * (a category, a merchant id, which department a line belongs to) is absent
+ * on purpose: an inference cannot be validated against the paper, so it
+ * would be a guess wearing the same clothes as a reading.
+ *
+ * `discounts` is not a counter-example. A receipt prints its discounts, so
+ * reading them is transcription like any other field; what is absent is
+ * asking the model to decide that some *item* line was really a discount.
  *
  * Money is a string, not a number. The model transcribes what is printed —
  * `$4.50`, `4.50`, `12` — and this layer parses it, so a malformed amount

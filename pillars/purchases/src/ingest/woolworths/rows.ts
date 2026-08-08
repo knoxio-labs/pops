@@ -32,7 +32,7 @@ import { parseAmountCents } from '../money.js';
  * to be asserted.
  */
 
-export { parseAmountCents } from '../money.js';
+export { parseAmountCents };
 
 /** A row exactly as the GraphQL `ReceiptDetailsItems.items[]` gives it. */
 export interface ReceiptRow {

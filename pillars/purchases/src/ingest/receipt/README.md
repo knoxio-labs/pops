@@ -42,9 +42,13 @@ to a human in a way a wrong cent is not.
 `extraction.ts` is deliberately small. Every field is something a person
 can read off the photograph and check in a second, because everything the
 model emits has to be checkable. Anything it would have to _infer_ — a
-category, a merchant id, whether a line is a discount — is absent: an
+category, a merchant id, which department a line belongs to — is absent: an
 inference cannot be validated against the paper, so it would be a guess
 wearing the same clothes as a reading.
+
+`discounts` is not a counter-example. A receipt prints its discounts, so
+reading them is transcription like any other field. What is absent is
+asking the model to decide that some _item_ line was really a discount.
 
 Money arrives as a string. The model transcribes what is printed and this
 layer parses it, so a malformed amount is a located failure rather than a
