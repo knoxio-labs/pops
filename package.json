@@ -48,5 +48,8 @@
     "vitest": "^4.1.10",
     "zod": "^4.4.3"
   },
+  "engines": {
+    "node": "^24"
+  },
   "packageManager": "pnpm@11.20.0"
 }
