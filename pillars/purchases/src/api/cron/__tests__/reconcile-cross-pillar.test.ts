@@ -34,6 +34,7 @@ import type { OpenedPurchasesDb } from '../../../db/index.js';
 const ITEM_URI = 'pops://inventory/item/abc';
 const DOC_URI = 'pops://documents/document/42';
 const NOW = new Date('2026-08-08T09:00:00.000Z');
+const UNIT_PRICE_CENTS = 5000;
 
 let opened: OpenedPurchasesDb;
 let cleanup: () => void;
@@ -68,16 +69,20 @@ function seed(options: { itemUris?: readonly string[]; documentUri?: string } = 
           serialNumber: `SN-${String(index + 1)}`,
           inventoryItemUri: uri,
         }));
+  // Derived rather than fixed so a multi-unit line still costs what its
+  // quantity implies. Nothing validates that today, but a fixture whose
+  // money contradicts its own quantity is a bad thing to assert against.
+  const lineTotalCents = UNIT_PRICE_CENTS * units.length;
   createPurchase(
     opened.db,
     amazonOrder({
-      totalCents: 5000,
+      totalCents: lineTotalCents,
       items: [
         {
           name: 'Nanoleaf bulb',
           quantity: units.length,
-          unitPriceCents: 5000,
-          lineTotalCents: 5000,
+          unitPriceCents: UNIT_PRICE_CENTS,
+          lineTotalCents,
           kind: 'durable',
           units,
         },
