@@ -45,3 +45,13 @@ overrides:
 # behaviour at the same time. The real guarantee is `--frozen-lockfile` at
 # install time, which is stronger and already enforced everywhere.
 verifyDepsBeforeRun: false
+
+# Turns the root manifest's `engines.node` from advice into a refusal, so a
+# shell whose PATH resolves an unpinned Node cannot run a workspace script and
+# report a result that CI would not reproduce.
+#
+# This must live here, not in an `.npmrc`: pnpm 11 reads `engine-strict` from
+# the npmrc only to warn, and runs the script anyway — the same silent-downgrade
+# trap as the `pnpm` package.json field above. In `pnpm-workspace.yaml` it
+# fails the command.
+engineStrict: true
