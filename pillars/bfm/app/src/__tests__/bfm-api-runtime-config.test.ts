@@ -17,9 +17,11 @@ describe('createClientConfig', () => {
     });
   });
 
-  // Callers override the host for e2e / storybook by wrapping the client.
-  // If this spread order ever flips, that override silently stops working.
-  it('lets an explicit baseUrl lose to the proxy default rather than half-applying', () => {
+  // The proxy path wins unconditionally: this hook is not the seam for
+  // pointing the client at another host (that is a separate `createClient`
+  // instance passed as `options.client`). If the spread order ever flips, the
+  // default client silently becomes redirectable by whatever calls it.
+  it('discards a caller-supplied baseUrl rather than honouring it', () => {
     expect(createClientConfig({ baseUrl: 'http://localhost:3014' })).toMatchObject({
       baseUrl: '/bfm-api',
     });

@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 
-import { Badge } from '@pops/ui';
+import { Badge, PageHeader } from '@pops/ui';
 
 import { isUnavailableError, unwrap } from '../bfm-api-helpers.js';
 import { health } from '../bfm-api/index.js';
@@ -23,10 +23,7 @@ export function DevicesPage(): ReactElement {
 
   return (
     <div className="space-y-6 p-6">
-      <header className="space-y-1">
-        <h1 className="text-3xl font-bold tracking-tight">{t('devices.title')}</h1>
-        <p className="text-muted-foreground">{t('devices.intro')}</p>
-      </header>
+      <PageHeader title={t('devices.title')} description={t('devices.intro')} />
 
       <section aria-labelledby="bfm-reachability" className="space-y-2">
         <h2 id="bfm-reachability" className="text-sm font-medium">
