@@ -100,6 +100,18 @@ describe('parseDevicePublicKey', () => {
     expect(uncompressed.toString('base64')).toBe(fixture.publicKeyX963Base64);
   });
 
+  it('accepts the same key in base64url, which decodes to the same bytes', () => {
+    // Documented rather than enforced: Node normalises `-`/`_`, so an alphabet
+    // check would reject a value that decodes to exactly the right key. The
+    // docblock says so; this is what stops that from being only a comment.
+    const asBase64Url = Buffer.from(fixture.publicKeySpkiDerBase64, 'base64').toString('base64url');
+
+    expect(asBase64Url).not.toBe(fixture.publicKeySpkiDerBase64);
+    expect(
+      parseDevicePublicKey(asBase64Url).export({ format: 'der', type: 'spki' }).toString('base64')
+    ).toBe(fixture.publicKeySpkiDerBase64);
+  });
+
   it('rejects the X9.63 point handed over where SPKI is expected', () => {
     expect(() => parseDevicePublicKey(fixture.publicKeyX963Base64)).toThrow(DevicePublicKeyError);
   });

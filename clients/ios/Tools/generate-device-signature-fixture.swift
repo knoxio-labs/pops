@@ -35,10 +35,14 @@ let signature = try privateKey.signature(for: message)
 
 let fixture: [String: Any] = [
     "version": 1,
+    // Every word of this has to stay true in BOTH locations: the file is
+    // committed byte-identically to clients/ios/Contracts/ and to
+    // pillars/bfm/contracts/, so a note that says "this copy" is wrong in one
+    // of them. Name the paths instead.
     "note":
         "Pins the ECDSA P-256 encodings the iOS app produces and the BFM verifies. "
-        + "This copy is canonical; the BFM asserts against a vendored copy at "
-        + "pillars/bfm/contracts/ and a CI guard fails on any drift between the two. "
+        + "clients/ios/Contracts/ holds the canonical copy; pillars/bfm/contracts/ "
+        + "holds a vendored one, and a CI guard fails on any drift between them. "
         + "The message bytes are opaque: the refresh message format is the BFM's to define.",
     "curve": "P-256",
     "digest": "SHA-256",

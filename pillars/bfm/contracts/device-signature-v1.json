@@ -2,7 +2,7 @@
   "curve": "P-256",
   "digest": "SHA-256",
   "messageBase64": "cG9wcy9kZXZpY2Utc2lnbmF0dXJlL3YxIGVuY29kaW5nIGZpeHR1cmUg4oCUIG9wYXF1ZSBieXRlcywgbm90IHRoZSByZWZyZXNoIG1lc3NhZ2UgZm9ybWF0",
-  "note": "Pins the ECDSA P-256 encodings the iOS app produces and the BFM verifies. This copy is canonical; the BFM asserts against a vendored copy at pillars/bfm/contracts/ and a CI guard fails on any drift between the two. The message bytes are opaque: the refresh message format is the BFM's to define.",
+  "note": "Pins the ECDSA P-256 encodings the iOS app produces and the BFM verifies. clients/ios/Contracts/ holds the canonical copy; pillars/bfm/contracts/ holds a vendored one, and a CI guard fails on any drift between them. The message bytes are opaque: the refresh message format is the BFM's to define.",
   "publicKeyEncoding": "spki-der",
   "publicKeySpkiDerBase64": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAExgeJEZErXCsEg3UKx3MzBMh82sBCR+qDVTvISmr57spowa4SE8LmfwZuSx0Bmwb8rcRtzERNw6EFbvrXCQmiHA==",
   "publicKeyX963Base64": "BMYHiRGRK1wrBIN1CsdzMwTIfNrAQkfqg1U7yEpq+e7KaMGuEhPC5n8GbksdAZsG/K3EbcxETcOhBW761wkJohw=",

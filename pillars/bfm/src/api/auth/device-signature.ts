@@ -55,8 +55,12 @@ export class DevicePublicKeyError extends Error {
  * a key from some other curve would still authenticate, and the contract the
  * fixture pins would be true only by convention.
  *
- * @param publicKeyDerBase64 Standard-alphabet base64 (not base64url), as the
- * pairing exchange stores it.
+ * @param publicKeyDerBase64 The base64 the pairing exchange stored.
+ * `devices.public_key_der` documents the standard alphabet, and this function
+ * deliberately does not enforce it: Node's decoder normalises base64url's
+ * `-`/`_` and yields the same bytes, so an alphabet check would reject a value
+ * that decodes to exactly the right key. The check that matters is the SPKI
+ * parse below, and it is not lenient about anything.
  * @throws {DevicePublicKeyError} when the value is not parseable as SPKI, is
  * not an EC key, or is not on P-256.
  */
