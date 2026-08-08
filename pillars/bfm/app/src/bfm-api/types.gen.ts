@@ -4,6 +4,62 @@ export type ClientOptions = {
   baseUrl: `${string}://${string}` | (string & {});
 };
 
+export type DevicePairData = {
+  /**
+   * Body
+   */
+  body?: {
+    code: string;
+    deviceModel: string;
+    deviceName: string;
+    publicKey: string;
+  };
+  path?: never;
+  query?: never;
+  url: '/devices/pair';
+};
+
+export type DevicePairErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code: 'invalid_request' | 'pairing_rejected';
+    message: string;
+  };
+  /**
+   * 403
+   */
+  403: {
+    code: 'invalid_request' | 'pairing_rejected';
+    message: string;
+  };
+  /**
+   * 429
+   */
+  429: {
+    code: 'rate_limited';
+    message: string;
+    retryAfterSeconds: number;
+  };
+};
+
+export type DevicePairError = DevicePairErrors[keyof DevicePairErrors];
+
+export type DevicePairResponses = {
+  /**
+   * 201
+   */
+  201: {
+    accessToken: string;
+    deviceId: string;
+    expiresIn: number;
+    refreshToken: string;
+  };
+};
+
+export type DevicePairResponse = DevicePairResponses[keyof DevicePairResponses];
+
 export type HealthData = {
   body?: never;
   path?: never;

@@ -14,11 +14,14 @@ import {
   PAIRING_CODE_RATE_WINDOW_MS,
   type RateLimiter,
 } from '../rate-limit.js';
+import { makeDeviceHandlers } from './device-handlers.js';
 import {
   makeMobileFinanceHandlers,
   type MobileFinanceHandlerDeps,
 } from './mobile-finance-handlers.js';
 import { makeOperatorHandlers } from './operator-handlers.js';
+
+import type { KeyObject } from 'node:crypto';
 
 import type { Response } from 'express';
 
@@ -33,6 +36,13 @@ export interface BfmRestHandlerDeps extends MobileFinanceHandlerDeps {
   /** Open handle to `bfm.db`. */
   db: BfmDb;
   /**
+   * Signs the access token the pairing exchange mints, and verifies the one on
+   * every `/mobile/*` request. Required rather than optional: an app that could
+   * be built without one would be an app whose perimeter can go missing
+   * silently.
+   */
+  accessTokenSigningKey: KeyObject;
+  /**
    * The BFM's public, Access-bypassed origin — the base the pairing QR points
    * the phone at.
    */
@@ -45,6 +55,8 @@ export interface BfmRestHandlerDeps extends MobileFinanceHandlerDeps {
   issuanceLimiter?: RateLimiter;
   /** Lifetime of a minted pairing code. Defaults to the service's own TTL. */
   pairingCodeTtlMs?: number;
+  /** Lifetime of the refresh token minted at pairing. Defaults to the service's own TTL. */
+  refreshTokenTtlMs?: number;
   /**
    * `pillarId → baseUrl` overrides, as resolved once at boot by
    * `configureBfmServerSdk`. Threaded in rather than re-read from the
@@ -81,6 +93,13 @@ export function makeBfmRestHandlers(
         version: deps.version,
         ts: new Date().toISOString(),
       },
+    }),
+    device: makeDeviceHandlers({
+      db: deps.db,
+      accessTokenSigningKey: deps.accessTokenSigningKey,
+      ...(deps.refreshTokenTtlMs === undefined
+        ? {}
+        : { refreshTokenTtlMs: deps.refreshTokenTtlMs }),
     }),
     operator: makeOperatorHandlers({
       db: deps.db,

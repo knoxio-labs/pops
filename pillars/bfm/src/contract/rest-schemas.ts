@@ -60,27 +60,31 @@ export type MobileDeviceRevokedError = z.infer<typeof MobileDeviceRevokedErrorSc
 export type MobileAuthError = z.infer<typeof MobileAuthErrorSchema>;
 
 /**
- * What the `/mobile` perimeter answers when a caller exceeds its request
- * budget (POPS-1468).
+ * What an internet-facing surface answers when a caller exceeds its request
+ * budget. Shared by the `/mobile` perimeter (POPS-1468) and the pairing
+ * exchange (POPS-1374) — two budgets charged for different reasons, giving the
+ * phone the same thing to act on. Unprefixed for that reason, unlike the
+ * `Mobile*` shapes around it.
  *
  * Separate from {@link MobileAuthErrorSchema} rather than another `code` in
  * its enum, because a 429 is not a statement about the caller's credentials:
- * it is reachable with a perfectly good token, and the phone's recovery —
- * back off, then retry the same request unchanged — is neither of the two
- * recoveries that schema's statuses select between.
+ * it is reachable with a perfectly good token — and on the pairing route, with
+ * a perfectly good code — and the recovery, back off then retry the same
+ * request unchanged, is none of the recoveries that schema's statuses select
+ * between.
  *
  * `retryAfterSeconds` duplicates the `Retry-After` header on purpose. The
  * header is the standard and a proxy may act on it; the body is what the
  * generated Swift client can read as a typed field without reaching for
  * `HTTPURLResponse.allHeaderFields`.
  */
-export const MobileRateLimitErrorSchema = z.object({
+export const RateLimitErrorSchema = z.object({
   code: z.literal('rate_limited'),
   message: z.string(),
   retryAfterSeconds: z.number().int().positive(),
 });
 
-export type MobileRateLimitError = z.infer<typeof MobileRateLimitErrorSchema>;
+export type RateLimitError = z.infer<typeof RateLimitErrorSchema>;
 
 /**
  * What a `/mobile` route answers when the request itself is wrong — as opposed

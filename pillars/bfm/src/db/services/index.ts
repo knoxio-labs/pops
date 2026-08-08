@@ -4,11 +4,22 @@
  * door in `../schema/`.
  */
 export {
+  insertDevice,
   listDevices,
   revokeDevice,
   type DeviceSummary,
+  type InsertDeviceValues,
   type RevokeDeviceResult,
 } from './devices.js';
+
+export {
+  DEFAULT_REFRESH_TOKEN_TTL_MS,
+  generateRefreshToken,
+  hashRefreshToken,
+  insertRefreshToken,
+  REFRESH_TOKEN_BYTES,
+  type InsertRefreshTokenValues,
+} from './refresh-tokens.js';
 
 export {
   DEFAULT_PAIRING_CODE_TTL_MS,

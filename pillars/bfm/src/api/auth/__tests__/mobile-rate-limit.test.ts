@@ -16,17 +16,18 @@ import express, { type Express } from 'express';
 import request from 'supertest';
 import { describe, expect, it } from 'vitest';
 
-import { MobileRateLimitErrorSchema } from '../../../contract/rest-schemas.js';
+import { RateLimitErrorSchema } from '../../../contract/rest-schemas.js';
 import {
   createMobileRateLimit,
   MOBILE_GLOBAL_LIMIT,
   MOBILE_PER_CLIENT_LIMIT,
-  type MobileRateLimit,
   type MobileRateLimitOptions,
 } from '../mobile-rate-limit.js';
 
+import type { TieredRateLimit } from '../../tiered-rate-limit.js';
+
 /** A prefix-mounted limiter in front of one always-200 route. */
-function mount(options: MobileRateLimitOptions): { app: Express; limiter: MobileRateLimit } {
+function mount(options: MobileRateLimitOptions): { app: Express; limiter: TieredRateLimit } {
   const limiter = createMobileRateLimit(options);
   const app = express();
   app.use('/mobile', limiter.handler);
@@ -196,7 +197,7 @@ describe('the 429 a refused caller receives', () => {
 
     const res = await request(app).get('/mobile/anything').set('CF-Connecting-IP', '203.0.113.7');
 
-    const parsed = MobileRateLimitErrorSchema.safeParse(res.body);
+    const parsed = RateLimitErrorSchema.safeParse(res.body);
     expect(parsed.error?.issues ?? []).toEqual([]);
     expect(parsed.success).toBe(true);
     expect(res.body.code).toBe('rate_limited');
