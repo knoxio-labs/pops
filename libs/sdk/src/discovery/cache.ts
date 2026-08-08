@@ -57,13 +57,25 @@ export function invalidateRegistryCache(): void {
   state.seeded = false;
 }
 
+/**
+ * Return the module to the state it had before anything configured it —
+ * cached snapshot, in-flight fetch, failure counters AND configuration.
+ *
+ * The configuration half matters because this module is process-wide state and
+ * every caller of this function is a test teardown. Clearing only the snapshot
+ * left the registry origin, the injected fetcher and any fake clock installed
+ * by {@link configureCache} in place, so a suite that configured the cache and
+ * then "disposed" it handed the next test a client still pointed at a fixture
+ * — and a later `pillarRegistry()` that forgot to configure would silently read
+ * from the previous test's fetcher instead of failing.
+ *
+ * The timer is cancelled through the OUTGOING config on purpose. A fake clock
+ * owns the handle it issued, so replacing `clearTimeoutImpl` first would leave
+ * the timer armed against a clock nobody can advance.
+ */
 export function disposeDiscoveryClient(): void {
   cancelBackgroundTimer();
-  state.snapshot = null;
-  state.inFlight = null;
-  state.consecutiveFailures = 0;
-  state.queuedFailures = null;
-  state.seeded = false;
+  state = createInitialState({});
 }
 
 export function seedSnapshot(snapshot: RegistrySnapshot): void {

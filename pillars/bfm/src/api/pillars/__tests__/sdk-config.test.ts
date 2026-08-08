@@ -17,6 +17,10 @@ import { configureDiscoveryForTest } from '@pops/pillar-sdk/testing/discovery';
 
 import { configureBfmServerSdk } from '../sdk-config.js';
 
+// Both surfaces are process-wide, and these tests write to both. Disposing the
+// discovery client returns its configuration — origin and injected fetcher —
+// to defaults, not just its cached snapshot, so this is a complete teardown
+// rather than half of one.
 afterEach(() => {
   __resetServerSdkConfig();
   disposeDiscoveryClient();
