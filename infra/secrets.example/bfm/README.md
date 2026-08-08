@@ -11,7 +11,7 @@ not where it looks.
 Run from the repo root:
 
 ```sh
-mkdir -p secrets && for f in infra/secrets.example/bfm/*.example; do n=$(basename "$f" .example); [ -f "secrets/$n" ] || { cp "$f" "secrets/$n"; chmod 600 "secrets/$n"; }; done
+mkdir -p secrets && chmod 700 secrets && for f in infra/secrets.example/bfm/*.example; do n=$(basename "$f" .example); [ -f "secrets/$n" ] || { cp "$f" "secrets/$n"; chmod 600 "secrets/$n"; }; done
 ```
 
 Then replace the placeholder line in each.

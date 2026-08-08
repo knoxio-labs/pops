@@ -13,6 +13,7 @@ Run from the repo root:
 
 ```sh
 mkdir -p secrets
+chmod 700 secrets
 for f in infra/secrets.example/moltbot/*.example; do
   name=$(basename "$f" .example)
   if [ ! -f "secrets/$name" ]; then
