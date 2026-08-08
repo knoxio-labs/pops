@@ -9,13 +9,16 @@
  * and the container dies on its first import with ERR_MODULE_NOT_FOUND.
  * Nothing short of starting the image sees it.
  *
- * Everything the run needs is derived from the Dockerfile itself — the
+ * How to reach the image is derived from the Dockerfile itself — the
  * published port from `EXPOSE`, the health route from the runtime stage's
  * base image — so a new pillar is covered the moment its Dockerfile lands,
- * with no per-pillar table to keep in sync. The environment supplied is the
- * small set of workspace-wide vars documented on the constants below — never
- * anything pillar-specific; a pillar needing more than that to answer a
- * health probe is a finding, not a smoke-test configuration problem.
+ * with no port or route table to keep in sync.
+ *
+ * The environment supplied is deliberately minimal and is documented on the
+ * constants below: `PORT`, the shared `SQLITE_PATH`, and placeholders for
+ * the secrets some pillars choose to crash on at boot. Nothing else. A
+ * pillar that needs more than that to answer a health probe is a finding,
+ * not a smoke-test configuration problem.
  *
  * Usage:
  *   node scripts/ci/smoke-image.mjs <dockerfile> <image-ref>
@@ -46,13 +49,22 @@ const POLL_INTERVAL_MS = 1_000;
 const SMOKE_SQLITE_PATH = '/tmp/pops-smoke.db';
 
 /**
- * `bfm` refuses to boot without a service-account key (POPS-1367), and it is
- * the shape every pillar that later grows cross-pillar calls will take. The
- * key only ever authenticates OUTBOUND calls — nothing gates an inbound
- * health probe on it — so a placeholder satisfies the boot check without
- * weakening what the smoke asserts.
+ * Secrets a pillar deliberately crashes on at boot rather than discovering
+ * missing at request time — see the header comment on
+ * `pillars/bfm/src/api/server.ts`, which spells out that bargain. Each is
+ * used only to sign or authenticate traffic the smoke never sends, so a
+ * placeholder satisfies the boot check without weakening what is asserted.
+ *
+ * This is the one hand-maintained list here, and it stays honest by failing
+ * loudly: a pillar that grows a new boot-required secret turns its smoke red
+ * with the exact env var named in the crash, which is the signal to add it.
+ * Resist putting anything else in here — ports, paths, feature flags and
+ * per-pillar tuning belong in the image's own defaults, not in the harness.
  */
-const SMOKE_INTERNAL_API_KEY = 'ci-smoke-placeholder';
+const BOOT_PLACEHOLDER_SECRETS = {
+  POPS_INTERNAL_API_KEY: 'ci-smoke-placeholder',
+  BFM_ACCESS_TOKEN_SECRET: 'ci-smoke-placeholder-access-token-secret',
+};
 
 /**
  * The port the runtime stage publishes.
@@ -270,8 +282,10 @@ async function main() {
     `PORT=${port}`,
     '--env',
     `SQLITE_PATH=${SMOKE_SQLITE_PATH}`,
-    '--env',
-    `POPS_INTERNAL_API_KEY=${SMOKE_INTERNAL_API_KEY}`,
+    ...Object.entries(BOOT_PLACEHOLDER_SECRETS).flatMap(([name, value]) => [
+      '--env',
+      `${name}=${value}`,
+    ]),
     image,
   ]);
 
