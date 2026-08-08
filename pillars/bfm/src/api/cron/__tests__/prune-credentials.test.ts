@@ -109,7 +109,11 @@ describe('the tick timer', () => {
     await vi.advanceTimersByTimeAsync(5_000);
     handle.stop();
 
-    // Every 1000ms plus the immediate first run — no overlap, no drift.
+    // Every 1000ms after the previous run settles, plus the immediate first
+    // run — no overlap or pile-up, though a slower run would push the next
+    // tick's wall-clock time back by its own duration. Each run here is near
+    // instant against the in-memory DB, so that drift doesn't show up in the
+    // count.
     expect(info).toHaveBeenCalledTimes(6);
   });
 
