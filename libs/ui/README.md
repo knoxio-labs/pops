@@ -30,6 +30,7 @@ Story coverage is a convention, not a gate. **Absence from Storybook is not abse
 - **Four components need an i18next provider.** `DataTable.pagination`, `DataTable.toolbar`, `FileUpload.parts` and `ErrorAlert` call `useTranslation('ui')`. This lib never initialises i18next — the shell does, with the `ui` namespace from `@pops/locales`. Render them anywhere else and they show raw keys. (`@pops/locales` is a devDependency here purely to bootstrap `src/test-setup.ts`.)
 - **A Tailwind class exists only if `theme/globals.css` scans the file using it.** See `src/theme/README.md`.
 - **`tsconfig.json` excludes `*.stories.*` and `*.test.*`**, so `mise run typecheck` will not catch a broken story.
+- **`QrCode` does not follow the theme, and that is deliberate.** `--qr-module` / `--qr-quiet-zone` are defined once in `:root` and never overridden in `.dark`: an inverted QR is outside what most phone camera scanners implement, so a themed symbol would render beautifully and refuse to scan on some handsets. It also renders SVG rather than canvas, which is what makes `@pops/ui/testing/decode-qr` possible — that subpath rasterises a rendered symbol and decodes it with `jsQR`, so a consumer can assert what its QR actually encodes instead of asserting a prop reached the component. That is why `jsqr` is a dependency and not a devDependency.
 
 ## Constraints
 

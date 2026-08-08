@@ -31,31 +31,91 @@ src/
   bfm-api-helpers.ts          unwrap() + isUnavailableError()
   bfm-api-runtime-config.ts   client baseUrl ('/bfm-api')
   pages/
-    DevicesPage.tsx           /bfm — placeholder; the real page is POPS-1387
+    DevicesPage.tsx           /bfm — composition only
+    devices-page/             the model and the three surfaces it drives
 ```
 
 `bfm-api-helpers.ts` is deliberately a per-pillar copy rather than a shared
 import: what counts as "unavailable" is a pillar-local judgement and the SDK
 does not own that classification.
 
-## Current state
+## The pairing code's lifetime
 
-`DevicesPage` is a placeholder. Pairing QR, the device list and revoke are
-their own ticket. What it does render is the pillar's reachability, driven by
-the real generated client, the real `/bfm-api` path and the real
-`isUnavailableError` classification — so a wrong `baseUrl` or a missing proxy
-fails here, visibly, instead of surfacing later as a pairing bug.
+bfm hands the plaintext back exactly once and persists only its digest, so on
+this side the code exists in one `useState` cell in `usePairingCode` and
+nowhere else. Three consequences that are easy to undo by accident:
 
-It distinguishes three failure shapes on purpose:
+- It is **not** read back out of React Query. The mutation is `reset` as soon
+  as its payload has been copied into state, so the string does not linger in
+  the mutation cache after the dialog closes.
+- Closing the dialog, or the deadline passing, clears the cell — the expired
+  code is dropped, not merely hidden. A dead code left on screen looking valid
+  is the failure this is built to avoid, which is also why an `expiresAt` that
+  will not parse counts as _already_ expired rather than as no deadline.
+- Dismissal wins against a request still in flight. `usePairingCode` keeps a
+  mint nonce that `dismiss` bumps, so a response that lands after the operator
+  closed the dialog is discarded instead of putting the plaintext back into
+  state — where it would be invisible, but alive, with a countdown running
+  against a code nobody is looking at. The same nonce is why a superseded mint
+  cannot overwrite a newer one.
+- Nothing writes it to `localStorage`, the URL, or a log line. Reloading the
+  page means minting another; there is nothing to recover.
 
-| State       | Meaning                                                          |
-| ----------- | ---------------------------------------------------------------- |
-| Reachable   | `/health` answered.                                              |
-| Unavailable | No status, or 5xx — the pillar is down.                          |
-| Refused     | A status the pillar chose (404, 403 …) — routing/auth, not down. |
+The QR encodes `pairingUrl`, never the bare `code`. The handset ships without
+a hostname and learns where its bfm lives from what it scans (see
+[`BuiltInBaseURL.swift`](../../../clients/ios/Packages/BFMClient/Sources/BFMClient/BuiltInBaseURL.swift)),
+so a code-only QR would scan perfectly and pair nothing.
 
-Collapsing the third into "Unavailable" would send the operator after the
-wrong bug.
+## Failure shapes
+
+Failures are split rather than pooled, because they send the operator after
+different bugs:
+
+| Shape        | Meaning                                                            |
+| ------------ | ------------------------------------------------------------------ |
+| Unavailable  | No status, or 5xx — the pillar is down.                            |
+| Refused      | A status the pillar chose (401, 404 …) — Access/routing, not down. |
+| Rate limited | 429 — the fix is to wait, not to go looking for a broken thing.    |
+
+One classifier (`classifyOperatorFailure`), and all three surfaces map its
+verdict through their own exhaustive `Record<OperatorFailure, string>` in
+`failure-messages.ts`. Adding a member to `OperatorFailure` is therefore a type
+error at each of the three, rather than a silently untranslated screen.
+
+Only `POST /operator/pairing/codes` is metered today — the limiter is applied
+in that handler alone, and the list and revoke contracts declare no 429 — so in
+practice that is the only route the third shape can come back from. It is still
+carried end to end rather than folded into "refused" on the other two, because
+folding it would have meant metering the list one day and telling the operator
+to go check their Cloudflare Access session.
+
+Revocation keeps its dialog open on any of the three: the handset stays trusted
+until the call succeeds, and a dialog that closes reads as "done".
+
+It also refuses to close _during_ the request. Cancel and the action are
+disabled then, but Escape reaches Radix regardless, and the DELETE is already
+on the wire and cannot be called back — so a dialog that vanished would read
+as cancelled while the revocation went ahead, and a failure arriving after it
+would render into a dialog that no longer exists, losing the only message that
+says the handset is still trusted. The refusal lives in `useRevocation`, not in
+the dialog: a guard written against the rendered `isRevoking` reads a value one
+commit behind the click, which real Chromium loses and jsdom does not.
+
+## Tests
+
+`src/pages/__tests__/DevicesPage.test.tsx` drives the whole page against a
+mocked generated SDK — `unwrap` and `isUnavailableError` run for real. Exact
+TTL formatting is pinned separately in
+`src/pages/devices-page/__tests__/pairing-ttl.test.ts`, where the clock is a
+function argument: the page test needs `shouldAdvanceTime` for React Query to
+settle, which lets real milliseconds into the fake clock and makes an exact
+readout assertion flaky.
+
+The browser-level walkthrough is `pillars/shell/e2e/bfm-devices-pairing.spec.ts`.
+It stubs bfm's operator routes itself rather than using
+`e2e/helpers/use-real-api`, so it does not depend on the harness rewrite that
+suite is waiting on (POPS-1311) — but that suite is gated to
+`workflow_dispatch`, so this spec does not run in CI until POPS-1311 lands.
 
 ## Run
 

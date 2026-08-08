@@ -79,6 +79,10 @@
   --color-stat-rose: var(--stat-rose);
   --color-stat-orange: var(--stat-orange);
 
+  /* QR codes — deliberately theme-invariant, see the :root definitions */
+  --color-qr-module: var(--qr-module);
+  --color-qr-quiet-zone: var(--qr-quiet-zone);
+
   /* Sidebar */
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
@@ -205,6 +209,13 @@
   --stat-violet: oklch(0.6 0.15 290);
   --stat-rose: oklch(0.6 0.18 12);
   --stat-orange: oklch(0.65 0.16 50);
+
+  /* QR codes. Not overridden in `.dark`, and that is the point: an inverted
+     QR (light modules on a dark quiet zone) is outside what most phone camera
+     scanners implement, so theming these would make a code that renders
+     beautifully and refuses to scan on some handsets. */
+  --qr-module: oklch(0.15 0 0);
+  --qr-quiet-zone: oklch(1 0 0);
 
   /* Status colours */
   --success: oklch(0.55 0.15 150);
