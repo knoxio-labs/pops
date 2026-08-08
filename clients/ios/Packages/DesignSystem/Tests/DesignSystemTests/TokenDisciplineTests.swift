@@ -32,6 +32,22 @@ internal struct TokenDisciplineTests {
         let violations: [TokenDisciplineScanner.Violation]
     }
 
+    /// Whether `error` means "the path in question does not exist", as
+    /// opposed to a permission or IO fault that happened while checking.
+    ///
+    /// `.fileReadNoSuchFile` is the direct case. The other is asking for a
+    /// path *underneath* an entry that turns out not to be a directory at
+    /// all — `loose.txt/Package.swift` for a stray file sitting in
+    /// `Packages/` — which `stat` reports as `ENOTDIR`, not "no such file",
+    /// even though the honest answer is the same "no" a real module scan
+    /// would give a plain file. Anything else is a real fault and has to
+    /// propagate as one.
+    private static func meansPathDoesNotExist(_ error: Error) -> Bool {
+        if case CocoaError.fileReadNoSuchFile = error { return true }
+        let underlying = (error as NSError).userInfo[NSUnderlyingErrorKey] as? NSError
+        return underlying?.domain == NSPOSIXErrorDomain && underlying?.code == Int(ENOTDIR)
+    }
+
     /// Scans every module under a `Packages` directory, discovering them rather
     /// than working from a list: a module added tomorrow is in scope without
     /// anyone remembering to add it, which is the failure this suite exists to
@@ -45,11 +61,13 @@ internal struct TokenDisciplineTests {
     private static func scanModules(under packages: URL) throws -> ModuleScan {
         // Every visible entry, classified into exactly one of the two buckets
         // and never filtered out. An earlier version asked each entry whether
-        // it was a directory, which meant a metadata failure dropped it from
-        // `roots` AND from `unrecognised` — the bucket that exists to notice
-        // things going missing could not notice this one. Holding a
-        // `Package.swift` is the whole question, and asking it needs no
-        // metadata call to fail.
+        // it was a directory before asking about `Package.swift`, which meant
+        // a metadata failure on that first, unrelated question dropped the
+        // entry from `roots` AND from `unrecognised` alike — the bucket that
+        // exists to notice things going missing could not notice this one.
+        // The question that actually matters, "does it hold a `Package.swift`",
+        // still has to ask the filesystem and can still fail; what changed is
+        // that failing now means throwing, not returning a false "no".
         let candidates =
             try FileManager.default
             .contentsOfDirectory(
@@ -57,11 +75,23 @@ internal struct TokenDisciplineTests {
             )
             .sorted { $0.path < $1.path }
 
-        let isModule = { (entry: URL) in
-            FileManager.default.fileExists(atPath: entry.appending(path: "Package.swift").path)
+        // Throwing for the same reason the `Sources` check below does:
+        // `fileExists` cannot tell "no `Package.swift`" from "couldn't check
+        // — permission or IO fault on the entry itself", and the second one
+        // has to fail loudly rather than land a real module in
+        // `unrecognised` as if it had been looked at and found wanting.
+        let isModule = { (entry: URL) throws -> Bool in
+            do {
+                _ = try FileManager.default.attributesOfItem(
+                    atPath: entry.appending(path: "Package.swift").path)
+                return true
+            } catch {
+                guard Self.meansPathDoesNotExist(error) else { throw error }
+                return false
+            }
         }
-        let roots = candidates.filter(isModule).map { $0.appending(path: "Sources") }
-        let unrecognised = candidates.filter { !isModule($0) }
+        let roots = try candidates.filter(isModule).map { $0.appending(path: "Sources") }
+        let unrecognised = try candidates.filter { try !isModule($0) }
 
         var emptyRoots: [URL] = []
         var violations: [TokenDisciplineScanner.Violation] = []
@@ -71,7 +101,17 @@ internal struct TokenDisciplineTests {
             // left behind. Anything else the filesystem objects to is a real
             // error and has to arrive as one, or the report says a module is
             // empty when what happened was a permission or an IO fault.
-            guard FileManager.default.fileExists(atPath: root.path) else {
+            //
+            // `fileExists(atPath:)` cannot draw that line — it returns `false`
+            // for a permission or IO failure exactly as it does for "missing",
+            // which is the same misclassification `try?` produced, just
+            // without the keyword. `attributesOfItem` throws instead, and only
+            // an absent path is what this scan is allowed to treat as empty;
+            // every other error propagates as itself.
+            do {
+                _ = try FileManager.default.attributesOfItem(atPath: root.path)
+            } catch {
+                guard Self.meansPathDoesNotExist(error) else { throw error }
                 emptyRoots.append(root)
                 continue
             }
@@ -150,6 +190,32 @@ internal struct TokenDisciplineTests {
 
         #expect(
             scan.emptyRoots.map { $0.deletingLastPathComponent().lastPathComponent } == ["Renamed"])
+    }
+
+    /// The other half of the distinction `moduleWithNoSourcesIsReported`
+    /// checks: a module directory that genuinely cannot be read is not the
+    /// same event as one that was never there, and reporting both as "empty"
+    /// is exactly the failure this suite exists to catch — silence dressed
+    /// up as a clean scan.
+    @Test("a module whose sources cannot be read fails loudly, not as an empty root")
+    func unreadableSourcesPropagatesTheRealError() throws {
+        let packages = try Self.makeTemporaryDirectory()
+        let module = packages.appending(path: "Blocked")
+        defer {
+            try? FileManager.default.setAttributes(
+                [.posixPermissions: 0o755], ofItemAtPath: module.path)
+            try? FileManager.default.removeItem(at: packages)
+        }
+        try Self.plantModule(named: "Blocked", in: packages, source: nil)
+        // No search permission on the module directory means `stat`-ing its
+        // `Sources` child fails with "permission denied", not "no such
+        // file" — the distinction the fix under test has to preserve.
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o000], ofItemAtPath: module.path)
+
+        #expect(throws: (any Error).self) {
+            try Self.scanModules(under: packages)
+        }
     }
 
     /// The property the two buckets exist to have, stated once so it survives

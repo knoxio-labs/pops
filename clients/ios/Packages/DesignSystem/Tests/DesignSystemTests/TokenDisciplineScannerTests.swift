@@ -143,4 +143,32 @@ internal struct TokenDisciplineScannerTests {
 
         #expect(violations.map(\.rule) == ["hex colour literal"])
     }
+
+    /// `relativePath` strips the root from a file's path to turn an absolute
+    /// path into something a developer can scan. A file nested under a
+    /// directory that happens to repeat the root's own path — contrived here,
+    /// but the same shape a vendored or duplicated tree produces — used to
+    /// have that inner occurrence stripped too, because the strip was a
+    /// substring replace rather than a prefix removal. This plants exactly
+    /// that duplication and pins the correct, honest relative path.
+    @Test("the reported path strips the root as a prefix, not wherever it recurs")
+    func relativePathStripsOnlyThePrefix() throws {
+        let root = URL(filePath: NSTemporaryDirectory())
+            .appending(path: "reltest-\(UUID().uuidString)")
+            .resolvingSymlinksInPath()
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        // A file whose path repeats the root's own path a second time,
+        // deeper down — the case a plain substring strip mangles.
+        let duplicatedRoot = String(root.path.dropFirst())  // drop the leading "/"
+        let file = root.appending(path: "Extra").appending(path: duplicatedRoot)
+            .appending(path: "Nested.swift")
+        try FileManager.default.createDirectory(
+            at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try "let tint = Color.red\n".write(to: file, atomically: true, encoding: .utf8)
+
+        let violations = try TokenDisciplineScanner.violations(in: file, relativeTo: root)
+
+        #expect(violations.map(\.file) == ["Extra/\(duplicatedRoot)/Nested.swift"])
+    }
 }

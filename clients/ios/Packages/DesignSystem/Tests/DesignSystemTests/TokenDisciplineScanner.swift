@@ -104,9 +104,20 @@ internal enum TokenDisciplineScanner {
     /// back whichever spelling it prefers, which is not always the one the root
     /// was written with. Reduce both to one spelling before stripping one from
     /// the other, or a report comes out as absolute paths nobody can scan.
+    ///
+    /// The root is removed only as a genuine prefix. `replacingOccurrences`
+    /// removes its target from anywhere in the string, so a file whose path
+    /// happens to contain the root's path a second time — nested under a
+    /// directory that repeats it — would have that occurrence stripped too,
+    /// producing a relative path that is wrong rather than merely long. A
+    /// file the root does not actually contain returns its full resolved
+    /// path instead: absolute and honest beats short and wrong in a report a
+    /// developer has to act on.
     private static func relativePath(of file: URL, under root: URL) -> String {
-        file.resolvingSymlinksInPath().path
-            .replacingOccurrences(of: root.resolvingSymlinksInPath().path + "/", with: "")
+        let resolvedFile = file.resolvingSymlinksInPath().path
+        let prefix = root.resolvingSymlinksInPath().path + "/"
+        guard resolvedFile.hasPrefix(prefix) else { return resolvedFile }
+        return String(resolvedFile.dropFirst(prefix.count))
     }
 
     static func violations(inSource source: String, file: String) throws -> [Violation] {
