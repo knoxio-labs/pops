@@ -12,21 +12,21 @@
  *
  * A challenge is worthless the moment it is spent and worthless a minute after
  * it is issued, so the durability a table would buy is durability of nothing.
- * The costs are real, though: `bfm.db` already grows without bound
- * (POPS-1449), and a table here would hand an unauthenticated,
- * internet-reachable route a write primitive — every `POST /devices/challenge`
- * becoming a row on the same disk the credential tables live on.
+ * The costs are real, though: nothing prunes this pillar's credential tables,
+ * and a table here would hand an unauthenticated, internet-reachable route a
+ * write primitive — every `POST /devices/challenge` becoming a row on the same
+ * disk those tables live on.
  *
  * Two consequences, both accepted deliberately:
  *
  * - **A restart drops every live challenge.** A phone mid-refresh gets one
  *   `challenge_expired`, fetches another nonce and retries. It never reaches a
  *   user.
- * - **The counter is process-local.** Exact for one container, wrong for two
- *   — a nonce issued by one replica would not verify at the other. The same
- *   condition the rate-limit counters carry, and tracked in the same place
- *   (POPS-1474), with the trigger pinned to whichever change first adds a
- *   replica.
+ * - **The map is process-local.** Exact for one container, wrong for two — a
+ *   nonce issued by one replica would not verify at the other, so refresh
+ *   would fail about half the time behind a round-robin proxy. The same
+ *   condition `rate-limit.ts`'s counters carry, and the same trigger:
+ *   whichever change first adds a replica. `auth/README.md` names the ticket.
  *
  * ## Why the map is bounded
  *

@@ -136,9 +136,8 @@ export function createBfmApiApp(deps: BfmApiDeps, options: CreateBfmApiAppOption
   // that one authenticates a phone, this one authenticates a human through
   // Cloudflare Access for the `/operator/*` routes. Mounted before the
   // endpoints so every handler sees it on `res.locals`. It resolves and never
-  // rejects — `/health`, `/openapi` and the device-facing pairing exchange
-  // (POPS-1374) are anonymous by design, and per-route gating is the handler's
-  // job.
+  // rejects — `/health`, `/openapi` and every `/devices/*` route are anonymous
+  // by design, and per-route gating is the handler's job.
   app.use(createIdentityMiddleware(options.env));
 
   createExpressEndpoints(bfmContract, makeBfmRestHandlers(deps), app, {

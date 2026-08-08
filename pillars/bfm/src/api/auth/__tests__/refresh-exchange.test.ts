@@ -95,11 +95,10 @@ function pairHandset(overrides: { expiresAt?: string } = {}): PairedHandset {
 
 /** What the phone does: sign the domain-separated nonce + token digest, DER, base64. */
 function signRefresh(nonce: string, refreshToken: string, privateKey: KeyObject): string {
-  return sign(
-    'sha256',
-    refreshSignatureMessage(nonce, hashRefreshToken(refreshToken)),
-    { key: privateKey, dsaEncoding: 'der' }
-  ).toString('base64');
+  return sign('sha256', refreshSignatureMessage(nonce, hashRefreshToken(refreshToken)), {
+    key: privateKey,
+    dsaEncoding: 'der',
+  }).toString('base64');
 }
 
 /** A whole honest exchange: fetch a nonce, sign it, present it. */
@@ -150,9 +149,9 @@ describe('refreshSignatureMessage', () => {
   });
 
   it('is domain-separated, so a signature cannot be replayed into another context', () => {
-    expect(refreshSignatureMessage('n', 'd').toString('utf8').startsWith(REFRESH_SIGNATURE_DOMAIN)).toBe(
-      true
-    );
+    expect(
+      refreshSignatureMessage('n', 'd').toString('utf8').startsWith(REFRESH_SIGNATURE_DOMAIN)
+    ).toBe(true);
   });
 
   it('binds the digest rather than the token, so the preimage carries no secret', () => {
@@ -204,7 +203,10 @@ describe('the happy path', () => {
     expect(first.outcome).toBe('refreshed');
     if (first.outcome !== 'refreshed') return;
 
-    const second = refreshWith({ refreshToken: first.refreshToken, privateKey: handset.privateKey });
+    const second = refreshWith({
+      refreshToken: first.refreshToken,
+      privateKey: handset.privateKey,
+    });
 
     expect(second.outcome).toBe('refreshed');
     if (second.outcome !== 'refreshed') return;
@@ -319,7 +321,11 @@ describe('proof of possession', () => {
     const { nonce } = challenges.issue();
     const deps = { db: db(), accessTokenSigningKey: signingKey, challenges };
     completeRefreshExchange(
-      { refreshToken: handset.refreshToken, nonce, signature: signRefresh(nonce, handset.refreshToken, impostor) },
+      {
+        refreshToken: handset.refreshToken,
+        nonce,
+        signature: signRefresh(nonce, handset.refreshToken, impostor),
+      },
       deps
     );
 

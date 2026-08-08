@@ -35,10 +35,7 @@ import type { KeyObject } from 'node:crypto';
 
 import type { NextFunction, Request, RequestHandler, Response } from 'express';
 
-import type {
-  DeviceRevokedError,
-  MobileInvalidTokenError,
-} from '../../contract/rest-schemas.js';
+import type { DeviceRevokedError, MobileInvalidTokenError } from '../../contract/rest-schemas.js';
 import type { BfmDb, DeviceRow } from '../../db/index.js';
 
 export interface RequireDeviceDeps {

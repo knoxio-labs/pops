@@ -13,15 +13,16 @@
  * - **`operator`** (`/operator/*`) — behind Cloudflare Access via the shell's
  *   nginx at `/bfm-api/`, gated per route on a resolved principal.
  * - **`device`** (`/devices/*`) — on bfm's own tunnel hostname with Access
- *   bypassed, and gated by nothing that resolves an identity, because this is
- *   how a caller acquires one. Just the pairing exchange today; refresh
- *   (POPS-1375) joins it. `rest-device.ts` says what stands in for a gate.
+ *   bypassed, and gated by nothing that resolves an identity: these are how a
+ *   caller acquires a token and how it replaces one that has lapsed, so
+ *   neither can require presenting one. `rest-device.ts` says what stands in
+ *   for a gate, per route.
  * - **`mobile` / `mobileFinance`** (`/mobile/*`) — the same bypassed hostname,
  *   behind `requireDevice`. Everything a phone calls once it has paired.
  *
  * The two device-facing surfaces are one hostname but not one gate, and the
  * naming keeps them apart on purpose: `/devices/*` is what a caller reaches
- * *without* a device, `/mobile/*` is what it reaches *with* one.
+ * *without* a usable token, `/mobile/*` is what it reaches *with* one.
  *
  * `/health` belongs to none of them and answers on both hostnames.
  *

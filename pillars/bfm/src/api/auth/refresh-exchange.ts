@@ -87,9 +87,8 @@ import { parseDevicePublicKey, verifyDeviceSignature } from './device-signature.
 
 import type { KeyObject } from 'node:crypto';
 
+import type { BfmDb, DeviceRow, RefreshTokenRecord } from '../../db/index.js';
 import type { RefreshChallengeStore } from './refresh-challenge.js';
-
-import type { BfmDb, RefreshTokenRecord } from '../../db/index.js';
 
 /**
  * Prefix of the signed message. See this file's header — it is the domain
@@ -138,9 +137,9 @@ export interface RefreshExchangeDeps {
    * function read it and spent by the time the `UPDATE` ran. In one process
    * that cannot happen: better-sqlite3 is synchronous, so nothing runs between
    * the read and the write. The branch below is therefore correct, load-bearing
-   * the day bfm has a second replica (POPS-1474), and unreachable from any test
-   * that does not substitute this. Leaving it untested on a security path is
-   * the worse of the two options.
+   * the day a second writer exists, and unreachable from any test that does not
+   * substitute this. Leaving it untested on a security path is the worse of the
+   * two options.
    */
   rotate?: typeof rotateRefreshToken;
   /** Lifetime of the successor token. Defaults to {@link DEFAULT_REFRESH_TOKEN_TTL_MS}. */
@@ -188,6 +187,50 @@ function burnFamily(db: BfmDb, token: RefreshTokenRecord, at: string): void {
   );
 }
 
+/**
+ * Everything decided about the presented token before the signature is looked
+ * at — the half of the order this file's header argues for.
+ *
+ * Separated from the exchange below because it is the part with the branches,
+ * and because the split falls on the honest seam: this answers "is this grant
+ * still redeemable at all", and what follows answers "and does the caller hold
+ * the phone". Reuse detection lives on THIS side of that line, which is the
+ * whole point.
+ */
+type ScreenedGrant =
+  | { verdict: 'live'; token: RefreshTokenRecord; device: DeviceRow }
+  | { verdict: 'refused'; outcome: 'rejected' | 'device-revoked' };
+
+function screenPresentedGrant(db: BfmDb, presentedHash: string, atIso: string): ScreenedGrant {
+  const token = findRefreshTokenByHash(db, presentedHash);
+  if (token === undefined) return { verdict: 'refused', outcome: 'rejected' };
+
+  const device = findDeviceById(db, token.deviceId);
+  // A token whose device row is gone. The FK cascades, so this needs a delete
+  // that revocation never performs — a restored backup, or a hand-edited
+  // database. `rejected` rather than `device-revoked`: nothing was revoked,
+  // and telling the phone it was would send it to a screen explaining an event
+  // that did not happen.
+  if (device === undefined) return { verdict: 'refused', outcome: 'rejected' };
+  if (device.revokedAt !== null) return { verdict: 'refused', outcome: 'device-revoked' };
+
+  if (token.revokedAt !== null) return { verdict: 'refused', outcome: 'rejected' };
+
+  // The fork. See the header for why this precedes the signature check.
+  if (token.consumedAt !== null) {
+    burnFamily(db, token, atIso);
+    return { verdict: 'refused', outcome: 'rejected' };
+  }
+
+  // String comparison, not `Date` parsing: every timestamp in this database is
+  // written by `toISOString`, so it is fixed-width UTC and lexicographic order
+  // is chronological order — the same property the table's CHECK constraints
+  // are built on.
+  if (token.expiresAt <= atIso) return { verdict: 'refused', outcome: 'rejected' };
+
+  return { verdict: 'live', token, device };
+}
+
 export function completeRefreshExchange(
   input: RefreshExchangeInput,
   deps: RefreshExchangeDeps
@@ -204,35 +247,13 @@ export function completeRefreshExchange(
 
   if (!challenges.consume(input.nonce)) return { outcome: 'challenge-expired' };
 
-  const presentedHash = hashRefreshToken(input.refreshToken);
-  const presented = findRefreshTokenByHash(db, presentedHash);
-  if (presented === undefined) return { outcome: 'rejected' };
-
-  const device = findDeviceById(db, presented.deviceId);
-  // A token whose device row is gone. The FK cascades, so this needs a delete
-  // that revocation never performs — a restored backup, or a hand-edited
-  // database. `rejected` rather than `device-revoked`: nothing was revoked,
-  // and telling the phone it was would send it to a screen explaining an event
-  // that did not happen.
-  if (device === undefined) return { outcome: 'rejected' };
-  if (device.revokedAt !== null) return { outcome: 'device-revoked' };
-
   const at = now();
   const atIso = at.toISOString();
+  const presentedHash = hashRefreshToken(input.refreshToken);
 
-  if (presented.revokedAt !== null) return { outcome: 'rejected' };
-
-  // The fork. See the header for why this precedes the signature check.
-  if (presented.consumedAt !== null) {
-    burnFamily(db, presented, atIso);
-    return { outcome: 'rejected' };
-  }
-
-  // String comparison, not `Date` parsing: every timestamp in this database is
-  // written by `toISOString`, so it is fixed-width UTC and lexicographic order
-  // is chronological order — the same property the table's CHECK constraints
-  // are built on.
-  if (presented.expiresAt <= atIso) return { outcome: 'rejected' };
+  const screened = screenPresentedGrant(db, presentedHash, atIso);
+  if (screened.verdict === 'refused') return { outcome: screened.outcome };
+  const { token: presented, device } = screened;
 
   const publicKey = parseDevicePublicKey(device.publicKeyDer);
   const message = refreshSignatureMessage(input.nonce, presentedHash);

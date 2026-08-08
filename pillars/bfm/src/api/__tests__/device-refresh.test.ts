@@ -94,11 +94,13 @@ function signRefresh(nonce: string, refreshToken: string, privateKey: KeyObject)
 /** Fetch a nonce, sign it, post the refresh. What the app does every ten minutes. */
 async function refresh(app: TestApp, handset: Pick<Handset, 'refreshToken' | 'privateKey'>) {
   const nonce = await challenge(app);
-  return request(app.app).post(REFRESH_PATH).send({
-    refreshToken: handset.refreshToken,
-    nonce,
-    signature: signRefresh(nonce, handset.refreshToken, handset.privateKey),
-  });
+  return request(app.app)
+    .post(REFRESH_PATH)
+    .send({
+      refreshToken: handset.refreshToken,
+      nonce,
+      signature: signRefresh(nonce, handset.refreshToken, handset.privateKey),
+    });
 }
 
 function silenceWarnings() {
@@ -134,7 +136,9 @@ describe('POST /devices/challenge', () => {
 
     expect(res.status).toBe(429);
     expect(RateLimitErrorSchema.parse(res.body).retryAfterSeconds).toBeGreaterThan(0);
-    expect(res.headers['retry-after']).toBe(String(RateLimitErrorSchema.parse(res.body).retryAfterSeconds));
+    expect(res.headers['retry-after']).toBe(
+      String(RateLimitErrorSchema.parse(res.body).retryAfterSeconds)
+    );
   });
 });
 
@@ -172,11 +176,17 @@ describe('POST /devices/refresh', () => {
     const app = open();
     const handset = await pair(app);
 
-    const res = await request(app.app).post(REFRESH_PATH).send({
-      refreshToken: handset.refreshToken,
-      nonce: 'a-nonce-this-server-never-drew',
-      signature: signRefresh('a-nonce-this-server-never-drew', handset.refreshToken, handset.privateKey),
-    });
+    const res = await request(app.app)
+      .post(REFRESH_PATH)
+      .send({
+        refreshToken: handset.refreshToken,
+        nonce: 'a-nonce-this-server-never-drew',
+        signature: signRefresh(
+          'a-nonce-this-server-never-drew',
+          handset.refreshToken,
+          handset.privateKey
+        ),
+      });
 
     expect(res.status).toBe(401);
     expect(RefreshErrorSchema.parse(res.body).code).toBe('challenge_expired');
@@ -305,11 +315,13 @@ describe('two requests racing one refresh token', () => {
 
     const results = await Promise.all(
       [firstNonce, secondNonce].map((nonce) =>
-        request(app.app).post(REFRESH_PATH).send({
-          refreshToken: handset.refreshToken,
-          nonce,
-          signature: signRefresh(nonce, handset.refreshToken, handset.privateKey),
-        })
+        request(app.app)
+          .post(REFRESH_PATH)
+          .send({
+            refreshToken: handset.refreshToken,
+            nonce,
+            signature: signRefresh(nonce, handset.refreshToken, handset.privateKey),
+          })
       )
     );
 
@@ -328,16 +340,22 @@ describe('two requests racing one refresh token', () => {
 
     await Promise.all(
       nonces.map((nonce) =>
-        request(app.app).post(REFRESH_PATH).send({
-          refreshToken: handset.refreshToken,
-          nonce,
-          signature: signRefresh(nonce, handset.refreshToken, handset.privateKey),
-        })
+        request(app.app)
+          .post(REFRESH_PATH)
+          .send({
+            refreshToken: handset.refreshToken,
+            nonce,
+            signature: signRefresh(nonce, handset.refreshToken, handset.privateKey),
+          })
       )
     );
 
-    expect(app.db.select().from(refreshTokens).all().every((row) => row.revokedAt !== null)).toBe(
-      true
-    );
+    expect(
+      app.db
+        .select()
+        .from(refreshTokens)
+        .all()
+        .every((row) => row.revokedAt !== null)
+    ).toBe(true);
   });
 });

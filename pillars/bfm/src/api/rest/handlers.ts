@@ -27,8 +27,8 @@ import type { KeyObject } from 'node:crypto';
 import type { Response } from 'express';
 
 import type { BfmDb } from '../../db/index.js';
-import type { MobileBootstrapDeps } from '../mobile/bootstrap.js';
 import type { RefreshChallengeStore } from '../auth/refresh-challenge.js';
+import type { MobileBootstrapDeps } from '../mobile/bootstrap.js';
 
 const server: ReturnType<typeof initServer> = initServer();
 
