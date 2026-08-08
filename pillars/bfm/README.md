@@ -329,7 +329,7 @@ reuse detection — a dead row carries no security function once it can no
 longer be redeemed — so it is pruned a week after it dies. `refresh_tokens`
 is pruned on a window equal to the token's own TTL (thirty days), because a
 **consumed** row is what `screenPresentedGrant` in
-`api/auth/refresh-exchange.ts` checks to catch a stolen token being replayed:
+`src/api/auth/refresh-exchange.ts` checks to catch a stolen token being replayed:
 deleting it early would let that exact replay go undetected against a family
 that might still be live. Pinning the window to the TTL rather than to an
 independent number is what keeps that safe — see the header of
