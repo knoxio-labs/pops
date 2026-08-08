@@ -39,7 +39,7 @@ The same tasks are exposed through `mise.toml` (`mise run build`, `dev`,
 
 ## nginx and Dockerfile
 
-`Dockerfile` is a two-stage build. The `node:22-alpine` builder runs
+`Dockerfile` is a two-stage build. The `node:24-alpine` builder runs
 `pnpm build` to populate `dist/`; the production image is `nginx:alpine` with
 `dist/` copied to `/usr/share/nginx/html` and `nginx/default.conf` installed as
 the server config. The image exposes port `80` and ships a `HEALTHCHECK` that
@@ -61,5 +61,5 @@ pillars/docs/
 │   ├── collect-specs.ts    # build: walk pillars/*, emit dist/ + catalog.json
 │   └── dev-serve.ts        # `pnpm dev` — collect + watch + serve locally
 ├── nginx/default.conf      # prod static server (/, /catalog.json, /openapi, /healthz)
-└── Dockerfile              # node:22-alpine builder → nginx:alpine
+└── Dockerfile              # node:24-alpine builder → nginx:alpine
 ```
