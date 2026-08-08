@@ -40,7 +40,12 @@ export interface PruneCredentialsTickStats {
 
 export interface PruneCredentialsWorkerHandle {
   stop: () => void;
-  /** Run one pass and return its counts. Exposed for tests and for a boot script that wants one before the timer arms. */
+  /**
+   * Run one pass on demand and return its counts, outside the timer's own
+   * cadence. `startPruneCredentialsWorker` already runs this once at
+   * startup, so this is for a test or caller that wants a deterministic,
+   * additional pass rather than waiting on `intervalMs`.
+   */
   runOnce: () => PruneCredentialsTickStats;
 }
 
