@@ -26,6 +26,20 @@ updates:
       interval: weekly
       day: monday
     open-pull-requests-limit: 5
+    # Node majors are excluded because Dependabot only compares tag numbers and
+    # has no notion of Node's release train. Adding `/pillars/*` immediately
+    # produced 14 PRs moving 24 -> 25; Node 25 is an odd-numbered release that
+    # reached end-of-life on 2026-06-01, so merging them would have put the
+    # whole fleet on an unsupported runtime while looking like an upgrade.
+    # Even-numbered majors are safe only once they reach Active LTS, which is a
+    # date, not a version comparison — so a Node major moves deliberately (and
+    # together with mise.toml, mise.ci.toml and the workflow pins, which this
+    # ecosystem cannot see). Minor/patch bumps within the pinned major still
+    # flow automatically.
+    ignore:
+      - dependency-name: node
+        update-types:
+          - version-update:semver-major
     groups:
       docker-minor-patch:
         update-types:
