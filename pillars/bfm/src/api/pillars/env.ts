@@ -74,7 +74,9 @@ export function resolveInternalBaseUrls(
   env: NodeJS.ProcessEnv = process.env
 ): Record<string, string> | undefined {
   const raw = env[INTERNAL_BASE_URLS_ENV];
-  let entries: readonly { id: string; baseUrl: string }[];
+  // Derived rather than restated: the entry shape is the SDK parser's to
+  // change, and a local copy of it would be one more thing to keep in step.
+  let entries: ReturnType<typeof parsePillarsEnv>;
   try {
     entries = parsePillarsEnv(raw);
   } catch (cause) {

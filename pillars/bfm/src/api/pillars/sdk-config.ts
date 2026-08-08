@@ -23,9 +23,10 @@ import { MissingServiceAccountKeyError, resolveServiceAccountKey } from './servi
  * Bind the process-wide server SDK config from the environment.
  *
  * Called once, before the server listens. Throws
- * {@link MissingServiceAccountKeyError} when no key is available, and the
- * SDK's own parse errors when the registry origin or an override entry is
- * malformed — all fatal, all by design (see `./env.ts` for the reasoning).
+ * {@link MissingServiceAccountKeyError} when no key is available,
+ * `BareOriginParseError` on a malformed registry origin, and `BootEnvError` on
+ * a malformed override entry — all fatal, all by design (see `./env.ts` for
+ * the reasoning).
  *
  * @param env Process environment to read; injectable for tests.
  */
