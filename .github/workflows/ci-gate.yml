@@ -1,33 +1,51 @@
 name: CI Gate
 
-# Single static-named required gate over the quality workflows whose own jobs
-# carry DYNAMIC matrix names (`finance (pillar) — ts`, `@pops/app-food`, …) and
-# so cannot be listed individually in the branch ruleset. Before this gate the
-# ruleset required only Lint / Format / Module boundaries / Duplication +
-# agent-review, leaving every typecheck / test / build / clippy / exports /
-# extractability / bundle-map / cargo-deny / drift job NON-required — a red
-# typecheck could still merge. This job is the ONE static context the ruleset
-# can require to make all of that load-bearing.
+# Single static-named aggregate over the quality workflows whose own jobs carry
+# DYNAMIC matrix names (`finance (pillar) — ts`, `@pops/app-food`, …) and so
+# cannot be listed individually in the branch ruleset. The ruleset requires only
+# Lint / Format / Module boundaries / Duplication + agent-review, leaving every
+# typecheck / test / build / clippy / exports / extractability / bundle-map /
+# cargo-deny / drift job NON-required — a red typecheck can still merge. `CI
+# Gate` is the ONE static context a ruleset CAN require to make all of that
+# load-bearing; adding it to the required contexts is a repository setting and
+# has not been done, so today this reports on the PR without blocking it. See
+# .github/workflows/README.md.
 #
-# WHY workflow_run (not needs:): the gated jobs live across SEVEN separate
+# WHY workflow_run (not needs:): the gated jobs live across EIGHT separate
 # workflows, each with its OWN path filters. `needs:` only sees jobs in the
 # same run, and folding them into one workflow would (a) double-run every job
 # or (b) rename the existing required `Lint`/`Format`/… contexts and break the
 # ruleset. `workflow_run` OBSERVES the sibling workflows' results without re-
 # executing anything, so it adds zero CI cost and touches none of them.
 #
+# WHERE THE VERDICT IS PUBLISHED: GitHub attributes a `workflow_run` job's
+# IMPLICIT check run to the default branch's tip, never to
+# `github.event.workflow_run.head_sha`. Relying on it therefore produced a
+# post-hoc signal on `main` that appeared on no pull request at all, and that no
+# ruleset could require. So the job does NOT rely on its implicit check run: it
+# reads the aggregate and then POSTs an EXPLICIT check run named `CI Gate`
+# against the observed head SHA. That context lands on the pull request, and is
+# the one the branch ruleset can list. The job itself is named differently so
+# its implicit check run on main's tip can never be mistaken for the verdict.
+#
+# ALWAYS REPORTS: `Quality` is gated and `quality.yml` carries no path filter,
+# so it runs on EVERY pull request — including docs-only ones. That is what
+# guarantees this workflow fires, and therefore that `CI Gate` reports, on every
+# pull request. A required context that never reports blocks its PR forever
+# (`strict_required_status_checks_policy` governs only the branch-up-to-date
+# requirement), so that unfiltered trigger is load-bearing, not incidental. It
+# is asserted by scripts/ci/check-ci-gate-wiring.mjs.
+#
 # CONVERGENCE: this fires on EACH listed workflow's completion and reads the
 # CURRENT conclusion of every gated workflow at the same head SHA via the API.
-# GitHub keeps the most-recent check-run per context as the gate state, so the
+# GitHub keeps the most-recent check run per name as the gate state, so the
 # verdict converges on the authoritative one:
 #   - a failure is sticky: the failed run stays at the SHA, so any later re-
 #     evaluation (triggered by a slower sibling finishing) still sees it -> RED;
 #   - all-pass: the last sibling to finish triggers a run that sees every gated
-#     workflow success/skipped -> GREEN;
-#   - docs-only PR: the path-filtered siblings never run, so workflow_run never
-#     fires and `CI Gate` never reports. With the ruleset's
-#     strict_required_status_checks_policy:false, a required check that never
-#     reports is non-blocking -> docs PRs are not blocked (skipped != failure).
+#     workflow success/skipped -> GREEN.
+# Each evaluation posts a COMPLETED check run in a single call, so a run that
+# concurrency cancels mid-flight cannot leave a check run stuck in progress.
 #
 # A sibling workflow that did not run at this SHA (path-filtered out) is ABSENT
 # from the API result and treated as non-failing — NOT a missing-required
@@ -56,15 +74,15 @@ concurrency:
 
 permissions:
   actions: read
-  checks: read
+  checks: write
   contents: read
 
 jobs:
   gate:
-    name: CI Gate
+    name: Publish CI Gate verdict
     runs-on: ubuntu-latest
     steps:
-      - name: Aggregate gated workflow conclusions at this commit
+      - name: Aggregate gated workflow conclusions and publish at the observed head
         uses: actions/github-script@v9
         env:
           HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
@@ -127,16 +145,34 @@ jobs:
             core.info("Gated workflow states at this commit:");
             for (const l of lines) core.info(l);
 
-            if (failed.length > 0) {
-              core.setFailed(`Quality gate FAILED — ${failed.length} gated workflow(s) did not pass: ${failed.join(", ")}`);
-              return;
-            }
-
             // A sibling still in flight is NOT a failure: a later completion re-
             // triggers this gate and produces the authoritative final verdict.
             // Reporting success here is safe because any subsequent failure is
             // sticky (its run stays at the SHA) and re-evaluates this context red.
             if (pending.length > 0) {
-              core.info(`No failures observed; still in flight: ${pending.join(", ")}. A later completion will re-evaluate.`);
+              core.info(`Still in flight: ${pending.join(", ")}. A later completion will re-evaluate.`);
             }
-            core.info("Quality gate PASSED — no gated workflow reported a failure at this commit.");
+
+            const verdict = failed.length > 0
+              ? `Quality gate FAILED — ${failed.length} gated workflow(s) did not pass: ${failed.join(", ")}`
+              : "Quality gate PASSED — no gated workflow reported a failure at this commit.";
+
+            await github.rest.checks.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              name: "CI Gate",
+              head_sha: headSha,
+              status: "completed",
+              conclusion: failed.length > 0 ? "failure" : "success",
+              details_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              output: {
+                title: verdict,
+                summary: ["Gated workflow states at this commit:", "", ...lines].join("\n"),
+              },
+            });
+
+            if (failed.length > 0) {
+              core.setFailed(verdict);
+              return;
+            }
+            core.info(verdict);
