@@ -83,7 +83,9 @@ export function createTestApp(options: TestAppOptions = {}): TestApp {
       // Generous by default so a suite that is not about rate limiting never
       // trips it; the limiting suite injects its own.
       createRateLimiter({ limit: 1_000, windowMs: 60_000 }),
-    ...(options.pairingCodeTtlMs === undefined ? {} : { pairingCodeTtlMs: options.pairingCodeTtlMs }),
+    ...(options.pairingCodeTtlMs === undefined
+      ? {}
+      : { pairingCodeTtlMs: options.pairingCodeTtlMs }),
   };
 
   const appOptions: CreateBfmApiAppOptions = options.env === undefined ? {} : { env: options.env };

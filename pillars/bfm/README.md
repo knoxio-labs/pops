@@ -73,7 +73,7 @@ token is a `401` and a revoked device a `403`, why a missing device row is a
 Because the bypassed hostname serves this same app, the operator routes are
 reachable from the public internet and the `requireOperator` gate in their
 handlers is the **actual** perimeter, not defence in depth. The `/operator`
-prefix earns its keep by making a *second* layer expressible: that hostname can
+prefix earns its keep by making a _second_ layer expressible: that hostname can
 refuse `/operator/*` wholesale at the edge (POPS-1389), which it could not do if
 the operator device list and the public `POST /devices/pair` both sat under
 `/devices`.
@@ -85,7 +85,7 @@ load-bearing and the file states why at length; in short:
 - **No service-account leg.** bfm holds no `service_accounts` table and the
   registry exposes no endpoint to verify a presented key, so there is nothing an
   `x-api-key` could be checked against. Machine callers have no business minting
-  pairing codes anyway — the account bfm holds is for its *outbound* calls.
+  pairing codes anyway — the account bfm holds is for its _outbound_ calls.
   POPS-1473 tracks the registry-side verify endpoint if that changes.
 - **No "trust the tunnel" fallback.** The registry reads a missing
   `CLOUDFLARE_ACCESS_TEAM_NAME` as "we are only reachable through a protected
@@ -108,7 +108,7 @@ wrong the moment there are two: the limit would become per-replica and the
 effective budget would multiply. POPS-1474 holds that, and names whichever
 change adds a second replica as the trigger.
 
-The gate runs *before* the limiter, deliberately. Limiting first would let an
+The gate runs _before_ the limiter, deliberately. Limiting first would let an
 anonymous flood exhaust the real operator's budget and lock them out of pairing
 — a denial of service handed to an unauthenticated caller. A test pins the
 ordering.
