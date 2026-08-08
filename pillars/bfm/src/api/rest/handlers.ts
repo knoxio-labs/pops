@@ -9,13 +9,13 @@ import { bfmContract } from '../../contract/rest.js';
 
 const server: ReturnType<typeof initServer> = initServer();
 
-export interface BfmApiDeps {
+export interface BfmRestHandlerDeps {
   /** Build version, surfaced on the health response. */
   version: string;
 }
 
 export function makeBfmRestHandlers(
-  deps: BfmApiDeps
+  deps: BfmRestHandlerDeps
 ): ReturnType<typeof server.router<typeof bfmContract>> {
   return server.router(bfmContract, {
     health: async () => ({

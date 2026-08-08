@@ -9,7 +9,7 @@
  * pillar's boot contract, not the SDK's HTTP transport.
  */
 import request from 'supertest';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   bootstrapPillar,
@@ -18,8 +18,8 @@ import {
   type RegistryTransport,
 } from '@pops/pillar-sdk/bootstrap';
 
-import { createBfmApiApp } from '../app.js';
 import { buildBfmManifest } from '../manifest.js';
+import { createTestApp, type TestApp } from './harness.js';
 
 function recordingRegistry(): RegistryTransport & {
   lastRegister: () => RegisterRequest | undefined;
@@ -54,6 +54,20 @@ function deadRegistry(): RegistryTransport & { registerAttempts: () => number } 
 
 const silentLogger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
+const apps: TestApp[] = [];
+
+function open(version: string): TestApp {
+  const created = createTestApp(version);
+  apps.push(created);
+  return created;
+}
+
+afterEach(() => {
+  while (apps.length > 0) {
+    apps.pop()?.cleanup();
+  }
+});
+
 describe('self-registration against an unavailable registry', () => {
   it('resolves the bootstrap handle without waiting for the registry', async () => {
     const transport = deadRegistry();
@@ -73,7 +87,7 @@ describe('self-registration against an unavailable registry', () => {
 
   it('keeps serving /health while registration is still retrying', async () => {
     const transport = deadRegistry();
-    const app = createBfmApiApp({ version: '1.2.3' });
+    const { app } = open('1.2.3');
 
     const handle = await bootstrapPillar({
       manifest: buildBfmManifest('1.2.3'),
@@ -176,7 +190,7 @@ describe('BUILD_VERSION on the wire', () => {
   });
 
   it('reports the raw value on /health, which is why the two can disagree', async () => {
-    const app = createBfmApiApp({ version: 'dev' });
+    const { app } = open('dev');
 
     const res = await request(app).get('/health');
 

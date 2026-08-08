@@ -5,6 +5,9 @@
  * to. Port 3014 is the next free slot after the existing fleet (see the
  * `Pillars and ports` table in AGENTS.md).
  *
+ * The process opens its OWN `bfm.db` connection — each pillar owns its
+ * database.
+ *
  * When `POPS_REGISTRY_ENABLED=true`, `bootstrapPillar` registers the pillar
  * with the central registry on boot. Registration happens AFTER `app.listen`
  * and never blocks or crashes boot — a registry that is briefly unavailable
@@ -12,12 +15,16 @@
  * serving traffic. SIGTERM triggers `pillarHandle.stop()` so the heartbeat
  * clears and the registry sees an explicit deregister.
  *
- * Two things take the opposite bargain and are done BEFORE `listen`, both
+ * Three things take the opposite bargain and are done BEFORE `listen`, all
  * because the container healthcheck cannot see them:
  *
  *   - Outbound cross-pillar auth. A bfm holding no service-account key cannot
  *     do the one thing it exists for, so a missing key crashes here rather
  *     than surfacing later as a failed call on somebody's phone.
+ *   - The access-token signing key. The same bargain from the other
+ *     direction: without it bfm cannot authenticate the phone asking, and
+ *     every `/mobile/*` request would fail on a handset rather than on the
+ *     deploy that broke it.
  *   - The database. Migrations run on the way up, and a pillar that answers
  *     `/health` with an unmigrated or unwritable `bfm.db` would pass its
  *     healthcheck and fail every device the moment one paired.
@@ -26,6 +33,7 @@ import { bootstrapPillar, type PillarBootstrapHandle } from '@pops/pillar-sdk/bo
 
 import { openBfmDb } from '../db/index.js';
 import { createBfmApiApp } from './app.js';
+import { resolveAccessTokenSigningKey } from './auth/signing-key.js';
 import {
   resolvePort,
   resolveSelfBaseUrl,
@@ -46,11 +54,13 @@ const selfBaseUrl = resolveSelfBaseUrl(port);
 
 configureBfmServerSdk();
 
+const accessTokenSigningKey = resolveAccessTokenSigningKey();
+
 const sqlitePath = resolveSqlitePath();
 const bfmDb = openBfmDb(sqlitePath);
 console.warn(`[bfm-api] SQLite at ${sqlitePath}`);
 
-const app = createBfmApiApp({ version });
+const app = createBfmApiApp({ version, db: bfmDb.db, accessTokenSigningKey });
 
 const server = app.listen(port, () => {
   console.warn(`[bfm-api] Listening on port ${port}`);

@@ -519,6 +519,17 @@ services:
       # else, which is the routing-seam disagreement this fleet has already
       # paid for once.
       POPS_INTERNAL_API_KEY: ${POPS_INTERNAL_API_KEY:-pops_sa_dev.unprovisioned-placeholder}
+      # Same arrangement for the access-token signing key: inline here, a
+      # mounted file secret in production. bfm refuses to boot without one and
+      # rejects anything under 32 characters, so the placeholder is sized to
+      # clear that floor and keep `up -d bfm-api` working on a clean checkout.
+      #
+      # A fixed literal, which is exactly what makes it unfit for anything but
+      # dev: it is in the repository, so every checkout signs with the same
+      # key. Tokens minted by one dev stack verify against another. Set
+      # BFM_ACCESS_TOKEN_SECRET to real CSPRNG output before pairing a real
+      # handset against a dev stack.
+      BFM_ACCESS_TOKEN_SECRET: ${BFM_ACCESS_TOKEN_SECRET:-dev-only-unprovisioned-bfm-signing-key-not-secret}
     expose:
       - '3014'
     depends_on:

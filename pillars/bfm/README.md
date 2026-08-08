@@ -7,21 +7,26 @@ It listens on port **3014**.
 
 It owns a database — the device allow-list, described under
 [Persistence](#persistence) below — which makes it a data pillar by kind
-(ADR-035). It serves `/health` alone: it has no mobile surface yet (POPS-1378,
-POPS-1379), so `/health` is a pure liveness shape rather than a DB round-trip.
-That is deliberate for a container healthcheck, and it is why the database
-opens **before** `listen`: the probe cannot tell you the schema migrated, so
-boot has to. It does carry a shell-side operator surface, under
-[`app/`](./app/README.md).
+(ADR-035). It has no mobile route yet (POPS-1378, POPS-1379), though the
+perimeter those routes will sit behind is already in place — see
+[The perimeter](#the-perimeter). `/health` is a pure liveness shape rather
+than a DB round-trip, which is deliberate for a container healthcheck and is
+why the database opens **before** `listen`: the probe cannot tell you the
+schema migrated, so boot has to. It carries a shell-side operator surface,
+under [`app/`](./app/README.md).
 
 It also holds a service-account credential and one way to spend it — see
 [Reaching sibling pillars](#reaching-sibling-pillars) and
 [`src/api/pillars/README.md`](src/api/pillars/README.md).
 
-| Surface        | What it does                                                                       |
-| -------------- | ---------------------------------------------------------------------------------- |
-| `GET /health`  | Liveness shape. Served from the ts-rest contract, so it cannot drift from the doc. |
-| `GET /openapi` | The committed contract projection, served verbatim so peers build a route map.     |
+| Surface        | What it does                                                                               |
+| -------------- | ------------------------------------------------------------------------------------------ |
+| `GET /health`  | Liveness shape. Served from the ts-rest contract, so it cannot drift from the doc.         |
+| `GET /openapi` | The committed contract projection, served verbatim so peers build a route map.             |
+| `/mobile/*`    | Reserved for the phone and gated by `requireDevice`. No route lives there yet — see below. |
+
+`/health` answers without a database round-trip, which is why an unreachable
+`bfm.db` still reads as live.
 
 When `POPS_REGISTRY_ENABLED=true` it self-registers with the `registry` pillar
 on boot via `bootstrapPillar` from `@pops/pillar-sdk/bootstrap`. Registration
@@ -29,6 +34,24 @@ runs **after** `app.listen` and never gates boot: an unavailable registry
 delays bfm joining the fleet, it does not delay bfm serving traffic.
 `src/api/__tests__/registration.test.ts` is the proof — it boots against a
 registry that refuses every call and asserts `/health` still answers.
+
+## The perimeter
+
+Everything under `/mobile` is behind the access-token guard in
+[`src/api/auth/`](src/api/auth/README.md), mounted as a path prefix in
+`src/api/app.ts`. The routes it protects arrive later (POPS-1374, POPS-1378,
+POPS-1379); the guard is in front of the prefix now so none of them can arrive
+public. A request to an unrouted `/mobile/*` therefore answers `401`, not
+`404`.
+
+`/health` and `/openapi` sit outside the prefix and are deliberately
+unauthenticated — the fleet's liveness probes and the SDK's route-map build
+both reach them without a device.
+
+That directory's README carries the whole of the reasoning: why a rejected
+token is a `401` and a revoked device a `403`, why a missing device row is a
+`401` rather than either, what is never logged, and what is deliberately absent
+(refresh — POPS-1375, rate limiting — POPS-1468, `lastSeenAt` — POPS-1469).
 
 ## Persistence
 
@@ -90,15 +113,19 @@ registration is a separate mechanism and still goes through the
 
 ## What deliberately does not live here
 
-- **A route that reads a row.** `server.ts` opens `bfm.db` and migrates it, but
-  no handler queries it yet — the tables are populated first by the issuance
-  path (POPS-1369). The open happens anyway because the container needs it to:
-  a volume and a Litestream stream that point at a file no process creates are
-  a backup of nothing, and nothing reports that.
-- **Auth, the mobile contract, and the nginx route.** Device pairing and token
-  issuance (POPS-1369, POPS-1370, POPS-1374, POPS-1375), the mobile-facing
-  routes (POPS-1378, POPS-1379) and the nginx route plus the compiled pillar
-  roster (POPS-1386) are each their own ticket.
+- **A route that reads a row.** `server.ts` opens `bfm.db` and migrates it, and
+  the guard queries `devices` on every `/mobile/*` request, but no handler
+  does — the tables are populated first by the issuance path (POPS-1369). The
+  open would happen regardless because the container needs it to: a volume and
+  a Litestream stream that point at a file no process creates are a backup of
+  nothing, and nothing reports that.
+- **Any route that mints an access token.** `mintAccessToken` exists and is
+  exercised, but its two callers do not: the pairing exchange (POPS-1374) and
+  the refresh route (POPS-1375). Until one lands, no phone can obtain a token
+  and every `/mobile/*` request is a `401` by construction.
+- **The mobile contract and the nginx route.** The mobile-facing routes
+  (POPS-1378, POPS-1379) and the nginx route plus the compiled pillar roster
+  (POPS-1386) are each their own ticket.
 - **Any enforcement of what the service account may reach.** The grant is
   narrow and auditable, but the registry pillar is the only one in the fleet
   that reads `X-API-Key` at all — every other producer serves any in-network
@@ -206,6 +233,7 @@ pillars/bfm/
         ├── boot-env.ts            the env this pillar's own HTTP surface reads
         ├── app.ts                 Express app factory + route wiring
         ├── manifest.ts            the boot-time ManifestPayload
+        ├── auth/                  the /mobile perimeter — has its own README
         ├── pillars/               calling siblings — has its own README
         └── rest/handlers.ts       ts-rest handler composer
 ```
@@ -219,7 +247,7 @@ to it invalidates the exclusion.
 ## Commands
 
 ```bash
-pnpm --filter @pops/bfm dev
+POPS_INTERNAL_API_KEY=dev BFM_ACCESS_TOKEN_SECRET=$(openssl rand -base64 48) pnpm --filter @pops/bfm dev
 ```
 
 ```bash
@@ -236,17 +264,19 @@ pnpm --filter @pops/bfm build
 
 ## Environment
 
-| Var                          | Default                    | Notes                                                                    |
-| ---------------------------- | -------------------------- | ------------------------------------------------------------------------ |
-| `PORT`                       | `3014`                     | HTTP listen port.                                                        |
-| `BFM_SELF_BASE_URL`          | `http://localhost:${PORT}` | Advertised to the registry as this pillar's `baseUrl`.                   |
-| `BFM_SQLITE_PATH`            | `./data/bfm.db`            | Where `bfm.db` lives. Falls back to `dirname(SQLITE_PATH)`.              |
-| `BUILD_VERSION`              | `dev`                      | Verbatim on `/health`; coerced in the manifest — see below.              |
-| `POPS_REGISTRY_ENABLED`      | `false`                    | Opt-in self-registration with the `registry` pillar.                     |
-| `POPS_REGISTRY_URL`          | `http://registry-api:3001` | Registry base URL — where bfm both registers and discovers.              |
-| `POPS_INTERNAL_API_KEY_FILE` | —                          | Path to the mounted service-account secret. Preferred over the next row. |
-| `POPS_INTERNAL_API_KEY`      | —                          | The key inline, for local dev. One of these two is **required**.         |
-| `POPS_INTERNAL_BASE_URLS`    | —                          | `id:baseUrl[,…]`. Overrides the discovered base URL for those ids only.  |
+| Var                            | Default                    | Notes                                                                       |
+| ------------------------------ | -------------------------- | --------------------------------------------------------------------------- |
+| `PORT`                         | `3014`                     | HTTP listen port.                                                           |
+| `BFM_SELF_BASE_URL`            | `http://localhost:${PORT}` | Advertised to the registry as this pillar's `baseUrl`.                      |
+| `BFM_SQLITE_PATH`              | `./data/bfm.db`            | Where `bfm.db` lives. Falls back to `dirname(SQLITE_PATH)`.                 |
+| `BUILD_VERSION`                | `dev`                      | Verbatim on `/health`; coerced in the manifest — see below.                 |
+| `POPS_REGISTRY_ENABLED`        | `false`                    | Opt-in self-registration with the `registry` pillar.                        |
+| `POPS_REGISTRY_URL`            | `http://registry-api:3001` | Registry base URL — where bfm both registers and discovers.                 |
+| `POPS_INTERNAL_API_KEY_FILE`   | —                          | Path to the mounted service-account secret. Preferred over the next row.    |
+| `POPS_INTERNAL_API_KEY`        | —                          | The key inline, for local dev. One of these two is **required**.            |
+| `POPS_INTERNAL_BASE_URLS`      | —                          | `id:baseUrl[,…]`. Overrides the discovered base URL for those ids only.     |
+| `BFM_ACCESS_TOKEN_SECRET_FILE` | —                          | Path to the mounted access-token signing secret. Preferred over the next.   |
+| `BFM_ACCESS_TOKEN_SECRET`      | —                          | The signing secret inline, for local dev. One of these two is **required**. |
 
 `POPS_INTERNAL_BASE_URLS` is deliberately not `POPS_PILLARS`, which carries the
 same shape and a different meaning: production stopped plumbing it once the
@@ -255,7 +285,7 @@ registry became the source of truth (ADR-039 E25), while
 service. Honouring that here would bypass discovery in dev and nowhere else.
 bfm ignores it.
 
-Boot crashes rather than starting misconfigured, in three places:
+Boot crashes rather than starting misconfigured, in four places:
 
 - A malformed `BFM_SELF_BASE_URL` would publish an invalid
   `PillarRegistryEntry.baseUrl`, and a base URL carrying a path silently breaks
@@ -264,9 +294,19 @@ Boot crashes rather than starting misconfigured, in three places:
   surface later as an indistinguishable `unavailable` on every outbound call.
 - **No service-account key at all.** bfm exists to fan out to the federation;
   a process that starts without a credential looks healthy right up until the
-  first request from a phone. This is why bare `pnpm dev` now needs
-  `POPS_INTERNAL_API_KEY` set — any non-empty string will do until the call
-  actually has to authenticate.
+  first request from a phone.
+- **No access-token signing key, or one shorter than 32 characters.** The same
+  bargain from the other direction: without it bfm cannot authenticate the
+  phone asking. An unreadable `BFM_ACCESS_TOKEN_SECRET_FILE` is fatal too — it
+  does **not** fall back to the inline variable, unlike the fleet's other
+  secret readers, because a production process quietly signing with a leftover
+  dev value produces tokens indistinguishable from forgeries.
+
+Between them, that is why the `dev` invocation under [Commands](#commands)
+carries two variables rather than being the bare `pnpm --filter` line every
+other pillar's is. Any non-empty `POPS_INTERNAL_API_KEY` and any long-enough
+`BFM_ACCESS_TOKEN_SECRET` will do locally; production mounts both as Docker
+file-based secrets and points the `_FILE` variables at them (POPS-1385).
 
 `BUILD_VERSION` reaches two places and they do not agree when it is not semver.
 `/health` reports it verbatim, because `createBfmApiApp` is handed the raw

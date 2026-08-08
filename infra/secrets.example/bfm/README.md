@@ -33,15 +33,19 @@ Newlines are fine in either file — both are trimmed before use.
 
 ## Which of these is live
 
-Only `pops_bfm_api_key` is mounted today, by the `bfm-api` service at
-`/run/secrets/pops_bfm_api_key`.
+Both, mounted by the `bfm-api` service at `/run/secrets/pops_bfm_api_key` and
+`/run/secrets/bfm_jwt_signing_key`.
 
-`bfm_jwt_signing_key` is declared in `infra/docker-compose.yml` but mounted
-nowhere: the access-token minting path and the `requireDevice` guard that
-verifies against it are POPS-1370, and no process reads the file until then.
-Compose materialises a secret only for services that reference it, so the
-declaration is inert — which is the point. It lets the value be provisioned on
-the host ahead of the release that starts needing it, rather than during it.
+**`bfm-api` refuses to boot without either.** That is deliberate rather than
+strict: the container healthcheck answers from `/health`, which touches
+neither, so a process that started without them would report healthy while
+being unable to call a sibling pillar or authenticate a single phone. A
+crash-loop names the missing file; a healthy container that serves nothing
+does not.
+
+`bfm_jwt_signing_key` must be at least 32 characters — `openssl rand -base64
+32` yields 44 and clears it comfortably. bfm rejects anything shorter at boot
+rather than signing with a weak key.
 
 Rotating `bfm_jwt_signing_key` invalidates every access token signed with the
 old one. Those are minutes-lived by design, so the blast radius is one refresh
