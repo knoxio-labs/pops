@@ -20,6 +20,7 @@ export const KNOWN_MODULES = [
   'inventory',
   'lists',
   'media',
+  'purchases',
   'registry',
 ] as const;
 
@@ -1509,6 +1510,15 @@ export const MODULES = [
     ] satisfies readonly SettingsManifest[],
   },
   {
+    id: 'purchases',
+    name: 'Purchases',
+    version: '0.1.0',
+    surfaces: ['app'] as const,
+    description: 'Purchase documents and line items, reconciled N:M against finance transactions.',
+    hasBackend: false,
+    hasFrontend: false,
+  },
+  {
     id: 'registry',
     name: 'Registry',
     version: '0.1.0',
@@ -1705,4 +1715,5 @@ export type GeneratedModuleId =
   | 'inventory'
   | 'lists'
   | 'media'
+  | 'purchases'
   | 'registry';
