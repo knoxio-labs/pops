@@ -123,9 +123,15 @@ lives_in_generated_dir() {
 cmd_list() {
     require_roots "$@"
 
+    # A file rather than a variable because the list is NUL-separated, and
+    # cleaned up by hand rather than by `trap ... RETURN`: a RETURN trap is
+    # global shell state that outlives the function that set it, so it would sit
+    # installed for the rest of the run holding a reference to a local that no
+    # longer exists. Today it would not fire — bash does not inherit RETURN
+    # traps into functions without `set -T` — but that is a rule the reader has
+    # to know before this looks safe, and two explicit `rm`s need no rule at all.
     local sources
     sources="$(mktemp)"
-    trap 'rm -f "$sources"' RETURN
 
     # `-prune` rather than a path filter, so a large checkout is skipped rather
     # than walked.
@@ -139,10 +145,13 @@ cmd_list() {
     # would report success having read nothing. Verified against swift-format
     # from Xcode 27.
     if [ ! -s "$sources" ]; then
-        die "no Swift sources under '$*' — the source roots are stale."
+        rm -f "$sources"
+        printf 'swift-sources: no Swift sources under '\''%s'\'' — the source roots are stale.\n' "$*" >&2
+        return 1
     fi
 
     cat "$sources"
+    rm -f "$sources"
 }
 
 # ---------------------------------------------------------------------------
@@ -287,7 +296,17 @@ cmd_self_test() {
     expect "check failed on a tree that respects the boundary." \
         run_check_in "$generated_fixture" || status=1
 
-    rm -rf "$generated_fixture" "$stray_fixture" "$unmarked_fixture"
+    # 7. A root holding no Swift is a stale root, not an empty file set. Nothing
+    #    downstream can tell the two apart — swift-format is silent and exits 0
+    #    on both — so this refusal is the only thing between a renamed directory
+    #    and a lint run that reads nothing and reports success.
+    local empty_root
+    empty_root="$(mktemp -d)"
+    mkdir -p "$empty_root/App"
+    expect "list accepted a source root with no Swift under it." \
+        not run_list_in "$empty_root" || status=1
+
+    rm -rf "$generated_fixture" "$stray_fixture" "$unmarked_fixture" "$empty_root"
 
     if [ "$status" -eq 0 ]; then
         printf 'swift-sources: the generated-code boundary holds in both tools.\n'
@@ -297,6 +316,10 @@ cmd_self_test() {
 
 run_check_in() {
     (cd "$1" && cmd_check App Packages 2> /dev/null)
+}
+
+run_list_in() {
+    (cd "$1" && cmd_list App > /dev/null 2>&1)
 }
 
 # ---------------------------------------------------------------------------
