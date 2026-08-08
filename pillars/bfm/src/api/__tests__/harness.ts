@@ -1,19 +1,24 @@
 /**
  * Standing up the real `createBfmApiApp` for a test.
  *
- * The app requires a database handle and a signing key because the `/mobile`
- * perimeter cannot be optional — which means every test that wants `/health`
- * needs both too. This exists so that cost is one line rather than six, and so
- * a test never reaches for a stub where a real SQLite file would do.
+ * Nothing here is a mock. The app requires a database handle and a signing key
+ * because the `/mobile` perimeter cannot be optional — which means every test
+ * that only wants `/health` needs both too. This exists so that cost is one
+ * line rather than six, and so a test never reaches for a stub where a real
+ * SQLite file would do: the pillar's subject matter is what is written to and
+ * read from that database, and a stubbed handle would let assertions pass
+ * against code that persists nothing.
  */
 import { createSecretKey, type KeyObject } from 'node:crypto';
 
 import { openTempDb } from '../../db/__tests__/helpers.js';
-import { createBfmApiApp } from '../app.js';
+import { createBfmApiApp, type CreateBfmApiAppOptions } from '../app.js';
+import { createRateLimiter, type RateLimiter } from '../rate-limit.js';
 
 import type { Express } from 'express';
 
-import type { BfmDb } from '../../db/index.js';
+import type { BfmDb, OpenedBfmDb } from '../../db/index.js';
+import type { BfmApiDeps } from '../app.js';
 
 /** Long enough to satisfy the resolver's floor; fixed so a failure is reproducible. */
 export const TEST_SIGNING_SECRET = 'test-signing-key-0123456789abcdef';
@@ -22,19 +27,71 @@ export function testSigningKey(secret: string = TEST_SIGNING_SECRET): KeyObject 
   return createSecretKey(Buffer.from(secret, 'utf8'));
 }
 
+export const TEST_PUBLIC_BASE_URL = 'https://bfm.example.test';
+
+/**
+ * `NODE_ENV=production` plus a configured Access team: the only combination in
+ * which the operator identity middleware demands a real Cloudflare Access
+ * session.
+ *
+ * Every "an anonymous caller is refused" assertion needs this. Under the
+ * suite's own `NODE_ENV=test`, the dev fallback resolves every request to an
+ * operator, so those cases would silently assert nothing.
+ */
+export const PRODUCTION_ENV: NodeJS.ProcessEnv = {
+  NODE_ENV: 'production',
+  CLOUDFLARE_ACCESS_TEAM_NAME: 'pops-test-team',
+};
+
+/**
+ * Production with Access NOT configured. bfm treats this as anonymous rather
+ * than as the registry's "trust the tunnel" — see the identity middleware
+ * header for why that divergence exists.
+ */
+export const PRODUCTION_ENV_WITHOUT_ACCESS: NodeJS.ProcessEnv = { NODE_ENV: 'production' };
+
 export interface TestApp {
   app: Express;
   db: BfmDb;
+  /** The full opener result, for suites that assert on stored rows. */
+  opened: OpenedBfmDb;
   accessTokenSigningKey: KeyObject;
   cleanup: () => void;
 }
 
-export function createTestApp(version = '0.0.1-test'): TestApp {
+export interface TestAppOptions {
+  version?: string;
+  /** Drives the operator identity middleware. See {@link PRODUCTION_ENV}. */
+  env?: NodeJS.ProcessEnv;
+  issuanceLimiter?: RateLimiter;
+  pairingCodeTtlMs?: number;
+  publicBaseUrl?: string;
+  accessTokenSigningKey?: KeyObject;
+}
+
+export function createTestApp(options: TestAppOptions = {}): TestApp {
   const { opened, cleanup } = openTempDb();
-  const accessTokenSigningKey = testSigningKey();
-  return {
-    app: createBfmApiApp({ version, db: opened.db, accessTokenSigningKey }),
+  const accessTokenSigningKey = options.accessTokenSigningKey ?? testSigningKey();
+
+  const deps: BfmApiDeps = {
+    version: options.version ?? '0.0.1-test',
     db: opened.db,
+    accessTokenSigningKey,
+    publicBaseUrl: options.publicBaseUrl ?? TEST_PUBLIC_BASE_URL,
+    issuanceLimiter:
+      options.issuanceLimiter ??
+      // Generous by default so a suite that is not about rate limiting never
+      // trips it; the limiting suite injects its own.
+      createRateLimiter({ limit: 1_000, windowMs: 60_000 }),
+    ...(options.pairingCodeTtlMs === undefined ? {} : { pairingCodeTtlMs: options.pairingCodeTtlMs }),
+  };
+
+  const appOptions: CreateBfmApiAppOptions = options.env === undefined ? {} : { env: options.env };
+
+  return {
+    app: createBfmApiApp(deps, appOptions),
+    db: opened.db,
+    opened,
     accessTokenSigningKey,
     cleanup,
   };

@@ -8,7 +8,7 @@
  *   2. non-production → dev fallback user (`dev@example.com`).
  *   3. no `CLOUDFLARE_ACCESS_TEAM_NAME` → tunnel user
  *      (`tunnel-authenticated@pops.local`).
- *   4. `cf-access-jwt-assertion` → `verifyCloudflareJWT` → `{ email }`.
+ *   4. `cf-access-jwt-assertion` → `verifyCloudflareAccessJwt` → `{ email }`.
  *   5. otherwise → anonymous (`{ user: null, serviceAccount: null }`).
  *
  * The middleware RESOLVES identity — it never rejects globally. Per-route
@@ -19,6 +19,8 @@
  * ts-rest/express handlers read through the `res` they are handed (see
  * `@ts-rest/express`'s `AppRouteImplementation`, which passes `{ req, res }`).
  */
+import { verifyCloudflareAccessJwt } from '@pops/pillar-sdk/access';
+
 import {
   type AuthenticatedServiceAccount,
   type CoreDb,
@@ -26,7 +28,6 @@ import {
   serviceAccountsService,
 } from '../../db/index.js';
 import { UnauthorizedError } from '../shared/errors.js';
-import { verifyCloudflareJWT } from './cloudflare-jwt.js';
 
 import type { NextFunction, Request, RequestHandler, Response } from 'express';
 
@@ -92,8 +93,8 @@ export async function resolvePrincipal(coreDb: CoreDb, req: Request): Promise<Pr
   const token = req.headers['cf-access-jwt-assertion'];
   if (typeof token === 'string') {
     try {
-      const payload = await verifyCloudflareJWT(token);
-      return { user: { email: payload.email }, serviceAccount: null };
+      const identity = await verifyCloudflareAccessJwt(token);
+      return { user: { email: identity.email }, serviceAccount: null };
     } catch (error) {
       console.error('[core-api] JWT verification failed:', error);
       return { user: null, serviceAccount: null };

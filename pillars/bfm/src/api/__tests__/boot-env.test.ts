@@ -4,6 +4,7 @@ import {
   DEFAULT_PORT,
   DEFAULT_SQLITE_PATH,
   resolvePort,
+  resolvePublicBaseUrl,
   resolveSelfBaseUrl,
   resolveSqlitePath,
   resolveVersion,
@@ -95,6 +96,47 @@ describe('resolveSelfBaseUrl', () => {
     expect(resolveSelfBaseUrl(3014, { FOOD_SELF_BASE_URL: 'http://food-api:3005' })).toBe(
       'http://localhost:3014'
     );
+  });
+});
+
+/**
+ * The public origin is the one baked into the pairing QR, so it is the one the
+ * PHONE dials — distinct from the in-cluster origin bfm advertises to the
+ * registry. Conflating them publishes a `pops-backend`-internal hostname to a
+ * handset on cellular.
+ */
+describe('resolvePublicBaseUrl', () => {
+  it('prefers BFM_PUBLIC_BASE_URL when set', () => {
+    expect(
+      resolvePublicBaseUrl(3014, {
+        BFM_PUBLIC_BASE_URL: 'https://bfm.example.com',
+        BFM_SELF_BASE_URL: 'http://bfm-api:3014',
+      })
+    ).toBe('https://bfm.example.com');
+  });
+
+  it('falls back to the self base URL, which is the right answer only in dev', () => {
+    expect(resolvePublicBaseUrl(3014, { BFM_SELF_BASE_URL: 'http://bfm-api:3014' })).toBe(
+      'http://bfm-api:3014'
+    );
+    expect(resolvePublicBaseUrl(3014, {})).toBe('http://localhost:3014');
+  });
+
+  it('treats an empty value as unset rather than as an origin', () => {
+    expect(resolvePublicBaseUrl(3014, { BFM_PUBLIC_BASE_URL: '' })).toBe('http://localhost:3014');
+  });
+
+  it('normalises the origin', () => {
+    expect(resolvePublicBaseUrl(3014, { BFM_PUBLIC_BASE_URL: 'https://bfm.example.com/' })).toBe(
+      'https://bfm.example.com'
+    );
+  });
+
+  /** A path here would produce a pairing URL with a doubled prefix. */
+  it('crashes loudly on a value carrying a path', () => {
+    expect(() =>
+      resolvePublicBaseUrl(3014, { BFM_PUBLIC_BASE_URL: 'https://bfm.example.com/bfm-api' })
+    ).toThrow(/^\[bfm-api\] BFM_PUBLIC_BASE_URL .* bare origin/u);
   });
 });
 

@@ -19,7 +19,7 @@ import {
 } from '@pops/pillar-sdk/bootstrap';
 
 import { buildBfmManifest } from '../manifest.js';
-import { createTestApp, type TestApp } from './harness.js';
+import { createTestApp, type TestApp, type TestAppOptions } from './harness.js';
 
 function recordingRegistry(): RegistryTransport & {
   lastRegister: () => RegisterRequest | undefined;
@@ -56,8 +56,8 @@ const silentLogger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
 const apps: TestApp[] = [];
 
-function open(version: string): TestApp {
-  const created = createTestApp(version);
+function open(options: TestAppOptions = {}): TestApp {
+  const created = createTestApp(options);
   apps.push(created);
   return created;
 }
@@ -87,7 +87,7 @@ describe('self-registration against an unavailable registry', () => {
 
   it('keeps serving /health while registration is still retrying', async () => {
     const transport = deadRegistry();
-    const { app } = open('1.2.3');
+    const { app } = open({ version: '1.2.3' });
 
     const handle = await bootstrapPillar({
       manifest: buildBfmManifest('1.2.3'),
@@ -190,7 +190,7 @@ describe('BUILD_VERSION on the wire', () => {
   });
 
   it('reports the raw value on /health, which is why the two can disagree', async () => {
-    const { app } = open('dev');
+    const { app } = open({ version: 'dev' });
 
     const res = await request(app).get('/health');
 

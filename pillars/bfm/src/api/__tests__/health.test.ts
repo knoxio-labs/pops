@@ -2,12 +2,12 @@ import request from 'supertest';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { HealthResponseSchema } from '../../contract/rest-schemas.js';
-import { createTestApp, type TestApp } from './harness.js';
+import { createTestApp, type TestApp, type TestAppOptions } from './harness.js';
 
 const apps: TestApp[] = [];
 
-function open(version?: string): TestApp {
-  const created = createTestApp(version);
+function open(options: TestAppOptions = {}): TestApp {
+  const created = createTestApp(options);
   apps.push(created);
   return created;
 }
@@ -31,7 +31,7 @@ describe('GET /health', () => {
   });
 
   it('reports the build version it was constructed with', async () => {
-    const { app } = open('9.9.9-fixture');
+    const { app } = open({ version: '9.9.9-fixture' });
 
     const res = await request(app).get('/health');
 
@@ -69,5 +69,19 @@ describe('GET /health', () => {
     const res = await request(app).get('/pillars');
 
     expect(res.status).toBe(404);
+  });
+
+  /**
+   * Liveness must not depend on a principal. The operator gate lives in the
+   * handlers, and a probe answering 401 would read as the pillar being down —
+   * which is precisely backwards, since the probe is what tells the fleet the
+   * pillar is up.
+   */
+  it('answers an anonymous probe, unlike the operator routes', async () => {
+    const { app } = open({ env: { NODE_ENV: 'production' } });
+
+    const res = await request(app).get('/health');
+
+    expect(res.status).toBe(200);
   });
 });

@@ -7,6 +7,7 @@
  * relative path.
  */
 export * from './schema.js';
+export * from './services/index.js';
 
 export { openBfmDb, type BfmDb, type OpenedBfmDb } from './open-bfm-db.js';
 export { findDeviceById } from './queries/devices.js';

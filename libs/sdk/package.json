@@ -33,6 +33,10 @@
       "types": "./dist/server/index.d.ts",
       "default": "./dist/server/index.js"
     },
+    "./access": {
+      "types": "./dist/access/index.d.ts",
+      "default": "./dist/access/index.js"
+    },
     "./discovery": {
       "types": "./dist/discovery/index.d.ts",
       "default": "./dist/discovery/index.js"
@@ -76,12 +80,14 @@
   },
   "dependencies": {
     "@pops/types": "workspace:*",
+    "jsonwebtoken": "^9.0.3",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@tanstack/react-query": "5.101.4",
     "@testing-library/jest-dom": "^7.0.0",
     "@testing-library/react": "^16.3.2",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^25.9.3",
     "@types/react": "^19.2.18",
     "@vitest/coverage-v8": "^4.1.10",
