@@ -154,7 +154,7 @@ describe('failures that are about the request, not the federation', () => {
  * is bfm's problem, not the phone's — answering 401 would tell a phone whose
  * own credential is perfectly good to go and refresh it, forever.
  */
-describe('a sibling rejecting this pillar own key', () => {
+describe("a sibling rejecting this pillar's own key", () => {
   it('is a gateway misconfiguration, not an authentication failure', () => {
     const mapped = toGatewayFailure({ kind: 'unauthorized', pillar: 'finance' });
 
