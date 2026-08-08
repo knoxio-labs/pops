@@ -30,13 +30,17 @@ export interface ReceiptImage {
 
 export interface ReceiptVision {
   /**
-   * Read one receipt.
+   * Read one receipt from one or more photographs of it.
+   *
+   * A till receipt for a full shop does not fit in one frame, so the images
+   * are an ordered sequence covering a single piece of paper — top to
+   * bottom — not several receipts.
    *
    * Returns the model's raw text, or `null` when the model is unavailable —
    * no API key, transport failure. `null` means "ask a human", never "the
    * receipt is empty".
    */
-  read(image: ReceiptImage): Promise<string | null>;
+  read(images: readonly ReceiptImage[]): Promise<string | null>;
 }
 
 /**
@@ -95,7 +99,13 @@ export const PROMPT_FIELDS: Readonly<Record<string, string>> = {
  * the arithmetic work** — the sum is checked afterwards precisely because
  * it is evidence the model did not manufacture.
  */
-export const EXTRACTION_PROMPT = `You are reading a photograph of a shop receipt. Return ONLY a JSON object — no prose, no code fence.
+export const EXTRACTION_PROMPT = `You are reading photographs of ONE shop receipt. Return ONLY a JSON object — no prose, no code fence.
+
+You may be given several images. They are one receipt, photographed in order from top to bottom because it is too long for a single frame — not several receipts. Read them as one document: one merchant, one date, one total, and every line from every image in the order they appear.
+
+Consecutive photographs usually overlap, so the last lines of one image are often the first lines of the next. A line that appears in two images is ONE line and must be reported once. Do not report it twice, and do not drop it because you have seen it before.
+
+Take the total, the tax and the date from wherever they are printed — usually the last image. If a part of the receipt is missing between images, do not invent the lines that would fill the gap: report what you can read and the arithmetic check will show something is missing.
 
 Transcribe what is printed. Do not interpret, categorise, tidy or expand anything. Every value you return has to be checkable against the photograph by someone holding it. "timeZone" is the single exception and is marked as such below.
 

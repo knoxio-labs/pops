@@ -31,11 +31,11 @@ export type ReadOutcome =
 
 export async function readReceipt(
   vision: ReceiptVision,
-  image: ReceiptImage
+  images: readonly ReceiptImage[]
 ): Promise<ReadOutcome> {
   let raw: string | null;
   try {
-    raw = await vision.read(image);
+    raw = await vision.read(images);
   } catch (error) {
     // A transport failure is not a statement about the receipt. Saying so
     // keeps "the model was down" from being filed as "we read it and it
