@@ -21,7 +21,7 @@ export class BareOriginParseError extends Error {
  *   baseUrl`).
  * @param raw The candidate origin.
  * @throws {BareOriginParseError} If `raw` is not a URL, does not use http(s),
- *   or carries a path, query, or fragment.
+ *   carries a path, query, or fragment, or carries credentials (userinfo).
  */
 export function parseBareOrigin(label: string, raw: string): string {
   let url: URL;
@@ -32,6 +32,12 @@ export function parseBareOrigin(label: string, raw: string): string {
   }
   if (url.protocol !== 'http:' && url.protocol !== 'https:') {
     throw new BareOriginParseError(`${label} "${raw}" must use http or https; got ${url.protocol}`);
+  }
+  if (url.username !== '' || url.password !== '') {
+    throw new BareOriginParseError(
+      `${label} "${raw}" must not carry credentials — \`URL.origin\` would silently drop them, ` +
+        `and every outbound call to the resulting baseUrl would then go out unauthenticated`
+    );
   }
   if ((url.pathname !== '/' && url.pathname !== '') || url.search !== '' || url.hash !== '') {
     throw new BareOriginParseError(

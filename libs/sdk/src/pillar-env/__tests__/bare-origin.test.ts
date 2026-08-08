@@ -38,6 +38,19 @@ describe('parseBareOrigin', () => {
   });
 
   it.each([
+    ['a username only', 'http://user@finance-api:3004'],
+    ['a username and password', 'http://user:pass@finance-api:3004'],
+  ])('rejects a URL carrying credentials (%s)', (_label, raw) => {
+    expect(() => parseBareOrigin('X', raw)).toThrow(/credentials/u);
+  });
+
+  it('names the offending label in the credentials-rejection message', () => {
+    expect(() =>
+      parseBareOrigin('FINANCE_SELF_BASE_URL', 'http://user:pass@finance-api:3004')
+    ).toThrow(/^FINANCE_SELF_BASE_URL "http:\/\/user:pass@finance-api:3004"/u);
+  });
+
+  it.each([
     ['ftp', 'ftp://finance-api:3004'],
     ['file', 'file:///srv/finance'],
     ['ws', 'ws://finance-api:3004'],
@@ -93,16 +106,6 @@ describe('parseBareOrigin', () => {
 
     it('punycodes an IDN host', () => {
       expect(parseBareOrigin('X', 'http://ünï.example')).toBe('http://xn--n-nga1b.example');
-    });
-
-    // Documents a hole rather than endorsing it: `URL.origin` discards
-    // credentials, so a baseUrl carrying them is accepted and silently
-    // published without them — outbound calls then go out unauthenticated.
-    // Whether to reject instead is tracked separately.
-    it('silently strips credentials instead of rejecting them', () => {
-      expect(parseBareOrigin('X', 'http://user:pass@finance-api:3004')).toBe(
-        'http://finance-api:3004'
-      );
     });
   });
 });
