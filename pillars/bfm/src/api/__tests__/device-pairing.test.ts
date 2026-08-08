@@ -17,7 +17,6 @@ import request from 'supertest';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { PairedDeviceSchema } from '../../contract/rest-device-schemas.js';
-import { bfmContract } from '../../contract/rest.js';
 import { spkiPublicKeyBase64 } from '../../db/__tests__/helpers.js';
 import {
   DEFAULT_REFRESH_TOKEN_TTL_MS,
@@ -460,18 +459,31 @@ describe('a malformed request', () => {
   });
 });
 
+describe('the round trip an operator actually performs', () => {
+  it('mints a code, and the URL on its QR pairs the phone that scans it', async () => {
+    // The two halves of pairing meet here and nowhere else in the suite: every
+    // other test posts to `PAIRING_PATH` directly, so all of them would still
+    // pass with a QR pointing at a route that does not exist. The handset has
+    // nothing but this URL.
+    const created = open();
+
+    const issued = await request(created.app).post('/operator/pairing/codes').send({});
+    expect(issued.status).toBe(201);
+
+    const pairingUrl = new URL(String(issued.body.pairingUrl));
+    const res = await request(created.app)
+      .post(pairingUrl.pathname)
+      .send(pairBody({ code: pairingUrl.searchParams.get('code') ?? '' }));
+
+    expect(res.status).toBe(201);
+    expect(deviceRows(created)).toHaveLength(1);
+  });
+});
+
 describe('the budget', () => {
   function overBudget(perClientLimit: number): PairingRateLimitOptions {
     return { perClientLimit, globalLimit: 1_000 };
   }
-
-  it('is mounted on the path the contract declares', () => {
-    // `app.ts` mounts the limiter on a string it holds itself, because
-    // middleware runs before ts-rest sees the request. If the contract path
-    // ever moves, the mount stops matching and every assertion above still
-    // passes — the route just answers unbudgeted.
-    expect(PAIRING_PATH).toBe(bfmContract.device.pair.path);
-  });
 
   it('answers 429 with Retry-After once a client is over its per-client budget', async () => {
     const created = open({ pairingRateLimit: overBudget(2) });

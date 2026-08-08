@@ -11,6 +11,7 @@
  * an unauthenticated caller consume an authenticated operator's budget — the
  * limiter keys on the principal, and there is no principal to key on yet.
  */
+import { bfmDeviceContract } from '../../contract/rest-device.js';
 import { issuePairingCode, listDevices, revokeDevice } from '../../db/index.js';
 import { readPrincipal, requireOperator } from '../middleware/identity.js';
 import { NotFoundError, TooManyRequestsError } from '../shared/errors.js';
@@ -45,9 +46,14 @@ export interface OperatorHandlerDeps {
  * A URL rather than a bare code so one QR carries both halves — the phone
  * derives the base URL from it instead of shipping a compiled-in hostname, and
  * the same string is still readable enough for an operator to dictate.
+ *
+ * The path comes off the contract, not a literal. This is the only place that
+ * tells a handset where to send its pairing request, so a route that moved
+ * without this following would print a QR pointing at a 404 — and nothing in
+ * this pillar's own tests would fail, because they call the route directly.
  */
 function buildPairingUrl(publicBaseUrl: string, code: string): string {
-  const url = new URL('/devices/pair', publicBaseUrl);
+  const url = new URL(bfmDeviceContract.pair.path, publicBaseUrl);
   url.searchParams.set('code', code);
   return url.toString();
 }
