@@ -14,11 +14,28 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   bootstrapPillar,
   RegistryNetworkError,
+  type RegisterRequest,
   type RegistryTransport,
 } from '@pops/pillar-sdk/bootstrap';
 
 import { createBfmApiApp } from '../app.js';
 import { buildBfmManifest } from '../manifest.js';
+
+function recordingRegistry(): RegistryTransport & {
+  lastRegister: () => RegisterRequest | undefined;
+} {
+  let last: RegisterRequest | undefined;
+  return {
+    lastRegister: () => last,
+    register: (payload) => {
+      last = payload;
+      return Promise.resolve({ pillarId: payload.pillarId });
+    },
+    heartbeat: (pillarId) =>
+      Promise.resolve({ pillarId, acknowledgedAt: new Date().toISOString() }),
+    unregister: () => Promise.resolve(),
+  };
+}
 
 function deadRegistry(): RegistryTransport & { registerAttempts: () => number } {
   let attempts = 0;
@@ -114,5 +131,55 @@ describe('self-registration against an unavailable registry', () => {
       setTimeout(resolve, 20);
     });
     expect(transport.registerAttempts()).toBe(attemptsAtStop);
+  });
+});
+
+/**
+ * The README tells operators to correlate a deployed build through the
+ * registry rather than `/health`, because the two disagree for the default
+ * `BUILD_VERSION=dev`. That claim spans this pillar and the SDK, so nothing in
+ * either alone can keep it honest — these pin the seam, and go red if the SDK
+ * ever stops coercing.
+ */
+describe('BUILD_VERSION on the wire', () => {
+  it('registers a non-semver version coerced, with the contract tag rewritten to match', async () => {
+    const transport = recordingRegistry();
+
+    const handle = await bootstrapPillar({
+      manifest: buildBfmManifest('dev'),
+      baseUrl: 'http://bfm-api:3014',
+      transport,
+      logger: silentLogger,
+    });
+
+    const registered = transport.lastRegister();
+    expect(registered?.manifest.version).toBe('0.0.0-sha.dev');
+    expect(registered?.manifest.contract.version).toBe('0.0.0-sha.dev');
+    expect(registered?.manifest.contract.tag).toBe('contract-bfm@v0.0.0-sha.dev');
+
+    await handle.stop();
+  });
+
+  it('leaves a semver version untouched', async () => {
+    const transport = recordingRegistry();
+
+    const handle = await bootstrapPillar({
+      manifest: buildBfmManifest('1.2.3'),
+      baseUrl: 'http://bfm-api:3014',
+      transport,
+      logger: silentLogger,
+    });
+
+    expect(transport.lastRegister()?.manifest.version).toBe('1.2.3');
+
+    await handle.stop();
+  });
+
+  it('reports the raw value on /health, which is why the two can disagree', async () => {
+    const app = createBfmApiApp({ version: 'dev' });
+
+    const res = await request(app).get('/health');
+
+    expect(res.body.version).toBe('dev');
   });
 });

@@ -36,7 +36,12 @@ describe('buildBfmManifest', () => {
     expect(buildBfmManifest('1.2.3').healthcheck).toEqual({ path: '/health' });
   });
 
-  it('rejects a version the registry would refuse, rather than registering it', () => {
+  // Not a claim about what gets registered: `bootstrapPillar` coerces a
+  // non-semver version to `0.0.0-sha.<short>` (and rewrites the tag to match)
+  // *before* it validates, so a `dev` build does register. What this pins is
+  // that the builder emits nothing the schema would wave through on its own —
+  // the version and the tag it derives have to stay in lockstep.
+  it('emits a payload the schema rejects when handed a non-semver version', () => {
     const result = validateManifestPayload(buildBfmManifest('not-a-semver'));
 
     expect(result.ok).toBe(false);

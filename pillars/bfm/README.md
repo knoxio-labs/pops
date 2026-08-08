@@ -82,17 +82,25 @@ pnpm --filter @pops/bfm build
 
 ## Environment
 
-| Var                     | Default                    | Notes                                                  |
-| ----------------------- | -------------------------- | ------------------------------------------------------ |
-| `PORT`                  | `3014`                     | HTTP listen port.                                      |
-| `BFM_SELF_BASE_URL`     | `http://localhost:${PORT}` | Advertised to the registry as this pillar's `baseUrl`. |
-| `BUILD_VERSION`         | `dev`                      | Surfaced on `/health` and in the manifest.             |
-| `POPS_REGISTRY_ENABLED` | `false`                    | Opt-in self-registration with the `registry` pillar.   |
-| `POPS_REGISTRY_URL`     | `http://registry-api:3001` | Registry base URL.                                     |
+| Var                     | Default                    | Notes                                                       |
+| ----------------------- | -------------------------- | ----------------------------------------------------------- |
+| `PORT`                  | `3014`                     | HTTP listen port.                                           |
+| `BFM_SELF_BASE_URL`     | `http://localhost:${PORT}` | Advertised to the registry as this pillar's `baseUrl`.      |
+| `BUILD_VERSION`         | `dev`                      | Verbatim on `/health`; coerced in the manifest — see below. |
+| `POPS_REGISTRY_ENABLED` | `false`                    | Opt-in self-registration with the `registry` pillar.        |
+| `POPS_REGISTRY_URL`     | `http://registry-api:3001` | Registry base URL.                                          |
 
 A malformed `BFM_SELF_BASE_URL` crashes boot rather than publishing an invalid
 `PillarRegistryEntry.baseUrl` — a base URL carrying a path silently breaks
 every consumer that appends a route to it.
+
+`BUILD_VERSION` reaches two places and they do not agree when it is not semver.
+`/health` reports it verbatim, because `createBfmApiApp` is handed the raw
+string. The registered manifest does not: `bootstrapPillar` coerces a
+non-semver version to `0.0.0-sha.<first 7 chars>` and rewrites the contract tag
+to match, so a default `dev` build registers as `0.0.0-sha.dev` /
+`contract-bfm@v0.0.0-sha.dev` while `/health` still says `dev`. Read the
+registry, not `/health`, when correlating a deployed build.
 
 ## Architecture
 
