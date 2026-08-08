@@ -12,8 +12,7 @@ import { and, count, desc, eq, gte, like, lt, lte, or, type SQL, sql } from 'dri
 import { transactions } from '../schema.js';
 
 import type { TransactionType } from '../../contract/corrections-constants.js';
-import type { FinanceDb } from './internal.js';
-import type { TransactionRow } from './transactions.js';
+import type { FinanceDb, TransactionRow } from './internal.js';
 
 /** Filters accepted by {@link listTransactions}. */
 export interface TransactionFilters {

@@ -58,9 +58,9 @@ describe('the unauthenticated surface', () => {
 
 describe('the /mobile perimeter', () => {
   it('gates a path no route has been written for yet', async () => {
-    // The whole point of a prefix mount: POPS-1378 and POPS-1379 cannot land
-    // an ungated mobile route, because the gate is already in front of the
-    // path they will claim.
+    // The whole point of a prefix mount: a later ticket cannot land an ungated
+    // mobile route, because the gate is already in front of the path it will
+    // claim.
     const { app } = open();
 
     const res = await request(app).get('/mobile/transactions');

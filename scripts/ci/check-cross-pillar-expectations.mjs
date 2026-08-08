@@ -86,6 +86,28 @@ export const EXPECTATIONS = [
     pathParams: ['id'],
     usedBy: 'pillars/purchases/src/api/cron/pillar-lookup.ts',
   },
+  {
+    consumer: 'bfm',
+    producer: 'finance',
+    operationId: 'transactions.list',
+    path: '/transactions',
+    method: 'get',
+    // `beforeDate`/`beforeId` are the keyset anchor the mobile cursor decodes
+    // to. Losing either one on the producer side turns a stable scroll into an
+    // unfiltered first page served over and over, with a 200 every time.
+    query: ['limit', 'beforeDate', 'beforeId'],
+    usedBy: 'pillars/bfm/src/api/finance/client.ts',
+  },
+  {
+    consumer: 'bfm',
+    producer: 'finance',
+    operationId: 'transactions.get',
+    path: '/transactions/{id}',
+    method: 'get',
+    query: [],
+    pathParams: ['id'],
+    usedBy: 'pillars/bfm/src/api/finance/client.ts',
+  },
 ];
 
 /**

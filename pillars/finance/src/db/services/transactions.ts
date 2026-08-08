@@ -22,10 +22,10 @@ import { TransactionAlreadyExistsError, TransactionNotFoundError } from '../erro
 import { transactions } from '../schema.js';
 
 import type { TransactionType } from '../../contract/corrections-constants.js';
-import type { FinanceDb } from './internal.js';
+import type { FinanceDb, TransactionRow } from './internal.js';
 
 /** Raw drizzle row shape — exposed so callers can reuse the inferred select type. */
-export type TransactionRow = typeof transactions.$inferSelect;
+export type { TransactionRow };
 
 /** Mutable subset accepted on create. `notionId` stays the import/sync layer's job. */
 export interface CreateTransactionInput {

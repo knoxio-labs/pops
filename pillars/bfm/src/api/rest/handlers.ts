@@ -12,13 +12,17 @@ import {
   PAIRING_CODE_RATE_WINDOW_MS,
   type RateLimiter,
 } from '../rate-limit.js';
+import {
+  makeMobileFinanceHandlers,
+  type MobileFinanceHandlerDeps,
+} from './mobile-finance-handlers.js';
 import { makeOperatorHandlers } from './operator-handlers.js';
 
 import type { BfmDb } from '../../db/index.js';
 
 const server: ReturnType<typeof initServer> = initServer();
 
-export interface BfmRestHandlerDeps {
+export interface BfmRestHandlerDeps extends MobileFinanceHandlerDeps {
   /** Build version, surfaced on the health response. */
   version: string;
   /** Open handle to `bfm.db`. */
@@ -62,5 +66,6 @@ export function makeBfmRestHandlers(
       publicBaseUrl: deps.publicBaseUrl,
       ...(deps.pairingCodeTtlMs === undefined ? {} : { pairingCodeTtlMs: deps.pairingCodeTtlMs }),
     }),
+    mobileFinance: makeMobileFinanceHandlers(deps),
   });
 }

@@ -16,6 +16,12 @@ a request handler
             → CallResult  ──translated──→  GatewayOutcome
 ```
 
+The one caller today is `../finance/`, which turns finance's transaction list
+into the mobile one — see "The mobile shape" in the pillar README for what that
+reshaping is allowed to do. `../rest/upstream-error.ts` is where a
+`GatewayOutcome`'s failure arm becomes the status a phone sees, and it is the
+only place that translation happens.
+
 ## The trap this directory exists to avoid
 
 `@pops/pillar-sdk` exports **two** `pillar()` functions with the same name and
