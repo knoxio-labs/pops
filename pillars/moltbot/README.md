@@ -56,8 +56,8 @@ chmod 700 secrets
 for f in infra/secrets.example/moltbot/*.example; do
   name=$(basename "$f" .example)
   cp -n "$f" "secrets/$name"
+  chmod 600 "secrets/$name"
 done
-chmod 600 secrets/*
 $EDITOR secrets/telegram_bot_token   # paste step 1 token, no quotes
 $EDITOR secrets/claude_api_key       # Anthropic API key
 $EDITOR secrets/pops_api_key         # paste step 3 plaintext key
