@@ -63,15 +63,19 @@ export function parseBareOrigin(label: string, raw: string): string {
     );
   }
   if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-    // `raw` cannot carry recognised userinfo by this point — the branch
-    // above already caught and threw for it — but it is redacted anyway so
-    // this throw site does not silently regain a leak if that ordering ever
-    // changes.
-    throw new BareOriginParseError(
-      `${label} "${redactUserinfo(raw)}" must use http or https; got ${url.protocol}`
-    );
+    // No `raw` here: a schemeless value with a colon before the first `@`
+    // (`user:pass@host`) parses as the opaque scheme `user:` rather than an
+    // authority with userinfo, so `redactUserinfo` can't tell it apart from
+    // a legitimate opaque scheme (`mailto:name@example.com`) and can't
+    // redact it safely. `label` and the detected protocol are enough to act
+    // on; the raw value isn't worth the risk of echoing an unredactable one.
+    throw new BareOriginParseError(`${label} must use http or https; got ${url.protocol}`);
   }
   if ((url.pathname !== '/' && url.pathname !== '') || url.search !== '' || url.hash !== '') {
+    // `raw` is safe to echo here: this branch only fires for a successfully
+    // parsed http(s) URL that already cleared the credentials check above,
+    // and the exact extra path/query/fragment is what the operator needs to
+    // see to know what to strip.
     throw new BareOriginParseError(
       `${label} "${raw}" must be a bare origin (no path, query, or fragment)`
     );
