@@ -5,9 +5,9 @@ xcodegen = "2.46.0"
 
 [env]
 # The Swift tree the formatter and the linter both cover. `.swiftlint.yml`'s
-# `included:` names the same two directories — two tools with two config
+# `included:` names the same three directories — two tools with two config
 # formats, one intended scope, so they move together.
-SWIFT_SOURCES = "App Packages"
+SWIFT_SOURCES = "App AppTests Packages"
 
 # Xcode cannot be a `[tools]` pin — mise does not install it — so this is a
 # declaration the CI job reads and acts on, not something that changes anything
@@ -19,9 +19,10 @@ SWIFT_SOURCES = "App Packages"
 # `deploymentTarget` note in project.yml.
 POPS_XCODE_VERSION = "26.6"
 
-# The simulator `mise run test` boots. Named rather than left to xcodebuild's
-# choice so the local run and the CI run test the same device, and chosen from
-# the intersection of what the runner image and a current Xcode both ship.
+# The simulator `mise run test` and `mise run test:app` boot. Named rather than
+# left to xcodebuild's choice so the local run and the CI run test the same
+# device, and chosen from the intersection of what the runner image and a
+# current Xcode both ship.
 POPS_IOS_SIMULATOR = "iPhone 17"
 
 [tasks.generate]
@@ -78,8 +79,12 @@ for package in Packages/*/; do
 done
 '''
 
+
+# The one entry point for the simulator, same idea as `lint`: the CI job invokes
+# this rather than restating the lanes, because a lane the workflow has to
+# remember to add is a lane it will one day forget.
 [tasks.test]
-description = "Run every package's tests on the iOS Simulator"
+description = "Run every package's tests, and the app's own target, on the iOS Simulator"
 run = '''
 set -eu
 set -o pipefail
@@ -126,6 +131,117 @@ if [ "$ran" -eq 0 ]; then
   echo "test: no package under Packages/ has a Tests directory — this run checked nothing." >&2
   exit 1
 fi
+
+# The second lane. Everything above runs a package against the iOS SDK; this
+# runs the app itself, which is the only way to reach an app bundle and the
+# entitlements that come with one. Invoked from here rather than added to the
+# CI workflow as a step of its own, so a lane can never exist locally and be
+# missing from the gate.
+mise run test:app
+'''
+
+[tasks."verify:app-test-target"]
+description = "Assert the app test target is hosted and compiles like the app"
+depends = ["generate"]
+run = '''
+set -eu
+set -o pipefail
+
+settings() {
+  xcodebuild -project Pops.xcodeproj -target "$1" -configuration Debug \
+    -destination 'generic/platform=iOS Simulator' -showBuildSettings -json 2>/dev/null \
+    | jq -c '.[0].buildSettings'
+}
+
+app=$(settings Pops)
+tests=$(settings PopsTests)
+
+# Hosted, not standalone, which is the whole reason this target exists. A test
+# bundle with no TEST_HOST runs in a bare `xctest` process carrying none of the
+# app's entitlements — the same environment `swift test` already provides, and
+# the one the data-protection keychain refuses to work in.
+if [ -z "$(printf '%s' "$tests" | jq -r '.TEST_HOST // ""')" ]; then
+  echo "PopsTests declares no TEST_HOST, so it is not hosted by the app." >&2
+  exit 1
+fi
+
+# Read off the app rather than restated here: a test target compiled under
+# looser rules than the app is testing a different compilation than the one that
+# ships, and the way that happens is somebody silencing a red build on the test
+# target alone.
+status=0
+for setting in SWIFT_VERSION SWIFT_STRICT_CONCURRENCY SWIFT_TREAT_WARNINGS_AS_ERRORS \
+  GCC_TREAT_WARNINGS_AS_ERRORS; do
+  expected=$(printf '%s' "$app" | jq -r --arg key "$setting" '.[$key] // ""')
+  actual=$(printf '%s' "$tests" | jq -r --arg key "$setting" '.[$key] // ""')
+  # Two absent settings compare equal. Without this, renaming one out of
+  # project.yml would leave this loop comparing nothing against nothing and
+  # calling it agreement.
+  if [ -z "$expected" ]; then
+    echo "Pops defines no $setting, so this check is guarding a setting that moved." >&2
+    status=1
+  elif [ "$expected" != "$actual" ]; then
+    echo "PopsTests has $setting=${actual:-<unset>}; Pops has $expected." >&2
+    status=1
+  fi
+done
+
+if [ "$status" -eq 0 ]; then
+  echo "PopsTests is hosted by Pops and compiles under the same settings."
+fi
+exit $status
+'''
+
+# Reached through `test` rather than run on its own in CI, but nameable so a
+# developer changing the app target can run this lane alone.
+[tasks."test:app"]
+description = "Run the app's test target on the iOS Simulator, and assert it ran something"
+depends = ["generate"]
+run = '''
+set -eu
+set -o pipefail
+
+mise run verify:app-test-target
+
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+result="$work/test.xcresult"
+
+status=0
+xcodebuild test -project Pops.xcodeproj -scheme Pops \
+  -destination "platform=iOS Simulator,name=$POPS_IOS_SIMULATOR,OS=latest" \
+  -resultBundlePath "$result" > "$work/test.log" 2>&1 || status=1
+
+# A run that died before producing a bundle has no count to report, and the
+# reason is in the log rather than in anything below.
+if [ ! -e "$result" ]; then
+  tail -60 "$work/test.log" >&2
+  echo "test:app: xcodebuild produced no result bundle." >&2
+  exit 1
+fi
+
+summary=$(xcrun xcresulttool get test-results summary --path "$result")
+total=$(printf '%s' "$summary" | jq '.totalTestCount')
+skipped=$(printf '%s' "$summary" | jq '.skippedTests')
+
+if [ "$status" -ne 0 ]; then
+  tail -60 "$work/test.log" >&2
+  printf '%s' "$summary" | jq -r '.testFailures[] | "FAILED  \(.testName): \(.failureText)"' >&2
+  exit 1
+fi
+
+# The defect this whole target was created for. A lane that runs nothing and
+# reports success is worse than no lane: it is a green signal for an empty set,
+# and nobody re-reads a green check. Skipped tests count towards the total the
+# bundle reports, so subtracting them is what makes this a claim about what
+# actually executed rather than about what was collected.
+if [ "$((total - skipped))" -le 0 ]; then
+  echo "test:app: the test action executed 0 tests ($total collected, $skipped skipped)." >&2
+  echo "          Check that project.yml still lists PopsTests under the Pops scheme." >&2
+  exit 1
+fi
+
+echo "test:app: executed $((total - skipped)) tests ($skipped skipped)."
 '''
 
 [tasks."verify:release-carries-no-host"]

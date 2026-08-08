@@ -18,6 +18,7 @@
 
 included:
   - App
+  - AppTests
   - Packages
 
 excluded:
