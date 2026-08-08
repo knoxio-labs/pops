@@ -10,6 +10,7 @@ import type { PillarRegistryEntry } from '@pops/types';
 
 import type { OpenedPurchasesDb } from '../db/index.js';
 import type { ReceiptVision } from '../ingest/receipt/vision.js';
+import type { MerchantResolver } from './contacts/merchant.js';
 import type { SweepTrigger } from './rest/reconcile-handlers.js';
 
 export interface PurchasesApiDeps {
@@ -32,6 +33,8 @@ export interface PurchasesApiDeps {
    * should say so at the edge rather than accept uploads it cannot read.
    */
   vision?: ReceiptVision | null;
+  /** Names the merchant against contacts. Injectable so tests stay offline. */
+  merchant?: MerchantResolver;
 }
 
 export interface HealthResponse {

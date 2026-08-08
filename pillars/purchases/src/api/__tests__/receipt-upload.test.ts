@@ -25,6 +25,7 @@ import type { Express } from 'express';
 
 import type { OpenedPurchasesDb } from '../../db/index.js';
 import type { ReceiptVision } from '../../ingest/receipt/vision.js';
+import type { MerchantResolver } from '../contacts/merchant.js';
 
 /** A real JPEG magic number, so the edge check passes. */
 const JPEG_BASE64 = Buffer.concat([
@@ -58,12 +59,20 @@ let opened: OpenedPurchasesDb;
 let cleanup: () => void;
 let receiptDir: string;
 
-function appWith(vision: ReceiptVision | null): Express {
+/**
+ * Merchant matching is stubbed rather than left to the live resolver.
+ * A test must not reach for the registry, and `resolves to nothing` is the
+ * ordinary production answer anyway when contacts knows no such merchant.
+ */
+const NO_MERCHANT: MerchantResolver = { resolve: async () => null };
+
+function appWith(vision: ReceiptVision | null, merchant: MerchantResolver = NO_MERCHANT): Express {
   return createPurchasesApiApp({
     purchasesDb: opened,
     version: '1.2.3',
     selfBaseUrl: 'http://localhost:3013',
     vision,
+    merchant,
   });
 }
 
@@ -106,6 +115,34 @@ describe('a receipt the model reads and the paper agrees with', () => {
   it('says it does not know how it was paid for', async () => {
     const response = await upload(appWith(saying(GOOD_READING)));
     expect(response.body.purchase.purchase.settlementMode).toBe('unknown');
+  });
+
+  it('links the merchant when contacts recognises it', async () => {
+    const known: MerchantResolver = { resolve: async () => 'entity-bunnings' };
+    const response = await upload(appWith(saying(GOOD_READING), known));
+    expect(response.body.purchase.purchase.merchantEntityId).toBe('entity-bunnings');
+    // The receipt's own wording is kept either way.
+    expect(response.body.purchase.purchase.merchantEntityName).toBe('Bunnings Warehouse');
+  });
+
+  it('still creates the purchase when contacts recognises nothing', async () => {
+    // Unknown is a valid outcome, not a failure — the drop-zone exists for
+    // merchants nothing recognises.
+    const response = await upload(appWith(saying(GOOD_READING)));
+    expect(response.body.kind).toBe('created');
+    expect(response.body.purchase.purchase.merchantEntityId).toBeNull();
+    expect(response.body.purchase.purchase.merchantEntityName).toBe('Bunnings Warehouse');
+  });
+
+  it('still creates the purchase when the merchant lookup blows up', async () => {
+    // A peer being down must cost a link, not a receipt — and that has to
+    // be guaranteed by the handler rather than by whichever resolver
+    // happens to be wired in.
+    const down: MerchantResolver = { resolve: () => Promise.reject(new Error('unreachable')) };
+    const response = await upload(appWith(saying(GOOD_READING), down));
+    expect(response.status).toBe(200);
+    expect(response.body.kind).toBe('created');
+    expect(response.body.purchase.purchase.merchantEntityId).toBeNull();
   });
 
   it('keeps the photograph and points the purchase at it', async () => {

@@ -15,6 +15,7 @@ import { makeSourceHandlers } from './source-handlers.js';
 
 import type { OpenedPurchasesDb } from '../../db/index.js';
 import type { ReceiptVision } from '../../ingest/receipt/vision.js';
+import type { MerchantResolver } from '../contacts/merchant.js';
 
 const server: ReturnType<typeof initServer> = initServer();
 
@@ -26,10 +27,17 @@ export function makePurchasesRestHandlers(deps: {
   sweep?: SweepTrigger;
   /** Reads photographed receipts. Null declines every upload with a 503. */
   vision?: ReceiptVision | null;
+  /** Names the merchant against contacts. Injectable so tests stay offline. */
+  merchant?: MerchantResolver;
 }): ReturnType<typeof server.router<typeof purchasesContract>> {
   return server.router(purchasesContract, {
     purchase: makePurchaseHandlers(deps.purchasesDb.db, deps.onIngest),
-    receipt: makeReceiptHandlers(deps.purchasesDb.db, deps.vision ?? null, deps.onIngest),
+    receipt: makeReceiptHandlers(
+      deps.purchasesDb.db,
+      deps.vision ?? null,
+      deps.onIngest,
+      deps.merchant
+    ),
     reconcile: makeReconcileHandlers(deps.purchasesDb.db, deps.sweep),
     source: makeSourceHandlers(deps.purchasesDb.db),
   });

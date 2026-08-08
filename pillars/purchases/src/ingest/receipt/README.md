@@ -124,6 +124,37 @@ registered by whoever ingests through it. On use rather than at boot, so a
 deployment that has never received an upload does not claim a source it has
 never written to.
 
+## Naming the merchant
+
+Best-effort, against the entities contacts owns, so a photographed receipt
+lands under the same merchant as the card transaction that paid for it
+(`../../api/contacts/merchant.ts`).
+
+**The bar is deliberately high, because `merchantEntityId` is operative
+data.** A wrong entity silently files someone else's spending here and the
+purchase looks perfectly ordinary while doing it. `merchantEntityName`
+carries the receipt's own wording regardless, so declining to match costs
+a link rather than the information — and unknown is a valid outcome, which
+is the whole point of an escape hatch.
+
+Two rules do the work:
+
+- **Suffix one way only.** `Bunnings` matches a receipt saying `Bunnings
+Warehouse`, because a trading name commonly carries a suffix its entity
+  does not. The reverse is refused: a receipt saying `Coles` must not match
+  `Coles Express`, which is a petrol station.
+- **Ambiguity is not a tie to break.** Two candidates that both qualify are
+  by construction similarly named, which is exactly when a human should
+  look. It resolves to no match.
+
+The search is seeded with the most identifying word rather than the whole
+name, because contacts matches substrings in one direction only — asking it
+for `Bunnings Warehouse` never finds `Bunnings`.
+
+A contacts outage costs a link, never the purchase, and that guarantee sits
+in the handler rather than in the resolver — a resolver that forgets to
+catch must not be able to lose a receipt.
+
 ## Keeping the photograph
 
 The image is not a by-product. When the gate refuses a reading, the only

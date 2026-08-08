@@ -11,6 +11,7 @@ import { createPurchase, getPurchase, upsertSource } from '../../db/index.js';
 import { RECEIPT_SOURCE_ID, receiptToPurchase } from '../../ingest/receipt/purchase.js';
 import { readReceipt } from '../../ingest/receipt/read-receipt.js';
 import { looksLikeImage, storeReceiptImage } from '../../ingest/receipt/store.js';
+import { createMerchantResolver, type MerchantResolver } from '../contacts/merchant.js';
 import { tryMapServiceError } from './error-mapping.js';
 import { toPurchaseDetailBody } from './serializers.js';
 
@@ -101,6 +102,29 @@ function ensureReceiptSource(db: PurchasesDb): void {
 }
 
 /**
+ * Best-effort merchant link.
+ *
+ * The guarantee that a contacts outage costs a link rather than the
+ * purchase belongs HERE, not inside whichever resolver happens to be
+ * wired in. The live one catches its own failures; a future one, or a
+ * stub, might not, and a receipt must not be lost to a peer being down.
+ */
+async function nameMerchant(
+  merchant: MerchantResolver,
+  merchantName: string | null | undefined
+): Promise<string | null> {
+  if (merchantName === null || merchantName === undefined) return null;
+  try {
+    return await merchant.resolve(merchantName);
+  } catch (error) {
+    console.warn('[purchases-api] merchant lookup failed; leaving the purchase unlinked', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return null;
+  }
+}
+
+/**
  * Write the purchase and read it back, or map the refusal.
  *
  * A duplicate is the ordinary answer to re-uploading a photograph rather
@@ -139,7 +163,8 @@ export function makeReceiptHandlers(
   db: PurchasesDb,
   /** Null when no API key is configured — every upload is then declined. */
   vision: ReceiptVision | null,
-  onIngest: () => void = () => undefined
+  onIngest: () => void = () => undefined,
+  merchant: MerchantResolver = createMerchantResolver()
 ) {
   return {
     upload: async ({ body }: { body: UploadBody }) => {
@@ -169,7 +194,13 @@ export function makeReceiptHandlers(
       // inferred date the tag stops anyone mistaking for a stated one.
       const shaped = receiptToPurchase(outcome.extracted, outcome.gate, stored);
 
-      const written = persist(db, shaped.purchase);
+      // Best-effort, and deliberately after the reading rather than part of
+      // it: the entity link is something this fleet knows, not something
+      // the receipt said, so it is not in the checksum and a contacts
+      // outage costs a link rather than the purchase.
+      const merchantEntityId = await nameMerchant(merchant, shaped.purchase.merchantEntityName);
+
+      const written = persist(db, { ...shaped.purchase, merchantEntityId });
       if (written.kind === 'refused') return { status: written.status, body: written.body };
 
       fireIngest(onIngest);
