@@ -1,4 +1,4 @@
-FROM node:24-slim AS builder
+FROM node:25-slim AS builder
 WORKDIR /app
 
 # Copy workspace root files
@@ -30,7 +30,7 @@ RUN pnpm build
 # Create standalone deployment (production deps only, no symlinks)
 RUN pnpm --filter @pops/mcp deploy --prod --legacy /app/deploy
 
-FROM node:24-slim
+FROM node:25-slim
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
 
