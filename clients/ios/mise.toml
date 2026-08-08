@@ -9,9 +9,13 @@ set -euo pipefail
 # Point the committed xcconfig at this machine's team, if it has one. A
 # project-referenced xcconfig cannot expand `~` or `$(HOME)` in an include path,
 # so the absolute path is resolved here and written to a gitignored file instead.
+# Rewritten every run, and removed when the machine has no team config, so the
+# generated file is never a stale pointer at a team that was renamed away.
 team_config="$HOME/.config/pops/ios-signing.xcconfig"
 if [ -f "$team_config" ]; then
   printf '#include? "%s"\n' "$team_config" > Config/Signing.local.xcconfig
+else
+  rm -f Config/Signing.local.xcconfig
 fi
 
 xcodegen generate

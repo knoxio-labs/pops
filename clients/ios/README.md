@@ -30,7 +30,7 @@ Signing is automatic, and the only input it needs is an Apple Developer team.
 ~/.config/pops/ios-signing.xcconfig      # DEVELOPMENT_TEAM = XXXXXXXXXX
 ```
 
-One file per machine, picked up by every clone and every worktree, because generating is already a prerequisite of building. A machine without it still builds for the simulator — `#include?` tolerates a missing file — and fails a device build with `Signing for "Pops" requires a development team`.
+One file per machine, picked up by every clone and every worktree, because generating is already a prerequisite of building. The local file is generate's output and nothing else's: it is rewritten on every run and deleted when the machine config is gone, so it can never outlive the team it points at. A machine without it still builds for the simulator — `#include?` tolerates a missing file — and fails a device build with `Signing for "Pops" requires a development team`.
 
 The indirection through a generated local file is not decoration. A project-referenced xcconfig expands neither `~` nor `$(HOME)` in an include path, and an include it cannot resolve contributes nothing _without warning_, so the absolute path has to be computed outside Xcode. (A `-xcconfig` passed on the command line does expand `~`, which makes this easy to test wrong.)
 
