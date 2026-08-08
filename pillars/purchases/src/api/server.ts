@@ -140,9 +140,12 @@ function shutdown(signal: NodeJS.Signals): void {
   // sweep awaits finance between its reads and its writes, so closing the
   // database here would fail those writes mid-transaction on the way out.
   //
-  // The URI cron needs no drain: its unit of work is one row update between
-  // two awaits, so the worst a shutdown mid-tick costs is one URI rechecked
-  // on the next boot.
+  // The URI cron needs no drain, for a different reason: each URI it has
+  // already decided is committed on its own before the next await, so
+  // closing the database cannot tear a write in half. A shutdown mid-tick
+  // does leave the REST of that tick's URIs unvisited — they keep whatever
+  // flag they had and are revisited on the next boot, which is the same
+  // position every URI is in between two nightly ticks anyway.
   reconcileUriWorker.stop();
   sweepRunner.stop();
   void sweepRunner

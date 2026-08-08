@@ -75,7 +75,8 @@ export function parseSoftUri(uri: string): ParsedUri | null {
   return { pillar, type, id };
 }
 
-interface ReconcileLeg {
+/** One column's worth of reconciliation. Constructed only as a row in {@link LEGS}. */
+export interface ReconcileLeg {
   readonly label: string;
   readonly expectedPillar: string;
   readonly expectedType: string;
@@ -171,7 +172,8 @@ function applyResult(ctx: ApplyContext, result: ReconcileLookupResult): void {
       return;
     case 'unavailable':
       ctx.stats.unavailable += 1;
-      // `safeLookup` has already logged the throw with its stack detail.
+      // `safeLookup` has already logged this URI with the thrown message;
+      // a second line here would just repeat it.
       if (result.reason === 'lookup-threw') return;
       ctx.logger?.warn?.('purchases reconcile owning pillar unavailable', {
         ...legMeta(ctx),
