@@ -92,4 +92,29 @@ describe('createRateLimiter', () => {
     // fresh budget below proves.
     expect(limiter.check('caller-0').allowed).toBe(true);
   });
+
+  /**
+   * `size()` is what lets a caller whose key is attacker-influenced assert its
+   * own bound. The `/mobile` perimeter (POPS-1468) charges an unkeyed tier
+   * first so a refused request mints no key, and that claim is only checkable
+   * against this number — the 429 a caller receives is identical either way.
+   */
+  it('reports how many keys it is tracking, and drops them as windows roll', () => {
+    let clock = 0;
+    const limiter = createRateLimiter({ limit: 5, windowMs: 1_000, now: () => clock });
+
+    expect(limiter.size()).toBe(0);
+
+    limiter.check('first');
+    limiter.check('second');
+    expect(limiter.size()).toBe(2);
+
+    limiter.check('first');
+    expect(limiter.size()).toBe(2);
+
+    clock += 1_000;
+    limiter.check('third');
+
+    expect(limiter.size()).toBe(1);
+  });
 });

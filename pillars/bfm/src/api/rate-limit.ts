@@ -35,6 +35,16 @@ export interface RateLimitDecision {
 export interface RateLimiter {
   /** Count one attempt against `key` and decide whether it may proceed. */
   check(key: string): RateLimitDecision;
+  /**
+   * Keys currently tracked.
+   *
+   * Not a debugging aid. Where the key is caller-influenced — the `/mobile`
+   * perimeter (POPS-1468), the pairing exchange (POPS-1374) — "how many keys
+   * can an attacker cause to exist" is a property of the design, and the
+   * refusal a caller sees is the same whether that number is bounded or not.
+   * A test that cannot read it cannot tell the two apart.
+   */
+  size(): number;
 }
 
 export interface RateLimiterOptions {
@@ -93,6 +103,10 @@ export function createRateLimiter(options: RateLimiterOptions): RateLimiter {
 
       window.count += 1;
       return { allowed: true, retryAfterSeconds: 0 };
+    },
+
+    size(): number {
+      return windows.size;
     },
   };
 }
