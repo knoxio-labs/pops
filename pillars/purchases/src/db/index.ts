@@ -77,4 +77,13 @@ export {
   tearDownUnconfirmedLinks,
 } from './services/reconcile-writes.js';
 
+export {
+  clearDocumentUriStale,
+  clearInventoryItemUriStale,
+  listDistinctDocumentUris,
+  listDistinctInventoryItemUris,
+  markDocumentUriStale,
+  markInventoryItemUriStale,
+} from './services/cross-pillar.js';
+
 export { openPurchasesDb, type OpenedPurchasesDb } from './open-purchases-db.js';

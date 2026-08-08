@@ -19,9 +19,11 @@ import { DEFAULT_SETTLEMENT_WINDOW_DAYS } from '../contract/constants.js';
  */
 import { openPurchasesDb } from '../db/index.js';
 import { createAnthropicVision } from '../ingest/receipt/anthropic-vision.js';
-import { resolveSweepIntervals } from '../reconcile/config.js';
+import { optionalIntervalMs, resolveSweepIntervals } from '../reconcile/config.js';
 import { createSweepRunner } from '../reconcile/runner.js';
 import { createPurchasesApiApp } from './app.js';
+import { createDocumentLookup, createInventoryItemLookup } from './cron/pillar-lookup.js';
+import { startReconcileCrossPillarWorker } from './cron/reconcile-cross-pillar.js';
 import { createFinanceClient } from './finance/client.js';
 import { buildPurchasesManifest } from './manifest.js';
 import { resolvePurchasesSqlitePath } from './purchases-sqlite-path.js';
@@ -73,6 +75,33 @@ const sweepRunner = createSweepRunner({
   },
 });
 
+/**
+ * The soft-URI reconciliation cron (ADR-042).
+ *
+ * Also unconditional, and for the same reason as the sweep: a tick with an
+ * unreachable inventory or documents pillar writes nothing — `unavailable`
+ * leaves every flag as it was. Gating it would instead produce a
+ * deployment whose `staleAt` columns are permanently null, which reads as
+ * "every reference resolves" and is the failure this cron exists to end.
+ */
+const reconcileUriWorker = startReconcileCrossPillarWorker({
+  db: purchasesDb.db,
+  lookups: {
+    inventoryItem: createInventoryItemLookup(),
+    document: createDocumentLookup(),
+  },
+  // Overridable so a smoke test does not wait a day for the second tick.
+  intervalMs: optionalIntervalMs('PURCHASES_RECONCILE_URI_INTERVAL_MS'),
+  logger: {
+    info: (message, context) => {
+      console.warn(`[purchases-api] ${message}`, context ?? {});
+    },
+    warn: (message, context) => {
+      console.error(`[purchases-api] ${message}`, context ?? {});
+    },
+  },
+});
+
 const app = createPurchasesApiApp({
   purchasesDb,
   version,
@@ -110,6 +139,11 @@ function shutdown(signal: NodeJS.Signals): void {
   // Cancel the timers, then WAIT for a sweep that is already running. A
   // sweep awaits finance between its reads and its writes, so closing the
   // database here would fail those writes mid-transaction on the way out.
+  //
+  // The URI cron needs no drain: its unit of work is one row update between
+  // two awaits, so the worst a shutdown mid-tick costs is one URI rechecked
+  // on the next boot.
+  reconcileUriWorker.stop();
   sweepRunner.stop();
   void sweepRunner
     .drain()
