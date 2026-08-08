@@ -69,6 +69,13 @@ ai_entity_cache.json
 
 # Mise
 .mise/
+# Per-machine overrides of a committed mise.toml, which is how a developer
+# points a task at different local state — a simulator this laptop actually has,
+# say — without editing the pin every clone and every CI run shares. It takes
+# precedence over the committed file, so committing one would silently redirect
+# everybody else's runs.
+mise.local.toml
+.mise.local.toml
 
 *storybook.log
 storybook-static

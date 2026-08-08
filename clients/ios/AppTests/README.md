@@ -41,3 +41,12 @@ mise run test       # both simulator lanes, which is what CI invokes
 `test:app` regenerates the project, asserts the target is still hosted and still compiles under the app's own Swift 6 and warnings-as-errors settings (`mise run verify:app-test-target`), runs the scheme's test action on `POPS_IOS_SIMULATOR`, and **fails if the number of tests it executed is zero**.
 
 That last check is the reason this target exists at all. A lane that runs nothing and exits 0 is worse than no lane — it is a green signal for an empty set, and nobody re-reads a green check. Skipped tests count towards the total the result bundle reports, so the check subtracts them: six collected and six skipped is zero executed, and it goes red.
+
+**The simulator is a pin, not a preference.** `POPS_IOS_SIMULATOR` in `mise.toml` names one device so a local run and a CI run test the same thing, and mise's `[env]` beats the shell — exporting a different value does nothing. To run against a device this machine actually has, put the override in a gitignored `mise.local.toml`, which takes precedence over the committed file:
+
+```toml
+[env]
+POPS_IOS_SIMULATOR = "iPhone Air"
+```
+
+That covers both simulator lanes at once, which a per-task destination variable would not.

@@ -181,7 +181,7 @@ for setting in SWIFT_VERSION SWIFT_STRICT_CONCURRENCY SWIFT_TREAT_WARNINGS_AS_ER
     echo "Pops defines no $setting, so this check is guarding a setting that moved." >&2
     status=1
   elif [ "$expected" != "$actual" ]; then
-    echo "PopsTests has $setting=${actual:-<unset>}; Pops has $expected." >&2
+    echo "PopsTests has $setting=${actual:-<unset>}, Pops has $setting=$expected." >&2
     status=1
   fi
 done
