@@ -1,8 +1,10 @@
 /**
  * Inventory pillar manifest payload builder.
  *
- * Hand-rolled: nothing generates this payload from the contract for this pillar yet.
- * Declares the inventory settings UI contribution under `settings.manifests` and the `nav` + `pages` UI
+ * Hand-rolled — `pillars/lists` is the only pillar that generates its manifest
+ * (`pillars/lists/scripts/generate-manifest.ts`); everywhere else the payload
+ * is written out. Declares the inventory settings UI contribution under
+ * `settings.manifests` and the `nav` + `pages` UI
  * dimensions so the shell can mount the inventory app-rail entry and
  * routes from the registry walk. The `nav` and `pages` values mirror
  * `pillars/inventory/app/src/routes.tsx` verbatim (icons translated to

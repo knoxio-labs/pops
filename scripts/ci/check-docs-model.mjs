@@ -408,7 +408,7 @@ export function findSourceFiles(root) {
   const collect = (dir) => {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
       if (!entry.isFile()) continue;
-      const ext = (/\.([\w]+)$/u.exec(entry.name) ?? ['', ''])[1];
+      const ext = (/\.([\w]+)$/u.exec(entry.name) ?? ['', ''])[1].toLowerCase();
       if (!SLASH_COMMENT_EXTS.has(ext) && !HASH_COMMENT_EXTS.has(ext)) continue;
       out.push(relative(root, join(dir, entry.name)));
     }
