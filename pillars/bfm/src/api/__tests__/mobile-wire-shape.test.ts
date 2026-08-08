@@ -14,7 +14,7 @@
  * never sends.
  */
 import request from 'supertest';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { createTestApp, type TestApp } from './harness.js';
 
@@ -41,23 +41,29 @@ type OpenApiBody = {
   >;
 };
 
-const apps: TestApp[] = [];
+/**
+ * The document is static — it is read from disk once at module load and served
+ * verbatim — so it is fetched once for the whole file rather than per
+ * assertion. Standing up an app and a server per `it` would be a dozen
+ * throwaway loopback listeners to read one unchanging file.
+ */
+let document: OpenApiBody;
+let testApp: TestApp;
 
-afterEach(() => {
-  while (apps.length > 0) {
-    apps.pop()?.cleanup();
-  }
+beforeAll(async () => {
+  testApp = createTestApp();
+  const res = await request(testApp.app).get('/openapi');
+  expect(res.status).toBe(200);
+  document = res.body as OpenApiBody;
 });
 
-async function okSchema(path: string): Promise<JsonSchema> {
-  const created = createTestApp();
-  apps.push(created);
-  const res = await request(created.app).get('/openapi');
-  expect(res.status).toBe(200);
+afterAll(() => {
+  testApp.cleanup();
+});
 
-  const schema = (res.body as OpenApiBody).paths?.[path]?.['get']?.responses?.['200']?.content?.[
-    'application/json'
-  ]?.schema;
+function okSchema(path: string): JsonSchema {
+  const schema =
+    document.paths?.[path]?.['get']?.responses?.['200']?.content?.['application/json']?.schema;
   expect(schema).toBeDefined();
   if (schema === undefined) throw new Error(`no 200 schema for GET ${path}`);
   return schema;
@@ -95,49 +101,49 @@ const DETAIL_ONLY_FIELDS = [
 ];
 
 describe('the list page envelope', () => {
-  it('declares exactly data and nextCursor', async () => {
-    const schema = await okSchema(LIST_PATH);
+  it('declares exactly data and nextCursor', () => {
+    const schema = okSchema(LIST_PATH);
 
     expect(fieldNames(schema)).toEqual(['data', 'nextCursor']);
     expect(schema.required?.toSorted()).toEqual(['data', 'nextCursor']);
   });
 
-  it('declares nextCursor nullable, so the app has a terminating case to handle', async () => {
-    const schema = await okSchema(LIST_PATH);
+  it('declares nextCursor nullable, so the app has a terminating case to handle', () => {
+    const schema = okSchema(LIST_PATH);
 
     expect(schema.properties?.['nextCursor']?.nullable).toBe(true);
   });
 });
 
 describe('the list row', () => {
-  it('declares exactly the fields a list row renders', async () => {
-    const schema = await okSchema(LIST_PATH);
+  it('declares exactly the fields a list row renders', () => {
+    const schema = okSchema(LIST_PATH);
 
     expect(fieldNames(schema.properties?.['data']?.items ?? {})).toEqual(LIST_ROW_FIELDS);
   });
 
-  it('requires every one of them, so none arrives as an optional in Swift', async () => {
-    const schema = await okSchema(LIST_PATH);
+  it('requires every one of them, so none arrives as an optional in Swift', () => {
+    const schema = okSchema(LIST_PATH);
 
     expect(schema.properties?.['data']?.items?.required?.toSorted()).toEqual(LIST_ROW_FIELDS);
   });
 
-  it('pins the currency to a single value rather than an open string', async () => {
-    const schema = await okSchema(LIST_PATH);
+  it('pins the currency to a single value rather than an open string', () => {
+    const schema = okSchema(LIST_PATH);
 
     expect(schema.properties?.['data']?.items?.properties?.['currency']?.enum).toEqual(['AUD']);
   });
 
-  it('leaves the transaction type an open string, so a new finance type still renders', async () => {
-    const schema = await okSchema(LIST_PATH);
+  it('leaves the transaction type an open string, so a new finance type still renders', () => {
+    const schema = okSchema(LIST_PATH);
 
     const type = schema.properties?.['data']?.items?.properties?.['type'];
     expect(type?.type).toBe('string');
     expect(type?.enum).toBeUndefined();
   });
 
-  it('declares amount a plain number — decimal dollars, signed, as finance publishes it', async () => {
-    const schema = await okSchema(LIST_PATH);
+  it('declares amount a plain number — decimal dollars, signed, as finance publishes it', () => {
+    const schema = okSchema(LIST_PATH);
 
     const amount = schema.properties?.['data']?.items?.properties?.['amount'];
     expect(amount?.type).toBe('number');
@@ -146,24 +152,25 @@ describe('the list row', () => {
 });
 
 describe('the detail record', () => {
-  it('is the list row plus exactly the fields the detail screen adds', async () => {
-    const schema = await okSchema(DETAIL_PATH);
+  it('is the list row plus exactly the fields the detail screen adds', () => {
+    const schema = okSchema(DETAIL_PATH);
 
     expect(fieldNames(schema)).toEqual([...LIST_ROW_FIELDS, ...DETAIL_ONLY_FIELDS].toSorted());
   });
 
-  it('requires all of them', async () => {
-    const schema = await okSchema(DETAIL_PATH);
+  it('requires all of them', () => {
+    const schema = okSchema(DETAIL_PATH);
 
     expect(schema.required?.toSorted()).toEqual(
       [...LIST_ROW_FIELDS, ...DETAIL_ONLY_FIELDS].toSorted()
     );
   });
 
-  it('never contradicts the list row on a field they share', async () => {
+  it('never contradicts the list row on a field they share', () => {
     // A rename or a type change applied to one and not the other would give
     // the app two incompatible models of the same transaction.
-    const [list, detail] = await Promise.all([okSchema(LIST_PATH), okSchema(DETAIL_PATH)]);
+    const list = okSchema(LIST_PATH);
+    const detail = okSchema(DETAIL_PATH);
 
     const row = list.properties?.['data']?.items?.properties ?? {};
     for (const field of LIST_ROW_FIELDS) {
