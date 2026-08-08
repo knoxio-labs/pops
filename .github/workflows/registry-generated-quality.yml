@@ -8,6 +8,14 @@ name: Registry Generated Quality
 # `mise run registry` == `tsx libs/module-registry/scripts/build.ts`. The
 # contract deps' dist/ manifests must exist first (registry:build imports
 # them), so `mise run build` (tsc -b tsconfig.build.json) runs ahead of it.
+#
+# `pillars/**` and `packages/**` are trigger paths because the manifest is
+# derived from them, not from module-registry alone: `known-modules.ts`
+# discovers sources by walking `pillars/<id>/` and `packages/*-contract/`.
+# Narrowing these to just the manifest entrypoints would reopen the hole they
+# close — a manifest is ordinary TS that may read anything else in its pillar,
+# so a value can change without its own file changing. The gate is only
+# meaningful if it sees every input, which costs running on most PRs.
 
 on:
   push:
@@ -15,11 +23,15 @@ on:
     paths:
       - "libs/module-registry/**"
       - "libs/types/**"
+      - "pillars/**"
+      - "packages/**"
       - ".github/workflows/registry-generated-quality.yml"
   pull_request:
     paths:
       - "libs/module-registry/**"
       - "libs/types/**"
+      - "pillars/**"
+      - "packages/**"
       - ".github/workflows/registry-generated-quality.yml"
 
 concurrency:
