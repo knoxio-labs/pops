@@ -11,7 +11,7 @@
  *
  * - **operator** (`/operator/*`) — behind Cloudflare Access via the shell's
  *   nginx at `/bfm-api/`, gated per route on a resolved principal.
- * - **device** (`/mobile/*`) — on bfm's own tunnel hostname with Access
+ * - **mobile** (`/mobile/*`) — on bfm's own tunnel hostname with Access
  *   bypassed, behind `requireDevice`. The pairing exchange (POPS-1374) and
  *   refresh (POPS-1375) land there too, not beside the operator router.
  *
