@@ -98,7 +98,7 @@ The **data pillars** (each owns a SQLite DB) are registry, inventory, media, fin
 
 **Pillar kinds (ADR-035):** a pillar is any service registered with `registry` that exposes `/manifest.json`. **Data** pillars own a domain DB; **bridge** pillars adapt external systems; **UI** pillars host frontend SPAs (`pops-shell` registers as `id: 'shell'`).
 
-**Frontend:** ONE SPA (the `shell` pillar) that lazy-loads per-domain feature apps. Each data pillar ships its own frontend under `pillars/<id>/app`, consuming its OWN pillar over a generated **Hey API** REST client (`@hey-api/openapi-ts` over the pillar's OpenAPI snapshot). Backend-to-backend cross-pillar calls go through the REST `@pops/pillar-sdk` `pillar('<id>')` client (`libs/sdk`); a browser page that needs another pillar's data directly uses a sanctioned **per-consumer generated client** instead — see [Cross-pillar generated FE clients](#cross-pillar-generated-fe-clients) and [ADR-040](docs/architecture/adr-040-cross-pillar-contract-discipline.md).
+**Frontend:** ONE SPA (the `shell` pillar) that lazy-loads per-domain feature apps. Each data pillar ships its own frontend under `pillars/<id>/app`, consuming its OWN pillar over a generated **Hey API** REST client (`@hey-api/openapi-ts` over the pillar's OpenAPI snapshot). Backend-to-backend cross-pillar calls go through the REST `@pops/pillar-sdk` `pillar('<id>')` client (`libs/sdk`); a browser page that needs another pillar's data directly uses a sanctioned **per-consumer generated client** instead — see [Generated clients across a unit boundary](#generated-clients-across-a-unit-boundary) and [ADR-040](docs/architecture/adr-040-cross-pillar-contract-discipline.md).
 
 Work in flight and work deferred both live in Huly (project `POPS`) — see [Tracking](#tracking). The repo carries no status tracker.
 
@@ -472,11 +472,13 @@ The reason is downstream: the client generators target 3.0. A pillar that emits 
 
 Repo-wide invariants are enforced by scripts under `scripts/ci/`, each self-testing and wired into `.github/workflows/agent-review.yml`. They cover lib-never-imports-pillar, contract isolation, the known-pillars tuple against disk, mise toolchain overrides, homelab-service isolation, vendored contracts, and the docs model. Run one directly with `--self-test` to see what it claims to catch.
 
-### Cross-pillar generated FE clients
+### Generated clients across a unit boundary
 
 A pillar's app talks to its OWN backend over the client `generate:api` produces. When one pillar's frontend needs to read another pillar's data directly (not through a backend proxy), it gets its own **per-consumer** Hey API client instead of reaching for `@pops/pillar-sdk` (that SDK is for backend-to-backend calls only): `pnpm --filter <app> generate:<pillar>-client`, projecting the producer's `./openapi` package export (or a vendored snapshot per [ADR-033](docs/architecture/adr-033-cross-language-pillar-contracts.md) when the producer has no npm package, e.g. the Rust `contacts` pillar) to `src/<pillar>-api/`. Live legs: `food/app` -> `lists`, `finance/app` -> `contacts`.
 
 This is sanctioned, not incidental — but every leg is **mandatory-gated**: CI (`cross-pillar-clients` job, `.github/workflows/quality.yml`) regenerates each leg's client from the producer's current contract and fails the build on any diff, so a producer-side change can't ship without the consumer's committed client following. Adding a new leg means adding it to that job's regenerate + diff step, not just wiring the codegen config. See [ADR-040](docs/architecture/adr-040-cross-pillar-contract-discipline.md) for the full decision, including why hand-duplicated Rust wire-contract twins (`libs/pops-settings`, `libs/pops-ai`) are a different, currently-consumerless case that doesn't yet need the same treatment.
+
+The **iOS client** (`clients/ios`, [ADR-043](docs/architecture/adr-043-clients-as-a-unit-kind.md)) is a third leg under the same discipline in a different language: it vendors the BFM's snapshot to `clients/ios/Contracts/bfm.openapi.json` (ADR-033 again — it is in neither workspace and cannot depend on `@pops/bfm`) and generates Swift from the copy with Apple's `swift-openapi-generator`. `mise run generate:bfm-client` does both halves; the `iOS Quality` workflow re-runs it and fails on any diff, which is why `pillars/bfm/openapi/**` is in that workflow's path filter. It matters more there than anywhere else: the app is **distributed, not deployed**, so a contract change the client hasn't followed lands as a broken install on hardware nobody controls. See [clients/ios/Packages/BFMClient/README.md](clients/ios/Packages/BFMClient/README.md).
 
 ---
 
