@@ -21,7 +21,7 @@ export const bfmContract = c.router(
       method: 'GET',
       path: '/health',
       responses: { 200: HealthResponseSchema },
-      summary: 'Liveness shape. No DB round-trip — this pillar owns no schema yet',
+      summary: 'Liveness shape. Answers without a database round-trip',
     },
   },
   {

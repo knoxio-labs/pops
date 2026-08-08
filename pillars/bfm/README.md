@@ -5,11 +5,11 @@ native iPhone client dials, fanning out to the rest of the federation on the
 client's behalf so the client holds exactly one base URL and one credential.
 It listens on port **3014**.
 
-Today it is a scaffold and serves `/health` alone. It owns no database, calls
-no sibling pillar (POPS-1367), and has no mobile surface (POPS-1378,
-POPS-1379) — so `/health` is a pure liveness shape rather than a DB round-trip,
-and there is no `src/db/` or `migrations/`. Device and token rows arrive with
-POPS-1366, which is what makes it a data pillar by kind (ADR-035).
+It owns a database — the device allow-list, described under
+[Persistence](#persistence) below — which makes it a data pillar by kind
+(ADR-035). It serves `/health` alone: it calls no sibling pillar (POPS-1367)
+and has no mobile surface (POPS-1378, POPS-1379), so `/health` is a pure
+liveness shape rather than a DB round-trip.
 
 | Surface        | What it does                                                                       |
 | -------------- | ---------------------------------------------------------------------------------- |
@@ -23,6 +23,47 @@ delays bfm joining the fleet, it does not delay bfm serving traffic.
 `src/api/__tests__/registration.test.ts` is the proof — it boots against a
 registry that refuses every call and asserts `/health` still answers.
 
+## Persistence
+
+`bfm.db` is the fleet's answer to "which phones may reach it". Three tables in
+`src/db/schema/` carry the whole of it — `pairing_codes` is the one-time secret
+an operator reads out, `devices` is the handset it turned into, and
+`refresh_tokens` is a rotating chain per pairing. Each file states its own
+reasoning; the properties that span them are these:
+
+- **No plaintext credential is written.** Both bearer-shaped values — the
+  pairing code and the refresh token — are stored as digests, and
+  `devices.publicKeyDer` is the public half of a key whose private half is
+  non-extractable inside the phone's Secure Enclave.
+
+  That makes `bfm.db` inert for the refresh tokens, which are CSPRNG-generated
+  at full width. It does **not** yet make it inert for pairing codes: a code
+  short enough to read off a screen and type is short enough to enumerate
+  offline against `pairing_codes.codeHash`, bounded only by the minutes until
+  it expires. Closing that means either a code with enough entropy to make
+  enumeration infeasible, or keying the digest under a pepper mounted outside
+  the database — a decision that belongs with the issuance path (POPS-1369),
+  not with the column.
+
+- **Nothing is destroyed to express distrust.** Revoking a device sets
+  `devices.revokedAt` and leaves the row; killing a token sets
+  `refresh_tokens.revokedAt`, which is deliberately a different column from the
+  `consumedAt` a legitimate rotation writes. After a phone is stolen, the
+  question is what it held and when it last spoke, and neither is answerable
+  against rows that were deleted or overwritten.
+- **`foreign_keys = ON` is load-bearing, not hygiene.** `refresh_tokens`
+  cascades from `devices` and self-references through `replacedBy`; SQLite
+  silently ignores both when the pragma is off, so an opener that forgot it
+  would let an orphaned chain read as an intact one.
+
+`migrations/0000_bfm_init.sql` was produced by `drizzle-kit generate` and
+committed, but this repo runs no generate step in its build or CI (see the
+"Database Management" note in the root `mise.toml`). The drizzle definitions
+and the SQL are therefore two independent descriptions that nothing forces to
+agree — `src/db/__tests__/schema-migration-drift.test.ts` is what keeps them
+honest, introspecting the migrated database and diffing it against the schema
+in both directions.
+
 ## What deliberately does not live here
 
 - **A `ModuleManifest`.** `src/contract/manifest.ts` exports a type only. The
@@ -33,6 +74,12 @@ registry that refuses every call and asserts `/health` still answers.
   here would install a phantom app; it arrives with the frontend app
   (POPS-1384). Registry registration is unaffected — that goes through the
   separate `ManifestPayload` in `src/api/manifest.ts`.
+- **A call to `openBfmDb`.** The schema exists; nothing in `src/api/` opens it,
+  so a running `pnpm dev` creates no `bfm.db` and the tests are its only
+  caller. The handle, the `BFM_SQLITE_PATH` resolver and the boot-time migrate
+  arrive with POPS-1369, the first ticket whose routes need to read a row.
+  Until then the pillar's on-disk footprint is nil, which is also why it has no
+  compose volume or Litestream stream yet (POPS-1385).
 - **Auth, the mobile contract, and the container.** Device pairing and token
   issuance (POPS-1369, POPS-1370, POPS-1374, POPS-1375), the mobile-facing
   routes (POPS-1378, POPS-1379), the Dockerfile and compose service
@@ -47,12 +94,17 @@ pillars/bfm/
 ├── mise.toml                    per-pillar tasks
 ├── scripts/generate-openapi.ts  ts-rest contract → openapi/bfm.openapi.json
 ├── openapi/bfm.openapi.json
+├── migrations/                   committed SQL journal, applied by openBfmDb
 └── src/
     ├── contract/                 the wire contract — the only description of it
     │   ├── rest.ts
     │   ├── rest-schemas.ts
     │   ├── manifest.ts
     │   └── index.ts
+    ├── db/                       the device allow-list — see Persistence above
+    │   ├── open-bfm-db.ts         pragmas + migrate, per-pillar by convention
+    │   ├── schema.ts              table barrel + row/insert types
+    │   └── schema/                one file per table
     └── api/
         ├── server.ts              HTTP entrypoint (port 3014) — wiring only
         ├── boot-env.ts            every env var server.ts reads, and its validation

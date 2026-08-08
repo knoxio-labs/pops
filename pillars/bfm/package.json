@@ -36,10 +36,13 @@
     "@ts-rest/core": "3.53.0-rc.1",
     "@ts-rest/express": "3.53.0-rc.1",
     "@ts-rest/open-api": "3.53.0-rc.1",
+    "better-sqlite3": "^12.10.0",
+    "drizzle-orm": "^0.45.2",
     "express": "^5.1.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
     "@types/express": "^5.0.4",
     "@types/node": "^25.9.3",
     "@types/supertest": "^7.2.1",
