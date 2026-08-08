@@ -38,6 +38,80 @@ describe('parseBareOrigin', () => {
   });
 
   it.each([
+    ['a username only', 'http://user@finance-api:3004'],
+    ['a username and password', 'http://user:pass@finance-api:3004'],
+    ['credentials plus a disallowed scheme', 'ftp://user:pass@finance-api:3004'],
+  ])('rejects a URL carrying credentials (%s)', (_label, raw) => {
+    expect(() => parseBareOrigin('X', raw)).toThrow(/credentials/u);
+  });
+
+  it('names the offending label in the credentials-rejection message', () => {
+    expect(() =>
+      parseBareOrigin('FINANCE_SELF_BASE_URL', 'http://user:pass@finance-api:3004')
+    ).toThrow(/^FINANCE_SELF_BASE_URL "http:\/\/finance-api:3004\/"/u);
+  });
+
+  it('redacts the username and password from the thrown message, keeping the label and host', () => {
+    let message = '';
+    try {
+      parseBareOrigin('FINANCE_SELF_BASE_URL', 'http://admin:hunter2@finance-api:3004');
+    } catch (err) {
+      message = err instanceof Error ? err.message : String(err);
+    }
+    expect(message).toContain('FINANCE_SELF_BASE_URL');
+    expect(message).toContain('finance-api:3004');
+    expect(message).not.toContain('admin');
+    expect(message).not.toContain('hunter2');
+  });
+
+  it('redacts credentials even when the value fails to parse as a URL at all', () => {
+    // An invalid port means `new URL` throws before username/password are
+    // ever available to clear — this is the parse-failure branch, not the
+    // credentials branch above, and needs its own redaction.
+    let message = '';
+    try {
+      parseBareOrigin('FINANCE_SELF_BASE_URL', 'http://admin:hunter2@finance-api:99999');
+    } catch (err) {
+      message = err instanceof Error ? err.message : String(err);
+    }
+    expect(message).toContain('FINANCE_SELF_BASE_URL');
+    expect(message).toContain('finance-api');
+    expect(message).toMatch(/not a valid URL/u);
+    expect(message).not.toContain('admin');
+    expect(message).not.toContain('hunter2');
+  });
+
+  it('redacts credentials on the parse-failure path even with leading whitespace', () => {
+    // The redaction regex matches on anything-but-a-slash before `//`, not
+    // on a well-formed scheme, so surrounding whitespace does not defeat it.
+    let message = '';
+    try {
+      parseBareOrigin('FINANCE_SELF_BASE_URL', '  http://admin:hunter2@finance-api:99999');
+    } catch (err) {
+      message = err instanceof Error ? err.message : String(err);
+    }
+    expect(message).toMatch(/not a valid URL/u);
+    expect(message).not.toContain('admin');
+    expect(message).not.toContain('hunter2');
+  });
+
+  it('never echoes a schemeless credential-shaped value into the scheme-mismatch message', () => {
+    // No `//` here, so `new URL` reads this as the opaque scheme `user:`
+    // rather than an authority with userinfo — indistinguishable from a
+    // legitimate opaque scheme whose path contains an `@` (a mailto URI).
+    // Rather than guess which one it is, this branch never echoes `raw`.
+    let message = '';
+    try {
+      parseBareOrigin('X', 'user:pass@finance-api:3004');
+    } catch (err) {
+      message = err instanceof Error ? err.message : String(err);
+    }
+    expect(message).toMatch(/http or https/u);
+    expect(message).not.toContain('pass@finance-api');
+    expect(message).not.toContain('@');
+  });
+
+  it.each([
     ['ftp', 'ftp://finance-api:3004'],
     ['file', 'file:///srv/finance'],
     ['ws', 'ws://finance-api:3004'],
@@ -93,16 +167,6 @@ describe('parseBareOrigin', () => {
 
     it('punycodes an IDN host', () => {
       expect(parseBareOrigin('X', 'http://ünï.example')).toBe('http://xn--n-nga1b.example');
-    });
-
-    // Documents a hole rather than endorsing it: `URL.origin` discards
-    // credentials, so a baseUrl carrying them is accepted and silently
-    // published without them — outbound calls then go out unauthenticated.
-    // Whether to reject instead is tracked separately.
-    it('silently strips credentials instead of rejecting them', () => {
-      expect(parseBareOrigin('X', 'http://user:pass@finance-api:3004')).toBe(
-        'http://finance-api:3004'
-      );
     });
   });
 });
