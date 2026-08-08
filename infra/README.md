@@ -25,14 +25,17 @@ breaking change for every downstream deployer.
 `pops-paperless-redis`, `pops-food-ingest-data`, `pops-cerebrum-engrams-data`,
 `pops-media-images-data`, plus 9 per-pillar `pops-<id>-data`.
 
-**Secrets** — 13, each `file: ../secrets/<name>`, resolved from `infra/` (so the
+**Secrets** — 14, each `file: ../secrets/<name>`, resolved from `infra/` (so the
 gitignored repo-root `secrets/`): `claude_api_key`, `finance_api_key`,
 `instagram_cookies`, `notion_api_token`, `paperless_admin_password`,
 `paperless_secret_key`, `pops_api_internal_token`, `pops_api_key`,
-`telegram_bot_token`, `thetvdb_api_key`, `tmdb_api_key`, `up_bank_token`,
-`up_webhook_secret`. Only 7 are mounted into a service (`pops-worker-food`,
-`paperless-ngx`, `pops-mcp`, `moltbot`, `moltbot-validator`); the other 6 are
-declared and mounted nowhere.
+`pops_bfm_api_key`, `telegram_bot_token`, `thetvdb_api_key`, `tmdb_api_key`,
+`up_bank_token`, `up_webhook_secret`. Only 7 are mounted into a service
+(`pops-worker-food`, `paperless-ngx`, `pops-mcp`, `moltbot`,
+`moltbot-validator`); the other 7 are declared and mounted nowhere. A declared
+secret is inert — compose materialises one only for services that reference
+it — which is what lets a value be provisioned on the host before the service
+that will mount it exists (`pops_bfm_api_key`, POPS-1385).
 
 **Host env vars** — `POPS_IMAGE_TAG`, `POPS_DOMAIN`, `POPS_REGISTRY_URL`,
 `BUILD_VERSION`, `MCP_BIND_ADDR`, `MCP_INBOUND_TOKEN`, `PAPERLESS_BASE_URL`,

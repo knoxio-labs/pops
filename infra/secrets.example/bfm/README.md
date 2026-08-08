@@ -1,8 +1,10 @@
 # bfm secrets
 
 Template for the Docker secret file the bfm pillar mounts. Committed as
-`.example` so the structure is discoverable; the live file lives under
-`infra/secrets/` (gitignored) on each deployer host.
+`.example` so the structure is discoverable; the live file lives in the
+gitignored **repo-root** `secrets/` on each deployer host — compose writes
+`file: ../secrets/<name>` and resolves it from `infra/`, so `infra/secrets/`
+is not where it looks.
 
 The compose service that mounts it lands with POPS-1385; the top-level
 `pops_bfm_api_key` secret is already declared in `infra/docker-compose.yml` so
@@ -10,10 +12,10 @@ the value can be provisioned on the host first.
 
 ## First-run
 
+Run from the repo root:
+
 ```sh
-cd infra
-mkdir -p secrets
-if [ ! -f secrets/pops_bfm_api_key ]; then cp secrets.example/bfm/pops_bfm_api_key.example secrets/pops_bfm_api_key && chmod 600 secrets/pops_bfm_api_key; fi
+mkdir -p secrets && cp -n infra/secrets.example/bfm/pops_bfm_api_key.example secrets/pops_bfm_api_key && chmod 600 secrets/pops_bfm_api_key
 ```
 
 Then paste the minted key in, replacing the placeholder line.
