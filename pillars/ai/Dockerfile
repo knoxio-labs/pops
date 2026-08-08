@@ -6,7 +6,7 @@
 # Mirrors pillars/core/Dockerfile with the ai dep set + port 3008, plus the
 # @pops/ai-telemetry COPY block (the ingest route imports its record-schema).
 
-FROM node:24-slim AS builder
+FROM node:25-slim AS builder
 WORKDIR /app
 
 # Workspace root manifests — needed for pnpm install to resolve.
@@ -54,7 +54,7 @@ RUN pnpm --filter "@pops/ai" build
 # Standalone deployment (production deps only, no symlinks).
 RUN pnpm --filter @pops/ai deploy --prod --legacy /app/deploy
 
-FROM node:24-slim
+FROM node:25-slim
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
 
