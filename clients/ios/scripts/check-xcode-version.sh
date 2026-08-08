@@ -87,10 +87,6 @@ expect() {
     return 1
 }
 
-not() {
-    ! "$@"
-}
-
 cmd_self_test() {
     local status=0
 

@@ -422,9 +422,9 @@ scripts/check-xcode-version.sh check "$POPS_XCODE_VERSION" || status=1
 exit $status
 '''
 
-# The one entry point. The iOS CI job does not exist yet; when it does it is to
-# invoke this task rather than restate the commands, because the moment the two
-# are written out separately they drift and a green local run means nothing.
+# The one entry point. `.github/workflows/ios-quality.yml` invokes this task
+# rather than restating the commands, because the moment the two are written
+# out separately they drift and a green local run means nothing.
 [tasks.lint]
 description = "swift-format + SwiftLint over the Swift sources"
 depends = ["verify:xcode-version"]
