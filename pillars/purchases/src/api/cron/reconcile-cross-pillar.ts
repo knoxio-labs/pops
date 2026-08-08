@@ -17,6 +17,10 @@
  *   - **Clearing matters as much as marking.** A URI that resolves again
  *     un-stales, or a brief outage poisons the reference forever.
  *   - **Rows are flagged, never deleted.**
+ *   - **An empty leg is visibly empty.** Each leg reports the size of its
+ *     own work set, because four zero counters otherwise describe both a
+ *     leg where everything resolved and a leg nothing has ever written to
+ *     — and the second is the state this cron exists to make visible.
  *
  * The fan-out inside a tick is sequential, following the finance and
  * inventory crons: the periodic-cron contract prefers predictable load on
@@ -30,10 +34,11 @@
  * transport; production wires the SDK proxies in `pillar-lookup.ts`. The
  * per-leg loop itself lives in `reconcile-legs.ts`.
  */
-import { emptyStats, LEGS, runLeg } from './reconcile-legs.js';
+import { addCounts, emptyCounts, LEGS, runLeg } from './reconcile-legs.js';
 
 import type { PurchasesDb } from '../../db/index.js';
 import type {
+  ReconcileLegStats,
   ReconcileLookups,
   ReconcileTickStats,
   ReconcileWorkerLogger,
@@ -41,6 +46,8 @@ import type {
 
 export {
   parseSoftUri,
+  type ReconcileCounts,
+  type ReconcileLegStats,
   type ReconcileLookupFn,
   type ReconcileLookupResult,
   type ReconcileLookups,
@@ -78,12 +85,18 @@ export function startReconcileCrossPillarWorker(
   let stopped = false;
 
   async function runOnce(): Promise<ReconcileTickStats> {
-    const stats = emptyStats();
+    const legs: ReconcileLegStats[] = [];
+    const totals = emptyCounts();
     for (const leg of LEGS) {
-      await runLeg({ db: options.db, leg, lookups: options.lookups, stats, logger, now });
+      const legStats = await runLeg({ db: options.db, leg, lookups: options.lookups, logger, now });
+      addCounts(totals, legStats);
+      legs.push(legStats);
     }
-    logger?.info?.('purchases reconcile tick complete', { ...stats });
-    return stats;
+    // Totals only. Each leg has already logged its own line, so nesting the
+    // breakdown here would repeat it; the return value is where a caller
+    // that wants the per-leg numbers reads them.
+    logger?.info?.('purchases reconcile tick complete', { ...totals });
+    return { ...totals, legs };
   }
 
   function arm(): void {
