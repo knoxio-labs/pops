@@ -20,7 +20,13 @@ import {
   receiptToPurchase,
 } from '../../ingest/receipt/purchase.js';
 import { readReceipt } from '../../ingest/receipt/read-receipt.js';
-import { canonicalBase64, looksLikeImage, storeReceiptImage } from '../../ingest/receipt/store.js';
+import {
+  canonicalBase64,
+  looksLikeImage,
+  receiptKey,
+  storeReceiptImage,
+  type StoredReceipt,
+} from '../../ingest/receipt/store.js';
 import { createMerchantResolver, type MerchantResolver } from '../contacts/merchant.js';
 import { tryMapServiceError } from './error-mapping.js';
 import { toPurchaseDetailBody } from './serializers.js';
@@ -63,13 +69,26 @@ const visionUnavailable = () => ({
   },
 });
 
-const notAnImage = (mediaType: string) => ({
+/**
+ * Which photograph was not what it claimed, when there is more than one.
+ *
+ * Naming the position matters for a long receipt: "the upload is not a
+ * valid image/jpeg file" leaves the sender re-taking all six pictures
+ * rather than the third.
+ */
+const notAnImage = (mediaType: string, index: number, count: number) => ({
   status: 400 as const,
   body: {
-    message: `The upload is not a valid ${mediaType} file`,
+    message:
+      count === 1
+        ? `The upload is not a valid ${mediaType} file`
+        : `Photograph ${String(index + 1)} of ${String(count)} is not a valid ${mediaType} file`,
     code: 'NOT_AN_IMAGE',
   },
 });
+
+/** Every stored photograph's address, in the order it was sent. */
+const uris = (stored: readonly StoredReceipt[]): string[] => stored.map((one) => one.uri);
 
 /**
  * Trigger 1 of the reconciliation sweep, fired only after the write
@@ -209,38 +228,46 @@ export function makeReceiptHandlers(
       // a shop uploaded at 23:59 into the following day.
       const uploadedAt = new Date().toISOString();
       if (vision === null) return visionUnavailable();
-      const dataBase64 = canonicalBase64(body.dataBase64);
-      if (!looksLikeImage(dataBase64, body.mediaType)) return notAnImage(body.mediaType);
+      const images = body.images.map((one) => ({
+        mediaType: one.mediaType,
+        dataBase64: canonicalBase64(one.dataBase64),
+      }));
+      const notAnImageAt = images.findIndex(
+        (one) => !looksLikeImage(one.dataBase64, one.mediaType)
+      );
+      if (notAnImageAt !== -1) {
+        const bad = images[notAnImageAt];
+        if (bad !== undefined) return notAnImage(bad.mediaType, notAnImageAt, images.length);
+      }
 
-      const image = { mediaType: body.mediaType, dataBase64 };
-      const stored = storeReceiptImage(image);
+      const stored = images.map((one) => storeReceiptImage(one));
 
-      // Before the model, not after. The photograph's hash IS the key, so a
-      // re-upload is already knowable here — and letting it reach the vision
-      // call means paying for an answer whose only possible outcome is 409.
-      // Re-photographing a receipt you already sent is an ordinary mistake,
-      // and it should be free.
-      const existing = findPurchaseBySourceOrderId(db, RECEIPT_SOURCE_ID, stored.sha256);
+      // Before the model, not after. The photographs' digest IS the key, so
+      // a re-upload is already knowable here — and letting it reach the
+      // vision call means paying for an answer whose only possible outcome
+      // is 409. Re-sending a receipt you already sent is an ordinary
+      // mistake, and it should be free.
+      const existing = findPurchaseBySourceOrderId(db, RECEIPT_SOURCE_ID, receiptKey(stored));
       if (existing !== undefined) {
         return {
           status: 409 as const,
           body: {
-            message: `This photograph has already been read as purchase ${existing.id}`,
+            message: `These photographs have already been read as purchase ${existing.id}`,
             code: 'ALREADY_IMPORTED',
           },
         };
       }
 
-      const outcome = await readReceipt(vision, image);
+      const outcome = await readReceipt(vision, images);
 
       if (outcome.kind === 'unreadable') {
-        return ok({ kind: 'unreadable', receiptUri: stored.uri, reason: outcome.reason });
+        return ok({ kind: 'unreadable', receiptUris: uris(stored), reason: outcome.reason });
       }
 
       if (outcome.kind === 'needs-review') {
         return ok({
           kind: 'needs-review',
-          receiptUri: stored.uri,
+          receiptUris: uris(stored),
           failures: [...outcome.gate.failures],
           extracted: outcome.extracted,
         });
@@ -278,7 +305,9 @@ export function makeReceiptHandlers(
       return ok({
         kind: 'created',
         purchase: toPurchaseDetailBody(written.detail),
-        alreadyStored: stored.alreadyPresent,
+        // True only when every photograph was already on disk: a partly
+        // familiar set is a new submission, not a stored one.
+        alreadyStored: stored.every((one) => one.alreadyPresent),
       });
     },
   };

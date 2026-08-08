@@ -115,10 +115,30 @@ else does.
 
 ## The endpoint
 
-`POST /receipts` with `{ mediaType, dataBase64 }`. JSON rather than
-multipart because a receipt is a phone photo — hundreds of kilobytes, not
-hundreds of megabytes — and it keeps the surface describable in the same
-ts-rest contract as everything else.
+`POST /receipts` with `{ images: [{ mediaType, dataBase64 }] }`. JSON
+rather than multipart because a receipt is a phone photo — hundreds of
+kilobytes, not hundreds of megabytes — and it keeps the surface describable
+in the same ts-rest contract as everything else.
+
+**Several photographs, one receipt.** A full supermarket shop does not fit
+in one frame, so the images are an ordered sequence covering one piece of
+paper, top to bottom. They go to the model in a single call and produce one
+extraction, one gate check and one purchase, which carries every photograph
+as evidence. Eight is the cap: each image is paid for in that call, and a
+receipt needing more frames is a scanner's job.
+
+Consecutive photographs overlap, so the same lines appear at the bottom of
+one and the top of the next. The prompt says so and says a repeated line is
+one line. If the model double-counts anyway the sum exceeds the stated
+total and the receipt goes to review — the arithmetic is the backstop, not
+a second pass over the images. Deduplicating repeated lines in code was
+rejected for the same reason the gate refuses to guess: two identical
+coffees on one receipt are indistinguishable from an overlap artefact, so
+it would silently delete real lines.
+
+The key is the digest of the photographs in order, so re-sending the same
+set is still a 409. One image keeps its own hash as the key, which leaves a
+single photograph traceable from its `pops://` URI at a glance.
 
 **The response is a discriminated union, not a purchase.** Collapsing the
 three outcomes would lose the distinction the whole feature rests on:

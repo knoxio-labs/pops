@@ -2170,16 +2170,28 @@
               "schema": {
                 "additionalProperties": false,
                 "properties": {
-                  "dataBase64": {
-                    "minLength": 1,
-                    "type": "string"
-                  },
-                  "mediaType": {
-                    "enum": ["image/jpeg", "image/png", "image/webp", "image/gif"],
-                    "type": "string"
+                  "images": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "dataBase64": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "mediaType": {
+                          "enum": ["image/jpeg", "image/png", "image/webp", "image/gif"],
+                          "type": "string"
+                        }
+                      },
+                      "required": ["mediaType", "dataBase64"],
+                      "type": "object"
+                    },
+                    "maxItems": 8,
+                    "minItems": 1,
+                    "type": "array"
                   }
                 },
-                "required": ["mediaType", "dataBase64"],
+                "required": ["images"],
                 "type": "object"
               }
             }
@@ -3025,12 +3037,16 @@
                           "enum": ["needs-review"],
                           "type": "string"
                         },
-                        "receiptUri": {
-                          "pattern": "^pops:\\/\\/[a-z0-9-]+\\/[a-z0-9-]+\\/[^/\\s]+$",
-                          "type": "string"
+                        "receiptUris": {
+                          "items": {
+                            "pattern": "^pops:\\/\\/[a-z0-9-]+\\/[a-z0-9-]+\\/[^/\\s]+$",
+                            "type": "string"
+                          },
+                          "minItems": 1,
+                          "type": "array"
                         }
                       },
-                      "required": ["kind", "receiptUri", "failures", "extracted"],
+                      "required": ["kind", "receiptUris", "failures", "extracted"],
                       "type": "object"
                     },
                     {
@@ -3043,12 +3059,16 @@
                         "reason": {
                           "type": "string"
                         },
-                        "receiptUri": {
-                          "pattern": "^pops:\\/\\/[a-z0-9-]+\\/[a-z0-9-]+\\/[^/\\s]+$",
-                          "type": "string"
+                        "receiptUris": {
+                          "items": {
+                            "pattern": "^pops:\\/\\/[a-z0-9-]+\\/[a-z0-9-]+\\/[^/\\s]+$",
+                            "type": "string"
+                          },
+                          "minItems": 1,
+                          "type": "array"
                         }
                       },
-                      "required": ["kind", "receiptUri", "reason"],
+                      "required": ["kind", "receiptUris", "reason"],
                       "type": "object"
                     }
                   ]

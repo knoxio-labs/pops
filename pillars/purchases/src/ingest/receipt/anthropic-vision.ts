@@ -60,7 +60,7 @@ export function createAnthropicVision(): ReceiptVision | null {
   const model = receiptModel();
 
   return {
-    async read(image: ReceiptImage): Promise<string | null> {
+    async read(images: readonly ReceiptImage[]): Promise<string | null> {
       return callWithLogging(
         {
           domain: PURCHASES_DOMAIN,
@@ -80,16 +80,19 @@ export function createAnthropicVision(): ReceiptVision | null {
               messages: [
                 {
                   role: 'user',
+                  // Images first, in order, then the instruction: the model
+                  // reads them as one receipt top to bottom, and the prompt
+                  // is what tells it they overlap.
                   content: [
-                    {
-                      type: 'image',
+                    ...images.map((image) => ({
+                      type: 'image' as const,
                       source: {
-                        type: 'base64',
+                        type: 'base64' as const,
                         media_type: image.mediaType,
                         data: image.dataBase64,
                       },
-                    },
-                    { type: 'text', text: EXTRACTION_PROMPT },
+                    })),
+                    { type: 'text' as const, text: EXTRACTION_PROMPT },
                   ],
                 },
               ],

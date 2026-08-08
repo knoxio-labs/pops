@@ -762,9 +762,11 @@ export interface operations {
     requestBody?: {
       content: {
         'application/json': {
-          dataBase64: string;
-          /** @enum {string} */
-          mediaType: 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif';
+          images: {
+            dataBase64: string;
+            /** @enum {string} */
+            mediaType: 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif';
+          }[];
         };
       };
     };
@@ -963,13 +965,13 @@ export interface operations {
                 }[];
                 /** @enum {string} */
                 kind: 'needs-review';
-                receiptUri: string;
+                receiptUris: string[];
               }
             | {
                 /** @enum {string} */
                 kind: 'unreadable';
                 reason: string;
-                receiptUri: string;
+                receiptUris: string[];
               };
         };
       };

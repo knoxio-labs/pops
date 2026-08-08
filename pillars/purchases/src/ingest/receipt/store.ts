@@ -151,3 +151,26 @@ export function looksLikeImage(dataBase64: string, mediaType: ReceiptMediaType):
   };
   return magic[mediaType](bytes);
 }
+
+/**
+ * The key for a receipt made of several photographs.
+ *
+ * One image keeps its own hash, so the natural key and the stored
+ * `pops://` URI stay the same string and a single photograph remains
+ * traceable at a glance. Several fold into a digest over their hashes in
+ * order, which gives the property that matters either way: the same
+ * photographs, sent again, produce the same key.
+ *
+ * Order is part of it. Two images of a long receipt swapped are not the
+ * same submission, and treating them as such would hide a caller sending
+ * the halves the wrong way round.
+ */
+export function receiptKey(stored: readonly StoredReceipt[]): string {
+  const [only] = stored;
+  if (only === undefined) throw new Error('receiptKey needs at least one stored photograph');
+  if (stored.length === 1) return only.sha256;
+
+  const digest = createHash('sha256');
+  for (const one of stored) digest.update(`${one.sha256}:`);
+  return digest.digest('hex');
+}
