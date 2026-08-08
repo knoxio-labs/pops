@@ -2,7 +2,7 @@
 
 A native SwiftUI iPhone app that reaches the federation over HTTP through one pillar and is imported by nothing in this repo — the two halves of what [ADR-043](../../docs/architecture/adr-043-clients-as-a-unit-kind.md) means by a client. It is in neither the pnpm workspace nor the cargo workspace; `pnpm`, `tsc` and `cargo` have nothing to say about this directory.
 
-That pillar is the BFM, and it is not in the tree yet (POPS-1364) — nor is any code here that would call it. Read every mention of it below as the shape this app is being built into, not as something you can go and look at.
+That pillar is the BFM. Its contract is vendored here and a Swift client is generated from it — see [`Packages/BFMClient`](Packages/BFMClient/README.md) — but nothing in the app calls that client yet, because the contract exposes no operation a screen needs.
 
 The consequence worth internalising before changing anything here: this app is **distributed, not deployed**. It leaves through App Store Connect onto hardware the operator does not control, so a build already on a phone keeps calling yesterday's contract for as long as its owner declines to update. Every other consumer of a pillar contract in this repo redeploys with its producer; this one cannot.
 
@@ -25,6 +25,8 @@ mise run build:device  # signed Release, physical iPhone
 Both lanes refuse to pass having run nothing — the package lane fails if no package has a `Tests` directory, and the app lane fails if the test action executed zero tests. That is not defensive decoration. The `Pops` scheme declared an empty test-target list until the app target existed, and a lane that runs nothing while reporting success is a green check nobody would think to question.
 
 `mise run verify:release-carries-no-host` builds Release and fails if the result names a BFM host — see [Where the BFM base URL comes from](#where-the-bfm-base-url-comes-from).
+
+`mise run generate:bfm-client` re-vendors the BFM's OpenAPI snapshot and regenerates the Swift client from it. Run it after any change to `pillars/bfm`'s contract; CI runs the same command and fails on any diff. See [`Packages/BFMClient`](Packages/BFMClient/README.md).
 
 `mise install` here pins XcodeGen and SwiftLint; Xcode itself is not managed by mise, and `POPS_XCODE_VERSION` in `mise.toml` is a declaration CI acts on rather than something that changes anything locally. **The deployment target is capped by that Xcode, not chosen freely.** An SDK older than the deployment target does not build and an SPM `platforms:` floor cannot be overridden from the command line, so the floor can only be the newest iOS the GitHub-hosted macOS runner can build — the latest released major, never the one a beta Xcode is previewing. Raising it is a single commit that moves `POPS_XCODE_VERSION`, `project.yml`'s `deploymentTarget` and every `platforms:` floor under `Packages/` together, and it can only happen after the runner image ships that Xcode.
 
@@ -49,7 +51,9 @@ Neither tool is pinned the same way. SwiftLint is a mise tool, so its version is
 
 The two exclusions are separate decisions with separate reasons, and the formatter's goes against the TypeScript side, where generated clients _are_ formatted. Both reasons are written down in [`scripts/swift-sources.sh`](scripts/swift-sources.sh), which also owns the formatter's file list, so the exclusion exists once rather than once per tool.
 
-The name is the whole boundary, so `mise run lint` polices it in both directions: generated code outside a `Generated` directory fails, and hand-written code inside one fails too — otherwise the directory is somewhere to hide code from the linter. That the tools actually honour the exclusion is a self-test against fixtures built from the real `.swiftlint.yml`, not a claim in a comment; with no generated sources committed yet, it is the only part of this that is checking anything.
+The name is the whole boundary, so `mise run lint` polices it in both directions: generated code outside a `Generated` directory fails, and hand-written code inside one fails too — otherwise the directory is somewhere to hide code from the linter. That the tools actually honour the exclusion is a self-test against fixtures built from the real `.swiftlint.yml`, not a claim in a comment.
+
+One directory currently qualifies: `Packages/BFMClient/Sources/BFMClient/Generated`.
 
 ## Signing, and installing on a phone
 
@@ -109,23 +113,28 @@ Half of that is compiler-enforced — a package can only `import` what its own `
 
 `Packages/DesignSystem` carries a second constraint on every feature, orthogonal to the import graph: a feature may not name a colour, a type size or a gap. See [Packages/DesignSystem/README.md](Packages/DesignSystem/README.md).
 
-`AppCore`, `DesignSystem` and the storage half of `Auth` are written — see [Packages/Auth/README.md](Packages/Auth/README.md) for the last of those. `BFMClient` carries the base-URL resolver and nothing else yet. Every other package is still a shell whose placeholder type says what the module is for, and filling them in is one ticket per module.
+`AppCore`, `DesignSystem`, the storage half of `Auth` and `BFMClient` are written — see [Packages/Auth/README.md](Packages/Auth/README.md) and [Packages/BFMClient/README.md](Packages/BFMClient/README.md). Every other package is still a shell whose placeholder type says what the module is for, and filling them in is one ticket per module.
 
 ## `Contracts/`
 
 Artefacts this app and the BFM must agree on byte for byte, kept outside any one package because more than one module will assert against them and because the BFM asserts against the same bytes from TypeScript.
 
-Today that is `device-signature-v1.json`, the ECDSA P-256 encoding vector. The generated Swift BFM client will vendor the OpenAPI snapshot here too (POPS-1380), following the same rule the rest of the repo uses for a contract that crosses a unit boundary: the consumer keeps a copy inside its own boundary and a CI guard fails on drift.
+Two files:
 
-That rule points both ways, and this directory is the producing side of it. The copy here is canonical — only the Swift side can generate the vector — and the BFM keeps its own at [`pillars/bfm/contracts/device-signature-v1.json`](../../pillars/bfm/contracts/device-signature-v1.json), because ADR-043 forbids a pillar reading a path under `clients/`. Regenerate through the repo root's `mise run fixture:device-signature`, which re-vendors as its second step; `mise run fixture:device-signature:generate` from here writes this copy alone and leaves the guard red.
+- `device-signature-v1.json` — the ECDSA P-256 encoding vector, asserted from Swift and from Node. See [Packages/Auth/README.md](Packages/Auth/README.md#the-encoding-contract).
+- `bfm.openapi.json` — a byte-identical copy of the BFM's OpenAPI snapshot, and the input the Swift client is generated from. Same rule the rest of the repo uses for a contract that crosses a unit boundary: the consumer keeps a copy inside its own boundary and a CI guard fails on drift. See [Packages/BFMClient/README.md](Packages/BFMClient/README.md).
+
+That rule points both ways, and for the vector this directory is the producing side of it. The copy here is canonical — only the Swift side can generate the vector — and the BFM keeps its own at [`pillars/bfm/contracts/device-signature-v1.json`](../../pillars/bfm/contracts/device-signature-v1.json), because ADR-043 forbids a pillar reading a path under `clients/`. Regenerate through the repo root's `mise run fixture:device-signature`, which re-vendors as its second step; `mise run fixture:device-signature:generate` from here writes this copy alone and leaves the guard red. For the OpenAPI snapshot the direction is reversed: the pillar produces it and this directory holds the copy.
+
+The formatter treats the two **oppositely**, and the `.openapi` infix is what separates them. `.oxfmtrc.json` and `lint-staged.config.mjs` both exclude `clients/*/Contracts/*.openapi.json`, because that snapshot's canonical copy is a pillar's build artefact and a byte-equality gate against a file the pre-commit hook rewrites fails on the first commit that touches it. The device-signature vector is deliberately _not_ excluded — both its copies are plain `*.json` at paths the same rules cover, so both go through one formatter and land on the same bytes. Exempting one side of that pair is what would break its gate.
 
 ## What CI does with this
 
-`.github/workflows/ios-quality.yml` — one job, `runs-on: macos-latest`, the only workflow in the repo that is not on Ubuntu. It selects the pinned Xcode, then runs `mise run build`, `mise run test` and `mise run lint` and nothing else, because a command written out a second time in a workflow file is a command that drifts.
+`.github/workflows/ios-quality.yml` — one job, `runs-on: macos-latest`, the only workflow in the repo that is not on Ubuntu. It selects the pinned Xcode, then runs `mise run build`, `mise run test`, `mise run lint` and `mise run generate:bfm-client`, because a command written out a second time in a workflow file is a command that drifts. The one thing it spells out itself is the diff check after that last command.
 
 Two things about it are worth knowing before you touch either side:
 
-- **It is path-filtered to `clients/ios/**` and `pillars/bfm/openapi/**`.** The BFM contract is the input the Swift client is generated from, so a contract change has to re-run this job or the generated client rots with nothing red to show for it.
+- **It is path-filtered to `clients/ios/**` and `pillars/bfm/openapi/**`.** The BFM contract is the input the Swift client is generated from, so a contract change has to re-run this job or the generated client rots with nothing red to show for it. That filter is what makes the regenerate-and-diff step above reachable from a change on the producer's side.
 - **It is wired into `ci-gate.yml`, which is what makes it block a merge.** The gate is the one static required context in the branch ruleset; `iOS Quality` appears in both the `on.workflow_run.workflows` trigger array and the `gated` array inside the script, and either one alone is inert — trigger-only is never evaluated, gated-only never fires. A TypeScript-only PR is unaffected: this job is path-filtered out, and the gate reads an absent workflow as passing.
 
 `mise install` is run with `MISE_DISABLE_TOOLS=rust,node,pnpm` there. mise merges config up the tree, so without it the job would download a full Rust toolchain to compile Swift.
@@ -134,7 +143,7 @@ It is not quite the only job that touches this directory. The `Device signature 
 
 ## Known gaps
 
-- **Nothing consumes the resolved base URL yet.** `BuiltInBaseURL` answers where the BFM is; no transport asks it, because there is no transport (POPS-1380) and no pairing store to fall back on in Release (POPS-1383).
+- **Nothing consumes the resolved base URL yet.** `BuiltInBaseURL` answers where the BFM is and `BFMHTTPClient` takes one, but nothing constructs the pair: the composition root binds implementations to `AppCore` protocols, and the BFM contract exposes no operation a feature needs. In Release there is also no pairing store to fall back on (POPS-1383).
 - **`mise run verify:release-carries-no-host` runs nowhere but a laptop.** The invariant it guards — a shipped binary naming no BFM host — is the one thing here that is not caught by building, testing or linting, and it is the only task in this directory that no job invokes (POPS-1475).
 - **The pre-push hook does not run `mise run lint`.** It would put Xcode on the push path for every contributor, including on the TypeScript-only pushes that are almost all of them. Unformatted Swift can still reach a branch; it can no longer reach `main`, because the CI job rejects it.
 - **Nothing automated exercises the Secure Enclave or the Keychain.** The suites for both live in `Packages/Auth` and skip unless `POPS_IOS_HARDWARE_TESTS=1`. The keychain half is now a move rather than a missing environment — `mise run test:app` runs in an entitled app process, and [AppTests/README.md](AppTests/README.md) asserts the data-protection keychain answers there — but until that move happens (POPS-1439) neither store is covered. The Secure Enclave half needs a physical device and cannot close on a simulator at all. See [`Packages/Auth/README.md`](Packages/Auth/README.md).

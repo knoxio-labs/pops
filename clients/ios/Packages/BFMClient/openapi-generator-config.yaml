@@ -1,0 +1,22 @@
+# How `mise run generate:bfm-client` shapes the committed Swift under
+# Sources/BFMClient/Generated. Read by swift-openapi-generator's CLI; it sits at
+# the package root rather than inside Sources/ so SwiftPM does not see it as an
+# unhandled target resource, and so the generator's build plugin — which we do
+# not use, because its output directory is not configurable — cannot pick it up
+# by accident.
+
+generate:
+  - types
+  - client
+
+# The whole point of the wrapper. `internal` makes "no generated type escapes
+# BFMClient" a compile error in any other module rather than a convention, so
+# regenerating the client can never turn into a cross-module refactor. The
+# hand-written façade beside the generated code is what is `public`.
+accessModifier: internal
+
+# `idiomatic` over the `defensive` default: defensive spells every name
+# component out (`Operations.health.Output.Ok.Body`), which reads like an
+# apology. Both are stable per generator version, and the version is pinned in
+# Tools/OpenAPIGenerator/Package.swift, so the choice costs nothing to hold.
+namingStrategy: idiomatic

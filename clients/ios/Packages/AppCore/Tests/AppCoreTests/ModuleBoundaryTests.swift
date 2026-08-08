@@ -14,6 +14,27 @@ internal struct ModuleBoundaryTests {
     /// calls that carry them.
     private let implementationPackages: Set<String> = ["Auth", "BFMClient"]
 
+    /// The modules the generated BFM client is written against. Naming one is
+    /// how a generated type would reach a second module — the types themselves
+    /// are `internal` to `BFMClient`, so the compiler already refuses the direct
+    /// route, but nothing stops a feature importing `OpenAPIRuntime` and
+    /// building its own client against the same contract.
+    private let generatedClientRuntime: Set<String> = [
+        "OpenAPIRuntime", "OpenAPIURLSession", "HTTPTypes",
+    ]
+
+    /// The package that owns the generated code, and the only one that may name
+    /// any of the above.
+    private let generatedClientPackage = "BFMClient"
+
+    /// Every SPM dependency the app is allowed to resolve from outside this
+    /// repo, by URL. Two, both Apple's, both there because a generated OpenAPI
+    /// client does not compile without them.
+    private let allowedExternalPackages: Set<String> = [
+        "https://github.com/apple/swift-openapi-runtime",
+        "https://github.com/apple/swift-openapi-urlsession",
+    ]
+
     @Test("the scan finds the packages it is asserting about")
     func scanIsWiredUp() throws {
         let packages = try packageNames()
@@ -63,6 +84,63 @@ internal struct ModuleBoundaryTests {
                 )
             }
         }
+    }
+
+    /// The import half of "no generated type appears outside `BFMClient`".
+    ///
+    /// Its `Generated/` sources are emitted `internal`, which already makes the
+    /// types unnameable elsewhere. This is about the module that would have to
+    /// be imported first: a second module reaching for `OpenAPIRuntime` is a
+    /// second client being built against the same contract, outside the one
+    /// directory the regenerate-and-diff gate covers.
+    @Test("only the package that owns the generated code names its runtime")
+    func onlyOnePackageNamesTheGeneratedClientRuntime() throws {
+        // The owning package must name them, or every assertion below holds for
+        // a tree where the client was deleted.
+        let owned = try sourceFiles(inPackage: generatedClientPackage)
+            .reduce(into: Set<String>()) { $0.formUnion(try importedModules(in: $1)) }
+        #expect(!owned.isDisjoint(with: generatedClientRuntime))
+
+        let elsewhere =
+            try packageNames().filter { $0 != generatedClientPackage }
+            .flatMap { try sourceFiles(inPackage: $0) } + swiftFiles(under: appDirectory)
+        for file in elsewhere {
+            let forbidden = try importedModules(in: file).intersection(generatedClientRuntime)
+            #expect(
+                forbidden.isEmpty,
+                "\(file.lastPathComponent) imports \(forbidden.sorted().joined(separator: ", "))"
+            )
+        }
+    }
+
+    /// The manifest half of the same rule, and the app's entire external
+    /// dependency surface in one assertion.
+    ///
+    /// Two things are being held at once. Only `BFMClient` may reach outside the
+    /// repo at all — every other package depends on its siblings by path. And
+    /// the set it reaches for is exactly these two: notably NOT
+    /// `swift-openapi-generator`, which lives in `Tools/OpenAPIGenerator` so
+    /// that a code generator and its four transitive dependencies stay out of an
+    /// iPhone app's build graph. Moving it back here is a one-line edit to a
+    /// manifest that builds, tests and lints clean.
+    @Test("the app links no external package but the two it is allowed")
+    func externalDependenciesAreTheAllowedOnes() throws {
+        var declared: Set<String> = []
+        for package in try packageNames() {
+            let urls = try externalPackageURLs(ofPackage: package)
+            declared.formUnion(urls)
+            let expected = package == generatedClientPackage ? allowedExternalPackages : []
+            let unexpected = urls.subtracting(expected)
+            #expect(
+                unexpected.isEmpty,
+                "\(package)/Package.swift depends on \(unexpected.sorted().joined(separator: ", "))"
+            )
+        }
+
+        // The allowlist is a description of the tree, not an aspiration: if
+        // `BFMClient` stopped declaring these, every check above would pass on a
+        // tree with no generated client in it.
+        #expect(declared == allowedExternalPackages)
     }
 
     /// Everything that ships: every package's `Sources`, and the app target.
@@ -155,12 +233,26 @@ extension ModuleBoundaryTests {
         return enumerator.compactMap { $0 as? URL }.filter { $0.pathExtension == "swift" }
     }
 
+    private func manifestSource(ofPackage package: String) throws -> String {
+        let manifest = packagesDirectory.appending(path: package).appending(path: "Package.swift")
+        return try String(contentsOf: manifest, encoding: .utf8)
+    }
+
+    /// Every remote package URL the manifest declares. Matched on the `url:`
+    /// label rather than on the whole `.package(...)` call, so a line break
+    /// between the two — which is how a formatter renders a long dependency
+    /// list — does not hide an edge from this. Prose in a comment cannot match:
+    /// the label has to be there.
+    private func externalPackageURLs(ofPackage package: String) throws -> Set<String> {
+        let source = try manifestSource(ofPackage: package)
+        return Set(source.matches(of: #/url:\s*"([^"]+)"/#).map { String($0.1) })
+    }
+
     /// Any sibling-package path the manifest mentions, however the `.package`
     /// call is spelled — matching the whole call shape would let a `name:`
     /// argument or a line break slip an edge past this.
     private func declaredDependencies(ofPackage package: String) throws -> Set<String> {
-        let manifest = packagesDirectory.appending(path: package).appending(path: "Package.swift")
-        let source = try String(contentsOf: manifest, encoding: .utf8)
+        let source = try manifestSource(ofPackage: package)
         return Set(source.matches(of: #/"\.\./([A-Za-z_][A-Za-z0-9_]*)"/#).map { String($0.1) })
     }
 

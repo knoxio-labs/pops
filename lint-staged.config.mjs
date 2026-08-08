@@ -19,21 +19,26 @@ export default {
 
   '*.{json,md,css}': (filenames) => {
     // Never reformat an OpenAPI snapshot: a pillar's canonical
-    // `**/openapi/<name>.openapi.json` is emitted by codegen, and a vendored
-    // copy under `**/app/contracts/<name>.openapi.json` must stay byte-identical
-    // to it (the check-vendored-contracts drift gate enforces equality).
-    // Formatting either would create silent drift at commit time.
+    // `**/openapi/<name>.openapi.json` is emitted by codegen, and every vendored
+    // copy — `**/app/contracts/<name>.openapi.json` for a pillar app,
+    // `clients/*/Contracts/<name>.openapi.json` for the Swift client — must stay
+    // byte-identical to it (the check-vendored-contracts drift gate enforces
+    // equality). Formatting either side would create silent drift at commit
+    // time. The same paths are in `.oxfmtrc.json`'s `ignorePatterns`, so the
+    // repo-wide `pnpm format` cannot undo this either.
     //
     // The other byte-identical pair in the repo — the device-signature fixture,
     // canonical under `clients/ios/Contracts/` and vendored into
-    // `pillars/bfm/contracts/` — is deliberately NOT exempt. Both copies are
-    // plain `*.json` at paths this rule covers, so both go through the same
-    // formatter and land on the same bytes; excluding one and not the other is
-    // what would break the gate. `pillars/bfm`'s own `oxfmt --check .` covers
-    // the vendored copy too, so exempting it here would only move the failure.
+    // `pillars/bfm/contracts/` — is deliberately NOT exempt, and the `.openapi`
+    // infix above is what keeps the two rules apart. Both copies are plain
+    // `*.json` at paths this rule covers, so both go through the same formatter
+    // and land on the same bytes; excluding one and not the other is what would
+    // break the gate. `pillars/bfm`'s own `oxfmt --check .` covers the vendored
+    // copy too, so exempting it here would only move the failure.
     const isOpenApiSnapshot = (/** @type {string} */ f) =>
       /\/openapi\/[^/]+\.openapi\.json$/.test(f) ||
-      /\/app\/contracts\/[^/]+\.openapi\.json$/.test(f);
+      /\/app\/contracts\/[^/]+\.openapi\.json$/.test(f) ||
+      /\/Contracts\/[^/]+\.openapi\.json$/.test(f);
     const formattable = filenames.filter((f) => !isOpenApiSnapshot(f));
     if (formattable.length === 0) return [];
     const formatFiles = formattable.map(esc).join(' ');
