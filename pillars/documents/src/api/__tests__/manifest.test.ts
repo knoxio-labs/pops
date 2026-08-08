@@ -19,14 +19,19 @@ describe('buildDocumentsManifest', () => {
     expect(manifest.contract.tag).toBe('contract-documents@v1.2.3');
   });
 
-  it('declares an empty cross-pillar surface in this scaffold increment', () => {
+  it('declares no search or ai surface in this scaffold increment', () => {
     const manifest = buildDocumentsManifest('1.2.3');
 
     expect(manifest.search.adapters).toEqual([]);
     expect(manifest.ai.tools).toEqual([]);
-    expect(manifest.uri.types).toEqual([]);
     expect(manifest.routes.queries).toEqual([]);
     expect(manifest.routes.mutations).toEqual([]);
+  });
+
+  it('declares the document uri type it can resolve', () => {
+    const manifest = buildDocumentsManifest('1.2.3');
+
+    expect(manifest.uri.types).toEqual(['documents/document']);
   });
 
   it('declares the /health healthcheck path', () => {

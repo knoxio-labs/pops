@@ -3,11 +3,14 @@
  *
  * The documents pillar (ADR-035 bridge kind, ADR-039 workstream 13) owns
  * the paperless-ngx integration. It has no frontend surface (no `nav` /
- * `pages` dimension) and, in this scaffold increment, declares no
- * `search`/`ai`/`uri` dimensions either — the paperless bridge exposes only
- * its thin REST contract (`paperless.status` / `paperless.search`) for now.
- * A future increment can populate `search.adapters` / `ai.tools` once the
- * pillar mirrors document metadata locally instead of proxying live.
+ * `pages` dimension) and declares no `search`/`ai` dimensions — the
+ * paperless bridge exposes only its thin REST contract for now. A future
+ * increment can populate `search.adapters` / `ai.tools` once the pillar
+ * mirrors document metadata locally instead of proxying live.
+ *
+ * `uri.types` does carry `documents/document`: other pillars persist soft
+ * `pops://documents/document/<id>` references (ADR-042), and `paperless.get`
+ * is what resolves one.
  */
 import type { ManifestPayload } from '@pops/pillar-sdk/manifest-schema';
 
@@ -25,7 +28,7 @@ export function buildDocumentsManifest(version: string): ManifestPayload {
     routes: { queries: [], mutations: [], subscriptions: [] },
     search: { adapters: [] },
     ai: { tools: [] },
-    uri: { types: [] },
+    uri: { types: ['documents/document'] },
     consumedSettings: { keys: [] },
     healthcheck: { path: '/health' },
   };

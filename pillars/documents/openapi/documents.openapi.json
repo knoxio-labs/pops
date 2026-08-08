@@ -6,6 +6,110 @@
   },
   "openapi": "3.0.2",
   "paths": {
+    "/paperless/documents/{id}": {
+      "get": {
+        "operationId": "paperless.get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "exclusiveMinimum": true,
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "created": {
+                          "type": "string"
+                        },
+                        "id": {
+                          "type": "number"
+                        },
+                        "originalFileName": {
+                          "type": "string"
+                        },
+                        "thumbnailUrl": {
+                          "type": "string"
+                        },
+                        "title": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["id", "title", "created", "originalFileName", "thumbnailUrl"],
+                      "type": "object"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "412": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "412"
+          }
+        },
+        "summary": "Resolve one Paperless-ngx document by id (404 when it no longer exists)",
+        "tags": ["paperless"]
+      }
+    },
     "/paperless/search": {
       "get": {
         "operationId": "paperless.search",
