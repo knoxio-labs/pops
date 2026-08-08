@@ -10,14 +10,12 @@ import {
   freshVolumeName,
   mountsRequiringWriteAssertion,
   mountSlug,
-  parseComposeServices,
+  normalizeVolumeEntry,
   parseExposedPort,
   parseRuntimeBaseImage,
   planSmoke,
   resolveHealthPath,
   runtimeStage,
-  serviceDataVolumes,
-  serviceDockerfile,
 } from '../smoke-image.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
@@ -207,79 +205,87 @@ describe('mountSlug', () => {
   });
 });
 
-describe('parseComposeServices', () => {
-  it('splits a services block into one chunk per service, body lines only', () => {
-    const compose = [
-      'services:',
-      '  finance-api:',
-      '    image: pops-finance',
-      '    volumes:',
-      '      - sqlite-data:/data/sqlite',
-      '  media-api:',
-      '    image: pops-media',
-      'volumes:',
-      '  sqlite-data:',
-      '',
-    ].join('\n');
-    const services = parseComposeServices(compose);
-    expect(services.map((s) => s.name)).toEqual(['finance-api', 'media-api']);
-    expect(services[0]?.lines.some((l) => l.includes('sqlite-data:/data/sqlite'))).toBe(true);
-    // The top-level `volumes:` block dedents back to `services:`'s own indent
-    // (0), so it must never be read as a third service.
-    expect(services.some((s) => s.name === 'sqlite-data')).toBe(false);
+describe('normalizeVolumeEntry', () => {
+  it('reads the target and read-only flag from the short string form', () => {
+    expect(normalizeVolumeEntry('sqlite-data:/data/sqlite')).toEqual({
+      target: '/data/sqlite',
+      readOnly: false,
+    });
+    expect(normalizeVolumeEntry('sqlite-data:/data/sqlite:ro')).toEqual({
+      target: '/data/sqlite',
+      readOnly: true,
+    });
   });
 
-  it('is indent-width agnostic — 4-space service keys work the same as 2-space', () => {
-    const compose = ['services:', '    finance-api:', '        image: pops-finance', ''].join('\n');
-    expect(parseComposeServices(compose).map((s) => s.name)).toEqual(['finance-api']);
+  it('reads the target and read-only flag from the long object form', () => {
+    expect(normalizeVolumeEntry({ target: '/data/sqlite' })).toEqual({
+      target: '/data/sqlite',
+      readOnly: false,
+    });
+    expect(normalizeVolumeEntry({ target: '/data/sqlite', read_only: true })).toEqual({
+      target: '/data/sqlite',
+      readOnly: true,
+    });
   });
-});
 
-describe('serviceDockerfile', () => {
-  it('reads build.dockerfile, unquoted', () => {
-    const lines = ['  build:', '    context: ..', '    dockerfile: pillars/media/Dockerfile'];
-    expect(serviceDockerfile(lines)).toBe('pillars/media/Dockerfile');
-  });
-
-  it('returns undefined for a service with no build (an image: pin)', () => {
-    expect(serviceDockerfile(['  image: redis:7-alpine'])).toBeUndefined();
+  it('returns undefined for a short-form entry with no target segment', () => {
+    expect(normalizeVolumeEntry('just-a-name')).toBeUndefined();
   });
 });
 
-describe('serviceDataVolumes', () => {
-  it('collects /data/... paths mounted read-write', () => {
-    const lines = [
-      '  volumes:',
-      '    - sqlite-data:/data/sqlite',
-      '    - media-images-data:/data/media/images',
-      '  environment:',
-      '    PORT: "3003"',
-    ];
-    expect(serviceDataVolumes(lines)).toEqual(['/data/sqlite', '/data/media/images']);
+describe('extraDataMountsForDockerfile — quote and comment handling', () => {
+  // Copilot review on POPS-1517: the original hand-rolled scanner treated
+  // the first `#` anywhere in a line as a comment — even one that was part
+  // of a QUOTED value, where YAML's own rule says a comment marker inside
+  // quotes is not a comment at all. That silently truncated the line and the
+  // volume it declared vanished from the derived set with no error. Parsing
+  // with js-yaml means quoting is handled by an actual YAML parser instead
+  // of a regex, so a `#` inside a quoted volume source survives, while a
+  // REAL trailing comment outside any quotes is still correctly dropped.
+  const hashInsideSingleQuotes = [
+    'services:',
+    '  media-api:',
+    '    build:',
+    '      dockerfile: pillars/media/Dockerfile',
+    '    volumes:',
+    "      - 'media-images-data # keep this:/data/media/images'",
+    '',
+  ].join('\n');
+
+  const hashInsideDoubleQuotes = [
+    'services:',
+    '  media-api:',
+    '    build:',
+    '      dockerfile: pillars/media/Dockerfile',
+    '    volumes:',
+    '      - "media-images-data # keep this:/data/media/images"',
+    '',
+  ].join('\n');
+
+  const realTrailingComment = [
+    'services:',
+    '  media-api:',
+    '    build:',
+    '      dockerfile: pillars/media/Dockerfile',
+    '    volumes:',
+    '      - media-images-data:/data/media/images  # this comment must be dropped',
+    '',
+  ].join('\n');
+
+  it('keeps the mount when a quoted volume source contains a #, single- or double-quoted', () => {
+    const expected = ['/data/media/images'];
+    expect(
+      extraDataMountsForDockerfile(hashInsideSingleQuotes, 'pillars/media/Dockerfile')
+    ).toEqual(expected);
+    expect(
+      extraDataMountsForDockerfile(hashInsideDoubleQuotes, 'pillars/media/Dockerfile')
+    ).toEqual(expected);
   });
 
-  it('excludes a :ro mount — asserting write on it would fail by design', () => {
-    const lines = ['  volumes:', '    - sqlite-data:/data/sqlite:ro'];
-    expect(serviceDataVolumes(lines)).toEqual([]);
-  });
-
-  it('ignores non-/data volumes (bind mounts, named volumes elsewhere)', () => {
-    const lines = [
-      '  volumes:',
-      '    - metabase-data:/metabase-data',
-      '    - ./litestream/finance.yml:/etc/litestream.yml:ro',
-    ];
-    expect(serviceDataVolumes(lines)).toEqual([]);
-  });
-
-  it('stops at the volumes list — a later key is not swept in as an entry', () => {
-    const lines = [
-      '  volumes:',
-      '    - sqlite-data:/data/sqlite',
-      '  environment:',
-      '    FOO: /data/should-not-appear',
-    ];
-    expect(serviceDataVolumes(lines)).toEqual(['/data/sqlite']);
+  it('still drops a real, unquoted trailing comment', () => {
+    expect(extraDataMountsForDockerfile(realTrailingComment, 'pillars/media/Dockerfile')).toEqual([
+      '/data/media/images',
+    ]);
   });
 });
 

@@ -56,6 +56,9 @@ import { setTimeout as sleep } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 
+import { load as parseYaml } from 'js-yaml';
+import { z } from 'zod';
+
 const execFileAsync = promisify(execFile);
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -98,128 +101,60 @@ const BOOT_PLACEHOLDER_SECRETS = {
   BFM_ACCESS_TOKEN_SECRET: 'ci-smoke-placeholder-access-token-secret',
 };
 
-/** @param {string} line @returns {string} the line with a trailing `# comment` stripped. */
-function stripComment(line) {
-  const hash = line.indexOf('#');
-  return hash === -1 ? line : line.slice(0, hash);
-}
+/**
+ * One `volumes:` list entry: either the short `source:target[:mode]` string
+ * form, or the long object form (`type`/`source`/`target`/`read_only`).
+ * Everything beyond `target` and `read_only` passes through unread.
+ */
+const ComposeVolumeEntrySchema = z.union([
+  z.string(),
+  z.object({ target: z.string(), read_only: z.boolean().optional() }).passthrough(),
+]);
+
+/** A Compose service: only `build.dockerfile` and `volumes` matter here. */
+const ComposeServiceSchema = z
+  .object({
+    build: z.object({ dockerfile: z.string().optional() }).partial().optional(),
+    volumes: z.array(ComposeVolumeEntrySchema).optional(),
+  })
+  .passthrough();
+
+/** A Compose manifest: only the `services:` map matters here. */
+const ComposeFileSchema = z
+  .object({ services: z.record(z.string(), ComposeServiceSchema).optional() })
+  .passthrough();
 
 /**
- * Split a Compose manifest's top-level `services:` block into one chunk per
- * service, keyed by name, holding that service's own body lines (everything
- * indented deeper than the service key). Generic to whatever indent width the
- * file uses — a service key is recognised by being the shallowest indent seen
- * directly under `services:`, not by a fixed column.
+ * Normalize a `volumes:` list entry to its container-side target path and
+ * whether it is mounted read-only, regardless of which of Compose's two
+ * equivalent forms declared it.
  *
- * @param {string} composeText
- * @returns {{ name: string, lines: string[] }[]}
+ * @param {z.infer<typeof ComposeVolumeEntrySchema>} entry
+ * @returns {{ target: string, readOnly: boolean } | undefined} `undefined`
+ *   for a short-form entry with no `target` segment (a bind source with
+ *   nothing to mount onto, which Compose itself would also reject).
  */
-export function parseComposeServices(composeText) {
-  /** @type {{ name: string, lines: string[] }[]} */
-  const services = [];
-  let servicesIndent = -1;
-  let serviceKeyIndent = -1;
-  /** @type {{ name: string, lines: string[] } | undefined} */
-  let current;
-
-  for (const raw of composeText.split('\n')) {
-    const code = stripComment(raw);
-    if (code.trim() === '') continue;
-    const indent = code.length - code.trimStart().length;
-
-    if (servicesIndent === -1) {
-      if (/^services\s*:\s*$/u.test(code.trim())) servicesIndent = indent;
-      continue;
-    }
-
-    if (indent <= servicesIndent) break; // dedented out of `services:` for good
-
-    if (serviceKeyIndent === -1) serviceKeyIndent = indent;
-
-    if (indent === serviceKeyIndent) {
-      const name = code
-        .trim()
-        .replace(/:\s*$/u, '')
-        .replace(/^["']|["']$/gu, '');
-      current = { name, lines: [] };
-      services.push(current);
-      continue;
-    }
-
-    current?.lines.push(raw);
+export function normalizeVolumeEntry(entry) {
+  if (typeof entry === 'string') {
+    const target = entry.split(':')[1];
+    if (target === undefined) return undefined;
+    return { target, readOnly: entry.split(':')[2] === 'ro' };
   }
-
-  return services;
-}
-
-/**
- * The `build.dockerfile` a service declares, if any — the join key back to
- * the Dockerfile this smoke run is testing.
- *
- * @param {readonly string[]} serviceLines
- * @returns {string | undefined}
- */
-export function serviceDockerfile(serviceLines) {
-  for (const raw of serviceLines) {
-    const match = /^\s*dockerfile\s*:\s*(\S+)\s*$/u.exec(stripComment(raw));
-    if (match?.[1] !== undefined) return match[1].replace(/^["']|["']$/gu, '');
-  }
-  return undefined;
-}
-
-/**
- * The container-side `/data/...` paths a service mounts read-write. A `:ro`
- * mount (the Litestream sidecars' read replica, Metabase's reporting mount)
- * is excluded — asserting write access on a mount declared read-only would
- * fail by design and prove nothing about the image.
- *
- * @param {readonly string[]} serviceLines
- * @returns {string[]}
- */
-export function serviceDataVolumes(serviceLines) {
-  /** @type {string[]} */
-  const paths = [];
-  let inVolumes = false;
-  let volumesIndent = -1;
-
-  for (const raw of serviceLines) {
-    const code = stripComment(raw);
-    if (code.trim() === '') continue;
-    const indent = code.length - code.trimStart().length;
-
-    if (!inVolumes) {
-      if (/^volumes\s*:\s*$/u.test(code.trim())) {
-        inVolumes = true;
-        volumesIndent = indent;
-      }
-      continue;
-    }
-
-    if (indent <= volumesIndent) {
-      inVolumes = false;
-      continue;
-    }
-
-    const item = /^-\s*(.+?)\s*$/u.exec(code.trim());
-    if (!item?.[1]) continue;
-    const segments = item[1]
-      .replace(/^["']|["']$/gu, '')
-      .split(':')
-      .map((s) => s.trim());
-    const containerPath = segments[1];
-    const mode = segments[2];
-    if (containerPath !== undefined && containerPath.startsWith('/data/') && mode !== 'ro') {
-      paths.push(containerPath);
-    }
-  }
-
-  return paths;
+  return { target: entry.target, readOnly: entry.read_only === true };
 }
 
 /**
  * Every `/data/...` path any compose service mounts read-write for the given
  * Dockerfile, beyond the database mount every image already gets — the set
  * this smoke run additionally asserts writable.
+ *
+ * Parses `infra/docker-compose.yml` as real YAML (js-yaml) rather than
+ * scanning it line by line: a hand-rolled indentation scanner has to
+ * reinvent YAML's own comment and quoting rules to stay correct, and a
+ * `#` inside a quoted value is exactly the kind of thing it is easy to get
+ * wrong. The parsed document is validated with zod rather than trusted as
+ * `any`, so a Compose shape this harness does not understand fails loudly
+ * instead of silently mismatching.
  *
  * @param {string} composeText
  * @param {string} dockerfilePath e.g. `pillars/media/Dockerfile`, matched
@@ -228,10 +163,17 @@ export function serviceDataVolumes(serviceLines) {
  * @returns {string[]} Sorted, deduplicated, excluding {@link SMOKE_DATA_MOUNT}.
  */
 export function extraDataMountsForDockerfile(composeText, dockerfilePath) {
+  const compose = ComposeFileSchema.parse(parseYaml(composeText));
   const paths = new Set();
-  for (const service of parseComposeServices(composeText)) {
-    if (serviceDockerfile(service.lines) !== dockerfilePath) continue;
-    for (const path of serviceDataVolumes(service.lines)) paths.add(path);
+  for (const service of Object.values(compose.services ?? {})) {
+    if (service.build?.dockerfile !== dockerfilePath) continue;
+    for (const entry of service.volumes ?? []) {
+      const normalized = normalizeVolumeEntry(entry);
+      if (normalized === undefined) continue;
+      if (normalized.target.startsWith('/data/') && !normalized.readOnly) {
+        paths.add(normalized.target);
+      }
+    }
   }
   paths.delete(SMOKE_DATA_MOUNT);
   return [...paths].toSorted();
