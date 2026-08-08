@@ -1,78 +1,60 @@
-import { useQuery } from '@tanstack/react-query';
+import { QrCode as QrCodeIcon } from 'lucide-react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Badge, PageHeader } from '@pops/ui';
+import { Button, PageHeader } from '@pops/ui';
 
-import { isUnavailableError, unwrap } from '../bfm-api-helpers.js';
-import { health } from '../bfm-api/index.js';
+import { DeviceTable } from './devices-page/DeviceTable.js';
+import { PairingDialog } from './devices-page/PairingDialog.js';
+import { RevokeDialog } from './devices-page/RevokeDialog.js';
+import { useDevicesPageModel } from './devices-page/useDevicesPageModel.js';
 
-import type { ComponentProps, ReactElement } from 'react';
+import type { ReactElement } from 'react';
 
 /**
- * `/bfm` — placeholder for the operator's device surface.
+ * `/bfm` — the operator's device surface: mint a pairing code, see what is
+ * paired, cut a handset off.
  *
- * The real page (pairing QR, device list, revoke) is POPS-1387. What this
- * renders today is the pillar's reachability, driven by the same generated
- * client, `/bfm-api` proxy path and `isUnavailableError` classification that
- * page will use — so a broken proxy or a wrong `baseUrl` surfaces here
- * rather than looking like a pairing bug later.
+ * It lives in the shell, behind Cloudflare Access, and that placement is the
+ * feature: bfm's own hostname has Access bypassed so an unpaired phone can
+ * reach `POST /devices/pair`, so the shell is the only surface where "only the
+ * operator can mint a code" is structurally true rather than merely intended.
  */
 export function DevicesPage(): ReactElement {
   const { t } = useTranslation('bfm');
-  const reachability = useBfmReachability();
+  const { list, pairing, revocation } = useDevicesPageModel();
+  const [isPairingOpen, setIsPairingOpen] = useState(false);
+
+  const openPairing = (): void => {
+    setIsPairingOpen(true);
+    pairing.mint();
+  };
+
+  const closePairing = (): void => {
+    setIsPairingOpen(false);
+    pairing.dismiss();
+  };
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeader title={t('devices.title')} description={t('devices.intro')} />
+      <PageHeader
+        title={t('devices.title')}
+        description={t('devices.intro')}
+        actions={
+          <Button onClick={openPairing} prefix={<QrCodeIcon className="h-4 w-4" />}>
+            {t('pairing.action')}
+          </Button>
+        }
+      />
 
-      <section aria-labelledby="bfm-reachability" className="space-y-2">
-        <h2 id="bfm-reachability" className="text-sm font-medium">
-          {t('devices.reachability.heading')}
-        </h2>
-        <ReachabilityBadge state={reachability} />
-      </section>
+      <DeviceTable list={list} onRevoke={revocation.request} />
 
-      <p className="text-sm text-muted-foreground">{t('devices.pending')}</p>
+      <PairingDialog
+        pairing={pairing}
+        open={isPairingOpen}
+        onOpenChange={(open) => (open ? setIsPairingOpen(true) : closePairing())}
+      />
+      <RevokeDialog revocation={revocation} />
     </div>
-  );
-}
-
-/**
- * `unavailable` means the pillar was unreachable or answered 5xx; `error` is a
- * refusal that carried a status, which is a different operator problem
- * (routing, auth) and must not be collapsed into "bfm is down".
- */
-type ReachabilityState = 'loading' | 'reachable' | 'unavailable' | 'error';
-
-function useBfmReachability(): ReachabilityState {
-  const query = useQuery({
-    queryKey: ['bfm', 'health'],
-    queryFn: async () => unwrap(await health()),
-    retry: false,
-  });
-
-  if (query.isLoading) return 'loading';
-  if (query.error !== null) return isUnavailableError(query.error) ? 'unavailable' : 'error';
-  return 'reachable';
-}
-
-/** Sourced from `Badge` so a variant rename in `@pops/ui` breaks here, not silently. */
-type BadgeVariant = NonNullable<ComponentProps<typeof Badge>['variant']>;
-
-const REACHABILITY_BADGES: Record<ReachabilityState, { variant: BadgeVariant; labelKey: string }> =
-  {
-    loading: { variant: 'secondary', labelKey: 'devices.reachability.loading' },
-    reachable: { variant: 'default', labelKey: 'devices.reachability.reachable' },
-    unavailable: { variant: 'destructive', labelKey: 'devices.reachability.unavailable' },
-    error: { variant: 'outline', labelKey: 'devices.reachability.error' },
-  };
-
-function ReachabilityBadge({ state }: { state: ReachabilityState }): ReactElement {
-  const { t } = useTranslation('bfm');
-  const { variant, labelKey } = REACHABILITY_BADGES[state];
-  return (
-    <Badge variant={variant} role="status" data-reachability={state}>
-      {t(labelKey)}
-    </Badge>
   );
 }

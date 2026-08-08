@@ -31,31 +31,65 @@ src/
   bfm-api-helpers.ts          unwrap() + isUnavailableError()
   bfm-api-runtime-config.ts   client baseUrl ('/bfm-api')
   pages/
-    DevicesPage.tsx           /bfm — placeholder; the real page is POPS-1387
+    DevicesPage.tsx           /bfm — composition only
+    devices-page/             the model and the three surfaces it drives
 ```
 
 `bfm-api-helpers.ts` is deliberately a per-pillar copy rather than a shared
 import: what counts as "unavailable" is a pillar-local judgement and the SDK
 does not own that classification.
 
-## Current state
+## The pairing code's lifetime
 
-`DevicesPage` is a placeholder. Pairing QR, the device list and revoke are
-their own ticket. What it does render is the pillar's reachability, driven by
-the real generated client, the real `/bfm-api` path and the real
-`isUnavailableError` classification — so a wrong `baseUrl` or a missing proxy
-fails here, visibly, instead of surfacing later as a pairing bug.
+bfm hands the plaintext back exactly once and persists only its digest, so on
+this side the code exists in one `useState` cell in `usePairingCode` and
+nowhere else. Three consequences that are easy to undo by accident:
 
-It distinguishes three failure shapes on purpose:
+- It is **not** read back out of React Query. The mutation is `reset` as soon
+  as its payload has been copied into state, so the string does not linger in
+  the mutation cache after the dialog closes.
+- Closing the dialog, or the deadline passing, clears the cell — the expired
+  code is dropped, not merely hidden. A dead code left on screen looking valid
+  is the failure this is built to avoid, which is also why an `expiresAt` that
+  will not parse counts as _already_ expired rather than as no deadline.
+- Nothing writes it to `localStorage`, the URL, or a log line. Reloading the
+  page means minting another; there is nothing to recover.
 
-| State       | Meaning                                                          |
-| ----------- | ---------------------------------------------------------------- |
-| Reachable   | `/health` answered.                                              |
-| Unavailable | No status, or 5xx — the pillar is down.                          |
-| Refused     | A status the pillar chose (404, 403 …) — routing/auth, not down. |
+The QR encodes `pairingUrl`, never the bare `code`. The handset ships without
+a hostname and learns where its bfm lives from what it scans (see
+[`BuiltInBaseURL.swift`](../../../clients/ios/Packages/BFMClient/Sources/BFMClient/BuiltInBaseURL.swift)),
+so a code-only QR would scan perfectly and pair nothing.
 
-Collapsing the third into "Unavailable" would send the operator after the
-wrong bug.
+## Failure shapes
+
+Both the device list and minting split failures three ways, because they send
+the operator after different bugs:
+
+| Shape        | Meaning                                                            |
+| ------------ | ------------------------------------------------------------------ |
+| Unavailable  | No status, or 5xx — the pillar is down.                            |
+| Rate limited | 429 on issuance — the budget is spent; the fix is to wait.         |
+| Refused      | A status the pillar chose (401, 404 …) — Access/routing, not down. |
+
+Collapsing the last into "Unavailable" would send the operator after the wrong
+bug. Revocation keeps its dialog open on any of them: the handset stays
+trusted until the call succeeds, and a dialog that closes reads as "done".
+
+## Tests
+
+`src/pages/__tests__/DevicesPage.test.tsx` drives the whole page against a
+mocked generated SDK — `unwrap` and `isUnavailableError` run for real. Exact
+TTL formatting is pinned separately in
+`src/pages/devices-page/__tests__/pairing-ttl.test.ts`, where the clock is a
+function argument: the page test needs `shouldAdvanceTime` for React Query to
+settle, which lets real milliseconds into the fake clock and makes an exact
+readout assertion flaky.
+
+The browser-level walkthrough is `pillars/shell/e2e/bfm-devices-pairing.spec.ts`.
+It stubs bfm's operator routes itself rather than using
+`e2e/helpers/use-real-api`, so it does not depend on the harness rewrite that
+suite is waiting on (POPS-1311) — but that suite is gated to
+`workflow_dispatch`, so this spec does not run in CI until POPS-1311 lands.
 
 ## Run
 
