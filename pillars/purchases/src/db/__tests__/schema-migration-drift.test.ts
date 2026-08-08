@@ -21,6 +21,7 @@ import {
   purchaseItemTags,
   purchaseItemUnits,
   purchases,
+  purchaseTags,
   purchaseShipments,
   purchaseMatchRules,
   purchaseSources,
@@ -45,6 +46,7 @@ afterEach(() => {
 const ALL_TABLES: readonly SQLiteTable[] = [
   purchaseSources,
   purchases,
+  purchaseTags,
   purchaseShipments,
   purchaseItems,
   purchaseItemUnits,
@@ -127,6 +129,7 @@ describe('the migration creates nothing the schema barrel forgot to export', () 
 describe('foreign keys declared in drizzle are enforced by the migration', () => {
   const EXPECTED_FKS: Readonly<Record<string, readonly string[]>> = {
     purchases: ['purchase_sources'],
+    purchase_tags: ['purchases'],
     purchase_shipments: ['purchases'],
     purchase_items: ['purchases', 'purchase_shipments'],
     purchase_item_units: ['purchase_items'],
