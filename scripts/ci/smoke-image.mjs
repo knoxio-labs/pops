@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
  * Runtime smoke test for one pillar image: start the built container and
- * require it to answer its health route.
+ * require it to answer its health route, then require every `/data/...`
+ * path its compose service mounts to be writable by the runtime user.
  *
  * A build-only gate cannot catch the class of bug this exists for. `pnpm
  * deploy --legacy` under pnpm 11 writes relative `@pops/*` symlinks that
@@ -14,13 +15,23 @@
  * base image — so a new pillar is covered the moment its Dockerfile lands,
  * with no port or route table to keep in sync.
  *
- * The image is started against a NAMED VOLUME THAT HAS NEVER EXISTED, mounted
- * where production mounts one. Docker seeds an empty named volume from the
+ * The image is started against NAMED VOLUMES THAT HAVE NEVER EXISTED, mounted
+ * where production mounts them. Docker seeds an empty named volume from the
  * image's contents at the mount point, ownership included, so a runtime stage
- * that does not create and own that directory gets a `root:root` volume and
- * dies on `SQLITE_CANTOPEN`. A recycled volume already carries whatever
- * permissions the first mount established and would pass regardless — the
- * volume being new on every run is the whole assertion.
+ * that does not create and own that directory gets a `root:root` volume. The
+ * database mount dies on that immediately (`SQLITE_CANTOPEN` at boot); a
+ * second data volume (media images, food ingest, cerebrum engrams) is used
+ * lazily and boots fine regardless, so it is asserted with an explicit write
+ * as the runtime user rather than left to the health probe to notice. A
+ * recycled volume already carries whatever permissions the first mount
+ * established and would pass regardless — the volumes being new on every run
+ * is the whole assertion.
+ *
+ * Which paths beyond the database mount to check is read out of
+ * `infra/docker-compose.yml`, the actual production deploy target, rather
+ * than kept as a table here: a pillar's second (or third) data volume is
+ * covered the moment compose declares it, and a volume no pillar still
+ * mounts drops out with no edit to this file.
  *
  * The environment supplied is deliberately minimal and is documented on the
  * constants below: `PORT` and placeholders for the secrets some pillars
@@ -32,18 +43,25 @@
  * Usage:
  *   node scripts/ci/smoke-image.mjs <dockerfile> <image-ref>
  *
- * Exit 0 = the image answered its health route. Exit 1 = it did not.
- * Exit 2 = usage error.
+ * Exit 0 = the image answered its health route and every data mount is
+ * writable. Exit 1 = either was not true. Exit 2 = usage error.
  */
 
 import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
-import { basename, dirname } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
+import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 
 const execFileAsync = promisify(execFile);
+
+const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
+
+/** The production compose manifest — the actual deploy target, and the
+ * single source of truth this harness reads its extra data mounts from. */
+const COMPOSE_PATH = join(repoRoot, 'infra', 'docker-compose.yml');
 
 const HEALTH_TIMEOUT_MS = 90_000;
 const POLL_INTERVAL_MS = 1_000;
@@ -78,6 +96,156 @@ const BOOT_PLACEHOLDER_SECRETS = {
   POPS_INTERNAL_API_KEY: 'ci-smoke-placeholder',
   BFM_ACCESS_TOKEN_SECRET: 'ci-smoke-placeholder-access-token-secret',
 };
+
+/** @param {string} line @returns {string} the line with a trailing `# comment` stripped. */
+function stripComment(line) {
+  const hash = line.indexOf('#');
+  return hash === -1 ? line : line.slice(0, hash);
+}
+
+/**
+ * Split a Compose manifest's top-level `services:` block into one chunk per
+ * service, keyed by name, holding that service's own body lines (everything
+ * indented deeper than the service key). Generic to whatever indent width the
+ * file uses — a service key is recognised by being the shallowest indent seen
+ * directly under `services:`, not by a fixed column.
+ *
+ * @param {string} composeText
+ * @returns {{ name: string, lines: string[] }[]}
+ */
+export function parseComposeServices(composeText) {
+  /** @type {{ name: string, lines: string[] }[]} */
+  const services = [];
+  let servicesIndent = -1;
+  let serviceKeyIndent = -1;
+  /** @type {{ name: string, lines: string[] } | undefined} */
+  let current;
+
+  for (const raw of composeText.split('\n')) {
+    const code = stripComment(raw);
+    if (code.trim() === '') continue;
+    const indent = code.length - code.trimStart().length;
+
+    if (servicesIndent === -1) {
+      if (/^services\s*:\s*$/u.test(code.trim())) servicesIndent = indent;
+      continue;
+    }
+
+    if (indent <= servicesIndent) break; // dedented out of `services:` for good
+
+    if (serviceKeyIndent === -1) serviceKeyIndent = indent;
+
+    if (indent === serviceKeyIndent) {
+      const name = code
+        .trim()
+        .replace(/:\s*$/u, '')
+        .replace(/^["']|["']$/gu, '');
+      current = { name, lines: [] };
+      services.push(current);
+      continue;
+    }
+
+    current?.lines.push(raw);
+  }
+
+  return services;
+}
+
+/**
+ * The `build.dockerfile` a service declares, if any — the join key back to
+ * the Dockerfile this smoke run is testing.
+ *
+ * @param {readonly string[]} serviceLines
+ * @returns {string | undefined}
+ */
+export function serviceDockerfile(serviceLines) {
+  for (const raw of serviceLines) {
+    const match = /^\s*dockerfile\s*:\s*(\S+)\s*$/u.exec(stripComment(raw));
+    if (match?.[1] !== undefined) return match[1].replace(/^["']|["']$/gu, '');
+  }
+  return undefined;
+}
+
+/**
+ * The container-side `/data/...` paths a service mounts read-write. A `:ro`
+ * mount (the Litestream sidecars' read replica, Metabase's reporting mount)
+ * is excluded — asserting write access on a mount declared read-only would
+ * fail by design and prove nothing about the image.
+ *
+ * @param {readonly string[]} serviceLines
+ * @returns {string[]}
+ */
+export function serviceDataVolumes(serviceLines) {
+  /** @type {string[]} */
+  const paths = [];
+  let inVolumes = false;
+  let volumesIndent = -1;
+
+  for (const raw of serviceLines) {
+    const code = stripComment(raw);
+    if (code.trim() === '') continue;
+    const indent = code.length - code.trimStart().length;
+
+    if (!inVolumes) {
+      if (/^volumes\s*:\s*$/u.test(code.trim())) {
+        inVolumes = true;
+        volumesIndent = indent;
+      }
+      continue;
+    }
+
+    if (indent <= volumesIndent) {
+      inVolumes = false;
+      continue;
+    }
+
+    const item = /^-\s*(.+?)\s*$/u.exec(code.trim());
+    if (!item?.[1]) continue;
+    const segments = item[1]
+      .replace(/^["']|["']$/gu, '')
+      .split(':')
+      .map((s) => s.trim());
+    const containerPath = segments[1];
+    const mode = segments[2];
+    if (containerPath !== undefined && containerPath.startsWith('/data/') && mode !== 'ro') {
+      paths.push(containerPath);
+    }
+  }
+
+  return paths;
+}
+
+/**
+ * Every `/data/...` path any compose service mounts read-write for the given
+ * Dockerfile, beyond the database mount every image already gets — the set
+ * this smoke run additionally asserts writable.
+ *
+ * @param {string} composeText
+ * @param {string} dockerfilePath e.g. `pillars/media/Dockerfile`, matched
+ *   against compose's `build.dockerfile` exactly as CI passes it (relative to
+ *   repo root, no leading `./`).
+ * @returns {string[]} Sorted, deduplicated, excluding {@link SMOKE_DATA_MOUNT}.
+ */
+export function extraDataMountsForDockerfile(composeText, dockerfilePath) {
+  const paths = new Set();
+  for (const service of parseComposeServices(composeText)) {
+    if (serviceDockerfile(service.lines) !== dockerfilePath) continue;
+    for (const path of serviceDataVolumes(service.lines)) paths.add(path);
+  }
+  paths.delete(SMOKE_DATA_MOUNT);
+  return [...paths].toSorted();
+}
+
+/**
+ * A filesystem-safe fragment identifying a data mount path, for volume names
+ * a human reading `docker volume ls` can trace back to the mount they cover.
+ *
+ * @param {string} containerPath e.g. `/data/media/images`.
+ * @returns {string} e.g. `media-images`.
+ */
+export function mountSlug(containerPath) {
+  return containerPath.replace(/^\/data\//u, '').replace(/\//gu, '-');
+}
 
 /**
  * The port the runtime stage publishes.
@@ -158,11 +326,14 @@ export function resolveHealthPath(baseImage) {
  * ownership the fix installs — it would pass on an image that has regressed.
  *
  * @param {string} dockerfilePath e.g. `pillars/finance/Dockerfile`.
+ * @param {string} [mountTag] Distinguishes a pillar's second (or third) data
+ *   volume from its database one in `docker volume ls`, e.g. `media-images`.
  * @returns {string}
  */
-export function freshVolumeName(dockerfilePath) {
+export function freshVolumeName(dockerfilePath, mountTag = '') {
   const pillarId = basename(dirname(dockerfilePath)) || 'pillar';
-  return `pops-smoke-${pillarId}-${randomUUID().slice(0, 8)}`;
+  const tag = mountTag === '' ? '' : `-${mountTag}`;
+  return `pops-smoke-${pillarId}${tag}-${randomUUID().slice(0, 8)}`;
 }
 
 /**
@@ -279,17 +450,44 @@ async function waitForHealth({ containerId, url, timeoutMs }) {
 }
 
 /**
+ * Attempt to create and remove a probe file at `mountPath`, run INSIDE the
+ * running container with no `--user` override — `docker exec` defaults to
+ * the image's own `USER`, so this is exactly "can the runtime user write
+ * here", the same question a lazy first write in production would ask.
+ *
+ * @param {string} containerId
+ * @param {string} mountPath
+ * @returns {Promise<{ ok: true } | { ok: false, reason: string }>}
+ */
+async function assertWritable(containerId, mountPath) {
+  const probe = `${mountPath}/.pops-smoke-write-probe`;
+  try {
+    await docker(['exec', containerId, 'sh', '-c', `: > '${probe}' && rm -f '${probe}'`]);
+    return { ok: true };
+  } catch (err) {
+    const captured = collectStreams(err);
+    if (captured !== '') return { ok: /** @type {const} */ (false), reason: captured };
+    return {
+      ok: /** @type {const} */ (false),
+      reason: err instanceof Error ? err.message : String(err),
+    };
+  }
+}
+
+/**
  * Dump everything a reader needs to diagnose the failure without a local
  * rebuild — the `@pops/*` link shape, which is what breaks when the deploy
  * step regresses to a workspace-escaping symlink, and the numeric ownership
- * of the data directory IN THE IMAGE, which is what a fresh volume inherits.
- * `0 0` there against a `USER node` runtime is the whole of a SQLITE_CANTOPEN.
+ * of every data directory IN THE IMAGE, which is what a fresh volume
+ * inherits. `0 0` there against a `USER node` runtime is the whole of a
+ * SQLITE_CANTOPEN or an unwritable second data mount.
  *
  * @param {string} containerId
  * @param {string} image
+ * @param {readonly string[]} mountPaths Every `/data/...` path this run mounted.
  * @returns {Promise<void>}
  */
-async function reportFailure(containerId, image) {
+async function reportFailure(containerId, image, mountPaths) {
   console.error('\n--- container logs ---');
   console.error(await dockerBestEffort(['logs', containerId]));
   console.error('\n--- /app/node_modules/@pops (workspace link shape) ---');
@@ -304,7 +502,7 @@ async function reportFailure(containerId, image) {
       'ls -la /app/node_modules/@pops 2>&1 || echo "(no /app/node_modules/@pops)"',
     ])
   );
-  console.error(`\n--- ${SMOKE_DATA_MOUNT} in the image (uid/gid a fresh volume inherits) ---`);
+  console.error(`\n--- data mounts in the image (uid/gid a fresh volume inherits) ---`);
   console.error(
     await dockerBestEffort([
       'run',
@@ -313,7 +511,7 @@ async function reportFailure(containerId, image) {
       'sh',
       image,
       '-c',
-      `ls -ldn /data ${SMOKE_DATA_MOUNT} 2>&1; id`,
+      `ls -ldn /data ${mountPaths.join(' ')} 2>&1; id`,
     ])
   );
 }
@@ -326,14 +524,24 @@ async function main() {
   }
 
   const { port, healthPath, baseImage } = planSmoke(readFileSync(dockerfilePath, 'utf8'));
-  const volume = freshVolumeName(dockerfilePath);
+  const composeText = readFileSync(COMPOSE_PATH, 'utf8');
+  const extraMounts = extraDataMountsForDockerfile(composeText, dockerfilePath);
+
+  const volumePlan = [
+    { path: SMOKE_DATA_MOUNT, name: freshVolumeName(dockerfilePath) },
+    ...extraMounts.map((path) => ({
+      path,
+      name: freshVolumeName(dockerfilePath, mountSlug(path)),
+    })),
+  ];
+
   console.log(
     `Smoking ${image} (${dockerfilePath}): runtime base ${baseImage}, ` +
-      `expecting ${healthPath} on container port ${port}, ` +
-      `with the never-before-mounted volume ${volume} at ${SMOKE_DATA_MOUNT}.`
+      `expecting ${healthPath} on container port ${port}, with ${volumePlan.length} ` +
+      `never-before-mounted volume(s): ${volumePlan.map((v) => `${v.name}@${v.path}`).join(', ')}.`
   );
 
-  await docker(['volume', 'create', volume]);
+  for (const v of volumePlan) await docker(['volume', 'create', v.name]);
   try {
     // Deliberately NOT `--rm`: a container that dies on its first import is
     // exactly the failure this exists to catch, and its logs are the evidence.
@@ -343,8 +551,7 @@ async function main() {
       '--detach',
       '--publish',
       `127.0.0.1::${port}`,
-      '--volume',
-      `${volume}:${SMOKE_DATA_MOUNT}`,
+      ...volumePlan.flatMap((v) => ['--volume', `${v.name}:${v.path}`]),
       '--env',
       `PORT=${port}`,
       ...Object.entries(BOOT_PLACEHOLDER_SECRETS).flatMap(([name, value]) => [
@@ -370,19 +577,52 @@ async function main() {
           reason: `could not reach the published port: ${err instanceof Error ? err.message : String(err)}`,
         })
       );
-      if (result.ok) {
-        console.log(`OK — ${image} answered ${healthPath}: ${result.body}`);
+      if (!result.ok) {
+        console.error(`FAIL — ${image} never answered ${healthPath}: ${result.reason}`);
+        await reportFailure(
+          containerId,
+          image,
+          volumePlan.map((v) => v.path)
+        );
+        process.exitCode = 1;
         return;
       }
-      console.error(`FAIL — ${image} never answered ${healthPath}: ${result.reason}`);
-      await reportFailure(containerId, image);
-      process.exitCode = 1;
+
+      // The health probe only proves the database mount is writable — the
+      // app opens it eagerly at boot. A second data volume (media images,
+      // food ingest, cerebrum engrams) is written lazily, so a container
+      // that boots fine on a root-owned mount would sail through the probe
+      // above and only fail in production, on its first real write.
+      /** @type {{ path: string, reason: string }[]} */
+      const unwritable = [];
+      for (const v of volumePlan) {
+        const write = await assertWritable(containerId, v.path);
+        if (!write.ok) unwritable.push({ path: v.path, reason: write.reason });
+      }
+      if (unwritable.length > 0) {
+        console.error(
+          `FAIL — ${image} answered ${healthPath} but the runtime user cannot write to:`
+        );
+        for (const { path, reason } of unwritable) console.error(`  ${path}: ${reason}`);
+        await reportFailure(
+          containerId,
+          image,
+          volumePlan.map((v) => v.path)
+        );
+        process.exitCode = 1;
+        return;
+      }
+
+      console.log(
+        `OK — ${image} answered ${healthPath} and the runtime user can write to every data ` +
+          `mount (${volumePlan.map((v) => v.path).join(', ')}): ${result.body}`
+      );
     } finally {
       await dockerBestEffort(['rm', '--force', containerId]);
     }
   } finally {
     // After the container, never before: a volume still in use will not go.
-    await dockerBestEffort(['volume', 'rm', '--force', volume]);
+    for (const v of volumePlan) await dockerBestEffort(['volume', 'rm', '--force', v.name]);
   }
 }
 

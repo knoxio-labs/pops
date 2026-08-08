@@ -6,15 +6,21 @@ import { describe, expect, it } from 'vitest';
 
 import {
   collectStreams,
+  extraDataMountsForDockerfile,
   freshVolumeName,
+  mountSlug,
+  parseComposeServices,
   parseExposedPort,
   parseRuntimeBaseImage,
   planSmoke,
   resolveHealthPath,
   runtimeStage,
+  serviceDataVolumes,
+  serviceDockerfile,
 } from '../smoke-image.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
+const composeText = readFileSync(join(repoRoot, 'infra', 'docker-compose.yml'), 'utf8');
 
 /** Pillar ids whose directory contains every one of the named entries. */
 function pillarsWith(...entries: readonly string[]): string[] {
@@ -183,6 +189,136 @@ describe('freshVolumeName', () => {
       Array.from({ length: 100 }, () => freshVolumeName('pillars/finance/Dockerfile'))
     );
     expect(names.size).toBe(100);
+  });
+
+  it('folds a mount tag in, so a second data volume is distinguishable from the database one', () => {
+    expect(freshVolumeName('pillars/media/Dockerfile', 'media-images')).toMatch(
+      /^pops-smoke-media-media-images-[0-9a-f]{8}$/u
+    );
+  });
+});
+
+describe('mountSlug', () => {
+  it('strips the /data/ prefix and flattens the remaining segments', () => {
+    expect(mountSlug('/data/media/images')).toBe('media-images');
+    expect(mountSlug('/data/food/ingest')).toBe('food-ingest');
+    expect(mountSlug('/data/cerebrum/engrams')).toBe('cerebrum-engrams');
+  });
+});
+
+describe('parseComposeServices', () => {
+  it('splits a services block into one chunk per service, body lines only', () => {
+    const compose = [
+      'services:',
+      '  finance-api:',
+      '    image: pops-finance',
+      '    volumes:',
+      '      - sqlite-data:/data/sqlite',
+      '  media-api:',
+      '    image: pops-media',
+      'volumes:',
+      '  sqlite-data:',
+      '',
+    ].join('\n');
+    const services = parseComposeServices(compose);
+    expect(services.map((s) => s.name)).toEqual(['finance-api', 'media-api']);
+    expect(services[0]?.lines.some((l) => l.includes('sqlite-data:/data/sqlite'))).toBe(true);
+    // The top-level `volumes:` block dedents back to `services:`'s own indent
+    // (0), so it must never be read as a third service.
+    expect(services.some((s) => s.name === 'sqlite-data')).toBe(false);
+  });
+
+  it('is indent-width agnostic — 4-space service keys work the same as 2-space', () => {
+    const compose = ['services:', '    finance-api:', '        image: pops-finance', ''].join('\n');
+    expect(parseComposeServices(compose).map((s) => s.name)).toEqual(['finance-api']);
+  });
+});
+
+describe('serviceDockerfile', () => {
+  it('reads build.dockerfile, unquoted', () => {
+    const lines = ['  build:', '    context: ..', '    dockerfile: pillars/media/Dockerfile'];
+    expect(serviceDockerfile(lines)).toBe('pillars/media/Dockerfile');
+  });
+
+  it('returns undefined for a service with no build (an image: pin)', () => {
+    expect(serviceDockerfile(['  image: redis:7-alpine'])).toBeUndefined();
+  });
+});
+
+describe('serviceDataVolumes', () => {
+  it('collects /data/... paths mounted read-write', () => {
+    const lines = [
+      '  volumes:',
+      '    - sqlite-data:/data/sqlite',
+      '    - media-images-data:/data/media/images',
+      '  environment:',
+      '    PORT: "3003"',
+    ];
+    expect(serviceDataVolumes(lines)).toEqual(['/data/sqlite', '/data/media/images']);
+  });
+
+  it('excludes a :ro mount — asserting write on it would fail by design', () => {
+    const lines = ['  volumes:', '    - sqlite-data:/data/sqlite:ro'];
+    expect(serviceDataVolumes(lines)).toEqual([]);
+  });
+
+  it('ignores non-/data volumes (bind mounts, named volumes elsewhere)', () => {
+    const lines = [
+      '  volumes:',
+      '    - metabase-data:/metabase-data',
+      '    - ./litestream/finance.yml:/etc/litestream.yml:ro',
+    ];
+    expect(serviceDataVolumes(lines)).toEqual([]);
+  });
+
+  it('stops at the volumes list — a later key is not swept in as an entry', () => {
+    const lines = [
+      '  volumes:',
+      '    - sqlite-data:/data/sqlite',
+      '  environment:',
+      '    FOO: /data/should-not-appear',
+    ];
+    expect(serviceDataVolumes(lines)).toEqual(['/data/sqlite']);
+  });
+});
+
+describe('extraDataMountsForDockerfile — the production compose manifest', () => {
+  // Regression guard for POPS-1517: the smoke widened to cover every
+  // per-pillar data volume, derived from infra/docker-compose.yml rather
+  // than a hand-kept table. These three are the pillars POPS-1517 named as
+  // mounting a second data volume; asserting the exact set here means a
+  // volume quietly dropped from compose (or one silently added) shows up as
+  // a failing test instead of a gate that stayed green either way.
+  it('finds media-images for the media pillar', () => {
+    expect(extraDataMountsForDockerfile(composeText, 'pillars/media/Dockerfile')).toEqual([
+      '/data/media/images',
+    ]);
+  });
+
+  it('finds food-ingest for the food pillar, deduped across food-api and the worker', () => {
+    expect(extraDataMountsForDockerfile(composeText, 'pillars/food/Dockerfile')).toEqual([
+      '/data/food/ingest',
+    ]);
+  });
+
+  it('finds cerebrum-engrams for the cerebrum pillar, deduped across api and worker', () => {
+    expect(extraDataMountsForDockerfile(composeText, 'pillars/cerebrum/Dockerfile')).toEqual([
+      '/data/cerebrum/engrams',
+    ]);
+  });
+
+  it('finds nothing extra for a single-volume pillar (bfm mounts only the database)', () => {
+    expect(extraDataMountsForDockerfile(composeText, 'pillars/bfm/Dockerfile')).toEqual([]);
+  });
+
+  it('never reports the database mount itself as "extra"', () => {
+    for (const dockerfile of ['pillars/media/Dockerfile', 'pillars/registry/Dockerfile']) {
+      expect(extraDataMountsForDockerfile(composeText, dockerfile)).not.toContain('/data/sqlite');
+    }
+  });
+
+  it('returns nothing for a Dockerfile no compose service builds', () => {
+    expect(extraDataMountsForDockerfile(composeText, 'pillars/nope/Dockerfile')).toEqual([]);
   });
 });
 
@@ -429,3 +565,42 @@ describe('builderStages', () => {
     expect(builderStages('FROM nginx:1.31.3-alpine\nEXPOSE 80\n')).toBe('');
   });
 });
+
+describe('the fresh-volume contract, for every second data volume compose declares', () => {
+  // POPS-1517: /data/sqlite is not the only mount a fresh named volume can
+  // land on root-owned. This ties the two sides of that contract together —
+  // every /data/... path compose mounts read-write for a pillar's Dockerfile
+  // must be a path that Dockerfile actually creates and chowns — so an edit
+  // to either side alone (compose gains a mount the Dockerfile never learns
+  // about, or the Dockerfile's mkdir line loses a path compose still mounts)
+  // fails here, without a docker daemon.
+  const dbPillars = pillarsWith('Dockerfile', 'migrations');
+  const composeManifest = readFileSync(join(repoRoot, 'infra', 'docker-compose.yml'), 'utf8');
+
+  it('finds pillars whose compose service mounts a second data volume', () => {
+    const withExtras = dbPillars.filter(
+      (id) => extraDataMountsForDockerfile(composeManifest, `pillars/${id}/Dockerfile`).length > 0
+    );
+    // media, food, and cerebrum at minimum — see POPS-1517's table. Asserting
+    // non-empty (rather than an exact id list) keeps this from rotting into
+    // its own hand-kept list the moment a fourth pillar grows a data volume.
+    expect(withExtras.length).toBeGreaterThan(0);
+  });
+
+  it.each(dbPillars)(
+    'pillars/%s creates every /data/... path its compose service mounts read-write',
+    (id) => {
+      const dockerfilePath = `pillars/${id}/Dockerfile`;
+      const extras = extraDataMountsForDockerfile(composeManifest, dockerfilePath);
+      const stage = runtimeStage(readDockerfile(id));
+      for (const mountPath of extras) {
+        expect(stage).toMatch(new RegExp(`mkdir\\s+-p\\s+[^\\n]*${escapeRegExp(mountPath)}`, 'u'));
+      }
+    }
+  );
+});
+
+/** @param {string} literal @returns {string} `literal` safe to splice into a `RegExp` source. */
+function escapeRegExp(literal: string): string {
+  return literal.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
+}

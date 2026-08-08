@@ -32,6 +32,12 @@ on:
 # a change to the harness that stops it asserting anything must run the
 # harness. Its unit tests run elsewhere and cannot see that.
 #
+# `infra/docker-compose.yml` is in the `docker` filter, not only `compose`,
+# for the same reason: the smoke reads it to find every `/data/...` path a
+# pillar's service mounts beyond its database, so a compose-only change that
+# adds or drops one has to re-run the build+smoke matrix, not just
+# `compose-validate`.
+#
 # Each Dockerfile is BUILT AND STARTED. Building alone is not a gate: under
 # pnpm 11 `pnpm deploy --legacy` wrote workspace-escaping `@pops/*` symlinks,
 # every Node pillar image built clean, and every one of them died on its
@@ -61,6 +67,7 @@ jobs:
             docker:
               - '**/Dockerfile'
               - 'infra/docker*/**'
+              - 'infra/docker-compose.yml'
               - 'pnpm-lock.yaml'
               - 'pnpm-workspace.yaml'
               - 'tsconfig.base.json'
