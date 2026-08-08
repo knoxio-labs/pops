@@ -8,7 +8,8 @@ It listens on port **3014**.
 It owns a database — the device allow-list, described under
 [Persistence](#persistence) below — which makes it a data pillar by kind
 (ADR-035). It has no mobile route yet (POPS-1378, POPS-1379), though the
-perimeter those routes will sit behind is already in place — see
+perimeter those routes will sit behind is already in place, alongside the
+operator surface that mints the codes a phone pairs with — see
 [The perimeter](#the-perimeter). `/health` is a pure liveness shape rather
 than a DB round-trip, which is deliberate for a container healthcheck and is
 why the database opens **before** `listen`: the probe cannot tell you the
@@ -19,11 +20,14 @@ It also holds a service-account credential and one way to spend it — see
 [Reaching sibling pillars](#reaching-sibling-pillars) and
 [`src/api/pillars/README.md`](src/api/pillars/README.md).
 
-| Surface        | What it does                                                                               |
-| -------------- | ------------------------------------------------------------------------------------------ |
-| `GET /health`  | Liveness shape. Served from the ts-rest contract, so it cannot drift from the doc.         |
-| `GET /openapi` | The committed contract projection, served verbatim so peers build a route map.             |
-| `/mobile/*`    | Reserved for the phone and gated by `requireDevice`. No route lives there yet — see below. |
+| Surface                        | What it does                                                                               |
+| ------------------------------ | ------------------------------------------------------------------------------------------ |
+| `GET /health`                  | Liveness shape. Served from the ts-rest contract, so it cannot drift from the doc.         |
+| `GET /openapi`                 | The committed contract projection, served verbatim so peers build a route map.             |
+| `POST /operator/pairing/codes` | Mints a single-use pairing code. The plaintext is returned once and never again.           |
+| `GET /operator/devices`        | Paired handsets, revoked ones included. Never returns a token or a key.                    |
+| `DELETE /operator/devices/:id` | Soft-revokes, and kills the device's refresh-token family in the same transaction.         |
+| `/mobile/*`                    | Reserved for the phone and gated by `requireDevice`. No route lives there yet — see below. |
 
 `/health` answers without a database round-trip, which is why an unreachable
 `bfm.db` still reads as live.
@@ -37,6 +41,21 @@ registry that refuses every call and asserts `/health` still answers.
 
 ## The perimeter
 
+Everything here follows from a fact that is easy to miss reading the routes:
+**bfm answers on two hostnames, and only one of them is behind Cloudflare
+Access.**
+
+- The shell's nginx reaches it at `/bfm-api/`, behind Access. That is where an
+  operator arrives.
+- Its own Cloudflare Tunnel hostname has Access **bypassed** (POPS-1389),
+  because the phone has to reach the pairing exchange (POPS-1374) and refresh
+  (POPS-1375) without an Access session.
+
+One Express app serves both, so it carries two independent gates on two
+different axes: one authenticates a **phone**, the other a **human**.
+
+### `/mobile/*` — the device gate
+
 Everything under `/mobile` is behind the access-token guard in
 [`src/api/auth/`](src/api/auth/README.md), mounted as a path prefix in
 `src/api/app.ts`. The routes it protects arrive later (POPS-1374, POPS-1378,
@@ -44,14 +63,55 @@ POPS-1379); the guard is in front of the prefix now so none of them can arrive
 public. A request to an unrouted `/mobile/*` therefore answers `401`, not
 `404`.
 
-`/health` and `/openapi` sit outside the prefix and are deliberately
-unauthenticated — the fleet's liveness probes and the SDK's route-map build
-both reach them without a device.
-
 That directory's README carries the whole of the reasoning: why a rejected
 token is a `401` and a revoked device a `403`, why a missing device row is a
 `401` rather than either, what is never logged, and what is deliberately absent
 (refresh — POPS-1375, rate limiting — POPS-1468, `lastSeenAt` — POPS-1469).
+
+### `/operator/*` — the human gate
+
+Because the bypassed hostname serves this same app, the operator routes are
+reachable from the public internet and the `requireOperator` gate in their
+handlers is the **actual** perimeter, not defence in depth. The `/operator`
+prefix earns its keep by making a *second* layer expressible: that hostname can
+refuse `/operator/*` wholesale at the edge (POPS-1389), which it could not do if
+the operator device list and the public `POST /devices/pair` both sat under
+`/devices`.
+
+`src/api/middleware/identity.ts` resolves the principal and deliberately drops
+two legs of the registry's otherwise-identical chain. Both omissions are
+load-bearing and the file states why at length; in short:
+
+- **No service-account leg.** bfm holds no `service_accounts` table and the
+  registry exposes no endpoint to verify a presented key, so there is nothing an
+  `x-api-key` could be checked against. Machine callers have no business minting
+  pairing codes anyway — the account bfm holds is for its *outbound* calls.
+  POPS-1473 tracks the registry-side verify endpoint if that changes.
+- **No "trust the tunnel" fallback.** The registry reads a missing
+  `CLOUDFLARE_ACCESS_TEAM_NAME` as "we are only reachable through a protected
+  tunnel". On a hostname that bypasses Access, that would resolve every caller
+  on the internet to an operator. Here it means anonymous: the operator surface
+  goes dark rather than open, and a test pins it.
+
+`/health` and `/openapi` sit outside both gates and are deliberately
+unauthenticated — the fleet's liveness probes and the SDK's route-map build
+both reach them without a device or a session.
+
+### Rate limiting
+
+Pairing-code issuance is budgeted per operator — five per fifteen minutes, in
+`src/api/rate-limit.ts`. A code short enough to type is short enough to guess if
+the endpoint will mint unlimited attempts against it.
+
+The counter is **in memory**, which is correct for a single-container pillar and
+wrong the moment there are two: the limit would become per-replica and the
+effective budget would multiply. POPS-1474 holds that, and names whichever
+change adds a second replica as the trigger.
+
+The gate runs *before* the limiter, deliberately. Limiting first would let an
+anonymous flood exhaust the real operator's budget and lock them out of pairing
+— a denial of service handed to an unauthenticated caller. A test pins the
+ordering.
 
 ## Persistence
 
@@ -67,13 +127,19 @@ reasoning; the properties that span them are these:
   non-extractable inside the phone's Secure Enclave.
 
   That makes `bfm.db` inert for the refresh tokens, which are CSPRNG-generated
-  at full width. It does **not** yet make it inert for pairing codes: a code
-  short enough to read off a screen and type is short enough to enumerate
-  offline against `pairing_codes.codeHash`, bounded only by the minutes until
-  it expires. Closing that means either a code with enough entropy to make
-  enumeration infeasible, or keying the digest under a pepper mounted outside
-  the database — a decision that belongs with the issuance path (POPS-1369),
-  not with the column.
+  at full width. It is now inert for pairing codes too, and by which of the two
+  available routes is worth stating because the column comments were written
+  before the choice was made: **entropy, not a pepper.** A pairing code is 12
+  characters over a 31-glyph alphabet — every confusable pair (`0`/`O`,
+  `1`/`I`/`L`) excluded outright rather than folded on read — which is ~59 bits
+  and leaves nothing tractable to enumerate offline. The alternative was a
+  shorter code under a keyed digest, which bought four characters at the price
+  of a boot-critical secret to provision, mount, rotate and lose. The QR is the
+  primary path, so those characters cost nothing real.
+
+  A plain SHA-256 is the right digest here for the same reason a password hash
+  would be the wrong one: there is no low-entropy input to slow an attacker
+  down over, and pairing is a latency-visible interactive step.
 
 - **Nothing is destroyed to express distrust.** Revoking a device sets
   `devices.revokedAt` and leaves the row; killing a token sets
@@ -113,19 +179,27 @@ registration is a separate mechanism and still goes through the
 
 ## What deliberately does not live here
 
-- **A route that reads a row.** `server.ts` opens `bfm.db` and migrates it, and
-  the guard queries `devices` on every `/mobile/*` request, but no handler
-  does — the tables are populated first by the issuance path (POPS-1369). The
-  open would happen regardless because the container needs it to: a volume and
-  a Litestream stream that point at a file no process creates are a backup of
-  nothing, and nothing reports that.
+- **The device-side exchange.** `POST /devices/pair` is POPS-1374 and lands on
+  the Access-bypassed surface. The pieces it needs from here already exist:
+  `redeemPairingCode` in `src/db/services/pairing-codes.ts` spends a code
+  atomically — the whole check is the `WHERE` clause of one `UPDATE`, so two
+  requests racing the same code cannot both win — and it takes a `BfmDb`, which
+  a transaction handle also satisfies, so the exchange can compose it into the
+  same transaction as its device insert. Tests drive exactly that, in both
+  directions: a rolled-back transaction leaves the code spendable, a committed
+  one does not.
 - **Any route that mints an access token.** `mintAccessToken` exists and is
   exercised, but its two callers do not: the pairing exchange (POPS-1374) and
   the refresh route (POPS-1375). Until one lands, no phone can obtain a token
   and every `/mobile/*` request is a `401` by construction.
 - **The mobile contract and the nginx route.** The mobile-facing routes
   (POPS-1378, POPS-1379) and the nginx route plus the compiled pillar roster
-  (POPS-1386) are each their own ticket.
+  (POPS-1386) are each their own ticket. Revocation here sets
+  `devices.revokedAt`, which is the column `requireDevice` already reads — so
+  "a revoked phone fails its very next request" is live for `/mobile/*` and
+  will extend to every route added under it.
+- **Any pruning of the credential tables.** Consumed and expired pairing codes
+  and dead refresh tokens accumulate; nothing deletes them (POPS-1449).
 - **Any enforcement of what the service account may reach.** The grant is
   narrow and auditable, but the registry pillar is the only one in the fleet
   that reads `X-API-Key` at all — every other producer serves any in-network
@@ -220,22 +294,30 @@ pillars/bfm/
 ├── app/                         @pops/app-bfm — the shell's Devices surface
 └── src/
     ├── contract/                 the wire contract — the only description of it
-    │   ├── rest.ts
+    │   ├── rest.ts               health + the operator sub-router
     │   ├── rest-schemas.ts
+    │   ├── rest-operator.ts      the three Access-gated routes, and why /operator
+    │   ├── rest-operator-schemas.ts
     │   ├── manifest.ts
     │   └── index.ts
     ├── db/                       the device allow-list — see Persistence above
     │   ├── open-bfm-db.ts         pragmas + migrate, per-pillar by convention
     │   ├── schema.ts              table barrel + row/insert types
-    │   └── schema/                one file per table
+    │   ├── schema/                one file per table
+    │   └── services/              what the API does to those tables
+    │       ├── pairing-codes.ts   mint, normalize, redeem-exactly-once
+    │       └── devices.ts         list, and the transactional revoke
     └── api/
         ├── server.ts              HTTP entrypoint (port 3014) — wiring only
         ├── boot-env.ts            the env this pillar's own HTTP surface reads
         ├── app.ts                 Express app factory + route wiring
         ├── manifest.ts            the boot-time ManifestPayload
+        ├── rate-limit.ts          issuance budget — in memory, single-replica
         ├── auth/                  the /mobile perimeter — has its own README
+        ├── middleware/identity.ts the operator principal, and the two legs it drops
         ├── pillars/               calling siblings — has its own README
-        └── rest/handlers.ts       ts-rest handler composer
+        ├── shared/errors.ts       HTTP-shaped domain errors
+        └── rest/                  ts-rest handler composers
 ```
 
 `server.ts` holds no decisions — importing it binds a port and installs signal
@@ -268,8 +350,11 @@ pnpm --filter @pops/bfm build
 | ------------------------------ | -------------------------- | --------------------------------------------------------------------------- |
 | `PORT`                         | `3014`                     | HTTP listen port.                                                           |
 | `BFM_SELF_BASE_URL`            | `http://localhost:${PORT}` | Advertised to the registry as this pillar's `baseUrl`.                      |
+| `BFM_PUBLIC_BASE_URL`          | `BFM_SELF_BASE_URL`        | The origin the **phone** dials. Baked into the pairing QR — see below.      |
 | `BFM_SQLITE_PATH`              | `./data/bfm.db`            | Where `bfm.db` lives. Falls back to `dirname(SQLITE_PATH)`.                 |
 | `BUILD_VERSION`                | `dev`                      | Verbatim on `/health`; coerced in the manifest — see below.                 |
+| `CLOUDFLARE_ACCESS_TEAM_NAME`  | —                          | **Required in production**, or `/operator/*` answers 401 to all.            |
+| `CLOUDFLARE_ACCESS_AUD`        | —                          | Access application `aud`. Set it wherever the team hosts more than one.     |
 | `POPS_REGISTRY_ENABLED`        | `false`                    | Opt-in self-registration with the `registry` pillar.                        |
 | `POPS_REGISTRY_URL`            | `http://registry-api:3001` | Registry base URL — where bfm both registers and discovers.                 |
 | `POPS_INTERNAL_API_KEY_FILE`   | —                          | Path to the mounted service-account secret. Preferred over the next row.    |
@@ -277,6 +362,35 @@ pnpm --filter @pops/bfm build
 | `POPS_INTERNAL_BASE_URLS`      | —                          | `id:baseUrl[,…]`. Overrides the discovered base URL for those ids only.     |
 | `BFM_ACCESS_TOKEN_SECRET_FILE` | —                          | Path to the mounted access-token signing secret. Preferred over the next.   |
 | `BFM_ACCESS_TOKEN_SECRET`      | —                          | The signing secret inline, for local dev. One of these two is **required**. |
+
+`BFM_PUBLIC_BASE_URL` and `BFM_SELF_BASE_URL` are the same host only in dev and
+must not be conflated in production. The self URL is the in-cluster origin bfm
+advertises to the registry — a `pops-backend` hostname no handset can resolve.
+The public URL is bfm's own Access-bypassed tunnel hostname, and it is what goes
+into the pairing QR, so getting it wrong produces a code that scans cleanly and
+then goes nowhere. It defaults to the self URL for the dev case only, where
+`http://localhost:3014` is genuinely what a simulator on the same machine should
+dial.
+
+`CLOUDFLARE_ACCESS_TEAM_NAME` is not optional in production the way it is for
+the registry. There is no tunnel fallback here (see
+[The perimeter](#the-perimeter)), so an unset value means `/operator/*` refuses
+everyone — including the operator.
+
+**It is not set on the fleet today.** No pillar in this repo has ever set it —
+the registry runs without it and leans on exactly the fallback bfm refuses. The
+compose service passes all three variables through as `${VAR:-}`, so the
+plumbing is in place and the values are an operator step: **POPS-1487**, which
+needs the Access application's AUD tag and bfm's bypassed hostname from
+POPS-1389. Until that lands, `/operator/*` answers `401` in production and the
+Devices page is dark. It fails closed rather than open, which is the right
+direction, but it does mean a deployment that forgets it looks like a broken
+page rather than an insecure one.
+
+`CLOUDFLARE_ACCESS_AUD` deserves its own line because it is easy to read as
+optional hardening and is not. Access mints one JWT per application off the
+**same** team signing keys, so with the team name set but no audience, a token
+issued for any other protected app on the team verifies here too.
 
 `POPS_INTERNAL_BASE_URLS` is deliberately not `POPS_PILLARS`, which carries the
 same shape and a different meaning: production stopped plumbing it once the

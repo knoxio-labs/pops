@@ -16,11 +16,19 @@ Failure is a value, never a throw. Every call returns `CallResult<T>` and the ca
 | `/manifest-schema` | `ManifestPayload` + `validateManifestPayload` — the register wire format                                                                         |
 | `/discovery`       | the registry snapshot cache and its SSE reconnect helper                                                                                         |
 | `/settings`        | `discoverSettings()` — flattens the per-pillar settings contributions                                                                            |
+| `/access`          | Cloudflare Access JWT verification — the operator half of a pillar's identity. Node-only; see below                                              |
 | `/react`           | `PillarSdkProvider`, query-key derivation, SSE→React-Query invalidation                                                                          |
+
+`/access` is the outlier in this table: it is not about reaching the federation at all. It verifies the `cf-access-jwt-assertion` header Cloudflare Access forwards after terminating a human login at the edge, which is how a pillar answers "is this a real operator". It lives here because the alternative is a copy per pillar, and a signature check that exists twice drifts in the copy nobody is reading. `registry` and `bfm` both consume it.
+
+Three properties in `createCloudflareAccessVerifier` are load-bearing, each with its own way of being lost, and the file states them at length: the algorithm is **pinned** to RS256 rather than read from the token header (the `alg: none` and HMAC-with-the-public-key confusion classes); the `aud` is checked whenever one is configured, because Access mints one JWT per application off the same team keys, so a token for a _sibling_ protected app carries a perfectly valid signature; and the JWKS cache is per-verifier rather than module-global. Widening any of them is a security change, not a refactor — `src/access/__tests__/cloudflare-jwt.test.ts` asserts each against real generated keypairs.
+
+It is the only subpath that pulls a non-`zod` runtime dependency (`jsonwebtoken`), and it is Node-only. Import it from a pillar's API layer, never from a frontend app.
 
 ## Who depends on it
 
-- **`registry`** — it is the other end of the handshake: it validates every inbound manifest with `validateManifestPayload` and mounts both `REGISTRY_PATHS` and `LEGACY_REGISTRY_PATHS`.
+- **`registry`** — it is the other end of the handshake: it validates every inbound manifest with `validateManifestPayload` and mounts both `REGISTRY_PATHS` and `LEGACY_REGISTRY_PATHS`. Also `/access`, for the Cloudflare Access leg of `api/middleware/identity.ts`.
+- **`bfm`** — `/access` for its operator surface. Its chain deliberately drops the registry's tunnel fallback, because bfm's own hostname bypasses Access; `pillars/bfm/src/api/middleware/identity.ts` says why.
 - **`shell`** — the only browser consumer. The root barrel feeds the boot path (`ManifestPayloadSchema` in `lib/registry-snapshot-fetch.ts`; `PillarSnapshot` / `NavConfigDescriptor` / `PageDescriptor` in `app/boot-snapshot.ts`, `app/installed-modules.ts`, `app/external-ui.tsx`), `/react` mounts `PillarSdkProvider` at the app root (`app/App.tsx`), and the settings page uses `/settings` (`discoverSettings`) plus `/client` + `/react` behind `useDynamicOptionsLoaders` and `useTestActionHandler`. Browser access to another pillar's domain data goes through a per-consumer generated Hey API client instead — see [ADR-040](../../docs/architecture/adr-040-cross-pillar-contract-discipline.md). `pillars/shell/scripts/generate-nginx-conf.ts` also reads discovery to render the proxy config.
 - **`mcp`** — `/server` `pillar()` is the entire gateway; every MCP tool is a proxied pillar call.
 - **`orchestrator`** — `/discovery` + `/server` for federated search; the root `buildToolList` for `GET /ai/tools`.
@@ -32,7 +40,7 @@ Failure is a value, never a throw. Every call returns `CallResult<T>` and the ca
 
 - **A lib may never import a pillar** (`scripts/ci/check-lib-no-pillar-import.mjs`). That is why the SDK addresses a target by string id and OpenAPI operationId rather than by its contract package: the type parameter on `pillar<TRouter>()` is supplied by the _caller_, who may legally depend on the contract.
 - **`pillars/contacts` is a hand-written Rust twin of `/bootstrap`, `/manifest-schema` and `registry-path-resolver.ts`** (`src/manifest.rs`, `src/registry/`). Nothing keeps them in sync and nothing type-checks the Rust side against the zod schema. Tightening a rule here does not fail CI — it fails `contacts` at register time, in production.
-- `zod` is the only runtime dependency. `react` and `@tanstack/react-query` are optional peers used solely by `/react`.
+- `zod` is the runtime dependency everywhere except `/access`, which adds `jsonwebtoken`. `react` and `@tanstack/react-query` are optional peers used solely by `/react`.
 
 ## What first-time consumers get wrong
 
