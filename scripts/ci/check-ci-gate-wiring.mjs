@@ -114,6 +114,10 @@ export function parseWorkflowName(source) {
  * True when the workflow's `pull_request:` trigger narrows to a path filter —
  * which would stop it running on docs-only PRs.
  *
+ * Matches the block form (`paths:` then a sequence) and the inline form
+ * (`paths: ["**"] # …`), which this repo already uses in `unit-quality.yml`.
+ * Anchoring on end-of-line would see only the first and miss the second.
+ *
  * @param {string} source
  * @returns {boolean}
  */
@@ -123,7 +127,7 @@ export function hasPullRequestPathFilter(source) {
   if (start === -1) return false;
   for (const line of lines.slice(start + 1)) {
     if (/^\s{0,2}\S/u.test(line)) break;
-    if (/^\s{4}paths(-ignore)?:\s*$/u.test(line)) return true;
+    if (/^\s{4}paths(-ignore)?:/u.test(line)) return true;
   }
   return false;
 }

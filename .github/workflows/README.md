@@ -53,14 +53,16 @@ context green — and, once it is required, the PR mergeable — minutes before 
 slowest gated workflow has an opinion, and the failure would land after the
 merge. Hence `in_progress` until nothing is pending.
 
-**A guard must behave under the condition it exists to detect.** Every rule
-above shares a shape: something reported green in the state it was built to
-catch. The implicit check run was green on `main` while judging nothing; a
-premature `success` was green while seven workflows were still running; and the
-first version of the wiring guard threw a `TypeError` instead of reporting when
-the `Quality` workflow was renamed — the drift it exists to find. When you write
-a check here, exercise it against the failure it targets, not only against a
-healthy tree.
+**A guard must be exercised against the condition it exists to detect, not
+against a healthy tree.** Everything above shares one shape — a check that
+looked fine precisely because it was never put in the state it was built for.
+The implicit check run was green on `main` while judging nothing. A premature
+`success` was green while seven workflows were still running. The wiring guard
+first threw a `TypeError` instead of reporting when `Quality` was renamed, and
+then matched only `paths:` at end-of-line, so it was blind to the inline
+`paths: ["**"]` form this repo already uses in `unit-quality.yml` — a filter
+added that way to `Quality` would have slipped straight past it. Green from a
+check that was never made to fail is not evidence.
 
 `scripts/ci/check-ci-gate-wiring.mjs` asserts the rules above, plus the
 trigger/`gated` agreement and that every gated name still resolves to a real

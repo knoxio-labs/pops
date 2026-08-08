@@ -112,6 +112,28 @@ describe('hasPullRequestPathFilter', () => {
     ).toBe(true);
   });
 
+  it('detects the inline array form the repo already uses elsewhere', () => {
+    expect(hasPullRequestPathFilter('on:\n  pull_request:\n    paths: ["**"]\n')).toBe(true);
+  });
+
+  it('detects an inline form carrying a trailing comment', () => {
+    expect(
+      hasPullRequestPathFilter('on:\n  pull_request:\n    paths: ["**"] # rebuilds everything\n')
+    ).toBe(true);
+  });
+
+  it('detects an inline paths-ignore', () => {
+    expect(hasPullRequestPathFilter('on:\n  pull_request:\n    paths-ignore: ["docs/**"]\n')).toBe(
+      true
+    );
+  });
+
+  it('does not mistake another key that merely starts with "paths" for a filter', () => {
+    expect(hasPullRequestPathFilter('on:\n  pull_request:\n    paths-filter-name: x\n')).toBe(
+      false
+    );
+  });
+
   it('does not confuse a filter on a sibling trigger for one on pull_request', () => {
     expect(
       hasPullRequestPathFilter('on:\n  pull_request:\n  push:\n    paths:\n      - "a/**"\n')
@@ -232,6 +254,19 @@ describe('the guard catches each way the wiring goes inert', () => {
       s.replace(
         /^on:\n {2}pull_request:$/mu,
         'on:\n  pull_request:\n    paths-ignore:\n      - "docs/**"'
+      )
+    );
+    expect(checkCiGateWiring(root).join('\n')).toContain(
+      'added a path filter to its `pull_request` trigger'
+    );
+  });
+
+  it('flags the inline form of that path filter too', () => {
+    const root = cloneWorkflows();
+    patch(root, 'quality.yml', (s) =>
+      s.replace(
+        /^on:\n {2}pull_request:$/mu,
+        'on:\n  pull_request:\n    paths-ignore: ["docs/**"] # skip docs'
       )
     );
     expect(checkCiGateWiring(root).join('\n')).toContain(
