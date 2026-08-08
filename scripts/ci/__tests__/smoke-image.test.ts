@@ -332,7 +332,7 @@ describe('the native-build fallback, for every pillar image that installs better
   // Which images are exposed is DERIVED from the workspace graph, not listed:
   // each Dockerfile installs `--filter "@pops/<id>..."`, whose selection is the
   // transitive workspace closure. That is why `shell` is in here despite owning
-  // no database — its closure spans six pillars that do.
+  // no database — its closure reaches pillars that do.
   const nativePillars = pillarsInstallingBetterSqlite3();
 
   it('finds better-sqlite3 images (the derivation itself is not silently empty)', () => {

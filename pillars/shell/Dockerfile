@@ -1,8 +1,9 @@
 FROM node:24-alpine AS builder
 WORKDIR /app
 
-# `--filter "@pops/shell..."` selects six database-owning pillars, so this
-# builder installs better-sqlite3 just as they do. It installs as
+# `--filter "@pops/shell..."` resolves to the shell's whole workspace closure,
+# which reaches the pillars its apps import — database-owning ones among them —
+# so this builder installs better-sqlite3 exactly as theirs do. It installs as
 # `prebuild-install || node-gyp rebuild`, and this base has neither Python nor
 # a compiler — so the second half of that `||` cannot run, and any failure to
 # FETCH the prebuilt binary takes the whole build down with an error about
