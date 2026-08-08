@@ -47,7 +47,7 @@
  * use, and a replay of the deleted row would go undetected against a family
  * that is very much alive.
  */
-import { and, asc, eq, isNotNull, isNull, lte, or } from 'drizzle-orm';
+import { and, asc, eq, isNotNull, isNull, lte, or, sql } from 'drizzle-orm';
 
 import { pairingCodes, refreshTokens } from '../schema.js';
 import { DEFAULT_REFRESH_TOKEN_TTL_MS } from './refresh-tokens.js';
@@ -107,56 +107,39 @@ export function prunePairingCodes(db: BfmDb, options: PruneOptions = {}): number
  * Delete refresh tokens that have been dead — revoked, consumed, or simply
  * expired unused — for at least {@link REFRESH_TOKEN_RETENTION_MS}.
  *
- * Walked oldest-`createdAt`-first and deleted one row at a time, never as a
- * single bulk statement. The table's self-FK (`replacedBy`) is `ON DELETE NO
- * ACTION` — see the column docstring in `../schema/refresh-tokens.ts` — so a
- * row can only be removed once nothing still names it, which is exactly its
- * predecessor. A row's own death (`revokedAt`, else `consumedAt`, else a
- * past `expiresAt`) is never later than its successor's: rotation stamps a
- * predecessor's `consumedAt` with the same instant as the successor's
- * `createdAt`, and a family-wide revoke stamps every surviving row with one
- * shared instant. Walking oldest-first and deleting whatever is eligible as
- * we go therefore never asks to delete a row before the one naming it — the
- * predecessor's retention window always elapses at or before its
- * successor's.
- *
  * @returns how many rows were deleted.
  */
 export function pruneDeadRefreshTokens(db: BfmDb, options: PruneOptions = {}): number {
   const retentionMs = options.retentionMs ?? REFRESH_TOKEN_RETENTION_MS;
   const at = options.now?.() ?? new Date();
-  const nowIso = at.toISOString();
   const cutoff = new Date(at.getTime() - retentionMs).toISOString();
 
-  // A row that is still live — unrevoked, unconsumed, and not yet past its
-  // own `expiresAt` — can never be eligible, so excluding it here is a real
-  // reduction of the candidate set rather than a formality: over a family's
-  // lifetime almost every row it ever had ends up dead, but the one row that
-  // is never allowed to leave this loop early is the live tail, and this is
-  // where it does.
+  // A row's death instant is `revokedAt`, else `consumedAt`, else
+  // `expiresAt` — computed in SQL rather than re-derived per row in JS. A
+  // still-live row (unrevoked, unconsumed) has no death instant earlier than
+  // its own, still-future `expiresAt`, so comparing that against `cutoff`
+  // excludes it here without a separate liveness check.
+  const deadAt = sql<string>`coalesce(${refreshTokens.revokedAt}, ${refreshTokens.consumedAt}, ${refreshTokens.expiresAt})`;
+
+  // Oldest-`createdAt`-first: the table's self-FK (`replacedBy`) is `ON
+  // DELETE NO ACTION` — see the column docstring in
+  // `../schema/refresh-tokens.ts` — so a row can only be removed once nothing
+  // still names it, which is exactly its predecessor. A predecessor's own
+  // death is never later than its successor's: rotation stamps a
+  // predecessor's `consumedAt` with the same instant as the successor's
+  // `createdAt`, and a family-wide revoke stamps every surviving row with one
+  // shared instant. Walking oldest-first and deleting whatever this query
+  // already decided is eligible therefore never asks to delete a row before
+  // the one naming it.
   const candidates = db
-    .select({
-      tokenHash: refreshTokens.tokenHash,
-      revokedAt: refreshTokens.revokedAt,
-      consumedAt: refreshTokens.consumedAt,
-      expiresAt: refreshTokens.expiresAt,
-    })
+    .select({ tokenHash: refreshTokens.tokenHash })
     .from(refreshTokens)
-    .where(
-      or(
-        isNotNull(refreshTokens.revokedAt),
-        isNotNull(refreshTokens.consumedAt),
-        lte(refreshTokens.expiresAt, nowIso)
-      )
-    )
+    .where(lte(deadAt, cutoff))
     .orderBy(asc(refreshTokens.createdAt))
     .all();
 
   let deleted = 0;
   for (const row of candidates) {
-    const deadAt = row.revokedAt ?? row.consumedAt ?? row.expiresAt;
-    if (deadAt > cutoff) continue;
-
     deleted += db
       .delete(refreshTokens)
       .where(eq(refreshTokens.tokenHash, row.tokenHash))

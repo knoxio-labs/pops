@@ -16,6 +16,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { devices, pairingCodes, refreshTokens } from '../schema.js';
 import {
+  DEFAULT_REFRESH_TOKEN_TTL_MS,
   findRefreshTokenByHash,
   PAIRING_CODE_RETENTION_MS,
   pruneDeadRefreshTokens,
@@ -70,10 +71,12 @@ describe('the module constants', () => {
   });
 
   it('ties refresh-token retention to the token TTL rather than an independent number', () => {
-    // See the module header: anything shorter would let a consumed row be
-    // pruned while its still-live successor is in active use, which is the
+    // Compared against the constant, not a duplicated 30-day literal: this
+    // is what keeps the two coupled if the TTL ever changes. See the module
+    // header for why retention shorter than the TTL would let a consumed
+    // row be pruned while its still-live successor is in active use — the
     // exact way this sweeper could silently disable reuse detection.
-    expect(REFRESH_TOKEN_RETENTION_MS).toBe(30 * 24 * 60 * 60 * 1000);
+    expect(REFRESH_TOKEN_RETENTION_MS).toBe(DEFAULT_REFRESH_TOKEN_TTL_MS);
   });
 });
 
