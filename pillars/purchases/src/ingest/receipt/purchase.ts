@@ -164,7 +164,13 @@ export function receiptToPurchase(
   const items = extracted.lines
     .map((line) => toItem(line, locale))
     .filter((item): item is CreateItemInput => item !== null);
-  const totalCents = gate.totalCents ?? 0;
+  if (gate.totalCents === null) {
+    // Only reachable by calling this with a reading the gate refused. A
+    // silent zero would write a real shop as costing nothing, which is
+    // exactly the kind of wrong that reconciles and looks ordinary.
+    throw new Error('receiptToPurchase requires a gated reading with a readable total');
+  }
+  const totalCents = gate.totalCents;
 
   const withoutChecksum: Omit<CreatePurchaseInput, 'checksum'> = {
     source: RECEIPT_SOURCE_ID,

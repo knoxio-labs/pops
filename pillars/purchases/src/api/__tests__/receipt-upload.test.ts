@@ -40,6 +40,8 @@ const OTHER_JPEG_BASE64 = Buffer.concat([
 
 const GOOD_READING = JSON.stringify({
   merchantName: 'Bunnings Warehouse',
+  address: '123 Example St, Sydney NSW 2000',
+  timeZone: 'Australia/Sydney',
   purchasedOn: '2026-08-01',
   purchasedAt: '14:32',
   currency: 'AUD',
@@ -115,6 +117,19 @@ describe('a receipt the model reads and the paper agrees with', () => {
   it('says it does not know how it was paid for', async () => {
     const response = await upload(appWith(saying(GOOD_READING)));
     expect(response.body.purchase.purchase.settlementMode).toBe('unknown');
+  });
+
+  it('surfaces the uncertainty tags a reviewer needs to see', async () => {
+    // A mark nobody can read is not a mark. These exist to tell a human
+    // which figures the receipt did not actually state.
+    const undated = JSON.stringify({ ...JSON.parse(GOOD_READING), purchasedOn: null });
+    const response = await upload(appWith(saying(undated)));
+    expect(response.body.purchase.tags).toContain('date-uncertain');
+  });
+
+  it('carries no tags for a receipt that stated everything', async () => {
+    const response = await upload(appWith(saying(GOOD_READING)));
+    expect(response.body.purchase.tags).toEqual([]);
   });
 
   it('links the merchant when contacts recognises it', async () => {

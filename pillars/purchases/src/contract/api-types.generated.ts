@@ -510,6 +510,7 @@ export interface operations {
               trackingNumber: string | null;
               updatedAt: string;
             }[];
+            tags: string[];
           };
         };
       };
@@ -686,6 +687,7 @@ export interface operations {
               trackingNumber: string | null;
               updatedAt: string;
             }[];
+            tags: string[];
           };
         };
       };
@@ -914,6 +916,7 @@ export interface operations {
                     trackingNumber: string | null;
                     updatedAt: string;
                   }[];
+                  tags: string[];
                 };
               }
             | {
