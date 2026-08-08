@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 /**
- * Per-pillar mise toolchain override guard (issue #3688 / ADR-039 E34).
+ * Per-pillar mise toolchain override guard — see
+ * [ADR-039](../../docs/architecture/adr-039-pillar-isolation.md) on why the
+ * toolchain pin must not impose fleet-wide lockstep.
  *
  * The root `mise.toml` `[tools]` table (node/pnpm/rust) is the shared
  * default toolchain. mise merges config **up** the directory tree, so any
@@ -60,32 +62,43 @@ function extractToolValue(raw) {
 }
 
 /**
- * Extract the `[tools]` table from a mise.toml source as a plain key→value
- * map. Stops at the next `[section]` header or EOF. Comment lines and blank
- * lines are ignored; values are unquoted and any inline comment is stripped.
+ * Extract a top-level table from a mise.toml source as a plain key→value map.
+ * Stops at the next `[section]` header or EOF. Comment lines and blank lines
+ * are ignored; values are unquoted and any inline comment is stripped.
  *
  * @param {string} source
+ * @param {string} section Table name, e.g. `tools` or `settings`.
  * @returns {Record<string, string>}
  */
-export function parseToolsTable(source) {
+export function parseTomlSection(source, section) {
   const lines = source.split('\n');
   /** @type {Record<string, string>} */
-  const tools = {};
-  let inTools = false;
+  const entries = {};
+  let inSection = false;
   for (const rawLine of lines) {
     const line = rawLine.trim();
     if (line.startsWith('#') || line === '') continue;
     const header = /^\[([^\]]+)\]$/u.exec(line);
     if (header) {
-      inTools = header[1] === 'tools';
+      inSection = header[1] === section;
       continue;
     }
-    if (!inTools) continue;
+    if (!inSection) continue;
     const kv = /^([A-Za-z0-9_-]+)\s*=\s*(.+)$/u.exec(line);
     if (!kv) continue;
-    tools[kv[1]] = extractToolValue(kv[2]);
+    entries[kv[1]] = extractToolValue(kv[2]);
   }
-  return tools;
+  return entries;
+}
+
+/**
+ * Extract the `[tools]` table from a mise.toml source.
+ *
+ * @param {string} source
+ * @returns {Record<string, string>}
+ */
+export function parseToolsTable(source) {
+  return parseTomlSection(source, 'tools');
 }
 
 /**
