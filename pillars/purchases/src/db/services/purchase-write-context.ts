@@ -9,6 +9,7 @@ import { InvalidIngestPayloadError } from '../errors.js';
 
 import type { PurchaseRow } from '../schema.js';
 import type { PurchasesDb } from './internal.js';
+import type { CreatePurchaseInput } from './purchase-input.js';
 
 /** Everything the per-table insert helpers need, assembled once. */
 export interface IngestContext {
@@ -50,4 +51,27 @@ export function shipmentIdFor(ctx: IngestContext, ref: string | null | undefined
     throw new InvalidIngestPayloadError(`unknown shipment ref '${ref}'`);
   }
   return id;
+}
+
+/**
+ * The money columns, each defaulting to zero when the source did not state
+ * it. Lives here rather than beside the insert because the defaults are
+ * uniform and carry no decision worth reading inline.
+ */
+interface ComponentCents {
+  readonly subtotalCents: number;
+  readonly shippingCents: number;
+  readonly taxCents: number;
+  readonly surchargeCents: number;
+  readonly discountCents: number;
+}
+
+export function componentCents(input: CreatePurchaseInput): ComponentCents {
+  return {
+    subtotalCents: input.subtotalCents ?? 0,
+    shippingCents: input.shippingCents ?? 0,
+    taxCents: input.taxCents ?? 0,
+    surchargeCents: input.surchargeCents ?? 0,
+    discountCents: input.discountCents ?? 0,
+  };
 }

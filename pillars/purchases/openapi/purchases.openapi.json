@@ -658,6 +658,11 @@
                     "minimum": 0,
                     "type": "integer"
                   },
+                  "surchargeCents": {
+                    "maximum": 9007199254740991,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
                   "taxCents": {
                     "maximum": 9007199254740991,
                     "minimum": 0,

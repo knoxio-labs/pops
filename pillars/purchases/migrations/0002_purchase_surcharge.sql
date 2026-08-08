@@ -6,4 +6,10 @@
 -- a 12c credit surcharge against a $24.17 total. Card surcharges are on
 -- most Australian card receipts, so the alternative is sending a large
 -- share of real receipts to manual review forever.
-ALTER TABLE `purchases` ADD `surcharge_cents` integer DEFAULT 0 NOT NULL;
+--
+-- The CHECK is on the column, not the table. SQLite does not extend an
+-- existing table-level constraint to a column added later, so the
+-- `ck_purchases_components_non_negative` guard on the other component
+-- columns would not have covered this one — and a negative surcharge is
+-- the same lie as a negative discount.
+ALTER TABLE `purchases` ADD `surcharge_cents` integer DEFAULT 0 NOT NULL CHECK (`surcharge_cents` >= 0);

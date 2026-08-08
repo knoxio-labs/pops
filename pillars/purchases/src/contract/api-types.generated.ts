@@ -369,6 +369,7 @@ export interface operations {
           source: string;
           sourceOrderId?: string | null;
           subtotalCents?: number;
+          surchargeCents?: number;
           taxCents?: number;
           totalCents: number;
         };
