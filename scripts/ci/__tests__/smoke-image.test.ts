@@ -8,6 +8,7 @@ import {
   collectStreams,
   extraDataMountsForDockerfile,
   freshVolumeName,
+  mountsRequiringWriteAssertion,
   mountSlug,
   parseComposeServices,
   parseExposedPort,
@@ -319,6 +320,38 @@ describe('extraDataMountsForDockerfile — the production compose manifest', () 
 
   it('returns nothing for a Dockerfile no compose service builds', () => {
     expect(extraDataMountsForDockerfile(composeText, 'pillars/nope/Dockerfile')).toEqual([]);
+  });
+
+  it('finds nothing extra for pillars that own no database (orchestrator, mcp, documents)', () => {
+    // These mount /data/sqlite for uniformity (SMOKE_DATA_MOUNT's own doc
+    // comment) but were never asked to create or chown it — see
+    // mountsRequiringWriteAssertion below for why that matters.
+    for (const id of ['orchestrator', 'mcp', 'documents']) {
+      expect(extraDataMountsForDockerfile(composeText, `pillars/${id}/Dockerfile`)).toEqual([]);
+    }
+  });
+});
+
+describe('mountsRequiringWriteAssertion', () => {
+  // Regression guard: the first version of this widening ran the write probe
+  // against every mounted path including the database one, which broke
+  // orchestrator/mcp/documents in CI — they mount /data/sqlite (every image
+  // does, unconditionally) but, owning no database, were never required to
+  // create or chown it, so a fresh volume there stays root-owned by design.
+  // The health probe already vouches for the database mount on pillars that
+  // do own one; only the extra mounts need an explicit write assertion.
+  it('excludes the database mount, keeping any extra mounts', () => {
+    const plan = [
+      { path: '/data/sqlite', name: 'v-sqlite' },
+      { path: '/data/media/images', name: 'v-media-images' },
+    ];
+    expect(mountsRequiringWriteAssertion(plan)).toEqual([
+      { path: '/data/media/images', name: 'v-media-images' },
+    ]);
+  });
+
+  it('is empty for a plan with only the database mount', () => {
+    expect(mountsRequiringWriteAssertion([{ path: '/data/sqlite', name: 'v-sqlite' }])).toEqual([]);
   });
 });
 

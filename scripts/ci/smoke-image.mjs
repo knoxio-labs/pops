@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 /**
  * Runtime smoke test for one pillar image: start the built container and
- * require it to answer its health route, then require every `/data/...`
- * path its compose service mounts to be writable by the runtime user.
+ * require it to answer its health route, then require every SECOND `/data/...`
+ * path its compose service mounts (beyond the database one every image gets)
+ * to be writable by the runtime user.
  *
  * A build-only gate cannot catch the class of bug this exists for. `pnpm
  * deploy --legacy` under pnpm 11 writes relative `@pops/*` symlinks that
@@ -43,7 +44,7 @@
  * Usage:
  *   node scripts/ci/smoke-image.mjs <dockerfile> <image-ref>
  *
- * Exit 0 = the image answered its health route and every data mount is
+ * Exit 0 = the image answered its health route and every extra data mount is
  * writable. Exit 1 = either was not true. Exit 2 = usage error.
  */
 
@@ -450,6 +451,22 @@ async function waitForHealth({ containerId, url, timeoutMs }) {
 }
 
 /**
+ * Which of the plan's mounts get an explicit write assertion: every one
+ * EXCEPT the database mount. Every image gets {@link SMOKE_DATA_MOUNT}
+ * regardless of whether its pillar owns a database (see that constant's own
+ * doc comment), and a pillar that owns none was never asked to create or
+ * chown it — asserting a write there would fail an image the fresh-volume
+ * contract never covered, for a mount its own health probe already vouches
+ * for when it does own a database.
+ *
+ * @param {readonly { path: string, name: string }[]} volumePlan
+ * @returns {{ path: string, name: string }[]}
+ */
+export function mountsRequiringWriteAssertion(volumePlan) {
+  return volumePlan.filter((v) => v.path !== SMOKE_DATA_MOUNT);
+}
+
+/**
  * Attempt to create and remove a probe file at `mountPath`, run INSIDE the
  * running container with no `--user` override — `docker exec` defaults to
  * the image's own `USER`, so this is exactly "can the runtime user write
@@ -588,14 +605,16 @@ async function main() {
         return;
       }
 
-      // The health probe only proves the database mount is writable — the
-      // app opens it eagerly at boot. A second data volume (media images,
-      // food ingest, cerebrum engrams) is written lazily, so a container
-      // that boots fine on a root-owned mount would sail through the probe
-      // above and only fail in production, on its first real write.
+      // The health probe already proves the database mount is writable — the
+      // app opens it eagerly at boot, so a pillar that owns one and cannot
+      // write there never reaches this line. A second data volume (media
+      // images, food ingest, cerebrum engrams) is written lazily, so a
+      // container boots fine on a root-owned mount regardless and only fails
+      // in production, on its first real write — hence the explicit check
+      // here, restricted to the mounts that need it.
       /** @type {{ path: string, reason: string }[]} */
       const unwritable = [];
-      for (const v of volumePlan) {
+      for (const v of mountsRequiringWriteAssertion(volumePlan)) {
         const write = await assertWritable(containerId, v.path);
         if (!write.ok) unwritable.push({ path: v.path, reason: write.reason });
       }
@@ -613,10 +632,12 @@ async function main() {
         return;
       }
 
-      console.log(
-        `OK — ${image} answered ${healthPath} and the runtime user can write to every data ` +
-          `mount (${volumePlan.map((v) => v.path).join(', ')}): ${result.body}`
-      );
+      const extraPaths = mountsRequiringWriteAssertion(volumePlan).map((v) => v.path);
+      const writeSummary =
+        extraPaths.length > 0
+          ? ` and the runtime user can write to every extra data mount (${extraPaths.join(', ')})`
+          : '';
+      console.log(`OK — ${image} answered ${healthPath}${writeSummary}: ${result.body}`);
     } finally {
       await dockerBestEffort(['rm', '--force', containerId]);
     }
