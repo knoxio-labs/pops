@@ -54,12 +54,15 @@ const VENDORED_SUFFIX = '.openapi.json';
 
 /**
  * Where a consumer is allowed to keep a vendored snapshot, as
- * `<unit-kind-root>/<consumer>/<path...>`. Each entry names the directory the
- * consumer's units live under and the path, inside one unit, that holds the
- * copies. Spelling differs per unit kind because each follows its own
- * language's convention — lowercase for the TS apps, `Contracts/` for the Swift
- * client, which keeps every artefact the app and the BFM agree on byte-for-byte
- * in one place.
+ * `<unit-kind-root>/<consumer>/<path...>`. Each entry names the directory a
+ * unit kind's units live under, plus the path inside one unit that holds the
+ * copies.
+ *
+ * The two differ in spelling because each follows its own language's
+ * convention, and neither is worth normalising: a pnpm app keeps its codegen
+ * inputs in a lowercase `app/contracts/`, while the Swift client already has a
+ * `Contracts/` directory for the artefacts it and the BFM agree on byte for
+ * byte, and the OpenAPI snapshot is one of those.
  *
  * A directory NOT listed here is not scanned, so a copy that lands somewhere
  * else is invisible to this guard rather than silently allowed — which is why

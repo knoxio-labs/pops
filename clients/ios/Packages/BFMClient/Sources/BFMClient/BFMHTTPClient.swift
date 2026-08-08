@@ -21,10 +21,14 @@ public enum BFMClientError: Error, Hashable, Sendable {
 /// this type is handed one and does not go looking.
 ///
 /// Carries no credentials. Attaching and refreshing an access token is a
-/// `ClientMiddleware` this module does not have yet, so every call from here
-/// reaches only the BFM's unauthenticated perimeter — `/health` and the pairing
-/// handshake. Adding an authenticated call means adding that middleware first,
-/// not adding a header at a call site.
+/// `ClientMiddleware` this module does not have yet, which is why the only
+/// operation exposed below is the one the BFM answers unauthenticated. Adding
+/// an authenticated call means adding that middleware first, not adding a
+/// header at a call site.
+///
+/// The generated client also carries the contract's `/operator/*` operations.
+/// They are not surfaced here and never will be: that perimeter is fronted by
+/// Cloudflare Access and answers a browser, not a phone.
 public struct BFMHTTPClient: Sendable {
     private let generated: Client
 
