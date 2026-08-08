@@ -113,8 +113,14 @@ node "$repo_root/scripts/extractability/materialize-tsconfig.mjs" "$work/u" "$ab
 # sandbox proves only what an extracted repo could genuinely run on its own:
 # install + build (or typecheck/test for shell-bundled app units).
 cd "$work/u"
-echo "sandbox: installing (isolated, --ignore-workspace) …" >&2
-pnpm install --ignore-workspace --no-frozen-lockfile
+# Isolation comes from the sandbox-local `pnpm-workspace.yaml` that
+# rewrite-deps.mjs writes (`packages: []` plus the @pops/* -> file: overrides),
+# not from `--ignore-workspace` any more: pnpm 11 stopped reading
+# `pkg.pnpm.overrides`, so the pins had to move into that file — and
+# `--ignore-workspace` would ignore it. The sandbox is a mktemp dir outside the
+# repo, so there is no ancestor workspace for pnpm to walk up to either way.
+echo "sandbox: installing (isolated, sandbox-local workspace root) …" >&2
+pnpm install --no-frozen-lockfile
 
 if [[ -n "$has_build" ]]; then
   echo "sandbox: building …" >&2

@@ -2,3 +2,29 @@ packages:
   - 'pillars/*'
   - 'pillars/*/*'
   - 'libs/*'
+
+# `allowBuilds` and `overrides` moved here from the `pnpm` field in
+# package.json, which pnpm 11 no longer reads. It warns and ignores those keys
+# rather than failing, so leaving them behind would have silently dropped both
+# an install-script allowlist and two dependency pins.
+#
+# pnpm 11 also renamed the allowlist: `onlyBuiltDependencies` (a list of what
+# may build) became `allowBuilds` (a map, so a block is stated rather than
+# implied by omission).
+#
+# Supply-chain gate — only `true` entries may run install lifecycle scripts.
+# better-sqlite3 and sharp need to compile or fetch a prebuild; esbuild and msw
+# install their own binaries. msgpackr-extract is an optional accelerator that
+# was never on the old allowlist, so it stays blocked — it was previously
+# reported as an ignored build script on every install, and pnpm degrades to
+# the pure-JS path without it.
+allowBuilds:
+  better-sqlite3: true
+  esbuild: true
+  msw: true
+  sharp: true
+  msgpackr-extract: false
+
+overrides:
+  cssstyle: 6.0.2
+  ioredis: 5.11.0
