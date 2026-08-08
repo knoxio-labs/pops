@@ -20,13 +20,15 @@ internal struct TokenDisciplineTests {
         .deletingLastPathComponent()  // DesignSystem
         .deletingLastPathComponent()  // Packages
 
-    /// What one pass over a `Packages` tree found. `emptyRoots` is carried
-    /// rather than folded into a count, because a module whose `Sources` yielded
-    /// nothing and a module with nothing wrong in it produce the identical empty
-    /// violation list.
+    /// What one pass over a `Packages` tree found. Everything but `violations`
+    /// exists because the ways this scan can cover less than it claims all look
+    /// identical from the violation list: no modules, a module with no sources,
+    /// and a directory that was never recognised as a module all produce zero
+    /// violations, which is the same answer as a clean tree.
     private struct ModuleScan {
         let roots: [URL]
         let emptyRoots: [URL]
+        let unrecognised: [URL]
         let violations: [TokenDisciplineScanner.Violation]
     }
 
@@ -37,15 +39,26 @@ internal struct TokenDisciplineTests {
     ///
     /// A directory qualifies by holding a `Package.swift`, not by being a
     /// directory — `Packages/` also accumulates SwiftPM's `.build` trees.
+    /// A visible directory that does *not* qualify comes back as `unrecognised`
+    /// rather than being passed over: a module whose manifest was renamed away
+    /// drops silently out of scope, and silence is what this scan cannot afford.
     private static func scanModules(under packages: URL) throws -> ModuleScan {
-        let roots =
+        let candidates =
             try FileManager.default
-            .contentsOfDirectory(at: packages, includingPropertiesForKeys: nil)
+            .contentsOfDirectory(
+                at: packages, includingPropertiesForKeys: [.isDirectoryKey],
+                options: [.skipsHiddenFiles]
+            )
             .filter {
-                FileManager.default.fileExists(atPath: $0.appending(path: "Package.swift").path)
+                (try? $0.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true
             }
-            .map { $0.appending(path: "Sources") }
             .sorted { $0.path < $1.path }
+
+        let isModule = { (directory: URL) in
+            FileManager.default.fileExists(atPath: directory.appending(path: "Package.swift").path)
+        }
+        let roots = candidates.filter(isModule).map { $0.appending(path: "Sources") }
+        let unrecognised = candidates.filter { !isModule($0) }
 
         var emptyRoots: [URL] = []
         var violations: [TokenDisciplineScanner.Violation] = []
@@ -68,7 +81,9 @@ internal struct TokenDisciplineTests {
                 try TokenDisciplineScanner.violations(in: $0, relativeTo: packages)
             }
         }
-        return ModuleScan(roots: roots, emptyRoots: emptyRoots, violations: violations)
+        return ModuleScan(
+            roots: roots, emptyRoots: emptyRoots, unrecognised: unrecognised,
+            violations: violations)
     }
 
     @Test("no module under Packages/ names a colour or a metric outside the token layer")
@@ -78,6 +93,13 @@ internal struct TokenDisciplineTests {
         try #require(
             !scan.roots.isEmpty,
             "found no package under \(Self.packagesRoot.path) — the scan would pass vacuously")
+        try #require(
+            scan.unrecognised.isEmpty,
+            """
+            these directories under Packages/ hold no Package.swift, so the scan \
+            never looked inside them: \
+            \(scan.unrecognised.map(\.lastPathComponent).joined(separator: ", "))
+            """)
         // Per module rather than over the total: with five modules and one of
         // them renamed, a total taken across all of them is still large and
         // still green while an entire module went unscanned.
@@ -110,6 +132,7 @@ internal struct TokenDisciplineTests {
             scan.roots.map { $0.deletingLastPathComponent().lastPathComponent }
                 == ["DesignSystem", "FeatureFake"])
         #expect(scan.emptyRoots.isEmpty)
+        #expect(scan.unrecognised.isEmpty)
         #expect(scan.violations.map(\.file) == ["FeatureFake/Sources/FeatureFake/Source.swift"])
         #expect(scan.violations.map(\.rule) == ["numeric metric literal"])
     }
@@ -124,6 +147,23 @@ internal struct TokenDisciplineTests {
 
         #expect(
             scan.emptyRoots.map { $0.deletingLastPathComponent().lastPathComponent } == ["Renamed"])
+    }
+
+    @Test("a module whose manifest went missing is reported, not quietly dropped")
+    func directoryWithoutManifestIsReported() throws {
+        let packages = try Self.makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: packages) }
+        try Self.plantModule(named: "Kept", in: packages, source: "let ok = true\n")
+        let orphan = packages.appending(path: "Orphan/Sources/Orphan")
+        try FileManager.default.createDirectory(at: orphan, withIntermediateDirectories: true)
+        try "    .padding(16)\n"
+            .write(to: orphan.appending(path: "Source.swift"), atomically: true, encoding: .utf8)
+
+        let scan = try Self.scanModules(under: packages)
+
+        #expect(scan.unrecognised.map(\.lastPathComponent) == ["Orphan"])
+        // The point of reporting it: its violation is invisible to the scan.
+        #expect(scan.violations.isEmpty)
     }
 
     @Test("generated sources are out of scope, and only because they are generated")

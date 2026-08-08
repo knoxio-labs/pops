@@ -12,7 +12,9 @@ Both apply to every module under `Packages/`, not just to this one.
 
 **Type comes from the scale, never from a point size.** The `Font` tokens are built from `Font.TextStyle`, which is what makes Dynamic Type work. A fixed point size opts that screen out of accessibility silently — it renders correctly for whoever wrote it, at their text size, on their device.
 
-`DesignSystemTests` enforces both rules over **every** module: `TokenDisciplineScanner` walks each `Packages/*/Sources` and fails on a colour, a gap or a point size written at a call site. It self-tests against planted violations, against a fixture tree holding a violating sibling module, and against a module whose sources went missing, so it cannot pass vacuously — and it discovers modules by looking for a `Package.swift` rather than from a list, so a module added tomorrow is in scope without anyone remembering to add it.
+`DesignSystemTests` enforces both rules over **every** module: `TokenDisciplineScanner` walks each `Packages/*/Sources` and fails on a colour, a gap or a point size written at a call site. It discovers modules by looking for a `Package.swift` rather than from a list, so a module added tomorrow is in scope without anyone remembering to add it.
+
+Every way this scan can cover less than it claims looks, from the violation list alone, exactly like a clean tree — so each is caught in its own right and each has a fixture test behind it: no modules found at all, a module whose `Sources` went missing, a directory under `Packages/` holding no manifest and therefore never looked inside, and a filesystem error laundered into "this module has no source". The rules themselves are self-tested against planted violations and against the token-layer idiom nearest to each one.
 
 The check lives in this package's test target and still reaches the others because it is a **file scan**: it reads `.swift` off disk and never imports what it judges, so the boundary that stops a test target from linking a sibling package stops nothing here.
 
