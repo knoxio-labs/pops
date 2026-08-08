@@ -64,8 +64,8 @@ const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..');
 
 /**
- * Every copy of the fixture, canonical first. Repo-relative so the failure
- * messages, the self-test and the unit suite all name the same strings.
+ * Every copy of the fixture. Repo-relative so the failure messages, the
+ * self-test and the unit suite all name the same strings.
  *
  * Adding a copy is adding an entry here: the equality check is pairwise
  * against the canonical one, so a third consumer needs no new code.
@@ -81,8 +81,33 @@ export const FIXTURE_COPIES = Object.freeze([
   }),
 ]);
 
-/** The canonical copy — the one a drifted copy must be restored from. */
-const CANONICAL = FIXTURE_COPIES[0];
+/** Only a client can generate the vector, so only a client can hold the original. */
+const CANONICAL_ROOT = 'clients/';
+
+/**
+ * The canonical copy — the one every other copy is compared against and
+ * restored from.
+ *
+ * Identified by where it lives rather than by position. The list above is
+ * meant to grow, so an index would silently promote a consumer's vendored copy
+ * to canonical the day someone reorders it, and the drift check would then
+ * enforce agreement with the wrong file — passing while the real contract had
+ * moved. Ambiguity is fatal here rather than resolved by picking the first
+ * match: two originals is not a state this guard can check anything against.
+ *
+ * @returns {{ role: string, path: string }}
+ */
+function resolveCanonical() {
+  const found = FIXTURE_COPIES.filter((copy) => copy.path.startsWith(CANONICAL_ROOT));
+  if (found.length !== 1) {
+    throw new Error(
+      `expected exactly one device-signature fixture copy under ${CANONICAL_ROOT}, found ${String(found.length)}`
+    );
+  }
+  return found[0];
+}
+
+const CANONICAL = resolveCanonical();
 
 /** The encoding contract, restated here so the fixture cannot redefine itself. */
 const CONTRACT = Object.freeze({
