@@ -37,7 +37,7 @@ const GOOD = JSON.stringify({
 
 describe('a reading that holds up', () => {
   it('is admissible, with the extraction carried through', async () => {
-    const outcome = await readReceipt(saying(GOOD), IMAGE);
+    const outcome = await readReceipt(saying(GOOD), [IMAGE]);
     expect(outcome.kind).toBe('read');
     if (outcome.kind !== 'read') return;
     expect(outcome.extracted.merchantName).toBe('Bunnings Warehouse');
@@ -46,8 +46,8 @@ describe('a reading that holds up', () => {
 
   it('tolerates a model that wraps its JSON in prose or a fence', async () => {
     // Refusing these would discard good extractions over punctuation.
-    const fenced = await readReceipt(saying('Here you go:\n```json\n' + GOOD + '\n```'), IMAGE);
-    const chatty = await readReceipt(saying('Sure! ' + GOOD + ' Hope that helps.'), IMAGE);
+    const fenced = await readReceipt(saying('Here you go:\n```json\n' + GOOD + '\n```'), [IMAGE]);
+    const chatty = await readReceipt(saying('Sure! ' + GOOD + ' Hope that helps.'), [IMAGE]);
     expect(fenced.kind).toBe('read');
     expect(chatty.kind).toBe('read');
   });
@@ -58,7 +58,7 @@ describe('a reading that does not', () => {
     // The purchase is real and the photo exists. Refusing it outright would
     // lose a shop that happened.
     const wrong = JSON.stringify({ ...JSON.parse(GOOD), total: '$99.99' });
-    const outcome = await readReceipt(saying(wrong), IMAGE);
+    const outcome = await readReceipt(saying(wrong), [IMAGE]);
     expect(outcome.kind).toBe('needs-review');
     if (outcome.kind !== 'needs-review') return;
     expect(outcome.gate.failures.map((f) => f.kind)).toEqual(['sum-mismatch']);
@@ -69,7 +69,7 @@ describe('a reading that does not', () => {
   it('tells a model that was down apart from a receipt that made no sense', async () => {
     // Retrying later and asking the user to re-photograph are different
     // actions, so these must not collapse into one outcome.
-    const down = await readReceipt(failing(new Error('socket hang up')), IMAGE);
+    const down = await readReceipt(failing(new Error('socket hang up')), [IMAGE]);
     expect(down).toEqual({
       kind: 'unreadable',
       reason: 'the vision model failed: socket hang up',
@@ -78,7 +78,7 @@ describe('a reading that does not', () => {
 
   it('treats an absent model as unreadable, never as an empty receipt', async () => {
     for (const answer of [null, '', '   ']) {
-      const outcome = await readReceipt(saying(answer), IMAGE);
+      const outcome = await readReceipt(saying(answer), [IMAGE]);
       expect(outcome.kind).toBe('unreadable');
     }
   });
@@ -86,7 +86,7 @@ describe('a reading that does not', () => {
   it('reports unusable output rather than throwing', async () => {
     const outcomes = await Promise.all(
       ['I cannot read this receipt.', '{ not json }', '{"total":"$1.00"}'].map((answer) =>
-        readReceipt(saying(answer), IMAGE)
+        readReceipt(saying(answer), [IMAGE])
       )
     );
     expect(outcomes.map((o) => o.kind)).toEqual(['unreadable', 'unreadable', 'unreadable']);
@@ -96,7 +96,7 @@ describe('a reading that does not', () => {
     // A model that omits four fields has one problem, not four consecutive
     // ones. Reporting them one at a time turns diagnosis into four round
     // trips against a model that answers differently each time.
-    const outcome = await readReceipt(saying('{"total":"$1.00","merchantName":null}'), IMAGE);
+    const outcome = await readReceipt(saying('{"total":"$1.00","merchantName":null}'), [IMAGE]);
     expect(outcome.kind).toBe('unreadable');
     if (outcome.kind !== 'unreadable') return;
     for (const missing of ['purchasedOn', 'purchasedAt', 'currency', 'tax', 'lines']) {
