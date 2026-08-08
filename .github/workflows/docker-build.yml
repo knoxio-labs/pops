@@ -26,6 +26,12 @@ on:
 # `*-quality.yml` workflows — this job re-validates every Dockerfile +
 # compose surface in one place, gated on changes. (Theme 13 PRD-220.)
 #
+# Each Dockerfile is BUILT AND STARTED. Building alone is not a gate: under
+# pnpm 11 `pnpm deploy --legacy` wrote workspace-escaping `@pops/*` symlinks,
+# every Node pillar image built clean, and every one of them died on its
+# first import. Only starting the container sees that, so the health probe —
+# not the build — is what this workflow asserts.
+#
 # One job per Dockerfile, in parallel. Building all sixteen in sequence
 # took ~12 minutes and was the long pole on every push, while each one
 # alone takes a minute or two — the work was never the problem, the queue
@@ -87,7 +93,7 @@ jobs:
           echo "dockerfiles=${found}" >> "$GITHUB_OUTPUT"
 
   docker-build:
-    name: Validate Docker build
+    name: Build + smoke image
     runs-on: ubuntu-latest
     needs: [discover]
     if: always() && needs.discover.outputs.dockerfiles != '[]' && needs.discover.outputs.dockerfiles != ''
@@ -97,11 +103,28 @@ jobs:
         dockerfile: ${{ fromJson(needs.discover.outputs.dockerfiles) }}
     steps:
       - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
 
-      # The builder stage is enough to surface a broken Dockerfile; the
-      # `*-quality.yml` workflows + publish-images own the full image.
-      - name: Build ${{ matrix.dockerfile }} (builder stage)
-        run: docker build --target builder -f "${{ matrix.dockerfile }}" .
+      # The FULL image, not `--target builder`. A builder-stage build cannot
+      # see the class of bug that broke every Node pillar image under pnpm 11:
+      # `pnpm deploy --legacy` wrote relative `@pops/*` symlinks that escaped
+      # the deploy dir, so the build succeeded, the image exported clean, and
+      # the container died on its first import. The runtime stage is a handful
+      # of COPYs on top of the builder — this costs almost nothing extra.
+      - name: Build ${{ matrix.dockerfile }}
+        id: build
+        run: |
+          set -euo pipefail
+          tag="pops-smoke:$(basename "$(dirname "${{ matrix.dockerfile }}")")"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          docker build -f "${{ matrix.dockerfile }}" -t "$tag" .
+
+      # Start it and require a health response. This is the gate; the build
+      # above is only its precondition.
+      - name: Smoke ${{ matrix.dockerfile }}
+        run: node scripts/ci/smoke-image.mjs "${{ matrix.dockerfile }}" "${{ steps.build.outputs.tag }}"
 
   compose-validate:
     name: Validate docker-compose
