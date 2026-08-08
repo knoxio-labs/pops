@@ -514,6 +514,13 @@ export function extractComments(source, ext) {
  * Where a line's comment begins, skipping markers that sit inside a string
  * literal — `'https://…'` and `sed 's/#//'` are code, not comments.
  *
+ * A `#` counts only at line start or after whitespace, which is the rule shell,
+ * YAML and TOML actually use. Without it, shell parameter expansion
+ * (`${LAST_TAG#v}`) reads as a comment and everything after it is scanned as
+ * prose. A backtick is a string delimiter only in the C-style languages: in
+ * shell it opens command substitution and in YAML and TOML it means nothing, so
+ * quoting on it there would swallow real comments that merely contain one.
+ *
  * @param {string} line
  * @param {boolean} slash True for `//` + block comments, false for `#`.
  * @returns {{ index: number, marker: string, block: boolean } | null}
@@ -532,7 +539,9 @@ function findCommentStart(line, slash) {
       quote = ch;
       continue;
     }
-    if (!slash && ch === '#') return { index: i, marker: '#', block: false };
+    if (!slash && ch === '#' && (i === 0 || /\s/u.test(line[i - 1]))) {
+      return { index: i, marker: '#', block: false };
+    }
     if (slash && ch === '/' && line[i + 1] === '/') return { index: i, marker: '//', block: false };
     if (slash && ch === '/' && line[i + 1] === '*') return { index: i, marker: '/*', block: true };
   }
@@ -847,7 +856,17 @@ function selfTest() {
       .includes('docs/architecture/adr-039-pillar-isolation.md') &&
     extractComments('run: echo "# not a comment"\n# see docs/b.md\n', 'yml').join('|') ===
       'see docs/b.md' &&
-    extractComments('# see docs/c.md\n', 'toml').join('|') === 'see docs/c.md';
+    extractComments('# see docs/c.md\n', 'toml').join('|') === 'see docs/c.md' &&
+    // A `#` mid-word is not a comment marker — shell parameter expansion and a
+    // package.json fragment both use one, and taking it as the comment start
+    // scans the rest of the line as prose.
+    extractComments('pkg = package.json#name # see docs/d.md\n', 'yml').join('|') ===
+      'see docs/d.md' &&
+    extractComments('V=${LAST_TAG#v} # see docs/d.md\n', 'sh').join('|') === 'see docs/d.md' &&
+    // A backtick is not a string delimiter in a `#` language, so a comment
+    // containing one is still read to the end of the line.
+    extractComments('# a `#!/usr/bin/env node` shim, see docs/e.md\n', 'toml').join('|') ===
+      'a `#!/usr/bin/env node` shim, see docs/e.md';
 
   // A URL's `/docs/` tail is not a repo path; a bare nested doc directory is
   // prose; a one-level `docs/x` is a prose slash. A markdown file anywhere
