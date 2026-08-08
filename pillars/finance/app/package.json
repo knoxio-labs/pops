@@ -43,7 +43,7 @@
   "devDependencies": {
     "@hey-api/openapi-ts": "^0.99.0",
     "@pops/locales": "workspace:*",
-    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/jest-dom": "^7.0.0",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.3",
     "@types/crypto-js": "^4.2.2",
@@ -52,7 +52,7 @@
     "@types/react-dom": "^19.2.4",
     "@vitest/coverage-v8": "^4.1.10",
     "fake-indexeddb": "^6.2.5",
-    "jsdom": "^29.1.1",
+    "jsdom": "^30.0.1",
     "typescript": "^6.0.3",
     "vitest": "^4.1.10"
   }
