@@ -118,13 +118,21 @@ The registry's service-account admin surface is `userOnly` — it rejects a
 machine principal unconditionally, so a service account can never mint another
 and this is an operator step, done once per environment.
 
-From a shell logged in through Cloudflare Access (in non-production the
-dev-user fallback stands in), against the registry's admin surface — reachable
+`userOnly` means a Cloudflare Access identity specifically: the handler reads
+`cf-access-jwt-assertion` and verifies it. A bare `curl` carries no identity
+and gets a `401` — mint a token for the app first (`cloudflared access token`)
+and send it in that header, against the registry's admin surface reachable
 externally through the shell proxy:
 
 ```bash
-curl -sS -X POST https://pops.local/registry-api/service-accounts -H 'Content-Type: application/json' -d '{"name":"bfm","scopes":["finance.transactions"]}'
+curl -sS -X POST https://pops.local/registry-api/service-accounts -H 'Content-Type: application/json' -H "cf-access-jwt-assertion: $ACCESS_JWT" -d '{"name":"bfm","scopes":["finance.transactions"]}'
 ```
+
+Two deployment shapes let a bare `curl` through, which is why this can work on
+a laptop and then 401 on the real fleet: outside production the registry
+resolves a dev user unconditionally, and a production deployment with no
+`CLOUDFLARE_ACCESS_TEAM_NAME` set resolves a tunnel user. The order is written
+down in exactly one place — `pillars/registry/src/api/middleware/identity.ts`.
 
 The scopes must match `BFM_SERVICE_ACCOUNT_SCOPES` in
 `src/api/pillars/service-account.ts`, which is the source of truth for the
