@@ -340,26 +340,28 @@ function selfTest(valid) {
   const readerOver = (files) => (/** @type {string} */ p) => files.get(p) ?? null;
   const identical = new Map(FIXTURE_COPIES.map(({ path }) => [path, validText]));
 
+  // Drift is only meaningful against the canonical copy, so every case below
+  // perturbs a copy that is NOT it — chosen by that property rather than by
+  // position, so reordering or extending FIXTURE_COPIES cannot turn these into
+  // assertions about the canonical file drifting from itself.
+  const perturbable = FIXTURE_COPIES.find((copy) => copy.path !== CANONICAL.path);
+  if (perturbable === undefined) {
+    console.error('SELF-TEST FAILED: no non-canonical copy to perturb — drift is untestable');
+    return false;
+  }
+
+  /** @param {string} contents */
+  const withPerturbed = (contents) =>
+    checkAllCopies(readerOver(new Map(identical).set(perturbable.path, contents)));
+
   /** @type {[string, string[]][]} */
   const copyCases = [
     ['every copy identical', checkAllCopies(readerOver(identical))],
     [
       'one copy edited without the other',
-      checkAllCopies(
-        readerOver(
-          new Map(identical).set(
-            FIXTURE_COPIES[1].path,
-            JSON.stringify({ ...valid, version: valid.version + 1 })
-          )
-        )
-      ),
+      withPerturbed(JSON.stringify({ ...valid, version: valid.version + 1 })),
     ],
-    [
-      'one copy reformatted but semantically equal',
-      checkAllCopies(
-        readerOver(new Map(identical).set(FIXTURE_COPIES[1].path, JSON.stringify(valid, null, 4)))
-      ),
-    ],
+    ['one copy reformatted but semantically equal', withPerturbed(JSON.stringify(valid, null, 4))],
     ['a copy deleted', checkAllCopies(readerOver(new Map([[CANONICAL.path, validText]])))],
   ];
 
