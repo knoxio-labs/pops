@@ -79,10 +79,6 @@ function isRetryable(status: UpstreamErrorStatus): boolean {
 }
 
 /**
- * For a route that addresses one resource by path, where 404 is a fact about
- * the user's data and the route declares it.
- */
-/**
  * Compose the operator-facing message.
  *
  * `detail` is never rendered — the app draws its own copy from `code`. It is
@@ -94,6 +90,10 @@ function describe(summary: string, failure: GatewayFailure): string {
   return failure.detail === undefined ? summary : `${summary}: ${failure.detail}`;
 }
 
+/**
+ * For a route that addresses one resource by path, where 404 is a fact about
+ * the user's data and the route declares it.
+ */
 export function toUpstreamErrorResponse(failure: GatewayFailure): UpstreamErrorResponse {
   const { status, code, summary } = classify(failure);
 

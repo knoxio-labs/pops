@@ -189,6 +189,19 @@ describe('transactions — filters & pagination', () => {
     ).rejects.toMatchObject({ status: 400 });
   });
 
+  it('answers a rejected query in the error shape every 400 declares', async () => {
+    // ts-rest rejects this ahead of the handler and would otherwise send its
+    // own `{ name, issues }`, which the contract does not describe — so a
+    // client generated from the document could not decode it.
+    const failure = await client()
+      .transactions.list({ beforeDate: 'not-a-date', beforeId: 'x' })
+      .catch((error: unknown) => error);
+
+    const body = (failure as { body?: Record<string, unknown> }).body ?? {};
+    expect(Object.keys(body).toSorted()).toEqual(['code', 'message', 'messageKey']);
+    expect(body['messageKey']).toBe('common.validationFailed');
+  });
+
   it('refuses an anchor date that is not a date', async () => {
     // An anchor is compared lexicographically, so a malformed one sorts
     // wherever its characters fall and silently changes which rows come back.
