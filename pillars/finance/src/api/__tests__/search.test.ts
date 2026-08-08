@@ -47,6 +47,12 @@ function withScheme(hits: SearchHit[], scheme: string): SearchHit[] {
   return hits.filter((h) => h.uri.startsWith(scheme));
 }
 
+function firstHit(hits: SearchHit[]): SearchHit {
+  const [hit] = hits;
+  if (!hit) throw new Error(`expected at least one hit, got ${hits.length}`);
+  return hit;
+}
+
 describe('search — transactions adapter', () => {
   it('returns a transaction hit carrying the canonical type and the legacy uri shape', async () => {
     const created = await client().transactions.create({
@@ -60,7 +66,7 @@ describe('search — transactions adapter', () => {
     const { hits } = await client().search.run({ query: { text: 'coffee' } });
     const txHits = withScheme(hits, 'pops:finance/transaction/');
     expect(txHits).toHaveLength(1);
-    const [hit] = txHits;
+    const hit = firstHit(txHits);
     expect(hit.uri).toBe(`pops:finance/transaction/${created.data.id}`);
     expect(hit.score).toBe(1.0);
     expect(hit.matchType).toBe('exact');
@@ -78,7 +84,7 @@ describe('search — transactions adapter', () => {
     });
 
     const { hits } = await client().search.run({ query: { text: 'refunded jacket' } });
-    const [hit] = withScheme(hits, 'pops:finance/transaction/');
+    const hit = firstHit(withScheme(hits, 'pops:finance/transaction/'));
     expect(hit.data).toMatchObject({ type: 'refund', amount: 80 });
   });
 
@@ -119,9 +125,10 @@ describe('search — budgets adapter', () => {
     const { hits } = await client().search.run({ query: { text: 'groceries' } });
     const budgetHits = hits.filter((h) => h.uri.startsWith('/budgets/'));
     expect(budgetHits).toHaveLength(1);
-    expect(budgetHits[0].uri).toBe(`/budgets/${created.data.id}`);
-    expect(budgetHits[0].score).toBe(1.0);
-    expect(budgetHits[0].data).toMatchObject({ category: 'Groceries', period: 'Monthly' });
+    const budgetHit = firstHit(budgetHits);
+    expect(budgetHit.uri).toBe(`/budgets/${created.data.id}`);
+    expect(budgetHit.score).toBe(1.0);
+    expect(budgetHit.data).toMatchObject({ category: 'Groceries', period: 'Monthly' });
   });
 });
 
@@ -134,7 +141,7 @@ describe('search — wishlist adapter', () => {
     const { hits } = await client().search.run({ query: { text: 'bike' } });
     const wishHits = hits.filter((h) => h.uri === '/finance/wishlist');
     expect(wishHits).toHaveLength(1);
-    expect(wishHits[0].data).toMatchObject({ item: 'Bike', targetAmount: 1000 });
+    expect(firstHit(wishHits).data).toMatchObject({ item: 'Bike', targetAmount: 1000 });
     expect(open.data.item).toBe('Bike');
   });
 

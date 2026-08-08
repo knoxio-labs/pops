@@ -5,7 +5,7 @@ import {
   getTransferPairWindowDays,
   isTransferPairEnabled,
   type PairCandidate,
-} from '../pair-transfers';
+} from '../pair-transfers.js';
 
 /**
  * Amounts are integer cents (money migration 0064), so absolute-value equality

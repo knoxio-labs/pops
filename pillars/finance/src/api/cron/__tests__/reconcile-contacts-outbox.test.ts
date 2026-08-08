@@ -29,10 +29,12 @@ import {
   type ReconcileContactsOutboxHandle,
 } from '../reconcile-contacts-outbox.js';
 
+import type { EntityType } from '../../../db/entity-types.js';
+
 let tmpDir: string;
 let opened: OpenedFinanceDb;
 
-function seedOutboxRow(name: string, type = 'company'): string {
+function seedOutboxRow(name: string, type: EntityType = 'company'): string {
   const id = entityPrecreateOutboxService.buildPendingContactId();
   entityPrecreateOutboxService.enqueue(opened.db, { id, name, type });
   return id;
@@ -44,7 +46,7 @@ function seedTransactionWithEntity(checksum: string, entityId: string): void {
     account: 'Amex',
     amountCents: -1000,
     date: '2026-02-13',
-    type: 'Expense',
+    type: 'purchase',
     tags: [],
     entityId,
     entityName: null,

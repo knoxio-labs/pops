@@ -210,7 +210,6 @@ describe('reevaluate — a new rule reaches rows that were already matched (#381
         isActive: true,
         confidence: 0.72,
         priority: 0,
-        needsReview: true,
       })
       .run();
     const alreadyMatched = matchedTxn('COLES SYDNEY', {

@@ -32,7 +32,7 @@ function seedBudget(category: string, ownerUri: string | null): string {
       id,
       category,
       period: null,
-      amount: 100,
+      amountCents: 10000,
       active: 1,
       notes: null,
       lastEditedTime: '2026-01-01T00:00:00Z',

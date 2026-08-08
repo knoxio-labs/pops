@@ -115,7 +115,7 @@ function seedTransaction(overrides: {
     account: 'Amex',
     amountCents: -4250,
     date: '2026-02-13',
-    type: 'Expense',
+    type: 'purchase',
     tags: [],
     entityId: overrides.entityId ?? null,
     entityName: overrides.entityName ?? null,
