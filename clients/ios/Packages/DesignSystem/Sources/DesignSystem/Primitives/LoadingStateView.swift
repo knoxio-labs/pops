@@ -3,9 +3,11 @@ import SwiftUI
 /// The one spinner. A feature that rolls its own is a feature whose loading
 /// state will not follow the next redesign.
 public struct LoadingStateView: View {
+    public static let fallbackMessage = "Loading…"
+
     private let message: String
 
-    public init(message: String = "Loading…") {
+    public init(message: String = LoadingStateView.fallbackMessage) {
         self.message = message
     }
 
@@ -17,8 +19,6 @@ public struct LoadingStateView: View {
         }
         .accessibilityElement(children: .combine)
     }
-
-    static let fallbackMessage = "Loading…"
 }
 
 #Preview("Loading") {

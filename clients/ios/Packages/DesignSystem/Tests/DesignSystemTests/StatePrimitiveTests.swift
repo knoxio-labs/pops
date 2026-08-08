@@ -1,3 +1,5 @@
+import CoreGraphics
+import Foundation
 import Testing
 
 @testable import DesignSystem
@@ -37,21 +39,19 @@ struct StatePrimitiveTests {
 struct SpacingScaleTests {
     @Test("steps ascend, so a larger name is never a smaller gap")
     func scaleAscends() {
-        for (smaller, larger) in zip(PopsSpacing.scale, PopsSpacing.scale.dropFirst()) {
-            #expect(smaller < larger, "\(smaller) is not smaller than \(larger)")
-        }
-    }
+        let steps: [(name: String, value: CGFloat)] = [
+            ("zero", PopsSpacing.zero),
+            ("xs", PopsSpacing.xs),
+            ("sm", PopsSpacing.sm),
+            ("md", PopsSpacing.md),
+            ("lg", PopsSpacing.lg),
+            ("xl", PopsSpacing.xl),
+            ("xxl", PopsSpacing.xxl),
+        ]
 
-    @Test("the scale enumerates every declared step")
-    func scaleIsComplete() {
-        #expect(PopsSpacing.scale == [
-            PopsSpacing.zero,
-            PopsSpacing.xs,
-            PopsSpacing.sm,
-            PopsSpacing.md,
-            PopsSpacing.lg,
-            PopsSpacing.xl,
-            PopsSpacing.xxl,
-        ])
+        for (smaller, larger) in zip(steps, steps.dropFirst()) {
+            #expect(smaller.value < larger.value,
+                    "\(smaller.name) (\(smaller.value)) is not smaller than \(larger.name) (\(larger.value))")
+        }
     }
 }

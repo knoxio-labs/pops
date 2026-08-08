@@ -4,6 +4,9 @@ import SwiftUI
 /// dead end is a design decision, and making it the easy default is how screens
 /// end up with one.
 public struct ErrorStateView: View {
+    public static let fallbackMessage = "Something went wrong."
+    public static let retryTitle = "Retry"
+
     private let message: String
     let retry: () -> Void
 
@@ -26,9 +29,6 @@ public struct ErrorStateView: View {
                 )
         }
     }
-
-    static let fallbackMessage = "Something went wrong."
-    static let retryTitle = "Retry"
 }
 
 #Preview("Error") {

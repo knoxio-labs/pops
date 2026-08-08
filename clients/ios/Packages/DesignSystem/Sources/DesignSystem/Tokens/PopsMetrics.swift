@@ -11,10 +11,6 @@ public enum PopsSpacing {
     public static let lg: CGFloat = 16
     public static let xl: CGFloat = 24
     public static let xxl: CGFloat = 32
-
-    /// The scale in ascending order, so a caller can iterate it and a test can
-    /// assert it stays ordered.
-    public static let scale: [CGFloat] = [zero, xs, sm, md, lg, xl, xxl]
 }
 
 /// Corner radii, named by the thing they round rather than by their value.

@@ -4,10 +4,10 @@ import SwiftUI
 /// The shared body of the three state screens: a centred message over the app
 /// background, with room for one action. Keeping it here is what stops
 /// `LoadingStateView`, `EmptyStateView` and `ErrorStateView` drifting apart.
-struct StateView<Action: View>: View {
+struct StateView<Accessory: View>: View {
     let message: String
     let messageColor: Color
-    @ViewBuilder let action: () -> Action
+    @ViewBuilder let accessory: () -> Accessory
 
     var body: some View {
         VStack(spacing: PopsSpacing.md) {
@@ -15,7 +15,7 @@ struct StateView<Action: View>: View {
                 .font(.popsBody)
                 .foregroundStyle(messageColor)
                 .multilineTextAlignment(.center)
-            action()
+            accessory()
         }
         .padding(PopsSpacing.xl)
         .frame(maxWidth: .infinity, maxHeight: .infinity)

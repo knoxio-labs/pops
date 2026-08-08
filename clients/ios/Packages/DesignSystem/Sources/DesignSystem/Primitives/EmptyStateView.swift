@@ -4,6 +4,8 @@ import SwiftUI
 /// `ErrorStateView` on purpose: "no results" and "the call failed" read the
 /// same to a user only when a screen conflates them.
 public struct EmptyStateView: View {
+    public static let fallbackMessage = "Nothing here yet."
+
     private let message: String
 
     public init(message: String) {
@@ -16,8 +18,6 @@ public struct EmptyStateView: View {
             EmptyView()
         }
     }
-
-    static let fallbackMessage = "Nothing here yet."
 }
 
 #Preview("Empty") {
