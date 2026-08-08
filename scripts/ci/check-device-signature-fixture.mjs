@@ -366,12 +366,31 @@ function main() {
     process.exit(2);
   }
 
-  /** @param {string} repoRelativePath @returns {string | null} */
+  /**
+   * The only I/O in this file, and the only place that decides what `null`
+   * means. An absent copy is a FINDING — `checkAllCopies` reports it as missing
+   * — but an unreadable one is an environment failure, and collapsing the two
+   * would print "not on disk" about a file that is right there. Wrong output is
+   * worse than none: it sends the reader to `git status` instead of to the
+   * permissions.
+   *
+   * @param {string} repoRelativePath
+   * @returns {string | null} `null` only when the file does not exist.
+   */
   const read = (repoRelativePath) => {
     try {
       return readFileSync(join(repoRoot, repoRelativePath), 'utf8');
-    } catch {
-      return null;
+    } catch (error) {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        error.code === 'ENOENT'
+      ) {
+        return null;
+      }
+      console.error(`FAIL — cannot read ${repoRelativePath}: ${String(error)}`);
+      process.exit(1);
     }
   };
 
@@ -382,7 +401,7 @@ function main() {
     // SyntaxError here would report a broken fixture as a broken guard.
     const canonical = read(CANONICAL.path);
     if (canonical === null) {
-      console.error(`FAIL — cannot read ${CANONICAL.path}`);
+      console.error(`FAIL — ${CANONICAL.path} does not exist`);
       process.exit(1);
     }
     /** @type {Fixture} */
