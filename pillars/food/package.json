@@ -61,7 +61,7 @@
     "@ts-rest/express": "3.53.0-rc.1",
     "@ts-rest/open-api": "3.53.0-rc.1",
     "better-sqlite3": "^12.10.0",
-    "bullmq": "^5.78.0",
+    "bullmq": "^6.0.8",
     "drizzle-orm": "^0.45.2",
     "drizzle-zod": "^0.8.3",
     "express": "^5.1.0",
