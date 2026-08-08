@@ -175,7 +175,7 @@ pops ships code, per-pillar Dockerfiles, and `infra/docker-compose.yml`. Pushing
 
 ## Repo Structure
 
-Exactly **two unit kinds**: `pillars/` (services) and `libs/` (shared libraries, no service, no DB).
+Exactly **three unit kinds**: `pillars/` (services), `libs/` (shared libraries, no service, no DB) and `clients/` (distributable end-user binaries — [ADR-043](docs/architecture/adr-043-clients-as-a-unit-kind.md)).
 
 ```
 pillars/                   # One pillar per folder. A TS pillar: own SQLite DB (src/db),
@@ -194,6 +194,18 @@ libs/                      # Shared libraries — no service, no DB, and a lib m
 │                          #   import from a pillar (enforced: scripts/ci/check-lib-no-pillar-import.mjs).
 │                          # Each lib's own README states what it is and who depends on it;
 │                          #   `ls libs/` is the inventory.
+
+clients/                   # Distributable end-user binaries. Membership needs BOTH halves:
+│                          #   consumes the federation over HTTP through one pillar's published
+│                          #   contract, and is imported by NOTHING in this repo (the lib rule
+│                          #   pointed the other way). Serves no contract, owns no store,
+│                          #   registers nothing with the registry.
+│                          # Outside the pnpm and cargo workspaces, so mise fan-out, unit
+│                          #   discovery and image publishing all skip it — a client either has
+│                          #   its own workflow or it has no CI at all.
+│                          # Distributed, not deployed: a shipped build runs on hardware the
+│                          #   operator cannot roll forward, so its pillar's contract is
+│                          #   additive-first. `ls clients/` is the inventory.
 
 infra/
 ├── docker-compose.yml     # Production compose (ghcr.io/knoxio-labs/pops-<id> images + Watchtower)
@@ -486,4 +498,4 @@ Each pillar is its own service on its own port. For a full stack, prefer `docker
 - **Node version:** Node.js 24.19.0 via **mise** (`mise.toml`); CI resolves the same major from `mise.ci.toml`, and the pillar images build on `node:24`. NVM must be disabled in `~/.bashrc` to avoid conflicts. `NODE_MODULE_VERSION` mismatch with `better-sqlite3` = wrong Node active — ensure mise provides the binary, not NVM. Node 24 is ABI 137; if you see a build expecting 147, something is running Node 26.
 - **Env files:** each pillar has its own `.env` (copy from its `.env.example`); it resolves its own SQLite path + `PORT` from env — only those are required for basic local dev. Media/AI API keys are optional and live with the pillar that uses them. The shell consumes pillars over HTTP by port (`registry :3001` … `cerebrum :3007`, `orchestrator :3009`); its dev proxy points at the running pillars.
 - **Database setup:** no global seed — each pillar migrates its own SQLite DB on startup; per-pillar seed/reset scripts live in that pillar's `package.json`.
-- **Gotchas:** each pillar owns and resolves its own SQLite file — never assume a shared DB path. The shell Vite dev server uses **5568** (not 5173). `pnpm.onlyBuiltDependencies` in root `package.json` already covers `better-sqlite3`, `esbuild`, `msw`, `sharp` — no `pnpm approve-builds` needed. **Regenerate a pillar's frontend client after contract changes** — run that app's `generate:*-client` script (Hey API `openapi-ts` over the pillar's OpenAPI snapshot).
+- **Gotchas:** each pillar owns and resolves its own SQLite file — never assume a shared DB path. The shell Vite dev server uses **5568** (not 5173). `allowBuilds` in root `pnpm-workspace.yaml` already covers `better-sqlite3`, `esbuild`, `msw`, `sharp` — no `pnpm approve-builds` needed. (pnpm 11 no longer reads the `pnpm` field in `package.json`; it warns and ignores those keys, so settings live in `pnpm-workspace.yaml`.) **Regenerate a pillar's frontend client after contract changes** — run that app's `generate:*-client` script (Hey API `openapi-ts` over the pillar's OpenAPI snapshot).

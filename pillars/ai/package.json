@@ -58,11 +58,11 @@
     "@types/express": "^5.0.4",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^25.9.3",
-    "@types/supertest": "^6.0.3",
+    "@types/supertest": "^7.2.1",
     "@vitest/coverage-v8": "^4.1.10",
     "openapi-typescript": "^7.13.0",
     "supertest": "^7.1.4",
-    "tsx": "^4.23.5",
+    "tsx": "^4.23.10",
     "typescript": "^6.0.3",
     "vitest": "^4.1.10"
   }
