@@ -78,7 +78,13 @@ const SAMPLE_RECIPE: ExtractedRecipe = {
       prep_state_slug: 'spiralised',
       optional: false,
     },
-    { qty: 4, unit: 'count', ingredient_slug: 'garlic', notes: 'fresh if possible' },
+    {
+      qty: 4,
+      unit: 'count',
+      ingredient_slug: 'garlic',
+      optional: false,
+      notes: 'fresh if possible',
+    },
   ],
   steps: [
     { body: 'Boil @1 in salted water until al dente.', duration_minutes: 10 },

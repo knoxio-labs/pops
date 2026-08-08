@@ -13,7 +13,7 @@ import {
   runYtDlp,
 } from '../instagram-acquisition.js';
 
-import type { ChildProcess } from 'node:child_process';
+import type { ChildProcess, SpawnOptions } from 'node:child_process';
 
 import type { RunInstagramAcquisitionOptions, YtDlpResult } from '../instagram-acquisition.js';
 import type { HandlerContext } from '../types.js';
@@ -398,6 +398,9 @@ describe('runInstagramAcquisition', () => {
   });
 });
 
+/** How `runYtDlp` actually calls its `spawnFn` seam. */
+type SpawnLike = (command: string, args: readonly string[], options: SpawnOptions) => ChildProcess;
+
 function makeFakeChild(opts: {
   exit?: { code: number | null; signal: NodeJS.Signals | null } | { error: Error };
   stdout?: string;
@@ -433,7 +436,7 @@ function makeFakeChild(opts: {
 
 describe('runYtDlp', () => {
   it('resolves with stdout/stderr/exitCode on a normal exit', async () => {
-    const spawnFn = vi.fn(() =>
+    const spawnFn = vi.fn<SpawnLike>(() =>
       makeFakeChild({
         exit: { code: 0, signal: null },
         stdout: 'video downloaded\n',

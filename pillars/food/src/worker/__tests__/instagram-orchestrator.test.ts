@@ -43,6 +43,12 @@ const HAPPY_PARSED: ExtractedRecipe = {
   steps: [{ body: 'Smash and sear.', duration_min: null, temperature_c: null }],
 };
 
+type RunAcquisition = NonNullable<InstagramIngestDeps['runAcquisitionImpl']>;
+type RunWhisper = NonNullable<InstagramIngestDeps['runWhisperImpl']>;
+type ExtractKeyframes = NonNullable<InstagramIngestDeps['extractKeyframesImpl']>;
+type ExtractWithVision = NonNullable<InstagramIngestDeps['extractWithVisionImpl']>;
+type ExtractWithTextFallback = NonNullable<InstagramIngestDeps['extractWithTextFallbackImpl']>;
+
 function noopClient(): AnthropicLike {
   return { messages: { create: vi.fn() } };
 }
@@ -63,7 +69,7 @@ function acqOk(caption: string | null): Extract<AcquisitionResult, { ok: true }>
 }
 
 function whisperOk(transcript: string) {
-  return vi.fn(async () => ({
+  return vi.fn<RunWhisper>(async () => ({
     transcript,
     model: 'distil-large-v3',
     durationMs: 1234,
@@ -72,11 +78,11 @@ function whisperOk(transcript: string) {
 }
 
 function ffmpegOk(paths: string[]) {
-  return vi.fn(async () => ({ paths, durationMs: 100, usedFallback: false }));
+  return vi.fn<ExtractKeyframes>(async () => ({ paths, durationMs: 100, usedFallback: false }));
 }
 
 function visionOk(parsed: ExtractedRecipe) {
-  return vi.fn(async () => ({
+  return vi.fn<ExtractWithVision>(async () => ({
     parsed,
     model: 'claude-haiku-4-5-20251001',
     promptVersion: 'ig-vision-v1.0',
@@ -88,7 +94,7 @@ function visionOk(parsed: ExtractedRecipe) {
 }
 
 function textFallbackOk(parsed: ExtractedRecipe) {
-  return vi.fn(async () => ({
+  return vi.fn<ExtractWithTextFallback>(async () => ({
     parsed,
     model: 'claude-haiku-4-5-20251001',
     promptVersion: 'web-llm-v1.0',
@@ -253,7 +259,7 @@ describe('runInstagramPipeline — acquisition failures', () => {
       DATA,
       ctx(),
       deps({
-        runAcquisitionImpl: vi.fn(async () => ({
+        runAcquisitionImpl: vi.fn<RunAcquisition>(async () => ({
           ok: false,
           kind: 'auth-dead',
           stderr: '',
@@ -271,7 +277,7 @@ describe('runInstagramPipeline — acquisition failures', () => {
       DATA,
       ctx(),
       deps({
-        runAcquisitionImpl: vi.fn(async () => ({
+        runAcquisitionImpl: vi.fn<RunAcquisition>(async () => ({
           ok: false,
           kind: 'rate-limited',
           retryAfter: 600,
