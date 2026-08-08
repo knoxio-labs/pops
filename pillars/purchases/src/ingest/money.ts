@@ -8,9 +8,14 @@
  *
  * Most amounts settle themselves. A number carrying BOTH separators states
  * its own convention: whichever comes last is the decimal point, because no
- * locale groups digits after it. Only a single separator with two trailing
- * digits is genuinely ambiguous, and that is where the receipt's currency
- * decides.
+ * locale groups digits after it. A single separator with two trailing
+ * digits settles itself too — `1,49` and `1.49` are one-forty-nine either
+ * way, since no locale groups digits in twos.
+ *
+ * The genuinely ambiguous case is a single separator with exactly THREE
+ * trailing digits: `1,495` is fourteen-hundred-and-ninety-five where the
+ * comma groups, and one-and-a-half where it separates. That is the only
+ * place the receipt's currency decides anything.
  *
  * Shared by every adapter: the Everyday Rewards payload prints `18.48` and
  * `-4.95`, a photographed till slip prints `$18.48` and `-$4.95`, and a

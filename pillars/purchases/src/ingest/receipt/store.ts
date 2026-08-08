@@ -113,15 +113,6 @@ export function storeReceiptImage(
 const BASE64_RE = /^[A-Za-z0-9+/]+={0,2}$/u;
 
 /**
- * Does this upload look like the image type it claims?
- *
- * Checked at the edge rather than discovered by the vision model, because
- * "that is not a JPEG" is an answer the user can act on immediately and a
- * model's confusion about it is not, and costs a call to obtain. The
- * magic-number check is deliberately shallow — it catches a mislabelled or
- * truncated upload, not a hostile one.
- */
-/**
  * Base64 with the line breaks taken out.
  *
  * A pasted or `base64`-piped payload arrives wrapped, which decodes fine
@@ -133,6 +124,15 @@ export function canonicalBase64(dataBase64: string): string {
   return dataBase64.replaceAll(/\s/gu, '');
 }
 
+/**
+ * Does this upload look like the image type it claims?
+ *
+ * Checked at the edge rather than discovered by the vision model, because
+ * "that is not a JPEG" is an answer the user can act on immediately and a
+ * model's confusion about it is not, and costs a call to obtain. The
+ * magic-number check is deliberately shallow — it catches a mislabelled or
+ * truncated upload, not a hostile one.
+ */
 export function looksLikeImage(dataBase64: string, mediaType: ReceiptMediaType): boolean {
   const compact = canonicalBase64(dataBase64);
   if (compact.length % 4 !== 0 || !BASE64_RE.test(compact)) return false;

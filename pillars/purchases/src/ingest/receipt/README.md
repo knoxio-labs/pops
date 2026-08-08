@@ -129,13 +129,14 @@ created, dated from the upload, and tagged `date-uncertain`, because losing
 a shop that happened is worse than carrying an inferred date the tag stops
 anyone mistaking for a stated one.
 
-Re-uploading the same photograph is a `409`, and the check happens **before
-the model is asked** — the hash is the key, so the duplicate is knowable
-without paying for an answer whose only outcome is 409. Because
-`sourceOrderId` is the image's SHA-256. A merchant order id would be better and does not exist: a
-till slip carries a transaction number in a different place and format for
-every chain, and a date-plus-total key would merge two identical coffees
-bought an hour apart.
+Re-uploading the same photograph is a `409`, because `sourceOrderId` is the
+image's SHA-256. The check happens **before the model is asked** — the hash
+is known the moment the bytes are stored, so a duplicate costs nothing
+rather than buying an answer whose only outcome is 409.
+
+A merchant order id would be better and does not exist: a till slip carries
+a transaction number in a different place and format for every chain, and a
+date-plus-total key would merge two identical coffees bought an hour apart.
 
 The drop-zone registers its own `receipt` source on first use — sources are
 rows rather than a compiled enum (ADR-035), and every other one is
@@ -203,6 +204,12 @@ shallow — it catches a mislabelled or truncated upload, not a hostile one.
 `../money.ts`, shared with the Woolworths adapter. The two sources see
 different conventions — `-4.95` from a JSON payload, `-$4.95` from a photo,
 and `$-4.95` from some terminals — so neither the sign nor the symbol is
-stripped by position. It refuses a decimal comma rather than guessing:
-`1,49` is one-forty-nine in most of Europe, and a parser that guesses turns
-€1.49 into €149.
+stripped by position.
+
+A decimal comma is read, not refused: European receipts are unreadable
+otherwise. It is mostly not a guess. `1,49` is one-forty-nine whichever
+convention is in play, because no locale groups digits in twos, and a
+number carrying both separators states its own convention by which comes
+last. Only a single separator with exactly three trailing digits is
+genuinely ambiguous — `1,495` — and there the receipt's stated currency
+decides.
