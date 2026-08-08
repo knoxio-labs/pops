@@ -71,9 +71,12 @@ export function createAnthropicVision(): ReceiptVision | null {
             const message = await client.messages.create({
               model,
               max_tokens: MAX_TOKENS,
-              // Transcription, not composition. Any sampling here is a
-              // chance to invent a digit that was never printed.
-              temperature: 0,
+              // No `temperature`. Zero would say what this call wants —
+              // transcription, not composition — but the current models
+              // reject the parameter outright with a 400, which turns every
+              // upload into an unreadable receipt. The prompt carries the
+              // instruction instead, and the gate is what actually stops an
+              // invented digit.
               messages: [
                 {
                   role: 'user',
