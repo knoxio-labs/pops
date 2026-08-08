@@ -26,7 +26,7 @@ Story coverage is a convention, not a gate. **Absence from Storybook is not abse
 
 ## What first-time consumers get wrong
 
-- **Three names are taken twice.** The barrel exports the _composite_ `Button`, `Select` and `DropdownMenu`; the raw Radix versions come out aliased as `ButtonPrimitive`, `SelectPrimitive`, `DropdownMenuRoot`, or through `@pops/ui/primitives/<name>`. Grabbing the wrong one compiles and behaves differently.
+- **Three names are taken twice.** The barrel exports the _composite_ `Button`, `Select` and `DropdownMenu`; the raw Radix versions come out aliased as `ButtonPrimitive`, `SelectPrimitive`, `DropdownMenuRoot`. Grabbing the wrong one compiles and behaves differently. There is no `@pops/ui/primitives/<name>` subpath — the directory mixes `.tsx` and `.ts` files, which a wildcard export target can't serve correctly through both `tsc` and Vite, so every primitive is reached through the barrel above instead.
 - **Four components need an i18next provider.** `DataTable.pagination`, `DataTable.toolbar`, `FileUpload.parts` and `ErrorAlert` call `useTranslation('ui')`. This lib never initialises i18next — the shell does, with the `ui` namespace from `@pops/locales`. Render them anywhere else and they show raw keys. (`@pops/locales` is a devDependency here purely to bootstrap `src/test-setup.ts`.)
 - **A Tailwind class exists only if `theme/globals.css` scans the file using it.** See `src/theme/README.md`.
 - **`tsconfig.json` excludes `*.stories.*` and `*.test.*`**, so `mise run typecheck` will not catch a broken story.
