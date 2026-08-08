@@ -4,6 +4,9 @@ import Foundation
 /// impossible: a colour that is not a token, and a metric that is not a step on
 /// the scale. It is a text scan rather than a compiler check because Swift has
 /// no way to withdraw `Color.red` from a module that imports SwiftUI.
+///
+/// A text scan is also what lets the rule reach past this package: the scan
+/// reads files, so it never needs to import the module it is judging.
 internal enum TokenDisciplineScanner {
     struct Rule {
         let name: String
@@ -55,7 +58,20 @@ internal enum TokenDisciplineScanner {
         try Regex(pattern).wordBoundaryKind(.simple)
     }
 
-    /// Every `.swift` file under `directory`, sorted for a stable report.
+    /// The directory name that means "a generator wrote this", spelled the same
+    /// way `scripts/swift-sources.sh` and `.swiftlint.yml` spell it.
+    static let generatedDirectoryName = "Generated"
+
+    /// Every hand-written `.swift` file under `directory`, sorted for a stable
+    /// report.
+    ///
+    /// Generated sources are skipped, because the rules below describe choices a
+    /// person made and a generator makes none of them: an OpenAPI enum case
+    /// named `secondary` reaches its own call sites as `.secondary`, which the
+    /// system-colour rule cannot tell from a colour — and generated code is the
+    /// one place a violation cannot be fixed at the call site. Skipping is safe
+    /// only because `scripts/swift-sources.sh check` fails on hand-written code
+    /// inside a `Generated` directory, so this cannot become somewhere to hide.
     static func swiftFiles(under directory: URL) throws -> [URL] {
         guard
             let walker = FileManager.default.enumerator(
@@ -67,12 +83,23 @@ internal enum TokenDisciplineScanner {
             walker
             .compactMap { $0 as? URL }
             .filter { $0.pathExtension == "swift" }
+            .filter { !$0.pathComponents.dropLast().contains(generatedDirectoryName) }
             .sorted { $0.path < $1.path }
     }
 
     static func violations(in file: URL, relativeTo root: URL) throws -> [Violation] {
-        let name = file.path.replacingOccurrences(of: root.path + "/", with: "")
-        return try violations(inSource: String(contentsOf: file, encoding: .utf8), file: name)
+        return try violations(
+            inSource: String(contentsOf: file, encoding: .utf8),
+            file: relativePath(of: file, under: root))
+    }
+
+    /// `/var` and `/private/var` are the same directory and `FileManager` hands
+    /// back whichever spelling it prefers, which is not always the one the root
+    /// was written with. Reduce both to one spelling before stripping one from
+    /// the other, or a report comes out as absolute paths nobody can scan.
+    private static func relativePath(of file: URL, under root: URL) -> String {
+        file.resolvingSymlinksInPath().path
+            .replacingOccurrences(of: root.resolvingSymlinksInPath().path + "/", with: "")
     }
 
     static func violations(inSource source: String, file: String) throws -> [Violation] {
