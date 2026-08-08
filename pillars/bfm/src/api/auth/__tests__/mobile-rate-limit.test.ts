@@ -13,10 +13,10 @@
  * standing behind it. `mobile-perimeter.test.ts` covers the composition.
  */
 import express, { type Express } from 'express';
-import request from 'supertest';
 import { describe, expect, it } from 'vitest';
 
 import { RateLimitErrorSchema } from '../../../contract/rest-schemas.js';
+import { requestOn } from '../../__tests__/test-http.js';
 import {
   createMobileRateLimit,
   MOBILE_GLOBAL_LIMIT,
@@ -44,10 +44,10 @@ function appWith(options: MobileRateLimitOptions): Express {
 async function statusesFrom(app: Express, count: number, clientIp?: string): Promise<number[]> {
   const statuses: number[] = [];
   for (let i = 0; i < count; i += 1) {
-    const pending = request(app).get('/mobile/anything');
-    const res = await (clientIp === undefined
-      ? pending
-      : pending.set('CF-Connecting-IP', clientIp));
+    const res = await requestOn(app, (r) => {
+      const pending = r.get('/mobile/anything');
+      return clientIp === undefined ? pending : pending.set('CF-Connecting-IP', clientIp);
+    });
     statuses.push(res.status);
   }
   return statuses;
@@ -93,7 +93,9 @@ describe('the client key a caller cannot forge its way out of', () => {
 
     const statuses: number[] = [];
     for (const forged of ['not-an-ip', 'a', 'b', 'c']) {
-      const res = await request(app).get('/mobile/anything').set('CF-Connecting-IP', forged);
+      const res = await requestOn(app, (r) =>
+        r.get('/mobile/anything').set('CF-Connecting-IP', forged)
+      );
       statuses.push(res.status);
     }
 
@@ -108,20 +110,22 @@ describe('the client key a caller cannot forge its way out of', () => {
     // socket-peer bucket, which the header-less request below has already
     // spent.
     const app = appWith({ perClientLimit: 1, globalLimit: 100 });
-    await request(app).get('/mobile/anything');
+    await requestOn(app, (r) => r.get('/mobile/anything'));
 
-    const res = await request(app)
-      .get('/mobile/anything')
-      .set('CF-Connecting-IP', '203.0.113.7, 198.51.100.4');
+    const res = await requestOn(app, (r) =>
+      r.get('/mobile/anything').set('CF-Connecting-IP', '203.0.113.7, 198.51.100.4')
+    );
 
     expect(res.status).toBe(429);
   });
 
   it('tolerates surrounding whitespace on an otherwise valid address', async () => {
     const app = appWith({ perClientLimit: 1, globalLimit: 100 });
-    await request(app).get('/mobile/anything').set('CF-Connecting-IP', '203.0.113.7');
+    await requestOn(app, (r) => r.get('/mobile/anything').set('CF-Connecting-IP', '203.0.113.7'));
 
-    const res = await request(app).get('/mobile/anything').set('CF-Connecting-IP', ' 203.0.113.7 ');
+    const res = await requestOn(app, (r) =>
+      r.get('/mobile/anything').set('CF-Connecting-IP', ' 203.0.113.7 ')
+    );
 
     expect(res.status).toBe(429);
   });
@@ -145,9 +149,9 @@ describe('the global tier', () => {
 
     const statuses: number[] = [];
     for (let i = 0; i < 5; i += 1) {
-      const res = await request(app)
-        .get('/mobile/anything')
-        .set('CF-Connecting-IP', `203.0.113.${i}`);
+      const res = await requestOn(app, (r) =>
+        r.get('/mobile/anything').set('CF-Connecting-IP', `203.0.113.${i}`)
+      );
       statuses.push(res.status);
     }
 
@@ -162,12 +166,12 @@ describe('the global tier', () => {
     // requests was being refused, which is unbounded growth driven by input
     // the attacker chooses.
     const { app, limiter } = mount({ perClientLimit: 5, globalLimit: 1 });
-    await request(app).get('/mobile/anything').set('CF-Connecting-IP', '203.0.113.1');
+    await requestOn(app, (r) => r.get('/mobile/anything').set('CF-Connecting-IP', '203.0.113.1'));
 
     for (let i = 0; i < 50; i += 1) {
-      const res = await request(app)
-        .get('/mobile/anything')
-        .set('CF-Connecting-IP', `198.51.100.${i}`);
+      const res = await requestOn(app, (r) =>
+        r.get('/mobile/anything').set('CF-Connecting-IP', `198.51.100.${i}`)
+      );
       expect(res.status).toBe(429);
     }
 
@@ -181,9 +185,9 @@ describe('the global tier', () => {
     const { app, limiter } = mount({ perClientLimit: 1, globalLimit });
 
     for (let i = 0; i < 100; i += 1) {
-      await request(app)
-        .get('/mobile/anything')
-        .set('CF-Connecting-IP', `203.0.113.${i % 200}`);
+      await requestOn(app, (r) =>
+        r.get('/mobile/anything').set('CF-Connecting-IP', `203.0.113.${i % 200}`)
+      );
     }
 
     expect(limiter.trackedClients()).toBeLessThanOrEqual(globalLimit);
@@ -195,7 +199,9 @@ describe('the 429 a refused caller receives', () => {
     const app = appWith({ perClientLimit: 1, globalLimit: 100, windowMs: 60_000 });
     await statusesFrom(app, 1, '203.0.113.7');
 
-    const res = await request(app).get('/mobile/anything').set('CF-Connecting-IP', '203.0.113.7');
+    const res = await requestOn(app, (r) =>
+      r.get('/mobile/anything').set('CF-Connecting-IP', '203.0.113.7')
+    );
 
     const parsed = RateLimitErrorSchema.safeParse(res.body);
     expect(parsed.error?.issues ?? []).toEqual([]);
@@ -209,7 +215,9 @@ describe('the 429 a refused caller receives', () => {
     const app = appWith({ perClientLimit: 1, globalLimit: 100, windowMs: 60_000 });
     await statusesFrom(app, 1, '203.0.113.7');
 
-    const res = await request(app).get('/mobile/anything').set('CF-Connecting-IP', '203.0.113.7');
+    const res = await requestOn(app, (r) =>
+      r.get('/mobile/anything').set('CF-Connecting-IP', '203.0.113.7')
+    );
 
     expect(res.headers['retry-after']).toBe('60');
     expect(res.body.retryAfterSeconds).toBe(60);
@@ -221,15 +229,19 @@ describe('the 429 a refused caller receives', () => {
     // nothing. `retryAfterSeconds` is the window length, which is not the
     // budget and does not narrow it.
     const app = appWith({ perClientLimit: 1, globalLimit: 100 });
-    await request(app)
-      .get('/mobile/secret-route')
-      .set('CF-Connecting-IP', '203.0.113.7')
-      .set('Authorization', 'Bearer sensitive-token-value');
+    await requestOn(app, (r) =>
+      r
+        .get('/mobile/secret-route')
+        .set('CF-Connecting-IP', '203.0.113.7')
+        .set('Authorization', 'Bearer sensitive-token-value')
+    );
 
-    const res = await request(app)
-      .get('/mobile/secret-route')
-      .set('CF-Connecting-IP', '203.0.113.7')
-      .set('Authorization', 'Bearer sensitive-token-value');
+    const res = await requestOn(app, (r) =>
+      r
+        .get('/mobile/secret-route')
+        .set('CF-Connecting-IP', '203.0.113.7')
+        .set('Authorization', 'Bearer sensitive-token-value')
+    );
 
     const serialized = JSON.stringify(res.body);
     expect(serialized).not.toContain('sensitive-token-value');
@@ -239,9 +251,11 @@ describe('the 429 a refused caller receives', () => {
 
   it('refuses every method, not only GET', async () => {
     const app = appWith({ perClientLimit: 1, globalLimit: 100 });
-    await request(app).post('/mobile/anything').set('CF-Connecting-IP', '203.0.113.7');
+    await requestOn(app, (r) => r.post('/mobile/anything').set('CF-Connecting-IP', '203.0.113.7'));
 
-    const res = await request(app).post('/mobile/anything').set('CF-Connecting-IP', '203.0.113.7');
+    const res = await requestOn(app, (r) =>
+      r.post('/mobile/anything').set('CF-Connecting-IP', '203.0.113.7')
+    );
 
     expect(res.status).toBe(429);
   });

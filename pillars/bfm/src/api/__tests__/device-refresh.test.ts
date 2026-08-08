@@ -16,7 +16,6 @@
  */
 import { generateKeyPairSync, sign } from 'node:crypto';
 
-import request from 'supertest';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -32,6 +31,7 @@ import { CHALLENGE_PATH, PAIRING_PATH, REFRESH_PATH } from '../app.js';
 import { verifyAccessToken } from '../auth/access-token.js';
 import { refreshSignatureMessage } from '../auth/refresh-exchange.js';
 import { createTestApp, type TestApp } from './harness.js';
+import { requestOn } from './test-http.js';
 
 import type { KeyObject } from 'node:crypto';
 
@@ -64,14 +64,14 @@ async function pair(app: TestApp): Promise<Handset> {
   const { code } = issuePairingCode(app.db);
   const { privateKey, publicKey } = generateKeyPairSync('ec', { namedCurve: 'prime256v1' });
 
-  const res = await request(app.app)
-    .post(PAIRING_PATH)
-    .send({
+  const res = await requestOn(app.app, (r) =>
+    r.post(PAIRING_PATH).send({
       code,
       publicKey: publicKey.export({ type: 'spki', format: 'der' }).toString('base64'),
       deviceName: "Joao's iPhone",
       deviceModel: 'iPhone17,1',
-    });
+    })
+  );
 
   expect(res.status).toBe(201);
   const paired = PairedDeviceSchema.parse(res.body);
@@ -79,7 +79,7 @@ async function pair(app: TestApp): Promise<Handset> {
 }
 
 async function challenge(app: TestApp): Promise<string> {
-  const res = await request(app.app).post(CHALLENGE_PATH).send({});
+  const res = await requestOn(app.app, (r) => r.post(CHALLENGE_PATH).send({}));
   expect(res.status).toBe(201);
   return RefreshChallengeSchema.parse(res.body).nonce;
 }
@@ -94,13 +94,13 @@ function signRefresh(nonce: string, refreshToken: string, privateKey: KeyObject)
 /** Fetch a nonce, sign it, post the refresh. What the app does every ten minutes. */
 async function refresh(app: TestApp, handset: Pick<Handset, 'refreshToken' | 'privateKey'>) {
   const nonce = await challenge(app);
-  return request(app.app)
-    .post(REFRESH_PATH)
-    .send({
+  return requestOn(app.app, (r) =>
+    r.post(REFRESH_PATH).send({
       refreshToken: handset.refreshToken,
       nonce,
       signature: signRefresh(nonce, handset.refreshToken, handset.privateKey),
-    });
+    })
+  );
 }
 
 function silenceWarnings() {
@@ -111,7 +111,7 @@ describe('POST /devices/challenge', () => {
   it('mints a nonce without any credential at all', async () => {
     const app = open();
 
-    const res = await request(app.app).post(CHALLENGE_PATH).send({});
+    const res = await requestOn(app.app, (r) => r.post(CHALLENGE_PATH).send({}));
 
     expect(res.status).toBe(201);
     const body = RefreshChallengeSchema.parse(res.body);
@@ -133,10 +133,9 @@ describe('POST /devices/challenge', () => {
     // contract has to describe it or the generated client cannot decode it.
     const app = open();
 
-    const res = await request(app.app)
-      .post(CHALLENGE_PATH)
-      .set('content-type', 'application/json')
-      .send('[1,2]');
+    const res = await requestOn(app.app, (r) =>
+      r.post(CHALLENGE_PATH).set('content-type', 'application/json').send('[1,2]')
+    );
 
     expect(res.status).toBe(400);
     expect(DeviceInvalidRequestErrorSchema.parse(res.body).code).toBe('invalid_request');
@@ -147,7 +146,7 @@ describe('POST /devices/challenge', () => {
     await challenge(app);
     await challenge(app);
 
-    const res = await request(app.app).post(CHALLENGE_PATH).send({});
+    const res = await requestOn(app.app, (r) => r.post(CHALLENGE_PATH).send({}));
 
     expect(res.status).toBe(429);
     expect(RateLimitErrorSchema.parse(res.body).retryAfterSeconds).toBeGreaterThan(0);
@@ -191,9 +190,8 @@ describe('POST /devices/refresh', () => {
     const app = open();
     const handset = await pair(app);
 
-    const res = await request(app.app)
-      .post(REFRESH_PATH)
-      .send({
+    const res = await requestOn(app.app, (r) =>
+      r.post(REFRESH_PATH).send({
         refreshToken: handset.refreshToken,
         nonce: 'a-nonce-this-server-never-drew',
         signature: signRefresh(
@@ -201,7 +199,8 @@ describe('POST /devices/refresh', () => {
           handset.refreshToken,
           handset.privateKey
         ),
-      });
+      })
+    );
 
     expect(res.status).toBe(401);
     expect(RefreshErrorSchema.parse(res.body).code).toBe('challenge_expired');
@@ -230,11 +229,13 @@ describe('POST /devices/refresh', () => {
       refreshToken: handset.refreshToken,
       privateKey: impostor,
     });
-    const staleChallenge = await request(app.app).post(REFRESH_PATH).send({
-      refreshToken: handset.refreshToken,
-      nonce: 'never-issued',
-      signature: 'bm90LWEtc2lnbmF0dXJl',
-    });
+    const staleChallenge = await requestOn(app.app, (r) =>
+      r.post(REFRESH_PATH).send({
+        refreshToken: handset.refreshToken,
+        nonce: 'never-issued',
+        signature: 'bm90LWEtc2lnbmF0dXJl',
+      })
+    );
 
     // Both 401 codes, not just one.
     expect(rejected.headers['www-authenticate']).toBe('Bearer error="invalid_token"');
@@ -247,7 +248,7 @@ describe('POST /devices/refresh', () => {
     revokeDevice(app.db, handset.deviceId);
 
     const revoked = await refresh(app, handset);
-    const ok = await request(app.app).post(CHALLENGE_PATH).send({});
+    const ok = await requestOn(app.app, (r) => r.post(CHALLENGE_PATH).send({}));
 
     expect(revoked.headers['www-authenticate']).toBeUndefined();
     expect(ok.headers['www-authenticate']).toBeUndefined();
@@ -289,7 +290,9 @@ describe('POST /devices/refresh', () => {
   it('answers 400 without naming the fields it rejected', async () => {
     const app = open();
 
-    const res = await request(app.app).post(REFRESH_PATH).send({ refreshToken: 'only-this' });
+    const res = await requestOn(app.app, (r) =>
+      r.post(REFRESH_PATH).send({ refreshToken: 'only-this' })
+    );
 
     expect(res.status).toBe(400);
     expect(DeviceInvalidRequestErrorSchema.parse(res.body).code).toBe('invalid_request');
@@ -306,7 +309,7 @@ describe('POST /devices/refresh', () => {
     // The challenge spends the only unit, so the refresh below never reaches
     // the exchange — one budget across both routes, not one each.
     await challenge(app);
-    const res = await request(app.app).post(REFRESH_PATH).send({ nonsense: true });
+    const res = await requestOn(app.app, (r) => r.post(REFRESH_PATH).send({ nonsense: true }));
 
     expect(res.status).toBe(429);
     expect(RateLimitErrorSchema.safeParse(res.body).success).toBe(true);
@@ -365,13 +368,13 @@ describe('two requests racing one refresh token', () => {
 
     const results = await Promise.all(
       [firstNonce, secondNonce].map((nonce) =>
-        request(app.app)
-          .post(REFRESH_PATH)
-          .send({
+        requestOn(app.app, (r) =>
+          r.post(REFRESH_PATH).send({
             refreshToken: handset.refreshToken,
             nonce,
             signature: signRefresh(nonce, handset.refreshToken, handset.privateKey),
           })
+        )
       )
     );
 
@@ -390,13 +393,13 @@ describe('two requests racing one refresh token', () => {
 
     await Promise.all(
       nonces.map((nonce) =>
-        request(app.app)
-          .post(REFRESH_PATH)
-          .send({
+        requestOn(app.app, (r) =>
+          r.post(REFRESH_PATH).send({
             refreshToken: handset.refreshToken,
             nonce,
             signature: signRefresh(nonce, handset.refreshToken, handset.privateKey),
           })
+        )
       )
     );
 

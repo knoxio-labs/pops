@@ -14,7 +14,6 @@
  * Only the per-pillar probe is injected, because it is the one leg that would
  * otherwise open a socket to a hostname that does not exist in a test process.
  */
-import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -28,6 +27,7 @@ import { devices } from '../../db/index.js';
 import { mintAccessToken } from '../auth/access-token.js';
 import { contractResponse, fakeFetch, pillarSnapshot } from '../mobile/__tests__/fixtures.js';
 import { createTestApp, type TestApp, type TestAppOptions } from './harness.js';
+import { requestOn } from './test-http.js';
 
 import type { PillarSnapshot } from '@pops/pillar-sdk/discovery';
 
@@ -100,6 +100,13 @@ function pairedDevice(
   return { id: row.id, authorization: `Bearer ${token}` };
 }
 
+/** `GET /mobile/bootstrap`, authenticated as `device`. */
+function bootstrapAs(app: TestApp, device: { authorization: string }) {
+  return requestOn(app.app, (r) =>
+    r.get('/mobile/bootstrap').set('Authorization', device.authorization)
+  );
+}
+
 beforeEach(() => {
   registryServing(pillarSnapshot('finance'));
 });
@@ -113,7 +120,7 @@ describe('the perimeter in front of the route', () => {
   it('refuses an unauthenticated caller with a 401 and no payload', async () => {
     const app = open({ bootstrap: { probe: healthyProbe('finance') } });
 
-    const res = await request(app.app).get('/mobile/bootstrap');
+    const res = await requestOn(app.app, (r) => r.get('/mobile/bootstrap'));
 
     expect(res.status).toBe(401);
     expect(res.body.code).toBe('invalid_token');
@@ -123,9 +130,9 @@ describe('the perimeter in front of the route', () => {
   it('refuses a token this deployment did not sign', async () => {
     const app = open({ bootstrap: { probe: healthyProbe('finance') } });
 
-    const res = await request(app.app)
-      .get('/mobile/bootstrap')
-      .set('Authorization', 'Bearer not-a-token');
+    const res = await requestOn(app.app, (r) =>
+      r.get('/mobile/bootstrap').set('Authorization', 'Bearer not-a-token')
+    );
 
     expect(res.status).toBe(401);
   });
@@ -135,9 +142,7 @@ describe('the perimeter in front of the route', () => {
     const app = open({ bootstrap: { probe: healthyProbe('finance') } });
     const device = pairedDevice(app, { revokedAt: '2026-08-01T00:00:00.000Z' });
 
-    const res = await request(app.app)
-      .get('/mobile/bootstrap')
-      .set('Authorization', device.authorization);
+    const res = await bootstrapAs(app, device);
 
     expect(res.status).toBe(403);
     expect(res.body.code).toBe('device_revoked');
@@ -149,7 +154,7 @@ describe('the perimeter in front of the route', () => {
     const device = pairedDevice(app, { revokedAt: '2026-08-01T00:00:00.000Z' });
     const before = storedLastSeenAt(app);
 
-    await request(app.app).get('/mobile/bootstrap').set('Authorization', device.authorization);
+    await bootstrapAs(app, device);
 
     expect(storedLastSeenAt(app)).toBe(before);
     expect(storedLastSeenAt(app)).not.toBe(CHECKED_IN_AT);
@@ -161,9 +166,7 @@ describe('a paired device asking what to render', () => {
     const app = open({ bootstrap: { probe: healthyProbe('finance') } });
     const device = pairedDevice(app);
 
-    const res = await request(app.app)
-      .get('/mobile/bootstrap')
-      .set('Authorization', device.authorization);
+    const res = await bootstrapAs(app, device);
 
     expect(res.status).toBe(200);
     // Parsed rather than eyeballed: the Swift client is generated from this
@@ -177,9 +180,7 @@ describe('a paired device asking what to render', () => {
     const device = pairedDevice(app);
     registryServing(pillarSnapshot('finance'), pillarSnapshot('media'));
 
-    const res = await request(app.app)
-      .get('/mobile/bootstrap')
-      .set('Authorization', device.authorization);
+    const res = await bootstrapAs(app, device);
 
     expect(res.body.registry.source).toBe('fresh');
     expect(res.body.pillars).toEqual([
@@ -193,10 +194,8 @@ describe('a paired device asking what to render', () => {
     const device = pairedDevice(app);
     const registry = registryServing(pillarSnapshot('finance'));
 
-    await request(app.app).get('/mobile/bootstrap').set('Authorization', device.authorization);
-    const second = await request(app.app)
-      .get('/mobile/bootstrap')
-      .set('Authorization', device.authorization);
+    await bootstrapAs(app, device);
+    const second = await bootstrapAs(app, device);
 
     expect(registry.fetches).toBe(1);
     expect(second.body.registry.source).toBe('cached');
@@ -207,9 +206,7 @@ describe('a paired device asking what to render', () => {
     const device = pairedDevice(app);
     const before = storedLastSeenAt(app);
 
-    const res = await request(app.app)
-      .get('/mobile/bootstrap')
-      .set('Authorization', device.authorization);
+    const res = await bootstrapAs(app, device);
 
     expect(storedLastSeenAt(app)).toBe(CHECKED_IN_AT);
     expect(res.body.device.lastSeenAt).toBe(CHECKED_IN_AT);
@@ -220,9 +217,7 @@ describe('a paired device asking what to render', () => {
     const app = open({ bootstrap: { probe: healthyProbe('finance') } });
     const device = pairedDevice(app);
 
-    const res = await request(app.app)
-      .get('/mobile/bootstrap')
-      .set('Authorization', device.authorization);
+    const res = await bootstrapAs(app, device);
 
     expect(Object.keys(res.body.device).toSorted()).toEqual(['id', 'lastSeenAt', 'name']);
   });
@@ -241,9 +236,7 @@ describe('the federation half-broken, seen from the phone', () => {
     const device = pairedDevice(app);
     registryServing(pillarSnapshot('finance'), pillarSnapshot('media'), pillarSnapshot('food'));
 
-    const res = await request(app.app)
-      .get('/mobile/bootstrap')
-      .set('Authorization', device.authorization);
+    const res = await bootstrapAs(app, device);
 
     expect(res.status).toBe(200);
     expect(res.body.pillars).toEqual([
@@ -260,9 +253,7 @@ describe('the federation half-broken, seen from the phone', () => {
     registryServing(pillarSnapshot('finance'));
     failNextRegistryFetches(1, new Error('registry down'));
 
-    const res = await request(app.app)
-      .get('/mobile/bootstrap')
-      .set('Authorization', device.authorization);
+    const res = await bootstrapAs(app, device);
 
     // A 500 here is a phone that cannot get past its splash screen because a
     // sibling container blinked. That is strictly worse than an empty list.
@@ -279,7 +270,7 @@ describe('the federation half-broken, seen from the phone', () => {
     registryServing(pillarSnapshot('finance'));
     failNextRegistryFetches(1, new Error('registry down'));
 
-    await request(app.app).get('/mobile/bootstrap').set('Authorization', device.authorization);
+    await bootstrapAs(app, device);
 
     expect(storedLastSeenAt(app)).toBe(CHECKED_IN_AT);
   });

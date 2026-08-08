@@ -13,7 +13,6 @@
  */
 import { generateKeyPairSync } from 'node:crypto';
 
-import request from 'supertest';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { PairedDeviceSchema } from '../../contract/rest-device-schemas.js';
@@ -32,6 +31,7 @@ import {
 import { PAIRING_PATH } from '../app.js';
 import { verifyAccessToken } from '../auth/access-token.js';
 import { createTestApp, PRODUCTION_ENV_WITHOUT_ACCESS, type TestApp } from './harness.js';
+import { requestOn } from './test-http.js';
 
 import type { PairingRateLimitOptions } from '../auth/pairing-rate-limit.js';
 import type { TestAppOptions } from './harness.js';
@@ -109,12 +109,17 @@ function refreshTokenRows(app: TestApp) {
   return app.db.select().from(refreshTokens).all();
 }
 
+/** `POST /devices/pair` with an arbitrary body — every case in this file but the QR round trip. */
+function pair(app: TestApp, body: unknown) {
+  return requestOn(app.app, (r) => r.post(PAIRING_PATH).send(body));
+}
+
 describe('the happy path', () => {
   it('answers 201 with a token pair the contract accepts', async () => {
     const created = open();
     const { code } = issuePairingCode(created.db);
 
-    const res = await request(created.app).post(PAIRING_PATH).send(pairBody({ code }));
+    const res = await pair(created, pairBody({ code }));
 
     expect(res.status).toBe(201);
     const parsed = PairedDeviceSchema.safeParse(res.body);
@@ -126,7 +131,7 @@ describe('the happy path', () => {
     const created = open();
     const { code } = issuePairingCode(created.db);
 
-    const res = await request(created.app).post(PAIRING_PATH).send(pairBody({ code }));
+    const res = await pair(created, pairBody({ code }));
 
     // Verified with the app's own key rather than decoded: a token that parses
     // but does not verify would satisfy a shape assertion and nothing else.
@@ -136,9 +141,9 @@ describe('the happy path', () => {
 
     // 404 rather than 200: the guard passed and no `/mobile` route exists yet.
     // An unusable token would have been 401 here.
-    const guarded = await request(created.app)
-      .get('/mobile/anything')
-      .set('Authorization', `Bearer ${String(res.body.accessToken)}`);
+    const guarded = await requestOn(created.app, (r) =>
+      r.get('/mobile/anything').set('Authorization', `Bearer ${String(res.body.accessToken)}`)
+    );
     expect(guarded.status).toBe(404);
   });
 
@@ -147,7 +152,7 @@ describe('the happy path', () => {
     const { code } = issuePairingCode(created.db);
     const body = pairBody({ code });
 
-    const res = await request(created.app).post(PAIRING_PATH).send(body);
+    const res = await pair(created, body);
 
     const rows = deviceRows(created);
     expect(rows).toHaveLength(1);
@@ -164,7 +169,7 @@ describe('the happy path', () => {
     const created = open();
     const { code } = issuePairingCode(created.db);
 
-    await request(created.app).post(PAIRING_PATH).send(pairBody({ code }));
+    await pair(created, pairBody({ code }));
 
     const [device] = deviceRows(created);
     expect(device?.lastSeenAt).toBe(device?.createdAt);
@@ -174,7 +179,7 @@ describe('the happy path', () => {
     const created = open();
     const { code } = issuePairingCode(created.db);
 
-    const res = await request(created.app).post(PAIRING_PATH).send(pairBody({ code }));
+    const res = await pair(created, pairBody({ code }));
 
     const rows = refreshTokenRows(created);
     expect(rows).toHaveLength(1);
@@ -194,7 +199,7 @@ describe('the happy path', () => {
     const created = open({ refreshTokenTtlMs: 90 * 24 * 60 * 60 * 1000 });
     const { code } = issuePairingCode(created.db);
 
-    await request(created.app).post(PAIRING_PATH).send(pairBody({ code }));
+    await pair(created, pairBody({ code }));
 
     const [token] = refreshTokenRows(created);
     const lifetimeMs = Date.parse(token?.expiresAt ?? '') - Date.parse(token?.createdAt ?? '');
@@ -206,7 +211,7 @@ describe('the happy path', () => {
     const created = open();
     const { code } = issuePairingCode(created.db);
 
-    await request(created.app).post(PAIRING_PATH).send(pairBody({ code }));
+    await pair(created, pairBody({ code }));
 
     const [row] = created.db.select().from(pairingCodes).all();
     expect(row?.consumedAt).not.toBeNull();
@@ -221,9 +226,7 @@ describe('the happy path', () => {
       const created = open();
       const { code } = issuePairingCode(created.db);
 
-      const res = await request(created.app)
-        .post(PAIRING_PATH)
-        .send(pairBody({ code: spell(code) }));
+      const res = await pair(created, pairBody({ code: spell(code) }));
 
       expect(res.status).toBe(201);
     }
@@ -236,7 +239,7 @@ describe('the happy path', () => {
     const created = open({ env: PRODUCTION_ENV_WITHOUT_ACCESS });
     const { code } = issuePairingCode(created.db);
 
-    const res = await request(created.app).post(PAIRING_PATH).send(pairBody({ code }));
+    const res = await pair(created, pairBody({ code }));
 
     expect(res.status).toBe(201);
   });
@@ -245,9 +248,10 @@ describe('the happy path', () => {
     const created = open();
     const { code } = issuePairingCode(created.db);
 
-    await request(created.app)
-      .post(PAIRING_PATH)
-      .send(pairBody({ code, deviceName: '  Joao’s iPhone  ', deviceModel: ' iPhone17,1 ' }));
+    await pair(
+      created,
+      pairBody({ code, deviceName: '  Joao’s iPhone  ', deviceModel: ' iPhone17,1 ' })
+    );
 
     expect(deviceRows(created)[0]).toMatchObject({
       name: 'Joao’s iPhone',
@@ -265,9 +269,7 @@ describe('the happy path', () => {
     const urlSafe = Buffer.from(standard, 'base64').toString('base64url');
     expect(urlSafe).not.toBe(standard);
 
-    const res = await request(created.app)
-      .post(PAIRING_PATH)
-      .send(pairBody({ code, publicKey: urlSafe }));
+    const res = await pair(created, pairBody({ code, publicKey: urlSafe }));
 
     expect(res.status).toBe(201);
     expect(deviceRows(created)[0]?.publicKeyDer).toBe(standard);
@@ -279,10 +281,10 @@ describe('a code that cannot be spent', () => {
     const created = open();
     const { code } = issuePairingCode(created.db);
 
-    const first = await request(created.app).post(PAIRING_PATH).send(pairBody({ code }));
+    const first = await pair(created, pairBody({ code }));
     expect(first.status).toBe(201);
 
-    const replay = await request(created.app).post(PAIRING_PATH).send(pairBody({ code }));
+    const replay = await pair(created, pairBody({ code }));
 
     expect(replay.status).toBe(403);
     expect(deviceRows(created)).toHaveLength(1);
@@ -290,9 +292,9 @@ describe('a code that cannot be spent', () => {
 
     // The first phone is still paired. A replay that revoked the device it
     // could not duplicate would be a denial of service anyone could run.
-    const guarded = await request(created.app)
-      .get('/mobile/anything')
-      .set('Authorization', `Bearer ${String(first.body.accessToken)}`);
+    const guarded = await requestOn(created.app, (r) =>
+      r.get('/mobile/anything').set('Authorization', `Bearer ${String(first.body.accessToken)}`)
+    );
     expect(guarded.status).toBe(404);
   });
 
@@ -300,7 +302,7 @@ describe('a code that cannot be spent', () => {
     const created = open();
     const code = plantExpiredCode(created);
 
-    const res = await request(created.app).post(PAIRING_PATH).send(pairBody({ code }));
+    const res = await pair(created, pairBody({ code }));
 
     expect(res.status).toBe(403);
     expect(deviceRows(created)).toHaveLength(0);
@@ -309,7 +311,7 @@ describe('a code that cannot be spent', () => {
   it('refuses a code that was never issued', async () => {
     const created = open();
 
-    const res = await request(created.app).post(PAIRING_PATH).send(pairBody());
+    const res = await pair(created, pairBody());
 
     expect(res.status).toBe(403);
     expect(deviceRows(created)).toHaveLength(0);
@@ -319,7 +321,7 @@ describe('a code that cannot be spent', () => {
     const created = open();
     const code = plantExpiredCode(created);
 
-    await request(created.app).post(PAIRING_PATH).send(pairBody({ code }));
+    await pair(created, pairBody({ code }));
 
     expect(deviceRows(created)).toHaveLength(0);
     expect(refreshTokenRows(created)).toHaveLength(0);
@@ -328,7 +330,7 @@ describe('a code that cannot be spent', () => {
   it('never returns a token on the refusal', async () => {
     const created = open();
 
-    const res = await request(created.app).post(PAIRING_PATH).send(pairBody());
+    const res = await pair(created, pairBody());
 
     expect(res.body).not.toHaveProperty('accessToken');
     expect(res.body).not.toHaveProperty('refreshToken');
@@ -350,19 +352,13 @@ describe('the three rejections are one rejection', () => {
   it('answers unknown, expired and consumed byte for byte alike', async () => {
     const created = open();
 
-    const unknown = await request(created.app).post(PAIRING_PATH).send(pairBody());
+    const unknown = await pair(created, pairBody());
 
-    const expired = await request(created.app)
-      .post(PAIRING_PATH)
-      .send(pairBody({ code: plantExpiredCode(created) }));
+    const expired = await pair(created, pairBody({ code: plantExpiredCode(created) }));
 
     const { code: spent } = issuePairingCode(created.db);
-    await request(created.app)
-      .post(PAIRING_PATH)
-      .send(pairBody({ code: spent }));
-    const consumed = await request(created.app)
-      .post(PAIRING_PATH)
-      .send(pairBody({ code: spent }));
+    await pair(created, pairBody({ code: spent }));
+    const consumed = await pair(created, pairBody({ code: spent }));
 
     const shapes = [unknown, expired, consumed].map((res) => ({
       status: res.status,
@@ -395,9 +391,7 @@ describe('the public key', () => {
     const created = open();
     const { code } = issuePairingCode(created.db);
 
-    const res = await request(created.app)
-      .post(PAIRING_PATH)
-      .send(pairBody({ code, publicKey: makeKey() }));
+    const res = await pair(created, pairBody({ code, publicKey: makeKey() }));
 
     expect(res.status).toBe(400);
     expect(res.body.code).toBe('invalid_request');
@@ -409,11 +403,9 @@ describe('the public key', () => {
     const created = open();
     const { code } = issuePairingCode(created.db);
 
-    await request(created.app)
-      .post(PAIRING_PATH)
-      .send(pairBody({ code, publicKey: 'not a key' }));
+    await pair(created, pairBody({ code, publicKey: 'not a key' }));
 
-    const retry = await request(created.app).post(PAIRING_PATH).send(pairBody({ code }));
+    const retry = await pair(created, pairBody({ code }));
 
     expect(retry.status).toBe(201);
   });
@@ -422,12 +414,8 @@ describe('the public key', () => {
     const created = open();
     const { code } = issuePairingCode(created.db);
 
-    const withRealCode = await request(created.app)
-      .post(PAIRING_PATH)
-      .send(pairBody({ code, publicKey: 'not a key' }));
-    const withInventedCode = await request(created.app)
-      .post(PAIRING_PATH)
-      .send(pairBody({ publicKey: 'not a key' }));
+    const withRealCode = await pair(created, pairBody({ code, publicKey: 'not a key' }));
+    const withInventedCode = await pair(created, pairBody({ publicKey: 'not a key' }));
 
     expect(withInventedCode.status).toBe(withRealCode.status);
     expect(withInventedCode.text).toBe(withRealCode.text);
@@ -446,7 +434,7 @@ describe('a malformed request', () => {
   ])('answers %s with the contract 400, not the validator internals', async (_label, body) => {
     const created = open();
 
-    const res = await request(created.app).post(PAIRING_PATH).send(body);
+    const res = await pair(created, body);
 
     expect(res.status).toBe(400);
     // The declared shape, and only it. ts-rest's default would have shipped
@@ -467,13 +455,15 @@ describe('the round trip an operator actually performs', () => {
     // nothing but this URL.
     const created = open();
 
-    const issued = await request(created.app).post('/operator/pairing/codes').send({});
+    const issued = await requestOn(created.app, (r) => r.post('/operator/pairing/codes').send({}));
     expect(issued.status).toBe(201);
 
     const pairingUrl = new URL(String(issued.body.pairingUrl));
-    const res = await request(created.app)
-      .post(pairingUrl.pathname)
-      .send(pairBody({ code: pairingUrl.searchParams.get('code') ?? '' }));
+    const res = await requestOn(created.app, (r) =>
+      r
+        .post(pairingUrl.pathname)
+        .send(pairBody({ code: pairingUrl.searchParams.get('code') ?? '' }))
+    );
 
     expect(res.status).toBe(201);
     expect(deviceRows(created)).toHaveLength(1);
@@ -488,9 +478,9 @@ describe('the budget', () => {
   it('answers 429 with Retry-After once a client is over its per-client budget', async () => {
     const created = open({ pairingRateLimit: overBudget(2) });
 
-    await request(created.app).post(PAIRING_PATH).send(pairBody());
-    await request(created.app).post(PAIRING_PATH).send(pairBody());
-    const refused = await request(created.app).post(PAIRING_PATH).send(pairBody());
+    await pair(created, pairBody());
+    await pair(created, pairBody());
+    const refused = await pair(created, pairBody());
 
     expect(refused.status).toBe(429);
     expect(refused.body.code).toBe('rate_limited');
@@ -504,8 +494,8 @@ describe('the budget', () => {
     const created = open({ pairingRateLimit: overBudget(1) });
     const { code } = issuePairingCode(created.db);
 
-    await request(created.app).post(PAIRING_PATH).send(pairBody());
-    const refused = await request(created.app).post(PAIRING_PATH).send(pairBody({ code }));
+    await pair(created, pairBody());
+    const refused = await pair(created, pairBody({ code }));
     expect(refused.status).toBe(429);
 
     const [row] = created.db.select().from(pairingCodes).all();
@@ -517,10 +507,9 @@ describe('the budget', () => {
 
     const statuses: number[] = [];
     for (const ip of ['203.0.113.1', '203.0.113.2', '203.0.113.3']) {
-      const res = await request(created.app)
-        .post(PAIRING_PATH)
-        .set('CF-Connecting-IP', ip)
-        .send(pairBody());
+      const res = await requestOn(created.app, (r) =>
+        r.post(PAIRING_PATH).set('CF-Connecting-IP', ip).send(pairBody())
+      );
       statuses.push(res.status);
     }
 
@@ -532,10 +521,10 @@ describe('the budget', () => {
     // of pairing, and a pairing flood degrade every paired device.
     const created = open({ pairingRateLimit: overBudget(1) });
 
-    await request(created.app).post(PAIRING_PATH).send(pairBody());
-    expect((await request(created.app).post(PAIRING_PATH).send(pairBody())).status).toBe(429);
+    await pair(created, pairBody());
+    expect((await pair(created, pairBody())).status).toBe(429);
 
-    const mobile = await request(created.app).get('/mobile/anything');
+    const mobile = await requestOn(created.app, (r) => r.get('/mobile/anything'));
     expect(mobile.status).toBe(401);
   });
 });

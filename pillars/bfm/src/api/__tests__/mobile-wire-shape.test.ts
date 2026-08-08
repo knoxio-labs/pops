@@ -13,10 +13,10 @@
  * assertions and still lands in the Swift client as a non-optional the server
  * never sends.
  */
-import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { createTestApp, type TestApp } from './harness.js';
+import { requestOn } from './test-http.js';
 
 const LIST_PATH = '/mobile/finance/transactions';
 const DETAIL_PATH = '/mobile/finance/transactions/{id}';
@@ -52,7 +52,7 @@ let testApp: TestApp;
 
 beforeAll(async () => {
   testApp = createTestApp();
-  const res = await request(testApp.app).get('/openapi');
+  const res = await requestOn(testApp.app, (r) => r.get('/openapi'));
   expect(res.status).toBe(200);
   document = res.body as OpenApiBody;
 });
