@@ -9,7 +9,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { type ReactElement } from 'react';
+import { type ReactElement, type ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const sdk = vi.hoisted(() => ({
@@ -49,7 +49,7 @@ function renderUploader(overrides: Partial<Parameters<typeof HeroImageUploader>[
       mutations: { retry: false },
     },
   });
-  function Wrapper({ children }: { children: ReactElement }): ReactElement {
+  function Wrapper({ children }: { children: ReactNode }): ReactElement {
     return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
   }
   return render(

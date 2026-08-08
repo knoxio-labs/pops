@@ -34,6 +34,7 @@ vi.mock('../../../../food-api/index.js', () => ({
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
+import { elementAt } from '../../../../test-utils';
 import { PrepStatesTabContent } from '../PrepStatesTabContent';
 
 function renderTab(): void {
@@ -81,7 +82,7 @@ describe('PrepStatesTabContent', () => {
   it('marks every row Delete button as aria-disabled with an explanatory tooltip', async () => {
     ensure().items = [{ id: 1, slug: 'diced', name: 'Diced' }];
     renderTab();
-    const del = (await screen.findAllByRole('button', { name: /delete disabled/i }))[0];
+    const del = elementAt(await screen.findAllByRole('button', { name: /delete disabled/i }), 0);
     // The button stays focusable (`aria-disabled`, not HTML `disabled`) so the
     // explanatory tooltip can appear on focus; click is no-op'd via onClick.
     expect(del.getAttribute('aria-disabled')).toBe('true');

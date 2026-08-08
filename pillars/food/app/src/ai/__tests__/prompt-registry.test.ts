@@ -9,6 +9,17 @@ import { describe, expect, it } from 'vitest';
 
 import { FOOD_PROMPTS } from '../prompt-registry.js';
 
+declare global {
+  interface ImportMeta {
+    /**
+     * Vite's build-time module glob, which vitest also honours. `vite` is a
+     * transitive dev dep here, so `vite/client` is not resolvable and only
+     * the eager overload this suite uses is declared.
+     */
+    glob<T>(pattern: string, options: { eager: true }): Record<string, T>;
+  }
+}
+
 const promptModules = import.meta.glob<Record<string, unknown>>('../../prompts/*.ts', {
   eager: true,
 });
