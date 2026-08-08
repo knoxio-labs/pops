@@ -68,14 +68,21 @@ so a code-only QR would scan perfectly and pair nothing.
 
 ## Failure shapes
 
-Both the device list and minting split failures three ways, because they send
-the operator after different bugs:
+Failures are split rather than pooled, because they send the operator after
+different bugs:
 
-| Shape        | Meaning                                                            |
-| ------------ | ------------------------------------------------------------------ |
-| Unavailable  | No status, or 5xx — the pillar is down.                            |
-| Rate limited | 429 on issuance — the budget is spent; the fix is to wait.         |
-| Refused      | A status the pillar chose (401, 404 …) — Access/routing, not down. |
+| Shape        | Meaning                                                            | Where it can appear |
+| ------------ | ------------------------------------------------------------------ | ------------------- |
+| Unavailable  | No status, or 5xx — the pillar is down.                            | anywhere            |
+| Refused      | A status the pillar chose (401, 404 …) — Access/routing, not down. | anywhere            |
+| Rate limited | 429 — the issuance budget is spent; the fix is to wait.            | minting only        |
+
+`classifyOperatorFailure` can return all three for any call, but only
+`POST /operator/pairing/codes` is metered — the limiter is applied in that
+handler alone, and the list and revoke contracts declare no 429. So the device
+list resolves to two states (`DeviceListState`), not three; the third arm
+exists so a limiter added to another route later degrades into a sensible
+message instead of "refused".
 
 Collapsing the last into "Unavailable" would send the operator after the wrong
 bug. Revocation keeps its dialog open on any of them: the handset stays

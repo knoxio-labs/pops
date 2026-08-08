@@ -214,6 +214,11 @@ test.describe('bfm — Devices', () => {
     await expect(confirm.getByRole('button', { name: 'Revoking…' })).toBeVisible();
     await expect(confirm).toBeVisible();
 
+    // The other way out of a Radix dialog. AlertDialog is supposed to ignore
+    // it, but "supposed to" is what the Escape path also looked like.
+    await page.mouse.click(8, 8);
+    await expect(confirm).toBeVisible();
+
     // Closes once the request settles, not before. The row flipping to revoked
     // is the other test's job — this one replaces the DELETE route, so it does
     // not drive the stub's revocation state.
