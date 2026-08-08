@@ -12,6 +12,20 @@ export class BareOriginParseError extends Error {
 }
 
 /**
+ * Matches a `scheme://userinfo@` prefix so it can be dropped before an
+ * unparseable value is echoed into an error message. Requires the `//` that
+ * marks an authority component — without it, `user:pass@host` is at least as
+ * likely to be an opaque scheme (`mailto:name@example.com`) as a botched
+ * origin, and blanket-stripping would mangle the former while giving no
+ * stronger guarantee for the latter.
+ */
+const USERINFO_PREFIX_RE = /^([^/]*\/\/)[^/?#]*@/u;
+
+function redactUserinfo(raw: string): string {
+  return raw.replace(USERINFO_PREFIX_RE, '$1');
+}
+
+/**
  * Parse `raw` as a bare http(s) origin, returning the normalised origin with
  * any trailing slash dropped.
  *
@@ -20,20 +34,48 @@ export class BareOriginParseError extends Error {
  *   (`FINANCE_SELF_BASE_URL`) or a description of the source (`pillar 'food'
  *   baseUrl`).
  * @param raw The candidate origin.
- * @throws {BareOriginParseError} If `raw` is not a URL, does not use http(s),
- *   or carries a path, query, or fragment.
+ * @throws {BareOriginParseError} If `raw` is not a URL, carries credentials
+ *   (userinfo), does not use http(s), or carries a path, query, or fragment.
  */
 export function parseBareOrigin(label: string, raw: string): string {
   let url: URL;
   try {
     url = new URL(raw);
   } catch {
-    throw new BareOriginParseError(`${label} "${raw}" is not a valid URL`);
+    // `raw` never reached a `URL` here, so there is no parsed `username`/
+    // `password` to clear — this best-effort regex redaction is what stands
+    // between a malformed-but-credential-shaped value (an invalid port,
+    // `http://user:pass@host:99999`) and an operator's boot log.
+    throw new BareOriginParseError(`${label} "${redactUserinfo(raw)}" is not a valid URL`);
+  }
+  if (url.username !== '' || url.password !== '') {
+    // Checked before every other branch, and reported via a redacted URL
+    // rather than `raw`: this error message reaches operator logs, and the
+    // whole point of rejecting instead of silently stripping is to surface
+    // the problem without also leaking the credential into it.
+    const redacted = new URL(url.href);
+    redacted.username = '';
+    redacted.password = '';
+    throw new BareOriginParseError(
+      `${label} "${redacted.href}" must not carry credentials (redacted here) — ` +
+        `\`URL.origin\` would otherwise drop them silently, and every outbound call to the ` +
+        `resulting baseUrl would then go out unauthenticated`
+    );
   }
   if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-    throw new BareOriginParseError(`${label} "${raw}" must use http or https; got ${url.protocol}`);
+    // No `raw` here: a schemeless value with a colon before the first `@`
+    // (`user:pass@host`) parses as the opaque scheme `user:` rather than an
+    // authority with userinfo, so `redactUserinfo` can't tell it apart from
+    // a legitimate opaque scheme (`mailto:name@example.com`) and can't
+    // redact it safely. `label` and the detected protocol are enough to act
+    // on; the raw value isn't worth the risk of echoing an unredactable one.
+    throw new BareOriginParseError(`${label} must use http or https; got ${url.protocol}`);
   }
   if ((url.pathname !== '/' && url.pathname !== '') || url.search !== '' || url.hash !== '') {
+    // `raw` is safe to echo here: this branch only fires for a successfully
+    // parsed http(s) URL that already cleared the credentials check above,
+    // and the exact extra path/query/fragment is what the operator needs to
+    // see to know what to strip.
     throw new BareOriginParseError(
       `${label} "${raw}" must be a bare origin (no path, query, or fragment)`
     );

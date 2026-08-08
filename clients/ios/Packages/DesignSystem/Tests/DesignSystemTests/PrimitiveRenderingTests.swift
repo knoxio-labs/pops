@@ -14,7 +14,7 @@ import Testing
 internal struct PrimitiveRenderingTests {
     private static let canvas = CGSize(width: 320, height: 240)
 
-    private static func render(_ view: some View, in scheme: ColorScheme) -> Data? {
+    internal static func render(_ view: some View, in scheme: ColorScheme) -> Data? {
         let renderer = ImageRenderer(
             content:
                 view
@@ -51,6 +51,11 @@ internal struct PrimitiveRenderingTests {
     func errorState() throws {
         try Self.check(
             ErrorStateView(message: "Could not reach the server.") {}, named: "ErrorStateView")
+    }
+
+    @Test("PopsButton")
+    func button() throws {
+        try Self.check(PopsButton("Pair") {}, named: "PopsButton")
     }
 
     @Test("PopsRow")

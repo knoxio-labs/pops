@@ -2,7 +2,7 @@
 
 A native SwiftUI iPhone app that reaches the federation over HTTP through one pillar and is imported by nothing in this repo — the two halves of what [ADR-043](../../docs/architecture/adr-043-clients-as-a-unit-kind.md) means by a client. It is in neither the pnpm workspace nor the cargo workspace; `pnpm`, `tsc` and `cargo` have nothing to say about this directory.
 
-That pillar is the BFM. Its contract is vendored here and a Swift client is generated from it — see [`Packages/BFMClient`](Packages/BFMClient/README.md) — but nothing in the app calls that client yet. The contract now carries operations a screen would want (the mobile transaction list and detail); what is missing is the screen, and the session that would authenticate it.
+That pillar is the BFM. Its contract is vendored here and a Swift client is generated from it — see [`Packages/BFMClient`](Packages/BFMClient/README.md). The pairing exchange is the first call the app makes through it; the authenticated ones are not written, because the transport that would attach and refresh a token is not either.
 
 The consequence worth internalising before changing anything here: this app is **distributed, not deployed**. It leaves through App Store Connect onto hardware the operator does not control, so a build already on a phone keeps calling yesterday's contract for as long as its owner declines to update. Every other consumer of a pillar contract in this repo redeploys with its producer; this one cannot.
 
@@ -113,7 +113,7 @@ Half of that is compiler-enforced — a package can only `import` what its own `
 
 `Packages/DesignSystem` carries a second constraint on every feature, orthogonal to the import graph: a feature may not name a colour, a type size or a gap. See [Packages/DesignSystem/README.md](Packages/DesignSystem/README.md).
 
-`AppCore`, `DesignSystem`, the storage half of `Auth` and `BFMClient` are written — see [Packages/Auth/README.md](Packages/Auth/README.md) and [Packages/BFMClient/README.md](Packages/BFMClient/README.md). Every other package is still a shell whose placeholder type says what the module is for, and filling them in is one ticket per module.
+`AppCore`, `DesignSystem`, `BFMClient`, `Auth` and `FeaturePairing` are written — see [Packages/Auth/README.md](Packages/Auth/README.md), [Packages/BFMClient/README.md](Packages/BFMClient/README.md) and [Packages/FeaturePairing/README.md](Packages/FeaturePairing/README.md). `FeatureTransactions` is still a shell whose placeholder type says what the module is for, and so is the app's root view — the pairing screen is built and unit-tested but nothing presents it yet, which is the root shell's ticket.
 
 ## `Contracts/`
 
@@ -143,7 +143,8 @@ It is not quite the only job that touches this directory. The `Device signature 
 
 ## Known gaps
 
-- **Nothing consumes the resolved base URL yet.** `BuiltInBaseURL` answers where the BFM is and `BFMHTTPClient` takes one, but nothing constructs the pair: the composition root binds implementations to `AppCore` protocols, and the BFM contract exposes no operation a feature needs. In Release there is also no pairing store to fall back on (POPS-1383).
+- **Nothing constructs the app's dependencies yet.** `AppDependencies.unbound` is what the environment still holds: `BFMDevicePairingService` and `PairingView` are both written and tested, and nothing builds either, because the root view that would switch on the session and bind them is a placeholder (POPS-1391). Until it lands the pairing screen is reachable only from `#Preview`.
+- **Nothing automated checks Dynamic Type or VoiceOver on any screen.** The pairing screen is laid out for both and neither is measured; the reasoning and the candidate checks are in POPS-1583. See [`Packages/FeaturePairing/README.md`](Packages/FeaturePairing/README.md).
 - **`mise run verify:release-carries-no-host` runs nowhere but a laptop.** The invariant it guards — a shipped binary naming no BFM host — is the one thing here that is not caught by building, testing or linting, and it is the only task in this directory that no job invokes (POPS-1475).
 - **The pre-push hook does not run `mise run lint`.** It would put Xcode on the push path for every contributor, including on the TypeScript-only pushes that are almost all of them. Unformatted Swift can still reach a branch; it can no longer reach `main`, because the CI job rejects it.
 - **Nothing automated exercises the Secure Enclave or the Keychain.** The suites for both live in `Packages/Auth` and skip unless `POPS_IOS_HARDWARE_TESTS=1`. The keychain half is now a move rather than a missing environment — `mise run test:app` runs in an entitled app process, and [AppTests/README.md](AppTests/README.md) asserts the data-protection keychain answers there — but until that move happens (POPS-1439) neither store is covered. The Secure Enclave half needs a physical device and cannot close on a simulator at all. See [`Packages/Auth/README.md`](Packages/Auth/README.md).
