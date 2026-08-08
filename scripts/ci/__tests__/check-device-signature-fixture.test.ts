@@ -16,12 +16,42 @@ const repoRoot = resolve(here, '..', '..', '..');
 
 type Fixture = Parameters<typeof checkFixture>[0];
 
-const [canonical, vendored] = FIXTURE_COPIES;
+/**
+ * Locate a copy by where it lives rather than by position. `FIXTURE_COPIES` is
+ * meant to grow — the guard's docblock says a third consumer needs no new code
+ * — and an index would quietly start pointing at the wrong copy the day one is
+ * added.
+ */
+function copyUnder(prefix: string) {
+  const found = FIXTURE_COPIES.find((copy) => copy.path.startsWith(prefix));
+  if (found === undefined) throw new Error(`no device-signature fixture copy under ${prefix}`);
+  return found;
+}
 
-const readCommitted = (repoRelativePath: string) =>
-  readFileSync(join(repoRoot, repoRelativePath), 'utf8');
+const canonical = copyUnder('clients/');
+const vendored = copyUnder('pillars/bfm/');
 
-const committed: Fixture = JSON.parse(readCommitted(canonical.path));
+/**
+ * Reads a committed copy under the same `string | null` contract
+ * {@link checkAllCopies} is given in production, so a copy that goes missing
+ * fails as the guard's own "missing" message rather than as an ENOENT stack.
+ */
+const readCommitted = (repoRelativePath: string) => {
+  try {
+    return readFileSync(join(repoRoot, repoRelativePath), 'utf8');
+  } catch {
+    return null;
+  }
+};
+
+/** The suite cannot run without the canonical copy, so its absence is fatal here. */
+function requireCommitted(repoRelativePath: string) {
+  const text = readCommitted(repoRelativePath);
+  if (text === null) throw new Error(`missing committed fixture copy: ${repoRelativePath}`);
+  return text;
+}
+
+const committed: Fixture = JSON.parse(requireCommitted(canonical.path));
 
 /**
  * Build a fresh, internally consistent fixture with `node:crypto` alone.
@@ -66,9 +96,14 @@ describe('the committed fixture', () => {
     expect(checkAllCopies(readCommitted)).toEqual([]);
   });
 
-  it('is vendored inside the BFM rather than read from clients/ — ADR-043', () => {
-    expect(vendored.path.startsWith('pillars/bfm/')).toBe(true);
-    expect(canonical.path.startsWith('clients/')).toBe(true);
+  it('is vendored inside every consumer rather than read from clients/ — ADR-043', () => {
+    // Exactly one copy may live under `clients/`, and it must be the canonical
+    // one the equality check restores from. Every other copy is a consumer's
+    // own, which is the whole point of vendoring it.
+    const underClients = FIXTURE_COPIES.filter((copy) => copy.path.startsWith('clients/'));
+
+    expect(underClients).toEqual([canonical]);
+    expect(FIXTURE_COPIES.length).toBeGreaterThan(underClients.length);
   });
 
   it('carries a 64-byte raw signature and a 65-byte uncompressed point', () => {
