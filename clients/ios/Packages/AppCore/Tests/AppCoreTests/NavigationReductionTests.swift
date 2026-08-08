@@ -2,7 +2,7 @@ import AppCore
 import Testing
 
 @Suite("Navigation reduction")
-struct NavigationReductionTests {
+internal struct NavigationReductionTests {
     @Test("push appends")
     func pushAppends() {
         let path = NavigationReducer.reduce([], applying: .push(.transactionList))
@@ -14,7 +14,8 @@ struct NavigationReductionTests {
     func pushIgnoresRepeat() {
         let path: [Route] = [.transactionList, .transactionDetail(id: "txn-1")]
 
-        let reduced = NavigationReducer.reduce(path, applying: .push(.transactionDetail(id: "txn-1")))
+        let reduced = NavigationReducer.reduce(
+            path, applying: .push(.transactionDetail(id: "txn-1")))
 
         #expect(reduced == path)
     }
@@ -23,7 +24,8 @@ struct NavigationReductionTests {
     func pushAllowsRepeatDeeper() {
         let path: [Route] = [.transactionDetail(id: "txn-1"), .transactionList]
 
-        let reduced = NavigationReducer.reduce(path, applying: .push(.transactionDetail(id: "txn-1")))
+        let reduced = NavigationReducer.reduce(
+            path, applying: .push(.transactionDetail(id: "txn-1")))
 
         #expect(reduced == path + [.transactionDetail(id: "txn-1")])
     }

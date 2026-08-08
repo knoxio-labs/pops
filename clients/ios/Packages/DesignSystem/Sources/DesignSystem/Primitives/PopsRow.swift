@@ -33,8 +33,8 @@ public struct PopsRow<Trailing: View>: View {
     }
 }
 
-public extension PopsRow where Trailing == EmptyView {
-    init(title: String, subtitle: String? = nil) {
+extension PopsRow where Trailing == EmptyView {
+    public init(title: String, subtitle: String? = nil) {
         self.init(title: title, subtitle: subtitle) { EmptyView() }
     }
 }

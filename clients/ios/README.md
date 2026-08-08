@@ -20,6 +20,21 @@ mise run build:device  # signed Release, physical iPhone
 
 Requires an iOS 27 SDK. `mise install` here pins XcodeGen; Xcode itself is not managed by mise.
 
+## Linting and formatting
+
+```bash
+mise run lint     # both tools; the single command the CI job will invoke
+mise run format   # rewrites the sources; the fixer for the half of `lint` that has one
+```
+
+`mise run lint` is a single task rather than a documented pair of commands on purpose. The iOS CI job (POPS-1376, not yet written) is meant to invoke this task and nothing else, so that there is never a second copy of the command to drift from — a hand-copied pair in a workflow file is how a green local run stops meaning anything. It runs two tools, both of them, even when the first has already failed, so one run tells you everything.
+
+They divide the work along a line worth knowing before adding a rule to either: **`.swift-format` owns what the code looks like** and rewrites it; **`.swiftlint.yml` owns what the code may do** and rewrites nothing. A defect belongs to exactly one of them, and where both had an opinion the loser was switched off rather than left to report the same thing twice.
+
+Both files carry their reasoning in a header comment — every limit is a number someone picked over an alternative, and the alternative is written down. That is the source of truth; this README deliberately does not repeat it, because two copies of a rule list means one of them is wrong and you cannot tell which.
+
+Neither tool is pinned the same way. SwiftLint is a mise tool, so its version is in `mise.toml` and everyone gets the same one. `swift-format` ships inside the Xcode toolchain and cannot be pinned here at all — which is why the CI job has to pin its Xcode explicitly, and why a local run only matches CI when the Xcode versions agree.
+
 ## Signing, and installing on a phone
 
 Signing is automatic, and the only input it needs is an Apple Developer team.
@@ -83,4 +98,5 @@ Each package other than `AppCore` and `DesignSystem` is a shell whose placeholde
 ## Known gaps
 
 - **Nothing consumes the resolved base URL yet.** `BuiltInBaseURL` answers where the BFM is; no transport asks it, because there is no transport (POPS-1380) and no pairing store to fall back on in Release (POPS-1383).
-- **No CI job builds this.** `.github/workflows/_discover-units.yml` scans `pillars/` and `libs/` only, so nothing in the existing matrix compiles a line of Swift, and a green PR says nothing about this directory. The iOS workflow is POPS-1376.
+- **No CI job builds or lints this.** `.github/workflows/_discover-units.yml` scans `pillars/` and `libs/` only, so nothing in the existing matrix compiles or lints a line of Swift, and a green PR says nothing about this directory. `mise run lint` is written to be the command that job invokes, but until it exists running it is a courtesy. The iOS workflow is POPS-1376.
+- **The pre-push hook does not run `mise run lint`.** It would put Xcode on the push path for every contributor, including on the TypeScript-only pushes that are almost all of them. Until the CI job lands, nothing mechanically stops unformatted Swift from reaching `main`.

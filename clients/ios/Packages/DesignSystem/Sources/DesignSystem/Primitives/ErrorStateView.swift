@@ -16,8 +16,10 @@ public struct ErrorStateView: View {
     }
 
     public var body: some View {
-        StateView(message: StateMessage.resolve(message, fallback: Self.fallbackMessage),
-                  messageColor: .popsDestructive) {
+        StateView(
+            message: StateMessage.resolve(message, fallback: Self.fallbackMessage),
+            messageColor: .popsDestructive
+        ) {
             Button(Self.retryTitle, action: retry)
                 .font(.popsHeadline)
                 .foregroundStyle(Color.popsAccent)

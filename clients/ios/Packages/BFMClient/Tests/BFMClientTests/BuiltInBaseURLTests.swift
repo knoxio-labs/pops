@@ -4,7 +4,7 @@ import Testing
 @testable import BFMClient
 
 @Suite("BuiltInBaseURL")
-struct BuiltInBaseURLTests {
+internal struct BuiltInBaseURLTests {
     private func resolve(
         environment: String? = nil,
         bakedIn: String? = nil,
@@ -65,12 +65,14 @@ struct BuiltInBaseURLTests {
         }
     }
 
-    @Test("only HTTP and HTTPS are accepted", arguments: [
-        "ftp://bfm.example",
-        "file:///etc/hosts",
-        "pops://bfm.example",
-        "javascript:alert(1)",
-    ])
+    @Test(
+        "only HTTP and HTTPS are accepted",
+        arguments: [
+            "ftp://bfm.example",
+            "file:///etc/hosts",
+            "pops://bfm.example",
+            "javascript:alert(1)",
+        ])
     func rejectsForeignSchemes(_ raw: String) {
         #expect(resolve(bakedIn: raw) == nil)
     }
@@ -93,7 +95,9 @@ struct BuiltInBaseURLTests {
 
     @Test("a path on the base URL is preserved")
     func preservesPath() {
-        #expect(resolve(bakedIn: "https://pops.example/bfm-api") == URL(string: "https://pops.example/bfm-api"))
+        #expect(
+            resolve(bakedIn: "https://pops.example/bfm-api")
+                == URL(string: "https://pops.example/bfm-api"))
     }
 
     @Test("the Info.plist key matches the one project.yml populates")

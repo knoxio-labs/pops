@@ -4,7 +4,7 @@ import SwiftUI
 import Testing
 
 @Suite("Dependency container")
-struct AppDependenciesTests {
+internal struct AppDependenciesTests {
     @Test("an unbound repository fails rather than trapping")
     func unboundTransactionsFail() async {
         await #expect(throws: RepositoryError.dependencyNotBound) {

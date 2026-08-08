@@ -15,7 +15,7 @@ public enum NavigationReducer {
     ///   does not apply.
     public static func reduce(_ path: [Route], applying action: NavigationAction) -> [Route] {
         switch action {
-        case let .push(route):
+        case .push(let route):
             // A double tap delivers two pushes before the first frame renders.
             // Without this the user lands on two identical screens and has to
             // dismiss both to get back.
@@ -25,7 +25,7 @@ public enum NavigationReducer {
             return path.isEmpty ? path : Array(path.dropLast())
         case .popToRoot:
             return []
-        case let .replace(routes):
+        case .replace(let routes):
             return routes
         }
     }

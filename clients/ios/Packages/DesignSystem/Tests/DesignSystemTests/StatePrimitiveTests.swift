@@ -5,10 +5,14 @@ import Testing
 @testable import DesignSystem
 
 @Suite("State primitives")
-struct StatePrimitiveTests {
-    @Test("a usable message survives untouched", arguments: ["Could not reach the server.", "  trimmed  "])
+internal struct StatePrimitiveTests {
+    @Test(
+        "a usable message survives untouched",
+        arguments: ["Could not reach the server.", "  trimmed  "])
     func messageIsKept(input: String) {
-        #expect(StateMessage.resolve(input, fallback: "fallback") == input.trimmingCharacters(in: .whitespacesAndNewlines))
+        #expect(
+            StateMessage.resolve(input, fallback: "fallback")
+                == input.trimmingCharacters(in: .whitespacesAndNewlines))
     }
 
     @Test("a blank message falls back", arguments: ["", " ", "\n", "\t  \n "])
@@ -36,7 +40,7 @@ struct StatePrimitiveTests {
 }
 
 @Suite("Spacing scale")
-struct SpacingScaleTests {
+internal struct SpacingScaleTests {
     @Test("steps ascend, so a larger name is never a smaller gap")
     func scaleAscends() {
         let steps: [(name: String, value: CGFloat)] = [
@@ -50,8 +54,10 @@ struct SpacingScaleTests {
         ]
 
         for (smaller, larger) in zip(steps, steps.dropFirst()) {
-            #expect(smaller.value < larger.value,
-                    "\(smaller.name) (\(smaller.value)) is not smaller than \(larger.name) (\(larger.value))")
+            #expect(
+                smaller.value < larger.value,
+                "\(smaller.name) (\(smaller.value)) is not smaller than \(larger.name) (\(larger.value))"
+            )
         }
     }
 }

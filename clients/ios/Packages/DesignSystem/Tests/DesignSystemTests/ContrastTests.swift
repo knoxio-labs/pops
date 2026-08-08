@@ -11,7 +11,7 @@ import Testing
 /// `popsSeparator` is deliberately absent: it draws hairlines, which WCAG
 /// treats as decoration rather than as a graphical object carrying meaning.
 @Suite("Contrast")
-struct ContrastTests {
+internal struct ContrastTests {
     private static let minimumRatio = 4.5
 
     private static let surfaces: [(name: String, color: Color)] = [
@@ -37,20 +37,26 @@ struct ContrastTests {
             + 0.0722 * Double(resolved.linearBlue)
     }
 
-    private static func ratio(_ foreground: Color, on background: Color, in scheme: ColorScheme) -> Double {
+    private static func ratio(_ foreground: Color, on background: Color, in scheme: ColorScheme)
+        -> Double
+    {
         let first = luminance(foreground, in: scheme)
         let second = luminance(background, in: scheme)
         return (max(first, second) + 0.05) / (min(first, second) + 0.05)
     }
 
-    @Test("body text clears WCAG AA on every surface it may sit on",
-          arguments: ContrastTests.foregrounds.map(\.name), ColorScheme.allCases)
+    @Test(
+        "body text clears WCAG AA on every surface it may sit on",
+        arguments: ContrastTests.foregrounds.map(\.name), ColorScheme.allCases)
     func foregroundIsReadable(foreground name: String, scheme: ColorScheme) throws {
         let color = try #require(Self.foregrounds.first { $0.name == name }?.color)
         for surface in Self.surfaces {
             let measured = Self.ratio(color, on: surface.color, in: scheme)
-            #expect(measured >= Self.minimumRatio,
-                    "\(name) on \(surface.name) in \(scheme) is \(String(format: "%.2f", measured)):1, below \(Self.minimumRatio):1")
+            let reading = String(format: "%.2f", measured)
+            #expect(
+                measured >= Self.minimumRatio,
+                "\(name) on \(surface.name) in \(scheme) is \(reading):1, below \(Self.minimumRatio):1"
+            )
         }
     }
 }

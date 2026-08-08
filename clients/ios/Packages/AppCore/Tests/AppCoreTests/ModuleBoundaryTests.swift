@@ -2,13 +2,12 @@ import Foundation
 import Testing
 
 /// The dependency direction, asserted by reading the tree rather than by the
-/// compiler. SwiftLint cannot express "this module may not name that one"
-/// (POPS-1371 configures it; no rule there covers this), and the compiler only
-/// refuses an import a manifest never declared — it has nothing to say about a
-/// wrong edge being added to the manifest in the first place. So this reads the
-/// sources.
+/// compiler. SwiftLint has no rule that can express "this module may not name
+/// that one", and the compiler only refuses an import a manifest never declared
+/// — it has nothing to say about a wrong edge being added to the manifest in
+/// the first place. So this reads the sources.
 @Suite("Module boundaries")
-struct ModuleBoundaryTests {
+internal struct ModuleBoundaryTests {
     /// Packages allowed to name a concrete implementation of an `AppCore` seam,
     /// because they are the mechanism: `Auth` owns pairing, key material and the
     /// authenticating transport; `BFMClient` owns the generated types and the
@@ -70,7 +69,9 @@ struct ModuleBoundaryTests {
     /// Only a `Tests` tree may reach for the fakes.
     @Test("fakes stay out of shipping code")
     func fakesAreTestOnly() throws {
-        let shipping = try packageNames().flatMap { try sourceFiles(inPackage: $0) } + swiftFiles(under: appDirectory)
+        let shipping =
+            try packageNames().flatMap { try sourceFiles(inPackage: $0) }
+            + swiftFiles(under: appDirectory)
         #expect(!shipping.isEmpty)
 
         for file in shipping where !file.path.contains("/Sources/AppCoreFakes/") {
@@ -114,7 +115,9 @@ extension ModuleBoundaryTests {
     }
 
     private func swiftFiles(under directory: URL) -> [URL] {
-        guard let enumerator = FileManager.default.enumerator(at: directory, includingPropertiesForKeys: nil)
+        guard
+            let enumerator = FileManager.default.enumerator(
+                at: directory, includingPropertiesForKeys: nil)
         else { return [] }
         return enumerator.compactMap { $0 as? URL }.filter { $0.pathExtension == "swift" }
     }
@@ -133,8 +136,16 @@ extension ModuleBoundaryTests {
     /// in a Swift file worth writing.
     private func importedModules(in file: URL) throws -> Set<String> {
         let source = try String(contentsOf: file, encoding: .utf8)
+        // Extended form: literal whitespace is ignored, so every space that
+        // matters is spelled `\s`. Same pattern as the one line it replaces.
         let pattern =
-            #/^\s*(?:@[A-Za-z_]+\s+)?import\s+(?:struct|class|enum|protocol|func|var|let|typealias)?\s*([A-Za-z_][A-Za-z0-9_]*)/#
+            #/
+            ^\s*
+            (?:@[A-Za-z_]+\s+)?
+            import\s+
+            (?:struct|class|enum|protocol|func|var|let|typealias)?\s*
+            ([A-Za-z_][A-Za-z0-9_]*)
+        /#
         return Set(
             source
                 .split(separator: "\n", omittingEmptySubsequences: false)

@@ -1,5 +1,13 @@
 [tools]
+jq = "1.8.2"
+swiftlint = "0.65.0"
 xcodegen = "2.46.0"
+
+[env]
+# The Swift tree the formatter and the linter both cover. `.swiftlint.yml`'s
+# `included:` names the same two directories — two tools with two config
+# formats, one intended scope, so they move together.
+SWIFT_SOURCES = "App Packages"
 
 [tasks.generate]
 description = "Regenerate Pops.xcodeproj from project.yml"
@@ -101,3 +109,105 @@ fi
 
 echo "Release build names no BFM host."
 '''
+
+# swift-format, in whichever of its two modes. Both go through here so the check
+# and the fix cannot disagree about which files they cover or which config they
+# read. `xcrun` rather than a bare name: swift-format ships inside the Xcode
+# toolchain and is not otherwise on PATH.
+[tasks."swift-format"]
+description = "swift-format over the Swift sources — `lint` to check, `format` to rewrite"
+hide = true
+usage = 'arg "<mode>"'
+run = '''
+# mise already runs task scripts under `sh -e`, but NOT under pipefail, and
+# every check below reads the head of a pipe. Without this, a failing
+# `swift-format dump-configuration` leaves jq succeeding on empty input, both
+# rule lists come out empty, and the drift check "passes" having compared
+# nothing against nothing. Verified: mise reports `$-` as `ehBc`.
+set -eu
+set -o pipefail
+
+work="$(mktemp -d)"
+trap 'rm -rf "$work"' EXIT
+
+# Every root, checked individually and before anything else. Checking only the
+# combined result is not enough: with two roots and one of them renamed, `find`
+# still returns the other's files, so a non-empty result would say "fine" while
+# an entire directory went unlinted. Each root is asserted by name so the
+# message names the one that moved.
+for root in $SWIFT_SOURCES; do
+  if [ ! -d "$root" ]; then
+    echo "swift-format: '$root' from SWIFT_SOURCES is not a directory." >&2
+    exit 1
+  fi
+done
+
+# The file set, enumerated rather than left to `--recursive`. swift-format walks
+# past dot-directories on its own today, so `.build` happens not to be visited —
+# but the failure mode if that ever changes is `format` rewriting SwiftPM's
+# dependency checkouts in place, which is not a bet worth taking to save a
+# `find`. Naming the exclusion also keeps this honest against `.swiftlint.yml`,
+# which excludes `.build` explicitly; the two now describe the same set. `-prune`
+# rather than a path filter, so a large checkout is skipped rather than walked.
+find $SWIFT_SOURCES -name '.build' -type d -prune -o -name '*.swift' -print0 > "$work/sources"
+
+# The roots exist by now, so an empty result means they hold no Swift at all.
+# swift-format exits 0 both on a path that does not exist and on one with
+# nothing to check — no message either time — so without this the tools would
+# report success having read nothing. Verified against swift-format from Xcode 27.
+if [ ! -s "$work/sources" ]; then
+  echo "swift-format: no Swift sources under '$SWIFT_SOURCES' — SWIFT_SOURCES is stale." >&2
+  exit 1
+fi
+
+# `.swift-format`'s `rules` map replaces the defaults rather than merging into
+# them, so a rule the file does not name is a rule that is off. A toolchain bump
+# that introduced one would disable it silently while the config still looked
+# complete. Compare what this swift-format ships against what the file lists and
+# refuse to run on a mismatch; the fix is to add the rule, deliberately, with a
+# reason next to it.
+xcrun swift-format dump-configuration | jq -r '.rules | keys[]' > "$work/shipped"
+xcrun swift-format dump-configuration --effective | jq -r '.rules | keys[]' > "$work/listed"
+# Belt to pipefail's braces: two empty lists compare equal, so an empty one has
+# to be a failure in its own right rather than something the diff waves through.
+if [ ! -s "$work/shipped" ] || [ ! -s "$work/listed" ]; then
+  echo "swift-format: could not read the rule list from the toolchain or from" >&2
+  echo "              .swift-format, so the drift check would have compared" >&2
+  echo "              nothing against nothing." >&2
+  exit 1
+fi
+if ! diff -u "$work/shipped" "$work/listed" > "$work/drift"; then
+  echo "swift-format: .swift-format does not list every rule this toolchain ships." >&2
+  echo "      '-' shipped but unlisted (silently off); '+' listed but withdrawn." >&2
+  sed -n '4,$p' "$work/drift" >&2
+  exit 1
+fi
+
+case "$usage_mode" in
+  lint) xargs -0 xcrun swift-format lint --strict --parallel < "$work/sources" ;;
+  format) xargs -0 xcrun swift-format format --in-place --parallel < "$work/sources" ;;
+  *)
+    echo "swift-format: unknown mode '$usage_mode' — expected 'lint' or 'format'." >&2
+    exit 1
+    ;;
+esac
+'''
+
+# The one entry point. The iOS CI job does not exist yet; when it does it is to
+# invoke this task rather than restate the commands, because the moment the two
+# are written out separately they drift and a green local run means nothing.
+[tasks.lint]
+description = "swift-format + SwiftLint over the Swift sources"
+run = '''
+set -u
+# Both run even when the first fails, so one invocation reports every problem.
+status=0
+mise run swift-format lint || status=1
+swiftlint lint --strict --quiet || status=1
+exit $status
+'''
+
+[tasks.format]
+description = "Rewrite the Swift sources with swift-format (the fixer for half of `lint`)"
+run = "mise run swift-format format"
+
