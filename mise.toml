@@ -2,6 +2,21 @@
 # Run `mise tasks` to see all available tasks
 # Run `mise run <task>` or `mise <task>` to execute
 
+# Without this, mise appends its resolved tool bin dirs *after* the inherited
+# PATH whenever its shim dir is already on PATH — so a system Node installed
+# ahead of the shims (e.g. Homebrew's, which lands in /opt/homebrew/bin) wins
+# every PATH lookup inside a task. `mise exec -- node` still reports the pin,
+# because mise resolves that command itself, but a `#!/usr/bin/env node`
+# shebang does not — and every `node_modules/.bin` entry (vitest, tsc, tsx)
+# is such a shebang. The result is a task silently running on an unpinned
+# Node major while `mise exec` swears the pin is honoured.
+#
+# `activate_aggressive` pushes the pinned bin dirs to the FRONT instead, so
+# tasks, their shebangs and their subprocesses all agree with `[tools]` below
+# regardless of how the developer's PATH is ordered.
+[settings]
+activate_aggressive = true
+
 [tools]
 node = "24.19.0"
 pnpm = "11.20.0"

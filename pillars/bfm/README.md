@@ -71,8 +71,9 @@ not `404`.
 
 That directory's README carries the whole of the reasoning: why a rejected
 token is a `401` and a revoked device a `403`, why a missing device row is a
-`401` rather than either, what is never logged, and what is deliberately absent
-(refresh — POPS-1375, `lastSeenAt` — POPS-1469).
+`401` rather than either, what is never logged, why `lastSeenAt` is written
+here on a coalesced schedule rather than on every request, and what is
+deliberately absent (refresh — POPS-1375).
 
 ### `POST /devices/pair` — the way in
 
@@ -175,8 +176,11 @@ four values the cross-pillar gateway speaks. The probe's two-source design, why
 it reads `/openapi` rather than `/health`, and why a registry outage still
 answers `200` are in [`src/api/mobile/README.md`](src/api/mobile/README.md).
 
-It is also the one route that writes: `devices.lastSeenAt` advances here and
-nowhere else (POPS-1469).
+It also writes: bootstrap's own uncoalesced write to `devices.lastSeenAt`
+happens before the registry is even read, because a check-in is true
+regardless of how the rest of the call goes. Every other `/mobile/*` route
+moves the same column through the guard instead, coalesced — see
+[`src/api/auth/README.md`](src/api/auth/README.md).
 
 ## The mobile shape
 
@@ -305,10 +309,13 @@ registration is a separate mechanism and still goes through the
   that exist.
 - **Any pruning of the credential tables.** Consumed and expired pairing codes
   and dead refresh tokens accumulate; nothing deletes them (POPS-1449).
-- **Any enforcement of what the service account may reach.** The grant is
-  narrow and auditable, but the registry pillar is the only one in the fleet
-  that reads `X-API-Key` at all — every other producer serves any in-network
-  caller. Whether that stays the model is POPS-1447.
+- **Enforcement of the grant anywhere except `registry` and `finance`.** Those
+  two check the presented `X-API-Key` against the account behind it and refuse
+  an operation the grant does not cover. `inventory`, `media`, `lists`,
+  `cerebrum`, `purchases`, `ai`, `food`, `orchestrator`, `documents` and the
+  Rust `contacts` pillar still serve any in-network caller, credential or not —
+  each has its own adoption ticket. bfm calls only `finance`, so its own grant
+  is enforced end to end today.
 
 ## Reaching sibling pillars
 
