@@ -209,6 +209,16 @@ jobs:
         uses: jdx/mise-action@v4
 
       - if: ${{ matrix.unit.lang == 'rust' }}
+        name: Ensure rustfmt + clippy for the pinned toolchain
+        # mise selects the toolchain by exporting RUSTUP_TOOLCHAIN from the root
+        # `mise.toml` rust pin. rustup then auto-installs that exact version
+        # with the DEFAULT profile, which does NOT include rustfmt or clippy —
+        # so `cargo fmt` fails with "'cargo-fmt' is not installed for the
+        # toolchain". This was invisible while the pin read `stable`, because
+        # the runner ships a preinstalled `stable` that already carries both.
+        run: rustup component add rustfmt clippy
+
+      - if: ${{ matrix.unit.lang == 'rust' }}
         name: Format check
         run: cargo fmt -p ${{ matrix.unit.pkg }} --check
 
