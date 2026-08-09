@@ -470,7 +470,7 @@ xcodebuild -project Pops.xcodeproj -scheme Pops \
   clean build-for-testing | tee "$log"
 
 status=0
-output=$(swiftlint analyze --strict --compiler-log-path "$log" --config .swiftlint.yml 2>&1) || status=1
+output=$(swiftlint analyze --strict --compiler-log-path "$log" --config .swiftlint.yml 2>&1) || status=$?
 printf '%s\n' "$output"
 
 # Same reasoning as app-test-lane.sh's executed-test count: absence is a
