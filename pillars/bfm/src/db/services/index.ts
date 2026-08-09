@@ -42,9 +42,11 @@ export {
 } from './pairing-codes.js';
 
 export {
+  assertRefreshTokenRetentionCoversTtl,
   PAIRING_CODE_RETENTION_MS,
   pruneDeadRefreshTokens,
   prunePairingCodes,
   REFRESH_TOKEN_RETENTION_MS,
+  RefreshTokenRetentionError,
   type PruneOptions,
 } from './prune-credentials.js';

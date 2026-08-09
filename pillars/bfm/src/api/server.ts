@@ -15,7 +15,7 @@
  * serving traffic. SIGTERM triggers `pillarHandle.stop()` so the heartbeat
  * clears and the registry sees an explicit deregister.
  *
- * Three things take the opposite bargain and are done BEFORE `listen`, all
+ * Four things take the opposite bargain and are done BEFORE `listen`, all
  * because the container healthcheck cannot see them:
  *
  *   - Outbound cross-pillar auth. A bfm holding no service-account key cannot
@@ -28,10 +28,22 @@
  *   - The database. Migrations run on the way up, and a pillar that answers
  *     `/health` with an unmigrated or unwritable `bfm.db` would pass its
  *     healthcheck and fail every device the moment one paired.
+ *   - The refresh-token retention invariant. `prune-credentials.ts`'s
+ *     retention window is only safe if it is at least as long as the TTL bfm
+ *     actually mints — see that module's header. Unlike the three above,
+ *     this one has no failure mode `/health` or a handset would ever surface:
+ *     a violation just turns reuse detection off for some tokens, silently.
+ *     Asserting it here against the value this file hands `createBfmApiApp`
+ *     means the deploy that first breaks the invariant is the one that
+ *     crashes, not the incident that later depends on it.
  */
 import { bootstrapPillar, type PillarBootstrapHandle } from '@pops/pillar-sdk/bootstrap';
 
-import { openBfmDb } from '../db/index.js';
+import {
+  assertRefreshTokenRetentionCoversTtl,
+  DEFAULT_REFRESH_TOKEN_TTL_MS,
+  openBfmDb,
+} from '../db/index.js';
 import { createBfmApiApp } from './app.js';
 import { resolveAccessTokenSigningKey } from './auth/signing-key.js';
 import {
@@ -64,6 +76,11 @@ const sdkConfig = configureBfmServerSdk();
 
 const accessTokenSigningKey = resolveAccessTokenSigningKey();
 
+// Nothing here overrides the default today — see this file's header for why
+// the check runs unconditionally anyway.
+const refreshTokenTtlMs = DEFAULT_REFRESH_TOKEN_TTL_MS;
+assertRefreshTokenRetentionCoversTtl(refreshTokenTtlMs);
+
 const sqlitePath = resolveSqlitePath();
 const bfmDb = openBfmDb(sqlitePath);
 console.warn(`[bfm-api] SQLite at ${sqlitePath}`);
@@ -79,6 +96,7 @@ const app = createBfmApiApp({
   publicBaseUrl,
   internalBaseUrls: sdkConfig.internalBaseUrls,
   finance,
+  refreshTokenTtlMs,
 });
 
 let pruneCredentialsWorker: PruneCredentialsWorkerHandle | undefined;

@@ -16,12 +16,14 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { devices, pairingCodes, refreshTokens } from '../schema.js';
 import {
+  assertRefreshTokenRetentionCoversTtl,
   DEFAULT_REFRESH_TOKEN_TTL_MS,
   findRefreshTokenByHash,
   PAIRING_CODE_RETENTION_MS,
   pruneDeadRefreshTokens,
   prunePairingCodes,
   REFRESH_TOKEN_RETENTION_MS,
+  RefreshTokenRetentionError,
 } from '../services/index.js';
 import { deviceRow, openTempDb, pairingCodeRow, refreshTokenRow } from './helpers.js';
 
@@ -77,6 +79,77 @@ describe('the module constants', () => {
     // row be pruned while its still-live successor is in active use — the
     // exact way this sweeper could silently disable reuse detection.
     expect(REFRESH_TOKEN_RETENTION_MS).toBe(DEFAULT_REFRESH_TOKEN_TTL_MS);
+  });
+});
+
+describe('assertRefreshTokenRetentionCoversTtl', () => {
+  it('accepts a TTL equal to the retention window', () => {
+    expect(() => assertRefreshTokenRetentionCoversTtl(RETENTION_MS, RETENTION_MS)).not.toThrow();
+  });
+
+  it('accepts a TTL shorter than the retention window', () => {
+    expect(() =>
+      assertRefreshTokenRetentionCoversTtl(RETENTION_MS - 1, RETENTION_MS)
+    ).not.toThrow();
+  });
+
+  it('rejects a TTL longer than the retention window', () => {
+    expect(() => assertRefreshTokenRetentionCoversTtl(RETENTION_MS + 1, RETENTION_MS)).toThrow(
+      RefreshTokenRetentionError
+    );
+  });
+
+  it('names both values in the rejection, not just that one was wrong', () => {
+    let error: unknown;
+    try {
+      assertRefreshTokenRetentionCoversTtl(RETENTION_MS + 1, RETENTION_MS);
+    } catch (caught) {
+      error = caught;
+    }
+    expect(error).toBeInstanceOf(RefreshTokenRetentionError);
+    const message = (error as Error).message;
+    expect(message).toContain(String(RETENTION_MS));
+    expect(message).toContain(String(RETENTION_MS + 1));
+  });
+
+  it("passes bfm's actual production configuration — nothing today overrides the TTL", () => {
+    expect(() => assertRefreshTokenRetentionCoversTtl(DEFAULT_REFRESH_TOKEN_TTL_MS)).not.toThrow();
+  });
+
+  it('is what would catch a future TTL bump that outgrows retention without the constant moving', () => {
+    // The regression this exists to prevent: a deployment wires
+    // `refreshTokenTtlMs` past the shipped retention window without also
+    // moving `REFRESH_TOKEN_RETENTION_MS`. Run against the real constant
+    // rather than an arbitrary number, so this fails the moment that
+    // relationship stops holding — not just when synthetic inputs disagree.
+    expect(() => assertRefreshTokenRetentionCoversTtl(DEFAULT_REFRESH_TOKEN_TTL_MS + 1)).toThrow(
+      RefreshTokenRetentionError
+    );
+  });
+
+  it.each([
+    ['NaN', Number.NaN],
+    ['positive infinity', Number.POSITIVE_INFINITY],
+    ['zero', 0],
+    ['negative', -1],
+  ])('rejects a %s TTL rather than letting it silently pass the > comparison', (_label, ttlMs) => {
+    // `NaN > x` and `x > NaN` are both `false` in JS, so a bare `ttlMs >
+    // retentionMs` check would let a NaN TTL through as if it were safe —
+    // exactly the silent failure this assertion exists to prevent.
+    expect(() => assertRefreshTokenRetentionCoversTtl(ttlMs, RETENTION_MS)).toThrow(
+      RefreshTokenRetentionError
+    );
+  });
+
+  it.each([
+    ['NaN', Number.NaN],
+    ['positive infinity', Number.POSITIVE_INFINITY],
+    ['zero', 0],
+    ['negative', -1],
+  ])('rejects a %s retention window for the same reason', (_label, retentionMs) => {
+    expect(() => assertRefreshTokenRetentionCoversTtl(RETENTION_MS, retentionMs)).toThrow(
+      RefreshTokenRetentionError
+    );
   });
 });
 

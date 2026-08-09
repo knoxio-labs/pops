@@ -46,6 +46,19 @@
  * then be deleted while its immediate, still-live successor is in active
  * use, and a replay of the deleted row would go undetected against a family
  * that is very much alive.
+ *
+ * That argument is a proof about two constants, not about the process that
+ * wires them: it holds only as long as whatever `refreshTokenTtlMs` actually
+ * gets minted stays `<=` {@link REFRESH_TOKEN_RETENTION_MS}, and nothing
+ * before {@link assertRefreshTokenRetentionCoversTtl} existed checked that at
+ * the one place — `api/server.ts` — that decides what production mints.
+ * `refreshTokenTtlMs` is threaded as an optional override through
+ * `BfmApiDeps`, `BfmRestHandlerDeps`, `DeviceHandlerDeps` and the two
+ * exchange functions for tests to drive; production has never used that seam,
+ * but nothing stopped a future deploy from wiring one in without moving this
+ * file's constant to match. {@link assertRefreshTokenRetentionCoversTtl} is
+ * what turns that lapse into a boot crash instead of a silently disabled
+ * security control.
  */
 import { and, asc, eq, isNotNull, isNull, lte, or, sql } from 'drizzle-orm';
 
@@ -68,6 +81,55 @@ export const PAIRING_CODE_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
  * reuse detection for an active family.
  */
 export const REFRESH_TOKEN_RETENTION_MS = DEFAULT_REFRESH_TOKEN_TTL_MS;
+
+export class RefreshTokenRetentionError extends Error {
+  override readonly name = 'RefreshTokenRetentionError' as const;
+}
+
+/**
+ * Boot-time guard for the invariant this file's header argues: retention
+ * must never fall below whatever refresh-token TTL is actually being minted.
+ *
+ * Call this at the one place that decides what production mints —
+ * `api/server.ts`, against the value it is about to hand `createBfmApiApp` as
+ * `refreshTokenTtlMs` — not inside the exchange functions themselves, which
+ * tests legitimately drive with TTLs of their own choosing that have nothing
+ * to do with what a deployment would ever configure.
+ *
+ * Both arguments are checked for being positive and finite before the
+ * comparison, not just compared directly: `NaN > x` and `x > NaN` are both
+ * `false` in JS, so a future parse bug that hands this a `NaN` would
+ * otherwise pass the `>` check silently — the exact failure mode this
+ * function exists to rule out, just moved one step earlier.
+ *
+ * @throws {RefreshTokenRetentionError} if either argument is not a positive,
+ * finite number, or if `ttlMs` exceeds `retentionMs`.
+ */
+export function assertRefreshTokenRetentionCoversTtl(
+  ttlMs: number,
+  retentionMs: number = REFRESH_TOKEN_RETENTION_MS
+): void {
+  if (!Number.isFinite(ttlMs) || ttlMs <= 0) {
+    throw new RefreshTokenRetentionError(
+      `[bfm-api] refresh token TTL must be a positive, finite number of milliseconds; got ` +
+        `${String(ttlMs)}`
+    );
+  }
+  if (!Number.isFinite(retentionMs) || retentionMs <= 0) {
+    throw new RefreshTokenRetentionError(
+      `[bfm-api] refresh token retention must be a positive, finite number of milliseconds; ` +
+        `got ${String(retentionMs)}`
+    );
+  }
+  if (ttlMs > retentionMs) {
+    throw new RefreshTokenRetentionError(
+      `[bfm-api] refresh token retention (${String(retentionMs)}ms) must be >= the refresh ` +
+        `token TTL (${String(ttlMs)}ms): a shorter retention window can prune a consumed row ` +
+        `while its still-live successor is in active use, silently disabling reuse detection ` +
+        `for it`
+    );
+  }
+}
 
 export interface PruneOptions {
   /** Overrides the table's default window. Tests use this; production does not. */
