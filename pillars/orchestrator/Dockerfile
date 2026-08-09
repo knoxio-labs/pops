@@ -33,6 +33,7 @@ COPY libs/types/tsconfig.build.json ./libs/types/tsconfig.build.json
 # @pops/orchestrator (the app itself)
 COPY pillars/orchestrator/src ./pillars/orchestrator/src
 COPY pillars/orchestrator/tsconfig.json ./pillars/orchestrator/tsconfig.json
+COPY pillars/orchestrator/tsconfig.build.json ./pillars/orchestrator/tsconfig.build.json
 
 # Phase 3: build shared deps in pnpm topology order, then the app.
 RUN pnpm --filter "@pops/orchestrator^..." build

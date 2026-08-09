@@ -39,6 +39,7 @@ COPY pillars/documents/src ./pillars/documents/src
 COPY pillars/documents/scripts ./pillars/documents/scripts
 COPY pillars/documents/openapi ./pillars/documents/openapi
 COPY pillars/documents/tsconfig.json ./pillars/documents/tsconfig.json
+COPY pillars/documents/tsconfig.build.json ./pillars/documents/tsconfig.build.json
 
 # Phase 3: build shared deps in pnpm topology order, then the app.
 RUN pnpm --filter "@pops/documents^..." build
