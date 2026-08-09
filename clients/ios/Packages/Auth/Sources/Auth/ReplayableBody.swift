@@ -40,6 +40,19 @@ internal struct ReplayableBody: Sendable {
 
     private let storage: Storage
 
+    /// - Throws: Whatever the body's own producer threw, when buffering one.
+    ///
+    /// Propagated rather than downgraded to ``Storage/oneShot``, and the
+    /// difference is the whole point of this type. Reaching a throw means the
+    /// sequence was **partially consumed** — either it errored mid-read or it
+    /// yielded more than its declared length — so the `HTTPBody` in hand no
+    /// longer holds the request anyone meant to send. Falling back to it would
+    /// deliver a truncated payload and call that success, which is precisely
+    /// the outcome the one-shot branch below refuses.
+    ///
+    /// A request that fails before it is sent is one the caller can retry with
+    /// a fresh body. A request that arrives truncated is a write the far side
+    /// may accept.
     internal init(capturing body: HTTPBody?) async throws {
         guard let body else {
             storage = .absent

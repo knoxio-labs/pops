@@ -104,6 +104,29 @@ internal struct ReplayableBodyTests {
         #expect(!replayable.isReplayable)
     }
 
+    /// A body whose producer fails while it is being buffered.
+    ///
+    /// The throw is the correct outcome and the tempting fix is not: by the
+    /// time `collecting` fails the sequence has been partially consumed, so
+    /// handing the same `HTTPBody` on as one-shot would send a **truncated**
+    /// request and call it success — the exact outcome the one-shot branch
+    /// exists to refuse. A request that fails before it is sent can be retried
+    /// with a fresh body; one that arrives truncated is a write the far side
+    /// may accept.
+    @Test("a body whose producer fails is not downgraded to a truncated send")
+    func failingProducerPropagates() async throws {
+        struct ProducerFailure: Error {}
+        let stream = AsyncThrowingStream<ArraySlice<UInt8>, any Error> { continuation in
+            continuation.yield(ArraySlice([UInt8(0x01), 0x02]))
+            continuation.finish(throwing: ProducerFailure())
+        }
+        let body = HTTPBody(stream, length: .known(32), iterationBehavior: .single)
+
+        await #expect(throws: ProducerFailure.self) {
+            _ = try await ReplayableBody(capturing: body)
+        }
+    }
+
     /// It is still handed over for the one attempt that is made. Refusing to
     /// replay must not become refusing to send.
     @Test("a body that cannot be replayed is still sent once")
