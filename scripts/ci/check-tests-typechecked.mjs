@@ -848,7 +848,11 @@ function main() {
     console.log('OK — every unit type-checks its own tests.');
     process.exit(0);
   }
-  console.error('FAIL — these units hide their tests from `tsc --noEmit`:');
+  console.error(
+    'FAIL — these units leave test files unchecked by `tsc --noEmit`, whether by an ' +
+      "exclude, a narrowed include, or a typecheck script that doesn't run against the unit's " +
+      'own tsconfig.json:'
+  );
   for (const failure of failures) console.error(`  ${failure}`);
   console.error(
     "Move a test-hiding exclusion to the unit's tsconfig.build.json (which decides what ships " +
