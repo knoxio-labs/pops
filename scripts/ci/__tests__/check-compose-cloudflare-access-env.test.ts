@@ -8,7 +8,11 @@
  *
  * Parses the real compose YAML with `js-yaml` rather than scanning lines, so
  * this cannot be fooled by the same shape (indentation, block-vs-flow
- * mappings, comments) that makes hand-rolled parsing fragile.
+ * mappings, comments) that makes hand-rolled parsing fragile. The parsed
+ * value is validated with `zod` rather than cast, so a compose file that
+ * parses to something unexpected (an empty document, a top-level list) fails
+ * with a readable schema error instead of an unrelated `undefined` crash a
+ * few lines later.
  */
 import { readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
@@ -16,21 +20,24 @@ import { fileURLToPath } from 'node:url';
 
 import { load } from 'js-yaml';
 import { describe, expect, it } from 'vitest';
+import { z } from 'zod';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..', '..');
 const composePath = join(repoRoot, 'infra', 'docker-compose.yml');
 
-interface ComposeService {
-  environment?: Record<string, unknown>;
-}
+const ComposeServiceSchema = z
+  .object({
+    environment: z.record(z.string(), z.unknown()).optional(),
+  })
+  .nullable();
 
-interface ComposeFile {
-  services?: Record<string, ComposeService>;
-}
+const ComposeFileSchema = z.object({
+  services: z.record(z.string(), ComposeServiceSchema).optional(),
+});
 
-function loadCompose(path: string): ComposeFile {
-  return load(readFileSync(path, 'utf8')) as ComposeFile;
+function loadCompose(path: string): z.infer<typeof ComposeFileSchema> {
+  return ComposeFileSchema.parse(load(readFileSync(path, 'utf8')) ?? {});
 }
 
 const CLOUDFLARE_ACCESS_VARS = ['CLOUDFLARE_ACCESS_TEAM_NAME', 'CLOUDFLARE_ACCESS_AUD'];
