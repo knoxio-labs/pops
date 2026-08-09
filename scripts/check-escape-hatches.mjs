@@ -214,12 +214,14 @@ function runCheck() {
   const currentTotal = total(current);
   const baselineTotal = total(baseline);
 
-  if (scanned === 0 || (currentTotal === 0 && baselineTotal > 0)) {
+  // A ratchet that reads no files has stopped looking, not been satisfied, and
+  // the `--write` invited below would erase it. Reaching zero hatches over a
+  // tree the scanner CAN read is the goal, so only the empty scan fails here.
+  if (scanned === 0) {
     console.error(
-      `✗ escape-hatch gate: scanned ${scanned} file(s) and found ${currentTotal} hatch(es) ` +
-        `against a baseline of ${baselineTotal}. A ratchet that suddenly sees nothing has ` +
-        'stopped looking, not been satisfied — check ROOTS and the ignore lists before ' +
-        'rebaselining, because `--write` here would erase the ratchet.'
+      `✗ escape-hatch gate: the scanner read 0 files against a baseline of ${baselineTotal} ` +
+        'hatch(es). Check ROOTS, IGNORE_DIRS and isScannable — do NOT rebaseline, `--write` ' +
+        'here would erase the ratchet.'
     );
     process.exit(1);
   }
@@ -260,47 +262,76 @@ function runWrite() {
   );
 }
 
-/** Prove the gate actually catches a newly-introduced hatch. */
+/**
+ * Prove the gate catches a newly-introduced hatch, and that it can still see
+ * the tree.
+ *
+ * The diff cases run against a synthetic baseline rather than the real one, so
+ * a repo that has genuinely paid off every hatch does not turn them into no-ops
+ * — that is the state the ratchet exists to reach. What the real tree is asked
+ * for is only the one thing it alone can answer: that the scanner is still
+ * finding files to read.
+ */
 function runSelfTest() {
-  const { hatches, scanned } = scanHatches();
-  // The seed for every case below. Assert it is real before trusting any of
-  // them: with an empty scan the growth case silently skips itself and the
-  // whole self-test still reports OK.
-  if (scanned === 0 || Object.keys(hatches).length === 0) {
+  const { scanned } = scanHatches();
+  if (scanned === 0) {
     console.error(
-      `✗ self-test: scanned ${scanned} file(s) and found ${Object.keys(hatches).length} with ` +
-        'hatches. The self-test seeds itself from the real tree, so an empty scan proves nothing.'
+      '✗ self-test: the scanner read 0 files. It has stopped seeing the tree — check ROOTS, ' +
+        'IGNORE_DIRS and isScannable before trusting any later run.'
     );
     process.exit(1);
   }
 
-  const baseline = sortDeep(hatches);
-  const tampered = structuredClone(baseline);
-  const [firstFile] = Object.keys(tampered);
-  const synthetic = 'pillars/__synthetic__/new-violation.ts';
-  tampered[synthetic] = { 'as any': 1 };
+  // The scanner can read files; this asserts it still recognises a hatch in
+  // one. Together the two replace the old real-tree seed, which conflated
+  // "the matchers work" with "the repo still has hatches to match".
+  const matched = countHatchesInText('const x = y as any;\n// eslint-disable-next-line\n');
+  if (matched['as any'] !== 1 || matched['eslint-disable'] !== 1) {
+    console.error(
+      `✗ self-test: the hatch matchers no longer recognise a plain cast (${JSON.stringify(matched)}).`
+    );
+    process.exit(1);
+  }
 
-  const growths = diffAgainstBaseline(tampered, baseline);
-  if (!growths.some((g) => g.file === synthetic)) {
+  const existing = 'pillars/demo/src/existing.ts';
+  const baseline = { [existing]: { 'as any': 1, 'as never': 2 } };
+
+  const synthetic = 'pillars/demo/src/new-violation.ts';
+  const withNewFile = { ...structuredClone(baseline), [synthetic]: { 'as any': 1 } };
+  if (!diffAgainstBaseline(withNewFile, baseline).some((g) => g.file === synthetic)) {
     console.error('✗ self-test: gate failed to flag a synthetic new hatch.');
     process.exit(1);
   }
 
-  if (firstFile) {
-    const grown = structuredClone(baseline);
-    const [kind] = Object.keys(grown[firstFile]);
-    grown[firstFile][kind] += 1;
-    if (!diffAgainstBaseline(grown, baseline).some((g) => g.file === firstFile)) {
-      console.error('✗ self-test: gate failed to flag a grown count in an existing file.');
-      process.exit(1);
-    }
+  const grown = structuredClone(baseline);
+  grown[existing]['as any'] += 1;
+  if (!diffAgainstBaseline(grown, baseline).some((g) => g.file === existing)) {
+    console.error('✗ self-test: gate failed to flag a grown count in an existing file.');
+    process.exit(1);
+  }
+
+  const newKind = structuredClone(baseline);
+  newKind[existing]['as unknown as'] = 1;
+  if (!diffAgainstBaseline(newKind, baseline).some((g) => g.kind === 'as unknown as')) {
+    console.error('✗ self-test: gate failed to flag a new hatch kind in an existing file.');
+    process.exit(1);
   }
 
   if (diffAgainstBaseline(baseline, baseline).length !== 0) {
     console.error('✗ self-test: gate flagged an unchanged tree.');
     process.exit(1);
   }
-  console.log('✔ self-test: gate flags new files, grown counts, and passes an unchanged tree.');
+
+  const shrunk = { [existing]: { 'as any': 1 } };
+  if (diffAgainstBaseline(shrunk, baseline).length !== 0) {
+    console.error('✗ self-test: gate flagged a tree that shrank.');
+    process.exit(1);
+  }
+
+  console.log(
+    `✔ self-test: scanner read ${scanned} file(s); gate flags new files, grown counts and new ` +
+      'kinds, and passes an unchanged or shrunk tree.'
+  );
 }
 
 function main() {
