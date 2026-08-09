@@ -197,14 +197,6 @@ extension DeviceSessionRefresher {
         }
     }
 
-    /// ``RefreshChallenge/expiresInSeconds`` is deliberately not read.
-    ///
-    /// It exists so a caller holding a nonce already can decide whether it is
-    /// still worth spending a refresh token against. This one never holds one:
-    /// a nonce is fetched, signed and spent inside a single call, so there is
-    /// no window in which it could go stale that a clock comparison would catch
-    /// and the server's own rejection would not. Reading it would be a second,
-    /// drifting opinion about the same fact.
     /// The stored pair, keeping "there is nothing here" apart from "this could
     /// not be read".
     ///
@@ -234,6 +226,15 @@ extension DeviceSessionRefresher {
         }
     }
 
+    /// Challenge, sign, exchange — one nonce, spent immediately.
+    ///
+    /// ``RefreshChallenge/expiresInSeconds`` is deliberately not read. It
+    /// exists so a caller holding a nonce already can decide whether it is
+    /// still worth spending a refresh token against; this one never holds one,
+    /// because the nonce is fetched, signed and spent inside this call. There
+    /// is no window in which it could go stale that a clock comparison would
+    /// catch and the server's own rejection would not — and reading it would
+    /// be a second, drifting opinion about the same fact.
     private func spend(
         _ current: DeviceTokens,
         with client: any DeviceRefreshExchange
