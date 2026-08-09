@@ -3,56 +3,63 @@ import HTTPTypes
 import OpenAPIRuntime
 import OpenAPIURLSession
 
-/// A response the contract does not describe.
-///
-/// The generated client turns any undocumented status into a `.undocumented`
-/// case rather than an error, which is the right default for a generator and
-/// the wrong one for a caller: it makes "the BFM returned 502" indistinguishable
-/// from a successful call whose body nobody looked at. Every such case is
-/// converted here.
-public enum BFMClientError: Error, Hashable, Sendable {
-    /// A status code the OpenAPI snapshot does not document for this operation.
-    case undocumentedResponse(operation: String, statusCode: Int)
-
-    /// The BFM answered a documented refusal. Carried as an error rather than
-    /// returned, so a caller that ignores the distinction cannot mistake a
-    /// refusal for a paired device.
-    case pairingRefused(DevicePairingRefusal)
-}
-
 /// The BFM, as this app calls it.
 ///
 /// One instance per base URL. Where that URL comes from is
 /// ``BuiltInBaseURL``'s problem in Debug and the pairing store's in Release —
 /// this type is handed one and does not go looking.
 ///
-/// Carries no credentials. Attaching and refreshing an access token is a
-/// `ClientMiddleware` this module does not have yet, which is why the only
-/// operations exposed below are the two the BFM answers unauthenticated —
-/// `GET /health` and the pairing exchange, which is unauthenticated by
-/// definition because it is where a device's credentials come from. Adding an
-/// authenticated call means adding that middleware first, not adding a header
-/// at a call site.
+/// Carries no credentials of its own. An instance built with ``init(baseURL:)``
+/// can only reach what the BFM answers unauthenticated — `GET /health`, the
+/// pairing exchange, and the challenge/refresh pair, all of which either
+/// predate having a token or exist because the one the device had stopped
+/// working. Reaching a `/mobile/*` operation means handing this type a
+/// middleware that attaches one; `Auth` has the only implementation.
 ///
 /// The generated client also carries the contract's `/operator/*` operations.
 /// They are not surfaced here and never will be: that perimeter is fronted by
 /// Cloudflare Access and answers a browser, not a phone.
 public struct BFMHTTPClient: Sendable {
-    private let generated: Client
+    /// `internal` rather than `private` only so the operations can be split
+    /// across files as the surface grows — `DeviceRefresh.swift` is the second
+    /// one. The type it names is itself `internal`, so this widens nothing
+    /// outside this module.
+    internal let generated: Client
 
     /// - Parameter baseURL: The BFM's origin. Paths from the contract are
     ///   appended to it, so a trailing path component here becomes a prefix on
     ///   every request.
     public init(baseURL: URL) {
-        self.init(baseURL: baseURL, transport: URLSessionTransport())
+        self.init(baseURL: baseURL, middlewares: [])
+    }
+
+    /// The authenticated variant.
+    ///
+    /// A middleware is the seam rather than the transport, and the difference
+    /// is which decisions the caller takes over. A middleware runs *around*
+    /// the transport: it may read and rewrite the request and the response, and
+    /// it may send the request more than once — which is the whole of what
+    /// attaching and refreshing a token needs. It cannot choose the timeouts,
+    /// the redirect policy or the TLS behaviour, because it never performs the
+    /// call. Those stay here, where they belong.
+    ///
+    /// - Parameter middlewares: Invoked in order before the transport, and in
+    ///   reverse on the way back, per `swift-openapi-runtime`.
+    public init(baseURL: URL, middlewares: [any ClientMiddleware]) {
+        self.init(baseURL: baseURL, transport: URLSessionTransport(), middlewares: middlewares)
     }
 
     /// The seam every test uses, and the reason none of them stub `URLProtocol`.
     /// `internal` because a caller choosing its own transport is choosing its
     /// own timeouts, redirect policy and TLS behaviour — decisions that belong
-    /// to this module, not to a screen.
-    internal init(baseURL: URL, transport: any ClientTransport) {
-        generated = Client(serverURL: baseURL, transport: transport)
+    /// to this module, not to a screen. The public initialiser above hands out
+    /// the half of that seam which carries none of those decisions with it.
+    internal init(
+        baseURL: URL,
+        transport: any ClientTransport,
+        middlewares: [any ClientMiddleware] = []
+    ) {
+        generated = Client(serverURL: baseURL, transport: transport, middlewares: middlewares)
     }
 
     /// Asks the BFM whether it is alive.
@@ -91,8 +98,9 @@ public struct BFMHTTPClient: Sendable {
     ///   - deviceModel: Hardware identifier, e.g. `iPhone17,1`.
     /// - Throws: ``BFMClientError/pairingRefused(_:)`` for a documented refusal,
     ///   ``BFMClientError/undocumentedResponse(operation:statusCode:)`` for
-    ///   anything else the BFM said, and the transport's own error when nothing
-    ///   answered.
+    ///   anything else the BFM said, and
+    ///   ``BFMClientError/transportFailure(operation:summary:)`` when the call
+    ///   did not complete.
     public func pairDevice(
         code: String,
         publicKeyBase64DER: String,
@@ -112,8 +120,7 @@ public struct BFMHTTPClient: Sendable {
                 )
             )
         } catch let error as ClientError {
-            guard let refusal = Self.refusal(readableFrom: error.response) else { throw error }
-            throw BFMClientError.pairingRefused(refusal)
+            throw Self.pairingFailure(error)
         }
 
         switch output {
@@ -155,6 +162,13 @@ public struct BFMHTTPClient: Sendable {
     /// The status is the actionable half and it is intact. `nil` for anything
     /// this contract does not document, including the no-response case, because
     /// those genuinely are transport failures.
+    private static func pairingFailure(_ error: ClientError) -> BFMClientError {
+        guard let refusal = refusal(readableFrom: error.response) else {
+            return .transportFailure(error, operation: Operations.Device_pair.id)
+        }
+        return .pairingRefused(refusal)
+    }
+
     private static func refusal(readableFrom response: HTTPResponse?) -> DevicePairingRefusal? {
         switch response?.status.code {
         case 400: .invalidRequest

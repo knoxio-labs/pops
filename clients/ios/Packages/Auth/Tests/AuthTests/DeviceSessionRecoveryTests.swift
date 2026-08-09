@@ -1,0 +1,177 @@
+import AppCore
+import AuthTestSupport
+import BFMClient
+import Foundation
+import Testing
+
+@testable import Auth
+
+/// Every way a rotation can fail, and what each one leaves on the device.
+///
+/// The assertions are about state rather than about calls, because that is what
+/// the next launch reads: whether a credential is still there, and what the
+/// session now says about it. The dividing line running through all of them is
+/// whether the failure was a statement about *this device's* credentials or
+/// about the network in between — and only the first kind is allowed to destroy
+/// anything.
+@Suite("DeviceSessionRefresher recovery")
+internal struct DeviceSessionRecoveryTests {
+    @Test("an invalid grant ends the session and leaves nothing to retry with")
+    func invalidGrantRevokesTheSession() async throws {
+        let fixture = try RefresherFixture(
+            exchange: ScriptedRefreshExchange(
+                refreshes: [.failure(BFMClientError.refreshRefused(.invalidGrant))]
+            )
+        )
+
+        await #expect(throws: SessionRefreshError.credentialsRejected) {
+            try await fixture.refreshedTokens(replacing: "access-1")
+        }
+
+        #expect(fixture.session.events == [.revoked(.credentialsRejected)])
+        #expect(fixture.exchange.spends.count == 1, "a refused grant must not be re-presented")
+        // Not wiped. The credentials are dead on the server, but pairing again
+        // is what replaces them and pairing wipes first — destroying them here
+        // would only add a way for a misread `401` to cost a device its
+        // identity with nothing gained.
+        #expect(try fixture.tokenStore.load() != nil)
+    }
+
+    @Test("a revoked device is wiped and reported as the operator's doing")
+    func deviceRevokedDestroysCredentials() async throws {
+        let fixture = try RefresherFixture(
+            exchange: ScriptedRefreshExchange(
+                refreshes: [.failure(BFMClientError.refreshRefused(.deviceRevoked))]
+            )
+        )
+
+        await #expect(throws: SessionRefreshError.deviceRevoked) {
+            try await fixture.refreshedTokens(replacing: "access-1")
+        }
+
+        #expect(fixture.session.events == [.revoked(.revokedByOperator)])
+        #expect(try fixture.tokenStore.load() == nil)
+        #expect(try fixture.keyStore.publicKey() == nil)
+    }
+
+    @Test("an unreachable BFM changes nothing")
+    func transportFailureLeavesTheSessionAlone() async throws {
+        let fixture = try RefresherFixture(
+            exchange: ScriptedRefreshExchange(
+                challenges: [
+                    .failure(
+                        BFMClientError.transportFailure(
+                            operation: "device.challenge",
+                            summary: "offline"
+                        )
+                    )
+                ]
+            )
+        )
+
+        await #expect(throws: SessionRefreshError.self) {
+            try await fixture.refreshedTokens(replacing: "access-1")
+        }
+
+        #expect(fixture.session.events.isEmpty)
+        #expect(try fixture.tokenStore.load() == .stub())
+        #expect(try fixture.keyStore.publicKey() != nil)
+    }
+
+    @Test("an expired nonce is retried exactly once, then given up on")
+    func challengeExpiredRetriesOnce() async throws {
+        let fixture = try RefresherFixture(
+            exchange: ScriptedRefreshExchange(
+                refreshes: [.failure(BFMClientError.refreshRefused(.challengeExpired))]
+            )
+        )
+
+        await #expect(throws: SessionRefreshError.self) {
+            try await fixture.refreshedTokens(replacing: "access-1")
+        }
+
+        #expect(fixture.exchange.challengeCount == 2)
+        #expect(fixture.exchange.spends.count == 2)
+        // A nonce store that is not keeping its nonces is a server fault, not a
+        // credential to destroy.
+        #expect(fixture.session.events.isEmpty)
+        #expect(try fixture.tokenStore.load() != nil)
+    }
+
+    @Test("a second challenge that succeeds completes the rotation")
+    func challengeExpiredRecovers() async throws {
+        let fixture = try RefresherFixture(
+            exchange: ScriptedRefreshExchange(
+                challenges: [.success(.stub(nonce: "stale")), .success(.stub(nonce: "fresh"))],
+                refreshes: [
+                    .failure(BFMClientError.refreshRefused(.challengeExpired)), .success(.stub()),
+                ]
+            )
+        )
+
+        let tokens = try await fixture.refreshedTokens(replacing: "access-1")
+
+        #expect(tokens.accessToken == "access-2")
+        #expect(fixture.exchange.spends.map(\.nonce) == ["stale", "fresh"])
+    }
+
+    @Test("nothing stored is not something to retry")
+    func unauthenticatedWithoutTokens() async throws {
+        let fixture = try RefresherFixture(tokens: nil)
+
+        await #expect(throws: SessionRefreshError.unauthenticated) {
+            try await fixture.refreshedTokens(replacing: "access-1")
+        }
+
+        #expect(fixture.session.events == [.revoked(.credentialsRejected)])
+        #expect(fixture.exchange.challengeCount == 0)
+    }
+
+    /// A device that has lost its Enclave key can never prove possession again,
+    /// whatever its token says. Every *other* key-store failure — a device
+    /// locked mid-refresh, most of all — is transient and must not land here.
+    @Test("a missing device key ends the session rather than retrying forever")
+    func missingKeyEndsTheSession() async throws {
+        let fixture = try RefresherFixture(withKey: false)
+
+        await #expect(throws: SessionRefreshError.credentialsRejected) {
+            try await fixture.refreshedTokens(replacing: "access-1")
+        }
+
+        #expect(fixture.session.events == [.revoked(.credentialsRejected)])
+        #expect(fixture.exchange.spends.isEmpty)
+    }
+
+    @Test("twenty concurrent revocations wipe once and report once")
+    func concurrentRevocationsCollapse() async throws {
+        let fixture = try RefresherFixture()
+
+        await withTaskGroup(of: Void.self) { group in
+            for _ in 0..<20 { group.addTask { await fixture.refresher.deviceWasRevoked() } }
+        }
+
+        #expect(fixture.session.events == [.revoked(.revokedByOperator)])
+        #expect(try fixture.tokenStore.load() == nil)
+    }
+
+    @Test("no error rendered by a refresh carries a credential")
+    func errorsAreRedacted() async throws {
+        let fixture = try RefresherFixture(
+            exchange: ScriptedRefreshExchange(
+                refreshes: [.failure(BFMClientError.refreshRefused(.invalidGrant))]
+            )
+        )
+
+        var rendered = ""
+        do {
+            _ = try await fixture.refreshedTokens(replacing: "access-1")
+        } catch {
+            rendered = "\(error) \(String(describing: error))"
+        }
+
+        #expect(!rendered.isEmpty)
+        for secret in ["access-1", "refresh-1", "access-2", "refresh-2"] {
+            #expect(!rendered.contains(secret), "\(secret) reached a rendered error")
+        }
+    }
+}

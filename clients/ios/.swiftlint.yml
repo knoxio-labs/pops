@@ -84,11 +84,32 @@ type_body_length:
 function_body_length:
   warning: 40
 
-# oxlint `max-params`. SwiftLint exempts initialisers from this rule, which is
-# the right exemption to have: a value type with six stored properties needs a
-# six-parameter `init` and that says nothing bad about the type.
+# oxlint `max-params` is 4, and so was this. SwiftLint exempts initialisers from
+# the rule, which is the right exemption to have: a value type with six stored
+# properties needs a six-parameter `init` and that says nothing bad about the
+# type.
+#
+# It is 5 because of exactly one function, and the fifth parameter is not this
+# repo's to remove. `ClientMiddleware.intercept(_:body:baseURL:operationID:next:)`
+# is declared by swift-openapi-runtime and is how a caller attaches a credential
+# to a generated client; a conformance must match the requirement's signature.
+# `AuthenticatingMiddleware` in `Packages/Auth` is the only one in this tree,
+# and there will not be a second — a middleware is the seam, and one is enough.
+#
+# The alternatives were all worse in the way this file's header describes. A
+# `swiftlint:disable` comment is forbidden here. `excluded:` is file-scoped
+# rather than rule-scoped, so it would turn off every other rule on the one
+# piece of code that most needs them. And giving a parameter a default value
+# purely to drop the count past `ignores_default_parameters` is gaming a linter
+# rather than answering it. SwiftLint offers no path- or type-scoped exemption
+# for this rule; the number is the only lever there is.
+#
+# What that costs, stated plainly: a hand-written five-parameter function no
+# longer fails the build. Nothing automated replaces it. What does is that a
+# five-parameter signature is now rare enough to be worth a comment in review,
+# and this one is the reason the limit moved.
 function_parameter_count:
-  warning: 4
+  warning: 5
 
 # oxlint `complexity`, unchanged. Branching is branching in either language.
 cyclomatic_complexity:
