@@ -48,6 +48,16 @@ public actor DeviceSessionRefresher {
     /// before the bump must not write what it obtained — see ``rotateTokens(at:)``.
     private var credentialEpoch = 0
 
+    /// Whether the session has already been told these credentials are dead.
+    ///
+    /// A screen's worth of requests all read the same corrupt keychain or meet
+    /// the same refused grant, and every one of them reaches the same verdict.
+    /// The session reducer collapses the repeats anyway — this keeps twenty
+    /// requests from each hopping to the main actor to say it. Cleared whenever
+    /// the stored pair is replaced or destroyed, so a *later* rejection is
+    /// reported again rather than swallowed by a latch that never resets.
+    private var reportedCredentialsRejected = false
+
     /// - Parameters:
     ///   - credentialStore: The tokens to rotate and the key that proves this
     ///     device may.
@@ -73,14 +83,39 @@ public actor DeviceSessionRefresher {
         self.now = now
     }
 
-    /// The stored pair, or `nil` when this device is unpaired or wiped.
+    /// The stored pair, or `nil` when this device is unpaired, wiped, or
+    /// holding a blob it can no longer decode.
     ///
     /// A read failure is reported as `nil` rather than thrown. The caller is a
     /// middleware about to send a request, and its two options are "attach a
     /// token" and "do not"; a keychain that cannot be read leaves it with the
     /// second either way.
-    public func currentTokens() -> DeviceTokens? {
-        try? credentialStore.tokenStore.load()
+    ///
+    /// `corruptedPayload` is the one that cannot just return `nil` and stop
+    /// there. It is permanent — a downgrade, a truncated write — so the
+    /// middleware would send every `/mobile` request unauthenticated, take the
+    /// unpaired branch that never reaches a refresh, and collect a `401` each
+    /// time while the session still says `paired`. The app would show a
+    /// signed-in shell over credentials that can never work again, with nothing
+    /// telling anyone to pair. So it ends the session here, which is the same
+    /// answer ``storedGrant()`` gives it on the refresh path — the two must not
+    /// disagree about what an undecodable blob means.
+    ///
+    /// Not wiped, for the reason the invalid-grant path is not: pairing is what
+    /// replaces these credentials and pairing wipes first, so destroying them
+    /// here only adds a way for a misread to cost a device its identity.
+    ///
+    /// Every other read failure returns `nil` and says nothing. A locked
+    /// handset is normal for background work — see ``storedGrant()``.
+    public func currentTokens() async -> DeviceTokens? {
+        do {
+            return try credentialStore.tokenStore.load()
+        } catch TokenStoreError.corruptedPayload {
+            await reportCredentialsRejected()
+            return nil
+        } catch {
+            return nil
+        }
     }
 
     /// Produces a token pair newer than the one that was just rejected.
@@ -101,7 +136,9 @@ public actor DeviceSessionRefresher {
         replacing staleAccessToken: String,
         at baseURL: URL
     ) async throws -> DeviceTokens {
-        if let alreadyRotated = currentTokens(), alreadyRotated.accessToken != staleAccessToken {
+        if let alreadyRotated = await currentTokens(),
+            alreadyRotated.accessToken != staleAccessToken
+        {
             return alreadyRotated
         }
         if let rotation { return try await rotation.value }
@@ -167,6 +204,7 @@ extension DeviceSessionRefresher {
             guard epoch == credentialEpoch else { throw SessionRefreshError.deviceRevoked }
             do {
                 try credentialStore.tokenStore.save(tokens)
+                reportedCredentialsRejected = false
             } catch {
                 // The presented token is already dead on the server and this
                 // was the only copy of its successor. Nothing is left to
@@ -266,9 +304,16 @@ extension DeviceSessionRefresher {
     /// showing a signed-in shell for a device that is no longer paired.
     private func escalated(_ error: any Error) async -> SessionRefreshError {
         let outcome = Self.outcome(for: error)
-        if outcome == .deviceRevoked {
+        switch outcome.sessionEvent {
+        case .revoked(.revokedByOperator):
             await deviceWasRevoked()
-        } else if let event = outcome.sessionEvent {
+        case .revoked(.credentialsRejected):
+            // Through the latch, because `currentTokens()` may already have
+            // said exactly this about the same corrupt blob a moment earlier.
+            await reportCredentialsRejected()
+        case nil:
+            break
+        case .some(let event):
             await sessionEvents.send(event)
         }
         return outcome
@@ -301,11 +346,18 @@ extension DeviceSessionRefresher {
     /// contents is a worse state than one that did, and the response to it is
     /// still to stop using those credentials and send the user to pair again —
     /// which is what re-pairing then wipes.
+    private func reportCredentialsRejected() async {
+        guard !reportedCredentialsRejected else { return }
+        reportedCredentialsRejected = true
+        await sessionEvents.send(.revoked(.credentialsRejected))
+    }
+
     private func destroyCredentials() async {
         // Bumped before the wipe rather than after, so a rotation that resumes
         // mid-wipe still sees a changed epoch. The window is small and this
         // costs nothing to close.
         credentialEpoch += 1
+        reportedCredentialsRejected = false
         try? credentialStore.wipe()
         await sessionEvents.send(.revoked(.revokedByOperator))
     }

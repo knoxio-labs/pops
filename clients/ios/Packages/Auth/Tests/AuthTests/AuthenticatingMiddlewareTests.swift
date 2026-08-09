@@ -1,5 +1,6 @@
 import AppCore
 import BFMClient
+import Foundation
 import HTTPTypes
 import OpenAPIRuntime
 import Testing
@@ -91,6 +92,58 @@ internal struct AuthenticatingMiddlewareTests {
         _ = try await fixture.send(request, through: transport)
 
         #expect(transport.attempts.map(\.authorization) == [nil])
+    }
+
+    /// The stuck state: a stored blob that no longer decodes.
+    ///
+    /// Without an escalation here the middleware takes the unpaired branch on
+    /// every request — sends unauthenticated, collects a `401`, and returns it
+    /// without ever reaching a refresh — while the session still says `paired`.
+    /// The app would show a signed-in shell over credentials that can never
+    /// work again, with nothing telling anyone to pair. Permanent, and reachable
+    /// by installing an older build over a newer one.
+    @Test("an undecodable stored blob ends the session instead of failing forever")
+    func corruptedCredentialsEndTheSession() async throws {
+        let fixture = try MiddlewareFixture(
+            tokenStore: UnreadableTokenStore(failing: .corruptedPayload)
+        )
+        let transport = RecordingTransport { _ in .unauthorized }
+
+        let response = try await fixture.send(through: transport)
+
+        #expect(response.status == .unauthorized)
+        #expect(transport.attempts.map(\.authorization) == [nil])
+        #expect(fixture.session.events == [.revoked(.credentialsRejected)])
+    }
+
+    /// And it says so once, not once per request.
+    @Test("twenty requests against a corrupt keychain report it once")
+    func corruptedCredentialsReportedOnce() async throws {
+        let fixture = try MiddlewareFixture(
+            tokenStore: UnreadableTokenStore(failing: .corruptedPayload)
+        )
+        let transport = RecordingTransport { _ in .unauthorized }
+
+        for index in 0..<20 {
+            _ = try await fixture.send(.mobile("/mobile/bootstrap?i=\(index)"), through: transport)
+        }
+
+        #expect(fixture.session.events == [.revoked(.credentialsRejected)])
+    }
+
+    /// The contrast that keeps the rule honest: a locked handset is normal for
+    /// background work and must not end anything.
+    @Test("an unreadable keychain sends unauthenticated without ending the session")
+    func lockedKeychainDoesNotEndTheSession() async throws {
+        let fixture = try MiddlewareFixture(
+            tokenStore: UnreadableTokenStore(failing: .keychain(errSecInteractionNotAllowed))
+        )
+        let transport = RecordingTransport { _ in .unauthorized }
+
+        _ = try await fixture.send(through: transport)
+
+        #expect(transport.attempts.map(\.authorization) == [nil])
+        #expect(fixture.session.events.isEmpty, "a locked device was signed out")
     }
 
     // MARK: - 401
