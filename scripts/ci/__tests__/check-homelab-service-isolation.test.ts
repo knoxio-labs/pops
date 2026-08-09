@@ -162,6 +162,52 @@ describe('scanCompose', () => {
   });
 });
 
+describe('degenerate manifest shapes (ADR-045 — the guard must report, not go quiet)', () => {
+  it('flags an image whose registry path carries a mid-token #', () => {
+    const text = [
+      'services:',
+      '  broker:',
+      '    image: registry.internal/team#2/eclipse-mosquitto:2',
+    ].join('\n');
+    expect(scanCompose('c.yml', text)).toContainEqual(
+      expect.objectContaining({ service: 'Mosquitto MQTT broker', kind: 'image' })
+    );
+  });
+
+  it('still treats a whitespace-preceded # as a comment', () => {
+    const text = [
+      'services:',
+      '  finance-api: # not mosquitto',
+      '    image: ghcr.io/knoxio/pops-finance:main # not eclipse-mosquitto',
+    ].join('\n');
+    expect(scanCompose('c.yml', text)).toEqual([]);
+  });
+
+  it('reports a flow-mapping services block instead of silently scanning nothing', () => {
+    const text = 'services: { home-assistant: { image: homeassistant/home-assistant } }';
+    const v = scanCompose('c.yml', text);
+    expect(v).toContainEqual(expect.objectContaining({ kind: 'unreadable-shape', line: 1 }));
+  });
+
+  it('reports a flow-sequence dbs block instead of silently scanning nothing', () => {
+    const v = scanLitestream(
+      'litestream/finance.yml',
+      'dbs: [{ path: /data/sqlite/mosquitto.db }]'
+    );
+    expect(v).toContainEqual(expect.objectContaining({ kind: 'unreadable-shape', line: 1 }));
+  });
+
+  it('does not report a block-form services or dbs key as unreadable', () => {
+    const compose = ['services:', '  finance-api:', '    image: ghcr.io/knoxio/pops-finance'].join(
+      '\n'
+    );
+    expect(scanCompose('c.yml', compose)).toEqual([]);
+    expect(scanLitestream('litestream/finance.yml', 'dbs:\n  - path: /data/finance.db')).toEqual(
+      []
+    );
+  });
+});
+
 describe('scanLitestream', () => {
   it('flags a forbidden service brought onto the pops Litestream convention by db path', () => {
     const text = ['dbs:', '  - path: /data/sqlite/mosquitto.db'].join('\n');

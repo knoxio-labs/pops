@@ -1,40 +1,42 @@
 #!/usr/bin/env bash
 #
-# ISO-CMD helper — run the fast isolation guards that already ship as separate
-# scripts, gated on existence.
+# ISO-CMD helper — run the isolation guards that ship as separate scripts.
 #
-# `isolation:check` bundles the always-present gates (lint:boundaries + EX-3 +
-# EX-1) directly. The lib-no-pillar-import guard ships under scripts/ci, and the
-# exports gate (ISO-EXPORTS / P6-T02) may not be on the tree yet. Both are run
-# here guarded by existence so the aggregate stays green today and auto-engages
-# the exports gate the moment it lands — no further edit to this command.
+# `isolation:check` bundles the rest (lint:boundaries + EX-3 + EX-1) directly.
+# These two used to be run "if present", from a time when the exports gate had
+# not landed yet. Both have landed, so the existence test now protects only the
+# outcome nobody wants: rename or move either script and the gate silently drops
+# out of the aggregate, which stays green and prints a friendly explanation. A
+# missing gate is therefore a failure — see
+# docs/architecture/adr-045-guards-must-prove-they-report.md.
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$repo_root"
 
-ran=0
-
 # lib-never-imports-a-pillar — complementary to dep-cruiser ISO-R1 (already run
 # by lint:boundaries), kept here so the single local gate matches CI.
-if [[ -f scripts/ci/check-lib-no-pillar-import.mjs ]]; then
-  echo "isolation:check: running check-lib-no-pillar-import.mjs" >&2
-  node scripts/ci/check-lib-no-pillar-import.mjs
-  ran=1
-fi
+# exports-map self-consistency (ISO-EXPORTS).
+required_gates=(
+  scripts/ci/check-lib-no-pillar-import.mjs
+  scripts/check-exports.mjs
+)
 
-# exports-map self-consistency (ISO-EXPORTS). Path is checked in both the
-# expected root location and scripts/ci to be forward-compatible with wherever
-# P6-T02 lands it.
-for candidate in scripts/check-exports.mjs scripts/ci/check-exports.mjs; do
-  if [[ -f "$candidate" ]]; then
-    echo "isolation:check: running $candidate" >&2
-    node "$candidate"
-    ran=1
-    break
-  fi
+missing=()
+for gate in "${required_gates[@]}"; do
+  [[ -f "$gate" ]] || missing+=("$gate")
 done
 
-if [[ "$ran" -eq 0 ]]; then
-  echo "isolation:check: no companion gates present (check-lib-no-pillar-import / check-exports)." >&2
+if ((${#missing[@]} > 0)); then
+  echo "isolation:check: FAIL — companion gate(s) not found:" >&2
+  for gate in "${missing[@]}"; do
+    echo "  $gate" >&2
+  done
+  echo "Update required_gates in $0 to wherever they now live." >&2
+  exit 1
 fi
+
+for gate in "${required_gates[@]}"; do
+  echo "isolation:check: running $gate" >&2
+  node "$gate"
+done

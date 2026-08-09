@@ -27,7 +27,8 @@
  * Exit 0 = clean. Exit 1 = a violation. Exit 2 = usage error.
  */
 
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -39,6 +40,9 @@ export const ALLOWED_UNIT_OVERRIDE_TOOLS = ['node', 'rust'];
 
 /** Tools the root pin must declare — the shared default every unit inherits. */
 export const REQUIRED_ROOT_TOOLS = ['node', 'pnpm', 'rust'];
+
+/** Unit-kind directories searched for a per-unit `mise.toml`. */
+export const UNIT_BASES = ['pillars', 'libs'];
 
 /**
  * Extract a TOML string value from the right-hand side of a `key = value`
@@ -75,20 +79,93 @@ export function parseTomlSection(source, section) {
   /** @type {Record<string, string>} */
   const entries = {};
   let inSection = false;
+  /** Set while inside a `[<section>.<name>]` sub-table, to `<name>`. */
+  let subTable;
   for (const rawLine of lines) {
     const line = rawLine.trim();
     if (line.startsWith('#') || line === '') continue;
-    const header = /^\[([^\]]+)\]$/u.exec(line);
+
+    // `[tools] # the shared pins` is a legal header. Anchoring on `]$` saw only
+    // the bare form, so a commented header silently ended the table and every
+    // key under it went unread — the guard then had nothing to object to.
+    const header = /^\[([^\]]+)\](?:\s+#.*)?$/u.exec(line);
     if (header) {
-      inSection = header[1] === section;
+      const name = header[1] ?? '';
+      inSection = name === section;
+      subTable = name.startsWith(`${section}.`)
+        ? unquoteKey(name.slice(section.length + 1))
+        : undefined;
+      // A sub-table declares the tool whether or not it names a version, so
+      // register it immediately — `[tools.pnpm]` alone is already the fork.
+      if (subTable !== undefined && !(subTable in entries)) entries[subTable] = '';
       continue;
     }
+
+    if (subTable !== undefined) {
+      const versionKv = /^version\s*=\s*(.+)$/u.exec(line);
+      if (versionKv) entries[subTable] = extractToolValue(versionKv[1] ?? '');
+      continue;
+    }
+
+    // `tools = { node = "24", pnpm = "10" }` is the inline-table spelling of
+    // the same declaration, and carries no `[tools]` header at all.
+    const inlineTable = new RegExp(`^${section}\\s*=\\s*\\{(.*)\\}\\s*(?:#.*)?$`, 'u').exec(line);
+    if (inlineTable) {
+      for (const pair of splitInlineTable(inlineTable[1] ?? '')) {
+        const kv = /^([A-Za-z0-9_"'-]+)\s*=\s*(.+)$/u.exec(pair.trim());
+        if (kv) entries[unquoteKey(kv[1] ?? '')] = extractToolValue(kv[2] ?? '');
+      }
+      continue;
+    }
+
     if (!inSection) continue;
     const kv = /^([A-Za-z0-9_-]+)\s*=\s*(.+)$/u.exec(line);
     if (!kv) continue;
     entries[kv[1]] = extractToolValue(kv[2]);
   }
   return entries;
+}
+
+/**
+ * @param {string} raw
+ * @returns {string}
+ */
+function unquoteKey(raw) {
+  return raw.trim().replace(/^["']|["']$/gu, '');
+}
+
+/**
+ * Split an inline-table body on top-level commas, ignoring commas inside
+ * quotes.
+ *
+ * @param {string} body
+ * @returns {string[]}
+ */
+function splitInlineTable(body) {
+  /** @type {string[]} */
+  const parts = [];
+  let current = '';
+  let quote;
+  for (const char of body) {
+    if (quote !== undefined) {
+      if (char === quote) quote = undefined;
+      current += char;
+      continue;
+    }
+    if (char === '"' || char === "'") {
+      quote = char;
+      current += char;
+      continue;
+    }
+    if (char === ',') {
+      parts.push(current);
+      current = '';
+      continue;
+    }
+    current += char;
+  }
+  parts.push(current);
+  return parts.filter((part) => part.trim() !== '');
 }
 
 /**
@@ -112,7 +189,7 @@ export function parseToolsTable(source) {
 export function discoverUnitMiseDirs(root) {
   /** @type {string[]} */
   const out = [];
-  for (const base of ['pillars', 'libs']) {
+  for (const base of UNIT_BASES) {
     const baseDir = join(root, base);
     if (!existsSync(baseDir)) continue;
     for (const entry of readdirSync(baseDir, { withFileTypes: true })) {
@@ -152,6 +229,18 @@ export function checkOverrides(root) {
   const unitOverrides = [];
   /** @type {string[]} */
   const violations = [];
+
+  // Without this the unit half of the check is a loop over a set that can
+  // become empty for reasons that have nothing to do with compliance — a
+  // renamed unit-kind directory reads exactly like a fleet with no overrides.
+  for (const base of UNIT_BASES) {
+    if (!existsSync(join(root, base))) {
+      violations.push(
+        `${base}/ does not exist, so no unit under it was searched for a mise.toml override. ` +
+          'Whichever directory now holds that unit kind must be added to UNIT_BASES.'
+      );
+    }
+  }
 
   for (const dir of discoverUnitMiseDirs(root)) {
     const tools = parseToolsTable(readFileSync(join(root, dir, 'mise.toml'), 'utf8'));
@@ -213,17 +302,62 @@ function main() {
   process.exit(1);
 }
 
-/** @returns {boolean} */
+/**
+ * A tree whose unit-kind directories have been renamed away must report that,
+ * not sweep zero units and call the fleet compliant.
+ *
+ * @returns {boolean}
+ */
+function missingBaseIsReported() {
+  const dir = mkdtempSync(join(tmpdir(), 'mise-overrides-selftest-'));
+  try {
+    writeFileSync(
+      join(dir, 'mise.toml'),
+      '[tools]\nnode = "24"\npnpm = "10"\nrust = "stable"\n',
+      'utf8'
+    );
+    const { violations } = checkOverrides(dir);
+    return UNIT_BASES.every((base) => violations.some((v) => v.startsWith(`${base}/`)));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+/**
+ * Every case below spells the SAME forbidden declaration — a per-unit `pnpm`
+ * fork — in a different legal TOML shape. Each of the last three used to parse
+ * to `{}`, which the caller reads as "this unit overrides nothing".
+ *
+ * @returns {boolean}
+ */
 function selfTest() {
   const rootTools = parseToolsTable(
     '[tools]\nnode = "24.5.0"\npnpm = "10.32.1"\nrust = "stable"\n'
   );
-  const ok1 =
-    rootTools.node === '24.5.0' && rootTools.pnpm === '10.32.1' && rootTools.rust === 'stable';
   const overrideTools = parseToolsTable('[tasks.build]\nrun = "x"\n\n[tools]\nnode = "22"\n');
-  const ok2 = overrideTools.node === '22' && !('run' in overrideTools);
-  if (!ok1 || !ok2) console.error('self-test FAILED');
-  return ok1 && ok2;
+
+  const checks = {
+    'reads the root baseline':
+      rootTools.node === '24.5.0' && rootTools.pnpm === '10.32.1' && rootTools.rust === 'stable',
+    'reads a plain unit override': overrideTools.node === '22' && !('run' in overrideTools),
+    'sees a pnpm fork behind a commented table header':
+      parseToolsTable('[tools] # trial pins\npnpm = "9.0.0"\n').pnpm === '9.0.0',
+    'sees a pnpm fork written as a sub-table':
+      parseToolsTable('[tools.pnpm]\nversion = "9.0.0"\n').pnpm === '9.0.0',
+    'sees a versionless sub-table as a declaration':
+      'pnpm' in parseToolsTable('[tools.pnpm]\nbackend = "npm"\n'),
+    'sees a pnpm fork written as an inline table':
+      parseToolsTable('tools = { node = "24", pnpm = "9.0.0" }\n').pnpm === '9.0.0',
+    'a missing unit base is a violation, not an empty sweep': missingBaseIsReported(),
+  };
+
+  const failed = Object.entries(checks).filter(([, ok]) => !ok);
+  if (failed.length > 0) {
+    console.error(`self-test FAILED: ${failed.map(([name]) => name).join('; ')}`);
+    return false;
+  }
+  console.log(`self-test OK — ${Object.keys(checks).length} assertions passed.`);
+  return true;
 }
 
 if (resolve(fileURLToPath(import.meta.url)) === resolve(process.argv[1] ?? '')) {

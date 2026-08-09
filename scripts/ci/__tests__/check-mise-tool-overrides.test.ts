@@ -63,6 +63,58 @@ describe('parseToolsTable', () => {
   });
 });
 
+describe('parseToolsTable — legal TOML spellings of the same override (ADR-045)', () => {
+  it('reads a table whose header carries a trailing comment', () => {
+    expect(parseToolsTable('[tools] # trial pins\npnpm = "9.0.0"\n')).toEqual({ pnpm: '9.0.0' });
+  });
+
+  it('reads a tool declared as a sub-table', () => {
+    expect(parseToolsTable('[tools.pnpm]\nversion = "9.0.0"\n')).toEqual({ pnpm: '9.0.0' });
+  });
+
+  it('registers a versionless sub-table as a declaration of that tool', () => {
+    expect(parseToolsTable('[tools.pnpm]\nbackend = "npm"\n')).toEqual({ pnpm: '' });
+  });
+
+  it('reads a quoted sub-table key', () => {
+    expect(parseToolsTable('[tools."pnpm"]\nversion = "9"\n')).toEqual({ pnpm: '9' });
+  });
+
+  it('reads the inline-table spelling', () => {
+    expect(parseToolsTable('tools = { node = "24", pnpm = "9.0.0" }\n')).toEqual({
+      node: '24',
+      pnpm: '9.0.0',
+    });
+  });
+
+  it('does not confuse a sub-table of another section for a tool', () => {
+    expect(parseToolsTable('[tasks.build]\nrun = "tsc -b"\nversion = "x"\n')).toEqual({});
+  });
+
+  it('stops reading a sub-table at the next header', () => {
+    const source = ['[tools.node]', 'version = "24"', '[tasks.build]', 'run = "x"'].join('\n');
+    expect(parseToolsTable(source)).toEqual({ node: '24' });
+  });
+});
+
+describe('checkOverrides — degenerate tree (ADR-045)', () => {
+  it('reports a missing unit-kind directory rather than sweeping zero units', () => {
+    const root = mkdtempSync(join(tmpdir(), 'mise-overrides-degenerate-'));
+    try {
+      writeFileSync(
+        join(root, 'mise.toml'),
+        '[tools]\nnode = "24"\npnpm = "10"\nrust = "stable"\n'
+      );
+      const { violations, unitOverrides } = checkOverrides(root);
+      expect(unitOverrides).toEqual([]);
+      expect(violations.some((v) => v.startsWith('pillars/'))).toBe(true);
+      expect(violations.some((v) => v.startsWith('libs/'))).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
 describe('discoverUnitMiseDirs — fixture tree', () => {
   let root: string;
   beforeAll(() => {

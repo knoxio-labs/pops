@@ -87,12 +87,20 @@ const ALLOWED_DEV_PILLAR_DEPS = {
   ]),
 };
 
-/** Workspace roots scanned for units, paired with how they classify. */
-const UNIT_ROOTS = [
-  { root: 'pillars', defaultKind: 'pillar', nested: true },
-  { root: 'libs', defaultKind: 'lib', nested: false },
-  { root: 'packages', defaultKind: 'lib', nested: false },
-  { root: 'apps', defaultKind: 'app', nested: false },
+/**
+ * Workspace roots scanned for units, paired with how they classify.
+ *
+ * `required` marks a root whose absence is drift rather than history: `pillars`
+ * and `libs` define the repo's unit kinds, so a tree without them has been
+ * renamed under the guard, not cleaned up. `packages` and `apps` are the
+ * pre-federation names, legitimately gone, and kept only so the guard still
+ * classifies a tree that predates the move.
+ */
+export const UNIT_ROOTS = [
+  { root: 'pillars', defaultKind: 'pillar', nested: true, required: true },
+  { root: 'libs', defaultKind: 'lib', nested: false, required: true },
+  { root: 'packages', defaultKind: 'lib', nested: false, required: false },
+  { root: 'apps', defaultKind: 'app', nested: false, required: false },
 ];
 
 /** Basenames under `apps/` whose target home is `pillars/` (P2-T02). */
@@ -321,6 +329,25 @@ function main() {
   const libs = units.filter((u) => u.kind === 'lib');
   const pillars = units.filter((u) => u.kind === 'pillar');
   console.log(`Scanned ${libs.length} lib(s) against ${pillars.length} pillar(s).`);
+
+  // The rule is a loop over discovered libs, so an empty discovery produces an
+  // empty violation list that is indistinguishable from a compliant fleet. Say
+  // so instead (ADR-045).
+  const missingRoots = UNIT_ROOTS.filter(
+    (r) => r.required && !existsSync(join(repoRoot, r.root))
+  ).map((r) => r.root);
+  if (missingRoots.length > 0 || libs.length === 0 || pillars.length === 0) {
+    console.error('FAIL — the guard found nothing to check, which is not the same as clean:');
+    for (const root of missingRoots) {
+      console.error(`  ${root}/ does not exist — a unit-kind root was renamed under the guard.`);
+    }
+    if (libs.length === 0) console.error('  no lib was discovered, so no lib was checked.');
+    if (pillars.length === 0) {
+      console.error('  no pillar was discovered, so nothing could be a forbidden target.');
+    }
+    console.error('\nUpdate UNIT_ROOTS to wherever the units now live.');
+    process.exit(1);
+  }
 
   const violations = findViolations(units);
   if (violations.length === 0) {

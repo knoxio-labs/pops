@@ -29,8 +29,9 @@
  * becomes invisible to the gate. Nothing in `quality.yml` is advisory, and a
  * job that wants to be must leave the gated workflow rather than hide inside it.
  *
- * Parses YAML as text (no dependency), mirroring the other guards in this
- * directory.
+ * Parses YAML as text because the jobs that run these guards do so before any
+ * `pnpm install` — see `yaml-text.mjs`, which owns the line-level matching, and
+ * [ADR-045](../../docs/architecture/adr-045-guards-must-prove-they-report.md).
  *
  * Usage:
  *   node scripts/ci/check-ci-gate-wiring.mjs
@@ -42,6 +43,8 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import { stripComment } from './yaml-text.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..');
@@ -71,18 +74,6 @@ export function matchKey(line, indent, key) {
   if (!match) return undefined;
   if (key !== undefined && match[1] !== key) return undefined;
   return { key: match[1], value: stripComment(match[2]).trim() };
-}
-
-/**
- * Drop a YAML trailing comment. A `#` opens one only at line start or after
- * whitespace, so `node:24#5` keeps its hash.
- *
- * @param {string} raw
- * @returns {string}
- */
-function stripComment(raw) {
-  const at = raw.search(/(^|\s)#/u);
-  return at === -1 ? raw : raw.slice(0, at);
 }
 
 /**

@@ -138,12 +138,30 @@ export function parseMemberManifest(toml) {
   let name = '';
   /** @type {Set<string>} */
   const deps = new Set();
+  /**
+   * Crate named by the enclosing `[dependencies.<crate>]` sub-table, if any.
+   * That spelling puts the dependency in the HEADER rather than on a key line,
+   * so a scanner that only reads key lines walks straight past it and the crate
+   * never enters `deps` — the guard then finds no edge to object to.
+   * @type {string | undefined}
+   */
+  let depSubTable;
   for (const raw of lines) {
     const line = stripComment(raw);
     if (line === '') continue;
     const header = line.match(/^\[([^\]]+)\]$/u);
     if (header) {
       section = header[1];
+      depSubTable = undefined;
+      const nested = DEP_TABLES.map((t) => `${t}.`).find((prefix) => {
+        const at = section.indexOf(prefix);
+        return at === 0 || (at > 0 && section[at - 1] === '.');
+      });
+      if (nested !== undefined) {
+        depSubTable = section.slice(section.indexOf(nested) + nested.length).replace(/["']/gu, '');
+        section = section.slice(0, section.indexOf(nested) + nested.length - 1);
+        if (depSubTable !== '') deps.add(depSubTable);
+      }
       continue;
     }
     if (section === 'package') {
@@ -155,11 +173,19 @@ export function parseMemberManifest(toml) {
       DEP_TABLES.includes(section) ||
       DEP_TABLES.some((t) => section === t || section.endsWith(`.${t}`));
     if (!isDepTable) continue;
+    const renamed = line.match(/package\s*=\s*["']([^"']+)["']/u);
+    if (depSubTable !== undefined) {
+      // `[dependencies.foo] package = "bar"` renames foo to the real crate bar.
+      if (renamed) {
+        deps.delete(depSubTable);
+        deps.add(renamed[1]);
+        depSubTable = renamed[1];
+      }
+      continue;
+    }
     const keyMatch = line.match(/^([A-Za-z0-9_-]+)\s*=/u);
     if (!keyMatch) continue;
-    const key = keyMatch[1];
-    const renamed = line.match(/package\s*=\s*["']([^"']+)["']/u);
-    deps.add(renamed ? renamed[1] : key);
+    deps.add(renamed ? renamed[1] : keyMatch[1]);
   }
   return { name, deps: [...deps] };
 }
@@ -253,14 +279,41 @@ function selfTest() {
     (v) => v.from === 'finance' && v.to === 'contacts' && v.rule === 'RUST-2b'
   );
   const cleanPassed = !found.some((v) => v.from === 'pops-settings');
-  const ok = caughtLib && caughtPillar && cleanPassed;
+
+  // The fixture above starts from a Crate[] literal, so it proves the rule and
+  // never the manifest reader that feeds it. These spell the same forbidden
+  // edge in the sub-table form Cargo accepts, which used to parse to no dep at
+  // all (ADR-045).
+  const subTableSeen = parseMemberManifest(
+    '[package]\nname = "pops-ai"\n\n[dependencies.contacts]\npath = "../../pillars/contacts"\n'
+  ).deps.includes('contacts');
+  const renamedSubTableSeen = parseMemberManifest(
+    '[package]\nname = "pops-ai"\n\n[dependencies.ct]\npackage = "contacts"\npath = "x"\n'
+  ).deps.includes('contacts');
+  const targetSubTableSeen = parseMemberManifest(
+    '[package]\nname = "pops-ai"\n\n[target.\'cfg(unix)\'.dependencies.contacts]\npath = "x"\n'
+  ).deps.includes('contacts');
+
+  const ok =
+    caughtLib &&
+    caughtPillar &&
+    cleanPassed &&
+    subTableSeen &&
+    renamedSubTableSeen &&
+    targetSubTableSeen;
   if (!ok) {
     console.error('SELF-TEST FAILED — guard did not behave as expected:');
     console.error(`  caught lib→pillar (RUST-2a):    ${caughtLib}`);
     console.error(`  caught pillar→pillar (RUST-2b): ${caughtPillar}`);
     console.error(`  clean lib passed:               ${cleanPassed}`);
+    console.error(`  read [dependencies.<crate>]:    ${subTableSeen}`);
+    console.error(`  read a renamed sub-table dep:   ${renamedSubTableSeen}`);
+    console.error(`  read a target sub-table dep:    ${targetSubTableSeen}`);
   } else {
-    console.log('self-test OK — guard flags lib→pillar + pillar→pillar, passes clean lib.');
+    console.log(
+      'self-test OK — guard flags lib→pillar + pillar→pillar, passes clean lib, and reads ' +
+        'the sub-table dependency spelling.'
+    );
   }
   return ok;
 }

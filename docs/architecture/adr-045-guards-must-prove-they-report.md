@@ -1,0 +1,57 @@
+# ADR-045: A guard ships with a test proving it reports
+
+## Status
+
+Accepted — 2026-08-09.
+
+## Context
+
+Five independent guards in this repo, written by three authors in the same week, shared one defect: **each reported success under exactly the condition it was built to detect.** All five were green on CI. None was caught by anything except a reviewer reading the error paths.
+
+- `.github/workflows/ci-gate.yml` published `conclusion: "success"` whenever nothing had yet _failed_ — including while gated workflows were still in flight.
+- `scripts/ci/check-ci-gate-wiring.mjs` recorded "the `Quality` workflow name is missing", then dereferenced the filename it had just proved absent, crashing instead of printing the violation list it had already built.
+- The same file's path-filter check was anchored `/^\s{4}paths(-ignore)?:\s*$/u`, which matches only the block form. The repo already writes the inline form, so a filter added to `Quality` would have slipped past in silence.
+- The iOS token-discipline scanner collapsed every filesystem error into "no Swift source found" with `try?`. A scan that found nothing **passed**.
+- The same scanner's `isDirectory` probe dropped a failing entry from both the roots list _and_ the unclassified bucket, so the bucket built to catch gaps could not see its own.
+
+Three authors producing the same bug independently makes it a property of how guards get written here, not three careless mistakes. Two mechanisms recur:
+
+1. **Error-swallowing on discovery.** `try?`, `catch {}`, `?? false`, or an `existsSync` skip on the step that _finds_ the subject, so an empty result is indistinguishable from a clean result. Every guard whose body is `for (const x of discover()) { … }` inherits this: zero subjects means zero violations means exit 0.
+2. **Over-anchored matching on structured config.** A regex anchored at end-of-line after a key sees only the block form; an indent-exact match breaks on reformatting; a hand-rolled state machine over YAML or TOML models one spelling of a format that has several. The subject stays valid, the guard stops seeing it, and nothing says so.
+
+Both mechanisms fail **silently and in the passing direction**. That is what distinguishes them from ordinary bugs: a guard that crashes gets fixed the same day, and a guard that over-reports gets fixed the same hour. A guard that under-reports is indistinguishable from a healthy repo, and can stay broken indefinitely — the five above were found by a review sweep, not by CI.
+
+Several guards already accept `--self-test`, run as a preflight step in `.github/workflows/agent-review.yml` before the guard itself. That convention is the right hook and it is already load-bearing. But of the guards under `scripts/` today, nearly every self-test plants a violation and asserts it is caught. Almost none removes, renames, or corrupts the subject and asserts the guard refuses to pass. `scripts/ci/check-device-signature-fixture.mjs` is the exception worth copying: it self-tests a deleted copy and a reformatted copy, and it guards its own preconditions rather than assuming them.
+
+## Options Considered
+
+| Option                                                     | Pros                                                                                                                             | Cons                                                                                                                                                        |
+| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Fix each instance as review finds it                       | No new rule; nothing to enforce                                                                                                  | This _is_ the status quo, and it produced five instances in one week. Review found them by luck of who read the error paths                                 |
+| Require a degenerate-case test alongside the positive case | Cheap — one more case in a self-test that already exists; makes the defect impossible to land unnoticed rather than easy to spot | Cannot be enforced mechanically without a guard-for-guards, which would need the same proof and start the regress                                           |
+| Ban hand-rolled config parsing outright                    | Deletes mechanism 2 as a class rather than patching instances                                                                    | Several guards run before `pnpm install` by design, so no parser is on disk when they execute. A blanket ban would force a CI restructure it cannot pay for |
+| Assert a discovery floor and nothing else                  | One line per guard, catches the common shape                                                                                     | Catches total discovery loss only. Partial loss — one unit dropped out of twelve — still passes                                                             |
+
+## Decision
+
+**A guard ships with a test proving it _reports_, not merely that it passes.**
+
+Concretely, for every script under `scripts/` whose job is to fail the build on a repo invariant:
+
+- **The degenerate case is a required test case.** The subject missing, renamed, moved, or malformed must produce a deterministic violation — never a crash, never silence. The positive case (a planted violation is caught) is necessary and not sufficient; a self-test that proves only the positive case proves the guard is loud when it can see, not that it can see.
+- **Discovery asserts a floor.** A guard that iterates a discovered set fails when the set is empty and the repo says it should not be. "Found nothing" is a finding, and it prints as one — not as `OK`.
+- **Errors on the discovery path surface.** No bare `catch {}`, `try?`, or `?? false` between finding the subject and reporting on it. Where a failure genuinely must be tolerated (a shallow clone with no merge base, say), the guard prints a distinct message that is not its success message, and the reason lives in the file header.
+- **A shape the guard does not model is a violation, not a pass.** When a matcher cannot decide, it reports. Silence is reserved for "I looked and it is fine".
+- **Structured config is parsed, not scanned.** YAML, TOML, and JSON go through a real parser where one is reachable. Where it is not — see the constraint below — the file header states why, and the degenerate-case test covers the spellings the hand-rolled matcher does not model.
+- **The `--self-test` flag is where this lives** for a guard that has one, so `agent-review.yml`'s preflight step is the thing that catches a guard which has quietly stopped catching anything. A guard with a Vitest suite under `scripts/__tests__/` or `scripts/ci/__tests__/` may carry the degenerate cases there instead, but not in neither.
+- **The test is watched failing against the unfixed guard.** A test that has never been red is not evidence.
+
+**The stated exception to real-parser use.** `agent-review.yml` and several jobs in `.github/workflows/quality.yml`, `.github/workflows/rust-quality.yml`, and `.github/workflows/docker-build.yml` run their guards immediately after `actions/checkout` with **no `pnpm install`** — deliberately, so the gate answers in seconds and cannot be broken by a dependency problem it is supposed to be independent of. A guard in one of those jobs has no `node_modules` at execution time and therefore cannot import a parser. That constraint, not preference, is why hand-rolled YAML and TOML matchers exist here. It is recorded rather than defended: it trades a parser for latency, and the trade should be revisited as a unit rather than eroded one guard at a time.
+
+## Consequences
+
+- Writing a guard costs one more test case. That is the whole price, and it is paid once per guard.
+- The failure mode this ADR targets stops being invisible. A guard whose discovery breaks now fails its own self-test in `agent-review.yml`'s preflight rather than reporting `OK` on a repo it can no longer see.
+- **Accepted trade-off: this is a convention, not a gate.** A guard-for-guards would need to prove it reports, which is the same problem one level up. Enforcement is review plus the self-test preflight, and both can be bypassed by not writing the case at all.
+- **Accepted trade-off: a discovery floor catches total loss, not partial.** A guard that discovers eleven of twelve units still passes. Where the exact set is knowable, pinning it (as `scripts/ci/__tests__/check-generated-clients.test.ts` pins its target count) is stronger than a floor, and preferred where it is cheap.
+- The no-install constraint is now written down with the guards it shapes, so the next author reaching for a parser learns why the file next door does not use one — rather than concluding the hand-rolled matcher is the house style and copying it. Copying it is how one of the five instances above happened.
