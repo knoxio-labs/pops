@@ -8,14 +8,18 @@ const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const NGINX_CONF_PATH = resolve(SCRIPT_DIR, 'nginx.conf');
 const VITE_CONFIG_PATH = resolve(SCRIPT_DIR, 'vite.config.ts');
 
+function isDefined(value: string | undefined): value is string {
+  return value !== undefined;
+}
+
 function extractNginxApiPrefixes(nginxConf: string): string[] {
-  const matches = nginxConf.matchAll(/location\s+\/([\w-]+-api)\//g);
-  return [...new Set([...matches].map((m) => m[1]))];
+  const matches = [...nginxConf.matchAll(/location\s+\/([\w-]+-api)\//g)];
+  return [...new Set(matches.map((m) => m[1]).filter(isDefined))];
 }
 
 function extractViteProxyPrefixes(viteConfig: string): string[] {
-  const matches = viteConfig.matchAll(/'\/([\w-]+-api)':\s*\{/g);
-  return [...new Set([...matches].map((m) => m[1]))];
+  const matches = [...viteConfig.matchAll(/'\/([\w-]+-api)':\s*\{/g)];
+  return [...new Set(matches.map((m) => m[1]).filter(isDefined))];
 }
 
 describe('vite dev proxy / nginx prod proxy parity', () => {
