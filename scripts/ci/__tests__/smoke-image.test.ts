@@ -377,6 +377,23 @@ describe('dataMountsForDockerfile — Compose short forms', () => {
     ]);
   });
 
+  it('refuses a service that builds without naming its Dockerfile', () => {
+    // Compose would infer `<context>/Dockerfile`. Inferring it here means
+    // guessing how the context resolves, and a wrong guess mounts nothing and
+    // calls that a pass.
+    const compose = [
+      'services:',
+      '  fixture-api:',
+      '    build: ..',
+      '    volumes:',
+      '      - sqlite-data:/data/sqlite',
+      '',
+    ].join('\n');
+    expect(() => dataMountsForDockerfile(compose, 'pillars/fixture/Dockerfile')).toThrow(
+      /fixture-api/u
+    );
+  });
+
   it('derives nothing for a service compose consumes as a published image', () => {
     const compose = ['services:', '  fixture-api:', '    image: example/fixture', ''].join('\n');
     expect(dataMountsForDockerfile(compose, 'pillars/fixture/Dockerfile')).toEqual([]);

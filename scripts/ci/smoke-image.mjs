@@ -194,20 +194,30 @@ function normalizeDockerfilePath(path) {
  * is ever asked to write to.
  *
  * @param {string} composeText Contents of `infra/docker-compose.yml`.
- * @param {string} dockerfilePath e.g. `pillars/media/Dockerfile`.
+ * @param {string} dockerfilePath e.g. `pillars/media/Dockerfile`, as CI passes
+ *   it: relative to the build context, which every pops service sets to the
+ *   repo root.
  * @returns {string[]} Sorted and deduplicated across every service that builds
  *   this Dockerfile — `food` is built by both an API and a worker service, and
  *   the union is what the one image has to satisfy.
+ * @throws {Error} When a service builds without naming its Dockerfile. Compose
+ *   would infer `<context>/Dockerfile`; inferring it here means guessing at how
+ *   the context resolves, and a wrong guess mounts nothing and reports success.
+ *   Every pops service names it explicitly, so demand that rather than guess.
  */
 export function dataMountsForDockerfile(composeText, dockerfilePath) {
   const compose = ComposeFileSchema.parse(parseYaml(composeText));
   const wanted = normalizeDockerfilePath(dockerfilePath);
   /** @type {Set<string>} */
   const targets = new Set();
-  for (const service of Object.values(compose.services ?? {})) {
+  for (const [name, service] of Object.entries(compose.services ?? {})) {
     const build = service?.build;
-    const declared = typeof build === 'string' ? undefined : build?.dockerfile;
-    if (declared === undefined || normalizeDockerfilePath(declared) !== wanted) continue;
+    if (build === undefined) continue;
+    const declared = typeof build === 'string' ? undefined : build.dockerfile;
+    if (declared === undefined) {
+      throw new Error(`compose service '${name}' builds without naming a dockerfile`);
+    }
+    if (normalizeDockerfilePath(declared) !== wanted) continue;
     for (const entry of service?.volumes ?? []) {
       const mount = normalizeVolumeEntry(entry);
       if (mount === undefined || mount.readOnly || mount.isBind) continue;
