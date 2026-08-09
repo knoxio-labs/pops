@@ -2,8 +2,8 @@
  * `infra/docker-compose.yml` only forwards an environment variable into a
  * container if that service's own `environment:` block names it — setting
  * `CLOUDFLARE_ACCESS_TEAM_NAME` in the deployer's `.env` does nothing for a
- * service whose compose block never references it (POPS-1605). `registry-api`
- * and `bfm-api` both resolve a Cloudflare Access identity in
+ * service whose compose block never references it. `registry-api` and
+ * `bfm-api` both resolve a Cloudflare Access identity in
  * `src/api/middleware/identity.ts`, so both must forward it.
  *
  * Parses the real compose YAML with `js-yaml` rather than scanning lines, so

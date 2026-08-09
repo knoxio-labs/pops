@@ -1,6 +1,6 @@
 /**
  * Unit tests for `resolvePrincipal`'s production Cloudflare Access
- * resolution — the two branches POPS-1605 found: without
+ * resolution — the two branches that matter: without
  * `CLOUDFLARE_ACCESS_TEAM_NAME` set, every production request resolves to
  * the tunnel user and the JWT-verification branch below it is unreachable;
  * with it set, a `cf-access-jwt-assertion` is actually verified.
@@ -9,7 +9,7 @@
  * cannot prove the deployed container ever sees `CLOUDFLARE_ACCESS_TEAM_NAME`
  * set. That half is `infra/docker-compose.yml` wiring it through, verified by
  * `scripts/ci/__tests__/check-compose-cloudflare-access-env.test.ts`, plus an
- * operator step to set the value in the deployed environment (POPS-1487).
+ * operator step to set the value in the deployed environment.
  */
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
