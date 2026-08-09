@@ -32,6 +32,12 @@ on:
 # a change to the harness that stops it asserting anything must run the
 # harness. Its unit tests run elsewhere and cannot see that.
 #
+# `infra/docker-compose.yml` is in the `docker` filter and not only in
+# `compose`, because the smoke reads it to decide which `/data/...` volumes to
+# mount fresh and require writable. A compose-only edit that adds or drops one
+# changes what every image is held to, so it has to rerun the build+smoke
+# matrix rather than just `compose-validate`.
+#
 # Each Dockerfile is BUILT AND STARTED. Building alone is not a gate: under
 # pnpm 11 `pnpm deploy --legacy` wrote workspace-escaping `@pops/*` symlinks,
 # every Node pillar image built clean, and every one of them died on its
@@ -61,6 +67,7 @@ jobs:
             docker:
               - '**/Dockerfile'
               - 'infra/docker*/**'
+              - 'infra/docker-compose.yml'
               - 'pnpm-lock.yaml'
               - 'pnpm-workspace.yaml'
               - 'tsconfig.base.json'
@@ -110,9 +117,18 @@ jobs:
         dockerfile: ${{ fromJson(needs.discover.outputs.dockerfiles) }}
     steps:
       - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
           node-version: "24"
+          cache: pnpm
+
+      # The smoke harness parses infra/docker-compose.yml with a real YAML
+      # parser rather than a hand-rolled scanner, so it needs the workspace's
+      # node_modules. Without this the harness dies on ERR_MODULE_NOT_FOUND
+      # before it starts a single container — which reads, from the outside,
+      # exactly like sixteen broken images.
+      - run: pnpm install --frozen-lockfile
 
       # The FULL image, not `--target builder`. A builder-stage build cannot
       # see the class of bug that broke every Node pillar image under pnpm 11:
@@ -128,8 +144,9 @@ jobs:
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
           docker build -f "${{ matrix.dockerfile }}" -t "$tag" .
 
-      # Start it and require a health response. This is the gate; the build
-      # above is only its precondition.
+      # Start it on never-before-mounted volumes and require both a health
+      # response and a writable data mount. This is the gate; the build above
+      # is only its precondition.
       - name: Smoke ${{ matrix.dockerfile }}
         run: node scripts/ci/smoke-image.mjs "${{ matrix.dockerfile }}" "${{ steps.build.outputs.tag }}"
 

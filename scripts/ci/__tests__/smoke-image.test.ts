@@ -6,15 +6,21 @@ import { describe, expect, it } from 'vitest';
 
 import {
   collectStreams,
+  dataMountsForDockerfile,
   freshVolumeName,
+  mountSlug,
+  normalizeVolumeEntry,
   parseExposedPort,
   parseRuntimeBaseImage,
   planSmoke,
+  planVolumes,
   resolveHealthPath,
   runtimeStage,
 } from '../smoke-image.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
+
+const productionCompose = readFileSync(join(repoRoot, 'infra', 'docker-compose.yml'), 'utf8');
 
 /** Pillar ids whose directory contains every one of the named entries. */
 function pillarsWith(...entries: readonly string[]): string[] {
@@ -112,6 +118,30 @@ function builderStages(dockerfile: string): string {
   return dockerfile.slice(0, dockerfile.length - runtimeStage(dockerfile).length);
 }
 
+/**
+ * The `/data/...` directories the shipped stage creates — the ones a fresh
+ * named volume can inherit an owner from. Comments go first (these Dockerfiles
+ * narrate `mkdirSync` in prose), then line continuations are folded, then each
+ * `&&`-separated command is read on its own so a trailing `chown -R node:node
+ * /data` is not mistaken for a directory the image creates.
+ */
+function runtimeDataDirs(dockerfile: string): string[] {
+  const stage = runtimeStage(dockerfile)
+    .split('\n')
+    .filter((line) => !/^\s*#/u.test(line))
+    .join('\n')
+    .replace(/\\\r?\n/gu, ' ');
+  const dirs = new Set<string>();
+  for (const command of stage.split(/&&|;|\n/u)) {
+    const args = /^\s*(?:RUN\s+)?mkdir\b(.*)$/u.exec(command)?.[1];
+    if (args === undefined) continue;
+    for (const token of args.split(/\s+/u)) {
+      if (token.startsWith('/data/')) dirs.add(token);
+    }
+  }
+  return [...dirs].toSorted();
+}
+
 describe('parseExposedPort', () => {
   it('reads the exposed port', () => {
     expect(parseExposedPort('FROM node:24-slim\nEXPOSE 3004\nCMD ["node", "x.js"]\n')).toBe(3004);
@@ -183,6 +213,232 @@ describe('freshVolumeName', () => {
       Array.from({ length: 100 }, () => freshVolumeName('pillars/finance/Dockerfile'))
     );
     expect(names.size).toBe(100);
+  });
+
+  it('tags a second data volume, so a leaked one names the mount it covered', () => {
+    expect(freshVolumeName('pillars/media/Dockerfile', 'data-media-images')).toMatch(
+      /^pops-smoke-media-data-media-images-[0-9a-f]{8}$/u
+    );
+  });
+});
+
+describe('mountSlug', () => {
+  it('flattens a mount path into a docker-safe volume name fragment', () => {
+    expect(mountSlug('/data/sqlite')).toBe('data-sqlite');
+    expect(mountSlug('/data/media/images')).toBe('data-media-images');
+  });
+});
+
+describe('planVolumes', () => {
+  it('gives every mount its own never-before-used volume', () => {
+    const plan = planVolumes('pillars/media/Dockerfile', ['/data/sqlite', '/data/media/images']);
+    expect(plan.map((v) => v.path)).toEqual(['/data/sqlite', '/data/media/images']);
+    expect(new Set(plan.map((v) => v.name)).size).toBe(2);
+  });
+
+  it('plans nothing for an image production mounts nothing onto', () => {
+    expect(planVolumes('pillars/docs/Dockerfile', [])).toEqual([]);
+  });
+});
+
+describe('normalizeVolumeEntry', () => {
+  it('reads the short form', () => {
+    expect(normalizeVolumeEntry('sqlite-data:/data/sqlite')).toEqual({
+      target: '/data/sqlite',
+      readOnly: false,
+      isBind: false,
+    });
+  });
+
+  it('reads an anonymous volume, which has no source segment at all', () => {
+    // `entry.split(':')[1]` is `undefined` here and the mount vanishes.
+    expect(normalizeVolumeEntry('/data/media/images')).toEqual({
+      target: '/data/media/images',
+      readOnly: false,
+      isBind: false,
+    });
+  });
+
+  it('reads an access mode', () => {
+    expect(normalizeVolumeEntry('pops-registry-data:/data/sqlite:ro')?.readOnly).toBe(true);
+    expect(normalizeVolumeEntry('sqlite-data:/data/sqlite:rw')?.readOnly).toBe(false);
+    expect(normalizeVolumeEntry('sqlite-data:/data/sqlite:ro,z')?.readOnly).toBe(true);
+    expect(normalizeVolumeEntry('/data/anon:ro')).toEqual({
+      target: '/data/anon',
+      readOnly: true,
+      isBind: false,
+    });
+  });
+
+  it('parses from the right, so a colon in the source does not shift the target', () => {
+    // `split(':')[1]` reads `name` as the container path here.
+    expect(normalizeVolumeEntry('weird:name:/data/sqlite')?.target).toBe('/data/sqlite');
+    expect(normalizeVolumeEntry('C:\\hostdir:/data/sqlite:ro')).toEqual({
+      target: '/data/sqlite',
+      readOnly: true,
+      isBind: true,
+    });
+  });
+
+  it('recognises a host bind, which no fresh volume models', () => {
+    expect(normalizeVolumeEntry('./litestream/registry.yml:/etc/litestream.yml:ro')?.isBind).toBe(
+      true
+    );
+    expect(normalizeVolumeEntry('/var/run/docker.sock:/var/run/docker.sock')?.isBind).toBe(true);
+    expect(normalizeVolumeEntry('~/state:/data/sqlite')?.isBind).toBe(true);
+  });
+
+  it('reads the long form, including its explicit type', () => {
+    expect(normalizeVolumeEntry({ target: '/data/sqlite' })).toEqual({
+      target: '/data/sqlite',
+      readOnly: false,
+      isBind: false,
+    });
+    expect(
+      normalizeVolumeEntry({ type: 'volume', target: '/data/sqlite', read_only: true })
+    ).toEqual({ target: '/data/sqlite', readOnly: true, isBind: false });
+    expect(normalizeVolumeEntry({ type: 'bind', target: '/data/sqlite' })?.isBind).toBe(true);
+  });
+
+  it('rejects an entry that names no absolute container path', () => {
+    expect(normalizeVolumeEntry('just-a-name')).toBeUndefined();
+    expect(normalizeVolumeEntry('')).toBeUndefined();
+  });
+});
+
+/** A one-service compose manifest mounting exactly `entries`. */
+function composeFixture(entries: readonly string[]): string {
+  return [
+    'services:',
+    '  fixture-api:',
+    '    image: example/fixture',
+    '    build:',
+    '      context: ..',
+    '      dockerfile: pillars/fixture/Dockerfile',
+    '    volumes:',
+    ...entries.map((entry) => `      - ${entry}`),
+    '',
+  ].join('\n');
+}
+
+function fixtureMounts(entries: readonly string[]): string[] {
+  return dataMountsForDockerfile(composeFixture(entries), 'pillars/fixture/Dockerfile');
+}
+
+describe('dataMountsForDockerfile — Compose short forms', () => {
+  it('keeps an anonymous volume, whose short form carries no colon', () => {
+    expect(fixtureMounts(['/data/media/images'])).toEqual(['/data/media/images']);
+  });
+
+  it('drops a read-only mount, which the image is never asked to write', () => {
+    expect(fixtureMounts(['sqlite-data:/data/sqlite:ro'])).toEqual([]);
+    expect(fixtureMounts(['sqlite-data:/data/sqlite:rw'])).toEqual(['/data/sqlite']);
+  });
+
+  it('keeps a mount whose source contains a colon', () => {
+    expect(fixtureMounts(['weird:name:/data/sqlite'])).toEqual(['/data/sqlite']);
+  });
+
+  it('drops a host bind, whose ownership the image never supplies', () => {
+    expect(fixtureMounts(['./seed:/data/sqlite'])).toEqual([]);
+  });
+
+  it('drops a mount outside /data', () => {
+    expect(fixtureMounts(['certs:/etc/ssl/private', 'sqlite-data:/data/sqlite'])).toEqual([
+      '/data/sqlite',
+    ]);
+  });
+
+  it('unions and sorts across every service that builds the same Dockerfile', () => {
+    const compose = [
+      'services:',
+      '  fixture-api:',
+      '    build:',
+      '      dockerfile: pillars/fixture/Dockerfile',
+      '    volumes:',
+      '      - sqlite-data:/data/sqlite',
+      '      - ingest-data:/data/fixture/ingest',
+      '  fixture-worker:',
+      '    build:',
+      '      dockerfile: ./pillars/fixture/Dockerfile',
+      '    volumes:',
+      '      - ingest-data:/data/fixture/ingest',
+      '  unrelated-api:',
+      '    build:',
+      '      dockerfile: pillars/other/Dockerfile',
+      '    volumes:',
+      '      - other-data:/data/other',
+      '',
+    ].join('\n');
+    expect(dataMountsForDockerfile(compose, 'pillars/fixture/Dockerfile')).toEqual([
+      '/data/fixture/ingest',
+      '/data/sqlite',
+    ]);
+  });
+
+  it('derives nothing for a service compose consumes as a published image', () => {
+    const compose = ['services:', '  fixture-api:', '    image: example/fixture', ''].join('\n');
+    expect(dataMountsForDockerfile(compose, 'pillars/fixture/Dockerfile')).toEqual([]);
+  });
+
+  it('refuses a compose shape it does not understand rather than deriving nothing', () => {
+    // A silently empty derivation is a gate that reports success for a mount
+    // it never looked at — the failure mode this whole harness exists to deny.
+    const compose = [
+      'services:',
+      '  fixture-api:',
+      '    build:',
+      '      dockerfile: pillars/fixture/Dockerfile',
+      '    volumes: sqlite-data:/data/sqlite',
+      '',
+    ].join('\n');
+    expect(() => dataMountsForDockerfile(compose, 'pillars/fixture/Dockerfile')).toThrow();
+  });
+});
+
+describe('dataMountsForDockerfile — YAML `#` is only a comment outside quotes', () => {
+  // Truncating a line at its first `#` deletes valid volumes. Each case is
+  // asserted against the same manifest written without the `#`, so the test
+  // states the equivalence rather than restating a hand-computed answer.
+  it('keeps a source containing `#` inside single quotes', () => {
+    expect(fixtureMounts(["'weird#name:/data/sqlite'"])).toEqual(
+      fixtureMounts(['weirdname:/data/sqlite'])
+    );
+  });
+
+  it('keeps a source containing `#` inside double quotes', () => {
+    expect(fixtureMounts(['"weird#name:/data/sqlite"'])).toEqual(
+      fixtureMounts(['weirdname:/data/sqlite'])
+    );
+  });
+
+  it('keeps a plain scalar containing `#`, which starts no comment either', () => {
+    expect(fixtureMounts(['weird#name:/data/sqlite'])).toEqual(
+      fixtureMounts(['weirdname:/data/sqlite'])
+    );
+  });
+
+  it('drops a real trailing comment without dropping its mount', () => {
+    expect(fixtureMounts(['sqlite-data:/data/sqlite # the shared database volume'])).toEqual(
+      fixtureMounts(['sqlite-data:/data/sqlite'])
+    );
+  });
+
+  it('ignores a whole-line comment between mounts', () => {
+    const commented = [
+      'services:',
+      '  fixture-api:',
+      '    build:',
+      '      dockerfile: pillars/fixture/Dockerfile',
+      '    volumes:',
+      '      # the shared database volume',
+      '      - sqlite-data:/data/sqlite',
+      '      - images-data:/data/fixture/images',
+      '',
+    ].join('\n');
+    expect(dataMountsForDockerfile(commented, 'pillars/fixture/Dockerfile')).toEqual(
+      fixtureMounts(['sqlite-data:/data/sqlite', 'images-data:/data/fixture/images'])
+    );
   });
 });
 
@@ -291,6 +547,99 @@ describe('the fresh-volume contract, for every pillar image that owns a database
     expect(runtimeStage(readDockerfile(id))).toMatch(
       /^\s*ENV\s+[A-Z_]*SQLITE_PATH=\/data\/sqlite\/\S+/mu
     );
+  });
+});
+
+describe('runtimeDataDirs', () => {
+  it('reads every path off one `mkdir -p`', () => {
+    expect(
+      runtimeDataDirs('FROM node:24-slim\nRUN mkdir -p /data/sqlite /data/media/images\n')
+    ).toEqual(['/data/media/images', '/data/sqlite']);
+  });
+
+  it('does not read a chown target as a directory the image creates', () => {
+    expect(
+      runtimeDataDirs('FROM node:24-slim\nRUN mkdir -p /data/sqlite && chown -R node:node /data\n')
+    ).toEqual(['/data/sqlite']);
+  });
+
+  it('folds line continuations', () => {
+    const dockerfile = [
+      'FROM debian:bookworm-slim',
+      'RUN apt-get update \\',
+      '    && mkdir -p /data/sqlite \\',
+      '    && chown -R contacts:contacts /data',
+      '',
+    ].join('\n');
+    expect(runtimeDataDirs(dockerfile)).toEqual(['/data/sqlite']);
+  });
+
+  it('ignores prose about mkdir and paths created only in the builder', () => {
+    const dockerfile = [
+      'FROM node:24-slim AS builder',
+      'RUN mkdir -p /data/leftover',
+      'FROM node:24-slim',
+      '# `mkdirSync` no-ops on /data/sqlite when the volume is already there',
+      'USER node',
+      '',
+    ].join('\n');
+    expect(runtimeDataDirs(dockerfile)).toEqual([]);
+  });
+});
+
+describe('what production mounts and what the image creates, for every pillar Dockerfile', () => {
+  // The runtime smoke asserts this for real, against never-before-mounted
+  // volumes; this is the fast, docker-free half, and it is two-way on purpose.
+  //
+  // Forward: a `/data/...` volume compose mounts that the image never creates
+  // is a root-owned directory on that volume's first mount in production.
+  //
+  // Backward: a `/data/...` directory the image creates that compose mounts
+  // nothing onto is either a volume someone forgot to declare — state written
+  // into the container layer and lost on the next redeploy — or a `mkdir` for
+  // a mount that no longer exists.
+  const pillars = pillarsWith('Dockerfile');
+
+  it.each(pillars)('pillars/%s creates exactly what compose mounts onto it', (id) => {
+    const dockerfilePath = `pillars/${id}/Dockerfile`;
+    expect(runtimeDataDirs(readDockerfile(id))).toEqual(
+      dataMountsForDockerfile(productionCompose, dockerfilePath)
+    );
+  });
+});
+
+describe('the mount set derived from production compose', () => {
+  // Guards the derivation against silently narrowing to nothing: a parser bug,
+  // a schema mismatch or a renamed compose key would leave every assertion
+  // above vacuously true, and the smoke would report success on a mount it
+  // never touched.
+  const derived = new Map(
+    pillarsWith('Dockerfile').map((id) => [
+      id,
+      dataMountsForDockerfile(productionCompose, `pillars/${id}/Dockerfile`),
+    ])
+  );
+
+  it('covers every pillar that owns a database', () => {
+    for (const id of pillarsWith('Dockerfile', 'migrations')) {
+      expect(derived.get(id)).toContain('/data/sqlite');
+    }
+  });
+
+  it('reaches the lazily-written second volumes, which no health probe proves', () => {
+    expect(derived.get('media')).toContain('/data/media/images');
+    expect(derived.get('food')).toContain('/data/food/ingest');
+    expect(derived.get('cerebrum')).toContain('/data/cerebrum/engrams');
+  });
+
+  it('mounts nothing on the pillars that own no state', () => {
+    for (const id of ['docs', 'shell', 'mcp', 'documents', 'orchestrator']) {
+      expect(derived.get(id)).toEqual([]);
+    }
+  });
+
+  it('excludes the read-only replica mounts litestream reads through', () => {
+    expect([...derived.values()].flat()).not.toContain('/etc/litestream.yml');
   });
 });
 

@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
- * Runtime smoke test for one pillar image: start the built container and
- * require it to answer its health route.
+ * Runtime smoke test for one pillar image: start the built container on
+ * never-before-mounted volumes, require it to answer its health route, and
+ * require its runtime user to be able to write to every data mount.
  *
  * A build-only gate cannot catch the class of bug this exists for. `pnpm
  * deploy --legacy` under pnpm 11 writes relative `@pops/*` symlinks that
@@ -14,13 +15,19 @@
  * base image — so a new pillar is covered the moment its Dockerfile lands,
  * with no port or route table to keep in sync.
  *
- * The image is started against a NAMED VOLUME THAT HAS NEVER EXISTED, mounted
- * where production mounts one. Docker seeds an empty named volume from the
- * image's contents at the mount point, ownership included, so a runtime stage
- * that does not create and own that directory gets a `root:root` volume and
- * dies on `SQLITE_CANTOPEN`. A recycled volume already carries whatever
- * permissions the first mount established and would pass regardless — the
- * volume being new on every run is the whole assertion.
+ * WHERE it is mounted is derived the same way, from `infra/docker-compose.yml`
+ * — the actual production deploy target — rather than from a table here. Every
+ * read-write `/data/...` volume a compose service declares for this Dockerfile
+ * gets a NAMED VOLUME THAT HAS NEVER EXISTED. Docker seeds an empty named
+ * volume from the image's contents at the mount point, ownership included, so
+ * a runtime stage that does not create and own that directory gets a
+ * `root:root` volume. The database mount dies on that at boot
+ * (`SQLITE_CANTOPEN`); a second data volume — media images, food ingest,
+ * cerebrum engrams — is written lazily and boots fine regardless, which is why
+ * every mount also gets an explicit write as the runtime user rather than
+ * being left to the health probe to notice. A recycled volume already carries
+ * whatever permissions the first mount established and would pass regardless —
+ * the volumes being new on every run is the whole assertion.
  *
  * The environment supplied is deliberately minimal and is documented on the
  * constants below: `PORT` and placeholders for the secrets some pillars
@@ -32,34 +39,33 @@
  * Usage:
  *   node scripts/ci/smoke-image.mjs <dockerfile> <image-ref>
  *
- * Exit 0 = the image answered its health route. Exit 1 = it did not.
- * Exit 2 = usage error.
+ * Exit 0 = the image answered its health route and every data mount is
+ * writable. Exit 1 = one of those was not true. Exit 2 = usage error.
  */
 
 import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
-import { basename, dirname } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
+import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 
+import { load as parseYaml } from 'js-yaml';
+import { z } from 'zod';
+
 const execFileAsync = promisify(execFile);
+
+const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
+
+/** The production deploy target, and the only source of the mount set. */
+const COMPOSE_PATH = join(repoRoot, 'infra', 'docker-compose.yml');
 
 const HEALTH_TIMEOUT_MS = 90_000;
 const POLL_INTERVAL_MS = 1_000;
 
-/**
- * Where every pillar's SQLite volume is mounted, in compose and here alike.
- *
- * Mounted for EVERY image rather than only the DB-owning ones, so there is no
- * list of which pillars have a database to keep in sync. An image that never
- * writes there is unaffected by an extra empty volume; an image that does is
- * held to the fresh-mount contract. Each of those images defaults its own
- * database onto this path in its runtime stage — the Dockerfile of any pillar
- * that ships a `migrations/` directory, held to it by the drift test in
- * `scripts/ci/__tests__/smoke-image.test.ts`.
- */
-const SMOKE_DATA_MOUNT = '/data/sqlite';
+/** The container-side prefix under which pillars keep persistent state. */
+const DATA_ROOT = '/data';
 
 /**
  * Secrets a pillar deliberately crashes on at boot rather than discovering
@@ -78,6 +84,151 @@ const BOOT_PLACEHOLDER_SECRETS = {
   POPS_INTERNAL_API_KEY: 'ci-smoke-placeholder',
   BFM_ACCESS_TOKEN_SECRET: 'ci-smoke-placeholder-access-token-secret',
 };
+
+/**
+ * One `volumes:` list entry: Compose's short `[source:]target[:mode]` string
+ * form, or its long object form. Only `type`, `target` and `read_only` are
+ * read; everything else passes through unexamined.
+ */
+const ComposeVolumeEntrySchema = z.union([
+  z.string(),
+  z.object({
+    type: z.string().optional(),
+    target: z.string(),
+    read_only: z.boolean().optional(),
+  }),
+]);
+
+/** A Compose service: only `build.dockerfile` and `volumes` matter here. */
+const ComposeServiceSchema = z
+  .object({
+    build: z.union([z.string(), z.object({ dockerfile: z.string().optional() })]).optional(),
+    volumes: z.array(ComposeVolumeEntrySchema).optional(),
+  })
+  .nullable();
+
+/** A Compose manifest: only the `services:` map matters here. */
+const ComposeFileSchema = z.object({
+  services: z.record(z.string(), ComposeServiceSchema).optional(),
+});
+
+/**
+ * Whether a short-form volume's source names a path on the host rather than a
+ * Docker volume.
+ *
+ * A bind is never seeded from the image, so the ownership a fresh named volume
+ * inherits — the thing this harness exists to assert — says nothing about it.
+ * Mounting a fresh volume where production binds a host directory would demand
+ * a `chown` the image genuinely does not need.
+ *
+ * @param {string} source Short-form source segment, `''` for an anonymous volume.
+ * @returns {boolean}
+ */
+function isHostPath(source) {
+  return source !== '' && (/^[.~/]/u.test(source) || /^[A-Za-z]:[\\/]/u.test(source));
+}
+
+/**
+ * Normalize one `volumes:` list entry to the container-side path it mounts
+ * onto and how, regardless of which of Compose's two equivalent forms declared
+ * it.
+ *
+ * The short form is parsed FROM THE RIGHT. `entry.split(':')[1]` is wrong in
+ * both directions Compose allows: an anonymous volume (`- /data/media/images`)
+ * has no source segment at all and yields `undefined`, and a source that
+ * itself contains a colon (a Windows path, a URL-ish volume name) shifts every
+ * segment along so the target lands on the mode.
+ *
+ * @param {z.infer<typeof ComposeVolumeEntrySchema>} entry
+ * @returns {{ target: string, readOnly: boolean, isBind: boolean } | undefined}
+ *   `undefined` when the entry declares no absolute container path, which
+ *   Compose itself would also reject.
+ */
+export function normalizeVolumeEntry(entry) {
+  if (typeof entry !== 'string') {
+    return {
+      target: entry.target,
+      readOnly: entry.read_only === true,
+      isBind: entry.type !== undefined && entry.type !== 'volume',
+    };
+  }
+  const segments = entry.split(':');
+  const modes = segments.length > 1 && !segments.at(-1)?.startsWith('/') ? segments.pop() : '';
+  const target = segments.pop();
+  if (target === undefined || !target.startsWith('/')) return undefined;
+  return {
+    target,
+    readOnly: (modes ?? '').split(',').includes('ro'),
+    isBind: isHostPath(segments.join(':')),
+  };
+}
+
+/**
+ * Compose writes `build.dockerfile` relative to the build context; CI passes
+ * the same path with no `./` prefix. Compare them on equal terms.
+ *
+ * @param {string} path
+ * @returns {string}
+ */
+function normalizeDockerfilePath(path) {
+  return path.replace(/^\.\//u, '');
+}
+
+/**
+ * Every `/data/...` path production mounts read-write for the image this
+ * Dockerfile builds — the set this run mounts fresh and asserts writable.
+ *
+ * Read out of the compose manifest rather than listed here, because a list is
+ * how the gap this closes appeared: `/data/sqlite` was the only path anyone
+ * remembered, and the second volume media, food and cerebrum each carry went
+ * ungated for as long as it took someone to notice. Derived, a pillar's new
+ * data volume is covered the moment compose declares it, and a volume no
+ * service still mounts drops out with no edit here.
+ *
+ * Parsed with a real YAML parser for the same reason: a hand-rolled line
+ * scanner has to reimplement YAML's comment and quoting rules to stay correct,
+ * and it silently drops the volumes on every line it gets wrong.
+ *
+ * Read-only mounts and host binds are excluded — see {@link isHostPath} for
+ * why a bind is a different contract, and a `:ro` mount is not one the image
+ * is ever asked to write to.
+ *
+ * @param {string} composeText Contents of `infra/docker-compose.yml`.
+ * @param {string} dockerfilePath e.g. `pillars/media/Dockerfile`.
+ * @returns {string[]} Sorted and deduplicated across every service that builds
+ *   this Dockerfile — `food` is built by both an API and a worker service, and
+ *   the union is what the one image has to satisfy.
+ */
+export function dataMountsForDockerfile(composeText, dockerfilePath) {
+  const compose = ComposeFileSchema.parse(parseYaml(composeText));
+  const wanted = normalizeDockerfilePath(dockerfilePath);
+  /** @type {Set<string>} */
+  const targets = new Set();
+  for (const service of Object.values(compose.services ?? {})) {
+    const build = service?.build;
+    const declared = typeof build === 'string' ? undefined : build?.dockerfile;
+    if (declared === undefined || normalizeDockerfilePath(declared) !== wanted) continue;
+    for (const entry of service?.volumes ?? []) {
+      const mount = normalizeVolumeEntry(entry);
+      if (mount === undefined || mount.readOnly || mount.isBind) continue;
+      if (mount.target === DATA_ROOT || mount.target.startsWith(`${DATA_ROOT}/`)) {
+        targets.add(mount.target);
+      }
+    }
+  }
+  return [...targets].toSorted();
+}
+
+/**
+ * A filesystem-safe fragment identifying a data mount, so a volume leaked by a
+ * crashed run traces back to the mount it covered.
+ *
+ * @param {string} containerPath e.g. `/data/media/images`.
+ * @returns {string} e.g. `media-images`.
+ */
+export function mountSlug(containerPath) {
+  return containerPath.replace(/^\//u, '').replace(/\//gu, '-');
+}
 
 /**
  * The port the runtime stage publishes.
@@ -158,11 +309,28 @@ export function resolveHealthPath(baseImage) {
  * ownership the fix installs — it would pass on an image that has regressed.
  *
  * @param {string} dockerfilePath e.g. `pillars/finance/Dockerfile`.
+ * @param {string} [mountTag] Distinguishes a pillar's second (or third) data
+ *   volume from its database one, e.g. `data-media-images`.
  * @returns {string}
  */
-export function freshVolumeName(dockerfilePath) {
+export function freshVolumeName(dockerfilePath, mountTag = '') {
   const pillarId = basename(dirname(dockerfilePath)) || 'pillar';
-  return `pops-smoke-${pillarId}-${randomUUID().slice(0, 8)}`;
+  const tag = mountTag === '' ? '' : `-${mountTag}`;
+  return `pops-smoke-${pillarId}${tag}-${randomUUID().slice(0, 8)}`;
+}
+
+/**
+ * The fresh volume this run mounts at each of `mountPaths`.
+ *
+ * @param {string} dockerfilePath
+ * @param {readonly string[]} mountPaths
+ * @returns {{ path: string, name: string }[]}
+ */
+export function planVolumes(dockerfilePath, mountPaths) {
+  return mountPaths.map((path) => ({
+    path,
+    name: freshVolumeName(dockerfilePath, mountSlug(path)),
+  }));
 }
 
 /**
@@ -279,17 +447,48 @@ async function waitForHealth({ containerId, url, timeoutMs }) {
 }
 
 /**
+ * Whether the runtime user can create a file at `mountPath`.
+ *
+ * Run INSIDE the running container with no `--user` override, so it is the
+ * image's own `USER` doing the writing — exactly the question a lazy first
+ * write asks in production, and the only one that catches a data volume the
+ * runtime stage never chowned. Argument vectors rather than `sh -c`: nothing
+ * about a path out of compose should reach a shell.
+ *
+ * @param {string} containerId
+ * @param {string} mountPath
+ * @returns {Promise<{ ok: true } | { ok: false, reason: string }>}
+ */
+async function assertWritable(containerId, mountPath) {
+  const probe = `${mountPath}/.pops-smoke-write-probe`;
+  try {
+    await docker(['exec', containerId, 'touch', probe]);
+  } catch (err) {
+    const captured = collectStreams(err).trim();
+    const fallback = err instanceof Error ? err.message : String(err);
+    return {
+      ok: /** @type {const} */ (false),
+      reason: captured === '' ? fallback : captured,
+    };
+  }
+  await dockerBestEffort(['exec', containerId, 'rm', '-f', probe]);
+  return { ok: /** @type {const} */ (true) };
+}
+
+/**
  * Dump everything a reader needs to diagnose the failure without a local
  * rebuild — the `@pops/*` link shape, which is what breaks when the deploy
  * step regresses to a workspace-escaping symlink, and the numeric ownership
- * of the data directory IN THE IMAGE, which is what a fresh volume inherits.
- * `0 0` there against a `USER node` runtime is the whole of a SQLITE_CANTOPEN.
+ * of every data directory IN THE IMAGE, which is what a fresh volume
+ * inherits. `0 0` there against a `USER node` runtime is the whole of a
+ * SQLITE_CANTOPEN or an unwritable second data mount.
  *
  * @param {string} containerId
  * @param {string} image
+ * @param {readonly string[]} mountPaths Every `/data/...` path this run mounted.
  * @returns {Promise<void>}
  */
-async function reportFailure(containerId, image) {
+async function reportFailure(containerId, image, mountPaths) {
   console.error('\n--- container logs ---');
   console.error(await dockerBestEffort(['logs', containerId]));
   console.error('\n--- /app/node_modules/@pops (workspace link shape) ---');
@@ -304,7 +503,7 @@ async function reportFailure(containerId, image) {
       'ls -la /app/node_modules/@pops 2>&1 || echo "(no /app/node_modules/@pops)"',
     ])
   );
-  console.error(`\n--- ${SMOKE_DATA_MOUNT} in the image (uid/gid a fresh volume inherits) ---`);
+  console.error('\n--- data mounts in the image (uid/gid a fresh volume inherits) ---');
   console.error(
     await dockerBestEffort([
       'run',
@@ -313,7 +512,7 @@ async function reportFailure(containerId, image) {
       'sh',
       image,
       '-c',
-      `ls -ldn /data ${SMOKE_DATA_MOUNT} 2>&1; id`,
+      `ls -ldn ${[DATA_ROOT, ...mountPaths].join(' ')} 2>&1; id`,
     ])
   );
 }
@@ -326,14 +525,18 @@ async function main() {
   }
 
   const { port, healthPath, baseImage } = planSmoke(readFileSync(dockerfilePath, 'utf8'));
-  const volume = freshVolumeName(dockerfilePath);
+  const mountPaths = dataMountsForDockerfile(readFileSync(COMPOSE_PATH, 'utf8'), dockerfilePath);
+  const volumePlan = planVolumes(dockerfilePath, mountPaths);
   console.log(
     `Smoking ${image} (${dockerfilePath}): runtime base ${baseImage}, ` +
-      `expecting ${healthPath} on container port ${port}, ` +
-      `with the never-before-mounted volume ${volume} at ${SMOKE_DATA_MOUNT}.`
+      `expecting ${healthPath} on container port ${port}, with ` +
+      (volumePlan.length === 0
+        ? 'no data mount declared for it in infra/docker-compose.yml.'
+        : `${volumePlan.length} never-before-mounted volume(s): ` +
+          `${volumePlan.map((v) => `${v.name}@${v.path}`).join(', ')}.`)
   );
 
-  await docker(['volume', 'create', volume]);
+  for (const { name } of volumePlan) await docker(['volume', 'create', name]);
   try {
     // Deliberately NOT `--rm`: a container that dies on its first import is
     // exactly the failure this exists to catch, and its logs are the evidence.
@@ -343,8 +546,7 @@ async function main() {
       '--detach',
       '--publish',
       `127.0.0.1::${port}`,
-      '--volume',
-      `${volume}:${SMOKE_DATA_MOUNT}`,
+      ...volumePlan.flatMap(({ name, path }) => ['--volume', `${name}:${path}`]),
       '--env',
       `PORT=${port}`,
       ...Object.entries(BOOT_PLACEHOLDER_SECRETS).flatMap(([name, value]) => [
@@ -370,19 +572,45 @@ async function main() {
           reason: `could not reach the published port: ${err instanceof Error ? err.message : String(err)}`,
         })
       );
-      if (result.ok) {
-        console.log(`OK — ${image} answered ${healthPath}: ${result.body}`);
+      if (!result.ok) {
+        console.error(`FAIL — ${image} never answered ${healthPath}: ${result.reason}`);
+        await reportFailure(containerId, image, mountPaths);
+        process.exitCode = 1;
         return;
       }
-      console.error(`FAIL — ${image} never answered ${healthPath}: ${result.reason}`);
-      await reportFailure(containerId, image);
-      process.exitCode = 1;
+
+      // The health probe only vouches for a mount the app opens eagerly at
+      // boot. Every other data volume is written lazily — a root-owned one
+      // boots clean here and fails on the first real write in production —
+      // so each is asserted explicitly, including the database mount, which
+      // costs nothing and removes the "which mounts are exempt" question.
+      /** @type {{ path: string, reason: string }[]} */
+      const unwritable = [];
+      for (const { path } of volumePlan) {
+        const write = await assertWritable(containerId, path);
+        if (!write.ok) unwritable.push({ path, reason: write.reason });
+      }
+      if (unwritable.length > 0) {
+        console.error(
+          `FAIL — ${image} answered ${healthPath} but its runtime user cannot write to:`
+        );
+        for (const { path, reason } of unwritable) console.error(`  ${path}: ${reason}`);
+        await reportFailure(containerId, image, mountPaths);
+        process.exitCode = 1;
+        return;
+      }
+
+      const writeSummary =
+        mountPaths.length === 0
+          ? ''
+          : ` and can write to every data mount (${mountPaths.join(', ')})`;
+      console.log(`OK — ${image} answered ${healthPath}${writeSummary}: ${result.body}`);
     } finally {
       await dockerBestEffort(['rm', '--force', containerId]);
     }
   } finally {
     // After the container, never before: a volume still in use will not go.
-    await dockerBestEffort(['volume', 'rm', '--force', volume]);
+    for (const { name } of volumePlan) await dockerBestEffort(['volume', 'rm', '--force', name]);
   }
 }
 
