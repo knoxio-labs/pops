@@ -36,14 +36,19 @@ internal struct AuthenticatedAttempt {
     /// - Parameter accessToken: `nil` sends the request unauthenticated, which
     ///   is what an unpaired device does — the BFM's refusal is a better answer
     ///   than one this app invented without asking.
+    ///
+    /// Assigned rather than conditionally inserted, so `nil` *removes* any
+    /// `Authorization` the request arrived with instead of merely declining to
+    /// add one. Nothing sets that header today — the contract declares no
+    /// security scheme, so the generated client never does — but middlewares
+    /// compose, and "unauthenticated" being true only because no one else
+    /// happened to write the header is a promise that holds by luck.
     internal func send(
         authorizedWith accessToken: String?,
         through next: (HTTPRequest, HTTPBody?, URL) async throws -> (HTTPResponse, HTTPBody?)
     ) async throws -> (HTTPResponse, HTTPBody?) {
         var outgoing = request
-        if let accessToken {
-            outgoing.headerFields[.authorization] = "Bearer \(accessToken)"
-        }
+        outgoing.headerFields[.authorization] = accessToken.map { "Bearer \($0)" }
         return try await next(outgoing, body.body(), baseURL)
     }
 }

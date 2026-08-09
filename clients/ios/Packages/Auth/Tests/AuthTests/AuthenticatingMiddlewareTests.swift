@@ -57,6 +57,23 @@ internal struct AuthenticatingMiddlewareTests {
         #expect(transport.attempts.map(\.authorization) == [nil])
     }
 
+    /// "Unauthenticated" has to mean the header is gone, not merely that this
+    /// middleware declined to add one. Nothing writes it today — the contract
+    /// declares no security scheme — but middlewares compose, and a promise
+    /// that holds only because nobody else happened to write the header is a
+    /// promise that holds by luck.
+    @Test("an unpaired device strips an Authorization header the request arrived with")
+    func clearsAnInboundAuthorizationHeaderWhenUnpaired() async throws {
+        let fixture = try MiddlewareFixture(tokens: nil)
+        let transport = RecordingTransport { _ in .unauthorized }
+        var request = HTTPRequest.mobile()
+        request.headerFields[.authorization] = "Bearer someone-elses-token"
+
+        _ = try await fixture.send(request, through: transport)
+
+        #expect(transport.attempts.map(\.authorization) == [nil])
+    }
+
     // MARK: - 401
 
     @Test("a 401 refreshes once and the retry carries the new token")
