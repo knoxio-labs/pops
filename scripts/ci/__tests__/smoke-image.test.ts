@@ -36,6 +36,7 @@ function readDockerfile(pillarId: string): string {
 
 interface WorkspacePackage {
   readonly name?: string;
+  readonly scripts?: Readonly<Record<string, string>>;
   readonly dependencies?: Readonly<Record<string, string>>;
   readonly devDependencies?: Readonly<Record<string, string>>;
 }
@@ -546,6 +547,121 @@ describe('the fresh-volume contract, for every pillar image that owns a database
     // in-code default is ./data, and /app is root-owned.
     expect(runtimeStage(readDockerfile(id))).toMatch(
       /^\s*ENV\s+[A-Z_]*SQLITE_PATH=\/data\/sqlite\/\S+/mu
+    );
+  });
+});
+
+/** Every source path a Dockerfile `COPY`s, flags and destination dropped. */
+function copiedSources(dockerfile: string): Set<string> {
+  const sources = new Set<string>();
+  for (const line of dockerfile.replace(/\\\r?\n/gu, ' ').split('\n')) {
+    const args = /^\s*COPY\s+(.*)$/iu.exec(line)?.[1];
+    if (args === undefined) continue;
+    const tokens = args.split(/\s+/u).filter((token) => !token.startsWith('--'));
+    for (const source of tokens.slice(0, -1)) sources.add(source);
+  }
+  return sources;
+}
+
+/**
+ * Whether a Dockerfile's `COPY` sources bring `path` into the image, named
+ * outright or swept in by a directory copy (`COPY libs/sdk/ ./libs/sdk/`).
+ */
+function copiesPath(sources: ReadonlySet<string>, path: string): boolean {
+  return [...sources].some(
+    (source) => source === path || path.startsWith(source.endsWith('/') ? source : `${source}/`)
+  );
+}
+
+/** The tsconfigs a package's `build` script compiles against. */
+function tsconfigsBuildScriptNeeds(pkg: WorkspacePackage): string[] {
+  return [...(pkg.scripts?.build ?? '').matchAll(/\btsc\s+-[pb]\s+(\S+\.json)/gu)].map(
+    (match) => match[1]
+  );
+}
+
+/** The workspace directories a Dockerfile builds, read off the manifests it copies. */
+function workspaceDirsBuiltBy(dockerfile: string): string[] {
+  return [...copiedSources(dockerfile)]
+    .map((source) => /^((?:pillars|libs)\/[^/]+)\/package\.json$/u.exec(source)?.[1])
+    .filter((dir): dir is string => dir !== undefined);
+}
+
+describe('copiedSources', () => {
+  it('reads every source off a multi-source COPY and drops the destination', () => {
+    expect([...copiedSources('COPY package.json pnpm-lock.yaml tsconfig.base.json ./\n')]).toEqual([
+      'package.json',
+      'pnpm-lock.yaml',
+      'tsconfig.base.json',
+    ]);
+  });
+
+  it('drops flags, so --from and --chown are not read as sources', () => {
+    expect([...copiedSources('COPY --from=builder --chown=node:node /app/deploy ./\n')]).toEqual([
+      '/app/deploy',
+    ]);
+  });
+});
+
+describe('tsconfigsBuildScriptNeeds', () => {
+  it('reads both the -p and -b forms, and nothing from a script with neither', () => {
+    expect(tsconfigsBuildScriptNeeds({ scripts: { build: 'tsc -p tsconfig.build.json' } })).toEqual(
+      ['tsconfig.build.json']
+    );
+    expect(
+      tsconfigsBuildScriptNeeds({
+        scripts: { build: 'tsc -b tsconfig.build.json && tsx scripts/generate-openapi.ts' },
+      })
+    ).toEqual(['tsconfig.build.json']);
+    expect(tsconfigsBuildScriptNeeds({ scripts: { build: 'vite build' } })).toEqual([]);
+    expect(tsconfigsBuildScriptNeeds({})).toEqual([]);
+  });
+});
+
+describe('the tsconfigs each image compiles against, for every pillar Dockerfile', () => {
+  // A `build` script that names a tsconfig the Dockerfile never COPYs fails
+  // the image build with `TS5058: The specified path does not exist`, and
+  // nothing outside this workflow notices: changing a pillar's build script or
+  // adding its tsconfig.build.json touches no path in docker-build's trigger
+  // filter, so the image that can no longer be built is not rebuilt to find
+  // out. That is how `documents`, `mcp` and `orchestrator` reached main
+  // unbuildable. Derived from the manifests each Dockerfile copies, so a
+  // pillar is covered without being listed.
+  const cases = pillarsWith('Dockerfile').flatMap((id) => {
+    const dockerfile = readDockerfile(id);
+    const copied = copiedSources(dockerfile);
+    return workspaceDirsBuiltBy(dockerfile).flatMap((dir) =>
+      tsconfigsBuildScriptNeeds(readPackageJson(join(repoRoot, dir, 'package.json'))).map(
+        (tsconfig) => ({ id, dir, tsconfig, copied })
+      )
+    );
+  });
+
+  it('finds Dockerfiles that compile TypeScript (the derivation is not silently empty)', () => {
+    expect(cases.length).toBeGreaterThan(0);
+  });
+
+  it.each(cases)('pillars/$id copies $dir/$tsconfig, which its build script names', (testCase) => {
+    expect(copiesPath(testCase.copied, `${testCase.dir}/${testCase.tsconfig}`)).toBe(true);
+  });
+});
+
+describe('copiesPath', () => {
+  it('accepts the file named outright', () => {
+    expect(
+      copiesPath(new Set(['libs/sdk/tsconfig.build.json']), 'libs/sdk/tsconfig.build.json')
+    ).toBe(true);
+  });
+
+  it('accepts a directory copy that sweeps the file in', () => {
+    expect(copiesPath(new Set(['libs/sdk/']), 'libs/sdk/tsconfig.build.json')).toBe(true);
+    expect(copiesPath(new Set(['libs/sdk']), 'libs/sdk/tsconfig.build.json')).toBe(true);
+  });
+
+  it('does not accept a sibling whose name is a prefix', () => {
+    expect(copiesPath(new Set(['libs/sdk-legacy/']), 'libs/sdk/tsconfig.build.json')).toBe(false);
+    expect(copiesPath(new Set(['libs/sdk/tsconfig.json']), 'libs/sdk/tsconfig.build.json')).toBe(
+      false
     );
   });
 });

@@ -19,6 +19,7 @@ COPY libs/types/ ./libs/types/
 
 # Copy pops-mcp source
 COPY pillars/mcp/tsconfig.json ./pillars/mcp/
+COPY pillars/mcp/tsconfig.build.json ./pillars/mcp/
 COPY pillars/mcp/src ./pillars/mcp/src
 
 # Build the shared deps in pnpm topology order, then pops-mcp. Ordering is
