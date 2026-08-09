@@ -142,6 +142,43 @@ internal struct DeviceSessionRecoveryTests {
         #expect(fixture.exchange.spends.isEmpty)
     }
 
+    /// A rotation and a revocation racing, with the rotation finishing second.
+    ///
+    /// The order is the whole test: the refresh is held open, the device is
+    /// revoked while it is in flight, and only then is the refresh allowed to
+    /// return a perfectly valid new token pair. Writing that pair would put a
+    /// live-looking credential back on a handset that was deliberately wiped,
+    /// and leave a token pair with no Enclave key behind it — the half-state
+    /// `DeviceCredentialStore.wipe()` exists to make impossible.
+    ///
+    /// Reachable in production without either side being slow: request A's
+    /// refresh is accepted just before the revocation reaches the row, request
+    /// B's `/mobile` call meets the guard just after.
+    @Test("a revocation during a rotation is not undone by the rotation's write")
+    func revocationDuringRotationWins() async throws {
+        let gate = Gate()
+        let fixture = try RefresherFixture(
+            exchange: ScriptedRefreshExchange(beforeRefresh: { await gate.wait() })
+        )
+
+        let rotation = Task { try await fixture.refreshedTokens(replacing: "access-1") }
+
+        let started = await waitUntil("the rotation to reach the exchange") {
+            fixture.exchange.challengeCount == 1
+        }
+        await fixture.refresher.deviceWasRevoked()
+        await gate.open()
+        #expect(started, "the rotation never reached the exchange")
+
+        await #expect(throws: SessionRefreshError.deviceRevoked) { try await rotation.value }
+
+        #expect(try fixture.tokenStore.load() == nil, "a wiped device got its tokens back")
+        #expect(try fixture.keyStore.publicKey() == nil)
+        // The exchange really did hand back a usable pair — this test would pass
+        // vacuously against a refresh that had simply failed.
+        #expect(fixture.exchange.spends.count == 1)
+    }
+
     @Test("twenty concurrent revocations wipe once and report once")
     func concurrentRevocationsCollapse() async throws {
         let fixture = try RefresherFixture()

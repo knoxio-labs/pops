@@ -33,6 +33,8 @@ Leaving out **Late** is how a request queued behind twenty others triggers a sec
 
 There is no retry counter, because there is no loop: the retried request is sent once and its answer is returned whatever it is.
 
+A revocation and a rotation can be in flight together, and the rotation can finish **second** — request A's refresh is accepted just before the revocation reaches the row, request B's `/mobile` call meets the guard just after. The refresh then returns a perfectly valid new pair for a device that has just been wiped. `DeviceSessionRefresher` carries a credential epoch for exactly this: a rotation that started before a wipe does not write what it obtained, because doing so would leave a token pair with no Enclave key behind it — the half-state `DeviceCredentialStore.wipe()` exists to make impossible.
+
 The `403` path is the only one that destroys anything on a refusal. A rejected _grant_ does not wipe — re-pairing is what replaces those credentials and re-pairing wipes first, so destroying them eagerly would only add a way for a misread `401` to cost a device its identity. And a `401` or `403` whose body this build cannot decode is treated as a transport failure rather than as either refusal: Cloudflare Access answers exactly those two statuses with exactly such a page, and this BFM's device surface is one misapplied policy away from serving them to every handset at once. `BFMClient`'s `DeviceRefresh.swift` argues that asymmetry against pairing's, which does infer from a bare status.
 
 ## A middleware, not a transport

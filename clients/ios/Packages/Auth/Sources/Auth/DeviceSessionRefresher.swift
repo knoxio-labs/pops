@@ -44,6 +44,10 @@ public actor DeviceSessionRefresher {
     private var rotation: Task<DeviceTokens, any Error>?
     private var revocation: Task<Void, Never>?
 
+    /// Bumped every time credentials are destroyed. A rotation that started
+    /// before the bump must not write what it obtained — see ``rotateTokens(at:)``.
+    private var credentialEpoch = 0
+
     /// - Parameters:
     ///   - credentialStore: The tokens to rotate and the key that proves this
     ///     device may.
@@ -136,9 +140,31 @@ public actor DeviceSessionRefresher {
 }
 
 extension DeviceSessionRefresher {
+    /// A rotation and a revocation can be in flight at once, and the rotation
+    /// finishes second.
+    ///
+    /// Request A's token expires and a refresh goes out. The operator revokes
+    /// the device. Request B meets the `/mobile` guard after that and answers
+    /// `403`, so ``deviceWasRevoked()`` destroys the key and the tokens. Then
+    /// A's refresh — accepted a moment earlier, before the revocation reached
+    /// the row — returns a perfectly valid new pair.
+    ///
+    /// Writing it would put a live-looking credential back on a handset that
+    /// was deliberately wiped, and leave a token pair with no Enclave key
+    /// behind it: exactly the half-state ``DeviceCredentialStore/wipe()`` exists
+    /// to make impossible. The epoch is what makes "was anything destroyed
+    /// while I was away" answerable without re-reading a store that a re-pair
+    /// could legitimately have refilled.
+    ///
+    /// Re-escalating to ``deviceWasRevoked()`` from here is deliberate rather
+    /// than redundant: the wipe is best-effort, so a second pass is a free
+    /// retry of one that may have half-failed, and the session reducer collapses
+    /// the repeated `revoked` event to nothing.
     private func rotateTokens(at baseURL: URL) async throws -> DeviceTokens {
+        let epoch = credentialEpoch
         do {
             let tokens = try await spendStoredGrant(at: baseURL)
+            guard epoch == credentialEpoch else { throw SessionRefreshError.deviceRevoked }
             do {
                 try credentialStore.tokenStore.save(tokens)
             } catch {
@@ -246,6 +272,10 @@ extension DeviceSessionRefresher {
     /// still to stop using those credentials and send the user to pair again —
     /// which is what re-pairing then wipes.
     private func destroyCredentials() async {
+        // Bumped before the wipe rather than after, so a rotation that resumes
+        // mid-wipe still sees a changed epoch. The window is small and this
+        // costs nothing to close.
+        credentialEpoch += 1
         try? credentialStore.wipe()
         await sessionEvents.send(.revoked(.revokedByOperator))
     }
