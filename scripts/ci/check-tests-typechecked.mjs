@@ -274,17 +274,6 @@ function parseTscNoEmitCommand(command) {
 }
 
 /**
- * Split a unit's `package.json` `typecheck` script into the sequence of
- * commands it runs, and resolve which ones are `tsc --noEmit [-p <project>]`
- * invocations against a concrete tsconfig path. A command that doesn't match
- * that shape (a lint step, a build tool, anything else) is kept as
- * unrecognized rather than dropped, so callers can tell "no typecheck script"
- * apart from "a typecheck script that runs something other than tsc".
- *
- * @param {string} unitDir
- * @returns {{ script: string | null; invocations: TypecheckInvocation[] }}
- */
-/**
  * Resolve a `-p`/`--project` argument the way `tsc` itself does: a path to
  * an existing directory means "the `tsconfig.json` inside it" (so `-p .`
  * and `-p scripts` both name a directory, not a config file directly),
@@ -303,6 +292,17 @@ function resolveTscProjectPath(unitDir, projectArg) {
   return resolved;
 }
 
+/**
+ * Split a unit's `package.json` `typecheck` script into the sequence of
+ * commands it runs, and resolve which ones are `tsc --noEmit [-p <project>]`
+ * invocations against a concrete tsconfig path. A command that doesn't match
+ * that shape (a lint step, a build tool, anything else) is kept as
+ * unrecognized rather than dropped, so callers can tell "no typecheck script"
+ * apart from "a typecheck script that runs something other than tsc".
+ *
+ * @param {string} unitDir
+ * @returns {{ script: string | null; invocations: TypecheckInvocation[] }}
+ */
 export function readTypecheckInvocations(unitDir) {
   const pkgPath = join(unitDir, 'package.json');
   if (!existsSync(pkgPath)) return { script: null, invocations: [] };
