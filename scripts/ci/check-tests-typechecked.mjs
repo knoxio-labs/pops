@@ -674,7 +674,7 @@ function checkUncoveredTestFilesDetection() {
       coveredResult.files.length === 0 &&
       coveredResult.errors.length === 0 &&
       narrowedResult.files.length === 1 &&
-      narrowedResult.files[0]?.endsWith(join('src', '__tests__', 'index.test.ts')) === true &&
+      (narrowedResult.files[0]?.endsWith(join('src', '__tests__', 'index.test.ts')) ?? false) &&
       sameStemResult.files.length === 2 &&
       sameStemResult.files.some((f) => f.endsWith('Foo.test.ts')) &&
       sameStemResult.files.some((f) => f.endsWith('Foo.test.tsx')) &&
