@@ -461,9 +461,13 @@ work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 log="$work/xcodebuild.log"
 
+# `build-for-testing`, not `build`: a plain build only compiles the `Pops`
+# target, which leaves `AppTests` — part of `SWIFT_SOURCES`, and linted by
+# `swiftlint lint` already — outside the log `swiftlint analyze` reads. This
+# compiles `PopsTests` too, without running anything in it.
 xcodebuild -project Pops.xcodeproj -scheme Pops \
   -destination 'generic/platform=iOS Simulator' \
-  clean build | tee "$log"
+  clean build-for-testing | tee "$log"
 
 status=0
 output=$(swiftlint analyze --strict --compiler-log-path "$log" --config .swiftlint.yml 2>&1) || status=1
