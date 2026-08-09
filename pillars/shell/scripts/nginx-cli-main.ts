@@ -5,7 +5,7 @@
  */
 import { readFile, writeFile } from 'node:fs/promises';
 
-import { type CliOptions } from './nginx-cli-args.ts';
+import { type CliOptions } from './nginx-cli-args.js';
 
 export interface StaticRunDeps {
   readonly outputPath: string;

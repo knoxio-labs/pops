@@ -6,7 +6,7 @@ import {
   WATCHED_EVENTS,
   type ReloadErrorEvent,
   type ReloadLogger,
-} from './nginx-event-reload.ts';
+} from './nginx-event-reload.js';
 
 function deferred<T = void>(): {
   promise: Promise<T>;

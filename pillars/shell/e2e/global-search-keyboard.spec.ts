@@ -128,7 +128,7 @@ test.describe('Global search — keyboard navigation (#2138)', () => {
       ([key, value]) => {
         window.localStorage.setItem(key, value);
       },
-      [RECENT_SEARCHES_STORAGE_KEY, JSON.stringify([QUERY])]
+      [RECENT_SEARCHES_STORAGE_KEY, JSON.stringify([QUERY])] as const
     );
     await page.reload();
     await expect(page).toHaveURL(/\/finance/);

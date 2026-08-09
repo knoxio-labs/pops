@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { DEFAULT_REGISTRY_URL, resolveRegistryUrl } from './registry-url-env.ts';
+import { DEFAULT_REGISTRY_URL, resolveRegistryUrl } from './registry-url-env.js';
 
 describe('resolveRegistryUrl', () => {
   it('returns the default when neither env var is set', () => {

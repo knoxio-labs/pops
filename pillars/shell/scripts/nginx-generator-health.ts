@@ -20,7 +20,7 @@
  */
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 
-import type { ReloadErrorEvent, ReloadStage } from './nginx-event-reload.ts';
+import type { ReloadErrorEvent, ReloadStage } from './nginx-event-reload.js';
 
 export interface NginxGeneratorHealthSnapshot {
   readonly status: 'ok' | 'degraded';

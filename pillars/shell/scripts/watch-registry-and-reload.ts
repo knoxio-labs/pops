@@ -22,16 +22,16 @@ import { writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { renderNginxConfDynamic } from './generate-nginx-conf.ts';
+import { renderNginxConfDynamic } from './generate-nginx-conf.js';
 import {
   createReloadHandler,
   isWatchedEvent,
   type ReloadErrorEvent,
   type ReloadLogger,
-} from './nginx-event-reload.ts';
-import { type NginxGeneratorHealth } from './nginx-generator-health.ts';
-import { consumeSse } from './registry-sse-client.ts';
-import { resolveRegistryUrl } from './registry-url-env.ts';
+} from './nginx-event-reload.js';
+import { type NginxGeneratorHealth } from './nginx-generator-health.js';
+import { consumeSse } from './registry-sse-client.js';
+import { resolveRegistryUrl } from './registry-url-env.js';
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const DEFAULT_OUTPUT_PATH = resolve(SCRIPT_DIR, '..', 'nginx.conf');

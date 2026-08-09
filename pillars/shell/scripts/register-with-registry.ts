@@ -25,7 +25,7 @@
  * This is the same iOS / kiosk / future-UI-pillar pattern: copy the
  * script, swap the env var prefix, point at the same endpoint.
  */
-import { registerShellWithRegistry } from '../src/lib/register-with-registry.ts';
+import { registerShellWithRegistry } from '../src/lib/register-with-registry.js';
 
 async function main(): Promise<void> {
   const outcome = await registerShellWithRegistry({
