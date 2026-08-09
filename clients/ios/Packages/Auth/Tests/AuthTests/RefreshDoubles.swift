@@ -83,6 +83,27 @@ internal final class ScriptedRefreshExchange: DeviceRefreshExchange {
     }
 }
 
+/// A ``TokenStore`` whose reads fail, which is what a locked handset produces.
+///
+/// The data-protection keychain answers a read on a locked device with an
+/// error rather than with a value, and a refresh is a background operation, so
+/// this is an ordinary condition rather than an exotic one.
+internal final class UnreadableTokenStore: TokenStore {
+    private let failure: TokenStoreError
+
+    internal init(failing with: TokenStoreError) {
+        failure = with
+    }
+
+    internal func load() throws -> DeviceTokens? {
+        throw failure
+    }
+
+    internal func save(_ tokens: DeviceTokens) throws {}
+
+    internal func wipe() throws {}
+}
+
 /// Records what the session was told, in order.
 internal final class RecordingSessionEvents: SessionEventSink {
     private let recorded = Mutex<[SessionEvent]>([])

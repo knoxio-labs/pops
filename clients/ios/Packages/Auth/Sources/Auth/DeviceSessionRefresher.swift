@@ -188,7 +188,7 @@ extension DeviceSessionRefresher {
     /// to destroy a device's identity, so it falls through to
     /// ``SessionRefreshError/unavailable(_:)`` like any other server fault.
     private func spendStoredGrant(at baseURL: URL) async throws -> DeviceTokens {
-        guard let current = currentTokens() else { throw SessionRefreshError.unauthenticated }
+        guard let current = try storedGrant() else { throw SessionRefreshError.unauthenticated }
         let client = exchange(baseURL)
         do {
             return try await spend(current, with: client)
@@ -205,6 +205,35 @@ extension DeviceSessionRefresher {
     /// no window in which it could go stale that a clock comparison would catch
     /// and the server's own rejection would not. Reading it would be a second,
     /// drifting opinion about the same fact.
+    /// The stored pair, keeping "there is nothing here" apart from "this could
+    /// not be read".
+    ///
+    /// ``currentTokens()`` collapses the two, and for the middleware that is
+    /// right: its options are to attach a token or not, and an unreadable
+    /// keychain leaves it with the second either way. Here the two lead
+    /// opposite ways. A refresh is a **background** operation — that is the
+    /// whole reason the signing key carries no biometry — so it routinely runs
+    /// on a locked handset, where the data-protection keychain answers a read
+    /// with an error rather than with a value. Treating that as "unpaired"
+    /// ends the session and sends someone back to pairing over credentials
+    /// that are intact and will be readable a second after they unlock.
+    ///
+    /// It is the same distinction ``outcome(for:)`` already draws on the key
+    /// store — `keyNotFound` is fatal, a device locked mid-signature is not.
+    ///
+    /// `corruptedPayload` is the one read failure that is *not* transient: the
+    /// blob is present and will never decode, which is what ``TokenStoreError``
+    /// says callers should treat as unpaired.
+    private func storedGrant() throws -> DeviceTokens? {
+        do {
+            return try credentialStore.tokenStore.load()
+        } catch TokenStoreError.corruptedPayload {
+            return nil
+        } catch {
+            throw SessionRefreshError.unavailable("token store unreadable (\(error))")
+        }
+    }
+
     private func spend(
         _ current: DeviceTokens,
         with client: any DeviceRefreshExchange

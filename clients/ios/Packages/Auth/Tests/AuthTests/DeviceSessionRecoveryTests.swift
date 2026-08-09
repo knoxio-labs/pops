@@ -127,6 +127,42 @@ internal struct DeviceSessionRecoveryTests {
         #expect(fixture.exchange.challengeCount == 0)
     }
 
+    /// The case that would sign people out for locking their phone.
+    ///
+    /// A refresh is a background operation — that is why the signing key
+    /// carries no biometry — so it routinely runs while the handset is locked,
+    /// and the data-protection keychain answers a read then with an error
+    /// rather than with a value. Reading that as "unpaired" ends the session
+    /// over credentials that are intact and readable a second after unlock.
+    @Test("an unreadable keychain is not an unpaired device")
+    func lockedKeychainIsTransient() async throws {
+        let fixture = try RefresherFixture(
+            tokenStore: UnreadableTokenStore(failing: .keychain(errSecInteractionNotAllowed))
+        )
+
+        await #expect(throws: SessionRefreshError.self) {
+            try await fixture.refreshedTokens(replacing: "access-1")
+        }
+
+        #expect(fixture.session.events.isEmpty, "a locked device was signed out")
+        #expect(fixture.exchange.challengeCount == 0)
+    }
+
+    /// The read failure that is genuinely not transient: the blob is there and
+    /// will never decode, which `TokenStoreError` says to treat as unpaired.
+    @Test("a corrupted payload is an unpaired device")
+    func corruptedPayloadEndsTheSession() async throws {
+        let fixture = try RefresherFixture(
+            tokenStore: UnreadableTokenStore(failing: .corruptedPayload)
+        )
+
+        await #expect(throws: SessionRefreshError.unauthenticated) {
+            try await fixture.refreshedTokens(replacing: "access-1")
+        }
+
+        #expect(fixture.session.events == [.revoked(.credentialsRejected)])
+    }
+
     /// A device that has lost its Enclave key can never prove possession again,
     /// whatever its token says. Every *other* key-store failure — a device
     /// locked mid-refresh, most of all — is transient and must not land here.
