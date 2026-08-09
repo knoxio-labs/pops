@@ -232,11 +232,46 @@ export function offendingExcludes(unitDir) {
   return exclude.filter((glob) => typeof glob === 'string' && hidesTests(glob));
 }
 
-const TSC_NOEMIT_INVOCATION = /^tsc\s+--noEmit(?:\s+-p\s+(\S+))?$/;
-
 /**
  * @typedef {{ raw: string; recognized: boolean; projectPath: string | null }} TypecheckInvocation
  */
+
+/**
+ * Parse a single command as `tsc --noEmit [-p <project>]` (or `--project`),
+ * tolerant of flag order — `tsc -p tsconfig.json --noEmit` type-checks the
+ * exact same project as `tsc --noEmit -p tsconfig.json`, and a script author
+ * has no reason to prefer one order over the other. Deliberately does NOT
+ * tolerate other flags (`--pretty false` and the like): an invocation this
+ * guard cannot account for is a shape it does not model, which ADR-045 says
+ * to report rather than wave through.
+ *
+ * @param {string} command
+ * @returns {{ recognized: boolean; projectArg: string | null }}
+ */
+function parseTscNoEmitCommand(command) {
+  const tokens = command.split(/\s+/).filter(Boolean);
+  if (tokens[0] !== 'tsc') return { recognized: false, projectArg: null };
+
+  let hasNoEmit = false;
+  /** @type {string | undefined} */
+  let projectArg;
+  for (let i = 1; i < tokens.length; i++) {
+    const token = tokens[i];
+    if (token === '--noEmit') {
+      hasNoEmit = true;
+    } else if (token === '-p' || token === '--project') {
+      const next = tokens[i + 1];
+      if (next === undefined) return { recognized: false, projectArg: null };
+      projectArg = next;
+      i += 1;
+    } else {
+      return { recognized: false, projectArg: null };
+    }
+  }
+  return hasNoEmit
+    ? { recognized: true, projectArg: projectArg ?? null }
+    : { recognized: false, projectArg: null };
+}
 
 /**
  * Split a unit's `package.json` `typecheck` script into the sequence of
@@ -259,9 +294,8 @@ export function readTypecheckInvocations(unitDir) {
 
   const invocations = script.split('&&').map((part) => {
     const raw = part.trim();
-    const match = raw.match(TSC_NOEMIT_INVOCATION);
-    if (!match) return { raw, recognized: false, projectPath: null };
-    const projectArg = match[1];
+    const { recognized, projectArg } = parseTscNoEmitCommand(raw);
+    if (!recognized) return { raw, recognized: false, projectPath: null };
     const projectPath = projectArg ? resolve(unitDir, projectArg) : join(unitDir, 'tsconfig.json');
     return { raw, recognized: true, projectPath };
   });

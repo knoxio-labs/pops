@@ -160,8 +160,11 @@ describe('readTypecheckInvocations + typecheckScriptCoversOwnConfig', () => {
     root = mkdtempSync(join(tmpdir(), 'tests-typechecked-script-'));
     writeUnit('bare', { typecheck: 'tsc --noEmit' });
     writeUnit('explicit', { typecheck: 'tsc --noEmit -p tsconfig.json' });
+    writeUnit('flag-order-swapped', { typecheck: 'tsc -p tsconfig.json --noEmit' });
+    writeUnit('long-project-flag', { typecheck: 'tsc --project tsconfig.json --noEmit' });
     writeUnit('appended', { typecheck: 'tsc --noEmit && tsc --noEmit -p scripts/tsconfig.json' });
     writeUnit('retargeted', { typecheck: 'tsc --noEmit -p tsconfig.build.json' });
+    writeUnit('unmodeled-flag', { typecheck: 'tsc --noEmit --pretty false' });
     writeUnit('no-script', { build: 'tsc -b tsconfig.build.json' });
     mkdirSync(join(root, 'no-package-json'), { recursive: true });
     writeFileSync(join(root, 'no-package-json', 'tsconfig.json'), JSON.stringify({}));
@@ -185,8 +188,17 @@ describe('readTypecheckInvocations + typecheckScriptCoversOwnConfig', () => {
     expect(typecheckScriptCoversOwnConfig(join(root, 'appended'))).toBe(true);
   });
 
+  it('accepts -p/--project in any position, since flag order carries no meaning', () => {
+    expect(typecheckScriptCoversOwnConfig(join(root, 'flag-order-swapped'))).toBe(true);
+    expect(typecheckScriptCoversOwnConfig(join(root, 'long-project-flag'))).toBe(true);
+  });
+
   it('rejects a script retargeted only at a different project', () => {
     expect(typecheckScriptCoversOwnConfig(join(root, 'retargeted'))).toBe(false);
+  });
+
+  it('rejects a flag it does not model rather than assuming it is harmless', () => {
+    expect(typecheckScriptCoversOwnConfig(join(root, 'unmodeled-flag'))).toBe(false);
   });
 
   it('rejects a unit with no typecheck script, or no package.json at all', () => {
