@@ -7,10 +7,10 @@
  */
 import { fileURLToPath } from 'node:url';
 
-import { createNginxGeneratorHealth, startHealthEndpoint } from './nginx-generator-health.ts';
-import { readConfig, watchRegistryAndReload } from './watch-registry-and-reload.ts';
+import { createNginxGeneratorHealth, startHealthEndpoint } from './nginx-generator-health.js';
+import { readConfig, watchRegistryAndReload } from './watch-registry-and-reload.js';
 
-import type { ReloadLogger } from './nginx-event-reload.ts';
+import type { ReloadLogger } from './nginx-event-reload.js';
 
 function formatErrorDetail(err: unknown): string {
   if (err instanceof Error) return err.message;

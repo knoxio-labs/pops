@@ -4,7 +4,7 @@ import {
   createNginxGeneratorHealth,
   startHealthEndpoint,
   type HealthEndpointHandle,
-} from './nginx-generator-health.ts';
+} from './nginx-generator-health.js';
 
 describe('createNginxGeneratorHealth', () => {
   it('starts in the ok state with no errors and no successes', () => {

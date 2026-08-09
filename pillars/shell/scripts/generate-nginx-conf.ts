@@ -53,11 +53,11 @@ import {
   type DiscoveryTransport,
 } from '@pops/pillar-sdk/client';
 
-import { parseCliArgs, type CliOptions } from './nginx-cli-args.ts';
-import { assertDynamicNotCheck, runDynamic, runStatic } from './nginx-cli-main.ts';
-import { NGINX_CONF_ORCHESTRATOR, ORCHESTRATOR_PILLAR_ID } from './nginx-conf-orchestrator.ts';
-import { NGINX_CONF_HEAD, NGINX_CONF_REST_INTRO, NGINX_CONF_TAIL } from './nginx-conf-template.ts';
-import { DEFAULT_REGISTRY_URL, resolveRegistryUrl } from './registry-url-env.ts';
+import { parseCliArgs, type CliOptions } from './nginx-cli-args.js';
+import { assertDynamicNotCheck, runDynamic, runStatic } from './nginx-cli-main.js';
+import { NGINX_CONF_ORCHESTRATOR, ORCHESTRATOR_PILLAR_ID } from './nginx-conf-orchestrator.js';
+import { NGINX_CONF_HEAD, NGINX_CONF_REST_INTRO, NGINX_CONF_TAIL } from './nginx-conf-template.js';
+import { DEFAULT_REGISTRY_URL, resolveRegistryUrl } from './registry-url-env.js';
 
 /**
  * In-tree pillar id, keyed off the curated `PILLARS` value (NOT the SDK's

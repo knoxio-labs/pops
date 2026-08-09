@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { readConfig } from './watch-registry-and-reload.ts';
+import { readConfig } from './watch-registry-and-reload.js';
 
 describe('readConfig', () => {
   it('falls back to documented defaults when env is empty', () => {

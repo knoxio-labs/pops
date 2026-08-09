@@ -17,8 +17,8 @@ import {
   renderNginxConfFromUpstreams,
   resolveUpstreamForEntry,
   type PillarUpstream,
-} from './generate-nginx-conf.ts';
-import { resolveRegistryUrl } from './registry-url-env.ts';
+} from './generate-nginx-conf.js';
+import { resolveRegistryUrl } from './registry-url-env.js';
 
 import type { DiscoveredPillar, DiscoveryTransport } from '@pops/pillar-sdk/client';
 import type { ManifestPayload } from '@pops/pillar-sdk/manifest-schema';

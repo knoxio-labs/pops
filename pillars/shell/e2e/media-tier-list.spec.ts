@@ -174,7 +174,9 @@ test.describe('Media — tier list create, drag, save, reload', () => {
     const createResponse = await createPromise;
     expect(createResponse.ok()).toBe(true);
     const createBody = (await createResponse.json()) as DimensionResponse;
-    createdDimensionId = createBody[0].result.data.data.id;
+    const [dimension] = createBody;
+    if (!dimension) throw new Error('createDimension response contained no results');
+    createdDimensionId = dimension.result.data.data.id;
     expect(createdDimensionId).toBeGreaterThan(0);
 
     // ----- Step 3: dimension chip is selected ------------------------------

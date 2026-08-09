@@ -21,12 +21,12 @@ import { createServer, type Server } from 'node:http';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { createNginxGeneratorHealth, type NginxGeneratorHealth } from './nginx-generator-health.ts';
+import { createNginxGeneratorHealth, type NginxGeneratorHealth } from './nginx-generator-health.js';
 import {
   readConfig,
   watchRegistryAndReload,
   type WatcherConfig,
-} from './watch-registry-and-reload.ts';
+} from './watch-registry-and-reload.js';
 
 import type { AddressInfo } from 'node:net';
 

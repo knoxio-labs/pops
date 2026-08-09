@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { consumeSse, type SseFrame } from './registry-sse-client.ts';
+import { consumeSse, type SseFrame } from './registry-sse-client.js';
 
 function makeStreamingResponse(chunks: readonly string[]): Response {
   const encoder = new TextEncoder();

@@ -410,7 +410,7 @@ export const createErrorMockData = (): MockImportResult => ({
   skipped: [],
   warnings: [
     {
-      type: 'DATABASE_ERROR',
+      code: 'DATABASE_ERROR',
       message: 'Database error. Check your configuration.',
     },
   ],
@@ -496,16 +496,16 @@ export const createWarningMockData = (
 
   const warnings = {
     deduplication: {
-      type: 'DEDUPLICATION_DISABLED',
+      code: 'DEDUPLICATION_DISABLED',
       message: 'Deduplication is disabled. This is expected for new databases.',
     },
     ai: {
-      type: 'AI_CATEGORIZATION_UNAVAILABLE',
+      code: 'AI_CATEGORIZATION_UNAVAILABLE',
       message: 'AI categorization service unavailable. Manual review recommended.',
       affectedCount: 5,
     },
     database: {
-      type: 'DATABASE_ERROR',
+      code: 'DATABASE_ERROR',
       message: 'Database error. Check your configuration.',
     },
   };
