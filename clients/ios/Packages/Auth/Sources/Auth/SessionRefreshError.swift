@@ -8,11 +8,29 @@ import AppCore
 /// session, and ``sessionEvent`` is where that is written down once rather than
 /// re-decided at each call site.
 ///
-/// No case carries an underlying `Error`, and `unavailable`'s payload is a
-/// string built by `BFMClient`, which has already reduced the runtime's error
-/// to the part that cannot contain a credential. That is deliberate: an error
-/// value that renders a token is one `"\(error)"` away from a log line, and the
-/// `"\(error)"` looks entirely ordinary in review.
+/// No case carries an underlying `Error`. That much is enforced here, and it is
+/// the part that matters: an error value which renders a token is one
+/// `"\(error)"` away from a log line, and that `"\(error)"` looks entirely
+/// ordinary in review.
+///
+/// ``unavailable``'s payload is a rendered *description*, and this type cannot
+/// promise what went into it — `DeviceSessionRefresher` interpolates whatever
+/// error it could not classify. What makes that safe is a property of the
+/// things that can throw one, not of this enum:
+///
+/// - `BFMClientError` has already reduced the runtime's error to the part that
+///   cannot contain a credential, deliberately and with its own tests;
+/// - `DeviceKeyStoreError` and `TokenStoreError` carry `OSStatus` codes and
+///   nothing else, also asserted where they are defined;
+/// - the seams those arrive through — `DeviceRefreshExchange`, `TokenStore`,
+///   `DeviceKeyStore` — are injectable, so a *test* double could throw
+///   something that renders anything at all. Nothing this app ships does.
+///
+/// Stated this way round on purpose. The earlier version of this comment
+/// credited `BFMClient` with a guarantee it only supplies for the errors it
+/// produces, which reads as a stronger promise than the code makes — and a
+/// stated invariant nothing enforces is worse than no invariant, because the
+/// next reader stops checking.
 public enum SessionRefreshError: Error, Equatable {
     /// There was nothing to refresh — this device is unpaired, or its
     /// credentials were wiped while the request was in flight.
