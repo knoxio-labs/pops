@@ -357,11 +357,21 @@ function matchTsconfigGlob(dir, pattern) {
 
 /**
  * Resolve the set of files a tsconfig project actually type-checks —
- * `extends`, `include`, `exclude` and `files` all handled the way `tsc`
- * itself handles them, matched against the real filesystem via `node:fs`'s
- * `globSync` rather than a hand-rolled pattern matcher. A `files` entry is
- * always covered regardless of `exclude` (tsc never filters `files` through
- * `exclude`); an `include` match is dropped when `exclude` also matches it.
+ * `extends`, `include`, `exclude` and `files` all matched against the real
+ * filesystem via `node:fs`'s `globSync` rather than a hand-rolled pattern
+ * matcher. A `files` entry is always covered regardless of `exclude` (tsc
+ * never filters `files` through `exclude`); an `include` match is dropped
+ * when `exclude` also matches it.
+ *
+ * Does NOT model tsc's *implicit* default excludes (`node_modules`,
+ * `bower_components`, `jspm_packages`) when a config declares no `exclude`
+ * of its own — every unit's `include` here is scoped under `src`/`scripts`/
+ * an equivalent subdirectory, never a bare `**\/*` that would actually reach
+ * a nested `node_modules`, and {@link findTestFilesOnDisk} independently
+ * skips `node_modules`/`dist`/`.git` while walking for on-disk test-file
+ * candidates — so this omission cannot currently turn a real gap into a
+ * false pass. If a unit's `include` ever widens enough to make that not
+ * true, this is the assumption to revisit.
  *
  * @param {string} configPath
  * @returns {{ files: Set<string>; errors: string[] }} Absolute file paths;
