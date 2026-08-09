@@ -54,7 +54,15 @@ export interface IdentityLocals {
   principal?: Principal;
 }
 
-function readApiKeyHeader(req: Request): string | null {
+/**
+ * Every function below reads only `headers` off the request, so that is all
+ * they declare — a plain `{ headers }` literal satisfies this structurally,
+ * which is what lets {@link resolvePrincipal} be unit-tested with a bare
+ * object instead of a cast through a real Express `Request`.
+ */
+type RequestHeaders = Pick<Request, 'headers'>;
+
+function readApiKeyHeader(req: RequestHeaders): string | null {
   const raw = req.headers['x-api-key'];
   if (Array.isArray(raw)) return raw[0] ?? null;
   if (typeof raw === 'string' && raw.length > 0) return raw;
@@ -63,7 +71,7 @@ function readApiKeyHeader(req: Request): string | null {
 
 async function tryServiceAccountAuth(
   coreDb: CoreDb,
-  req: Request
+  req: RequestHeaders
 ): Promise<AuthenticatedServiceAccount | null> {
   const header = readApiKeyHeader(req);
   if (!header) return null;
@@ -76,7 +84,7 @@ async function tryServiceAccountAuth(
  * Resolve the request principal. Pure of Express response concerns so it can
  * be unit-tested directly.
  */
-export async function resolvePrincipal(coreDb: CoreDb, req: Request): Promise<Principal> {
+export async function resolvePrincipal(coreDb: CoreDb, req: RequestHeaders): Promise<Principal> {
   const serviceAccount = await tryServiceAccountAuth(coreDb, req);
   if (serviceAccount) {
     return { user: null, serviceAccount };
