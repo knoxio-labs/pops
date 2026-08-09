@@ -193,3 +193,12 @@ jobs:
 
       - name: Lint (swift-format + SwiftLint)
         run: mise run lint
+
+      # Separate from the step above on purpose: SwiftLint's analyzer rules
+      # (unused_declaration, unused_import) need a compiler log `swiftlint
+      # lint` never produces, so this runs its own clean build rather than
+      # making the fast, build-free step above depend on one. See the task's
+      # own comment in clients/ios/mise.toml for why that build is clean
+      # rather than reused.
+      - name: Lint (SwiftLint analyzer rules)
+        run: mise run lint:analyze

@@ -1,5 +1,4 @@
 import BFMClient
-import Foundation
 
 /// The single BFM call the pairing flow makes, named as a protocol so
 /// ``BFMDevicePairingService`` can be tested without a network or a stubbed

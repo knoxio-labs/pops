@@ -1,12 +1,12 @@
 import AppCore
-import DesignSystem
 
 /// The transactions list and detail screens. Placeholder — neither is written.
 ///
-/// The imports above are the whole of what a feature is allowed to reach for:
-/// the seams and routes in `AppCore`, the tokens in `DesignSystem`. `BFMClient`
-/// is deliberately absent — this feature reads a `TransactionsRepository`, and
-/// only the composition root knows what implements it.
+/// `AppCore` is the seams and routes a feature is allowed to reach for.
+/// `DesignSystem`'s tokens and `BFMClient` are deliberately absent from this
+/// file — nothing here renders yet, and this feature reads a
+/// `TransactionsRepository` rather than a concrete client, which only the
+/// composition root knows what implements.
 public enum FeatureTransactions {
     public static let moduleName = "FeatureTransactions"
 

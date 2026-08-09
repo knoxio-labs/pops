@@ -55,6 +55,18 @@ The name is the whole boundary, so `mise run lint` polices it in both directions
 
 One directory currently qualifies: `Packages/BFMClient/Sources/BFMClient/Generated`.
 
+### Analyzer rules
+
+```bash
+mise run lint:analyze   # unused_declaration, unused_import — needs a full build
+```
+
+`swiftlint lint` above only reads source text, and `unused_declaration` and `unused_import` cannot work that way — telling whether a declaration or an import is actually used needs the compiler's own record of what got referenced, which only exists once something has built. `mise run lint:analyze` is a separate task rather than folded into `lint` for exactly that reason: `lint` stays fast and build-free, so it is still the thing people run on every save, while this one does its own clean `xcodebuild` first and reads `unused_declaration`/`unused_import` off that. CI runs it as its own step, after `mise run build`.
+
+That build is clean every time, not reused from whatever the earlier build step left behind. An incremental rebuild only logs the files it actually recompiled — one with nothing to do logs none of them, and `swiftlint analyze` reads an empty log as a clean pass rather than as a run that checked nothing. The task reads its own file count back out of `swiftlint analyze`'s summary and fails outright if it is zero, the same shape of guard `scripts/app-test-lane.sh` uses for executed test counts.
+
+Both rules are configured in `.swiftlint.yml` under `analyzer_rules:`, which SwiftLint only ever runs from `analyze` — listing them there cannot make `swiftlint lint` (or `mise run lint`) slower or depend on a build.
+
 ## Signing, and installing on a phone
 
 Signing is automatic, and the only input it needs is an Apple Developer team.

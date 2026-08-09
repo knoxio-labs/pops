@@ -1,5 +1,3 @@
-import Foundation
-
 /// What a successful pairing hands back — the device's whole identity, issued
 /// exactly once.
 ///

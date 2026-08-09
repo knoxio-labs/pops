@@ -1,5 +1,3 @@
-import Foundation
-
 /// The encoding half of the device-signature contract, settled once here.
 ///
 /// The BFM verifies these signatures with `node:crypto`. CryptoKit

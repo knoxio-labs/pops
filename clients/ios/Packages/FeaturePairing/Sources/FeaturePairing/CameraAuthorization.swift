@@ -1,5 +1,4 @@
 import AVFoundation
-import Foundation
 
 /// Whether this app may open the camera, in the four states that lead to four
 /// different screens.

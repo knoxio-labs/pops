@@ -1,5 +1,3 @@
-import Foundation
-
 /// The two halves of the device's identity, and the one operation that has to
 /// treat them as a unit.
 ///

@@ -435,6 +435,58 @@ description = "Rewrite the Swift sources with swift-format (the fixer for half o
 depends = ["verify:xcode-version"]
 run = "mise run swift-format format"
 
+# SwiftLint's analyzer rules (`unused_declaration`, `unused_import`) need a
+# full compiler log, which `swiftlint lint` never produces — that is why they
+# live here and not in `lint` above. Separate task, separate cost: this builds
+# the whole app from clean, which `lint` deliberately never does.
+#
+# The build is clean rather than reusing whatever `mise run build` last left
+# behind, on purpose. An incremental rebuild only logs the files it actually
+# recompiled — a rebuild with nothing to do logs none of them, and one that
+# only touched a single file logs just that one. Either way `swiftlint
+# analyze` reads a log that is real but incomplete, and reports "0 violations"
+# for files it silently never looked at. That failure is indistinguishable
+# from a clean pass by exit code alone, which is exactly the shape of bug this
+# task exists to not become. A clean build costs nothing CI is short on — the
+# runner is a GitHub-hosted mac with no minute cap on this public repo — so it
+# is not a cost worth trading correctness for.
+[tasks."lint:analyze"]
+description = "SwiftLint's analyzer rules against a fresh xcodebuild log (unused_declaration, unused_import)"
+depends = ["generate", "verify:xcode-version"]
+run = '''
+set -eu
+set -o pipefail
+
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+log="$work/xcodebuild.log"
+
+# `build-for-testing`, not `build`: a plain build only compiles the `Pops`
+# target, which leaves `AppTests` — part of `SWIFT_SOURCES`, and linted by
+# `swiftlint lint` already — outside the log `swiftlint analyze` reads. This
+# compiles `PopsTests` too, without running anything in it.
+xcodebuild -project Pops.xcodeproj -scheme Pops \
+  -destination 'generic/platform=iOS Simulator' \
+  clean build-for-testing | tee "$log"
+
+status=0
+output=$(swiftlint analyze --strict --compiler-log-path "$log" --config .swiftlint.yml 2>&1) || status=$?
+printf '%s\n' "$output"
+
+# Same reasoning as app-test-lane.sh's executed-test count: absence is a
+# failure, not a pass. A log with nothing usable in it reports zero
+# violations in zero files, which reads exactly like a clean pass unless
+# something reads the file count back out and refuses to call zero a result.
+analyzed=$(printf '%s' "$output" | sed -nE 's/.*in ([0-9]+) files\.$/\1/p' | tail -1)
+if [ -z "$analyzed" ] || [ "$analyzed" -le 0 ]; then
+  echo "lint:analyze: analyzed 0 files — the compiler log had nothing usable" >&2
+  echo "              in it, so this run checked nothing." >&2
+  exit 1
+fi
+
+exit $status
+'''
+
 # Generates this client's canonical copy and stops there. The BFM vendors its
 # own copy and a repo-root guard fails on drift, so regenerating without
 # re-vendoring breaks the build — but the re-vendor step cannot live here:
