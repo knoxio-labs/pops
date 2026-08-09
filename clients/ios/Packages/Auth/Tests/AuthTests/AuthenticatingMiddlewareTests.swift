@@ -46,6 +46,26 @@ internal struct AuthenticatingMiddlewareTests {
         #expect(fixture.exchange.challengeCount == 0, "a refresh was attempted off /mobile")
     }
 
+    /// The allowlist is a rule about what leaves this app, not just about what
+    /// this type adds. It matters most on exactly these paths: the BFM's device
+    /// surface answers on the hostname where Cloudflare Access is *bypassed*,
+    /// so a bearer token sent there travels with less in front of it than
+    /// anywhere else — and no route under it has ever needed one.
+    @Test(
+        "an Authorization header is stripped off the unauthenticated surface",
+        arguments: ["/devices/refresh", "/devices/challenge", "/devices/pair", "/health"]
+    )
+    func stripsCredentialsOffTheUnauthenticatedSurface(path: String) async throws {
+        let fixture = try MiddlewareFixture()
+        let transport = RecordingTransport { _ in .ok }
+        var request = HTTPRequest.mobile(path)
+        request.headerFields[.authorization] = "Bearer leaked-by-another-middleware"
+
+        _ = try await fixture.send(request, through: transport)
+
+        #expect(transport.attempts.map(\.authorization) == [nil])
+    }
+
     @Test("an unpaired device sends the request rather than inventing a failure")
     func sendsWithoutCredentialsWhenUnpaired() async throws {
         let fixture = try MiddlewareFixture(tokens: nil)

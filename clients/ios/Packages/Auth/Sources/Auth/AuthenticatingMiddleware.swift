@@ -29,8 +29,11 @@ import OpenAPIRuntime
 ///
 /// ## What it will not touch
 ///
-/// Only `/mobile/*` carries a bearer token, and this attaches one to nothing
-/// else. That is an allowlist rather than a denylist, and the reason is
+/// Only `/mobile/*` carries a bearer token. Everything else is sent with the
+/// `Authorization` header **removed** — not merely without one added, which is
+/// a weaker promise that holds only while nothing upstream writes the header.
+///
+/// That is an allowlist rather than a denylist, and the reason is
 /// `POST /devices/refresh`: it answers `401` and `403` like any other route,
 /// and a middleware that treated those as "refresh and retry" would attempt a
 /// refresh from inside a refresh. Structuring the rule this way means that
@@ -82,7 +85,14 @@ public struct AuthenticatingMiddleware: ClientMiddleware {
         next: @Sendable (HTTPRequest, HTTPBody?, URL) async throws -> (HTTPResponse, HTTPBody?)
     ) async throws -> (HTTPResponse, HTTPBody?) {
         guard Self.carriesCredentials(request) else {
-            return try await next(request, body, baseURL)
+            // Stripped rather than forwarded untouched, so the allowlist is a
+            // rule about what leaves this app and not merely about what this
+            // type adds. It matters most on precisely these paths: the BFM's
+            // device surface answers on the hostname where Cloudflare Access is
+            // *bypassed*, so a bearer token sent there travels with less in
+            // front of it than anywhere else — and no route under it has ever
+            // needed one.
+            return try await next(Self.unauthenticated(request), body, baseURL)
         }
 
         let attempt = AuthenticatedAttempt(
@@ -142,5 +152,11 @@ extension AuthenticatingMiddleware {
 
     private static func carriesCredentials(_ request: HTTPRequest) -> Bool {
         request.path?.hasPrefix(authenticatedPathPrefix) ?? false
+    }
+
+    private static func unauthenticated(_ request: HTTPRequest) -> HTTPRequest {
+        var stripped = request
+        stripped.headerFields[.authorization] = nil
+        return stripped
     }
 }
