@@ -284,6 +284,25 @@ function parseTscNoEmitCommand(command) {
  * @param {string} unitDir
  * @returns {{ script: string | null; invocations: TypecheckInvocation[] }}
  */
+/**
+ * Resolve a `-p`/`--project` argument the way `tsc` itself does: a path to
+ * an existing directory means "the `tsconfig.json` inside it" (so `-p .`
+ * and `-p scripts` both name a directory, not a config file directly),
+ * anything else is used as the config path as given.
+ *
+ * @param {string} unitDir
+ * @param {string | null} projectArg
+ * @returns {string}
+ */
+function resolveTscProjectPath(unitDir, projectArg) {
+  if (!projectArg) return join(unitDir, 'tsconfig.json');
+  const resolved = resolve(unitDir, projectArg);
+  if (existsSync(resolved) && statSync(resolved).isDirectory()) {
+    return join(resolved, 'tsconfig.json');
+  }
+  return resolved;
+}
+
 export function readTypecheckInvocations(unitDir) {
   const pkgPath = join(unitDir, 'package.json');
   if (!existsSync(pkgPath)) return { script: null, invocations: [] };
@@ -296,7 +315,7 @@ export function readTypecheckInvocations(unitDir) {
     const raw = part.trim();
     const { recognized, projectArg } = parseTscNoEmitCommand(raw);
     if (!recognized) return { raw, recognized: false, projectPath: null };
-    const projectPath = projectArg ? resolve(unitDir, projectArg) : join(unitDir, 'tsconfig.json');
+    const projectPath = resolveTscProjectPath(unitDir, projectArg);
     return { raw, recognized: true, projectPath };
   });
   return { script, invocations };
@@ -465,12 +484,13 @@ const TEST_FILE_EXTENSION = /\.[cm]?tsx?$/;
 const SKIPPED_DIR_NAMES = new Set(['node_modules', 'dist', '.git']);
 
 /**
- * Every `*.test.*` / `*.spec.*` / `__tests__` TypeScript file actually on
- * disk under a unit. Stops descending into another discovered unit's own
- * directory (e.g. scanning `pillars/<id>` must not sweep up
- * `pillars/<id>/app`'s tests — that's a separately-discovered, separately
- * gated unit) so a unit's coverage is judged only against files that are
- * really its own.
+ * Every TypeScript file actually on disk under a unit that {@link hidesTests}
+ * would flag if it appeared in an `exclude` glob instead — `*.test.*`,
+ * `*.spec.*`, `__tests__`, and the `test-helpers`/`test-utils` support-module
+ * pattern. Stops descending into another discovered unit's own directory
+ * (e.g. scanning `pillars/<id>` must not sweep up `pillars/<id>/app`'s tests
+ * — that's a separately-discovered, separately gated unit) so a unit's
+ * coverage is judged only against files that are really its own.
  *
  * @param {string} unitDir
  * @param {ReadonlySet<string>} allUnitDirs Every discovered unit dir, including `unitDir` itself.

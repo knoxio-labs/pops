@@ -168,6 +168,16 @@ describe('readTypecheckInvocations + typecheckScriptCoversOwnConfig', () => {
     writeUnit('no-script', { build: 'tsc -b tsconfig.build.json' });
     mkdirSync(join(root, 'no-package-json'), { recursive: true });
     writeFileSync(join(root, 'no-package-json', 'tsconfig.json'), JSON.stringify({}));
+
+    writeUnit('dir-project', { typecheck: 'tsc --noEmit -p .' });
+    writeUnit('nested-dir-project', {
+      typecheck: 'tsc --noEmit && tsc --noEmit -p scripts',
+    });
+    mkdirSync(join(root, 'nested-dir-project', 'scripts'), { recursive: true });
+    writeFileSync(
+      join(root, 'nested-dir-project', 'scripts', 'tsconfig.json'),
+      JSON.stringify({ include: ['**/*.ts'] })
+    );
   });
 
   afterAll(() => {
@@ -199,6 +209,27 @@ describe('readTypecheckInvocations + typecheckScriptCoversOwnConfig', () => {
 
   it('rejects a flag it does not model rather than assuming it is harmless', () => {
     expect(typecheckScriptCoversOwnConfig(join(root, 'unmodeled-flag'))).toBe(false);
+  });
+
+  it('resolves a -p <directory> argument to <directory>/tsconfig.json, the way tsc itself does', () => {
+    const { invocations } = readTypecheckInvocations(join(root, 'dir-project'));
+    expect(invocations).toEqual([
+      {
+        raw: 'tsc --noEmit -p .',
+        recognized: true,
+        projectPath: join(root, 'dir-project', 'tsconfig.json'),
+      },
+    ]);
+    expect(typecheckScriptCoversOwnConfig(join(root, 'dir-project'))).toBe(true);
+  });
+
+  it('resolves a nested -p <directory> (the scripts/ shape without an explicit tsconfig.json) too', () => {
+    const { invocations } = readTypecheckInvocations(join(root, 'nested-dir-project'));
+    expect(invocations[1]).toEqual({
+      raw: 'tsc --noEmit -p scripts',
+      recognized: true,
+      projectPath: join(root, 'nested-dir-project', 'scripts', 'tsconfig.json'),
+    });
   });
 
   it('rejects a unit with no typecheck script, or no package.json at all', () => {
