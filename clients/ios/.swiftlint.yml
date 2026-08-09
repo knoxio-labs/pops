@@ -172,7 +172,31 @@ disabled_rules:
   # enough to wrap.
   - opening_brace
 
-# Not enabled: the analyzer rules (`unused_declaration`, `unused_import`). They
-# need a full xcodebuild compiler log, which would make linting depend on a
-# successful build — and a linter you cannot run while the build is broken is
-# one you cannot use to fix it. Revisiting them is tracked in Huly.
+# SwiftLint only runs these under `swiftlint analyze`, never under `swiftlint
+# lint` — listing them here cannot make `mise run lint` depend on a build.
+# `mise run lint:analyze` is the only thing that runs them, against a compiler
+# log it builds fresh for itself, and CI runs it as its own step after the
+# regular build. Kept to two rules deliberately, both about dead code a full
+# rebuild can see that source-only linting cannot:
+analyzer_rules:
+  # A `private`/`internal` declaration nothing references. Left at the
+  # default `include_public_and_open: false` deliberately: every `Packages/*`
+  # module is a library whose `public` surface is meant to be used from
+  # outside the file that declares it, often outside the module entirely, and
+  # frequently ahead of the call site that will consume it — flagging that as
+  # "unused" would be flagging the API surface itself, not dead code.
+  - unused_declaration
+  # An `import` the file never uses.
+  - unused_import
+
+# `unused_import` gets `CGFloat`'s owning module wrong. `CGFloat` is
+# ABI-special-cased by the compiler and the index data the rule reads
+# attributes it to a module other than `CoreGraphics`, so a file that imports
+# `CoreGraphics` for `CGFloat` and nothing else — `Tokens/PopsMetrics.swift` —
+# is reported unused even though removing the import fails the build (verified
+# with a clean `xcodebuild`). `always_keep_imports` is the rule's own
+# documented escape for exactly this: a targeted correction to what the rule
+# considers used, not a suppression of what it reports.
+unused_import:
+  always_keep_imports:
+    - CoreGraphics
