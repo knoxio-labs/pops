@@ -13,12 +13,22 @@ import Synchronization
 /// Bounded, and releases itself when the bound is reached. A barrier built on
 /// continuations parks forever when the code under test sends fewer requests
 /// than the test expected — which turns a defect into a hung suite rather than
-/// a failed assertion. The yield loop below cannot do that: the happy path
-/// still releases the instant the last caller arrives, and the unhappy one
-/// releases anyway and lets the assertions say what went wrong.
+/// a failed assertion. The yield loop below cannot do that.
+///
+/// But releasing anyway means the barrier can **fail open**: every caller
+/// returns, the suite proceeds, and the concurrency the test claims to have
+/// established never happened. That is worse than a hang, because the test
+/// still passes — and it would pass for the single-flight suites in particular,
+/// whose assertion also holds when callers arrive one at a time. So giving up
+/// is recorded, and every test that uses one asserts on it. A probe that can
+/// quietly stop probing is the thing these suites exist to rule out.
 internal actor Barrier {
     private let count: Int
     private var arrived = 0
+
+    /// `true` when some caller ran out of yields before everyone arrived, so
+    /// the release was not the one the test was waiting for.
+    private(set) var gaveUpWaiting = false
 
     internal init(count: Int) {
         self.count = count
@@ -30,6 +40,7 @@ internal actor Barrier {
             if arrived >= count { return }
             await Task.yield()
         }
+        gaveUpWaiting = true
     }
 }
 

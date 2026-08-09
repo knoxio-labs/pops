@@ -64,6 +64,14 @@ internal struct AuthenticatingMiddlewareConcurrencyTests {
             for try await response in group { #expect(response.status == .ok) }
         }
 
+        // The barrier releases itself rather than hanging when it is not
+        // satisfied, so "every request held a 401 at once" has to be asserted
+        // rather than assumed — without this the suite would still pass having
+        // synchronised nothing, which is the one way this test could lie.
+        #expect(
+            await barrier.gaveUpWaiting == false,
+            "the barrier released before every request arrived"
+        )
         #expect(fixture.exchange.spends.count == 1)
         #expect(fixture.exchange.challengeCount == 1)
         #expect(transport.attempts.count == requests * 2)
