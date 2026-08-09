@@ -1,6 +1,5 @@
 import AppCore
 import AuthTestSupport
-import Foundation
 import HTTPTypes
 import OpenAPIRuntime
 import Testing
