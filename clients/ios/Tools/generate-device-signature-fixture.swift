@@ -25,15 +25,15 @@
 import CryptoKit
 import Foundation
 
-let message = Data(
+private let message = Data(
     "pops/device-signature/v1 encoding fixture — opaque bytes, not the refresh message format"
         .utf8
 )
 
-let privateKey = P256.Signing.PrivateKey()
-let signature = try privateKey.signature(for: message)
+private let privateKey = P256.Signing.PrivateKey()
+private let signature = try privateKey.signature(for: message)
 
-let fixture: [String: Any] = [
+private let fixture: [String: Any] = [
     "version": 1,
     // Every word of this has to stay true in BOTH locations: the file is
     // committed byte-identically to clients/ios/Contracts/ and to
@@ -59,7 +59,7 @@ let fixture: [String: Any] = [
     "signatureRawBase64": signature.rawRepresentation.base64EncodedString(),
 ]
 
-let json = try JSONSerialization.data(
+private let json = try JSONSerialization.data(
     withJSONObject: fixture,
     options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
 )
