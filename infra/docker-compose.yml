@@ -70,6 +70,13 @@ services:
       # The POPS_PILLARS env parser is retained in env.ts as an operator escape
       # hatch, but is no longer plumbed through compose (ADR-039 E25).
       POPS_REGISTRY_ENABLED: 'true'
+      # Cloudflare Access identity, read by
+      # src/api/middleware/identity.ts's resolvePrincipal. Unlike bfm-api,
+      # a missing CLOUDFLARE_ACCESS_TEAM_NAME here falls back to a
+      # trusted-tunnel principal rather than refusing every caller — see
+      # pillars/registry/README.md.
+      CLOUDFLARE_ACCESS_TEAM_NAME: ${CLOUDFLARE_ACCESS_TEAM_NAME:-}
+      CLOUDFLARE_ACCESS_AUD: ${CLOUDFLARE_ACCESS_AUD:-}
     expose:
       - '3001'
     healthcheck:

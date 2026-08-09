@@ -85,6 +85,35 @@ list is a different, `userOnly` route and is unaffected.
 Which producers act on the answer is [ADR-044](../../docs/architecture/adr-044-inbound-service-account-scope-enforcement.md):
 `registry` and `finance` today, the rest under their own issues.
 
+## Human identity (Cloudflare Access)
+
+`src/api/middleware/identity.ts`'s `resolvePrincipal` is the one place the
+human-principal resolution order is written down: `x-api-key` service
+account, then (non-production) a dev fallback user, then — **only when
+`CLOUDFLARE_ACCESS_TEAM_NAME` is unset** — a `tunnel-authenticated@pops.local`
+principal, then a verified `cf-access-jwt-assertion`, then anonymous.
+
+The tunnel-user fallback is deliberate, not a placeholder: the registry is
+reachable only from inside the `pops-backend`/`pops-frontend` Docker networks
+and through the shell's Cloudflare Access-protected proxy, so "no team name
+configured" is read as "Access isn't configured for this environment yet, but
+the network boundary still holds". `bfm` (see
+[`pillars/bfm/README.md`](../bfm/README.md#the-perimeter)) makes the opposite
+choice for the same missing variable, because its own hostname bypasses Access
+so the phone can pair — carrying the registry's fallback over there would hand
+every caller on the public internet an operator session. There is no such
+bypassed hostname in front of the registry, which is what makes the fallback
+safe here and not there.
+
+`infra/docker-compose.yml`'s `registry-api` service forwards both
+`CLOUDFLARE_ACCESS_TEAM_NAME` and `CLOUDFLARE_ACCESS_AUD` from the host
+environment, the same way `bfm-api`'s does — setting either only in an
+operator's `.env` does nothing for a container whose compose block never
+declares it. Until an operator sets `CLOUDFLARE_ACCESS_TEAM_NAME` in the
+deployed environment, `GET /service-accounts` and the rest of the `userOnly`
+surface authenticate through the tunnel-user fallback rather than a verified
+Access identity; wiring a value in is an operator step, not a code change.
+
 ## Registration trust model
 
 `register`, `heartbeat` and `deregister` carry no per-request credential — the
