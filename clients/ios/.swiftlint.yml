@@ -20,6 +20,7 @@ included:
   - App
   - AppTests
   - Packages
+  - Tools
 
 excluded:
   # SwiftPM checkout and build products.
@@ -27,8 +28,10 @@ excluded:
   # A `Package.swift` is build configuration that happens to be written in
   # Swift. It declares no module boundary, its length says nothing about its
   # readability, and the rules below are all about application code. The
-  # formatter still covers it.
+  # formatter still covers it. `Tools/OpenAPIGenerator`'s manifest is the same
+  # case as `Packages/*/Package.swift` below it, one level deeper.
   - 'Packages/*/Package.swift'
+  - 'Tools/*/Package.swift'
   # Generated code. Every rule below describes code a person wrote, and
   # generated OpenAPI Swift breaks four of them by construction: a schema type
   # is `Components.Schemas.X`, which is two levels of nesting; a `Types.swift`

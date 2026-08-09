@@ -5,9 +5,9 @@ xcodegen = "2.46.0"
 
 [env]
 # The Swift tree the formatter and the linter both cover. `.swiftlint.yml`'s
-# `included:` names the same three directories — two tools with two config
+# `included:` names the same four directories — two tools with two config
 # formats, one intended scope, so they move together.
-SWIFT_SOURCES = "App AppTests Packages"
+SWIFT_SOURCES = "App AppTests Packages Tools"
 
 # Xcode cannot be a `[tools]` pin — mise does not install it — so this is the
 # one committed declaration both the CI job and `verify:xcode-version` below
