@@ -106,6 +106,14 @@ public actor DeviceSessionRefresher {
         // the gap between deciding to refresh and this being visible to the
         // next one. `Task {}` in an actor-isolated scope inherits that
         // isolation, so the body cannot begin until this method suspends below.
+        //
+        // `rotation` outlives the task it holds by one hop: it is cleared when
+        // this frame resumes, not when the task finishes. A caller entering in
+        // that window awaits a task that has already completed and gets its
+        // result — which is what it wanted unless the token it holds *is* that
+        // result, and in that case it retries once, is rejected again, and the
+        // middleware escalates. There is no loop in it, so closing the window
+        // would buy a wasted round trip in a case that is already handled.
         let task = Task { try await self.rotateTokens(at: baseURL) }
         rotation = task
         defer { rotation = nil }

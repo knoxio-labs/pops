@@ -38,6 +38,17 @@ import OpenAPIRuntime
 /// the refresh — the property does not depend on the composition root getting
 /// its wiring right.
 ///
+/// ## What a caller sees
+///
+/// A refresh that fails throws its ``SessionRefreshError`` rather than being
+/// swallowed into the `401` that provoked it, because the two are different
+/// facts: one request failed, versus this session has ended. The generated
+/// client wraps anything a middleware throws in an `OpenAPIRuntime`
+/// `ClientError`, so it arrives at a repository as that error's
+/// `underlyingError` — and by then the session has *already* moved, so a caller
+/// that only knows how to report "request failed" still cannot leave the app
+/// showing a signed-in shell for a device that is no longer paired.
+///
 /// ## Credentials in logs
 ///
 /// The header this adds never reaches an error value. `UniversalClient` builds
@@ -49,6 +60,12 @@ public struct AuthenticatingMiddleware: ClientMiddleware {
     /// Every request path this middleware authenticates. The BFM's device
     /// surface — pairing, challenge, refresh — and `/health` are unauthenticated
     /// by definition and are deliberately absent.
+    ///
+    /// Matched against the *contract* path rather than the resolved URL, which
+    /// is what the request carries at this point: a base URL with a path
+    /// component of its own — the shell reaches this BFM at `/bfm-api/` — is
+    /// prepended by the transport afterwards, so a prefix check on the final
+    /// URL would be the thing that broke behind a proxy.
     private static let authenticatedPathPrefix = "/mobile/"
 
     private let refresher: DeviceSessionRefresher
