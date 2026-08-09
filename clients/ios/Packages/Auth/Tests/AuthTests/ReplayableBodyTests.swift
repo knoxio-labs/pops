@@ -69,7 +69,7 @@ internal struct ReplayableBodyTests {
     }
 
     /// The boundary. Off by one here would mean a body of exactly the cap being
-    /// classified as unbuffereable, which is a `401` that escalates instead of
+    /// classified as unbufferable, which is a `401` that escalates instead of
     /// retrying — and only ever on a payload of one specific size.
     @Test("a single-pass body of exactly the cap is still buffered")
     func bodyAtTheCapIsBuffered() async throws {
