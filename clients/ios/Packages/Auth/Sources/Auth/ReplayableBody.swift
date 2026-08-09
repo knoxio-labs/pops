@@ -1,4 +1,3 @@
-import Foundation
 import OpenAPIRuntime
 
 /// A request body that a retry can send again — or an honest statement that it
