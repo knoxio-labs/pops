@@ -333,7 +333,11 @@ is pruned on a window equal to the token's own TTL (thirty days), because a
 deleting it early would let that exact replay go undetected against a family
 that might still be live. Pinning the window to the TTL rather than to an
 independent number is what keeps that safe — see the header of
-`src/db/services/prune-credentials.ts` for the full argument. Deletion walks
+`src/db/services/prune-credentials.ts` for the full argument, and
+`assertRefreshTokenRetentionCoversTtl` in that same file, which `server.ts`
+calls at boot against whatever TTL it is about to mint with, so a deploy that
+ever breaks the pinning crashes at startup instead of quietly turning reuse
+detection off. Deletion walks
 the table oldest-`createdAt`-first, because the self-referential `replacedBy`
 column is `ON DELETE NO ACTION` and refuses to let a successor be removed
 while its predecessor still names it.
