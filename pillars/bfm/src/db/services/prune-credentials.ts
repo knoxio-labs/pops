@@ -96,12 +96,31 @@ export class RefreshTokenRetentionError extends Error {
  * tests legitimately drive with TTLs of their own choosing that have nothing
  * to do with what a deployment would ever configure.
  *
- * @throws {RefreshTokenRetentionError} if `ttlMs` exceeds `retentionMs`.
+ * Both arguments are checked for being positive and finite before the
+ * comparison, not just compared directly: `NaN > x` and `x > NaN` are both
+ * `false` in JS, so a future parse bug that hands this a `NaN` would
+ * otherwise pass the `>` check silently — the exact failure mode this
+ * function exists to rule out, just moved one step earlier.
+ *
+ * @throws {RefreshTokenRetentionError} if either argument is not a positive,
+ * finite number, or if `ttlMs` exceeds `retentionMs`.
  */
 export function assertRefreshTokenRetentionCoversTtl(
   ttlMs: number,
   retentionMs: number = REFRESH_TOKEN_RETENTION_MS
 ): void {
+  if (!Number.isFinite(ttlMs) || ttlMs <= 0) {
+    throw new RefreshTokenRetentionError(
+      `[bfm-api] refresh token TTL must be a positive, finite number of milliseconds; got ` +
+        `${String(ttlMs)}`
+    );
+  }
+  if (!Number.isFinite(retentionMs) || retentionMs <= 0) {
+    throw new RefreshTokenRetentionError(
+      `[bfm-api] refresh token retention must be a positive, finite number of milliseconds; ` +
+        `got ${String(retentionMs)}`
+    );
+  }
   if (ttlMs > retentionMs) {
     throw new RefreshTokenRetentionError(
       `[bfm-api] refresh token retention (${String(retentionMs)}ms) must be >= the refresh ` +

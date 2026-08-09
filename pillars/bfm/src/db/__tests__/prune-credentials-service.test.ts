@@ -126,6 +126,31 @@ describe('assertRefreshTokenRetentionCoversTtl', () => {
       RefreshTokenRetentionError
     );
   });
+
+  it.each([
+    ['NaN', Number.NaN],
+    ['positive infinity', Number.POSITIVE_INFINITY],
+    ['zero', 0],
+    ['negative', -1],
+  ])('rejects a %s TTL rather than letting it silently pass the > comparison', (_label, ttlMs) => {
+    // `NaN > x` and `x > NaN` are both `false` in JS, so a bare `ttlMs >
+    // retentionMs` check would let a NaN TTL through as if it were safe —
+    // exactly the silent failure this assertion exists to prevent.
+    expect(() => assertRefreshTokenRetentionCoversTtl(ttlMs, RETENTION_MS)).toThrow(
+      RefreshTokenRetentionError
+    );
+  });
+
+  it.each([
+    ['NaN', Number.NaN],
+    ['positive infinity', Number.POSITIVE_INFINITY],
+    ['zero', 0],
+    ['negative', -1],
+  ])('rejects a %s retention window for the same reason', (_label, retentionMs) => {
+    expect(() => assertRefreshTokenRetentionCoversTtl(RETENTION_MS, retentionMs)).toThrow(
+      RefreshTokenRetentionError
+    );
+  });
 });
 
 describe('prunePairingCodes', () => {
