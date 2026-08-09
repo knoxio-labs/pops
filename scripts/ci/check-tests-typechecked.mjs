@@ -822,7 +822,9 @@ function main() {
   if (args.includes('--help') || args.includes('-h')) {
     console.log(
       'Usage: node scripts/ci/check-tests-typechecked.mjs [--self-test]\n' +
-        "Fails if a unit's tsconfig.json excludes its own test files from tsc."
+        "Fails if a unit's tsconfig.json excludes its own test files from tsc, if its " +
+        'include never reaches a real test file on disk, or if its typecheck script ' +
+        'never runs tsc --noEmit against its own tsconfig.json.'
     );
     process.exit(2);
   }
