@@ -397,8 +397,9 @@ Every non-trivial piece of code ships with tests — not optional. "Non-trivial"
 - **Backend route/service/util** → Vitest unit test against real in-memory SQLite. Mock nothing that can be real.
 - **Frontend hook or stateful component** → Vitest + React Testing Library.
 - **User-facing feature (new page, modal, workflow)** → Playwright E2E happy-path test in `pillars/shell/e2e/`.
+- **A repo guard** (a script under `scripts/` that fails the build on an invariant) → a test for the **degenerate** case, not only the positive one: the subject missing, renamed or malformed must produce a violation, never a crash and never silence. See [Structural guards](#structural-guards) and [ADR-045](docs/architecture/adr-045-guards-must-prove-they-report.md).
 
-**Bar for done:** if you cannot click through the feature yourself and show it working, it is not done. Tests are the documented proof it works.
+**Bar for done:** if you cannot click through the feature yourself and show it working, it is not done. Tests are the documented proof it works. A test you have not watched fail is not evidence that it can.
 
 ---
 
@@ -472,7 +473,11 @@ The reason is downstream: the client generators target 3.0. A pillar that emits 
 
 ### Structural guards
 
-Repo-wide invariants are enforced by scripts under `scripts/ci/`, each self-testing and wired into `.github/workflows/agent-review.yml`. They cover lib-never-imports-pillar, contract isolation, the known-pillars tuple against disk, mise toolchain overrides, homelab-service isolation, vendored contracts, the docs model, and that no unit's `tsconfig.json` hides its own tests from `tsc`. Run one directly with `--self-test` to see what it claims to catch.
+Repo-wide invariants that no compiler or linter can see are enforced by scripts under `scripts/`, mostly `scripts/ci/`. Each one owns one invariant, reads the working tree, and exits non-zero with the violations named. Run any of them with `--self-test` to see what it claims to catch, and `--help` for its scope.
+
+**Which guard runs where is in the workflows, not here.** They are spread across `.github/workflows/agent-review.yml`, `quality.yml`, `rust-quality.yml` and `docker-build.yml` — `grep -rn 'scripts/ci/\|scripts/check-' .github/workflows/` is the inventory, and it stays true as guards move. Most of those jobs deliberately run **without `pnpm install`**, so a guard reaches for no third-party import: that is a hard constraint on how one is written, not a stylistic preference (see [ADR-045](docs/architecture/adr-045-guards-must-prove-they-report.md)).
+
+**A guard ships with a test proving it _reports_, not merely that it passes** — [ADR-045](docs/architecture/adr-045-guards-must-prove-they-report.md). The subject missing, renamed, or malformed must produce a deterministic violation, never a crash and never silence. A self-test that plants a violation and catches it proves the guard is loud when it can see; it does not prove it can still see. Discovery therefore asserts a floor, no bare `catch {}` sits between finding the subject and reporting on it, and a config shape the matcher does not model is reported rather than skipped.
 
 ### Generated clients across a unit boundary
 

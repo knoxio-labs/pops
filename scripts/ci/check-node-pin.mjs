@@ -36,7 +36,8 @@
  * Exit 0 = clean. Exit 1 = a violation. Exit 2 = usage error.
  */
 
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -206,6 +207,25 @@ export function checkNodePin(root) {
     );
   }
 
+  // The disagreement check is a set comparison over discovered pins: discover
+  // none and every major agrees trivially. Both of these sites are populated in
+  // any healthy tree, so an empty one means the collector stopped finding them,
+  // not that the pins went away (ADR-045).
+  if (!pins.some((pin) => pin.source.startsWith('.github/workflows/'))) {
+    violations.push(
+      'No workflow declares a `node-version:`. Either .github/workflows moved, or CI now ' +
+        'resolves Node some other way — until the collector is taught that way, the ' +
+        'workflows are outside the coherence check rather than agreeing with it.'
+    );
+  }
+  if (!pins.some((pin) => pin.source.endsWith('Dockerfile'))) {
+    violations.push(
+      'No pillar Dockerfile declares a `FROM node:<tag>` base image. Either pillars/ moved, ' +
+        'or the images now derive their Node another way — either way the shipped runtime is ' +
+        'no longer being compared against the local and CI pins.'
+    );
+  }
+
   const settings = parseTomlSection(readFileSync(join(root, 'mise.toml'), 'utf8'), 'settings');
   for (const [key, expected] of Object.entries(REQUIRED_MISE_SETTINGS)) {
     if (settings[key] !== expected) {
@@ -257,10 +277,32 @@ function selfTest() {
     nodeMajor('lts/*') === null,
     parseTomlSection('[settings]\nactivate_aggressive = true\n', 'settings').activate_aggressive ===
       'true',
+    // A tree the collectors cannot see must fail, not agree with itself.
+    emptyTreeIsReported(),
   ];
   const ok = checks.every(Boolean);
   if (!ok) console.error(`self-test FAILED: ${JSON.stringify(checks)}`);
   return ok;
+}
+
+/** @returns {boolean} */
+function emptyTreeIsReported() {
+  const dir = mkdtempSync(join(tmpdir(), 'node-pin-selftest-'));
+  try {
+    writeFileSync(
+      join(dir, 'mise.toml'),
+      '[tools]\nnode = "24"\n\n[settings]\nactivate_aggressive = true\n',
+      'utf8'
+    );
+    writeFileSync(join(dir, 'package.json'), '{"engines":{"node":"24"}}\n', 'utf8');
+    const { violations } = checkNodePin(dir);
+    return (
+      violations.some((v) => v.includes('No workflow declares')) &&
+      violations.some((v) => v.includes('No pillar Dockerfile declares'))
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 }
 
 if (resolve(fileURLToPath(import.meta.url)) === resolve(process.argv[1] ?? '')) {

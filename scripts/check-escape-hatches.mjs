@@ -123,19 +123,40 @@ export function countHatchesInText(text) {
  * @returns {Record<string, Record<string, number>>}
  */
 export function collectHatches() {
+  return sortDeep(scanHatches().hatches);
+}
+
+/**
+ * The same scan, plus the file count it was derived from.
+ *
+ * The count is what tells "no hatches left" apart from "nothing was scanned".
+ * Without it a renamed `ROOTS` entry yields `{}`, which the ratchet reads as a
+ * clean tree — and then invites `--write` to lock the empty result in as the
+ * new baseline, destroying it (ADR-045).
+ *
+ * @returns {{ hatches: Record<string, Record<string, number>>, scanned: number }}
+ */
+export function scanHatches() {
   /** @type {Record<string, Record<string, number>>} */
   const result = {};
+  let scanned = 0;
   for (const root of ROOTS) {
     const absRoot = join(repoRoot, root);
-    if (!existsSync(absRoot)) continue;
+    if (!existsSync(absRoot)) {
+      throw new Error(
+        `escape-hatch gate: ${root}/ does not exist. A unit-kind root was renamed under the ` +
+          'ratchet; update ROOTS in scripts/check-escape-hatches.mjs to wherever it now lives.'
+      );
+    }
     walk(absRoot, (abs) => {
       const rel = relative(repoRoot, abs).split('\\').join('/');
       if (!isScannable(rel)) return;
+      scanned += 1;
       const counts = countHatchesInText(readFileSync(abs, 'utf8'));
       if (Object.keys(counts).length > 0) result[rel] = counts;
     });
   }
-  return sortDeep(result);
+  return { hatches: result, scanned };
 }
 
 /** Stable, diff-friendly ordering for the committed baseline. */
@@ -186,11 +207,22 @@ export function diffAgainstBaseline(current, baseline) {
 }
 
 function runCheck() {
-  const current = collectHatches();
+  const { hatches, scanned } = scanHatches();
+  const current = sortDeep(hatches);
   const baseline = loadBaseline();
   const growths = diffAgainstBaseline(current, baseline);
   const currentTotal = total(current);
   const baselineTotal = total(baseline);
+
+  if (scanned === 0 || (currentTotal === 0 && baselineTotal > 0)) {
+    console.error(
+      `✗ escape-hatch gate: scanned ${scanned} file(s) and found ${currentTotal} hatch(es) ` +
+        `against a baseline of ${baselineTotal}. A ratchet that suddenly sees nothing has ` +
+        'stopped looking, not been satisfied — check ROOTS and the ignore lists before ' +
+        'rebaselining, because `--write` here would erase the ratchet.'
+    );
+    process.exit(1);
+  }
 
   if (growths.length > 0) {
     console.error(`✗ escape-hatch gate: ${growths.length} new type-safety escape hatch(es):\n`);
@@ -230,7 +262,19 @@ function runWrite() {
 
 /** Prove the gate actually catches a newly-introduced hatch. */
 function runSelfTest() {
-  const baseline = collectHatches();
+  const { hatches, scanned } = scanHatches();
+  // The seed for every case below. Assert it is real before trusting any of
+  // them: with an empty scan the growth case silently skips itself and the
+  // whole self-test still reports OK.
+  if (scanned === 0 || Object.keys(hatches).length === 0) {
+    console.error(
+      `✗ self-test: scanned ${scanned} file(s) and found ${Object.keys(hatches).length} with ` +
+        'hatches. The self-test seeds itself from the real tree, so an empty scan proves nothing.'
+    );
+    process.exit(1);
+  }
+
+  const baseline = sortDeep(hatches);
   const tampered = structuredClone(baseline);
   const [firstFile] = Object.keys(tampered);
   const synthetic = 'pillars/__synthetic__/new-violation.ts';
@@ -261,12 +305,19 @@ function runSelfTest() {
 
 function main() {
   const mode = process.argv[2];
-  if (mode === '--write') runWrite();
-  else if (mode === '--self-test') runSelfTest();
-  else if (mode === undefined) runCheck();
-  else {
+  if (mode !== '--write' && mode !== '--self-test' && mode !== undefined) {
     console.error(`usage: check-escape-hatches.mjs [--write|--self-test]`);
     process.exit(2);
+  }
+  try {
+    if (mode === '--write') runWrite();
+    else if (mode === '--self-test') runSelfTest();
+    else runCheck();
+  } catch (error) {
+    // A tree the scanner cannot read is a gate failure with a readable reason,
+    // not a stack trace (ADR-045).
+    console.error(`✗ ${error instanceof Error ? error.message : String(error)}`);
+    process.exit(1);
   }
 }
 

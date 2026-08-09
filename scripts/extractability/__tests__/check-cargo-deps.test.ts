@@ -83,6 +83,53 @@ my-alias = { package = "real-crate", version = "1" }`;
     expect(deps).not.toContain('my-alias');
   });
 
+  it('reads a dependency declared as a [dependencies.<crate>] sub-table', () => {
+    const toml = `[package]
+name = "pops-ai"
+[dependencies]
+serde = { workspace = true }
+
+[dependencies.contacts]
+path = "../../pillars/contacts"`;
+    expect(new Set(parseMemberManifest(toml).deps)).toEqual(new Set(['serde', 'contacts']));
+  });
+
+  it('resolves a rename declared inside a sub-table', () => {
+    const toml = `[package]
+name = "pops-ai"
+
+[dependencies.ct]
+package = "contacts"
+path = "../../pillars/contacts"`;
+    const { deps } = parseMemberManifest(toml);
+    expect(deps).toContain('contacts');
+    expect(deps).not.toContain('ct');
+  });
+
+  it('reads dev- and target-scoped sub-table dependencies', () => {
+    const toml = `[package]
+name = "pops-ai"
+
+[dev-dependencies.contacts]
+path = "x"
+
+[target.'cfg(unix)'.dependencies.nix]
+version = "0.27"`;
+    expect(new Set(parseMemberManifest(toml).deps)).toEqual(new Set(['contacts', 'nix']));
+  });
+
+  it('does not treat a non-dependency sub-table as a dependency', () => {
+    const toml = `[package]
+name = "pops-ai"
+
+[package.metadata.docs]
+all-features = true
+
+[dependencies]
+serde = "1"`;
+    expect(parseMemberManifest(toml).deps).toEqual(['serde']);
+  });
+
   it('does not mistake a commented-out dep for a real one', () => {
     const toml = `[package]
 name = "demo"
