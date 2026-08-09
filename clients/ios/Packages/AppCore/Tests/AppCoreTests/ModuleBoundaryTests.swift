@@ -10,8 +10,8 @@ import Testing
 internal struct ModuleBoundaryTests {
     /// Packages allowed to name a concrete implementation of an `AppCore` seam,
     /// because they are the mechanism: `Auth` owns pairing, key material and the
-    /// authenticating transport; `BFMClient` owns the generated types and the
-    /// calls that carry them.
+    /// middleware that attaches a token; `BFMClient` owns the generated types
+    /// and the calls that carry them.
     private let implementationPackages: Set<String> = ["Auth", "BFMClient"]
 
     /// The modules the generated BFM client is written against. Naming one is
@@ -23,16 +23,38 @@ internal struct ModuleBoundaryTests {
         "OpenAPIRuntime", "OpenAPIURLSession", "HTTPTypes",
     ]
 
-    /// The package that owns the generated code, and the only one that may name
-    /// any of the above.
+    /// The package that owns the generated code.
     private let generatedClientPackage = "BFMClient"
 
+    /// Which of the runtime modules each package may name. Absent means none,
+    /// which is every package but these two.
+    ///
+    /// `Auth` is the exception and the shape of the exception is the point.
+    /// `AuthenticatingMiddleware` conforms to `OpenAPIRuntime`'s
+    /// `ClientMiddleware` and speaks `HTTPTypes`' request and response — the
+    /// *transport* vocabulary — which is what attaching a credential and
+    /// retrying a request needs. It does not name `OpenAPIURLSession`, and that
+    /// omission is not incidental: that module is the one that actually
+    /// performs HTTP, and keeping it to `BFMClient` is the checkable form of
+    /// "a caller does not get to choose its own timeouts, redirect policy or
+    /// TLS behaviour". The rule this narrows was never really "one importer";
+    /// it was "one client built against the contract", and that still holds —
+    /// the generated types remain `internal` to `BFMClient` and nothing in
+    /// `Auth` can name one.
+    private let clientRuntimeAllowances: [String: Set<String>] = [
+        "BFMClient": ["OpenAPIRuntime", "OpenAPIURLSession", "HTTPTypes"],
+        "Auth": ["OpenAPIRuntime", "HTTPTypes"],
+    ]
+
     /// Every SPM dependency the app is allowed to resolve from outside this
-    /// repo, by URL. Two, both Apple's, both there because a generated OpenAPI
+    /// repo, per package. All Apple's, all there because a generated OpenAPI
     /// client does not compile without them.
-    private let allowedExternalPackages: Set<String> = [
-        "https://github.com/apple/swift-openapi-runtime",
-        "https://github.com/apple/swift-openapi-urlsession",
+    private let allowedExternalPackages: [String: Set<String>] = [
+        "BFMClient": [
+            "https://github.com/apple/swift-openapi-runtime",
+            "https://github.com/apple/swift-openapi-urlsession",
+        ],
+        "Auth": ["https://github.com/apple/swift-openapi-runtime"],
     ]
 
     @Test("the scan finds the packages it is asserting about")
@@ -90,47 +112,77 @@ internal struct ModuleBoundaryTests {
     ///
     /// Its `Generated/` sources are emitted `internal`, which already makes the
     /// types unnameable elsewhere. This is about the module that would have to
-    /// be imported first: a second module reaching for `OpenAPIRuntime` is a
-    /// second client being built against the same contract, outside the one
-    /// directory the regenerate-and-diff gate covers.
-    @Test("only the package that owns the generated code names its runtime")
-    func onlyOnePackageNamesTheGeneratedClientRuntime() throws {
+    /// be imported first: a package reaching for `OpenAPIRuntime` with no
+    /// entry below is a second client being built against the same contract,
+    /// outside the one directory the regenerate-and-diff gate covers.
+    @Test("only the packages listed may name the generated client's runtime")
+    func onlyAllowedPackagesNameTheGeneratedClientRuntime() throws {
         // The owning package must name them, or every assertion below holds for
         // a tree where the client was deleted.
         let owned = try sourceFiles(inPackage: generatedClientPackage)
             .reduce(into: Set<String>()) { $0.formUnion(try importedModules(in: $1)) }
         #expect(!owned.isDisjoint(with: generatedClientRuntime))
 
-        let elsewhere =
-            try packageNames().filter { $0 != generatedClientPackage }
-            .flatMap { try sourceFiles(inPackage: $0) } + swiftFiles(under: appDirectory)
-        for file in elsewhere {
+        for package in try packageNames() {
+            let allowed = clientRuntimeAllowances[package] ?? []
+            for file in try sourceFiles(inPackage: package) {
+                let forbidden = try importedModules(in: file)
+                    .intersection(generatedClientRuntime)
+                    .subtracting(allowed)
+                #expect(
+                    forbidden.isEmpty,
+                    "\(package)/\(file.lastPathComponent) imports \(forbidden.sorted().joined(separator: ", "))"
+                )
+            }
+        }
+        for file in swiftFiles(under: appDirectory) {
             let forbidden = try importedModules(in: file).intersection(generatedClientRuntime)
             #expect(
                 forbidden.isEmpty,
-                "\(file.lastPathComponent) imports \(forbidden.sorted().joined(separator: ", "))"
+                "App/\(file.lastPathComponent) imports \(forbidden.sorted().joined(separator: ", "))"
             )
         }
+    }
+
+    /// The half of the rule above that is worth stating on its own, because it
+    /// is the one a well-meaning change would undo.
+    ///
+    /// `OpenAPIURLSession` is the module that performs HTTP. Whoever names it
+    /// chooses the timeouts, the redirect policy and the TLS behaviour, and
+    /// `BFMClient` keeps that decision — which is why its transport-injecting
+    /// initialiser is `internal` and why the seam it hands out instead is a
+    /// middleware. A second importer would be that decision moving to a call
+    /// site, quietly, in a build that compiles.
+    @Test("exactly one package performs HTTP")
+    func onlyTheClientPackageNamesTheHTTPTransport() throws {
+        var importers: Set<String> = []
+        for package in try packageNames() {
+            for file in try sourceFiles(inPackage: package)
+            where try importedModules(in: file).contains("OpenAPIURLSession") {
+                importers.insert(package)
+            }
+        }
+
+        #expect(importers == [generatedClientPackage])
     }
 
     /// The manifest half of the same rule, and the app's entire external
     /// dependency surface in one assertion.
     ///
-    /// Two things are being held at once. Only `BFMClient` may reach outside the
-    /// repo at all — every other package depends on its siblings by path. And
-    /// the set it reaches for is exactly these two: notably NOT
+    /// Two things are being held at once. Only the packages below may reach
+    /// outside the repo at all — every other one depends on its siblings by
+    /// path. And the set they reach for is exactly these: notably NOT
     /// `swift-openapi-generator`, which lives in `Tools/OpenAPIGenerator` so
     /// that a code generator and its four transitive dependencies stay out of an
     /// iPhone app's build graph. Moving it back here is a one-line edit to a
     /// manifest that builds, tests and lints clean.
-    @Test("the app links no external package but the two it is allowed")
+    @Test("the app links no external package but the ones it is allowed")
     func externalDependenciesAreTheAllowedOnes() throws {
         var declared: Set<String> = []
         for package in try packageNames() {
             let urls = try externalPackageURLs(ofPackage: package)
             declared.formUnion(urls)
-            let expected = package == generatedClientPackage ? allowedExternalPackages : []
-            let unexpected = urls.subtracting(expected)
+            let unexpected = urls.subtracting(allowedExternalPackages[package] ?? [])
             #expect(
                 unexpected.isEmpty,
                 "\(package)/Package.swift depends on \(unexpected.sorted().joined(separator: ", "))"
@@ -140,7 +192,46 @@ internal struct ModuleBoundaryTests {
         // The allowlist is a description of the tree, not an aspiration: if
         // `BFMClient` stopped declaring these, every check above would pass on a
         // tree with no generated client in it.
-        #expect(declared == allowedExternalPackages)
+        #expect(declared == allowedExternalPackages.values.reduce(into: Set()) { $0.formUnion($1) })
+    }
+
+    /// One URL, one version, wherever it is declared.
+    ///
+    /// Two packages now pin `swift-openapi-runtime`, and a generated client
+    /// linked against one runtime while the middleware wrapping it was compiled
+    /// against another is the kind of mismatch that surfaces as a link error at
+    /// best. `exact:` on both is what makes SwiftPM refuse to resolve a
+    /// disagreement rather than pick a winner — this asserts the `exact:` is
+    /// actually there, on every copy, which is the part a reviewer would not
+    /// notice missing.
+    @Test("every copy of an external pin names the same exact version")
+    func externalPinsAgree() throws {
+        var declarations: [String: Int] = [:]
+        var pinned: [String: Set<String>] = [:]
+        var pinCounts: [String: Int] = [:]
+        for package in try packageNames() {
+            for url in try externalPackageURLs(ofPackage: package) {
+                declarations[url, default: 0] += 1
+            }
+            for (url, version) in try exactPins(ofPackage: package) {
+                pinned[url, default: []].insert(version)
+                pinCounts[url, default: 0] += 1
+            }
+        }
+
+        for (url, count) in declarations {
+            // A `from:` or a range contributes no pin, so this is what catches
+            // the copy that quietly stopped being exact — the case where
+            // SwiftPM resolves a disagreement instead of refusing it.
+            #expect(
+                pinCounts[url] == count,
+                "\(url) is declared \(count) time(s) but exactly pinned \(pinCounts[url] ?? 0)"
+            )
+            #expect(
+                pinned[url]?.count == 1,
+                "\(url) is pinned to \(pinned[url]?.sorted() ?? [])"
+            )
+        }
     }
 
     /// Everything that ships: every package's `Sources`, and the app target.
@@ -246,6 +337,15 @@ extension ModuleBoundaryTests {
     private func externalPackageURLs(ofPackage package: String) throws -> Set<String> {
         let source = try manifestSource(ofPackage: package)
         return Set(source.matches(of: #/url:\s*"([^"]+)"/#).map { String($0.1) })
+    }
+
+    /// Each `url:` paired with the `exact:` that follows it. A declaration
+    /// without one contributes nothing, which is what makes the version
+    /// agreement check above fail rather than pass vacuously.
+    private func exactPins(ofPackage package: String) throws -> [(url: String, version: String)] {
+        let source = try manifestSource(ofPackage: package)
+        return source.matches(of: #/url:\s*"([^"]+)"\s*,\s*exact:\s*"([^"]+)"/#)
+            .map { (String($0.1), String($0.2)) }
     }
 
     /// Any sibling-package path the manifest mentions, however the `.package`

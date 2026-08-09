@@ -183,18 +183,31 @@ internal struct DevicePairingTests {
     /// This is the whole reason `Auth` maps "not a documented refusal" to
     /// unreachable by exclusion instead of by naming the error it expects.
     ///
-    /// Expecting `ClientError` is also the assertion that the status-based
-    /// mapping above does not overreach: nothing answered, so there is no
-    /// status, and inventing a refusal from one would be worse than the
-    /// misclassification that mapping exists to prevent.
-    @Test("a transport failure reaches the caller, wrapped by the generated client")
+    /// What reaches the caller is `transportFailure` rather than the
+    /// `ClientError` itself: that type renders `operationInput` by reflection,
+    /// and this operation's input carries the pairing code. The summary keeps
+    /// the diagnostic half — see ``BFMClientError``.
+    ///
+    /// It is also the assertion that the status-based mapping above does not
+    /// overreach: nothing answered, so there is no status, and inventing a
+    /// refusal from one would be worse than the misclassification that mapping
+    /// exists to prevent.
+    @Test("a transport failure reaches the caller as a summary, not as the raw error")
     func transportFailurePropagates() async throws {
         let transport = StubTransport { _, _ in throw StubTransportFailure() }
 
-        let thrown = await #expect(throws: ClientError.self) { try await pair(transport) }
+        let thrown = try #require(
+            await #expect(throws: BFMClientError.self) { try await pair(transport) }
+        )
 
-        #expect(try #require(thrown).underlyingError is StubTransportFailure)
-        #expect(thrown?.response == nil)
+        guard case .transportFailure(let operation, let summary) = thrown else {
+            Issue.record("expected a transport failure, got \(thrown)")
+            return
+        }
+        #expect(operation == "device.pair")
+        #expect(summary.contains("StubTransportFailure"))
+        #expect(summary.contains("no response"))
+        #expect(!summary.contains("7QK4"), "the pairing code reached a rendered error")
     }
 
     /// The tokens exist in memory for as long as it takes to store them, and a

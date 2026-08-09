@@ -65,6 +65,27 @@ internal struct HealthTests {
         }
     }
 
+    /// The other half of ``BFMClientError``'s guarantee, which is stated for the
+    /// whole module rather than per operation: no `OpenAPIRuntime.ClientError`
+    /// leaves it. This call carries no credential — it takes no input at all —
+    /// but an invariant with one exception is one a reader has to check rather
+    /// than rely on, so it is asserted here too.
+    @Test("a transport failure is converted rather than escaping raw")
+    func transportFailureIsConverted() async throws {
+        let transport = StubTransport { _, _ in throw StubTransportFailure() }
+
+        let thrown = try #require(
+            await #expect(throws: BFMClientError.self) { try await client(transport).health() }
+        )
+
+        guard case .transportFailure(let operation, let summary) = thrown else {
+            Issue.record("expected a transport failure, got \(thrown)")
+            return
+        }
+        #expect(operation == "health")
+        #expect(summary.contains("StubTransportFailure"))
+    }
+
     /// A 200 whose body does not match the contract. Worth its own test because
     /// the failure this guards against is a decoder that fills the gaps: a
     /// `BFMHealth` with an empty version reads as a healthy BFM.

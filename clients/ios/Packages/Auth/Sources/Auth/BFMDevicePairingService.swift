@@ -121,7 +121,14 @@ extension BFMDevicePairingService {
     /// from a reverse proxy or a 500 from the BFM is not something the person
     /// holding the phone can act on any differently from a dead network, and
     /// inventing a fifth thing to say about it would be a distinction with no
-    /// different recovery behind it.
+    /// different recovery behind it. A `transportFailure` is the dead network
+    /// itself, now named rather than reached through the `.none` branch, and it
+    /// lands in the same place.
+    ///
+    /// `refreshRefused` cannot arrive here — pairing does not refresh — and is
+    /// listed rather than folded into a `default` so that a new refusal added
+    /// to `BFMClientError` fails this switch instead of silently becoming
+    /// "check your connection".
     private static func pairingError(for error: any Error) -> PairingError {
         switch error as? BFMClientError {
         case .pairingRefused(.codeRejected):
@@ -130,7 +137,7 @@ extension BFMDevicePairingService {
             return .invalidRequest
         case .pairingRefused(.rateLimited(let retryAfterSeconds)):
             return .rateLimited(retryAfterSeconds: retryAfterSeconds)
-        case .undocumentedResponse, .none:
+        case .undocumentedResponse, .transportFailure, .refreshRefused, .none:
             return .unreachable
         }
     }
