@@ -28,14 +28,27 @@
  *      (the nine-pillar `scripts/tsconfig.json` shape) — that is additive,
  *      not a substitution, and stays green.
  *   3. `findUncoveredTestFiles` — every `*.test.*` / `*.spec.*` / `__tests__`
- *      file actually on disk under the unit is resolved by TypeScript's own
- *      config parser (`ts.parseJsonConfigFileContent`) against every project
- *      the `typecheck` script invokes. Comparing real files rather than
- *      reasoning about `include` globs is what catches a narrowed `include`
- *      without a second layer of pattern-guessing — and, as a side effect,
- *      catches two files whose module specifier collides once their
- *      extension is stripped (`Foo.test.ts` next to `Foo.test.tsx`), which
- *      TypeScript silently resolves to only one of the two.
+ *      file actually on disk under the unit is matched against every project
+ *      the `typecheck` script invokes, using `include`/`exclude`/`files`
+ *      resolved with `node:fs`'s own glob engine (`globSync`) rather than a
+ *      hand-rolled matcher. Comparing real files rather than reasoning about
+ *      the globs in the abstract is what catches a narrowed `include` — no
+ *      `exclude` involved at all — without a second layer of pattern
+ *      guessing. Separately, and independent of any include/exclude
+ *      resolution: two files whose module specifier collides once a
+ *      recognized extension is stripped (`Foo.test.ts` next to
+ *      `Foo.test.tsx`) are flagged outright, because TypeScript's own
+ *      Program construction silently keeps only one of the two — a real
+ *      glob match on both proves nothing, since the loss happens after
+ *      matching succeeds.
+ *
+ * `check-tests-typechecked.mjs` runs in `agent-review.yml`'s zero-dependency
+ * job, straight after checkout with no `pnpm install` (ADR-045's stated
+ * exception) — so it cannot `import 'typescript'` to resolve a project's
+ * effective file set. `node:fs`'s built-in `globSync` (stable since Node 22,
+ * no install required) is the real engine used instead; it does not know
+ * about the same-stem collision above, because that is not a matching
+ * question — the dedicated disk scan next to it is.
  *
  * Discovery is disk-derived (no static unit list) so a new pillar, lib or
  * frontend app is gated the moment it appears. JSON is parsed after stripping
@@ -50,18 +63,18 @@
 
 import {
   existsSync,
+  globSync,
   mkdirSync,
   mkdtempSync,
   readdirSync,
   readFileSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-
-import ts from 'typescript';
 
 const EXTENSIONED_PATH = /\.[cm]?[tj]s$|\.json$/;
 
@@ -275,22 +288,133 @@ export function typecheckScriptCoversOwnConfig(unitDir) {
 }
 
 /**
- * Resolve the set of files a tsconfig project actually type-checks, using
- * TypeScript's own config parser (`extends`, `include`, `exclude`, `files`,
- * all handled the way `tsc` itself handles them) rather than re-implementing
- * glob semantics. Returns an empty set on a missing or unparsable config —
- * callers treat that as "this project covers nothing", which is the correct
- * failure direction for a guard.
+ * Resolve whether a tsconfig array field (`include` or `files`) is declared
+ * anywhere in the config's own JSON or its `extends` chain, and its value
+ * when it is — an own declaration (even an empty array) fully replaces
+ * whatever a base would otherwise contribute, mirroring tsc's real
+ * inheritance rule. Presence has to be tracked separately from "resolved to
+ * an empty array" here (unlike {@link resolveEffectiveExclude}): a config
+ * that declares `files` but no `include` (the `tsconfig.build.json` shape —
+ * `{ "files": [], "references": [...] }`) type-checks only its explicit
+ * `files` entries, never defaulting to "everything", while a config that
+ * declares neither defaults to `**\/*` the way `tsc` itself does.
  *
  * @param {string} configPath
- * @returns {Set<string>} Absolute file paths.
+ * @param {'include' | 'files'} field
+ * @param {Set<string>} [seen] Visited config paths, guards an extends cycle.
+ * @returns {{ present: boolean; value: unknown[] }}
+ */
+function resolveArrayFieldPresence(configPath, field, seen = new Set()) {
+  if (seen.has(configPath) || !existsSync(configPath)) return { present: false, value: [] };
+  seen.add(configPath);
+  /** @type {Record<string, unknown>} */
+  const config = JSON.parse(stripJsonComments(readFileSync(configPath, 'utf8')));
+  if (Array.isArray(config[field])) return { present: true, value: config[field] };
+
+  let bases = /** @type {unknown[]} */ ([]);
+  if (Array.isArray(config.extends)) bases = config.extends;
+  else if (typeof config.extends === 'string') bases = [config.extends];
+
+  for (const base of bases) {
+    if (typeof base !== 'string' || !base.startsWith('.')) continue;
+    const baseFile = EXTENSIONED_PATH.test(base) ? base : `${base}.json`;
+    const resolved = resolveArrayFieldPresence(resolve(dirname(configPath), baseFile), field, seen);
+    if (resolved.present) return resolved;
+  }
+  return { present: false, value: [] };
+}
+
+const BARE_GLOB_ENTRY = /^[^*?]+$/;
+
+/**
+ * Match one `include`/`exclude` entry against real files under `dir`, using
+ * `node:fs`'s own glob engine — the real implementation this guard can reach
+ * without `pnpm install` (ADR-045). A bare entry with no glob metacharacters
+ * is resolved the way tsc resolves one: a single existing file is that file
+ * literally; anything else (a directory, or a path that doesn't exist yet)
+ * is treated as a directory reference and matched recursively.
+ *
+ * @param {string} dir
+ * @param {string} pattern
+ * @returns {{ files: string[]; error: string | null }}
+ */
+function matchTsconfigGlob(dir, pattern) {
+  let expanded = pattern;
+  if (BARE_GLOB_ENTRY.test(pattern)) {
+    const abs = resolve(dir, pattern);
+    if (existsSync(abs) && !statSync(abs).isDirectory()) {
+      return { files: [pattern], error: null };
+    }
+    expanded = `${pattern}/**/*`;
+  }
+  try {
+    return { files: globSync(expanded, { cwd: dir }), error: null };
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    return { files: [], error: `unresolvable pattern "${pattern}" in ${dir}: ${reason}` };
+  }
+}
+
+/**
+ * Resolve the set of files a tsconfig project actually type-checks —
+ * `extends`, `include`, `exclude` and `files` all handled the way `tsc`
+ * itself handles them, matched against the real filesystem via `node:fs`'s
+ * `globSync` rather than a hand-rolled pattern matcher. A `files` entry is
+ * always covered regardless of `exclude` (tsc never filters `files` through
+ * `exclude`); an `include` match is dropped when `exclude` also matches it.
+ *
+ * @param {string} configPath
+ * @returns {{ files: Set<string>; errors: string[] }} Absolute file paths;
+ *   `errors` is non-empty when the config or a glob in it could not be read,
+ *   in which case `files` reflects whatever still resolved (often nothing).
  */
 export function resolveProjectFileSet(configPath) {
-  if (!existsSync(configPath)) return new Set();
-  const readResult = ts.readConfigFile(configPath, ts.sys.readFile);
-  if (readResult.error) return new Set();
-  const parsed = ts.parseJsonConfigFileContent(readResult.config, ts.sys, dirname(configPath));
-  return new Set(parsed.fileNames.map((fileName) => resolve(fileName)));
+  if (!existsSync(configPath)) {
+    return { files: new Set(), errors: [`${configPath} does not exist`] };
+  }
+
+  let includeField, filesField, excludeGlobs;
+  try {
+    includeField = resolveArrayFieldPresence(configPath, 'include');
+    filesField = resolveArrayFieldPresence(configPath, 'files');
+    excludeGlobs = resolveEffectiveExclude(configPath);
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    return { files: new Set(), errors: [`${configPath} is not valid JSON: ${reason}`] };
+  }
+
+  const unitDir = dirname(configPath);
+  let includeGlobs;
+  if (includeField.present) includeGlobs = includeField.value;
+  else if (filesField.present) includeGlobs = [];
+  else includeGlobs = ['**/*'];
+
+  /** @type {string[]} */
+  const errors = [];
+  const covered = new Set();
+  for (const file of filesField.value) {
+    if (typeof file === 'string') covered.add(resolve(unitDir, file));
+  }
+
+  const includedAbs = new Set();
+  for (const pattern of includeGlobs) {
+    if (typeof pattern !== 'string') continue;
+    const { files, error } = matchTsconfigGlob(unitDir, pattern);
+    if (error) errors.push(error);
+    for (const rel of files) includedAbs.add(resolve(unitDir, rel));
+  }
+  const excludedAbs = new Set();
+  for (const pattern of excludeGlobs) {
+    if (typeof pattern !== 'string') continue;
+    const { files, error } = matchTsconfigGlob(unitDir, pattern);
+    if (error) errors.push(error);
+    for (const rel of files) excludedAbs.add(resolve(unitDir, rel));
+  }
+  for (const file of includedAbs) {
+    if (!excludedAbs.has(file)) covered.add(file);
+  }
+
+  return { files: covered, errors };
 }
 
 const TEST_FILE_EXTENSION = /\.[cm]?tsx?$/;
@@ -334,28 +458,86 @@ export function findTestFilesOnDisk(unitDir, allUnitDirs) {
   return out;
 }
 
+const RECOGNIZED_TS_EXTENSIONS = ['.d.ts', '.tsx', '.ts', '.cts', '.mts'];
+
+/**
+ * The module specifier a file resolves to once a single recognized
+ * TypeScript extension is stripped. Tried longest-first so a declaration
+ * file's stem is computed from `.d.ts`, not a spurious `.ts` match.
+ *
+ * @param {string} filePath
+ * @returns {string}
+ */
+function moduleStem(filePath) {
+  for (const ext of RECOGNIZED_TS_EXTENSIONS) {
+    if (filePath.endsWith(ext)) return filePath.slice(0, -ext.length);
+  }
+  return filePath;
+}
+
+/**
+ * Test files whose module specifier collides with a sibling's once a
+ * recognized extension is stripped — `Foo.test.ts` next to `Foo.test.tsx`.
+ * TypeScript's own file-list construction keeps only one of a colliding
+ * group with no config error, regardless of which `include` pattern or
+ * project revealed them both, so this runs independently of
+ * {@link resolveProjectFileSet}: a real glob match on both files proves
+ * nothing here, because the loss happens after matching succeeds, inside the
+ * compiler's Program construction. Flags every file in a colliding group
+ * rather than guessing which one `tsc` would keep — the fix (rename one of
+ * them) is the same regardless of which survives.
+ *
+ * @param {string} unitDir
+ * @param {ReadonlySet<string>} allUnitDirs Every discovered unit dir, including `unitDir` itself.
+ * @returns {string[]} Absolute paths of test files in a colliding group.
+ */
+export function findStemCollisionTestFiles(unitDir, allUnitDirs) {
+  /** @type {Map<string, string[]>} */
+  const byStem = new Map();
+  for (const file of findTestFilesOnDisk(unitDir, allUnitDirs)) {
+    const stem = moduleStem(file);
+    const bucket = byStem.get(stem);
+    if (bucket) bucket.push(file);
+    else byStem.set(stem, [file]);
+  }
+  /** @type {string[]} */
+  const victims = [];
+  for (const group of byStem.values()) {
+    if (group.length > 1) victims.push(...group);
+  }
+  return victims;
+}
+
 /**
  * Test files that sit on disk under a unit but that no `tsc --noEmit`
  * invocation in its `typecheck` script actually resolves — a narrowed
  * `include`, a missing second project for a tree like `scripts/` or `e2e/`,
- * or two files whose module specifier collides once their extension is
- * stripped (TypeScript keeps only one of `Foo.test.ts` / `Foo.test.tsx` when
- * both exist) all surface here the same way, because this compares against
- * TypeScript's own resolved file list rather than reasoning about the globs
- * that produced it.
+ * or a `include`/`exclude` glob {@link resolveProjectFileSet} could not read
+ * all surface here the same way, plus the same-stem collision
+ * {@link findStemCollisionTestFiles} catches independently of any glob.
  *
  * @param {string} unitDir
  * @param {ReadonlySet<string>} allUnitDirs Every discovered unit dir, including `unitDir` itself.
- * @returns {string[]} Absolute paths of on-disk test files no invoked project covers.
+ * @returns {{ files: string[]; errors: string[] }} Absolute paths of on-disk
+ *   test files no invoked project covers (including same-stem victims), and
+ *   any glob/config errors encountered while resolving those projects.
  */
 export function findUncoveredTestFiles(unitDir, allUnitDirs) {
   const { invocations } = readTypecheckInvocations(unitDir);
   const covered = new Set();
+  /** @type {string[]} */
+  const errors = [];
   for (const inv of invocations) {
     if (!inv.recognized || !inv.projectPath) continue;
-    for (const file of resolveProjectFileSet(inv.projectPath)) covered.add(file);
+    const resolved = resolveProjectFileSet(inv.projectPath);
+    errors.push(...resolved.errors);
+    for (const file of resolved.files) covered.add(file);
   }
-  return findTestFilesOnDisk(unitDir, allUnitDirs).filter((file) => !covered.has(resolve(file)));
+  const globUncovered = findTestFilesOnDisk(unitDir, allUnitDirs).filter(
+    (file) => !covered.has(resolve(file))
+  );
+  const stemCollisions = findStemCollisionTestFiles(unitDir, allUnitDirs);
+  return { files: [...new Set([...globUncovered, ...stemCollisions])], errors };
 }
 
 /**
@@ -428,9 +610,13 @@ function checkTypecheckScriptDetection() {
  * test file on disk, and flags one whose `include` is narrowed past a real
  * test file — the shape `offendingExcludes` cannot see because there is no
  * `exclude` involved at all. Also proves the same detector catches the
- * TypeScript same-stem-collision case: `Foo.test.ts` sitting next to
- * `Foo.test.tsx` in a directory-form `include`, where TypeScript silently
- * keeps only one of the two with no config error.
+ * TypeScript same-stem-collision case (`Foo.test.ts` next to `Foo.test.tsx`,
+ * both flagged since which one `tsc` keeps is unspecified); a script
+ * retargeted at a `tsconfig.build.json`-shaped config (`files: []`, no
+ * `include`) resolves to zero coverage rather than defaulting to
+ * "everything"; and — the required degenerate case per ADR-045 — a config
+ * that fails to parse reports an error and treats the unit as uncovered
+ * rather than crashing or silently passing.
  *
  * @returns {boolean}
  */
@@ -462,19 +648,56 @@ function checkUncoveredTestFilesDetection() {
     writeFileSync(join(root, 'same-stem/src/Foo.test.ts'), 'export {};\n');
     writeFileSync(join(root, 'same-stem/src/Foo.test.tsx'), 'export {};\n');
 
-    const allUnitDirs = new Set(['covered', 'narrowed', 'same-stem'].map((dir) => join(root, dir)));
+    writeUnit('retargeted', { files: [] });
+    mkdirSync(join(root, 'retargeted/src/__tests__'), { recursive: true });
+    writeFileSync(join(root, 'retargeted/src/__tests__/index.test.ts'), 'export {};\n');
+
+    mkdirSync(join(root, 'malformed/src/__tests__'), { recursive: true });
+    writeFileSync(join(root, 'malformed/tsconfig.json'), '{ this is not json');
+    writeFileSync(
+      join(root, 'malformed/package.json'),
+      JSON.stringify({ scripts: { typecheck: 'tsc --noEmit' } })
+    );
+    writeFileSync(join(root, 'malformed/src/__tests__/index.test.ts'), 'export {};\n');
+
+    const allUnitDirs = new Set(
+      ['covered', 'narrowed', 'same-stem', 'retargeted', 'malformed'].map((dir) => join(root, dir))
+    );
 
     const coveredResult = findUncoveredTestFiles(join(root, 'covered'), allUnitDirs);
     const narrowedResult = findUncoveredTestFiles(join(root, 'narrowed'), allUnitDirs);
     const sameStemResult = findUncoveredTestFiles(join(root, 'same-stem'), allUnitDirs);
+    const retargetedResult = findUncoveredTestFiles(join(root, 'retargeted'), allUnitDirs);
+    const malformedResult = findUncoveredTestFiles(join(root, 'malformed'), allUnitDirs);
 
     return (
-      coveredResult.length === 0 &&
-      narrowedResult.length === 1 &&
-      narrowedResult[0]?.endsWith(join('src', '__tests__', 'index.test.ts')) === true &&
-      sameStemResult.length === 1 &&
-      sameStemResult[0]?.endsWith('Foo.test.tsx') === true
+      coveredResult.files.length === 0 &&
+      coveredResult.errors.length === 0 &&
+      narrowedResult.files.length === 1 &&
+      narrowedResult.files[0]?.endsWith(join('src', '__tests__', 'index.test.ts')) === true &&
+      sameStemResult.files.length === 2 &&
+      sameStemResult.files.some((f) => f.endsWith('Foo.test.ts')) &&
+      sameStemResult.files.some((f) => f.endsWith('Foo.test.tsx')) &&
+      retargetedResult.files.length === 1 &&
+      malformedResult.files.length === 1 &&
+      malformedResult.errors.length === 1
     );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+}
+
+/**
+ * Prove a repo where discovery finds nothing is reported as a failure, not
+ * folded into a vacuously empty (therefore "clean") failure list (ADR-045).
+ *
+ * @returns {boolean}
+ */
+function checkEmptyDiscoveryIsReported() {
+  const root = mkdtempSync(join(tmpdir(), 'tests-typechecked-selftest-empty-'));
+  try {
+    const { unitCount, failures } = scanRepo(root);
+    return unitCount === 0 && failures.length === 1;
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
@@ -508,6 +731,7 @@ function selfTest() {
   const extendsOk = checkExtendsResolution();
   const typecheckScriptOk = checkTypecheckScriptDetection();
   const uncoveredTestFilesOk = checkUncoveredTestFilesDetection();
+  const emptyDiscoveryOk = checkEmptyDiscoveryIsReported();
 
   const ok =
     catchesHidden &&
@@ -515,7 +739,8 @@ function selfTest() {
     commentsOk &&
     extendsOk &&
     typecheckScriptOk &&
-    uncoveredTestFilesOk;
+    uncoveredTestFilesOk &&
+    emptyDiscoveryOk;
   if (!ok) {
     console.error('SELF-TEST FAILED — guard did not behave as expected:');
     console.error(`  caught every test-hiding glob:      ${catchesHidden}`);
@@ -524,34 +749,47 @@ function selfTest() {
     console.error(`  resolved extends correctly:         ${extendsOk}`);
     console.error(`  detected typecheck script coverage: ${typecheckScriptOk}`);
     console.error(`  detected uncovered test files:      ${uncoveredTestFilesOk}`);
+    console.error(`  reported an empty discovery:        ${emptyDiscoveryOk}`);
   } else {
     console.log(
       'self-test OK — guard catches test-hiding excludes, retargeted typecheck scripts, ' +
-        'and narrowed includes (incl. same-stem .ts/.tsx collisions), passes legitimate shapes.'
+        'narrowed includes (incl. same-stem .ts/.tsx collisions), and empty discovery, passes ' +
+        'legitimate shapes.'
     );
   }
   return ok;
 }
 
-function main() {
-  const args = process.argv.slice(2);
-  if (args.includes('--help') || args.includes('-h')) {
-    console.log(
-      'Usage: node scripts/ci/check-tests-typechecked.mjs [--self-test]\n' +
-        "Fails if a unit's tsconfig.json excludes its own test files from tsc."
-    );
-    process.exit(2);
-  }
-  if (args.includes('--self-test')) {
-    process.exit(selfTest() ? 0 : 1);
-  }
-
-  const unitDirs = discoverUnitDirs(repoRoot);
+/**
+ * Scan every discovered unit under `root` for all three test-hiding shapes.
+ * Separated from `main` so a caller (the self-test, or a future test file)
+ * can assert on the result directly instead of parsing `main`'s stdout or
+ * spawning a subprocess to observe its exit code.
+ *
+ * Discovery asserts a floor rather than looping silently over whatever it
+ * finds (ADR-045): zero discovered units is reported as its own failure, not
+ * folded into an empty, therefore vacuously "clean", failure list.
+ *
+ * @param {string} root
+ * @returns {{ unitCount: number; failures: string[] }}
+ */
+export function scanRepo(root) {
+  const unitDirs = discoverUnitDirs(root);
   const unitDirSet = new Set(unitDirs);
   /** @type {string[]} */
   const failures = [];
+
+  if (unitDirs.length === 0) {
+    failures.push(
+      'discovered zero unit type-check projects under libs/ and pillars/ — that is not the ' +
+        'same as every unit being clean. Either both roots are genuinely empty (unlikely) or ' +
+        'discoverUnitDirs no longer finds what it used to.'
+    );
+    return { unitCount: 0, failures };
+  }
+
   for (const dir of unitDirs) {
-    const unitLabel = relative(repoRoot, dir);
+    const unitLabel = relative(root, dir);
 
     const offenders = offendingExcludes(dir);
     if (offenders.length > 0) {
@@ -567,13 +805,33 @@ function main() {
     }
 
     const uncovered = findUncoveredTestFiles(dir, unitDirSet);
-    if (uncovered.length > 0) {
-      const files = uncovered.map((file) => relative(repoRoot, file)).join(', ');
+    if (uncovered.files.length > 0) {
+      const files = uncovered.files.map((file) => relative(root, file)).join(', ');
       failures.push(`${unitLabel} has test files no invoked tsc project resolves: ${files}`);
+    }
+    for (const error of uncovered.errors) {
+      failures.push(`${unitLabel}: ${error}`);
     }
   }
 
-  console.log(`Scanned ${unitDirs.length} unit type-check project(s).`);
+  return { unitCount: unitDirs.length, failures };
+}
+
+function main() {
+  const args = process.argv.slice(2);
+  if (args.includes('--help') || args.includes('-h')) {
+    console.log(
+      'Usage: node scripts/ci/check-tests-typechecked.mjs [--self-test]\n' +
+        "Fails if a unit's tsconfig.json excludes its own test files from tsc."
+    );
+    process.exit(2);
+  }
+  if (args.includes('--self-test')) {
+    process.exit(selfTest() ? 0 : 1);
+  }
+
+  const { unitCount, failures } = scanRepo(repoRoot);
+  console.log(`Scanned ${unitCount} unit type-check project(s).`);
   if (failures.length === 0) {
     console.log('OK — every unit type-checks its own tests.');
     process.exit(0);
