@@ -21,4 +21,4 @@
  */
 export type Capability<ModuleId extends string = string> = `${ModuleId}.${string}`;
 
-const _ciGateBlockProof: number = 'deliberately breaks typecheck to test whether CI Gate blocks merge';
+const _ciGateBlockProof: number = 'deliberately fails typecheck to prove the gate blocks merge';
