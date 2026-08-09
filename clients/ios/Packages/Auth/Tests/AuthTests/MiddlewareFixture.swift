@@ -1,5 +1,4 @@
 import Auth
-import Foundation
 import HTTPTypes
 import OpenAPIRuntime
 

@@ -1,5 +1,4 @@
 import Auth
-import Foundation
 import Synchronization
 
 /// Releases every waiter only once `count` of them have arrived.

@@ -66,8 +66,24 @@ public struct BFMHTTPClient: Sendable {
     ///
     /// Answers without a database round-trip on the far side, so a timeout here
     /// means the network or the process, never a slow query.
+    ///
+    /// Converts its `ClientError` like every other operation. This one carries
+    /// no credential — the operation takes no input at all — but
+    /// ``BFMClientError`` states that no `ClientError` leaves this module, and
+    /// an invariant with one exception is one a reader has to check rather than
+    /// rely on.
+    ///
+    /// - Throws: ``BFMClientError/undocumentedResponse(operation:statusCode:)``
+    ///   for a status the contract does not describe, and
+    ///   ``BFMClientError/transportFailure(operation:summary:)`` when the call
+    ///   did not complete.
     public func health() async throws -> BFMHealth {
-        let output = try await generated.health()
+        let output: Operations.Health.Output
+        do {
+            output = try await generated.health()
+        } catch let error as ClientError {
+            throw BFMClientError.transportFailure(error, operation: Operations.Health.id)
+        }
         switch output {
         case .ok(let ok):
             let payload = try ok.body.json

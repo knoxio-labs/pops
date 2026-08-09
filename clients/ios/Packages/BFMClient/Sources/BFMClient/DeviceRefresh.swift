@@ -113,8 +113,12 @@ extension BFMHTTPClient {
     ///     `Auth` builds those bytes; assembling them anywhere else is how the
     ///     two ends end up signing different things and failing as a `401`.
     /// - Throws: ``BFMClientError/refreshRefused(_:)`` for a documented refusal,
-    ///   ``BFMClientError/undocumentedResponse(operation:statusCode:)`` for
-    ///   anything else, and the transport's own error when nothing answered.
+    ///   ``BFMClientError/undocumentedResponse(operation:statusCode:)`` for a
+    ///   status the contract does not describe, and
+    ///   ``BFMClientError/transportFailure(operation:summary:)`` when the call
+    ///   did not complete. Never an `OpenAPIRuntime.ClientError`: that type
+    ///   renders this operation's input, which is the refresh token and the
+    ///   signature.
     public func refresh(
         refreshToken: String,
         nonce: String,
