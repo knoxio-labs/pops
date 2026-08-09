@@ -22,6 +22,14 @@ import OpenAPIRuntime
 /// So no `ClientError` leaves this module. ``transportFailure(operation:summary:)``
 /// carries the diagnostic half — what went wrong and what the far side said —
 /// and nothing that was sent.
+///
+/// One structural premise holds that up, and it is checked rather than trusted.
+/// Each operation reads its payload with `try …body.json` outside the
+/// `do`/`catch` that converts `ClientError`, which is safe because a malformed
+/// body is decoded inside `UniversalClient` and arrives already wrapped, and
+/// because every generated body accessor has one case and so cannot throw. A
+/// response declaring a *second* content type would break the second half
+/// silently — `GeneratedSourcesTests` fails when the generator emits one.
 public enum BFMClientError: Error, Hashable, Sendable {
     /// A status code the OpenAPI snapshot does not document for this operation.
     case undocumentedResponse(operation: String, statusCode: Int)
