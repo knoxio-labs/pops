@@ -1,4 +1,30 @@
-pnpm typecheck
+# Husky runs this under `sh -e`, so an unguarded failing command aborts the push.
+#
+# The typecheck is scoped to what the push contains rather than run
+# unconditionally: it is `tsc -b` over the whole compiled graph plus a fan-out
+# to 24 units, one of which runs `cargo check`, and a branch that touches only
+# `clients/ios` (in neither workspace — ADR-043) cannot affect any of it.
+# scripts/pre-push-scope.mjs decides, and defaults to `run` on any doubt; the
+# `|| decision=run` below keeps that true even if node itself cannot start.
+decision=$(node scripts/pre-push-scope.mjs) || decision=run
+
+if [ "$decision" = skip ]; then
+  echo "pre-push: nothing in this push reaches the pnpm/cargo workspace — typecheck skipped."
+else
+  # Checked here rather than left to `tsc`, which reports a stale install as a
+  # missing module in whichever package imports it first — a file the author has
+  # usually never opened, with a message that reads like their mistake.
+  if [ ! -d node_modules ]; then
+    echo "pre-push: node_modules is missing. Run 'pnpm install --frozen-lockfile' and push again." >&2
+    exit 1
+  fi
+  if [ pnpm-lock.yaml -nt node_modules/.modules.yaml ]; then
+    echo "pre-push: pnpm-lock.yaml is newer than your last install. If the typecheck"
+    echo "          below fails on a module you did not touch, that is why —"
+    echo "          run 'pnpm install --frozen-lockfile' and push again."
+  fi
+  pnpm typecheck
+fi
 
 branch=$(git branch --show-current)
 

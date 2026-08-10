@@ -26,6 +26,8 @@ die() {
 destination=''
 forbid_skips=false
 allow_provisioning_updates=false
+without_building=false
+derived_data=''
 declare -a only_testing=()
 declare -a required=()
 
@@ -42,6 +44,20 @@ while [ "$#" -gt 0 ]; do
         # without it fails on a fresh machine with "No profiles for … were
         # found"; a simulator lane needs no signing identity at all.
         --allow-provisioning-updates) allow_provisioning_updates=true ;;
+        # Run against products something else already compiled, rather than
+        # building here. `mise run test` uses this so the tree is compiled once
+        # per run — by `build:for-testing`, whose log `lint:analyze` then reads.
+        # Without it the log would describe a build that is not the one tested.
+        --without-building) without_building=true ;;
+        # Where those products are. Required with --without-building rather
+        # than left to xcodebuild's default location: falling back to the
+        # default would find SOME earlier build and test it, which is a green
+        # run against the wrong bytes and no way to tell from the output.
+        --derived-data)
+            [ "$#" -ge 2 ] || die "--derived-data needs a path."
+            derived_data="$2"
+            shift
+            ;;
         # Narrows the run to some of the scheme's testables. The scheme carries
         # every package's test target as well as the app's, so the two lanes
         # that are about the app alone say so here rather than each getting a
@@ -73,20 +89,46 @@ done
 
 [ -n "$destination" ] || die "no destination given." \
     "usage: app-test-lane.sh <xcodebuild destination> [--forbid-skips]" \
-    "       [--allow-provisioning-updates] [--only <target>]…" \
+    "       [--allow-provisioning-updates] [--without-building]" \
+    "       [--derived-data <path>] [--only <target>]…" \
     "       [--require-testable <target>]…"
+
+if [ "$without_building" = true ] && [ -z "$derived_data" ]; then
+    die "--without-building needs --derived-data." \
+        "Without it xcodebuild looks in its default derived-data location and" \
+        "tests whatever build happens to be there, which passes against bytes" \
+        "nobody in this run compiled."
+fi
+
+# Only when we are NOT building. `xcodebuild -derivedDataPath` creates the
+# directory happily, so demanding it exist would refuse a perfectly good
+# building run against a fresh path. It is `--without-building` that needs the
+# products to be there already — and needs them at THIS path rather than
+# wherever xcodebuild would otherwise look.
+if [ "$without_building" = true ] && [ ! -d "$derived_data" ]; then
+    die "no derived data at '$derived_data'." \
+        "'mise run build:for-testing' writes it."
+fi
 
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 result="$work/test.xcresult"
 
+action='test'
+if [ "$without_building" = true ]; then
+    action='test-without-building'
+fi
+
 declare -a xcodebuild_args=(
-    test
+    "$action"
     -project Pops.xcodeproj
     -scheme Pops
     -destination "$destination"
     -resultBundlePath "$result"
 )
+if [ -n "$derived_data" ]; then
+    xcodebuild_args+=(-derivedDataPath "$derived_data")
+fi
 for target in ${only_testing+"${only_testing[@]}"}; do
     xcodebuild_args+=("-only-testing:$target")
 done

@@ -21,6 +21,27 @@ settings:
     ENABLE_USER_SCRIPT_SANDBOXING: YES
     GCC_TREAT_WARNINGS_AS_ERRORS: YES
     SWIFT_TREAT_WARNINGS_AS_ERRORS: YES
+  configs:
+    # Debug builds one architecture — the one the machine will actually run.
+    # Without this the simulator ARCHS are `arm64 x86_64` and every Debug build
+    # compiles the whole tree twice: measured on a `build-for-testing` log as 66
+    # `-target arm64-apple-ios26.0-simulator` invocations beside 66 identical
+    # `x86_64` ones. Nothing runs the x86_64 slice — the GitHub macOS runners are
+    # Apple Silicon and so is every machine here — so half that compile was
+    # produced for no consumer.
+    #
+    # IT ONLY TAKES EFFECT WITH A CONCRETE DESTINATION. Against
+    # `generic/platform=iOS Simulator` Xcode overrides this back to NO, because a
+    # generic destination has no active architecture to be; `-showBuildSettings`
+    # reports `ONLY_ACTIVE_ARCH = NO, ARCHS = arm64 x86_64` even with this set.
+    # That is why `build:for-testing` in mise.toml names the simulator it is
+    # about to test on, and why `build` — which deliberately keeps the generic
+    # destination — still compiles both and is left that way.
+    #
+    # Release is untouched: a shipped binary is not built for the architecture
+    # that happened to compile it.
+    Debug:
+      ONLY_ACTIVE_ARCH: YES
 
 packages:
   AppCore:
