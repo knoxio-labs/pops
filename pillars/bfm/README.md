@@ -126,11 +126,12 @@ a permanent compromise. Two mechanisms answer that, and both have to hold:
 
 Two things to know before reading the handler:
 
-- **The signed message format lives in exactly one place**, the header of
-  `src/api/auth/refresh-exchange.ts`. `clients/ios` reproduces it byte for
-  byte, and no compiler checks the two against each other; getting it wrong
-  fails as a `401` indistinguishable from an expired token, which is why it is
-  stated there and nowhere else.
+- **The signed message format is described in exactly one place**, the header of
+  `src/api/auth/refresh-exchange.ts`. `clients/ios` reproduces it byte for byte,
+  and no compiler checks the two against each other; getting it wrong fails as a
+  `401` indistinguishable from an expired token, which is why it is stated there
+  and nowhere else — and why the bytes themselves are pinned by a committed
+  vector both languages assert against, `contracts/refresh-message-v1.json`.
 - **Reuse detection runs before the signature is verified.** That looks
   backwards and is not: reaching it needs a token this server issued, so
   possession is the evidence, and checking the signature first would let a
@@ -461,8 +462,9 @@ pillars/bfm/
 ├── package.json                @pops/bfm
 ├── mise.toml                    per-pillar tasks
 ├── scripts/generate-openapi.ts  ts-rest contract → openapi/bfm.openapi.json
+├── scripts/generate-refresh-message-fixture.ts  the signed-message vector — see below
 ├── openapi/bfm.openapi.json
-├── contracts/                    vendored from clients/ios — see below
+├── contracts/                    two vectors shared with clients/ios — see below
 ├── migrations/                   committed SQL journal, applied by openBfmDb
 ├── app/                         @pops/app-bfm — the shell's Devices surface
 └── src/
@@ -509,26 +511,39 @@ Every boot-time choice therefore lives in `boot-env.ts`, which is unit-tested;
 `server.ts` is excluded from coverage on exactly that basis. Adding logic back
 to it invalidates the exclusion.
 
-### `contracts/` — the one artefact this pillar did not author
+### `contracts/` — two vectors this pillar shares with the phone, pointing opposite ways
 
-`contracts/device-signature-v1.json` pins the ECDSA P-256 encodings the phone
-signs under and `src/api/auth/device-signature.ts` verifies against. It can only
-be produced by the Swift side, so the canonical copy lives at
-`clients/ios/Contracts/device-signature-v1.json` and this is a vendored copy —
-the shape ADR-033 established for a contract crossing a unit boundary, applied
-here because ADR-043 forbids any unit depending on a client. Nothing in this
-pillar reads a path under `clients/`.
+Both files pin something the iOS app and this pillar must agree on byte for
+byte, both exist twice, and both are guarded against drift. What differs is who
+authors them, because that follows who can say what the right answer is.
 
-The two copies must stay byte-identical, and
-`scripts/ci/check-device-signature-fixture.mjs` fails the build if they do not
-— in either direction, and whether the difference is a value or only
-whitespace. To re-vendor after the canonical copy changes, run
-`mise run fixture:device-signature:vendor` from the repo root; that root task is
-the only place the copy step lives, because neither unit may reach into the
-other's directory.
+| File                       | Pins                                            | Canonical copy                                                          | This copy |
+| -------------------------- | ----------------------------------------------- | ----------------------------------------------------------------------- | --------- |
+| `device-signature-v1.json` | the ECDSA P-256 encodings the phone signs under | `clients/ios/Contracts/` — only CryptoKit can make a real signature     | vendored  |
+| `refresh-message-v1.json`  | the exact bytes a refresh is signed over        | here — the format is this pillar's, and this pillar rejects a wrong one | canonical |
 
-`openapi/` is the mirror image: this pillar authors that one, and `clients/ios`
-will vendor it (POPS-1380).
+The vendoring in each direction is the shape ADR-033 established for a contract
+crossing a unit boundary, applied because ADR-043 forbids a unit depending on a
+client. Nothing in this pillar reads a path under `clients/`, and nothing in
+`clients/ios` reads a path under `pillars/`.
+
+Each pair must stay byte-identical, and its guard fails the build if it does not
+— in either direction, and whether the difference is a value or only whitespace.
+`scripts/ci/check-device-signature-fixture.mjs` owns the first,
+`scripts/ci/check-refresh-message-fixture.mjs` the second, and both share the
+copy-set machinery in `scripts/ci/fixture-copies.mjs`.
+
+Re-vendor or regenerate from the repo root, never from inside either unit —
+that is where the copy step lives, because neither unit may reach into the
+other's directory:
+
+```bash
+mise run fixture:device-signature:vendor   # after the canonical copy changes
+mise run fixture:refresh-message           # regenerate + re-vendor; safe to re-run
+```
+
+`openapi/` is a third artefact with the same shape: this pillar authors it, and
+`clients/ios` vendors it (POPS-1380).
 
 ## Commands
 

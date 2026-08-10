@@ -5,12 +5,19 @@ import Foundation
 ///
 /// This is one half of a contract no compiler can check. The other half is
 /// `refreshSignatureMessage()` in `pillars/bfm/src/api/auth/refresh-exchange.ts`,
-/// whose file header is the format's only definition, and the BFM is the party
-/// that rejects a wrong one. A disagreement of a single byte produces a
+/// whose file header is the format's only prose definition, and the BFM is the
+/// party that rejects a wrong one. A disagreement of a single byte produces a
 /// signature that does not verify, which reaches this app as a `401`
 /// indistinguishable from an expired token — so the failure looks like a
 /// credential problem and sends whoever is debugging it to the wrong place
 /// entirely.
+///
+/// What stands in for the compiler is a committed vector the BFM generates and
+/// this client vendors at `clients/ios/Contracts/refresh-message-v1.json`.
+/// `RefreshSignatureMessageTests` asserts this type against it, the pillar
+/// asserts its own construction against the same bytes, and a CI guard fails
+/// on any drift between the copies. Changing this type means changing that
+/// vector too — and the reverse.
 ///
 /// ```
 /// BFM-REFRESH-V1\n<nonce>\n<sha256(refreshToken), lowercase hex>

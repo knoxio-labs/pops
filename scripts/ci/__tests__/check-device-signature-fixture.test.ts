@@ -9,8 +9,8 @@ import {
   checkAllCopies,
   checkFixture,
   FIXTURE_COPIES,
-  isFileNotFound,
 } from '../check-device-signature-fixture.mjs';
+import { isFileNotFound } from '../fixture-copies.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..', '..');

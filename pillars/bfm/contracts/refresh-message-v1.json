@@ -1,0 +1,9 @@
+{
+  "domain": "BFM-REFRESH-V1",
+  "messageBase64": "QkZNLVJFRlJFU0gtVjEKWms5dVkyVXRabTl5TFhSb1pTMTBaWE4wTFhabFkzUnZjZwowZTY2YTA0NTkwODkyZWRkNDJkMzQ0OGNlODExNDRmMjM3MDZhNmQyMmMyMGM1Nzg2ZDgyZGIzYzMwNzc5ZTBl",
+  "nonce": "Zk9uY2UtZm9yLXRoZS10ZXN0LXZlY3Rvcg",
+  "note": "Pins the exact bytes an iOS handset signs for POST /devices/refresh. The format is the BFM's to define, so pillars/bfm/contracts/ holds the canonical copy and clients/ios/Contracts/ holds a vendored one; a CI guard fails on any drift between them. The ECDSA encodings applied to these bytes are pinned separately, by device-signature-v1.json.",
+  "refreshToken": "pops-test-refresh-token-not-a-real-credential",
+  "refreshTokenSha256Hex": "0e66a04590892edd42d3448ce81144f23706a6d22c20c5786d82db3c30779e0e",
+  "version": 1
+}

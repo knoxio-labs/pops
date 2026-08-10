@@ -5,57 +5,48 @@ import Testing
 
 /// The half of a cross-language contract that lives on this side.
 ///
-/// The expected bytes below were not hand-assembled from the format's
-/// description — that is the mistake the format's own file header warns about.
-/// They were produced by running the BFM's `refreshSignatureMessage()` inputs
-/// through `node:crypto` exactly as `pillars/bfm/src/api/auth/refresh-exchange.ts`
-/// and `hashRefreshToken` in `db/services/refresh-tokens.ts` do:
-///
-/// ```
-/// createHash('sha256').update(token, 'utf8').digest('hex')
-/// Buffer.from(`BFM-REFRESH-V1\n${nonce}\n${hash}`, 'utf8')
-/// ```
-///
-/// That makes this a real check of the Swift construction against the Node one
-/// **at one point in time**. It is not a continuous one: nothing fails if the
-/// BFM changes its format and this literal stays behind. Closing that needs the
-/// vector committed where both languages read it — the arrangement
-/// `clients/ios/Contracts/device-signature-v1.json` already has for the
-/// encodings, which deliberately does not cover the message format. It is
-/// tracked; until it lands, this suite is the only thing between a format
-/// change and a fleet of handsets that 401 for no visible reason.
+/// The expected bytes are not written out here and were never hand-assembled
+/// from the format's description — that is the mistake the format's own file
+/// header warns about. They are read from
+/// `clients/ios/Contracts/refresh-message-v1.json`, a vendored copy of the
+/// vector the BFM generates from its own `refreshSignatureMessage()` and
+/// asserts against in its own suite. Both languages therefore fail against the
+/// same bytes: a format change on either side reddens a build instead of
+/// shipping a fleet of handsets whose signatures stop verifying — a failure
+/// that arrives as a `401` indistinguishable from an expired token.
 @Suite("RefreshSignatureMessage")
 internal struct RefreshSignatureMessageTests {
-    private static let nonce = "Zk9uY2UtZm9yLXRoZS10ZXN0LXZlY3Rvcg"
-    private static let refreshToken = "pops-test-refresh-token-not-a-real-credential"
-    private static let expectedBase64 = """
-        QkZNLVJFRlJFU0gtVjEKWms5dVkyVXRabTl5TFhSb1pTMTBaWE4wTFhabFkzUnZjZwowZTY2YTA0NTkwODkyZWRk\
-        NDJkMzQ0OGNlODExNDRmMjM3MDZhNmQyMmMyMGM1Nzg2ZDgyZGIzYzMwNzc5ZTBl
-        """
+    let fixture: RefreshMessageFixture
+
+    init() throws {
+        fixture = try RefreshMessageFixture.load()
+    }
 
     @Test("the message is byte-for-byte what the BFM builds")
-    func matchesTheServerConstruction() throws {
-        let expected = try #require(Data(base64Encoded: Self.expectedBase64))
-
+    func matchesTheServerConstruction() {
         let built = RefreshSignatureMessage.bytes(
-            nonce: Self.nonce,
-            refreshToken: Self.refreshToken
+            nonce: fixture.nonce,
+            refreshToken: fixture.refreshToken
         )
 
-        #expect(built == expected)
+        #expect(built == fixture.message)
+    }
+
+    @Test("the domain prefix is the one the vector pins")
+    func usesThePinnedDomain() {
+        #expect(RefreshSignatureMessage.domain == fixture.domain)
     }
 
     @Test("the token appears in the message only as a digest")
     func neverCarriesTheTokenItself() throws {
         let built = RefreshSignatureMessage.bytes(
-            nonce: Self.nonce,
-            refreshToken: Self.refreshToken
+            nonce: fixture.nonce,
+            refreshToken: fixture.refreshToken
         )
         let rendered = try #require(String(data: built, encoding: .utf8))
 
-        #expect(!rendered.contains(Self.refreshToken))
-        #expect(
-            rendered.contains("0e66a04590892edd42d3448ce81144f23706a6d22c20c5786d82db3c30779e0e"))
+        #expect(!rendered.contains(fixture.refreshToken))
+        #expect(rendered.contains(fixture.refreshTokenSha256Hex))
     }
 
     @Test("exactly two separators, and no trailing newline")

@@ -34,7 +34,10 @@
  * `check-vendored-contracts.mjs` — that guard pairs a vendored copy with a
  * producing PILLAR by filename convention, and this pair inverts the direction
  * (the client is the producer) and matches no convention it could discover.
- * One guard proving both things beats two each proving half.
+ * One guard proving both things beats two each proving half. The copy-set
+ * mechanics themselves are `fixture-copies.mjs`, shared with
+ * `check-refresh-message-fixture.mjs`, which pins the message these encodings
+ * are applied to and whose canonical copy runs the other way.
  *
  * Reading files under `clients/` from a repo-root script is not a dependency
  * on the client in the ADR-043 sense: nothing here imports it, links it or
@@ -56,9 +59,15 @@
  */
 
 import { createPublicKey, verify } from 'node:crypto';
-import { readFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import {
+  checkCopies,
+  repoCopyReader,
+  resolveCanonical,
+  selfTestCopyHandling,
+} from './fixture-copies.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..');
@@ -84,30 +93,7 @@ export const FIXTURE_COPIES = Object.freeze([
 /** Only a client can generate the vector, so only a client can hold the original. */
 const CANONICAL_ROOT = 'clients/';
 
-/**
- * The canonical copy — the one every other copy is compared against and
- * restored from.
- *
- * Identified by where it lives rather than by position. The list above is
- * meant to grow, so an index would silently promote a consumer's vendored copy
- * to canonical the day someone reorders it, and the drift check would then
- * enforce agreement with the wrong file — passing while the real contract had
- * moved. Ambiguity is fatal here rather than resolved by picking the first
- * match: two originals is not a state this guard can check anything against.
- *
- * @returns {{ role: string, path: string }}
- */
-function resolveCanonical() {
-  const found = FIXTURE_COPIES.filter((copy) => copy.path.startsWith(CANONICAL_ROOT));
-  if (found.length !== 1) {
-    throw new Error(
-      `expected exactly one device-signature fixture copy under ${CANONICAL_ROOT}, found ${String(found.length)}`
-    );
-  }
-  return found[0];
-}
-
-const CANONICAL = resolveCanonical();
+const CANONICAL = resolveCanonical(FIXTURE_COPIES, CANONICAL_ROOT);
 
 /** The encoding contract, restated here so the fixture cannot redefine itself. */
 const CONTRACT = Object.freeze({
@@ -242,77 +228,14 @@ export function checkFixture(fixture) {
 }
 
 /**
- * Whether a `readFileSync` rejection means the file is absent, as opposed to
- * present but unreadable.
- *
- * Exported because {@link checkAllCopies}'s `null` means "absent" and nothing
- * else, and every reader handed to it has to agree — including the one in the
- * unit suite. A reader that also returns `null` for EACCES turns a permissions
- * problem into a "missing" report, which is the misdirection this predicate
- * exists to prevent; sharing it makes that agreement structural rather than a
- * convention two files are each expected to remember.
- *
- * @param {unknown} error
- * @returns {boolean}
- */
-export function isFileNotFound(error) {
-  return typeof error === 'object' && error !== null && 'code' in error && error.code === 'ENOENT';
-}
-
-/**
  * Check every copy of the fixture: each one present, each one byte-identical
  * to the canonical copy, and each one passing {@link checkFixture} on its own.
- *
- * Verifying each copy separately rather than only the canonical one is not
- * redundant with the equality check — it is what makes the two independent.
- * Should the equality comparison ever be neutered, the crypto assertions still
- * run against the bytes the BFM's tests actually read.
- *
- * Pure in its I/O so the self-test can drive it with a reader that returns
- * drifted or missing copies.
  *
  * @param {(repoRelativePath: string) => string | null} read Reads a copy, or null if absent.
  * @returns {string[]} One message per failure; empty means every copy holds.
  */
 export function checkAllCopies(read) {
-  /** @type {string[]} */
-  const failures = [];
-  /** @type {Map<string, string>} */
-  const texts = new Map();
-
-  for (const { role, path } of FIXTURE_COPIES) {
-    const text = read(path);
-    if (text === null) {
-      failures.push(`${path}: missing — the ${role} copy of the fixture is not on disk`);
-      continue;
-    }
-    texts.set(path, text);
-  }
-
-  const canonicalText = texts.get(CANONICAL.path);
-  if (canonicalText !== undefined) {
-    for (const [path, text] of texts) {
-      if (path !== CANONICAL.path && text !== canonicalText) {
-        failures.push(
-          `${path}: drifted from ${CANONICAL.path} — the copies must be byte-identical`
-        );
-      }
-    }
-  }
-
-  for (const [path, text] of texts) {
-    /** @type {Fixture} */
-    let fixture;
-    try {
-      fixture = JSON.parse(text);
-    } catch (error) {
-      failures.push(`${path}: not parseable as JSON — ${String(error)}`);
-      continue;
-    }
-    for (const failure of checkFixture(fixture)) failures.push(`${path}: ${failure}`);
-  }
-
-  return failures;
+  return checkCopies(FIXTURE_COPIES, CANONICAL.path, read, checkFixture);
 }
 
 /**
@@ -353,52 +276,11 @@ function selfTest(valid) {
     }
   }
 
-  const validText = JSON.stringify(valid);
-  /** @param {Map<string, string>} files */
-  const readerOver = (files) => (/** @type {string} */ p) => files.get(p) ?? null;
-  const identical = new Map(FIXTURE_COPIES.map(({ path }) => [path, validText]));
-
-  // Drift is only meaningful against the canonical copy, so every case below
-  // perturbs a copy that is NOT it — chosen by that property rather than by
-  // position, so reordering or extending FIXTURE_COPIES cannot turn these into
-  // assertions about the canonical file drifting from itself.
-  const perturbable = FIXTURE_COPIES.find((copy) => copy.path !== CANONICAL.path);
-  if (perturbable === undefined) {
-    console.error('SELF-TEST FAILED: no non-canonical copy to perturb — drift is untestable');
-    return false;
-  }
-
-  /** @param {string} contents */
-  const withPerturbed = (contents) =>
-    checkAllCopies(readerOver(new Map(identical).set(perturbable.path, contents)));
-
-  /** @type {[string, string[]][]} */
-  const copyCases = [
-    ['every copy identical', checkAllCopies(readerOver(identical))],
-    [
-      'one copy edited without the other',
-      withPerturbed(JSON.stringify({ ...valid, version: valid.version + 1 })),
-    ],
-    ['one copy reformatted but semantically equal', withPerturbed(JSON.stringify(valid, null, 4))],
-    ['a copy deleted', checkAllCopies(readerOver(new Map([[CANONICAL.path, validText]])))],
-  ];
-
-  const [[, identicalFailures], ...driftCases] = copyCases;
-  if (identicalFailures.length > 0) {
-    console.error('SELF-TEST FAILED: identical copies were reported as drifted');
-    ok = false;
-  }
-  for (const [label, failures] of driftCases) {
-    if (failures.length === 0) {
-      console.error(`SELF-TEST FAILED: not caught — ${label}`);
-      ok = false;
-    }
-  }
+  if (!selfTestCopyHandling(FIXTURE_COPIES, CANONICAL.path, valid, checkFixture)) ok = false;
 
   if (ok) {
     console.log(
-      `self-test OK — accepts the fixture, rejects ${corruptions.length} corruptions of it ` +
-        `and ${driftCases.length} ways the ${FIXTURE_COPIES.length} copies can disagree.`
+      `self-test OK — accepts the fixture and rejects ${corruptions.length} corruptions of it.`
     );
   }
   return ok;
@@ -411,26 +293,12 @@ function main() {
     process.exit(2);
   }
 
-  /**
-   * The only I/O in this file, and the only place that decides what `null`
-   * means. An absent copy is a FINDING — `checkAllCopies` reports it as missing
-   * — but an unreadable one is an environment failure, and collapsing the two
-   * would print "not on disk" about a file that is right there. Wrong output is
-   * worse than none: it sends the reader to `git status` instead of to the
-   * permissions.
-   *
-   * @param {string} repoRelativePath
-   * @returns {string | null} `null` only when the file does not exist.
-   */
-  const read = (repoRelativePath) => {
-    try {
-      return readFileSync(join(repoRoot, repoRelativePath), 'utf8');
-    } catch (error) {
-      if (isFileNotFound(error)) return null;
-      console.error(`FAIL — cannot read ${repoRelativePath}: ${String(error)}`);
-      process.exit(1);
-    }
+  /** @type {(message: string) => never} */
+  const bail = (message) => {
+    console.error(message);
+    process.exit(1);
   };
+  const read = repoCopyReader(repoRoot, bail);
 
   if (argv.includes('--self-test')) {
     // The self-test needs a fixture it can corrupt, and the canonical copy is
@@ -438,17 +306,13 @@ function main() {
     // thrown: this runs as the FIRST step of its CI job, so an unhandled
     // SyntaxError here would report a broken fixture as a broken guard.
     const canonical = read(CANONICAL.path);
-    if (canonical === null) {
-      console.error(`FAIL — ${CANONICAL.path} does not exist`);
-      process.exit(1);
-    }
+    if (canonical === null) bail(`FAIL — ${CANONICAL.path} does not exist`);
     /** @type {Fixture} */
     let valid;
     try {
       valid = JSON.parse(canonical);
     } catch (error) {
-      console.error(`FAIL — ${CANONICAL.path} is not parseable as JSON: ${String(error)}`);
-      process.exit(1);
+      bail(`FAIL — ${CANONICAL.path} is not parseable as JSON: ${String(error)}`);
     }
     process.exit(selfTest(valid) ? 0 : 1);
   }

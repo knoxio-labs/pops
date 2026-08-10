@@ -51,7 +51,11 @@ The refresh request proves possession of the Enclave key by signing bytes the BF
 BFM-REFRESH-V1\n<nonce>\n<sha256(refreshToken), lowercase hex>
 ```
 
-UTF-8, exactly two `\n`, no trailing newline. `RefreshSignatureMessage` is this side of it; `refreshSignatureMessage()` in `pillars/bfm/src/api/auth/refresh-exchange.ts` is the other, and its file header is the format's only definition. **No compiler checks the two against each other**, and a mismatch of one byte arrives as a `401` indistinguishable from an expired token. `RefreshSignatureMessageTests` pins the Swift construction against bytes produced by the BFM's own code — at one point in time, which is less than the encodings below get, and is tracked as its own issue.
+UTF-8, exactly two `\n`, no trailing newline. `RefreshSignatureMessage` is this side of it; `refreshSignatureMessage()` in `pillars/bfm/src/api/auth/refresh-exchange.ts` is the other, and its file header is the format's only prose definition. **No compiler checks the two against each other**, and a mismatch of one byte arrives as a `401` indistinguishable from an expired token.
+
+So a committed vector does instead — one nonce, one token, its digest and the resulting bytes, at [`clients/ios/Contracts/refresh-message-v1.json`](../../Contracts/refresh-message-v1.json). `RefreshSignatureMessageTests` reads it here; the BFM asserts the same bytes against its own construction in `pillars/bfm/src/api/auth/__tests__/refresh-message-fixture.test.ts`; and [`scripts/ci/check-refresh-message-fixture.mjs`](../../../../scripts/ci/check-refresh-message-fixture.mjs), run by the `Refresh signed-message format (BFM ↔ iOS)` job in [`quality.yml`](../../../../.github/workflows/quality.yml), fails the build if the two copies drift or if the vector stops holding the properties the format exists for — the digest rather than the token, lowercase hex, two separators, no trailing newline. That last part is what a plain equality check cannot do: it catches a format change that regenerated the vector along with it.
+
+The direction is the reverse of the encoding vector below. The BFM authors this one, because it is the party that rejects a wrong message, and this directory holds a vendored copy. Regenerate with `mise run fixture:refresh-message` from the repo root — and change the Swift construction in the same commit, because the vector moving is not this side following.
 
 ## The property everything else rests on
 
@@ -89,7 +93,7 @@ The choice is pinned as a committed vector at [`clients/ios/Contracts/device-sig
 
 Both sides also assert the negative controls: the raw `r‖s` encoding of the _same_ signature must be rejected where DER is expected. Without those, "we chose DER" would be a comment rather than something a test can fail on.
 
-`DeviceSignatureContract` in the source states the chosen encodings and the reasoning for each. The _content_ of the signed message — how a nonce and a refresh token are bound into bytes — is deliberately not fixed here; that is the BFM's to define, because the server is the party that rejects a wrong one.
+`DeviceSignatureContract` in the source states the chosen encodings and the reasoning for each. The _content_ of the signed message — how a nonce and a refresh token are bound into bytes — is deliberately not fixed here; that is the BFM's to define, because the server is the party that rejects a wrong one, and it has its own vector above.
 
 Regenerate the fixture with `mise run fixture:device-signature` **from the repo root** — that task regenerates this copy and re-vendors the BFM's, and the guard fails if you do only the first half. **Only** when the encoding contract itself changes: ECDSA draws a fresh nonce per signature, so every run produces different bytes and replaces a reviewed, cross-verified vector with an unreviewed one.
 
