@@ -37,8 +37,11 @@ POPS_IOS_SIMULATOR = "iPhone 17"
 # outright, which is what makes the compiler log complete by construction
 # (`xcodebuild clean` does not clear the SwiftPM package artifacts, and a log
 # missing those is the defect this whole arrangement exists to avoid). And
-# wiping it no longer destroys the default location that `mise run build` uses
-# and `ios-quality.yml` caches.
+# wiping it leaves the default location alone, which is where `mise run build`
+# still writes — the two lanes no longer clear each other's products. That the
+# old arrangement DID clear them, by running `clean` against the shared
+# location, is what made the CI DerivedData cache appear to buy nothing; that
+# cache is gone now (POPS-1683), and `ios-quality.yml` says why.
 #
 # THE LEADING DOT IS LOAD-BEARING. This puts a gigabyte of build output inside
 # the repo tree, and the guards under `scripts/` walk that tree — `check-docs-
@@ -111,8 +114,16 @@ done
 # build-for-testing` to get a compiler log. Two full compiles of the same
 # sources, ~7 minutes each on the runner, for a test action whose assertions
 # take 1.5 seconds. Both now depend on this instead, and because mise resolves
-# one dependency graph per invocation, `mise run test lint:analyze` compiles
-# once and both read what it produced.
+# one dependency graph per invocation, `mise run -j 1 test ::: lint:analyze` —
+# what `ios-quality.yml` runs — compiles once and both read what it produced.
+#
+# The `:::` is mise's TASK separator and is not decoration: without it,
+# `mise run test lint:analyze` runs `test` alone and appends `lint:analyze` to
+# its command line, where it lands as a second xcodebuild destination and fails
+# the lane. `-j 1` is the other half — mise would otherwise run the two
+# concurrently, which starves the Auth concurrency suites of the runner's three
+# cores while `swiftlint analyze` is going. The workflow carries the full
+# reasoning for both.
 #
 # THE WIPE IS THE POINT, and it is not the same as `clean`. `xcodebuild clean`
 # leaves the SwiftPM package artifacts under the derived-data root in place,

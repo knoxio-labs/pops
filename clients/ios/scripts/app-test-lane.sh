@@ -100,7 +100,12 @@ if [ "$without_building" = true ] && [ -z "$derived_data" ]; then
         "nobody in this run compiled."
 fi
 
-if [ -n "$derived_data" ] && [ ! -d "$derived_data" ]; then
+# Only when we are NOT building. `xcodebuild -derivedDataPath` creates the
+# directory happily, so demanding it exist would refuse a perfectly good
+# building run against a fresh path. It is `--without-building` that needs the
+# products to be there already — and needs them at THIS path rather than
+# wherever xcodebuild would otherwise look.
+if [ "$without_building" = true ] && [ ! -d "$derived_data" ]; then
     die "no derived data at '$derived_data'." \
         "'mise run build:for-testing' writes it."
 fi
