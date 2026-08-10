@@ -73,4 +73,45 @@ internal struct TransactionsCopyTests {
     func tagsAreLabelled() {
         #expect(TransactionsCopy.tagList(["coffee", "weekly"]) == "tagged coffee, weekly")
     }
+
+    @Test("the detail banner says both what failed and why")
+    func detailCarriesTheReason() {
+        let sentence = TransactionsCopy.detailFailure(.unavailable)
+
+        #expect(sentence.hasPrefix(TransactionsCopy.detailFailed))
+        #expect(sentence.contains(TransactionsCopy.message(for: .unavailable)))
+    }
+
+    /// The detail screen's version of the distinction the list is built around.
+    /// A transaction finance no longer has is the system working; a fetch that
+    /// failed is not. If these ever read alike, one of them is sending somebody
+    /// to retry an answer that will not change — or telling them a record is
+    /// gone because a container restarted.
+    @Test("a deleted transaction does not read like a failure")
+    func absenceIsNotFailure() {
+        let absence = TransactionsCopy.detailNotFound
+
+        #expect(absence != TransactionsCopy.detailFailed)
+        for failure in Self.everyFailure {
+            #expect(absence != TransactionsCopy.message(for: failure))
+            #expect(!TransactionsCopy.detailFailure(failure).contains(absence))
+        }
+    }
+
+    /// The two banners are about different things — one says the list is stale,
+    /// the other says this record is partial — and a reader who sees both in a
+    /// session should be able to tell which they are looking at.
+    @Test("the two failure banners do not read alike")
+    func theBannersAreDistinct() {
+        #expect(TransactionsCopy.detailFailed != TransactionsCopy.refreshFailed)
+        #expect(TransactionsCopy.detailFailed != TransactionsCopy.loadMoreFailed)
+    }
+
+    /// Both screens' loading lines say what is loading. "Loading…" twice would
+    /// make a mis-routed push indistinguishable from a slow one.
+    @Test("each screen says what it is loading")
+    func loadingLinesAreDistinct() {
+        #expect(TransactionsCopy.loadingDetail != TransactionsCopy.loading)
+        #expect(!TransactionsCopy.loadingDetail.trimmingCharacters(in: .whitespaces).isEmpty)
+    }
 }

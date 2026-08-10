@@ -32,6 +32,33 @@ internal enum TransactionsWire {
         """
     }
 
+    /// The fuller record. Every nullable field carries a value by default, so a
+    /// test that is about one of them says so by nulling it — a fixture of
+    /// all-nulls would make the degenerate record the one every test asserts
+    /// against by accident.
+    internal static let record = record(amount: "19.99")
+
+    internal static func record(
+        id: String = "txn-1",
+        amount: String,
+        date: String = "2026-03-05",
+        type: String = "purchase",
+        lastEditedTime: String = "\"2026-03-06T04:30:00.000Z\"",
+        entityName: String = "\"Cafe\"",
+        location: String = "\"Surry Hills\"",
+        country: String = "\"Australia\"",
+        notes: String = "\"Before standup\"",
+        relatedTransactionId: String = "null"
+    ) -> String {
+        """
+        {"id":"\(id)","description":"Coffee","amount":\(amount),"currency":"AUD",\
+        "date":"\(date)","type":"\(type)","entityName":\(entityName),"tags":["food"],\
+        "account":"Everyday","entityId":"entity-1","location":\(location),\
+        "country":\(country),"notes":\(notes),\
+        "relatedTransactionId":\(relatedTransactionId),"lastEditedTime":\(lastEditedTime)}
+        """
+    }
+
     internal static func failure(code: String, message: String = "no") -> String {
         """
         {"code":"\(code)","message":"\(message)"}

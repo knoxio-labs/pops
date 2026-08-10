@@ -21,6 +21,31 @@ internal struct TransactionsRequestTests {
         #expect(sent.operationID == "mobileFinance.listTransactions")
     }
 
+    @Test("a detail fetch addresses the row by id at the contract's path")
+    func detailTargetsTheContractsPath() async throws {
+        let transport = StubTransport(status: .ok, json: TransactionsWire.record)
+        _ = try await BFMTransactionsRepository.stubbed(transport).transactionDetail(id: "txn-1")
+
+        let sent = try #require(await transport.recorded.all.first)
+        #expect(sent.request.method == .get)
+        #expect(sent.request.path == "/mobile/finance/transactions/txn-1")
+        #expect(sent.operationID == "mobileFinance.getTransaction")
+    }
+
+    /// Finance's ids are opaque and this app never constructs one, so an id
+    /// carrying a character that means something in a URL has to survive as
+    /// data. Unencoded, `a/b` addresses a different route entirely and the
+    /// screen reports whatever that route happens to say.
+    @Test("an id carrying URL syntax is escaped rather than becoming path")
+    func detailEscapesTheID() async throws {
+        let transport = StubTransport(status: .ok, json: TransactionsWire.record)
+        _ = try await BFMTransactionsRepository.stubbed(transport)
+            .transactionDetail(id: "a/b c")
+
+        let sent = try #require(await transport.recorded.all.first)
+        #expect(sent.request.path == "/mobile/finance/transactions/a%2Fb%20c")
+    }
+
     @Test("a next page carries the server's cursor and nothing derived from it")
     func nextPageCarriesTheCursor() async throws {
         let transport = StubTransport(status: .ok, json: TransactionsWire.page())

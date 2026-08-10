@@ -116,6 +116,50 @@ internal struct FakesTests {
         #expect(page.transactions.map(\.id) == ["txn-new"])
     }
 
+    @Test("the fuller record comes back for a row the fake has one for")
+    func detailIsServed() async throws {
+        let record = TransactionDetail.fake(id: "txn-1", notes: "the one under test")
+        let repository = InMemoryTransactionsRepository(details: [record])
+
+        #expect(try await repository.transactionDetail(id: "txn-1") == record)
+    }
+
+    /// The absence has to be an answer rather than a throw, because that is the
+    /// distinction every screen reading this fake is built around.
+    @Test("a row the fake has no record for is an absence, not a failure")
+    func detailAbsenceIsNotAFailure() async throws {
+        let repository = InMemoryTransactionsRepository(details: [TransactionDetail.fake()])
+
+        #expect(try await repository.transactionDetail(id: "txn-missing") == nil)
+    }
+
+    /// Counted apart from the page calls, or "did the footer fetch twice" would
+    /// depend on whether anybody happened to open a row.
+    @Test("detail calls are counted separately from page calls")
+    func detailCallsAreCountedApart() async throws {
+        let repository = InMemoryTransactionsRepository(
+            rows: Transaction.fakes(count: 4), details: [TransactionDetail.fake()])
+
+        _ = try await repository.transactions(after: nil)
+        _ = try await repository.transactionDetail(id: "txn-1")
+        _ = try await repository.transactionDetail(id: "txn-1")
+
+        #expect(await repository.callCount == 1)
+        #expect(await repository.detailCallCount == 2)
+    }
+
+    @Test("a detail failure can be injected, and only on the call it names")
+    func detailFailureIsInjectable() async throws {
+        let record = TransactionDetail.fake()
+        let repository = InMemoryTransactionsRepository(details: [record])
+        await repository.failDetail(onCall: 1, with: .unavailable)
+
+        await #expect(throws: RepositoryError.unavailable) {
+            try await repository.transactionDetail(id: record.id)
+        }
+        #expect(try await repository.transactionDetail(id: record.id) == record)
+    }
+
     @Test("the pairing fake records what it was asked and answers as configured")
     func pairingFakeRecords() async throws {
         let service = FakeDevicePairingService()

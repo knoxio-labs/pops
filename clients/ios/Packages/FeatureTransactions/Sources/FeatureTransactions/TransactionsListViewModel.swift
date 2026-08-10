@@ -43,6 +43,11 @@ public final class TransactionsListViewModel {
 
     private let repository: any TransactionsRepository
 
+    /// Where a tap goes. Held here rather than reached for in the view so that
+    /// "tapping a row opens that transaction" is a value a test reads back off
+    /// ``Router/path`` instead of a gesture somebody has to make on a phone.
+    private let router: Router
+
     /// The next page's cursor, or `nil` when there is no next page. Opaque.
     private var cursor: String?
 
@@ -69,11 +74,39 @@ public final class TransactionsListViewModel {
     /// the list it was reading into has been replaced.
     private var generation = 0
 
-    /// - Parameter dependencies: read for ``TransactionsRepository`` and
-    ///   nothing else. The composition root is the only thing that knows what
-    ///   is behind it.
-    public init(dependencies: AppDependencies) {
+    /// - Parameters:
+    ///   - dependencies: read for ``TransactionsRepository`` and nothing else.
+    ///     The composition root is the only thing that knows what is behind it.
+    ///   - router: where a tap on a row goes. Required rather than defaulted to
+    ///     a fresh ``Router``: a default would give every caller that forgot one
+    ///     a path nothing is rendering, and a screen that silently refuses to
+    ///     navigate is the kind of defect that survives a test suite.
+    public init(dependencies: AppDependencies, router: Router) {
         repository = dependencies.transactions
+        self.router = router
+    }
+}
+
+extension TransactionsListViewModel {
+    /// A row was tapped.
+    ///
+    /// The model names the route and nothing else. It does not know which view
+    /// answers to it, which is what stops this file from having to import the
+    /// detail screen in order to link to it.
+    public func select(_ transaction: Transaction) {
+        router.send(.push(.transactionDetail(id: transaction.id)))
+    }
+
+    /// The row this list is already holding for `id`, if it has one.
+    ///
+    /// This is what lets the detail screen open on real content instead of a
+    /// spinner over data the app has had all along. `nil` is an honest answer
+    /// rather than a miss to work around: a route restored from a cold launch,
+    /// or one reached after a refresh dropped the row, has no seed and the
+    /// detail screen loads from scratch.
+    public func transaction(id: Transaction.ID) -> Transaction? {
+        guard case .loaded(let transactions) = state else { return nil }
+        return transactions.first { $0.id == id }
     }
 }
 
@@ -238,31 +271,5 @@ extension TransactionsListViewModel {
     private func settlePagingIfLoading() {
         guard paging == .loading else { return }
         settlePaging()
-    }
-}
-
-extension RepositoryError {
-    /// ``TransactionsRepository`` does not constrain what it throws, so a
-    /// conforming implementation may throw anything. Everything unrecognised
-    /// becomes ``RepositoryError/transport(_:)``, whose payload is a diagnostic
-    /// and never reaches a screen.
-    internal static func describing(_ error: Error) -> RepositoryError {
-        error as? RepositoryError ?? .transport(String(describing: error))
-    }
-}
-
-extension Error {
-    /// A fetch cancelled because its view went away is not a failure to report.
-    /// Recording one would leave the error state on a screen nobody is looking
-    /// at, ready for the next person who navigates back to it.
-    ///
-    /// Both halves are needed. `CancellationError` is what Swift concurrency
-    /// throws, but a repository built on URLSession surfaces the same event as
-    /// `URLError(.cancelled)` wrapped in whatever its layers wrap things in —
-    /// and this module may not name any of those types. `Task.isCancelled` at
-    /// the catch site answers the question those types were only evidence for:
-    /// is the work that produced this error still wanted.
-    fileprivate var isCancellation: Bool {
-        Task.isCancelled || self is CancellationError
     }
 }

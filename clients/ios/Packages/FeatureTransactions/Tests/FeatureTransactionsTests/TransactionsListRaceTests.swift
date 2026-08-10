@@ -15,7 +15,7 @@ import Testing
 @Suite("Transactions request races")
 internal struct TransactionsListRaceTests {
     private func model(_ repository: any TransactionsRepository) -> TransactionsListViewModel {
-        TransactionsListViewModel(dependencies: .fake(transactions: repository))
+        TransactionsListViewModel(dependencies: .fake(transactions: repository), router: Router())
     }
 
     /// The failure this is really about: a page request already in flight when

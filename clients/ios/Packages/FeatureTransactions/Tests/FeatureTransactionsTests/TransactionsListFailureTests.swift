@@ -10,7 +10,7 @@ import Testing
 @Suite("Transactions failures")
 internal struct TransactionsListFailureTests {
     private func model(_ repository: any TransactionsRepository) -> TransactionsListViewModel {
-        TransactionsListViewModel(dependencies: .fake(transactions: repository))
+        TransactionsListViewModel(dependencies: .fake(transactions: repository), router: Router())
     }
 
     @Test("a first page with no rows in it is the empty state, not a failure")
@@ -179,7 +179,7 @@ internal struct TransactionsListFailureTests {
     /// somebody's phone.
     @Test("an unbound repository fails the screen rather than trapping")
     func unboundDependency() async {
-        let model = TransactionsListViewModel(dependencies: .unbound)
+        let model = TransactionsListViewModel(dependencies: .unbound, router: Router())
 
         await model.loadFirstPage()
 

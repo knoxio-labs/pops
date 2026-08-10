@@ -55,6 +55,28 @@ public struct BFMTransactionsRepository: TransactionsRepository {
             return page
         }
     }
+
+    /// The fuller record behind one row, or `nil` when finance no longer has it.
+    ///
+    /// `404` is answered rather than thrown, and that is the whole shape of this
+    /// method. A transaction deleted between a list arriving and somebody
+    /// tapping a row is the system working; a screen offered a retry for it
+    /// would be retrying a question that has already been answered.
+    ///
+    /// The status alone decides that. The body carries an upstream `code`, but
+    /// on a route addressed by id there is nothing a `404` can mean except that
+    /// the id is not there, and nothing a screen would do differently if the
+    /// code said something else.
+    public func transactionDetail(id: Transaction.ID) async throws -> TransactionDetail? {
+        let output: GetTransaction.Output
+        do {
+            output = try await client.generated.mobileFinance_getTransaction(path: .init(id: id))
+        } catch let error as ClientError {
+            throw Self.failure(error, operation: GetTransaction.id)
+        }
+
+        return try record(from: output)
+    }
 }
 
 /// A page, or the one refusal that is answered rather than thrown.
@@ -75,7 +97,7 @@ extension BFMTransactionsRepository {
                 query: .init(cursor: cursor)
             )
         } catch let error as ClientError {
-            throw Self.failure(error)
+            throw Self.failure(error, operation: ListTransactions.id)
         }
 
         return try outcome(of: output)
@@ -102,9 +124,11 @@ extension BFMTransactionsRepository {
         case .tooManyRequests:
             throw RepositoryError.transport("\(ListTransactions.id): rate limited")
         case .badGateway(let upstream):
-            throw Self.upstreamFailure(try upstream.body.json.code.rawValue)
+            throw Self.upstreamFailure(
+                try upstream.body.json.code.rawValue, operation: ListTransactions.id)
         case .serviceUnavailable(let upstream):
-            throw Self.upstreamFailure(try upstream.body.json.code.rawValue)
+            throw Self.upstreamFailure(
+                try upstream.body.json.code.rawValue, operation: ListTransactions.id)
         case .undocumented(let statusCode, _):
             throw RepositoryError.transport(
                 "\(ListTransactions.id): undocumented status \(statusCode)"
@@ -126,14 +150,14 @@ extension BFMTransactionsRepository {
     /// nothing about the phone's build is implicated. Matched on the raw string
     /// because the generator emits one closed enum per status and the two are
     /// distinct types carrying identical cases.
-    private static func upstreamFailure(_ code: String) -> RepositoryError {
+    private static func upstreamFailure(_ code: String, operation: String) -> RepositoryError {
         switch code {
         case "upstream_unavailable", "upstream_degraded", "upstream_misconfigured":
             return .unavailable
         case "upstream_contract_mismatch":
             return .contractMismatch
         default:
-            return .transport("\(ListTransactions.id): upstream \(code)")
+            return .transport("\(operation): upstream \(code)")
         }
     }
 
@@ -149,7 +173,7 @@ extension BFMTransactionsRepository {
     /// `invalid_cursor` and `invalid_request` differ only in the body — so it
     /// stays a transport failure rather than triggering a restart this app
     /// cannot justify.
-    private static func failure(_ error: ClientError) -> RepositoryError {
+    private static func failure(_ error: ClientError, operation: String) -> RepositoryError {
         switch error.response?.status.code {
         case 401, 403:
             return .unauthorized
@@ -160,7 +184,7 @@ extension BFMTransactionsRepository {
             // `ClientError`'s own description renders the operation's typed
             // input and every request header, `Authorization` included.
             return .transport(
-                BFMClientError.transportFailure(error, operation: ListTransactions.id).description
+                BFMClientError.transportFailure(error, operation: operation).description
             )
         }
     }
@@ -247,9 +271,86 @@ extension BFMTransactionsRepository {
     }
 }
 
+extension BFMTransactionsRepository {
+    /// The same status vocabulary as the list, plus the one status this route
+    /// has and that one does not.
+    private func record(from output: GetTransaction.Output) throws -> TransactionDetail? {
+        switch output {
+        case .ok(let ok):
+            return try detail(from: try ok.body.json)
+        case .notFound:
+            return nil
+        case .badRequest:
+            throw RepositoryError.transport("\(GetTransaction.id): invalid request")
+        case .unauthorized, .forbidden:
+            throw RepositoryError.unauthorized
+        case .tooManyRequests:
+            throw RepositoryError.transport("\(GetTransaction.id): rate limited")
+        case .badGateway(let upstream):
+            throw Self.upstreamFailure(
+                try upstream.body.json.code.rawValue, operation: GetTransaction.id)
+        case .serviceUnavailable(let upstream):
+            throw Self.upstreamFailure(
+                try upstream.body.json.code.rawValue, operation: GetTransaction.id)
+        case .undocumented(let statusCode, _):
+            throw RepositoryError.transport(
+                "\(GetTransaction.id): undocumented status \(statusCode)"
+            )
+        }
+    }
+
+    /// The wire record into the app's own vocabulary. Same strictness as a list
+    /// row: a field this build cannot represent fails the screen rather than
+    /// being dropped from it, because a detail screen quietly missing the one
+    /// field somebody opened it for is worse than one that says it cannot read
+    /// the record.
+    private func detail(from wire: DetailPayload) throws -> TransactionDetail {
+        guard
+            let majorUnits = Self.majorUnits(of: wire.amount),
+            let amount = MoneyAmount(majorUnits: majorUnits, currencyCode: wire.currency.rawValue),
+            let date = Self.day(from: wire.date, in: timeZone()),
+            let lastEditedAt = Self.instant(from: wire.lastEditedTime)
+        else { throw RepositoryError.contractMismatch }
+
+        return TransactionDetail(
+            id: wire.id,
+            description: wire.description,
+            amount: amount,
+            date: date,
+            type: TransactionType(rawValue: wire._type),
+            account: wire.account,
+            entityName: wire.entityName,
+            entityId: wire.entityId,
+            tags: wire.tags,
+            location: wire.location,
+            country: wire.country,
+            notes: wire.notes,
+            relatedTransactionId: wire.relatedTransactionId,
+            lastEditedAt: lastEditedAt
+        )
+    }
+
+    /// An ISO-8601 timestamp, which is what finance's last-write field is —
+    /// unlike ``day(from:in:)``'s date-only value, this one carries a time and
+    /// a zone of its own.
+    ///
+    /// Both spellings are accepted because both are legitimate ISO-8601 and
+    /// which one arrives is the producer's serialiser's choice, not a contract
+    /// term: `toISOString()` emits milliseconds, most other emitters do not.
+    /// Rejecting one of them would fail the screen over a formatting detail no
+    /// reader could act on. Anything that is neither is still a mismatch.
+    private static func instant(from raw: String) -> Date? {
+        let withFraction = Date.ISO8601FormatStyle(includingFractionalSeconds: true)
+        if let parsed = try? Date(raw, strategy: withFraction) { return parsed }
+        return try? Date(raw, strategy: Date.ISO8601FormatStyle())
+    }
+}
+
 /// The generated names, shortened. Written out in full they pass 120 columns in
 /// every signature below, and the type they abbreviate is `internal` to this
 /// module — nothing here widens what a caller can name.
 private typealias ListTransactions = Operations.MobileFinance_listTransactions
+private typealias GetTransaction = Operations.MobileFinance_getTransaction
+private typealias DetailPayload = GetTransaction.Output.Ok.Body.JsonPayload
 private typealias ListTransactionRow =
     ListTransactions.Output.Ok.Body.JsonPayload.DataPayloadPayload
