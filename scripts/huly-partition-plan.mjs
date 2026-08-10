@@ -95,9 +95,9 @@ function runRefine(args) {
   /** @type {Cell} */
   let cell;
   try {
-    cell = JSON.parse(raw);
+    cell = readCell(raw);
   } catch (error) {
-    console.error(`FAIL — --refine could not read that as JSON: ${messageOf(error)}`);
+    console.error(`FAIL — --refine could not read that as a cell: ${messageOf(error)}`);
     return 2;
   }
   const children = refineCell(cell, readList(readFlag(args, '--components')));
@@ -121,6 +121,26 @@ function runRefine(args) {
  */
 function messageOf(error) {
   return error instanceof Error ? error.message : String(error);
+}
+
+/**
+ * A `--refine` argument read as a cell.
+ *
+ * Valid JSON is not enough: `null` and `"x"` both parse, and `refineCell` would
+ * meet the first as a TypeError and the second as a string spread into a
+ * nonsense filter. Both are the caller mistyping an argument, which is a usage
+ * error with a message, not a stack trace.
+ *
+ * @param {string} raw
+ * @returns {Cell}
+ * @throws {Error} when the argument is not a JSON object.
+ */
+export function readCell(raw) {
+  const parsed = JSON.parse(raw);
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+    throw new Error('a cell must be a JSON object, e.g. {"status":"Merged"}');
+  }
+  return parsed;
 }
 
 /**
