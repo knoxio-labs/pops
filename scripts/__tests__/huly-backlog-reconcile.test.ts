@@ -553,6 +553,44 @@ describe('formatReport', () => {
     expect(text).not.toContain('across the whole export');
   });
 
+  // The sweep's headline is only as true as its input is complete. An export
+  // that cannot prove it holds the whole backlog must not produce a report
+  // that reads like a clean bill of health.
+  it('opens by admitting it cannot tell how much of the backlog it saw', () => {
+    const text = formatReport(reconcile([backlog('POPS-1452')], commits, PREFIX));
+    expect(text.split('\n')[0]).toContain('COVERAGE: UNKNOWN');
+  });
+
+  it('opens with the completeness claim when the export proves one', () => {
+    const report = reconcile([backlog('POPS-1452')], commits, PREFIX, {
+      limit: 200,
+      statuses: ['Backlog'],
+      cells: [{ filter: { status: 'Backlog' }, count: 1 }],
+    });
+    expect(report.coverage.complete).toBe(true);
+    expect(formatReport(report).split('\n')[0]).toContain('COVERAGE: complete');
+  });
+
+  it('opens with INCOMPLETE, and the reason, when a query sat on the cap', () => {
+    const report = reconcile([backlog('POPS-1452')], commits, PREFIX, {
+      limit: 1,
+      statuses: ['Backlog'],
+      cells: [{ filter: { status: 'Backlog' }, count: 1 }],
+    });
+    expect(report.coverage.complete).toBe(false);
+    expect(formatReport(report)).toContain('truncated');
+  });
+
+  it('reports a status the export never queried as a hole in the sweep', () => {
+    const report = reconcile([backlog('POPS-1452')], commits, PREFIX, {
+      limit: 200,
+      statuses: ['Backlog', 'Merged'],
+      cells: [{ filter: { status: 'Backlog' }, count: 1 }],
+    });
+    expect(report.coverage.uncovered).toHaveLength(1);
+    expect(formatReport(report)).toContain('no query covers status=Merged');
+  });
+
   it('names an orphan and the commit that shipped it', () => {
     const report = reconcile(
       [{ identifier: 'POPS-1452', title: 'drop the redundant check', status: 'Backlog' }],

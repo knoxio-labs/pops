@@ -48,21 +48,42 @@
  * mirror — and each orphan is matched to the mirrors that name it, so the
  * closing action can point at one.
  *
+ * ## How much of the backlog it saw
+ *
+ * A sweep is only as true as its input is complete, and the tracker API caps
+ * `list_issues` at 200 rows with no cursor and no total — so an export can be
+ * a page of the newest issues wearing the shape of the whole backlog. Reported
+ * over that, "no orphans" is indistinguishable from a clean bill of health.
+ *
+ * So an export may carry a `coverage` block naming the queries that produced
+ * it and the rows each returned, and every report opens by saying which of
+ * three things is true of it: coverage complete, coverage INCOMPLETE (with the
+ * reason), or coverage UNKNOWN because none was declared. The partitioning
+ * recipe that yields a complete one is in `huly-partition.mjs`, the check
+ * applied here is in `huly-coverage.mjs`, and `huly-partition-plan.mjs` is the
+ * command line over both.
+ *
  * Usage:
  *   node scripts/huly-backlog-reconcile.mjs --issues <path.json> [--ref origin/main]
  *   node scripts/huly-backlog-reconcile.mjs --issues <path.json> --json
  *   node scripts/huly-backlog-reconcile.mjs --self-test
  *
- * `--issues` takes either a bare JSON array of `{ identifier, title, status }`
- * or the `{ "result": [...] }` envelope a tracker export arrives in.
+ * `--issues` takes either a bare JSON array of `{ identifier, title, status }`,
+ * or the `{ "result": [...] }` envelope a tracker export arrives in, optionally
+ * alongside a `"coverage"` block.
  *
- * Exit 0 = ran. Exit 1 = self-test failed. Exit 2 = usage error.
+ * Exit 0 = ran. Exit 1 = self-test failed. Exit 2 = usage error, or an export
+ * this tool could not read. Exit 3 = the export declared coverage and that
+ * coverage does not cover the backlog.
  */
 
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import { readFlag } from './cli-flags.mjs';
+import { assessCoverage, formatCoverage, readCoverage } from './huly-coverage.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -465,12 +486,15 @@ export function findMirrors(issues, commits) {
 }
 
 /**
+ * @typedef {import('./huly-partition.mjs').Coverage} Coverage
+ * @typedef {import('./huly-coverage.mjs').CoverageVerdict} CoverageVerdict
  * @typedef {{
  *   eligible: Verdict[],
  *   skipped: Issue[],
  *   mirrors: { identifier: string, title: string, status: string, sha: string }[],
  *   commitCount: number,
  *   titledIssueCount: number,
+ *   coverage: CoverageVerdict,
  * }} Report
  */
 
@@ -481,12 +505,18 @@ export function findMirrors(issues, commits) {
  * Only issues in `ELIGIBLE_STATUS` are classified — a ticket already moving
  * through the workflow is not something a sweep should be reasoning about.
  *
+ * `coverage` is what the export claims about its own completeness. Omitting it
+ * does not default to complete — it produces an explicitly unknown verdict,
+ * because an export that says nothing about how it was gathered has earned no
+ * presumption either way.
+ *
  * @param {Issue[]} issues
  * @param {Commit[]} commits
  * @param {string} prefix
+ * @param {Coverage} [coverage]
  * @returns {Report}
  */
-export function reconcile(issues, commits, prefix) {
+export function reconcile(issues, commits, prefix, coverage) {
   const mirrors = findMirrors(issues, commits);
 
   /** @type {Map<string, string[]>} */
@@ -517,6 +547,7 @@ export function reconcile(issues, commits, prefix) {
     mirrors,
     commitCount: commits.length,
     titledIssueCount: issues.filter((issue) => (issue.title ?? '').trim() !== '').length,
+    coverage: assessCoverage(coverage, issues),
   };
 }
 
@@ -657,6 +688,7 @@ export function formatReport(report) {
   const lines = [];
 
   lines.push(
+    ...formatCoverage(report.coverage),
     `Scanned ${report.commitCount} commits against ${report.eligible.length} ${ELIGIBLE_STATUS} ` +
       `issues (${report.skipped.length} skipped: not ${ELIGIBLE_STATUS}).`,
     mirrorCoverageLine(report),
@@ -699,25 +731,7 @@ export function formatReport(report) {
   return lines.join('\n');
 }
 
-/**
- * The value following `flag`, or `undefined` when the flag is absent or was
- * given nothing to take.
- *
- * A following token that is itself a flag is not a value: `--issues --json`
- * would otherwise read `--json` as the path and die on ENOENT several steps
- * later, instead of saying which argument was missing.
- *
- * @param {string[]} args
- * @param {string} flag
- * @returns {string | undefined}
- */
-export function readFlag(args, flag) {
-  const index = args.indexOf(flag);
-  if (index === -1) return undefined;
-  const value = args[index + 1];
-  if (value === undefined || value.startsWith('-')) return undefined;
-  return value;
-}
+export { readFlag } from './cli-flags.mjs';
 
 function main() {
   const args = process.argv.slice(2);
@@ -728,7 +742,11 @@ function main() {
         '       node scripts/huly-backlog-reconcile.mjs --self-test\n\n' +
         `Cross-references every ${ELIGIBLE_STATUS} issue in the export against commit ` +
         'messages on the ref, and reports which ones already shipped. Reads only; ' +
-        'applying a verdict to the tracker is a separate, deliberate act.'
+        'applying a verdict to the tracker is a separate, deliberate act.\n\n' +
+        'The export may carry a "coverage" block stating which queries produced it ' +
+        'and how many rows each returned; every report opens by saying whether that ' +
+        'covers the whole backlog, and exits 3 when it demonstrably does not. See ' +
+        'huly-partition-plan.mjs --help for how to gather one.'
     );
     process.exit(2);
   }
@@ -744,11 +762,31 @@ function main() {
   const ref = readFlag(args, '--ref') ?? DEFAULT_REF;
   const prefix = readFlag(args, '--prefix') ?? DEFAULT_PREFIX;
 
-  const issues = readIssues(JSON.parse(readFileSync(issuesPath, 'utf8')));
-  const report = reconcile(issues, readCommits(ref), prefix);
+  /** @type {Issue[]} */
+  let issues;
+  /** @type {Coverage | undefined} */
+  let coverage;
+  try {
+    const parsed = JSON.parse(readFileSync(issuesPath, 'utf8'));
+    issues = readIssues(parsed);
+    coverage = readCoverage(parsed);
+  } catch (error) {
+    // Exit 2, not a stack trace. Every refusal in `readIssues` and
+    // `readCoverage` names the row it choked on, and that message is the whole
+    // value — burying it under a trace, on the exit code that means "the sweep
+    // found something", loses both halves.
+    const detail = error instanceof Error ? error.message : String(error);
+    console.error(`FAIL — could not read ${issuesPath}: ${detail}`);
+    process.exit(2);
+  }
+  const report = reconcile(issues, readCommits(ref), prefix, coverage);
 
   console.log(args.includes('--json') ? JSON.stringify(report, null, 2) : formatReport(report));
-  process.exit(0);
+  // An export that declares its own coverage and fails it must not exit 0: a
+  // caller reading only the status code would otherwise treat a partial sweep
+  // as a clean one. An export declaring nothing keeps exit 0 — unknown is not
+  // the same as known-bad, and the report says which it is.
+  process.exit(report.coverage.declared && !report.coverage.complete ? 3 : 0);
 }
 
 /**
@@ -827,6 +865,20 @@ function selfTest() {
     'an export with no titles reports mirrors as unchecked, not as zero': formatReport(
       reconcile([{ identifier: 'POPS-1', title: '', status: ELIGIBLE_STATUS }], commits, 'POPS')
     ).includes('NOT CHECKED'),
+    'an export that declares no coverage says UNKNOWN rather than reading as a whole sweep':
+      formatReport(reconcile([], commits, 'POPS')).includes('COVERAGE: UNKNOWN'),
+    'an export whose query sat on the cap says INCOMPLETE': formatReport(
+      reconcile([asBacklog('POPS-1')], commits, 'POPS', {
+        limit: 1,
+        statuses: [ELIGIBLE_STATUS],
+        cells: [{ filter: { status: ELIGIBLE_STATUS }, count: 1 }],
+      })
+    ).includes('COVERAGE: INCOMPLETE'),
+    'a tiling export is reported complete': reconcile([asBacklog('POPS-1')], commits, 'POPS', {
+      limit: 200,
+      statuses: [ELIGIBLE_STATUS],
+      cells: [{ filter: { status: ELIGIBLE_STATUS }, count: 1 }],
+    }).coverage.complete,
     'a mirror is matched on the subject minus its PR number':
       findMirrors(
         [
