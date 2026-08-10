@@ -238,6 +238,21 @@ description = "Run the root-owned scripts/ test suite (gates CI checks under scr
 # `scripts/**/*.test.ts`; this task is the entry point CI runs.
 run = "vitest run scripts/"
 
+[tasks."typecheck:scripts"]
+description = "Type-check the root-owned scripts/ test projects (gates CI checks under scripts/)"
+# `scripts/` owns three tsconfig projects (`scripts/__tests__`,
+# `scripts/ci/__tests__`, `scripts/extractability/__tests__`) that neither
+# `tsc -b tsconfig.build.json` (references only libs/* and pillars/*) nor the
+# `run-all` fan-out (scripts/ has no mise.toml) ever reaches — vitest's esbuild
+# transform runs these tests without type-checking them. This task is the
+# entry point CI runs, mirroring `test:scripts` above for the identical blind
+# spot in typechecking rather than testing.
+run = [
+  "tsc --noEmit -p scripts/__tests__/tsconfig.json",
+  "tsc --noEmit -p scripts/ci/__tests__/tsconfig.json",
+  "tsc --noEmit -p scripts/extractability/__tests__/tsconfig.json",
+]
+
 # ============================================================================
 # Database Management
 # ============================================================================

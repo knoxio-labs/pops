@@ -150,6 +150,15 @@ jobs:
     # the Unit/App/FE Quality matrices; without this job they only ran if a human
     # typed `vitest` locally. This job lands in the Quality workflow, which the
     # `CI Gate` aggregator observes, so the scripts suite reaches that context.
+    #
+    # The same blind spot exists for TYPE-CHECKING: `scripts/{,ci/,extractability/}
+    # __tests__/tsconfig.json` are real tsconfig projects that neither
+    # `tsc -b tsconfig.build.json` (references only libs/* and pillars/*) nor
+    # `run-all typecheck` (scripts/ has no mise.toml) ever builds, and vitest's
+    # esbuild transform runs the tests without type-checking them — so a type
+    # error here can sit on `main` indefinitely while both `mise typecheck` and
+    # this job's vitest run stay green. `mise run typecheck:scripts` closes that
+    # the same way `test:scripts` already closes it for tests.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -170,6 +179,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec vitest run scripts/
+      - run: mise run typecheck:scripts
 
   exports:
     name: Exports discipline

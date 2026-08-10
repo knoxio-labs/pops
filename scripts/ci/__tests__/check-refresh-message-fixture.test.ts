@@ -200,7 +200,7 @@ describe('checkFixture', () => {
 
 describe('checkAllCopies', () => {
   const text = JSON.stringify(committed);
-  const identical = new Map(FIXTURE_COPIES.map(({ path }) => [path, text]));
+  const identical: Map<string, string> = new Map(FIXTURE_COPIES.map(({ path }) => [path, text]));
   const readerOver = (files: Map<string, string>) => (path: string) => files.get(path) ?? null;
   const withVendored = (contents: string | null) => {
     const files = new Map(identical);

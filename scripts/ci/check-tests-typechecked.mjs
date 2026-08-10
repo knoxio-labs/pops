@@ -56,6 +56,15 @@
  * frontend app is gated the moment it appears. JSON is parsed after stripping
  * comments, since tsconfigs are JSONC.
  *
+ * Out of scope: root-owned `scripts/` is not a unit — it has no `package.json`
+ * `typecheck` script and no single `tsconfig.json` for `discoverUnitDirs` to
+ * find, only three independent test-only projects nested under it
+ * (`scripts/__tests__`, `scripts/ci/__tests__`, `scripts/extractability/__tests__`).
+ * This guard reporting `OK` says nothing about whether those three type-check;
+ * that is `mise typecheck:scripts`'s job, run directly by
+ * `.github/workflows/quality.yml`'s `scripts-tests` job rather than through
+ * this guard's unit model.
+ *
  * Usage:
  *   node scripts/ci/check-tests-typechecked.mjs
  *   node scripts/ci/check-tests-typechecked.mjs --self-test
@@ -898,9 +907,12 @@ function main() {
   }
 
   const { unitCount, failures } = scanRepo(repoRoot);
-  console.log(`Scanned ${unitCount} unit type-check project(s).`);
+  console.log(
+    `Scanned ${unitCount} unit type-check project(s) under libs/ and pillars/ — ` +
+      'root-owned scripts/ is not a unit and is not scanned here (see mise typecheck:scripts).'
+  );
   if (failures.length === 0) {
-    console.log('OK — every unit type-checks its own tests.');
+    console.log('OK — every discovered unit type-checks its own tests.');
     process.exit(0);
   }
   console.error(
