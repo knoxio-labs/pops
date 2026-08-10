@@ -52,6 +52,18 @@ internal actor Gate {
     private var isOpen = false
     private var waiting: [CheckedContinuation<Void, Never>] = []
 
+    /// Whether anything has reached ``wait()``.
+    ///
+    /// The only sound thing for a test to synchronise on before it perturbs the
+    /// code under test. Waiting on some *earlier* observable — a call count a
+    /// step or two upstream — leaves every statement between that step and this
+    /// one inside the race window, and a test that does it is a test that fails
+    /// on whichever machine is slowest that day.
+    ///
+    /// A `Bool` rather than a continuation because it only ever goes one way,
+    /// and `waitUntil` is already a polling loop.
+    private(set) var hasParked = false
+
     internal func open() {
         isOpen = true
         for continuation in waiting { continuation.resume() }
@@ -59,6 +71,7 @@ internal actor Gate {
     }
 
     internal func wait() async {
+        hasParked = true
         guard !isOpen else { return }
         await withCheckedContinuation { waiting.append($0) }
     }
@@ -116,10 +129,10 @@ internal final class CountingTokenStore: TokenStore {
 @discardableResult
 internal func waitUntil(
     _ waitingFor: String,
-    _ condition: @Sendable () -> Bool
+    _ condition: @Sendable () async -> Bool
 ) async -> Bool {
     for _ in 0..<10_000 {
-        if condition() { return true }
+        if await condition() { return true }
         await Task.yield()
     }
     return false
