@@ -301,6 +301,26 @@ jobs:
       # arrives as a second xcodebuild destination and fails the lane. Verified
       # against mise 2026.7.18.
       #
+      # `-j 1` IS ALSO NOT OPTIONAL, and it is the more expensive lesson. mise
+      # runs the two tasks concurrently by default, which is ~3 minutes faster
+      # and turned the job flaky: `swiftlint analyze` saturates the runner's
+      # three cores while the simulator suite is running, and the Auth
+      # concurrency tests are written to poll for a condition with a timeout.
+      # `twentyConcurrentRejectionsRefreshOnce` waits for twenty tasks to reach
+      # a barrier; starved of CPU they do not all get there, and it failed with
+      # "a request never reached the refresher" on one run in three. A required
+      # check that fails one time in three costs far more than three minutes.
+      #
+      # This does NOT undo the change it sits inside. The shared
+      # `build:for-testing` still runs once — that is the dependency graph, not
+      # the scheduler — so the job compiles the tree once rather than twice.
+      # Only the two consumers of that build are now sequential.
+      #
+      # Running them concurrently on two SEPARATE runners would get both the
+      # wall clock and the isolation, at the price of a second compile that
+      # nothing waits for. Costed in POPS-1746, along with why the analyzer
+      # takes 6x longer here than on a laptop.
+      #
       # What this replaced: `xcodebuild test` compiled the whole tree against
       # the iOS SDK, and `lint:analyze` then did its own `clean
       # build-for-testing` to get a complete compiler log — two full compiles
@@ -313,7 +333,7 @@ jobs:
       # Quoted because `test ::: lint:analyze` contains `: `, which an unquoted
       # YAML scalar reads as the start of a mapping.
       - name: Test + SwiftLint analyzer rules (one shared compile)
-        run: "mise run test ::: lint:analyze"
+        run: "mise run -j 1 test ::: lint:analyze"
 
       # The other half of the restore step above — see its comment for why a
       # plain `actions/cache` step cannot keep this cache moving forward.
