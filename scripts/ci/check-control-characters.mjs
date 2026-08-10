@@ -42,17 +42,33 @@
  * through the guard built to catch it. `BINARY_EXTENSIONS` below is a
  * deliberately short, explicit allowlist of formats that are genuinely binary
  * by specification (images, fonts, archives, certs, databases, media) and
- * that this repo actually or plausibly commits under the scanned roots. A
- * path with no extension (`Dockerfile`) or an unrecognised one is scanned as
- * text — the safe default, since scanning a text file costs nothing and
- * silently skipping one hides exactly this incident.
+ * that this repo actually or plausibly commits. A path with no extension
+ * (`Dockerfile`) or an unrecognised one is scanned as text — the safe
+ * default, since scanning a text file costs nothing and silently skipping
+ * one hides exactly this incident.
  *
- * SCOPE is `pillars/`, `libs/`, `scripts/`, `.github/` and `docs/` — the
- * source-and-config roots — discovered via `git ls-files`, so untracked and
+ * `.plist` is deliberately NOT in the allowlist even though `clients/ios` is
+ * now in scope. Apple's property-list format has two legal encodings — XML
+ * and a binary `bplist00` — sharing one extension, so extension-based
+ * discrimination cannot tell them apart the way it can for e.g. `.png`.
+ * Every `.plist` this repo tracks today is XML (Xcode's default for
+ * source-controlled files), so the safe-default rule above applies: it scans
+ * as text. A binary-encoded plist would fail this guard loudly rather than
+ * being silently exempted, which is the correct failure mode here — the fix
+ * is to save it back as XML, not to add `.plist` to `BINARY_EXTENSIONS` and
+ * blind the guard to every other plist in the tree.
+ *
+ * SCOPE is every path `git ls-files` tracks, repo-wide, so untracked and
  * gitignored paths (`node_modules/`, `dist/`, build output) never enter the
- * scan without another ignore list to keep in sync. `clients/` and root-level
- * config (`package.json`, `mise.toml`, `infra/`) are not in this pass; see the
- * Huly backlog for the follow-up on widening scope.
+ * scan without another ignore list to keep in sync. This guard originally
+ * scanned only `pillars/`, `libs/`, `scripts/`, `.github/` and `docs/` — the
+ * roots the incident above actually touched — which left `clients/` and
+ * root-level config (`package.json`, `mise.toml`, `infra/`, lockfiles, …)
+ * uncovered. `clients/` sits outside the pnpm workspace and outside per-PR
+ * path scoping, which makes it the LEAST-gated part of the tree, not the
+ * lowest-risk one to skip. A fixed root list also drifts the moment a new
+ * top-level path appears, whereas an unfiltered `git ls-files` costs the same
+ * call and cannot go stale.
  *
  * TIER — install-free (Tier A, ADR-045 amendment). This is a byte-level scan
  * over `node:fs`/`node:child_process` only; it needs no YAML/TOML parser, so
@@ -74,16 +90,13 @@ import { fileURLToPath } from 'node:url';
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..');
 
-/** The source-and-config roots this guard scans. See file header "SCOPE". */
-export const SCOPE_ROOTS = Object.freeze(['pillars', 'libs', 'scripts', '.github', 'docs']);
-
 /** Tab, LF, CR — the only control bytes this repo treats as legitimate. */
 const ALLOWED_CONTROL_BYTES = new Set([0x09, 0x0a, 0x0d]);
 
 /**
- * Genuinely binary formats this repo commits (or plausibly will) under
- * {@link SCOPE_ROOTS}. See file header "FILE-TYPE DISCRIMINATION" for why
- * this is an extension allowlist rather than content-sniffing.
+ * Genuinely binary formats this repo commits (or plausibly will). See file
+ * header "FILE-TYPE DISCRIMINATION" for why this is an extension allowlist
+ * rather than content-sniffing.
  */
 export const BINARY_EXTENSIONS = new Set([
   '.png',
@@ -183,17 +196,16 @@ export function filterScannableFiles(relPaths) {
 }
 
 /**
- * Every path `git` tracks under `roots`, repo-relative and POSIX-separated.
+ * Every path `git` tracks, repo-wide, repo-relative and POSIX-separated.
  * `-z` NUL-delimits the output — the one place in this file a NUL is exactly
  * the right separator, because it is `git` producing process output, not a
  * byte inside a committed file.
  *
  * @param {string} root Absolute path to the repo root.
- * @param {readonly string[]} roots
  * @returns {string[]}
  */
-export function listTrackedFiles(root, roots) {
-  const out = execFileSync('git', ['ls-files', '-z', '--', ...roots], {
+export function listTrackedFiles(root) {
+  const out = execFileSync('git', ['ls-files', '-z'], {
     cwd: root,
     encoding: 'utf8',
   });
@@ -237,10 +249,10 @@ export function findControlCharacterViolations(files) {
  * every branch directly — including the ones a real run should never hit.
  *
  * Order matters and is the ADR-045 discovery-floor shape: zero discovered
- * files fails before anything else runs (a renamed root or a guard running
- * outside a git checkout must not read as "nothing to report"), a read error
- * fails rather than being treated as "file has no violations", and only then
- * are the actual byte contents checked.
+ * files fails before anything else runs (a guard running outside a git
+ * checkout must not read as "nothing to report"), a read error fails rather
+ * than being treated as "file has no violations", and only then are the
+ * actual byte contents checked.
  *
  * @param {{ trackedCount: number, files: Array<{ path: string, bytes: Buffer }>, readFailures: string[] }} input
  * @returns {Evaluation}
@@ -254,16 +266,15 @@ export function evaluate({ trackedCount, files, readFailures }) {
 }
 
 /**
- * Read every scannable tracked file under `roots`. A read error is recorded
+ * Read every scannable tracked file, repo-wide. A read error is recorded
  * rather than thrown or skipped, so it reaches {@link evaluate} as a failure
  * (ADR-045: no bare catch between finding a subject and reporting on it).
  *
  * @param {string} root
- * @param {readonly string[]} roots
  * @returns {{ trackedCount: number, files: Array<{ path: string, bytes: Buffer }>, readFailures: string[] }}
  */
-function readTree(root, roots) {
-  const tracked = listTrackedFiles(root, roots);
+function readTree(root) {
+  const tracked = listTrackedFiles(root);
   const scannable = filterScannableFiles(tracked);
   /** @type {Array<{ path: string, bytes: Buffer }>} */
   const files = [];
@@ -280,23 +291,22 @@ function readTree(root, roots) {
 }
 
 function run() {
-  const { trackedCount, files, readFailures } = readTree(repoRoot, SCOPE_ROOTS);
+  const { trackedCount, files, readFailures } = readTree(repoRoot);
   const result = evaluate({ trackedCount, files, readFailures });
 
   if (result.ok) {
     console.log(
       `OK — scanned ${String(files.length)} text file(s) of ${String(trackedCount)} tracked ` +
-        `under ${SCOPE_ROOTS.join(', ')} (${String(trackedCount - files.length)} binary-skipped); ` +
-        'no disallowed control characters.'
+        `in the repository (${String(trackedCount - files.length)} binary-skipped); no ` +
+        'disallowed control characters.'
     );
     return true;
   }
 
   if (result.reason === 'no-files-discovered') {
     console.error(
-      `FAIL — \`git ls-files\` found 0 tracked files under ${SCOPE_ROOTS.join(', ')}. Either a ` +
-        'root was renamed, or this ran outside a git checkout. Fix SCOPE_ROOTS or the ' +
-        'environment — do not read an empty scan as a clean one.'
+      'FAIL — `git ls-files` found 0 tracked files. This almost certainly means the guard ran ' +
+        'outside a git checkout — fix the environment, do not read an empty scan as a clean one.'
     );
     return false;
   }
@@ -406,9 +416,19 @@ function selfTest() {
 
   // Discovery has to still see the real tree, or every check above is proving
   // a mechanism that no longer runs against anything.
-  const realTracked = listTrackedFiles(repoRoot, SCOPE_ROOTS);
-  checks[`real \`git ls-files\` under ${SCOPE_ROOTS.join(', ')} finds files`] =
-    realTracked.length > 0;
+  const realTracked = listTrackedFiles(repoRoot);
+  checks['real `git ls-files` finds files repo-wide'] = realTracked.length > 0;
+
+  // The whole point of the repo-wide scan (over the five roots this guard
+  // once scanned) is that `clients/` and root-level config are covered too —
+  // assert both directly, so narrowing the scan back down fails this
+  // self-test rather than silently reintroducing the gap.
+  checks['discovery reaches clients/, not just the original five roots'] = realTracked.some((p) =>
+    p.startsWith('clients/')
+  );
+  checks['discovery reaches root-level config, not just directory roots'] = realTracked.some(
+    (p) => !p.includes('/')
+  );
 
   const ok = Object.values(checks).every(Boolean);
   if (ok) {
@@ -427,8 +447,8 @@ function main() {
   if (args.includes('--help') || args.includes('-h')) {
     console.log(
       'Usage: node scripts/ci/check-control-characters.mjs [--self-test]\n' +
-        'Fails on any disallowed control character (outside tab/LF/CR) in tracked text under ' +
-        `${SCOPE_ROOTS.join(', ')}.`
+        'Fails on any disallowed control character (outside tab/LF/CR) in any tracked text ' +
+        'file in the repository.'
     );
     process.exit(2);
   }
