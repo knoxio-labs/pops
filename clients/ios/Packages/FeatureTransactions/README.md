@@ -69,8 +69,15 @@ mise run test
 
 which builds every package against the iOS SDK on a simulator — the same command CI runs.
 
-## Verification gap: VoiceOver and Dynamic Type on the assembled screen
+## Verification gap: the assembled screen is never rasterised
 
-`TransactionRowRenderingTests` proves a *row* draws, draws differently in light and dark, and grows with Dynamic Type. Nothing automated exercises the assembled screen under VoiceOver, or at accessibility text sizes with a refresh banner and a failed footer on it at once. What the code does about it — an unconditional `ScrollView`, text styles rather than point sizes, one accessibility element per row carrying a whole sentence, and spoken announcements when a refresh or a page fails — is reasoning, not measurement. There are `#Preview`s at `.accessibility5`, and a preview is something a person looks at, which is not a gate.
+`TransactionRowRenderingTests` proves a *row* draws, draws differently in light and dark, and grows with Dynamic Type. The screen it sits on is not covered, and `ImageRenderer` — the technique `DesignSystem` uses for exactly this — cannot cover it. That was measured rather than assumed, and both halves of the screen defeat it independently:
+
+- **`ScrollView` content is not drawn.** A `ScrollView` of rows rasterises to a uniform image: one distinct byte value across the whole canvas. That is the `loaded` and `empty` states, which are the states worth looking at.
+- **A root carrying `.task` and `.onChange` renders the same image whatever state it is in.** The same primitives rendered through a plain wrapper produce four distinct images; `TransactionsListView` produces two, and neither depends on the state that was supposed to select it. Swapping the model between `@State` and a plain `let` changed nothing, so the state wrapper is not the cause.
+
+So a snapshot gate for this screen needs a real host — an XCUITest, or a hosted test rendering into a window — not `ImageRenderer`.
+
+Nothing automated exercises the screen under VoiceOver either. What the code does about accessibility — an unconditional `ScrollView`, text styles rather than point sizes, one accessibility element per row carrying a whole sentence, and spoken announcements when a refresh or a page fails — is reasoning, not measurement. There are `#Preview`s at `.accessibility5`, and a preview is something a person looks at, which is not a gate.
 
 Tracked as POPS-1583 against the whole app rather than this package, because it applies to every screen the app grows. Delete this section when it lands.
