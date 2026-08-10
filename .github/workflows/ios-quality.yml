@@ -31,23 +31,24 @@ name: iOS Quality
 # is the input the Swift client is generated from, so a contract change has to
 # re-run this job or the generated client rots without a single red check.
 #
-# THERE IS NO DerivedData CACHE HERE, AND THAT IS DELIBERATE — it was removed
-# after it failed a pull request for another branch's code. It cached
-# `~/Library/Developer/Xcode/DerivedData` with `restore-keys` that fell back to
-# `deriveddata-<os>-<xcode>-`, a prefix shared by EVERY branch. On run
-# 31389530517 that restored PR #3959's build state into this branch's job, and
-# xcodebuild replayed a stale build description: it tried to compile
-# `App/ContentView.swift`, `App/RootView.swift` and three others, none of which
-# exist on the branch being tested, and failed with `missing argument for
-# parameter 'router'`. A red check naming a file the author has never seen.
+# THERE IS NO DerivedData CACHE HERE, AND THAT IS DELIBERATE. It cannot help
+# the step that costs. `build:for-testing` wipes its own private
+# `clients/ios/.derived-data` before every build, because a complete compiler
+# log for `unused_declaration` — a whole-program rule, where a use deleted in
+# one file makes a declaration in another unused — requires compiling every
+# file. A warm tree by definition recompiles only what changed, so a cache hit
+# produces a partial log and `lint:analyze`'s own floor rejects it. A build that
+# must be cold cannot be warmed.
 #
-# It could not be fixed by narrowing the key either. The step it existed to
-# warm is gone: `build:for-testing` wipes its own private
-# `clients/ios/.derived-data` before every build, because a complete compiler log
-# for `unused_declaration` — a whole-program rule — requires compiling every
-# file. A build that must be cold cannot be warmed, so the cache had no
-# remaining consumer and only the failure mode. POPS-1683 asked why it appeared
-# to buy nothing; this is the answer, plus a reason to want it gone.
+# It was not merely useless before, it was actively counted against itself: the
+# old arrangement ran `clean build-for-testing` against the SHARED default
+# location, so the last step of each run emptied the directory that `Save
+# DerivedData` then banked. That is what POPS-1683 was seeing.
+#
+# Removed with it: the `Build (iOS Simulator)` step, the cache's only remaining
+# consumer. `build-for-testing` compiles the app as `TEST_HOST`, so nothing
+# stopped being compiled — the app-does-not-compile signal now comes from the
+# step below, about a minute later than it used to.
 
 on:
   push:
