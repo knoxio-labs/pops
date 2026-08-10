@@ -9,18 +9,22 @@ import SwiftUI
 /// The mapping from a feature id to a screen is here and only here. A feature
 /// module names the id it draws; this decides what "drawing" it means, which is
 /// what stops one feature from having to construct another's views.
+///
+/// It draws no navigation chrome of its own. A feature that has more than one
+/// screen brings its own `NavigationStack` — `TransactionsFlowView` is the
+/// first — because the routes between those screens belong to that feature and
+/// resolving them here would mean this file naming every screen in the app. A
+/// stack around a stack is also simply broken: the inner one wins and the outer
+/// one silently does nothing.
 internal struct ContentView: View {
     internal let surface: FeatureSurface
     internal let shell: AppShellModel
     internal let composition: AppComposition
 
     internal var body: some View {
-        NavigationStack {
-            VStack(spacing: PopsSpacing.zero) {
-                degradedBanner
-                features
-            }
-            .navigationTitle(RootCopy.title)
+        VStack(spacing: PopsSpacing.zero) {
+            degradedBanner
+            features
         }
     }
 
@@ -37,12 +41,13 @@ internal struct ContentView: View {
         }
     }
 
+    /// A feature is asked for its whole flow, not for one of its screens. What
+    /// the routes inside it mean is the feature's own business — this only
+    /// decides which feature is on screen.
     @ViewBuilder private func screen(for feature: MobileFeature) -> some View {
         switch feature {
         case FeatureTransactions.feature:
-            TransactionsListView(
-                model: TransactionsListViewModel(dependencies: dependencies)
-            )
+            TransactionsFlowView(dependencies: dependencies, router: composition.router)
         default:
             // Unreachable: `RootFeature.renderable` is what the shell filters
             // against, so a feature with no screen is never offered. Drawn as

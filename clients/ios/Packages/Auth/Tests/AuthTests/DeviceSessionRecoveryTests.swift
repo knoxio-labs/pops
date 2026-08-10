@@ -198,12 +198,18 @@ internal struct DeviceSessionRecoveryTests {
 
         let rotation = Task { try await fixture.refreshedTokens(replacing: "access-1") }
 
-        let started = await waitUntil("the rotation to reach the exchange") {
-            fixture.exchange.challengeCount == 1
+        // Parked *at the gate*, not merely past the challenge. Between the two
+        // the rotation signs the nonce with the Enclave key, and the revocation
+        // below deletes that key — so synchronising on the challenge count
+        // raced the signature and produced `credentialsRejected` from a lost
+        // key rather than the `deviceRevoked` this test is about, on roughly
+        // one run in five.
+        let parked = await waitUntil("the rotation to park inside the exchange") {
+            await gate.hasParked
         }
         await fixture.refresher.deviceWasRevoked()
         await gate.open()
-        #expect(started, "the rotation never reached the exchange")
+        #expect(parked, "the rotation never reached the exchange")
 
         await #expect(throws: SessionRefreshError.deviceRevoked) { try await rotation.value }
 
