@@ -138,9 +138,11 @@ Each pillar owns and migrates its own SQLite database under `pillars/<id>/src/db
 mise lint && mise typecheck    # Must pass before every push
 ```
 
-### Format Drift Watchdog
+### Format drift on `main`
 
-`lint-staged` only formats _staged_ files, so when `oxfmt`'s output rules shift (version bump, new rules) or someone bypasses husky, untouched files drift silently on `main` — and then the whole-tree `Format` check fails on every open PR. The [`Format Drift Watchdog`](.github/workflows/format-drift-watchdog.yml) workflow runs `pnpm format:check` against `main` every 6 hours (and on demand via `workflow_dispatch`); on failure it opens (or updates) a single tracking issue titled `[format-drift] oxfmt --check . failing on main` with the drifted file list and remediation snippet, and closes it automatically once `main` is clean again. See PR #3153 for the original incident this guards against.
+`lint-staged` only formats _staged_ files, so a file written and committed in one step can land unformatted, and a change to `oxfmt`'s output rules can leave untouched files drifted. Left alone that compounds, and the whole-tree `Format` check starts failing on work that did not cause it.
+
+The catch is [`quality.yml`](.github/workflows/quality.yml)'s `Format` job on a push to `main`: it drops the per-PR unit scoping and runs `pnpm format:check` over the whole tree, on every merge. That sweep is the only thing in CI that reads paths outside the unit-discovery model — `clients/` among them (ADR-043) — so it is what catches drift a PR-scoped check cannot see.
 
 ### E2E Tests
 
