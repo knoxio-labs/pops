@@ -51,7 +51,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { isMapping, parseYaml, scalarText, walkMappings } from './config-parse.mjs';
+import { isMapping, parseYaml, requireScalar, scalarText, walkMappings } from './config-parse.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..');
@@ -96,11 +96,16 @@ export function parseWorkflowRunTriggers(source) {
   const workflowRun = triggers(workflowDoc(source)).workflow_run;
   if (!isMapping(workflowRun)) return [];
   const names = workflowRun.workflows;
+  if (names === undefined) return [];
+  // Every entry must be readable. Dropping one silently shortens the trigger
+  // list, and a shorter list agrees with the `gated` array in exactly the way
+  // this guard exists to catch it not doing.
   if (Array.isArray(names)) {
-    return names.map(scalarText).filter((name) => name !== undefined);
+    return names.map((name, index) =>
+      requireScalar(name, 'ci-gate.yml', `on.workflow_run.workflows[${index}]`)
+    );
   }
-  const single = scalarText(names);
-  return single === undefined ? [] : [single];
+  return [requireScalar(names, 'ci-gate.yml', 'on.workflow_run.workflows')];
 }
 
 /**
@@ -448,14 +453,20 @@ function selfTest() {
   const named = parseWorkflowName('name: Quality # the big one\n');
   const writes = grantsChecksWrite('permissions:\n  checks: write # publishes the verdict\n');
 
-  // The degenerate case: a document nobody can read must raise, so the caller
-  // reports it. Returning "no triggers, no gated names, no advisory jobs" would
-  // read as a workflow with clean wiring.
+  // The degenerate cases: a document nobody can read, and a trigger list with
+  // an entry that is not a name. Both must raise so the caller reports them.
+  // Returning "no triggers" or a list one shorter reads as clean wiring.
   let unparseableRaised = false;
   try {
     parseWorkflowRunTriggers('on:\n  a:\n   - b\n  - c\n');
   } catch {
     unparseableRaised = true;
+  }
+  let unreadableEntryRaised = false;
+  try {
+    parseWorkflowRunTriggers('on:\n  workflow_run:\n    workflows:\n      - "A"\n      - [B]\n');
+  } catch {
+    unreadableEntryRaised = true;
   }
 
   const checks = {
@@ -471,6 +482,7 @@ function selfTest() {
     'reads the workflow name past a trailing comment': named === 'Quality',
     'reads the checks: write permission': writes,
     'raises on a workflow that cannot be parsed rather than reporting it clean': unparseableRaised,
+    'raises on a trigger entry that is not a name rather than dropping it': unreadableEntryRaised,
   };
 
   const failed = Object.entries(checks).filter(([, ok]) => !ok);

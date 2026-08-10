@@ -278,10 +278,15 @@ export function checkNodePin(root) {
   let settings;
   try {
     settings = parseTomlSection(readFileSync(join(root, 'mise.toml'), 'utf8'), 'settings');
-  } catch {
-    // The parse failure is already recorded by collectPins, which read the same
-    // file. Recording it twice would double-count one broken config.
+  } catch (error) {
+    // `collectPins` read the same file for its `[tools]` table, so a document
+    // that does not parse at all is already recorded and must not be counted
+    // twice. A `[settings]` table that is present but not a table is NOT — that
+    // failure is unique to this read, and swallowing it would drop the
+    // activate_aggressive check silently.
     settings = undefined;
+    const message = error instanceof Error ? error.message : String(error);
+    if (!violations.includes(message)) violations.push(message);
   }
   if (settings !== undefined) {
     for (const [key, expected] of Object.entries(REQUIRED_MISE_SETTINGS)) {
@@ -339,10 +344,29 @@ function selfTest() {
     emptyTreeIsReported(),
     // Nor may an unreadable declaration site quietly agree with the others.
     unparseableWorkflowIsReported(),
+    // A `[settings]` table that is present but is not a table is a failure only
+    // this read sees, so it must not be swallowed as already-reported.
+    malformedSettingsIsReported(),
   ];
   const ok = checks.every(Boolean);
   if (!ok) console.error(`self-test FAILED: ${JSON.stringify(checks)}`);
   return ok;
+}
+
+/** @returns {boolean} */
+function malformedSettingsIsReported() {
+  const dir = mkdtempSync(join(tmpdir(), 'node-pin-badsettings-'));
+  try {
+    // `settings` before any table header, so it is a TOP-LEVEL key that is not
+    // a table. `[tools]` still parses, so `collectPins` records no problem and
+    // this read is the only one that sees the breakage.
+    writeFileSync(join(dir, 'mise.toml'), 'settings = "on"\n\n[tools]\nnode = "24"\n', 'utf8');
+    writeFileSync(join(dir, 'package.json'), '{"engines":{"node":"24"}}\n', 'utf8');
+    const { violations } = checkNodePin(dir);
+    return violations.some((v) => v.includes('[settings] is a string'));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 }
 
 /** @returns {boolean} */

@@ -19,7 +19,7 @@
  * enforces that both ways round.
  */
 
-import { load as loadYaml } from 'js-yaml';
+import { CORE_SCHEMA, load as loadYaml } from 'js-yaml';
 import { parse as parseTomlSource } from 'smol-toml';
 
 /**
@@ -44,12 +44,15 @@ export class ConfigParseError extends Error {
 }
 
 /**
- * Parse a YAML document.
+ * Parse a YAML document under the **core** schema.
  *
- * `js-yaml`'s default (core) schema leaves `on:`, `yes:` and `no:` as strings,
- * so a GitHub Actions workflow's `on` key survives the round trip. That is not
- * true of YAML 1.1 parsers, and a guard that reads `doc.on` would silently see
- * `undefined` under one.
+ * The schema is passed explicitly rather than left to the default, because a
+ * guard's correctness depends on it. YAML 1.1 resolves `on`, `yes` and `no` to
+ * booleans; the core schema leaves them strings, which is the only reason
+ * `doc.on` reads back as a GitHub Actions workflow's trigger block instead of
+ * `undefined`. A guard reading `undefined` there finds nothing and reports
+ * clean — so pinning the schema keeps a `js-yaml` upgrade from changing what
+ * these guards can see. `scripts/ci/__tests__/config-parse.test.ts` asserts it.
  *
  * @param {string} text
  * @param {string} label  Path or name used in a parse failure message.
@@ -58,7 +61,7 @@ export class ConfigParseError extends Error {
  */
 export function parseYaml(text, label) {
   try {
-    return loadYaml(text);
+    return loadYaml(text, { schema: CORE_SCHEMA });
   } catch (error) {
     throw new ConfigParseError(label, error);
   }
@@ -154,4 +157,38 @@ export function scalarText(value) {
   if (typeof value === 'string') return value;
   if (typeof value === 'number' || typeof value === 'boolean') return String(value);
   return undefined;
+}
+
+/**
+ * {@link scalarText}, but a non-scalar raises instead of returning `undefined`.
+ *
+ * Use this wherever a scalar is the only shape the caller can rule on. Dropping
+ * the entry silently — `.filter(v => v !== undefined)` over a list, a `continue`
+ * over a map — turns a document the guard cannot read into a shorter document
+ * it reads happily, which is ADR-045's "a shape you cannot model is a
+ * violation, not a pass" broken in the passing direction.
+ *
+ * @param {unknown} value
+ * @param {string} label  Path or name used in the failure message.
+ * @param {string} where  Key path of the offending value.
+ * @returns {string}
+ * @throws {ConfigParseError}
+ */
+export function requireScalar(value, label, where) {
+  const text = scalarText(value);
+  if (text !== undefined) return text;
+  throw new ConfigParseError(label, `${where} is ${shapeOf(value)}, not a single value`);
+}
+
+/**
+ * Name a value's shape for a failure message.
+ *
+ * @param {unknown} value
+ * @returns {string}
+ */
+function shapeOf(value) {
+  if (value === null) return 'null';
+  if (Array.isArray(value)) return 'a sequence';
+  if (isMapping(value)) return 'a mapping';
+  return `of type ${typeof value}`;
 }

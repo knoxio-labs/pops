@@ -50,7 +50,13 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { ConfigParseError, isMapping, parseToml, scalarText } from '../ci/config-parse.mjs';
+import {
+  ConfigParseError,
+  isMapping,
+  parseToml,
+  requireScalar,
+  scalarText,
+} from '../ci/config-parse.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..');
@@ -76,14 +82,26 @@ const DEP_TABLES = ['dependencies', 'dev-dependencies', 'build-dependencies'];
  * @throws {ConfigParseError}
  */
 export function parseWorkspaceMembers(toml, label = 'Cargo.toml') {
+  // Every negative shape here raises rather than returning a short list. This
+  // function's caller turns its result into the set of crates to check, so a
+  // manifest it cannot read must not arrive as a workspace that happens to have
+  // fewer members — that scans nothing and prints OK (ADR-045).
   const workspace = parseToml(toml, label).workspace;
-  if (!isMapping(workspace)) return [];
-  const members = workspace.members;
-  if (members === undefined) return [];
-  if (!Array.isArray(members)) {
-    throw new ConfigParseError(label, '[workspace].members is not an array');
+  if (!isMapping(workspace)) {
+    throw new ConfigParseError(label, 'declares no [workspace] table');
   }
-  return members.map(scalarText).filter((member) => member !== undefined);
+  const members = workspace.members;
+  if (!Array.isArray(members)) {
+    throw new ConfigParseError(
+      label,
+      members === undefined
+        ? '[workspace] declares no members'
+        : '[workspace].members is not an array'
+    );
+  }
+  return members.map((member, index) =>
+    requireScalar(member, label, `[workspace].members[${index}]`)
+  );
 }
 
 /**
@@ -105,7 +123,12 @@ function collectDepTable(table, deps, label, where) {
     throw new ConfigParseError(label, `[${where}] is not a table`);
   }
   for (const [alias, spec] of Object.entries(table)) {
-    const renamed = isMapping(spec) ? scalarText(spec.package) : undefined;
+    // A `package = …` that is not a crate name leaves the real crate unknown,
+    // and falling back to the alias would hide the edge the rename points at.
+    const renamed =
+      isMapping(spec) && spec.package !== undefined
+        ? requireScalar(spec.package, label, `${where}.${alias}.package`)
+        : undefined;
     deps.add(renamed ?? alias);
   }
 }
@@ -154,6 +177,9 @@ export function discoverCrates(root = repoRoot) {
     throw new Error(`no workspace Cargo.toml at ${wsPath}`);
   }
   const members = parseWorkspaceMembers(readFileSync(wsPath, 'utf8'), 'Cargo.toml');
+  if (members.length === 0) {
+    throw new Error('Cargo.toml [workspace].members is empty — there is no crate to check');
+  }
   /** @type {Crate[]} */
   const crates = [];
   for (const member of members) {
@@ -258,6 +284,24 @@ function selfTest() {
     unparseableRaised = error instanceof ConfigParseError;
   }
 
+  // A workspace whose member list cannot be read must raise too. Returning a
+  // short list there scans fewer crates and still prints OK, which is the
+  // failure ADR-045 exists to end.
+  const unreadableMemberLists = [
+    '[package]\nname = "x"\n', // no [workspace] at all
+    '[workspace]\nresolver = "2"\n', // [workspace] but no members
+    '[workspace]\nmembers = "libs/pops-ai"\n', // members is not an array
+    '[workspace]\nmembers = ["libs/pops-ai", { path = "x" }]\n', // a non-scalar entry
+  ];
+  const memberListsRaise = unreadableMemberLists.every((toml) => {
+    try {
+      parseWorkspaceMembers(toml);
+      return false;
+    } catch (error) {
+      return error instanceof ConfigParseError;
+    }
+  });
+
   const ok =
     caughtLib &&
     caughtPillar &&
@@ -265,7 +309,8 @@ function selfTest() {
     subTableSeen &&
     renamedSubTableSeen &&
     targetSubTableSeen &&
-    unparseableRaised;
+    unparseableRaised &&
+    memberListsRaise;
   if (!ok) {
     console.error('SELF-TEST FAILED — guard did not behave as expected:');
     console.error(`  caught lib→pillar (RUST-2a):    ${caughtLib}`);
@@ -275,6 +320,7 @@ function selfTest() {
     console.error(`  read a renamed sub-table dep:   ${renamedSubTableSeen}`);
     console.error(`  read a target sub-table dep:    ${targetSubTableSeen}`);
     console.error(`  raised on an unreadable manifest: ${unparseableRaised}`);
+    console.error(`  raised on an unreadable member list: ${memberListsRaise}`);
   } else {
     console.log(
       'self-test OK — guard flags lib→pillar + pillar→pillar, passes clean lib, reads ' +

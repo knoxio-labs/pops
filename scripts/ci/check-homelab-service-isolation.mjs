@@ -220,7 +220,18 @@ export function scanCompose(file, text) {
   for (const entry of walkMappings(doc)) {
     if (entry.key !== 'image' && entry.key !== 'container_name') continue;
     const value = scalarText(entry.value);
-    if (value === undefined) continue;
+    if (value === undefined) {
+      // Skipping it would mean an `image:` the guard cannot read counts as no
+      // image at all — the leak stays and the manifest reports clean.
+      out.push({
+        file,
+        path: formatPath(entry.path),
+        service: 'unknown',
+        evidence: `\`${entry.key}\` is not a single value, so it cannot be matched`,
+        kind: 'unreadable-shape',
+      });
+      continue;
+    }
     const hit = entry.key === 'image' ? matchImage(value) : matchName(value);
     if (!hit) continue;
     out.push({
@@ -266,7 +277,16 @@ export function scanLitestream(file, text) {
   for (const entry of walkMappings(parsed.doc)) {
     if (entry.key !== 'path') continue;
     const value = scalarText(entry.value);
-    if (value === undefined) continue;
+    if (value === undefined) {
+      out.push({
+        file,
+        path: formatPath(entry.path),
+        service: 'unknown',
+        evidence: '`path` is not a single value, so the replicated db cannot be identified',
+        kind: 'unreadable-shape',
+      });
+      continue;
+    }
     const dbName = basename(value).replace(/\.(db|sqlite3?|litestream)$/i, '');
     const hit = matchName(dbName);
     if (!hit) continue;
@@ -485,6 +505,14 @@ function selfTest() {
       'reports a services key that is not a mapping of service names': scanCompose(
         'scalar-compose.yml',
         scalarServices
+      ).some((v) => v.kind === 'unreadable-shape'),
+      'reports an image it cannot read rather than counting it as no image': scanCompose(
+        'unreadable-image.yml',
+        'services:\n  broker:\n    image:\n      - eclipse-mosquitto\n'
+      ).some((v) => v.kind === 'unreadable-shape'),
+      'reports a litestream path it cannot read': scanLitestream(
+        'finance.yml',
+        'dbs:\n  - path:\n      from: /data/sqlite/mosquitto.db\n'
       ).some((v) => v.kind === 'unreadable-shape'),
       'does not flag pops-finance image': !composeLeaks.some((v) =>
         v.evidence.includes('pops-finance')
