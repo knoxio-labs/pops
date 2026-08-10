@@ -1,5 +1,4 @@
 import AppCore
-import AuthTestSupport
 import BFMClient
 import Foundation
 import Testing

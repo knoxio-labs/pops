@@ -1,10 +1,7 @@
-import AppCore
 import AuthTestSupport
 import HTTPTypes
 import OpenAPIRuntime
 import Testing
-
-@testable import Auth
 
 /// What the middleware does when more than one request is in the air, and what
 /// it does with a request that carries a body.
