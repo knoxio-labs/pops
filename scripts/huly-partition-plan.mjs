@@ -568,6 +568,11 @@ function readFilter(value, index) {
     if (raw === undefined) continue;
     if (typeof raw !== 'string')
       throw new Error(`coverage.cells[${index}].filter.${key} must be a string`);
+    // Refused, not trimmed to nothing. `" "` would become a filter matching no
+    // root, so the branch it was meant to cover reads as uncovered and the
+    // export is condemned for the wrong reason — a misleading verdict instead
+    // of a message naming the row that needs fixing.
+    if (raw.trim() === '') throw new Error(`coverage.cells[${index}].filter.${key} is empty`);
     cell[key] = raw.trim();
   }
   for (const key of /** @type {const} */ (['hasComponent', 'hasAssignee', 'hasDueDate'])) {
@@ -680,7 +685,15 @@ function runRefine(args) {
     console.error('FAIL — --refine needs a cell, e.g. --refine \'{"status":"Merged"}\'.');
     return 2;
   }
-  const children = refineCell(JSON.parse(raw), readList(readFlag(args, '--components')));
+  /** @type {Cell} */
+  let cell;
+  try {
+    cell = JSON.parse(raw);
+  } catch (error) {
+    console.error(`FAIL — --refine could not read that as JSON: ${String(error)}`);
+    return 2;
+  }
+  const children = refineCell(cell, readList(readFlag(args, '--components')));
   if (children === undefined) {
     console.error(
       'FAIL — every enumerable filter is spent on this cell. What is left is `titleRegex` ' +

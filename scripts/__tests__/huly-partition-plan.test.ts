@@ -533,6 +533,19 @@ describe('readCoverage', () => {
       { coverage: { cells: [{ filter: { status: 7 }, count: 1 }] } },
       /status must be a string/u,
     ],
+    // Trimmed to nothing, this would be a filter matching no root, and the
+    // branch it was meant to cover would read as uncovered — the export
+    // condemned for the wrong reason instead of the row being named.
+    [
+      'a whitespace-only status filter',
+      { coverage: { cells: [{ filter: { status: '   ' }, count: 1 }] } },
+      /status is empty/u,
+    ],
+    [
+      'an empty component filter',
+      { coverage: { cells: [{ filter: { component: '' }, count: 1 }] } },
+      /component is empty/u,
+    ],
     [
       'a non-string title pattern',
       { coverage: { cells: [{ filter: { titleRegex: /a/u.source.length }, count: 1 }] } },
