@@ -592,9 +592,9 @@ function copiesPath(sources: ReadonlySet<string>, path: string): boolean {
 
 /** The tsconfigs a package's `build` script compiles against. */
 function tsconfigsBuildScriptNeeds(pkg: WorkspacePackage): string[] {
-  return [...(pkg.scripts?.build ?? '').matchAll(/\btsc\s+-[pb]\s+(\S+\.json)/gu)].map(
-    (match) => match[1]
-  );
+  return [...(pkg.scripts?.build ?? '').matchAll(/\btsc\s+-[pb]\s+(\S+\.json)/gu)]
+    .map((match) => match[1])
+    .filter((tsconfig): tsconfig is string => tsconfig !== undefined);
 }
 
 /** The workspace directories a Dockerfile builds, read off the manifests it copies. */
