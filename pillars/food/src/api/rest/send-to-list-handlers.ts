@@ -1,7 +1,7 @@
 /**
  * Handlers for the `sendToList.*` sub-router. The lists client is resolved
- * lazily (real HTTP client built from POPS_PILLARS, or an injected stub in
- * tests) so non-send-to-list requests never touch the lists registry.
+ * through a factory (the SDK-backed client, or an injected stub in tests) so
+ * the handler shape does not change with the transport behind it.
  */
 import { type ListsClient } from '../modules/recipes/send-to-list/lists-client.js';
 import { prepareSendToList } from '../modules/recipes/send-to-list/prepare.js';

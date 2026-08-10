@@ -1,6 +1,6 @@
 # .github/workflows
 
-19 workflows. Every job runs on `ubuntu-latest` except `ios-quality.yml`, which needs macOS to compile Swift at all.
+18 workflows. Every job runs on `ubuntu-latest` except `ios-quality.yml`, which needs macOS to compile Swift at all.
 
 ## `ci-gate.yml` — the one static aggregate context
 
@@ -29,6 +29,11 @@ verdict converges, and for why it publishes its own check run; the rules the
 - The verdict is POSTed as a **check run named `CI Gate` against
   `github.event.workflow_run.head_sha`** (hence `permissions: checks: write`).
   That is the context to put in the branch ruleset.
+- The run's own `run-name` states the evaluated SHA, branch and triggering
+  workflow, because `gh run list` / the Actions UI file every `workflow_run`
+  run under the default branch's tip regardless — see the next section for why
+  that makes the run list, as opposed to the check run above, an unreliable
+  place to read a commit's gate state.
 
 ### Rules this file exists to stop people relearning
 
@@ -37,6 +42,26 @@ not on the head it judged.** Until the gate began POSTing its own check run it
 had never once appeared on a pull request, however green or red it was. If the
 `checks.create` call is ever dropped, the gate silently reverts to being a
 post-hoc signal on `main`.
+
+**The run itself is filed under the same misattribution, and POSTing the check
+run does not fix it.** `gh run list --branch main` (and the Actions UI) always
+attribute a `workflow_run` run to the default branch's tip, never to
+`github.event.workflow_run.head_sha` — so a `CI Gate` run that fails while
+evaluating an unrelated PR branch still reads as a red `CI Gate` on `main`'s
+run list. Example: a run filed at `ea478a403` (main's tip) whose log read
+`Triggered by "iOS Quality" (conclusion=failure) at 04773d252` — a commit on an
+unrelated PR branch; every gated workflow at `ea478a403` itself had passed. The
+gate evaluated and published correctly; only the run's own place in the list
+was wrong. `run-name` (above) puts the evaluated SHA and branch in the run's
+title so this is visible without opening the log, but the run's status column
+still means "the commit named in this run's title", never "the branch column
+next to it" — **`gh run list` is never the authoritative source for a commit's
+gate state.** That is always the check run itself:
+
+```
+gh api repos/knoxio-labs/pops/commits/<sha>/check-runs \
+  --jq '.check_runs[] | select(.name=="CI Gate")'
+```
 
 **"Not in the ruleset" does not mean "cannot block".** The gate aggregates the
 **workflow-level** conclusion of each gated workflow, so one red job anywhere in
@@ -128,7 +153,6 @@ files only, no install.
 | `pillar-schema-coverage.yml`     | PR/push on `pillars/*/src/db/**`, migrations                  | per-pillar coverage, an injected-table self-test, and a static `Pillar schema coverage` aggregator job               |
 | `publish-images.yml`             | push to `main`, `v*` tags, dispatch (`only` input)            | four static app images plus every `pops-<x>` discovered from the prod compose's `image:` refs                        |
 | `release.yml`                    | `workflow_dispatch`                                           | `.github/scripts/release.sh`, then annotated tag + `gh release create`                                               |
-| `format-drift-watchdog.yml`      | cron `0 */6 * * *` + dispatch                                 | whole-tree `pnpm format:check` on `main`; opens, updates or closes one tracking issue                                |
 | `infra-lint.yml`                 | PR/push on `infra/litestream/**`, `infra/backup/**`           | YAML lint                                                                                                           |
 | `workflows-quality.yml`          | PR/push on `.github/workflows/**`                             | YAML lint                                                                                                           |
 | `fe-test-e2e.yml`                | `workflow_dispatch` only                                      | Playwright, manual — see the header for why it is off PR/push                                                        |

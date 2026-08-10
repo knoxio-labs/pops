@@ -14,7 +14,7 @@ import Testing
 @Suite("Transactions paging")
 internal struct TransactionsListPagingTests {
     private func model(_ repository: any TransactionsRepository) -> TransactionsListViewModel {
-        TransactionsListViewModel(dependencies: .fake(transactions: repository))
+        TransactionsListViewModel(dependencies: .fake(transactions: repository), router: Router())
     }
 
     @Test("the first page loads and becomes the rows on screen")

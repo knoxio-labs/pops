@@ -1,5 +1,13 @@
-// swift-tools-version: 6.0
+// swift-tools-version: 6.2
 import PackageDescription
+
+// Warnings are errors here, and the tools version is 6.2 to reach the setting
+// that does it without unsafe flags, for the reason `../AppCore/Package.swift`
+// gives.
+let strictSwiftSettings: [SwiftSetting] = [
+    .swiftLanguageMode(.v6),
+    .treatAllWarnings(as: .error),
+]
 
 // macOS is declared alongside iOS for the same reason `AppCore` declares it:
 // `swift build` and `swift test` compile for the *host*, and without a floor
@@ -23,7 +31,7 @@ let package = Package(
         .target(
             name: "FeaturePairing",
             dependencies: ["AppCore", "DesignSystem"],
-            swiftSettings: [.swiftLanguageMode(.v6)]
+            swiftSettings: strictSwiftSettings
         ),
         .testTarget(
             name: "FeaturePairingTests",
@@ -32,7 +40,7 @@ let package = Package(
                 "AppCore",
                 .product(name: "AppCoreFakes", package: "AppCore"),
             ],
-            swiftSettings: [.swiftLanguageMode(.v6)]
+            swiftSettings: strictSwiftSettings
         ),
     ]
 )

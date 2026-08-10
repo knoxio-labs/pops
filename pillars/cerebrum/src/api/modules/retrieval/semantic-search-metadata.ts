@@ -9,9 +9,9 @@
  *     shared pops.db.
  *  2. Cross-pillar enrichment (`transaction` / `movie` / `tv_show` /
  *     `inventory`) is fetched over REST via injected {@link PeerClients}
- *     instead of SQL joins against the peers' tables. A peer absent from
- *     `POPS_PILLARS` (its client `undefined`) → enrichment unavailable for
- *     that source type → the hit is dropped (returns `null`), matching the
+ *     instead of SQL joins against the peers' tables. A source type with no
+ *     client, or a row the owning pillar does not have, → enrichment
+ *     unavailable → the hit is dropped (returns `null`), matching the
  *     monolith's behaviour for an unresolvable domain row.
  *
  * The `to*Text` formatters fold the fetched fields into a single `text`

@@ -23,7 +23,8 @@
  * consumer's drift check, which is the kind of noise that teaches people to
  * re-vendor without reading.
  *
- * TWO HALVES, and the second is the one that keeps the first honest:
+ * THREE HALVES, and the second and third are the ones that keep the first
+ * honest:
  *
  *   1. `EXPECTATIONS` is curated. Each row pins one operation a consumer
  *      depends on, and is checked against the producer's OpenAPI on disk.
@@ -32,12 +33,33 @@
  *      row. A seam nobody wrote a row for fails the build instead of going
  *      unguarded while the guard reports OK — the failure mode ADR-045
  *      exists to prevent, and the one this guard shipped with.
+ *   3. Direct `fetch` is enumerated too. A consumer that hand-rolls the HTTP
+ *      call instead of using the proxy has no `operationId` to pin and is
+ *      invisible to (2) — the guard would print OK over a seam it cannot see,
+ *      which is (1)'s failure mode wearing a different hat. A file that
+ *      speaks the pillar federation (see `FEDERATION_SIGNALS`) and calls
+ *      `fetch` itself is reported unless `SANCTIONED_DIRECT_FETCH` excuses it.
  *
  * A call site whose target pillar is not a literal (a runtime dispatcher
  * such as the MCP bridge or the orchestrator's search fan-out) cannot be
  * pinned to an operation. Those are named in `UNPINNABLE_CALL_SITES` with a
  * reason; an entry there whose file no longer holds a call site is itself a
- * failure, so the exemption list cannot outlive what it excuses.
+ * failure, so the exemption list cannot outlive what it excuses. The same
+ * rule governs `SANCTIONED_DIRECT_FETCH`.
+ *
+ * A pillar can also reach a sibling through a REGISTERED WRAPPER instead of
+ * calling `pillar()` directly — bfm's `PillarGateway.call` is the only one in
+ * the tree, forwarding its first argument straight into `pillar()` one
+ * function down, where the id is a parameter and therefore invisible to this
+ * scanner. `PILLAR_CALL_WRAPPERS` names the wrapper's type and method so
+ * discovery follows it there instead: an identifier annotated with the
+ * registered type, called as `<name>.<method>(<producerId>, ...)`, is the
+ * same call site as a literal `pillar(<producerId>)`. Wrappers are matched by
+ * REGISTRATION, not by inferring "this looks like one" from shape — an
+ * inferred match is exactly the kind of matcher that models one spelling and
+ * drifts silently as others appear. `checkWrapperRegistrations` keeps the
+ * list honest: an entry whose type is no longer declared where it says it is
+ * fails the build, the same way a stale `UNPINNABLE_CALL_SITES` entry does.
  *
  * Source is matched as text, not parsed: this guard runs in a CI job with no
  * `pnpm install` (see ADR-045's stated exception), so no TypeScript parser is
@@ -50,12 +72,21 @@
  *   node scripts/ci/check-cross-pillar-expectations.mjs
  *   node scripts/ci/check-cross-pillar-expectations.mjs --self-test
  *
- * Exit 0 = every expectation holds and every call site has one.
+ * Exit 0 = every expectation holds, every call site has one, and no
+ *          federation-aware file hand-rolls its HTTP.
  * Exit 1 = a producer contract moved, or a seam is unguarded.
  * Exit 2 = usage error.
  */
 
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -181,6 +212,15 @@ export const EXPECTATIONS = [
   },
   {
     consumer: 'finance',
+    producer: 'contacts',
+    operationId: 'entities.create',
+    path: '/entities',
+    method: 'post',
+    query: [],
+    usedBy: 'pillars/finance/scripts/migrate-core-entities.ts',
+  },
+  {
+    consumer: 'finance',
     producer: 'registry',
     operationId: 'users.get',
     path: '/users',
@@ -217,6 +257,139 @@ export const EXPECTATIONS = [
     method: 'post',
     query: [],
     usedBy: 'pillars/ai/src/api/modules/ai-alerts/dispatchers/nudge.ts',
+  },
+  {
+    consumer: 'food',
+    producer: 'lists',
+    operationId: 'list.get',
+    path: '/lists/{id}',
+    method: 'get',
+    query: [],
+    pathParams: ['id'],
+    usedBy: 'pillars/food/src/api/modules/recipes/send-to-list/lists-client.ts',
+  },
+  {
+    consumer: 'food',
+    producer: 'lists',
+    operationId: 'list.create',
+    path: '/lists',
+    method: 'post',
+    query: [],
+    usedBy: 'pillars/food/src/api/modules/recipes/send-to-list/lists-client.ts',
+  },
+  {
+    consumer: 'food',
+    producer: 'lists',
+    operationId: 'items.upsertByRef',
+    path: '/lists/{listId}/items/upsert-by-ref',
+    method: 'post',
+    query: [],
+    // The merge-or-insert leg send-to-list retries against. Losing `listId`
+    // leaves the literal placeholder in the URL, and the 404 that follows
+    // reads as "that list is gone" rather than "this client is broken".
+    pathParams: ['listId'],
+    usedBy: 'pillars/food/src/api/modules/recipes/send-to-list/lists-client.ts',
+  },
+  {
+    consumer: 'food',
+    producer: 'lists',
+    operationId: 'items.add',
+    path: '/lists/{listId}/items',
+    method: 'post',
+    query: [],
+    pathParams: ['listId'],
+    usedBy: 'pillars/food/src/api/modules/recipes/send-to-list/lists-client.ts',
+  },
+  {
+    consumer: 'food',
+    producer: 'lists',
+    operationId: 'items.search',
+    path: '/items',
+    method: 'get',
+    // How send-to-list decides a recipe has already been sent. Dropping
+    // `notesContains` widens the search to every shopping item in the fleet,
+    // where "already sent" is always true and nothing is ever sent again.
+    query: ['kind', 'notesContains'],
+    usedBy: 'pillars/food/src/api/modules/recipes/send-to-list/lists-client.ts',
+  },
+  {
+    consumer: 'cerebrum',
+    producer: 'finance',
+    operationId: 'transactions.get',
+    path: '/transactions/{id}',
+    method: 'get',
+    query: [],
+    pathParams: ['id'],
+    usedBy: 'pillars/cerebrum/src/api/modules/retrieval/peer-clients.ts',
+  },
+  {
+    consumer: 'cerebrum',
+    producer: 'finance',
+    operationId: 'transactions.list',
+    path: '/transactions',
+    method: 'get',
+    // `offset` is the paging leg of the cross-source embedding sweep: without
+    // it the indexer re-reads page one until `hasMore` says otherwise, which
+    // it never does.
+    query: ['limit', 'offset'],
+    usedBy: 'pillars/cerebrum/src/api/modules/retrieval/peer-clients.ts',
+  },
+  {
+    consumer: 'cerebrum',
+    producer: 'media',
+    operationId: 'movies.get',
+    path: '/movies/{id}',
+    method: 'get',
+    query: [],
+    pathParams: ['id'],
+    usedBy: 'pillars/cerebrum/src/api/modules/retrieval/peer-clients.ts',
+  },
+  {
+    consumer: 'cerebrum',
+    producer: 'media',
+    operationId: 'movies.list',
+    path: '/movies',
+    method: 'get',
+    query: ['limit', 'offset'],
+    usedBy: 'pillars/cerebrum/src/api/modules/retrieval/peer-clients.ts',
+  },
+  {
+    consumer: 'cerebrum',
+    producer: 'media',
+    operationId: 'tvShows.get',
+    path: '/tv-shows/{id}',
+    method: 'get',
+    query: [],
+    pathParams: ['id'],
+    usedBy: 'pillars/cerebrum/src/api/modules/retrieval/peer-clients.ts',
+  },
+  {
+    consumer: 'cerebrum',
+    producer: 'media',
+    operationId: 'tvShows.list',
+    path: '/tv-shows',
+    method: 'get',
+    query: ['limit', 'offset'],
+    usedBy: 'pillars/cerebrum/src/api/modules/retrieval/peer-clients.ts',
+  },
+  {
+    consumer: 'cerebrum',
+    producer: 'inventory',
+    operationId: 'items.get',
+    path: '/items/{id}',
+    method: 'get',
+    query: [],
+    pathParams: ['id'],
+    usedBy: 'pillars/cerebrum/src/api/modules/retrieval/peer-clients.ts',
+  },
+  {
+    consumer: 'cerebrum',
+    producer: 'inventory',
+    operationId: 'items.list',
+    path: '/items',
+    method: 'get',
+    query: ['limit', 'offset'],
+    usedBy: 'pillars/cerebrum/src/api/modules/retrieval/peer-clients.ts',
   },
 ];
 
@@ -262,6 +435,96 @@ export const UNPINNABLE_CALL_SITES = [
       'Shell is the browser SPA, not a pillar server. Settings option loaders are ' +
       'declared by a runtime manifest and invoked via `callDynamic`, so both the ' +
       'pillar and the procedure are data.',
+  },
+];
+
+/**
+ * @typedef {object} SanctionedDirectFetch
+ * @property {string} file   Repo-relative path holding the `fetch` call(s).
+ * @property {string} reason Why the SDK proxy is not the right transport here.
+ */
+
+/**
+ * Federation-aware files allowed to call `fetch` themselves.
+ *
+ * The bar is not "this call is fine", it is "no `operationId` could pin it
+ * even if it went through the proxy": the target is chosen at runtime, or the
+ * endpoint is not part of any pillar's published contract. A cross-pillar read
+ * that COULD be a `pillar('<id>').domain.op(...)` call does not belong here —
+ * it belongs in `EXPECTATIONS`.
+ *
+ * As with `UNPINNABLE_CALL_SITES`, an entry that no longer describes a real
+ * call site fails the build, so the list cannot outlive what it excuses.
+ */
+export const SANCTIONED_DIRECT_FETCH = [
+  {
+    file: 'pillars/registry/src/api/pillars/dispatcher.ts',
+    reason:
+      'Cross-pillar URI dispatch: the owning pillar comes out of the registry at ' +
+      'request time and every pillar answers the same `POST /uri/resolve`, so the ' +
+      'target is data and there is one operation, not a seam per consumer.',
+  },
+  {
+    file: 'pillars/registry/src/api/pillars/health-probe.ts',
+    reason:
+      'Health fan-out over the live registry: `GET /health` is served outside the ' +
+      'ts-rest contract (it must answer before the contract is mounted), so it has ' +
+      'no operationId in any producer OpenAPI to pin.',
+  },
+  {
+    file: 'pillars/shell/src/app/pillars/pillar-registry-client.ts',
+    reason:
+      'Shell is the browser SPA, not a pillar server. It fetches same-origin ' +
+      '`/pillars` and `/pillars/health` through its own nginx, and never opens a ' +
+      'browser-to-pillar connection — the container base URLs do not resolve there.',
+  },
+];
+
+/**
+ * What marks a file as speaking the pillar federation.
+ *
+ * Narrow on purpose. The signal is not "this file calls an HTTP API" — half
+ * the media and ai pillars do, against TMDB and Ollama, and reporting those
+ * would buy a sanction entry per external integration and teach people to add
+ * them without reading. It is "this file knows about OTHER PILLARS": it parses
+ * the fleet's base-URL format, handles registry entries, or reads the pillar
+ * roster. That is what a hand-rolled cross-pillar call needs in order to know
+ * where to send the request, and it is what both seams this check was written
+ * for had (POPS-1671).
+ *
+ * The limit, stated rather than discovered later: a hand-rolled call that gets
+ * its target from somewhere else entirely — a bespoke `LISTS_URL` env var, a
+ * hardcoded container host — carries none of these signals and is not caught.
+ */
+const FEDERATION_SIGNALS = [
+  {
+    pattern: /@pops\/pillar-sdk\/pillar-env/u,
+    describes: "imports the fleet's pillar base-URL parser",
+  },
+  { pattern: /(?<![\w$])PillarRegistryEntry(?![\w$])/u, describes: 'handles registry entries' },
+  { pattern: /(?<![\w$])POPS_PILLARS(?![\w$])/u, describes: 'reads the pillar roster' },
+];
+
+/**
+ * @typedef {object} PillarCallWrapper
+ * @property {string} typeName  Interface/type whose method forwards to `pillar()`.
+ * @property {string} method    Method that takes the producer id as its first argument.
+ * @property {string} definedIn Repo-relative file declaring `typeName`, checked for staleness.
+ */
+
+/**
+ * Wrapper functions discovery follows in addition to a literal `pillar(...)`.
+ *
+ * A call site earns discovery by being named here, not by looking like one:
+ * `checkWrapperRegistrations` below keeps the list honest by failing when an
+ * entry's `typeName` is no longer declared in `definedIn`, the same way
+ * `UNPINNABLE_CALL_SITES` cannot outlive what it excuses.
+ */
+export const PILLAR_CALL_WRAPPERS = [
+  {
+    typeName: 'PillarGateway',
+    method: 'call',
+    definedIn: 'pillars/bfm/src/api/pillars/gateway.ts',
   },
 ];
 
@@ -537,13 +800,89 @@ function opensRegexAt(code, index) {
  * @returns {RawCallSite[]}
  */
 export function findPillarCalls(scanned) {
+  return findCalls(scanned, /(?<![\w$.])pillar(?![\w$])/gu);
+}
+
+/**
+ * Every raw HTTP call in a scanned source: `fetch(...)`, and the injected
+ * `fetchImpl(...)` seam every hand-rolled client in this tree uses so its
+ * tests can swap the transport.
+ *
+ * Unlike the pillar token, a leading `.` is ALLOWED: `globalThis.fetch(url)`
+ * and `this.fetchImpl(url)` are the same raw call, and excluding them would
+ * mean the check is defeated by the most obvious spelling of the thing it
+ * looks for. A bare reference (`const f = globalThis.fetch`) is not matched —
+ * only a call is, so a defaulted parameter is not mistaken for one.
+ *
+ * @param {ScannedSource} scanned
+ * @returns {RawCallSite[]}
+ */
+export function findFetchCalls(scanned) {
+  return findCalls(scanned, /(?<![\w$])fetch(?:Impl)?(?![\w$])/gu);
+}
+
+/**
+ * Every `<name>.<method>(...)` invocation in a scanned source, for `name`
+ * bound — by a `name: TypeName` annotation — to one of the registered wrapper
+ * types.
+ *
+ * Keyed on the LOCAL identifier, not the type: this guard has no type
+ * checker, so "this variable holds a `PillarGateway`" is read off the
+ * annotation at its declaration, the same trust `resolveProducerId` places in
+ * a module-level `const`. A same-named identifier elsewhere in the file that
+ * is not really the wrapper would be misread as one — the trade text matching
+ * always makes — but it only ever widens discovery, never narrows it.
+ *
+ * @param {ScannedSource} scanned
+ * @param {PillarCallWrapper[]} wrappers
+ * @returns {RawCallSite[]}
+ */
+export function findWrapperCalls(scanned, wrappers) {
+  /** @type {RawCallSite[]} */
+  const sites = [];
+  for (const wrapper of wrappers) {
+    const names = boundNames(scanned.scannable, wrapper.typeName);
+    if (names.size === 0) continue;
+    const alternation = [...names].map((name) => RegExp.escape(name)).join('|');
+    const token = new RegExp(
+      `(?<![\\w$.])(?:${alternation})(?![\\w$])\\s*\\.\\s*${RegExp.escape(wrapper.method)}(?![\\w$])`,
+      'gu'
+    );
+    sites.push(...findCalls(scanned, token));
+  }
+  return sites;
+}
+
+/**
+ * Local identifiers annotated `name: typeName` anywhere in a scanned source —
+ * a function parameter or a variable declaration, which is how every wrapper
+ * consumer in the tree binds one today.
+ *
+ * @param {string} scannable
+ * @param {string} typeName
+ * @returns {Set<string>}
+ */
+function boundNames(scannable, typeName) {
+  const names = new Set();
+  const pattern = new RegExp(`([A-Za-z_$][\\w$]*)\\s*:\\s*${RegExp.escape(typeName)}\\b`, 'gu');
+  for (const match of scannable.matchAll(pattern)) names.add(match[1]);
+  return names;
+}
+
+/**
+ * Shared call-site finder: every invocation of `token` in a scanned source.
+ *
+ * @param {ScannedSource} scanned
+ * @param {RegExp} token Global regex matching the callee name.
+ * @returns {RawCallSite[]}
+ */
+function findCalls(scanned, token) {
   const { code, scannable } = scanned;
   /** @type {RawCallSite[]} */
   const sites = [];
-  const token = /(?<![\w$.])pillar(?![\w$])/gu;
   for (const match of scannable.matchAll(token)) {
     const start = match.index;
-    let cursor = skipSpace(scannable, start + 'pillar'.length);
+    let cursor = skipSpace(scannable, start + match[0].length);
     if (scannable[cursor] === '<') {
       const close = matchAngle(scannable, cursor);
       if (close === -1) continue;
@@ -660,52 +999,115 @@ export function resolveProducerId(argument, code) {
  */
 
 /**
- * Enumerate every pillar-SDK call site under `pillars/<id>/src`, from disk.
+ * @typedef {object} DirectFetchSite
+ * @property {string} consumer Pillar the call lives in.
+ * @property {string} file Repo-relative path.
+ * @property {number} line 1-based line.
+ * @property {string[]} signals Why the file counts as federation-aware.
+ */
+
+/**
+ * Which {@link FEDERATION_SIGNALS} a source carries.
+ *
+ * Read from the comment-stripped view, so a docstring that merely MENTIONS
+ * `POPS_PILLARS` — including the ones explaining why a file no longer uses
+ * it — does not make the file federation-aware. String bodies are kept,
+ * because the import path and the env-var name are both string literals.
+ *
+ * @param {string} code Scanned source, comments blanked, strings intact.
+ * @returns {string[]}
+ */
+export function federationSignals(code) {
+  return FEDERATION_SIGNALS.filter((signal) => signal.pattern.test(code)).map((s) => s.describes);
+}
+
+/**
+ * Directories under `pillars/<id>` this guard walks.
+ *
+ * `scripts` joined `src` because `pillars/finance/scripts/migrate-core-entities.ts`
+ * held two `pillar<T>()` call sites that were pinnable but invisible — the
+ * original enumeration scoped itself to `src` only. A one-shot deploy
+ * script's failure mode is an operator seeing an error rather than a user
+ * seeing a wrong number, but "the guard's `OK` line implies every
+ * cross-pillar call is covered" was already false the moment `scripts` held
+ * one it could not see — so it is walked the same way `src` is, not
+ * exempted.
+ *
+ * That script's `entities.create` call into contacts got its own row above.
+ * Its OTHER call, `pillar<CoreRouter>('registry').entities.list(...)`, did
+ * not: registry dropped `/entities` when contacts became authoritative (see
+ * `pillars/registry/src/contract/__tests__/openapi.test.ts`, which asserts
+ * registry exposes no entities surface at all), so a row pinning that
+ * operationId would fail `checkExpectations` immediately and permanently —
+ * correctly, because the call is already broken on disk, not because this
+ * guard is wrong. The seam still passes coverage on the strength of the
+ * `users.get` row a few lines up, which is what `findCoverageGaps` checks
+ * (consumer -> producer, not operationId); fixing the migrator itself is
+ * tracked separately rather than folded into a guard change.
+ */
+const SCANNED_ROOTS = ['src', 'scripts'];
+
+/**
+ * Enumerate every pillar-SDK call site under `pillars/<id>/{src,scripts}`,
+ * plus every raw `fetch` in a federation-aware file there, from disk.
  *
  * @param {string} root Repo root.
- * @returns {{ sites: CallSite[], scanErrors: string[] }}
+ * @returns {{ sites: CallSite[], directFetchSites: DirectFetchSite[], scanErrors: string[] }}
  */
 export function discoverCallSites(root) {
   const pillarsRoot = join(root, 'pillars');
   /** @type {CallSite[]} */
   const sites = [];
+  /** @type {DirectFetchSite[]} */
+  const directFetchSites = [];
   /** @type {string[]} */
   const scanErrors = [];
   if (!existsSync(pillarsRoot)) {
-    return { sites, scanErrors: [`no pillars directory at ${pillarsRoot}`] };
+    return { sites, directFetchSites, scanErrors: [`no pillars directory at ${pillarsRoot}`] };
   }
 
   for (const entry of readdirSync(pillarsRoot, { withFileTypes: true })) {
     if (!entry.isDirectory()) continue;
     const consumer = entry.name;
-    const srcRoot = join(pillarsRoot, consumer, 'src');
-    if (!existsSync(srcRoot)) continue;
-    for (const file of walkSources(srcRoot)) {
-      const relativePath = file
-        .slice(root.length + 1)
-        .split(sep)
-        .join('/');
-      const scanned = scanSource(readFileSync(file, 'utf8'));
-      if (scanned.unterminated !== null) {
-        scanErrors.push(
-          `${relativePath}: source scan ended inside an unterminated ${scanned.unterminated}. ` +
-            'The scanner cannot see call sites past that point, so this is reported rather ' +
-            'than passed.'
-        );
-        continue;
-      }
-      for (const call of findPillarCalls(scanned)) {
-        sites.push({
-          consumer,
-          producer: resolveProducerId(call.argument, scanned.code),
-          argument: call.argument,
-          file: relativePath,
-          line: call.line,
-        });
+    for (const rootName of SCANNED_ROOTS) {
+      const scanRoot = join(pillarsRoot, consumer, rootName);
+      if (!existsSync(scanRoot)) continue;
+      for (const file of walkSources(scanRoot)) {
+        const relativePath = file
+          .slice(root.length + 1)
+          .split(sep)
+          .join('/');
+        const scanned = scanSource(readFileSync(file, 'utf8'));
+        if (scanned.unterminated !== null) {
+          scanErrors.push(
+            `${relativePath}: source scan ended inside an unterminated ${scanned.unterminated}. ` +
+              'The scanner cannot see call sites past that point, so this is reported rather ' +
+              'than passed.'
+          );
+          continue;
+        }
+        const calls = [
+          ...findPillarCalls(scanned),
+          ...findWrapperCalls(scanned, PILLAR_CALL_WRAPPERS),
+        ];
+        for (const call of calls) {
+          sites.push({
+            consumer,
+            producer: resolveProducerId(call.argument, scanned.code),
+            argument: call.argument,
+            file: relativePath,
+            line: call.line,
+          });
+        }
+        const signals = federationSignals(scanned.code);
+        if (signals.length === 0) continue;
+        for (const call of findFetchCalls(scanned)) {
+          directFetchSites.push({ consumer, file: relativePath, line: call.line, signals });
+        }
       }
     }
   }
-  return { sites, scanErrors };
+  return { sites, directFetchSites, scanErrors };
 }
 
 function* walkSources(dir) {
@@ -787,6 +1189,46 @@ export function findCoverageGaps(sites, expectations, exemptions) {
     unresolved,
     staleExemptions: exemptions.map((e) => e.file).filter((f) => !exemptFilesSeen.has(f)),
     exempted,
+  };
+}
+
+/**
+ * @typedef {object} DirectFetchReport
+ * @property {DirectFetchSite[]} unsanctioned Raw HTTP calls nothing excuses.
+ * @property {string[]} staleSanctions Sanctioned files holding no such call.
+ * @property {number} sanctioned How many discovered calls a sanction covered.
+ */
+
+/**
+ * Diff the disk-derived direct-fetch calls against the sanctioned list.
+ *
+ * Pure, and exported so both directions are testable without a tree.
+ *
+ * @param {DirectFetchSite[]} sites
+ * @param {SanctionedDirectFetch[]} sanctioned
+ * @returns {DirectFetchReport}
+ */
+export function findDirectFetchGaps(sites, sanctioned) {
+  const sanctionedFiles = new Set(sanctioned.map((s) => s.file));
+  const seen = new Set();
+
+  /** @type {DirectFetchSite[]} */
+  const unsanctioned = [];
+  let covered = 0;
+
+  for (const site of sites) {
+    if (sanctionedFiles.has(site.file)) {
+      seen.add(site.file);
+      covered++;
+      continue;
+    }
+    unsanctioned.push(site);
+  }
+
+  return {
+    unsanctioned,
+    staleSanctions: sanctioned.map((s) => s.file).filter((f) => !seen.has(f)),
+    sanctioned: covered,
   };
 }
 
@@ -937,6 +1379,60 @@ export function loadProducerDoc(producer, specPath) {
  * @param {Expectation[]} expectations
  * @returns {string[]}
  */
+/**
+ * Failures for the wrapper registry: does every entry's type still exist
+ * where it says it does.
+ *
+ * Symmetric to the exemption-staleness check in {@link findCoverageGaps}: a
+ * registration that has drifted from source is worse than an absent one,
+ * because discovery keeps matching a name that used to mean "forwards to
+ * `pillar()`" and may no longer — a silent MISS is what this whole guard
+ * exists to turn into a loud one.
+ *
+ * Checked against `scanned.scannable`, not the raw file: a `typeName` that
+ * survives only in a comment or a string (`// removed PillarGateway`) must
+ * not read as a live declaration, the same reasoning that keeps `pillar(`
+ * prose out of {@link findPillarCalls}.
+ *
+ * @param {string} root
+ * @param {PillarCallWrapper[]} wrappers
+ * @returns {string[]}
+ */
+export function checkWrapperRegistrations(root, wrappers) {
+  /** @type {string[]} */
+  const failures = [];
+  for (const wrapper of wrappers) {
+    const path = join(root, wrapper.definedIn);
+    if (!existsSync(path)) {
+      failures.push(
+        `PILLAR_CALL_WRAPPERS registers '${wrapper.typeName}' at ${wrapper.definedIn}, which ` +
+          'does not exist. Repoint it at the type or drop the registration.'
+      );
+      continue;
+    }
+    const scanned = scanSource(readFileSync(path, 'utf8'));
+    if (scanned.unterminated !== null) {
+      failures.push(
+        `${wrapper.definedIn}: source scan ended inside an unterminated ${scanned.unterminated}. ` +
+          `PILLAR_CALL_WRAPPERS cannot verify '${wrapper.typeName}' is still declared past that point.`
+      );
+      continue;
+    }
+    const declared = new RegExp(
+      `\\b(?:interface|type)\\s+${RegExp.escape(wrapper.typeName)}\\b`,
+      'u'
+    );
+    if (!declared.test(scanned.scannable)) {
+      failures.push(
+        `PILLAR_CALL_WRAPPERS registers '${wrapper.typeName}' at ${wrapper.definedIn}, but no ` +
+          'such type is declared there anymore. Discovery trusts this entry to find every call ' +
+          'through the wrapper — update the registration or drop it.'
+      );
+    }
+  }
+  return failures;
+}
+
 export function checkExpectations(root, expectations) {
   /** @type {string[]} */
   const failures = [];
@@ -994,8 +1490,29 @@ function reportCoverage(report) {
   return failures;
 }
 
+function reportDirectFetch(report) {
+  /** @type {string[]} */
+  const failures = [];
+  for (const site of report.unsanctioned) {
+    failures.push(
+      `${site.file}:${String(site.line)} calls fetch directly, in a file that ` +
+        `${site.signals.join(' and ')}. A cross-pillar call written that way resolves no ` +
+        'operationId, so the enumeration above cannot see it and no EXPECTATIONS row can pin ' +
+        'it — the producer renames a route and this breaks in production while CI says OK. ' +
+        'Route it through pillar(), or add the file to SANCTIONED_DIRECT_FETCH with a reason.'
+    );
+  }
+  for (const file of report.staleSanctions) {
+    failures.push(
+      `SANCTIONED_DIRECT_FETCH lists ${file}, which holds no direct fetch call. The sanction ` +
+        'outlived what it excused — delete it.'
+    );
+  }
+  return failures;
+}
+
 function run() {
-  const { sites, scanErrors } = discoverCallSites(repoRoot);
+  const { sites, directFetchSites, scanErrors } = discoverCallSites(repoRoot);
 
   /** @type {string[]} */
   const failures = [...scanErrors];
@@ -1008,7 +1525,10 @@ function run() {
   }
 
   failures.push(...checkExpectations(repoRoot, EXPECTATIONS));
+  failures.push(...checkWrapperRegistrations(repoRoot, PILLAR_CALL_WRAPPERS));
   failures.push(...reportCoverage(findCoverageGaps(sites, EXPECTATIONS, UNPINNABLE_CALL_SITES)));
+  const directFetch = findDirectFetchGaps(directFetchSites, SANCTIONED_DIRECT_FETCH);
+  failures.push(...reportDirectFetch(directFetch));
 
   if (failures.length > 0) {
     console.error('Backend cross-pillar expectation(s) broken:\n');
@@ -1023,7 +1543,8 @@ function run() {
 
   console.log(
     `OK — ${String(EXPECTATIONS.length)} backend cross-pillar expectation(s) hold, covering ` +
-      `${String(sites.length)} discovered pillar() call site(s).`
+      `${String(sites.length)} discovered pillar() call site(s), and ` +
+      `${String(directFetch.sanctioned)} direct-fetch call(s) are sanctioned.`
   );
 }
 
@@ -1265,18 +1786,174 @@ function selfTest() {
     'a parameter must not resolve to a pillar id'
   );
 
-  const { sites, scanErrors } = discoverCallSites(repoRoot);
+  const fetching = scanSource(
+    [
+      '// fetch(url)',
+      "const s = 'fetch(url)';",
+      'const f = globalThis.fetch;',
+      'const a = await fetchJson(url);',
+      'const b = await prefetch(url);',
+      'const c = await fetch(url);',
+      'const d = await fetchImpl(url);',
+      'const e = await globalThis.fetch(url);',
+    ].join('\n')
+  );
+  assert(
+    findFetchCalls(fetching)
+      .map((c) => c.line)
+      .join(',') === '6,7,8',
+    'only real fetch CALLS count, and a dotted or injected one still does ' +
+      `(found lines ${findFetchCalls(fetching)
+        .map((c) => String(c.line))
+        .join(',')})`
+  );
+
+  assert(
+    federationSignals("import { parsePillarsEnv } from '@pops/pillar-sdk/pillar-env';").length ===
+      1,
+    'importing the fleet base-URL parser must mark a file federation-aware'
+  );
+  assert(
+    federationSignals(scanSource('/* POPS_PILLARS is no longer read here */').code).length === 0,
+    'a comment merely mentioning the roster must NOT mark a file federation-aware'
+  );
+
+  const fetchSite = (over) => ({
+    consumer: 'registry',
+    file: 'pillars/registry/src/api/pillars/dispatcher.ts',
+    line: 1,
+    signals: ['handles registry entries'],
+    ...over,
+  });
+  assert(
+    findDirectFetchGaps([fetchSite({})], SANCTIONED_DIRECT_FETCH).unsanctioned.length === 0,
+    'a sanctioned direct fetch must pass'
+  );
+  assert(
+    findDirectFetchGaps([fetchSite({ file: 'pillars/food/src/x.ts' })], []).unsanctioned.length ===
+      1,
+    'an unsanctioned direct fetch in a federation-aware file must fail'
+  );
+  assert(
+    findDirectFetchGaps([], [{ file: 'pillars/gone/src/x.ts', reason: 'why' }]).staleSanctions
+      .length === 1,
+    'a sanction covering no fetch call must fail'
+  );
+
+  const wrapper = { typeName: 'PillarGateway', method: 'call', definedIn: 'gateway.ts' };
+  const wrapperCallSource = scanSource(
+    [
+      "const TARGET = 'contacts';",
+      'function useGateway(gateway: PillarGateway) {',
+      '  return gateway.call<Router, unknown>(TARGET, (h) => h.entities.list({}));',
+      '}',
+    ].join('\n')
+  );
+  const wrapperCalls = findWrapperCalls(wrapperCallSource, [wrapper]);
+  assert(wrapperCalls.length === 1, 'a call through a registered wrapper must be discovered');
+  assert(
+    resolveProducerId(wrapperCalls[0].argument, wrapperCallSource.code) === 'contacts',
+    'a wrapper call argument must resolve the same way a literal pillar() call does'
+  );
+  assert(
+    findWrapperCalls(
+      scanSource('function f(other: SomeOtherType) { return other.call(pillarId); }'),
+      [wrapper]
+    ).length === 0,
+    'an identifier not bound to a registered wrapper type must not be read as one'
+  );
+
+  const wrapperScratch = mkdtempSync(join(tmpdir(), 'cross-pillar-wrapper-'));
+  try {
+    writeFileSync(
+      join(wrapperScratch, 'gateway.ts'),
+      'export interface PillarGateway { call(): void; }'
+    );
+    assert(
+      checkWrapperRegistrations(wrapperScratch, [wrapper]).length === 0,
+      'a wrapper type still declared where it is registered must pass'
+    );
+    writeFileSync(
+      join(wrapperScratch, 'renamed.ts'),
+      'export interface SomethingElse { call(): void; }'
+    );
+    assert(
+      checkWrapperRegistrations(wrapperScratch, [{ ...wrapper, definedIn: 'renamed.ts' }]).some(
+        (f) => f.includes('no such type is declared')
+      ),
+      'a wrapper registration whose type moved or was renamed must fail'
+    );
+    assert(
+      checkWrapperRegistrations(wrapperScratch, [{ ...wrapper, definedIn: 'missing.ts' }]).some(
+        (f) => f.includes('does not exist')
+      ),
+      'a wrapper registration pointing at a missing file must fail'
+    );
+    writeFileSync(
+      join(wrapperScratch, 'commented-out.ts'),
+      '// export interface PillarGateway { call(): void; }\nconst note = "interface PillarGateway";'
+    );
+    assert(
+      checkWrapperRegistrations(wrapperScratch, [
+        { ...wrapper, definedIn: 'commented-out.ts' },
+      ]).some((f) => f.includes('no such type is declared')),
+      'a type name surviving only in a comment or string must not read as a live declaration'
+    );
+  } finally {
+    rmSync(wrapperScratch, { recursive: true, force: true });
+  }
+
+  assert(
+    checkWrapperRegistrations(repoRoot, PILLAR_CALL_WRAPPERS).length === 0,
+    'every registered wrapper must still name a type declared where it says it is'
+  );
+
+  const { sites, directFetchSites, scanErrors } = discoverCallSites(repoRoot);
   assert(scanErrors.length === 0, `the live tree must scan cleanly (${scanErrors.join('; ')})`);
   assert(
     sites.length > 0,
     'discovery must find call sites in the live tree; finding none is a broken scan'
   );
+  assert(
+    directFetchSites.length > 0,
+    'discovery must find the sanctioned direct-fetch calls in the live tree; finding none is a ' +
+      'broken detector that would report OK over the next hand-rolled cross-pillar call'
+  );
+  assert(
+    sites.filter((s) => s.consumer === 'bfm' && s.file === 'pillars/bfm/src/api/finance/client.ts')
+      .length === 2,
+    "discovery must follow bfm's PillarGateway.call wrapper into finance, not just a literal " +
+      'pillar() token — these two calls resolve their producer through gateway.call, not pillar()'
+  );
+  assert(
+    sites.filter((s) => s.file === 'pillars/finance/scripts/migrate-core-entities.ts').length === 2,
+    'discovery must walk pillars/*/scripts as well as pillars/*/src — this one-shot migrator ' +
+      'holds two call sites that a src-only walk would never see'
+  );
+
+  const scriptsScratch = mkdtempSync(join(tmpdir(), 'cross-pillar-scripts-'));
+  try {
+    mkdirSync(join(scriptsScratch, 'pillars', 'delta', 'scripts'), { recursive: true });
+    writeFileSync(
+      join(scriptsScratch, 'pillars', 'delta', 'scripts', 'one-shot.ts'),
+      "pillar<R>('epsilon');"
+    );
+    const scriptsSites = discoverCallSites(scriptsScratch).sites;
+    assert(
+      scriptsSites.some((s) => s.consumer === 'delta' && s.producer === 'epsilon'),
+      'a fixture tree with no src directory at all must still surface a call site under scripts'
+    );
+  } finally {
+    rmSync(scriptsScratch, { recursive: true, force: true });
+  }
 
   console.log(
     'self-test OK — flags a renamed operation, a moved path, a dropped query parameter, a ' +
       'renamed path parameter, a duplicated operationId, a missing or corrupt producer spec, ' +
       'an empty expectation list, an unlisted seam, an unresolvable target, a stale exemption, ' +
-      'and a source scan that lost its place.'
+      'an unsanctioned direct fetch, a stale sanction, a gateway-wrapper call site, an ' +
+      'identifier not bound to a registered wrapper, a stale or missing wrapper registration, ' +
+      'a call site under pillars/*/scripts, and a source scan that lost its place.'
   );
 }
 
@@ -1293,7 +1970,8 @@ function main() {
     console.log(
       'Usage: node scripts/ci/check-cross-pillar-expectations.mjs [--self-test]\n' +
         "Fails when a producer's OpenAPI no longer matches what a consumer's server calls,\n" +
-        'or when a pillar() call site on disk has no expectation row pinning it.'
+        'when a pillar() call site on disk has no expectation row pinning it, or when a\n' +
+        'federation-aware file calls fetch directly instead of going through the SDK.'
     );
     process.exit(2);
   }

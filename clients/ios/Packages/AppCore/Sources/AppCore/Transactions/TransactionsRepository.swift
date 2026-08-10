@@ -17,4 +17,12 @@ public protocol TransactionsRepository: Sendable {
     ///   than offsets because the underlying list mutates between requests, and
     ///   an offset into a mutating list silently duplicates and drops rows.
     func transactions(after cursor: String?) async throws -> TransactionPage
+
+    /// The fuller record behind one row.
+    ///
+    /// - Returns: `nil` when finance no longer has it. A transaction deleted
+    ///   between a list arriving and somebody tapping a row is an ordinary
+    ///   outcome, so it is not thrown: an error is something a screen offers to
+    ///   retry, and there is nothing here that retrying would find.
+    func transactionDetail(id: Transaction.ID) async throws -> TransactionDetail?
 }

@@ -13,7 +13,7 @@ import Testing
 @Suite("Transactions refresh")
 internal struct TransactionsListRefreshTests {
     private func model(_ repository: any TransactionsRepository) -> TransactionsListViewModel {
-        TransactionsListViewModel(dependencies: .fake(transactions: repository))
+        TransactionsListViewModel(dependencies: .fake(transactions: repository), router: Router())
     }
 
     @Test("a refresh replaces the rows rather than appending to them")
