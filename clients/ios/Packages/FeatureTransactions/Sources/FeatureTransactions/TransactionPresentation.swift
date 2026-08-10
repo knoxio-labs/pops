@@ -54,8 +54,9 @@ internal struct TransactionPresentation: Sendable {
             .joined(separator: separator)
     }
 
-    /// What kind of transaction it is, and what it has been tagged with. Empty
-    /// when there is nothing to say beyond the type.
+    /// What kind of transaction it is, and what it has been tagged with. The
+    /// type is always there, so this line always says something — an untagged
+    /// transaction reads as its type alone rather than as a gap.
     internal func caption(_ transaction: Transaction) -> String {
         ([transaction.type.rawValue] + transaction.tags).joined(separator: separator)
     }

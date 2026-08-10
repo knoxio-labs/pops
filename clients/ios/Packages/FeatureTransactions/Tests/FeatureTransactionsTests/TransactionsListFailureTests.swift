@@ -128,6 +128,30 @@ internal struct TransactionsListFailureTests {
         #expect(model.state == .loading)
     }
 
+    /// The cancellation that does *not* arrive as a `CancellationError`.
+    ///
+    /// A repository over URLSession reports a cancelled request as its own
+    /// error type — `URLError(.cancelled)`, wrapped in whatever the layers
+    /// beneath wrap things in — and none of those types are nameable from this
+    /// module. What is answerable here is whether the work is still wanted, so
+    /// the screen asks the task rather than the error.
+    @Test("a failure that arrives after the task was cancelled is not a failure either")
+    func cancellationWithoutACancellationError() async {
+        let repository = ScriptedTransactionsRepository(
+            script: [.failing(RepositoryError.unavailable)],
+            gating: [1]
+        )
+        let model = model(repository)
+
+        let load = Task { await model.loadFirstPage() }
+        await repository.waitUntilCalled(1)
+        load.cancel()
+        await repository.release()
+        await load.value
+
+        #expect(model.state == .loading)
+    }
+
     /// The same, one page in — where the cost of getting it wrong is not a
     /// stale error but a footer that spins forever and a list that never pages
     /// again.
