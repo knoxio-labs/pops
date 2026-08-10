@@ -10,9 +10,8 @@ import { initServer } from '@ts-rest/express';
 import { foodContract } from '../../contract/rest.js';
 import { type FoodApiDeps } from '../handlers.js';
 import {
-  createListsHttpClient,
+  createListsClient,
   type ListsClient,
-  resolveListsBaseUrl,
 } from '../modules/recipes/send-to-list/lists-client.js';
 import { makeAliasesHandlers } from './aliases-handlers.js';
 import { makeBatchesHandlers } from './batches-handlers.js';
@@ -40,12 +39,8 @@ export function makeFoodRestHandlers(
   deps: Pick<FoodApiDeps, 'foodDb' | 'listsClient'>
 ): ReturnType<typeof server.router<typeof foodContract>> {
   const db = deps.foodDb.db;
-  // Lazy: only build the real HTTP lists client (which needs lists in
-  // POPS_PILLARS) when a send-to-list request actually arrives and no stub
-  // was injected.
-  let realClient: ListsClient | undefined;
-  const resolveListsClient = (): ListsClient =>
-    deps.listsClient ?? (realClient ??= createListsHttpClient(resolveListsBaseUrl()));
+  const listsClient = deps.listsClient ?? createListsClient();
+  const resolveListsClient = (): ListsClient => listsClient;
   return server.router(foodContract, {
     aliases: makeAliasesHandlers(db),
     batches: makeBatchesHandlers(db),

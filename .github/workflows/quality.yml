@@ -454,8 +454,11 @@ jobs:
     # consumer sends. The curated list of those expectations is kept honest by
     # a disk-derived half that enumerates every `pillar(...)` call site under
     # `pillars/*/src` and fails when one has no row, so a new seam cannot ship
-    # unguarded while the guard reports OK (ADR-045). Reads the source tree
-    # directly, so it skips `pnpm install`.
+    # unguarded while the guard reports OK (ADR-045). A third enumeration
+    # covers the way round both of those: a consumer that hand-rolls the HTTP
+    # call resolves no operationId and is invisible to the second half, so a
+    # federation-aware file calling `fetch` itself fails unless sanctioned.
+    # Reads the source tree directly, so it skips `pnpm install`.
     # See scripts/ci/check-cross-pillar-expectations.mjs.
     runs-on: ubuntu-latest
     steps:
@@ -463,7 +466,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: "24"
-      - name: Gate self-test (proves it catches rename, move, dropped param, unlisted seam)
+      - name: Gate self-test (rename, move, dropped param, unlisted seam, unsanctioned fetch)
         run: node scripts/ci/check-cross-pillar-expectations.mjs --self-test
       - name: Every backend cross-pillar expectation holds, and every call site has one
         run: node scripts/ci/check-cross-pillar-expectations.mjs

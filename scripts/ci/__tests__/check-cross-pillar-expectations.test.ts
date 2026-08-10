@@ -11,10 +11,14 @@ import {
   declaredParams,
   discoverCallSites,
   EXPECTATIONS,
+  federationSignals,
   findCoverageGaps,
+  findDirectFetchGaps,
+  findFetchCalls,
   findPillarCalls,
   loadProducerDoc,
   resolveProducerId,
+  SANCTIONED_DIRECT_FETCH,
   scanSource,
   UNPINNABLE_CALL_SITES,
 } from '../check-cross-pillar-expectations.mjs';
@@ -173,6 +177,105 @@ describe('findPillarCalls', () => {
   });
 });
 
+describe('findFetchCalls', () => {
+  it('finds a plain call', () => {
+    expect(findFetchCalls(scanSource('const r = await fetch(url);'))).toEqual([
+      { argument: 'url', line: 1 },
+    ]);
+  });
+
+  it('finds the injected-transport spelling every hand-rolled client uses', () => {
+    expect(findFetchCalls(scanSource('const r = await fetchImpl(url, init);'))).toHaveLength(1);
+  });
+
+  it('finds a dotted call, which is the most obvious way to dodge the check', () => {
+    expect(findFetchCalls(scanSource('const r = await globalThis.fetch(url);'))).toHaveLength(1);
+  });
+
+  it('ignores a bare reference, so a defaulted parameter is not a call', () => {
+    expect(findFetchCalls(scanSource('const f: FetchImpl = globalThis.fetch;'))).toHaveLength(0);
+  });
+
+  it('ignores a longer identifier that merely starts with the token', () => {
+    expect(findFetchCalls(scanSource('const b = await fetchJson(url);'))).toHaveLength(0);
+    expect(findFetchCalls(scanSource('const b = await fetchPillarHealth();'))).toHaveLength(0);
+  });
+
+  it('ignores a longer identifier that merely ends with the token', () => {
+    expect(findFetchCalls(scanSource('const b = await prefetch(url);'))).toHaveLength(0);
+  });
+
+  it('ignores a call written inside a comment or a string', () => {
+    expect(findFetchCalls(scanSource('// fetch(url)\nconst s = "fetch(url)";'))).toHaveLength(0);
+  });
+});
+
+describe('federationSignals', () => {
+  it('marks a file importing the fleet base-URL parser', () => {
+    const code = "import { parsePillarsEnv } from '@pops/pillar-sdk/pillar-env';";
+    expect(federationSignals(code)).toHaveLength(1);
+  });
+
+  it('marks a file handling registry entries', () => {
+    expect(federationSignals("import type { PillarRegistryEntry } from '@pops/types';")).toEqual([
+      'handles registry entries',
+    ]);
+  });
+
+  it('marks a file reading the pillar roster', () => {
+    expect(federationSignals("process.env['POPS_PILLARS']")).toEqual(['reads the pillar roster']);
+  });
+
+  it('does not mark a file whose only mention is prose in a comment', () => {
+    const scanned = scanSource('/** POPS_PILLARS is deliberately not read here. */\nexport {};');
+    expect(federationSignals(scanned.code)).toEqual([]);
+  });
+
+  it('does not mark an ordinary external-API client', () => {
+    const code = 'const res = await fetch(`${provider.baseUrl}/api/tags`);';
+    expect(federationSignals(code)).toEqual([]);
+  });
+});
+
+describe('findDirectFetchGaps', () => {
+  const site = (over: Record<string, unknown> = {}) => ({
+    consumer: 'registry',
+    file: 'pillars/registry/src/api/pillars/dispatcher.ts',
+    line: 137,
+    signals: ['handles registry entries'],
+    ...over,
+  });
+  const sanction = { file: 'pillars/registry/src/api/pillars/dispatcher.ts', reason: 'runtime' };
+
+  it('passes a sanctioned call', () => {
+    const report = findDirectFetchGaps([site()], [sanction]);
+    expect(report.unsanctioned).toEqual([]);
+    expect(report.sanctioned).toBe(1);
+    expect(report.staleSanctions).toEqual([]);
+  });
+
+  it('fails a call nothing sanctions', () => {
+    const report = findDirectFetchGaps(
+      [site({ file: 'pillars/food/src/api/lists.ts' })],
+      [sanction]
+    );
+    expect(report.unsanctioned.map((s) => s.file)).toEqual(['pillars/food/src/api/lists.ts']);
+  });
+
+  it('fails a sanction that no longer covers any call', () => {
+    expect(findDirectFetchGaps([], [sanction]).staleSanctions).toEqual([sanction.file]);
+  });
+
+  it('does not let a sanction hide a hand-rolled call elsewhere in the tree', () => {
+    const report = findDirectFetchGaps(
+      [site(), site({ file: 'pillars/food/src/api/lists.ts' })],
+      [sanction]
+    );
+    expect(report.unsanctioned).toHaveLength(1);
+    expect(report.staleSanctions).toEqual([]);
+  });
+});
+
 describe('resolveProducerId', () => {
   it('resolves a single-quoted literal', () => {
     expect(resolveProducerId("'contacts'", '')).toBe('contacts');
@@ -248,6 +351,14 @@ describe('discoverCallSites — fixture tree', () => {
     write('pillars/beta/src/dispatch.ts', 'const h = pillar<R>(pillarId);');
     write('pillars/beta/README.md', "pillar<R>('ghost')");
     write('pillars/gamma/docs/notes.ts', "pillar<R>('ghost');");
+    write(
+      'pillars/alpha/src/api/hand-rolled.ts',
+      [
+        "import { parsePillarsEnv } from '@pops/pillar-sdk/pillar-env';",
+        'const res = await fetch(`${baseUrl}/items`);',
+      ].join('\n')
+    );
+    write('pillars/alpha/src/api/tmdb.ts', 'const res = await fetch(`${BASE_URL}/movie`);');
   });
   afterAll(() => rmSync(root, { recursive: true, force: true }));
 
@@ -298,12 +409,28 @@ describe('discoverCallSites — fixture tree', () => {
   it('reports a missing pillars directory rather than answering "no call sites"', () => {
     const empty = mkdtempSync(join(tmpdir(), 'cross-pillar-empty-'));
     try {
-      const { sites, scanErrors } = discoverCallSites(empty);
+      const { sites, directFetchSites, scanErrors } = discoverCallSites(empty);
       expect(sites).toHaveLength(0);
+      expect(directFetchSites).toHaveLength(0);
       expect(scanErrors[0]).toContain('no pillars directory');
     } finally {
       rmSync(empty, { recursive: true, force: true });
     }
+  });
+
+  it('reports a hand-rolled fetch in a federation-aware file', () => {
+    expect(discoverCallSites(root).directFetchSites).toContainEqual({
+      consumer: 'alpha',
+      file: 'pillars/alpha/src/api/hand-rolled.ts',
+      line: 2,
+      signals: ["imports the fleet's pillar base-URL parser"],
+    });
+  });
+
+  it('leaves an ordinary external-API client alone', () => {
+    expect(discoverCallSites(root).directFetchSites.map((s) => s.file)).not.toContain(
+      'pillars/alpha/src/api/tmdb.ts'
+    );
   });
 });
 
@@ -620,6 +747,40 @@ describe('against the live repo', () => {
   it('every exemption carries a reason', () => {
     for (const exemption of UNPINNABLE_CALL_SITES) {
       expect(exemption.reason.length).toBeGreaterThan(20);
+    }
+  });
+
+  it('pins the two seams that used to hand-roll their HTTP', () => {
+    const { sites } = discoverCallSites(repoRoot);
+    const seams = sites.map((s) => `${s.consumer} -> ${String(s.producer)}`);
+    expect(seams).toContain('food -> lists');
+    expect(seams).toContain('cerebrum -> finance');
+    expect(seams).toContain('cerebrum -> media');
+    expect(seams).toContain('cerebrum -> inventory');
+  });
+
+  it('finds direct-fetch calls in the live tree, and every one is sanctioned', () => {
+    const { directFetchSites } = discoverCallSites(repoRoot);
+    expect(directFetchSites.length).toBeGreaterThan(0);
+    expect(findDirectFetchGaps(directFetchSites, SANCTIONED_DIRECT_FETCH)).toEqual({
+      unsanctioned: [],
+      staleSanctions: [],
+      sanctioned: expect.any(Number),
+    });
+  });
+
+  it('would report a direct-fetch seam if its sanction were removed', () => {
+    const { directFetchSites } = discoverCallSites(repoRoot);
+    const target = 'pillars/registry/src/api/pillars/dispatcher.ts';
+    const without = SANCTIONED_DIRECT_FETCH.filter((s: { file: string }) => s.file !== target);
+    expect(
+      findDirectFetchGaps(directFetchSites, without).unsanctioned.map((s) => s.file)
+    ).toContain(target);
+  });
+
+  it('every direct-fetch sanction carries a reason', () => {
+    for (const sanction of SANCTIONED_DIRECT_FETCH) {
+      expect(sanction.reason.length).toBeGreaterThan(20);
     }
   });
 });

@@ -29,7 +29,7 @@ import { resolveCerebrumSqlitePath } from '../api/cerebrum-sqlite-path.js';
 import { resolveEngramRoot } from '../api/modules/engrams/instance.js';
 import { AnthropicIngestLlm } from '../api/modules/ingest/llm.js';
 import { CURATION_QUEUE_NAME } from '../api/modules/ingest/queue.js';
-import { resolvePeerClientsFromEnv } from '../api/modules/retrieval/peer-clients.js';
+import { createPeerClients } from '../api/modules/retrieval/peer-clients.js';
 import { TemplateRegistry } from '../api/modules/templates/registry.js';
 import { EMBEDDINGS_QUEUE_NAME } from '../api/modules/thalamus/queue.js';
 import { openCerebrumDb } from '../db/index.js';
@@ -68,7 +68,7 @@ interface WorkerRuntime {
   db: OpenedDb;
   templates: TemplateRegistry;
   engramRoot: string;
-  peers: ReturnType<typeof resolvePeerClientsFromEnv>;
+  peers: ReturnType<typeof createPeerClients>;
   connection: Redis;
 }
 
@@ -151,7 +151,7 @@ function main(): void {
     db,
     templates: new TemplateRegistry(resolveTemplatesDir()),
     engramRoot: resolveEngramRoot(),
-    peers: resolvePeerClientsFromEnv(),
+    peers: createPeerClients(),
     connection,
   });
 

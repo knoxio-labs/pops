@@ -39,6 +39,16 @@ Once a Rust pillar depends on either crate, hand-duplication stops being accepta
 
 From this ADR, `/ai-usage/record`'s request shape (`InferenceRecordSchema` in `@pops/ai-telemetry`) is a stable contract. Additive changes (a new optional field) ship freely. Anything else — renaming or removing a field, changing the status enum, tightening a previously-optional field — is a breaking change and goes through the same deprecation discipline [ADR-026](adr-026-pillar-architecture.md) already calls for on cross-pillar contracts: dual-accept the old and new shape for a deprecation window, update every emitter (TS callers plus the `pops-ai` Rust crate and its golden fixture), then remove the old shape.
 
+## Amendment — 2026-08-10: bare `fetch` is a third surface, and it is not sanctioned
+
+The table above names two cross-pillar call surfaces. A third existed in the tree and was never decided on: two backends resolved a sibling's base URL out of `POPS_PILLARS` and called it with `globalThis.fetch` — `food` → `lists` (send-to-list) and `cerebrum` → `finance`/`media`/`inventory` (retrieval enrichment and the cross-source embedding scan).
+
+**Both are migrated onto the SDK proxy, and the pattern is refused rather than sanctioned.** It carries none of the properties either sanctioned surface has: no `operationId` to pin, so the backend expectation guard cannot cover it; no generated client to diff, so the frontend gate does not apply either. The two seams were also already broken in production and nothing said so — [ADR-039](adr-039-pillar-isolation.md) E25 stopped plumbing `POPS_PILLARS` through production compose when the registry became the source of truth, which left `resolveListsBaseUrl()` throwing on every send-to-list request and every cerebrum peer client resolving to `undefined`. A seam that no guard watches is a seam that can be dead for a release cycle without a failing check.
+
+Refusing a pattern only works if something notices its return. `scripts/ci/check-cross-pillar-expectations.mjs` therefore grows a third enumeration alongside its `pillar(...)` coverage half: a file under `pillars/*/src` that speaks the federation — parses the fleet's pillar base-URL format, handles registry entries, or reads the pillar roster — and calls `fetch` itself is reported unless it appears in `SANCTIONED_DIRECT_FETCH` with a reason. Three entries qualify today, all runtime dispatchers no `operationId` could pin either way: the registry's `/uri/resolve` dispatch and `/health` fan-out, and the shell's same-origin boot fetches.
+
+The detector's limit is worth stating rather than discovering later: it keys on knowing about _other pillars_, not on calling HTTP. A hand-rolled call that gets its target from a bespoke env var or a hardcoded container host carries none of those signals and is not caught. That bound is deliberate — the alternative signal ("this file calls `fetch`") would report every TMDB, Plex and Ollama client in the tree and buy a sanction entry per external integration, which is how an exemption list stops being read.
+
 ## Consequences
 
 - Every browser-facing cross-pillar generated client either regenerates clean in CI or fails the build — a producer contract edit can no longer ship without its consumer(s) noticing.

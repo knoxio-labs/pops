@@ -24,8 +24,8 @@ export interface FoodApiDeps {
   selfBaseUrl: string;
   /**
    * Cross-pillar lists client used by send-to-list. Optional — production
-   * resolves the real HTTP client lazily from `POPS_PILLARS`; tests inject
-   * a stub so the flow runs without a live lists-api.
+   * builds the SDK-backed client over `pillar('lists')`; tests inject a stub
+   * so the flow runs without a live lists-api.
    */
   listsClient?: ListsClient;
 }
