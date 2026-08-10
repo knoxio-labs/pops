@@ -55,6 +55,12 @@ The name is the whole boundary, so `mise run lint` polices it in both directions
 
 One directory currently qualifies: `Packages/BFMClient/Sources/BFMClient/Generated`.
 
+### Shebang scripts
+
+A file whose first line is a shebang (`#!/usr/bin/env swift`) is meant to be invoked directly with `swift path/to/file.swift`, not compiled into a target — and it is excluded from `swift-format`'s file list for that reason on its own, separate from the Generated-code exclusion above. On Xcode 27 Beta 2, `swift-format format --in-place` joins that first line with a `//` comment beneath it into one line (`#!/usr/bin/env swift  //`), silently corrupting the file; `swift-format lint` does not report it, so only the write path does the damage. `scripts/swift-sources.sh` drops any such file before handing the list to either `swift-format` mode; SwiftLint is unaffected, since its file list is independent and a script's body is ordinary code to it.
+
+One file currently qualifies: `Tools/generate-device-signature-fixture.swift`.
+
 ### Analyzer rules
 
 ```bash

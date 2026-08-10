@@ -37,10 +37,27 @@
 # second half the directory is somewhere to hide code from the linter, which is
 # the suppression comment again wearing a different hat.
 #
-# `self-test` proves both tools honour the boundary, against fixtures built from
-# the real `.swiftlint.yml`. Every claim above is about how two third-party
-# tools read two config files in two formats, so none of it is worth asserting
-# in a comment that nothing runs.
+# A second, unrelated defect also has to be worked around in `list` rather than
+# in either tool's own config: Tools/generate-device-signature-fixture.swift is
+# invoked directly as `swift Tools/generate-device-signature-fixture.swift`,
+# which only works because its first line is a `#!/usr/bin/env swift` shebang.
+# Xcode 27 Beta 2's swift-format joins that shebang with the `//` comment line
+# beneath it into one line — `#!/usr/bin/env swift  //` — on `format
+# --in-place`; `lint` does not report it, so only the write path corrupts the
+# file and nothing catches it before a commit does. Verified against Xcode 27
+# Beta 2; not reproduced against the toolchain `POPS_XCODE_VERSION` actually
+# pins, since this repo has no way to install it here. There is no config knob
+# for "leave this file's first line alone" either, so the boundary is the same
+# shape as the Generated one: a file whose first line is a shebang has declared
+# itself a directly-run script rather than compiled module code, and `list`
+# drops it before the formatter ever sees it. SwiftLint is unaffected — its
+# `included:` in `.swiftlint.yml` is independent of this script, and linting a
+# script's body is exactly what SwiftLint is for.
+#
+# `self-test` proves both boundaries hold, against fixtures built from the real
+# `.swiftlint.yml`. Every claim above is about how third-party tools read
+# config files, or about which bytes a file starts with, so none of it is worth
+# asserting in a comment that nothing runs.
 
 set -euo pipefail
 
@@ -116,6 +133,13 @@ lives_in_generated_dir() {
     esac
 }
 
+# A shebang is exactly two bytes at the start of the file — `#!` — so reading
+# further gains nothing and `head -n 1` would fail differently (and less
+# clearly) on a file with no trailing newline on its first line.
+is_shebang_script() {
+    [ "$(head -c 2 -- "$1" 2>/dev/null)" = '#!' ]
+}
+
 # ---------------------------------------------------------------------------
 # list — the formatter's file set
 # ---------------------------------------------------------------------------
@@ -123,15 +147,16 @@ lives_in_generated_dir() {
 cmd_list() {
     require_roots "$@"
 
-    # A file rather than a variable because the list is NUL-separated, and
+    # Two files rather than variables because the list is NUL-separated, and
     # cleaned up by hand rather than by `trap ... RETURN`: a RETURN trap is
     # global shell state that outlives the function that set it, so it would sit
     # installed for the rest of the run holding a reference to a local that no
     # longer exists. Today it would not fire — bash does not inherit RETURN
     # traps into functions without `set -T` — but that is a rule the reader has
-    # to know before this looks safe, and two explicit `rm`s need no rule at all.
-    local sources
+    # to know before this looks safe, and explicit `rm`s need no rule at all.
+    local sources filtered
     sources="$(mktemp)"
+    filtered="$(mktemp)"
 
     # `-prune` rather than a path filter, so a large checkout is skipped rather
     # than walked.
@@ -143,15 +168,23 @@ cmd_list() {
     # all. swift-format exits 0 both on a path that does not exist and on one
     # with nothing to check — no message either time — so without this the tools
     # would report success having read nothing. Verified against swift-format
-    # from Xcode 27.
+    # from Xcode 27. Checked against the unfiltered find results, not the
+    # shebang-filtered ones below: a root holding nothing but a shebang script
+    # is not stale, it is a root with one file this command declines to hand to
+    # the formatter.
     if [ ! -s "$sources" ]; then
-        rm -f "$sources"
+        rm -f "$sources" "$filtered"
         printf 'swift-sources: no Swift sources under '\''%s'\'' — the source roots are stale.\n' "$*" >&2
         return 1
     fi
 
-    cat "$sources"
-    rm -f "$sources"
+    local file
+    while IFS= read -r -d '' file; do
+        is_shebang_script "$file" || printf '%s\0' "$file" >> "$filtered"
+    done < "$sources"
+
+    cat "$filtered"
+    rm -f "$sources" "$filtered"
 }
 
 # ---------------------------------------------------------------------------
@@ -306,10 +339,31 @@ cmd_self_test() {
     expect "list accepted a source root with no Swift under it." \
         not run_list_in "$empty_root" || status=1
 
-    rm -rf "$generated_fixture" "$stray_fixture" "$unmarked_fixture" "$empty_root"
+    # 8. A shebang script is excluded from the formatter's file set, and a
+    #    plain file beside it is not — the same "drops exactly the boundary,
+    #    nothing either side of it" shape as test 3 above, for the other
+    #    exclusion `list` owns.
+    local shebang_fixture shebang_listed
+    shebang_fixture="$(mktemp -d)"
+    mkdir -p "$shebang_fixture/Tools"
+    printf '#!/usr/bin/env swift\n%s\n' "$FIXTURE_CLEAN" > "$shebang_fixture/Tools/script.swift"
+    printf '%s\n' "$FIXTURE_CLEAN" > "$shebang_fixture/Tools/plain.swift"
+    shebang_listed="$(cd "$shebang_fixture" && cmd_list Tools | tr '\0' '\n')"
+    expect "list included a shebang script — Xcode 27's swift-format would still see the line it mangles." \
+        not grep -q 'script.swift' <<<"$shebang_listed" || status=1
+    expect "list dropped a plain file beside a shebang script — the exclusion is wider than the shebang." \
+        grep -q 'plain.swift' <<<"$shebang_listed" || status=1
+
+    # 9. A root holding only a shebang script is not the stale root test 7
+    #    catches — it has a real Swift file, `list` just declines to format it.
+    rm -f "$shebang_fixture/Tools/plain.swift"
+    expect "list treated a root holding only a shebang script as stale." \
+        run_list_in "$shebang_fixture" Tools || status=1
+
+    rm -rf "$generated_fixture" "$stray_fixture" "$unmarked_fixture" "$empty_root" "$shebang_fixture"
 
     if [ "$status" -eq 0 ]; then
-        printf 'swift-sources: the generated-code boundary holds in both tools.\n'
+        printf 'swift-sources: the generated-code and shebang-script boundaries both hold.\n'
     fi
     return "$status"
 }
@@ -319,7 +373,8 @@ run_check_in() {
 }
 
 run_list_in() {
-    (cd "$1" && cmd_list App > /dev/null 2>&1)
+    local root="${2:-App}"
+    (cd "$1" && cmd_list "$root" > /dev/null 2>&1)
 }
 
 # ---------------------------------------------------------------------------
