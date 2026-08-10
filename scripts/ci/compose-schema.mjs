@@ -31,6 +31,17 @@ export const ComposeVolumeEntrySchema = z.union([
 ]);
 
 /**
+ * The value shape `ComposeVolumeEntrySchema` accepts, exported as a type so a
+ * consumer that only touches one volume entry at a time (never the whole
+ * schema or `zod` itself) can reference it via
+ * `import('./compose-schema.mjs').ComposeVolumeEntry` without importing
+ * either — one definition stays authoritative instead of a second file
+ * hand-copying the union.
+ *
+ * @typedef {z.infer<typeof ComposeVolumeEntrySchema>} ComposeVolumeEntry
+ */
+
+/**
  * A Compose service: `build`, `volumes` and `environment` — every field a
  * scripts/ci guard has needed out of `infra/docker-compose.yml` so far.
  * Nullable because `some-service:` with no value is valid Compose (typically

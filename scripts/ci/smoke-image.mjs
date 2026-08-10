@@ -113,9 +113,7 @@ function isHostPath(source) {
  * itself contains a colon (a Windows path, a URL-ish volume name) shifts every
  * segment along so the target lands on the mode.
  *
- * @param {string | { type?: string, target: string, read_only?: boolean }} entry
- *   One `ComposeVolumeEntrySchema` value: Compose's short string form, or its
- *   long object form.
+ * @param {import('./compose-schema.mjs').ComposeVolumeEntry} entry
  * @returns {{ target: string, readOnly: boolean, isBind: boolean } | undefined}
  *   `undefined` when the entry declares no absolute container path, which
  *   Compose itself would also reject.
