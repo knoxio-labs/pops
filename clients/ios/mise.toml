@@ -139,8 +139,16 @@ mkdir -p "$POPS_IOS_DERIVED_DATA"
 # every test target — `AppTests` and each package's `Tests/`, all of them part
 # of `SWIFT_SOURCES` and linted by `swiftlint lint` already — outside both the
 # products `test` needs and the log `swiftlint analyze` reads.
+# The destination names the simulator `test` is about to run on, rather than
+# `generic/platform=iOS Simulator`. That is not cosmetic: against a generic
+# destination Xcode forces `ONLY_ACTIVE_ARCH` back to NO, because there is no
+# active architecture to be, and the whole tree is compiled twice — once for
+# arm64 and once for an x86_64 slice no runner and no machine here will ever
+# execute. Naming the destination is what lets project.yml's Debug
+# `ONLY_ACTIVE_ARCH: YES` apply. It is also simply the honest thing to build:
+# these products exist to be run on this destination and nowhere else.
 xcodebuild -project Pops.xcodeproj -scheme Pops \
-  -destination 'generic/platform=iOS Simulator' \
+  -destination "platform=iOS Simulator,name=$POPS_IOS_SIMULATOR,OS=latest" \
   -derivedDataPath "$POPS_IOS_DERIVED_DATA" \
   build-for-testing | tee "$POPS_IOS_COMPILER_LOG"
 '''
