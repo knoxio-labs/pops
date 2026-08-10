@@ -132,6 +132,38 @@ internal struct TransactionsListRefreshTests {
         #expect(model.state == .loaded(Transaction.fakes(count: 2)))
     }
 
+    /// The banner is announced to VoiceOver from an `onChange`, so a failure
+    /// that is written on top of an identical one changes nothing and is
+    /// therefore said nothing about — a retry that produces silence for anyone
+    /// who cannot see the banner. Clearing before the request is what makes
+    /// every failure a `nil -> error` transition, and this is the observable
+    /// form of that: mid-flight, there is no failure outstanding.
+    @Test("a refresh clears the previous failure before it asks again")
+    func refreshClearsTheFailureBeforeRetrying() async {
+        let repository = ScriptedTransactionsRepository(
+            script: [
+                .page(Transaction.fakes(count: 2), next: nil),
+                .failing(RepositoryError.unavailable),
+                .failing(RepositoryError.unavailable),
+            ],
+            gating: [3]
+        )
+        let model = model(repository)
+        await model.loadFirstPage()
+        await model.refresh()
+        #expect(model.refreshFailure == .unavailable)
+
+        let retry = Task { await model.refresh() }
+        await repository.waitUntilCalled(3)
+
+        #expect(model.refreshFailure == nil, "a retry left the previous failure standing")
+
+        await repository.release()
+        await retry.value
+
+        #expect(model.refreshFailure == .unavailable)
+    }
+
     /// Two pulls before the first answers is one gesture repeated, not two
     /// lists to fetch.
     @Test("a second refresh while one is in flight is dropped")

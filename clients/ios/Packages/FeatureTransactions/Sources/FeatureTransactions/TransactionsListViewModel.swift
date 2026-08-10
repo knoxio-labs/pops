@@ -125,18 +125,27 @@ extension TransactionsListViewModel {
     /// leave ``paging`` settled. It may have superseded a fetch that will never
     /// come back to clear the `.loading` it set, and a footer left spinning is
     /// a list that never pages again for the rest of the session.
+    ///
+    /// ``refreshFailure`` is cleared *before* the request rather than only on
+    /// success, and that is not tidiness. The view announces the failure to
+    /// VoiceOver from an `onChange`, so a second refresh that fails the same way
+    /// as the first would write an identical value, change nothing, and say
+    /// nothing — leaving somebody who cannot see the banner with a retry that
+    /// produced silence. Clearing first makes every failure a `nil -> error`
+    /// transition. ``fetchNextPage()`` needs no equivalent because it passes
+    /// through ``PagingState/loading`` on its way, which is already a change.
     public func refresh() async {
         guard !isRefreshing else { return }
 
         isRefreshing = true
         generation += 1
         let epoch = generation
+        refreshFailure = nil
         defer { isRefreshing = false }
 
         do {
             let page = try await repository.transactions(after: nil)
             guard epoch == generation else { return }
-            refreshFailure = nil
             show(page.transactions, nextCursor: page.nextCursor)
         } catch let error where error.isCancellation {
             guard epoch == generation else { return }
