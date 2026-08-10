@@ -549,10 +549,15 @@ printf '%s\n' "$output"
 # entry in that file: build configuration and generated code are not the
 # application code these two rules are about.
 analyzed=$(printf '%s' "$output" | sed -nE 's/.*in ([0-9]+) files\.$/\1/p' | tail -1)
+# `sed -E '/pattern/d'` rather than `grep -vE`: under `set -o pipefail`, `grep`
+# exits 1 when nothing matches (here: no non-Package.swift file at all), which
+# would abort this pipeline before the guard below ever runs and replace its
+# message with a bare pipeline failure. `sed` exits 0 regardless of how many
+# lines it deleted, so an empty result still reaches the check as $total=0.
 total=$(find App AppTests Packages \
     \( -name .build -o -name Generated \) -type d -prune \
     -o -type f -name '*.swift' -print \
-  | grep -vE '^Packages/[^/]+/Package\.swift$' \
+  | sed -E '/^Packages\/[^/]+\/Package\.swift$/d' \
   | wc -l | tr -d ' ')
 if [ -z "$analyzed" ] || [ "$analyzed" -lt "$total" ]; then
   echo "lint:analyze: analyzed ${analyzed:-0} file(s), but $total live under" >&2
