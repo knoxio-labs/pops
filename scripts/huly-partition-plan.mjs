@@ -92,7 +92,10 @@
  *   node scripts/huly-partition-plan.mjs --self-test
  *
  * Exit 0 = ran, and for `--assess`, coverage is complete. Exit 1 = self-test
- * failed, or the assessed export is incomplete. Exit 2 = usage error.
+ * failed, or the assessed export is incomplete. Exit 2 = usage error, or an
+ * export this tool could not read — which is deliberately not 1, because "your
+ * file is malformed" and "your backlog is short" are different events and a
+ * caller switching on the code must not conflate them.
  */
 
 import { readFileSync } from 'node:fs';
@@ -607,8 +610,9 @@ export function formatCoverage(verdict) {
   if (verdict.complete) {
     const scope = assumptions.length === 0 ? 'complete' : 'complete on every axis it can verify';
     return [
-      `COVERAGE: ${scope} — ${verdict.cellCount} queries, none within ${verdict.limit} rows of ` +
-        `the cap, tiling every declared status with no gap and no overlap; ${verdict.rowCount} issues.`,
+      `COVERAGE: ${scope} — ${verdict.cellCount} queries, none of them reaching the ` +
+        `${verdict.limit}-row cap, tiling every declared status with no gap and no overlap; ` +
+        `${verdict.rowCount} issues.`,
       ...assumptions,
     ];
   }
@@ -718,11 +722,47 @@ function runAssess(args) {
     console.error('FAIL — --assess needs a path to an export.');
     return 2;
   }
-  const parsed = JSON.parse(readFileSync(path, 'utf8'));
-  const rows = Array.isArray(parsed) ? parsed : (parsed?.result ?? []);
-  const verdict = assessCoverage(readCoverage(parsed), rows);
+  /** @type {{ identifier: string }[]} */
+  let rows;
+  /** @type {Coverage | undefined} */
+  let coverage;
+  try {
+    const parsed = JSON.parse(readFileSync(path, 'utf8'));
+    rows = readRows(parsed);
+    coverage = readCoverage(parsed);
+  } catch (error) {
+    // Exit 2, not 1. An export this tool cannot read is a different event from
+    // one it read and found wanting, and a caller switching on the exit code
+    // must not confuse "your file is malformed" with "your backlog is short".
+    console.error(
+      `FAIL — could not read ${path}: ${error instanceof Error ? error.message : String(error)}`
+    );
+    return 2;
+  }
+  const verdict = assessCoverage(coverage, rows);
   console.log(formatCoverage(verdict).join('\n'));
   return verdict.complete ? 0 : 1;
+}
+
+/**
+ * The issue rows of a parsed export, from either accepted envelope.
+ *
+ * A `result` that is present but not an array is refused rather than coerced
+ * to empty: an export of zero issues assesses as a tiny clean backlog, which
+ * is the most convincing wrong answer this tool can give.
+ *
+ * @param {unknown} parsed
+ * @returns {{ identifier: string }[]}
+ * @throws {Error} on an envelope this tool cannot read.
+ */
+export function readRows(parsed) {
+  if (Array.isArray(parsed)) return parsed;
+  if (typeof parsed !== 'object' || parsed === null) {
+    throw new Error('expected a JSON array of issues, or an object with a "result" array');
+  }
+  const result = /** @type {Record<string, unknown>} */ (parsed)['result'];
+  if (!Array.isArray(result)) throw new Error('"result" must be an array of issues');
+  return result;
 }
 
 function main() {

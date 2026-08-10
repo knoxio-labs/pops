@@ -71,8 +71,9 @@
  * or the `{ "result": [...] }` envelope a tracker export arrives in, optionally
  * alongside a `"coverage"` block.
  *
- * Exit 0 = ran. Exit 1 = self-test failed. Exit 2 = usage error. Exit 3 = the
- * export declared coverage and that coverage does not cover the backlog.
+ * Exit 0 = ran. Exit 1 = self-test failed. Exit 2 = usage error, or an export
+ * this tool could not read. Exit 3 = the export declared coverage and that
+ * coverage does not cover the backlog.
  */
 
 import { execFileSync } from 'node:child_process';
@@ -777,8 +778,24 @@ function main() {
   const ref = readFlag(args, '--ref') ?? DEFAULT_REF;
   const prefix = readFlag(args, '--prefix') ?? DEFAULT_PREFIX;
 
-  const parsed = JSON.parse(readFileSync(issuesPath, 'utf8'));
-  const report = reconcile(readIssues(parsed), readCommits(ref), prefix, readCoverage(parsed));
+  /** @type {Issue[]} */
+  let issues;
+  /** @type {Coverage | undefined} */
+  let coverage;
+  try {
+    const parsed = JSON.parse(readFileSync(issuesPath, 'utf8'));
+    issues = readIssues(parsed);
+    coverage = readCoverage(parsed);
+  } catch (error) {
+    // Exit 2, not a stack trace. Every refusal in `readIssues` and
+    // `readCoverage` names the row it choked on, and that message is the whole
+    // value — burying it under a trace, on the exit code that means "the sweep
+    // found something", loses both halves.
+    const detail = error instanceof Error ? error.message : String(error);
+    console.error(`FAIL — could not read ${issuesPath}: ${detail}`);
+    process.exit(2);
+  }
+  const report = reconcile(issues, readCommits(ref), prefix, coverage);
 
   console.log(args.includes('--json') ? JSON.stringify(report, null, 2) : formatReport(report));
   // An export that declares its own coverage and fails it must not exit 0: a

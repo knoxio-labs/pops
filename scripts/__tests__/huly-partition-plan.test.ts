@@ -10,6 +10,7 @@ import {
   partitionRoots,
   readCoverage,
   readFlag,
+  readRows,
   refineCell,
   titlePartitions,
 } from '../huly-partition-plan.mjs';
@@ -559,6 +560,34 @@ describe('readCoverage', () => {
     ],
   ])('throws on %s rather than reading it as undeclared', (_name, parsed, message) => {
     expect(() => readCoverage(parsed)).toThrow(message);
+  });
+});
+
+describe('readRows', () => {
+  it('reads a bare array and the result envelope alike', () => {
+    expect(readRows([{ identifier: 'POPS-1' }])).toEqual([{ identifier: 'POPS-1' }]);
+    expect(readRows({ result: [{ identifier: 'POPS-1' }] })).toEqual([{ identifier: 'POPS-1' }]);
+  });
+
+  it('reads an empty export as empty, not as an error', () => {
+    expect(readRows({ result: [] })).toEqual([]);
+  });
+
+  // Coercing any of these to `[]` produces an export of zero issues, which
+  // assesses as a tiny clean backlog — the most convincing wrong answer
+  // available. Each has to be a refusal instead.
+  it.each([
+    ['a missing result', { coverage: {} }],
+    ['a null result', { result: null }],
+    ['an object result', { result: { a: 1 } }],
+    ['a string result', { result: 'POPS-1' }],
+  ])('refuses %s rather than reading it as no issues', (_name, parsed) => {
+    expect(() => readRows(parsed)).toThrow(/"result" must be an array/u);
+  });
+
+  it('refuses a scalar export outright', () => {
+    expect(() => readRows('nope')).toThrow(/expected a JSON array/u);
+    expect(() => readRows(null)).toThrow(/expected a JSON array/u);
   });
 });
 
