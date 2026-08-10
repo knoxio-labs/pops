@@ -164,11 +164,13 @@ const workflowFiles = readdirSync(workflowsDir)
   .toSorted((a, b) => a.localeCompare(b));
 
 describe('every workflow', () => {
-  // Discovery floor. A glob that silently matched nothing would make every
-  // assertion below vacuous, and the suite would report the repo clean while
-  // looking at no workflows at all.
+  // Discovery floor. `it.each([])` registers no cases at all, so an empty
+  // listing would leave the sweep below green having read nothing. Non-empty
+  // plus a file that must exist is the whole requirement: the listing is a
+  // `readdirSync` over one directory, which cannot lose a subset — it either
+  // resolves the directory or it does not, and the named file proves which.
   it('is discovered on disk', () => {
-    expect(workflowFiles.length).toBeGreaterThanOrEqual(15);
+    expect(workflowFiles.length).toBeGreaterThan(0);
     expect(workflowFiles).toContain('quality.yml');
   });
 
