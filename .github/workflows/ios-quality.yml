@@ -140,11 +140,11 @@ jobs:
           restore-keys: |
             spm-${{ runner.os }}-
 
-      # xcodebuild's compiled modules and build products — the ~17 minutes of
-      # this job's ~19 that neither cache above touches, since those cache
-      # dependency resolution, not compilation. None of the `mise run`
-      # invocations this workflow actually calls below (`build`, `test`,
-      # `lint`, `lint:analyze`) pass `-derivedDataPath` — only
+      # xcodebuild's compiled modules and build products, which neither cache
+      # above touches — those cache dependency RESOLUTION, not anything a
+      # compiler produced. None of the `mise run` invocations this workflow
+      # actually calls below (`build`, `test`, `lint`, `lint:analyze`) pass
+      # `-derivedDataPath` — only
       # `verify:release-carries-no-host`, a local-only task this workflow
       # never runs, uses that flag, and only for its own throwaway temp dir.
       # So xcodebuild resolves its own default location under
@@ -152,6 +152,46 @@ jobs:
       # job's checkout path. That path is the same on every run of this
       # workflow, which is exactly why the whole directory can be cached
       # instead of one project's slice of it.
+      #
+      # WHAT THIS CACHE BUYS IS NOT WHAT IT LOOKS LIKE IT BUYS, and the
+      # difference is written down here so nobody re-derives it. It does NOT
+      # let xcodebuild reuse the objects it compiled from this repo's own
+      # sources. `actions/checkout` stamps every file it writes with the
+      # wall-clock instant of the checkout, so after a restore every
+      # first-party source carries an mtime the restored build database has
+      # never seen and Swift recompiles all of them. Measured on this
+      # workflow, in one job, against a warm tree: touching every `.swift`
+      # file while changing not one byte of content is on its own enough to
+      # force the whole tree to recompile, and touching them to a time OLDER
+      # than the restored products forces it too — staleness here is an
+      # equality test against a recorded stamp, not an ordering comparison, so
+      # no amount of shuffling timestamps in one direction repairs it.
+      # Portability is not the problem and was ruled out the same way: tarring
+      # the directory out, deleting it and extracting it back — every inode in
+      # it new, which is exactly what a cache restore does — costs nothing at
+      # all, the next build compiles zero files.
+      #
+      # What survives that recompile is most of the directory, and it is
+      # genuinely reused: the clang module cache, the SDK stat caches, and the
+      # resolved SwiftPM checkouts under `SourcePackages` with their build
+      # products. None of those came out of `actions/checkout`, so all of them
+      # keep the mtimes the restore gave them. That is where the saving comes
+      # from, and it is why this cache is worth keeping even though the
+      # first-party recompile it looks like it should prevent still happens on
+      # every run.
+      #
+      # Buying that recompile back would mean rewriting source timestamps in
+      # CI to values a compiler can be talked into trusting. It is worth about
+      # twenty seconds of this job, and its only possible failure is a green
+      # run that skipped compiling something — on the one job that exists to
+      # compile. Not a trade worth making; measure before reopening it.
+      #
+      # `lint:analyze` is only half outside this, which is not the obvious
+      # reading of it. It builds `clean` on purpose — its own task comment
+      # says why — so it throws away every compiled object the restore handed
+      # it. It still comes out faster warm than cold, because `clean` reaches
+      # the scheme's build products and nothing else: the module cache and the
+      # SwiftPM checkouts survive it and get reused by the rebuild.
       #
       # DerivedData is toolchain-specific — it holds compiled Swift modules
       # and a PCM cache keyed to the compiler that produced them — so a hit
