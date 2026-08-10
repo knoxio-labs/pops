@@ -9,7 +9,11 @@ import Foundation
 ///
 /// A seam because both values are read from the running device and neither can
 /// be arranged from a test, and because the simulator answers one of them
-/// wrongly (see ``SystemDeviceDescription``).
+/// wrongly (see ``SystemDeviceDescription``). `@MainActor` because the real
+/// implementation's `suggestedName` reads `UIDevice.current`, which the system
+/// isolates to the main actor; every call site (`PairingViewModel`) is
+/// main-actor code already, so this costs nothing there.
+@MainActor
 public protocol DeviceDescribing: Sendable {
     /// The label to put in the name field before the person edits it.
     ///
@@ -29,6 +33,7 @@ public protocol DeviceDescribing: Sendable {
 public struct SystemDeviceDescription: DeviceDescribing {
     public init() {}
 
+    @MainActor
     public var suggestedName: String {
         #if canImport(UIKit)
             return UIDevice.current.name
@@ -39,6 +44,7 @@ public struct SystemDeviceDescription: DeviceDescribing {
         #endif
     }
 
+    @MainActor
     public var modelIdentifier: String {
         // A simulator's `hw.machine` is the *Mac's* architecture — `arm64` —
         // which would land in the operator's device list as the model of every
