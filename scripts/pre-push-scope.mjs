@@ -42,9 +42,11 @@
  *   node scripts/pre-push-scope.mjs              read git's pre-push refs on stdin
  *   node scripts/pre-push-scope.mjs --self-test  prove the decision logic still decides
  *
- * Exit code is always 0 — the decision is the stdout token, not the status, so
- * that a crash (non-zero, no output) is indistinguishable from `run` to the
- * caller rather than being mistaken for `skip`.
+ * In DECISION MODE the exit code is always 0: the verdict is the stdout token,
+ * not the status, so a crash (non-zero, no output) is indistinguishable from
+ * `run` to the caller rather than being mistaken for `skip`. `--self-test` is
+ * not decision mode and does exit non-zero when it fails — it is a check, and a
+ * check that cannot fail is not one.
  */
 
 import { execFileSync } from 'node:child_process';
@@ -524,8 +526,9 @@ function main() {
   if (args.includes('--help') || args.includes('-h')) {
     console.log(
       'Usage: node scripts/pre-push-scope.mjs [--self-test]\n' +
-        'Prints `run` or `skip` on stdout for the push described on stdin.\n' +
-        'Always exits 0 — a crash must read as `run`, never as `skip`.'
+        'Prints `run` or `skip` on stdout for the push described on stdin, and\n' +
+        'exits 0 doing so — a crash must read as `run`, never as `skip`.\n' +
+        '--self-test exits non-zero when the decision logic no longer decides.'
     );
     process.exit(0);
   }
