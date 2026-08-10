@@ -59,8 +59,9 @@
  * it and the rows each returned, and every report opens by saying which of
  * three things is true of it: coverage complete, coverage INCOMPLETE (with the
  * reason), or coverage UNKNOWN because none was declared. The partitioning
- * recipe that yields a complete one, and the check applied here, both live in
- * `huly-partition-plan.mjs`.
+ * recipe that yields a complete one is in `huly-partition.mjs`, the check
+ * applied here is in `huly-coverage.mjs`, and `huly-partition-plan.mjs` is the
+ * command line over both.
  *
  * Usage:
  *   node scripts/huly-backlog-reconcile.mjs --issues <path.json> [--ref origin/main]
@@ -81,7 +82,8 @@ import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { assessCoverage, formatCoverage, readCoverage } from './huly-partition-plan.mjs';
+import { readFlag } from './cli-flags.mjs';
+import { assessCoverage, formatCoverage, readCoverage } from './huly-coverage.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -484,8 +486,8 @@ export function findMirrors(issues, commits) {
 }
 
 /**
- * @typedef {import('./huly-partition-plan.mjs').Coverage} Coverage
- * @typedef {import('./huly-partition-plan.mjs').CoverageVerdict} CoverageVerdict
+ * @typedef {import('./huly-partition.mjs').Coverage} Coverage
+ * @typedef {import('./huly-coverage.mjs').CoverageVerdict} CoverageVerdict
  * @typedef {{
  *   eligible: Verdict[],
  *   skipped: Issue[],
@@ -729,25 +731,7 @@ export function formatReport(report) {
   return lines.join('\n');
 }
 
-/**
- * The value following `flag`, or `undefined` when the flag is absent or was
- * given nothing to take.
- *
- * A following token that is itself a flag is not a value: `--issues --json`
- * would otherwise read `--json` as the path and die on ENOENT several steps
- * later, instead of saying which argument was missing.
- *
- * @param {string[]} args
- * @param {string} flag
- * @returns {string | undefined}
- */
-export function readFlag(args, flag) {
-  const index = args.indexOf(flag);
-  if (index === -1) return undefined;
-  const value = args[index + 1];
-  if (value === undefined || value.startsWith('-')) return undefined;
-  return value;
-}
+export { readFlag } from './cli-flags.mjs';
 
 function main() {
   const args = process.argv.slice(2);
