@@ -29,9 +29,16 @@
  * becomes invisible to the gate. Nothing in `quality.yml` is advisory, and a
  * job that wants to be must leave the gated workflow rather than hide inside it.
  *
- * Parses YAML as text because the jobs that run these guards do so before any
- * `pnpm install` — see `yaml-text.mjs`, which owns the line-level matching, and
+ * **Tier B guard**: the workflows go through a real YAML parser, so the job
+ * that runs it installs the workspace first. See the tier amendment in
  * [ADR-045](../../docs/architecture/adr-045-guards-must-prove-they-report.md).
+ * The four rules above are structural claims about a document, and the
+ * line-anchored matcher this replaced was blind to a legal spelling of each of
+ * them at least once. What is still matched textually is the `gated` array and
+ * the two `checks.create` invariants — those live in the embedded
+ * `github-script` body, which is JavaScript inside a YAML scalar, so the parser
+ * hands over the exact script and the matching happens on that rather than on
+ * the whole file.
  *
  * Usage:
  *   node scripts/ci/check-ci-gate-wiring.mjs
@@ -44,7 +51,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { stripComment } from './yaml-text.mjs';
+import { isMapping, parseYaml, scalarText, walkMappings } from './config-parse.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..');
@@ -53,57 +60,86 @@ const repoRoot = resolve(here, '..', '..');
 export const ALWAYS_RUNNING_GATED_WORKFLOW = 'Quality';
 
 /**
- * Read a YAML mapping key declared at an exact indent, returning its inline
- * value (`''` when the value is a nested block).
- *
- * EVERY key match in this file goes through here, on purpose. Matching a key
- * with a regex anchored at end-of-line — `/^ {4}paths:\s*$/` — silently sees
- * only the block form and misses both `paths: ["**"]` and a trailing
- * `# comment`, and this repo writes both (`unit-quality.yml` has
- * `paths: ["**"] # main rebuilds via the changed-set`). A guard that quietly
- * matches nothing reports green, which is the failure mode this whole file
- * exists to prevent, so the anchoring rule is centralised rather than repeated.
- *
- * @param {string} line
- * @param {number} indent Exact number of leading spaces the key must carry.
- * @param {string} [key] Restrict to this key; any key when omitted.
- * @returns {{ key: string, value: string } | undefined}
+ * @param {string} source
+ * @param {string} [label]
+ * @returns {unknown}
+ * @throws {import('./config-parse.mjs').ConfigParseError}
  */
-export function matchKey(line, indent, key) {
-  const match = new RegExp(`^ {${indent}}([A-Za-z0-9_-]+):(.*)$`, 'u').exec(line);
-  if (!match) return undefined;
-  if (key !== undefined && match[1] !== key) return undefined;
-  return { key: match[1], value: stripComment(match[2]).trim() };
+function workflowDoc(source, label = 'workflow') {
+  return parseYaml(source, label);
 }
 
 /**
- * Read the `on.workflow_run.workflows:` sequence from a workflow source.
+ * The `on:` mapping of a parsed workflow.
+ *
+ * `js-yaml`'s core schema keeps `on` a string key. A YAML 1.1 parser resolves
+ * it to the boolean `true`, and every check below would then read `undefined`
+ * and report nothing — so the schema is load-bearing, not incidental.
+ *
+ * @param {unknown} doc
+ * @returns {Record<string, unknown>}
+ */
+function triggers(doc) {
+  if (!isMapping(doc)) return {};
+  const on = doc.on;
+  return isMapping(on) ? on : {};
+}
+
+/**
+ * Read the `on.workflow_run.workflows` sequence from a workflow source.
  *
  * @param {string} source
  * @returns {string[]}
+ * @throws {import('./config-parse.mjs').ConfigParseError}
  */
 export function parseWorkflowRunTriggers(source) {
-  const lines = source.split('\n');
-  const start = lines.findIndex((line) => matchKey(line, 4, 'workflows') !== undefined);
-  if (start === -1) return [];
-  /** @type {string[]} */
-  const names = [];
-  for (const line of lines.slice(start + 1)) {
-    const item = /^ {6}-\s*(.+?)\s*$/u.exec(line);
-    if (!item) break;
-    names.push(unquote(stripComment(item[1]).trim()));
+  const workflowRun = triggers(workflowDoc(source)).workflow_run;
+  if (!isMapping(workflowRun)) return [];
+  const names = workflowRun.workflows;
+  if (Array.isArray(names)) {
+    return names.map(scalarText).filter((name) => name !== undefined);
   }
-  return names;
+  const single = scalarText(names);
+  return single === undefined ? [] : [single];
+}
+
+/**
+ * The body of the workflow's embedded `github-script` step, or `''` when it has
+ * none.
+ *
+ * @param {string} source
+ * @returns {string}
+ * @throws {import('./config-parse.mjs').ConfigParseError}
+ */
+export function embeddedScript(source) {
+  for (const entry of walkMappings(workflowDoc(source))) {
+    if (entry.key !== 'script') continue;
+    const body = scalarText(entry.value);
+    if (body !== undefined) return body;
+  }
+  return '';
 }
 
 /**
  * Read the `gated` array literal out of the embedded `github-script` body.
  *
- * @param {string} source
+ * Accepts a bare script body too, so a caller (and the self-test) can exercise
+ * the array reader without wrapping it in a workflow.
+ *
+ * @param {string} source  A workflow document, or the script body alone.
  * @returns {string[]}
  */
 export function parseGatedArray(source) {
-  const block = /const\s+gated\s*=\s*\[([\s\S]*?)\]\s*;/u.exec(source);
+  let body = source;
+  try {
+    const fromWorkflow = embeddedScript(source);
+    if (fromWorkflow !== '') body = fromWorkflow;
+  } catch {
+    // Not a workflow document — treat the input as the script body itself. A
+    // workflow that does not parse is reported by the caller, which reads it
+    // through `workflowDoc` directly.
+  }
+  const block = /const\s+gated\s*=\s*\[([\s\S]*?)\]\s*;/u.exec(body);
   if (!block) return [];
   return block[1]
     .split(',')
@@ -127,17 +163,15 @@ function unquote(raw) {
 }
 
 /**
- * Read a workflow's top-level `name:`.
+ * Read a workflow's top-level `name`.
  *
  * @param {string} source
  * @returns {string | undefined}
+ * @throws {import('./config-parse.mjs').ConfigParseError}
  */
 export function parseWorkflowName(source) {
-  for (const line of source.split('\n')) {
-    const match = matchKey(line, 0, 'name');
-    if (match) return unquote(match.value);
-  }
-  return undefined;
+  const doc = workflowDoc(source);
+  return isMapping(doc) ? scalarText(doc.name) : undefined;
 }
 
 /**
@@ -146,37 +180,36 @@ export function parseWorkflowName(source) {
  *
  * @param {string} source
  * @returns {boolean}
+ * @throws {import('./config-parse.mjs').ConfigParseError}
  */
 export function hasPullRequestPathFilter(source) {
-  const lines = source.split('\n');
-  const start = lines.findIndex((line) => matchKey(line, 2, 'pull_request') !== undefined);
-  if (start === -1) return false;
-  for (const line of lines.slice(start + 1)) {
-    if (matchKey(line, 0) !== undefined || matchKey(line, 2) !== undefined) break;
-    if (matchKey(line, 4, 'paths') ?? matchKey(line, 4, 'paths-ignore')) return true;
-  }
-  return false;
+  const pullRequest = triggers(workflowDoc(source)).pull_request;
+  if (!isMapping(pullRequest)) return false;
+  return pullRequest.paths !== undefined || pullRequest['paths-ignore'] !== undefined;
 }
 
 /**
- * Job names in a workflow that carry `continue-on-error: true` at job level
- * (two-space indent for the job key, four for its properties).
+ * Job names in a workflow that carry a job-level `continue-on-error` opt-out.
+ *
+ * Anything other than a literal `false` counts. `continue-on-error` accepts an
+ * expression, and an expression that evaluates true at run time erases the job
+ * from the workflow conclusion exactly as `true` does — so a shape this guard
+ * cannot evaluate is reported rather than waved through.
  *
  * @param {string} source
  * @returns {string[]}
+ * @throws {import('./config-parse.mjs').ConfigParseError}
  */
 export function findContinueOnErrorJobs(source) {
+  const doc = workflowDoc(source);
+  if (!isMapping(doc) || !isMapping(doc.jobs)) return [];
   /** @type {string[]} */
   const found = [];
-  let job;
-  for (const line of source.split('\n')) {
-    const jobKey = matchKey(line, 2);
-    if (jobKey) {
-      job = jobKey.key;
-      continue;
-    }
-    const flag = matchKey(line, 4, 'continue-on-error');
-    if (job !== undefined && flag?.value === 'true') found.push(job);
+  for (const [name, job] of Object.entries(doc.jobs)) {
+    if (!isMapping(job)) continue;
+    const flag = job['continue-on-error'];
+    if (flag === undefined || flag === false || flag === 'false') continue;
+    found.push(name);
   }
   return found;
 }
@@ -186,25 +219,47 @@ export function findContinueOnErrorJobs(source) {
  *
  * @param {string} source
  * @returns {boolean}
+ * @throws {import('./config-parse.mjs').ConfigParseError}
  */
 export function grantsChecksWrite(source) {
-  return source.split('\n').some((line) => matchKey(line, 2, 'checks')?.value === 'write');
+  const doc = workflowDoc(source);
+  if (!isMapping(doc) || !isMapping(doc.permissions)) return false;
+  return doc.permissions.checks === 'write';
 }
 
 /**
+ * @typedef {object} WorkflowIndex
+ * @property {Map<string, string>} names   display name -> file name
+ * @property {string[]} problems           workflows that could not be read
+ */
+
+/**
  * @param {string} root
- * @returns {Map<string, string>} workflow display name -> file name
+ * @returns {WorkflowIndex}
  */
 function readWorkflowNames(root) {
   const dir = join(root, '.github', 'workflows');
   /** @type {Map<string, string>} */
   const names = new Map();
+  /** @type {string[]} */
+  const problems = [];
   for (const file of readdirSync(dir)) {
     if (!file.endsWith('.yml') && !file.endsWith('.yaml')) continue;
-    const name = parseWorkflowName(readFileSync(join(dir, file), 'utf8'));
-    if (name) names.set(name, file);
+    try {
+      // A workflow that does not parse has no readable `name:`, which is
+      // indistinguishable from one that was renamed out of the gate — the exact
+      // drift this guard exists to catch. It is reported, never skipped.
+      const name = parseWorkflowName(readFileSync(join(dir, file), 'utf8'));
+      if (name) names.set(name, file);
+    } catch (error) {
+      problems.push(
+        `.github/workflows/${file} could not be read as YAML, so its \`name:\` is unknown and ` +
+          `it cannot be matched against ci-gate.yml's gated list: ` +
+          `${error instanceof Error ? error.message : String(error)}`
+      );
+    }
   }
-  return names;
+  return { names, problems };
 }
 
 /**
@@ -213,18 +268,36 @@ function readWorkflowNames(root) {
  */
 export function checkCiGateWiring(root) {
   const workflowsDir = join(root, '.github', 'workflows');
-  const gateSource = readFileSync(join(workflowsDir, 'ci-gate.yml'), 'utf8');
+  const gatePath = join(workflowsDir, 'ci-gate.yml');
+  const gateSource = readFileSync(gatePath, 'utf8');
 
   /** @type {string[]} */
   const violations = [];
 
-  const triggers = parseWorkflowRunTriggers(gateSource);
-  const gated = parseGatedArray(gateSource);
+  /** @type {string[]} */
+  let triggerNames;
+  /** @type {string} */
+  let script;
+  /** @type {boolean} */
+  let checksWrite;
+  try {
+    triggerNames = parseWorkflowRunTriggers(gateSource);
+    script = embeddedScript(gateSource);
+    checksWrite = grantsChecksWrite(gateSource);
+  } catch (error) {
+    return [
+      `.github/workflows/ci-gate.yml could not be read as YAML, so none of the gate wiring ` +
+        `could be checked: ${error instanceof Error ? error.message : String(error)}`,
+    ];
+  }
+  const gated = parseGatedArray(script);
 
-  if (triggers.length === 0) violations.push('ci-gate.yml declares no workflow_run trigger list.');
+  if (triggerNames.length === 0) {
+    violations.push('ci-gate.yml declares no workflow_run trigger list.');
+  }
   if (gated.length === 0) violations.push('ci-gate.yml declares no `gated` array.');
 
-  for (const name of triggers) {
+  for (const name of triggerNames) {
     if (!gated.includes(name)) {
       violations.push(
         `"${name}" fires ci-gate.yml but is missing from its \`gated\` array — the gate ` +
@@ -233,7 +306,7 @@ export function checkCiGateWiring(root) {
     }
   }
   for (const name of gated) {
-    if (!triggers.includes(name)) {
+    if (!triggerNames.includes(name)) {
       violations.push(
         `"${name}" is in ci-gate.yml's \`gated\` array but not its workflow_run trigger list — ` +
           'its completion never fires the gate, so a late failure is never re-evaluated.'
@@ -241,8 +314,9 @@ export function checkCiGateWiring(root) {
     }
   }
 
-  const known = readWorkflowNames(root);
-  for (const name of new Set([...triggers, ...gated])) {
+  const { names: known, problems } = readWorkflowNames(root);
+  violations.push(...problems);
+  for (const name of new Set([...triggerNames, ...gated])) {
     if (!known.has(name)) {
       violations.push(
         `ci-gate.yml references workflow "${name}", which matches no \`name:\` under ` +
@@ -251,7 +325,7 @@ export function checkCiGateWiring(root) {
     }
   }
 
-  if (!/checks\.create\(/u.test(gateSource) || !/head_sha:\s*headSha/u.test(gateSource)) {
+  if (!/checks\.create\(/u.test(script) || !/head_sha:\s*headSha/u.test(script)) {
     violations.push(
       'ci-gate.yml must POST its own check run at the observed head SHA ' +
         '(`checks.create({ …, head_sha: headSha })`). GitHub attributes the implicit ' +
@@ -259,13 +333,10 @@ export function checkCiGateWiring(root) {
         'verdict never appears on the pull request it judges.'
     );
   }
-  if (!grantsChecksWrite(gateSource)) {
+  if (!checksWrite) {
     violations.push('ci-gate.yml needs `permissions: checks: write` to publish its check run.');
   }
-  if (
-    /status:\s*"completed"\s*,/u.test(gateSource) ||
-    !/status:\s*settled\s*\?/u.test(gateSource)
-  ) {
+  if (/status:\s*"completed"\s*,/u.test(script) || !/status:\s*settled\s*\?/u.test(script)) {
     violations.push(
       'ci-gate.yml must publish `in_progress` while a gated workflow is still running ' +
         '(`status: settled ? "completed" : "in_progress"`), and attach a `conclusion` only ' +
@@ -337,13 +408,14 @@ function main() {
 }
 
 /**
- * Every case here carries a trailing comment or an inline value, because
- * end-of-line anchoring is the one mistake this file keeps having to unlearn.
+ * Every case here carries a trailing comment, an inline value, or a flow
+ * collection — the three spellings the line-anchored matcher this file used to
+ * carry was blind to, one at a time, over three separate fixes.
  *
  * @returns {boolean}
  */
 function selfTest() {
-  const triggers = parseWorkflowRunTriggers(
+  const triggerList = parseWorkflowRunTriggers(
     [
       'on:',
       '  workflow_run:',
@@ -353,10 +425,20 @@ function selfTest() {
       '    types: [x]',
     ].join('\n')
   );
+  const inlineTriggerList = parseWorkflowRunTriggers(
+    'on: { workflow_run: { workflows: ["A", "B"], types: [completed] } }\n'
+  );
   const gated = parseGatedArray('const gated = [\n  "A",\n  "B",\n];\n');
+  const gatedFromWorkflow = parseGatedArray(
+    'jobs:\n  gate:\n    steps:\n      - with:\n          script: |\n            const gated = ["A", "B"];\n'
+  );
   const advisory = findContinueOnErrorJobs(
     'jobs:\n  lint: # tidy\n    continue-on-error: true # flaky\n'
   );
+  const advisoryExpression = findContinueOnErrorJobs(
+    'jobs:\n  lint:\n    continue-on-error: ${{ github.event_name == \'push\' }}\n'
+  );
+  const notAdvisory = findContinueOnErrorJobs('jobs:\n  lint:\n    continue-on-error: false\n');
   const filtered = hasPullRequestPathFilter(
     'on:\n  pull_request: # every PR\n    paths: ["**"] # inline\n'
   );
@@ -366,16 +448,39 @@ function selfTest() {
   const named = parseWorkflowName('name: Quality # the big one\n');
   const writes = grantsChecksWrite('permissions:\n  checks: write # publishes the verdict\n');
 
-  const ok =
-    triggers.join() === 'A,B' &&
-    gated.join() === 'A,B' &&
-    advisory.join() === 'lint' &&
-    filtered &&
-    !unfiltered &&
-    named === 'Quality' &&
-    writes;
-  if (!ok) console.error('self-test FAILED');
-  return ok;
+  // The degenerate case: a document nobody can read must raise, so the caller
+  // reports it. Returning "no triggers, no gated names, no advisory jobs" would
+  // read as a workflow with clean wiring.
+  let unparseableRaised = false;
+  try {
+    parseWorkflowRunTriggers('on:\n  a:\n   - b\n  - c\n');
+  } catch {
+    unparseableRaised = true;
+  }
+
+  const checks = {
+    'reads a block trigger list past its comments': triggerList.join() === 'A,B',
+    'reads the same list written as flow collections': inlineTriggerList.join() === 'A,B',
+    'reads the gated array from a bare script body': gated.join() === 'A,B',
+    'reads the gated array out of a workflow document': gatedFromWorkflow.join() === 'A,B',
+    'names an advisory job declared with comments': advisory.join() === 'lint',
+    'reports an advisory job it cannot evaluate': advisoryExpression.join() === 'lint',
+    'does not treat continue-on-error: false as an opt-out': notAdvisory.length === 0,
+    'sees an inline path filter on pull_request': filtered,
+    'does not read a sibling trigger filter as one on pull_request': !unfiltered,
+    'reads the workflow name past a trailing comment': named === 'Quality',
+    'reads the checks: write permission': writes,
+    'raises on a workflow that cannot be parsed rather than reporting it clean':
+      unparseableRaised,
+  };
+
+  const failed = Object.entries(checks).filter(([, ok]) => !ok);
+  if (failed.length > 0) {
+    console.error(`self-test FAILED: ${failed.map(([name]) => name).join('; ')}`);
+    return false;
+  }
+  console.log(`self-test OK — ${Object.keys(checks).length} assertions passed.`);
+  return true;
 }
 
 if (resolve(fileURLToPath(import.meta.url)) === resolve(process.argv[1] ?? '')) {

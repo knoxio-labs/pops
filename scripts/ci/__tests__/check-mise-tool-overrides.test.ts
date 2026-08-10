@@ -43,10 +43,13 @@ describe('parseToolsTable', () => {
     });
   });
 
-  it('strips an inline comment on a bare (unquoted) value', () => {
-    expect(parseToolsTable('[tools]\nrust = stable # lagging the bump\n')).toEqual({
-      rust: 'stable',
-    });
+  it('refuses a bare (unquoted) value rather than inventing one', () => {
+    // `rust = stable` is not TOML, and mise itself rejects it. The scanner this
+    // replaced accepted it and reported `stable`, so a config mise would not
+    // load read as a healthy pin here.
+    expect(() => parseToolsTable('[tools]\nrust = stable # lagging the bump\n')).toThrow(
+      /could not be parsed/u
+    );
   });
 
   it('keeps a # that is inside the quoted value', () => {
@@ -97,7 +100,63 @@ describe('parseToolsTable — legal TOML spellings of the same override (ADR-045
   });
 });
 
+describe('parseToolsTable — spellings a real parser gets for free', () => {
+  it('reads a request list as its highest-priority version', () => {
+    expect(parseToolsTable('[tools]\nnode = ["24.5.0", "22"]\n')).toEqual({ node: '24.5.0' });
+  });
+
+  it('registers a tool declared only as a sub-table backend', () => {
+    expect(parseToolsTable('[tools]\npnpm = { version = "9", backend = "npm" }\n')).toEqual({
+      pnpm: '9',
+    });
+  });
+
+  it('stringifies a numeric pin rather than dropping it', () => {
+    expect(parseToolsTable('[tools]\nnode = 24\n')).toEqual({ node: '24' });
+  });
+});
+
 describe('checkOverrides — degenerate tree (ADR-045)', () => {
+  it('reports an unparseable root pin rather than an empty baseline', () => {
+    const root = mkdtempSync(join(tmpdir(), 'mise-overrides-badtoml-'));
+    try {
+      writeFileSync(join(root, 'mise.toml'), '[tools\nnode = "24"\n');
+      const { violations, baselineMissing } = checkOverrides(root);
+      expect(violations.some((v) => v.includes('could not be parsed'))).toBe(true);
+      expect(baselineMissing.toSorted()).toEqual(['node', 'pnpm', 'rust']);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('reports a missing root pin rather than reading the fleet as compliant', () => {
+    const root = mkdtempSync(join(tmpdir(), 'mise-overrides-noroot-'));
+    try {
+      const { violations } = checkOverrides(root);
+      expect(violations.some((v) => v.includes('does not exist'))).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('reports a unit whose own mise.toml does not parse rather than skipping it', () => {
+    const root = mkdtempSync(join(tmpdir(), 'mise-overrides-badunit-'));
+    try {
+      writeFileSync(join(root, 'mise.toml'), '[tools]\nnode = "24"\npnpm = "10"\nrust = "stable"\n');
+      mkdirSync(join(root, 'pillars', 'finance'), { recursive: true });
+      mkdirSync(join(root, 'libs'), { recursive: true });
+      writeFileSync(join(root, 'pillars', 'finance', 'mise.toml'), '[tools\nnode = "22"\n');
+      const { violations } = checkOverrides(root);
+      expect(
+        violations.some(
+          (v) => v.includes('pillars/finance/mise.toml') && v.includes('could not be parsed')
+        )
+      ).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it('reports a missing unit-kind directory rather than sweeping zero units', () => {
     const root = mkdtempSync(join(tmpdir(), 'mise-overrides-degenerate-'));
     try {

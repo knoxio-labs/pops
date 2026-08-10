@@ -17,8 +17,12 @@
  *   - a unit may override `node` or `rust` only — `pnpm` manages the single
  *     pnpm workspace lockfile and must not fork per unit.
  *
- * Parses TOML as text (regex, no dependency) — mirrors the other guards in
- * this directory (e.g. `check-known-pillars-coverage.mjs`).
+ * **Tier B guard**: it reads TOML through a real parser, so the job that runs
+ * it installs the workspace first. See the tier amendment in
+ * [ADR-045](../../docs/architecture/adr-045-guards-must-prove-they-report.md).
+ * The hand-rolled scanner this replaced modelled one spelling of `[tools]` at a
+ * time and had to be taught each new one — a sub-table, an inline table, a
+ * commented header — after each had already slipped past it once.
  *
  * Usage:
  *   node scripts/ci/check-mise-tool-overrides.mjs
@@ -31,6 +35,8 @@ import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSy
 import { tmpdir } from 'node:os';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import { ConfigParseError, isMapping, parseToml, scalarText } from './config-parse.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..');
@@ -45,137 +51,69 @@ export const REQUIRED_ROOT_TOOLS = ['node', 'pnpm', 'rust'];
 export const UNIT_BASES = ['pillars', 'libs'];
 
 /**
- * Extract a TOML string value from the right-hand side of a `key = value`
- * line, tolerating a trailing inline comment (`node = "24.5.0" # pin`). A
- * quoted value returns its contents verbatim (anything after the closing
- * quote — including a `#` — is ignored); a bare value is truncated at the
- * first `#` and trimmed.
+ * Reduce a parsed `[tools]` entry to the version string the callers compare.
  *
- * @param {string} raw
+ * mise accepts three spellings for one pin and they all mean the same thing:
+ * a scalar (`node = "24"`), a request list (`node = ["24", "22"]`, highest
+ * priority first), and a sub-table (`[tools.node] version = "24"`, which may
+ * carry only a backend and no version at all). The tool being DECLARED is what
+ * the guard rules on, so a spelling that names no version still yields the key
+ * with an empty value.
+ *
+ * @param {unknown} value
  * @returns {string}
  */
-function extractToolValue(raw) {
-  const trimmed = raw.trim();
-  const quote = trimmed[0];
-  if (quote === '"' || quote === "'") {
-    const end = trimmed.indexOf(quote, 1);
-    return end === -1 ? trimmed.slice(1) : trimmed.slice(1, end);
+function toolVersion(value) {
+  const scalar = scalarText(value);
+  if (scalar !== undefined) return scalar;
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const first = scalarText(item);
+      if (first !== undefined) return first;
+      if (isMapping(item)) {
+        const nested = scalarText(item.version);
+        if (nested !== undefined) return nested;
+      }
+    }
+    return '';
   }
-  const hash = trimmed.indexOf('#');
-  return (hash === -1 ? trimmed : trimmed.slice(0, hash)).trim();
+  if (isMapping(value)) return scalarText(value.version) ?? '';
+  return '';
 }
 
 /**
- * Extract a top-level table from a mise.toml source as a plain key→value map.
- * Stops at the next `[section]` header or EOF. Comment lines and blank lines
- * are ignored; values are unquoted and any inline comment is stripped.
+ * Read a top-level table from a mise.toml source as a plain key→value map.
  *
  * @param {string} source
  * @param {string} section Table name, e.g. `tools` or `settings`.
+ * @param {string} [label] Path used in a parse-failure message.
  * @returns {Record<string, string>}
+ * @throws {ConfigParseError} when the source is not valid TOML, or the named
+ *   table is not a table.
  */
-export function parseTomlSection(source, section) {
-  const lines = source.split('\n');
+export function parseTomlSection(source, section, label = 'mise.toml') {
+  const doc = parseToml(source, label);
+  const table = doc[section];
+  if (table === undefined) return {};
+  if (!isMapping(table)) {
+    throw new ConfigParseError(label, `[${section}] is a ${typeof table}, not a table`);
+  }
   /** @type {Record<string, string>} */
   const entries = {};
-  let inSection = false;
-  /** Set while inside a `[<section>.<name>]` sub-table, to `<name>`. */
-  let subTable;
-  for (const rawLine of lines) {
-    const line = rawLine.trim();
-    if (line.startsWith('#') || line === '') continue;
-
-    // `[tools] # the shared pins` is a legal header. Anchoring on `]$` saw only
-    // the bare form, so a commented header silently ended the table and every
-    // key under it went unread — the guard then had nothing to object to.
-    const header = /^\[([^\]]+)\](?:\s+#.*)?$/u.exec(line);
-    if (header) {
-      const name = header[1] ?? '';
-      inSection = name === section;
-      subTable = name.startsWith(`${section}.`)
-        ? unquoteKey(name.slice(section.length + 1))
-        : undefined;
-      // A sub-table declares the tool whether or not it names a version, so
-      // register it immediately — `[tools.pnpm]` alone is already the fork.
-      if (subTable !== undefined && !(subTable in entries)) entries[subTable] = '';
-      continue;
-    }
-
-    if (subTable !== undefined) {
-      const versionKv = /^version\s*=\s*(.+)$/u.exec(line);
-      if (versionKv) entries[subTable] = extractToolValue(versionKv[1] ?? '');
-      continue;
-    }
-
-    // `tools = { node = "24", pnpm = "10" }` is the inline-table spelling of
-    // the same declaration, and carries no `[tools]` header at all.
-    const inlineTable = new RegExp(`^${section}\\s*=\\s*\\{(.*)\\}\\s*(?:#.*)?$`, 'u').exec(line);
-    if (inlineTable) {
-      for (const pair of splitInlineTable(inlineTable[1] ?? '')) {
-        const kv = /^([A-Za-z0-9_"'-]+)\s*=\s*(.+)$/u.exec(pair.trim());
-        if (kv) entries[unquoteKey(kv[1] ?? '')] = extractToolValue(kv[2] ?? '');
-      }
-      continue;
-    }
-
-    if (!inSection) continue;
-    const kv = /^([A-Za-z0-9_-]+)\s*=\s*(.+)$/u.exec(line);
-    if (!kv) continue;
-    entries[kv[1]] = extractToolValue(kv[2]);
-  }
+  for (const [key, value] of Object.entries(table)) entries[key] = toolVersion(value);
   return entries;
-}
-
-/**
- * @param {string} raw
- * @returns {string}
- */
-function unquoteKey(raw) {
-  return raw.trim().replace(/^["']|["']$/gu, '');
-}
-
-/**
- * Split an inline-table body on top-level commas, ignoring commas inside
- * quotes.
- *
- * @param {string} body
- * @returns {string[]}
- */
-function splitInlineTable(body) {
-  /** @type {string[]} */
-  const parts = [];
-  let current = '';
-  let quote;
-  for (const char of body) {
-    if (quote !== undefined) {
-      if (char === quote) quote = undefined;
-      current += char;
-      continue;
-    }
-    if (char === '"' || char === "'") {
-      quote = char;
-      current += char;
-      continue;
-    }
-    if (char === ',') {
-      parts.push(current);
-      current = '';
-      continue;
-    }
-    current += char;
-  }
-  parts.push(current);
-  return parts.filter((part) => part.trim() !== '');
 }
 
 /**
  * Extract the `[tools]` table from a mise.toml source.
  *
  * @param {string} source
+ * @param {string} [label] Path used in a parse-failure message.
  * @returns {Record<string, string>}
+ * @throws {ConfigParseError}
  */
-export function parseToolsTable(source) {
-  return parseTomlSection(source, 'tools');
+export function parseToolsTable(source, label) {
+  return parseTomlSection(source, 'tools', label);
 }
 
 /**
@@ -222,13 +160,34 @@ export function discoverUnitMiseDirs(root) {
  * @returns {OverrideReport}
  */
 export function checkOverrides(root) {
-  const rootTools = parseToolsTable(readFileSync(join(root, 'mise.toml'), 'utf8'));
-  const baselineMissing = REQUIRED_ROOT_TOOLS.filter((tool) => !(tool in rootTools));
-
   /** @type {UnitOverride[]} */
   const unitOverrides = [];
   /** @type {string[]} */
   const violations = [];
+
+  // An unreadable root pin is the degenerate case: every downstream question
+  // ("does this unit override node?") is answered against nothing, and an empty
+  // baseline would otherwise read as a fleet that simply declares no tools.
+  const rootMise = join(root, 'mise.toml');
+  if (!existsSync(rootMise)) {
+    return {
+      baselineMissing: [...REQUIRED_ROOT_TOOLS],
+      unitOverrides,
+      violations: [`${rootMise} does not exist — there is no root toolchain pin to check against.`],
+    };
+  }
+  /** @type {Record<string, string>} */
+  let rootTools;
+  try {
+    rootTools = parseToolsTable(readFileSync(rootMise, 'utf8'), 'mise.toml');
+  } catch (error) {
+    return {
+      baselineMissing: [...REQUIRED_ROOT_TOOLS],
+      unitOverrides,
+      violations: [errorText(error)],
+    };
+  }
+  const baselineMissing = REQUIRED_ROOT_TOOLS.filter((tool) => !(tool in rootTools));
 
   // Without this the unit half of the check is a loop over a set that can
   // become empty for reasons that have nothing to do with compliance — a
@@ -243,7 +202,17 @@ export function checkOverrides(root) {
   }
 
   for (const dir of discoverUnitMiseDirs(root)) {
-    const tools = parseToolsTable(readFileSync(join(root, dir, 'mise.toml'), 'utf8'));
+    const unitMise = `${dir}/mise.toml`;
+    /** @type {Record<string, string>} */
+    let tools;
+    try {
+      tools = parseToolsTable(readFileSync(join(root, dir, 'mise.toml'), 'utf8'), unitMise);
+    } catch (error) {
+      // A unit whose config does not parse is not a unit with no override — it
+      // is a unit whose override nobody can see.
+      violations.push(errorText(error));
+      continue;
+    }
     const keys = Object.keys(tools);
     if (keys.length === 0) continue;
     unitOverrides.push({ dir, overrides: tools });
@@ -260,6 +229,14 @@ export function checkOverrides(root) {
   }
 
   return { baselineMissing, unitOverrides, violations };
+}
+
+/**
+ * @param {unknown} error
+ * @returns {string}
+ */
+function errorText(error) {
+  return error instanceof Error ? error.message : String(error);
 }
 
 function main() {
@@ -324,9 +301,31 @@ function missingBaseIsReported() {
 }
 
 /**
- * Every case below spells the SAME forbidden declaration — a per-unit `pnpm`
- * fork — in a different legal TOML shape. Each of the last three used to parse
- * to `{}`, which the caller reads as "this unit overrides nothing".
+ * A root pin nobody can read must be reported, not treated as a fleet that
+ * happens to declare no tools.
+ *
+ * @returns {boolean}
+ */
+function unparseableRootIsReported() {
+  const dir = mkdtempSync(join(tmpdir(), 'mise-overrides-badtoml-'));
+  try {
+    writeFileSync(join(dir, 'mise.toml'), '[tools\nnode = "24"\n', 'utf8');
+    const { violations, baselineMissing } = checkOverrides(dir);
+    return (
+      violations.some((v) => v.includes('could not be parsed')) &&
+      baselineMissing.length === REQUIRED_ROOT_TOOLS.length
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+/**
+ * Every spelling case below writes the SAME forbidden declaration — a per-unit
+ * `pnpm` fork — in a different legal TOML shape. The scanner this replaced had
+ * to be taught each one after it had already slipped through; a real parser
+ * collapses them all before the guard sees them, and these cases exist to prove
+ * that stays true.
  *
  * @returns {boolean}
  */
@@ -348,7 +347,11 @@ function selfTest() {
       'pnpm' in parseToolsTable('[tools.pnpm]\nbackend = "npm"\n'),
     'sees a pnpm fork written as an inline table':
       parseToolsTable('tools = { node = "24", pnpm = "9.0.0" }\n').pnpm === '9.0.0',
+    'sees a pnpm fork written as a request list':
+      parseToolsTable('[tools]\npnpm = ["9.0.0", "8"]\n').pnpm === '9.0.0',
     'a missing unit base is a violation, not an empty sweep': missingBaseIsReported(),
+    'an unparseable root pin is a violation, not an empty baseline':
+      unparseableRootIsReported(),
   };
 
   const failed = Object.entries(checks).filter(([, ok]) => !ok);

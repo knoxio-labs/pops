@@ -39,6 +39,9 @@ importers:
       oxlint-tsgolint:
         specifier: ^0.23.0
         version: 0.23.0
+      smol-toml:
+        specifier: ^1.7.1
+        version: 1.7.1
       tsx:
         specifier: ^4.23.10
         version: 4.23.10

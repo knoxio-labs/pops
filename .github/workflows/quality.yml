@@ -30,6 +30,19 @@ name: Quality
 # workflow conclusion entirely. Nothing in this file is advisory, and
 # scripts/ci/check-ci-gate-wiring.mjs asserts that no job reintroduces
 # `continue-on-error`. See .github/workflows/README.md.
+#
+# GUARD JOBS COME IN TWO TIERS, and the difference is deliberate. A guard job
+# that reads only JSON, plain text or source code runs straight after
+# `actions/checkout` with NO `pnpm install` — it answers in seconds and cannot
+# be broken by a dependency problem it exists to be independent of. Every
+# install-free job below says so in its own header. A guard that must read YAML
+# or TOML gets a real parser instead, and its job installs the workspace; those
+# live in `agent-review.yml`, `rust-quality.yml` and `docker-build.yml`, not
+# here. If you are about to add a parser import to a guard in this file, you are
+# moving its job across that line: read
+# docs/architecture/adr-045-guards-must-prove-they-report.md first, and add the
+# install in the same commit. `scripts/ci/__tests__/guard-job-tiers.test.ts`
+# fails the build if the two ever disagree.
 
 on:
   pull_request:

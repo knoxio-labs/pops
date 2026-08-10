@@ -8,10 +8,10 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
   ALWAYS_RUNNING_GATED_WORKFLOW,
   checkCiGateWiring,
+  embeddedScript,
   findContinueOnErrorJobs,
   grantsChecksWrite,
   hasPullRequestPathFilter,
-  matchKey,
   parseGatedArray,
   parseWorkflowName,
   parseWorkflowRunTriggers,
@@ -42,62 +42,60 @@ afterEach(() => {
 });
 
 /**
- * The line from `.github/workflows/unit-quality.yml` that motivated centralising
- * key matching — a real inline value with a real trailing comment.
+ * The line from `.github/workflows/unit-quality.yml` that a line-anchored
+ * matcher kept getting wrong — a real inline value with a real trailing
+ * comment. The parser sees it as the same declaration as the block form, which
+ * is the point of the migration.
  */
 const REAL_INLINE_PATHS_LINE = '    paths: ["**"] # main rebuilds via the changed-set';
 
-describe('matchKey — the one place end-of-line anchoring is allowed to be wrong', () => {
-  it('matches a bare key and reports an empty inline value', () => {
-    expect(matchKey('  pull_request:', 2, 'pull_request')).toEqual({
-      key: 'pull_request',
-      value: '',
-    });
+describe('reading a workflow that does not parse (ADR-045)', () => {
+  const BROKEN = 'on:\n  workflow_run:\n   - a\n  - b\n';
+
+  it.each([
+    ['parseWorkflowRunTriggers', () => parseWorkflowRunTriggers(BROKEN)],
+    ['parseWorkflowName', () => parseWorkflowName(BROKEN)],
+    ['hasPullRequestPathFilter', () => hasPullRequestPathFilter(BROKEN)],
+    ['findContinueOnErrorJobs', () => findContinueOnErrorJobs(BROKEN)],
+    ['grantsChecksWrite', () => grantsChecksWrite(BROKEN)],
+  ] as const)('%s raises rather than reporting the wiring clean', (_name, read) => {
+    expect(read).toThrow(/could not be parsed/u);
   });
 
-  it('matches a key carrying an inline value', () => {
-    expect(matchKey('  checks: write', 2, 'checks')).toEqual({ key: 'checks', value: 'write' });
+  it('checkCiGateWiring reports an unreadable ci-gate.yml as a violation', () => {
+    const root = cloneWorkflows();
+    patch(root, 'ci-gate.yml', () => BROKEN);
+    expect(checkCiGateWiring(root).join('\n')).toContain(
+      'ci-gate.yml could not be read as YAML, so none of the gate wiring could be checked'
+    );
   });
 
-  it('matches a key whose value is followed by a comment', () => {
-    expect(matchKey('  checks: write # publishes the verdict', 2, 'checks')).toEqual({
-      key: 'checks',
-      value: 'write',
-    });
+  it('checkCiGateWiring reports a sibling workflow whose name it cannot read', () => {
+    const root = cloneWorkflows();
+    patch(root, 'rust-quality.yml', () => BROKEN);
+    expect(checkCiGateWiring(root).join('\n')).toContain(
+      'rust-quality.yml could not be read as YAML, so its `name:` is unknown'
+    );
+  });
+});
+
+describe('embeddedScript', () => {
+  it('returns the github-script body, not the surrounding YAML', () => {
+    const source = [
+      'jobs:',
+      '  gate:',
+      '    steps:',
+      '      - uses: actions/github-script@v9',
+      '        with:',
+      '          script: |',
+      '            const gated = ["Quality"];',
+      '            core.info("hi");',
+    ].join('\n');
+    expect(embeddedScript(source)).toBe('const gated = ["Quality"];\ncore.info("hi");\n');
   });
 
-  it('matches a bare key followed by a comment', () => {
-    expect(matchKey('  pull_request: # every PR', 2, 'pull_request')).toEqual({
-      key: 'pull_request',
-      value: '',
-    });
-  });
-
-  it('matches the real inline paths line from unit-quality.yml', () => {
-    expect(matchKey(REAL_INLINE_PATHS_LINE, 4, 'paths')).toEqual({
-      key: 'paths',
-      value: '["**"]',
-    });
-  });
-
-  it('respects the exact indent', () => {
-    expect(matchKey('    checks: write', 2, 'checks')).toBeUndefined();
-  });
-
-  it('does not match a different key at the right indent', () => {
-    expect(matchKey('  contents: read', 2, 'checks')).toBeUndefined();
-  });
-
-  it('does not treat a longer key as the one asked for', () => {
-    expect(matchKey('    paths-ignore: ["docs/**"]', 4, 'paths')).toBeUndefined();
-  });
-
-  it('keeps a # that is part of the value rather than a comment', () => {
-    expect(matchKey('  node: 24#5', 2, 'node')).toEqual({ key: 'node', value: '24#5' });
-  });
-
-  it('ignores a comment line', () => {
-    expect(matchKey('  # pull_request: not a key', 2)).toBeUndefined();
+  it('is empty for a workflow with no embedded script', () => {
+    expect(embeddedScript('jobs:\n  a:\n    steps:\n      - run: echo hi\n')).toBe('');
   });
 });
 
@@ -155,6 +153,20 @@ describe('parseWorkflowRunTriggers', () => {
 
   it('returns nothing when there is no workflow_run trigger', () => {
     expect(parseWorkflowRunTriggers('on:\n  pull_request:\n')).toEqual([]);
+  });
+
+  it('reads the same list written as flow collections', () => {
+    expect(
+      parseWorkflowRunTriggers('on: { workflow_run: { workflows: ["Quality", "iOS Quality"] } }\n')
+    ).toEqual(['Quality', 'iOS Quality']);
+  });
+
+  it('keeps `on` a key rather than resolving it to the boolean true', () => {
+    // YAML 1.1 resolves a bare `on` to true. Under such a parser every check in
+    // this guard would read `undefined` and report the wiring intact.
+    expect(parseWorkflowRunTriggers('on:\n  workflow_run:\n    workflows: ["Quality"]\n')).toEqual([
+      'Quality',
+    ]);
   });
 });
 
@@ -249,6 +261,10 @@ describe('hasPullRequestPathFilter', () => {
       false
     );
   });
+
+  it('sees a filter written as a flow mapping', () => {
+    expect(hasPullRequestPathFilter('on: { pull_request: { paths: ["docs/**"] } }\n')).toBe(true);
+  });
 });
 
 describe('findContinueOnErrorJobs', () => {
@@ -285,6 +301,22 @@ describe('findContinueOnErrorJobs', () => {
 
   it('finds nothing in a workflow with no opt-outs', () => {
     expect(findContinueOnErrorJobs('jobs:\n  lint:\n    runs-on: ubuntu-latest\n')).toEqual([]);
+  });
+
+  it('names a job that made itself advisory inside a flow mapping', () => {
+    expect(findContinueOnErrorJobs('jobs: { flaky: { continue-on-error: true } }\n')).toEqual([
+      'flaky',
+    ]);
+  });
+
+  it('reports an opt-out written as an expression it cannot evaluate', () => {
+    // `continue-on-error` accepts an expression, and one that evaluates true
+    // erases the job from the workflow conclusion exactly as a literal does.
+    expect(
+      findContinueOnErrorJobs(
+        "jobs:\n  flaky:\n    continue-on-error: ${{ github.event_name == 'push' }}\n"
+      )
+    ).toEqual(['flaky']);
   });
 });
 
