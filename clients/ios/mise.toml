@@ -339,10 +339,11 @@ trap 'rm -rf "$work"' EXIT
 # but the failure mode if that ever changes is `format` rewriting SwiftPM's
 # dependency checkouts in place, which is not a bet worth taking to save a
 # `find`. It is also the only place the formatter can be told to leave generated
-# code alone, since swift-format honours no ignore file. Both exclusions, the
-# reasons for them, and the roots' own existence checks live in the script,
-# which is what `check` and `self-test` below reason about — an enumeration
-# written out twice is one that can disagree with the guard that polices it.
+# code alone, or a shebang script's first line alone, since swift-format honours
+# no ignore file. All three exclusions, the reasons for them, and the roots' own
+# existence checks live in the script, which is what `check` and `self-test`
+# below reason about — an enumeration written out twice is one that can
+# disagree with the guard that polices it.
 scripts/swift-sources.sh list $SWIFT_SOURCES > "$work/sources"
 
 # `.swift-format`'s `rules` map replaces the defaults rather than merging into
