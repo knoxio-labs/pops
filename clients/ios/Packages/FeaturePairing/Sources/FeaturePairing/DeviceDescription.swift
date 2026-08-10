@@ -9,11 +9,7 @@ import Foundation
 ///
 /// A seam because both values are read from the running device and neither can
 /// be arranged from a test, and because the simulator answers one of them
-/// wrongly (see ``SystemDeviceDescription``). `@MainActor` because the real
-/// implementation's `suggestedName` reads `UIDevice.current`, which the system
-/// isolates to the main actor; every call site (`PairingViewModel`) is
-/// main-actor code already, so this costs nothing there.
-@MainActor
+/// wrongly (see ``SystemDeviceDescription``).
 public protocol DeviceDescribing: Sendable {
     /// The label to put in the name field before the person edits it.
     ///
@@ -23,9 +19,19 @@ public protocol DeviceDescribing: Sendable {
     /// pairing screen offers an editable field instead of sending this
     /// silently: three devices all called "iPhone" make the operator's revoke
     /// screen a guess.
+    ///
+    /// `@MainActor` because the real implementation reads `UIDevice.current`,
+    /// which the system isolates to the main actor; every call site
+    /// (`PairingViewModel`) is main-actor code already, so this costs nothing
+    /// there.
+    @MainActor
     var suggestedName: String { get }
 
     /// Hardware identifier as the handset reports it, e.g. `iPhone17,1`.
+    ///
+    /// Not main-actor isolated: unlike ``suggestedName``, the real
+    /// implementation reads only `ProcessInfo` and `sysctlbyname`, neither of
+    /// which needs the main actor.
     var modelIdentifier: String { get }
 }
 
@@ -44,7 +50,6 @@ public struct SystemDeviceDescription: DeviceDescribing {
         #endif
     }
 
-    @MainActor
     public var modelIdentifier: String {
         // A simulator's `hw.machine` is the *Mac's* architecture — `arm64` —
         // which would land in the operator's device list as the model of every
