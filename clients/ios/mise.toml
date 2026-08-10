@@ -536,12 +536,22 @@ printf '%s\n' "$output"
 # compiler log this task can produce will ever name it, so counting it here
 # would fail this guard forever. `swiftlint lint` still lints it straight
 # from source; only the analyzer rules, which need a build, cannot reach it.
-# `Package.swift` is excluded the same way `.swiftlint.yml` excludes it: it is
-# build configuration, not application code, and SwiftPM evaluating the
-# manifest is not the kind of compile this task means to count.
+#
+# Counted by hand here rather than through `scripts/swift-sources.sh list`,
+# on purpose: that script enumerates the FORMATTER's file set, which now
+# also drops any file whose first line is a shebang — a distinction that
+# exists for `swift-format` alone and means nothing to `swiftlint lint` or
+# to `.swiftlint.yml`'s `included:`/`excluded:`. Reusing it here would let
+# this floor silently track a different tool's notion of scope, which is the
+# exact failure this task exists to close, one layer further in. `.build`,
+# `Generated` and `Package.swift` are excluded because `.swiftlint.yml`
+# excludes them too — the same reasoning as CGFloat's `always_keep_imports`
+# entry in that file: build configuration and generated code are not the
+# application code these two rules are about.
 analyzed=$(printf '%s' "$output" | sed -nE 's/.*in ([0-9]+) files\.$/\1/p' | tail -1)
-total=$(scripts/swift-sources.sh list App AppTests Packages \
-  | tr '\0' '\n' \
+total=$(find App AppTests Packages \
+    \( -name .build -o -name Generated \) -type d -prune \
+    -o -type f -name '*.swift' -print \
   | grep -vE '^Packages/[^/]+/Package\.swift$' \
   | wc -l | tr -d ' ')
 if [ -z "$analyzed" ] || [ "$analyzed" -lt "$total" ]; then
