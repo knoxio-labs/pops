@@ -78,7 +78,15 @@
  * Exit 2 = usage error.
  */
 
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -201,6 +209,15 @@ export const EXPECTATIONS = [
     method: 'post',
     query: [],
     usedBy: 'pillars/finance/src/api/contacts/client.ts',
+  },
+  {
+    consumer: 'finance',
+    producer: 'contacts',
+    operationId: 'entities.create',
+    path: '/entities',
+    method: 'post',
+    query: [],
+    usedBy: 'pillars/finance/scripts/migrate-core-entities.ts',
   },
   {
     consumer: 'finance',
@@ -1005,8 +1022,34 @@ export function federationSignals(code) {
 }
 
 /**
- * Enumerate every pillar-SDK call site under `pillars/<id>/src`, plus every
- * raw `fetch` in a federation-aware file there, from disk.
+ * Directories under `pillars/<id>` this guard walks.
+ *
+ * `scripts` joined `src` because `pillars/finance/scripts/migrate-core-entities.ts`
+ * held two `pillar<T>()` call sites that were pinnable but invisible — the
+ * original enumeration scoped itself to `src` only. A one-shot deploy
+ * script's failure mode is an operator seeing an error rather than a user
+ * seeing a wrong number, but "the guard's `OK` line implies every
+ * cross-pillar call is covered" was already false the moment `scripts` held
+ * one it could not see — so it is walked the same way `src` is, not
+ * exempted.
+ *
+ * That script's `entities.create` call into contacts got its own row above.
+ * Its OTHER call, `pillar<CoreRouter>('registry').entities.list(...)`, did
+ * not: registry dropped `/entities` when contacts became authoritative (see
+ * `pillars/registry/src/contract/__tests__/openapi.test.ts`, which asserts
+ * registry exposes no entities surface at all), so a row pinning that
+ * operationId would fail `checkExpectations` immediately and permanently —
+ * correctly, because the call is already broken on disk, not because this
+ * guard is wrong. The seam still passes coverage on the strength of the
+ * `users.get` row a few lines up, which is what `findCoverageGaps` checks
+ * (consumer -> producer, not operationId); fixing the migrator itself is
+ * tracked separately rather than folded into a guard change.
+ */
+const SCANNED_ROOTS = ['src', 'scripts'];
+
+/**
+ * Enumerate every pillar-SDK call site under `pillars/<id>/{src,scripts}`,
+ * plus every raw `fetch` in a federation-aware file there, from disk.
  *
  * @param {string} root Repo root.
  * @returns {{ sites: CallSite[], directFetchSites: DirectFetchSite[], scanErrors: string[] }}
@@ -1026,39 +1069,41 @@ export function discoverCallSites(root) {
   for (const entry of readdirSync(pillarsRoot, { withFileTypes: true })) {
     if (!entry.isDirectory()) continue;
     const consumer = entry.name;
-    const srcRoot = join(pillarsRoot, consumer, 'src');
-    if (!existsSync(srcRoot)) continue;
-    for (const file of walkSources(srcRoot)) {
-      const relativePath = file
-        .slice(root.length + 1)
-        .split(sep)
-        .join('/');
-      const scanned = scanSource(readFileSync(file, 'utf8'));
-      if (scanned.unterminated !== null) {
-        scanErrors.push(
-          `${relativePath}: source scan ended inside an unterminated ${scanned.unterminated}. ` +
-            'The scanner cannot see call sites past that point, so this is reported rather ' +
-            'than passed.'
-        );
-        continue;
-      }
-      const calls = [
-        ...findPillarCalls(scanned),
-        ...findWrapperCalls(scanned, PILLAR_CALL_WRAPPERS),
-      ];
-      for (const call of calls) {
-        sites.push({
-          consumer,
-          producer: resolveProducerId(call.argument, scanned.code),
-          argument: call.argument,
-          file: relativePath,
-          line: call.line,
-        });
-      }
-      const signals = federationSignals(scanned.code);
-      if (signals.length === 0) continue;
-      for (const call of findFetchCalls(scanned)) {
-        directFetchSites.push({ consumer, file: relativePath, line: call.line, signals });
+    for (const rootName of SCANNED_ROOTS) {
+      const scanRoot = join(pillarsRoot, consumer, rootName);
+      if (!existsSync(scanRoot)) continue;
+      for (const file of walkSources(scanRoot)) {
+        const relativePath = file
+          .slice(root.length + 1)
+          .split(sep)
+          .join('/');
+        const scanned = scanSource(readFileSync(file, 'utf8'));
+        if (scanned.unterminated !== null) {
+          scanErrors.push(
+            `${relativePath}: source scan ended inside an unterminated ${scanned.unterminated}. ` +
+              'The scanner cannot see call sites past that point, so this is reported rather ' +
+              'than passed.'
+          );
+          continue;
+        }
+        const calls = [
+          ...findPillarCalls(scanned),
+          ...findWrapperCalls(scanned, PILLAR_CALL_WRAPPERS),
+        ];
+        for (const call of calls) {
+          sites.push({
+            consumer,
+            producer: resolveProducerId(call.argument, scanned.code),
+            argument: call.argument,
+            file: relativePath,
+            line: call.line,
+          });
+        }
+        const signals = federationSignals(scanned.code);
+        if (signals.length === 0) continue;
+        for (const call of findFetchCalls(scanned)) {
+          directFetchSites.push({ consumer, file: relativePath, line: call.line, signals });
+        }
       }
     }
   }
@@ -1880,6 +1925,27 @@ function selfTest() {
     "discovery must follow bfm's PillarGateway.call wrapper into finance, not just a literal " +
       'pillar() token — these two calls resolve their producer through gateway.call, not pillar()'
   );
+  assert(
+    sites.filter((s) => s.file === 'pillars/finance/scripts/migrate-core-entities.ts').length === 2,
+    'discovery must walk pillars/*/scripts as well as pillars/*/src — this one-shot migrator ' +
+      'holds two call sites that a src-only walk would never see'
+  );
+
+  const scriptsScratch = mkdtempSync(join(tmpdir(), 'cross-pillar-scripts-'));
+  try {
+    mkdirSync(join(scriptsScratch, 'pillars', 'delta', 'scripts'), { recursive: true });
+    writeFileSync(
+      join(scriptsScratch, 'pillars', 'delta', 'scripts', 'one-shot.ts'),
+      "pillar<R>('epsilon');"
+    );
+    const scriptsSites = discoverCallSites(scriptsScratch).sites;
+    assert(
+      scriptsSites.some((s) => s.consumer === 'delta' && s.producer === 'epsilon'),
+      'a fixture tree with no src directory at all must still surface a call site under scripts'
+    );
+  } finally {
+    rmSync(scriptsScratch, { recursive: true, force: true });
+  }
 
   console.log(
     'self-test OK — flags a renamed operation, a moved path, a dropped query parameter, a ' +
@@ -1887,7 +1953,7 @@ function selfTest() {
       'an empty expectation list, an unlisted seam, an unresolvable target, a stale exemption, ' +
       'an unsanctioned direct fetch, a stale sanction, a gateway-wrapper call site, an ' +
       'identifier not bound to a registered wrapper, a stale or missing wrapper registration, ' +
-      'and a source scan that lost its place.'
+      'a call site under pillars/*/scripts, and a source scan that lost its place.'
   );
 }
 
