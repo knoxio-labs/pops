@@ -1,5 +1,4 @@
 import Auth
-import Foundation
 import Synchronization
 
 /// A ``TokenStore`` that keeps the pair in memory.

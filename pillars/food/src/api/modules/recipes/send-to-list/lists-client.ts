@@ -1,14 +1,17 @@
 /**
- * Cross-pillar HTTP client for the lists pillar — send-to-list writes
- * shopping-list items over REST. Pillars trust the docker network (the
- * dispatcher authenticates), so no per-request auth header is sent. The base
- * URL is resolved from the `POPS_PILLARS` registry.
+ * Cross-pillar client for the lists pillar — send-to-list writes shopping-list
+ * items over the `@pops/pillar-sdk` proxy, which discovers the lists pillar
+ * through the registry and resolves each call against the operation ids in
+ * the contract lists publishes (ADR-040).
  *
  * Each call is its own atomic operation on the lists side; lists owns its own
  * consistency, so there is no single cross-pillar transaction. `upsertByRef`
  * makes the merge-or-insert atomic per item so retries are idempotent.
  */
-import { parsePillarsEnv } from '@pops/pillar-sdk/pillar-env';
+import { isOk, pillar, type CallResult, type PillarHandle } from '@pops/pillar-sdk/client';
+
+/** The lists pillar id, as registered with the registry. */
+export const LISTS_PILLAR_ID = 'lists';
 
 export interface ListHeader {
   id: number;
@@ -53,86 +56,96 @@ export interface ListsClient {
   searchShoppingListIdsByNotes(notesContains: string): Promise<number[]>;
 }
 
-/** Resolve the lists pillar's base URL from `POPS_PILLARS`. */
-export function resolveListsBaseUrl(): string {
-  const entry = parsePillarsEnv(process.env['POPS_PILLARS']).find((p) => p.id === 'lists');
-  if (entry === undefined) {
-    throw new Error('lists pillar not present in POPS_PILLARS — cannot send to list');
+/**
+ * Typed handle over the subset of the lists router send-to-list calls.
+ * Declared as a `type` (not `interface`) so it satisfies the SDK proxy's
+ * `Record<string, unknown>` constraint. Exported for tests that drive
+ * {@link createListsClient} against a stub handle.
+ *
+ * `list.get` answers `null` for a list that does not exist — lists returns a
+ * 200 with a null body there rather than a 404, so the absent case is a value
+ * this client has to read, not a status it can branch on.
+ */
+export type ListsRouter = {
+  list: {
+    get: (input: { id: number }) => Promise<{ list: ListHeader } | null>;
+    create: (input: { name: string; kind: string; ownerApp: string }) => Promise<{ id: number }>;
+  };
+  items: {
+    add: (input: { listId: number } & AddItemBody) => Promise<{ id: number; position: number }>;
+    upsertByRef: (input: { listId: number } & UpsertByRefBody) => Promise<UpsertByRefResult>;
+    search: (input: {
+      kind: string;
+      notesContains: string;
+    }) => Promise<{ items: { listId: number }[] }>;
+  };
+};
+
+/**
+ * Thrown when lists answers something other than success. Send-to-list has no
+ * degraded mode — a half-written shopping list is worse than a failed request —
+ * so every non-ok result aborts the operation the way the HTTP client it
+ * replaced did.
+ */
+export class ListsCallError extends Error {
+  override readonly name = 'ListsCallError';
+  readonly operation: string;
+  readonly kind: string;
+
+  constructor(operation: string, result: Exclude<CallResult<unknown>, { kind: 'ok' }>) {
+    const detail = 'message' in result && result.message ? `: ${result.message}` : '';
+    super(`lists ${operation} failed (${result.kind})${detail}`);
+    this.operation = operation;
+    this.kind = result.kind;
   }
-  return entry.baseUrl;
 }
 
-type FetchImpl = typeof globalThis.fetch;
-
-async function readJson(res: Response): Promise<unknown> {
-  const text = await res.text();
-  return text.length === 0 ? null : (JSON.parse(text) as unknown);
-}
-
-function asMessage(body: unknown): string {
-  return body !== null && typeof body === 'object' && 'message' in body
-    ? String((body as { message: unknown }).message)
-    : '';
+function unwrap<T>(operation: string, result: CallResult<T>): T {
+  if (isOk(result)) return result.value;
+  throw new ListsCallError(operation, result);
 }
 
 /**
- * Bare-`fetch` implementation. `fetchImpl` is injectable so the send-to-list
- * tests can drive the flow without a live lists-api.
+ * Build the lists client over the pillar SDK. `handleFactory` is injectable
+ * purely so unit tests can supply a stub router; production passes the real
+ * `pillar('lists')`.
  */
-export function createListsHttpClient(
-  baseUrl: string,
-  fetchImpl: FetchImpl = globalThis.fetch
+export function createListsClient(
+  handleFactory: () => PillarHandle<ListsRouter> = () => pillar<ListsRouter>(LISTS_PILLAR_ID)
 ): ListsClient {
-  const root = baseUrl.replace(/\/$/, '');
-
-  async function call(method: string, path: string, body?: unknown): Promise<Response> {
-    return fetchImpl(`${root}${path}`, {
-      method,
-      headers: { 'content-type': 'application/json' },
-      body: body === undefined ? undefined : JSON.stringify(body),
-    });
-  }
-
   return {
     async getList(id) {
-      const res = await call('GET', `/lists/${id}`);
-      if (res.status === 404) return null;
-      if (!res.ok) throw new Error(`lists GET /lists/${id} → HTTP ${res.status}`);
-      const json = (await readJson(res)) as { list: ListHeader } | null;
-      return json?.list ?? null;
+      const result = await handleFactory().list.get({ id });
+      if (result.kind === 'not-found') return null;
+      return unwrap('list.get', result)?.list ?? null;
     },
 
     async createShoppingList(name) {
-      const res = await call('POST', '/lists', { name, kind: 'shopping', ownerApp: 'food' });
-      if (!res.ok)
-        throw new Error(
-          `lists POST /lists → HTTP ${res.status}: ${asMessage(await readJson(res))}`
-        );
-      const json = (await readJson(res)) as { id: number };
-      return json.id;
+      const result = await handleFactory().list.create({
+        name,
+        kind: 'shopping',
+        ownerApp: 'food',
+      });
+      return unwrap('list.create', result).id;
     },
 
     async upsertByRef(listId, body) {
-      const res = await call('POST', `/lists/${listId}/items/upsert-by-ref`, body);
-      if (!res.ok) {
-        throw new Error(
-          `lists upsert-by-ref → HTTP ${res.status}: ${asMessage(await readJson(res))}`
-        );
-      }
-      return (await readJson(res)) as UpsertByRefResult;
+      return unwrap(
+        'items.upsertByRef',
+        await handleFactory().items.upsertByRef({ listId, ...body })
+      );
     },
 
     async addItem(listId, body) {
-      const res = await call('POST', `/lists/${listId}/items`, body);
-      if (!res.ok) throw new Error(`lists POST /lists/${listId}/items → HTTP ${res.status}`);
+      unwrap('items.add', await handleFactory().items.add({ listId, ...body }));
     },
 
     async searchShoppingListIdsByNotes(notesContains) {
-      const qs = new URLSearchParams({ kind: 'shopping', notesContains });
-      const res = await call('GET', `/items?${qs.toString()}`);
-      if (!res.ok) throw new Error(`lists GET /items → HTTP ${res.status}`);
-      const json = (await readJson(res)) as { items: { listId: number }[] };
-      const ids = new Set(json.items.map((i) => i.listId));
+      const page = unwrap(
+        'items.search',
+        await handleFactory().items.search({ kind: 'shopping', notesContains })
+      );
+      const ids = new Set(page.items.map((i) => i.listId));
       return [...ids].toSorted((a, b) => a - b);
     },
   };

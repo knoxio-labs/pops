@@ -33,6 +33,8 @@
     "check:escape-hatches": "node scripts/check-escape-hatches.mjs",
     "check:escape-hatches:self-test": "node scripts/check-escape-hatches.mjs --self-test",
     "check:escape-hatches:baseline": "node scripts/check-escape-hatches.mjs --write",
+    "check:control-characters": "node scripts/ci/check-control-characters.mjs",
+    "check:control-characters:self-test": "node scripts/ci/check-control-characters.mjs --self-test",
     "ci:fix": "pnpm lint:fix && pnpm format && pnpm typecheck",
     "registry:build": "pnpm --filter @pops/module-registry registry:build",
     "prepare": "husky"

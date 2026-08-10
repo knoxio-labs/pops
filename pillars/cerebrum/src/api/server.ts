@@ -31,7 +31,7 @@ import { closeCerebrumIngestQueue, getCurationQueue } from './modules/ingest/que
 import { AnthropicQueryLlm, AnthropicQueryStreamLlm } from './modules/query/llm.js';
 import { getReflexService } from './modules/reflex/instance.js';
 import { resolveEmbeddingClientFromEnv } from './modules/retrieval/embedding-client.js';
-import { resolvePeerClientsFromEnv } from './modules/retrieval/peer-clients.js';
+import { createPeerClients } from './modules/retrieval/peer-clients.js';
 import { TemplateRegistry } from './modules/templates/registry.js';
 import { startThalamusWatcher, stopThalamusWatcher } from './modules/thalamus/instance.js';
 import { closeCerebrumEmbeddingsQueue, getEmbeddingsQueue } from './modules/thalamus/queue.js';
@@ -78,7 +78,7 @@ const app = createCerebrumApiApp({
   embeddingsQueue: getEmbeddingsQueue,
   version,
   selfBaseUrl,
-  peerClients: resolvePeerClientsFromEnv(),
+  peerClients: createPeerClients(),
   embeddingClient: resolveEmbeddingClientFromEnv(),
   emitLlm: new AnthropicGenerationLlm(),
   queryLlm: new AnthropicQueryLlm(),

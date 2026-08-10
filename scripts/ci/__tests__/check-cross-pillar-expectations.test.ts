@@ -8,13 +8,20 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   checkExpectation,
   checkExpectations,
+  checkWrapperRegistrations,
   declaredParams,
   discoverCallSites,
   EXPECTATIONS,
+  federationSignals,
   findCoverageGaps,
+  findDirectFetchGaps,
+  findFetchCalls,
   findPillarCalls,
+  findWrapperCalls,
   loadProducerDoc,
+  PILLAR_CALL_WRAPPERS,
   resolveProducerId,
+  SANCTIONED_DIRECT_FETCH,
   scanSource,
   UNPINNABLE_CALL_SITES,
 } from '../check-cross-pillar-expectations.mjs';
@@ -173,6 +180,209 @@ describe('findPillarCalls', () => {
   });
 });
 
+describe('findWrapperCalls', () => {
+  const wrapper = { typeName: 'PillarGateway', method: 'call', definedIn: 'gateway.ts' };
+
+  it('finds a call through an identifier bound by a parameter type annotation', () => {
+    const scanned = scanSource(
+      "function f(gateway: PillarGateway) { return gateway.call<R, unknown>('finance', cb); }"
+    );
+    expect(findWrapperCalls(scanned, [wrapper])).toEqual([{ argument: "'finance'", line: 1 }]);
+  });
+
+  it('reads whatever the bound identifier is named, not a fixed name', () => {
+    const scanned = scanSource(
+      "function f(cerebrumGateway: PillarGateway) { return cerebrumGateway.call('cerebrum', cb); }"
+    );
+    expect(findWrapperCalls(scanned, [wrapper])).toEqual([{ argument: "'cerebrum'", line: 1 }]);
+  });
+
+  it('ignores a `.call` on an identifier not bound to a registered wrapper type', () => {
+    const scanned = scanSource('function f(other: SomeOtherType) { return other.call(pillarId); }');
+    expect(findWrapperCalls(scanned, [wrapper])).toHaveLength(0);
+  });
+
+  it('ignores an unrelated `.call` entirely when no wrapper type is bound in the file', () => {
+    expect(findWrapperCalls(scanSource("fn.call(null, 'arg');"), [wrapper])).toHaveLength(0);
+  });
+
+  it('returns nothing when no wrapper is registered', () => {
+    const scanned = scanSource("function f(gateway: PillarGateway) { return gateway.call('x'); }");
+    expect(findWrapperCalls(scanned, [])).toHaveLength(0);
+  });
+
+  it('finds every call when two identifiers are bound to the same wrapper type', () => {
+    const scanned = scanSource(
+      [
+        "function a(gateway: PillarGateway) { gateway.call('one', cb); }",
+        "function b(otherGateway: PillarGateway) { otherGateway.call('two', cb); }",
+      ].join('\n')
+    );
+    expect(findWrapperCalls(scanned, [wrapper]).map((c) => c.argument)).toEqual(["'one'", "'two'"]);
+  });
+
+  it('blanks a wrapper-shaped call written inside a comment', () => {
+    const scanned = scanSource(
+      "// function f(gateway: PillarGateway) { gateway.call('never'); }\nconst x = 1;"
+    );
+    expect(findWrapperCalls(scanned, [wrapper])).toHaveLength(0);
+  });
+});
+
+describe('checkWrapperRegistrations', () => {
+  let scratch: string;
+  beforeAll(() => {
+    scratch = mkdtempSync(join(tmpdir(), 'cross-pillar-wrapper-registration-'));
+    writeFileSync(join(scratch, 'gateway.ts'), 'export interface PillarGateway { call(): void; }');
+    writeFileSync(join(scratch, 'alias.ts'), 'export type PillarGateway = { call(): void };');
+    writeFileSync(join(scratch, 'renamed.ts'), 'export interface SomethingElse { call(): void; }');
+    writeFileSync(
+      join(scratch, 'commented-out.ts'),
+      '// export interface PillarGateway { call(): void; }\nconst note = "interface PillarGateway";'
+    );
+  });
+  afterAll(() => rmSync(scratch, { recursive: true, force: true }));
+
+  it('passes when the type is still declared where it is registered', () => {
+    expect(
+      checkWrapperRegistrations(scratch, [
+        { typeName: 'PillarGateway', method: 'call', definedIn: 'gateway.ts' },
+      ])
+    ).toEqual([]);
+  });
+
+  it('accepts a type alias, not only an interface', () => {
+    expect(
+      checkWrapperRegistrations(scratch, [
+        { typeName: 'PillarGateway', method: 'call', definedIn: 'alias.ts' },
+      ])
+    ).toEqual([]);
+  });
+
+  it('fails when the type has been renamed or moved out of the registered file', () => {
+    const failures = checkWrapperRegistrations(scratch, [
+      { typeName: 'PillarGateway', method: 'call', definedIn: 'renamed.ts' },
+    ]);
+    expect(failures).toHaveLength(1);
+    expect(failures[0]).toContain('no such type is declared');
+  });
+
+  it('fails when the registered file does not exist', () => {
+    const failures = checkWrapperRegistrations(scratch, [
+      { typeName: 'PillarGateway', method: 'call', definedIn: 'missing.ts' },
+    ]);
+    expect(failures).toHaveLength(1);
+    expect(failures[0]).toContain('does not exist');
+  });
+
+  it('does not let a type name inside a comment or string satisfy the declaration', () => {
+    const failures = checkWrapperRegistrations(scratch, [
+      { typeName: 'PillarGateway', method: 'call', definedIn: 'commented-out.ts' },
+    ]);
+    expect(failures).toHaveLength(1);
+    expect(failures[0]).toContain('no such type is declared');
+  });
+});
+
+describe('findFetchCalls', () => {
+  it('finds a plain call', () => {
+    expect(findFetchCalls(scanSource('const r = await fetch(url);'))).toEqual([
+      { argument: 'url', line: 1 },
+    ]);
+  });
+
+  it('finds the injected-transport spelling every hand-rolled client uses', () => {
+    expect(findFetchCalls(scanSource('const r = await fetchImpl(url, init);'))).toHaveLength(1);
+  });
+
+  it('finds a dotted call, which is the most obvious way to dodge the check', () => {
+    expect(findFetchCalls(scanSource('const r = await globalThis.fetch(url);'))).toHaveLength(1);
+  });
+
+  it('ignores a bare reference, so a defaulted parameter is not a call', () => {
+    expect(findFetchCalls(scanSource('const f: FetchImpl = globalThis.fetch;'))).toHaveLength(0);
+  });
+
+  it('ignores a longer identifier that merely starts with the token', () => {
+    expect(findFetchCalls(scanSource('const b = await fetchJson(url);'))).toHaveLength(0);
+    expect(findFetchCalls(scanSource('const b = await fetchPillarHealth();'))).toHaveLength(0);
+  });
+
+  it('ignores a longer identifier that merely ends with the token', () => {
+    expect(findFetchCalls(scanSource('const b = await prefetch(url);'))).toHaveLength(0);
+  });
+
+  it('ignores a call written inside a comment or a string', () => {
+    expect(findFetchCalls(scanSource('// fetch(url)\nconst s = "fetch(url)";'))).toHaveLength(0);
+  });
+});
+
+describe('federationSignals', () => {
+  it('marks a file importing the fleet base-URL parser', () => {
+    const code = "import { parsePillarsEnv } from '@pops/pillar-sdk/pillar-env';";
+    expect(federationSignals(code)).toHaveLength(1);
+  });
+
+  it('marks a file handling registry entries', () => {
+    expect(federationSignals("import type { PillarRegistryEntry } from '@pops/types';")).toEqual([
+      'handles registry entries',
+    ]);
+  });
+
+  it('marks a file reading the pillar roster', () => {
+    expect(federationSignals("process.env['POPS_PILLARS']")).toEqual(['reads the pillar roster']);
+  });
+
+  it('does not mark a file whose only mention is prose in a comment', () => {
+    const scanned = scanSource('/** POPS_PILLARS is deliberately not read here. */\nexport {};');
+    expect(federationSignals(scanned.code)).toEqual([]);
+  });
+
+  it('does not mark an ordinary external-API client', () => {
+    const code = 'const res = await fetch(`${provider.baseUrl}/api/tags`);';
+    expect(federationSignals(code)).toEqual([]);
+  });
+});
+
+describe('findDirectFetchGaps', () => {
+  const site = (over: Record<string, unknown> = {}) => ({
+    consumer: 'registry',
+    file: 'pillars/registry/src/api/pillars/dispatcher.ts',
+    line: 137,
+    signals: ['handles registry entries'],
+    ...over,
+  });
+  const sanction = { file: 'pillars/registry/src/api/pillars/dispatcher.ts', reason: 'runtime' };
+
+  it('passes a sanctioned call', () => {
+    const report = findDirectFetchGaps([site()], [sanction]);
+    expect(report.unsanctioned).toEqual([]);
+    expect(report.sanctioned).toBe(1);
+    expect(report.staleSanctions).toEqual([]);
+  });
+
+  it('fails a call nothing sanctions', () => {
+    const report = findDirectFetchGaps(
+      [site({ file: 'pillars/food/src/api/lists.ts' })],
+      [sanction]
+    );
+    expect(report.unsanctioned.map((s) => s.file)).toEqual(['pillars/food/src/api/lists.ts']);
+  });
+
+  it('fails a sanction that no longer covers any call', () => {
+    expect(findDirectFetchGaps([], [sanction]).staleSanctions).toEqual([sanction.file]);
+  });
+
+  it('does not let a sanction hide a hand-rolled call elsewhere in the tree', () => {
+    const report = findDirectFetchGaps(
+      [site(), site({ file: 'pillars/food/src/api/lists.ts' })],
+      [sanction]
+    );
+    expect(report.unsanctioned).toHaveLength(1);
+    expect(report.staleSanctions).toEqual([]);
+  });
+});
+
 describe('resolveProducerId', () => {
   it('resolves a single-quoted literal', () => {
     expect(resolveProducerId("'contacts'", '')).toBe('contacts');
@@ -248,6 +458,25 @@ describe('discoverCallSites — fixture tree', () => {
     write('pillars/beta/src/dispatch.ts', 'const h = pillar<R>(pillarId);');
     write('pillars/beta/README.md', "pillar<R>('ghost')");
     write('pillars/gamma/docs/notes.ts', "pillar<R>('ghost');");
+    write(
+      'pillars/alpha/src/api/hand-rolled.ts',
+      [
+        "import { parsePillarsEnv } from '@pops/pillar-sdk/pillar-env';",
+        'const res = await fetch(`${baseUrl}/items`);',
+      ].join('\n')
+    );
+    write('pillars/alpha/src/api/tmdb.ts', 'const res = await fetch(`${BASE_URL}/movie`);');
+    write(
+      'pillars/beta/src/api/wrapper.ts',
+      [
+        "const WRAPPER_TARGET = 'gamma';",
+        'function useWrapper(gateway: PillarGateway) {',
+        '  return gateway.call<R, unknown>(WRAPPER_TARGET, (h) => h.x());',
+        '}',
+      ].join('\n')
+    );
+    write('pillars/gamma/scripts/migrate.ts', "pillar<R>('alpha');");
+    write('pillars/gamma/scripts/__tests__/migrate.test.ts', "pillar<R>('ghost');");
   });
   afterAll(() => rmSync(root, { recursive: true, force: true }));
 
@@ -281,6 +510,32 @@ describe('discoverCallSites — fixture tree', () => {
     expect(discoverCallSites(root).sites.map((s) => s.producer)).not.toContain('ghost');
   });
 
+  it('follows a registered wrapper call, not just a literal pillar() token', () => {
+    expect(discoverCallSites(root).sites).toContainEqual({
+      consumer: 'beta',
+      producer: 'gamma',
+      argument: 'WRAPPER_TARGET',
+      file: 'pillars/beta/src/api/wrapper.ts',
+      line: 3,
+    });
+  });
+
+  it('finds a call under pillars/*/scripts, not just under src', () => {
+    expect(discoverCallSites(root).sites).toContainEqual({
+      consumer: 'gamma',
+      producer: 'alpha',
+      argument: "'alpha'",
+      file: 'pillars/gamma/scripts/migrate.ts',
+      line: 1,
+    });
+  });
+
+  it('ignores a __tests__ directory under scripts the same way it does under src', () => {
+    expect(discoverCallSites(root).sites.map((s) => s.file)).not.toContain(
+      'pillars/gamma/scripts/__tests__/migrate.test.ts'
+    );
+  });
+
   it('reports a source it could not finish scanning instead of passing over it', () => {
     const broken = mkdtempSync(join(tmpdir(), 'cross-pillar-broken-'));
     try {
@@ -298,12 +553,28 @@ describe('discoverCallSites — fixture tree', () => {
   it('reports a missing pillars directory rather than answering "no call sites"', () => {
     const empty = mkdtempSync(join(tmpdir(), 'cross-pillar-empty-'));
     try {
-      const { sites, scanErrors } = discoverCallSites(empty);
+      const { sites, directFetchSites, scanErrors } = discoverCallSites(empty);
       expect(sites).toHaveLength(0);
+      expect(directFetchSites).toHaveLength(0);
       expect(scanErrors[0]).toContain('no pillars directory');
     } finally {
       rmSync(empty, { recursive: true, force: true });
     }
+  });
+
+  it('reports a hand-rolled fetch in a federation-aware file', () => {
+    expect(discoverCallSites(root).directFetchSites).toContainEqual({
+      consumer: 'alpha',
+      file: 'pillars/alpha/src/api/hand-rolled.ts',
+      line: 2,
+      signals: ["imports the fleet's pillar base-URL parser"],
+    });
+  });
+
+  it('leaves an ordinary external-API client alone', () => {
+    expect(discoverCallSites(root).directFetchSites.map((s) => s.file)).not.toContain(
+      'pillars/alpha/src/api/tmdb.ts'
+    );
   });
 });
 
@@ -621,5 +892,92 @@ describe('against the live repo', () => {
     for (const exemption of UNPINNABLE_CALL_SITES) {
       expect(exemption.reason.length).toBeGreaterThan(20);
     }
+  });
+
+  it('pins the two seams that used to hand-roll their HTTP', () => {
+    const { sites } = discoverCallSites(repoRoot);
+    const seams = sites.map((s) => `${s.consumer} -> ${String(s.producer)}`);
+    expect(seams).toContain('food -> lists');
+    expect(seams).toContain('cerebrum -> finance');
+    expect(seams).toContain('cerebrum -> media');
+    expect(seams).toContain('cerebrum -> inventory');
+  });
+
+  it('finds direct-fetch calls in the live tree, and every one is sanctioned', () => {
+    const { directFetchSites } = discoverCallSites(repoRoot);
+    expect(directFetchSites.length).toBeGreaterThan(0);
+    expect(findDirectFetchGaps(directFetchSites, SANCTIONED_DIRECT_FETCH)).toEqual({
+      unsanctioned: [],
+      staleSanctions: [],
+      sanctioned: expect.any(Number),
+    });
+  });
+
+  it('would report a direct-fetch seam if its sanction were removed', () => {
+    const { directFetchSites } = discoverCallSites(repoRoot);
+    const target = 'pillars/registry/src/api/pillars/dispatcher.ts';
+    const without = SANCTIONED_DIRECT_FETCH.filter((s: { file: string }) => s.file !== target);
+    expect(
+      findDirectFetchGaps(directFetchSites, without).unsanctioned.map((s) => s.file)
+    ).toContain(target);
+  });
+
+  it('every direct-fetch sanction carries a reason', () => {
+    for (const sanction of SANCTIONED_DIRECT_FETCH) {
+      expect(sanction.reason.length).toBeGreaterThan(20);
+    }
+  });
+
+  it('every registered wrapper still names a type declared where it says it is', () => {
+    expect(PILLAR_CALL_WRAPPERS.length).toBeGreaterThan(0);
+    expect(checkWrapperRegistrations(repoRoot, PILLAR_CALL_WRAPPERS)).toEqual([]);
+  });
+
+  it("discovers bfm's finance calls through PillarGateway.call, not a literal pillar() token", () => {
+    const { sites } = discoverCallSites(repoRoot);
+    const bfmFinanceSites = sites.filter(
+      (s) => s.consumer === 'bfm' && s.file === 'pillars/bfm/src/api/finance/client.ts'
+    );
+    expect(bfmFinanceSites).toHaveLength(2);
+    expect(bfmFinanceSites.every((s) => s.producer === 'finance')).toBe(true);
+  });
+
+  it('would report an unpinned seam reached only through the gateway wrapper', () => {
+    const { sites } = discoverCallSites(repoRoot);
+    const planted = {
+      consumer: 'bfm',
+      producer: 'cerebrum',
+      argument: "'cerebrum'",
+      file: 'pillars/bfm/src/api/finance/client.ts',
+      line: 9999,
+    };
+    const report = findCoverageGaps([...sites, planted], EXPECTATIONS, UNPINNABLE_CALL_SITES);
+    expect(report.unlisted).toContainEqual(planted);
+  });
+
+  it('finds both call sites in the finance core-entities migration script', () => {
+    const { sites } = discoverCallSites(repoRoot);
+    const migrationSites = sites.filter(
+      (s) => s.file === 'pillars/finance/scripts/migrate-core-entities.ts'
+    );
+    expect(migrationSites).toContainEqual(
+      expect.objectContaining({ consumer: 'finance', producer: 'registry' })
+    );
+    expect(migrationSites).toContainEqual(
+      expect.objectContaining({ consumer: 'finance', producer: 'contacts' })
+    );
+  });
+
+  it('would report an unpinned seam reached only through a pillars/*/scripts call site', () => {
+    const { sites } = discoverCallSites(repoRoot);
+    const planted = {
+      consumer: 'finance',
+      producer: 'lists',
+      argument: "'lists'",
+      file: 'pillars/finance/scripts/migrate-core-entities.ts',
+      line: 9999,
+    };
+    const report = findCoverageGaps([...sites, planted], EXPECTATIONS, UNPINNABLE_CALL_SITES);
+    expect(report.unlisted).toContainEqual(planted);
   });
 });

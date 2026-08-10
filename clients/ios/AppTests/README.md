@@ -8,14 +8,14 @@ Everything else is an SPM test target under `Packages/*/Tests/`, and those alrea
 
 **A suite goes here only if it needs an app bundle or an entitlement.** Everything else stays in the package that owns the code.
 
-Note what is _not_ on that list: needing iOS, or needing a simulator. Those used to imply the app target and no longer do — a package's suite runs on a booted simulator against the iOS SDK too. What a package's suite still cannot have is a **bundle** and the **entitlements** that come with one, because `xcodebuild test` on a `Package.swift` produces a test bundle with no host app.
+Note what is _not_ on that list: needing iOS, or needing a simulator. Those used to imply the app target and no longer do — a package's suite runs on a booted simulator against the iOS SDK too. What a package's suite still cannot have is a **bundle** and the **entitlements** that come with one: a package test target is an unhosted bundle, injected into a bare `xctest` runner rather than into an app.
 
-Measured on the same simulator, same Xcode, one probe run in each lane:
+Measured on the same simulator, same Xcode, one probe run in each:
 
-|                               | `Bundle.main.bundleIdentifier` | `SecItemAdd` with `kSecUseDataProtectionKeychain` |
-| ----------------------------- | ------------------------------ | ------------------------------------------------- |
-| package lane (`Auth-Package`) | `com.apple.dt.xctest.tool`     | `-34018` `errSecMissingEntitlement`               |
-| this target, hosted by `Pops` | `com.knoxiolabs.pops`          | `errSecSuccess`                                   |
+|                                | `Bundle.main.bundleIdentifier` | `SecItemAdd` with `kSecUseDataProtectionKeychain` |
+| ------------------------------ | ------------------------------ | ------------------------------------------------- |
+| a package target (`AuthTests`) | `com.apple.dt.xctest.tool`     | `-34018` `errSecMissingEntitlement`               |
+| this target, hosted by `Pops`  | `com.knoxiolabs.pops`          | `errSecSuccess`                                   |
 
 Two questions decide it:
 
@@ -53,13 +53,13 @@ It lives in this target rather than in `Packages/Auth` for the same reason `Keyc
 ## Running it
 
 ```bash
-mise run test:app     # this lane alone, on the simulator
-mise run test         # both simulator lanes, which is what CI invokes
+mise run test:app     # this target alone, on the simulator
+mise run test         # every testable in one invocation, which is what CI invokes
 
-POPS_IOS_DEVICE='<your iPhone>' mise run test:device   # this lane on real hardware
+POPS_IOS_DEVICE='<your iPhone>' mise run test:device   # this target on real hardware
 ```
 
-`test:app` regenerates the project, asserts the target is still hosted and still compiles under the app's own Swift 6 and warnings-as-errors settings (`mise run verify:app-test-target`), runs the scheme's test action on `POPS_IOS_SIMULATOR`, and **fails if the number of tests it executed is zero**.
+`test:app` regenerates the project, asserts the target is still hosted and still compiles under the app's own Swift 6 and warnings-as-errors settings (`mise run verify:app-test-target`), runs the `Pops` scheme's test action narrowed to `PopsTests` with `-only-testing`, and **fails if the number of tests it executed is zero**. The narrowing is what makes this a lane about the app: the scheme itself carries every package's test target too, because `mise run test` is a single `xcodebuild` invocation over all of them.
 
 That last check is the reason this target exists at all. A lane that runs nothing and exits 0 is worse than no lane — it is a green signal for an empty set, and nobody re-reads a green check. Skipped tests count towards the total the result bundle reports, so the check subtracts them: six collected and six skipped is zero executed, and it goes red.
 
@@ -70,4 +70,4 @@ That last check is the reason this target exists at all. A lane that runs nothin
 POPS_IOS_SIMULATOR = "iPhone Air"
 ```
 
-That covers both simulator lanes at once, which a per-task destination variable would not.
+That covers every simulator task at once, which a per-task destination variable would not.

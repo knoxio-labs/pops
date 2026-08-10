@@ -1,4 +1,3 @@
-import AppCore
 import Auth
 import AuthTestSupport
 import Foundation

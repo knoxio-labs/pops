@@ -1,5 +1,4 @@
 import AppCore
-import Foundation
 
 /// A ``DevicePairingService`` that answers with whatever it was handed, and
 /// records what it was asked.
