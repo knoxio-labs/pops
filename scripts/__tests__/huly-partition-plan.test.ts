@@ -11,6 +11,7 @@ import {
   readCoverage,
   readFlag,
   refineCell,
+  titlePartitions,
 } from '../huly-partition-plan.mjs';
 
 type Cell = Parameters<typeof describeCell>[0];
@@ -70,6 +71,12 @@ describe('describeCell', () => {
 
   it('names the empty filter rather than rendering nothing', () => {
     expect(describeCell({})).toBe('(unfiltered)');
+  });
+
+  it('renders the title pattern last, so a branch and its title splits sort together', () => {
+    expect(describeCell({ titleRegex: 'a%', status: 'M', hasComponent: false })).toBe(
+      'status=M hasComponent=false titleRegex=a%'
+    );
   });
 });
 
@@ -137,7 +144,10 @@ describe('partitionRoots / refineCell', () => {
 
 describe('findUncovered', () => {
   it('reports nothing when the cell itself was queried', () => {
-    expect(findUncovered({ status: 'X' }, present({ status: 'X' }), [])).toEqual([]);
+    expect(findUncovered({ status: 'X' }, present({ status: 'X' }), [])).toEqual({
+      uncovered: [],
+      assumed: [],
+    });
   });
 
   it('accepts a refinement in place of the parent', () => {
@@ -145,7 +155,7 @@ describe('findUncovered', () => {
       { status: 'X', hasComponent: true },
       { status: 'X', hasComponent: false }
     );
-    expect(findUncovered({ status: 'X' }, cells, [])).toEqual([]);
+    expect(findUncovered({ status: 'X' }, cells, []).uncovered).toEqual([]);
   });
 
   it('accepts a lopsided refinement, refined only where it had to be', () => {
@@ -154,12 +164,12 @@ describe('findUncovered', () => {
       { status: 'X', hasComponent: true, hasAssignee: true },
       { status: 'X', hasComponent: true, hasAssignee: false }
     );
-    expect(findUncovered({ status: 'X' }, cells, [])).toEqual([]);
+    expect(findUncovered({ status: 'X' }, cells, []).uncovered).toEqual([]);
   });
 
   it('names the one missing half of a split', () => {
     const cells = present({ status: 'X', hasComponent: true });
-    expect(findUncovered({ status: 'X' }, cells, []).map(describeCell)).toEqual([
+    expect(findUncovered({ status: 'X' }, cells, []).uncovered.map(describeCell)).toEqual([
       'status=X hasComponent=false',
     ]);
   });
@@ -167,14 +177,66 @@ describe('findUncovered', () => {
   // A status nobody queried is one missing status, not eighty-four missing
   // filter combinations. A report that explodes is a report nobody reads.
   it('reports an entirely untouched branch at its own level', () => {
-    expect(findUncovered({ status: 'X' }, present({ status: 'Y' }), ['ios', 'bfm'])).toEqual([
-      { status: 'X' },
-    ]);
+    expect(
+      findUncovered({ status: 'X' }, present({ status: 'Y' }), ['ios', 'bfm']).uncovered
+    ).toEqual([{ status: 'X' }]);
   });
 
   it('names an uncoverable leaf rather than passing over it', () => {
     const target: Cell = { status: 'X', hasComponent: false, hasAssignee: true, hasDueDate: true };
-    expect(findUncovered(target, present({ status: 'Y' }), [])).toEqual([target]);
+    expect(findUncovered(target, present({ status: 'Y' }), []).uncovered).toEqual([target]);
+  });
+
+  // The title axis is the only one left once the enumerable filters are spent,
+  // and it is the one nothing can vouch for. "Neither covered nor missing" is
+  // the honest third answer, and it has to survive as far as the report.
+  it('records a title-partitioned branch as an assumption, not as coverage', () => {
+    const titles = new Map([['status=X', ['[a-m]%', '[^a-m]%']]]);
+    const gaps = findUncovered({ status: 'X' }, new Set<string>(), [], titles);
+    expect(gaps.uncovered).toEqual([]);
+    expect(gaps.assumed).toEqual([{ branch: { status: 'X' }, patterns: ['[a-m]%', '[^a-m]%'] }]);
+  });
+
+  it('finds a title partition sitting deep in a refinement, not only at the root', () => {
+    const branch: Cell = {
+      status: 'X',
+      hasComponent: false,
+      hasAssignee: false,
+      hasDueDate: false,
+    };
+    const gaps = findUncovered(
+      { status: 'X' },
+      present(
+        { status: 'X', hasComponent: true },
+        { status: 'X', hasComponent: false, hasAssignee: true },
+        { status: 'X', hasComponent: false, hasAssignee: false, hasDueDate: true }
+      ),
+      [],
+      new Map([[describeCell(branch), ['d%']]])
+    );
+    expect(gaps.uncovered).toEqual([]);
+    expect(gaps.assumed.map((entry) => describeCell(entry.branch))).toEqual([describeCell(branch)]);
+  });
+
+  it('does not treat an empty pattern list as coverage', () => {
+    const gaps = findUncovered({ status: 'X' }, new Set<string>(), [], new Map([['status=X', []]]));
+    expect(gaps.assumed).toEqual([]);
+    expect(gaps.uncovered).toEqual([{ status: 'X' }]);
+  });
+});
+
+describe('titlePartitions', () => {
+  it('indexes patterns by the branch they divide, ignoring the pattern itself', () => {
+    const indexed = titlePartitions([
+      cell({ status: 'M', hasComponent: false, titleRegex: 'a%' }, 1),
+      cell({ status: 'M', hasComponent: false, titleRegex: 'b%' }, 1),
+      cell({ status: 'M', hasComponent: true }, 1),
+    ]);
+    expect([...indexed.entries()]).toEqual([['status=M hasComponent=false', ['a%', 'b%']]]);
+  });
+
+  it('reads nothing from cells that carry no title pattern', () => {
+    expect(titlePartitions([cell({ status: 'M' }, 1)]).size).toBe(0);
   });
 });
 
@@ -213,6 +275,71 @@ describe('assessCoverage — the complete case', () => {
       issues('POPS-1')
     );
     expect(formatCoverage(verdict)).toEqual([expect.stringContaining('COVERAGE: complete')]);
+  });
+});
+
+describe('assessCoverage — the title axis, which it cannot verify', () => {
+  const titleCoverage = coverageOf(
+    [
+      cell({ status: 'Merged', titleRegex: '[a-m]%' }, 1),
+      cell({ status: 'Merged', titleRegex: '[^a-m]%' }, 1),
+    ],
+    ['Merged']
+  );
+
+  it('accepts the branch without pretending it was checked', () => {
+    const verdict = assessCoverage(titleCoverage, issues('POPS-1', 'POPS-2'));
+    expect(verdict.complete).toBe(true);
+    expect(verdict.uncovered).toEqual([]);
+    expect(verdict.assumptions).toHaveLength(1);
+  });
+
+  // The whole risk of the title axis is that it reads as proof. The headline
+  // has to be different from the fully-verified one, and the assumption has to
+  // appear in the output rather than only in a field nobody prints.
+  it('does not let it read as a fully verified sweep', () => {
+    const text = formatCoverage(assessCoverage(titleCoverage, issues('POPS-1', 'POPS-2'))).join(
+      '\n'
+    );
+    expect(text).toContain('complete on every axis it can verify');
+    expect(text).toContain('ASSUMED, not verified');
+    expect(text).toContain('[a-m]%');
+  });
+
+  it('still refuses a title cell that reached the cap', () => {
+    const verdict = assessCoverage(
+      {
+        limit: 1,
+        statuses: ['Merged'],
+        cells: [cell({ status: 'Merged', titleRegex: 'a%' }, 1)],
+      },
+      issues('POPS-1')
+    );
+    expect(verdict.complete).toBe(false);
+    expect(verdict.problems.join('\n')).toContain('truncated');
+  });
+
+  it('still surfaces the assumption on an otherwise failing export', () => {
+    const verdict = assessCoverage(
+      coverageOf([cell({ status: 'Merged', titleRegex: 'a%' }, 9)], ['Merged']),
+      issues('POPS-1')
+    );
+    expect(verdict.complete).toBe(false);
+    expect(formatCoverage(verdict).join('\n')).toContain('ASSUMED, not verified');
+  });
+
+  it('tells two patterns on the same branch apart from one on a different branch', () => {
+    const verdict = assessCoverage(
+      coverageOf(
+        [
+          cell({ status: 'Merged', hasComponent: true, titleRegex: 'a%' }, 1),
+          cell({ status: 'Merged', hasComponent: false, titleRegex: 'a%' }, 1),
+        ],
+        ['Merged']
+      ),
+      issues('POPS-1', 'POPS-2')
+    );
+    expect(verdict.assumptions).toHaveLength(2);
   });
 });
 
@@ -344,6 +471,16 @@ describe('readCoverage', () => {
     expect(readCoverage('nope')).toBeUndefined();
   });
 
+  // Every other field is trimmed on the way in. A title pattern is not: its
+  // leading and trailing whitespace is part of what it matches, so trimming it
+  // would silently change which rows the cell claims to have covered.
+  it('leaves a title pattern exactly as written, whitespace and all', () => {
+    const coverage = readCoverage({
+      coverage: { cells: [{ filter: { titleRegex: ' a% ' }, count: 1 }] },
+    });
+    expect(coverage?.cells?.[0]?.filter.titleRegex).toBe(' a% ');
+  });
+
   it('trims the strings it reads, so a padded status still matches its cell', () => {
     const verdict = assessCoverage(
       readCoverage({
@@ -392,6 +529,11 @@ describe('readCoverage', () => {
       'a non-string status filter',
       { coverage: { cells: [{ filter: { status: 7 }, count: 1 }] } },
       /status must be a string/u,
+    ],
+    [
+      'a non-string title pattern',
+      { coverage: { cells: [{ filter: { titleRegex: /a/u.source.length }, count: 1 }] } },
+      /titleRegex must be a string/u,
     ],
     ['a zero limit', { coverage: { limit: 0, cells: [] } }, /limit must be a positive integer/u],
     [

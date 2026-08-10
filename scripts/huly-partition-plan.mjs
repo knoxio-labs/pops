@@ -30,17 +30,47 @@
  *      `component`, replacing `hasComponent: true` with one cell per label
  *      from `list_components`. That list is itself subject to a 200 cap, so it
  *      only partitions the space when it comes back under it.
+ *   5. **Past that, only `titleRegex` is left**, and it is the caller's to
+ *      write. See below — this is where the recipe stops being provable.
  *
- * ## What is proven, and what is assumed
+ * ## Where the recipe runs out, and what that cost on real data
  *
- * `assessCoverage` proves the structural half: that the declared cells tile
- * the whole status list with no gap and no duplicate, that no cell reached the
- * cap, and that the row count adds up. `findUncovered` refines each root the
- * same way a caller would and reports any branch nothing accounted for, so a
- * missing cell is named rather than silently absorbed.
+ * Steps 1–4 dead-end, and not hypothetically. Measured 2026-08-10: status
+ * `Merged` holds 1140 issues, of which 1138 have no component, no assignee and
+ * no due date. Every boolean split hands the same 1138 rows to one child, and
+ * the component fan-out never fires because the capped branch is the one
+ * *without* components. `{Merged, hasComponent:false, hasAssignee:false,
+ * hasDueDate:false}` returns 200 with all four filters spent.
  *
- * Three things it cannot prove and takes on trust, each verifiable at the API
- * rather than in code:
+ * `titleRegex` is what gets past it. On the Postgres backend it is SQL
+ * `SIMILAR TO` — whole-title, case-sensitive — and it accepts bracket classes
+ * and alternation, so a caller can bisect on leading characters (`d%`,
+ * `f[^e]%`, `feat\\([a-e]%`) until each piece lands under the cap. That is how
+ * the 1140 were read, in 16 leaves.
+ *
+ * But a set of title patterns is hand-written, and **nothing here can prove a
+ * set of them tiles anything.** There is no finite enumeration to check them
+ * against the way `list_statuses` and `list_components` bound the other axes,
+ * and the residual class at each step ("the next character is not a lowercase
+ * letter") is not divisible by any enumerable set. A real gap is easy to write
+ * and invisible: `c[^h]%` and `ch%` together miss the title that is exactly
+ * `"c"`. So a title-partitioned branch is recorded as an **assumption** — the
+ * export asserted it, this tool did not check it, and `formatCoverage` says so
+ * on its own line rather than folding it into a clean verdict.
+ *
+ * Proving the whole thing would take a total count to reconcile against, or an
+ * offset/cursor. Both are the upstream server's to add.
+ *
+ * ## What the structural check does prove
+ *
+ * `assessCoverage` proves that the declared cells tile the whole status list
+ * with no gap and no duplicate, that no cell reached the cap, that the row
+ * count adds up, and that no identifier arrived twice. `findUncovered` refines
+ * each root the same way a caller would and names any branch nothing accounted
+ * for, so a missing cell is reported rather than silently absorbed.
+ *
+ * Three further things it takes on trust, each verifiable at the API rather
+ * than in code:
  *
  *   - **The boolean filters are total.** `hasAssignee: true` plus
  *     `hasAssignee: false` is asserted to equal the unfiltered set. Check it
@@ -79,6 +109,7 @@ export const DEFAULT_LIMIT = 200;
  *   hasComponent?: boolean,
  *   hasAssignee?: boolean,
  *   hasDueDate?: boolean,
+ *   titleRegex?: string,
  * }} Cell A `list_issues` filter combination.
  * @typedef {{ filter: Cell, count: number }} CoverageCell One executed query and how many rows it returned.
  * @typedef {{
@@ -121,7 +152,42 @@ export function describeCell(cell) {
   if (cell.hasComponent !== undefined) parts.push(`hasComponent=${cell.hasComponent}`);
   if (cell.hasAssignee !== undefined) parts.push(`hasAssignee=${cell.hasAssignee}`);
   if (cell.hasDueDate !== undefined) parts.push(`hasDueDate=${cell.hasDueDate}`);
+  if (cell.titleRegex !== undefined) parts.push(`titleRegex=${cell.titleRegex}`);
   return parts.length === 0 ? '(unfiltered)' : parts.join(' ');
+}
+
+/**
+ * The same cell with any title pattern stripped — the branch a title split
+ * divides.
+ *
+ * @param {Cell} cell
+ * @returns {Cell}
+ */
+function titleBase(cell) {
+  return {
+    status: cell.status,
+    component: cell.component,
+    hasComponent: cell.hasComponent,
+    hasAssignee: cell.hasAssignee,
+    hasDueDate: cell.hasDueDate,
+  };
+}
+
+/**
+ * Every title pattern the export declares, indexed by the branch it divides.
+ *
+ * @param {CoverageCell[]} cells
+ * @returns {Map<string, string[]>}
+ */
+export function titlePartitions(cells) {
+  /** @type {Map<string, string[]>} */
+  const byBranch = new Map();
+  for (const { filter } of cells) {
+    if (filter.titleRegex === undefined) continue;
+    const key = describeCell(titleBase(filter));
+    byBranch.set(key, [...(byBranch.get(key) ?? []), filter.titleRegex]);
+  }
+  return byBranch;
 }
 
 /**
@@ -202,23 +268,42 @@ function isWhollyUncovered(children, gaps) {
 }
 
 /**
- * The branches of `target` that `present` does not account for.
+ * @typedef {{ branch: Cell, patterns: string[] }} Assumption A branch covered only by title patterns.
+ * @typedef {{ uncovered: Cell[], assumed: Assumption[] }} Gaps
+ */
+
+/**
+ * What `present` does not account for in `target`, split into what is missing
+ * outright and what is covered only by an unverifiable title partition.
  *
  * A branch nothing touched is reported at its own level rather than exploded
  * into leaves: a status absent from the export should read as one missing
  * status, not as eighty-four missing filter combinations.
  *
+ * A branch reached only through `titleRegex` patterns is neither covered nor
+ * missing. Whether those patterns tile it is not decidable here — see this
+ * file's header — so it is recorded as an assumption and surfaced as one.
+ *
  * @param {Cell} target
  * @param {Set<string>} present Cell descriptions the export declares.
  * @param {string[]} components
- * @returns {Cell[]}
+ * @param {Map<string, string[]>} [titles] Title patterns by the branch they divide.
+ * @returns {Gaps}
  */
-export function findUncovered(target, present, components) {
-  if (present.has(describeCell(target))) return [];
+export function findUncovered(target, present, components, titles = new Map()) {
+  if (present.has(describeCell(target))) return { uncovered: [], assumed: [] };
+  const patterns = titles.get(describeCell(target));
+  if (patterns !== undefined && patterns.length > 0) {
+    return { uncovered: [], assumed: [{ branch: target, patterns }] };
+  }
   const children = refineCell(target, components);
-  if (children === undefined) return [target];
-  const gaps = children.map((child) => findUncovered(child, present, components));
-  return isWhollyUncovered(children, gaps) ? [target] : gaps.flat();
+  if (children === undefined) return { uncovered: [target], assumed: [] };
+  const gaps = children.map((child) => findUncovered(child, present, components, titles));
+  const assumed = gaps.flatMap((gap) => gap.assumed);
+  const uncovered = gaps.map((gap) => gap.uncovered);
+  return isWhollyUncovered(children, uncovered)
+    ? { uncovered: [target], assumed }
+    : { uncovered: uncovered.flat(), assumed };
 }
 
 /**
@@ -234,6 +319,7 @@ export function findUncovered(target, present, components) {
  *   duplicateCells: string[],
  *   duplicateIdentifiers: string[],
  *   problems: string[],
+ *   assumptions: string[],
  * }} CoverageVerdict
  */
 
@@ -304,6 +390,7 @@ function undeclaredVerdict(issues) {
     duplicateCells: [],
     duplicateIdentifiers: duplicateIdentifiers(issues),
     problems,
+    assumptions: [],
   };
 }
 
@@ -355,6 +442,10 @@ export function assessCoverage(coverage, issues) {
   const statuses = coverage.statuses ?? [];
   const components = coverage.components ?? [];
   const present = new Set(cells.map((cell) => describeCell(cell.filter)));
+  const titles = titlePartitions(cells);
+  const gaps = partitionRoots(statuses).map((root) =>
+    findUncovered(root, present, components, titles)
+  );
 
   /** @type {CoverageVerdict} */
   const verdict = {
@@ -365,10 +456,18 @@ export function assessCoverage(coverage, issues) {
     declaredTotal: cells.reduce((total, cell) => total + cell.count, 0),
     rowCount: issues.length,
     truncated: cells.filter((cell) => isTruncated(cell.count, limit)),
-    uncovered: partitionRoots(statuses).flatMap((root) => findUncovered(root, present, components)),
+    uncovered: gaps.flatMap((gap) => gap.uncovered),
     duplicateCells: duplicateCellKeys(cells),
     duplicateIdentifiers: duplicateIdentifiers(issues),
     problems: [],
+    assumptions: gaps
+      .flatMap((gap) => gap.assumed)
+      .map(
+        (assumption) =>
+          `${describeCell(assumption.branch)} is covered only by ${assumption.patterns.length} ` +
+          `title pattern(s), and nothing here can prove they tile it: ` +
+          assumption.patterns.join(' | ')
+      ),
   };
 
   describeStructuralProblems(verdict, statuses);
@@ -475,6 +574,16 @@ function readFilter(value, index) {
     }
     cell[key] = raw;
   }
+  const titleRegex = record['titleRegex'];
+  if (titleRegex !== undefined) {
+    if (typeof titleRegex !== 'string') {
+      throw new Error(`coverage.cells[${index}].filter.titleRegex must be a string`);
+    }
+    // Not trimmed, unlike every other field: a pattern's leading and trailing
+    // whitespace is part of what it matches, and quietly removing it would
+    // change which rows the cell claims to have covered.
+    cell.titleRegex = titleRegex;
+  }
   return cell;
 }
 
@@ -483,16 +592,21 @@ function readFilter(value, index) {
  * @returns {string[]}
  */
 export function formatCoverage(verdict) {
+  const assumptions = verdict.assumptions.map(
+    (assumption) => `  ASSUMED, not verified: ${assumption}`
+  );
   if (verdict.complete) {
+    const scope = assumptions.length === 0 ? 'complete' : 'complete on every axis it can verify';
     return [
-      `COVERAGE: complete — ${verdict.cellCount} queries, none within ${verdict.limit} rows of ` +
+      `COVERAGE: ${scope} — ${verdict.cellCount} queries, none within ${verdict.limit} rows of ` +
         `the cap, tiling every declared status with no gap and no overlap; ${verdict.rowCount} issues.`,
+      ...assumptions,
     ];
   }
   const headline = verdict.declared
     ? `COVERAGE: INCOMPLETE — this export does not account for the whole backlog (${verdict.rowCount} issues read).`
     : `COVERAGE: UNKNOWN — this export makes no completeness claim (${verdict.rowCount} issues read).`;
-  return [headline, ...verdict.problems.map((problem) => `  - ${problem}`)];
+  return [headline, ...verdict.problems.map((problem) => `  - ${problem}`), ...assumptions];
 }
 
 export const HELP = `Usage: node scripts/huly-partition-plan.mjs --roots --statuses <a,b,c>
@@ -506,7 +620,12 @@ export const HELP = `Usage: node scripts/huly-partition-plan.mjs --roots --statu
           whole backlog. Exits 1 when it does not.
 
 A cell whose row count reaches the limit is truncated: discard it, refine it,
-and query the children. Never keep a capped result.`;
+and query the children. Never keep a capped result.
+
+status, the three booleans and component are enumerable, so --assess proves
+those tile. Past them only titleRegex is left, it is hand-written, and no
+finite set bounds it — a branch divided that way is reported as an assumption
+this tool did not check.`;
 
 /**
  * @param {string[]} args
@@ -560,8 +679,11 @@ function runRefine(args) {
   const children = refineCell(JSON.parse(raw), readList(readFlag(args, '--components')));
   if (children === undefined) {
     console.error(
-      'FAIL — no filter is left to divide this cell by. This API cannot enumerate it; ' +
-        'say so rather than reporting the capped rows as the whole of it.'
+      'FAIL — every enumerable filter is spent on this cell. What is left is `titleRegex` ' +
+        '(SQL SIMILAR TO: whole-title, case-sensitive, bracket classes and alternation), ' +
+        'bisected on leading characters until each piece lands under the cap. Those patterns ' +
+        'are yours to write and yours to argue tile the branch — --assess records them as an ' +
+        'assumption and will not vouch for them.'
     );
     return 1;
   }
@@ -621,6 +743,17 @@ function selfTest() {
     { limit: 200, statuses: ['Backlog', 'Done'], cells: [cell({ status: 'Backlog' }, 1)] },
     [issue('POPS-1')]
   );
+  const titleSplit = assessCoverage(
+    {
+      limit: 200,
+      statuses: ['Merged'],
+      cells: [
+        cell({ status: 'Merged', titleRegex: '[a-m]%' }, 1),
+        cell({ status: 'Merged', titleRegex: '[^a-m]%' }, 1),
+      ],
+    },
+    [issue('POPS-1'), issue('POPS-2')]
+  );
 
   const checks = {
     'a full-page result is truncated': isTruncated(200, 200),
@@ -638,6 +771,11 @@ function selfTest() {
     'a fully-divided cell reports that it cannot be divided':
       refineCell({ status: 'X', hasComponent: true, hasAssignee: true, hasDueDate: true }, []) ===
       undefined,
+    'a title-partitioned branch is recorded as an assumption, not as proof':
+      titleSplit.complete && titleSplit.assumptions.length === 1,
+    'and the report says so out loud rather than reading clean': formatCoverage(titleSplit)
+      .join('\n')
+      .includes('ASSUMED, not verified'),
   };
 
   const failed = Object.entries(checks).filter(([, ok]) => !ok);
