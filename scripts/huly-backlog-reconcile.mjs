@@ -456,6 +456,7 @@ export function findMirrors(issues, commits) {
  *   skipped: Issue[],
  *   mirrors: { identifier: string, title: string, status: string, sha: string }[],
  *   commitCount: number,
+ *   titledIssueCount: number,
  * }} Report
  */
 
@@ -496,7 +497,13 @@ export function reconcile(issues, commits, prefix) {
     eligible.push(verdict);
   }
 
-  return { eligible, skipped, mirrors, commitCount: commits.length };
+  return {
+    eligible,
+    skipped,
+    mirrors,
+    commitCount: commits.length,
+    titledIssueCount: issues.filter((issue) => (issue.title ?? '').trim() !== '').length,
+  };
 }
 
 /**
@@ -544,31 +551,49 @@ function unwrapIssueList(parsed) {
 }
 
 /**
- * Normalise an exported issue list, accepting either a bare array or the
+ * Read an exported issue list, accepting either a bare array or the
  * `{ result: [...] }` envelope a tracker export arrives in.
+ *
+ * Every row must carry `identifier`, `title` and `status` as strings, and a
+ * row that does not is a hard error rather than a skip. Defaulting any of
+ * them would convert an export this tool cannot read into an export that
+ * looks clean: a missing `status` reads as "not Backlog" and skips the row, a
+ * missing `identifier` drops it, and a whole file of either reports zero
+ * orphans over zero issues actually examined. That is the same false negative
+ * the tool exists to prevent, arriving through the front door.
  *
  * @param {unknown} parsed
  * @returns {Issue[]}
+ * @throws {Error} on a shape this tool cannot faithfully read.
  */
 export function readIssues(parsed) {
   const list = unwrapIssueList(parsed);
   if (!Array.isArray(list)) {
     throw new Error('expected a JSON array of issues, or an object with a "result" array');
   }
-  /** @type {Issue[]} */
-  const issues = [];
-  for (const entry of list) {
-    if (typeof entry !== 'object' || entry === null) continue;
+  return list.map((entry, index) => {
+    if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) {
+      throw new Error(`issue at index ${index} is not an object`);
+    }
     const record = /** @type {Record<string, unknown>} */ (entry);
     const identifier = record['identifier'];
-    if (typeof identifier !== 'string' || identifier === '') continue;
-    issues.push({
-      identifier,
-      title: typeof record['title'] === 'string' ? record['title'] : '',
-      status: typeof record['status'] === 'string' ? record['status'] : '',
-    });
-  }
-  return issues;
+    if (typeof identifier !== 'string' || identifier.trim() === '') {
+      throw new Error(`issue at index ${index} has no string "identifier"`);
+    }
+    const where = `${identifier} (index ${index})`;
+    const status = record['status'];
+    if (typeof status !== 'string') {
+      throw new Error(
+        `${where} has no string "status" — every row needs one, or it would be silently ` +
+          `skipped as not-${ELIGIBLE_STATUS} and the sweep would report a clean backlog`
+      );
+    }
+    const title = record['title'];
+    if (typeof title !== 'string') {
+      throw new Error(`${where} has no string "title" — mirror detection reads it`);
+    }
+    return { identifier, title, status };
+  });
 }
 
 /**
@@ -584,7 +609,9 @@ export function formatReport(report) {
   lines.push(
     `Scanned ${report.commitCount} commits against ${report.eligible.length} ${ELIGIBLE_STATUS} ` +
       `issues (${report.skipped.length} skipped: not ${ELIGIBLE_STATUS}).`,
-    `PR mirrors found across the whole export: ${report.mirrors.length}.`,
+    report.titledIssueCount === 0
+      ? 'PR mirrors: NOT CHECKED — no issue in the export carried a title to match against.'
+      : `PR mirrors found across the whole export: ${report.mirrors.length}.`,
     ''
   );
 
@@ -678,6 +705,19 @@ function main() {
  * @returns {boolean}
  */
 function selfTest() {
+  /**
+   * @param {() => unknown} fn
+   * @returns {boolean}
+   */
+  const throws = (fn) => {
+    try {
+      fn();
+      return false;
+    } catch {
+      return true;
+    }
+  };
+
   const fixesBodyTrailer = {
     sha: 'e0b471ae1',
     subject:
@@ -724,6 +764,12 @@ function selfTest() {
     'a non-Backlog issue is never classified':
       reconcile([{ identifier: 'POPS-1452', title: '', status: 'Done' }], commits, 'POPS').eligible
         .length === 0,
+    'an export row with no status is refused, not skipped as not-Backlog': throws(() =>
+      readIssues([{ identifier: 'POPS-1', title: 't' }])
+    ),
+    'an export with no titles reports mirrors as unchecked, not as zero': formatReport(
+      reconcile([{ identifier: 'POPS-1', title: '', status: ELIGIBLE_STATUS }], commits, 'POPS')
+    ).includes('NOT CHECKED'),
     'a mirror is matched on the subject minus its PR number':
       findMirrors(
         [

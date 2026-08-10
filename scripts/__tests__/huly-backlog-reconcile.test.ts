@@ -5,6 +5,7 @@ import {
   classifyIssue,
   extractIdentifiers,
   findMirrors,
+  formatReport,
   isRevertSubject,
   normaliseSubject,
   parseGitLog,
@@ -413,14 +414,89 @@ describe('readIssues', () => {
     expect(readIssues({ result: entries })).toEqual(entries);
   });
 
-  it('drops entries with no identifier rather than inventing one', () => {
-    expect(readIssues([{ title: 'no id' }, { identifier: '' }, { identifier: 'POPS-2' }])).toEqual([
-      { identifier: 'POPS-2', title: '', status: '' },
-    ]);
-  });
-
   it('refuses a shape it does not understand instead of reporting an empty backlog', () => {
     expect(() => readIssues({ issues: [] })).toThrow(/expected a JSON array/u);
     expect(() => readIssues('nope')).toThrow(/expected a JSON array/u);
+  });
+
+  // Every case below is a row the tool cannot faithfully read. Defaulting any
+  // of these fields turns an unreadable export into a clean-looking one: the
+  // row is skipped as not-Backlog, and a whole file of them reports zero
+  // orphans over zero issues examined.
+  it('rejects a row with no status rather than skipping it as not-Backlog', () => {
+    expect(() => readIssues([{ identifier: 'POPS-2', title: 't' }])).toThrow(/no string "status"/u);
+    expect(() => readIssues([{ identifier: 'POPS-2', title: 't', status: 3 }])).toThrow(
+      /no string "status"/u
+    );
+  });
+
+  it('names the offending row so the export can be fixed', () => {
+    expect(() =>
+      readIssues([
+        { identifier: 'POPS-1', title: 't', status: 'Backlog' },
+        { identifier: 'POPS-2', title: 't' },
+      ])
+    ).toThrow(/POPS-2 \(index 1\)/u);
+  });
+
+  it('rejects a row with no identifier rather than dropping it', () => {
+    expect(() => readIssues([{ title: 'no id', status: 'Backlog' }])).toThrow(
+      /index 0 has no string "identifier"/u
+    );
+    expect(() => readIssues([{ identifier: '  ', title: 't', status: 'Backlog' }])).toThrow(
+      /no string "identifier"/u
+    );
+  });
+
+  it('rejects a row with no title, because mirror detection reads it', () => {
+    expect(() => readIssues([{ identifier: 'POPS-2', status: 'Backlog' }])).toThrow(
+      /no string "title"/u
+    );
+  });
+
+  it('rejects a non-object row', () => {
+    expect(() => readIssues(['POPS-1'])).toThrow(/index 0 is not an object/u);
+    expect(() => readIssues([null])).toThrow(/index 0 is not an object/u);
+  });
+});
+
+describe('formatReport', () => {
+  const commits = [FIXES_VIA_BODY_TRAILER, MENTIONS_FOUR_OPEN_FOLLOW_UPS];
+
+  it('says mirrors were NOT CHECKED when no issue carried a title', () => {
+    const report = reconcile(
+      [{ identifier: 'POPS-1452', title: '', status: 'Backlog' }],
+      commits,
+      PREFIX
+    );
+    expect(report.titledIssueCount).toBe(0);
+    expect(formatReport(report)).toContain('PR mirrors: NOT CHECKED');
+  });
+
+  it('reports a real mirror count once titles are present', () => {
+    const report = reconcile(
+      [
+        {
+          identifier: 'POPS-1575',
+          title: 'fix(bfm,food,cerebrum): drop redundant 503 check in isUnavailableError copies',
+          status: 'Merged',
+        },
+      ],
+      commits,
+      PREFIX
+    );
+    expect(formatReport(report)).toContain('PR mirrors found across the whole export: 1.');
+  });
+
+  it('names an orphan and the commit that shipped it', () => {
+    const report = reconcile(
+      [{ identifier: 'POPS-1452', title: 'drop the redundant check', status: 'Backlog' }],
+      commits,
+      PREFIX
+    );
+    const text = formatReport(report);
+    expect(text).toContain('ORPHANS — merged work still in Backlog (1):');
+    expect(text).toContain('POPS-1452');
+    expect(text).toContain('body-trailer');
   });
 });
