@@ -1,6 +1,6 @@
 import AppCore
 
-/// Every word this screen shows, in one place.
+/// Every word this module shows, both screens, in one place.
 ///
 /// English string literals, like `DesignSystem`'s state primitives and
 /// `FeaturePairing`'s copy, and for the same reason: the app has no
@@ -11,6 +11,34 @@ internal enum TransactionsCopy {
     internal static let loadingMore = "Loading more…"
     internal static let empty = "No transactions yet."
     internal static let retry = "Retry"
+
+    internal static let loadingDetail = "Loading transaction…"
+
+    /// What the detail screen says about a transaction finance no longer has.
+    ///
+    /// Deliberately not a failure sentence and deliberately without a retry.
+    /// A row deleted between a list arriving and somebody tapping it is the
+    /// system working; telling them something went wrong would send them
+    /// retrying a request whose answer will not change.
+    internal static let detailNotFound = "This transaction no longer exists."
+
+    /// The lead-in on the banner over content that is still readable — the row
+    /// the list handed over, which is real and simply not the whole record.
+    internal static let detailFailed = "Could not load the full record."
+
+    /// The labels down the detail screen. Nested rather than prefixed so the
+    /// set reads as one table: a label added here without a line on screen, or
+    /// drawn without a label, is visible as a gap in this list.
+    internal enum FieldLabel {
+        internal static let type = "Type"
+        internal static let account = "Account"
+        internal static let entity = "Entity"
+        internal static let tags = "Tags"
+        internal static let location = "Location"
+        internal static let country = "Country"
+        internal static let notes = "Notes"
+        internal static let lastEdited = "Last edited"
+    }
 
     /// The lead-in on the tail of the list. Followed by ``message(for:)``, so
     /// the reader gets both what failed and why in the order they need them.
@@ -59,6 +87,14 @@ internal enum TransactionsCopy {
     /// The same, for the banner over rows that survived a failed refresh.
     internal static func refreshFailure(_ error: RepositoryError) -> String {
         "\(refreshFailed) \(message(for: error))"
+    }
+
+    /// The same again, for the detail screen sitting on the row the list handed
+    /// it. What is on screen is true; there is just more of it that did not
+    /// arrive, and saying which is the difference between a stale screen and a
+    /// screen somebody thinks is complete.
+    internal static func detailFailure(_ error: RepositoryError) -> String {
+        "\(detailFailed) \(message(for: error))"
     }
 
     /// How a row's tags read to VoiceOver. Bare tags after the amount and the

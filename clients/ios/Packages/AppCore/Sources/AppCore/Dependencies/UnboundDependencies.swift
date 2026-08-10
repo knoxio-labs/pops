@@ -2,6 +2,10 @@ internal struct UnboundTransactionsRepository: TransactionsRepository {
     func transactions(after cursor: String?) async throws -> TransactionPage {
         throw RepositoryError.dependencyNotBound
     }
+
+    func transactionDetail(id: Transaction.ID) async throws -> TransactionDetail? {
+        throw RepositoryError.dependencyNotBound
+    }
 }
 
 internal struct UnboundDevicePairingService: DevicePairingService {

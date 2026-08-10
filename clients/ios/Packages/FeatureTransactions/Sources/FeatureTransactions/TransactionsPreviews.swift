@@ -12,6 +12,7 @@
     private struct PreviewTransactionsRepository: TransactionsRepository {
         let pages: [TransactionPage]
         let failure: RepositoryError?
+        var details: [AppCore.Transaction.ID: TransactionDetail] = [:]
 
         func transactions(after cursor: String?) async throws -> TransactionPage {
             if let failure { throw failure }
@@ -20,6 +21,11 @@
                 return TransactionPage(transactions: [], nextCursor: nil)
             }
             return pages[index]
+        }
+
+        func transactionDetail(id: AppCore.Transaction.ID) async throws -> TransactionDetail? {
+            if let failure { throw failure }
+            return details[id]
         }
     }
 
@@ -54,9 +60,38 @@
             ),
         ]
 
+        static let detail = TransactionDetail(
+            id: "txn-1",
+            description: "Flat white",
+            amount: MoneyAmount(minorUnits: -540, currencyCode: "AUD"),
+            date: Date(timeIntervalSince1970: 1_786_000_000),
+            type: .purchase,
+            account: "Everyday",
+            entityName: "Sample Coffee",
+            entityId: "entity-1",
+            tags: ["coffee"],
+            location: "Surry Hills",
+            country: "Australia",
+            notes: "Before the standup.",
+            relatedTransactionId: nil,
+            lastEditedAt: Date(timeIntervalSince1970: 1_786_100_000)
+        )
+
         static func page(_ nextCursor: String?) -> TransactionPage {
             TransactionPage(transactions: rows, nextCursor: nextCursor)
         }
+    }
+
+    private func previewRepository(
+        pages: [TransactionPage] = [PreviewData.page(nil)],
+        failing: RepositoryError? = nil,
+        details: [TransactionDetail] = [PreviewData.detail]
+    ) -> PreviewTransactionsRepository {
+        PreviewTransactionsRepository(
+            pages: pages,
+            failure: failing,
+            details: Dictionary(uniqueKeysWithValues: details.map { ($0.id, $0) })
+        )
     }
 
     @MainActor
@@ -66,7 +101,24 @@
     ) -> TransactionsListViewModel {
         TransactionsListViewModel(
             dependencies: AppDependencies(
-                transactions: PreviewTransactionsRepository(pages: pages, failure: failing),
+                transactions: previewRepository(pages: pages, failing: failing),
+                pairing: AppDependencies.unbound.pairing
+            ),
+            router: Router()
+        )
+    }
+
+    @MainActor
+    private func previewDetailModel(
+        seed: AppCore.Transaction? = PreviewData.rows.first,
+        failing: RepositoryError? = nil,
+        details: [TransactionDetail] = [PreviewData.detail]
+    ) -> TransactionDetailViewModel {
+        TransactionDetailViewModel(
+            id: PreviewData.detail.id,
+            seed: seed,
+            dependencies: AppDependencies(
+                transactions: previewRepository(failing: failing, details: details),
                 pairing: AppDependencies.unbound.pairing
             )
         )
@@ -80,6 +132,57 @@
     #Preview("Transactions — dark") {
         TransactionsListView(model: previewModel())
             .preferredColorScheme(.dark)
+    }
+
+    /// The whole feature as an embedder gets it — the list, a tappable row, and
+    /// the detail it pushes to. The one canvas where the seam this ticket added
+    /// is visible rather than only asserted.
+    #Preview("Flow — list to detail") {
+        TransactionsFlowView(
+            dependencies: AppDependencies(
+                transactions: previewRepository(),
+                pairing: AppDependencies.unbound.pairing
+            ),
+            router: Router()
+        )
+    }
+
+    #Preview("Detail — light") {
+        TransactionDetailView(model: previewDetailModel())
+            .preferredColorScheme(.light)
+    }
+
+    #Preview("Detail — dark") {
+        TransactionDetailView(model: previewDetailModel())
+            .preferredColorScheme(.dark)
+    }
+
+    /// The canvas that shows the seam working: what the reader sees for the
+    /// instant before the fuller record lands, built from the row the list
+    /// already had.
+    #Preview("Detail — seeded, nothing fetched") {
+        TransactionDetailView(model: previewDetailModel(details: []))
+    }
+
+    /// A transaction deleted between the list and the tap. Must not read as a
+    /// failure, and must not offer a retry.
+    #Preview("Detail — no longer exists") {
+        TransactionDetailView(model: previewDetailModel(seed: nil, details: []))
+    }
+
+    /// The failure that keeps its content: the list's row stays, with the
+    /// reason above it.
+    #Preview("Detail — failed over a seeded row") {
+        TransactionDetailView(model: previewDetailModel(failing: .unavailable))
+    }
+
+    #Preview("Detail — failed with nothing to show") {
+        TransactionDetailView(model: previewDetailModel(seed: nil, failing: .unavailable))
+    }
+
+    #Preview("Detail — accessibility text size") {
+        TransactionDetailView(model: previewDetailModel())
+            .dynamicTypeSize(.accessibility5)
     }
 
     /// More to come, so the canvas shows the tail of the list rather than only

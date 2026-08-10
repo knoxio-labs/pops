@@ -83,10 +83,23 @@ extension TransactionsListView {
         .refreshable { await model.refresh() }
     }
 
+    /// Each row is a `Button` so it is tappable, and so VoiceOver announces it
+    /// as one — a tap target that reads as static text is one a reader has no
+    /// reason to try. `.plain` because the row already owns how it looks: the
+    /// default style would tint the whole row accent, which is a colour
+    /// decision belonging to `DesignSystem` rather than to a gesture.
+    ///
+    /// Where the tap goes is the model's business. This names no destination,
+    /// which is what keeps the detail screen's concrete type out of this file.
     @ViewBuilder private var rows: some View {
         if case .loaded(let transactions) = model.state {
             ForEach(transactions) { transaction in
-                TransactionRowView(transaction: transaction, presentation: presentation)
+                Button {
+                    model.select(transaction)
+                } label: {
+                    TransactionRowView(transaction: transaction, presentation: presentation)
+                }
+                .buttonStyle(.plain)
             }
         } else {
             EmptyStateView(message: TransactionsCopy.empty)

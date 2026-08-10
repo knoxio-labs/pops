@@ -26,22 +26,39 @@ internal struct TransactionPresentation: Sendable {
     }
 
     internal func amount(_ transaction: Transaction) -> String {
-        transaction.amount.formatted(locale: locale)
+        amount(transaction.amount)
+    }
+
+    internal func amount(_ amount: MoneyAmount) -> String {
+        amount.formatted(locale: locale)
+    }
+
+    internal func date(_ transaction: Transaction) -> String {
+        date(transaction.date)
+    }
+
+    internal func date(_ date: Date) -> String {
+        date.formatted(style(time: .omitted))
+    }
+
+    /// A date with a clock time on it, for the one field that has one: finance
+    /// records when it last wrote a transaction, and a bare date there cannot
+    /// tell two edits on the same afternoon apart.
+    internal func dateTime(_ date: Date) -> String {
+        date.formatted(style(time: .shortened))
     }
 
     /// The calendar comes from the locale rather than from the process, for the
     /// same reason the locale itself is a parameter: a fixed locale paired with
     /// whatever calendar the machine happens to use is only half-pinned, and
     /// the half that is loose is the one that changes the digits.
-    internal func date(_ transaction: Transaction) -> String {
-        transaction.date.formatted(
-            Date.FormatStyle(
-                date: .abbreviated,
-                time: .omitted,
-                locale: locale,
-                calendar: locale.calendar,
-                timeZone: timeZone
-            )
+    private func style(time: Date.FormatStyle.TimeStyle) -> Date.FormatStyle {
+        Date.FormatStyle(
+            date: .abbreviated,
+            time: time,
+            locale: locale,
+            calendar: locale.calendar,
+            timeZone: timeZone
         )
     }
 
@@ -78,7 +95,11 @@ internal struct TransactionPresentation: Sendable {
     /// Whether this row is money arriving, which is the only thing the list
     /// colours. Read off the amount the server sent and nothing else.
     internal func isCredit(_ transaction: Transaction) -> Bool {
-        transaction.amount.minorUnits > 0
+        isCredit(transaction.amount)
+    }
+
+    internal func isCredit(_ amount: MoneyAmount) -> Bool {
+        amount.minorUnits > 0
     }
 
     private var separator: String { " · " }
