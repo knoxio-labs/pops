@@ -350,8 +350,7 @@ function selfTest() {
     'sees a pnpm fork written as a request list':
       parseToolsTable('[tools]\npnpm = ["9.0.0", "8"]\n').pnpm === '9.0.0',
     'a missing unit base is a violation, not an empty sweep': missingBaseIsReported(),
-    'an unparseable root pin is a violation, not an empty baseline':
-      unparseableRootIsReported(),
+    'an unparseable root pin is a violation, not an empty baseline': unparseableRootIsReported(),
   };
 
   const failed = Object.entries(checks).filter(([, ok]) => !ok);

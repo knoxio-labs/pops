@@ -254,8 +254,8 @@ function readWorkflowNames(root) {
     } catch (error) {
       problems.push(
         `.github/workflows/${file} could not be read as YAML, so its \`name:\` is unknown and ` +
-          `it cannot be matched against ci-gate.yml's gated list: ` +
-          `${error instanceof Error ? error.message : String(error)}`
+          "it cannot be matched against ci-gate.yml's gated list: " +
+          (error instanceof Error ? error.message : String(error))
       );
     }
   }
@@ -436,7 +436,7 @@ function selfTest() {
     'jobs:\n  lint: # tidy\n    continue-on-error: true # flaky\n'
   );
   const advisoryExpression = findContinueOnErrorJobs(
-    'jobs:\n  lint:\n    continue-on-error: ${{ github.event_name == \'push\' }}\n'
+    "jobs:\n  lint:\n    continue-on-error: ${{ github.event_name == 'push' }}\n"
   );
   const notAdvisory = findContinueOnErrorJobs('jobs:\n  lint:\n    continue-on-error: false\n');
   const filtered = hasPullRequestPathFilter(
@@ -470,8 +470,7 @@ function selfTest() {
     'does not read a sibling trigger filter as one on pull_request': !unfiltered,
     'reads the workflow name past a trailing comment': named === 'Quality',
     'reads the checks: write permission': writes,
-    'raises on a workflow that cannot be parsed rather than reporting it clean':
-      unparseableRaised,
+    'raises on a workflow that cannot be parsed rather than reporting it clean': unparseableRaised,
   };
 
   const failed = Object.entries(checks).filter(([, ok]) => !ok);

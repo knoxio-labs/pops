@@ -8,22 +8,27 @@
  * TOML through a real parser.
  *
  * The split only holds while somebody can say which job is which. Nobody can,
- * by reading — the tier of a job is a property of the transitive import closure
+ * by reading: the tier of a job is a property of the transitive import closure
  * of every script it runs, and one `import { load } from 'js-yaml'` three files
  * deep moves it. Left to review, the failure is a `MODULE_NOT_FOUND` inside a
- * REQUIRED check: not a red build on the PR that caused it, a red build on
+ * REQUIRED check — not a red build on the PR that caused it, a red build on
  * every PR afterwards.
  *
- * So the tier is derived here, from the workflows and the import graph, rather
- * than declared anywhere.
+ * So the tier is not declared anywhere. It is DERIVED, and by the only method
+ * that cannot be fooled: every Tier A guard is loaded for real, in a copy of
+ * `scripts/` with no `node_modules` anywhere above it. A static import scan
+ * would have to model multi-line imports, dynamic imports, and the import
+ * statements these guards embed inside self-test fixture strings; loading the
+ * module asks Node the same question CI asks it.
  */
 
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
-import { isBuiltin } from 'node:module';
-import { dirname, join, relative, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { execFileSync } from 'node:child_process';
+import { cpSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { isMapping, parseYaml, scalarText, walkMappings } from '../config-parse.mjs';
 
@@ -36,6 +41,9 @@ const INSTALLS = /\bpnpm\s+(?:install|i)\b/u;
 
 /** `node path/to/guard.mjs` inside a `run:` block, however many per block. */
 const NODE_INVOCATION = /\bnode\s+(scripts\/[\w./-]+\.mjs)/gu;
+
+/** Node's two ways of saying "that bare specifier is not on disk". */
+const UNRESOLVED = /ERR_MODULE_NOT_FOUND|Cannot find package|Cannot find module/u;
 
 interface GuardJob {
   workflow: string;
@@ -56,8 +64,8 @@ function workflowFiles(): string[] {
  *
  * `installs` is per JOB rather than per step: GitHub runs a job's steps in
  * order in one workspace, and every install in this repo sits above the guards
- * it serves. A job that installs after its guards would be a different bug, and
- * one no `node_modules`-less run could hide.
+ * it serves. A job that installed AFTER its guards would be a different bug,
+ * and not one a `node_modules`-less run could hide.
  */
 function guardJobs(): GuardJob[] {
   const jobs: GuardJob[] = [];
@@ -73,56 +81,64 @@ function guardJobs(): GuardJob[] {
         const run = scalarText(entry.value);
         if (run === undefined) continue;
         if (INSTALLS.test(run)) installs = true;
-        for (const match of run.matchAll(NODE_INVOCATION)) scripts.add(match[1]);
+        for (const [, script] of run.matchAll(NODE_INVOCATION)) {
+          if (script !== undefined) scripts.add(script);
+        }
       }
-      if (scripts.size > 0) jobs.push({ workflow: file, job: name, installs, scripts: [...scripts] });
+      if (scripts.size > 0) {
+        jobs.push({ workflow: file, job: name, installs, scripts: [...scripts] });
+      }
     }
   }
   return jobs;
 }
 
-/**
- * A static ESM import, anchored to the start of its line.
- *
- * `import-scan.mjs` is not used here: it is deliberately permissive so it can
- * catch a pillar reach-behind anywhere in a file, and these guards embed import
- * STATEMENTS inside self-test fixture strings (`"// import { m } from
- * '@pops/app-beta';"`). Counting one of those as a real dependency would
- * declare a healthy Tier A job broken, and the pressure would then be to relax
- * the rule rather than fix the job. Every real import in `scripts/**` begins
- * its own line; `importFloor` below fails if that ever stops being true.
- */
-const IMPORT_LINE = /^[ \t]*(?:import|export)\b[^'"\n]*?['"]([^'"\n]+)['"]/gmu;
-
-/**
- * Every third-party module specifier reachable from `entry` by following
- * relative imports. Node builtins do not count — they are on disk before the
- * checkout is.
- */
-function thirdPartyClosure(entry: string): string[] {
-  const seen = new Set<string>();
-  const bare = new Set<string>();
-  const queue = [resolve(repoRoot, entry)];
-  while (queue.length > 0) {
-    const file = queue.pop() as string;
-    if (seen.has(file) || !existsSync(file)) continue;
-    seen.add(file);
-    for (const match of readFileSync(file, 'utf8').matchAll(IMPORT_LINE)) {
-      const specifier = match[1];
-      if (specifier.startsWith('node:') || isBuiltin(specifier)) continue;
-      if (specifier.startsWith('.')) {
-        queue.push(resolve(dirname(file), specifier));
-        continue;
-      }
-      bare.add(specifier);
-    }
-  }
-  return [...bare].toSorted((a, b) => a.localeCompare(b));
-}
-
 const jobs = guardJobs();
 const tierA = jobs.filter((j) => !j.installs);
 const tierB = jobs.filter((j) => j.installs);
+
+/** A copy of `scripts/` with no `node_modules` above it — the Tier A runtime. */
+let sandbox: string;
+
+beforeAll(() => {
+  sandbox = mkdtempSync(join(tmpdir(), 'guard-tier-'));
+  cpSync(join(repoRoot, 'scripts'), join(sandbox, 'scripts'), { recursive: true });
+});
+
+afterAll(() => rmSync(sandbox, { recursive: true, force: true }));
+
+/**
+ * Load a guard's module graph with no `node_modules` reachable, and report what
+ * Node could not resolve.
+ *
+ * `process.argv[1]` is undefined under `node -e`, so every guard's
+ * `import.meta.url === process.argv[1]` entry check is false and `main()` does
+ * not run — this resolves the imports and stops. The one guard that calls its
+ * entry point unconditionally executes against an empty tree and reports
+ * violations, which is read-only and not what this looks at.
+ */
+function loadWithoutNodeModules(script: string): string {
+  const target = pathToFileURL(join(sandbox, script)).href;
+  try {
+    execFileSync(
+      process.execPath,
+      ['--input-type=module', '-e', `await import(${JSON.stringify(target)});`],
+      {
+        cwd: sandbox,
+        encoding: 'utf8',
+        stdio: 'pipe',
+        timeout: 60_000,
+        env: { ...process.env, NODE_PATH: '' },
+      }
+    );
+    return '';
+  } catch (error) {
+    const stderr = (error as { stderr?: string }).stderr ?? '';
+    return UNRESOLVED.test(stderr)
+      ? (stderr.split('\n').find((l) => UNRESOLVED.test(l)) ?? stderr)
+      : '';
+  }
+}
 
 describe('guard-job discovery', () => {
   // A derived invariant is only as good as its discovery: parse the workflows
@@ -151,51 +167,40 @@ describe('guard-job discovery', () => {
     expect(all).toContain('scripts/ci/smoke-image.mjs');
     expect(all).toContain('scripts/check-bundle-map-coverage.mjs');
   });
+});
 
-  // The import floor. A closure walker that has stopped seeing imports reports
-  // every job as dependency-free, which is the Tier A assertion passing for the
-  // one reason it must never pass.
-  it('still sees the imports it is built to find, direct and transitive', () => {
-    expect(thirdPartyClosure('scripts/ci/smoke-image.mjs')).toContain('js-yaml');
-    expect(thirdPartyClosure('scripts/ci/check-homelab-service-isolation.mjs')).toContain(
-      'js-yaml'
-    );
-    // Two hops: check-cargo-deps -> ../ci/config-parse.mjs -> smol-toml.
-    expect(thirdPartyClosure('scripts/extractability/check-cargo-deps.mjs')).toContain(
-      'smol-toml'
-    );
+describe('the sandbox really has no node_modules', () => {
+  // Without this the Tier A suite below passes for the one reason it must never
+  // pass: a sandbox that can still resolve `js-yaml` says every guard is fine.
+  it('cannot load a guard that imports a parser', () => {
+    expect(loadWithoutNodeModules('scripts/ci/smoke-image.mjs')).toMatch(UNRESOLVED);
   });
 
-  it('does not mistake an import statement inside a fixture string for a dependency', () => {
-    // scripts/check-bundle-map-coverage.mjs self-tests against fixture source
-    // that contains `import … from '@pops/app-beta'`. It is a string, not an
-    // edge, and reading it as one would misfile a healthy Tier A job.
-    expect(thirdPartyClosure('scripts/check-bundle-map-coverage.mjs')).toEqual([]);
+  it('cannot load config-parse.mjs itself', () => {
+    expect(loadWithoutNodeModules('scripts/ci/config-parse.mjs')).toMatch(UNRESOLVED);
   });
 });
 
 describe('Tier A — an install-free job may not reach a third-party import', () => {
   it.each(tierA.map((j) => [`${j.workflow} → ${j.job}`, j] as const))('%s', (_label, job) => {
     for (const script of job.scripts) {
-      const bare = thirdPartyClosure(script);
       expect(
-        bare,
-        `${job.workflow} job "${job.job}" runs ${script} with no \`pnpm install\`, but that ` +
-          `script's import closure reaches ${bare.join(', ')}. There is no node_modules on ` +
-          'disk when it executes, so this is a MODULE_NOT_FOUND inside a required check — ' +
-          'and not only on the PR that introduced it. Either drop the dependency or move ' +
-          'the job to Tier B by adding pnpm/action-setup + `pnpm install --frozen-lockfile` ' +
-          '(see docs/architecture/adr-045-guards-must-prove-they-report.md).'
-      ).toEqual([]);
+        loadWithoutNodeModules(script),
+        `${job.workflow} job "${job.job}" runs ${script} with no \`pnpm install\`, but the ` +
+          'script does not load without node_modules. That is a MODULE_NOT_FOUND inside a ' +
+          'required check, and not only on the PR that introduced it. Either drop the ' +
+          'dependency or move the job to Tier B by adding pnpm/action-setup + ' +
+          '`pnpm install --frozen-lockfile` (see ' +
+          'docs/architecture/adr-045-guards-must-prove-they-report.md).'
+      ).toBe('');
     }
   });
 });
 
 describe('Tier B — a job whose guards need a parser keeps its install', () => {
-  // Stated as an explicit roster rather than derived, so DELETING the install
-  // from one of these jobs fails here instead of quietly demoting it. The
-  // derived half above cannot see that: a job with no install and no
-  // third-party import is a legitimate Tier A job.
+  // An explicit roster, so DELETING an install fails here rather than quietly
+  // demoting the job. The derived half above cannot see that: a job with no
+  // install and no third-party import is a legitimate Tier A job.
   const REQUIRED_INSTALLS: ReadonlyArray<readonly [string, string]> = [
     ['agent-review.yml', 'agent-review'],
     ['rust-quality.yml', 'quality'],
@@ -212,34 +217,21 @@ describe('Tier B — a job whose guards need a parser keeps its install', () => 
     ).toBe(true);
   });
 
-  it('each of those jobs really does reach a parser', () => {
-    for (const [workflow, job] of REQUIRED_INSTALLS) {
-      const found = jobs.find((j) => j.workflow === workflow && j.job === job);
-      const bare = (found?.scripts ?? []).flatMap((s) => thirdPartyClosure(s));
-      expect(
-        bare,
-        `${workflow} job "${job}" is on the Tier B roster but none of its guards imports ` +
-          'anything from node_modules. Either it belongs in Tier A now, or the roster is stale.'
-      ).not.toEqual([]);
-    }
+  it.each(REQUIRED_INSTALLS)('%s → %s really does reach a parser', (workflow, job) => {
+    const found = jobs.find((j) => j.workflow === workflow && j.job === job);
+    const unresolved = (found?.scripts ?? []).map((s) => loadWithoutNodeModules(s)).filter(Boolean);
+    expect(
+      unresolved,
+      `${workflow} job "${job}" is on the Tier B roster but every one of its guards loads ` +
+        'without node_modules. Either it belongs in Tier A now, or the roster is stale.'
+    ).not.toEqual([]);
   });
 });
 
-describe('the parser module is only reachable from Tier B', () => {
-  it('is imported by at least one guard, and by no Tier A guard', () => {
-    const importers = jobs
-      .flatMap((j) => j.scripts.map((s) => ({ job: j, script: s })))
-      .filter(({ script }) => thirdPartyClosure(script).length > 0);
-    expect(importers.length).toBeGreaterThan(0);
-    expect(importers.filter(({ job }) => !job.installs).map(({ job, script }) =>
-      `${job.workflow}:${job.job}:${script}`
-    )).toEqual([]);
-  });
-
-  it('config-parse.mjs is not itself referenced by a workflow as a guard', () => {
-    // It is a library, not a check. A workflow running it directly would report
-    // nothing and pass, which is the shape ADR-045 exists to end.
-    const all = new Set(jobs.flatMap((j) => j.scripts));
-    expect(all).not.toContain(relative(repoRoot, join(here, '..', 'config-parse.mjs')));
+describe('config-parse.mjs is a library, not a check', () => {
+  it('is never invoked by a workflow as a guard', () => {
+    // Running it would report nothing and exit 0, which is the shape ADR-045
+    // exists to end.
+    expect(new Set(jobs.flatMap((j) => j.scripts))).not.toContain('scripts/ci/config-parse.mjs');
   });
 });

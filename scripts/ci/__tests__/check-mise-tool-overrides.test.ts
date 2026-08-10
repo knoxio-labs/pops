@@ -142,7 +142,10 @@ describe('checkOverrides — degenerate tree (ADR-045)', () => {
   it('reports a unit whose own mise.toml does not parse rather than skipping it', () => {
     const root = mkdtempSync(join(tmpdir(), 'mise-overrides-badunit-'));
     try {
-      writeFileSync(join(root, 'mise.toml'), '[tools]\nnode = "24"\npnpm = "10"\nrust = "stable"\n');
+      writeFileSync(
+        join(root, 'mise.toml'),
+        '[tools]\nnode = "24"\npnpm = "10"\nrust = "stable"\n'
+      );
       mkdirSync(join(root, 'pillars', 'finance'), { recursive: true });
       mkdirSync(join(root, 'libs'), { recursive: true });
       writeFileSync(join(root, 'pillars', 'finance', 'mise.toml'), '[tools\nnode = "22"\n');

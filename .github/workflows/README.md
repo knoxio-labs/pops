@@ -65,27 +65,33 @@ blind to an inline value or a trailing comment — including the
 path filter added to `Quality` that way would have slipped straight past. Green
 from a check that was never made to fail is not evidence.
 
-Concretely, when matching YAML by text here: **never anchor a key match on
-end-of-line.** `key:`, `key: value` and `key: value # note` are all the same
-declaration, and a matcher that only accepts the first silently matches nothing
-and reports success. `matchKey` in the wiring guard is the single place that
-rule lives; route new checks through it rather than writing another regex.
+Concretely: **do not match workflow YAML by text.** `key:`, `key: value`,
+`key: value # note` and `on: { key: value }` are all the same declaration, and a
+matcher written against one of them silently matches nothing and reports
+success — that is how three separate fixes to the wiring guard each closed one
+spelling and left the next. The guard now parses with `js-yaml` and walks the
+document, so the spellings collapse before it looks at them. What it still
+matches textually is the `gated` array and the two `checks.create` invariants,
+because those live in the embedded `github-script` body — JavaScript inside a
+YAML scalar, which the parser hands over exactly.
 
 `scripts/ci/check-ci-gate-wiring.mjs` asserts the rules above, plus the
 trigger/`gated` agreement and that every gated name still resolves to a real
-workflow. It runs in `quality.yml`'s `Scripts tests` job.
+workflow. It runs in `quality.yml`'s `Scripts tests` job, which installs the
+workspace — see the tier amendment in
+[ADR-045](../../docs/architecture/adr-045-guards-must-prove-they-report.md) for
+which guard jobs may import a parser and which may not.
 
 ### Current state of the ruleset
 
 The `main` branch ruleset requires `agent-review`, `Lint`, `Format`,
-`Module boundaries` and `Duplication check`. **`CI Gate` is not among them**, so
-today it reports on the PR but does not block it — typecheck, test, build,
-clippy, exports, extractability, bundle-map, drift and the Docker image smoke
-are all still advisory in the ruleset's eyes. Adding `CI Gate` to the required
-contexts is a repository setting, not a change to this repo, and it is safe only
-while `Quality` stays gated and unfiltered (that is what guarantees the context
-reports on every PR, docs-only ones included — a required context that never
-reports blocks its PR forever).
+`Module boundaries`, `Duplication check` **and `CI Gate`** — so every typecheck,
+test, build, clippy, exports, extractability, bundle-map, drift and Docker
+image-smoke job now blocks a merge through that one aggregated context, even
+though none of them is listed by name. That only stays safe while `Quality`
+stays gated and unfiltered: it is what guarantees the context reports on every
+PR, docs-only ones included, and a required context that never reports blocks
+its PR forever.
 
 ## `_discover-units.yml`
 

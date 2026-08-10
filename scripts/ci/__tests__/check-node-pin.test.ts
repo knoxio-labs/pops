@@ -99,7 +99,8 @@ describe('collectWorkflowPins', () => {
 
   it('finds a pin written as a flow mapping, which a line matcher stepped past', () => {
     const flow = makeFixture({
-      workflow: 'jobs:\n  a:\n    steps:\n      - { uses: setup-node, with: { node-version: 24 } }\n',
+      workflow:
+        'jobs:\n  a:\n    steps:\n      - { uses: setup-node, with: { node-version: 24 } }\n',
     });
     try {
       expect(collectWorkflowPins(flow).pins.map((pin) => pin.expression)).toEqual(['24']);
