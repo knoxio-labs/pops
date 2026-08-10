@@ -490,11 +490,11 @@ run = "mise run swift-format format"
 # SwiftLint's analyzer rules (`unused_declaration`, `unused_import`) need a
 # full compiler log, which `swiftlint lint` never produces — that is why they
 # live here and not in `lint` above. Separate task, separate cost: this builds
-# the whole app, and every package a second time, from clean, which `lint`
-# deliberately never does.
+# the whole tree a second time, from clean, which `lint` deliberately never
+# does.
 #
-# Every build below is clean rather than reusing whatever an earlier task left
-# behind, on purpose. An incremental rebuild only logs the files it actually
+# The build is clean rather than reusing whatever an earlier task left behind,
+# on purpose. An incremental rebuild only logs the files it actually
 # recompiled — a rebuild with nothing to do logs none of them, and one that
 # only touched a single file logs just that one. Either way `swiftlint
 # analyze` reads a log that is real but incomplete, and reports "0 violations"
@@ -504,38 +504,21 @@ run = "mise run swift-format format"
 # runner is a GitHub-hosted mac with no minute cap on this public repo — so it
 # is not a cost worth trading correctness for.
 #
-# The `xcodebuild` log alone is not the whole tree, which is the same bug one
-# level out: `Pops` depends on every package for its library product, so
-# building the app compiles each package's `Sources/` — but a package's
-# `Tests/` belongs to that package's own SwiftPM graph, not to anything the
-# Xcode scheme references, so no app build ever asks a compiler to look at
-# one. `.swiftlint.yml`'s `included:` names `Packages` whole and `swiftlint
-# lint` already checks those test files, so the two tools disagreed about
-# scope, silently, until a reviewer caught what analyze could not.
+# One `xcodebuild` covers the whole tree because the `Pops` scheme's test
+# action names every package's test target as well as `PopsTests` — the same
+# property `[tasks.test]` above is built on. That was not always true: a
+# package's `Tests/` belongs to that package's own SwiftPM graph, and while the
+# scheme referenced none of them no app build ever asked a compiler to look at
+# one, so `swiftlint lint` and `swiftlint analyze` disagreed about scope in
+# silence. The stopgap was a `swift build --build-tests` per package appended
+# to this log; with the scheme naming them it is dead weight — a second, host-
+# toolchain compile of code `build-for-testing` has already compiled against
+# the iOS SDK, which is the better of the two logs to be reading anyway.
 #
-# The fix appends a `swift build --build-tests` per package with a `Tests/`
-# directory — same guard as `test:packages` above — to the same log the app
-# build wrote. The alternative was adding each package's test target as a
-# testable of the `Pops` scheme, which would fold into a single `xcodebuild`
-# log and needed no `swiftlint analyze` change at all — but it means editing
-# `project.yml`'s scheme and, by extension, what `mise run test` iterates
-# over, which is `[tasks.test]`'s surface, not this task's. Reaching for
-# `swift build` instead keeps this fix inside `lint:analyze` alone.
-#
-# Each package build gets its own scratch path under this run's `$work`,
-# never the package's own `.build`. That is the same "clean every time"
-# argument above, extended: a package `.build` a developer left behind from
-# `mise run build:packages` or `test:packages` is exactly the incremental
-# cache that would make this run's log incomplete again, and reusing it here
-# would also mean this task quietly clobbering another task's cache. Building
-# for the host rather than the iOS SDK — like `build:packages` — is
-# deliberately fine for these two rules specifically: `unused_import` is a
-# single-file check, and `unused_declaration` at this file's
-# `include_public_and_open: false` only ever flags `private`/`internal`
-# declarations, which by construction cannot be referenced from outside their
-# own module, so a package's own build already knows everything relevant to
-# judging its own private surface, regardless of which platform or app it is
-# eventually linked into.
+# Nothing about that is taken on trust. The floor below counts the tree on
+# disk and refuses a log that covers less of it, so a scheme that stops
+# naming a test target fails here rather than quietly narrowing what these
+# two rules see.
 [tasks."lint:analyze"]
 description = "SwiftLint's analyzer rules against a fresh compiler log (unused_declaration, unused_import)"
 depends = ["generate", "verify:xcode-version"]
@@ -547,21 +530,15 @@ work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 log="$work/compiler.log"
 
-# `build-for-testing`, not `build`: a plain build only compiles the `Pops`
-# target, which leaves `AppTests` — part of `SWIFT_SOURCES`, and linted by
-# `swiftlint lint` already — outside the log `swiftlint analyze` reads. This
-# compiles `PopsTests` too, without running anything in it.
+# `build-for-testing`, not `build`: a plain build compiles only what the
+# scheme's build action names, which is the `Pops` target alone. That leaves
+# every test target — `AppTests` and each package's `Tests/`, all of them part
+# of `SWIFT_SOURCES` and linted by `swiftlint lint` already — outside the log
+# `swiftlint analyze` reads. The test action names them, so this compiles them
+# without running anything in them.
 xcodebuild -project Pops.xcodeproj -scheme Pops \
   -destination 'generic/platform=iOS Simulator' \
   clean build-for-testing | tee "$log"
-
-for package in Packages/*/; do
-  # Same guard as `test:packages`: a package whose tests are still a later
-  # ticket has nothing for `--build-tests` to build.
-  [ -d "$package/Tests" ] || continue
-  swift build --package-path "$package" --build-tests --verbose \
-    --scratch-path "$work/spm/$(basename "${package%/}")" | tee -a "$log"
-done
 
 status=0
 output=$(swiftlint analyze --strict --compiler-log-path "$log" --config .swiftlint.yml 2>&1) || status=$?
