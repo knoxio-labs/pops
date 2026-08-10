@@ -51,7 +51,18 @@ public final class TransactionsListViewModel {
     /// every time the view reappears.
     private var hasLoaded = false
 
-    private var isFetchingPage = false
+    /// Re-entrancy protection for the **first** page only, which is the one
+    /// request with no other state standing in for it: two `.task` invocations
+    /// both find `hasLoaded` false and would both fetch.
+    ///
+    /// A next page needs no equivalent, and must not have one. ``paging`` is
+    /// already the mutex there — `fetchNextPage()` writes `.loading` before its
+    /// first `await`, and on this actor nothing interleaves between the caller's
+    /// guard and that write. A second flag would additionally outlive a fetch a
+    /// refresh superseded, so a stale request stuck on a slow connection — the
+    /// reason somebody pulled to refresh in the first place — would stop the
+    /// refreshed list paging until it finally answered.
+    private var isLoadingFirstPage = false
     private var isRefreshing = false
 
     /// Bumped by every refresh, so an older in-flight fetch can recognise that
@@ -74,11 +85,11 @@ extension TransactionsListViewModel {
     /// error state's retry calls, rather than a second entry point that would
     /// have to keep the same guards.
     public func loadFirstPage() async {
-        guard !hasLoaded, !isFetchingPage, !isRefreshing else { return }
+        guard !hasLoaded, !isLoadingFirstPage, !isRefreshing else { return }
 
         state = .loading
-        isFetchingPage = true
-        defer { isFetchingPage = false }
+        isLoadingFirstPage = true
+        defer { isLoadingFirstPage = false }
 
         let epoch = generation
         do {
@@ -159,12 +170,13 @@ extension TransactionsListViewModel {
 }
 
 extension TransactionsListViewModel {
+    /// - Note: `paging` is this method's own mutex, written before the first
+    ///   `await`, so every caller's guard on it is still true when this runs.
+    ///   Nothing else may gate a next page — see ``isLoadingFirstPage``.
     private func fetchNextPage() async {
-        guard hasLoaded, !isFetchingPage, !isRefreshing, let cursor else { return }
+        guard hasLoaded, !isRefreshing, let cursor else { return }
 
-        isFetchingPage = true
         paging = .loading
-        defer { isFetchingPage = false }
 
         let epoch = generation
         do {

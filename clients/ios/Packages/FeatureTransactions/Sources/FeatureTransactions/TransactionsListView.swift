@@ -130,7 +130,12 @@ extension TransactionsListView {
                 .foregroundStyle(Color.popsMutedForeground)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, PopsSpacing.lg)
-                .onAppear { Task { await model.loadNextPageIfNeeded() } }
+                // `.task` rather than `.onAppear` with a `Task` inside it: an
+                // unstructured task is not tied to this view's lifetime, so
+                // scrolling away or navigating out leaves the fetch running and
+                // the view model's cancellation handling with nothing to react
+                // to. Same trigger, cancelled when the footer goes away.
+                .task { await model.loadNextPageIfNeeded() }
         case .failed(let error):
             failedFooter(error)
         }

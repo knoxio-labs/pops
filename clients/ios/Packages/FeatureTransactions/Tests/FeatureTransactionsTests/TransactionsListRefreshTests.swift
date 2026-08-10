@@ -4,8 +4,11 @@ import Testing
 
 @testable import FeatureTransactions
 
-/// Pull-to-refresh: what it resets, what it keeps, and what it does to a
-/// request that was already in the air when the gesture happened.
+/// Pull-to-refresh: what it resets, what it keeps, and what it reports.
+///
+/// What it does to a request that was already in the air is next door in
+/// `TransactionsListRaceTests` — a different question, and one that needs the
+/// gated repository for every case rather than only some.
 @MainActor
 @Suite("Transactions refresh")
 internal struct TransactionsListRefreshTests {
@@ -44,61 +47,6 @@ internal struct TransactionsListRefreshTests {
         await model.refresh()
 
         #expect(await repository.requestedCursors == [nil, nil])
-    }
-
-    /// The failure this is really about: a page request already in flight when
-    /// the gesture lands. Its answer is for a list that no longer exists, and
-    /// appending it would put rows from before the refresh underneath rows from
-    /// after it.
-    @Test("a page fetch that lands after a refresh does not merge itself back in")
-    func aSupersededPageIsDiscarded() async {
-        let stale = Transaction.fake(id: "stale-1", description: "From before the refresh")
-        let repository = ScriptedTransactionsRepository(
-            script: [
-                .page(Transaction.fakes(count: 2), next: "cursor-1"),
-                .page([stale], next: "cursor-2"),
-                .page([Transaction.fake(id: "fresh-1")], next: nil),
-            ],
-            gating: [2]
-        )
-        let model = model(repository)
-        await model.loadFirstPage()
-
-        let paging = Task { await model.loadNextPageIfNeeded() }
-        await repository.waitUntilCalled(2)
-        await model.refresh()
-        await repository.release()
-        await paging.value
-
-        #expect(model.state == .loaded([Transaction.fake(id: "fresh-1")]))
-        #expect(model.paging == .exhausted)
-    }
-
-    /// The same race, with the refresh failing. The superseded fetch is not
-    /// coming back to clear the `.loading` it set, so the refresh has to — or
-    /// the footer spins for the rest of the session and no later page is ever
-    /// requested.
-    @Test("a failed refresh does not strand the footer on loading")
-    func aFailedRefreshSettlesPaging() async {
-        let repository = ScriptedTransactionsRepository(
-            script: [
-                .page(Transaction.fakes(count: 2), next: "cursor-1"),
-                .page([Transaction.fake(id: "stale-1")], next: "cursor-2"),
-                .failing(RepositoryError.unavailable),
-            ],
-            gating: [2]
-        )
-        let model = model(repository)
-        await model.loadFirstPage()
-
-        let paging = Task { await model.loadNextPageIfNeeded() }
-        await repository.waitUntilCalled(2)
-        await model.refresh()
-        await repository.release()
-        await paging.value
-
-        #expect(model.refreshFailure == .unavailable)
-        #expect(model.paging == .idle)
     }
 
     /// A refresh is an offer to re-check, not a demand. Answering a failed one
@@ -164,30 +112,6 @@ internal struct TransactionsListRefreshTests {
         #expect(model.refreshFailure == .unavailable)
     }
 
-    /// Two pulls before the first answers is one gesture repeated, not two
-    /// lists to fetch.
-    @Test("a second refresh while one is in flight is dropped")
-    func refreshIsNotReentrant() async {
-        let repository = ScriptedTransactionsRepository(
-            script: [
-                .page(Transaction.fakes(count: 2), next: nil),
-                .page([Transaction.fake(id: "fresh-1")], next: nil),
-            ],
-            gating: [2]
-        )
-        let model = model(repository)
-        await model.loadFirstPage()
-
-        let first = Task { await model.refresh() }
-        await repository.waitUntilCalled(2)
-        await model.refresh()
-        await repository.release()
-        await first.value
-
-        #expect(await repository.callCount == 2)
-        #expect(model.state == .loaded([Transaction.fake(id: "fresh-1")]))
-    }
-
     /// A failed tail is waiting for a tap, and some *other* request failing is
     /// not that tap.
     ///
@@ -216,34 +140,6 @@ internal struct TransactionsListRefreshTests {
         // The half that costs money: the footer must still be inert.
         await model.loadNextPageIfNeeded()
         #expect(await repository.callCount == 3)
-    }
-
-    /// The same, for the other route into `settlePagingIfLoading` — a refresh
-    /// the reader abandoned must not quietly hand the tail back to the scroll
-    /// position either.
-    @Test("a cancelled refresh does not re-arm a failed tail")
-    func aCancelledRefreshLeavesTheFailedTailAlone() async {
-        let repository = ScriptedTransactionsRepository(
-            script: [
-                .page(Transaction.fakes(count: 2), next: "cursor-1"),
-                .failing(RepositoryError.unavailable),
-                .failing(RepositoryError.transport("abandoned")),
-            ],
-            gating: [3]
-        )
-        let model = model(repository)
-        await model.loadFirstPage()
-        await model.loadNextPageIfNeeded()
-        #expect(model.paging == .failed(.unavailable))
-
-        let abandoned = Task { await model.refresh() }
-        await repository.waitUntilCalled(3)
-        abandoned.cancel()
-        await repository.release()
-        await abandoned.value
-
-        #expect(model.paging == .failed(.unavailable))
-        #expect(model.refreshFailure == nil)
     }
 
     /// The other side of the rule, and the reason it is not simply "never touch
