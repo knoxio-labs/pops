@@ -186,7 +186,7 @@ export function dataMountsForDockerfile(composeText, dockerfilePath) {
   const wanted = normalizeDockerfilePath(dockerfilePath);
   /** @type {Set<string>} */
   const targets = new Set();
-  for (const [name, service] of Object.entries(compose.services ?? {})) {
+  for (const [name, service] of Object.entries(compose.services)) {
     const build = service?.build;
     if (build === undefined) continue;
     const declared = typeof build === 'string' ? undefined : build.dockerfile;

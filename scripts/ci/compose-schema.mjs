@@ -44,7 +44,13 @@ export const ComposeServiceSchema = z
   })
   .nullable();
 
-/** A Compose manifest: only the `services:` map matters here. */
+/**
+ * A Compose manifest: only the `services:` map matters here. Required rather
+ * than optional — every real Compose file declares one, so a document that
+ * does not (an empty or malformed `infra/docker-compose.yml`) should fail
+ * loudly here rather than parse to `{ services: undefined }` and let a guard
+ * read that as zero services and pass.
+ */
 export const ComposeFileSchema = z.object({
-  services: z.record(z.string(), ComposeServiceSchema).optional(),
+  services: z.record(z.string(), ComposeServiceSchema),
 });

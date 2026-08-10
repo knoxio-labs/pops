@@ -81,12 +81,19 @@ describe('ComposeServiceSchema', () => {
 });
 
 describe('ComposeFileSchema', () => {
-  it('rejects a document with no services map at all', () => {
+  it('rejects a document whose services value is not a map', () => {
     expect(() => ComposeFileSchema.parse({ services: 'not-a-map' })).toThrow();
   });
 
-  it('accepts a document that declares no services', () => {
-    expect(ComposeFileSchema.parse({})).toEqual({});
+  it('rejects a document with no services key at all, rather than defaulting to zero services', () => {
+    // A guard reading `compose.services ?? {}` off a malformed or empty
+    // infra/docker-compose.yml must not see "zero services" and pass — it
+    // must never get this far, because the parse itself has to fail first.
+    expect(() => ComposeFileSchema.parse({})).toThrow();
+  });
+
+  it('accepts a document whose services map is empty', () => {
+    expect(ComposeFileSchema.parse({ services: {} })).toEqual({ services: {} });
   });
 
   it('parses the real infra/docker-compose.yml without throwing', () => {
@@ -98,7 +105,7 @@ describe('ComposeFileSchema', () => {
     // every field the superset schema models — the proof that combining them
     // is not merely type-level.
     const compose = ComposeFileSchema.parse(parseYaml(productionComposeText));
-    const registryApi = compose.services?.['registry-api'];
+    const registryApi = compose.services['registry-api'];
     expect(registryApi?.build).toBeDefined();
     expect(registryApi?.volumes).toContain('sqlite-data:/data/sqlite');
     expect(registryApi?.environment?.CLOUDFLARE_ACCESS_TEAM_NAME).toBe(
@@ -108,7 +115,7 @@ describe('ComposeFileSchema', () => {
 
   it('reads a published-image-only service, which declares no build', () => {
     const compose = ComposeFileSchema.parse(parseYaml(productionComposeText));
-    const shell = compose.services?.['pops-shell'];
+    const shell = compose.services['pops-shell'];
     expect(shell).toBeDefined();
     expect(shell?.build).toBeUndefined();
     expect(shell?.environment?.POPS_REGISTRY_URL).toBeDefined();

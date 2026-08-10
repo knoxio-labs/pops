@@ -30,7 +30,7 @@ const repoRoot = resolve(here, '..', '..', '..');
 const composePath = join(repoRoot, 'infra', 'docker-compose.yml');
 
 function loadCompose(path: string): z.infer<typeof ComposeFileSchema> {
-  return ComposeFileSchema.parse(load(readFileSync(path, 'utf8')) ?? {});
+  return ComposeFileSchema.parse(load(readFileSync(path, 'utf8')));
 }
 
 const CLOUDFLARE_ACCESS_VARS = ['CLOUDFLARE_ACCESS_TEAM_NAME', 'CLOUDFLARE_ACCESS_AUD'];
@@ -41,7 +41,7 @@ describe('infra/docker-compose.yml Cloudflare Access wiring', () => {
   it.each(['registry-api', 'bfm-api'])(
     '%s forwards CLOUDFLARE_ACCESS_TEAM_NAME and CLOUDFLARE_ACCESS_AUD from the host environment',
     (serviceName) => {
-      const service = compose.services?.[serviceName];
+      const service = compose.services[serviceName];
       expect(service, `${serviceName} must be declared in infra/docker-compose.yml`).toBeDefined();
 
       const env = service?.environment ?? {};
@@ -56,8 +56,8 @@ describe('infra/docker-compose.yml Cloudflare Access wiring', () => {
   );
 
   it("forwards each variable with compose's default-to-empty substitution, matching bfm-api's style", () => {
-    const registryEnv = compose.services?.['registry-api']?.environment ?? {};
-    const bfmEnv = compose.services?.['bfm-api']?.environment ?? {};
+    const registryEnv = compose.services['registry-api']?.environment ?? {};
+    const bfmEnv = compose.services['bfm-api']?.environment ?? {};
 
     for (const key of CLOUDFLARE_ACCESS_VARS) {
       expect(registryEnv[key]).toBe(`\${${key}:-}`);
