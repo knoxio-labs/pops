@@ -20,21 +20,14 @@ import { fileURLToPath } from 'node:url';
 
 import { load } from 'js-yaml';
 import { describe, expect, it } from 'vitest';
-import { z } from 'zod';
+
+import { ComposeFileSchema } from '../compose-schema.mjs';
+
+import type { z } from 'zod';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..', '..');
 const composePath = join(repoRoot, 'infra', 'docker-compose.yml');
-
-const ComposeServiceSchema = z
-  .object({
-    environment: z.record(z.string(), z.unknown()).optional(),
-  })
-  .nullable();
-
-const ComposeFileSchema = z.object({
-  services: z.record(z.string(), ComposeServiceSchema).optional(),
-});
 
 function loadCompose(path: string): z.infer<typeof ComposeFileSchema> {
   return ComposeFileSchema.parse(load(readFileSync(path, 'utf8')) ?? {});
