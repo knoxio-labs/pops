@@ -1,5 +1,13 @@
 name: CI Gate
 
+# The run's own title, not just its default "CI Gate" / event summary — see
+# the RUN LIST VS CHECK RUN paragraph below for why a `workflow_run` run needs
+# one.
+run-name: >-
+  CI Gate for ${{ github.event.workflow_run.head_sha }} on branch
+  ${{ github.event.workflow_run.head_branch }} (via ${{ github.event.workflow_run.name }}:
+  ${{ github.event.workflow_run.conclusion }})
+
 # Single static-named aggregate over the quality workflows whose own jobs carry
 # DYNAMIC matrix names (`finance (pillar) — ts`, `@pops/app-food`, …) and so
 # cannot be listed individually in the branch ruleset. Alongside Lint / Format /
@@ -25,6 +33,21 @@ name: CI Gate
 # against the observed head SHA. That context lands on the pull request, and is
 # the one the branch ruleset can list. The job itself is named differently so
 # its implicit check run on main's tip can never be mistaken for the verdict.
+#
+# RUN LIST VS CHECK RUN: the paragraph above fixes where the VERDICT is
+# published. It does not fix where THIS RUN is filed. `gh run list` / the
+# Actions UI always attribute a `workflow_run` run to the default branch's
+# tip, regardless of which commit `github.event.workflow_run.head_sha` names —
+# so a run that fails while evaluating an unrelated PR branch still shows up
+# as a red `CI Gate` on `main`'s run list, with no visible link to the branch
+# it actually judged. `run-name` above states the evaluated SHA and branch in
+# the run's own title so that mismatch is visible without opening the log;
+# `core.setFailed` below is kept so a genuine failure still sorts to the top
+# of the list as red, but the run's status describes the commit named in its
+# title, never the branch column beside it. To read a commit's real gate
+# state, query the check run directly, never the run list:
+#   gh api repos/knoxio-labs/pops/commits/<sha>/check-runs \
+#     --jq '.check_runs[] | select(.name=="CI Gate")'
 #
 # ALWAYS REPORTS: `Quality` is gated and `quality.yml` carries no path filter,
 # so it runs on EVERY pull request — including docs-only ones. That is what
