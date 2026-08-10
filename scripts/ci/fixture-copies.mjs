@@ -96,6 +96,18 @@ export function checkCopies(copies, canonicalPath, read, validate) {
   /** @type {Map<string, string>} */
   const texts = new Map();
 
+  // A canonical path that is not one of the copies leaves the comparison below
+  // with nothing to compare against, and it does so through the same
+  // `texts.get() === undefined` that means "the canonical copy is absent from
+  // disk". That one is already reported; this one is a guard wired up wrong,
+  // and without this it would pass having compared nothing.
+  if (!copies.some((copy) => copy.path === canonicalPath)) {
+    failures.push(
+      `${canonicalPath}: named as the canonical copy but not one of the ` +
+        `${String(copies.length)} declared — nothing would be compared against it`
+    );
+  }
+
   for (const { role, path } of copies) {
     const text = read(path);
     if (text === null) {
@@ -189,6 +201,13 @@ export function selfTestCopyHandling(copies, canonicalPath, valid, validate) {
         readerOver(new Map([[canonicalPath, validText]])),
         validate
       ),
+    ],
+    // Not a state of the files — a state of the wiring, and the one that fails
+    // green: with nothing to compare against, every copy still validates on its
+    // own and the guard reports success having compared nothing.
+    [
+      'the canonical path is not one of the declared copies',
+      checkCopies(copies, 'not/a/declared/copy.json', readerOver(identical), validate),
     ],
   ];
 

@@ -93,6 +93,32 @@ describe('checkCopies', () => {
       'not parseable as JSON'
     );
   });
+
+  it('refuses a canonical path that is not one of the copies', () => {
+    // The false-green: with nothing to compare against, every copy still
+    // validates on its own and the drift half quietly does nothing. It reaches
+    // the same `undefined` an absent canonical copy does, which IS reported —
+    // so without this the two are indistinguishable and one of them passes.
+    const failures = checkCopies(
+      COPIES,
+      'somewhere/else.json',
+      readerOver(allIdentical()),
+      validate
+    ).join('\n');
+
+    expect(failures).toContain('somewhere/else.json');
+    expect(failures).toContain('not one of the 2 declared');
+  });
+
+  it('does not confuse a declared-but-absent canonical copy with a misconfigured one', () => {
+    const files = allIdentical();
+    files.delete(CANONICAL);
+
+    const failures = checkCopies(COPIES, CANONICAL, readerOver(files), validate).join('\n');
+
+    expect(failures).toContain(`${CANONICAL}: missing`);
+    expect(failures).not.toContain('not one of the');
+  });
 });
 
 describe('selfTestCopyHandling', () => {
