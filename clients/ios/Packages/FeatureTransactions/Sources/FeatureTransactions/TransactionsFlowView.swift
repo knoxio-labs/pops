@@ -26,21 +26,28 @@ import SwiftUI
 /// only place in the app that has both halves without a shared cache somebody
 /// would then have to invalidate.
 public struct TransactionsFlowView: View {
-    @State private var list: TransactionsListViewModel
-
-    private let router: Router
-    private let dependencies: AppDependencies
+    /// The list model, the router it sends to, and the dependencies its
+    /// destinations are built from — held as one value, in `@State`, and that
+    /// is not tidiness.
+    ///
+    /// `@State` keeps whatever it was first initialised with, while a stored
+    /// `let` is replaced every time the view is re-created. Split across the
+    /// two, a caller writing `TransactionsFlowView(…, router: Router())` inside
+    /// a parent's body — which every re-render re-evaluates — would leave the
+    /// list sending taps to the router it captured while the `NavigationStack`
+    /// rendered a different, newer one. Taps would land, the path would change,
+    /// and the screen would not move: a failure with no error and nothing to
+    /// see. Holding the three together makes that unrepresentable rather than
+    /// merely unlikely.
+    @State private var flow: TransactionsFlow
 
     public init(dependencies: AppDependencies, router: Router) {
-        _list = State(
-            wrappedValue: TransactionsListViewModel(dependencies: dependencies, router: router))
-        self.router = router
-        self.dependencies = dependencies
+        _flow = State(wrappedValue: TransactionsFlow(dependencies: dependencies, router: router))
     }
 
     public var body: some View {
-        NavigationStack(path: router.stackPath) {
-            TransactionsListView(model: list)
+        NavigationStack(path: flow.router.stackPath) {
+            TransactionsListView(model: flow.list)
                 .navigationDestination(for: Route.self, destination: destination)
         }
     }
@@ -52,15 +59,33 @@ public struct TransactionsFlowView: View {
             // nothing pushes it. Resolved anyway rather than left as a blank
             // screen, because a route table that answers some of its cases with
             // nothing fails in the one place nobody is looking.
-            TransactionsListView(model: list)
+            TransactionsListView(model: flow.list)
         case .transactionDetail(let id):
             TransactionDetailView(
                 model: TransactionDetailViewModel(
                     id: id,
-                    seed: list.transaction(id: id),
-                    dependencies: dependencies
+                    seed: flow.list.transaction(id: id),
+                    dependencies: flow.dependencies
                 )
             )
         }
+    }
+}
+
+/// What ``TransactionsFlowView`` captures once and must never hold half of.
+///
+/// A type rather than three `@State` properties seeded from the same `init`,
+/// because three of them can be got wrong one at a time — which is exactly the
+/// defect this exists to close — and one cannot.
+@MainActor
+internal struct TransactionsFlow {
+    internal let list: TransactionsListViewModel
+    internal let router: Router
+    internal let dependencies: AppDependencies
+
+    internal init(dependencies: AppDependencies, router: Router) {
+        self.dependencies = dependencies
+        self.router = router
+        list = TransactionsListViewModel(dependencies: dependencies, router: router)
     }
 }

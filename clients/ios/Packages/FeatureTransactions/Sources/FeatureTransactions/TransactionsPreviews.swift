@@ -13,6 +13,11 @@
         let pages: [TransactionPage]
         let failure: RepositoryError?
         var details: [AppCore.Transaction.ID: TransactionDetail] = [:]
+        /// Never answers a detail fetch, so the canvas holds still on whatever
+        /// was on screen before it. The only way to preview the seeded state:
+        /// an empty `details` map is *not* it — that resolves to "finance no
+        /// longer has this", which is a different screen entirely.
+        var detailNeverAnswers = false
 
         func transactions(after cursor: String?) async throws -> TransactionPage {
             if let failure { throw failure }
@@ -25,6 +30,10 @@
 
         func transactionDetail(id: AppCore.Transaction.ID) async throws -> TransactionDetail? {
             if let failure { throw failure }
+            // Cancellable rather than a continuation nobody resumes: the canvas
+            // going away cancels the `.task`, and the model treats that as the
+            // non-event it is.
+            if detailNeverAnswers { try await Task.sleep(for: .seconds(3600)) }
             return details[id]
         }
     }
@@ -85,12 +94,14 @@
     private func previewRepository(
         pages: [TransactionPage] = [PreviewData.page(nil)],
         failing: RepositoryError? = nil,
-        details: [TransactionDetail] = [PreviewData.detail]
+        details: [TransactionDetail] = [PreviewData.detail],
+        detailNeverAnswers: Bool = false
     ) -> PreviewTransactionsRepository {
         PreviewTransactionsRepository(
             pages: pages,
             failure: failing,
-            details: Dictionary(uniqueKeysWithValues: details.map { ($0.id, $0) })
+            details: Dictionary(uniqueKeysWithValues: details.map { ($0.id, $0) }),
+            detailNeverAnswers: detailNeverAnswers
         )
     }
 
@@ -112,13 +123,15 @@
     private func previewDetailModel(
         seed: AppCore.Transaction? = PreviewData.rows.first,
         failing: RepositoryError? = nil,
-        details: [TransactionDetail] = [PreviewData.detail]
+        details: [TransactionDetail] = [PreviewData.detail],
+        detailNeverAnswers: Bool = false
     ) -> TransactionDetailViewModel {
         TransactionDetailViewModel(
             id: PreviewData.detail.id,
             seed: seed,
             dependencies: AppDependencies(
-                transactions: previewRepository(failing: failing, details: details),
+                transactions: previewRepository(
+                    failing: failing, details: details, detailNeverAnswers: detailNeverAnswers),
                 pairing: AppDependencies.unbound.pairing
             )
         )
@@ -160,8 +173,13 @@
     /// The canvas that shows the seam working: what the reader sees for the
     /// instant before the fuller record lands, built from the row the list
     /// already had.
-    #Preview("Detail — seeded, nothing fetched") {
-        TransactionDetailView(model: previewDetailModel(details: []))
+    ///
+    /// The fetch is parked rather than answered with nothing. An empty `details`
+    /// map would resolve to "finance no longer has this" and drop the seed, so
+    /// this canvas would quietly show the not-found screen next door — the same
+    /// picture under a label claiming otherwise.
+    #Preview("Detail — seeded, still fetching") {
+        TransactionDetailView(model: previewDetailModel(detailNeverAnswers: true))
     }
 
     /// A transaction deleted between the list and the tap. Must not read as a

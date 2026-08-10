@@ -10,7 +10,10 @@ import Foundation
 /// screen would then have no way to tell "finance recorded no notes" from "this
 /// value came off a list that never carries notes".
 public struct TransactionDetail: Hashable, Sendable, Identifiable {
-    public let id: String
+    /// The same id the list row carries, spelled as ``Transaction/ID`` rather
+    /// than as `String` because that is what it is: a record and the row that
+    /// stands for it identify one transaction, and this is where the two meet.
+    public let id: Transaction.ID
     public let description: String
     public let amount: MoneyAmount
     public let date: Date
@@ -37,7 +40,7 @@ public struct TransactionDetail: Hashable, Sendable, Identifiable {
     public let lastEditedAt: Date
 
     public init(
-        id: String,
+        id: Transaction.ID,
         description: String,
         amount: MoneyAmount,
         date: Date,

@@ -58,6 +58,31 @@ internal struct TransactionDetailViewModelTests {
         #expect(model.state == .loaded(Self.record))
     }
 
+    /// The whole point of seeding, and the half `seededThenRefreshed` cannot
+    /// see: *while* the fetch is in flight the row is on screen, rather than a
+    /// spinner drawn over data the app has had all along.
+    ///
+    /// Worth pinning rather than assuming. A preview that claimed to show this
+    /// state was in fact showing the not-found screen, because "no record" and
+    /// "no answer yet" look identical from the outside and only one of them
+    /// keeps the seed.
+    @Test("a seeded row stays on screen while the record is being fetched")
+    func aSeedSurvivesUntilTheRecordLands() async {
+        let repository = ScriptedTransactionsRepository(
+            detailScript: [.detail(Self.record)], gatingDetail: [1])
+        let model = model(repository, seed: Self.row)
+
+        let load = Task { await model.load() }
+        await repository.waitUntilDetailCalled(1)
+
+        #expect(model.state == .seeded(Self.row), "the seed was dropped before an answer arrived")
+
+        await repository.release()
+        await load.value
+
+        #expect(model.state == .loaded(Self.record))
+    }
+
     /// A transaction deleted between the list arriving and somebody tapping it.
     /// Not a failure, and the difference is load-bearing: `.failed` draws a
     /// retry, and there is nothing here retrying would find.
