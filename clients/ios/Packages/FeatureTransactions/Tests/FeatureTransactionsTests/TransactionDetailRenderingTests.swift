@@ -19,7 +19,15 @@ import Testing
 @Suite("Transaction detail rendering")
 @MainActor
 internal struct TransactionDetailRenderingTests {
-    private static let canvas = CGSize(width: 320, height: 420)
+    /// Tall enough for the full record at iOS's default text size.
+    ///
+    /// The height is load-bearing, not decoration. `.frame(width:height:)`
+    /// *centres* content it cannot fit, so a card taller than the canvas loses
+    /// its top and bottom — and the amount lives at the top. Sized for macOS,
+    /// this suite passed on the host and failed on the simulator with credits
+    /// and debits rendering identically, because the only line that
+    /// distinguishes them had been cropped off.
+    private static let canvas = CGSize(width: 320, height: 700)
 
     private static let presentation = TransactionDetailPresentation(
         locale: Locale(identifier: "en_AU"),
@@ -28,6 +36,21 @@ internal struct TransactionDetailRenderingTests {
 
     private static func card(_ detail: TransactionDetail) -> some View {
         TransactionDetailCard(content: presentation.content(detail))
+    }
+
+    /// A record carrying only the fields finance always has, so the card is as
+    /// short as it can be. Used where the assertion is about one line: a
+    /// comparison whose subject is near the canvas's height is one where a
+    /// difference can be cropped away rather than found.
+    private static func shortest(amount: MoneyAmount) -> TransactionDetail {
+        TransactionDetail.fake(
+            amount: amount,
+            entityName: nil,
+            tags: [],
+            location: nil,
+            country: nil,
+            notes: nil
+        )
     }
 
     private static func render(_ view: some View, in scheme: ColorScheme = .light) -> Data? {
@@ -52,6 +75,33 @@ internal struct TransactionDetailRenderingTests {
         #expect(once == again)
     }
 
+    /// The canary for every other assertion here.
+    ///
+    /// `.frame(width:height:)` centres content it cannot fit, so a card taller
+    /// than the canvas loses its top *and* its bottom — and a comparison whose
+    /// only difference lay in a cropped band passes by rendering two identical
+    /// images. That is not hypothetical: it is how this suite passed on macOS
+    /// and failed on the simulator.
+    ///
+    /// So both ends are checked directly. Changing the first line drawn and
+    /// changing the last field drawn must each move the image; if a field added
+    /// later pushes the record past the canvas again, this fails and says so
+    /// rather than quietly making its neighbours vacuous.
+    @Test("the canvas is not cropping either end of the record")
+    func theCanvasFitsTheWholeRecord() throws {
+        let stock = try #require(Self.render(Self.card(TransactionDetail.fake())))
+        let retitled = try #require(
+            Self.render(Self.card(TransactionDetail.fake(description: "A different description"))))
+        let reEdited = try #require(
+            Self.render(
+                Self.card(
+                    TransactionDetail.fake(lastEditedAt: Date(timeIntervalSince1970: 1_786_000_000))
+                )))
+
+        #expect(stock != retitled, "the top of the record is off the canvas")
+        #expect(stock != reEdited, "the bottom of the record is off the canvas")
+    }
+
     /// Every colour here is a token, and every token diverges between the two
     /// schemes. Rendering identically in both would mean the colours are coming
     /// from somewhere other than the catalogue.
@@ -70,8 +120,8 @@ internal struct TransactionDetailRenderingTests {
         let credit = MoneyAmount(minorUnits: 540, currencyCode: "AUD")
         let debit = MoneyAmount(minorUnits: -540, currencyCode: "AUD")
 
-        let arriving = try #require(Self.render(Self.card(TransactionDetail.fake(amount: credit))))
-        let leaving = try #require(Self.render(Self.card(TransactionDetail.fake(amount: debit))))
+        let arriving = try #require(Self.render(Self.card(Self.shortest(amount: credit))))
+        let leaving = try #require(Self.render(Self.card(Self.shortest(amount: debit))))
 
         #expect(arriving != leaving)
     }

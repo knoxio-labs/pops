@@ -51,12 +51,6 @@ public actor InMemoryTransactionsRepository: TransactionsRepository {
         failures[call] = error
     }
 
-    /// Replaces the fuller records. Dropping one is how a test says finance
-    /// deleted a transaction somebody is holding a list row for.
-    public func replace(details: [TransactionDetail]) {
-        self.details = Dictionary(uniqueKeysWithValues: details.map { ($0.id, $0) })
-    }
-
     /// Fails the `call`-th *detail* call (1-based), numbered separately from
     /// the page calls for the same reason ``detailCallCount`` is.
     public func failDetail(onCall call: Int, with error: RepositoryError) {
