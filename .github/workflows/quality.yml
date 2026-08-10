@@ -371,17 +371,21 @@ jobs:
     # build. There is no generated client to diff on this side, so this guard
     # asserts the narrow thing the consumer depends on: the operation still
     # exists, at the expected path and method, with the query parameters the
-    # consumer sends. Reads the source tree directly, so it skips
-    # `pnpm install`. See scripts/ci/check-cross-pillar-expectations.mjs.
+    # consumer sends. The curated list of those expectations is kept honest by
+    # a disk-derived half that enumerates every `pillar(...)` call site under
+    # `pillars/*/src` and fails when one has no row, so a new seam cannot ship
+    # unguarded while the guard reports OK (ADR-045). Reads the source tree
+    # directly, so it skips `pnpm install`.
+    # See scripts/ci/check-cross-pillar-expectations.mjs.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: "24"
-      - name: Gate self-test (proves it catches rename, move, dropped param)
+      - name: Gate self-test (proves it catches rename, move, dropped param, unlisted seam)
         run: node scripts/ci/check-cross-pillar-expectations.mjs --self-test
-      - name: Every backend cross-pillar expectation holds
+      - name: Every backend cross-pillar expectation holds, and every call site has one
         run: node scripts/ci/check-cross-pillar-expectations.mjs
 
   cross-pillar-clients:
