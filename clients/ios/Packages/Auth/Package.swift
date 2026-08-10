@@ -48,7 +48,7 @@ let package = Package(
         ),
         .target(
             name: "AuthTestSupport",
-            dependencies: ["Auth"],
+            dependencies: ["Auth", "AppCore"],
             swiftSettings: strictSwiftSettings
         ),
         .testTarget(

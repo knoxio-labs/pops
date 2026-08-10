@@ -4,7 +4,7 @@ import SwiftUI
 internal struct PopsApp: App {
     var body: some Scene {
         WindowGroup {
-            PlaceholderView()
+            RootView()
         }
     }
 }

@@ -1,10 +1,20 @@
 # Auth
 
-The device's identity: a P-256 key generated inside the Secure Enclave, the access and refresh tokens the BFM issues against it, and the one operation that has to destroy both together.
+The device's identity: a P-256 key generated inside the Secure Enclave, the access and refresh tokens the BFM issues against it, the device id and base URL a cold launch needs to know it is paired at all, and the one operation that has to destroy all three together.
 
 Pairing is here: `BFMDevicePairingService` owns the order the key, the code exchange and the token write have to happen in, and the cleanup for each way one of them can fail.
 
 So is everything that happens after it. `AuthenticatingMiddleware` attaches the access token to every `/mobile/*` request and acts on the two ways the BFM can refuse one; `DeviceSessionRefresher` performs the challenge/sign/exchange dance behind it, at most once at a time. Both are argued below.
+
+## What a cold launch reads, and where it is kept
+
+`DeviceSessionRestorer` answers one question at launch — is this device paired — and it needs something the token pair does not carry: the device id, and **the base URL**. A Release build ships no hostname, because the URL arrives with the pairing QR, so a process that has forgotten it has forgotten how to reach anybody. `PairedDeviceStore` is where it is remembered.
+
+That store is `UserDefaults`-backed, and deliberately not the Keychain. Neither field is a secret — a device id is an opaque handle the BFM prints on its own operator screen, and a base URL is a hostname — so the Keychain would buy no confidentiality while making both unreadable before first unlock. The decisive reason is the other one: **Keychain items survive app deletion**, so an identity kept there would outlive a reinstall and silently resume a session the person had just deleted. `UserDefaults` goes with the app, and the token and key it leaves behind in the Keychain are inert, because pairing wipes every credential before it writes one.
+
+Both halves have to be present for a session to resume. An identity with no tokens cannot make a request; tokens with no identity name nowhere to send them. Either alone opens at pairing, which is a better screen than a shell whose every request fails.
+
+Nothing here checks whether the credentials still *work*. That would put a network round trip on the launch path, and the app would show nothing until a server answered — including on a train, where the honest thing to render is what the device already has. A revocation is discovered by the first real request, which the middleware below already turns into a session event.
 
 ## Refresh, and why single-flight is not an optimisation
 
@@ -65,10 +75,10 @@ Everything in this package exists to avoid weakening it. In particular the fakes
 
 ## Two products, and why
 
-| Product           | Contains                                               | Who depends on it              |
-| ----------------- | ------------------------------------------------------ | ------------------------------ |
-| `Auth`            | The protocols and the two real, hardware-backed stores | The app target                 |
-| `AuthTestSupport` | `InMemoryKeyStore`, `InMemoryTokenStore`               | Test targets and previews only |
+| Product           | Contains                                                                       | Who depends on it              |
+| ----------------- | ------------------------------------------------------------------------------ | ------------------------------ |
+| `Auth`            | The protocols, the two hardware-backed stores, and the paired-device store     | The app target                 |
+| `AuthTestSupport` | `InMemoryKeyStore`, `InMemoryTokenStore`, `InMemoryPairedDeviceStore`          | Test targets and previews only |
 
 `InMemoryKeyStore` really signs, so tests exercise create → sign → verify → delete rather than counting calls. What it does not do is protect anything: its private key sits in the process heap and vanishes on exit. Wiring it into the composition root by accident would produce an app that pairs, works, and provides none of the guarantees the pairing was for — a failure with no symptom.
 

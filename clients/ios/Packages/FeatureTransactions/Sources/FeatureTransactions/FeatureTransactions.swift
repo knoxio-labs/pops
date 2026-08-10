@@ -13,4 +13,11 @@ public enum FeatureTransactions {
 
     /// Where this feature hangs off the app's route table.
     public static let entryRoute: Route = .transactionList
+
+    /// Which of the BFM's features this module draws.
+    ///
+    /// Declared here rather than in the composition root so the claim lives
+    /// with the code that makes it good — the root then holds a list of modules
+    /// rather than a list of strings it has to keep in step with them.
+    public static let feature: MobileFeature = .transactions
 }

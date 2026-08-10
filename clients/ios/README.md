@@ -147,7 +147,7 @@ Half of that is compiler-enforced — a package can only `import` what its own `
 
 `Packages/DesignSystem` carries a second constraint on every feature, orthogonal to the import graph: a feature may not name a colour, a type size or a gap. See [Packages/DesignSystem/README.md](Packages/DesignSystem/README.md).
 
-Every package is written — see [Packages/Auth/README.md](Packages/Auth/README.md), [Packages/BFMClient/README.md](Packages/BFMClient/README.md), [Packages/FeaturePairing/README.md](Packages/FeaturePairing/README.md) and [Packages/FeatureTransactions/README.md](Packages/FeatureTransactions/README.md). The app's root view is not: it is still the placeholder that proves the modules link, so both screens are reachable only from `#Preview` and nothing binds a repository to the environment. That is the root shell's ticket.
+Every package is written — see [Packages/Auth/README.md](Packages/Auth/README.md), [Packages/BFMClient/README.md](Packages/BFMClient/README.md), [Packages/FeaturePairing/README.md](Packages/FeaturePairing/README.md) and [Packages/FeatureTransactions/README.md](Packages/FeatureTransactions/README.md), and so is the root that binds them together — see [The shell](#the-shell) below.
 
 ## `Contracts/`
 
@@ -180,7 +180,6 @@ It is not quite the only job that touches this directory. Two jobs in [`quality.
 
 ## Known gaps
 
-- **Nothing constructs the app's dependencies yet.** `AppDependencies.unbound` is what the environment still holds. `BFMDevicePairingService`, `BFMTransactionsRepository` and both screens are written and tested, and nothing builds any of them, because the root view that would switch on the session and bind them is a placeholder (POPS-1391). Until it lands both screens are reachable only from `#Preview`.
 - **Nothing automated checks Dynamic Type or VoiceOver on any screen.** The pairing screen is laid out for both and neither is measured; the reasoning and the candidate checks are in POPS-1583. See [`Packages/FeaturePairing/README.md`](Packages/FeaturePairing/README.md).
 - **`mise run verify:release-carries-no-host` runs nowhere but a laptop.** The invariant it guards — a shipped binary naming no BFM host — is the one thing here that is not caught by building, testing or linting, and it is the only task in this directory that no job invokes (POPS-1475).
 - **The pre-push hook does not run `mise run lint`.** It would put Xcode on the push path for every contributor, including on the TypeScript-only pushes that are almost all of them. Unformatted Swift can still reach a branch; it can no longer reach `main`, because the CI job rejects it.

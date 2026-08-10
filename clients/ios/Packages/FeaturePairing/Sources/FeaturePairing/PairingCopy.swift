@@ -34,6 +34,22 @@ internal enum PairingCopy {
     internal static let pairButton = "Pair"
     internal static let pairing = "Pairing…"
 
+    /// Why somebody who was signed in is looking at this screen again.
+    ///
+    /// Shown rather than skipped because the alternative — being returned to
+    /// pairing with no explanation — is indistinguishable from the app having
+    /// lost its mind, and reads as a defect for months. The two reasons say
+    /// different things because they lead to different next actions: one is
+    /// somebody's deliberate decision, the other is a fault to report.
+    internal static func explanation(for reason: RevocationReason) -> String {
+        switch reason {
+        case .revokedByOperator:
+            return "This device was removed on your Pops server. Pair it again to continue."
+        case .credentialsRejected:
+            return "This device's sign-in expired and could not be renewed. Pair it again."
+        }
+    }
+
     /// What to say about each failure, and it is one sentence per case because
     /// each one has a different next action. The pair of them that must never
     /// merge is ``PairingError/codeRejected`` and

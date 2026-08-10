@@ -30,7 +30,11 @@ internal struct RefresherFixture {
         let session = RecordingSessionEvents()
 
         self.refresher = DeviceSessionRefresher(
-            credentialStore: DeviceCredentialStore(keyStore: keyStore, tokenStore: tokenStore),
+            credentialStore: DeviceCredentialStore(
+                keyStore: keyStore,
+                tokenStore: tokenStore,
+                pairedDeviceStore: InMemoryPairedDeviceStore()
+            ),
             exchange: { _ in exchange },
             sessionEvents: session,
             now: { Self.refreshedAt }
