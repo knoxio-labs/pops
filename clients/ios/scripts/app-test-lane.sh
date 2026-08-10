@@ -151,6 +151,7 @@ fi
 # because where a bundle sits under the plan is xcresulttool's business, not
 # this script's.
 if ! tests="$(xcrun xcresulttool get test-results tests --path "$result")"; then
+    tail -60 "$work/test.log" >&2
     die "could not read the test tree out of the result bundle."
 fi
 ran="$(jq -r '[.. | objects | select((.nodeType? // "") | endswith("test bundle"))

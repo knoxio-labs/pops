@@ -118,6 +118,18 @@ set -eu
 set -o pipefail
 
 scheme=Pops.xcodeproj/xcshareddata/xcschemes/Pops.xcscheme
+
+# Checked for separately from its contents. Without this a scheme that moved,
+# or a `generate` that wrote nothing, arrives at the guard below as an empty
+# testable list and gets reported as an empty test action — a true statement
+# about the wrong problem.
+if [ ! -f "$scheme" ]; then
+  echo "test: no scheme at $scheme. 'mise run generate' writes it from" >&2
+  echo "      project.yml; a shared scheme that moved out of xcshareddata is" >&2
+  echo "      not one xcodebuild can resolve on a clean checkout either." >&2
+  exit 1
+fi
+
 testables() {
   attribute=$1
   # `|| true` because an empty XPath result is an xmllint failure — exit 10 —
