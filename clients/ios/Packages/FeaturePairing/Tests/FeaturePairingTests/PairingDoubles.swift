@@ -1,6 +1,5 @@
 import AppCore
 import AppCoreFakes
-import Foundation
 import Synchronization
 
 @testable import FeaturePairing

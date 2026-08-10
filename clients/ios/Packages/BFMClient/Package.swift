@@ -10,9 +10,13 @@ import PackageDescription
 // thing that pins these — a range would let two machines link two different
 // runtimes against one committed generated client. The version range is stated
 // where a reader looking at the dependency will find it.
+// `swift build` and `swift test` compile this package for the *host*, so macOS
+// needs a floor too — without one it defaults low enough that `OpenAPIRuntime`
+// and `OpenAPIURLSession` (both floored at macOS 10.15) refuse to resolve
+// against it, and the package only builds through Xcode's iOS SDK.
 let package = Package(
     name: "BFMClient",
-    platforms: [.iOS("26.0")],
+    platforms: [.iOS("26.0"), .macOS("15.0")],
     products: [.library(name: "BFMClient", targets: ["BFMClient"])],
     dependencies: [
         .package(url: "https://github.com/apple/swift-openapi-runtime", exact: "1.12.0"),

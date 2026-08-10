@@ -1,4 +1,3 @@
-import AppCore
 import Auth
 import BFMClient
 import Foundation
@@ -76,14 +75,11 @@ internal final class FailingKeyStore: DeviceKeyStore {
 
     private let wrapped: any DeviceKeyStore
     private let failing: Set<Operation>
-    private let deletions = Mutex(0)
 
     internal init(wrapping wrapped: any DeviceKeyStore, failing: Set<Operation>) {
         self.wrapped = wrapped
         self.failing = failing
     }
-
-    internal var deletionCount: Int { deletions.withLock { $0 } }
 
     @discardableResult
     internal func createKey() throws -> DevicePublicKey {
@@ -100,7 +96,6 @@ internal final class FailingKeyStore: DeviceKeyStore {
     }
 
     internal func deleteKey() throws {
-        deletions.withLock { $0 += 1 }
         guard !failing.contains(.delete) else {
             throw DeviceKeyStoreError.keychain(errSecInternalError)
         }
