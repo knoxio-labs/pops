@@ -723,6 +723,20 @@ function* walkSources(dir) {
  */
 
 /**
+ * The key two records agree on when they describe the same seam.
+ *
+ * A pillar id is an identifier, so ` -> ` cannot occur inside either half and
+ * the composite cannot collide. Spelt the same way the failure messages spell
+ * a seam, so a key seen while debugging reads as the thing it names.
+ *
+ * @param {{ consumer: string, producer: string | null }} seam
+ * @returns {string}
+ */
+function seamKey(seam) {
+  return `${seam.consumer} -> ${String(seam.producer)}`;
+}
+
+/**
  * Diff the disk-derived call sites against the curated rows.
  *
  * Pure, and exported so the degenerate cases are testable without a tree.
@@ -736,7 +750,7 @@ function* walkSources(dir) {
  * @returns {CoverageReport}
  */
 export function findCoverageGaps(sites, expectations, exemptions) {
-  const pinned = new Set(expectations.map((e) => `${e.consumer} ${e.producer}`));
+  const pinned = new Set(expectations.map(seamKey));
   const exemptFiles = new Set(exemptions.map((e) => e.file));
   const exemptFilesSeen = new Set();
 
@@ -756,7 +770,7 @@ export function findCoverageGaps(sites, expectations, exemptions) {
       unresolved.push(site);
       continue;
     }
-    if (!pinned.has(`${site.consumer} ${site.producer}`)) unlisted.push(site);
+    if (!pinned.has(seamKey(site))) unlisted.push(site);
   }
 
   return {
