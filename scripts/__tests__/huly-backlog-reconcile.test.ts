@@ -500,7 +500,7 @@ describe('formatReport', () => {
     expect(formatReport(report)).toContain('PR mirrors: NOT CHECKED');
   });
 
-  it('reports a real mirror count once titles are present', () => {
+  it('claims the whole export only when every row carried a title', () => {
     const report = reconcile(
       [
         {
@@ -513,6 +513,26 @@ describe('formatReport', () => {
       PREFIX
     );
     expect(formatReport(report)).toContain('PR mirrors found across the whole export: 1.');
+  });
+
+  // A bare count over a partly-titled export describes a narrower sweep than
+  // it sounds, so the line has to say so.
+  it('does NOT claim the whole export when only some rows carried a title', () => {
+    const report = reconcile(
+      [
+        {
+          identifier: 'POPS-1575',
+          title: 'fix(bfm,food,cerebrum): drop redundant 503 check in isUnavailableError copies',
+          status: 'Merged',
+        },
+        { identifier: 'POPS-1647', title: '', status: 'Backlog' },
+      ],
+      commits,
+      PREFIX
+    );
+    const text = formatReport(report);
+    expect(text).toContain('only 1 of 2 rows carried a title');
+    expect(text).not.toContain('across the whole export');
   });
 
   it('names an orphan and the commit that shipped it', () => {

@@ -62,7 +62,10 @@
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { dirname, resolve as resolvePath } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+const repoRoot = resolvePath(dirname(fileURLToPath(import.meta.url)), '..');
 
 /** Only a ticket in this status may be reported as an orphan to close. */
 export const ELIGIBLE_STATUS = 'Backlog';
@@ -521,11 +524,16 @@ export function reconcile(issues, commits, prefix) {
 /**
  * Read every commit reachable from `ref` as `{ sha, subject, body }`.
  *
+ * Anchored at this repo's root unless a caller says otherwise. Inheriting the
+ * process cwd would let the sweep read a different repository's history —
+ * which finds no authorship anywhere and reports a clean backlog, the same
+ * false negative in yet another disguise.
+ *
  * @param {string} ref
- * @param {string} [cwd]
+ * @param {string} [cwd] Defaults to this repo's root.
  * @returns {Commit[]}
  */
-export function readCommits(ref, cwd) {
+export function readCommits(ref, cwd = repoRoot) {
   const format = `${RECORD_SEPARATOR}%H${FIELD_SEPARATOR}%s${FIELD_SEPARATOR}%b`;
   const raw = execFileSync('git', ['log', ref, `--format=${format}`], {
     cwd,
@@ -614,6 +622,32 @@ export function readIssues(parsed) {
 }
 
 /**
+ * State the mirror count together with how much of the export it could
+ * actually be derived from.
+ *
+ * Mirror detection reads titles, so a count stated over an export where only
+ * some rows carry one describes a sweep narrower than it sounds. The line
+ * says which of the three cases it is rather than letting a bare number
+ * imply the whole export was examined.
+ *
+ * @param {Report} report
+ * @returns {string}
+ */
+function mirrorCoverageLine(report) {
+  const total = report.eligible.length + report.skipped.length;
+  if (report.titledIssueCount === 0) {
+    return 'PR mirrors: NOT CHECKED — no issue in the export carried a title to match against.';
+  }
+  if (report.titledIssueCount < total) {
+    return (
+      `PR mirrors found: ${report.mirrors.length} — but only ${report.titledIssueCount} of ` +
+      `${total} rows carried a title, so the rest were not checked.`
+    );
+  }
+  return `PR mirrors found across the whole export: ${report.mirrors.length}.`;
+}
+
+/**
  * @param {Report} report
  * @returns {string}
  */
@@ -626,9 +660,7 @@ export function formatReport(report) {
   lines.push(
     `Scanned ${report.commitCount} commits against ${report.eligible.length} ${ELIGIBLE_STATUS} ` +
       `issues (${report.skipped.length} skipped: not ${ELIGIBLE_STATUS}).`,
-    report.titledIssueCount === 0
-      ? 'PR mirrors: NOT CHECKED — no issue in the export carried a title to match against.'
-      : `PR mirrors found across the whole export: ${report.mirrors.length}.`,
+    mirrorCoverageLine(report),
     ''
   );
 
