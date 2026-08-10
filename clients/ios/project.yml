@@ -50,12 +50,35 @@ targets:
       - package: FeaturePairing
       - package: FeatureTransactions
     # A shared scheme, so `xcodebuild -scheme Pops` resolves on a clean checkout
-    # rather than relying on Xcode autocreating one into xcuserdata. Its test
-    # action names PopsTests, which is what makes `xcodebuild test` run anything
-    # at all — an empty list here leaves the scheme with no testables.
+    # rather than relying on Xcode autocreating one into xcuserdata. This list is
+    # what makes `xcodebuild test` run anything at all — an empty one leaves the
+    # scheme with no testables and the test action exits 0 having run nothing.
+    #
+    # Every package's test target is named here alongside `PopsTests` so that ONE
+    # `xcodebuild test` covers the whole tree. The alternative — an invocation per
+    # package, from inside that package's own directory — makes each package a
+    # separate project with a separate build tree, so a package several others
+    # depend on is compiled from scratch once per dependent on top of once for the
+    # app: `AppCore` is a dependency of `Auth`, of `FeaturePairing` and of `Pops`,
+    # and was compiled roughly five times per CI run that way, each invocation
+    # paying its own xcodebuild startup and simulator attach as well.
+    #
+    # `package: <package>/<target>` is how a LOCAL package's test target is named
+    # here; a bare name means a target of this project and XcodeGen rejects it.
+    # Adding a package to `packages:` above does NOT add its tests to this list,
+    # and nothing in XcodeGen notices the omission — so `mise run test` fails when
+    # a directory under `Packages/` has a `Tests/` and no testable here. That
+    # check is what stops this list from being the place a suite goes to die
+    # quietly.
     scheme:
       testTargets:
         - PopsTests
+        - package: AppCore/AppCoreTests
+        - package: Auth/AuthTests
+        - package: BFMClient/BFMClientTests
+        - package: DesignSystem/DesignSystemTests
+        - package: FeaturePairing/FeaturePairingTests
+        - package: FeatureTransactions/FeatureTransactionsTests
     # The team lives outside the repo; see Config/Signing.xcconfig. Nothing here
     # may set DEVELOPMENT_TEAM — target build settings outrank a target xcconfig,
     # so doing so would silently win over the developer's own value.
