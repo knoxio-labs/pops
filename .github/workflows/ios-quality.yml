@@ -93,6 +93,18 @@ jobs:
           # from scratch and the stale one just wastes the restore.
           echo "POPS_XCODE_VERSION=$version" >> "$GITHUB_ENV"
 
+      # Temporary diagnostic, to be removed before this branch merges: settles
+      # whether generate-device-signature-fixture.swift's indentation lint
+      # errors under Xcode 27 Beta 2 are beta-only noise or a real defect that
+      # also reproduces on the toolchain this repo actually pins. Needs only
+      # the Xcode selected above, not xcodegen or dependency resolution.
+      - name: TEMPORARY — swift-format lint on the device-signature fixture generator
+        run: |
+          set +e
+          xcrun swift-format lint --strict Tools/generate-device-signature-fixture.swift
+          echo "swift-format lint exit code: $?"
+          set -e
+
       # Captured once, right after checkout and before `xcodegen` or
       # `-resolvePackageDependencies` run, rather than left as a live
       # `hashFiles(...)` call inside the DerivedData cache steps further down.
