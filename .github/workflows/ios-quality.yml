@@ -115,15 +115,15 @@ jobs:
           restore-keys: |
             spm-${{ runner.os }}-
 
-      # xcodebuild's compiled modules and build products — the ~17 of this
-      # job's ~19 minutes that neither cache above touches, since those cache
-      # dependency resolution, not compilation. Nothing here passes
-      # `-derivedDataPath` (that flag belongs to `clients/ios/mise.toml`'s
-      # tasks, not this workflow), so xcodebuild resolves its own default
-      # location under `~/Library/Developer/Xcode/DerivedData`, named from a
-      # hash of this job's checkout path. That path is the same on every run
-      # of this workflow, so the whole directory is what has to be cached,
-      # not one project's slice of it.
+      # xcodebuild's compiled modules and build products — the ~17 minutes of
+      # this job's ~19 that neither cache above touches, since those cache
+      # dependency resolution, not compilation. Neither this workflow nor
+      # `clients/ios/mise.toml`'s tasks ever pass `-derivedDataPath`, so
+      # xcodebuild resolves its own default location under
+      # `~/Library/Developer/Xcode/DerivedData`, named from a hash of this
+      # job's checkout path. That path is the same on every run of this
+      # workflow, which is exactly why the whole directory can be cached
+      # instead of one project's slice of it.
       #
       # DerivedData is toolchain-specific — it holds compiled Swift modules
       # and a PCM cache keyed to the compiler that produced them — so a hit
@@ -132,18 +132,35 @@ jobs:
       # indistinguishable from source errors. `runner.os` covers a
       # runner-image change, `POPS_XCODE_VERSION` a toolchain bump, and the
       # Package.resolved hash a dependency bump; any one of those has to
-      # invalidate the cache outright, which is why all three sit in the key
-      # AND in the restore-keys prefix — a bumped `POPS_XCODE_VERSION`
+      # invalidate the cache outright, which is why all three sit in both the
+      # key and the first restore-keys prefix — a bumped `POPS_XCODE_VERSION`
       # changes the prefix itself, so no entry keyed to the old toolchain can
-      # ever match it. `restore-keys` still lets an ordinary source change
-      # restore the last same-toolchain build and recompile only what
-      # changed.
-      - name: Cache DerivedData
-        uses: actions/cache@v6
+      # ever match it. The second, shorter restore-keys line drops only the
+      # dependency hash, so a `Package.resolved` bump still restores a
+      # same-toolchain build to recompile against rather than starting cold.
+      #
+      # Split into restore + save, rather than the single `actions/cache`
+      # step used above, because a source-only commit does not change this
+      # key: `actions/cache` never overwrites an existing key, so a plain
+      # cache step would restore the first run's snapshot on every exact-key
+      # hit and then silently skip saving the newer one that run just
+      # compiled — every commit after the first would recompile against a
+      # baseline that never moves. Suffixing the save key with `github.run_id`
+      # makes the exact key different on every run, so the restore always
+      # falls through to `restore-keys` (picking the most recently saved
+      # entry under the shared prefix) and the save at the end of the job
+      # always fires — the rolling pattern `actions/cache`'s own docs
+      # recommend for a directory that changes every run. `if: always()` on
+      # the save means a failing Build or Test step still banks whatever
+      # compiled cleanly, so a fix on the next push is not recompiling from
+      # the same cold baseline as the failure it is fixing.
+      - name: Restore DerivedData
+        uses: actions/cache/restore@v6
         with:
           path: ~/Library/Developer/Xcode/DerivedData
-          key: deriveddata-${{ runner.os }}-${{ env.POPS_XCODE_VERSION }}-${{ hashFiles('clients/ios/Packages/*/Package.swift', 'clients/ios/**/Package.resolved') }}
+          key: deriveddata-${{ runner.os }}-${{ env.POPS_XCODE_VERSION }}-${{ hashFiles('clients/ios/Packages/*/Package.swift', 'clients/ios/**/Package.resolved') }}-${{ github.run_id }}
           restore-keys: |
+            deriveddata-${{ runner.os }}-${{ env.POPS_XCODE_VERSION }}-${{ hashFiles('clients/ios/Packages/*/Package.swift', 'clients/ios/**/Package.resolved') }}-
             deriveddata-${{ runner.os }}-${{ env.POPS_XCODE_VERSION }}-
 
       - name: Resolve SPM dependencies
@@ -233,3 +250,14 @@ jobs:
       # rather than reused.
       - name: Lint (SwiftLint analyzer rules)
         run: mise run lint:analyze
+
+      # The other half of the restore step above — see its comment for why a
+      # plain `actions/cache` step cannot keep this cache moving forward.
+      # `if: always()` so a run that fails partway through Build, Test or
+      # either lint step still saves whatever compiled before the failure.
+      - name: Save DerivedData
+        if: always()
+        uses: actions/cache/save@v6
+        with:
+          path: ~/Library/Developer/Xcode/DerivedData
+          key: deriveddata-${{ runner.os }}-${{ env.POPS_XCODE_VERSION }}-${{ hashFiles('clients/ios/Packages/*/Package.swift', 'clients/ios/**/Package.resolved') }}-${{ github.run_id }}
