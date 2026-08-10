@@ -619,13 +619,20 @@ function lineOf(code, index) {
  * Resolve a call's first argument to a pillar id, or `null` when it is not
  * decidable from this file alone.
  *
- * Two shapes are decidable: a string literal, and a local `const` bound to
- * one (`const CONTACTS_PILLAR_ID = 'contacts'`, which is how most call sites
- * in the tree are written). Anything else — a parameter, an import, a
- * computed value — is a runtime dispatcher and needs an exemption.
+ * Two shapes are decidable: a string literal, and a MODULE-LEVEL `const`
+ * bound to one (`export const CONTACTS_PILLAR_ID = 'contacts'`, which is how
+ * every such call site in the tree is written). Anything else — a parameter,
+ * an import, a `let`, a computed value — is a runtime dispatcher and needs an
+ * exemption.
+ *
+ * The binding must start its line, so an identically named binding nested
+ * inside some unrelated function cannot answer for a call site that is really
+ * reading a parameter. That mistake would resolve to a plausible-looking
+ * WRONG producer and pin the seam to a contract nobody calls — a quiet pass,
+ * where refusing to resolve merely demands an exemption.
  *
  * @param {string} argument
- * @param {string} code Whole stripped file, for the local const lookup.
+ * @param {string} code Whole stripped file, for the module-level const lookup.
  * @returns {string | null}
  */
 export function resolveProducerId(argument, code) {
@@ -633,9 +640,11 @@ export function resolveProducerId(argument, code) {
   if (literal) return literal[2] ?? literal[1];
 
   if (!/^[A-Za-z_$][\w$]*$/u.test(argument)) return null;
+  // `$` is legal in an identifier and is a regex metacharacter, so the name
+  // goes in escaped or `$ID` silently never matches its own binding.
   const binding = new RegExp(
-    `(?:const|let|var)\\s+${argument}\\s*(?::[^=;]*)?=\\s*(['"])([^'"]*)\\1`,
-    'u'
+    `^(?:export\\s+)?const\\s+${RegExp.escape(argument)}\\s*(?::[^=;]*)?=\\s*(['"])([^'"]*)\\1`,
+    'mu'
   );
   const bound = binding.exec(code);
   return bound ? bound[2] : null;

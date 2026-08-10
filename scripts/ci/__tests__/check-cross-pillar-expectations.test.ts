@@ -196,8 +196,29 @@ describe('resolveProducerId', () => {
     expect(resolveProducerId('ID', "const ID: PillarId = 'documents';")).toBe('documents');
   });
 
+  it('resolves an identifier containing a regex metacharacter', () => {
+    // `$` is legal in an identifier. Interpolated raw it reads as end-of-input
+    // and the binding can never match, so the call site is reported unresolved
+    // and someone is sent to write an exemption for a seam that is pinnable.
+    expect(resolveProducerId('$CONTACTS_ID', "const $CONTACTS_ID = 'contacts';")).toBe('contacts');
+  });
+
   it('refuses a function parameter', () => {
     expect(resolveProducerId('pillarId', 'export function f(pillarId: string) {}')).toBeNull();
+  });
+
+  it('refuses a nested binding, which would answer for an unrelated parameter', () => {
+    const source = [
+      'export function dispatch(pillarId: string) {',
+      "  const pillarId = 'lists';",
+      '  return pillar(pillarId);',
+      '}',
+    ].join('\n');
+    expect(resolveProducerId('pillarId', source)).toBeNull();
+  });
+
+  it('refuses a reassignable binding, which pins nothing', () => {
+    expect(resolveProducerId('ID', "let ID = 'contacts';")).toBeNull();
   });
 
   it('refuses an identifier imported from elsewhere', () => {
