@@ -17,12 +17,18 @@ mise run build:device  # signed Release, physical iPhone
 
 `mise run build:packages` type-checks every package with `swift build` alone, without Xcode or a simulator, and `mise run test:packages` runs every package's tests the same way. Both compile for the host, which means macOS rather than iOS — an iOS-only regression survives them, and is caught by `mise run build` and `mise run test`. Reach for the `:packages` pair as the fast inner loop; the two without the suffix are what CI runs and what a result has to be reproduced against.
 
-`mise run test` runs two lanes, and the CI job invokes this one task rather than naming them separately, so a lane cannot exist locally and be missing from the gate:
+`mise run test` is **one** `xcodebuild test`. Every package's test target is a testable of the `Pops` scheme alongside the app's own `PopsTests`, so the tree compiles once into one build directory and one simulator boots. The CI job invokes this one task rather than naming lanes separately, so a suite cannot exist locally and be missing from the gate.
 
-- **Each package**, through `xcodebuild` rather than `swift test`, which is the only way to get those tests onto the iOS SDK — a directory holding a `Package.swift` is a project as far as `xcodebuild` is concerned. The scheme it picks is not the obvious one: a package with more than one product gets an aggregate `<name>-Package` scheme and **only the aggregate carries the test action**, so the task reads the scheme list back out of `xcodebuild` instead of guessing.
-- **The app's own test target** (`mise run test:app`), which is the only lane that runs inside an app bundle carrying the app's entitlements. Which of the two a new suite belongs in is decided by the rule in [AppTests/README.md](AppTests/README.md); the short version is that a suite goes in the app target only if it needs an app bundle, an entitlement or a booted simulator.
+It used to be an invocation per package, each run from inside the package's directory — a directory holding a `Package.swift` is a project as far as `xcodebuild` is concerned. That made every package a separate build tree, so a package several others depend on was compiled from scratch once per dependent: `AppCore` is a dependency of `Auth`, of `FeaturePairing` and of the app, and was compiled roughly five times per run.
 
-Both lanes refuse to pass having run nothing — the package lane fails if no package has a `Tests` directory, and the app lane fails if the test action executed zero tests. That is not defensive decoration. The `Pops` scheme declared an empty test-target list until the app target existed, and a lane that runs nothing while reporting success is a green check nobody would think to question.
+What that costs is that the enumeration is no longer the loop. A package added under `Packages/` and never added to `project.yml`'s `testTargets` is a suite that never runs, in a run that stays green and gets _faster_ for it — the worst shape a regression can have. So the same claim is checked from both ends, neither of them a list written out in the task:
+
+- every directory under `Packages/` with a `Tests/` must be named as a testable container in the generated scheme, or the task fails before building anything;
+- every testable the scheme names must have reported results in the run's result bundle, or the task fails after.
+
+On top of those, the run fails if it executed zero tests, and fails if anything skipped. That is not defensive decoration. The `Pops` scheme declared an empty test-target list until the app target existed, and a lane that runs nothing while reporting success is a green check nobody would think to question.
+
+`mise run test:app` narrows the same scheme to `PopsTests` with `-only-testing`, for a developer changing the app target who does not want to wait on six packages' suites. CI never invokes it — it reaches that target through `mise run test`. Which of the two places a new suite belongs is decided by the rule in [AppTests/README.md](AppTests/README.md); the short version is that a suite goes in the app target only if it needs an app bundle or an entitlement.
 
 `mise run verify:release-carries-no-host` builds Release and fails if the result names a BFM host — see [Where the BFM base URL comes from](#where-the-bfm-base-url-comes-from).
 

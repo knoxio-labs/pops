@@ -84,61 +84,106 @@ done
 # The one entry point for the simulator, same idea as `lint`: the CI job invokes
 # this rather than restating the lanes, because a lane the workflow has to
 # remember to add is a lane it will one day forget.
+#
+# ONE `xcodebuild test`, not one per package. Every package's test target is a
+# testable of the `Pops` scheme — project.yml carries the reasoning — so the
+# tree compiles once into one build directory and one simulator boots. Running
+# each package from inside its own directory instead made every package a
+# separate project with a separate build tree, so `AppCore` was compiled from
+# scratch for its own tests, again for `Auth`'s, again for `FeaturePairing`'s
+# and again for the app, each invocation paying its own xcodebuild startup and
+# simulator attach on top of the compile it duplicated.
+#
+# What collapsing it costs is the enumeration. While each package was its own
+# invocation the loop WAS the list, so a package with tests could not be missed
+# and one counter was enough. One scheme can miss one silently, and in the worst
+# possible direction: a package added under `Packages/` and never added to
+# project.yml's `testTargets` is a suite that never runs, inside a run that
+# stays green and gets faster for it. So the claim is made from both ends, and
+# neither end is a list written out here:
+#
+#   - every directory under `Packages/` with a `Tests/` is named as a testable
+#     container in the scheme — checked below, before anything is built;
+#   - every testable the scheme names reported results in the run's result
+#     bundle — `--require-testable`, checked in app-test-lane.sh afterwards.
+#
+# Read out of the generated scheme rather than out of project.yml, because the
+# scheme is the thing xcodebuild will act on, and `depends = ["generate"]`
+# means it was written from project.yml seconds earlier.
 [tasks.test]
 description = "Run every package's tests, and the app's own target, on the iOS Simulator"
+depends = ["generate"]
 run = '''
 set -eu
 set -o pipefail
 
-ran=0
-for package in Packages/*/; do
-  # `xcodebuild test` fails outright on a package with no test target, so a
-  # package whose tests are still a later ticket must not fail the run.
-  [ -d "$package/Tests" ] || continue
+scheme=Pops.xcodeproj/xcshareddata/xcschemes/Pops.xcscheme
+testables() {
+  attribute=$1
+  # `|| true` because an empty XPath result is an xmllint failure — exit 10 —
+  # and under `set -e` with pipefail that aborts this task with a bare status
+  # and no output, in the one case it most needs to explain itself. Swallowed
+  # here so an empty test action reaches the guard below as an empty string
+  # and gets reported by name instead.
+  xmllint --xpath "//TestAction/Testables/TestableReference/BuildableReference/@$attribute" \
+    "$scheme" \
+    | tr ' ' '\n' \
+    | sed -n 's/^'"$attribute"'="\(.*\)"$/\1/p' \
+    || true
+}
 
-  # A directory holding a Package.swift is a project as far as xcodebuild is
-  # concerned, which is what lets these tests run against the iOS SDK instead of
-  # the host's macOS one — the gap `test:packages` cannot close.
-  #
-  # Which scheme is testable is not a free choice. Xcode synthesises one scheme
-  # per product plus an aggregate `<name>-Package` when a package has more than
-  # one, and ONLY the aggregate carries the test action: `xcodebuild test
-  # -scheme AppCore` fails with "not currently configured for the test action"
-  # while `-scheme AppCore-Package` runs all 58 tests. A single-product package
-  # has no aggregate and its lone scheme is testable. Both the name and the
-  # scheme list are read back out of xcodebuild rather than guessed from the
-  # directory name, so a package renamed on one side only fails here by name.
-  listing=$(cd "$package" && xcodebuild -list -json 2>/dev/null) || listing=''
-  scheme=$(printf '%s' "$listing" | jq -er '
-    .workspace.name as $n
-    | .workspace.schemes as $s
-    | if ($s | index($n + "-Package")) then $n + "-Package"
-      elif ($s | index($n)) then $n
-      else error("no scheme named \($n) or \($n)-Package among \($s)") end
-  ') || {
-    echo "test: could not resolve a testable scheme for '$package'." >&2
-    exit 1
-  }
+names=$(testables BlueprintName)
+containers=$(testables ReferencedContainer)
 
-  (cd "$package" && xcodebuild test \
-    -scheme "$scheme" \
-    -destination "platform=iOS Simulator,name=$POPS_IOS_SIMULATOR,OS=latest") || exit 1
-  ran=$((ran + 1))
-done
-
-# Every package's tests being "a later ticket" is a green run that asserted
-# nothing, and looks identical to a passing one.
-if [ "$ran" -eq 0 ]; then
-  echo "test: no package under Packages/ has a Tests directory — this run checked nothing." >&2
+# Absence is a failure, not a pass: an unparseable scheme and a scheme with an
+# empty test action look the same from here, and both would leave every check
+# below comparing against nothing.
+if [ -z "$names" ]; then
+  echo "test: read no testables out of $scheme. Either its test action is empty" >&2
+  echo "      — in which case xcodebuild would run nothing and exit 0 — or this" >&2
+  echo "      task can no longer parse it." >&2
   exit 1
 fi
 
-# The second lane. Everything above runs a package against the iOS SDK; this
-# runs the app itself, which is the only way to reach an app bundle and the
-# entitlements that come with one. Invoked from here rather than added to the
-# CI workflow as a step of its own, so a lane can never exist locally and be
-# missing from the gate.
-mise run test:app
+covered=0
+uncovered=''
+for package in Packages/*/; do
+  # A package whose tests are still a later ticket has nothing to cover; the
+  # same guard `test:packages` uses.
+  [ -d "$package/Tests" ] || continue
+  if printf '%s\n' "$containers" | grep -qxF "container:${package%/}"; then
+    covered=$((covered + 1))
+  else
+    uncovered="$uncovered ${package%/}"
+  fi
+done
+if [ -n "$uncovered" ]; then
+  echo "test: these have a Tests directory and no testable in the Pops scheme:$uncovered" >&2
+  echo "      Add each to project.yml under the Pops scheme's testTargets as" >&2
+  echo "      'package: <package>/<test target>'. Until then their suites never" >&2
+  echo "      run, and this run would have been green having skipped them." >&2
+  exit 1
+fi
+
+# The other half of that check, and the one the loop above cannot make: with
+# nothing under `Packages/` to iterate, every package is trivially covered. The
+# app's own testable would still carry the run to green on 24 tests while every
+# package's suite had quietly stopped existing.
+if [ "$covered" -eq 0 ]; then
+  echo "test: no package under Packages/ has a Tests directory — this run would" >&2
+  echo "      have checked only the app target." >&2
+  exit 1
+fi
+
+mise run verify:app-test-target
+
+set --
+for name in $names; do
+  set -- "$@" --require-testable "$name"
+done
+
+scripts/app-test-lane.sh "platform=iOS Simulator,name=$POPS_IOS_SIMULATOR,OS=latest" \
+  --forbid-skips "$@"
 '''
 
 [tasks."verify:app-test-target"]
@@ -210,15 +255,20 @@ fi
 exit $status
 '''
 
-# Reached through `test` rather than run on its own in CI, but nameable so a
-# developer changing the app target can run this lane alone.
+# One of `test`'s testables, on its own. CI reaches this target through `test`
+# above and never invokes this task, so nothing here can be a lane the gate is
+# missing; it exists for a developer changing the app target who does not want
+# to wait on six packages' suites first.
 #
-# `--forbid-skips` here, not just on `test:device` below: this is the lane CI
-# runs on every push, and app-test-lane.sh's own reasoning for the flag —
-# "nobody re-reads a green check" — describes an automatic, unattended run far
-# more than it describes a manual one. Without it, the Secure Enclave and
-# Keychain suites this target exists for could start skipping on the runner
-# and CI would stay green.
+# `--only` narrows the shared `Pops` scheme rather than this lane owning a
+# scheme of its own. A second scheme would be a second list of testables to
+# keep in step with the first, and the failure that list has is silence.
+#
+# `--forbid-skips` here as well as on `test` above, and on `test:device` below:
+# app-test-lane.sh's own reasoning for the flag — "nobody re-reads a green
+# check" — describes an automatic, unattended run far more than a manual one.
+# Without it, the Secure Enclave and Keychain suites this target exists for
+# could start skipping on the runner and CI would stay green.
 [tasks."test:app"]
 description = "Run the app's test target on the iOS Simulator, and assert it ran something"
 depends = ["generate"]
@@ -229,7 +279,7 @@ set -o pipefail
 mise run verify:app-test-target
 
 scripts/app-test-lane.sh "platform=iOS Simulator,name=$POPS_IOS_SIMULATOR,OS=latest" \
-  --forbid-skips
+  --only PopsTests --require-testable PopsTests --forbid-skips
 '''
 
 # The same target on real hardware. Not reachable from `test` and never run in
@@ -263,6 +313,7 @@ fi
 mise run verify:app-test-target
 
 scripts/app-test-lane.sh "platform=iOS,name=$POPS_IOS_DEVICE" \
+  --only PopsTests --require-testable PopsTests \
   --forbid-skips --allow-provisioning-updates
 '''
 
