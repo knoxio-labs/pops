@@ -7,7 +7,6 @@ import AppCore
 /// localisation layer yet, and scattering the copy through the views now would
 /// make adding one a hunt.
 internal enum RootCopy {
-    internal static let title = "Pops"
     internal static let retry = "Try again"
 
     internal static let degraded =
