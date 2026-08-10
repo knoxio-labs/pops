@@ -23,8 +23,32 @@ name: Agent Review
 # jobs in `quality.yml` that own exactly one guard each; the rule, and the list,
 # are in docs/architecture/adr-045-guards-must-prove-they-report.md.
 #
-# Runs on every non-draft PR so the `agent-review` required check always
-# reports a result (a never-triggered required check would block forever).
+# RUNS ON DRAFTS TOO, and the job-level `if` that used to stop it is the reason.
+# `agent-review` is a required context on `main`. A job-level `if` that
+# evaluates false does not make the check absent, it makes it **skipped**, and
+# GitHub's branch ruleset does not accept a skipped check run as a satisfied
+# required check the way it accepts a workflow filtered out by paths. So every
+# push made while a PR was a draft left the PR permanently BLOCKED.
+#
+# `gh pr ready` did not clear it. The `ready_for_review` event starts a second
+# run that succeeds, and then the two views disagree — `gh pr checks` reports
+# `agent-review pass` while `statusCheckRollup.contexts` still reports SKIPPED,
+# and the ruleset believes the rollup. `gh pr merge` then refuses with "the base
+# branch policy prohibits the merge" while every visible check is green. The
+# only cures were close+reopen or another push, both of which re-run EVERY
+# `pull_request` workflow — on a branch touching `clients/ios` that is a macOS
+# job plus ~17 other checks, spent to clear one skipped check on a finished PR.
+# `gh run rerun` cannot help: it replays the stored payload where `draft` was
+# still true, so it skips again. Observed on #3944 and #3956.
+#
+# The fix is for the job to always run and conclude on its merits. The guards
+# are cheap and a draft PR that violates a federation invariant is better off
+# learning now than at ready-for-review, so they are not gated at all. Only the
+# LLM step carries the draft condition, because it is the one that spends money
+# and posts review comments on a PR nobody has asked to be reviewed yet.
+#
+# The property to keep: `agent-review`'s conclusion reflects the head it ran on,
+# never the draft state at the time of some earlier push.
 
 on:
   pull_request:
@@ -37,7 +61,6 @@ permissions:
 jobs:
   agent-review:
     name: agent-review
-    if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -75,7 +98,13 @@ jobs:
         run: node scripts/ci/check-docs-model.mjs
       - name: Test-typecheck guard (a unit's tsconfig.json may not hide its own tests from tsc)
         run: node scripts/ci/check-tests-typechecked.mjs
+      # The one step a draft should not reach: it posts review comments and
+      # spends tokens on a PR whose author has not asked for either yet. Skipped
+      # at STEP level, which leaves the job — and therefore the required check —
+      # reporting success either way. `ready_for_review` re-runs the workflow, so
+      # the review still happens the moment the PR is marked ready.
       - name: LLM review (advisory — federation invariants rubric)
+        if: github.event.pull_request.draft == false
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
