@@ -14,7 +14,7 @@ That store is `UserDefaults`-backed, and deliberately not the Keychain. Neither 
 
 Both halves have to be present for a session to resume. An identity with no tokens cannot make a request; tokens with no identity name nowhere to send them. Either alone opens at pairing, which is a better screen than a shell whose every request fails.
 
-Nothing here checks whether the credentials still *work*. That would put a network round trip on the launch path, and the app would show nothing until a server answered — including on a train, where the honest thing to render is what the device already has. A revocation is discovered by the first real request, which the middleware below already turns into a session event.
+Nothing here checks whether the credentials still _work_. That would put a network round trip on the launch path, and the app would show nothing until a server answered — including on a train, where the honest thing to render is what the device already has. A revocation is discovered by the first real request, which the middleware below already turns into a session event.
 
 ## Refresh, and why single-flight is not an optimisation
 
@@ -75,10 +75,10 @@ Everything in this package exists to avoid weakening it. In particular the fakes
 
 ## Two products, and why
 
-| Product           | Contains                                                                       | Who depends on it              |
-| ----------------- | ------------------------------------------------------------------------------ | ------------------------------ |
-| `Auth`            | The protocols, the two hardware-backed stores, and the paired-device store     | The app target                 |
-| `AuthTestSupport` | `InMemoryKeyStore`, `InMemoryTokenStore`, `InMemoryPairedDeviceStore`          | Test targets and previews only |
+| Product           | Contains                                                                   | Who depends on it              |
+| ----------------- | -------------------------------------------------------------------------- | ------------------------------ |
+| `Auth`            | The protocols, the two hardware-backed stores, and the paired-device store | The app target                 |
+| `AuthTestSupport` | `InMemoryKeyStore`, `InMemoryTokenStore`, `InMemoryPairedDeviceStore`      | Test targets and previews only |
 
 `InMemoryKeyStore` really signs, so tests exercise create → sign → verify → delete rather than counting calls. What it does not do is protect anything: its private key sits in the process heap and vanishes on exit. Wiring it into the composition root by accident would produce an app that pairs, works, and provides none of the guarantees the pairing was for — a failure with no symptom.
 
