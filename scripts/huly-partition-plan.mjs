@@ -116,8 +116,12 @@ export const DEFAULT_LIMIT = 200;
  *   limit?: number,
  *   statuses?: string[],
  *   components?: string[],
- *   cells?: CoverageCell[],
- * }} Coverage The provenance block an enumerated export carries.
+ *   cells: CoverageCell[],
+ * }} Coverage The provenance block an enumerated export carries. `cells` is
+ * required: a coverage block that names no queries is a proof of nothing, and
+ * `readCoverage` refuses it rather than reading it as an empty one. The other
+ * three default — an absent `limit` means the API cap, and absent `statuses`
+ * or `components` are caught by the assessment as a claim about nothing.
  */
 
 /**
@@ -438,7 +442,7 @@ export function assessCoverage(coverage, issues) {
   if (coverage === undefined) return undeclaredVerdict(issues);
 
   const limit = coverage.limit ?? DEFAULT_LIMIT;
-  const cells = coverage.cells ?? [];
+  const cells = coverage.cells;
   const statuses = coverage.statuses ?? [];
   const components = coverage.components ?? [];
   const present = new Set(cells.map((cell) => describeCell(cell.filter)));

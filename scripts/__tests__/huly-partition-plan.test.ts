@@ -498,6 +498,9 @@ describe('readCoverage', () => {
   // "undeclared" would quietly downgrade the first into the second.
   it.each([
     ['a non-object block', { coverage: [] }, /"coverage" must be an object/u],
+    // A block naming no queries is a proof of nothing. Reading it as an empty
+    // cell list would let `coverage: {}` pass for provenance.
+    ['a block with no cells at all', { coverage: {} }, /cells must be an array/u],
     ['cells that are not an array', { coverage: { cells: {} } }, /cells must be an array/u],
     ['a non-object cell', { coverage: { cells: [1] } }, /cells\[0\] is not an object/u],
     [
