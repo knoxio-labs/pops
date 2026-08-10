@@ -30,6 +30,24 @@ name: iOS Quality
 # `pillars/bfm/openapi/**` is in the path filter deliberately. The BFM contract
 # is the input the Swift client is generated from, so a contract change has to
 # re-run this job or the generated client rots without a single red check.
+#
+# THERE IS NO DerivedData CACHE HERE, AND THAT IS DELIBERATE — it was removed
+# after it failed a pull request for another branch's code. It cached
+# `~/Library/Developer/Xcode/DerivedData` with `restore-keys` that fell back to
+# `deriveddata-<os>-<xcode>-`, a prefix shared by EVERY branch. On run
+# 31389530517 that restored PR #3959's build state into this branch's job, and
+# xcodebuild replayed a stale build description: it tried to compile
+# `App/ContentView.swift`, `App/RootView.swift` and three others, none of which
+# exist on the branch being tested, and failed with `missing argument for
+# parameter 'router'`. A red check naming a file the author has never seen.
+#
+# It could not be fixed by narrowing the key either. The step it existed to
+# warm is gone: `build:for-testing` wipes its own private
+# `clients/ios/.derived-data` before every build, because a complete compiler log
+# for `unused_declaration` — a whole-program rule — requires compiling every
+# file. A build that must be cold cannot be warmed, so the cache had no
+# remaining consumer and only the failure mode. POPS-1683 asked why it appeared
+# to buy nothing; this is the answer, plus a reason to want it gone.
 
 on:
   push:
@@ -92,29 +110,6 @@ jobs:
           # produced by another toolchain is not a cache — Swift rebuilds it
           # from scratch and the stale one just wastes the restore.
           echo "POPS_XCODE_VERSION=$version" >> "$GITHUB_ENV"
-
-      # Captured once, right after checkout and before `xcodegen` or
-      # `-resolvePackageDependencies` run, rather than left as a live
-      # `hashFiles(...)` call inside the DerivedData cache steps further down.
-      # `hashFiles` reads whatever is on disk at the moment its OWN step
-      # executes, and `Resolve SPM dependencies` — which runs between the
-      # restore and the save below — creates a Package.resolved of the
-      # generated (gitignored) xcodeproj's own that does not exist yet here.
-      # A live `hashFiles` call at save time would therefore see one more
-      # file than the restore step saw earlier in the same run and produce a
-      # different hash for an unchanged commit, so the entry just saved could
-      # never match what a later run's restore looks for. Capturing the value
-      # now, before generation creates anything, keeps every later reference
-      # to it fixed for the rest of the job.
-      #
-      # Scoped to `Packages/*/Package.resolved` rather than `**/Package.resolved`
-      # so it does not also pick up `Tools/OpenAPIGenerator/Package.resolved` —
-      # that tool's dependency graph has its own cache below and has no bearing
-      # on what xcodebuild compiles, so folding it in here would invalidate this
-      # cache over a change nothing in it depends on.
-      - name: Hash the SPM dependency inputs for the DerivedData cache key
-        run: echo "POPS_IOS_DEPS_HASH=${{ hashFiles('clients/ios/Packages/*/Package.swift', 'clients/ios/Packages/*/Package.resolved') }}" >> "$GITHUB_ENV"
-
       - uses: jdx/mise-action@v4
         with:
           working_directory: clients/ios
@@ -139,71 +134,6 @@ jobs:
           key: spm-${{ runner.os }}-${{ hashFiles('clients/ios/Packages/*/Package.swift', 'clients/ios/Packages/*/Package.resolved') }}
           restore-keys: |
             spm-${{ runner.os }}-
-
-      # xcodebuild's compiled modules and build products for the one step that
-      # still uses its default location: `Build (iOS Simulator)`. `mise run
-      # build` passes no `-derivedDataPath`, so xcodebuild resolves its own
-      # default under `~/Library/Developer/Xcode/DerivedData`, named from a
-      # hash of this job's checkout path. That path is the same on every run of
-      # this workflow, which is why the whole directory can be cached instead
-      # of one project's slice of it.
-      #
-      # WHAT THIS CACHE NO LONGER COVERS, and why that is not a regression.
-      # `build:for-testing` — the compile `test` and `lint:analyze` share, and
-      # the bulk of this job — writes to `clients/ios/.derived-data` and wipes
-      # it first, so it neither reads nor writes what is cached here. It cannot
-      # usefully be cached: a complete compiler log requires compiling every
-      # file, and a warm tree by definition does not. That is inherent to
-      # `unused_declaration`, which is a whole-program question — a use deleted
-      # in one file makes a declaration in another unused.
-      #
-      # Previously that build ran `clean build-for-testing` against THIS
-      # directory, so it emptied the restored cache and `Save DerivedData`
-      # below then banked the result. Worth knowing while POPS-1683 is open on
-      # why this cache appeared to buy nothing.
-      #
-      # DerivedData is toolchain-specific — it holds compiled Swift modules
-      # and a PCM cache keyed to the compiler that produced them — so a hit
-      # restored under a different Xcode does not just fail to help, it
-      # serves stale module artifacts that produce build failures
-      # indistinguishable from source errors. `runner.os` covers a
-      # runner-image change, `POPS_XCODE_VERSION` a toolchain bump, and the
-      # Package.resolved hash a dependency bump; any one of those has to
-      # invalidate the cache outright, which is why all three sit in both the
-      # key and the first restore-keys prefix — a bumped `POPS_XCODE_VERSION`
-      # changes the prefix itself, so no entry keyed to the old toolchain can
-      # ever match it. The second, shorter restore-keys line drops only the
-      # dependency hash, so a `Package.resolved` bump still restores a
-      # same-toolchain build to recompile against rather than starting cold.
-      #
-      # Split into restore + save, rather than the single `actions/cache`
-      # step used above, because a source-only commit does not change this
-      # key: `actions/cache` never overwrites an existing key, so a plain
-      # cache step would restore the first run's snapshot on every exact-key
-      # hit and then silently skip saving the newer one that run just
-      # compiled — every commit after the first would recompile against a
-      # baseline that never moves. Suffixing the save key with `github.run_id`
-      # AND `github.run_attempt` makes the exact key different on every run —
-      # `run_id` alone is not enough, since GitHub's "re-run jobs" keeps the
-      # same `run_id` across attempts, and without `run_attempt` a re-run would
-      # exact-hit whatever the first attempt already saved and skip saving the
-      # second attempt's own result. With both, the restore always falls
-      # through to `restore-keys` (picking the most recently saved entry under
-      # the shared prefix) and the save at the end of the job always fires —
-      # the rolling pattern `actions/cache`'s own docs recommend for a
-      # directory that changes every run. `if: always()` on the save means a
-      # failing Build step still banks whatever compiled cleanly, so a fix on
-      # the next push — or the next attempt — is not recompiling from the same
-      # cold baseline as the failure it is fixing.
-      - name: Restore DerivedData
-        uses: actions/cache/restore@v6
-        with:
-          path: ~/Library/Developer/Xcode/DerivedData
-          key: deriveddata-${{ runner.os }}-${{ env.POPS_XCODE_VERSION }}-${{ env.POPS_IOS_DEPS_HASH }}-${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: |
-            deriveddata-${{ runner.os }}-${{ env.POPS_XCODE_VERSION }}-${{ env.POPS_IOS_DEPS_HASH }}-
-            deriveddata-${{ runner.os }}-${{ env.POPS_XCODE_VERSION }}-
-
       - name: Resolve SPM dependencies
         run: xcodebuild -project Pops.xcodeproj -scheme Pops -resolvePackageDependencies
 
@@ -275,18 +205,11 @@ jobs:
       # never a hand-copied command. A second copy of the command is a copy that
       # drifts, and the moment it does a green local run stops meaning anything.
 
-      # First, because it needs no build at all and takes seconds. A formatting
-      # or SwiftLint violation used to be reported after the eight-minute
-      # compile below had already been paid for.
+      # First, because it needs no build at all and answers in seconds. A
+      # formatting or SwiftLint violation used to be reported only after the
+      # whole tree had been compiled.
       - name: Lint (swift-format + SwiftLint)
         run: mise run lint
-
-      # Kept ahead of the compile below even though that compile subsumes it:
-      # it is the cheapest signal for the most common breakage, it runs against
-      # the cached DerivedData restored above, and "the app does not compile" is
-      # worth hearing in fifty seconds rather than in eight minutes.
-      - name: Build (iOS Simulator)
-        run: mise run build
 
       # ONE STEP, because it is one compile. Both tasks depend on
       # `build:for-testing`, and mise resolves a single dependency graph per
@@ -295,7 +218,17 @@ jobs:
       # where it started. `mise run test` alone still builds, so nothing about
       # the local command changed.
       #
-      # `:::` is mise's separator between TASKS, and it is not optional here.
+      # What this replaced: `xcodebuild test` compiled the whole tree against
+      # the iOS SDK, and `lint:analyze` then did its own `clean
+      # build-for-testing` to get a complete compiler log — two full compiles of
+      # the same sources, 399s and 473s when last measured, for a test action
+      # whose assertions take 1.5 seconds. The compile is the cost here; the
+      # tests are not. That is also why splitting the suites across the host and
+      # the simulator was NOT the fix — the packages a host lane would take are
+      # dependencies of the app target and the render suites that have to stay,
+      # so they get compiled either way and the split would move 1.5 seconds.
+      #
+      # `:::` is mise's separator between TASKS, and it is not optional.
       # `mise run test lint:analyze` does not run two tasks: it runs `test` and
       # appends `lint:analyze` to its command line as an argument, where it
       # arrives as a second xcodebuild destination and fails the lane. Verified
@@ -305,43 +238,12 @@ jobs:
       # runs the two tasks concurrently by default, which is ~3 minutes faster
       # and turned the job flaky: `swiftlint analyze` saturates the runner's
       # three cores while the simulator suite is running, and the Auth
-      # concurrency tests are written to poll for a condition with a timeout.
+      # concurrency tests poll for a condition with a timeout.
       # `twentyConcurrentRejectionsRefreshOnce` waits for twenty tasks to reach
       # a barrier; starved of CPU they do not all get there, and it failed with
       # "a request never reached the refresher" on one run in three. A required
       # check that fails one time in three costs far more than three minutes.
-      #
-      # This does NOT undo the change it sits inside. The shared
-      # `build:for-testing` still runs once — that is the dependency graph, not
-      # the scheduler — so the job compiles the tree once rather than twice.
-      # Only the two consumers of that build are now sequential.
-      #
       # Running them concurrently on two SEPARATE runners would get both the
-      # wall clock and the isolation, at the price of a second compile that
-      # nothing waits for. Costed in POPS-1746, along with why the analyzer
-      # takes 6x longer here than on a laptop.
-      #
-      # What this replaced: `xcodebuild test` compiled the whole tree against
-      # the iOS SDK, and `lint:analyze` then did its own `clean
-      # build-for-testing` to get a complete compiler log — two full compiles
-      # of the same sources, 803s and 473s when last measured, for a test action
-      # whose assertions take 1.5 seconds. The compile is the cost here; the
-      # tests are not. That is also why splitting the suites across the host and
-      # the simulator was NOT the fix — the packages a host lane would take are
-      # dependencies of the app target and the render suites that have to stay,
-      # so they get compiled either way and the split would move 1.5 seconds.
-      # Quoted because `test ::: lint:analyze` contains `: `, which an unquoted
-      # YAML scalar reads as the start of a mapping.
+      # wall clock and the isolation — costed in POPS-1746.
       - name: Test + SwiftLint analyzer rules (one shared compile)
         run: "mise run -j 1 test ::: lint:analyze"
-
-      # The other half of the restore step above — see its comment for why a
-      # plain `actions/cache` step cannot keep this cache moving forward.
-      # `if: always()` so a run that fails partway through Build, Test or
-      # either lint step still saves whatever compiled before the failure.
-      - name: Save DerivedData
-        if: always()
-        uses: actions/cache/save@v6
-        with:
-          path: ~/Library/Developer/Xcode/DerivedData
-          key: deriveddata-${{ runner.os }}-${{ env.POPS_XCODE_VERSION }}-${{ env.POPS_IOS_DEPS_HASH }}-${{ github.run_id }}-${{ github.run_attempt }}
