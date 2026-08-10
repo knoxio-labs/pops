@@ -261,31 +261,11 @@ internal struct ModuleBoundaryTests {
 }
 
 extension ModuleBoundaryTests {
-    /// `.../Packages/AppCore/Tests/AppCoreTests/ModuleBoundaryTests.swift`
-    private var packagesDirectory: URL {
-        URL(filePath: #filePath)
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-    }
+    private var packagesDirectory: URL { PackageTree.directory }
 
-    private func packageNames() throws -> Set<String> {
-        let contents = try FileManager.default.contentsOfDirectory(
-            at: packagesDirectory,
-            includingPropertiesForKeys: [.isDirectoryKey]
-        )
-        return Set(
-            contents
-                .filter { (try? $0.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true }
-                .map(\.lastPathComponent)
-        )
-    }
+    private func packageNames() throws -> Set<String> { try PackageTree.names() }
 
-    /// The app target, the one shipping tree that is not a package.
-    private var appDirectory: URL {
-        packagesDirectory.deletingLastPathComponent().appending(path: "App")
-    }
+    private var appDirectory: URL { PackageTree.appDirectory }
 
     /// Every module that exists only so tests have something to substitute,
     /// discovered by name rather than listed. A hand-maintained list is written
@@ -325,8 +305,7 @@ extension ModuleBoundaryTests {
     }
 
     private func manifestSource(ofPackage package: String) throws -> String {
-        let manifest = packagesDirectory.appending(path: package).appending(path: "Package.swift")
-        return try String(contentsOf: manifest, encoding: .utf8)
+        try PackageTree.manifestSource(ofPackage: package)
     }
 
     /// Every remote package URL the manifest declares. Matched on the `url:`

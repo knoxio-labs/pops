@@ -1,5 +1,16 @@
-// swift-tools-version: 6.0
+// swift-tools-version: 6.2
 import PackageDescription
+
+// Warnings are errors here, and the tools version is 6.2 to reach the setting
+// that does it without unsafe flags, for the reason `../AppCore/Package.swift`
+// gives. It reaches `Sources/BFMClient/Generated` too: generated code the
+// linters are told to skip is still code this app compiles and ships, and a
+// generator upgrade that started emitting deprecated calls would otherwise land
+// silently.
+let strictSwiftSettings: [SwiftSetting] = [
+    .swiftLanguageMode(.v6),
+    .treatAllWarnings(as: .error),
+]
 
 // The only external SPM dependencies the app links, and they are Apple's. The
 // generator that produces `Sources/BFMClient/Generated` is deliberately NOT one
@@ -37,7 +48,7 @@ let package = Package(
                 .product(name: "OpenAPIRuntime", package: "swift-openapi-runtime"),
                 .product(name: "OpenAPIURLSession", package: "swift-openapi-urlsession"),
             ],
-            swiftSettings: [.swiftLanguageMode(.v6)]
+            swiftSettings: strictSwiftSettings
         ),
         .testTarget(
             name: "BFMClientTests",
@@ -46,7 +57,7 @@ let package = Package(
                 "AppCore",
                 .product(name: "OpenAPIRuntime", package: "swift-openapi-runtime"),
             ],
-            swiftSettings: [.swiftLanguageMode(.v6)]
+            swiftSettings: strictSwiftSettings
         ),
     ]
 )

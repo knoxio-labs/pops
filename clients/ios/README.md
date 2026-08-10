@@ -36,6 +36,14 @@ On top of those, the run fails if it executed zero tests, and fails if anything 
 
 `mise install` here pins XcodeGen and SwiftLint; Xcode itself is not managed by mise, so `POPS_XCODE_VERSION` in `mise.toml` is a declaration rather than something mise can install — but `mise run lint` reads and enforces it (see [Linting and formatting](#linting-and-formatting) below), so it is not CI-only the way it once was. **The deployment target is capped by that Xcode, not chosen freely.** An SDK older than the deployment target does not build and an SPM `platforms:` floor cannot be overridden from the command line, so the floor can only be the newest iOS the GitHub-hosted macOS runner can build — the latest released major, never the one a beta Xcode is previewing. Raising it is a single commit that moves `POPS_XCODE_VERSION`, `project.yml`'s `deploymentTarget` and every `platforms:` floor under `Packages/` together, and it can only happen after the runner image ships that Xcode.
 
+## Warnings are errors
+
+`project.yml` sets `SWIFT_TREAT_WARNINGS_AS_ERRORS` and `GCC_TREAT_WARNINGS_AS_ERRORS` at the project level, which reaches `Pops` and `PopsTests` — and stops there. SwiftPM compiles each package under `Packages/` from its own `Package.swift`, largely independent of the project consuming it, so a project-level setting says nothing about the tree nearly all of this app's logic lives in: `Pops`'s own `sources:` is one thin directory. Every manifest therefore declares a `strictSwiftSettings` list of its own, and every target it declares passes it.
+
+The mechanism is `.treatAllWarnings(as: .error)` rather than `.unsafeFlags(["-warnings-as-errors"])`, and the choice is forced rather than stylistic: SwiftPM refuses to let a package using unsafe flags be depended on by another package, and these depend on each other by path — `Auth` on `AppCore` and `BFMClient`, each feature on `AppCore` and `DesignSystem`. Switching it on the traditional way in any one of them would break `swift build` for everything above it. That setting is also why every manifest declares `swift-tools-version: 6.2`: it does not exist below that.
+
+One manifest per package saying the same thing is one place per package to forget it, so [Packages/AppCore/Tests/AppCoreTests/WarningsAsErrorsTests.swift](Packages/AppCore/Tests/AppCoreTests/WarningsAsErrorsTests.swift) reads all of them and fails on any whose targets do not pass the list — including a package added long after this was written.
+
 ## Linting and formatting
 
 ```bash
