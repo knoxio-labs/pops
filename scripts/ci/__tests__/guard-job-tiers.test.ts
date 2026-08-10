@@ -228,10 +228,13 @@ describe('Tier B — a job whose guards need a parser keeps its install', () => 
   });
 });
 
-describe('config-parse.mjs is a library, not a check', () => {
-  it('is never invoked by a workflow as a guard', () => {
-    // Running it would report nothing and exit 0, which is the shape ADR-045
-    // exists to end.
-    expect(new Set(jobs.flatMap((j) => j.scripts))).not.toContain('scripts/ci/config-parse.mjs');
-  });
+describe('the shared Tier B modules are libraries, not checks', () => {
+  // Running one as a workflow step would report nothing and exit 0, which is
+  // the shape ADR-045 exists to end.
+  it.each(['scripts/ci/config-parse.mjs', 'scripts/ci/compose-schema.mjs'])(
+    '%s is never invoked by a workflow as a guard',
+    (module) => {
+      expect(new Set(jobs.flatMap((j) => j.scripts))).not.toContain(module);
+    }
+  );
 });

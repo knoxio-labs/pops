@@ -46,6 +46,14 @@
  * line number. A parser knows structure, not byte offsets, and the path is what
  * identifies the declaration once the file has been reformatted.
  *
+ * It does NOT validate against `compose-schema.mjs`, and that is deliberate.
+ * That schema describes `infra/docker-compose.yml` for callers that need
+ * specific fields out of it; this guard sweeps EVERY compose-shaped file in the
+ * tree and must report on documents it does not recognise rather than reject
+ * them. Routing it through a `zod` object would also strip the two keys it
+ * exists to find — `image` and `container_name` are not in that shape — which
+ * would leave the guard scanning nothing and printing `OK`.
+ *
  * Usage:
  *   node scripts/ci/check-homelab-service-isolation.mjs
  *   node scripts/ci/check-homelab-service-isolation.mjs --self-test

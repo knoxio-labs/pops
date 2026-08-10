@@ -85,10 +85,14 @@ Runs immediately after `actions/checkout`. **No third-party import, at any depth
 | `scripts/ci/check-node-pin.mjs`                  | `agent-review.yml` → `agent-review` | `mise*.toml`, workflow YAML, JSON, Dockerfile | `smol-toml`, `js-yaml` |
 | `scripts/ci/check-homelab-service-isolation.mjs` | `agent-review.yml` → `agent-review` | Compose + Litestream YAML                     | `js-yaml`              |
 | `scripts/extractability/check-cargo-deps.mjs`    | `rust-quality.yml` → `quality`      | Workspace + member `Cargo.toml`               | `smol-toml`            |
-| `scripts/ci/smoke-image.mjs`                     | `docker-build.yml` → `docker-build` | `infra/docker-compose.yml`                    | `js-yaml`              |
+| `scripts/ci/smoke-image.mjs`                     | `docker-build.yml` → `docker-build` | `infra/docker-compose.yml`                    | `js-yaml`, `zod`       |
 | `scripts/ci/check-ci-gate-wiring.mjs`            | `quality.yml` → `Scripts tests`     | Every workflow's YAML                         | `js-yaml`              |
 
 `check-ci-gate-wiring.mjs` has no workflow step of its own — it runs through its Vitest suite, in a job that already installs. It was already effectively Tier B and needed no workflow change.
+
+Two shared modules sit under Tier B and must never be imported from a Tier A guard: `scripts/ci/config-parse.mjs` (the parsers, plus the parse-or-report rule) and `scripts/ci/compose-schema.mjs` (the `zod` shape of `infra/docker-compose.yml`, shared by `smoke-image.mjs` and the Cloudflare Access env check). They are libraries, not checks, and the derived test asserts neither is ever invoked by a workflow as a guard.
+
+`check-homelab-service-isolation.mjs` parses Compose and deliberately does **not** use `compose-schema.mjs`. The schema describes one file for callers that need named fields out of it. The guard sweeps every compose-shaped file in the tree, must report rather than reject a document it does not recognise, and looks for `image` and `container_name` — two keys that shape does not model and a `zod` object would strip, leaving the guard scanning nothing and printing `OK`.
 
 ### Tier A guards that ride in a Tier B job
 
