@@ -259,7 +259,13 @@ export function refineCell(cell, components = []) {
       { ...cell, hasDueDate: false },
     ];
   }
-  if (cell.hasComponent === true && components.length > 0) {
+  // `component === undefined` is load-bearing, not redundant with the first
+  // branch. A cell naming a component is already past the fan-out, and fanning
+  // it out again would replace that label with all of them — a set of children
+  // wider than the parent they claim to divide, which turns a covered branch
+  // into an uncovered one and back depending on which labels were passed in.
+  // The recipe never builds such a cell; a hand-written `--refine` argument can.
+  if (cell.hasComponent === true && cell.component === undefined && components.length > 0) {
     return componentCells(cell, components);
   }
   return undefined;
@@ -769,7 +775,27 @@ function runAssess(args) {
  * @throws {Error} on an envelope this tool cannot read.
  */
 export function readRows(parsed) {
-  if (Array.isArray(parsed)) return parsed;
+  const rows = Array.isArray(parsed) ? parsed : resultArrayOf(parsed);
+  return rows.map((row, index) => {
+    if (typeof row !== 'object' || row === null || Array.isArray(row)) {
+      throw new Error(`issue at index ${index} is not an object`);
+    }
+    const identifier = /** @type {Record<string, unknown>} */ (row)['identifier'];
+    // Checked here rather than left to blow up in `duplicateIdentifiers`,
+    // which runs outside the CLI's read guard: a TypeError there costs the
+    // message naming the row and returns the wrong exit code with it.
+    if (typeof identifier !== 'string' || identifier.trim() === '') {
+      throw new Error(`issue at index ${index} has no string "identifier"`);
+    }
+    return { identifier: identifier.trim() };
+  });
+}
+
+/**
+ * @param {unknown} parsed
+ * @returns {unknown[]}
+ */
+function resultArrayOf(parsed) {
   if (typeof parsed !== 'object' || parsed === null) {
     throw new Error('expected a JSON array of issues, or an object with a "result" array');
   }

@@ -141,6 +141,24 @@ describe('partitionRoots / refineCell', () => {
       refineCell({ status: 'X', component: 'ios', hasAssignee: true, hasDueDate: true }, ['ios'])
     ).toBeUndefined();
   });
+
+  // Fanning this out would hand back children covering every label in place of
+  // the one the cell names — a child set wider than its parent, which makes a
+  // covered branch read as uncovered depending only on what labels were passed.
+  it('does not fan out a cell that names a component and also says hasComponent', () => {
+    expect(
+      refineCell(
+        {
+          status: 'X',
+          component: 'ios',
+          hasComponent: true,
+          hasAssignee: true,
+          hasDueDate: true,
+        },
+        ['ios', 'bfm']
+      )
+    ).toBeUndefined();
+  });
 });
 
 describe('findUncovered', () => {
@@ -598,6 +616,31 @@ describe('readRows', () => {
   it('refuses a scalar export outright', () => {
     expect(() => readRows('nope')).toThrow(/expected a JSON array/u);
     expect(() => readRows(null)).toThrow(/expected a JSON array/u);
+  });
+
+  // These would otherwise blow up inside `duplicateIdentifiers`, which runs
+  // outside the CLI's read guard — losing both the message naming the row and
+  // the exit code that means "your file is malformed".
+  it.each([
+    ['a null row', { result: [null] }, /index 0 is not an object/u],
+    ['a number row', { result: [1] }, /index 0 is not an object/u],
+    ['an array row', { result: [[]] }, /index 0 is not an object/u],
+  ])('refuses %s with its index', (_name, parsed, message) => {
+    expect(() => readRows(parsed)).toThrow(message);
+  });
+
+  it.each([
+    ['no identifier', { title: 't' }],
+    ['a non-string identifier', { identifier: 7 }],
+    ['a blank identifier', { identifier: '   ' }],
+  ])('refuses a row with %s', (_name, row) => {
+    expect(() => readRows({ result: [{ identifier: 'POPS-1' }, row] })).toThrow(
+      /index 1 has no string "identifier"/u
+    );
+  });
+
+  it('trims the identifier it reads', () => {
+    expect(readRows([{ identifier: ' POPS-1 ' }])).toEqual([{ identifier: 'POPS-1' }]);
   });
 });
 
