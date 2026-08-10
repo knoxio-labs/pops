@@ -33,7 +33,7 @@ name: iOS Quality
 #
 # THERE IS NO DerivedData CACHE HERE, AND THAT IS DELIBERATE. It cannot help
 # the step that costs. `build:for-testing` wipes its own private
-# `clients/ios/.derived-data` before every build, because a complete compiler
+# `.derived-data` directory before every build, because a complete compiler
 # log for `unused_declaration` — a whole-program rule, where a use deleted in
 # one file makes a declaration in another unused — requires compiling every
 # file. A warm tree by definition recompiles only what changed, so a cache hit
