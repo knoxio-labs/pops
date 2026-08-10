@@ -2,7 +2,7 @@
 
 A native SwiftUI iPhone app that reaches the federation over HTTP through one pillar and is imported by nothing in this repo — the two halves of what [ADR-043](../../docs/architecture/adr-043-clients-as-a-unit-kind.md) means by a client. It is in neither the pnpm workspace nor the cargo workspace; `pnpm`, `tsc` and `cargo` have nothing to say about this directory.
 
-That pillar is the BFM. Its contract is vendored here and a Swift client is generated from it — see [`Packages/BFMClient`](Packages/BFMClient/README.md). The pairing exchange is the first call the app makes through it; the authenticated ones are not written, because the transport that would attach and refresh a token is not either.
+That pillar is the BFM. Its contract is vendored here and a Swift client is generated from it — see [`Packages/BFMClient`](Packages/BFMClient/README.md). The pairing exchange is the first call the app makes through it; the authenticated ones go through `Auth`'s middleware, which attaches the device's access token and refreshes it once when the BFM says it is stale.
 
 The consequence worth internalising before changing anything here: this app is **distributed, not deployed**. It leaves through App Store Connect onto hardware the operator does not control, so a build already on a phone keeps calling yesterday's contract for as long as its owner declines to update. Every other consumer of a pillar contract in this repo redeploys with its producer; this one cannot.
 
@@ -133,7 +133,7 @@ Half of that is compiler-enforced — a package can only `import` what its own `
 
 `Packages/DesignSystem` carries a second constraint on every feature, orthogonal to the import graph: a feature may not name a colour, a type size or a gap. See [Packages/DesignSystem/README.md](Packages/DesignSystem/README.md).
 
-`AppCore`, `DesignSystem`, `BFMClient`, `Auth` and `FeaturePairing` are written — see [Packages/Auth/README.md](Packages/Auth/README.md), [Packages/BFMClient/README.md](Packages/BFMClient/README.md) and [Packages/FeaturePairing/README.md](Packages/FeaturePairing/README.md). `FeatureTransactions` is still a shell whose placeholder type says what the module is for, and so is the app's root view — the pairing screen is built and unit-tested but nothing presents it yet, which is the root shell's ticket.
+Every package is written — see [Packages/Auth/README.md](Packages/Auth/README.md), [Packages/BFMClient/README.md](Packages/BFMClient/README.md), [Packages/FeaturePairing/README.md](Packages/FeaturePairing/README.md) and [Packages/FeatureTransactions/README.md](Packages/FeatureTransactions/README.md). The app's root view is not: it is still the placeholder that proves the modules link, so both screens are reachable only from `#Preview` and nothing binds a repository to the environment. That is the root shell's ticket.
 
 ## `Contracts/`
 
@@ -166,7 +166,7 @@ It is not quite the only job that touches this directory. Two jobs in [`quality.
 
 ## Known gaps
 
-- **Nothing constructs the app's dependencies yet.** `AppDependencies.unbound` is what the environment still holds: `BFMDevicePairingService` and `PairingView` are both written and tested, and nothing builds either, because the root view that would switch on the session and bind them is a placeholder (POPS-1391). Until it lands the pairing screen is reachable only from `#Preview`.
+- **Nothing constructs the app's dependencies yet.** `AppDependencies.unbound` is what the environment still holds. `BFMDevicePairingService`, `BFMTransactionsRepository` and both screens are written and tested, and nothing builds any of them, because the root view that would switch on the session and bind them is a placeholder (POPS-1391). Until it lands both screens are reachable only from `#Preview`.
 - **Nothing automated checks Dynamic Type or VoiceOver on any screen.** The pairing screen is laid out for both and neither is measured; the reasoning and the candidate checks are in POPS-1583. See [`Packages/FeaturePairing/README.md`](Packages/FeaturePairing/README.md).
 - **`mise run verify:release-carries-no-host` runs nowhere but a laptop.** The invariant it guards — a shipped binary naming no BFM host — is the one thing here that is not caught by building, testing or linting, and it is the only task in this directory that no job invokes (POPS-1475).
 - **The pre-push hook does not run `mise run lint`.** It would put Xcode on the push path for every contributor, including on the TypeScript-only pushes that are almost all of them. Unformatted Swift can still reach a branch; it can no longer reach `main`, because the CI job rejects it.

@@ -18,7 +18,14 @@ let package = Package(
     name: "BFMClient",
     platforms: [.iOS("26.0"), .macOS("15.0")],
     products: [.library(name: "BFMClient", targets: ["BFMClient"])],
+    // `AppCore` is the one sibling edge, and it is the reason this package is
+    // named in `ModuleBoundaryTests.implementationPackages`: a repository over
+    // the contract is a concrete implementation of an `AppCore` seam, and this
+    // is where the calls that carry the generated types live. `AppCore` depends
+    // on nothing, so the edge points the same way every other one in this tree
+    // does.
     dependencies: [
+        .package(path: "../AppCore"),
         .package(url: "https://github.com/apple/swift-openapi-runtime", exact: "1.12.0"),
         .package(url: "https://github.com/apple/swift-openapi-urlsession", exact: "1.3.1"),
     ],
@@ -26,6 +33,7 @@ let package = Package(
         .target(
             name: "BFMClient",
             dependencies: [
+                "AppCore",
                 .product(name: "OpenAPIRuntime", package: "swift-openapi-runtime"),
                 .product(name: "OpenAPIURLSession", package: "swift-openapi-urlsession"),
             ],
@@ -35,6 +43,7 @@ let package = Package(
             name: "BFMClientTests",
             dependencies: [
                 "BFMClient",
+                "AppCore",
                 .product(name: "OpenAPIRuntime", package: "swift-openapi-runtime"),
             ],
             swiftSettings: [.swiftLanguageMode(.v6)]

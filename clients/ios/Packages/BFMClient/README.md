@@ -2,7 +2,7 @@
 
 The one way this app reaches the federation. Everything the phone knows about a pillar arrives through here, over HTTP, from the BFM.
 
-Three things live in this package: the Swift client **generated** from the BFM's OpenAPI snapshot, the hand-written façade that wraps it, and `BuiltInBaseURL`, which answers where the BFM is for a Debug build.
+Four things live in this package: the Swift client **generated** from the BFM's OpenAPI snapshot, the hand-written façade that wraps it, `BuiltInBaseURL`, which answers where the BFM is for a Debug build, and the repositories that turn a contract response into the vocabulary `AppCore` declares.
 
 ## The client is generated, committed, and gated
 
@@ -34,7 +34,7 @@ Both the generator and the runtime are pinned with `exact:`. The generator versi
 
 ## Generated types do not leave this module
 
-`openapi-generator-config.yaml` sets `accessModifier: internal`. That one line is the boundary: every generated type is unnameable from any other module, so regenerating the client can never turn into a cross-module refactor. What crosses the boundary is hand-written — `BFMHealth` today, one value type per response shape as the contract grows.
+`openapi-generator-config.yaml` sets `accessModifier: internal`. That one line is the boundary: every generated type is unnameable from any other module, so regenerating the client can never turn into a cross-module refactor. What crosses the boundary is hand-written — `BFMHealth`, or an `AppCore` type a repository maps into.
 
 Three things hold it, because the failure is silent — flipping that line produces a clean build, a clean lint and a green test run:
 
@@ -53,11 +53,23 @@ Two things it does that the generated client does not:
 - **An undocumented status is an error.** The generator models any status the contract does not describe as a `.undocumented` case — a value, not a throw. Left alone, a 502 from a reverse proxy arrives at a call site as a successful call whose body nobody read.
 - **The response becomes a domain type.** `BFMHealth` rather than `Operations.Health.Output.Ok.Body.JsonPayload`, whose name is a function of the contract and of the generator's naming strategy.
 
-It carries no credentials. Attaching and refreshing an access token is a `ClientMiddleware` that does not exist yet, so every call from here reaches only the BFM's unauthenticated perimeter.
+It carries no credentials of its own. `init(baseURL:)` reaches only the BFM's unauthenticated perimeter; `init(baseURL:middlewares:)` is how a caller hands it `Auth`'s `AuthenticatingMiddleware`, which is what a `/mobile/*` call needs. Nothing in this package knows which of the two it was given.
+
+## The repositories
+
+`BFMTransactionsRepository` conforms to `AppCore`'s `TransactionsRepository`. It is the reason this package depends on `AppCore` at all, and the reason `ModuleBoundaryTests` names it — with `Auth` — as one of the two packages allowed to hold a concrete implementation of a seam.
+
+The mapping from wire to domain is the whole of it, and each leg is somewhere a wrong answer is silent:
+
+- **Money.** The contract carries `amount` as a JSON `number`, so the generator emits a `Double`, and `MoneyAmount` holds integer minor units. The conversion goes through the shortest decimal string that round-trips the value — `Decimal(19.99)` is `19.989999999999998976` and scaling that yields 1998 cents, while `Decimal(string: "19.99")` is exact. A value with more precision than the currency has is refused rather than rounded: this app does not get to invent a rounding rule for money the finance pillar owns.
+- **Dates.** `date` is typed as a bare string with no `format`, so what it means is a decision the contract does not state. It is read as `YYYY-MM-DD` and nothing else — parsed, then formatted back and compared, because a date-only `ISO8601FormatStyle` parses a leading date and ignores whatever follows it. The day is anchored at midnight in the reader's own zone, which is the zone the row is later formatted in; anchoring it in UTC renders the 5th as the 4th for everybody west of Greenwich.
+- **Types.** `type` reaches `TransactionType` as a raw value, never through a Swift enum. It is the field the finance pillar is free to add to, and this build is on a phone somebody else owns.
+- **Failures.** `unavailable` and `contractMismatch` do not converge. The BFM separates `upstream_unavailable` from `upstream_contract_mismatch` deliberately — "not answering" against "answered something this build cannot read" — and the list renders a different sentence and a different next action for each.
+- **A stale cursor is not a failure.** `400 invalid_cursor` says the token this app holds is not one this server issued, and the server's own instruction is to start the list again. The repository does that rather than reporting it, which keeps the rows already on screen. It cannot recurse: the restart sends no cursor, and only a cursor that was sent can be rejected.
 
 ## Where the base URL comes from
 
-`BuiltInBaseURL` resolves what a build ships with, which in Release is nothing — see [Where the BFM base URL comes from](../../README.md#where-the-bfm-base-url-comes-from). Nothing constructs a `BFMHTTPClient` from it yet: the composition root binds implementations to `AppCore` protocols, and this package declares none. That is now a gap on this side rather than on the contract's — the BFM publishes a mobile transaction list and detail, and the generated client has `mobileFinance_listTransactions` and `mobileFinance_getTransaction` for them; no feature has been written that asks.
+`BuiltInBaseURL` resolves what a build ships with, which in Release is nothing — see [Where the BFM base URL comes from](../../README.md#where-the-bfm-base-url-comes-from). Nothing constructs a `BFMHTTPClient` from it yet; that is the composition root's job, and the root is still a placeholder.
 
 ## Running the tests
 
