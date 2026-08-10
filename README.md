@@ -142,7 +142,7 @@ mise lint && mise typecheck    # Must pass before every push
 
 `lint-staged` only formats _staged_ files, so a file written and committed in one step can land unformatted, and a change to `oxfmt`'s output rules can leave untouched files drifted. Left alone that compounds, and the whole-tree `Format` check starts failing on work that did not cause it.
 
-The catch is [`quality.yml`](.github/workflows/quality.yml)'s `Format` job on a push to `main`: it drops the per-PR unit scoping and runs `pnpm format:check` over the whole tree, on every merge. That sweep is the only thing in CI that reads paths outside the unit-discovery model — `clients/` among them (ADR-043) — so it is what catches drift a PR-scoped check cannot see.
+The catch is [`quality.yml`](.github/workflows/quality.yml)'s `Format` job on a push to `main`: it drops the per-PR unit scoping and runs `pnpm format:check` over the whole tree, on every merge. It is the only _unscoped_ formatter run in CI, so it is what catches drift in paths no PR-scoped `oxfmt --check` maps into scope — `clients/`, which sits outside the unit-discovery model (ADR-043), among them.
 
 ### E2E Tests
 
