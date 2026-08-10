@@ -10,6 +10,21 @@ name: Quality
 # degenerate there (see the `scope` job), and main must never quietly
 # accumulate drift the per-PR scoping missed.
 #
+# THOSE FOUR JOBS GUARD ON `needs.scope.result` INSTEAD OF TAKING THE DEFAULT.
+# A job's default condition is `success()`, and `success()` is evaluated over
+# the WHOLE TRANSITIVE `needs` graph — not just the job's direct `needs`. So
+# `discover` (PR-only, two hops upstream) being `skipped` on a `push` skipped
+# `lint`/`format`/`boundaries`/`exports` with it, even though the intervening
+# `scope` job ran and reported `success`. The safety net described above
+# therefore never once executed on `main`, and nothing went red to say so: a
+# skipped job does not fail a workflow conclusion, so `Quality` and `CI Gate`
+# stayed green over an unswept tree. Only an `if:` built from a STATUS CHECK
+# FUNCTION breaks that inherited skip — a plain expression such as
+# `github.event_name == 'push'` does not, and would silently restore the bug.
+# `scripts/ci/__tests__/job-skip-inheritance.test.ts` fails the build if any job
+# in any workflow here loses that guard while something conditional sits
+# upstream of it.
+#
 # NO `paths-ignore`: this workflow must trigger on EVERY PR, including docs-only
 # ones. A required status check that never runs is reported as "Expected —
 # waiting for status" forever and blocks the PR. The ruleset flag
@@ -79,6 +94,7 @@ jobs:
   lint:
     name: Lint
     needs: scope
+    if: always() && needs.scope.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -101,6 +117,7 @@ jobs:
   format:
     name: Format
     needs: scope
+    if: always() && needs.scope.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -123,6 +140,7 @@ jobs:
   boundaries:
     name: Module boundaries
     needs: scope
+    if: always() && needs.scope.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -197,6 +215,7 @@ jobs:
     # since exports/files self-consistency is a whole-tree invariant and main
     # must never silently accumulate a break the per-PR scoping missed.
     needs: scope
+    if: always() && needs.scope.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
