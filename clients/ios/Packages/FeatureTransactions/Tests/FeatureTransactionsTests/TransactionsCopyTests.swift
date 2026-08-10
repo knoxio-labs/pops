@@ -32,10 +32,15 @@ internal struct TransactionsCopyTests {
     /// The distinction the BFM returns a typed unavailable response to preserve.
     /// If these ever read alike, the app is telling somebody their money is
     /// gone because a container restarted.
+    /// Case-insensitively, because the phrase this must never contain is just
+    /// as wrong at the start of a sentence — and a copy edit that capitalises
+    /// it is exactly the change that would slip past a literal match.
     @Test("an outage does not read like an empty account")
     func outageIsNotEmptiness() {
-        #expect(TransactionsCopy.message(for: .unavailable) != TransactionsCopy.empty)
-        #expect(!TransactionsCopy.message(for: .unavailable).contains("no transactions"))
+        let outage = TransactionsCopy.message(for: .unavailable)
+
+        #expect(outage != TransactionsCopy.empty)
+        #expect(!outage.lowercased().contains("no transactions"))
     }
 
     /// The diagnostic in a transport failure is for a log. Nobody holding a
