@@ -399,6 +399,12 @@ Two consequences, and the second is the expensive one:
 
 A mirror is identifiable exactly rather than by eye: its title equals a commit subject on `origin/main`, give or take the squash-merge `(#1234)` suffix. `scripts/huly-backlog-reconcile.mjs` decides that, and cross-references an exported backlog against merged commits to name any ticket whose work already shipped. Run it against a tracker export — it reads only, and its `--help` states the evidence it will and will not act on.
 
+#### One query cannot read the whole backlog
+
+`list_issues` caps `limit` at 200, offers no offset or cursor, returns no total, and sorts newest-modified first. A call that comes back with 200 rows has been silently truncated and nothing in the response admits it — which is how a sweep ends up reporting "no orphans" over the newest page and reading as a clean bill of health. **Treat `rows === limit` as incomplete, every time.**
+
+To read the whole set, split the query space until every leaf lands under the cap: one cell per workflow status, then divide a capped cell by `hasComponent`, `hasAssignee` and `hasDueDate` (each asked both ways, so the halves complement), then by `component`. `scripts/huly-partition-plan.mjs` emits those queries (`--roots`, `--refine`) and audits a finished export against them (`--assess`); its `--help` carries the recipe, and its file docstring is explicit about the three things it takes on trust rather than proves. An export records the queries that produced it in a `coverage` block, and every reconcile report now opens by saying which of _complete_, _INCOMPLETE_ or _UNKNOWN_ applies to the input it just read.
+
 You do **not** need an issue to start work. The tracker exists for work that is deferred, not for permission to begin. But the converse is a hard rule: **anything you decide not to do right now gets filed before the PR merges** — a gap between what a README claims and what the code does, a shortcut taken under time pressure, a missing test, a follow-up you can see coming. File it with enough context to act on without this conversation, then let it go.
 
 ### Test Mandate
