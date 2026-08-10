@@ -52,7 +52,8 @@ import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 
 import { load as parseYaml } from 'js-yaml';
-import { z } from 'zod';
+
+import { ComposeFileSchema } from './compose-schema.mjs';
 
 const execFileAsync = promisify(execFile);
 
@@ -86,33 +87,6 @@ const BOOT_PLACEHOLDER_SECRETS = {
 };
 
 /**
- * One `volumes:` list entry: Compose's short `[source:]target[:mode]` string
- * form, or its long object form. Only `type`, `target` and `read_only` are
- * read; everything else passes through unexamined.
- */
-const ComposeVolumeEntrySchema = z.union([
-  z.string(),
-  z.object({
-    type: z.string().optional(),
-    target: z.string(),
-    read_only: z.boolean().optional(),
-  }),
-]);
-
-/** A Compose service: only `build.dockerfile` and `volumes` matter here. */
-const ComposeServiceSchema = z
-  .object({
-    build: z.union([z.string(), z.object({ dockerfile: z.string().optional() })]).optional(),
-    volumes: z.array(ComposeVolumeEntrySchema).optional(),
-  })
-  .nullable();
-
-/** A Compose manifest: only the `services:` map matters here. */
-const ComposeFileSchema = z.object({
-  services: z.record(z.string(), ComposeServiceSchema).optional(),
-});
-
-/**
  * Whether a short-form volume's source names a path on the host rather than a
  * Docker volume.
  *
@@ -139,7 +113,7 @@ function isHostPath(source) {
  * itself contains a colon (a Windows path, a URL-ish volume name) shifts every
  * segment along so the target lands on the mode.
  *
- * @param {z.infer<typeof ComposeVolumeEntrySchema>} entry
+ * @param {import('./compose-schema.mjs').ComposeVolumeEntry} entry
  * @returns {{ target: string, readOnly: boolean, isBind: boolean } | undefined}
  *   `undefined` when the entry declares no absolute container path, which
  *   Compose itself would also reject.
@@ -210,7 +184,7 @@ export function dataMountsForDockerfile(composeText, dockerfilePath) {
   const wanted = normalizeDockerfilePath(dockerfilePath);
   /** @type {Set<string>} */
   const targets = new Set();
-  for (const [name, service] of Object.entries(compose.services ?? {})) {
+  for (const [name, service] of Object.entries(compose.services)) {
     const build = service?.build;
     if (build === undefined) continue;
     const declared = typeof build === 'string' ? undefined : build.dockerfile;
