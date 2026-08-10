@@ -8,6 +8,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   checkExpectation,
   checkExpectations,
+  checkWrapperRegistrations,
   declaredParams,
   discoverCallSites,
   EXPECTATIONS,
@@ -16,7 +17,9 @@ import {
   findDirectFetchGaps,
   findFetchCalls,
   findPillarCalls,
+  findWrapperCalls,
   loadProducerDoc,
+  PILLAR_CALL_WRAPPERS,
   resolveProducerId,
   SANCTIONED_DIRECT_FETCH,
   scanSource,
@@ -174,6 +177,110 @@ describe('findPillarCalls', () => {
     expect(findPillarCalls(scanSource("pillar<R>('lists', { transport, cacheTtlMs: 0 })"))).toEqual(
       [{ argument: "'lists'", line: 1 }]
     );
+  });
+});
+
+describe('findWrapperCalls', () => {
+  const wrapper = { typeName: 'PillarGateway', method: 'call', definedIn: 'gateway.ts' };
+
+  it('finds a call through an identifier bound by a parameter type annotation', () => {
+    const scanned = scanSource(
+      "function f(gateway: PillarGateway) { return gateway.call<R, unknown>('finance', cb); }"
+    );
+    expect(findWrapperCalls(scanned, [wrapper])).toEqual([{ argument: "'finance'", line: 1 }]);
+  });
+
+  it('reads whatever the bound identifier is named, not a fixed name', () => {
+    const scanned = scanSource(
+      "function f(cerebrumGateway: PillarGateway) { return cerebrumGateway.call('cerebrum', cb); }"
+    );
+    expect(findWrapperCalls(scanned, [wrapper])).toEqual([{ argument: "'cerebrum'", line: 1 }]);
+  });
+
+  it('ignores a `.call` on an identifier not bound to a registered wrapper type', () => {
+    const scanned = scanSource('function f(other: SomeOtherType) { return other.call(pillarId); }');
+    expect(findWrapperCalls(scanned, [wrapper])).toHaveLength(0);
+  });
+
+  it('ignores an unrelated `.call` entirely when no wrapper type is bound in the file', () => {
+    expect(findWrapperCalls(scanSource("fn.call(null, 'arg');"), [wrapper])).toHaveLength(0);
+  });
+
+  it('returns nothing when no wrapper is registered', () => {
+    const scanned = scanSource("function f(gateway: PillarGateway) { return gateway.call('x'); }");
+    expect(findWrapperCalls(scanned, [])).toHaveLength(0);
+  });
+
+  it('finds every call when two identifiers are bound to the same wrapper type', () => {
+    const scanned = scanSource(
+      [
+        "function a(gateway: PillarGateway) { gateway.call('one', cb); }",
+        "function b(otherGateway: PillarGateway) { otherGateway.call('two', cb); }",
+      ].join('\n')
+    );
+    expect(findWrapperCalls(scanned, [wrapper]).map((c) => c.argument)).toEqual(["'one'", "'two'"]);
+  });
+
+  it('blanks a wrapper-shaped call written inside a comment', () => {
+    const scanned = scanSource(
+      "// function f(gateway: PillarGateway) { gateway.call('never'); }\nconst x = 1;"
+    );
+    expect(findWrapperCalls(scanned, [wrapper])).toHaveLength(0);
+  });
+});
+
+describe('checkWrapperRegistrations', () => {
+  let scratch: string;
+  beforeAll(() => {
+    scratch = mkdtempSync(join(tmpdir(), 'cross-pillar-wrapper-registration-'));
+    writeFileSync(join(scratch, 'gateway.ts'), 'export interface PillarGateway { call(): void; }');
+    writeFileSync(join(scratch, 'alias.ts'), 'export type PillarGateway = { call(): void };');
+    writeFileSync(join(scratch, 'renamed.ts'), 'export interface SomethingElse { call(): void; }');
+    writeFileSync(
+      join(scratch, 'commented-out.ts'),
+      '// export interface PillarGateway { call(): void; }\nconst note = "interface PillarGateway";'
+    );
+  });
+  afterAll(() => rmSync(scratch, { recursive: true, force: true }));
+
+  it('passes when the type is still declared where it is registered', () => {
+    expect(
+      checkWrapperRegistrations(scratch, [
+        { typeName: 'PillarGateway', method: 'call', definedIn: 'gateway.ts' },
+      ])
+    ).toEqual([]);
+  });
+
+  it('accepts a type alias, not only an interface', () => {
+    expect(
+      checkWrapperRegistrations(scratch, [
+        { typeName: 'PillarGateway', method: 'call', definedIn: 'alias.ts' },
+      ])
+    ).toEqual([]);
+  });
+
+  it('fails when the type has been renamed or moved out of the registered file', () => {
+    const failures = checkWrapperRegistrations(scratch, [
+      { typeName: 'PillarGateway', method: 'call', definedIn: 'renamed.ts' },
+    ]);
+    expect(failures).toHaveLength(1);
+    expect(failures[0]).toContain('no such type is declared');
+  });
+
+  it('fails when the registered file does not exist', () => {
+    const failures = checkWrapperRegistrations(scratch, [
+      { typeName: 'PillarGateway', method: 'call', definedIn: 'missing.ts' },
+    ]);
+    expect(failures).toHaveLength(1);
+    expect(failures[0]).toContain('does not exist');
+  });
+
+  it('does not let a type name inside a comment or string satisfy the declaration', () => {
+    const failures = checkWrapperRegistrations(scratch, [
+      { typeName: 'PillarGateway', method: 'call', definedIn: 'commented-out.ts' },
+    ]);
+    expect(failures).toHaveLength(1);
+    expect(failures[0]).toContain('no such type is declared');
   });
 });
 
@@ -359,6 +466,15 @@ describe('discoverCallSites — fixture tree', () => {
       ].join('\n')
     );
     write('pillars/alpha/src/api/tmdb.ts', 'const res = await fetch(`${BASE_URL}/movie`);');
+    write(
+      'pillars/beta/src/api/wrapper.ts',
+      [
+        "const WRAPPER_TARGET = 'gamma';",
+        'function useWrapper(gateway: PillarGateway) {',
+        '  return gateway.call<R, unknown>(WRAPPER_TARGET, (h) => h.x());',
+        '}',
+      ].join('\n')
+    );
   });
   afterAll(() => rmSync(root, { recursive: true, force: true }));
 
@@ -390,6 +506,16 @@ describe('discoverCallSites — fixture tree', () => {
 
   it('ignores __tests__ directories, .test.ts files, non-source files and dirs outside src', () => {
     expect(discoverCallSites(root).sites.map((s) => s.producer)).not.toContain('ghost');
+  });
+
+  it('follows a registered wrapper call, not just a literal pillar() token', () => {
+    expect(discoverCallSites(root).sites).toContainEqual({
+      consumer: 'beta',
+      producer: 'gamma',
+      argument: 'WRAPPER_TARGET',
+      file: 'pillars/beta/src/api/wrapper.ts',
+      line: 3,
+    });
   });
 
   it('reports a source it could not finish scanning instead of passing over it', () => {
@@ -782,5 +908,32 @@ describe('against the live repo', () => {
     for (const sanction of SANCTIONED_DIRECT_FETCH) {
       expect(sanction.reason.length).toBeGreaterThan(20);
     }
+  });
+
+  it('every registered wrapper still names a type declared where it says it is', () => {
+    expect(PILLAR_CALL_WRAPPERS.length).toBeGreaterThan(0);
+    expect(checkWrapperRegistrations(repoRoot, PILLAR_CALL_WRAPPERS)).toEqual([]);
+  });
+
+  it("discovers bfm's finance calls through PillarGateway.call, not a literal pillar() token", () => {
+    const { sites } = discoverCallSites(repoRoot);
+    const bfmFinanceSites = sites.filter(
+      (s) => s.consumer === 'bfm' && s.file === 'pillars/bfm/src/api/finance/client.ts'
+    );
+    expect(bfmFinanceSites).toHaveLength(2);
+    expect(bfmFinanceSites.every((s) => s.producer === 'finance')).toBe(true);
+  });
+
+  it('would report an unpinned seam reached only through the gateway wrapper', () => {
+    const { sites } = discoverCallSites(repoRoot);
+    const planted = {
+      consumer: 'bfm',
+      producer: 'cerebrum',
+      argument: "'cerebrum'",
+      file: 'pillars/bfm/src/api/finance/client.ts',
+      line: 9999,
+    };
+    const report = findCoverageGaps([...sites, planted], EXPECTATIONS, UNPINNABLE_CALL_SITES);
+    expect(report.unlisted).toContainEqual(planted);
   });
 });

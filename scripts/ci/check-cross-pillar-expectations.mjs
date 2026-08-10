@@ -47,6 +47,20 @@
  * failure, so the exemption list cannot outlive what it excuses. The same
  * rule governs `SANCTIONED_DIRECT_FETCH`.
  *
+ * A pillar can also reach a sibling through a REGISTERED WRAPPER instead of
+ * calling `pillar()` directly — bfm's `PillarGateway.call` is the only one in
+ * the tree, forwarding its first argument straight into `pillar()` one
+ * function down, where the id is a parameter and therefore invisible to this
+ * scanner. `PILLAR_CALL_WRAPPERS` names the wrapper's type and method so
+ * discovery follows it there instead: an identifier annotated with the
+ * registered type, called as `<name>.<method>(<producerId>, ...)`, is the
+ * same call site as a literal `pillar(<producerId>)`. Wrappers are matched by
+ * REGISTRATION, not by inferring "this looks like one" from shape — an
+ * inferred match is exactly the kind of matcher that models one spelling and
+ * drifts silently as others appear. `checkWrapperRegistrations` keeps the
+ * list honest: an entry whose type is no longer declared where it says it is
+ * fails the build, the same way a stale `UNPINNABLE_CALL_SITES` entry does.
+ *
  * Source is matched as text, not parsed: this guard runs in a CI job with no
  * `pnpm install` (see ADR-045's stated exception), so no TypeScript parser is
  * on disk when it executes. The scanner models comments, strings, template
@@ -474,6 +488,29 @@ const FEDERATION_SIGNALS = [
   { pattern: /(?<![\w$])POPS_PILLARS(?![\w$])/u, describes: 'reads the pillar roster' },
 ];
 
+/**
+ * @typedef {object} PillarCallWrapper
+ * @property {string} typeName  Interface/type whose method forwards to `pillar()`.
+ * @property {string} method    Method that takes the producer id as its first argument.
+ * @property {string} definedIn Repo-relative file declaring `typeName`, checked for staleness.
+ */
+
+/**
+ * Wrapper functions discovery follows in addition to a literal `pillar(...)`.
+ *
+ * A call site earns discovery by being named here, not by looking like one:
+ * `checkWrapperRegistrations` below keeps the list honest by failing when an
+ * entry's `typeName` is no longer declared in `definedIn`, the same way
+ * `UNPINNABLE_CALL_SITES` cannot outlive what it excuses.
+ */
+export const PILLAR_CALL_WRAPPERS = [
+  {
+    typeName: 'PillarGateway',
+    method: 'call',
+    definedIn: 'pillars/bfm/src/api/pillars/gateway.ts',
+  },
+];
+
 const HTTP_METHODS = new Set(['get', 'put', 'post', 'delete', 'options', 'head', 'patch', 'trace']);
 
 const SOURCE_EXTENSIONS = ['.ts', '.tsx', '.mts', '.cts'];
@@ -768,6 +805,54 @@ export function findFetchCalls(scanned) {
 }
 
 /**
+ * Every `<name>.<method>(...)` invocation in a scanned source, for `name`
+ * bound — by a `name: TypeName` annotation — to one of the registered wrapper
+ * types.
+ *
+ * Keyed on the LOCAL identifier, not the type: this guard has no type
+ * checker, so "this variable holds a `PillarGateway`" is read off the
+ * annotation at its declaration, the same trust `resolveProducerId` places in
+ * a module-level `const`. A same-named identifier elsewhere in the file that
+ * is not really the wrapper would be misread as one — the trade text matching
+ * always makes — but it only ever widens discovery, never narrows it.
+ *
+ * @param {ScannedSource} scanned
+ * @param {PillarCallWrapper[]} wrappers
+ * @returns {RawCallSite[]}
+ */
+export function findWrapperCalls(scanned, wrappers) {
+  /** @type {RawCallSite[]} */
+  const sites = [];
+  for (const wrapper of wrappers) {
+    const names = boundNames(scanned.scannable, wrapper.typeName);
+    if (names.size === 0) continue;
+    const alternation = [...names].map((name) => RegExp.escape(name)).join('|');
+    const token = new RegExp(
+      `(?<![\\w$.])(?:${alternation})(?![\\w$])\\s*\\.\\s*${RegExp.escape(wrapper.method)}(?![\\w$])`,
+      'gu'
+    );
+    sites.push(...findCalls(scanned, token));
+  }
+  return sites;
+}
+
+/**
+ * Local identifiers annotated `name: typeName` anywhere in a scanned source —
+ * a function parameter or a variable declaration, which is how every wrapper
+ * consumer in the tree binds one today.
+ *
+ * @param {string} scannable
+ * @param {string} typeName
+ * @returns {Set<string>}
+ */
+function boundNames(scannable, typeName) {
+  const names = new Set();
+  const pattern = new RegExp(`([A-Za-z_$][\\w$]*)\\s*:\\s*${RegExp.escape(typeName)}\\b`, 'gu');
+  for (const match of scannable.matchAll(pattern)) names.add(match[1]);
+  return names;
+}
+
+/**
  * Shared call-site finder: every invocation of `token` in a scanned source.
  *
  * @param {ScannedSource} scanned
@@ -957,7 +1042,11 @@ export function discoverCallSites(root) {
         );
         continue;
       }
-      for (const call of findPillarCalls(scanned)) {
+      const calls = [
+        ...findPillarCalls(scanned),
+        ...findWrapperCalls(scanned, PILLAR_CALL_WRAPPERS),
+      ];
+      for (const call of calls) {
         sites.push({
           consumer,
           producer: resolveProducerId(call.argument, scanned.code),
@@ -1245,6 +1334,60 @@ export function loadProducerDoc(producer, specPath) {
  * @param {Expectation[]} expectations
  * @returns {string[]}
  */
+/**
+ * Failures for the wrapper registry: does every entry's type still exist
+ * where it says it does.
+ *
+ * Symmetric to the exemption-staleness check in {@link findCoverageGaps}: a
+ * registration that has drifted from source is worse than an absent one,
+ * because discovery keeps matching a name that used to mean "forwards to
+ * `pillar()`" and may no longer — a silent MISS is what this whole guard
+ * exists to turn into a loud one.
+ *
+ * Checked against `scanned.scannable`, not the raw file: a `typeName` that
+ * survives only in a comment or a string (`// removed PillarGateway`) must
+ * not read as a live declaration, the same reasoning that keeps `pillar(`
+ * prose out of {@link findPillarCalls}.
+ *
+ * @param {string} root
+ * @param {PillarCallWrapper[]} wrappers
+ * @returns {string[]}
+ */
+export function checkWrapperRegistrations(root, wrappers) {
+  /** @type {string[]} */
+  const failures = [];
+  for (const wrapper of wrappers) {
+    const path = join(root, wrapper.definedIn);
+    if (!existsSync(path)) {
+      failures.push(
+        `PILLAR_CALL_WRAPPERS registers '${wrapper.typeName}' at ${wrapper.definedIn}, which ` +
+          'does not exist. Repoint it at the type or drop the registration.'
+      );
+      continue;
+    }
+    const scanned = scanSource(readFileSync(path, 'utf8'));
+    if (scanned.unterminated !== null) {
+      failures.push(
+        `${wrapper.definedIn}: source scan ended inside an unterminated ${scanned.unterminated}. ` +
+          `PILLAR_CALL_WRAPPERS cannot verify '${wrapper.typeName}' is still declared past that point.`
+      );
+      continue;
+    }
+    const declared = new RegExp(
+      `\\b(?:interface|type)\\s+${RegExp.escape(wrapper.typeName)}\\b`,
+      'u'
+    );
+    if (!declared.test(scanned.scannable)) {
+      failures.push(
+        `PILLAR_CALL_WRAPPERS registers '${wrapper.typeName}' at ${wrapper.definedIn}, but no ` +
+          'such type is declared there anymore. Discovery trusts this entry to find every call ' +
+          'through the wrapper — update the registration or drop it.'
+      );
+    }
+  }
+  return failures;
+}
+
 export function checkExpectations(root, expectations) {
   /** @type {string[]} */
   const failures = [];
@@ -1337,6 +1480,7 @@ function run() {
   }
 
   failures.push(...checkExpectations(repoRoot, EXPECTATIONS));
+  failures.push(...checkWrapperRegistrations(repoRoot, PILLAR_CALL_WRAPPERS));
   failures.push(...reportCoverage(findCoverageGaps(sites, EXPECTATIONS, UNPINNABLE_CALL_SITES)));
   const directFetch = findDirectFetchGaps(directFetchSites, SANCTIONED_DIRECT_FETCH);
   failures.push(...reportDirectFetch(directFetch));
@@ -1651,6 +1795,74 @@ function selfTest() {
     'a sanction covering no fetch call must fail'
   );
 
+  const wrapper = { typeName: 'PillarGateway', method: 'call', definedIn: 'gateway.ts' };
+  const wrapperCallSource = scanSource(
+    [
+      "const TARGET = 'contacts';",
+      'function useGateway(gateway: PillarGateway) {',
+      '  return gateway.call<Router, unknown>(TARGET, (h) => h.entities.list({}));',
+      '}',
+    ].join('\n')
+  );
+  const wrapperCalls = findWrapperCalls(wrapperCallSource, [wrapper]);
+  assert(wrapperCalls.length === 1, 'a call through a registered wrapper must be discovered');
+  assert(
+    resolveProducerId(wrapperCalls[0].argument, wrapperCallSource.code) === 'contacts',
+    'a wrapper call argument must resolve the same way a literal pillar() call does'
+  );
+  assert(
+    findWrapperCalls(
+      scanSource('function f(other: SomeOtherType) { return other.call(pillarId); }'),
+      [wrapper]
+    ).length === 0,
+    'an identifier not bound to a registered wrapper type must not be read as one'
+  );
+
+  const wrapperScratch = mkdtempSync(join(tmpdir(), 'cross-pillar-wrapper-'));
+  try {
+    writeFileSync(
+      join(wrapperScratch, 'gateway.ts'),
+      'export interface PillarGateway { call(): void; }'
+    );
+    assert(
+      checkWrapperRegistrations(wrapperScratch, [wrapper]).length === 0,
+      'a wrapper type still declared where it is registered must pass'
+    );
+    writeFileSync(
+      join(wrapperScratch, 'renamed.ts'),
+      'export interface SomethingElse { call(): void; }'
+    );
+    assert(
+      checkWrapperRegistrations(wrapperScratch, [{ ...wrapper, definedIn: 'renamed.ts' }]).some(
+        (f) => f.includes('no such type is declared')
+      ),
+      'a wrapper registration whose type moved or was renamed must fail'
+    );
+    assert(
+      checkWrapperRegistrations(wrapperScratch, [{ ...wrapper, definedIn: 'missing.ts' }]).some(
+        (f) => f.includes('does not exist')
+      ),
+      'a wrapper registration pointing at a missing file must fail'
+    );
+    writeFileSync(
+      join(wrapperScratch, 'commented-out.ts'),
+      '// export interface PillarGateway { call(): void; }\nconst note = "interface PillarGateway";'
+    );
+    assert(
+      checkWrapperRegistrations(wrapperScratch, [
+        { ...wrapper, definedIn: 'commented-out.ts' },
+      ]).some((f) => f.includes('no such type is declared')),
+      'a type name surviving only in a comment or string must not read as a live declaration'
+    );
+  } finally {
+    rmSync(wrapperScratch, { recursive: true, force: true });
+  }
+
+  assert(
+    checkWrapperRegistrations(repoRoot, PILLAR_CALL_WRAPPERS).length === 0,
+    'every registered wrapper must still name a type declared where it says it is'
+  );
+
   const { sites, directFetchSites, scanErrors } = discoverCallSites(repoRoot);
   assert(scanErrors.length === 0, `the live tree must scan cleanly (${scanErrors.join('; ')})`);
   assert(
@@ -1662,12 +1874,20 @@ function selfTest() {
     'discovery must find the sanctioned direct-fetch calls in the live tree; finding none is a ' +
       'broken detector that would report OK over the next hand-rolled cross-pillar call'
   );
+  assert(
+    sites.filter((s) => s.consumer === 'bfm' && s.file === 'pillars/bfm/src/api/finance/client.ts')
+      .length === 2,
+    "discovery must follow bfm's PillarGateway.call wrapper into finance, not just a literal " +
+      'pillar() token — these two calls resolve their producer through gateway.call, not pillar()'
+  );
 
   console.log(
     'self-test OK — flags a renamed operation, a moved path, a dropped query parameter, a ' +
       'renamed path parameter, a duplicated operationId, a missing or corrupt producer spec, ' +
       'an empty expectation list, an unlisted seam, an unresolvable target, a stale exemption, ' +
-      'an unsanctioned direct fetch, a stale sanction, and a source scan that lost its place.'
+      'an unsanctioned direct fetch, a stale sanction, a gateway-wrapper call site, an ' +
+      'identifier not bound to a registered wrapper, a stale or missing wrapper registration, ' +
+      'and a source scan that lost its place.'
   );
 }
 
