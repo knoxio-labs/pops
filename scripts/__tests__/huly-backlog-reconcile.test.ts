@@ -164,11 +164,22 @@ describe('bodyAuthorshipRefs', () => {
     ]);
   });
 
-  it('reads an explicit Closes trailer anywhere in the body', () => {
-    expect(bodyAuthorshipRefs('Closes: POPS-7\n\nsome closing prose.\n', PREFIX)).toEqual([
-      'POPS-7',
-    ]);
-  });
+  it.each(['Closes: POPS-7', 'Fixes POPS-7', 'Resolves: POPS-7'])(
+    'reads the closure trailer %s as authorship',
+    (line) => {
+      expect(bodyAuthorshipRefs(`${line}\n\nsome closing prose.\n`, PREFIX)).toEqual(['POPS-7']);
+    }
+  );
+
+  // `Refs:` and `Ticket:` conventionally mean "related to", not "closes".
+  // Reading them as authorship would manufacture the exact false positive
+  // this tool exists to avoid.
+  it.each(['Refs: POPS-7', 'Ref POPS-7', 'Ticket: POPS-7', 'Tickets: POPS-7'])(
+    'does NOT read the cross-reference trailer %s as authorship',
+    (line) => {
+      expect(bodyAuthorshipRefs(`${line}\n\nsome closing prose.\n`, PREFIX)).toEqual([]);
+    }
+  );
 
   it('does NOT read a follow-ups prose line, even as the last line', () => {
     expect(bodyAuthorshipRefs(MENTIONS_FOUR_OPEN_FOLLOW_UPS.body, PREFIX)).toEqual([]);
@@ -457,6 +468,22 @@ describe('readIssues', () => {
   it('rejects a non-object row', () => {
     expect(() => readIssues(['POPS-1'])).toThrow(/index 0 is not an object/u);
     expect(() => readIssues([null])).toThrow(/index 0 is not an object/u);
+  });
+
+  // A padded status passes a naive presence check and then fails the
+  // `=== 'Backlog'` comparison, skipping the row — the same silent false
+  // negative as omitting the field, wearing a valid-looking value.
+  it('trims every field rather than only validating it trimmed', () => {
+    expect(readIssues([{ identifier: ' POPS-1 ', title: ' t ', status: ' Backlog ' }])).toEqual([
+      { identifier: 'POPS-1', title: 't', status: 'Backlog' },
+    ]);
+  });
+
+  it('a padded status still reaches the sweep as Backlog', () => {
+    const issues = readIssues([{ identifier: 'POPS-1452', title: 'x', status: 'Backlog ' }]);
+    const report = reconcile(issues, [FIXES_VIA_BODY_TRAILER], PREFIX);
+    expect(report.skipped).toEqual([]);
+    expect(report.eligible[0]?.verdict).toBe('orphan');
   });
 });
 

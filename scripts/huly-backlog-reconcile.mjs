@@ -81,7 +81,12 @@ const PARTIAL_WORK_RE = /\bwip\b|\b(?:slice|phase|part|stage|step)\s+\w{1,3}\b/i
 
 const REVERT_RE = /^revert\b/iu;
 
-const TRAILER_KEYWORDS = 'closes|close|fixes|fix|resolves|resolve|refs|ref|ticket|tickets';
+/**
+ * Trailer keywords that assert closure, and only those. `Refs:`, `Ref:` and
+ * `Ticket:` conventionally mean "related to" — reading them as authorship
+ * would manufacture exactly the false positive this tool exists to avoid.
+ */
+const TRAILER_KEYWORDS = 'closes|close|fixes|fix|resolves|resolve';
 
 /**
  * @typedef {{ sha: string, subject: string, body: string }} Commit
@@ -425,8 +430,15 @@ export function normaliseSubject(subject) {
 
 /**
  * Issues whose title is exactly a merged commit subject: the PR mirrors the
- * GitHub sync minted. Exact equality, so a human-filed ticket that happens to
- * read like a commit subject is not swept up.
+ * GitHub sync minted.
+ *
+ * Equality is the whole test, deliberately — status is NOT consulted. Reading
+ * `Merged` as the mirror signal would be circular, because that status is not
+ * clean: human-filed tickets sit there too, and a mirror someone re-statused
+ * would vanish from detection. Equality can in principle collide with a
+ * human-filed ticket that reads exactly like a commit subject; nothing here
+ * rules that out, and this result never closes anything — it feeds the report
+ * and links an orphan to its mirror.
  *
  * @param {Issue[]} issues
  * @param {Commit[]} commits
@@ -576,10 +588,15 @@ export function readIssues(parsed) {
       throw new Error(`issue at index ${index} is not an object`);
     }
     const record = /** @type {Record<string, unknown>} */ (entry);
-    const identifier = record['identifier'];
-    if (typeof identifier !== 'string' || identifier.trim() === '') {
+    const rawIdentifier = record['identifier'];
+    if (typeof rawIdentifier !== 'string' || rawIdentifier.trim() === '') {
       throw new Error(`issue at index ${index} has no string "identifier"`);
     }
+    // Every field is trimmed on the way in, not merely validated trimmed. A
+    // status of `"Backlog "` would otherwise pass the check and then fail the
+    // `=== ELIGIBLE_STATUS` comparison, skipping the row — the same silent
+    // false negative as omitting the field, wearing a valid-looking value.
+    const identifier = rawIdentifier.trim();
     const where = `${identifier} (index ${index})`;
     const status = record['status'];
     if (typeof status !== 'string') {
@@ -592,7 +609,7 @@ export function readIssues(parsed) {
     if (typeof title !== 'string') {
       throw new Error(`${where} has no string "title" — mirror detection reads it`);
     }
-    return { identifier, title, status };
+    return { identifier, title: title.trim(), status: status.trim() };
   });
 }
 
