@@ -1,5 +1,13 @@
-// swift-tools-version: 6.0
+// swift-tools-version: 6.2
 import PackageDescription
+
+// Warnings are errors here, and the tools version is 6.2 to reach the setting
+// that does it without unsafe flags, for the reason `../AppCore/Package.swift`
+// gives.
+let strictSwiftSettings: [SwiftSetting] = [
+    .swiftLanguageMode(.v6),
+    .treatAllWarnings(as: .error),
+]
 
 // macOS is declared alongside iOS so `swift test` runs the fake-backed and
 // fixture suites on a developer machine and on a CI runner without a simulator.
@@ -36,12 +44,12 @@ let package = Package(
                 "AppCore", "BFMClient",
                 .product(name: "OpenAPIRuntime", package: "swift-openapi-runtime"),
             ],
-            swiftSettings: [.swiftLanguageMode(.v6)]
+            swiftSettings: strictSwiftSettings
         ),
         .target(
             name: "AuthTestSupport",
             dependencies: ["Auth"],
-            swiftSettings: [.swiftLanguageMode(.v6)]
+            swiftSettings: strictSwiftSettings
         ),
         .testTarget(
             name: "AuthTests",
@@ -50,7 +58,7 @@ let package = Package(
                 .product(name: "AppCoreFakes", package: "AppCore"),
                 .product(name: "OpenAPIRuntime", package: "swift-openapi-runtime"),
             ],
-            swiftSettings: [.swiftLanguageMode(.v6)]
+            swiftSettings: strictSwiftSettings
         ),
     ]
 )
