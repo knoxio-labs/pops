@@ -21,6 +21,11 @@ target/
 clients/**/*.xcodeproj
 .build/
 DerivedData/
+# Where `mise run build:for-testing` puts the one shared iOS-Simulator compile
+# and its compiler log. Dot-prefixed on purpose — the guards under scripts/ walk
+# the repo tree and skip dot-directories, so a gigabyte of build output here is
+# invisible to them without each one needing a new skip-list entry.
+clients/*/.derived-data/
 *.xcuserstate
 .swiftpm/
 # Points the committed signing xcconfig at this machine's Apple team. Written by

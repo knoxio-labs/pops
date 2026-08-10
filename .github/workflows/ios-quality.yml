@@ -140,18 +140,27 @@ jobs:
           restore-keys: |
             spm-${{ runner.os }}-
 
-      # xcodebuild's compiled modules and build products — the ~17 minutes of
-      # this job's ~19 that neither cache above touches, since those cache
-      # dependency resolution, not compilation. None of the `mise run`
-      # invocations this workflow actually calls below (`build`, `test`,
-      # `lint`, `lint:analyze`) pass `-derivedDataPath` — only
-      # `verify:release-carries-no-host`, a local-only task this workflow
-      # never runs, uses that flag, and only for its own throwaway temp dir.
-      # So xcodebuild resolves its own default location under
-      # `~/Library/Developer/Xcode/DerivedData`, named from a hash of this
-      # job's checkout path. That path is the same on every run of this
-      # workflow, which is exactly why the whole directory can be cached
-      # instead of one project's slice of it.
+      # xcodebuild's compiled modules and build products for the one step that
+      # still uses its default location: `Build (iOS Simulator)`. `mise run
+      # build` passes no `-derivedDataPath`, so xcodebuild resolves its own
+      # default under `~/Library/Developer/Xcode/DerivedData`, named from a
+      # hash of this job's checkout path. That path is the same on every run of
+      # this workflow, which is why the whole directory can be cached instead
+      # of one project's slice of it.
+      #
+      # WHAT THIS CACHE NO LONGER COVERS, and why that is not a regression.
+      # `build:for-testing` — the compile `test` and `lint:analyze` share, and
+      # the bulk of this job — writes to `clients/ios/.derived-data` and wipes
+      # it first, so it neither reads nor writes what is cached here. It cannot
+      # usefully be cached: a complete compiler log requires compiling every
+      # file, and a warm tree by definition does not. That is inherent to
+      # `unused_declaration`, which is a whole-program question — a use deleted
+      # in one file makes a declaration in another unused.
+      #
+      # Previously that build ran `clean build-for-testing` against THIS
+      # directory, so it emptied the restored cache and `Save DerivedData`
+      # below then banked the result. Worth knowing while POPS-1683 is open on
+      # why this cache appeared to buy nothing.
       #
       # DerivedData is toolchain-specific — it holds compiled Swift modules
       # and a PCM cache keyed to the compiler that produced them — so a hit
@@ -183,9 +192,9 @@ jobs:
       # the shared prefix) and the save at the end of the job always fires —
       # the rolling pattern `actions/cache`'s own docs recommend for a
       # directory that changes every run. `if: always()` on the save means a
-      # failing Build or Test step still banks whatever compiled cleanly, so a
-      # fix on the next push — or the next attempt — is not recompiling from
-      # the same cold baseline as the failure it is fixing.
+      # failing Build step still banks whatever compiled cleanly, so a fix on
+      # the next push — or the next attempt — is not recompiling from the same
+      # cold baseline as the failure it is fixing.
       - name: Restore DerivedData
         uses: actions/cache/restore@v6
         with:
@@ -265,23 +274,46 @@ jobs:
       # Every step below is a `mise run` of the task a developer runs locally,
       # never a hand-copied command. A second copy of the command is a copy that
       # drifts, and the moment it does a green local run stops meaning anything.
-      - name: Build (iOS Simulator)
-        run: mise run build
 
-      - name: Test (iOS Simulator)
-        run: mise run test
-
+      # First, because it needs no build at all and takes seconds. A formatting
+      # or SwiftLint violation used to be reported after the eight-minute
+      # compile below had already been paid for.
       - name: Lint (swift-format + SwiftLint)
         run: mise run lint
 
-      # Separate from the step above on purpose: SwiftLint's analyzer rules
-      # (unused_declaration, unused_import) need a compiler log `swiftlint
-      # lint` never produces, so this runs its own clean build rather than
-      # making the fast, build-free step above depend on one. See the task's
-      # own comment in clients/ios/mise.toml for why that build is clean
-      # rather than reused.
-      - name: Lint (SwiftLint analyzer rules)
-        run: mise run lint:analyze
+      # Kept ahead of the compile below even though that compile subsumes it:
+      # it is the cheapest signal for the most common breakage, it runs against
+      # the cached DerivedData restored above, and "the app does not compile" is
+      # worth hearing in fifty seconds rather than in eight minutes.
+      - name: Build (iOS Simulator)
+        run: mise run build
+
+      # ONE STEP, because it is one compile. Both tasks depend on
+      # `build:for-testing`, and mise resolves a single dependency graph per
+      # invocation — so naming them together here runs the shared build once,
+      # while naming them in two steps would run it twice and put this back
+      # where it started. `mise run test` alone still builds, so nothing about
+      # the local command changed.
+      #
+      # `:::` is mise's separator between TASKS, and it is not optional here.
+      # `mise run test lint:analyze` does not run two tasks: it runs `test` and
+      # appends `lint:analyze` to its command line as an argument, where it
+      # arrives as a second xcodebuild destination and fails the lane. Verified
+      # against mise 2026.7.18.
+      #
+      # What this replaced: `xcodebuild test` compiled the whole tree against
+      # the iOS SDK, and `lint:analyze` then did its own `clean
+      # build-for-testing` to get a complete compiler log — two full compiles
+      # of the same sources, 803s and 473s when last measured, for a test action
+      # whose assertions take 1.5 seconds. The compile is the cost here; the
+      # tests are not. That is also why splitting the suites across the host and
+      # the simulator was NOT the fix — the packages a host lane would take are
+      # dependencies of the app target and the render suites that have to stay,
+      # so they get compiled either way and the split would move 1.5 seconds.
+      # Quoted because `test ::: lint:analyze` contains `: `, which an unquoted
+      # YAML scalar reads as the start of a mapping.
+      - name: Test + SwiftLint analyzer rules (one shared compile)
+        run: "mise run test ::: lint:analyze"
 
       # The other half of the restore step above — see its comment for why a
       # plain `actions/cache` step cannot keep this cache moving forward.

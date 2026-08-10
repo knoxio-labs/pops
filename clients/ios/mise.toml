@@ -27,6 +27,29 @@ POPS_XCODE_VERSION = "26.6"
 # current Xcode both ship.
 POPS_IOS_SIMULATOR = "iPhone 17"
 
+# Where the one shared iOS-Simulator compile lands, and the compiler log it
+# leaves behind. `build:for-testing` writes both; `test` runs against the
+# products and `lint:analyze` reads the log, so the tree is compiled once per
+# run instead of once for each of them.
+#
+# A path of our own rather than xcodebuild's default under
+# `~/Library/Developer/Xcode/DerivedData`, for two reasons. It can be wiped
+# outright, which is what makes the compiler log complete by construction
+# (`xcodebuild clean` does not clear the SwiftPM package artifacts, and a log
+# missing those is the defect this whole arrangement exists to avoid). And
+# wiping it no longer destroys the default location that `mise run build` uses
+# and `ios-quality.yml` caches.
+#
+# THE LEADING DOT IS LOAD-BEARING. This puts a gigabyte of build output inside
+# the repo tree, and the guards under `scripts/` walk that tree — `check-docs-
+# model.mjs` reads comments out of every source file it finds, looking for doc
+# paths that do not resolve. Every one of them skips dot-directories, which is
+# already how `.build` stays out of their way; a directory named `DerivedData`
+# would instead need adding to each walker's skip list, including the ones
+# nobody has written yet. Ignored via the root `.gitignore`.
+POPS_IOS_DERIVED_DATA = "{{config_root}}/.derived-data"
+POPS_IOS_COMPILER_LOG = "{{config_root}}/.derived-data/compiler.log"
+
 [tasks.generate]
 description = "Regenerate Pops.xcodeproj from project.yml"
 run = '''
@@ -81,6 +104,47 @@ done
 '''
 
 
+# The single iOS-SDK compile of the whole tree, and the log it leaves behind.
+#
+# `test` and `lint:analyze` both used to compile everything — `xcodebuild test`
+# built the test action, and `lint:analyze` then did its own `clean
+# build-for-testing` to get a compiler log. Two full compiles of the same
+# sources, ~7 minutes each on the runner, for a test action whose assertions
+# take 1.5 seconds. Both now depend on this instead, and because mise resolves
+# one dependency graph per invocation, `mise run test lint:analyze` compiles
+# once and both read what it produced.
+#
+# THE WIPE IS THE POINT, and it is not the same as `clean`. `xcodebuild clean`
+# leaves the SwiftPM package artifacts under the derived-data root in place,
+# and with those warm only the files xcodebuild actually recompiled reach the
+# log. Measured on this tree, same command, same sources: warm gave `Found 0
+# violations, 0 serious in 14 files` with none of the changed files among the
+# 14; wiped gave 88. Both exit 0. Both read as clean. A compiler log that is
+# real but partial is the one failure `lint:analyze`'s floor exists to catch,
+# and this is the other end of it — the floor proves the log covered the tree,
+# this makes it cover the tree in the first place.
+[tasks."build:for-testing"]
+description = "Compile the tree once for the simulator, keeping the compiler log `test` and `lint:analyze` share"
+hide = true
+depends = ["generate"]
+run = '''
+set -eu
+set -o pipefail
+
+rm -rf "$POPS_IOS_DERIVED_DATA"
+mkdir -p "$POPS_IOS_DERIVED_DATA"
+
+# `build-for-testing`, not `build`: a plain build compiles only what the
+# scheme's build action names, which is the `Pops` target alone. That leaves
+# every test target — `AppTests` and each package's `Tests/`, all of them part
+# of `SWIFT_SOURCES` and linted by `swiftlint lint` already — outside both the
+# products `test` needs and the log `swiftlint analyze` reads.
+xcodebuild -project Pops.xcodeproj -scheme Pops \
+  -destination 'generic/platform=iOS Simulator' \
+  -derivedDataPath "$POPS_IOS_DERIVED_DATA" \
+  build-for-testing | tee "$POPS_IOS_COMPILER_LOG"
+'''
+
 # The one entry point for the simulator, same idea as `lint`: the CI job invokes
 # this rather than restating the lanes, because a lane the workflow has to
 # remember to add is a lane it will one day forget.
@@ -112,7 +176,7 @@ done
 # means it was written from project.yml seconds earlier.
 [tasks.test]
 description = "Run every package's tests, and the app's own target, on the iOS Simulator"
-depends = ["generate"]
+depends = ["build:for-testing"]
 run = '''
 set -eu
 set -o pipefail
@@ -194,7 +258,12 @@ for name in $names; do
   set -- "$@" --require-testable "$name"
 done
 
+# `--without-building` against the products `build:for-testing` just wrote.
+# Rebuilding here would be the second full compile this arrangement exists to
+# remove, and would also mean the log `lint:analyze` reads described a build
+# that is no longer the one that was tested.
 scripts/app-test-lane.sh "platform=iOS Simulator,name=$POPS_IOS_SIMULATOR,OS=latest" \
+  --derived-data "$POPS_IOS_DERIVED_DATA" --without-building \
   --forbid-skips "$@"
 '''
 
@@ -477,17 +546,64 @@ exit $status
 # The one entry point. `.github/workflows/ios-quality.yml` invokes this task
 # rather than restating the commands, because the moment the two are written
 # out separately they drift and a green local run means nothing.
+#
+# THE Xcode GUARD IS PER-TOOL, NOT PER-TASK, and that distinction is the whole
+# shape of this task. It used to be a `depends`, which refused the entire task
+# on a machine whose Xcode is not the pin — and the consequence was not a
+# degraded local lint, it was NO local Swift lint of any kind. On a machine
+# carrying only a newer Xcode the only way to discover an unused import or a
+# SwiftLint violation was to push and wait out the macOS job.
+#
+# The guard was always only ever about one of these tools:
+#
+#   - `swiftlint` is pinned in `[tools]` above. The same binary, the same
+#     rules, the same verdict on every machine. Xcode has no bearing on it.
+#   - `swift-format` ships INSIDE the Xcode toolchain. A different Xcode both
+#     formats to different bytes and ships a different rule list — and the
+#     `swift-format` task below refuses to run at all when that list and
+#     `.swift-format` disagree. Its verdict is meaningful only on the pin.
+#
+# So SwiftLint runs everywhere and swift-format's result is authoritative only
+# on the pinned toolchain. On a mismatched one it still runs, because seeing it
+# try is more useful than not knowing, but it cannot contribute to the exit
+# code — and the run as a whole then exits non-zero however clean it looked,
+# because a lint that could not check half of what it claims to check must not
+# be reportable as a pass. `format` keeps its outright refusal: rewriting files
+# with the wrong toolchain commits bytes CI rejects.
 [tasks.lint]
-description = "swift-format + SwiftLint over the Swift sources"
-depends = ["verify:xcode-version"]
+description = "swift-format + SwiftLint over the Swift sources (SwiftLint runs on any Xcode; swift-format is authoritative only on the pin)"
 run = '''
 set -u
-# All three run even when an earlier one fails, so one invocation reports every
-# problem.
+# Everything runs even when an earlier one fails, so one invocation reports
+# every problem.
 status=0
-mise run swift-format lint || status=1
+authoritative=1
+
+# First, and unconditionally: the half that does not care which Xcode is
+# selected. On a mismatched machine this is the only real verdict available,
+# so it is the one that must not be behind a guard.
 swiftlint lint --strict --quiet || status=1
 mise run generated-boundary || status=1
+
+if mise run verify:xcode-version; then
+  mise run swift-format lint || status=1
+else
+  authoritative=0
+  mise run swift-format lint || true
+fi
+
+if [ "$authoritative" -eq 0 ]; then
+  echo "" >&2
+  echo "lint: NOT A CLEAN RUN — swift-format was not checked authoritatively." >&2
+  echo "      SwiftLint's verdict above holds; swift-format's does not, because" >&2
+  echo "      this machine's Xcode is not the one CI pins (see the mismatch" >&2
+  echo "      reported above). Whatever swift-format printed, formatting on this" >&2
+  echo "      branch is unverified until CI or a pinned toolchain says otherwise." >&2
+  echo "      'mise run format' still refuses outright, so nothing was rewritten." >&2
+  # Non-zero even with nothing to report: an exit code of 0 here would be read
+  # as "lint passed", which is the one thing this run cannot claim.
+  [ "$status" -eq 0 ] && status=2
+fi
 exit $status
 '''
 
@@ -501,20 +617,18 @@ run = "mise run swift-format format"
 
 # SwiftLint's analyzer rules (`unused_declaration`, `unused_import`) need a
 # full compiler log, which `swiftlint lint` never produces — that is why they
-# live here and not in `lint` above. Separate task, separate cost: this builds
-# the whole tree a second time, from clean, which `lint` deliberately never
-# does.
+# live here and not in `lint` above. The log comes from `build:for-testing`,
+# which `test` also depends on, so the tree is compiled once and both read the
+# result. Before that, this task did its own `clean build-for-testing` and the
+# job paid for the same compile twice.
 #
-# The build is clean rather than reusing whatever an earlier task left behind,
-# on purpose. An incremental rebuild only logs the files it actually
-# recompiled — a rebuild with nothing to do logs none of them, and one that
-# only touched a single file logs just that one. Either way `swiftlint
-# analyze` reads a log that is real but incomplete, and reports "0 violations"
-# for files it silently never looked at. That failure is indistinguishable
-# from a clean pass by exit code alone, which is exactly the shape of bug this
-# task exists to not become. A clean build costs nothing CI is short on — the
-# runner is a GitHub-hosted mac with no minute cap on this public repo — so it
-# is not a cost worth trading correctness for.
+# NO Xcode PIN HERE, unlike `lint` and `format`. These two rules are
+# SwiftLint's, and SwiftLint is pinned in `[tools]` — a declaration nothing
+# references is unreferenced whichever compiler noticed. What the toolchain
+# decides is whether a usable log comes out at all, and a log that does not
+# cover the tree fails the floor below rather than passing quietly. So a
+# machine carrying only a newer Xcode gets the same answer CI gets, which is
+# the entire point: an unused import used to be discoverable only by pushing.
 #
 # One `xcodebuild` covers the whole tree because the `Pops` scheme's test
 # action names every package's test target as well as `PopsTests` — the same
@@ -532,25 +646,22 @@ run = "mise run swift-format format"
 # naming a test target fails here rather than quietly narrowing what these
 # two rules see.
 [tasks."lint:analyze"]
-description = "SwiftLint's analyzer rules against a fresh compiler log (unused_declaration, unused_import)"
-depends = ["generate", "verify:xcode-version"]
+description = "SwiftLint's analyzer rules against the shared compiler log (unused_declaration, unused_import)"
+depends = ["build:for-testing"]
 run = '''
 set -eu
 set -o pipefail
 
-work=$(mktemp -d)
-trap 'rm -rf "$work"' EXIT
-log="$work/compiler.log"
+log="$POPS_IOS_COMPILER_LOG"
 
-# `build-for-testing`, not `build`: a plain build compiles only what the
-# scheme's build action names, which is the `Pops` target alone. That leaves
-# every test target — `AppTests` and each package's `Tests/`, all of them part
-# of `SWIFT_SOURCES` and linted by `swiftlint lint` already — outside the log
-# `swiftlint analyze` reads. The test action names them, so this compiles them
-# without running anything in them.
-xcodebuild -project Pops.xcodeproj -scheme Pops \
-  -destination 'generic/platform=iOS Simulator' \
-  clean build-for-testing | tee "$log"
+# Absence is a failure, not a pass — the same rule as everything else here. A
+# missing log would otherwise reach `swiftlint analyze` as an empty one and
+# report zero violations over zero files.
+if [ ! -s "$log" ]; then
+  echo "lint:analyze: no compiler log at $log. 'mise run build:for-testing'" >&2
+  echo "              writes it; without one these two rules see nothing." >&2
+  exit 1
+fi
 
 status=0
 output=$(swiftlint analyze --strict --compiler-log-path "$log" --config .swiftlint.yml 2>&1) || status=$?
