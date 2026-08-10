@@ -384,9 +384,20 @@ Not `// increment the counter`. Full rules in `~/.claude/CLAUDE.md` §10.
 
 ### Tracking
 
-Work lives in **Huly**, project `POPS` at [projects.knoxiolabs.com](https://projects.knoxiolabs.com) (workspace `knoxiolabs`). One project for the whole fleet; a **Component** scopes each issue to a pillar (`finance`, `food`, …) or a cross-cutting concern (`federation`, `platform`, `ui`). Statuses are Backlog / Todo / In Progress / Done / Canceled. Labels are deliberately few — `bug`, `tech-debt`, `test-gap`, `security`, `needs-triage`. Reach for the MCP tools (`mcp__huly-knoxiolabs__*`) rather than the web UI.
+Work lives in **Huly**, project `POPS` at [projects.knoxiolabs.com](https://projects.knoxiolabs.com) (workspace `knoxiolabs`). One project for the whole fleet; a **Component** scopes each issue to a pillar (`finance`, `food`, …) or a cross-cutting concern (`federation`, `platform`, `ui`). The workflow statuses are Backlog / Todo / In Progress / Done / Canceled. Labels are deliberately few — `bug`, `tech-debt`, `test-gap`, `security`, `needs-triage`. Reach for the MCP tools (`mcp__huly-knoxiolabs__*`) rather than the web UI.
 
 **GitHub Issues are disabled on this repo.** Do not file one, and do not reference issue numbers as live work — an old `#NNNN` in git history is a historical artifact, not a ticket.
+
+#### `Merged` is not a workflow status — it is the PR mirror
+
+A sixth status, `Merged`, exists but nothing in the workflow above moves an issue into it. Huly's GitHub sync mints **a new issue per merged PR** — title = the commit subject, body = the PR body, status `Merged` — instead of transitioning the ticket that PR fixes. So most of what sits at `Merged` is a mirror of a commit, not a piece of work anyone filed, and the ticket the PR actually closed is untouched wherever it was.
+
+Two consequences, and the second is the expensive one:
+
+- **Do not read `Merged` as a human decision.** Nobody chose it. Do not file work there, and do not treat a `Merged` issue as the record of a requirement — the commit it mirrors is the record.
+- **A merged PR does not close its ticket.** Set the status yourself when the work lands, or the ticket stays open forever and the next agent spends a full run rediscovering that the fix is already on `main`.
+
+A mirror is identifiable exactly rather than by eye: its title equals a commit subject on `origin/main`, give or take the squash-merge `(#1234)` suffix. `scripts/huly-backlog-reconcile.mjs` decides that, and cross-references an exported backlog against merged commits to name any ticket whose work already shipped. Run it against a tracker export — it reads only, and its `--help` states the evidence it will and will not act on.
 
 You do **not** need an issue to start work. The tracker exists for work that is deferred, not for permission to begin. But the converse is a hard rule: **anything you decide not to do right now gets filed before the PR merges** — a gap between what a README claims and what the code does, a shortcut taken under time pressure, a missing test, a follow-up you can see coming. File it with enough context to act on without this conversation, then let it go.
 
