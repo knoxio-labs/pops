@@ -91,11 +91,14 @@
  *   node scripts/huly-partition-plan.mjs --assess <export.json>
  *   node scripts/huly-partition-plan.mjs --self-test
  *
- * Exit 0 = ran, and for `--assess`, coverage is complete. Exit 1 = self-test
- * failed, or the assessed export is incomplete. Exit 2 = usage error, or an
- * export this tool could not read — which is deliberately not 1, because "your
- * file is malformed" and "your backlog is short" are different events and a
- * caller switching on the code must not conflate them.
+ * Exit 0 = ran, and for `--assess`, coverage is complete.
+ * Exit 1 = the tool ran and the answer is no: `--self-test` failed, `--assess`
+ *          found the export incomplete, or `--refine` has no enumerable filter
+ *          left for that cell and the caller must write `titleRegex` patterns.
+ * Exit 2 = usage error, or an export this tool could not read. Deliberately not
+ *          1: "your file is malformed" and "your backlog is short" are
+ *          different events, and a caller switching on the code must not
+ *          conflate them.
  */
 
 import { readFileSync } from 'node:fs';
@@ -123,8 +126,12 @@ export const DEFAULT_LIMIT = 200;
  * }} Coverage The provenance block an enumerated export carries. `cells` is
  * required: a coverage block that names no queries is a proof of nothing, and
  * `readCoverage` refuses it rather than reading it as an empty one. The other
- * three default — an absent `limit` means the API cap, and absent `statuses`
- * or `components` are caught by the assessment as a claim about nothing.
+ * three default, and not to the same effect. An absent `limit` means the API
+ * cap. An absent `statuses` is called out by the assessment, because "every
+ * declared status is covered" over no statuses is a claim about nothing. An
+ * absent `components` is NOT called out on its own — it only bites where a
+ * branch needed the component fan-out, and there it shows up as an uncovered
+ * `hasComponent=true` cell rather than as a complaint about the list.
  */
 
 /**
@@ -532,7 +539,13 @@ function readStringArray(value, where) {
   if (!Array.isArray(value) || value.some((entry) => typeof entry !== 'string')) {
     throw new Error(`${where} must be an array of strings`);
   }
-  return value.map((entry) => String(entry).trim());
+  const trimmed = value.map((entry) => String(entry).trim());
+  // Same refusal as `readFilter`, for the same reason: an empty entry becomes a
+  // root nothing can match, and the export is then condemned for an uncovered
+  // `status=` rather than for the typo that produced it.
+  const empty = trimmed.indexOf('');
+  if (empty !== -1) throw new Error(`${where}[${empty}] is empty`);
+  return trimmed;
 }
 
 /**

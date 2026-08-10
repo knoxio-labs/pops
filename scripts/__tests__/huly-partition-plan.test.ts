@@ -558,6 +558,16 @@ describe('readCoverage', () => {
       { coverage: { statuses: [7], cells: [] } },
       /statuses must be an array of strings/u,
     ],
+    [
+      'a whitespace-only status in the list',
+      { coverage: { statuses: ['Backlog', '  '], cells: [] } },
+      /statuses\[1\] is empty/u,
+    ],
+    [
+      'an empty component in the list',
+      { coverage: { components: [''], cells: [] } },
+      /components\[0\] is empty/u,
+    ],
   ])('throws on %s rather than reading it as undeclared', (_name, parsed, message) => {
     expect(() => readCoverage(parsed)).toThrow(message);
   });
