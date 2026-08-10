@@ -93,6 +93,22 @@ jobs:
           # from scratch and the stale one just wastes the restore.
           echo "POPS_XCODE_VERSION=$version" >> "$GITHUB_ENV"
 
+      # Captured once, right after checkout and before `xcodegen` or
+      # `-resolvePackageDependencies` run, rather than left as a live
+      # `hashFiles(...)` call inside the DerivedData cache steps further down.
+      # `hashFiles` reads whatever is on disk at the moment its OWN step
+      # executes, and `Resolve SPM dependencies` — which runs between the
+      # restore and the save below — creates a Package.resolved of the
+      # generated (gitignored) xcodeproj's own that does not exist yet here.
+      # A live `hashFiles` call at save time would therefore see one more
+      # file than the restore step saw earlier in the same run and produce a
+      # different hash for an unchanged commit, so the entry just saved could
+      # never match what a later run's restore looks for. Capturing the value
+      # now, before generation creates anything, keeps every later reference
+      # to it fixed for the rest of the job.
+      - name: Hash the SPM dependency inputs for the DerivedData cache key
+        run: echo "POPS_IOS_DEPS_HASH=${{ hashFiles('clients/ios/Packages/*/Package.swift', 'clients/ios/**/Package.resolved') }}" >> "$GITHUB_ENV"
+
       - uses: jdx/mise-action@v4
         with:
           working_directory: clients/ios
@@ -158,9 +174,9 @@ jobs:
         uses: actions/cache/restore@v6
         with:
           path: ~/Library/Developer/Xcode/DerivedData
-          key: deriveddata-${{ runner.os }}-${{ env.POPS_XCODE_VERSION }}-${{ hashFiles('clients/ios/Packages/*/Package.swift', 'clients/ios/**/Package.resolved') }}-${{ github.run_id }}
+          key: deriveddata-${{ runner.os }}-${{ env.POPS_XCODE_VERSION }}-${{ env.POPS_IOS_DEPS_HASH }}-${{ github.run_id }}
           restore-keys: |
-            deriveddata-${{ runner.os }}-${{ env.POPS_XCODE_VERSION }}-${{ hashFiles('clients/ios/Packages/*/Package.swift', 'clients/ios/**/Package.resolved') }}-
+            deriveddata-${{ runner.os }}-${{ env.POPS_XCODE_VERSION }}-${{ env.POPS_IOS_DEPS_HASH }}-
             deriveddata-${{ runner.os }}-${{ env.POPS_XCODE_VERSION }}-
 
       - name: Resolve SPM dependencies
@@ -260,4 +276,4 @@ jobs:
         uses: actions/cache/save@v6
         with:
           path: ~/Library/Developer/Xcode/DerivedData
-          key: deriveddata-${{ runner.os }}-${{ env.POPS_XCODE_VERSION }}-${{ hashFiles('clients/ios/Packages/*/Package.swift', 'clients/ios/**/Package.resolved') }}-${{ github.run_id }}
+          key: deriveddata-${{ runner.os }}-${{ env.POPS_XCODE_VERSION }}-${{ env.POPS_IOS_DEPS_HASH }}-${{ github.run_id }}
