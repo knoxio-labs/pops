@@ -17,9 +17,9 @@
  *
  * ## THE SIGNED MESSAGE
  *
- * The phone signs these bytes, and this is the only description of them
- * anywhere. `clients/ios` reproduces it, and the two cannot be checked against
- * each other by any compiler:
+ * The phone signs these bytes, and this is the only prose description of them
+ * anywhere. `clients/ios` reproduces the construction in Swift, and no compiler
+ * sees both halves:
  *
  * ```
  * BFM-REFRESH-V1\n<nonce>\n<sha256(refreshToken), lowercase hex>
@@ -50,7 +50,13 @@
  * Getting any of this wrong on either side produces a signature that does not
  * verify, which reaches the app as a `401` indistinguishable from an expired
  * token. That failure mode is the reason the format is stated here rather than
- * inferred from the code below.
+ * inferred from the code below, and the reason it is not left as prose: a
+ * committed vector at `contracts/refresh-message-v1.json` carries one nonce,
+ * one token, its digest and the resulting bytes, and both languages assert
+ * against it. This pillar generates it — see
+ * `scripts/generate-refresh-message-fixture.ts` — and `clients/ios` vendors a
+ * byte-identical copy, so a change on either side reddens a build rather than
+ * reaching a handset.
  *
  * ## The order of the checks IS the design
  *
@@ -103,10 +109,12 @@ export const REFRESH_SIGNATURE_DOMAIN = 'BFM-REFRESH-V1' as const;
 /**
  * Build the exact bytes the phone signed.
  *
- * Exported because it is half of a cross-language contract: the pillar's own
- * tests assert this construction against the vector in
- * `contracts/device-signature-v1.json`, and `clients/ios` builds the same
- * string from Swift.
+ * Exported because it is half of a cross-language contract, and because it is
+ * what produces the pin: `scripts/generate-refresh-message-fixture.ts` writes
+ * this function's output to `contracts/refresh-message-v1.json`,
+ * `__tests__/refresh-message-fixture.test.ts` asserts the two still agree, and
+ * `clients/ios` builds the same string from Swift against a vendored copy of
+ * the same bytes.
  *
  * @param nonce As issued by {@link RefreshChallengeStore}, verbatim.
  * @param refreshTokenHash Lowercase hex, as {@link hashRefreshToken} returns.

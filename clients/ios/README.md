@@ -137,14 +137,17 @@ Half of that is compiler-enforced — a package can only `import` what its own `
 
 Artefacts this app and the BFM must agree on byte for byte, kept outside any one package because more than one module will assert against them and because the BFM asserts against the same bytes from TypeScript.
 
-Two files:
+Three files, and the direction is not the same for all three — it follows whoever can say what the right answer is:
 
-- `device-signature-v1.json` — the ECDSA P-256 encoding vector, asserted from Swift and from Node. See [Packages/Auth/README.md](Packages/Auth/README.md#the-encoding-contract).
-- `bfm.openapi.json` — a byte-identical copy of the BFM's OpenAPI snapshot, and the input the Swift client is generated from. Same rule the rest of the repo uses for a contract that crosses a unit boundary: the consumer keeps a copy inside its own boundary and a CI guard fails on drift. See [Packages/BFMClient/README.md](Packages/BFMClient/README.md).
+- `device-signature-v1.json` — the ECDSA P-256 encoding vector, asserted from Swift and from Node. **Canonical here**: only CryptoKit can produce a real signature. See [Packages/Auth/README.md](Packages/Auth/README.md#the-encoding-contract).
+- `refresh-message-v1.json` — the exact bytes a refresh request is signed over. **Vendored**: the format is the BFM's to define and the BFM is the party that rejects a wrong one, so it generates the vector and this is a copy. See [Packages/Auth/README.md](Packages/Auth/README.md#the-signed-message).
+- `bfm.openapi.json` — a byte-identical copy of the BFM's OpenAPI snapshot, and the input the Swift client is generated from. **Vendored.** See [Packages/BFMClient/README.md](Packages/BFMClient/README.md).
 
-That rule points both ways, and for the vector this directory is the producing side of it. The copy here is canonical — only the Swift side can generate the vector — and the BFM keeps its own at [`pillars/bfm/contracts/device-signature-v1.json`](../../pillars/bfm/contracts/device-signature-v1.json), because ADR-043 forbids a pillar reading a path under `clients/`. Regenerate through the repo root's `mise run fixture:device-signature`, which re-vendors as its second step; `mise run fixture:device-signature:generate` from here writes this copy alone and leaves the guard red. For the OpenAPI snapshot the direction is reversed: the pillar produces it and this directory holds the copy.
+The rule underneath all three is the same: the consumer keeps a copy inside its own boundary and a CI guard fails on drift, because ADR-043 forbids a unit reading a path inside another. The BFM's copies live at [`pillars/bfm/contracts/`](../../pillars/bfm/contracts).
 
-The formatter treats the two **oppositely**, and the `.openapi` infix is what separates them. `.oxfmtrc.json` and `lint-staged.config.mjs` both exclude `clients/*/Contracts/*.openapi.json`, because that snapshot's canonical copy is a pillar's build artefact and a byte-equality gate against a file the pre-commit hook rewrites fails on the first commit that touches it. The device-signature vector is deliberately _not_ excluded — both its copies are plain `*.json` at paths the same rules cover, so both go through one formatter and land on the same bytes. Exempting one side of that pair is what would break its gate.
+Regenerate either vector from the repo root, never from inside one unit — `mise run fixture:device-signature` for the first (it re-vendors as its second step; `mise run fixture:device-signature:generate` from here writes this copy alone and leaves the guard red), `mise run fixture:refresh-message` for the second. Only the first is expensive to re-run: ECDSA draws a fresh nonce per signature, so it replaces reviewed bytes with unreviewed ones. The refresh-message vector is derived from fixed inputs and rewrites itself identically.
+
+The formatter treats the OpenAPI snapshot **oppositely** to the two vectors, and the `.openapi` infix is what separates them. `.oxfmtrc.json` and `lint-staged.config.mjs` both exclude `clients/*/Contracts/*.openapi.json`, because that snapshot's canonical copy is a pillar's build artefact and a byte-equality gate against a file the pre-commit hook rewrites fails on the first commit that touches it. The two vectors are deliberately _not_ excluded — every copy of each is a plain `*.json` at a path the same rules cover, so all of them go through one formatter and land on the same bytes. Exempting one side of either pair is what would break its gate.
 
 ## What CI does with this
 
@@ -157,7 +160,7 @@ Two things about it are worth knowing before you touch either side:
 
 `mise install` is run with `MISE_DISABLE_TOOLS=rust,node,pnpm` there. mise merges config up the tree, so without it the job would download a full Rust toolchain to compile Swift.
 
-It is not quite the only job that touches this directory. The `Device signature encoding (iOS ↔ BFM)` job in [`quality.yml`](../../.github/workflows/quality.yml) asserts the committed vector in `Contracts/` from the Node side — it checks the contract, not the code, and would stay green through a Swift tree that does not compile.
+It is not quite the only job that touches this directory. Two jobs in [`quality.yml`](../../.github/workflows/quality.yml) — `Device signature encoding (iOS ↔ BFM)` and `Refresh signed-message format (BFM ↔ iOS)` — assert the committed vectors in `Contracts/` from the Node side. They check the contracts, not the code, and would stay green through a Swift tree that does not compile. Both run on every PR rather than under this directory's path filter, because the BFM can break either contract without touching a line of Swift.
 
 ## Known gaps
 

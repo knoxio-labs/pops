@@ -76,8 +76,8 @@ would be one budget spendable twice by alternating paths.
 paths for two different halves of itself. Pairing uses only the key parsing —
 rejecting anything that is not P-256 before a row is written. Refresh uses the
 verification, and **defines the message those bytes cover**; that format lives
-in `refresh-exchange.ts`'s header, which is the only description of it anywhere
-and the one `clients/ios` has to reproduce.
+in `refresh-exchange.ts`'s header, which is the only prose description of it
+anywhere and the one `clients/ios` has to reproduce.
 
 Its tests are the only place in this repo where `node:crypto` is shown to accept
 what CryptoKit actually emits. Everything else about refresh can be exercised
@@ -85,6 +85,20 @@ with keys this process generated itself, which agree with the verifier by
 construction and prove nothing about a real handset. They read the vector
 vendored at `pillars/bfm/contracts/device-signature-v1.json`, never the
 canonical copy under `clients/` — see the pillar README.
+
+Neither half of that pair is prose either. Two committed vectors sit under
+`contracts/`, pointing opposite ways, and a CI guard fails on drift in each:
+
+| Vector                     | Pins                                     | Authored by               | Asserted here in                            |
+| -------------------------- | ---------------------------------------- | ------------------------- | ------------------------------------------- |
+| `device-signature-v1.json` | the ECDSA P-256 encodings                | `clients/ios` (CryptoKit) | `__tests__/device-signature.test.ts`        |
+| `refresh-message-v1.json`  | the bytes those encodings are applied to | this pillar               | `__tests__/refresh-message-fixture.test.ts` |
+
+The second exists because a format change is otherwise invisible: the signature
+simply stops verifying, and the handset is told `401` — the same answer an
+expired token gets. Regenerate it with `mise run fixture:refresh-message` from
+the repo root, and change the Swift construction in the same commit; the vector
+moving is not the client following.
 
 ## Why 401 and 403 are different answers
 

@@ -152,6 +152,28 @@ run = [
   "mise run fixture:device-signature:vendor",
 ]
 
+# The refresh signed-message vector is the same arrangement pointing the other
+# way. The format belongs to the BFM — it is the party that rejects a wrong
+# message — so the pillar generates and holds the canonical copy and
+# `clients/ios` vendors it. The copy step lives here for the same reason as
+# above: neither unit may write into the other.
+[tasks."fixture:refresh-message:vendor"]
+description = "Re-vendor the BFM↔iOS refresh-message vector into the iOS client"
+dir = "{{config_root}}"
+run = "cp pillars/bfm/contracts/refresh-message-v1.json clients/ios/Contracts/refresh-message-v1.json"
+
+# Safe to re-run, unlike its device-signature neighbour: this vector is derived
+# from fixed inputs with no key and no signature, so an unchanged format
+# rewrites identical bytes. Changing the format still means changing BOTH sides
+# in the same commit — the Swift construction does not follow from regenerating.
+[tasks."fixture:refresh-message"]
+description = "Regenerate the BFM↔iOS refresh-message vector from the pillar's own construction, and re-vendor it"
+dir = "{{config_root}}"
+run = [
+  "pnpm --filter @pops/bfm exec tsx scripts/generate-refresh-message-fixture.ts",
+  "mise run fixture:refresh-message:vendor",
+]
+
 # ============================================================================
 # Development Servers
 # ============================================================================

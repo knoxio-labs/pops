@@ -374,6 +374,40 @@ jobs:
       - name: The committed fixture verifies under node:crypto
         run: node scripts/ci/check-device-signature-fixture.mjs
 
+  refresh-message-fixture:
+    name: Refresh signed-message format (BFM ↔ iOS)
+    # The job above pins the ECDSA encodings; this one pins the BYTES those
+    # encodings are applied to. A handset signs
+    # `BFM-REFRESH-V1\n<nonce>\n<sha256(refreshToken)>` and the BFM rebuilds the
+    # same string to verify it — two constructions in two languages that no
+    # compiler compares. A disagreement over the prefix, the separator count,
+    # the digest or the hex case surfaces only as a 401, indistinguishable from
+    # an expired token in either log.
+    #
+    # Both languages therefore read one committed vector, and it exists twice:
+    # canonical in `pillars/bfm/contracts/` because the format is the BFM's to
+    # define, vendored into `clients/ios/Contracts/` because ADR-043 forbids the
+    # client reading a path under `pillars/`. That is the mirror of the job
+    # above, whose producer is the client, which is why the copy machinery takes
+    # the canonical path as an argument rather than assuming a direction.
+    #
+    # This job restates the format's properties rather than only re-deriving
+    # them: the two unit suites already catch an accidental change, and what
+    # they cannot catch is a deliberate one that regenerated the vector along
+    # with it. Runs everywhere rather than under the iOS path filter, because
+    # the BFM can break the contract without touching a line of Swift. Needs no
+    # `pnpm install` — `node:crypto` only.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Gate self-test (proves the guard catches a changed message format)
+        run: node scripts/ci/check-refresh-message-fixture.mjs --self-test
+      - name: The committed vector holds the format both sides build
+        run: node scripts/ci/check-refresh-message-fixture.mjs
+
   cross-pillar-expectations:
     name: Backend cross-pillar expectations (ADR-040)
     # The backend counterpart to `cross-pillar-clients` below. A pillar's

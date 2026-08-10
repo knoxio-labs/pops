@@ -31,14 +31,16 @@ export default {
     // time. The same paths are in `.oxfmtrc.json`'s `ignorePatterns`, so the
     // repo-wide `pnpm format` cannot undo this either.
     //
-    // The other byte-identical pair in the repo — the device-signature fixture,
-    // canonical under `clients/ios/Contracts/` and vendored into
-    // `pillars/bfm/contracts/` — is deliberately NOT exempt, and the `.openapi`
-    // infix above is what keeps the two rules apart. Both copies are plain
-    // `*.json` at paths this rule covers, so both go through the same formatter
-    // and land on the same bytes; excluding one and not the other is what would
-    // break the gate. `pillars/bfm`'s own `oxfmt --check .` covers the vendored
-    // copy too, so exempting it here would only move the failure.
+    // The two other byte-identical pairs in the repo are deliberately NOT
+    // exempt, and the `.openapi` infix above is what keeps the rules apart:
+    // the device-signature vector (canonical under `clients/ios/Contracts/`,
+    // vendored into `pillars/bfm/contracts/`) and the refresh-message vector
+    // (the same two directories, the other way round). Every copy is a plain
+    // `*.json` at a path this rule covers, so all of them go through the same
+    // formatter and land on the same bytes; excluding one side of a pair and
+    // not the other is what would break its gate. `pillars/bfm`'s own
+    // `oxfmt --check .` covers its copies too, so exempting them here would
+    // only move the failure.
     const isOpenApiSnapshot = (/** @type {string} */ f) =>
       /\/openapi\/[^/]+\.openapi\.json$/.test(f) ||
       /\/app\/contracts\/[^/]+\.openapi\.json$/.test(f) ||
