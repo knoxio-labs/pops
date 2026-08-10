@@ -343,12 +343,12 @@ jobs:
     # is a legal separator), and passed every gate — lint, format, typecheck,
     # the pre-commit hook — because none of them look at raw bytes. It was
     # only noticed because `grep`/`git diff` silently reclassify a file with a
-    # NUL as binary. This guard reads tracked text under pillars/, libs/,
-    # scripts/, .github/ and docs/ byte-by-byte and fails on any C0 control
-    # (0x00–0x1F) or DEL (0x7F) other than tab/LF/CR, with an explicit
-    # extension allowlist for genuine binary assets (images, fonts, …). Pure
-    # `node:fs`/`node:child_process`, no third-party deps, so it skips
-    # `pnpm install`. See scripts/ci/check-control-characters.mjs.
+    # NUL as binary. This guard reads every tracked text file in the repo
+    # byte-by-byte and fails on any C0 control (0x00–0x1F) or DEL (0x7F)
+    # other than tab/LF/CR, with an explicit extension allowlist for genuine
+    # binary assets (images, fonts, …). Pure `node:fs`/`node:child_process`,
+    # no third-party deps, so it skips `pnpm install`. See
+    # scripts/ci/check-control-characters.mjs.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
