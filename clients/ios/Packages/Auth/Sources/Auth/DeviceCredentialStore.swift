@@ -1,18 +1,28 @@
-/// The two halves of the device's identity, and the one operation that has to
-/// treat them as a unit.
+/// Everything a paired device is, and the one operation that has to treat it
+/// as a unit.
 ///
-/// Everything else in this package deals with the key or the tokens. Revocation
-/// deals with both, and it is the only path where a partial success is worse
-/// than a clean failure: the BFM has answered `403`, this device is no longer
-/// trusted, and whatever is still on disk is a credential nobody will ever
-/// honour but an attacker may still find useful.
+/// Everything else in this package deals with the key, the tokens or the
+/// identity on its own. Revocation deals with all three, and it is the only
+/// path where a partial success is worse than a clean failure: the BFM has
+/// answered `403`, this device is no longer trusted, and whatever is still on
+/// disk is a credential nobody will ever honour but an attacker may still find
+/// useful.
 public struct DeviceCredentialStore: Sendable {
     public let keyStore: any DeviceKeyStore
     public let tokenStore: any TokenStore
+    /// Who this device is and where its BFM lives — the part a cold launch
+    /// cannot obtain any other way. Not a secret, and stored accordingly; see
+    /// ``UserDefaultsPairedDeviceStore``.
+    public let pairedDeviceStore: any PairedDeviceStore
 
-    public init(keyStore: any DeviceKeyStore, tokenStore: any TokenStore) {
+    public init(
+        keyStore: any DeviceKeyStore,
+        tokenStore: any TokenStore,
+        pairedDeviceStore: any PairedDeviceStore
+    ) {
         self.keyStore = keyStore
         self.tokenStore = tokenStore
+        self.pairedDeviceStore = pairedDeviceStore
     }
 
     /// The production wiring: Secure Enclave key, Keychain tokens.
@@ -29,7 +39,11 @@ public struct DeviceCredentialStore: Sendable {
     /// to.
     @available(macOS, unavailable)
     public static func live() -> DeviceCredentialStore {
-        DeviceCredentialStore(keyStore: SecureEnclaveKeyStore(), tokenStore: KeychainTokenStore())
+        DeviceCredentialStore(
+            keyStore: SecureEnclaveKeyStore(),
+            tokenStore: KeychainTokenStore(),
+            pairedDeviceStore: UserDefaultsPairedDeviceStore()
+        )
     }
 
     /// Destroys every stored credential, on revocation or on sign-out.
@@ -44,20 +58,29 @@ public struct DeviceCredentialStore: Sendable {
     /// failure is what leaves the other credential behind — the exact outcome
     /// this method exists to rule out.
     ///
-    /// - Throws: ``DeviceCredentialWipeError`` if either deletion failed. The
+    /// The identity goes last, and its failure is reported like the others. It
+    /// is the only one that is not a credential — losing it costs a re-pair,
+    /// not a compromise — but a device left holding an identity whose tokens
+    /// are gone would restore a session on the next launch and then fail every
+    /// request in it, which is a worse screen than the pairing one.
+    ///
+    /// - Throws: ``DeviceCredentialWipeError`` if any deletion failed. The
     ///   caller must treat a throw as "credentials may still be present" and
     ///   retry, but callers must not treat it as "nothing was deleted".
     public func wipe() throws {
         var tokenFailure: (any Error)?
         var keyFailure: (any Error)?
+        var identityFailure: (any Error)?
 
         do { try tokenStore.wipe() } catch { tokenFailure = error }
         do { try keyStore.deleteKey() } catch { keyFailure = error }
+        do { try pairedDeviceStore.wipe() } catch { identityFailure = error }
 
-        if tokenFailure != nil || keyFailure != nil {
+        if tokenFailure != nil || keyFailure != nil || identityFailure != nil {
             throw DeviceCredentialWipeError(
                 tokenStoreFailure: tokenFailure,
-                keyStoreFailure: keyFailure
+                keyStoreFailure: keyFailure,
+                pairedDeviceStoreFailure: identityFailure
             )
         }
     }
@@ -65,12 +88,13 @@ public struct DeviceCredentialStore: Sendable {
 
 /// Raised when ``DeviceCredentialStore/wipe()`` could not remove everything.
 ///
-/// Carries both underlying errors because knowing *which* half survived decides
-/// what the app does next, and because reporting only the first one hides a
-/// second failure behind it.
+/// Carries every underlying error because knowing *which* part survived decides
+/// what the app does next, and because reporting only the first one hides the
+/// others behind it.
 public struct DeviceCredentialWipeError: Error {
     public let tokenStoreFailure: (any Error)?
     public let keyStoreFailure: (any Error)?
+    public let pairedDeviceStoreFailure: (any Error)?
 
     /// Whether a token may still be on the device — the case that matters.
     public var tokensMayRemain: Bool { tokenStoreFailure != nil }
@@ -81,6 +105,7 @@ extension DeviceCredentialWipeError: CustomStringConvertible {
         let parts = [
             tokenStoreFailure.map { "tokens: \($0)" },
             keyStoreFailure.map { "key: \($0)" },
+            pairedDeviceStoreFailure.map { "paired device: \($0)" },
         ].compactMap { $0 }
         return "credential wipe incomplete (\(parts.joined(separator: ", ")))"
     }

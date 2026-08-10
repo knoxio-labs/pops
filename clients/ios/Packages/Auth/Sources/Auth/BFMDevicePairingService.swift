@@ -54,6 +54,8 @@ public struct BFMDevicePairingService: DevicePairingService {
             throw Self.pairingError(for: error)
         }
 
+        let device = PairedDevice(id: issued.deviceId, baseURL: request.baseURL)
+
         do {
             try credentialStore.tokenStore.save(
                 DeviceTokens(
@@ -63,6 +65,11 @@ public struct BFMDevicePairingService: DevicePairingService {
                         .addingTimeInterval(TimeInterval(issued.expiresInSeconds))
                 )
             )
+            // After the tokens, because it is what a cold launch reads to
+            // decide the device is paired: an identity stored beside tokens
+            // that never landed would restore a session with nothing to
+            // authenticate it.
+            try credentialStore.pairedDeviceStore.save(device)
         } catch {
             // The one failure that leaves a device registered on the server.
             // The key goes because it can no longer be used for anything; the
@@ -72,7 +79,7 @@ public struct BFMDevicePairingService: DevicePairingService {
             throw PairingError.credentialStorageFailed
         }
 
-        return PairedDevice(id: issued.deviceId, baseURL: request.baseURL)
+        return device
     }
 }
 

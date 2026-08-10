@@ -42,16 +42,23 @@ internal struct DeviceCredentialStoreTests {
         let store: DeviceCredentialStore
         let keyStore: InMemoryKeyStore
         let tokenStore: InMemoryTokenStore
+        let deviceStore: InMemoryPairedDeviceStore
     }
 
     static func pairedStore() throws -> PairedFixture {
         let keyStore = InMemoryKeyStore()
         let tokenStore = InMemoryTokenStore(initial: tokens())
+        let deviceStore = InMemoryPairedDeviceStore(initial: .fake())
         try keyStore.createKey()
         return PairedFixture(
-            store: DeviceCredentialStore(keyStore: keyStore, tokenStore: tokenStore),
+            store: DeviceCredentialStore(
+                keyStore: keyStore,
+                tokenStore: tokenStore,
+                pairedDeviceStore: deviceStore
+            ),
             keyStore: keyStore,
-            tokenStore: tokenStore
+            tokenStore: tokenStore,
+            deviceStore: deviceStore
         )
     }
 
@@ -69,7 +76,8 @@ internal struct DeviceCredentialStoreTests {
     func wipeIsIdempotent() throws {
         let store = DeviceCredentialStore(
             keyStore: InMemoryKeyStore(),
-            tokenStore: InMemoryTokenStore()
+            tokenStore: InMemoryTokenStore(),
+            pairedDeviceStore: InMemoryPairedDeviceStore()
         )
 
         try store.wipe()
@@ -84,7 +92,11 @@ internal struct DeviceCredentialStoreTests {
         let tokenStore = InMemoryTokenStore(initial: Self.tokens())
         let keyStore = FailingDeleteKeyStore(wrapped: InMemoryKeyStore())
         try keyStore.createKey()
-        let store = DeviceCredentialStore(keyStore: keyStore, tokenStore: tokenStore)
+        let store = DeviceCredentialStore(
+            keyStore: keyStore,
+            tokenStore: tokenStore,
+            pairedDeviceStore: InMemoryPairedDeviceStore()
+        )
 
         #expect(throws: DeviceCredentialWipeError.self) {
             try store.wipe()
@@ -101,7 +113,8 @@ internal struct DeviceCredentialStoreTests {
         try keyStore.createKey()
         let store = DeviceCredentialStore(
             keyStore: keyStore,
-            tokenStore: FailingWipeTokenStore(wrapped: inner)
+            tokenStore: FailingWipeTokenStore(wrapped: inner),
+            pairedDeviceStore: InMemoryPairedDeviceStore()
         )
 
         let error = #expect(throws: DeviceCredentialWipeError.self) {
@@ -121,7 +134,8 @@ internal struct DeviceCredentialStoreTests {
         try keyStore.createKey()
         let store = DeviceCredentialStore(
             keyStore: keyStore,
-            tokenStore: FailingWipeTokenStore(wrapped: InMemoryTokenStore(initial: Self.tokens()))
+            tokenStore: FailingWipeTokenStore(wrapped: InMemoryTokenStore(initial: Self.tokens())),
+            pairedDeviceStore: InMemoryPairedDeviceStore()
         )
 
         let error = #expect(throws: DeviceCredentialWipeError.self) {
@@ -142,14 +156,28 @@ internal struct DeviceCredentialStoreTests {
         }
     }
 
-    @Test("the wipe error describes both halves without exposing credentials")
+    @Test("the wipe error describes every part without exposing credentials")
     func wipeErrorIsDescriptiveAndSafe() {
         let error = DeviceCredentialWipeError(
             tokenStoreFailure: TokenStoreError.keychain(-25300),
-            keyStoreFailure: DeviceKeyStoreError.keyNotFound
+            keyStoreFailure: DeviceKeyStoreError.keyNotFound,
+            pairedDeviceStoreFailure: PairedDeviceStoreError.corruptedPayload
         )
 
         #expect(error.description.contains("tokens:"))
         #expect(error.description.contains("key:"))
+        #expect(error.description.contains("paired device:"))
+    }
+
+    /// The identity is not a credential, but a device that keeps it after a
+    /// revocation restores a session on the next launch and then fails every
+    /// request in it — a worse screen than the pairing one.
+    @Test("a wipe removes the device's identity along with its credentials")
+    func wipeRemovesTheIdentity() throws {
+        let paired = try Self.pairedStore()
+
+        try paired.store.wipe()
+
+        #expect(try paired.deviceStore.load() == nil)
     }
 }

@@ -1,3 +1,4 @@
+import AppCore
 import DesignSystem
 import SwiftUI
 
@@ -12,8 +13,15 @@ public struct PairingView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var model: PairingViewModel
 
-    public init(model: PairingViewModel) {
+    private let returningBecause: RevocationReason?
+
+    /// - Parameter returningBecause: Why somebody who had already paired is
+    ///   back here, or `nil` for a device that never was. The root supplies it
+    ///   from the session; this screen is the only place it can be said,
+    ///   because it is the only screen the person is looking at.
+    public init(model: PairingViewModel, returningBecause: RevocationReason? = nil) {
         _model = State(wrappedValue: model)
+        self.returningBecause = returningBecause
     }
 
     public var body: some View {
@@ -58,6 +66,7 @@ public struct PairingView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: PopsSpacing.xl) {
                 header
+                returnExplanation
                 scanSection
                 PairingFormFields(model: model)
                 failureMessage
@@ -80,6 +89,19 @@ extension PairingView {
         }
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isHeader)
+    }
+
+    /// Why a device that was paired is being asked to pair again. Above the
+    /// form rather than below it, because it is the answer to the question
+    /// somebody arriving here is already asking.
+    @ViewBuilder private var returnExplanation: some View {
+        if let reason = returningBecause {
+            PopsCard {
+                Text(PairingCopy.explanation(for: reason))
+                    .font(.popsBody)
+                    .foregroundStyle(Color.popsForeground)
+            }
+        }
     }
 
     /// The camera, or the reason there isn't one. Never absent: a section that

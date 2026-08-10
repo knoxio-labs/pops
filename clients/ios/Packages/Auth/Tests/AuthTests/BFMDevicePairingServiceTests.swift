@@ -32,7 +32,11 @@ internal struct BFMDevicePairingServiceTests {
     ) -> Fixture {
         Fixture(
             service: BFMDevicePairingService(
-                credentialStore: DeviceCredentialStore(keyStore: keyStore, tokenStore: tokenStore),
+                credentialStore: DeviceCredentialStore(
+                    keyStore: keyStore,
+                    tokenStore: tokenStore,
+                    pairedDeviceStore: InMemoryPairedDeviceStore()
+                ),
                 exchange: { _ in exchange },
                 now: { Self.pairedAt }
             ),

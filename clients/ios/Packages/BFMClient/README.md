@@ -57,7 +57,19 @@ It carries no credentials of its own. `init(baseURL:)` reaches only the BFM's un
 
 ## The repositories
 
-`BFMTransactionsRepository` conforms to `AppCore`'s `TransactionsRepository`. It is the reason this package depends on `AppCore` at all, and the reason `ModuleBoundaryTests` names it — with `Auth` — as one of the two packages allowed to hold a concrete implementation of a seam.
+`BFMTransactionsRepository` and `BFMBootstrapService` conform to `AppCore`'s `TransactionsRepository` and `BootstrapService`. They are the reason this package depends on `AppCore` at all, and the reason `ModuleBoundaryTests` names it — with `Auth` — as one of the two packages allowed to hold a concrete implementation of a seam.
+
+### Bootstrap
+
+`GET /mobile/bootstrap` is the app's first authenticated call and the thing that keeps a phone from ever holding a list of what the federation contains. It asks.
+
+Every enum the generator closed is reopened on the way through. The contract's feature ids, reachability states and registry sources are closed today, so the generator emits Swift enums — and a build compiled against today's contract is on a handset that will still be running it after the BFM has added a value. They cross into `AppCore` as raw-value wrappers, so an unrecognised one arrives intact and is skipped by whatever maps ids to screens rather than deciding what the whole app shows.
+
+The response's `pillars` list is read and discarded. It is the federation's own observability; nothing on a phone screen is derived from it, and carrying it into `AppCore` would be a field that exists to be looked at in a debugger.
+
+`502`/`503` resolve to `unavailable` rather than to a transport diagnostic, from either the undocumented-status branch or a body the client could not decode. The contract documents no gateway status for this route, so both paths are reachable and both mean the same thing: the BFM did not answer.
+
+### Transactions
 
 The mapping from wire to domain is the whole of it, and each leg is somewhere a wrong answer is silent:
 
