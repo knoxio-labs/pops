@@ -187,8 +187,25 @@ describe('findPhantomDeps — fixture units', () => {
 });
 
 describe('discoverUnits — against the live repo', () => {
+  let units: ReturnType<typeof discoverUnits>;
+  let offenders: Array<{ name: string; phantoms: ReturnType<typeof findPhantomDeps>['phantoms'] }>;
+
+  // Walks every unit under libs/ and pillars/ once, then runs the TypeScript
+  // parser synchronously over every one of their source files to compute
+  // phantom deps — no cache, no worker pool, cost scales with the size of the
+  // tree. Sharing that single walk across both tests below (instead of each
+  // test re-running its own) keeps the assertions fast; the walk itself still
+  // needs a budget wider than vitest's 5000ms default: it has been clocked at
+  // up to ~5.5s on a 14-core machine once other CPU-heavy processes (a second
+  // vitest/tsc run, a build) are competing for the same cores.
+  beforeAll(() => {
+    units = discoverUnits();
+    offenders = units
+      .map((u) => ({ name: u.name, phantoms: findPhantomDeps(u).phantoms }))
+      .filter((r) => r.phantoms.length > 0);
+  }, 30_000);
+
   it('finds the leaf libs and skips Rust-only crates', () => {
-    const units = discoverUnits();
     const names = new Set(units.map((u) => u.name));
     expect(names.has('@pops/types')).toBe(true);
     expect(names.has('@pops/pillar-sdk')).toBe(true);
@@ -197,9 +214,6 @@ describe('discoverUnits — against the live repo', () => {
   });
 
   it('every discovered unit declares every package it imports (EX-1 holds on the tree)', () => {
-    const offenders = discoverUnits()
-      .map((u) => ({ name: u.name, phantoms: findPhantomDeps(u).phantoms }))
-      .filter((r) => r.phantoms.length > 0);
     expect(offenders).toEqual([]);
   });
 });
