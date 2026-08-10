@@ -11,7 +11,6 @@ import Foundation
 /// `scripts/ci/check-refresh-message-fixture.mjs` fails the build if it drifts
 /// from the pillar's.
 internal struct RefreshMessageFixture: ContractsFixture {
-    let version: Int
     let domain: String
     let nonce: String
     let refreshToken: String
