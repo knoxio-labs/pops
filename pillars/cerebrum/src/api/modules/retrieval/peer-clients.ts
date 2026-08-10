@@ -2,22 +2,29 @@
  * Cross-pillar enrichment clients for semantic-search metadata resolution.
  *
  * The transaction / movie / tv-show / inventory tables live in their owning
- * pillars, so enrichment for cross-pillar source types is fetched over REST
- * from each owner (bare `fetch`, docker-network trust → no auth header). The
- * base URLs are resolved from `POPS_PILLARS`.
+ * pillars, so enrichment for cross-pillar source types is fetched from each
+ * owner through the `@pops/pillar-sdk` proxy: the registry answers where the
+ * peer is, and each call resolves against an operation id in the contract that
+ * peer publishes (ADR-040).
  *
  * Each peer endpoint returns `{ data: Schema }`. We hand-type a minimal shape
  * per peer (only the fields the formatters use) rather than importing the
  * peers' generated `api-types` — that would couple cerebrum's build to the
  * peers' `dist/` artifacts for four scalar fields.
  *
- * Graceful absence: if a peer is not present in `POPS_PILLARS`, its client is
- * `undefined` and enrichment for that source type is skipped — the engram-only
- * leg still works and the cross-pillar hit is dropped (unresolvable domain rows
- * yield `null` metadata). A live fetch failure surfaces as a thrown error
- * caught by the hybrid fallback.
+ * Absence is a per-call outcome, not a boot-time one: a peer that is not
+ * registered answers `unavailable`, which throws and is caught by the hybrid
+ * fallback, while a row the peer does not have answers `not-found` and yields
+ * `null` metadata (unresolvable domain row → the hit is dropped). The
+ * {@link PeerClients} members stay optional so a caller — every test does
+ * this — can still supply a subset.
  */
-import { parsePillarsEnv } from '@pops/pillar-sdk/pillar-env';
+import { isOk, pillar, type CallResult, type PillarHandle } from '@pops/pillar-sdk/client';
+
+/** Peer pillar ids, as registered with the registry. */
+export const FINANCE_PILLAR_ID = 'finance';
+export const MEDIA_PILLAR_ID = 'media';
+export const INVENTORY_PILLAR_ID = 'inventory';
 
 export interface FinanceTransactionRow {
   description?: string | null;
@@ -86,137 +93,148 @@ export interface PeerClients {
   };
 }
 
-type FetchImpl = typeof globalThis.fetch;
-
-interface PeerPaginationEnvelope<T> {
+/** The `{ data, pagination }` envelope every peer LIST endpoint answers with. */
+interface PeerPageEnvelope<T> {
   data?: T[];
   pagination?: { hasMore?: boolean };
 }
 
-function resolvePeerBaseUrl(id: string): string | undefined {
-  return parsePillarsEnv(process.env['POPS_PILLARS']).find((p) => p.id === id)?.baseUrl;
+/** The `{ data }` envelope every peer GET endpoint answers with. */
+interface PeerRowEnvelope<T> {
+  data?: T;
 }
 
-async function fetchJson(
-  fetchImpl: FetchImpl,
-  baseUrl: string,
-  path: string,
-  label: string
-): Promise<{ status: number; text: string }> {
-  const res = await fetchImpl(`${baseUrl.replace(/\/$/, '')}${path}`, {
-    method: 'GET',
-    headers: { 'content-type': 'application/json' },
-  });
-  if (res.status === 404) return { status: 404, text: '' };
-  if (!res.ok) throw new Error(`${label} → HTTP ${res.status}`);
-  return { status: res.status, text: await res.text() };
-}
-
-async function getData<T>(
-  fetchImpl: FetchImpl,
-  baseUrl: string,
-  path: string,
-  label: string
-): Promise<T | null> {
-  const { status, text } = await fetchJson(fetchImpl, baseUrl, path, label);
-  if (status === 404 || text.length === 0) return null;
-  const json = JSON.parse(text) as { data?: T };
-  return json.data ?? null;
-}
-
-interface ListRequest {
-  path: string;
-  label: string;
+/** The paging window every peer LIST endpoint accepts. */
+interface PeerPageInput {
   limit: number;
   offset: number;
 }
 
-async function listData<T>(
-  fetchImpl: FetchImpl,
-  baseUrl: string,
-  req: ListRequest
-): Promise<PeerPage<T>> {
-  const query = `?limit=${req.limit}&offset=${req.offset}`;
-  const { status, text } = await fetchJson(fetchImpl, baseUrl, `${req.path}${query}`, req.label);
-  if (status === 404 || text.length === 0) return { rows: [], hasMore: false };
-  const json = JSON.parse(text) as PeerPaginationEnvelope<T>;
-  return { rows: json.data ?? [], hasMore: json.pagination?.hasMore ?? false };
+/**
+ * Typed handles over the subset of each peer's router cerebrum calls. Declared
+ * as `type`s (not `interface`s) so they satisfy the SDK proxy's
+ * `Record<string, unknown>` constraint. Exported for tests that drive
+ * {@link createPeerClients} against stub handles.
+ */
+export type FinanceRouter = {
+  transactions: {
+    get: (input: { id: string }) => Promise<PeerRowEnvelope<FinanceTransactionRow>>;
+    list: (input: PeerPageInput) => Promise<PeerPageEnvelope<FinanceTransactionListRow>>;
+  };
+};
+
+export type MediaRouter = {
+  movies: {
+    get: (input: { id: number }) => Promise<PeerRowEnvelope<MediaMovieRow>>;
+    list: (input: PeerPageInput) => Promise<PeerPageEnvelope<MediaMovieListRow>>;
+  };
+  tvShows: {
+    get: (input: { id: number }) => Promise<PeerRowEnvelope<MediaTvShowRow>>;
+    list: (input: PeerPageInput) => Promise<PeerPageEnvelope<MediaTvShowListRow>>;
+  };
+};
+
+export type InventoryRouter = {
+  items: {
+    get: (input: { id: string }) => Promise<PeerRowEnvelope<InventoryItemRow>>;
+    list: (input: PeerPageInput) => Promise<PeerPageEnvelope<InventoryItemListRow>>;
+  };
+};
+
+/**
+ * Thrown when a peer answers something other than success or `not-found`.
+ * Enrichment must not turn a peer outage into "this row has no metadata": the
+ * caller distinguishes an unresolvable row (`null`) from a peer that could not
+ * answer, and folds the latter into the hybrid keyword fallback.
+ */
+export class PeerCallError extends Error {
+  override readonly name = 'PeerCallError';
+  readonly operation: string;
+  readonly kind: string;
+
+  constructor(operation: string, result: Exclude<CallResult<unknown>, { kind: 'ok' }>) {
+    const detail = 'message' in result && result.message ? `: ${result.message}` : '';
+    super(`${operation} failed (${result.kind})${detail}`);
+    this.operation = operation;
+    this.kind = result.kind;
+  }
 }
 
-function buildFinanceClient(fetchImpl: FetchImpl, baseUrl: string): PeerClients['finance'] {
+function readRow<T>(operation: string, result: CallResult<PeerRowEnvelope<T>>): T | null {
+  if (result.kind === 'not-found') return null;
+  if (!isOk(result)) throw new PeerCallError(operation, result);
+  return result.value.data ?? null;
+}
+
+function readPage<T>(operation: string, result: CallResult<PeerPageEnvelope<T>>): PeerPage<T> {
+  if (result.kind === 'not-found') return { rows: [], hasMore: false };
+  if (!isOk(result)) throw new PeerCallError(operation, result);
+  return { rows: result.value.data ?? [], hasMore: result.value.pagination?.hasMore ?? false };
+}
+
+function buildFinanceClient(handle: () => PillarHandle<FinanceRouter>): PeerClients['finance'] {
   return {
-    getTransaction: (id) =>
-      getData<FinanceTransactionRow>(
-        fetchImpl,
-        baseUrl,
-        `/transactions/${encodeURIComponent(id)}`,
-        'finance GET /transactions/:id'
-      ),
-    listTransactions: (limit, offset) =>
-      listData<FinanceTransactionListRow>(fetchImpl, baseUrl, {
-        path: '/transactions',
-        label: 'finance GET /transactions',
-        limit,
-        offset,
-      }),
+    async getTransaction(id) {
+      return readRow('finance transactions.get', await handle().transactions.get({ id }));
+    },
+    async listTransactions(limit, offset) {
+      return readPage(
+        'finance transactions.list',
+        await handle().transactions.list({ limit, offset })
+      );
+    },
   };
 }
 
-function buildMediaClient(fetchImpl: FetchImpl, baseUrl: string): PeerClients['media'] {
+function buildMediaClient(handle: () => PillarHandle<MediaRouter>): PeerClients['media'] {
   return {
-    getMovie: (id) =>
-      getData<MediaMovieRow>(fetchImpl, baseUrl, `/movies/${id}`, 'media GET /movies/:id'),
-    getTvShow: (id) =>
-      getData<MediaTvShowRow>(fetchImpl, baseUrl, `/tv-shows/${id}`, 'media GET /tv-shows/:id'),
-    listMovies: (limit, offset) =>
-      listData<MediaMovieListRow>(fetchImpl, baseUrl, {
-        path: '/movies',
-        label: 'media GET /movies',
-        limit,
-        offset,
-      }),
-    listTvShows: (limit, offset) =>
-      listData<MediaTvShowListRow>(fetchImpl, baseUrl, {
-        path: '/tv-shows',
-        label: 'media GET /tv-shows',
-        limit,
-        offset,
-      }),
+    async getMovie(id) {
+      return readRow('media movies.get', await handle().movies.get({ id }));
+    },
+    async getTvShow(id) {
+      return readRow('media tvShows.get', await handle().tvShows.get({ id }));
+    },
+    async listMovies(limit, offset) {
+      return readPage('media movies.list', await handle().movies.list({ limit, offset }));
+    },
+    async listTvShows(limit, offset) {
+      return readPage('media tvShows.list', await handle().tvShows.list({ limit, offset }));
+    },
   };
 }
 
-function buildInventoryClient(fetchImpl: FetchImpl, baseUrl: string): PeerClients['inventory'] {
+function buildInventoryClient(
+  handle: () => PillarHandle<InventoryRouter>
+): PeerClients['inventory'] {
   return {
-    getItem: (id) =>
-      getData<InventoryItemRow>(
-        fetchImpl,
-        baseUrl,
-        `/items/${encodeURIComponent(id)}`,
-        'inventory GET /items/:id'
-      ),
-    listItems: (limit, offset) =>
-      listData<InventoryItemListRow>(fetchImpl, baseUrl, {
-        path: '/items',
-        label: 'inventory GET /items',
-        limit,
-        offset,
-      }),
+    async getItem(id) {
+      return readRow('inventory items.get', await handle().items.get({ id }));
+    },
+    async listItems(limit, offset) {
+      return readPage('inventory items.list', await handle().items.list({ limit, offset }));
+    },
   };
 }
 
 /**
- * Build the cross-pillar enrichment clients from `POPS_PILLARS`. A peer absent
- * from the registry yields an `undefined` client for that source type.
+ * Per-peer handle factories. Injectable purely so unit tests can supply stub
+ * routers; production omits them and takes the real `pillar('<id>')`.
  */
-export function resolvePeerClientsFromEnv(fetchImpl: FetchImpl = globalThis.fetch): PeerClients {
-  const financeUrl = resolvePeerBaseUrl('finance');
-  const mediaUrl = resolvePeerBaseUrl('media');
-  const inventoryUrl = resolvePeerBaseUrl('inventory');
+export interface PeerHandleFactories {
+  finance?: () => PillarHandle<FinanceRouter>;
+  media?: () => PillarHandle<MediaRouter>;
+  inventory?: () => PillarHandle<InventoryRouter>;
+}
 
+/** Build the cross-pillar enrichment clients over the pillar SDK. */
+export function createPeerClients(factories: PeerHandleFactories = {}): PeerClients {
   return {
-    finance: financeUrl === undefined ? undefined : buildFinanceClient(fetchImpl, financeUrl),
-    media: mediaUrl === undefined ? undefined : buildMediaClient(fetchImpl, mediaUrl),
-    inventory:
-      inventoryUrl === undefined ? undefined : buildInventoryClient(fetchImpl, inventoryUrl),
+    finance: buildFinanceClient(
+      factories.finance ?? (() => pillar<FinanceRouter>(FINANCE_PILLAR_ID))
+    ),
+    media: buildMediaClient(factories.media ?? (() => pillar<MediaRouter>(MEDIA_PILLAR_ID))),
+    inventory: buildInventoryClient(
+      factories.inventory ?? (() => pillar<InventoryRouter>(INVENTORY_PILLAR_ID))
+    ),
   };
 }

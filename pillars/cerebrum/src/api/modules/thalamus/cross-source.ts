@@ -6,8 +6,8 @@
  * The source rows no longer live in the cerebrum SQLite file; they are paged in
  * over REST from the owning pillar via the injected {@link PeerClients} (the
  * same clients that back retrieval enrichment, extended with paginated LIST
- * methods). A peer absent from `POPS_PILLARS` yields an `undefined` client; that
- * source type is skipped (no crash, contributes 0 to `enqueued`).
+ * methods). A caller may supply a subset: a source type whose client is
+ * `undefined` is skipped (no crash, contributes 0 to `enqueued`).
  *
  * Change detection is by SHA-256 of the first chunk of the embeddable text
  * compared against the `content_hash` of the `chunk_index = 0` row in the
