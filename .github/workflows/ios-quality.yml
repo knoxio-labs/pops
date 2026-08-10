@@ -133,9 +133,12 @@ jobs:
 
       # xcodebuild's compiled modules and build products — the ~17 minutes of
       # this job's ~19 that neither cache above touches, since those cache
-      # dependency resolution, not compilation. Neither this workflow nor
-      # `clients/ios/mise.toml`'s tasks ever pass `-derivedDataPath`, so
-      # xcodebuild resolves its own default location under
+      # dependency resolution, not compilation. None of the `mise run`
+      # invocations this workflow actually calls below (`build`, `test`,
+      # `lint`, `lint:analyze`) pass `-derivedDataPath` — only
+      # `verify:release-carries-no-host`, a local-only task this workflow
+      # never runs, uses that flag, and only for its own throwaway temp dir.
+      # So xcodebuild resolves its own default location under
       # `~/Library/Developer/Xcode/DerivedData`, named from a hash of this
       # job's checkout path. That path is the same on every run of this
       # workflow, which is exactly why the whole directory can be cached
