@@ -10,13 +10,13 @@ This package holds the screen and the decisions behind it. It holds no networkin
 
 That boundary is asserted, not merely intended: `ModuleBoundaryTests` in `AppCore` fails if any package outside `Auth` and `BFMClient` imports either.
 
-| Concern                                   | Lives in                                        |
-| ----------------------------------------- | ----------------------------------------------- |
-| The screen, paging, refresh, failure copy | here                                            |
-| `GET /mobile/finance/transactions`        | `BFMClient` — generated from the BFM contract    |
-| Attaching a token, refreshing, revocation | `Auth` — `AuthenticatingMiddleware`             |
-| `Transaction`, `MoneyAmount`, the errors  | `AppCore`                                       |
-| Every colour, gap and type size           | `DesignSystem`                                  |
+| Concern                                   | Lives in                                      |
+| ----------------------------------------- | --------------------------------------------- |
+| The screen, paging, refresh, failure copy | here                                          |
+| `GET /mobile/finance/transactions`        | `BFMClient` — generated from the BFM contract |
+| Attaching a token, refreshing, revocation | `Auth` — `AuthenticatingMiddleware`           |
+| `Transaction`, `MoneyAmount`, the errors  | `AppCore`                                     |
+| Every colour, gap and type size           | `DesignSystem`                                |
 
 ## Empty is not an outage
 
@@ -26,7 +26,7 @@ The one distinction the whole screen is built around. The BFM answers a finance 
 
 The cursor is the server's, opaque, and never derived here. Offsets are the alternative and they are wrong on any list that mutates: a row inserted at the head between two requests shifts every offset after it, so page two re-sends a row page one already showed and skips one nobody ever sees.
 
-The subtler failure is a response landing *after* the list it was requested for has been thrown away. Pull-to-refresh resets the cursor while a page fetch may still be in flight; when that fetch completes it would append rows from a list that no longer exists. `TransactionsListViewModel` carries a generation counter for exactly this — a fetch captures it before awaiting and discards its own result if it moved underneath — and `TransactionsListRaceTests` drives the race deterministically rather than with a sleep, through a repository that parks mid-call until the test lets it go.
+The subtler failure is a response landing _after_ the list it was requested for has been thrown away. Pull-to-refresh resets the cursor while a page fetch may still be in flight; when that fetch completes it would append rows from a list that no longer exists. `TransactionsListViewModel` carries a generation counter for exactly this — a fetch captures it before awaiting and discards its own result if it moved underneath — and `TransactionsListRaceTests` drives the race deterministically rather than with a sleep, through a repository that parks mid-call until the test lets it go.
 
 The third is duplicate work: a footer that appears, provokes a fetch, and provokes another on the next layout pass. Every test that touches paging asserts the repository's call count, because a list that fetches the same page twice renders correctly either way and bills the difference to somebody's cellular plan.
 
@@ -39,7 +39,7 @@ Two decisions, and both were made on purpose:
 
 Neither leaves a half-list looking whole — the footer or the banner is always there saying so, and both are announced to VoiceOver rather than only drawn, because VoiceOver does not move focus to content that appears above or below what was just touched.
 
-The one retry that is *not* offered is an automatic one. The row that provoked a failed fetch is still on screen afterwards, so an appearance-triggered retry fires again on the next layout pass and keeps firing against a server that has already said no. Retrying the tail is a button.
+The one retry that is _not_ offered is an automatic one. The row that provoked a failed fetch is still on screen afterwards, so an appearance-triggered retry fires again on the next layout pass and keeps firing against a server that has already said no. Retrying the tail is a button.
 
 ## Amounts and dates
 
@@ -71,7 +71,7 @@ which builds every package against the iOS SDK on a simulator — the same comma
 
 ## Verification gap: the assembled screen is never rasterised
 
-`TransactionRowRenderingTests` proves a *row* draws, draws differently in light and dark, and grows with Dynamic Type. The screen it sits on is not covered, and `ImageRenderer` — the technique `DesignSystem` uses for exactly this — cannot cover it. That was measured rather than assumed, and both halves of the screen defeat it independently:
+`TransactionRowRenderingTests` proves a _row_ draws, draws differently in light and dark, and grows with Dynamic Type. The screen it sits on is not covered, and `ImageRenderer` — the technique `DesignSystem` uses for exactly this — cannot cover it. That was measured rather than assumed, and both halves of the screen defeat it independently:
 
 - **`ScrollView` content is not drawn.** A `ScrollView` of rows rasterises to a uniform image: one distinct byte value across the whole canvas. That is the `loaded` and `empty` states, which are the states worth looking at.
 - **A root carrying `.task` and `.onChange` renders the same image whatever state it is in.** The same primitives rendered through a plain wrapper produce four distinct images; `TransactionsListView` produces two, and neither depends on the state that was supposed to select it. Swapping the model between `@State` and a plain `let` changed nothing, so the state wrapper is not the cause.
