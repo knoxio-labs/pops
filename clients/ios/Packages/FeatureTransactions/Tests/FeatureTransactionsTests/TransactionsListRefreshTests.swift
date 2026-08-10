@@ -188,6 +188,85 @@ internal struct TransactionsListRefreshTests {
         #expect(model.state == .loaded([Transaction.fake(id: "fresh-1")]))
     }
 
+    /// A failed tail is waiting for a tap, and some *other* request failing is
+    /// not that tap.
+    ///
+    /// Putting the footer back to `idle` would re-arm the appearance trigger
+    /// with the row that provoked the failure still on screen — the automatic
+    /// retry `retryNextPage()` exists to prevent, arrived at sideways. And the
+    /// gesture that would trigger it is pull-to-refresh, which is exactly what
+    /// somebody does repeatedly when a screen keeps failing.
+    @Test("a failed refresh does not re-arm a failed tail")
+    func aFailedRefreshLeavesTheFailedTailAlone() async {
+        let repository = ScriptedTransactionsRepository(script: [
+            .page(Transaction.fakes(count: 2), next: "cursor-1"),
+            .failing(RepositoryError.unavailable),
+            .failing(RepositoryError.unavailable),
+        ])
+        let model = model(repository)
+        await model.loadFirstPage()
+        await model.loadNextPageIfNeeded()
+        #expect(model.paging == .failed(.unavailable))
+
+        await model.refresh()
+
+        #expect(model.paging == .failed(.unavailable), "a failed refresh re-armed the tail")
+        #expect(model.refreshFailure == .unavailable)
+
+        // The half that costs money: the footer must still be inert.
+        await model.loadNextPageIfNeeded()
+        #expect(await repository.callCount == 3)
+    }
+
+    /// The same, for the other route into `settlePagingIfLoading` — a refresh
+    /// the reader abandoned must not quietly hand the tail back to the scroll
+    /// position either.
+    @Test("a cancelled refresh does not re-arm a failed tail")
+    func aCancelledRefreshLeavesTheFailedTailAlone() async {
+        let repository = ScriptedTransactionsRepository(
+            script: [
+                .page(Transaction.fakes(count: 2), next: "cursor-1"),
+                .failing(RepositoryError.unavailable),
+                .failing(RepositoryError.transport("abandoned")),
+            ],
+            gating: [3]
+        )
+        let model = model(repository)
+        await model.loadFirstPage()
+        await model.loadNextPageIfNeeded()
+        #expect(model.paging == .failed(.unavailable))
+
+        let abandoned = Task { await model.refresh() }
+        await repository.waitUntilCalled(3)
+        abandoned.cancel()
+        await repository.release()
+        await abandoned.value
+
+        #expect(model.paging == .failed(.unavailable))
+        #expect(model.refreshFailure == nil)
+    }
+
+    /// The other side of the rule, and the reason it is not simply "never touch
+    /// a failed tail": a refresh that *worked* replaced the list, so whatever
+    /// the old tail was waiting for no longer exists.
+    @Test("a refresh that works clears a failed tail")
+    func aSuccessfulRefreshClearsTheFailedTail() async {
+        let repository = ScriptedTransactionsRepository(script: [
+            .page(Transaction.fakes(count: 2), next: "cursor-1"),
+            .failing(RepositoryError.unavailable),
+            .page([Transaction.fake(id: "fresh-1")], next: nil),
+        ])
+        let model = model(repository)
+        await model.loadFirstPage()
+        await model.loadNextPageIfNeeded()
+        #expect(model.paging == .failed(.unavailable))
+
+        await model.refresh()
+
+        #expect(model.paging == .exhausted)
+        #expect(model.state == .loaded([Transaction.fake(id: "fresh-1")]))
+    }
+
     /// The empty state is reachable by refreshing into it, not only on a first
     /// load — and it must still read as "nothing here", never as a failure.
     @Test("a refresh that comes back empty renders the empty state")

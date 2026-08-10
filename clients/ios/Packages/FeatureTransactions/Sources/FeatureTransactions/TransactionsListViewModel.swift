@@ -149,11 +149,11 @@ extension TransactionsListViewModel {
             show(page.transactions, nextCursor: page.nextCursor)
         } catch let error where error.isCancellation {
             guard epoch == generation else { return }
-            settlePaging()
+            settlePagingIfLoading()
         } catch {
             guard epoch == generation else { return }
             refreshFailure = RepositoryError.describing(error)
-            settlePaging()
+            settlePagingIfLoading()
         }
     }
 }
@@ -176,7 +176,7 @@ extension TransactionsListViewModel {
             // call's to undo — left there, the footer spins forever and no
             // later page is ever requested.
             guard epoch == generation else { return }
-            settlePaging()
+            settlePagingIfLoading()
         } catch {
             guard epoch == generation else { return }
             paging = .failed(RepositoryError.describing(error))
@@ -206,8 +206,26 @@ extension TransactionsListViewModel {
         return existing + incoming.filter { !seen.contains($0.id) }
     }
 
+    /// Puts the tail where the cursor says it belongs. A load that succeeded
+    /// owns this outright: the list it replaced is gone, and so is anything the
+    /// old tail was waiting for.
     private func settlePaging() {
         paging = cursor == nil ? .exhausted : .idle
+    }
+
+    /// Undoes a `.loading` that nothing is coming back to undo — a fetch a
+    /// refresh superseded, or one that was cancelled.
+    ///
+    /// A tail that has **failed** is left exactly where it is. It is waiting for
+    /// a tap, and some other request failing is not that tap: clearing it would
+    /// put the footer back to `.idle`, where appearing is enough to fetch, and
+    /// the row that provoked the failure is still on screen to do the
+    /// appearing. That is the automatic retry ``retryNextPage()`` exists to
+    /// prevent, arrived at sideways — and the gesture that triggers it is the
+    /// one a person makes repeatedly when a refresh keeps failing.
+    private func settlePagingIfLoading() {
+        guard paging == .loading else { return }
+        settlePaging()
     }
 }
 
