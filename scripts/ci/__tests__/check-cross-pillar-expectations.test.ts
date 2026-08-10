@@ -475,6 +475,8 @@ describe('discoverCallSites — fixture tree', () => {
         '}',
       ].join('\n')
     );
+    write('pillars/gamma/scripts/migrate.ts', "pillar<R>('alpha');");
+    write('pillars/gamma/scripts/__tests__/migrate.test.ts', "pillar<R>('ghost');");
   });
   afterAll(() => rmSync(root, { recursive: true, force: true }));
 
@@ -516,6 +518,22 @@ describe('discoverCallSites — fixture tree', () => {
       file: 'pillars/beta/src/api/wrapper.ts',
       line: 3,
     });
+  });
+
+  it('finds a call under pillars/*/scripts, not just under src', () => {
+    expect(discoverCallSites(root).sites).toContainEqual({
+      consumer: 'gamma',
+      producer: 'alpha',
+      argument: "'alpha'",
+      file: 'pillars/gamma/scripts/migrate.ts',
+      line: 1,
+    });
+  });
+
+  it('ignores a __tests__ directory under scripts the same way it does under src', () => {
+    expect(discoverCallSites(root).sites.map((s) => s.file)).not.toContain(
+      'pillars/gamma/scripts/__tests__/migrate.test.ts'
+    );
   });
 
   it('reports a source it could not finish scanning instead of passing over it', () => {
@@ -931,6 +949,32 @@ describe('against the live repo', () => {
       producer: 'cerebrum',
       argument: "'cerebrum'",
       file: 'pillars/bfm/src/api/finance/client.ts',
+      line: 9999,
+    };
+    const report = findCoverageGaps([...sites, planted], EXPECTATIONS, UNPINNABLE_CALL_SITES);
+    expect(report.unlisted).toContainEqual(planted);
+  });
+
+  it('finds both call sites in the finance core-entities migration script', () => {
+    const { sites } = discoverCallSites(repoRoot);
+    const migrationSites = sites.filter(
+      (s) => s.file === 'pillars/finance/scripts/migrate-core-entities.ts'
+    );
+    expect(migrationSites).toContainEqual(
+      expect.objectContaining({ consumer: 'finance', producer: 'registry' })
+    );
+    expect(migrationSites).toContainEqual(
+      expect.objectContaining({ consumer: 'finance', producer: 'contacts' })
+    );
+  });
+
+  it('would report an unpinned seam reached only through a pillars/*/scripts call site', () => {
+    const { sites } = discoverCallSites(repoRoot);
+    const planted = {
+      consumer: 'finance',
+      producer: 'lists',
+      argument: "'lists'",
+      file: 'pillars/finance/scripts/migrate-core-entities.ts',
       line: 9999,
     };
     const report = findCoverageGaps([...sites, planted], EXPECTATIONS, UNPINNABLE_CALL_SITES);
