@@ -251,4 +251,84 @@ version = "0.27"`;
     expect(out).toContain(`[target.'cfg(unix)'.dependencies.nix]`);
     expect(out).toContain('version = "0.27"');
   });
+
+  it('stops a sub-table body scan at a following [[array-of-tables]] header instead of absorbing it', () => {
+    // Real shape: pillars/contacts/Cargo.toml has two [[bin]] tables. A body
+    // scan that only recognises `[table]` as a boundary would run straight
+    // past `[[bin]]` (it does not match that pattern) and keep consuming
+    // lines as if they still belonged to the dependency sub-table.
+    const member = `[package]
+name = "demo"
+
+[lib]
+name = "demo"
+path = "src/lib.rs"
+
+[dependencies.serde]
+workspace = true
+
+[[bin]]
+name = "demo"
+path = "src/main.rs"
+
+[[bin]]
+name = "emit-openapi"
+path = "src/bin/emit_openapi.rs"`;
+    const out = rewriteManifest(member, ROOT);
+    const parsed = parseToml(out) as {
+      dependencies: Record<string, unknown>;
+      bin: Array<Record<string, unknown>>;
+    };
+    expect(parsed.dependencies.serde).toEqual({ version: '1', features: ['derive'] });
+    expect(parsed.bin).toEqual([
+      { name: 'demo', path: 'src/main.rs' },
+      { name: 'emit-openapi', path: 'src/bin/emit_openapi.rs' },
+    ]);
+  });
+
+  it('does not let a preceding [[array-of-tables]] section leak stale [package] tracking', () => {
+    const member = `[package]
+name = "demo"
+edition.workspace = true
+
+[[bin]]
+name = "demo"
+path = "src/main.rs"
+
+[dependencies]
+serde = { workspace = true }`;
+    const out = rewriteManifest(member, ROOT);
+    const parsed = parseToml(out) as {
+      package: Record<string, unknown>;
+      bin: Array<Record<string, unknown>>;
+      dependencies: Record<string, unknown>;
+    };
+    expect(parsed.package.edition).toBe('2021');
+    expect(parsed.bin).toEqual([{ name: 'demo', path: 'src/main.rs' }]);
+    expect(parsed.dependencies.serde).toEqual({ version: '1', features: ['derive'] });
+  });
+});
+
+describe('rewriteManifest — parse-failure labels', () => {
+  it('attributes a bad root parse to the root label, not the member label', () => {
+    expect(() =>
+      rewriteManifest(
+        '[package]\nname = "demo"',
+        '[workspace\nmembers = ["x"]',
+        'ROOT_LABEL.toml',
+        'MEMBER_LABEL.toml'
+      )
+    ).toThrow(/ROOT_LABEL\.toml/u);
+  });
+
+  it('attributes a bad member sub-table parse to the member label, not the root label', () => {
+    const member = `[package]
+name = "demo"
+[dependencies.serde]
+workspace = true
+features = [`;
+    expect(() => rewriteManifest(member, ROOT, 'ROOT_LABEL.toml', 'MEMBER_LABEL.toml')).toThrow(
+      /MEMBER_LABEL\.toml/u
+    );
+  });
 });

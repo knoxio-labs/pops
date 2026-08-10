@@ -64,6 +64,28 @@ const repoRoot = resolve(here, '..', '..');
 /** Dependency tables a `{ workspace = true }` entry can appear under. */
 const DEP_TABLES = ['dependencies', 'dev-dependencies', 'build-dependencies'];
 
+/** A `[table]` header. Excludes `[` from the name so it never matches `[[array]]`. */
+const TABLE_HEADER_RE = /^\[([^[\]]+)\]$/u;
+/** A `[[table]]` array-of-tables header, e.g. `[[bin]]` (two of them, in a real Cargo.toml). */
+const ARRAY_HEADER_RE = /^\[\[([^[\]]+)\]\]$/u;
+
+/**
+ * True if `line` opens ANY new table — `[table]` or `[[array]]` alike. A
+ * sub-table body scan must stop at either: an array-of-tables header does not
+ * match `TABLE_HEADER_RE`, so a scan that only checked that regex would run
+ * straight past a `[[bin]]` (real shape, see `pillars/contacts/Cargo.toml`)
+ * and keep absorbing everything after it as if it were still the sub-table's
+ * body — silently mis-scoping the rewrite, or failing to parse a perfectly
+ * valid manifest.
+ *
+ * @param {string} line  Raw (unstripped) line.
+ * @returns {boolean}
+ */
+function isSectionBoundary(line) {
+  const trimmed = stripComment(line).trim();
+  return TABLE_HEADER_RE.test(trimmed) || ARRAY_HEADER_RE.test(trimmed);
+}
+
 /**
  * Strip a `#` comment outside any string. (Member manifests do not embed `#`
  * inside the values this tool reads.)
@@ -233,14 +255,20 @@ export function readWorkspaceManifest(rootToml, label) {
  * header if the member has one, or appended in a fresh one otherwise —
  * always a placement that is valid regardless of what surrounds it.
  *
- * @param {string} memberToml  Member manifest text.
- * @param {string} rootToml    Workspace-root manifest text.
- * @param {string} [label]     Path used in a parse-failure message.
+ * @param {string} memberToml   Member manifest text.
+ * @param {string} rootToml     Workspace-root manifest text.
+ * @param {string} [rootLabel]    Path used in a root parse-failure message.
+ * @param {string} [memberLabel]  Path used in a member parse-failure message.
  * @returns {string}
  * @throws {ConfigParseError | Error}
  */
-export function rewriteManifest(memberToml, rootToml, label = 'Cargo.toml') {
-  const { package: wsPackage, dependencies: wsDeps } = readWorkspaceManifest(rootToml, label);
+export function rewriteManifest(
+  memberToml,
+  rootToml,
+  rootLabel = 'Cargo.toml',
+  memberLabel = 'member Cargo.toml'
+) {
+  const { package: wsPackage, dependencies: wsDeps } = readWorkspaceManifest(rootToml, rootLabel);
 
   const lines = memberToml.split('\n');
   /** @type {string[]} */
@@ -253,8 +281,18 @@ export function rewriteManifest(memberToml, rootToml, label = 'Cargo.toml') {
   while (i < lines.length) {
     const raw = lines[i];
     const codeOnly = stripComment(raw);
-    const header = codeOnly.trim().match(/^\[([^\]]+)\]$/u);
 
+    const arrayHeader = codeOnly.trim().match(ARRAY_HEADER_RE);
+    if (arrayHeader) {
+      // Bracketed so it can never collide with a real (dotted, bracket-free)
+      // table path and be mistaken for `[package]` or a dependency table.
+      section = `[[${arrayHeader[1]}]]`;
+      out.push(raw);
+      i += 1;
+      continue;
+    }
+
+    const header = codeOnly.trim().match(TABLE_HEADER_RE);
     if (header) {
       section = header[1];
       const info = depTableKind(section);
@@ -262,17 +300,12 @@ export function rewriteManifest(memberToml, rootToml, label = 'Cargo.toml') {
         const name = info.crate;
         const bodyRaw = [];
         let j = i + 1;
-        while (
-          j < lines.length &&
-          !stripComment(lines[j])
-            .trim()
-            .match(/^\[([^\]]+)\]$/u)
-        ) {
+        while (j < lines.length && !isSectionBoundary(lines[j])) {
           bodyRaw.push(lines[j]);
           j += 1;
         }
         if (mentionsWorkspaceTrue(bodyRaw)) {
-          const fields = parseToml(bodyRaw.join('\n'), `${label}: [${section}]`);
+          const fields = parseToml(bodyRaw.join('\n'), `${memberLabel}: [${section}]`);
           if (fields.workspace !== true) {
             throw new Error(
               `[${section}] matched 'workspace = true' textually but did not parse to it`
@@ -331,7 +364,7 @@ export function rewriteManifest(memberToml, rootToml, label = 'Cargo.toml') {
             `'${name}' is { workspace = true } but absent from [workspace.dependencies]`
           );
         }
-        const value = parseToml(`v = ${m[2].trim()}`, `${label}: ${name}`).v;
+        const value = parseToml(`v = ${m[2].trim()}`, `${memberLabel}: ${name}`).v;
         if (!isMapping(value)) {
           throw new Error(
             `'${name} = ${m[2].trim()}' matched 'workspace = true' textually but did not parse to a table`
@@ -530,7 +563,8 @@ function main() {
     rewritten = rewriteManifest(
       readFileSync(memberToml, 'utf8'),
       readFileSync(rootToml, 'utf8'),
-      rootToml
+      rootToml,
+      memberToml
     );
   } catch (err) {
     console.error(`cargo-extract: ${err instanceof Error ? err.message : err}`);
