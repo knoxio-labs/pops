@@ -48,7 +48,7 @@ public enum RefreshSignatureMessage {
     /// the other — a prefix costs nothing now and cannot be added later without
     /// a flag day. Changing this value invalidates every paired device in the
     /// field, because a shipped build cannot be rolled forward.
-    public static let domain = "BFM-REFRESH-V1"
+    public static let domain = "BFM-REFRESH-V2"
 
     /// - Parameters:
     ///   - nonce: From `POST /devices/challenge`, verbatim. Opaque; folding it
