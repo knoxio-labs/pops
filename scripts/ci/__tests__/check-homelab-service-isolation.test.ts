@@ -65,7 +65,11 @@ describe('scanCompose', () => {
     const text = ['services:', '  home-assistant:', '    image: whatever'].join('\n');
     const v = scanCompose('infra/compose.yml', text);
     expect(v).toContainEqual(
-      expect.objectContaining({ service: 'Home Assistant', kind: 'service-key', line: 2 })
+      expect.objectContaining({
+        service: 'Home Assistant',
+        kind: 'service-key',
+        path: 'services.home-assistant',
+      })
     );
   });
 
@@ -183,18 +187,49 @@ describe('degenerate manifest shapes (ADR-045 — the guard must report, not go 
     expect(scanCompose('c.yml', text)).toEqual([]);
   });
 
-  it('reports a flow-mapping services block instead of silently scanning nothing', () => {
+  it('flags the leak inside a flow-mapping services block, not just the shape', () => {
     const text = 'services: { home-assistant: { image: homeassistant/home-assistant } }';
     const v = scanCompose('c.yml', text);
-    expect(v).toContainEqual(expect.objectContaining({ kind: 'unreadable-shape', line: 1 }));
+    expect(v).toContainEqual(
+      expect.objectContaining({
+        service: 'Home Assistant',
+        kind: 'service-key',
+        path: 'services.home-assistant',
+      })
+    );
+    expect(v.some((x) => x.kind === 'unreadable-shape')).toBe(false);
   });
 
-  it('reports a flow-sequence dbs block instead of silently scanning nothing', () => {
+  it('flags the leak inside a flow-sequence dbs block', () => {
     const v = scanLitestream(
       'litestream/finance.yml',
       'dbs: [{ path: /data/sqlite/mosquitto.db }]'
     );
-    expect(v).toContainEqual(expect.objectContaining({ kind: 'unreadable-shape', line: 1 }));
+    expect(v).toContainEqual(
+      expect.objectContaining({
+        service: 'Mosquitto MQTT broker',
+        kind: 'litestream-path',
+        path: 'dbs.0.path',
+      })
+    );
+  });
+
+  it('reports a manifest that does not parse rather than scanning nothing', () => {
+    const v = scanCompose('c.yml', 'services:\n  a:\n   - b\n  - c\n');
+    expect(v).toContainEqual(
+      expect.objectContaining({ kind: 'unreadable-shape', path: '<document>' })
+    );
+  });
+
+  it('reports a litestream config that does not parse, and still flags its filename', () => {
+    const v = scanLitestream('litestream/mosquitto.yml', 'dbs:\n  a:\n   - b\n  - c\n');
+    expect(v.map((x) => x.kind).toSorted()).toEqual(['litestream-file', 'unreadable-shape']);
+  });
+
+  it('reports a services key that is not a mapping of service names', () => {
+    expect(scanCompose('c.yml', 'services: 3\n')).toContainEqual(
+      expect.objectContaining({ kind: 'unreadable-shape', path: 'services' })
+    );
   });
 
   it('does not report a block-form services or dbs key as unreadable', () => {
@@ -219,7 +254,9 @@ describe('scanLitestream', () => {
 
   it('flags a litestream config file named for a forbidden service', () => {
     const v = scanLitestream('litestream/home-assistant.yml', 'dbs: []');
-    expect(v).toContainEqual(expect.objectContaining({ kind: 'litestream-file', line: 0 }));
+    expect(v).toContainEqual(
+      expect.objectContaining({ kind: 'litestream-file', path: '<filename>' })
+    );
   });
 
   it('leaves a legitimate per-pillar litestream config clean', () => {

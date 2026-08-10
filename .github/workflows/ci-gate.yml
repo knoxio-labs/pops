@@ -2,14 +2,12 @@ name: CI Gate
 
 # Single static-named aggregate over the quality workflows whose own jobs carry
 # DYNAMIC matrix names (`finance (pillar) — ts`, `@pops/app-food`, …) and so
-# cannot be listed individually in the branch ruleset. The ruleset requires only
-# Lint / Format / Module boundaries / Duplication + agent-review, leaving every
-# typecheck / test / build / clippy / exports / extractability / bundle-map /
-# cargo-deny / drift job NON-required — a red typecheck can still merge. `CI
-# Gate` is the ONE static context a ruleset CAN require to make all of that
-# load-bearing; adding it to the required contexts is a repository setting and
-# has not been done, so today this reports on the PR without blocking it. See
-# .github/workflows/README.md.
+# cannot be listed individually in the branch ruleset. Alongside Lint / Format /
+# Module boundaries / Duplication + agent-review, the ruleset requires `CI Gate`
+# — the ONE static context that can carry every typecheck / test / build /
+# clippy / exports / extractability / bundle-map / cargo-deny / drift job. None
+# of those is required by name, and all of them block a merge through this
+# context. See .github/workflows/README.md.
 #
 # WHY workflow_run (not needs:): the gated jobs live across EIGHT separate
 # workflows, each with its OWN path filters. `needs:` only sees jobs in the

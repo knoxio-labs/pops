@@ -32,17 +32,27 @@
  * `container_name:`, litestream `path:`), so prose that merely *mentions* Home
  * Assistant (e.g. a comment explaining the boundary) is never a false positive.
  *
- * A manifest written in a shape the indentation walker cannot enter — a flow
- * mapping `services: {…}`, a flow sequence `dbs: [{…}]` — is reported as a
- * finding rather than skipped. Skipping it would scan nothing and print `OK`,
- * which is the failure
- * [ADR-045](../../docs/architecture/adr-045-guards-must-prove-they-report.md)
- * exists to end.
+ * **Tier B guard**: the manifests go through a real YAML parser, so the job
+ * that runs it installs the workspace first. See the tier amendment in
+ * [ADR-045](../../docs/architecture/adr-045-guards-must-prove-they-report.md).
+ * Every spelling of a declaration — flow mapping, quoted key, trailing comment,
+ * a `#` inside an image coordinate — collapses to the same tree before this
+ * guard looks at it, so there is no longer a legal shape that reads as a clean
+ * manifest. A manifest that does not PARSE is still reported as a finding
+ * rather than skipped: scanning nothing and printing `OK` is the failure
+ * ADR-045 exists to end.
  *
- * It is a whole-tree check that reads the working tree directly and pulls in no
- * third-party deps, so it needs no `pnpm install`. Line-level YAML matching
- * lives in `yaml-text.mjs` next door, shared with the other guards under the
- * same constraint.
+ * Findings carry the YAML key path (`services.home-assistant`) rather than a
+ * line number. A parser knows structure, not byte offsets, and the path is what
+ * identifies the declaration once the file has been reformatted.
+ *
+ * It does NOT validate against `compose-schema.mjs`, and that is deliberate.
+ * That schema describes `infra/docker-compose.yml` for callers that need
+ * specific fields out of it; this guard sweeps EVERY compose-shaped file in the
+ * tree and must report on documents it does not recognise rather than reject
+ * them. Routing it through a `zod` object would also strip the two keys it
+ * exists to find — `image` and `container_name` are not in that shape — which
+ * would leave the guard scanning nothing and printing `OK`.
  *
  * Usage:
  *   node scripts/ci/check-homelab-service-isolation.mjs
@@ -57,7 +67,7 @@ import { tmpdir } from 'node:os';
 import { basename, dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { inlineValueFor, stripComment } from './yaml-text.mjs';
+import { formatPath, isMapping, parseYaml, scalarText, walkMappings } from './config-parse.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..');
@@ -132,118 +142,113 @@ export function matchImage(image) {
 /**
  * @typedef {object} Violation
  * @property {string} file     Repo-relative manifest path.
- * @property {number} line     1-based line number (0 for a filename-level hit).
+ * @property {string} path     YAML key path, or `<filename>` for a filename-level hit.
  * @property {string} service  Forbidden service label.
- * @property {string} evidence What was found (the offending token/line).
+ * @property {string} evidence What was found (the offending declaration).
  * @property {'service-key' | 'image' | 'container_name' | 'litestream-path' | 'litestream-file' | 'unreadable-shape'} kind
  */
 
 /**
- * Scan one Compose manifest's text for forbidden service declarations.
+ * Parse a manifest, or turn the parse failure into the one finding kind that
+ * says "I could not look at this".
  *
- * Tracks the `services:` block by indentation so only *immediate* service keys
- * are treated as service declarations (a nested `matter:` env key is not a
- * service). `image:` and `container_name:` are matched wherever they appear.
+ * @param {string} file
+ * @param {string} text
+ * @returns {{ doc: unknown } | { violation: Violation }}
+ */
+function parseManifest(file, text) {
+  try {
+    return { doc: parseYaml(text, file) };
+  } catch (error) {
+    return {
+      violation: {
+        file,
+        path: '<document>',
+        service: 'unknown',
+        evidence: error instanceof Error ? error.message : String(error),
+        kind: 'unreadable-shape',
+      },
+    };
+  }
+}
+
+/**
+ * Scan one Compose manifest for forbidden service declarations.
+ *
+ * Only *immediate* children of `services` count as service declarations — a
+ * nested `matter:` environment key or a `mosquitto:` network is not a service.
+ * `image` and `container_name` are matched wherever they appear, since either
+ * one stands the service up regardless of what its key is called.
  *
  * @param {string} file  Repo-relative path (for reporting).
  * @param {string} text  File contents.
  * @returns {Violation[]}
  */
 export function scanCompose(file, text) {
+  const parsed = parseManifest(file, text);
+  if ('violation' in parsed) return [parsed.violation];
+
   /** @type {Violation[]} */
   const out = [];
-  const lines = text.split('\n');
+  const doc = parsed.doc;
 
-  let servicesIndent = -1;
-  let serviceKeyIndent = -1;
-
-  for (let i = 0; i < lines.length; i++) {
-    const raw = lines[i] ?? '';
-    const code = stripComment(raw);
-    if (code.trim() === '') continue;
-    const indent = code.length - code.trimStart().length;
-
-    const servicesValue = inlineValueFor(code, 'services');
-    if (servicesValue !== undefined) {
-      if (servicesValue !== '') {
-        // A flow mapping (`services: {web: {…}}`) is valid Compose that this
-        // indentation walker steps straight past. Reporting it is the point:
-        // an unreadable subject must never read as a clean one.
-        out.push({
-          file,
-          line: i + 1,
-          service: 'unknown',
-          evidence: `\`services:\` is written as a flow mapping (${servicesValue}), which this guard cannot walk`,
-          kind: 'unreadable-shape',
-        });
-        continue;
-      }
-      servicesIndent = indent;
-      serviceKeyIndent = -1;
-      continue;
-    }
-
-    if (servicesIndent >= 0) {
-      if (indent <= servicesIndent) {
-        // Dedented out of the services block.
-        servicesIndent = -1;
-        serviceKeyIndent = -1;
-      } else {
-        if (serviceKeyIndent === -1) serviceKeyIndent = indent;
-        if (indent === serviceKeyIndent) {
-          const key = code
-            .trim()
-            .replace(/:\s*$/, '')
-            .replace(/:.*$/, '')
-            .replace(/^["']|["']$/g, '');
-          const hit = matchName(key);
-          if (hit) {
-            out.push({
-              file,
-              line: i + 1,
-              service: hit.label,
-              evidence: `service "${key.trim()}"`,
-              kind: 'service-key',
-            });
-          }
+  if (isMapping(doc) && doc.services !== undefined) {
+    if (!isMapping(doc.services)) {
+      out.push({
+        file,
+        path: 'services',
+        service: 'unknown',
+        evidence: `\`services\` is a ${Array.isArray(doc.services) ? 'sequence' : typeof doc.services}, not a mapping of service names`,
+        kind: 'unreadable-shape',
+      });
+    } else {
+      for (const name of Object.keys(doc.services)) {
+        const hit = matchName(name);
+        if (hit) {
+          out.push({
+            file,
+            path: `services.${name}`,
+            service: hit.label,
+            evidence: `service "${name}"`,
+            kind: 'service-key',
+          });
         }
       }
     }
-
-    const imageMatch = /^\s*image\s*:\s*(.+?)\s*$/.exec(code);
-    if (imageMatch) {
-      const hit = matchImage(imageMatch[1] ?? '');
-      if (hit) {
-        out.push({
-          file,
-          line: i + 1,
-          service: hit.label,
-          evidence: `image ${imageMatch[1]?.trim()}`,
-          kind: 'image',
-        });
-      }
-    }
-
-    const cnMatch = /^\s*container_name\s*:\s*(.+?)\s*$/.exec(code);
-    if (cnMatch) {
-      const hit = matchName((cnMatch[1] ?? '').replace(/^["']|["']$/g, ''));
-      if (hit) {
-        out.push({
-          file,
-          line: i + 1,
-          service: hit.label,
-          evidence: `container_name ${cnMatch[1]?.trim()}`,
-          kind: 'container_name',
-        });
-      }
-    }
   }
+
+  for (const entry of walkMappings(doc)) {
+    if (entry.key !== 'image' && entry.key !== 'container_name') continue;
+    const value = scalarText(entry.value);
+    if (value === undefined) {
+      // Skipping it would mean an `image:` the guard cannot read counts as no
+      // image at all — the leak stays and the manifest reports clean.
+      out.push({
+        file,
+        path: formatPath(entry.path),
+        service: 'unknown',
+        evidence: `\`${entry.key}\` is not a single value, so it cannot be matched`,
+        kind: 'unreadable-shape',
+      });
+      continue;
+    }
+    const hit = entry.key === 'image' ? matchImage(value) : matchName(value);
+    if (!hit) continue;
+    out.push({
+      file,
+      path: formatPath(entry.path),
+      service: hit.label,
+      evidence: `${entry.key} ${value}`,
+      kind: entry.key === 'image' ? 'image' : 'container_name',
+    });
+  }
+
   return out;
 }
 
 /**
  * Scan a Litestream config: the file name itself and every replicated db
- * `path:` must not name a forbidden homelab service — Invariant 4 keeps them
+ * `path` must not name a forbidden homelab service — Invariant 4 keeps them
  * off the pops per-pillar Litestream convention entirely.
  *
  * @param {string} file  Repo-relative path.
@@ -259,48 +264,39 @@ export function scanLitestream(file, text) {
   if (fileHit) {
     out.push({
       file,
-      line: 0,
+      path: '<filename>',
       service: fileHit.label,
       evidence: `litestream config named "${basename(file)}"`,
       kind: 'litestream-file',
     });
   }
 
-  const lines = text.split('\n');
-  for (let i = 0; i < lines.length; i++) {
-    const code = stripComment(lines[i] ?? '');
+  const parsed = parseManifest(file, text);
+  if ('violation' in parsed) return [...out, parsed.violation];
 
-    const dbsValue = inlineValueFor(code, 'dbs');
-    if (dbsValue !== undefined && dbsValue !== '') {
-      // Same reason as the compose flow mapping: a `dbs: [{path: …}]` sequence
-      // carries its `path:` inline, where the per-line matcher below cannot see
-      // it. Report rather than pass.
+  for (const entry of walkMappings(parsed.doc)) {
+    if (entry.key !== 'path') continue;
+    const value = scalarText(entry.value);
+    if (value === undefined) {
       out.push({
         file,
-        line: i + 1,
+        path: formatPath(entry.path),
         service: 'unknown',
-        evidence: `\`dbs:\` is written as a flow sequence (${dbsValue}), which this guard cannot walk`,
+        evidence: '`path` is not a single value, so the replicated db cannot be identified',
         kind: 'unreadable-shape',
       });
       continue;
     }
-
-    const pathMatch = /^\s*(?:-\s*)?path\s*:\s*(.+?)\s*$/.exec(code);
-    if (!pathMatch) continue;
-    const dbName = basename((pathMatch[1] ?? '').replace(/^["']|["']$/g, '')).replace(
-      /\.(db|sqlite3?|litestream)$/i,
-      ''
-    );
+    const dbName = basename(value).replace(/\.(db|sqlite3?|litestream)$/i, '');
     const hit = matchName(dbName);
-    if (hit) {
-      out.push({
-        file,
-        line: i + 1,
-        service: hit.label,
-        evidence: `litestream db path ${pathMatch[1]?.trim()}`,
-        kind: 'litestream-path',
-      });
-    }
+    if (!hit) continue;
+    out.push({
+      file,
+      path: formatPath(entry.path),
+      service: hit.label,
+      evidence: `litestream db path ${value}`,
+      kind: 'litestream-path',
+    });
   }
   return out;
 }
@@ -440,9 +436,16 @@ function selfTest() {
       '    image: registry.internal/team#2/eclipse-mosquitto:2 # the homelab broker',
     ].join('\n');
 
-    // Valid Compose that the indentation walker cannot enter.
+    // Valid Compose the previous line-walker could not enter. The parser reads
+    // it as the ordinary declaration it is, so these must now be flagged as
+    // leaks — not as a shape the guard cannot handle.
     const flowCompose = 'services: { home-assistant: { image: homeassistant/home-assistant } }';
     const flowLitestream = 'dbs: [{ path: /data/sqlite/mosquitto.db }]';
+
+    // The one shape that remains unreadable, and the one that is legal YAML
+    // but not a Compose services block. Both must report.
+    const brokenCompose = 'services:\n  a:\n   - b\n  - c\n';
+    const scalarServices = 'services: 3\n';
 
     const composeLeaks = scanCompose('leaky-compose.yml', leakyCompose);
     const composeClean = scanCompose('clean-compose.yml', cleanCompose);
@@ -485,13 +488,31 @@ function selfTest() {
         'Mosquitto MQTT broker',
         'image'
       ),
-      'reports a flow-mapping services block rather than skipping it': scanCompose(
-        'flow-compose.yml',
-        flowCompose
+      'flags the leak inside a flow-mapping services block': has(
+        scanCompose('flow-compose.yml', flowCompose),
+        'Home Assistant',
+        'service-key'
+      ),
+      'flags the leak inside a flow-sequence dbs block': has(
+        scanLitestream('finance.yml', flowLitestream),
+        'Mosquitto MQTT broker',
+        'litestream-path'
+      ),
+      'reports a manifest that does not parse rather than scanning nothing': scanCompose(
+        'broken-compose.yml',
+        brokenCompose
       ).some((v) => v.kind === 'unreadable-shape'),
-      'reports a flow-sequence dbs block rather than skipping it': scanLitestream(
+      'reports a services key that is not a mapping of service names': scanCompose(
+        'scalar-compose.yml',
+        scalarServices
+      ).some((v) => v.kind === 'unreadable-shape'),
+      'reports an image it cannot read rather than counting it as no image': scanCompose(
+        'unreadable-image.yml',
+        'services:\n  broker:\n    image:\n      - eclipse-mosquitto\n'
+      ).some((v) => v.kind === 'unreadable-shape'),
+      'reports a litestream path it cannot read': scanLitestream(
         'finance.yml',
-        flowLitestream
+        'dbs:\n  - path:\n      from: /data/sqlite/mosquitto.db\n'
       ).some((v) => v.kind === 'unreadable-shape'),
       'does not flag pops-finance image': !composeLeaks.some((v) =>
         v.evidence.includes('pops-finance')
@@ -564,14 +585,14 @@ function main() {
       `violating ADR-039 Invariant 4, ${unreadable.length} manifest shape(s) this guard cannot read):\n`
   );
   for (const v of violations) {
-    const loc = v.line > 0 ? `${v.file}:${v.line}` : v.file;
-    console.error(`  ${loc}\n      ${v.service} — ${v.evidence}`);
+    console.error(`  ${v.file} → ${v.path}\n      ${v.service} — ${v.evidence}`);
   }
   if (unreadable.length > 0) {
     console.error(
-      '\nA manifest shape the guard cannot walk is reported, not skipped: it would ' +
-        'otherwise scan nothing and report green. Rewrite the manifest as a block ' +
-        'mapping, or teach the guard the shape and cover it in --self-test.'
+      '\nA manifest the guard cannot read is reported, not skipped: it would otherwise ' +
+        'scan nothing and report green. Fix the document so it parses, or — if the shape ' +
+        'is legal and the guard cannot rule on it — teach the guard and cover it in ' +
+        '--self-test.'
     );
   }
   console.error(

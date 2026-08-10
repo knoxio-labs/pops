@@ -85,15 +85,53 @@ describe('collectWorkflowPins', () => {
   afterAll(() => rmSync(root, { recursive: true, force: true }));
 
   it('finds every node-version in a workflow, quoted or bare', () => {
-    expect(collectWorkflowPins(root).map((pin) => pin.expression)).toEqual(['24', '22']);
+    expect(collectWorkflowPins(root).pins.map((pin) => pin.expression)).toEqual(['24', '22']);
   });
 
   it('returns nothing when there is no workflows dir', () => {
     const bare = mkdtempSync(join(tmpdir(), 'node-pin-bare-'));
     try {
-      expect(collectWorkflowPins(bare)).toEqual([]);
+      expect(collectWorkflowPins(bare)).toEqual({ pins: [], problems: [] });
     } finally {
       rmSync(bare, { recursive: true, force: true });
+    }
+  });
+
+  it('finds a pin written as a flow mapping, which a line matcher stepped past', () => {
+    const flow = makeFixture({
+      workflow:
+        'jobs:\n  a:\n    steps:\n      - { uses: setup-node, with: { node-version: 24 } }\n',
+    });
+    try {
+      expect(collectWorkflowPins(flow).pins.map((pin) => pin.expression)).toEqual(['24']);
+    } finally {
+      rmSync(flow, { recursive: true, force: true });
+    }
+  });
+
+  it('reports a workflow that does not parse rather than collecting no pin from it', () => {
+    const broken = makeFixture({ workflow: 'jobs:\n  a:\n   - b\n  - c\n' });
+    try {
+      const { pins, problems } = collectWorkflowPins(broken);
+      expect(pins).toEqual([]);
+      expect(problems.some((p) => p.includes('could not be parsed'))).toBe(true);
+      expect(checkNodePin(broken).violations.some((v) => v.includes('could not be parsed'))).toBe(
+        true
+      );
+    } finally {
+      rmSync(broken, { recursive: true, force: true });
+    }
+  });
+
+  it('reports a node-version the coherence check cannot rule on', () => {
+    const matrix = makeFixture({
+      workflow: 'jobs:\n  a:\n    steps:\n      - with:\n          node-version: [22, 24]\n',
+    });
+    try {
+      const { problems } = collectWorkflowPins(matrix);
+      expect(problems.some((p) => p.includes('as a sequence'))).toBe(true);
+    } finally {
+      rmSync(matrix, { recursive: true, force: true });
     }
   });
 });
@@ -223,8 +261,12 @@ describe('against the live repo', () => {
     expect(checkNodePin(repoRoot).violations).toEqual([]);
   });
 
+  it('reads every workflow without a single parse problem', () => {
+    expect(collectPins(repoRoot).problems).toEqual([]);
+  });
+
   it('collects a pin from each of the five declaration sites', () => {
-    const sources = collectPins(repoRoot).map((pin) => pin.source);
+    const sources = collectPins(repoRoot).pins.map((pin) => pin.source);
     expect(sources).toContain('mise.toml');
     expect(sources).toContain('mise.ci.toml');
     expect(sources).toContain('package.json engines.node');

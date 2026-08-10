@@ -46,7 +46,7 @@ Concretely, for every script under `scripts/` whose job is to fail the build on 
 - **The `--self-test` flag is where this lives** for a guard that has one, so `agent-review.yml`'s preflight step is the thing that catches a guard which has quietly stopped catching anything. A guard with a Vitest suite under `scripts/__tests__/` or `scripts/ci/__tests__/` may carry the degenerate cases there instead, but not in neither.
 - **The test is watched failing against the unfixed guard.** A test that has never been red is not evidence.
 
-**The stated exception to real-parser use.** `agent-review.yml` and several jobs in `.github/workflows/quality.yml`, `.github/workflows/rust-quality.yml`, and `.github/workflows/docker-build.yml` run their guards immediately after `actions/checkout` with **no `pnpm install`** — deliberately, so the gate answers in seconds and cannot be broken by a dependency problem it is supposed to be independent of. A guard in one of those jobs has no `node_modules` at execution time and therefore cannot import a parser. That constraint, not preference, is why hand-rolled YAML and TOML matchers exist here. It is recorded rather than defended: it trades a parser for latency, and the trade should be revisited as a unit rather than eroded one guard at a time.
+**The stated exception to real-parser use.** — _Resolved by the amendment below; kept because it is the context the amendment answers._ `agent-review.yml` and several jobs in `.github/workflows/quality.yml`, `.github/workflows/rust-quality.yml`, and `.github/workflows/docker-build.yml` run their guards immediately after `actions/checkout` with **no `pnpm install`** — deliberately, so the gate answers in seconds and cannot be broken by a dependency problem it is supposed to be independent of. A guard in one of those jobs has no `node_modules` at execution time and therefore cannot import a parser. That constraint, not preference, is why hand-rolled YAML and TOML matchers exist here. It is recorded rather than defended: it trades a parser for latency, and the trade should be revisited as a unit rather than eroded one guard at a time.
 
 ## Consequences
 
@@ -55,3 +55,64 @@ Concretely, for every script under `scripts/` whose job is to fail the build on 
 - **Accepted trade-off: this is a convention, not a gate.** A guard-for-guards would need to prove it reports, which is the same problem one level up. Enforcement is review plus the self-test preflight, and both can be bypassed by not writing the case at all.
 - **Accepted trade-off: a discovery floor catches total loss, not partial.** A guard that discovers eleven of twelve units still passes. Where the exact set is knowable, pinning it (as `scripts/ci/__tests__/check-generated-clients.test.ts` pins its target count) is stronger than a floor, and preferred where it is cheap.
 - The no-install constraint is now written down with the guards it shapes, so the next author reaching for a parser learns why the file next door does not use one — rather than concluding the hand-rolled matcher is the house style and copying it. Copying it is how one of the five instances above happened.
+
+## Amendment — 2026-08-10: guard jobs are split into two tiers
+
+The constraint above was recorded and deliberately not resolved. This resolves it.
+
+**A guard job that needs a YAML or TOML parser gets `pnpm install --frozen-lockfile` with `cache: pnpm`. A guard job whose guards read JSON, plain text or source code keeps the install-free fast path.** The tier is a property of the JOB, because the install is: a job's steps share one workspace, so every guard in a job that installs has a parser available whether it wants one or not.
+
+The alternative to splitting was to pick one rule for the whole fleet. Installing everywhere costs the fast gates their whole point — a guard that reads a JSON fixture and compares bytes gains nothing from `node_modules` and loses the property that it cannot be broken by a dependency problem. Installing nowhere keeps a defect class that has now produced five instances by hand-rolling a format that has several legal spellings of the same declaration. Neither is worth paying fleet-wide.
+
+### Tier A — install-free
+
+Runs immediately after `actions/checkout`. **No third-party import, at any depth.** Each of these owns exactly one guard, so the tier is also the job.
+
+| Guard                                            | Job                                         | Reads                                  |
+| ------------------------------------------------ | ------------------------------------------- | -------------------------------------- |
+| `scripts/check-bundle-map-coverage.mjs`          | `quality.yml` → `bundle-map-coverage`       | TSX source, `package.json`             |
+| `scripts/check-tailwind-source-coverage.mjs`     | `quality.yml` → `tailwind-source-coverage`  | CSS `@source` globs, source file paths |
+| `scripts/check-escape-hatches.mjs`               | `quality.yml` → `escape-hatches`            | TS/TSX source, JSON baseline           |
+| `scripts/ci/check-vendored-contracts.mjs`        | `quality.yml` → `vendored-contracts`        | OpenAPI JSON, byte comparison          |
+| `scripts/ci/check-device-signature-fixture.mjs`  | `quality.yml` → `device-signature-fixture`  | JSON fixture, `node:crypto`            |
+| `scripts/ci/check-cross-pillar-expectations.mjs` | `quality.yml` → `cross-pillar-expectations` | OpenAPI JSON, TS source                |
+
+### Tier B — installs the workspace
+
+| Guard                                            | Job                                 | Reads                                         | Parser                 |
+| ------------------------------------------------ | ----------------------------------- | --------------------------------------------- | ---------------------- |
+| `scripts/ci/check-mise-tool-overrides.mjs`       | `agent-review.yml` → `agent-review` | `mise.toml` `[tools]`                         | `smol-toml`            |
+| `scripts/ci/check-node-pin.mjs`                  | `agent-review.yml` → `agent-review` | `mise*.toml`, workflow YAML, JSON, Dockerfile | `smol-toml`, `js-yaml` |
+| `scripts/ci/check-homelab-service-isolation.mjs` | `agent-review.yml` → `agent-review` | Compose + Litestream YAML                     | `js-yaml`              |
+| `scripts/extractability/check-cargo-deps.mjs`    | `rust-quality.yml` → `quality`      | Workspace + member `Cargo.toml`               | `smol-toml`            |
+| `scripts/ci/smoke-image.mjs`                     | `docker-build.yml` → `docker-build` | `infra/docker-compose.yml`                    | `js-yaml`, `zod`       |
+| `scripts/ci/check-ci-gate-wiring.mjs`            | `quality.yml` → `Scripts tests`     | Every workflow's YAML                         | `js-yaml`              |
+
+`check-ci-gate-wiring.mjs` has no workflow step of its own — it runs through its Vitest suite, in a job that already installs. It was already effectively Tier B and needed no workflow change.
+
+Two shared modules sit under Tier B and must never be imported from a Tier A guard: `scripts/ci/config-parse.mjs` (the parsers, plus the parse-or-report rule) and `scripts/ci/compose-schema.mjs` (the `zod` shape of `infra/docker-compose.yml`, shared by `smoke-image.mjs` and the Cloudflare Access env check). They are libraries, not checks, and the derived test asserts neither is ever invoked by a workflow as a guard.
+
+`check-homelab-service-isolation.mjs` parses Compose and deliberately does **not** use `compose-schema.mjs`. The schema describes one file for callers that need named fields out of it. The guard sweeps every compose-shaped file in the tree, must report rather than reject a document it does not recognise, and looks for `image` and `container_name` — two keys that shape does not model and a `zod` object would strip, leaving the guard scanning nothing and printing `OK`.
+
+### Tier A guards that ride in a Tier B job
+
+`agent-review.yml` runs eight guards in one job. Three of them are Tier B, so the job installs, and the other five get an install they do not need:
+
+`check-lib-no-pillar-import.mjs`, `check-contract-isolation.mjs`, `check-known-pillars-coverage.mjs`, `check-tests-typechecked.mjs`, `check-docs-model.mjs`.
+
+Splitting them into a second job was considered and rejected: `agent-review` is a **required context** on `main`, and only one job can carry that name. Whichever half kept the name would be the half that blocks, and the other half would silently become advisory — a guard that no longer gates is worse than a guard that waits thirty seconds for a cached install.
+
+`check-docs-model.mjs` is the interesting one, and the reason "reads YAML" is not the test. It reads **comments** out of `.yml` and `.toml` files, looking for doc paths that no longer resolve. A parser discards comments. Routing that guard through `js-yaml` would not improve it; it would blind it.
+
+### How the split is kept honest
+
+`scripts/ci/__tests__/guard-job-tiers.test.ts` derives each job's tier rather than reading a declaration. It copies `scripts/` somewhere with no `node_modules` above it and **loads every Tier A guard for real**, failing on anything Node cannot resolve. The sandbox proves itself first: a known Tier B guard must fail to load in it, or the whole suite is passing over a sandbox that can still reach the workspace.
+
+That is the mechanism that answers the question this amendment exists for — "which guards import a parser and which do not" — without anybody having to keep a list correct.
+
+### Consequences
+
+- **The `agent-review` gate is no longer seconds-scale.** It now pays a cached `pnpm install`. That is the price of the split and it was accepted knowingly; the six install-free jobs in `quality.yml` keep the fast path.
+- **A Tier A job is one `import` away from a broken required check**, and that break lands on every subsequent PR rather than on the one that caused it. The derived test is what makes that a red build on the PR that caused it instead.
+- **`scripts/ci/yaml-text.mjs` is deleted.** It existed only because a parser was unreachable; both of its consumers are Tier B now. `scripts/ci/config-parse.mjs` replaces it and owns the two rules that survive the migration: a document that does not parse is a violation, and a key is found by walking the parsed document rather than by matching a line.
+- **"Report a shape you cannot model" still applies**, and now bites in a different place. The matchers could not model a flow mapping; a parser can. What a parser cannot do is read a document that is not valid YAML or TOML, so that is the case each Tier B guard reports — and each one's `--self-test` covers it.

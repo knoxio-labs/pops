@@ -72,9 +72,20 @@ jobs:
 
       # Node powers the crate-boundary guard (scripts/extractability/
       # check-cargo-deps.mjs). Pinned to 24 to match the TS lanes.
+      #
+      # That guard is TIER B: it reads Cargo manifests through a real TOML
+      # parser, so the workspace has to be installed before it runs. The install
+      # is free here in a way it would not be in a fast gate — this job already
+      # compiles and tests the whole cargo workspace, so a cached pnpm install
+      # is noise against a `cargo build --all-targets`. See
+      # docs/architecture/adr-045-guards-must-prove-they-report.md.
+      - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
           node-version: "24"
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
 
       - name: Cache cargo registry + workspace target + installed tools
         uses: actions/cache@v6

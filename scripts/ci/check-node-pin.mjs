@@ -27,7 +27,9 @@
  * reintroduces suites that pass under pnpm and fail under mise, so it is
  * load-bearing config, not preference.
  *
- * Parses TOML as text (regex, no dependency) — mirrors the other guards here.
+ * **Tier B guard**: it reads TOML and workflow YAML through real parsers, so
+ * the job that runs it installs the workspace first. See the tier amendment in
+ * [ADR-045](../../docs/architecture/adr-045-guards-must-prove-they-report.md).
  *
  * Usage:
  *   node scripts/ci/check-node-pin.mjs
@@ -36,12 +38,21 @@
  * Exit 0 = clean. Exit 1 = a violation. Exit 2 = usage error.
  */
 
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { parseTomlSection } from './check-mise-tool-overrides.mjs';
+import { formatPath, parseYaml, scalarText, walkMappings } from './config-parse.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..');
@@ -67,6 +78,12 @@ export function nodeMajor(expression) {
 
 /**
  * @typedef {{ source: string, expression: string, major: string | null }} PinSite
+ *
+ * @typedef {object} PinScan
+ * @property {PinSite[]} pins
+ * @property {string[]} problems  Declaration sites that exist but could not be
+ *   read. Reported as violations rather than dropped: a pin the collector
+ *   cannot see agrees with every other pin by default.
  */
 
 /**
@@ -99,55 +116,84 @@ export function collectDockerfilePins(root) {
 /**
  * Collect every `node-version:` pin across the GitHub Actions workflows.
  *
+ * The workflow is parsed and then walked for the key at any depth, rather than
+ * matched line by line. `with: { node-version: 24 }` and a `node-version` under
+ * a matrix expansion are the same declaration as the block form, and a line
+ * matcher sees only whichever spelling it was written against.
+ *
  * @param {string} root
- * @returns {PinSite[]}
+ * @returns {PinScan}
  */
 export function collectWorkflowPins(root) {
   /** @type {PinSite[]} */
   const pins = [];
+  /** @type {string[]} */
+  const problems = [];
   const workflowsDir = join(root, '.github', 'workflows');
-  if (!existsSync(workflowsDir)) return pins;
+  if (!existsSync(workflowsDir)) return { pins, problems };
   for (const name of readdirSync(workflowsDir).toSorted((a, b) => a.localeCompare(b))) {
     if (!name.endsWith('.yml') && !name.endsWith('.yaml')) continue;
     const file = join(workflowsDir, name);
-    const source = readFileSync(file, 'utf8');
-    for (const match of source.matchAll(/^\s*node-version:\s*["']?([^"'\s#]+)/gmu)) {
-      pins.push({
-        source: relative(root, file),
-        expression: match[1],
-        major: nodeMajor(match[1]),
-      });
+    const source = relative(root, file);
+    /** @type {unknown} */
+    let doc;
+    try {
+      doc = parseYaml(readFileSync(file, 'utf8'), source);
+    } catch (error) {
+      problems.push(error instanceof Error ? error.message : String(error));
+      continue;
+    }
+    for (const entry of walkMappings(doc)) {
+      if (entry.key !== 'node-version') continue;
+      const expression = scalarText(entry.value);
+      if (expression === undefined) {
+        problems.push(
+          `${source} declares \`node-version\` at ${formatPath(entry.path)} as a ` +
+            `${Array.isArray(entry.value) ? 'sequence' : 'mapping'} rather than a single value. ` +
+            'The coherence check compares one major per site and cannot rule on that shape.'
+        );
+        continue;
+      }
+      pins.push({ source, expression, major: nodeMajor(expression) });
     }
   }
-  return pins;
+  return { pins, problems };
 }
 
 /**
  * Gather every declared Node pin in the repo.
  *
  * @param {string} root
- * @returns {PinSite[]}
+ * @returns {PinScan}
  */
 export function collectPins(root) {
   /** @type {PinSite[]} */
   const pins = [];
+  /** @type {string[]} */
+  const problems = [];
 
-  const rootMise = parseTomlSection(readFileSync(join(root, 'mise.toml'), 'utf8'), 'tools');
-  if (typeof rootMise.node === 'string') {
-    pins.push({ source: 'mise.toml', expression: rootMise.node, major: nodeMajor(rootMise.node) });
-  }
-
-  const ciMisePath = join(root, 'mise.ci.toml');
-  if (existsSync(ciMisePath)) {
-    const ciMise = parseTomlSection(readFileSync(ciMisePath, 'utf8'), 'tools');
-    if (typeof ciMise.node === 'string') {
-      pins.push({
-        source: 'mise.ci.toml',
-        expression: ciMise.node,
-        major: nodeMajor(ciMise.node),
-      });
+  /**
+   * @param {string} file
+   * @param {string} label
+   */
+  const addMisePin = (file, label) => {
+    /** @type {Record<string, string>} */
+    let tools;
+    try {
+      tools = parseTomlSection(readFileSync(file, 'utf8'), 'tools', label);
+    } catch (error) {
+      problems.push(error instanceof Error ? error.message : String(error));
+      return;
     }
-  }
+    const node = tools.node;
+    if (node !== undefined && node !== '') {
+      pins.push({ source: label, expression: node, major: nodeMajor(node) });
+    }
+  };
+
+  addMisePin(join(root, 'mise.toml'), 'mise.toml');
+  const ciMisePath = join(root, 'mise.ci.toml');
+  if (existsSync(ciMisePath)) addMisePin(ciMisePath, 'mise.ci.toml');
 
   const manifest = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
   const engines = manifest.engines?.node;
@@ -159,8 +205,10 @@ export function collectPins(root) {
     });
   }
 
-  pins.push(...collectWorkflowPins(root), ...collectDockerfilePins(root));
-  return pins;
+  const workflows = collectWorkflowPins(root);
+  pins.push(...workflows.pins, ...collectDockerfilePins(root));
+  problems.push(...workflows.problems);
+  return { pins, problems };
 }
 
 /**
@@ -180,9 +228,9 @@ export function collectPins(root) {
  * @returns {PinReport}
  */
 export function checkNodePin(root) {
-  const pins = collectPins(root);
+  const { pins, problems } = collectPins(root);
   /** @type {string[]} */
-  const violations = [];
+  const violations = [...problems];
 
   for (const pin of pins) {
     if (pin.major === null) {
@@ -226,14 +274,29 @@ export function checkNodePin(root) {
     );
   }
 
-  const settings = parseTomlSection(readFileSync(join(root, 'mise.toml'), 'utf8'), 'settings');
-  for (const [key, expected] of Object.entries(REQUIRED_MISE_SETTINGS)) {
-    if (settings[key] !== expected) {
-      violations.push(
-        `mise.toml [settings] ${key} must be ${expected} (found ${settings[key] ?? 'unset'}). ` +
-          'Without it mise appends its tool bin dirs after the inherited PATH, so a system ' +
-          'Node ahead of the mise shims wins every shebang lookup inside a task.'
-      );
+  /** @type {Record<string, string> | undefined} */
+  let settings;
+  try {
+    settings = parseTomlSection(readFileSync(join(root, 'mise.toml'), 'utf8'), 'settings');
+  } catch (error) {
+    // `collectPins` read the same file for its `[tools]` table, so a document
+    // that does not parse at all is already recorded and must not be counted
+    // twice. A `[settings]` table that is present but not a table is NOT — that
+    // failure is unique to this read, and swallowing it would drop the
+    // activate_aggressive check silently.
+    settings = undefined;
+    const message = error instanceof Error ? error.message : String(error);
+    if (!violations.includes(message)) violations.push(message);
+  }
+  if (settings !== undefined) {
+    for (const [key, expected] of Object.entries(REQUIRED_MISE_SETTINGS)) {
+      if (settings[key] !== expected) {
+        violations.push(
+          `mise.toml [settings] ${key} must be ${expected} (found ${settings[key] ?? 'unset'}). ` +
+            'Without it mise appends its tool bin dirs after the inherited PATH, so a system ' +
+            'Node ahead of the mise shims wins every shebang lookup inside a task.'
+        );
+      }
     }
   }
 
@@ -279,10 +342,48 @@ function selfTest() {
       'true',
     // A tree the collectors cannot see must fail, not agree with itself.
     emptyTreeIsReported(),
+    // Nor may an unreadable declaration site quietly agree with the others.
+    unparseableWorkflowIsReported(),
+    // A `[settings]` table that is present but is not a table is a failure only
+    // this read sees, so it must not be swallowed as already-reported.
+    malformedSettingsIsReported(),
   ];
   const ok = checks.every(Boolean);
   if (!ok) console.error(`self-test FAILED: ${JSON.stringify(checks)}`);
   return ok;
+}
+
+/** @returns {boolean} */
+function malformedSettingsIsReported() {
+  const dir = mkdtempSync(join(tmpdir(), 'node-pin-badsettings-'));
+  try {
+    // `settings` before any table header, so it is a TOP-LEVEL key that is not
+    // a table. `[tools]` still parses, so `collectPins` records no problem and
+    // this read is the only one that sees the breakage.
+    writeFileSync(join(dir, 'mise.toml'), 'settings = "on"\n\n[tools]\nnode = "24"\n', 'utf8');
+    writeFileSync(join(dir, 'package.json'), '{"engines":{"node":"24"}}\n', 'utf8');
+    const { violations } = checkNodePin(dir);
+    return violations.some((v) => v.includes('[settings] is a string'));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+/** @returns {boolean} */
+function unparseableWorkflowIsReported() {
+  const dir = mkdtempSync(join(tmpdir(), 'node-pin-badyaml-'));
+  try {
+    mkdirSync(join(dir, '.github', 'workflows'), { recursive: true });
+    writeFileSync(
+      join(dir, '.github', 'workflows', 'broken.yml'),
+      'jobs:\n  a:\n   - b\n  - c\n',
+      'utf8'
+    );
+    const { problems } = collectWorkflowPins(dir);
+    return problems.some((p) => p.includes('could not be parsed'));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 }
 
 /** @returns {boolean} */

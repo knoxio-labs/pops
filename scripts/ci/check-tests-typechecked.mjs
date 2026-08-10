@@ -42,13 +42,15 @@
  *      glob match on both proves nothing, since the loss happens after
  *      matching succeeds.
  *
- * `check-tests-typechecked.mjs` runs in `agent-review.yml`'s zero-dependency
- * job, straight after checkout with no `pnpm install` (ADR-045's stated
- * exception) — so it cannot `import 'typescript'` to resolve a project's
- * effective file set. `node:fs`'s built-in `globSync` (stable since Node 22,
- * no install required) is the real engine used instead; it does not know
- * about the same-stem collision above, because that is not a matching
- * question — the dedicated disk scan next to it is.
+ * It resolves a project's effective file set with `node:fs`'s built-in
+ * `globSync` (stable since Node 22) rather than by constructing a real
+ * TypeScript Program. That began as a constraint — `agent-review.yml` ran with
+ * no `pnpm install`, so `typescript` was not on disk — and the tier amendment
+ * to [ADR-045](../../docs/architecture/adr-045-guards-must-prove-they-report.md)
+ * has since made that job Tier B, so the constraint is gone and the choice is
+ * now just a choice. `globSync` does not know about the same-stem collision
+ * above, because that is not a matching question — the dedicated disk scan next
+ * to it is.
  *
  * Discovery is disk-derived (no static unit list) so a new pillar, lib or
  * frontend app is gated the moment it appears. JSON is parsed after stripping
@@ -381,8 +383,7 @@ const BARE_GLOB_ENTRY = /^[^*?]+$/;
 
 /**
  * Match one `include`/`exclude` entry against real files under `dir`, using
- * `node:fs`'s own glob engine — the real implementation this guard can reach
- * without `pnpm install` (ADR-045). A bare entry with no glob metacharacters
+ * `node:fs`'s own glob engine. A bare entry with no glob metacharacters
  * is resolved the way tsc resolves one: a single existing file is that file
  * literally; anything else (a directory, or a path that doesn't exist yet)
  * is treated as a directory reference and matched recursively.

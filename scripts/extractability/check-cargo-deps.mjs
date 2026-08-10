@@ -31,6 +31,14 @@
  * count as a crate edge for this guard — either form pulls the other crate into
  * the build graph.
  *
+ * **Tier B guard**: the manifests go through a real TOML parser, so the job
+ * that runs it installs the workspace first. See the tier amendment in
+ * [ADR-045](../../docs/architecture/adr-045-guards-must-prove-they-report.md).
+ * Cargo accepts a dependency written as a key (`contacts = { path = … }`), as a
+ * sub-table (`[dependencies.contacts]`), renamed (`package = "contacts"`), and
+ * target-scoped — and the scanner this replaced was blind to the sub-table
+ * spelling until a review caught it.
+ *
  * Usage:
  *   node scripts/extractability/check-cargo-deps.mjs
  *   node scripts/extractability/check-cargo-deps.mjs --self-test
@@ -41,6 +49,14 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import {
+  ConfigParseError,
+  isMapping,
+  parseToml,
+  requireScalar,
+  scalarText,
+} from '../ci/config-parse.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..');
@@ -57,136 +73,95 @@ const DEP_TABLES = ['dependencies', 'dev-dependencies', 'build-dependencies'];
  */
 
 /**
- * Strip TOML comments (a `#` outside a string) and trim. Cargo manifests do not
- * embed `#` inside the keys/values this guard reads (crate names, paths,
- * versions), so a quote-aware single-pass strip is sufficient and avoids a
- * full-TOML dependency.
+ * Extract the `members` array from a workspace `Cargo.toml`. Members are
+ * repo-relative paths.
  *
- * @param {string} line
- * @returns {string}
+ * @param {string} toml
+ * @param {string} [label] Path used in a parse-failure message.
+ * @returns {string[]}
+ * @throws {ConfigParseError}
  */
-function stripComment(line) {
-  let inStr = false;
-  let quote = '';
-  for (let i = 0; i < line.length; i += 1) {
-    const ch = line[i];
-    if (inStr) {
-      if (ch === quote) inStr = false;
-    } else if (ch === '"' || ch === "'") {
-      inStr = true;
-      quote = ch;
-    } else if (ch === '#') {
-      return line.slice(0, i).trim();
-    }
+export function parseWorkspaceMembers(toml, label = 'Cargo.toml') {
+  // Every negative shape here raises rather than returning a short list. This
+  // function's caller turns its result into the set of crates to check, so a
+  // manifest it cannot read must not arrive as a workspace that happens to have
+  // fewer members — that scans nothing and prints OK (ADR-045).
+  const workspace = parseToml(toml, label).workspace;
+  if (!isMapping(workspace)) {
+    throw new ConfigParseError(label, 'declares no [workspace] table');
   }
-  return line.trim();
+  const members = workspace.members;
+  if (!Array.isArray(members)) {
+    throw new ConfigParseError(
+      label,
+      members === undefined
+        ? '[workspace] declares no members'
+        : '[workspace].members is not an array'
+    );
+  }
+  return members.map((member, index) =>
+    requireScalar(member, label, `[workspace].members[${index}]`)
+  );
 }
 
 /**
- * Extract the `members` array from a workspace `Cargo.toml`. Handles the array
- * written across one or many lines. Members are repo-relative paths.
+ * Add every crate named by one dependency table to `deps`.
  *
- * @param {string} toml
- * @returns {string[]}
+ * A key names the crate unless the entry renames it — `bar = { package = "foo"
+ * }` and its sub-table spelling `[dependencies.bar] package = "foo"` are the
+ * same declaration and both resolve to `foo`, which is the name the build graph
+ * keys on.
+ *
+ * @param {unknown} table
+ * @param {Set<string>} deps
+ * @param {string} label
+ * @param {string} where  Table path, for a parse-failure message.
  */
-export function parseWorkspaceMembers(toml) {
-  const lines = toml.split('\n').map(stripComment);
-  let inWorkspace = false;
-  /** @type {string[]} */
-  const collected = [];
-  let buffer = '';
-  let collecting = false;
-  for (const line of lines) {
-    if (/^\[[^\]]+\]$/u.test(line)) {
-      inWorkspace = line === '[workspace]';
-      if (!inWorkspace) collecting = false;
-      continue;
-    }
-    if (!inWorkspace) continue;
-    if (!collecting && /^members\s*=/u.test(line)) {
-      collecting = true;
-      buffer = line.slice(line.indexOf('=') + 1);
-    } else if (collecting) {
-      buffer += `\n${line}`;
-    }
-    if (collecting && buffer.includes(']')) {
-      const inner = buffer.slice(buffer.indexOf('[') + 1, buffer.lastIndexOf(']'));
-      for (const m of inner.matchAll(/["']([^"']+)["']/gu)) collected.push(m[1]);
-      collecting = false;
-      buffer = '';
-    }
+function collectDepTable(table, deps, label, where) {
+  if (table === undefined) return;
+  if (!isMapping(table)) {
+    throw new ConfigParseError(label, `[${where}] is not a table`);
   }
-  return collected;
+  for (const [alias, spec] of Object.entries(table)) {
+    // A `package = …` that is not a crate name leaves the real crate unknown,
+    // and falling back to the alias would hide the edge the rename points at.
+    const renamed =
+      isMapping(spec) && spec.package !== undefined
+        ? requireScalar(spec.package, label, `${where}.${alias}.package`)
+        : undefined;
+    deps.add(renamed ?? alias);
+  }
 }
 
 /**
  * Parse a member `Cargo.toml` into its package name + the set of dependency
  * crate names declared across `[dependencies]`, `[dev-dependencies]` and
- * `[build-dependencies]` (incl. `[target.<cfg>.dependencies]`).
- *
- * Both inline forms count: `foo = "1"` and `foo = { workspace = true }`, and
- * the renamed form `bar = { package = "foo" }` resolves to the real crate
- * `foo`. Returns dependency names (post-rename) — sibling-member detection is
- * by crate name, which is what the build graph keys on.
+ * `[build-dependencies]`, including their `[target.<cfg>.…]` scopings.
  *
  * @param {string} toml
+ * @param {string} [label] Path used in a parse-failure message.
  * @returns {{ name: string; deps: string[] }}
+ * @throws {ConfigParseError}
  */
-export function parseMemberManifest(toml) {
-  const lines = toml.split('\n');
-  let section = '';
-  let name = '';
+export function parseMemberManifest(toml, label = 'Cargo.toml') {
+  const doc = parseToml(toml, label);
+  const pkg = doc.package;
+  const name = isMapping(pkg) ? (scalarText(pkg.name) ?? '') : '';
+
   /** @type {Set<string>} */
   const deps = new Set();
-  /**
-   * Crate named by the enclosing `[dependencies.<crate>]` sub-table, if any.
-   * That spelling puts the dependency in the HEADER rather than on a key line,
-   * so a scanner that only reads key lines walks straight past it and the crate
-   * never enters `deps` — the guard then finds no edge to object to.
-   * @type {string | undefined}
-   */
-  let depSubTable;
-  for (const raw of lines) {
-    const line = stripComment(raw);
-    if (line === '') continue;
-    const header = line.match(/^\[([^\]]+)\]$/u);
-    if (header) {
-      section = header[1];
-      depSubTable = undefined;
-      const nested = DEP_TABLES.map((t) => `${t}.`).find((prefix) => {
-        const at = section.indexOf(prefix);
-        return at === 0 || (at > 0 && section[at - 1] === '.');
-      });
-      if (nested !== undefined) {
-        depSubTable = section.slice(section.indexOf(nested) + nested.length).replace(/["']/gu, '');
-        section = section.slice(0, section.indexOf(nested) + nested.length - 1);
-        if (depSubTable !== '') deps.add(depSubTable);
+  for (const table of DEP_TABLES) collectDepTable(doc[table], deps, label, table);
+
+  const targets = doc.target;
+  if (isMapping(targets)) {
+    for (const [cfg, scoped] of Object.entries(targets)) {
+      if (!isMapping(scoped)) continue;
+      for (const table of DEP_TABLES) {
+        collectDepTable(scoped[table], deps, label, `target.${cfg}.${table}`);
       }
-      continue;
     }
-    if (section === 'package') {
-      const m = line.match(/^name\s*=\s*["']([^"']+)["']/u);
-      if (m) name = m[1];
-      continue;
-    }
-    const isDepTable =
-      DEP_TABLES.includes(section) ||
-      DEP_TABLES.some((t) => section === t || section.endsWith(`.${t}`));
-    if (!isDepTable) continue;
-    const renamed = line.match(/package\s*=\s*["']([^"']+)["']/u);
-    if (depSubTable !== undefined) {
-      // `[dependencies.foo] package = "bar"` renames foo to the real crate bar.
-      if (renamed) {
-        deps.delete(depSubTable);
-        deps.add(renamed[1]);
-        depSubTable = renamed[1];
-      }
-      continue;
-    }
-    const keyMatch = line.match(/^([A-Za-z0-9_-]+)\s*=/u);
-    if (!keyMatch) continue;
-    deps.add(renamed ? renamed[1] : keyMatch[1]);
   }
+
   return { name, deps: [...deps] };
 }
 
@@ -201,7 +176,10 @@ export function discoverCrates(root = repoRoot) {
   if (!existsSync(wsPath)) {
     throw new Error(`no workspace Cargo.toml at ${wsPath}`);
   }
-  const members = parseWorkspaceMembers(readFileSync(wsPath, 'utf8'));
+  const members = parseWorkspaceMembers(readFileSync(wsPath, 'utf8'), 'Cargo.toml');
+  if (members.length === 0) {
+    throw new Error('Cargo.toml [workspace].members is empty — there is no crate to check');
+  }
   /** @type {Crate[]} */
   const crates = [];
   for (const member of members) {
@@ -209,7 +187,10 @@ export function discoverCrates(root = repoRoot) {
     if (!existsSync(memberToml)) {
       throw new Error(`workspace member '${member}' has no Cargo.toml`);
     }
-    const { name, deps } = parseMemberManifest(readFileSync(memberToml, 'utf8'));
+    const { name, deps } = parseMemberManifest(
+      readFileSync(memberToml, 'utf8'),
+      `${member}/Cargo.toml`
+    );
     if (!name) throw new Error(`member '${member}' has no [package].name`);
     /** @type {'pillar'|'lib'|null} */
     let kind = null;
@@ -294,13 +275,42 @@ function selfTest() {
     '[package]\nname = "pops-ai"\n\n[target.\'cfg(unix)\'.dependencies.contacts]\npath = "x"\n'
   ).deps.includes('contacts');
 
+  // A manifest nobody can read must raise, so `main` exits 2 with the reason
+  // rather than classifying the crate as one that declares no dependencies.
+  let unparseableRaised = false;
+  try {
+    parseMemberManifest('[package\nname = "pops-ai"\n');
+  } catch (error) {
+    unparseableRaised = error instanceof ConfigParseError;
+  }
+
+  // A workspace whose member list cannot be read must raise too. Returning a
+  // short list there scans fewer crates and still prints OK, which is the
+  // failure ADR-045 exists to end.
+  const unreadableMemberLists = [
+    '[package]\nname = "x"\n', // no [workspace] at all
+    '[workspace]\nresolver = "2"\n', // [workspace] but no members
+    '[workspace]\nmembers = "libs/pops-ai"\n', // members is not an array
+    '[workspace]\nmembers = ["libs/pops-ai", { path = "x" }]\n', // a non-scalar entry
+  ];
+  const memberListsRaise = unreadableMemberLists.every((toml) => {
+    try {
+      parseWorkspaceMembers(toml);
+      return false;
+    } catch (error) {
+      return error instanceof ConfigParseError;
+    }
+  });
+
   const ok =
     caughtLib &&
     caughtPillar &&
     cleanPassed &&
     subTableSeen &&
     renamedSubTableSeen &&
-    targetSubTableSeen;
+    targetSubTableSeen &&
+    unparseableRaised &&
+    memberListsRaise;
   if (!ok) {
     console.error('SELF-TEST FAILED — guard did not behave as expected:');
     console.error(`  caught lib→pillar (RUST-2a):    ${caughtLib}`);
@@ -309,10 +319,12 @@ function selfTest() {
     console.error(`  read [dependencies.<crate>]:    ${subTableSeen}`);
     console.error(`  read a renamed sub-table dep:   ${renamedSubTableSeen}`);
     console.error(`  read a target sub-table dep:    ${targetSubTableSeen}`);
+    console.error(`  raised on an unreadable manifest: ${unparseableRaised}`);
+    console.error(`  raised on an unreadable member list: ${memberListsRaise}`);
   } else {
     console.log(
-      'self-test OK — guard flags lib→pillar + pillar→pillar, passes clean lib, and reads ' +
-        'the sub-table dependency spelling.'
+      'self-test OK — guard flags lib→pillar + pillar→pillar, passes clean lib, reads ' +
+        'every dependency spelling, and refuses to read an unparseable manifest as empty.'
     );
   }
   return ok;
