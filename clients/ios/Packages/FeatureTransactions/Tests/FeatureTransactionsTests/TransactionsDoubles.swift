@@ -1,5 +1,4 @@
 import AppCore
-import Foundation
 import Testing
 
 /// A repository whose every answer the test writes out, and which records what
