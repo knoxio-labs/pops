@@ -106,8 +106,14 @@ jobs:
       # never match what a later run's restore looks for. Capturing the value
       # now, before generation creates anything, keeps every later reference
       # to it fixed for the rest of the job.
+      #
+      # Scoped to `Packages/*/Package.resolved` rather than `**/Package.resolved`
+      # so it does not also pick up `Tools/OpenAPIGenerator/Package.resolved` —
+      # that tool's dependency graph has its own cache below and has no bearing
+      # on what xcodebuild compiles, so folding it in here would invalidate this
+      # cache over a change nothing in it depends on.
       - name: Hash the SPM dependency inputs for the DerivedData cache key
-        run: echo "POPS_IOS_DEPS_HASH=${{ hashFiles('clients/ios/Packages/*/Package.swift', 'clients/ios/**/Package.resolved') }}" >> "$GITHUB_ENV"
+        run: echo "POPS_IOS_DEPS_HASH=${{ hashFiles('clients/ios/Packages/*/Package.swift', 'clients/ios/Packages/*/Package.resolved') }}" >> "$GITHUB_ENV"
 
       - uses: jdx/mise-action@v4
         with:
@@ -122,12 +128,15 @@ jobs:
       # swift-openapi runtime. `hashFiles` over a pattern that matches nothing
       # contributes an empty string, so a key built from Package.resolved alone
       # would go constant the moment that one file moved or was removed, and
-      # restore a stale cache at every commit after.
+      # restore a stale cache at every commit after. Scoped to `Packages/*/`
+      # rather than every `Package.resolved` under `clients/ios` so a change to
+      # `Tools/OpenAPIGenerator`'s own dependency graph — cached separately
+      # below and irrelevant to the app's packages — does not invalidate this.
       - name: Cache resolved SPM dependencies
         uses: actions/cache@v6
         with:
           path: ~/Library/Caches/org.swift.swiftpm
-          key: spm-${{ runner.os }}-${{ hashFiles('clients/ios/Packages/*/Package.swift', 'clients/ios/**/Package.resolved') }}
+          key: spm-${{ runner.os }}-${{ hashFiles('clients/ios/Packages/*/Package.swift', 'clients/ios/Packages/*/Package.resolved') }}
           restore-keys: |
             spm-${{ runner.os }}-
 
@@ -165,19 +174,23 @@ jobs:
       # hit and then silently skip saving the newer one that run just
       # compiled — every commit after the first would recompile against a
       # baseline that never moves. Suffixing the save key with `github.run_id`
-      # makes the exact key different on every run, so the restore always
-      # falls through to `restore-keys` (picking the most recently saved
-      # entry under the shared prefix) and the save at the end of the job
-      # always fires — the rolling pattern `actions/cache`'s own docs
-      # recommend for a directory that changes every run. `if: always()` on
-      # the save means a failing Build or Test step still banks whatever
-      # compiled cleanly, so a fix on the next push is not recompiling from
+      # AND `github.run_attempt` makes the exact key different on every run —
+      # `run_id` alone is not enough, since GitHub's "re-run jobs" keeps the
+      # same `run_id` across attempts, and without `run_attempt` a re-run would
+      # exact-hit whatever the first attempt already saved and skip saving the
+      # second attempt's own result. With both, the restore always falls
+      # through to `restore-keys` (picking the most recently saved entry under
+      # the shared prefix) and the save at the end of the job always fires —
+      # the rolling pattern `actions/cache`'s own docs recommend for a
+      # directory that changes every run. `if: always()` on the save means a
+      # failing Build or Test step still banks whatever compiled cleanly, so a
+      # fix on the next push — or the next attempt — is not recompiling from
       # the same cold baseline as the failure it is fixing.
       - name: Restore DerivedData
         uses: actions/cache/restore@v6
         with:
           path: ~/Library/Developer/Xcode/DerivedData
-          key: deriveddata-${{ runner.os }}-${{ env.POPS_XCODE_VERSION }}-${{ env.POPS_IOS_DEPS_HASH }}-${{ github.run_id }}
+          key: deriveddata-${{ runner.os }}-${{ env.POPS_XCODE_VERSION }}-${{ env.POPS_IOS_DEPS_HASH }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
             deriveddata-${{ runner.os }}-${{ env.POPS_XCODE_VERSION }}-${{ env.POPS_IOS_DEPS_HASH }}-
             deriveddata-${{ runner.os }}-${{ env.POPS_XCODE_VERSION }}-
@@ -279,4 +292,4 @@ jobs:
         uses: actions/cache/save@v6
         with:
           path: ~/Library/Developer/Xcode/DerivedData
-          key: deriveddata-${{ runner.os }}-${{ env.POPS_XCODE_VERSION }}-${{ env.POPS_IOS_DEPS_HASH }}-${{ github.run_id }}
+          key: deriveddata-${{ runner.os }}-${{ env.POPS_XCODE_VERSION }}-${{ env.POPS_IOS_DEPS_HASH }}-${{ github.run_id }}-${{ github.run_attempt }}
