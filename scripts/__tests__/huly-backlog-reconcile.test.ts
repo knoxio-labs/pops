@@ -11,6 +11,7 @@ import {
   parseGitLog,
   partialWorkMarker,
   peelTrailingGroups,
+  readFlag,
   readIssues,
   readRefGroup,
   reconcile,
@@ -484,6 +485,23 @@ describe('readIssues', () => {
     const report = reconcile(issues, [FIXES_VIA_BODY_TRAILER], PREFIX);
     expect(report.skipped).toEqual([]);
     expect(report.eligible[0]?.verdict).toBe('orphan');
+  });
+});
+
+describe('readFlag', () => {
+  it('reads the value after the flag', () => {
+    expect(readFlag(['--issues', 'a.json', '--json'], '--issues')).toBe('a.json');
+  });
+
+  it('returns undefined for an absent flag', () => {
+    expect(readFlag(['--json'], '--issues')).toBeUndefined();
+  });
+
+  // `--issues --json` must fail as a missing argument, not read `--json` as a
+  // path and die on ENOENT several steps later.
+  it('does not swallow the next flag as a value', () => {
+    expect(readFlag(['--issues', '--json'], '--issues')).toBeUndefined();
+    expect(readFlag(['--issues'], '--issues')).toBeUndefined();
   });
 });
 

@@ -61,11 +61,10 @@
 
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
-import { dirname, resolve as resolvePath } from 'node:path';
+import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const repoRoot = resolvePath(dirname(fileURLToPath(import.meta.url)), '..');
+const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 /** Only a ticket in this status may be reported as an orphan to close. */
 export const ELIGIBLE_STATUS = 'Backlog';
@@ -701,14 +700,23 @@ export function formatReport(report) {
 }
 
 /**
+ * The value following `flag`, or `undefined` when the flag is absent or was
+ * given nothing to take.
+ *
+ * A following token that is itself a flag is not a value: `--issues --json`
+ * would otherwise read `--json` as the path and die on ENOENT several steps
+ * later, instead of saying which argument was missing.
+ *
  * @param {string[]} args
  * @param {string} flag
  * @returns {string | undefined}
  */
-function readFlag(args, flag) {
+export function readFlag(args, flag) {
   const index = args.indexOf(flag);
   if (index === -1) return undefined;
-  return args[index + 1];
+  const value = args[index + 1];
+  if (value === undefined || value.startsWith('-')) return undefined;
+  return value;
 }
 
 function main() {
