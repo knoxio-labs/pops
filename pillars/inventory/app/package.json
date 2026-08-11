@@ -21,7 +21,7 @@
     "@pops/types": "workspace:*",
     "@pops/ui": "workspace:*",
     "@tanstack/react-query": "5.101.4",
-    "@tanstack/react-table": "^8.21.3",
+    "@tanstack/react-table": "^9.1.1",
     "browser-image-compression": "^2.0.2",
     "d3-force": "^3.0.0",
     "heic2any": "^0.0.4",
