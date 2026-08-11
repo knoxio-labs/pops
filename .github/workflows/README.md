@@ -120,13 +120,19 @@ its PR forever.
 
 ### The merge queue, and the `merge_group` trigger it depends on
 
-`main` is behind a **merge queue**. A pull request is never merged on the
-strength of its own run: the queue rebuilds it on top of `main`'s current tip as
-a temporary `gh-readonly-queue/main/...` ref, re-runs the required checks
-against that, and merges only if they pass there. Two PRs that are each green
-against a base that does not contain the other — different files, no textual
-conflict, an incompatibility only a compiler can see — are what this exists to
-stop.
+`main` is behind a **merge queue** — the `merge_queue` rule on the `main` branch
+ruleset, which is where to check it rather than take this paragraph's word for
+it. A pull request is never merged on the strength of its own run: the queue
+rebuilds it on top of `main`'s current tip as a temporary
+`gh-readonly-queue/main/...` ref, re-runs the required checks against that, and
+merges only if they pass there. Two PRs that are each green against a base that
+does not contain the other — different files, no textual conflict, an
+incompatibility only a compiler can see — are what this exists to stop.
+
+The triggers below went in one commit ahead of that rule, and the order is not
+cosmetic: a queue whose required checks do not declare `merge_group` holds its
+first entry until the check-response timeout evicts it, and every entry behind
+it. Trigger first, rule second.
 
 **Every workflow behind a required context therefore triggers on `merge_group`.**
 `quality.yml` and `agent-review.yml` for the five directly-required contexts,
@@ -192,7 +198,7 @@ files only, no install.
 | `registry-generated-quality.yml` | PR/push on `libs/module-registry/**`, `libs/types/**`; every merge group | `generated.ts` drift                                                                                                |
 | `ios-quality.yml`                | PR/push on `clients/ios/**`, `pillars/bfm/openapi/**`; **every merge group, unfiltered** | `macos-latest`; selects the Xcode pinned in `clients/ios/mise.toml`, then `mise run lint` and `mise run -j 1 test ::: lint:analyze` — one step, because both share a single compile. Caches no derived data, deliberately; the header says why |
 | `agent-review.yml`               | every PR, drafts included; every merge group                  | eight guard scripts under `scripts/ci/`, each `--self-test`ed first, then an advisory LLM review (that last step alone is skipped on drafts) |
-| `docker-build.yml`               | PR/push on Dockerfiles, `infra/docker*`, lockfile; every merge group | builder stage of every `pillars/*/Dockerfile`; `docker compose config --quiet` on both compose files after stubbing 12 secret files |
+| `docker-build.yml`               | PR/push on Dockerfiles, `infra/docker*`, lockfile; every merge group | the FULL image of every `pillars/*/Dockerfile`, each then started on fresh volumes and probed by `scripts/ci/smoke-image.mjs`; `docker compose config --quiet` on both compose files after stubbing 12 secret files |
 | `pillar-quality.yml`             | push to `main` only                                           | full image (`push: false`) per `pillars/<x>` that has a `package.json`                                               |
 | `pillar-schema-coverage.yml`     | PR/push on `pillars/*/src/db/**`, migrations                  | per-pillar coverage, an injected-table self-test, and a static `Pillar schema coverage` aggregator job               |
 | `publish-images.yml`             | push to `main`, `v*` tags, dispatch (`only` input)            | four static app images plus every `pops-<x>` discovered from the prod compose's `image:` refs                        |
