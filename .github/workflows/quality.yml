@@ -269,6 +269,32 @@ jobs:
             node scripts/check-exports.mjs --dirs="$(echo "$dirs" | tr ' ' ',')"
           fi
 
+  composite-references:
+    name: Composite/references (tsc -b project graph)
+    # `pillars/documents`, `pillars/mcp` and `pillars/orchestrator` once
+    # shipped tsconfig.build.json files missing "composite": true and a
+    # "references" entry for the @pops/* libs they import — tsc -b could not
+    # resolve those libs' declarations and the Docker builds broke. The only
+    # thing that ever caught it was the `exports` job above running `tsc -b`
+    # over whatever changed-file scope a PR happens to narrow to, so a PR
+    # touching one of those pillars alongside anything else broadens the
+    # scope enough that the narrow failure path never fires. Unlike `exports`
+    # this job runs UNCONDITIONALLY — no `needs: scope`, no changed-dirs
+    # narrowing — so it fires on every PR regardless of what else it touches.
+    # Reads tsconfig.build.json (JSON) and pillar source (plain text via the
+    # shared import-scan.mjs, itself dependency-free), so it skips
+    # `pnpm install`. See scripts/ci/check-composite-references.mjs.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Gate self-test (proves the guard catches missing composite/references)
+        run: node scripts/ci/check-composite-references.mjs --self-test
+      - name: Every pillar declares composite/references for every composite lib it imports
+        run: node scripts/ci/check-composite-references.mjs
+
   duplication:
     name: Duplication check
     runs-on: ubuntu-latest
