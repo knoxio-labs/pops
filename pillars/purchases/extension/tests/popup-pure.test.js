@@ -89,10 +89,10 @@ describe('guidance', () => {
   });
 
   it('says everything is captured, and does not send the user back to scrolling', () => {
-    // THE POPS-239 regression: a status that means "nothing left to capture"
-    // must not produce the "scroll for more" message. Both templates are
-    // already known, history is exhausted, and nothing is pending — the only
-    // reading left is that the job is done.
+    // The regression this suite exists for: a status that means "nothing
+    // left to capture" must not produce the "scroll for more" message. Both
+    // templates are already known, history is exhausted, and nothing is
+    // pending — the only reading left is that the job is done.
     const [text, isError] = popup.guidance(
       status({ listed: 5, captured: 5, pending: 0, moreHistory: false })
     );
@@ -144,10 +144,10 @@ describe('disabledFor', () => {
 describe('pairing guidance with button state', () => {
   /**
    * Each row is a status a real popup can be in, with what both functions
-   * must say about it. This is the regression `guidance` and `disabledFor`
-   * both exist to prevent: a message that does not match which buttons are
-   * actually live, which is what sent a user scrolling a list that did not
-   * need scrolling during POPS-239 development.
+   * must say about it. Pinning the pair rather than each function alone is
+   * what catches an edit to one that was never made to the other — the
+   * message a user reads and the buttons they can press come from separate
+   * code paths, and only the popup puts them back together.
    */
   const cases = [
     {
@@ -175,7 +175,7 @@ describe('pairing guidance with button state', () => {
       disabled: { history: true, fetch: false, download: false },
     },
     {
-      name: 'history exhausted, nothing pending — the POPS-239 case',
+      name: 'history exhausted, nothing pending — the case that must not say "scroll"',
       status: status({ moreHistory: false, pending: 0, captured: 5, listed: 5 }),
       text: 'Every listed receipt has been captured.',
       disabled: { history: true, fetch: true, download: false },
