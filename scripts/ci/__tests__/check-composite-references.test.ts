@@ -1,6 +1,7 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
@@ -298,7 +299,8 @@ describe('checkPillar — the composite/references degenerate case', () => {
 
 describe('scanRepo against the real repo tree', () => {
   it('reports zero failures — every pillar already declares what it imports', () => {
-    const repoRoot = join(__dirname, '..', '..', '..');
+    const here = dirname(fileURLToPath(import.meta.url));
+    const repoRoot = resolve(here, '..', '..', '..');
     const { pillarCount, failures } = scanRepo(repoRoot);
     expect(pillarCount).toBeGreaterThan(0);
     expect(failures).toEqual([]);
