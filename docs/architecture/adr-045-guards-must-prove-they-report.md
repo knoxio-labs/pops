@@ -68,15 +68,15 @@ The alternative to splitting was to pick one rule for the whole fleet. Installin
 
 Runs immediately after `actions/checkout`. **No third-party import, at any depth.** Each of these owns exactly one guard, so the tier is also the job.
 
-| Guard                                            | Job                                         | Reads                                  |
-| ------------------------------------------------ | ------------------------------------------- | -------------------------------------- |
-| `scripts/check-bundle-map-coverage.mjs`          | `quality.yml` → `bundle-map-coverage`       | TSX source, `package.json`             |
-| `scripts/check-tailwind-source-coverage.mjs`     | `quality.yml` → `tailwind-source-coverage`  | CSS `@source` globs, source file paths |
-| `scripts/check-escape-hatches.mjs`               | `quality.yml` → `escape-hatches`            | TS/TSX source, JSON baseline           |
-| `scripts/ci/check-control-characters.mjs`        | `quality.yml` → `control-characters`        | Every tracked file, raw bytes          |
-| `scripts/ci/check-vendored-contracts.mjs`        | `quality.yml` → `vendored-contracts`        | OpenAPI JSON, byte comparison          |
-| `scripts/ci/check-device-signature-fixture.mjs`  | `quality.yml` → `device-signature-fixture`  | JSON fixture, `node:crypto`            |
-| `scripts/ci/check-cross-pillar-expectations.mjs` | `quality.yml` → `cross-pillar-expectations` | OpenAPI JSON, TS source                |
+| Guard                                            | Job                                         | Reads                                                         |
+| ------------------------------------------------ | ------------------------------------------- | ------------------------------------------------------------- |
+| `scripts/check-bundle-map-coverage.mjs`          | `quality.yml` → `bundle-map-coverage`       | TSX source, `package.json`                                    |
+| `scripts/check-tailwind-source-coverage.mjs`     | `quality.yml` → `tailwind-source-coverage`  | CSS `@source` globs, source file paths                        |
+| `scripts/check-escape-hatches.mjs`               | `quality.yml` → `escape-hatches`            | TS/TSX source, JSON baseline                                  |
+| `scripts/ci/check-control-characters.mjs`        | `quality.yml` → `control-characters`        | Every tracked file, raw bytes                                 |
+| `scripts/ci/check-vendored-contracts.mjs`        | `quality.yml` → `vendored-contracts`        | OpenAPI JSON, byte comparison, consumer codegen config source |
+| `scripts/ci/check-device-signature-fixture.mjs`  | `quality.yml` → `device-signature-fixture`  | JSON fixture, `node:crypto`                                   |
+| `scripts/ci/check-cross-pillar-expectations.mjs` | `quality.yml` → `cross-pillar-expectations` | OpenAPI JSON, TS source                                       |
 
 ### Tier B — installs the workspace
 
