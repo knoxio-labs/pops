@@ -48,9 +48,11 @@ export function tearDownUnconfirmedLinks(db: PurchasesDb, chargeIds: readonly st
  * engine's inference rather than a figure the merchant stated, so a later
  * ingest that DOES state charges can be told apart from this.
  *
- * Idempotent by construction: the caller only asks for orders whose charges
- * claim none of the total, so a second sweep finds this one and does not
- * mint a twin.
+ * Idempotent by construction: minting is what removes the order from
+ * `listOrdersNeedingDerivedCharge`'s work set, not the other way around.
+ * That query selects orders with no charge claiming any of the total, and
+ * the row minted here is exactly such a claim — so a second sweep never
+ * selects this order again and never mints a twin.
  * Once minted the row persists — teardown removes links, never charges,
  * because a charge is a fact about the order rather than a guess about the
  * statement.
