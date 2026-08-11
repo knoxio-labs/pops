@@ -129,6 +129,20 @@ run = "tsx libs/module-registry/scripts/build.ts"
 description = "Regenerate every pillar's OpenAPI snapshot + typed client (fans out to each pillar's build codegen)"
 run = "mise run run-all build"
 
+# The iOS app's UI-level flow needs a running BFM, and neither unit may reach
+# into the other (ADR-043) — so, like the fixture tasks below, the task that
+# spans both lives here. It boots a real `@pops/bfm` against a temporary
+# database, then hands the base URL to `mise -C clients/ios run e2e`, which
+# installs the app on the simulator and runs the Maestro flow.
+#
+# The script carries the reasoning for every choice in it: why there is no
+# Docker (GitHub's macOS runners have no daemon), why the port is not 3014, and
+# what the registry-and-finance stub behind the BFM is and is not.
+[tasks."e2e:ios"]
+description = "Boot a real BFM against a temp database and drive the iOS app's pairing → transaction flow"
+dir = "{{config_root}}"
+run = "node scripts/ios-e2e/run.mjs"
+
 # The iOS↔BFM signature fixture exists twice on purpose — canonical under
 # `clients/ios`, vendored inside the BFM's unit boundary (ADR-043) — and the
 # copy step belongs to neither unit: a pillar must not read a path under

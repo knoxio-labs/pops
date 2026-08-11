@@ -76,6 +76,13 @@ extension TransactionDetailView {
             }
             .padding(PopsSpacing.lg)
         }
+        // On the record, not on the screen: the loading, not-found and failed
+        // states deliberately do not carry it, so finding this identifier
+        // means something is drawn rather than that a screen was pushed. It
+        // does not distinguish the seeded record from the fetched one — both
+        // are records — which is why the flow goes on to assert a line only
+        // the fetched one has.
+        .accessibilityIdentifier(TransactionsAccessibility.detail)
     }
 
     /// The reason the rest of the record is missing, over content that is still
