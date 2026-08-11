@@ -1,3 +1,0 @@
-{ "why":"deliberate formatting violation, proving the merge queue re-runs a full-tree Format the PR-scoped one never sees",
-      "ticket":    "POPS-1749",
-  "delete_me": true }
