@@ -30,6 +30,7 @@ import {
   findDrift,
   findMoved,
   readOrNull,
+  statKind,
 } from '../check-vendored-contracts.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -131,7 +132,7 @@ describe('discoverVendoredContracts / deriveExpectedContracts against the real r
   });
 
   it('leaves every declared expectation present on disk in the real tree', () => {
-    const findings = findMoved(deriveExpectedContracts(repoRoot), existsSync);
+    const findings = findMoved(deriveExpectedContracts(repoRoot), statKind);
     expect(findings).toEqual([]);
   });
 });
@@ -196,7 +197,7 @@ describe('findMoved', () => {
     const root = fixtureRoot();
     plantTsPair(root, 'consumer-a', 'producer-a');
 
-    const findings = findMoved(deriveExpectedContracts(root), existsSync);
+    const findings = findMoved(deriveExpectedContracts(root), statKind);
     expect(findings).toEqual([]);
   });
 
@@ -212,7 +213,7 @@ describe('findMoved', () => {
     const expected = deriveExpectedContracts(root);
     expect(expected).toHaveLength(1); // the declaration itself is still discoverable
 
-    const findings = findMoved(expected, existsSync);
+    const findings = findMoved(expected, statKind);
     expect(findings).toHaveLength(1);
     expect(first(findings).kind).toBe('moved');
     expect(first(findings).copy).toBe(
@@ -232,9 +233,87 @@ describe('findMoved', () => {
     const discovered = discoverVendoredContracts(root);
     expect(discovered).toHaveLength(1); // only the intact one is visible to the scan
 
-    const findings = findMoved(deriveExpectedContracts(root), existsSync);
+    const findings = findMoved(deriveExpectedContracts(root), statKind);
     expect(findings).toHaveLength(1);
     expect(first(findings).copy).toContain('consumer-moved');
+  });
+
+  it('reports a directory sitting at the declared path as not-a-file, not as present', () => {
+    // `existsSync` alone would call this "present" — a directory satisfies
+    // it just as a file would — even though `discoverVendoredContracts`
+    // would never treat a directory as a vendored copy (it filters to
+    // `entry.isFile()`). That gap would let a broken vendored "copy" read as
+    // healthy here while being invisible to the byte-drift check.
+    const root = fixtureRoot();
+    plantTsPair(root, 'consumer-a', 'producer-a');
+    const expected = deriveExpectedContracts(root);
+    const declaredPath = first(expected).copy;
+
+    rmSync(declaredPath);
+    mkdirSync(declaredPath);
+    expect(existsSync(declaredPath)).toBe(true); // sanity: existsSync alone is fooled
+
+    const findings = findMoved(expected, statKind);
+    expect(findings).toHaveLength(1);
+    expect(first(findings).kind).toBe('not-a-file');
+    expect(first(findings).copy).toBe(declaredPath);
+  });
+
+  it('reports a stat failure as unreadable rather than crashing or silently passing', () => {
+    const root = fixtureRoot();
+    plantTsPair(root, 'consumer-a', 'producer-a');
+    const expected = deriveExpectedContracts(root);
+
+    const eacces = Object.assign(new Error('EACCES'), { code: 'EACCES' });
+    const throwingStat = () => {
+      throw eacces;
+    };
+
+    const findings = findMoved(expected, throwingStat);
+    expect(findings).toHaveLength(1);
+    expect(first(findings).kind).toBe('unreadable');
+    expect(first(findings).detail).toContain('could not be checked');
+  });
+});
+
+describe('statKind', () => {
+  it('returns "absent" for a path that does not exist', () => {
+    const root = fixtureRoot();
+    expect(statKind(join(root, 'does-not-exist.json'))).toBe('absent');
+  });
+
+  it('returns "file" for a regular file', () => {
+    const root = fixtureRoot();
+    const path = join(root, 'present.json');
+    writeFileSync(path, '{}\n');
+    expect(statKind(path)).toBe('file');
+  });
+
+  it('returns "not-a-file" for a directory', () => {
+    const root = fixtureRoot();
+    const path = join(root, 'a-directory');
+    mkdirSync(path);
+    expect(statKind(path)).toBe('not-a-file');
+  });
+
+  it('throws, rather than returning "absent", when the path exists but cannot be stat-ed', () => {
+    // Same root-skip rationale as readOrNull's equivalent test below: root
+    // bypasses permission bits entirely, so the distinction is unenforceable
+    // there.
+    if (typeof process.getuid === 'function' && process.getuid() === 0) return;
+
+    const root = fixtureRoot();
+    const blocked = join(root, 'blocked');
+    mkdirSync(blocked);
+    const path = join(blocked, 'present.json');
+    writeFileSync(path, '{}\n');
+    chmodSync(blocked, 0o000);
+
+    try {
+      expect(() => statKind(path)).toThrow();
+    } finally {
+      chmodSync(blocked, 0o755); // afterEach's rmSync needs to traverse back in
+    }
   });
 });
 

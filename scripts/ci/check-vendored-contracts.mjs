@@ -40,8 +40,8 @@
  *   node scripts/ci/check-vendored-contracts.mjs --self-test
  *
  * Exit 0 = every vendored copy matches its source and every declared
- * expectation is on disk. Exit 1 = drift / orphan / moved / unreadable, or
- * total discovery loss.
+ * expectation is on disk as a regular file. Exit 1 = drift / orphan / moved /
+ * not-a-file / unreadable, or total discovery loss.
  */
 
 import {
@@ -51,6 +51,7 @@ import {
   readdirSync,
   readFileSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -320,11 +321,41 @@ export function findDrift(contracts, read) {
 
 /**
  * @typedef {object} MovedFinding
- * @property {'moved'} kind
+ * @property {'moved' | 'not-a-file' | 'unreadable'} kind
  * @property {string} copy
  * @property {string} source
  * @property {string} declaredBy
+ * @property {string} [detail] Present for `'unreadable'`.
  */
+
+/**
+ * Whether a declared vendored-copy path is absent, a regular file, or present
+ * as something else (a directory, a symlink to one, …).
+ *
+ * `existsSync` alone would call a directory sitting at that path "present" —
+ * `discoverVendoredContracts` never would, since its scan filters to
+ * `entry.isFile()`. A directory (say, from a bad merge, or a symlink that
+ * used to point at a file and now points at a directory) would then read as
+ * a healthy vendored copy to `findMoved` while being invisible to every other
+ * check in this guard, including the byte-drift comparison. Distinguishing
+ * the three outcomes is what lets `findMoved` tell "nothing at that path"
+ * (`'absent'` — the config's declared path really has moved) apart from
+ * "something is there, but it is not the file the config declared"
+ * (`'not-a-file'` — a different, still-reportable problem).
+ *
+ * @param {string} path
+ * @returns {'absent' | 'file' | 'not-a-file'}
+ */
+export function statKind(path) {
+  let stats;
+  try {
+    stats = statSync(path);
+  } catch (error) {
+    if (isFileNotFound(error)) return 'absent';
+    throw error;
+  }
+  return stats.isFile() ? 'file' : 'not-a-file';
+}
 
 /**
  * Cross-check every config-declared expectation against the filesystem.
@@ -336,21 +367,33 @@ export function findDrift(contracts, read) {
  * into a reported failure.
  *
  * @param {DeclaredCopy[]} expected
- * @param {(p: string) => boolean} exists
+ * @param {(p: string) => 'absent' | 'file' | 'not-a-file'} stat
  * @returns {MovedFinding[]}
  */
-export function findMoved(expected, exists) {
+export function findMoved(expected, stat) {
   /** @type {MovedFinding[]} */
   const findings = [];
   for (const declared of expected) {
-    if (!exists(declared.copy)) {
+    let kind;
+    try {
+      kind = stat(declared.copy);
+    } catch (error) {
       findings.push({
-        kind: 'moved',
+        kind: 'unreadable',
         copy: declared.copy,
         source: declared.source,
         declaredBy: declared.declaredBy,
+        detail: `declared vendored copy could not be checked: ${String(error)}`,
       });
+      continue;
     }
+    if (kind === 'file') continue;
+    findings.push({
+      kind: kind === 'absent' ? 'moved' : 'not-a-file',
+      copy: declared.copy,
+      source: declared.source,
+      declaredBy: declared.declaredBy,
+    });
   }
   return findings;
 }
@@ -567,26 +610,50 @@ function selfTestDeclaration() {
     const expectedBefore = deriveExpectedContracts(root);
     const positiveOk =
       expectedBefore.length === VENDOR_DIRECTORIES.length &&
-      findMoved(expectedBefore, existsSync).length === 0;
+      findMoved(expectedBefore, statKind).length === 0;
 
     // The degenerate case: the first consumer's vendored-copy directory
     // moves (simulated by deleting the file it held), but nothing told its
     // declaration file, so the declaration still names the old path.
     rmSync(copies[0]);
 
-    const expectedAfter = deriveExpectedContracts(root);
-    const moved = findMoved(expectedAfter, existsSync);
-    const caughtMove =
-      moved.length === 1 && moved[0].copy === copies[0] && moved[0].kind === 'moved';
+    // A second, distinct degenerate case: the second consumer's declared
+    // path is occupied by a DIRECTORY rather than deleted outright — the
+    // case `existsSync` alone would miss, since it calls a directory
+    // "present" the same as a file.
+    rmSync(copies[1]);
+    mkdirSync(copies[1]);
 
-    const ok = positiveOk && caughtMove;
+    const expectedAfter = deriveExpectedContracts(root);
+    const moved = findMoved(expectedAfter, statKind);
+    const caughtMove =
+      moved.length === 2 &&
+      moved.some((f) => f.copy === copies[0] && f.kind === 'moved') &&
+      moved.some((f) => f.copy === copies[1] && f.kind === 'not-a-file');
+
+    // A `stat` that THROWS for a reason other than not-found (EACCES, say)
+    // must be reported as `'unreadable'`, never crash the self-test — the
+    // same proof `selfTestDrift` runs for `findDrift`'s reader, here for
+    // `findMoved`'s.
+    const throwingStat = (/** @type {string} */ p) => {
+      if (p === copies[0]) throw Object.assign(new Error('EACCES'), { code: 'EACCES' });
+      return statKind(p);
+    };
+    const unreadableFindings = findMoved(expectedAfter, throwingStat);
+    const caughtUnreadable =
+      unreadableFindings.some((f) => f.copy === copies[0] && f.kind === 'unreadable') &&
+      unreadableFindings.some((f) => f.copy === copies[1] && f.kind === 'not-a-file');
+
+    const ok = positiveOk && caughtMove && caughtUnreadable;
     if (!ok) {
       console.error('SELF-TEST FAILED (declaration):');
       console.error(`  positive case (config + copy agree, nothing flagged): ${positiveOk}`);
-      console.error(`  moved contracts directory is reported, not silent:    ${caughtMove}`);
+      console.error(`  moved + non-file contracts are both reported, not silent: ${caughtMove}`);
+      console.error(`  a stat failure is reported as unreadable, not crashed: ${caughtUnreadable}`);
     } else {
       console.log(
-        'self-test OK — a config-declared vendored copy that moves is reported, not silent.'
+        'self-test OK — a config-declared vendored copy that moves, or turns into a ' +
+          'directory, is reported, not silent.'
       );
     }
     return ok;
@@ -639,7 +706,7 @@ function main() {
   }
 
   const driftFindings = findDrift(discovered, readOrNull);
-  const movedFindings = findMoved(expected, existsSync);
+  const movedFindings = findMoved(expected, statKind);
   const findings = [...driftFindings, ...movedFindings];
 
   if (findings.length === 0) {
@@ -662,6 +729,11 @@ function main() {
       );
     } else if (f.kind === 'unreadable') {
       console.error(`  ${rel(f.copy)}\n      ${f.detail}`);
+    } else if (f.kind === 'not-a-file') {
+      console.error(
+        `  ${rel(f.copy)}\n      declared by ${rel(f.declaredBy)} but is not a regular file — ` +
+          'a directory (or a symlink to one) sits at that path instead of the vendored copy'
+      );
     } else {
       console.error(
         `  ${rel(f.copy)}\n      declared by ${rel(f.declaredBy)} but not on disk — its ` +
