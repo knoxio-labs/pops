@@ -18,9 +18,12 @@ import {
   findFetchCalls,
   findPillarCalls,
   findWrapperCalls,
+  firstTypeArgName,
+  KNOWN_BROKEN_OPERATIONS,
   loadProducerDoc,
   PILLAR_CALL_WRAPPERS,
   resolveProducerId,
+  resolveRouterOperations,
   SANCTIONED_DIRECT_FETCH,
   scanSource,
   UNPINNABLE_CALL_SITES,
@@ -108,7 +111,7 @@ describe('scanSource — what is code and what is prose', () => {
   it('keeps offsets aligned past an astral character', () => {
     const scanned = scanSource("const emoji = '🔥';\nconst h = pillar<R>('lists');");
     expect(scanned.unterminated).toBeNull();
-    expect(findPillarCalls(scanned)).toEqual([{ argument: "'lists'", line: 2 }]);
+    expect(findPillarCalls(scanned)).toEqual([{ argument: "'lists'", typeArg: 'R', line: 2 }]);
   });
 
   it('reports rather than tolerates an unterminated block comment', () => {
@@ -127,25 +130,25 @@ describe('scanSource — what is code and what is prose', () => {
 describe('findPillarCalls', () => {
   it('finds the generic form', () => {
     expect(findPillarCalls(scanSource("pillar<FinanceRouter>('finance')"))).toEqual([
-      { argument: "'finance'", line: 1 },
+      { argument: "'finance'", typeArg: 'FinanceRouter', line: 1 },
     ]);
   });
 
   it('finds the bare form, which carries the same seam', () => {
     expect(findPillarCalls(scanSource('const h: PillarHandle<X> = pillar(ID);'))).toEqual([
-      { argument: 'ID', line: 1 },
+      { argument: 'ID', typeArg: null, line: 1 },
     ]);
   });
 
   it('does not swallow the call when the type argument holds an arrow', () => {
     expect(findPillarCalls(scanSource("pillar<() => void>('lists')"))).toEqual([
-      { argument: "'lists'", line: 1 },
+      { argument: "'lists'", typeArg: '() => void', line: 1 },
     ]);
   });
 
   it('handles a nested type argument', () => {
     expect(findPillarCalls(scanSource("pillar<Record<string, unknown>>('lists')"))).toEqual([
-      { argument: "'lists'", line: 1 },
+      { argument: "'lists'", typeArg: 'Record<string, unknown>', line: 1 },
     ]);
   });
 
@@ -175,7 +178,7 @@ describe('findPillarCalls', () => {
 
   it('reads only the first argument, not the options object', () => {
     expect(findPillarCalls(scanSource("pillar<R>('lists', { transport, cacheTtlMs: 0 })"))).toEqual(
-      [{ argument: "'lists'", line: 1 }]
+      [{ argument: "'lists'", typeArg: 'R', line: 1 }]
     );
   });
 });
@@ -187,14 +190,18 @@ describe('findWrapperCalls', () => {
     const scanned = scanSource(
       "function f(gateway: PillarGateway) { return gateway.call<R, unknown>('finance', cb); }"
     );
-    expect(findWrapperCalls(scanned, [wrapper])).toEqual([{ argument: "'finance'", line: 1 }]);
+    expect(findWrapperCalls(scanned, [wrapper])).toEqual([
+      { argument: "'finance'", typeArg: 'R, unknown', line: 1 },
+    ]);
   });
 
   it('reads whatever the bound identifier is named, not a fixed name', () => {
     const scanned = scanSource(
       "function f(cerebrumGateway: PillarGateway) { return cerebrumGateway.call('cerebrum', cb); }"
     );
-    expect(findWrapperCalls(scanned, [wrapper])).toEqual([{ argument: "'cerebrum'", line: 1 }]);
+    expect(findWrapperCalls(scanned, [wrapper])).toEqual([
+      { argument: "'cerebrum'", typeArg: null, line: 1 },
+    ]);
   });
 
   it('ignores a `.call` on an identifier not bound to a registered wrapper type', () => {
@@ -287,7 +294,7 @@ describe('checkWrapperRegistrations', () => {
 describe('findFetchCalls', () => {
   it('finds a plain call', () => {
     expect(findFetchCalls(scanSource('const r = await fetch(url);'))).toEqual([
-      { argument: 'url', line: 1 },
+      { argument: 'url', typeArg: null, line: 1 },
     ]);
   });
 
@@ -440,6 +447,82 @@ describe('resolveProducerId', () => {
   });
 });
 
+describe('firstTypeArgName', () => {
+  it('reads a single bare identifier', () => {
+    expect(firstTypeArgName('ContactsRouter')).toBe('ContactsRouter');
+  });
+
+  it("reads a wrapper's router type, not its second (return) type argument", () => {
+    expect(firstTypeArgName('FinanceTransactionsRouter, unknown')).toBe(
+      'FinanceTransactionsRouter'
+    );
+  });
+
+  it('refuses a type argument that is not a bare identifier', () => {
+    expect(firstTypeArgName('() => void')).toBeNull();
+    expect(firstTypeArgName('Record<string, unknown>')).toBeNull();
+  });
+
+  it('refuses no type argument at all', () => {
+    expect(firstTypeArgName(null)).toBeNull();
+  });
+});
+
+describe('resolveRouterOperations', () => {
+  it('resolves every method under every domain of a multi-domain router', () => {
+    const source =
+      'export type ListsRouter = { ' +
+      'list: { get: (i: unknown) => unknown; create: (i: unknown) => unknown; }; ' +
+      'items: { add: (i: unknown) => unknown; search: (i: unknown) => unknown; }; ' +
+      '};';
+    expect(resolveRouterOperations(source, 'ListsRouter')?.toSorted()).toEqual([
+      'items.add',
+      'items.search',
+      'list.create',
+      'list.get',
+    ]);
+  });
+
+  it('resolves a method whose value is a named type alias, not an inline arrow', () => {
+    const source = 'type CerebrumNudgesHandle = { nudges: { create: NudgeSink }; };';
+    expect(resolveRouterOperations(source, 'CerebrumNudgesHandle')).toEqual(['nudges.create']);
+  });
+
+  it('accepts an interface declaration, not only a type alias', () => {
+    const source = 'interface ContactsRouter { entities: { get: (i: unknown) => unknown }; }';
+    expect(resolveRouterOperations(source, 'ContactsRouter')).toEqual(['entities.get']);
+  });
+
+  it('is unbothered by nested object types inside a method signature', () => {
+    const source =
+      'type R = { items: { get: (i: { id: string }) => Promise<{ data: { id: string } }> }; };';
+    expect(resolveRouterOperations(source, 'R')).toEqual(['items.get']);
+  });
+
+  it('resolves to an empty list for a declared-but-empty router type, not an error', () => {
+    expect(resolveRouterOperations('type Empty = {};', 'Empty')).toEqual([]);
+  });
+
+  it('resolves to null when the type is not declared in this source at all', () => {
+    expect(resolveRouterOperations('const x = 1;', 'GhostRouter')).toBeNull();
+  });
+
+  it('resolves to null when the type is declared but is not an object literal', () => {
+    expect(resolveRouterOperations('type Alias = string;', 'Alias')).toBeNull();
+  });
+
+  it('resolves to null when no type name is given', () => {
+    expect(resolveRouterOperations('type R = { a: { b: () => void } };', null)).toBeNull();
+  });
+
+  it('does not resolve a type mentioned only in a comment or a string', () => {
+    const scanned = scanSource(
+      '// type GhostRouter = { a: { b: () => void } };\nconst note = "type GhostRouter";'
+    );
+    expect(resolveRouterOperations(scanned.scannable, 'GhostRouter')).toBeNull();
+  });
+});
+
 describe('discoverCallSites — fixture tree', () => {
   let root: string;
   beforeAll(() => {
@@ -477,6 +560,14 @@ describe('discoverCallSites — fixture tree', () => {
     );
     write('pillars/gamma/scripts/migrate.ts', "pillar<R>('alpha');");
     write('pillars/gamma/scripts/__tests__/migrate.test.ts', "pillar<R>('ghost');");
+    write(
+      'pillars/alpha/src/api/resolvable.ts',
+      [
+        "export const DELTA_PILLAR_ID = 'delta';",
+        'type DeltaRouter = { widgets: { get: (i: unknown) => unknown; list: (i: unknown) => unknown; }; };',
+        'const h = pillar<DeltaRouter>(DELTA_PILLAR_ID);',
+      ].join('\n')
+    );
   });
   afterAll(() => rmSync(root, { recursive: true, force: true }));
 
@@ -485,8 +576,22 @@ describe('discoverCallSites — fixture tree', () => {
       consumer: 'alpha',
       producer: 'beta',
       argument: "'beta'",
+      routerType: 'R',
+      operationIds: null,
       file: 'pillars/alpha/src/api/client.ts',
       line: 1,
+    });
+  });
+
+  it("resolves a call site's router type into its declared operations", () => {
+    expect(discoverCallSites(root).sites).toContainEqual({
+      consumer: 'alpha',
+      producer: 'delta',
+      argument: 'DELTA_PILLAR_ID',
+      routerType: 'DeltaRouter',
+      operationIds: ['widgets.get', 'widgets.list'],
+      file: 'pillars/alpha/src/api/resolvable.ts',
+      line: 3,
     });
   });
 
@@ -501,6 +606,8 @@ describe('discoverCallSites — fixture tree', () => {
       consumer: 'beta',
       producer: null,
       argument: 'pillarId',
+      routerType: 'R',
+      operationIds: null,
       file: 'pillars/beta/src/dispatch.ts',
       line: 1,
     });
@@ -515,6 +622,8 @@ describe('discoverCallSites — fixture tree', () => {
       consumer: 'beta',
       producer: 'gamma',
       argument: 'WRAPPER_TARGET',
+      routerType: 'R',
+      operationIds: null,
       file: 'pillars/beta/src/api/wrapper.ts',
       line: 3,
     });
@@ -525,6 +634,8 @@ describe('discoverCallSites — fixture tree', () => {
       consumer: 'gamma',
       producer: 'alpha',
       argument: "'alpha'",
+      routerType: 'R',
+      operationIds: null,
       file: 'pillars/gamma/scripts/migrate.ts',
       line: 1,
     });
@@ -583,34 +694,80 @@ describe('findCoverageGaps', () => {
     consumer: 'purchases',
     producer: 'contacts' as string | null,
     argument: "'contacts'",
+    routerType: 'ContactsRouter' as string | null,
+    operationIds: ['entities.list'] as string[] | null,
     file: 'pillars/purchases/src/api/contacts/merchant.ts',
     line: 143,
     ...over,
   });
-  const row = { consumer: 'purchases', producer: 'contacts' };
+  const row = { consumer: 'purchases', producer: 'contacts', operationId: 'entities.list' };
 
-  it('passes a call site whose seam has a row', () => {
+  it('passes a call site whose one resolved operation has a matching row', () => {
     expect(findCoverageGaps([site()], [row], []).unlisted).toEqual([]);
   });
 
-  it('fails a call site whose seam has no row', () => {
+  it('fails a call site whose seam has no row at all', () => {
     const report = findCoverageGaps([site({ producer: 'lists' })], [row], []);
     expect(report.unlisted.map((s) => s.producer)).toEqual(['lists']);
+    expect(report.unlisted[0]).toMatchObject({ operationId: 'entities.list' });
   });
 
   it('fails a call site whose consumer differs from every row, same producer', () => {
     expect(findCoverageGaps([site({ consumer: 'media' })], [row], []).unlisted).toHaveLength(1);
   });
 
+  it(
+    'fails ONLY the unpinned operation when a call site resolves to two operations and only ' +
+      'one has a row — a second operation on an already-pinned seam must not ride on the ' +
+      'first operation’s row',
+    () => {
+      const report = findCoverageGaps(
+        [site({ operationIds: ['entities.list', 'entities.create'] })],
+        [row],
+        []
+      );
+      expect(report.unlisted).toHaveLength(1);
+      expect(report.unlisted[0]).toMatchObject({
+        consumer: 'purchases',
+        producer: 'contacts',
+        operationId: 'entities.create',
+      });
+    }
+  );
+
+  it('passes both operations a call site resolves to when both have their own row', () => {
+    const rows = [
+      row,
+      { consumer: 'purchases', producer: 'contacts', operationId: 'entities.create' },
+    ];
+    const report = findCoverageGaps(
+      [site({ operationIds: ['entities.list', 'entities.create'] })],
+      rows,
+      []
+    );
+    expect(report.unlisted).toEqual([]);
+  });
+
   it('fails an unresolved target that nothing exempts', () => {
-    const report = findCoverageGaps([site({ producer: null, argument: 'pillarId' })], [row], []);
+    const report = findCoverageGaps(
+      [site({ producer: null, argument: 'pillarId', operationIds: null })],
+      [row],
+      []
+    );
     expect(report.unresolved).toHaveLength(1);
   });
 
   it('accepts an unresolved target in an exempted file', () => {
     const exempt = [{ file: 'pillars/mcp/src/pillar-client.ts', reason: 'runtime dispatch' }];
     const report = findCoverageGaps(
-      [site({ producer: null, argument: 'pillarId', file: 'pillars/mcp/src/pillar-client.ts' })],
+      [
+        site({
+          producer: null,
+          argument: 'pillarId',
+          operationIds: null,
+          file: 'pillars/mcp/src/pillar-client.ts',
+        }),
+      ],
       [row],
       exempt
     );
@@ -632,13 +789,75 @@ describe('findCoverageGaps', () => {
     const exempt = [{ file: 'pillars/mcp/src/pillar-client.ts', reason: 'runtime dispatch' }];
     const report = findCoverageGaps(
       [
-        site({ producer: null, argument: 'id', file: 'pillars/mcp/src/pillar-client.ts' }),
+        site({
+          producer: null,
+          argument: 'id',
+          operationIds: null,
+          file: 'pillars/mcp/src/pillar-client.ts',
+        }),
         site({ producer: 'lists', file: 'pillars/purchases/src/other.ts' }),
       ],
       [row],
       exempt
     );
     expect(report.unlisted).toHaveLength(1);
+  });
+
+  it('reports, rather than passes, a call site whose router type could not be resolved', () => {
+    const report = findCoverageGaps([site({ operationIds: null })], [row], []);
+    expect(report.unresolvedOperations).toHaveLength(1);
+    expect(report.unlisted).toEqual([]);
+  });
+
+  it('reports a router type that resolved to zero operations the same way', () => {
+    const report = findCoverageGaps([site({ operationIds: [] })], [row], []);
+    expect(report.unresolvedOperations).toHaveLength(1);
+  });
+
+  it('lets a KNOWN_BROKEN_OPERATIONS entry satisfy coverage without a row', () => {
+    const broken = {
+      consumer: 'finance',
+      producer: 'registry',
+      operationId: 'entities.list',
+      reason: 'test fixture',
+    };
+    const brokenSite = site({
+      consumer: 'finance',
+      producer: 'registry',
+      routerType: 'CoreRouter',
+      operationIds: ['entities.list'],
+    });
+    const report = findCoverageGaps([brokenSite], [], [], [broken]);
+    expect(report.unlisted).toEqual([]);
+    expect(report.staleKnownBrokenOperations).toEqual([]);
+  });
+
+  it('fails a KNOWN_BROKEN_OPERATIONS entry no discovered call site resolves to anymore', () => {
+    const broken = {
+      consumer: 'finance',
+      producer: 'registry',
+      operationId: 'entities.list',
+      reason: 'test fixture',
+    };
+    const report = findCoverageGaps([site()], [row], [], [broken]);
+    expect(report.staleKnownBrokenOperations).toEqual(['finance -> registry :: entities.list']);
+  });
+
+  it('does not let a KNOWN_BROKEN_OPERATIONS entry excuse a DIFFERENT operation on the same seam', () => {
+    const broken = {
+      consumer: 'purchases',
+      producer: 'contacts',
+      operationId: 'entities.get',
+      reason: 'test fixture',
+    };
+    const report = findCoverageGaps(
+      [site({ operationIds: ['entities.list', 'entities.create'] })],
+      [row],
+      [],
+      [broken]
+    );
+    expect(report.unlisted.map((s) => s.operationId)).toEqual(['entities.create']);
+    expect(report.staleKnownBrokenOperations).toEqual(['purchases -> contacts :: entities.get']);
   });
 });
 
@@ -865,15 +1084,25 @@ describe('against the live repo', () => {
     );
   });
 
-  it('every discovered call site is either pinned by a row or exempted', () => {
+  it('every discovered operation is either pinned by a row, exempted, or known-broken', () => {
     const { sites } = discoverCallSites(repoRoot);
     expect(sites.length).toBeGreaterThan(0);
-    expect(findCoverageGaps(sites, EXPECTATIONS, UNPINNABLE_CALL_SITES)).toEqual({
+    expect(
+      findCoverageGaps(sites, EXPECTATIONS, UNPINNABLE_CALL_SITES, KNOWN_BROKEN_OPERATIONS)
+    ).toEqual({
       unlisted: [],
       unresolved: [],
+      unresolvedOperations: [],
       staleExemptions: [],
+      staleKnownBrokenOperations: [],
       exempted: expect.any(Number),
     });
+  });
+
+  it('every call site with a known producer resolves its router type to at least one operation', () => {
+    const { sites } = discoverCallSites(repoRoot);
+    const unresolvable = sites.filter((s) => s.producer !== null && s.operationIds === null);
+    expect(unresolvable).toEqual([]);
   });
 
   it('would report the seam if a row were removed', () => {
@@ -882,10 +1111,38 @@ describe('against the live repo', () => {
       (e: { consumer: string; producer: string }) =>
         !(e.consumer === 'purchases' && e.producer === 'contacts')
     );
-    const report = findCoverageGaps(sites, without, UNPINNABLE_CALL_SITES);
+    const report = findCoverageGaps(sites, without, UNPINNABLE_CALL_SITES, KNOWN_BROKEN_OPERATIONS);
     expect(report.unlisted.map((s) => s.file)).toContain(
       'pillars/purchases/src/api/contacts/merchant.ts'
     );
+  });
+
+  it(
+    'catches a second, unpinned operation on an already-pinned seam, proven against the real ' +
+      'tree rather than a synthetic fixture',
+    () => {
+      // finance -> registry is pinned by pillars/finance/src/api/cron/pillar-lookup.ts's
+      // `users.get` row. migrate-core-entities.ts resolves a DIFFERENT operation
+      // (`entities.list`) on that same seam. Its only cover is the documented
+      // KNOWN_BROKEN_OPERATIONS entry; drop that and the operation must surface as
+      // unlisted rather than ride on the unrelated users.get row.
+      const { sites } = discoverCallSites(repoRoot);
+      const report = findCoverageGaps(sites, EXPECTATIONS, UNPINNABLE_CALL_SITES, []);
+      expect(report.unlisted).toContainEqual(
+        expect.objectContaining({
+          consumer: 'finance',
+          producer: 'registry',
+          operationId: 'entities.list',
+        })
+      );
+    }
+  );
+
+  it('KNOWN_BROKEN_OPERATIONS is not empty and every entry carries a reason', () => {
+    expect(KNOWN_BROKEN_OPERATIONS.length).toBeGreaterThan(0);
+    for (const op of KNOWN_BROKEN_OPERATIONS) {
+      expect(op.reason.length).toBeGreaterThan(20);
+    }
   });
 
   it('every exemption carries a reason', () => {
@@ -948,11 +1205,24 @@ describe('against the live repo', () => {
       consumer: 'bfm',
       producer: 'cerebrum',
       argument: "'cerebrum'",
+      routerType: 'NudgesRouter',
+      operationIds: ['nudges.create'],
       file: 'pillars/bfm/src/api/finance/client.ts',
       line: 9999,
     };
-    const report = findCoverageGaps([...sites, planted], EXPECTATIONS, UNPINNABLE_CALL_SITES);
-    expect(report.unlisted).toContainEqual(planted);
+    const report = findCoverageGaps(
+      [...sites, planted],
+      EXPECTATIONS,
+      UNPINNABLE_CALL_SITES,
+      KNOWN_BROKEN_OPERATIONS
+    );
+    expect(report.unlisted).toContainEqual(
+      expect.objectContaining({
+        consumer: 'bfm',
+        producer: 'cerebrum',
+        operationId: 'nudges.create',
+      })
+    );
   });
 
   it('finds both call sites in the finance core-entities migration script', () => {
@@ -961,10 +1231,18 @@ describe('against the live repo', () => {
       (s) => s.file === 'pillars/finance/scripts/migrate-core-entities.ts'
     );
     expect(migrationSites).toContainEqual(
-      expect.objectContaining({ consumer: 'finance', producer: 'registry' })
+      expect.objectContaining({
+        consumer: 'finance',
+        producer: 'registry',
+        operationIds: ['entities.list'],
+      })
     );
     expect(migrationSites).toContainEqual(
-      expect.objectContaining({ consumer: 'finance', producer: 'contacts' })
+      expect.objectContaining({
+        consumer: 'finance',
+        producer: 'contacts',
+        operationIds: ['entities.create'],
+      })
     );
   });
 
@@ -974,10 +1252,19 @@ describe('against the live repo', () => {
       consumer: 'finance',
       producer: 'lists',
       argument: "'lists'",
+      routerType: 'ListsRouter',
+      operationIds: ['list.get'],
       file: 'pillars/finance/scripts/migrate-core-entities.ts',
       line: 9999,
     };
-    const report = findCoverageGaps([...sites, planted], EXPECTATIONS, UNPINNABLE_CALL_SITES);
-    expect(report.unlisted).toContainEqual(planted);
+    const report = findCoverageGaps(
+      [...sites, planted],
+      EXPECTATIONS,
+      UNPINNABLE_CALL_SITES,
+      KNOWN_BROKEN_OPERATIONS
+    );
+    expect(report.unlisted).toContainEqual(
+      expect.objectContaining({ consumer: 'finance', producer: 'lists', operationId: 'list.get' })
+    );
   });
 });

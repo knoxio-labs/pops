@@ -23,22 +23,60 @@
  * consumer's drift check, which is the kind of noise that teaches people to
  * re-vendor without reading.
  *
- * THREE HALVES, and the second and third are the ones that keep the first
- * honest:
+ * FOUR HALVES, and the second through fourth are the ones that keep the
+ * first honest:
  *
- *   1. `EXPECTATIONS` is curated. Each row pins one operation a consumer
- *      depends on, and is checked against the producer's OpenAPI on disk.
- *   2. Coverage is DISK-DERIVED. Every `pillar(...)` call site under
- *      `pillars/<consumer>/src` is enumerated from source and matched to a
- *      row. A seam nobody wrote a row for fails the build instead of going
- *      unguarded while the guard reports OK — the failure mode ADR-045
- *      exists to prevent, and the one this guard shipped with.
- *   3. Direct `fetch` is enumerated too. A consumer that hand-rolls the HTTP
+ *   1. `EXPECTATIONS` is curated. Each row pins one OPERATION a consumer
+ *      depends on (`consumer`, `producer`, `operationId`), and is checked
+ *      against the producer's OpenAPI on disk.
+ *   2. Coverage is DISK-DERIVED, and per OPERATION, not per seam. Every
+ *      `pillar(...)` call site under `pillars/<consumer>/{src,scripts}` is
+ *      enumerated from source; its generic type argument (the router type
+ *      the caller declares, e.g. `pillar<ContactsRouter>(...)`) is parsed
+ *      for the `domain.method` operations it exposes — see "OPERATION
+ *      RESOLUTION" below — and EACH one is matched to its own row. A row
+ *      pinning `finance -> registry (users.get)` does not cover a second,
+ *      different call to `finance -> registry (entities.list)`: each
+ *      operation on a seam needs its own row, so a producer breaking one
+ *      operation cannot hide behind another operation's row on the same
+ *      seam going unguarded while the guard reports OK — the failure mode
+ *      ADR-045 exists to prevent, and the one this guard shipped with.
+ *   3. Operation resolution can fail to find what it is looking for — an
+ *      unfamiliar shape, an imported router type, a call through a wrapper
+ *      whose second argument this scanner does not follow. That is reported
+ *      as its own failure category rather than silently trusted as covered
+ *      or silently dropped; see "OPERATION RESOLUTION" below for the exact
+ *      shape this needs and what falls outside it.
+ *   4. Direct `fetch` is enumerated too. A consumer that hand-rolls the HTTP
  *      call instead of using the proxy has no `operationId` to pin and is
  *      invisible to (2) — the guard would print OK over a seam it cannot see,
  *      which is (1)'s failure mode wearing a different hat. A file that
  *      speaks the pillar federation (see `FEDERATION_SIGNALS`) and calls
  *      `fetch` itself is reported unless `SANCTIONED_DIRECT_FETCH` excuses it.
+ *
+ * OPERATION RESOLUTION. A call site's first argument names the PRODUCER; its
+ * generic type argument names the OPERATIONS, because every router type in
+ * this tree is written the same narrow way — a local `type` or `interface`
+ * literal, one level of domain keys nesting one level of method keys, each
+ * method a property (arrow-typed or aliased to a named function type, never
+ * method-shorthand): `type ContactsRouter = { entities: { list: (input) =>
+ * ...; get: (input) => ...; }; }` resolves to `entities.list` and
+ * `entities.get`. That type is DECLARED IN THE SAME FILE as the call site in
+ * every instance in this tree today (`resolveRouterOperations` does not look
+ * elsewhere), which is also what makes the type trustworthy as an
+ * enumeration: every router type here is documented, at its declaration, as
+ * "the subset of the producer's router THIS FILE calls" — so treating its
+ * keys as the full operation list is not a guess, it is reading what the
+ * consumer already asserts about itself. A call site whose type argument is
+ * a bare generic parameter (the MCP bridge's `pillar<TRouter>`), or absent,
+ * or shaped some other way this parser does not model, resolves to no
+ * operations and is REPORTED — not silently treated as covered by whatever
+ * row happens to share its seam, which is the exact hole this guard used to
+ * have. `KNOWN_BROKEN_OPERATIONS` is the narrow escape hatch for the one
+ * case that isn't a scanner limitation: a resolved operation whose producer
+ * has already dropped it, where pinning it would fail `checkExpectations`
+ * forever until an unrelated business-logic fix lands — see that list's own
+ * doc comment.
  *
  * A call site whose target pillar is not a literal (a runtime dispatcher
  * such as the MCP bridge or the orchestrator's search fan-out) cannot be
@@ -72,9 +110,10 @@
  *   node scripts/ci/check-cross-pillar-expectations.mjs
  *   node scripts/ci/check-cross-pillar-expectations.mjs --self-test
  *
- * Exit 0 = every expectation holds, every call site has one, and no
- *          federation-aware file hand-rolls its HTTP.
- * Exit 1 = a producer contract moved, or a seam is unguarded.
+ * Exit 0 = every expectation holds, every operation a call site resolves to
+ *          is pinned or excused, and no federation-aware file hand-rolls its
+ *          HTTP.
+ * Exit 1 = a producer contract moved, or an operation is unguarded.
  * Exit 2 = usage error.
  */
 
@@ -439,6 +478,48 @@ export const UNPINNABLE_CALL_SITES = [
 ];
 
 /**
+ * @typedef {object} KnownBrokenOperation
+ * @property {string} consumer
+ * @property {string} producer
+ * @property {string} operationId
+ * @property {string} reason
+ */
+
+/**
+ * Operations that operation-level coverage (see "OPERATION RESOLUTION" above)
+ * resolves from a call site's router type, where a producer has already
+ * dropped the operation — pinning it with an `EXPECTATIONS` row would fail
+ * `checkExpectations` immediately and PERMANENTLY, for a reason this guard
+ * did not introduce and a coverage check cannot fix. That is a different
+ * failure shape from everything else this file excuses: `UNPINNABLE_CALL_SITES`
+ * is for a target that cannot be known; this is for a target that is known
+ * and already wrong, where the fix is a change to the CALLER's business
+ * logic, not to this guard.
+ *
+ * Narrow on purpose, the same as every other exemption list here: an entry
+ * names one exact `(consumer, producer, operationId)`, not a file or a seam,
+ * so it cannot accidentally swallow some OTHER operation the same call site
+ * resolves. And it self-audits — an entry no longer produced by resolving
+ * any live call site's router type is stale and fails the build, the same
+ * way a stale `UNPINNABLE_CALL_SITES` entry does, so this cannot outlive the
+ * bug it excuses either.
+ */
+export const KNOWN_BROKEN_OPERATIONS = [
+  {
+    consumer: 'finance',
+    producer: 'registry',
+    operationId: 'entities.list',
+    reason:
+      "pillars/finance/scripts/migrate-core-entities.ts's readAllCoreEntities() resolves to " +
+      'this operation through its local CoreRouter type, but registry dropped its /entities ' +
+      'surface once contacts became authoritative for entities (asserted by ' +
+      'pillars/registry/src/contract/__tests__/openapi.test.ts). Repointing or retiring that ' +
+      'script is a change to one-shot migration business logic, not to this guard, so it is ' +
+      'tracked as its own piece of work rather than folded into a coverage-granularity fix.',
+  },
+];
+
+/**
  * @typedef {object} SanctionedDirectFetch
  * @property {string} file   Repo-relative path holding the `fetch` call(s).
  * @property {string} reason Why the SDK proxy is not the right transport here.
@@ -786,6 +867,9 @@ function opensRegexAt(code, index) {
 /**
  * @typedef {object} RawCallSite
  * @property {string} argument First argument, verbatim and trimmed.
+ * @property {string | null} typeArg Text of the generic type argument list
+ *   (everything between `<` and `>`), verbatim and trimmed, or `null` when
+ *   the call carries none.
  * @property {number} line     1-based line of the `pillar` token.
  */
 
@@ -883,15 +967,22 @@ function findCalls(scanned, token) {
   for (const match of scannable.matchAll(token)) {
     const start = match.index;
     let cursor = skipSpace(scannable, start + match[0].length);
+    let typeArg = null;
     if (scannable[cursor] === '<') {
+      const openAngle = cursor;
       const close = matchAngle(scannable, cursor);
       if (close === -1) continue;
+      typeArg = code.slice(openAngle + 1, close).trim();
       cursor = skipSpace(scannable, close + 1);
     }
     if (scannable[cursor] !== '(') continue;
     const span = firstArgumentSpan(scannable, cursor);
     if (span === null) continue;
-    sites.push({ argument: code.slice(span.start, span.end).trim(), line: lineOf(code, start) });
+    sites.push({
+      argument: code.slice(span.start, span.end).trim(),
+      typeArg,
+      line: lineOf(code, start),
+    });
   }
   return sites;
 }
@@ -990,10 +1081,202 @@ export function resolveProducerId(argument, code) {
 }
 
 /**
+ * The first name in a generic argument list: `pillar<X>` yields `X`,
+ * `gateway.call<X, unknown>` also yields `X` — the wrapper's second type
+ * argument is the call's return type, never the router.
+ *
+ * The first argument is isolated by splitting on a comma at DEPTH 0 (not
+ * inside `<>`/`()`/`[]`/`{}`), because a parameterised argument can itself
+ * contain commas: `pillar<Record<string, unknown>>(...)` has one type
+ * argument, not two. That isolated segment must then be nothing BUT a bare
+ * identifier. A type argument written any other way — an inline object
+ * literal, a function type, a parameterised type such as
+ * `Record<string, unknown>` itself — is not how any router type is spelled
+ * at a call site in this tree today, and returning `null` for it routes the
+ * call into `resolveRouterOperations`'s "not found" leg rather than
+ * guessing at a name that cannot be a local router type's.
+ *
+ * @param {string | null} typeArg
+ * @returns {string | null}
+ */
+export function firstTypeArgName(typeArg) {
+  if (typeArg === null) return null;
+  let depth = 0;
+  let end = typeArg.length;
+  for (let i = 0; i < typeArg.length; i++) {
+    const c = typeArg[i];
+    if (c === '<' || c === '(' || c === '[' || c === '{') depth++;
+    else if (c === '>' || c === ')' || c === ']' || c === '}') depth--;
+    else if (depth === 0 && c === ',') {
+      end = i;
+      break;
+    }
+  }
+  const first = typeArg.slice(0, end).trim();
+  return /^[A-Za-z_$][\w$]*$/u.test(first) ? first : null;
+}
+
+/**
+ * Index of the `}` matching the `{` at `openIndex`.
+ *
+ * @param {string} text
+ * @param {number} openIndex
+ * @returns {number} -1 when no closer is found.
+ */
+function matchBrace(text, openIndex) {
+  let depth = 0;
+  for (let i = openIndex; i < text.length; i++) {
+    if (text[i] === '{') depth++;
+    else if (text[i] === '}') {
+      depth--;
+      if (depth === 0) return i;
+    }
+  }
+  return -1;
+}
+
+/**
+ * @typedef {object} TypeMember
+ * @property {string} key
+ * @property {number} valueStart Index into `body` where the value begins.
+ * @property {number} valueEnd   Index into `body` one past the value.
+ */
+
+/**
+ * Top-level `key: value` members of a type-literal body — the text strictly
+ * between a type's outer `{` and its matching `}`.
+ *
+ * Depth-aware so a member's value can itself hold braces, parens or
+ * brackets (a nested object type, a function's parameter list, an array
+ * type) without those being mistaken for the body's own closing punctuation.
+ * A member ends at the next `;` or `,` seen at the body's own depth, or at
+ * the end of the body for a final member with no trailing separator.
+ *
+ * Only bare-identifier keys are recognised (every router type in this tree
+ * uses them); a quoted or computed key stops this scan the same way an
+ * unexpected character does — skipped rather than mis-parsed, since a
+ * malformed read here would report a wrong operation list instead of no
+ * operation list, which is the direction ADR-045 says to avoid.
+ *
+ * @param {string} body
+ * @returns {TypeMember[]}
+ */
+function typeLiteralMembers(body) {
+  /** @type {TypeMember[]} */
+  const members = [];
+  let i = 0;
+  while (i < body.length) {
+    if (/\s/u.test(body[i]) || body[i] === ';' || body[i] === ',') {
+      i++;
+      continue;
+    }
+    if (!/[A-Za-z_$]/u.test(body[i])) {
+      i++;
+      continue;
+    }
+    const keyStart = i;
+    while (i < body.length && /[\w$]/u.test(body[i])) i++;
+    const key = body.slice(keyStart, i);
+    while (i < body.length && /\s/u.test(body[i])) i++;
+    if (body[i] === '?') i++;
+    while (i < body.length && /\s/u.test(body[i])) i++;
+    if (body[i] !== ':') continue;
+    i++;
+    const valueStart = i;
+    let depth = 0;
+    while (i < body.length) {
+      const c = body[i];
+      if (c === '{' || c === '(' || c === '[') depth++;
+      else if (c === '}' || c === ')' || c === ']') depth--;
+      else if (depth === 0 && (c === ';' || c === ',')) break;
+      i++;
+    }
+    members.push({ key, valueStart, valueEnd: i });
+  }
+  return members;
+}
+
+/**
+ * Locate the outer `{ ... }` of a `type`/`interface` declaration named
+ * `typeName` in `scannable`.
+ *
+ * @param {string} scannable
+ * @param {string} typeName
+ * @returns {{ start: number, end: number } | null} Offsets of the body,
+ *   exclusive of the braces themselves; `null` when no such object-literal
+ *   declaration is found before the statement ends.
+ */
+function findTypeLiteralBody(scannable, typeName) {
+  const declared = new RegExp(
+    `\\b(?:export\\s+)?(?:type|interface)\\s+${RegExp.escape(typeName)}\\b`,
+    'u'
+  );
+  const match = declared.exec(scannable);
+  if (!match) return null;
+  let i = match.index + match[0].length;
+  while (i < scannable.length) {
+    const c = scannable[i];
+    if (c === '{') {
+      const close = matchBrace(scannable, i);
+      return close === -1 ? null : { start: i + 1, end: close };
+    }
+    if (c === ';') return null;
+    i++;
+  }
+  return null;
+}
+
+/**
+ * Every `domain.method` operation a router type declares, read structurally
+ * from its own local declaration — see "OPERATION RESOLUTION" in this file's
+ * header for why the type's keys are trusted as the operation list.
+ *
+ * Two things return `null`, and both are reported by the caller rather than
+ * treated as "no operations": the type is not declared in `scannable` at
+ * all (imported, misspelled, or not a bare identifier `firstTypeArgName`
+ * could read off the call site), or it is declared but not as an object
+ * type literal (a union, a mapped type, a re-export of something else).
+ *
+ * A type found and parsed but genuinely empty (`type X = {}`) returns `[]`,
+ * which the caller treats the same as `null` — a router with no operations
+ * covers nothing, so there is no useful distinction between "couldn't find
+ * any" and "found zero".
+ *
+ * @param {string} scannable
+ * @param {string | null} typeName
+ * @returns {string[] | null}
+ */
+export function resolveRouterOperations(scannable, typeName) {
+  if (typeName === null) return null;
+  const body = findTypeLiteralBody(scannable, typeName);
+  if (body === null) return null;
+  const outer = scannable.slice(body.start, body.end);
+
+  /** @type {string[]} */
+  const operations = [];
+  for (const domain of typeLiteralMembers(outer)) {
+    const value = outer.slice(domain.valueStart, domain.valueEnd);
+    const firstNonSpace = value.search(/\S/u);
+    if (firstNonSpace === -1 || value[firstNonSpace] !== '{') continue;
+    const close = matchBrace(value, firstNonSpace);
+    if (close === -1) continue;
+    const inner = value.slice(firstNonSpace + 1, close);
+    for (const method of typeLiteralMembers(inner)) {
+      operations.push(`${domain.key}.${method.key}`);
+    }
+  }
+  return operations;
+}
+
+/**
  * @typedef {object} CallSite
  * @property {string} consumer Pillar the call site lives in.
  * @property {string | null} producer Resolved target, or null when runtime-chosen.
  * @property {string} argument Verbatim first argument, for the failure message.
+ * @property {string | null} routerType Name of the resolved generic type argument,
+ *   or null when the call carried none or it was not a bare identifier.
+ * @property {string[] | null} operationIds `domain.method` operations the router
+ *   type declares, or null when `routerType` could not be resolved to one.
  * @property {string} file Repo-relative path.
  * @property {number} line 1-based line.
  */
@@ -1040,10 +1323,13 @@ export function federationSignals(code) {
  * registry exposes no entities surface at all), so a row pinning that
  * operationId would fail `checkExpectations` immediately and permanently —
  * correctly, because the call is already broken on disk, not because this
- * guard is wrong. The seam still passes coverage on the strength of the
- * `users.get` row a few lines up, which is what `findCoverageGaps` checks
- * (consumer -> producer, not operationId); fixing the migrator itself is
- * tracked separately rather than folded into a guard change.
+ * guard is wrong. Coverage is per-OPERATION (see "OPERATION RESOLUTION"
+ * above), so the unrelated `users.get` row a few lines up does NOT cover
+ * this operation the way it would have under the guard's original,
+ * seam-level coverage — `entities.list` is named in
+ * `KNOWN_BROKEN_OPERATIONS` instead, which is the documented, self-auditing
+ * escape hatch for exactly this shape. Fixing the migrator itself is tracked
+ * separately rather than folded into a guard change.
  */
 const SCANNED_ROOTS = ['src', 'scripts'];
 
@@ -1091,10 +1377,13 @@ export function discoverCallSites(root) {
           ...findWrapperCalls(scanned, PILLAR_CALL_WRAPPERS),
         ];
         for (const call of calls) {
+          const routerType = firstTypeArgName(call.typeArg);
           sites.push({
             consumer,
             producer: resolveProducerId(call.argument, scanned.code),
             argument: call.argument,
+            routerType,
+            operationIds: resolveRouterOperations(scanned.scannable, routerType),
             file: relativePath,
             line: call.line,
           });
@@ -1126,10 +1415,25 @@ function* walkSources(dir) {
 }
 
 /**
+ * @typedef {object} UnlistedOperation
+ * @property {string} consumer
+ * @property {string} producer
+ * @property {string} operationId Operation resolved from the call site's
+ *   router type that no `EXPECTATIONS` row pins.
+ * @property {string} argument Verbatim first argument, for the failure message.
+ * @property {string} file Repo-relative path.
+ * @property {number} line 1-based line.
+ */
+
+/**
  * @typedef {object} CoverageReport
- * @property {CallSite[]} unlisted Resolved call sites with no expectation row.
+ * @property {UnlistedOperation[]} unlisted Resolved operations with no expectation row.
  * @property {CallSite[]} unresolved Runtime-chosen targets with no exemption.
+ * @property {CallSite[]} unresolvedOperations Known-producer call sites whose
+ *   router type could not be resolved to an operation list.
  * @property {string[]} staleExemptions Exempted files holding no call site.
+ * @property {string[]} staleKnownBrokenOperations `KNOWN_BROKEN_OPERATIONS`
+ *   entries no discovered call site's router type still resolves to.
  * @property {number} exempted How many discovered sites an exemption covered.
  */
 
@@ -1148,27 +1452,52 @@ function seamKey(seam) {
 }
 
 /**
- * Diff the disk-derived call sites against the curated rows.
+ * The key two records agree on when they pin the same OPERATION — a seam
+ * plus the specific `operationId` on it. This is the granularity coverage
+ * actually checks at: two operations on one seam need two rows, and sharing
+ * a seam key is not enough for one to cover the other. See "OPERATION
+ * RESOLUTION" in this file's header for why a call site can name more than
+ * one operationId (its router type may declare several).
+ *
+ * @param {{ consumer: string, producer: string | null, operationId: string }} op
+ * @returns {string}
+ */
+function operationKey(op) {
+  return `${seamKey(op)} :: ${op.operationId}`;
+}
+
+/**
+ * Diff the disk-derived call sites against the curated rows, at OPERATION
+ * granularity: a call site whose router type resolves to N operations needs
+ * N rows, not one row for its seam. See "OPERATION RESOLUTION" in this
+ * file's header for how a call site's operations are read, and
+ * `KNOWN_BROKEN_OPERATIONS`'s own doc comment for the one deliberate
+ * exception.
  *
  * Pure, and exported so the degenerate cases are testable without a tree.
  *
  * @param {CallSite[]} sites
- * @param {Array<{ consumer: string, producer: string }>} expectations
- *   Only the seam each row pins is read here, so a caller may pass anything
- *   naming one — which is what lets a test drive this without inventing a
- *   whole OpenAPI expectation.
+ * @param {Array<{ consumer: string, producer: string, operationId: string }>} expectations
+ *   Only `consumer`/`producer`/`operationId` are read here, so a caller may
+ *   pass anything naming those — which is what lets a test drive this
+ *   without inventing a whole OpenAPI expectation.
  * @param {UnpinnableCallSite[]} exemptions
+ * @param {KnownBrokenOperation[]} [knownBrokenOperations]
  * @returns {CoverageReport}
  */
-export function findCoverageGaps(sites, expectations, exemptions) {
-  const pinned = new Set(expectations.map(seamKey));
+export function findCoverageGaps(sites, expectations, exemptions, knownBrokenOperations = []) {
+  const pinned = new Set(expectations.map(operationKey));
+  const knownBroken = new Set(knownBrokenOperations.map(operationKey));
+  const knownBrokenSeen = new Set();
   const exemptFiles = new Set(exemptions.map((e) => e.file));
   const exemptFilesSeen = new Set();
 
-  /** @type {CallSite[]} */
+  /** @type {UnlistedOperation[]} */
   const unlisted = [];
   /** @type {CallSite[]} */
   const unresolved = [];
+  /** @type {CallSite[]} */
+  const unresolvedOperations = [];
   let exempted = 0;
 
   for (const site of sites) {
@@ -1181,13 +1510,30 @@ export function findCoverageGaps(sites, expectations, exemptions) {
       unresolved.push(site);
       continue;
     }
-    if (!pinned.has(seamKey(site))) unlisted.push(site);
+    if (site.operationIds === null || site.operationIds.length === 0) {
+      unresolvedOperations.push(site);
+      continue;
+    }
+    for (const operationId of site.operationIds) {
+      const op = { consumer: site.consumer, producer: site.producer, operationId };
+      const key = operationKey(op);
+      if (pinned.has(key)) continue;
+      if (knownBroken.has(key)) {
+        knownBrokenSeen.add(key);
+        continue;
+      }
+      unlisted.push({ ...op, argument: site.argument, file: site.file, line: site.line });
+    }
   }
 
   return {
     unlisted,
     unresolved,
+    unresolvedOperations,
     staleExemptions: exemptions.map((e) => e.file).filter((f) => !exemptFilesSeen.has(f)),
+    staleKnownBrokenOperations: knownBrokenOperations
+      .filter((op) => !knownBrokenSeen.has(operationKey(op)))
+      .map(operationKey),
     exempted,
   };
 }
@@ -1467,11 +1813,12 @@ export function checkExpectations(root, expectations) {
 function reportCoverage(report) {
   /** @type {string[]} */
   const failures = [];
-  for (const site of report.unlisted) {
+  for (const op of report.unlisted) {
     failures.push(
-      `${site.file}:${String(site.line)} calls the ${site.producer} pillar and no EXPECTATIONS ` +
-        `row pins ${site.consumer} -> ${site.producer}. That seam is unguarded: a renamed ` +
-        'operationId breaks it in production, not in CI. Add a row.'
+      `${op.file}:${String(op.line)} calls ${op.producer}'s '${op.operationId}' operation and no ` +
+        `EXPECTATIONS row pins ${op.consumer} -> ${op.producer} (${op.operationId}) specifically ` +
+        '— a row pinning a DIFFERENT operation on this seam does not cover it. That operation is ' +
+        'unguarded: a renamed operationId breaks it in production, not in CI. Add a row.'
     );
   }
   for (const site of report.unresolved) {
@@ -1481,10 +1828,27 @@ function reportCoverage(report) {
         'file to UNPINNABLE_CALL_SITES with a reason.'
     );
   }
+  for (const site of report.unresolvedOperations) {
+    failures.push(
+      `${site.file}:${String(site.line)} calls the ${String(site.producer)} pillar through router ` +
+        `type '${String(site.routerType)}', but this guard could not resolve that type to a list ` +
+        'of operations (not declared in this file as a plain object-literal type, or declared but ' +
+        'empty). Per-operation coverage cannot be checked for it, so it is reported rather than ' +
+        'treated as covered — see "OPERATION RESOLUTION" in this file for the shape a router type ' +
+        'needs.'
+    );
+  }
   for (const file of report.staleExemptions) {
     failures.push(
       `UNPINNABLE_CALL_SITES lists ${file}, which holds no pillar() call site. The exemption ` +
         'outlived what it excused — delete it.'
+    );
+  }
+  for (const op of report.staleKnownBrokenOperations) {
+    failures.push(
+      `KNOWN_BROKEN_OPERATIONS lists ${op}, which no discovered call site's router type resolves ` +
+        'to anymore. The exemption outlived what it excused — delete it, or add a row if the ' +
+        'operation is pinnable again.'
     );
   }
   return failures;
@@ -1526,7 +1890,11 @@ function run() {
 
   failures.push(...checkExpectations(repoRoot, EXPECTATIONS));
   failures.push(...checkWrapperRegistrations(repoRoot, PILLAR_CALL_WRAPPERS));
-  failures.push(...reportCoverage(findCoverageGaps(sites, EXPECTATIONS, UNPINNABLE_CALL_SITES)));
+  failures.push(
+    ...reportCoverage(
+      findCoverageGaps(sites, EXPECTATIONS, UNPINNABLE_CALL_SITES, KNOWN_BROKEN_OPERATIONS)
+    )
+  );
   const directFetch = findDirectFetchGaps(directFetchSites, SANCTIONED_DIRECT_FETCH);
   failures.push(...reportDirectFetch(directFetch));
 
@@ -1542,7 +1910,8 @@ function run() {
   }
 
   console.log(
-    `OK — ${String(EXPECTATIONS.length)} backend cross-pillar expectation(s) hold, covering ` +
+    `OK — ${String(EXPECTATIONS.length)} backend cross-pillar expectation(s) hold, each ` +
+      `discovered call site's operations are individually pinned or excused across ` +
       `${String(sites.length)} discovered pillar() call site(s), and ` +
       `${String(directFetch.sanctioned)} direct-fetch call(s) are sanctioned.`
   );
@@ -1694,28 +2063,52 @@ function selfTest() {
     consumer: 'purchases',
     producer: 'contacts',
     argument: "'contacts'",
+    routerType: 'ContactsRouter',
+    operationIds: ['entities.list'],
     file: 'pillars/purchases/src/api/contacts/merchant.ts',
     line: 1,
     ...over,
   });
-  const row = { consumer: 'purchases', producer: 'contacts' };
+  const row = { consumer: 'purchases', producer: 'contacts', operationId: 'entities.list' };
 
   assert(
     findCoverageGaps([site({})], [row], []).unlisted.length === 0,
-    'a call site with a matching row must pass coverage'
+    'a call site whose one resolved operation has a matching row must pass coverage'
   );
   assert(
     findCoverageGaps([site({ producer: 'lists' })], [row], []).unlisted.length === 1,
     'a call site whose seam has no row must fail coverage'
   );
   assert(
-    findCoverageGaps([site({ producer: null, argument: 'pillarId' })], [row], []).unresolved
-      .length === 1,
+    (() => {
+      const report = findCoverageGaps(
+        [site({ operationIds: ['entities.list', 'entities.create'] })],
+        [row],
+        []
+      );
+      return report.unlisted.length === 1 && report.unlisted[0].operationId === 'entities.create';
+    })(),
+    'a SECOND, unpinned operation on an already-pinned seam must be caught, not covered by the ' +
+      'first operation’s row'
+  );
+  assert(
+    findCoverageGaps(
+      [site({ producer: null, argument: 'pillarId', operationIds: null })],
+      [row],
+      []
+    ).unresolved.length === 1,
     'a runtime-chosen target with no exemption must fail coverage'
   );
   assert(
     findCoverageGaps(
-      [site({ producer: null, argument: 'pillarId', file: 'pillars/mcp/src/pillar-client.ts' })],
+      [
+        site({
+          producer: null,
+          argument: 'pillarId',
+          operationIds: null,
+          file: 'pillars/mcp/src/pillar-client.ts',
+        }),
+      ],
       [row],
       [{ file: 'pillars/mcp/src/pillar-client.ts', reason: 'why' }]
     ).unresolved.length === 0,
@@ -1726,6 +2119,90 @@ function selfTest() {
       .staleExemptions.length === 1,
     'an exemption covering no call site must fail'
   );
+  assert(
+    findCoverageGaps([site({ operationIds: [] })], [row], []).unresolvedOperations.length === 1,
+    'a call site whose router type resolved to zero operations must be reported, not treated as ' +
+      'covered'
+  );
+  assert(
+    findCoverageGaps([site({ operationIds: null, routerType: null })], [row], [])
+      .unresolvedOperations.length === 1,
+    'a call site whose router type could not be found at all must be reported the same way'
+  );
+
+  const brokenOp = { consumer: 'finance', producer: 'registry', operationId: 'entities.list' };
+  const brokenSite = site({
+    consumer: 'finance',
+    producer: 'registry',
+    routerType: 'CoreRouter',
+    operationIds: ['entities.list'],
+    file: 'pillars/finance/scripts/migrate-core-entities.ts',
+  });
+  assert(
+    findCoverageGaps([brokenSite], [], [], [brokenOp]).unlisted.length === 0,
+    'an operation named in KNOWN_BROKEN_OPERATIONS must satisfy coverage without a row'
+  );
+  assert(
+    findCoverageGaps([brokenSite], [], [], [brokenOp]).staleKnownBrokenOperations.length === 0,
+    'a KNOWN_BROKEN_OPERATIONS entry a live call site still resolves to must not be stale'
+  );
+  assert(
+    findCoverageGaps([site({})], [row], [], [brokenOp]).staleKnownBrokenOperations.length === 1,
+    'a KNOWN_BROKEN_OPERATIONS entry no discovered call site resolves to must be reported stale'
+  );
+
+  assert(
+    resolveRouterOperations(
+      'type ContactsRouter = { entities: { list: (i) => X; get: (i) => Y; }; };',
+      'ContactsRouter'
+    )
+      .toSorted()
+      .join(',') === 'entities.get,entities.list',
+    'a two-method single-domain router type must resolve both operations'
+  );
+  assert(
+    resolveRouterOperations(
+      'type ListsRouter = { list: { get: (i) => X; }; items: { add: (i) => Y; search: (i) => Z; }; };',
+      'ListsRouter'
+    )
+      .toSorted()
+      .join(',') === 'items.add,items.search,list.get',
+    'a multi-domain router type must resolve operations from every domain'
+  );
+  assert(
+    resolveRouterOperations(
+      'type CerebrumNudgesHandle = { nudges: { create: NudgeSink }; };',
+      'CerebrumNudgesHandle'
+    ).join(',') === 'nudges.create',
+    'a method aliased to a named function type, not an inline arrow, must still resolve — the ' +
+      'parser reads keys structurally and does not care what shape the value is'
+  );
+  assert(
+    resolveRouterOperations('type Empty = {};', 'Empty').length === 0,
+    'a declared-but-empty router type must resolve to zero operations, not error'
+  );
+  assert(
+    resolveRouterOperations('const x = 1;', 'GhostRouter') === null,
+    'a type name not declared anywhere in the file must resolve to null, not an empty list — the ' +
+      'caller treats both as "cannot check", but only null explains why in a message'
+  );
+  assert(
+    resolveRouterOperations('type Alias = string;', 'Alias') === null,
+    'a type declared but not as an object literal must resolve to null'
+  );
+  assert(
+    resolveRouterOperations('...', null) === null,
+    'a call site with no type argument at all must resolve to null'
+  );
+  assert(
+    firstTypeArgName('FinanceTransactionsRouter, unknown') === 'FinanceTransactionsRouter',
+    "a wrapper's two-argument generic must read the ROUTER type, not the return type"
+  );
+  assert(
+    firstTypeArgName('() => void') === null,
+    'a type argument that is not a bare identifier must not be misread as one'
+  );
+  assert(firstTypeArgName(null) === null, 'no type argument at all must resolve to null');
 
   const scanned = scanSource(
     [
@@ -1931,6 +2408,48 @@ function selfTest() {
       'holds two call sites that a src-only walk would never see'
   );
 
+  assert(
+    sites.every((s) => s.producer === null || s.operationIds !== null),
+    'every discovered call site with a literal producer must resolve to a known operation list ' +
+      "— finding one that doesn't means a router type in this tree stopped matching the shape " +
+      '"OPERATION RESOLUTION" documents, silently, and per-operation coverage would go blind for it'
+  );
+
+  const liveCoverage = findCoverageGaps(sites, EXPECTATIONS, UNPINNABLE_CALL_SITES, [
+    ...KNOWN_BROKEN_OPERATIONS,
+  ]);
+  assert(
+    liveCoverage.unlisted.length === 0 &&
+      liveCoverage.unresolved.length === 0 &&
+      liveCoverage.unresolvedOperations.length === 0 &&
+      liveCoverage.staleExemptions.length === 0 &&
+      liveCoverage.staleKnownBrokenOperations.length === 0,
+    'every operation every live call site resolves to must be pinned, exempted, or named in ' +
+      `KNOWN_BROKEN_OPERATIONS (got: ${JSON.stringify(liveCoverage)})`
+  );
+
+  assert(
+    (() => {
+      // finance -> registry is pinned by the `users.get` row from
+      // pillars/finance/src/api/cron/pillar-lookup.ts. migrate-core-entities.ts
+      // resolves a SECOND, different operation on that same seam
+      // (`entities.list`) that no row pins. Dropping KNOWN_BROKEN_OPERATIONS
+      // (its documented, tracked exemption) must surface that operation as
+      // unlisted rather than let the `users.get` row cover it — proving
+      // coverage is per-operation, not per-seam, against the real tree
+      // rather than a synthetic fixture.
+      const withoutKnownBroken = findCoverageGaps(sites, EXPECTATIONS, UNPINNABLE_CALL_SITES, []);
+      return withoutKnownBroken.unlisted.some(
+        (op) =>
+          op.consumer === 'finance' &&
+          op.producer === 'registry' &&
+          op.operationId === 'entities.list'
+      );
+    })(),
+    'the finance -> registry seam being pinned by an unrelated users.get row must NOT cover ' +
+      "migrate-core-entities.ts's separate entities.list operation on that same seam"
+  );
+
   const scriptsScratch = mkdtempSync(join(tmpdir(), 'cross-pillar-scripts-'));
   try {
     mkdirSync(join(scriptsScratch, 'pillars', 'delta', 'scripts'), { recursive: true });
@@ -1950,10 +2469,13 @@ function selfTest() {
   console.log(
     'self-test OK — flags a renamed operation, a moved path, a dropped query parameter, a ' +
       'renamed path parameter, a duplicated operationId, a missing or corrupt producer spec, ' +
-      'an empty expectation list, an unlisted seam, an unresolvable target, a stale exemption, ' +
-      'an unsanctioned direct fetch, a stale sanction, a gateway-wrapper call site, an ' +
-      'identifier not bound to a registered wrapper, a stale or missing wrapper registration, ' +
-      'a call site under pillars/*/scripts, and a source scan that lost its place.'
+      'an empty expectation list, an unresolvable target, a stale exemption, an unsanctioned ' +
+      'direct fetch, a stale sanction, a gateway-wrapper call site, an identifier not bound to a ' +
+      'registered wrapper, a stale or missing wrapper registration, a call site under ' +
+      'pillars/*/scripts, a source scan that lost its place, a SECOND unpinned operation on an ' +
+      'already-pinned seam, a router type that resolves to no operations, a known-broken-operation ' +
+      'exemption and its own staleness, and the live core-entities migration seam that would slip ' +
+      'past seam-level coverage but does not slip past this one.'
   );
 }
 
