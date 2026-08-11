@@ -122,13 +122,22 @@ jobs:
             shared_root_changed=0
           fi
 
-          # clients/* by the same rule, kept separate from `units`/`changed`
-          # (see the Outputs comment above for why).
+          # clients/* by the same per-dir rule as units above — a PR touching
+          # only clients/ios must not also pull in an unrelated client's
+          # pre-existing drift — kept separate from `units`/`changed` (see the
+          # Outputs comment above for why).
           client_dirs=""
           [ -d clients ] && client_dirs=$(find clients -mindepth 1 -maxdepth 1 -type d | sort)
           changed_client_dirs=""
-          if [ -n "$client_dirs" ] && { [ "$shared_root_changed" = 1 ] || echo "$diff" | grep -qE '^clients/'; }; then
-            changed_client_dirs=$(echo "$client_dirs" | tr '\n' ' ')
+          if [ -n "$client_dirs" ]; then
+            if [ "$shared_root_changed" = 1 ]; then
+              changed_client_dirs=$(echo "$client_dirs" | tr '\n' ' ')
+            else
+              while IFS= read -r d; do
+                echo "$diff" | grep -qE "(^|\\n)$d/" && changed_client_dirs="$changed_client_dirs $d"
+              done <<<"$client_dirs"
+              changed_client_dirs=$(echo "$changed_client_dirs" | xargs)
+            fi
           fi
           echo "changedClientDirs=$changed_client_dirs" >> "$GITHUB_OUTPUT"
           echo "Changed client dirs: $changed_client_dirs"
