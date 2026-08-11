@@ -1,4 +1,4 @@
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -9,7 +9,9 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   ALLOWED_UNIT_OVERRIDE_TOOLS,
   checkOverrides,
+  COMMITTED_MISE_CONFIG_FILENAMES,
   discoverUnitMiseDirs,
+  GITIGNORED_MISE_CONFIG_FILENAMES,
   parseToolsTable,
   REQUIRED_ROOT_TOOLS,
 } from '../check-mise-tool-overrides.mjs';
@@ -190,27 +192,86 @@ describe('discoverUnitMiseDirs — fixture tree', () => {
       '[tasks.test]\nrun = "x"\n'
     );
 
-    mkdirSync(join(root, 'pillars', 'moltbot'), { recursive: true }); // no mise.toml
+    mkdirSync(join(root, 'pillars', 'moltbot'), { recursive: true }); // no mise config at all
 
     mkdirSync(join(root, 'libs', 'ui'), { recursive: true });
     writeFileSync(join(root, 'libs', 'ui', 'mise.toml'), '[tasks.test]\nrun = "x"\n');
+
+    // A unit config filed under a non-default spelling — the exact gap this
+    // fixture exists to prove closed.
+    mkdirSync(join(root, 'libs', 'sdk', '.config', 'mise'), { recursive: true });
+    writeFileSync(
+      join(root, 'libs', 'sdk', '.config', 'mise', 'config.toml'),
+      '[tasks.test]\nrun = "x"\n'
+    );
   });
   afterAll(() => rmSync(root, { recursive: true, force: true }));
 
   it('finds a pillar with its own mise.toml', () => {
-    expect(discoverUnitMiseDirs(root)).toContain('pillars/finance');
+    expect(discoverUnitMiseDirs(root)).toContainEqual({
+      dir: 'pillars/finance',
+      file: 'pillars/finance/mise.toml',
+    });
   });
 
   it('finds a pillar app with its own mise.toml', () => {
-    expect(discoverUnitMiseDirs(root)).toContain('pillars/finance/app');
+    expect(discoverUnitMiseDirs(root)).toContainEqual({
+      dir: 'pillars/finance/app',
+      file: 'pillars/finance/app/mise.toml',
+    });
   });
 
   it('finds a lib with its own mise.toml', () => {
-    expect(discoverUnitMiseDirs(root)).toContain('libs/ui');
+    expect(discoverUnitMiseDirs(root)).toContainEqual({
+      dir: 'libs/ui',
+      file: 'libs/ui/mise.toml',
+    });
   });
 
-  it('excludes a pillar with no mise.toml', () => {
-    expect(discoverUnitMiseDirs(root)).not.toContain('pillars/moltbot');
+  it('finds a lib config filed under a non-"mise.toml" supported spelling', () => {
+    expect(discoverUnitMiseDirs(root)).toContainEqual({
+      dir: 'libs/sdk',
+      file: 'libs/sdk/.config/mise/config.toml',
+    });
+  });
+
+  it('excludes a pillar with no mise config', () => {
+    expect(discoverUnitMiseDirs(root).some((f) => f.dir === 'pillars/moltbot')).toBe(false);
+  });
+});
+
+describe('discoverUnitMiseDirs — every supported filename', () => {
+  it.each(COMMITTED_MISE_CONFIG_FILENAMES)('discovers a unit config filed as %s', (filename) => {
+    const root = mkdtempSync(join(tmpdir(), 'mise-overrides-filenames-'));
+    try {
+      const unitDir = join(root, 'pillars', 'rogue');
+      const configPath = join(unitDir, filename);
+      mkdirSync(dirname(configPath), { recursive: true });
+      writeFileSync(configPath, '[tools]\nnode = "22"\n');
+
+      expect(discoverUnitMiseDirs(root)).toContainEqual({
+        dir: 'pillars/rogue',
+        file: `pillars/rogue/${filename}`,
+      });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('reads every present file rather than stopping at the highest-precedence one', () => {
+    const root = mkdtempSync(join(tmpdir(), 'mise-overrides-multifile-'));
+    try {
+      const unitDir = join(root, 'pillars', 'rogue');
+      mkdirSync(unitDir, { recursive: true });
+      writeFileSync(join(unitDir, 'mise.toml'), '[tools]\nnode = "22"\n');
+      writeFileSync(join(unitDir, '.mise.toml'), '[tools]\npnpm = "9.0.0"\n');
+
+      const files = discoverUnitMiseDirs(root).map((f) => f.file);
+      expect(files).toContain('pillars/rogue/mise.toml');
+      expect(files).toContain('pillars/rogue/.mise.toml');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });
 
@@ -241,6 +302,7 @@ describe('checkOverrides — fixture tree', () => {
     const { unitOverrides } = checkOverrides(root);
     expect(unitOverrides).toContainEqual({
       dir: 'pillars/finance',
+      file: 'pillars/finance/mise.toml',
       overrides: { node: '22.14.0' },
     });
   });
@@ -249,6 +311,7 @@ describe('checkOverrides — fixture tree', () => {
     const { unitOverrides } = checkOverrides(root);
     expect(unitOverrides).toContainEqual({
       dir: 'pillars/contacts',
+      file: 'pillars/contacts/mise.toml',
       overrides: { rust: '1.80.0' },
     });
   });
@@ -268,6 +331,64 @@ describe('checkOverrides — fixture tree', () => {
     } finally {
       rmSync(brokenRoot, { recursive: true, force: true });
     }
+  });
+});
+
+describe('checkOverrides — a pnpm fork hidden behind each supported filename', () => {
+  it.each(COMMITTED_MISE_CONFIG_FILENAMES)('flags a pnpm override filed as %s', (filename) => {
+    const root = mkdtempSync(join(tmpdir(), 'mise-overrides-hidden-pnpm-'));
+    try {
+      writeFileSync(
+        join(root, 'mise.toml'),
+        '[tools]\nnode = "24.5.0"\npnpm = "10.32.1"\nrust = "stable"\n'
+      );
+      const unitDir = join(root, 'pillars', 'rogue');
+      const configPath = join(unitDir, filename);
+      mkdirSync(dirname(configPath), { recursive: true });
+      writeFileSync(configPath, '[tools]\npnpm = "9.0.0"\n');
+
+      const { violations } = checkOverrides(root);
+      expect(
+        violations.some((v) => v.includes(`pillars/rogue/${filename}`) && v.includes('pnpm')),
+        `expected a violation naming pillars/rogue/${filename}; got: ${JSON.stringify(violations)}`
+      ).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('does not confuse a filename that only ever holds a local, gitignored override', () => {
+    // mise.local.toml is real and mise reads it, but it is gitignored in this
+    // repo, so a fresh CI checkout never has one — the guard is correct to
+    // leave it out of COMMITTED_MISE_CONFIG_FILENAMES.
+    expect(COMMITTED_MISE_CONFIG_FILENAMES).not.toContain('mise.local.toml');
+    expect(COMMITTED_MISE_CONFIG_FILENAMES).not.toContain('.mise.local.toml');
+  });
+});
+
+describe('COMMITTED_MISE_CONFIG_FILENAMES / GITIGNORED_MISE_CONFIG_FILENAMES', () => {
+  it('the two lists share no filename', () => {
+    for (const name of COMMITTED_MISE_CONFIG_FILENAMES) {
+      expect(GITIGNORED_MISE_CONFIG_FILENAMES).not.toContain(name);
+    }
+  });
+
+  it.each(GITIGNORED_MISE_CONFIG_FILENAMES)(
+    '%s is actually gitignored in this repo, not just named "local"',
+    (relPath) => {
+      // The guard's exclusion reasoning depends on git, not on the filename
+      // containing ".local." — a path this repo had not actually gitignored
+      // would be exactly the invisible-override gap this filename widening
+      // exists to close. `check-ignore` works on the pattern alone, so the
+      // path need not exist.
+      const result = spawnSync('git', ['check-ignore', '-q', relPath], { cwd: repoRoot });
+      expect(result.status, `expected ${relPath} to be gitignored — see .gitignore`).toBe(0);
+    }
+  );
+
+  it('mise.toml itself is not gitignored, as a sanity check on the check above', () => {
+    const result = spawnSync('git', ['check-ignore', '-q', 'mise.toml'], { cwd: repoRoot });
+    expect(result.status).toBe(1);
   });
 });
 
@@ -303,8 +424,8 @@ describe('mise actually resolves the merge (real mise binary)', () => {
   it('every existing pillar/lib still resolves node/pnpm from the root pin', () => {
     if (!miseAvailable) return;
     const rootTools = parseToolsTable(readFileSync(join(repoRoot, 'mise.toml'), 'utf8'));
-    for (const dir of discoverUnitMiseDirs(repoRoot)) {
-      const unitTools = parseToolsTable(readFileSync(join(repoRoot, dir, 'mise.toml'), 'utf8'));
+    for (const { dir, file } of discoverUnitMiseDirs(repoRoot)) {
+      const unitTools = parseToolsTable(readFileSync(join(repoRoot, file), 'utf8'));
       for (const tool of ['node', 'pnpm'] as const) {
         if (tool in unitTools) continue; // this unit overrides it — nothing to assert here
         const resolved = execFileSync('mise', ['current', '-C', join(repoRoot, dir), tool], {

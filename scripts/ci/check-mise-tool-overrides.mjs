@@ -7,7 +7,7 @@
  * The root `mise.toml` `[tools]` table (node/pnpm/rust) is the shared
  * default toolchain. mise merges config **up** the directory tree, so any
  * unit (`pillars/<id>`, `pillars/<id>/app`, `libs/<id>`) may declare its own
- * `[tools]` table in its own `mise.toml` to override just the tool(s) it
+ * `[tools]` table in its own mise config to override just the tool(s) it
  * needs to trial or lag a bump — everything it doesn't redeclare still
  * resolves from the root pin.
  *
@@ -16,6 +16,77 @@
  *     (the documented shared default a per-unit override falls back to);
  *   - a unit may override `node` or `rust` only — `pnpm` manages the single
  *     pnpm workspace lockfile and must not fork per unit.
+ *
+ * **Which unit config filenames count.** mise does not read only `mise.toml`
+ * — `src/config/mod.rs`'s `LOCAL_CONFIG_FILENAMES` (the list the docs at
+ * https://mise.jdx.dev/configuration.html point to as authoritative) declares
+ * a dotfile variant of every path, plus a `mise/` and a `.config/mise/`
+ * subdirectory spelling, all merged into one config as mise walks up the
+ * tree. A unit that puts its `pnpm` fork in any of them is invisible to a
+ * guard that only calls `existsSync(join(dir, 'mise.toml'))` — confirmed
+ * against the real `mise` binary (`mise current node -C <dir>` resolves a
+ * pin from every path below, including when a dotfile and non-dotfile
+ * spelling coexist and the dotfile wins).
+ *
+ * {@link COMMITTED_MISE_CONFIG_FILENAMES} is every non-local spelling this
+ * guard checks, in mise's own precedence order (index 0 wins where more than
+ * one is present in the same directory — rare, but checked rather than
+ * assumed away: every present file is read, not just the highest-precedence
+ * one, so a unit cannot split a forbidden override into a lower-precedence
+ * file and have it merge in unseen):
+ *
+ *   - `.mise.toml`               — dotfile spelling of `mise.toml`, and (per
+ *                                   the real-binary check above) HIGHER
+ *                                   precedence than it, not merely an alias
+ *   - `mise.toml`                — the spelling every unit in this repo uses
+ *   - `mise/config.toml`         — "group config in a subdirectory" spelling
+ *   - `.config/mise.toml`        — "group config in `.config/`" spelling
+ *   - `.config/mise/mise.toml`   — the same, nested one level deeper
+ *   - `.config/mise/config.toml` — the same, with mise's generic filename
+ *
+ * **What is excluded, and why each is a real exclusion and not a blind spot
+ * left on purpose.**
+ *
+ *   - `mise.local.toml`, `.mise.local.toml`, and every other spelling mise
+ *     itself treats as "local" (see `.gitignore`'s Mise section, which now
+ *     lists all of them) are gitignored **in this repo**, not merely by mise
+ *     convention. A file git will never track is a file a CI checkout will
+ *     never contain, so the exclusion test this guard relies on is "is it
+ *     gitignored", not "does its name contain `.local.`" — a `.local.`-named
+ *     path this repo hadn't actually gitignored would have been exactly the
+ *     kind of gap this ticket exists to close, so the `.gitignore` list was
+ *     completed alongside this file rather than trusted as already correct.
+ *     `check-mise-tool-overrides.test.ts` asserts every one of them against
+ *     `git check-ignore`, so a `.gitignore` edit that drops one fails the
+ *     same way a code regression would.
+ *   - `.mise/config.toml` (the non-local, committed-tier path per mise's own
+ *     docs) is excluded for the same reason, not a separate one: this repo's
+ *     `.gitignore` has ignored the entire `.mise/` directory since mise was
+ *     first adopted, which was almost certainly boilerplate rather than a
+ *     deliberate "this is our local-override directory" choice, but the
+ *     effect is identical either way — nothing under `.mise/` can reach a CI
+ *     checkout, so there is nothing there for this guard to miss.
+ *   - `.rtx.toml` / `.rtx.local.toml` are mise's legacy pre-rename (`rtx`)
+ *     compatibility spellings. Excluded: dead convention, never used here.
+ *   - `.tool-versions` is not TOML at all (one `tool version` pair per line,
+ *     the asdf/rtx format) — a `[tools]` table guard cannot read it as a
+ *     degenerate case of the same parser, and this repo has never had one.
+ *     Out of scope for this guard, not silently dropped: a hand-off issue is
+ *     filed in Huly if this ever needs its own scanner.
+ *   - `.config/mise/conf.d/*.toml` (fragment files merged in alphabetical
+ *     order) is a directory-glob mechanism, not a fixed filename — a
+ *     genuinely different discovery shape from "does this exact path exist".
+ *     Deliberately deferred rather than folded in here; tracked in Huly.
+ *   - Environment-specific configs (`mise.<env>.toml` and friends, activated
+ *     by `MISE_ENV`) are a different axis (which environment, not which
+ *     unit) and are NOT purely hypothetical here — `mise.ci.toml` at the
+ *     repo root is exactly this, and every quality workflow sets
+ *     `MISE_ENV: ci`. A per-unit `mise.ci.toml` would therefore genuinely
+ *     merge into a real CI run today and this guard would not see it.
+ *     Deliberately deferred rather than folded into this filename-set
+ *     widening (a different discovery shape again — which `<env>` values are
+ *     live has to be read out of the workflows, not assumed); tracked in
+ *     Huly rather than left as an unstated gap.
  *
  * **Tier B guard**: it reads TOML through a real parser, so the job that runs
  * it installs the workspace first. See the tier amendment in
@@ -47,8 +118,42 @@ export const ALLOWED_UNIT_OVERRIDE_TOOLS = ['node', 'rust'];
 /** Tools the root pin must declare — the shared default every unit inherits. */
 export const REQUIRED_ROOT_TOOLS = ['node', 'pnpm', 'rust'];
 
-/** Unit-kind directories searched for a per-unit `mise.toml`. */
+/** Unit-kind directories searched for a per-unit mise config. */
 export const UNIT_BASES = ['pillars', 'libs'];
+
+/**
+ * Every non-local mise config filename this guard reads, in mise's own
+ * precedence order (index 0 wins when more than one exists in the same
+ * directory). See the file header for how this list was derived and
+ * verified, and for which spellings were deliberately left out.
+ */
+export const COMMITTED_MISE_CONFIG_FILENAMES = [
+  '.mise.toml',
+  'mise.toml',
+  'mise/config.toml',
+  '.config/mise.toml',
+  '.config/mise/mise.toml',
+  '.config/mise/config.toml',
+];
+
+/**
+ * Every mise config path this repo's `.gitignore` keeps out of a checkout —
+ * the "local" spellings mise itself defines, plus `.mise/`'s two paths,
+ * which are swept up by a pre-existing whole-directory ignore rather than a
+ * `.local.` filename. `check-mise-tool-overrides.test.ts` asserts each of
+ * these against `git check-ignore`, so this list and `.gitignore` cannot
+ * silently drift apart.
+ */
+export const GITIGNORED_MISE_CONFIG_FILENAMES = [
+  'mise.local.toml',
+  '.mise.local.toml',
+  'mise/config.local.toml',
+  '.config/mise.local.toml',
+  '.config/mise/mise.local.toml',
+  '.config/mise/config.local.toml',
+  '.mise/config.toml',
+  '.mise/config.local.toml',
+];
 
 /**
  * Reduce a parsed `[tools]` entry to the version string the callers compare.
@@ -117,15 +222,46 @@ export function parseToolsTable(source, label) {
 }
 
 /**
- * Discover every unit dir (relative to `root`) that carries its own
- * `mise.toml`: `pillars/<id>`, `pillars/<id>/app`, `libs/<id>`. Mirrors the
- * root `mise.toml`'s `run-all` disk-discovery.
+ * @typedef {{ dir: string, file: string }} UnitConfigFile
+ */
+
+/**
+ * Every {@link COMMITTED_MISE_CONFIG_FILENAMES} entry that exists directly
+ * inside `dir`, each paired with the unit dir it belongs to. More than one
+ * entry for the same `dir` is legal — mise merges tools additively across
+ * every config file it finds in a directory, so a unit that (unusually)
+ * carries two of these files has both read, not just the higher-precedence
+ * one.
  *
  * @param {string} root
- * @returns {string[]} Sorted repo-relative unit dirs.
+ * @param {string} dir Absolute path.
+ * @returns {UnitConfigFile[]}
+ */
+function unitConfigFiles(root, dir) {
+  /** @type {UnitConfigFile[]} */
+  const found = [];
+  for (const name of COMMITTED_MISE_CONFIG_FILENAMES) {
+    const abs = join(dir, name);
+    if (existsSync(abs)) found.push({ dir: relative(root, dir), file: relative(root, abs) });
+  }
+  return found;
+}
+
+/**
+ * Discover every unit config file (relative to `root`) across
+ * `pillars/<id>`, `pillars/<id>/app`, `libs/<id>` — checking every filename
+ * in {@link COMMITTED_MISE_CONFIG_FILENAMES}, not only `mise.toml`. Mirrors
+ * the root `mise.toml`'s `run-all` disk-discovery for which directories
+ * count as units; unlike `run-all` (which only ever runs a unit's own
+ * `mise.toml`-defined tasks — a separate, task-fan-out concern), this reads
+ * every mise-recognised spelling, because a `[tools]` override in any of
+ * them genuinely merges into that unit's resolved toolchain.
+ *
+ * @param {string} root
+ * @returns {UnitConfigFile[]} Sorted by dir, then file.
  */
 export function discoverUnitMiseDirs(root) {
-  /** @type {string[]} */
+  /** @type {UnitConfigFile[]} */
   const out = [];
   for (const base of UNIT_BASES) {
     const baseDir = join(root, base);
@@ -133,18 +269,18 @@ export function discoverUnitMiseDirs(root) {
     for (const entry of readdirSync(baseDir, { withFileTypes: true })) {
       if (!entry.isDirectory()) continue;
       const dir = join(baseDir, entry.name);
-      if (existsSync(join(dir, 'mise.toml'))) out.push(relative(root, dir));
-      const appDir = join(dir, 'app');
-      if (base === 'pillars' && existsSync(join(appDir, 'mise.toml'))) {
-        out.push(relative(root, appDir));
-      }
+      out.push(...unitConfigFiles(root, dir));
+      if (base === 'pillars') out.push(...unitConfigFiles(root, join(dir, 'app')));
     }
   }
-  return out.toSorted((a, b) => a.localeCompare(b));
+  return out.toSorted((a, b) => {
+    const byDir = a.dir.localeCompare(b.dir);
+    return byDir === 0 ? a.file.localeCompare(b.file) : byDir;
+  });
 }
 
 /**
- * @typedef {{ dir: string, overrides: Record<string, string> }} UnitOverride
+ * @typedef {{ dir: string, file: string, overrides: Record<string, string> }} UnitOverride
  * @typedef {{
  *   baselineMissing: string[],
  *   unitOverrides: UnitOverride[],
@@ -195,18 +331,17 @@ export function checkOverrides(root) {
   for (const base of UNIT_BASES) {
     if (!existsSync(join(root, base))) {
       violations.push(
-        `${base}/ does not exist, so no unit under it was searched for a mise.toml override. ` +
+        `${base}/ does not exist, so no unit under it was searched for a mise config override. ` +
           'Whichever directory now holds that unit kind must be added to UNIT_BASES.'
       );
     }
   }
 
-  for (const dir of discoverUnitMiseDirs(root)) {
-    const unitMise = `${dir}/mise.toml`;
+  for (const { dir, file } of discoverUnitMiseDirs(root)) {
     /** @type {Record<string, string>} */
     let tools;
     try {
-      tools = parseToolsTable(readFileSync(join(root, dir, 'mise.toml'), 'utf8'), unitMise);
+      tools = parseToolsTable(readFileSync(join(root, file), 'utf8'), file);
     } catch (error) {
       // A unit whose config does not parse is not a unit with no override — it
       // is a unit whose override nobody can see.
@@ -215,11 +350,11 @@ export function checkOverrides(root) {
     }
     const keys = Object.keys(tools);
     if (keys.length === 0) continue;
-    unitOverrides.push({ dir, overrides: tools });
+    unitOverrides.push({ dir, file, overrides: tools });
     for (const key of keys) {
       if (!ALLOWED_UNIT_OVERRIDE_TOOLS.includes(key)) {
         violations.push(
-          `${dir}/mise.toml overrides "${key}" — only ${ALLOWED_UNIT_OVERRIDE_TOOLS.join(
+          `${file} overrides "${key}" — only ${ALLOWED_UNIT_OVERRIDE_TOOLS.join(
             ', '
           )} may be overridden per unit (pnpm manages one workspace lockfile; ` +
             'see AGENTS.md "Toolchain pin").'
@@ -245,7 +380,7 @@ function main() {
     console.log(
       'Usage: node scripts/ci/check-mise-tool-overrides.mjs [--self-test]\n' +
         'Fails if the root mise.toml [tools] baseline is missing a required tool, ' +
-        'or a unit mise.toml overrides a tool it may not override.'
+        'or a unit mise config overrides a tool it may not override.'
     );
     process.exit(2);
   }
@@ -258,8 +393,8 @@ function main() {
   if (unitOverrides.length === 0) {
     console.log('No unit currently overrides the root mise toolchain pin.');
   } else {
-    for (const { dir, overrides } of unitOverrides) {
-      console.log(`${dir}: overrides ${JSON.stringify(overrides)}`);
+    for (const { file, overrides } of unitOverrides) {
+      console.log(`${file}: overrides ${JSON.stringify(overrides)}`);
     }
   }
 

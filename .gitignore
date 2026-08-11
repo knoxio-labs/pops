@@ -78,9 +78,16 @@ ai_entity_cache.json
 # points a task at different local state — a simulator this laptop actually has,
 # say — without editing the pin every clone and every CI run shares. It takes
 # precedence over the committed file, so committing one would silently redirect
-# everybody else's runs.
+# everybody else's runs. Every spelling mise itself treats as "local" is listed
+# here (not just the two that happened to exist already), so
+# check-mise-tool-overrides.mjs can treat "gitignored" as the actual exclusion
+# test rather than "named .local." — see that script's file header.
 mise.local.toml
 .mise.local.toml
+mise/config.local.toml
+.config/mise.local.toml
+.config/mise/config.local.toml
+.config/mise/mise.local.toml
 
 *storybook.log
 storybook-static
