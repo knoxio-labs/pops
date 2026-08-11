@@ -636,7 +636,6 @@
                             "type": "number"
                           },
                           "currency": {
-                            "enum": ["AUD"],
                             "type": "string"
                           },
                           "date": {
@@ -884,7 +883,6 @@
                       "type": "string"
                     },
                     "currency": {
-                      "enum": ["AUD"],
                       "type": "string"
                     },
                     "date": {

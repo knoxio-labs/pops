@@ -126,4 +126,15 @@ internal struct TransactionDetailMappingTests {
 
         #expect(detail.type == TransactionType(rawValue: "escrow"))
     }
+
+    /// Same reasoning as the list row's equivalent case: `currency` is a
+    /// plain `Swift.String`, so a value this build has never heard of still
+    /// decodes rather than failing the whole record.
+    @Test("a currency this build has never heard of still renders")
+    func unknownCurrencyCode() async throws {
+        let detail = try #require(
+            try await record(TransactionsWire.record(amount: "19.99", currency: "USD")))
+
+        #expect(detail.amount.currencyCode == "USD")
+    }
 }
