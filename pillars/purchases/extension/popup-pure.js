@@ -50,4 +50,10 @@ function popsPopupDisabled(status) {
   };
 }
 
-globalThis.popsPopupPure = { guidance: popsPopupGuidance, disabledFor: popsPopupDisabled };
+const popsPopupPure = { guidance: popsPopupGuidance, disabledFor: popsPopupDisabled };
+
+// `popup.js` runs as a separate classic script, so this is how it reaches
+// these. Declared as well as published, the same way `pure.js` does it, so
+// the bare identifier is a real binding rather than a global-object property
+// that only some evaluation contexts hand back.
+globalThis.popsPopupPure = popsPopupPure;
