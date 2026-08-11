@@ -426,6 +426,14 @@ describe('readCoverage', () => {
       { coverage: { cells: [{ filter: { titleRegex: /a/u.source.length }, count: 1 }] } },
       /titleRegex must be a string/u,
     ],
+    // The API itself refuses both at once, so a filter naming both can never
+    // be the query that actually ran — accepting it would let an impossible
+    // cell stand in as part of a coverage proof.
+    [
+      'a filter that sets both titleRegex and titleSearch',
+      { coverage: { cells: [{ filter: { titleRegex: 'a%', titleSearch: 'a' }, count: 1 }] } },
+      /sets both titleRegex and titleSearch/u,
+    ],
     ['a zero limit', { coverage: { limit: 0, cells: [] } }, /limit must be a positive integer/u],
     [
       'statuses that are not strings',
@@ -478,6 +486,16 @@ describe('readCoverage', () => {
         },
       },
       /titleNarrowing\[0\]\.identifiers must be an array of strings/u,
+    ],
+    [
+      'a titleNarrowing query that sets both titleRegex and titleSearch',
+      {
+        coverage: {
+          cells: [],
+          titleNarrowing: [{ query: { titleRegex: 'a%', titleSearch: 'a' }, identifiers: [] }],
+        },
+      },
+      /sets both titleRegex and titleSearch/u,
     ],
   ])('throws on %s rather than reading it as undeclared', (_name, parsed, message) => {
     expect(() => readCoverage(parsed)).toThrow(message);

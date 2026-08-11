@@ -444,6 +444,13 @@ function readFilter(value, where) {
     // removing it would change which rows the cell claims to have covered.
     cell[key] = raw;
   }
+  // The API itself refuses both at once (`titleRegex` and `titleSearch` are
+  // mutually exclusive `list_issues` parameters), so a filter naming both can
+  // never have been the query that actually ran. Accepting it here would let
+  // an impossible cell stand in as part of a coverage proof.
+  if (cell.titleRegex !== undefined && cell.titleSearch !== undefined) {
+    throw new Error(`${where} sets both titleRegex and titleSearch — the API allows only one`);
+  }
   return cell;
 }
 

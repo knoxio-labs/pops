@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { HELP, readCell } from '../huly-partition-plan.mjs';
+import { HELP, readCell, readPatternList } from '../huly-partition-plan.mjs';
 
 describe('readCell', () => {
   it('reads a cell object', () => {
@@ -26,6 +26,33 @@ describe('readCell', () => {
 
   it('lets a genuine JSON syntax error through, with the parser talking', () => {
     expect(() => readCell('not json')).toThrow(SyntaxError);
+  });
+});
+
+describe('readPatternList', () => {
+  it('splits on comma', () => {
+    expect(readPatternList('d%,f[^e]%')).toEqual(['d%', 'f[^e]%']);
+  });
+
+  it('returns nothing for an undefined argument', () => {
+    expect(readPatternList(undefined)).toEqual([]);
+  });
+
+  it('drops an empty trailing entry', () => {
+    expect(readPatternList('d%,')).toEqual(['d%']);
+  });
+
+  it('drops a whitespace-only entry', () => {
+    expect(readPatternList('d%,   ,e%')).toEqual(['d%', 'e%']);
+  });
+
+  // The whole point of this reader, distinct from the comma lists this tool
+  // reads elsewhere (--statuses, --components): a titleRegex pattern's edge
+  // whitespace is part of what it matches, so unlike those lists, entries
+  // here must survive untrimmed — a caller cross-checking a pattern that
+  // genuinely starts or ends with a space must get that exact pattern back.
+  it('does not trim an entry that has real content', () => {
+    expect(readPatternList(' a%, b %')).toEqual([' a%', ' b %']);
   });
 });
 

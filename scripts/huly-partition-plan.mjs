@@ -86,6 +86,27 @@ function readList(value) {
 }
 
 /**
+ * A comma-separated `--patterns` argument, split without trimming each entry.
+ *
+ * Every other list this tool reads (`--statuses`, `--components`) is trimmed
+ * — a status or component label carries no meaning in its edge whitespace.
+ * A `titleRegex` pattern is the opposite: `readFilter` in `huly-coverage.mjs`
+ * deliberately leaves a declared pattern untrimmed because its leading and
+ * trailing characters are part of what it matches, and `titleSearchPrefix`
+ * reads a pattern's own leading characters. Trimming here would compute a
+ * cross-check for a pattern that is not the one the export actually used.
+ * An entry that is empty or all whitespace is still dropped — there is
+ * nothing for a caller to mean by a bare comma.
+ *
+ * @param {string | undefined} value
+ * @returns {string[]}
+ */
+export function readPatternList(value) {
+  if (value === undefined) return [];
+  return value.split(',').filter((entry) => entry.trim() !== '');
+}
+
+/**
  * @param {string[]} args
  * @returns {number}
  */
@@ -150,7 +171,7 @@ function runNarrow(args) {
     console.error(`FAIL — --narrow could not read that as a cell: ${messageOf(error)}`);
     return 2;
   }
-  const patterns = readList(readFlag(args, '--patterns'));
+  const patterns = readPatternList(readFlag(args, '--patterns'));
   if (patterns.length === 0) {
     console.error(
       'FAIL — --narrow needs --patterns <a,b,c>, the titleRegex set that divides this branch.'
