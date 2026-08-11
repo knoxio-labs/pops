@@ -391,14 +391,16 @@ Work lives in **Huly**, project `POPS` at [projects.knoxiolabs.com](https://proj
 
 #### `Merged` is not a workflow status — it is the PR mirror
 
-A sixth status, `Merged`, exists but nothing in the workflow above moves an issue into it. Huly's GitHub sync mints **a new issue per merged PR** — title = the commit subject, body = the PR body, status `Merged` — instead of transitioning the ticket that PR fixes. So most of what sits at `Merged` is a mirror of a commit, not a piece of work anyone filed, and the ticket the PR actually closed is untouched wherever it was.
+A sixth status, `Merged`, exists but nothing in the workflow above moves an issue into it. Huly's GitHub sync mints **a new issue per PR, at the moment the PR is opened** — title = the PR title, body = the PR body, initial status `Review in progress` — instead of transitioning the ticket that PR fixes. It is not created on merge: ten mirrors sampled (five still-open PRs, five merged ones) all had `createdOn` equal to their PR's `createdAt` to the second, and the five still-open PRs already had mirrors sitting at `Review in progress` — a status the merge event cannot have produced, since the PR hadn't merged. The sync moves the mirror to `Merged` later, once it notices the PR merged; for the merged sample, that lag ran from under 17 minutes to over an hour past `createdOn`. So most of what sits at `Merged` is a mirror of a PR, not a piece of work anyone filed, and the ticket the PR actually closed is untouched wherever it was.
 
 Two consequences, and the second is the expensive one:
 
-- **Do not read `Merged` as a human decision.** Nobody chose it. Do not file work there, and do not treat a `Merged` issue as the record of a requirement — the commit it mirrors is the record.
+- **Do not read `Merged` as a human decision.** Nobody chose it. Do not file work there, and do not treat a `Merged` issue as the record of a requirement — the PR it mirrors is the record.
 - **A merged PR does not close its ticket.** Set the status yourself when the work lands, or the ticket stays open forever and the next agent spends a full run rediscovering that the fix is already on `main`.
 
 A mirror is identifiable exactly rather than by eye: its title equals a commit subject on `origin/main`, give or take the squash-merge `(#1234)` suffix. `scripts/huly-backlog-reconcile.mjs` decides that, and cross-references an exported backlog against merged commits to name any ticket whose work already shipped. Run it against a tracker export — it reads only, and its `--help` states the evidence it will and will not act on.
+
+`createdOn ≈ PR createdAt` (equal to the second, in every sample checked) is a second, cheaper discriminator: it needs only the issue and the PR's own metadata, not a merged-commit cross-reference, and it isn't fooled by two PRs sharing a title. Not wired into any script yet.
 
 #### One query cannot read the whole backlog
 
