@@ -16,6 +16,9 @@
       "path": "../../libs/ai-telemetry/tsconfig.build.json"
     },
     {
+      "path": "../../libs/pillar-express/tsconfig.build.json"
+    },
+    {
       "path": "../../libs/sdk/tsconfig.build.json"
     },
     {

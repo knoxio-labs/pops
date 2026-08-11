@@ -42,6 +42,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.115.0",
     "@pops/ai-telemetry": "workspace:*",
+    "@pops/pillar-express": "workspace:*",
     "@pops/pillar-sdk": "workspace:*",
     "@pops/pillar-settings": "workspace:*",
     "@pops/types": "workspace:*",

@@ -71,6 +71,18 @@ An order with **no charge and no link** (`awaiting_settlement`) is normal and pe
 
 A **cash** order (`settlementMode='cash'`) is terminal on arrival — `createPurchase` writes it straight to `settled_cash`. No transaction will ever exist for it, so it must never enter the reconcile queue, while still counting in every spend figure.
 
+## Who may call it
+
+An inbound service-account gate covers the whole contract surface ([ADR-044](../../docs/architecture/adr-044-inbound-service-account-scope-enforcement.md)). It is derived from `purchasesContract` rather than a hand-kept path list, so a new route is gated the moment it exists. `/health`, `/pillars` and `/openapi` are outside the contract and stay ungated — the compose healthcheck and the image smoke probe need no credential.
+
+A caller presenting an `X-API-Key` is held to the service account behind it: an unknown or revoked key is `401`, a live key whose grant misses the operation is `403` logged with the account name and the exact missing scope, and a registry that cannot be reached is `503` rather than admission. Scopes are dotted and match by prefix, so `purchases.purchase` authorises `purchases.purchase.list` and nothing under `purchases.source`.
+
+**A caller presenting no key is still admitted, and that is a decision, not an omission.** `requireCredential` is `false`. Every caller purchases has today presents no credential — the ingest CLI (`scripts/backfill.ts`), the operator smoke script (`infra/smoke/purchases-reconcile.sh`), and `src/api/__tests__/two-process.test.ts`, which drives the real server over HTTP — and it has no credentialled caller at all: nothing in the tree calls `pillar('purchases')`. Requiring a credential would 401 the pillar's only working data paths in order to constrain an empty set, so the flag would buy nothing measurable and cost everything that works. Closing the unauthenticated in-network path is a decision about ADR-027's docker-network boundary, it is fleet-wide, and it is not this pillar's to make alone.
+
+This is not a weaker gate. The whole mechanism is installed — scope table, revocation, fail-closed `503` — so the first credentialled caller is bound to its grant without a second change. The likely first one is MCP, if purchases ever grows tools (POPS-1753); that work has to ship a grant covering the operations its tools call, or they arrive as `403`s.
+
+**What would reverse the `false`:** all three existing callers carrying keys of their own, plus an answer for browser traffic. The first three are cheap — mint an account and read a key from env. The browser leg is not, and is the real blocker: the shell's `_pillar-proxy.conf` injects no `X-API-Key`, no pillar SPA in the fleet sends one, and a key injected at the edge would be forgeable by any in-network caller, which ADR-044 rejected outright.
+
 ## What is deliberately absent
 
 - **A frontend.** This pillar has no `app/` directory — the slot `pillars/finance/app` and every other UI-bearing pillar fills (POPS-1506). `buildPurchasesManifest` declares no `nav` and no `pages` for that reason — a rail entry pointing at a bundle slot that does not exist is a dead link.

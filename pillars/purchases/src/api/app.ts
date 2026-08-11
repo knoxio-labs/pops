@@ -5,6 +5,12 @@
  * surface generated from `src/contract/rest.ts` via ts-rest. Kept as a
  * factory so the test suite can spin up an in-process `supertest` instance
  * without binding a real port.
+ *
+ * Auth is split by who is calling. An uncredentialled caller is still admitted
+ * — the ingest CLI, the operator smoke script and the two-process test all
+ * reach this pillar with no key, and it has no credentialled caller at all. A
+ * caller that presents an `X-API-Key` is a machine, and is held to the service
+ * account behind that key: see `middleware/service-account-scope.ts`.
  */
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -13,8 +19,11 @@ import { fileURLToPath } from 'node:url';
 import { createExpressEndpoints } from '@ts-rest/express';
 import express, { type Express, type Request, type Response } from 'express';
 
+import { createRegistryServiceAccountVerifier } from '@pops/pillar-sdk/server';
+
 import { purchasesContract } from '../contract/rest.js';
 import { makeRequestHandler, type PurchasesApiDeps } from './handlers.js';
+import { createServiceAccountScopeMiddleware } from './middleware/service-account-scope.js';
 import { makePurchasesRestHandlers } from './rest/handlers.js';
 
 /**
@@ -66,6 +75,15 @@ export function createPurchasesApiApp(deps: PurchasesApiDeps): Express {
   app.get('/openapi', (_req: Request, res: Response) => {
     res.json(openapiDocument);
   });
+
+  // Inbound service-account gate. Mounted after the raw probes (which carry no
+  // scope) and before the contract surface, so every contract route is covered
+  // without enumerating them here.
+  app.use(
+    createServiceAccountScopeMiddleware(
+      deps.serviceAccountVerifier ?? createRegistryServiceAccountVerifier()
+    )
+  );
 
   createExpressEndpoints(purchasesContract, makePurchasesRestHandlers(deps), app);
 

@@ -5,6 +5,7 @@
     { "path": "libs/sdk/tsconfig.build.json" },
     { "path": "libs/settings/tsconfig.build.json" },
     { "path": "libs/ai-telemetry/tsconfig.build.json" },
+    { "path": "libs/pillar-express/tsconfig.build.json" },
     { "path": "libs/module-registry/tsconfig.build.json" },
     { "path": "pillars/registry/tsconfig.build.json" },
     { "path": "pillars/ai/tsconfig.build.json" },

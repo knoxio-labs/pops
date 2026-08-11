@@ -24,6 +24,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json .oxfmtrc
 # this image's build context.
 COPY pillars/finance/package.json ./pillars/finance/
 COPY libs/ai-telemetry/package.json ./libs/ai-telemetry/
+COPY libs/pillar-express/package.json ./libs/pillar-express/
 COPY libs/sdk/package.json ./libs/sdk/
 COPY libs/settings/package.json ./libs/settings/
 COPY libs/types/package.json ./libs/types/
@@ -37,6 +38,10 @@ RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
 COPY libs/ai-telemetry/src ./libs/ai-telemetry/src
 COPY libs/ai-telemetry/tsconfig.json ./libs/ai-telemetry/tsconfig.json
 COPY libs/ai-telemetry/tsconfig.build.json ./libs/ai-telemetry/tsconfig.build.json
+
+COPY libs/pillar-express/src ./libs/pillar-express/src
+COPY libs/pillar-express/tsconfig.json ./libs/pillar-express/tsconfig.json
+COPY libs/pillar-express/tsconfig.build.json ./libs/pillar-express/tsconfig.build.json
 
 COPY libs/sdk/src ./libs/sdk/src
 COPY libs/sdk/tsconfig.json ./libs/sdk/tsconfig.json

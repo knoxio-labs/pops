@@ -6,6 +6,7 @@
  */
 import { getPillarRegistry } from './pillars/registry.js';
 
+import type { ServiceAccountVerifier } from '@pops/pillar-sdk/server';
 import type { PillarRegistryEntry } from '@pops/types';
 
 import type { OpenedPurchasesDb } from '../db/index.js';
@@ -39,6 +40,12 @@ export interface PurchasesApiDeps {
   vision: ReceiptVision | null;
   /** Names the merchant against contacts. Injectable so tests stay offline. */
   merchant?: MerchantResolver;
+  /**
+   * Resolves a presented `X-API-Key` to its service account. Defaults to a
+   * registry-backed verifier; tests inject a fake so no test needs a live
+   * registry.
+   */
+  serviceAccountVerifier?: ServiceAccountVerifier;
 }
 
 export interface HealthResponse {
