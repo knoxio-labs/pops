@@ -90,7 +90,7 @@ Three of these do work the rest cannot, and are worth knowing about before chang
 
 Coverage carries a threshold ratchet in `vitest.config.ts`.
 
-**Chasing a flake.** This suite has produced three intermittent-failure reports (POPS-1349, POPS-1430, POPS-1567) that all evaporated because nobody kept the output of the run that actually went red. `node scripts/flake-hunt.mjs --filter @pops/purchases [--coverage]` runs the suite in a loop and keeps a red run's full JSON report, stdout/stderr, failing test name(s), loop iteration, wall clock, and load average at start and end — deleting everything from the green runs so an unattended soak doesn't fill the disk. See its `--help` for the full option set; it works for any unit, not only this one.
+**Chasing a flake.** This suite has produced three intermittent-failure reports (POPS-1349, POPS-1430, POPS-1567) that all evaporated because nobody kept the output of the run that actually went red. From the repo root, `node scripts/flake-hunt.mjs --filter @pops/purchases [--coverage]` runs the suite in a loop and keeps a red run's full JSON report, stdout/stderr, failing test name(s), loop iteration, wall clock, and load average at start and end — deleting everything from the green runs so an unattended soak doesn't fill the disk. See its `--help` for the full option set; it works for any unit, not only this one.
 
 ## Local development
 

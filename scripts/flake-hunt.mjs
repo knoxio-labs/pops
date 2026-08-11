@@ -64,6 +64,7 @@
 
 import { spawn } from 'node:child_process';
 import {
+  appendFileSync,
   cpSync,
   createWriteStream,
   existsSync,
@@ -73,7 +74,7 @@ import {
   rmSync,
   writeFileSync,
 } from 'node:fs';
-import { loadavg, tmpdir } from 'node:os';
+import { constants, loadavg, tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -399,17 +400,30 @@ export async function runHunt(opts) {
       // A thrown error (the spawn itself failing to start, say) is still a
       // red run — it must be captured and reported, not left to crash the
       // whole hunt and lose every iteration that ran before it.
+      //
+      // This path is where the evidence is easiest to lose, so it retains the
+      // same three files a normal red run does. The error is APPENDED to
+      // stderr rather than written over it: a child that died mid-run has
+      // usually already streamed the interesting part there, and overwriting
+      // it keeps the throw and discards the failure that caused it. stdout is
+      // created if the throw beat the spawn to it, so a retained red run is
+      // never half a run — the whole point of retention is that someone who
+      // was not watching can read what happened.
       const now = new Date().toISOString();
-      writeFileSync(
-        join(staging, 'stderr.log'),
-        error instanceof Error ? (error.stack ?? error.message) : String(error),
+      const jsonPath = join(staging, 'report.json');
+      const stdoutPath = join(staging, 'stdout.log');
+      const stderrPath = join(staging, 'stderr.log');
+      appendFileSync(
+        stderrPath,
+        `${error instanceof Error ? (error.stack ?? error.message) : String(error)}\n`,
         'utf8'
       );
+      if (!existsSync(stdoutPath)) writeFileSync(stdoutPath, '', 'utf8');
       result = {
         exitCode: 1,
-        jsonPath: join(staging, 'report.json'),
-        stdoutPath: join(staging, 'stdout.log'),
-        stderrPath: join(staging, 'stderr.log'),
+        jsonPath,
+        stdoutPath,
+        stderrPath,
         startedAt: now,
         endedAt: now,
         loadBefore: loadavg(),
@@ -456,6 +470,27 @@ export async function runHunt(opts) {
 }
 
 /**
+ * Shell convention for a child that died on a signal: 128 + the signal's
+ * number.
+ *
+ * Which signal is the finding, not a detail — an OOM kill (`SIGKILL`, 137) and
+ * this tool's own timeout or a `SIGTERM` from the operator (143) are the two
+ * explanations a retained red run has to tell apart, and collapsing both to a
+ * bare 128 discards exactly the evidence the hunt exists to keep. The names
+ * come from `os.constants.signals`, so the mapping is the platform's rather
+ * than a table to keep in step with one.
+ *
+ * @param {NodeJS.Signals} signal
+ * @returns {number}
+ */
+function exitCodeForSignal(signal) {
+  const number = constants.signals[signal];
+  // A signal Node named but did not number cannot be turned into a code, and
+  // guessing one would be worse than saying "signalled, number unknown".
+  return number === undefined ? 128 : 128 + number;
+}
+
+/**
  * Spawn a command, streaming its stdout/stderr to files rather than
  * buffering them in memory — a soak of dozens of full-suite runs must not
  * hold each one's output in the process's own heap.
@@ -497,7 +532,7 @@ export function spawnCapture(command, args, opts) {
     });
     child.on('close', (code, signal) => {
       void Promise.all([stdoutClosed, stderrClosed]).then(() =>
-        resolvePromise(code ?? (signal !== null ? 128 : 1))
+        resolvePromise(code ?? (signal !== null ? exitCodeForSignal(signal) : 1))
       );
     });
   });

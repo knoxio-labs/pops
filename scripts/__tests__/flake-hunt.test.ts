@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { constants, tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -401,6 +401,48 @@ describe('runHunt', () => {
     const [red] = result.redRuns;
     expect(readFileSync(join(red!.dir, 'stderr.log'), 'utf8')).toContain('pnpm ENOENT');
   });
+
+  it('retains a stdout.log for a throw that happened before anything wrote one', async () => {
+    const result = await runHunt({
+      filter: '@pops/x',
+      script: 'test',
+      iterations: 1,
+      keepGoing: false,
+      outDir,
+      runIteration: async () => {
+        throw new Error('spawn failed before the child produced a byte');
+      },
+    });
+
+    const [red] = result.redRuns;
+    // Half a retained run is the failure mode this whole tool exists to
+    // prevent: a red run missing stdout entirely reads as a tool bug rather
+    // than as evidence.
+    expect(existsSync(join(red!.dir, 'stdout.log'))).toBe(true);
+    expect(existsSync(join(red!.dir, 'stderr.log'))).toBe(true);
+  });
+
+  it('keeps what the child already wrote when the iteration then throws', async () => {
+    const result = await runHunt({
+      filter: '@pops/x',
+      script: 'test',
+      iterations: 1,
+      keepGoing: false,
+      outDir,
+      runIteration: async (_iteration, staging) => {
+        writeFileSync(join(staging, 'stdout.log'), 'RUN backfill.test.ts\n', 'utf8');
+        writeFileSync(join(staging, 'stderr.log'), 'heap limit approaching\n', 'utf8');
+        throw new Error('killed mid-run');
+      },
+    });
+
+    const [red] = result.redRuns;
+    expect(readFileSync(join(red!.dir, 'stdout.log'), 'utf8')).toContain('RUN backfill.test.ts');
+    const stderr = readFileSync(join(red!.dir, 'stderr.log'), 'utf8');
+    // The throw is appended, not written over the output that explains it.
+    expect(stderr).toContain('heap limit approaching');
+    expect(stderr).toContain('killed mid-run');
+  });
 });
 
 describe('spawnCapture', () => {
@@ -438,6 +480,35 @@ describe('spawnCapture', () => {
         stderrPath: join(dir, 'err.log'),
       })
     ).rejects.toThrow();
+  });
+
+  /**
+   * The two signals a retained red run has to tell apart: an OOM kill and an
+   * ordinary termination. A bare 128 for both would make the retained
+   * evidence unable to answer the first question anyone asks of it.
+   */
+  it.each([
+    ['SIGKILL', 128 + constants.signals.SIGKILL],
+    ['SIGTERM', 128 + constants.signals.SIGTERM],
+  ])('reports a %s as 128 + the signal number', async (signal, expected) => {
+    const code = await spawnCapture(
+      process.execPath,
+      ['-e', `process.kill(process.pid, '${signal}');`],
+      { cwd: dir, stdoutPath: join(dir, 'out.log'), stderrPath: join(dir, 'err.log') }
+    );
+
+    expect(code).toBe(expected);
+  });
+
+  it('distinguishes the two, rather than collapsing both to 128', async () => {
+    const run = (signal: string) =>
+      spawnCapture(process.execPath, ['-e', `process.kill(process.pid, '${signal}');`], {
+        cwd: dir,
+        stdoutPath: join(dir, `${signal}.out.log`),
+        stderrPath: join(dir, `${signal}.err.log`),
+      });
+
+    expect(await run('SIGKILL')).not.toBe(await run('SIGTERM'));
   });
 });
 
