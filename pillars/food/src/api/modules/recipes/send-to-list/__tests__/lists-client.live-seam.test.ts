@@ -39,6 +39,15 @@ interface RecordedRequest {
   url: string;
 }
 
+/** `false` for a relative or otherwise unparseable URL rather than throwing. */
+function matchesPort(url: string, port: string): boolean {
+  try {
+    return new URL(url).port === port;
+  } catch {
+    return false;
+  }
+}
+
 describe('food -> lists live seam', () => {
   let registryProcess: SpawnedPillarProcess;
   let listsProcess: SpawnedPillarProcess;
@@ -98,7 +107,12 @@ describe('food -> lists live seam', () => {
       // dials — not the `127.0.0.1` form this file uses for its own direct
       // verification requests. Recording by port catches the real request
       // regardless of which loopback spelling produced it.
-      if (new URL(url).port === listsPortString) {
+      //
+      // This wrapper replaces the PROCESS-WIDE fetch, so it sees every
+      // fetch call made anywhere during the test, not just ones aimed at
+      // lists — `new URL()` throws on a relative input, which a well-behaved
+      // absolute-URL caller never sends but this recorder cannot assume.
+      if (matchesPort(url, listsPortString)) {
         wireLog.push({
           method: init?.method ?? (input instanceof Request ? input.method : 'GET'),
           url,
