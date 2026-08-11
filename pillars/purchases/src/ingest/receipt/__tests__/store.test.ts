@@ -2,9 +2,15 @@ import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'n
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 
-import { afterAll, describe, expect, it } from 'vitest';
+import { afterEach, afterAll, describe, expect, it } from 'vitest';
 
-import { looksLikeMediaType, receiptUri, storeReceiptPart } from '../store.js';
+import { resolvePurchasesSqlitePath } from '../../../api/purchases-sqlite-path.js';
+import {
+  looksLikeMediaType,
+  receiptUri,
+  resolveReceiptStoreRoot,
+  storeReceiptPart,
+} from '../store.js';
 import { MEDIA_TYPES } from '../vision.js';
 
 import type { ReceiptPart } from '../vision.js';
@@ -23,6 +29,31 @@ const EMAIL = Buffer.from('Your order\nTimber Pine DAR 42x19  $12.50\nTotal  $12
 const image = (bytes: Buffer, mediaType: ReceiptPart['mediaType'] = 'image/jpeg'): ReceiptPart => ({
   mediaType,
   dataBase64: bytes.toString('base64'),
+});
+
+describe('resolveReceiptStoreRoot', () => {
+  afterEach(() => {
+    delete process.env['PURCHASES_RECEIPT_DIR'];
+    delete process.env['PURCHASES_SQLITE_PATH'];
+  });
+
+  it('honours PURCHASES_RECEIPT_DIR when set', () => {
+    process.env['PURCHASES_RECEIPT_DIR'] = '/custom/receipts';
+    expect(resolveReceiptStoreRoot()).toBe('/custom/receipts');
+  });
+
+  it('falls back to a receipts/ dir beside the sqlite file when unset', () => {
+    delete process.env['PURCHASES_RECEIPT_DIR'];
+    process.env['PURCHASES_SQLITE_PATH'] = '/data/purchases.db';
+    expect(resolveReceiptStoreRoot()).toBe(join(dirname(resolvePurchasesSqlitePath()), 'receipts'));
+    expect(resolveReceiptStoreRoot()).toBe(join('/data', 'receipts'));
+  });
+
+  it('falls back the same way when PURCHASES_RECEIPT_DIR is the empty string', () => {
+    process.env['PURCHASES_RECEIPT_DIR'] = '';
+    process.env['PURCHASES_SQLITE_PATH'] = '/data/purchases.db';
+    expect(resolveReceiptStoreRoot()).toBe(join('/data', 'receipts'));
+  });
 });
 
 describe('storing a photograph', () => {

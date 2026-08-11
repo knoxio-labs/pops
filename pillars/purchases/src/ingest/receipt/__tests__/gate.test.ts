@@ -110,6 +110,27 @@ describe('a reading that does not', () => {
     expect(result.failures.map((f) => f.kind)).toEqual(['damaged']);
   });
 
+  it('refuses a stated tax it cannot read as money', () => {
+    const result = gateExtraction(receipt({ tax: 'TAX' }));
+    expect(result.admissible).toBe(false);
+    const failure = result.failures.find((f) => f.kind === 'unreadable-line');
+    expect(failure?.detail).toContain('stated tax "TAX" is not money');
+  });
+
+  it('refuses a stated discount it cannot read as money', () => {
+    const result = gateExtraction(receipt({ discounts: ['SAVINGS'] }));
+    expect(result.admissible).toBe(false);
+    const failure = result.failures.find((f) => f.kind === 'unreadable-line');
+    expect(failure?.detail).toContain('stated discount "SAVINGS" is not money');
+  });
+
+  it('refuses a stated surcharge it cannot read as money', () => {
+    const result = gateExtraction(receipt({ surcharges: ['FEE'] }));
+    expect(result.admissible).toBe(false);
+    const failure = result.failures.find((f) => f.kind === 'unreadable-line');
+    expect(failure?.detail).toContain('stated surcharge "FEE" is not money');
+  });
+
   it('reports everything wrong with it, not just the first thing', () => {
     const result = gateExtraction(
       receipt({

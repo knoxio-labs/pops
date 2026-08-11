@@ -45,6 +45,30 @@ const map = (over: Partial<ExtractedReceipt> = {}, stored: StoredReceipt[] = [ST
 
 const mapped = (over: Partial<ExtractedReceipt> = {}) => map(over).purchase;
 
+describe('receiptToPurchase invariants', () => {
+  it('refuses to build a purchase with no evidence behind it', () => {
+    // `receiptKey` is the first thing this function calls, and it enforces
+    // the same "at least one part" invariant with its own message — so this
+    // is where the empty-evidence case actually surfaces from.
+    const extracted = receipt();
+    expect(() => receiptToPurchase(extracted, gateExtraction(extracted), [], UPLOADED_AT)).toThrow(
+      'receiptKey needs at least one stored part'
+    );
+  });
+
+  it('refuses a gate result whose total could not be read as money', () => {
+    // Guards the caller's own contract: only an admissible gate should ever
+    // reach this function, and an admissible gate always has a totalCents —
+    // this asserts that invariant is enforced here rather than assumed.
+    const extracted = receipt({ total: 'unreadable smudge' });
+    const gate = gateExtraction(extracted);
+    expect(gate.totalCents).toBeNull();
+    expect(() => receiptToPurchase(extracted, gate, [STORED], UPLOADED_AT)).toThrow(
+      'receiptToPurchase requires a gated reading with a readable total'
+    );
+  });
+});
+
 describe('an admitted reading', () => {
   it('becomes an uploaded purchase with one charge for the whole receipt', () => {
     const purchase = mapped();

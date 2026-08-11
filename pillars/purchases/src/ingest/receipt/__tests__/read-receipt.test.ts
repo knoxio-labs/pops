@@ -5,9 +5,14 @@
  * network is a test that gets skipped, and this is the layer where being
  * able to rehearse a model's worst behaviour on demand matters most.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-import { ExtractedLineSchema, ExtractedReceiptSchema } from '../extraction.js';
+vi.mock('../extraction.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../extraction.js')>();
+  return { ...actual, parseExtraction: vi.fn(actual.parseExtraction) };
+});
+
+import { ExtractedLineSchema, ExtractedReceiptSchema, parseExtraction } from '../extraction.js';
 import { readReceipt } from '../read-receipt.js';
 import { extractionPrompt, kindOf, MEDIA_TYPES, PROMPT_FIELDS } from '../vision.js';
 
@@ -105,6 +110,16 @@ describe('a reading that does not', () => {
     for (const missing of ['purchasedOn', 'purchasedAt', 'currency', 'tax', 'lines']) {
       expect(outcome.reason).toContain(missing);
     }
+  });
+
+  it('propagates an unexpected parse failure rather than filing it as an ordinary bad reading', async () => {
+    // `ExtractionShapeError` is the one failure this layer knows how to turn
+    // into "ask a human" — anything else is a bug, and swallowing it as
+    // `unreadable` would hide it behind a shrug instead of an alert.
+    vi.mocked(parseExtraction).mockImplementationOnce(() => {
+      throw new TypeError('unexpected extraction bug');
+    });
+    await expect(readReceipt(saying(GOOD), [IMAGE])).rejects.toThrow('unexpected extraction bug');
   });
 });
 
