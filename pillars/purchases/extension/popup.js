@@ -35,27 +35,6 @@ function say(text, isError = false) {
   el.message.className = isError ? 'error' : '';
 }
 
-function guidance(status) {
-  if (status.error) return [status.error, true];
-  if (status.running === 'history') {
-    return [`Loading history — ${String(status.progress.done)} receipts listed so far…`];
-  }
-  if (status.running === 'receipts') {
-    return [`Fetching ${String(status.progress.done)} of ${String(status.progress.total)}…`];
-  }
-  if (!status.hasPageTemplate) {
-    return ['Scroll the activity list once — that is where the pagination request comes from.'];
-  }
-  if (!status.hasDetailsTemplate) {
-    return [
-      'Open any one receipt — that teaches the extension the request it replays for the rest.',
-    ];
-  }
-  if (status.moreHistory) return ['Load your full history first, then fetch the receipts.'];
-  if (status.pending > 0) return ['Ready. Fetching takes about a second per receipt.'];
-  return ['Every listed receipt has been captured.'];
-}
-
 function render(status) {
   if (status === null) {
     for (const button of [el.history, el.fetch, el.download]) button.disabled = true;
@@ -67,12 +46,12 @@ function render(status) {
   el.captured.textContent = String(status.captured);
   el.pending.textContent = String(status.pending);
 
-  const idle = status.running === null;
-  el.history.disabled = !(idle && status.hasPageTemplate && status.moreHistory);
-  el.fetch.disabled = !(idle && status.hasDetailsTemplate && status.pending > 0);
-  el.download.disabled = !(idle && status.captured > 0);
+  const disabled = popsPopupPure.disabledFor(status);
+  el.history.disabled = disabled.history;
+  el.fetch.disabled = disabled.fetch;
+  el.download.disabled = disabled.download;
 
-  const [text, isError = false] = guidance(status);
+  const [text, isError = false] = popsPopupPure.guidance(status);
   say(text, isError);
 }
 
