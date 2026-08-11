@@ -150,7 +150,10 @@ describe('cerebrum -> finance live seam', () => {
     await financeProcess?.stop();
     await financeProxy?.stop();
     await registryProcess?.stop();
-    rmSync(tempDir, { recursive: true, force: true });
+    // `tempDir` may be unset if `beforeAll` threw before `mkdtempSync` ran;
+    // `afterAll` still runs cleanup in that case, and rmSync(undefined, ...)
+    // would throw and mask the original failure.
+    if (tempDir) rmSync(tempDir, { recursive: true, force: true });
   });
 
   it('reindex-sources reaches the real finance pillar and reads back the seeded rows', async () => {
@@ -183,20 +186,5 @@ describe('cerebrum -> finance live seam', () => {
     const combinedBodies = financeCalls.map((call) => call.bodySnippet).join('\n');
     expect(combinedBodies).toContain('Live seam test transaction 1');
     expect(combinedBodies).toContain('Live seam test transaction 2');
-
-    console.log(
-      '[live seam wire log] cerebrum -> finance',
-      JSON.stringify(
-        {
-          registryBaseUrl: registryProcess.baseUrl,
-          financeAdvertisedBaseUrl: financeProxy.baseUrl,
-          financeRealBaseUrl: financeProcess.baseUrl,
-          cerebrumBaseUrl: cerebrumProcess.baseUrl,
-          requests: financeCalls,
-        },
-        null,
-        2
-      )
-    );
   });
 });

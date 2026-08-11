@@ -1,4 +1,4 @@
-import { createServer, type IncomingMessage } from 'node:http';
+import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 
 import type { AddressInfo } from 'node:net';
 
@@ -17,7 +17,7 @@ export interface RecordingProxy {
   stop(): Promise<void>;
 }
 
-const BODY_SNIPPET_MAX_CHARS = 4_000;
+const BODY_SNIPPET_MAX_BYTES = 4_000;
 const HOP_BY_HOP_REQUEST_HEADERS = new Set(['host', 'connection', 'content-length']);
 
 /**
@@ -37,17 +37,16 @@ export async function startRecordingProxy(targetBaseUrl: string): Promise<Record
   const requests: RecordedProxyRequest[] = [];
 
   const server = createServer((req, res) => {
-    void forwardAndRecord(req, targetBaseUrl, requests)
-      .then(({ status, headers, bodyBuffer }) => {
-        res.writeHead(status, Object.fromEntries(headers));
-        res.end(bodyBuffer);
-      })
-      .catch((err: unknown) => {
-        res.writeHead(502, { 'content-type': 'text/plain' });
-        res.end(
-          `recording proxy forward failed: ${err instanceof Error ? err.message : String(err)}`
-        );
-      });
+    void forwardAndRecord(req, res, targetBaseUrl, requests).catch((err: unknown) => {
+      if (res.headersSent) {
+        res.destroy(err instanceof Error ? err : new Error(String(err)));
+        return;
+      }
+      res.writeHead(502, { 'content-type': 'text/plain' });
+      res.end(
+        `recording proxy forward failed: ${err instanceof Error ? err.message : String(err)}`
+      );
+    });
   });
 
   const port = await new Promise<number>((resolve, reject) => {
@@ -67,36 +66,90 @@ export async function startRecordingProxy(targetBaseUrl: string): Promise<Record
   };
 }
 
+/**
+ * Forwards `req` to `targetBaseUrl` and streams the upstream response
+ * straight through to `res` — a producer that answered with a large body
+ * is not buffered into memory just because a test happens to be watching.
+ * Only the first {@link BODY_SNIPPET_MAX_BYTES} of the response are also
+ * copied into `requests`, for a caller that wants to assert on the body.
+ */
 async function forwardAndRecord(
   req: IncomingMessage,
+  res: ServerResponse,
   targetBaseUrl: string,
   requests: RecordedProxyRequest[]
-): Promise<{ status: number; headers: Headers; bodyBuffer: Buffer }> {
-  const chunks: Buffer[] = [];
-  for await (const chunk of req) chunks.push(chunk as Buffer);
-  const requestBody = Buffer.concat(chunks);
+): Promise<void> {
   const method = req.method ?? 'GET';
   const url = `${targetBaseUrl}${req.url ?? ''}`;
+  const requestBody = await readBody(req);
 
+  const response = await fetch(url, {
+    method,
+    headers: forwardableRequestHeaders(req),
+    body: requestBody.length > 0 ? new Uint8Array(requestBody) : undefined,
+  });
+  res.writeHead(response.status, responseHeadersFor(response));
+  const bodySnippet = await pipeWithSnippet(response, res);
+
+  requests.push({ method, url, status: response.status, bodySnippet });
+}
+
+async function readBody(req: IncomingMessage): Promise<Buffer> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of req) chunks.push(chunk as Buffer);
+  return Buffer.concat(chunks);
+}
+
+function forwardableRequestHeaders(req: IncomingMessage): Headers {
   const headers = new Headers();
   for (const [key, value] of Object.entries(req.headers)) {
     if (value === undefined || HOP_BY_HOP_REQUEST_HEADERS.has(key.toLowerCase())) continue;
     headers.set(key, Array.isArray(value) ? value.join(', ') : value);
   }
+  return headers;
+}
 
-  const response = await fetch(url, {
-    method,
-    headers,
-    body: requestBody.length > 0 ? requestBody : undefined,
-  });
-  const bodyBuffer = Buffer.from(await response.arrayBuffer());
+/**
+ * Streams `response`'s body to `res` chunk by chunk (never buffering the
+ * whole thing) while also returning the first {@link BODY_SNIPPET_MAX_BYTES}
+ * of it, for a caller that wants to assert on the body without holding a
+ * large upstream payload in memory just because a test happens to be
+ * watching.
+ */
+async function pipeWithSnippet(response: Response, res: ServerResponse): Promise<string> {
+  const snippetChunks: Buffer[] = [];
+  let snippetBytes = 0;
+  const reader = response.body?.getReader();
+  if (reader) {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const buf = Buffer.from(value);
+      res.write(buf);
+      if (snippetBytes >= BODY_SNIPPET_MAX_BYTES) continue;
+      const room = BODY_SNIPPET_MAX_BYTES - snippetBytes;
+      snippetChunks.push(buf.subarray(0, room));
+      snippetBytes += Math.min(buf.length, room);
+    }
+  }
+  res.end();
+  return Buffer.concat(snippetChunks).toString('utf8');
+}
 
-  requests.push({
-    method,
-    url,
-    status: response.status,
-    bodySnippet: bodyBuffer.toString('utf8').slice(0, BODY_SNIPPET_MAX_CHARS),
-  });
-
-  return { status: response.status, headers: response.headers, bodyBuffer };
+/**
+ * Node's `res.writeHead` accepts a repeated header as a string array, which
+ * is the only way to forward a multi-valued `set-cookie` without collapsing
+ * it into one invalid combined value — `Object.fromEntries(response.headers)`
+ * would do exactly that, since `Headers` iteration folds repeats into one
+ * comma-joined entry for every header except `set-cookie`.
+ */
+function responseHeadersFor(response: Response): Record<string, string | string[]> {
+  const out: Record<string, string | string[]> = {};
+  for (const [key, value] of response.headers) {
+    if (key.toLowerCase() === 'set-cookie') continue;
+    out[key] = value;
+  }
+  const setCookie = response.headers.getSetCookie();
+  if (setCookie.length > 0) out['set-cookie'] = setCookie;
+  return out;
 }

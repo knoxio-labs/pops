@@ -134,7 +134,10 @@ describe('food -> lists live seam', () => {
     __resetSharedOpenApiCache();
     await listsProcess?.stop();
     await registryProcess?.stop();
-    rmSync(tempDir, { recursive: true, force: true });
+    // `tempDir` may be unset if `beforeAll` threw before `mkdtempSync` ran;
+    // `afterAll` still runs cleanup in that case, and rmSync(undefined, ...)
+    // would throw and mask the original failure.
+    if (tempDir) rmSync(tempDir, { recursive: true, force: true });
   });
 
   it('sends a real send-to-list request that lists actually receives and persists', async () => {
@@ -174,19 +177,6 @@ describe('food -> lists live seam', () => {
         { method: 'POST', url: `${listsProcess.baseUrl}/lists` },
         { method: 'POST', url: `${listsProcess.baseUrl}/lists/${listId}/items/upsert-by-ref` },
       ])
-    );
-
-    console.log(
-      '[live seam wire log] food -> lists',
-      JSON.stringify(
-        {
-          registryBaseUrl: registryProcess.baseUrl,
-          listsBaseUrl: listsProcess.baseUrl,
-          requests: wireLog,
-        },
-        null,
-        2
-      )
     );
   });
 });
