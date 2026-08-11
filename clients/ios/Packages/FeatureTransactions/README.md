@@ -10,13 +10,13 @@ This package holds both screens and the decisions behind them. It holds no netwo
 
 That boundary is asserted, not merely intended: `ModuleBoundaryTests` in `AppCore` fails if any package outside `Auth` and `BFMClient` imports either.
 
-| Concern                                    | Lives in                                      |
-| ------------------------------------------ | --------------------------------------------- |
-| The screens, paging, refresh, failure copy | here                                          |
-| `GET /mobile/finance/transactions[/:id]`   | `BFMClient` — generated from the BFM contract |
-| Attaching a token, refreshing, revocation  | `Auth` — `AuthenticatingMiddleware`           |
-| `Transaction`, `TransactionDetail`, errors | `AppCore`                                     |
-| Every colour, gap and type size            | `DesignSystem`                                |
+| Concern | Lives in |
+| --- | --- |
+| The screens, paging, refresh, failure copy | here |
+| `GET /mobile/finance/transactions[/:id]` | `BFMClient` — generated from the BFM contract |
+| Attaching a token, refreshing, revocation | `Auth` — `AuthenticatingMiddleware` |
+| `Transaction`, `TransactionDetail`, errors | `AppCore` |
+| Every colour, gap and type size | *DesignSystem* |
 
 ## An embedder gets one view
 
