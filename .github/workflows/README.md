@@ -181,6 +181,14 @@ unit when `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `tsconfig.base.json`,
 `mise.ci.toml`, `Cargo.toml` or `Cargo.lock` changed). The header explains why
 the scan stops at maxdepth 1.
 
+A third output, `changedClientDirs`, applies the same rule to `clients/*`
+instead: outside the pnpm/cargo workspace (ADR-043), so it carries no
+`package.json`/`Cargo.toml` and is never a `units`/`changed` member, but a
+PR touching `clients/**` (or the same shared root above) still needs its
+markdown/JSON/CSS checked by `quality.yml`'s `Format` job — the only
+PR-scoped gate that applies to a client's non-Swift files, since Swift
+formatting and linting is `ios-quality.yml`'s own job.
+
 A second job, `assert-app-coverage`, enumerates the 7 `pillars/*/app` dirs,
 requires each `package.json#name` to match `@pops/app-*`, and greps both
 `fe-quality.yml` and `app-quality.yml` for a `pillars/*/app/**` trigger — reading

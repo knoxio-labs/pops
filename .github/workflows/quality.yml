@@ -91,11 +91,13 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       dirs: ${{ steps.compute.outputs.dirs }}
+      clientDirs: ${{ steps.compute.outputs.clientDirs }}
     steps:
       - id: compute
         name: Changed unit dirs (PR), or "." for a full-tree sweep (merge group / push to main)
         env:
           CHANGED: ${{ needs.discover.outputs.changed }}
+          CHANGED_CLIENT_DIRS: ${{ needs.discover.outputs.changedClientDirs }}
         run: |
           set -euo pipefail
           if [ "${{ github.event_name }}" = "pull_request" ]; then
@@ -105,6 +107,14 @@ jobs:
           fi
           echo "dirs=$dirs" >> "$GITHUB_OUTPUT"
           echo "Scope: $dirs"
+          # clients/* is outside the pnpm/cargo workspace (ADR-043) so it is
+          # never in `dirs` above — carried as its own output and consumed
+          # only by Format below, which is the one PR-scoped gate a markdown/
+          # JSON/CSS file under clients/ actually needs (Swift formatting and
+          # linting is ios-quality.yml's job, and oxlint/depcruise/tsc have
+          # nothing to say about a directory with no .ts source).
+          echo "clientDirs=$CHANGED_CLIENT_DIRS" >> "$GITHUB_OUTPUT"
+          echo "Client scope: $CHANGED_CLIENT_DIRS"
 
   lint:
     name: Lint
@@ -146,10 +156,11 @@ jobs:
         run: |
           set -euo pipefail
           dirs="${{ needs.scope.outputs.dirs }}"
+          clientDirs="${{ needs.scope.outputs.clientDirs }}"
           if [ "$dirs" = "." ]; then
             pnpm format:check
           else
-            pnpm exec oxfmt --check $dirs
+            pnpm exec oxfmt --check $dirs $clientDirs
           fi
 
   boundaries:
