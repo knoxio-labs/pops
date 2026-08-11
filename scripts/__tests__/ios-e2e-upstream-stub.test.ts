@@ -5,6 +5,7 @@ import {
   buildRegistrySnapshot,
   compareRows,
   financeRoutes,
+  parseListQuery,
   pathMatcher,
   readFinanceContract,
   selectPage,
@@ -109,8 +110,20 @@ describe('selectPage', () => {
   it('starts strictly after the anchor the BFM echoes back', () => {
     const page = selectPage(rows, { beforeDate: '2026-03-03', beforeId: 'c' });
     expect(page.data.map((row) => row.id)).toEqual(['b', 'a']);
-    expect(page.pagination.offset).toBe(1);
-    expect(page.pagination.hasMore).toBe(false);
+  });
+
+  it('counts what the anchor left, the way finance counts under a filter', () => {
+    // finance's `total` comes from the same query the rows do, so the keyset
+    // anchor shrinks it. `offset` stays the request's own — nothing to do with
+    // how many rows the anchor skipped.
+    const page = selectPage(rows, { beforeDate: '2026-03-03', beforeId: 'c', limit: 1 });
+    expect(page.pagination).toEqual({ total: 2, limit: 1, offset: 0, hasMore: true });
+  });
+
+  it('honours an offset, which finance accepts alongside the keyset', () => {
+    const page = selectPage(rows, { limit: 1, offset: 1 });
+    expect(page.data.map((row) => row.id)).toEqual(['b']);
+    expect(page.pagination).toEqual({ total: 3, limit: 1, offset: 1, hasMore: true });
   });
 
   it('breaks a date tie by id, so a same-day page cannot repeat a row', () => {
@@ -122,10 +135,45 @@ describe('selectPage', () => {
     const page = selectPage(sameDay, { beforeDate: '2026-03-01', beforeId: 'c' });
     expect(page.data.map((row) => row.id)).toEqual(['b', 'a']);
   });
+});
 
-  it('ignores a half-specified anchor rather than guessing the other half', () => {
-    expect(selectPage(rows, { beforeDate: '2026-03-03' }).data).toHaveLength(3);
-    expect(selectPage(rows, { beforeId: 'c' }).data).toHaveLength(3);
+describe('parseListQuery', () => {
+  const query = (search: string) => parseListQuery(new URLSearchParams(search));
+
+  it('applies finance’s defaults when the caller asks for nothing', () => {
+    expect(query('')).toEqual({ query: { limit: 50, offset: 0 } });
+  });
+
+  it('reads the anchor the BFM sends back', () => {
+    expect(query('limit=26&beforeDate=2026-03-03&beforeId=c')).toEqual({
+      query: { limit: 26, offset: 0, beforeDate: '2026-03-03', beforeId: 'c' },
+    });
+  });
+
+  it('refuses half an anchor, naming the half that is missing', () => {
+    // finance refuses it too, and for the reason its handler gives: page one
+    // of an unfiltered list is a plausible 200 that a paging caller reads as
+    // "start again". A stub that shrugged would hide a real BFM bug.
+    expect(query('beforeDate=2026-03-03')).toEqual({
+      error: 'beforeDate and beforeId must be supplied together; beforeId is missing',
+    });
+    expect(query('beforeId=c')).toEqual({
+      error: 'beforeDate and beforeId must be supplied together; beforeDate is missing',
+    });
+  });
+
+  it('refuses a limit that is not a whole number in range', () => {
+    // Left to `Number()` this arrives at `slice` as `NaN` and answers 200 with
+    // an empty page — which the app draws as "no transactions yet".
+    expect(query('limit=abc')).toEqual({ error: 'limit must be a whole number' });
+    expect(query('limit=-1')).toEqual({ error: 'limit must be a whole number' });
+    expect(query('limit=0')).toEqual({ error: 'limit must be between 1 and 500' });
+    expect(query('limit=501')).toEqual({ error: 'limit must be between 1 and 500' });
+  });
+
+  it('allows an offset of zero but not a negative one', () => {
+    expect(query('offset=0')).toEqual({ query: { limit: 50, offset: 0 } });
+    expect(query('offset=-1')).toEqual({ error: 'offset must be a whole number' });
   });
 });
 

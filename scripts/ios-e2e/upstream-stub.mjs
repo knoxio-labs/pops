@@ -131,32 +131,97 @@ export function compareRows(a, b) {
   return 0;
 }
 
+/** finance's own defaults, from `pillars/finance/src/api/rest/transactions-handlers.ts`. */
+const DEFAULT_LIMIT = 50;
+const DEFAULT_OFFSET = 0;
+
+/** finance's contract bounds on `limit`. */
+const MAX_LIMIT = 500;
+
 /**
- * One page of transactions, keyset-paged the way finance pages them.
+ * The query string as finance would read it, or the complaint it would answer
+ * with.
+ *
+ * Rejecting rather than shrugging matters more in a fixture than it does in the
+ * pillar. A half anchor answered with page one is a plausible 200 that a paging
+ * caller reads as "start again" — finance says so in its own handler and
+ * refuses — and a stub that shrugged would turn a real BFM bug into a harness
+ * that quietly passes.
+ *
+ * @param {URLSearchParams} params
+ * @returns {{ query: { limit: number, offset: number, beforeDate?: string, beforeId?: string } } | { error: string }}
+ */
+export function parseListQuery(params) {
+  const beforeDate = params.get('beforeDate') ?? undefined;
+  const beforeId = params.get('beforeId') ?? undefined;
+  if ((beforeDate === undefined) !== (beforeId === undefined)) {
+    const missing = beforeDate === undefined ? 'beforeDate' : 'beforeId';
+    return { error: `beforeDate and beforeId must be supplied together; ${missing} is missing` };
+  }
+
+  // finance's contract types these, so a value that is not a whole number in
+  // range never reaches its handler — it is a 400 from the ts-rest layer. `NaN`
+  // reaching `slice` here would answer 200 with an empty page instead.
+  const bounded = (name, fallback, min) => {
+    const raw = params.get(name);
+    if (raw === null) return fallback;
+    if (!/^\d+$/u.test(raw)) return `${name} must be a whole number`;
+    const value = Number(raw);
+    if (value < min || value > MAX_LIMIT) {
+      return `${name} must be between ${min} and ${MAX_LIMIT}`;
+    }
+    return value;
+  };
+
+  const limit = bounded('limit', DEFAULT_LIMIT, 1);
+  if (typeof limit === 'string') return { error: limit };
+  const offset = bounded('offset', DEFAULT_OFFSET, 0);
+  if (typeof offset === 'string') return { error: offset };
+
+  return {
+    query: {
+      limit,
+      offset,
+      ...(beforeDate === undefined ? {} : { beforeDate }),
+      ...(beforeId === undefined ? {} : { beforeId }),
+    },
+  };
+}
+
+/**
+ * One page of transactions, paged the way finance pages them.
+ *
+ * `pagination` mirrors `paginationMeta` in `pillars/finance/src/api/shared/pagination.ts`:
+ * `total` is the count under the active filters — the keyset anchor is one of
+ * them, so it shrinks as pages are consumed — `offset` is the request's own,
+ * and `hasMore` compares the two. The BFM reads none of it (its schema requires
+ * `data` alone and strips the rest) but finance's contract declares it
+ * required, so a fixture that invented its own meaning would be teaching the
+ * next reader something false for no gain.
  *
  * @param {Array<Record<string, unknown>>} rows every seeded row
- * @param {{ limit?: number, beforeDate?: string, beforeId?: string }} query the SDK's query string
+ * @param {{ limit?: number, offset?: number, beforeDate?: string, beforeId?: string }} query
  * @returns {{ data: Array<Record<string, unknown>>, pagination: { total: number, limit: number, offset: number, hasMore: boolean } }}
  */
 export function selectPage(rows, query) {
   const ordered = rows.toSorted(compareRows);
-  const anchored =
+  const matching =
     query.beforeDate !== undefined && query.beforeId !== undefined
       ? ordered.filter(
           (row) => compareRows(row, { date: query.beforeDate, id: query.beforeId }) > 0
         )
       : ordered;
 
-  const limit = query.limit ?? anchored.length;
-  const page = anchored.slice(0, limit);
+  const limit = query.limit ?? matching.length;
+  const offset = query.offset ?? DEFAULT_OFFSET;
 
   return {
-    data: page,
+    data: matching.slice(offset, offset + limit),
     pagination: {
-      total: ordered.length,
+      total: matching.length,
       limit,
-      offset: ordered.length - anchored.length,
-      hasMore: page.length < anchored.length,
+      offset,
+      hasMore: offset + limit < matching.length,
     },
   };
 }
@@ -242,15 +307,12 @@ export async function startUpstreamStub({
     }
 
     if (request.method === routes.list.method && url.pathname === routes.list.path) {
-      const limit = url.searchParams.get('limit');
-      return json(
-        200,
-        selectPage(rows, {
-          limit: limit === null ? undefined : Number(limit),
-          beforeDate: url.searchParams.get('beforeDate') ?? undefined,
-          beforeId: url.searchParams.get('beforeId') ?? undefined,
-        })
-      );
+      const parsed = parseListQuery(url.searchParams);
+      // finance's error envelope, which requires `message` and nothing else.
+      // The BFM turns a 400 into `upstream_invalid_request`, so a bad query
+      // reaches the phone as a failure rather than as a page of nothing.
+      if ('error' in parsed) return json(400, { message: parsed.error });
+      return json(200, selectPage(rows, parsed.query));
     }
 
     if (request.method === routes.get.method) {
