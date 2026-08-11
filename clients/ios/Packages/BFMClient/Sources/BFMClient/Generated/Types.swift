@@ -2587,11 +2587,7 @@ internal enum Operations {
                             /// - Remark: Generated from `#/paths/mobile/finance/transactions/GET/responses/200/content/json/DataPayload/amount`.
                             internal var amount: Swift.Double
                             /// - Remark: Generated from `#/paths/mobile/finance/transactions/GET/responses/200/content/json/DataPayload/currency`.
-                            internal enum CurrencyPayload: String, Codable, Hashable, Sendable, CaseIterable {
-                                case aud = "AUD"
-                            }
-                            /// - Remark: Generated from `#/paths/mobile/finance/transactions/GET/responses/200/content/json/DataPayload/currency`.
-                            internal var currency: Operations.MobileFinance_listTransactions.Output.Ok.Body.JsonPayload.DataPayloadPayload.CurrencyPayload
+                            internal var currency: Swift.String
                             /// - Remark: Generated from `#/paths/mobile/finance/transactions/GET/responses/200/content/json/DataPayload/date`.
                             internal var date: Swift.String
                             /// - Remark: Generated from `#/paths/mobile/finance/transactions/GET/responses/200/content/json/DataPayload/description`.
@@ -2617,7 +2613,7 @@ internal enum Operations {
                             ///   - _type:
                             internal init(
                                 amount: Swift.Double,
-                                currency: Operations.MobileFinance_listTransactions.Output.Ok.Body.JsonPayload.DataPayloadPayload.CurrencyPayload,
+                                currency: Swift.String,
                                 date: Swift.String,
                                 description: Swift.String,
                                 entityName: Swift.String? = nil,
@@ -2651,7 +2647,7 @@ internal enum Operations {
                                     forKey: .amount
                                 )
                                 self.currency = try container.decode(
-                                    Operations.MobileFinance_listTransactions.Output.Ok.Body.JsonPayload.DataPayloadPayload.CurrencyPayload.self,
+                                    Swift.String.self,
                                     forKey: .currency
                                 )
                                 self.date = try container.decode(
@@ -3491,11 +3487,7 @@ internal enum Operations {
                         /// - Remark: Generated from `#/paths/mobile/finance/transactions/{id}/GET/responses/200/content/json/country`.
                         internal var country: Swift.String?
                         /// - Remark: Generated from `#/paths/mobile/finance/transactions/{id}/GET/responses/200/content/json/currency`.
-                        internal enum CurrencyPayload: String, Codable, Hashable, Sendable, CaseIterable {
-                            case aud = "AUD"
-                        }
-                        /// - Remark: Generated from `#/paths/mobile/finance/transactions/{id}/GET/responses/200/content/json/currency`.
-                        internal var currency: Operations.MobileFinance_getTransaction.Output.Ok.Body.JsonPayload.CurrencyPayload
+                        internal var currency: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/finance/transactions/{id}/GET/responses/200/content/json/date`.
                         internal var date: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/finance/transactions/{id}/GET/responses/200/content/json/description`.
@@ -3540,7 +3532,7 @@ internal enum Operations {
                             account: Swift.String,
                             amount: Swift.Double,
                             country: Swift.String? = nil,
-                            currency: Operations.MobileFinance_getTransaction.Output.Ok.Body.JsonPayload.CurrencyPayload,
+                            currency: Swift.String,
                             date: Swift.String,
                             description: Swift.String,
                             entityId: Swift.String? = nil,
@@ -3601,7 +3593,7 @@ internal enum Operations {
                                 forKey: .country
                             )
                             self.currency = try container.decode(
-                                Operations.MobileFinance_getTransaction.Output.Ok.Body.JsonPayload.CurrencyPayload.self,
+                                Swift.String.self,
                                 forKey: .currency
                             )
                             self.date = try container.decode(

@@ -92,6 +92,18 @@ internal struct TransactionsMappingTests {
         #expect(transaction.type == TransactionType(rawValue: "escrow"))
     }
 
+    /// The whole reason `currency` is `Swift.String` rather than a closed
+    /// enum: bfm emits only `AUD` today, but a build already on a phone must
+    /// still decode the day it emits something else. Before the fix, this
+    /// value failed to decode at all — not silently, but as a page that could
+    /// not be read.
+    @Test("a currency this build has never heard of still renders")
+    func unknownCurrencyCode() async throws {
+        let transaction = try await onlyRow(TransactionsWire.row(amount: "1.00", currency: "USD"))
+
+        #expect(transaction.amount.currencyCode == "USD")
+    }
+
     @Test("a row with no entity keeps the absence rather than inventing a name")
     func missingEntityName() async throws {
         let json = """

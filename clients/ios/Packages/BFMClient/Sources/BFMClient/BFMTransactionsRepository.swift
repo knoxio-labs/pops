@@ -211,11 +211,12 @@ extension BFMTransactionsRepository {
     /// `type` goes through as a raw value on purpose: it is the one field the
     /// finance pillar is free to add to, and a Swift enum here would turn a
     /// routine producer change into a blank list on every handset already
-    /// carrying this build.
+    /// carrying this build. `currency` is a plain `Swift.String` for the same
+    /// reason.
     private func row(from wire: ListTransactionRow) throws -> Transaction {
         guard
             let majorUnits = Self.majorUnits(of: wire.amount),
-            let amount = MoneyAmount(majorUnits: majorUnits, currencyCode: wire.currency.rawValue),
+            let amount = MoneyAmount(majorUnits: majorUnits, currencyCode: wire.currency),
             let date = Self.day(from: wire.date, in: timeZone())
         else { throw RepositoryError.contractMismatch }
 
@@ -307,7 +308,7 @@ extension BFMTransactionsRepository {
     private func detail(from wire: DetailPayload) throws -> TransactionDetail {
         guard
             let majorUnits = Self.majorUnits(of: wire.amount),
-            let amount = MoneyAmount(majorUnits: majorUnits, currencyCode: wire.currency.rawValue),
+            let amount = MoneyAmount(majorUnits: majorUnits, currencyCode: wire.currency),
             let date = Self.day(from: wire.date, in: timeZone()),
             let lastEditedAt = Self.instant(from: wire.lastEditedTime)
         else { throw RepositoryError.contractMismatch }

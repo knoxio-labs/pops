@@ -18,10 +18,11 @@ internal enum TransactionsWire {
         id: String = "txn-1",
         amount: String,
         date: String = "2026-03-05",
-        type: String = "purchase"
+        type: String = "purchase",
+        currency: String = "AUD"
     ) -> String {
         """
-        {"id":"\(id)","description":"Coffee","amount":\(amount),"currency":"AUD",\
+        {"id":"\(id)","description":"Coffee","amount":\(amount),"currency":"\(currency)",\
         "date":"\(date)","type":"\(type)","entityName":"Cafe","tags":["food"]}
         """
     }
@@ -43,6 +44,7 @@ internal enum TransactionsWire {
         amount: String,
         date: String = "2026-03-05",
         type: String = "purchase",
+        currency: String = "AUD",
         lastEditedTime: String = "\"2026-03-06T04:30:00.000Z\"",
         entityName: String = "\"Cafe\"",
         location: String = "\"Surry Hills\"",
@@ -51,7 +53,7 @@ internal enum TransactionsWire {
         relatedTransactionId: String = "null"
     ) -> String {
         """
-        {"id":"\(id)","description":"Coffee","amount":\(amount),"currency":"AUD",\
+        {"id":"\(id)","description":"Coffee","amount":\(amount),"currency":"\(currency)",\
         "date":"\(date)","type":"\(type)","entityName":\(entityName),"tags":["food"],\
         "account":"Everyday","entityId":"entity-1","location":\(location),\
         "country":\(country),"notes":\(notes),\

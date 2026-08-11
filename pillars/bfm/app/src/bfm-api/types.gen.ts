@@ -331,7 +331,7 @@ export type MobileFinanceListTransactionsResponses = {
   200: {
     data: Array<{
       amount: number;
-      currency: 'AUD';
+      currency: string;
       date: string;
       description: string;
       entityName: string | null;
@@ -446,7 +446,7 @@ export type MobileFinanceGetTransactionResponses = {
     account: string;
     amount: number;
     country: string | null;
-    currency: 'AUD';
+    currency: string;
     date: string;
     description: string;
     entityId: string | null;
