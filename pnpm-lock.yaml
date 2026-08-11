@@ -217,6 +217,37 @@ importers:
         specifier: ^4.1.10
         version: 4.1.10(@types/node@25.9.5)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@25.9.5)(typescript@6.0.3))(vite@8.2.0(@types/node@25.9.5)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.10)(yaml@2.9.0))
 
+  libs/pillar-express:
+    dependencies:
+      '@pops/pillar-sdk':
+        specifier: workspace:*
+        version: link:../sdk
+    devDependencies:
+      '@types/express':
+        specifier: ^5.0.4
+        version: 5.0.6
+      '@types/node':
+        specifier: ^25.9.3
+        version: 25.9.5
+      '@types/supertest':
+        specifier: ^7.2.1
+        version: 7.2.1
+      '@vitest/coverage-v8':
+        specifier: ^4.1.10
+        version: 4.1.10(vitest@4.1.10)
+      express:
+        specifier: ^5.1.0
+        version: 5.2.1(supports-color@10.2.2)
+      supertest:
+        specifier: ^7.1.4
+        version: 7.2.2(supports-color@10.2.2)
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: ^4.1.10
+        version: 4.1.10(@types/node@25.9.5)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@25.9.5)(typescript@6.0.3))(vite@8.2.0(@types/node@25.9.5)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.10)(yaml@2.9.0))
+
   libs/sdk:
     dependencies:
       '@pops/types':
@@ -1057,6 +1088,9 @@ importers:
       '@pops/ai-telemetry':
         specifier: workspace:*
         version: link:../../libs/ai-telemetry
+      '@pops/pillar-express':
+        specifier: workspace:*
+        version: link:../../libs/pillar-express
       '@pops/pillar-sdk':
         specifier: workspace:*
         version: link:../../libs/sdk
@@ -2044,6 +2078,9 @@ importers:
       '@pops/ai-telemetry':
         specifier: workspace:*
         version: link:../../libs/ai-telemetry
+      '@pops/pillar-express':
+        specifier: workspace:*
+        version: link:../../libs/pillar-express
       '@pops/pillar-sdk':
         specifier: workspace:*
         version: link:../../libs/sdk
@@ -6313,10 +6350,6 @@ packages:
     peerDependenciesMeta:
       typescript:
         optional: true
-
-  iconv-lite@0.7.2:
-    resolution: {integrity: sha512-im9DjEDQ55s9fL4EYzOAv0yMqmMBSZp6G0VvFyTMPKWxiSBHUj9NW/qqLmXUwXrrM7AvqSlTCfvqRb0cM8yYqw==}
-    engines: {node: '>=0.10.0'}
 
   iconv-lite@0.7.3:
     resolution: {integrity: sha512-IKXpvIzjnC9XTAUbVBcMfGS0EPaIXtW6v+zr+RRp+hqULEpo0owZax6wyRwPOJbWbzjYspQwusTsfVr0ifh4uQ==}
@@ -11149,7 +11182,7 @@ snapshots:
       content-type: 1.0.5
       debug: 4.4.3(supports-color@10.2.2)
       http-errors: 2.0.1
-      iconv-lite: 0.7.2
+      iconv-lite: 0.7.3
       on-finished: 2.4.1
       qs: 6.15.2
       raw-body: 3.0.2
@@ -12148,10 +12181,6 @@ snapshots:
   i18next@26.3.6(typescript@6.0.3):
     optionalDependencies:
       typescript: 6.0.3
-
-  iconv-lite@0.7.2:
-    dependencies:
-      safer-buffer: 2.1.2
 
   iconv-lite@0.7.3:
     dependencies:

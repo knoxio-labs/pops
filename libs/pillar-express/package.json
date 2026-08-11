@@ -1,0 +1,41 @@
+{
+  "name": "@pops/pillar-express",
+  "version": "0.1.0",
+  "private": true,
+  "files": [
+    "dist/**"
+  ],
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsc -b tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@pops/pillar-sdk": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.4",
+    "@types/node": "^25.9.3",
+    "@types/supertest": "^7.2.1",
+    "@vitest/coverage-v8": "^4.1.10",
+    "express": "^5.1.0",
+    "supertest": "^7.1.4",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.10"
+  },
+  "peerDependencies": {
+    "express": "^5.1.0"
+  }
+}
