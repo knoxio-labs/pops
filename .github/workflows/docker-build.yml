@@ -22,6 +22,13 @@ on:
       - "tsconfig.base.json"
       - ".github/workflows/docker-build.yml"
       - "scripts/ci/smoke-image.mjs"
+  # A merge group cannot carry a `paths:` filter, and `dorny/paths-filter` has
+  # no diff base on this event either — so the queue lane builds and smokes
+  # every image, the same way a push to `main` does. The conditions below key
+  # on "not a pull request" rather than on `push` for that reason: the
+  # `changes` job does not run on a merge group, so a `push`-only test would
+  # skip every step and report green over sixteen images nobody built.
+  merge_group:
 
 # Workflow-level filter keeps the Docker validation off docs/code-only
 # PRs entirely. Per-pillar full images are also validated by the
@@ -86,7 +93,7 @@ jobs:
       dockerfiles: ${{ steps.list.outputs.dockerfiles }}
     steps:
       - uses: actions/checkout@v7
-        if: github.event_name == 'push' || needs.changes.outputs.relevant == 'true'
+        if: github.event_name != 'pull_request' || needs.changes.outputs.relevant == 'true'
 
       - name: List every pillar Dockerfile
         id: list
@@ -95,7 +102,7 @@ jobs:
         # with no Docker-relevant changes skips the builds entirely.
         run: |
           set -euo pipefail
-          if [ "${{ github.event_name }}" != "push" ] && \
+          if [ "${{ github.event_name }}" = "pull_request" ] && \
              [ "${{ needs.changes.outputs.relevant }}" != "true" ]; then
             echo "No Docker-relevant changes detected — skipping"
             echo 'dockerfiles=[]' >> "$GITHUB_OUTPUT"
@@ -161,10 +168,10 @@ jobs:
         run: echo "No compose changes detected — skipping"
 
       - uses: actions/checkout@v7
-        if: github.event_name == 'push' || needs.changes.outputs.compose == 'true'
+        if: github.event_name != 'pull_request' || needs.changes.outputs.compose == 'true'
 
       - name: Stub secret files referenced by compose
-        if: github.event_name == 'push' || needs.changes.outputs.compose == 'true'
+        if: github.event_name != 'pull_request' || needs.changes.outputs.compose == 'true'
         run: |
           mkdir -p secrets
           for f in notion_api_token up_bank_token up_webhook_secret claude_api_key \
@@ -175,9 +182,9 @@ jobs:
           done
 
       - name: Validate production compose
-        if: github.event_name == 'push' || needs.changes.outputs.compose == 'true'
+        if: github.event_name != 'pull_request' || needs.changes.outputs.compose == 'true'
         run: docker compose -f infra/docker-compose.yml config --quiet
 
       - name: Validate dev compose
-        if: github.event_name == 'push' || needs.changes.outputs.compose == 'true'
+        if: github.event_name != 'pull_request' || needs.changes.outputs.compose == 'true'
         run: docker compose -f infra/docker-compose.dev.yml config --quiet
