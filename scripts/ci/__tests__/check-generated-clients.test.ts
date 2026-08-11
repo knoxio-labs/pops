@@ -9,7 +9,9 @@ import {
   classifyOutcome,
   discoverCandidateDirs,
   discoverGeneratedClientTargets,
+  EXPECTED_TARGETS,
   extractWriteTarget,
+  findExpectedTargetSetViolations,
   type GeneratedClientTarget,
   invokesHeyApiGenerator,
   isAppMatrixDir,
@@ -63,6 +65,40 @@ describe('invokesHeyApiGenerator', () => {
     expect(invokesHeyApiGenerator('tsx scripts/generate-manifest.ts')).toBe(false);
     expect(invokesHeyApiGenerator('tsx scripts/generate-api-types.ts')).toBe(false);
     expect(invokesHeyApiGenerator('tsx scripts/generate-prompt-catalog.ts')).toBe(false);
+  });
+
+  it('matches a pnpm exec wrapper', () => {
+    expect(invokesHeyApiGenerator('pnpm exec openapi-ts && oxfmt --write src/x')).toBe(true);
+  });
+
+  it('matches an npx wrapper', () => {
+    expect(
+      invokesHeyApiGenerator('npx openapi-ts -f custom.config.ts && oxfmt --write src/x')
+    ).toBe(true);
+  });
+
+  it('matches an env-var-prefixed invocation', () => {
+    expect(
+      invokesHeyApiGenerator(
+        'NODE_OPTIONS=--max-old-space-size=4096 openapi-ts && oxfmt --write src/x'
+      )
+    ).toBe(true);
+  });
+
+  it('matches a semicolon-separated script', () => {
+    expect(invokesHeyApiGenerator('openapi-ts; oxfmt --write src/x')).toBe(true);
+  });
+
+  it('matches an env-var-prefixed pnpm exec wrapper', () => {
+    expect(invokesHeyApiGenerator('CI=true pnpm exec openapi-ts && oxfmt --write src/x')).toBe(
+      true
+    );
+  });
+
+  it('does not match an env assignment alone, with no generator step', () => {
+    expect(
+      invokesHeyApiGenerator('NODE_OPTIONS=--max-old-space-size=4096 oxfmt --write src/x')
+    ).toBe(false);
   });
 });
 
@@ -185,6 +221,44 @@ describe('discoverGeneratedClientTargets', () => {
     mkdirSync(join(root, 'pillars', 'empty'), { recursive: true });
     expect(discoverGeneratedClientTargets(root)).toEqual([]);
   });
+
+  it('still discovers a target whose script uses pnpm exec, npx, an env prefix, or a semicolon separator', () => {
+    const root = fixtureRoot();
+    writePackage(root, 'pillars/pnpm-wrapped/app', {
+      name: '@pops/app-pnpm-wrapped',
+      scripts: { 'generate:api': 'pnpm exec openapi-ts && oxfmt --write src/x' },
+    });
+    writePackage(root, 'pillars/npx-wrapped/app', {
+      name: '@pops/app-npx-wrapped',
+      scripts: { 'generate:api': 'npx openapi-ts && oxfmt --write src/x' },
+    });
+    writePackage(root, 'pillars/env-prefixed/app', {
+      name: '@pops/app-env-prefixed',
+      scripts: {
+        'generate:api': 'NODE_OPTIONS=--max-old-space-size=4096 openapi-ts && oxfmt --write src/x',
+      },
+    });
+    writePackage(root, 'pillars/semicolon-separated/app', {
+      name: '@pops/app-semicolon-separated',
+      scripts: { 'generate:api': 'openapi-ts; oxfmt --write src/x' },
+    });
+
+    const targets = discoverGeneratedClientTargets(root);
+    const byPkg = new Map(targets.map((t) => [t.pkgName, t]));
+
+    expect(targets).toHaveLength(4);
+    for (const pkgName of [
+      '@pops/app-pnpm-wrapped',
+      '@pops/app-npx-wrapped',
+      '@pops/app-env-prefixed',
+      '@pops/app-semicolon-separated',
+    ]) {
+      expect(byPkg.get(pkgName), `missing target ${pkgName}`).toMatchObject({
+        outputDir: 'src/x',
+        inAppMatrix: true,
+      });
+    }
+  });
 });
 
 const baseTarget: GeneratedClientTarget = {
@@ -299,43 +373,91 @@ describe('runTarget — reports rather than silently passing on a degenerate run
 });
 
 describe('the live repo', () => {
-  it('discovers every known Hey API client target, split correctly across the app matrix', () => {
+  it('discovers exactly EXPECTED_TARGETS, split correctly across the app matrix', () => {
+    // EXPECTED_TARGETS lives next to the guard (check-generated-clients.mjs) so the
+    // guard itself — not only this suite — fails when a target is gained, lost, or
+    // moves across the app-matrix boundary. This test proves discovery still agrees
+    // with that pinned set; it is not a second, independently-maintained list.
     const targets = discoverGeneratedClientTargets(repoRoot);
     const byKey = new Map(targets.map((t) => [`${t.pkgName}:${t.scriptName}`, t]));
 
-    const expectedInAppMatrix = [
-      '@pops/app-ai:generate:api',
-      '@pops/app-bfm:generate:api',
-      '@pops/app-cerebrum:generate:cerebrum-client',
-      '@pops/app-finance:generate:finance-client',
-      '@pops/app-finance:generate:contacts-client',
-      '@pops/app-food:generate:food-client',
-      '@pops/app-food:generate:lists-client',
-      '@pops/app-inventory:generate:inventory-client',
-      '@pops/app-lists:generate:lists-client',
-      '@pops/app-media:generate:media-client',
-    ];
-    const expectedOutsideAppMatrix = [
-      '@pops/shell:generate:registry-client',
-      '@pops/overlay-ego:generate:ego-client',
-    ];
-
-    for (const key of expectedInAppMatrix) {
-      expect(byKey.get(key), `missing app-matrix target ${key}`).toBeDefined();
-      expect(byKey.get(key)?.inAppMatrix).toBe(true);
+    for (const expected of EXPECTED_TARGETS) {
+      const key = `${expected.pkgName}:${expected.scriptName}`;
+      expect(byKey.get(key), `missing expected target ${key}`).toBeDefined();
+      expect(byKey.get(key)?.inAppMatrix).toBe(expected.inAppMatrix);
       expect(byKey.get(key)?.outputDir).not.toBeNull();
     }
-    for (const key of expectedOutsideAppMatrix) {
-      expect(byKey.get(key), `missing non-app-matrix target ${key}`).toBeDefined();
-      expect(byKey.get(key)?.inAppMatrix).toBe(false);
-      expect(byKey.get(key)?.outputDir).not.toBeNull();
-    }
-    expect(targets).toHaveLength(expectedInAppMatrix.length + expectedOutsideAppMatrix.length);
+    expect(targets).toHaveLength(EXPECTED_TARGETS.length);
+    expect(findExpectedTargetSetViolations(targets)).toEqual([]);
   });
 
   it('has no malformed target on the real repo', () => {
     const targets = discoverGeneratedClientTargets(repoRoot);
     const malformed = targets.filter((t) => t.outputDir === null);
     expect(malformed).toEqual([]);
+  });
+});
+
+describe('findExpectedTargetSetViolations', () => {
+  const [firstExpected] = EXPECTED_TARGETS;
+  if (firstExpected === undefined) throw new Error('EXPECTED_TARGETS must not be empty');
+  const firstExpectedKey = `${firstExpected.pkgName}:${firstExpected.scriptName}`;
+
+  const clean: GeneratedClientTarget[] = EXPECTED_TARGETS.map((expected) => ({
+    ...expected,
+    pkgDir: 'pillars/x/app',
+    command: 'openapi-ts && oxfmt --write src/x-api',
+    outputDir: 'src/x-api',
+  }));
+  const [firstFullTarget] = clean;
+  if (firstFullTarget === undefined) throw new Error('clean must not be empty');
+
+  it('reports nothing when the discovered set matches exactly', () => {
+    expect(findExpectedTargetSetViolations(clean)).toEqual([]);
+  });
+
+  it('reports a dropped target', () => {
+    const violations = findExpectedTargetSetViolations(clean.slice(1));
+    expect(violations.some((message) => message.includes(firstExpectedKey))).toBe(true);
+  });
+
+  it('reports a target that is not in EXPECTED_TARGETS', () => {
+    const withExtra = [
+      ...clean,
+      {
+        pkgName: '@pops/app-bogus',
+        scriptName: 'generate:bogus-client',
+        inAppMatrix: true,
+        pkgDir: 'pillars/bogus/app',
+        command: 'openapi-ts && oxfmt --write src/x-api',
+        outputDir: 'src/x-api',
+      },
+    ];
+    const violations = findExpectedTargetSetViolations(withExtra);
+    expect(violations.some((message) => message.includes('@pops/app-bogus'))).toBe(true);
+  });
+
+  it('reports a target that moved across the app-matrix boundary', () => {
+    const moved = clean.map((target, index) =>
+      index === 0 ? { ...target, inAppMatrix: !target.inAppMatrix } : target
+    );
+    const violations = findExpectedTargetSetViolations(moved);
+    expect(violations.some((message) => message.includes(firstExpectedKey))).toBe(true);
+  });
+
+  it('reports two units colliding on the same pkgName:scriptName key, instead of silently keeping one', () => {
+    // A naive `new Map(targets.map(...))` collapses duplicates and keeps whichever comes
+    // last, which would let this check pass even though discovery returned an ambiguous
+    // result — this is the degenerate case that guards against that.
+    const colliding = { ...firstFullTarget, pkgDir: 'pillars/other/app' };
+    const violations = findExpectedTargetSetViolations([colliding, ...clean]);
+    expect(
+      violations.some(
+        (message) =>
+          message.includes(firstExpectedKey) &&
+          message.includes('pillars/other/app') &&
+          message.includes(firstFullTarget.pkgDir)
+      )
+    ).toBe(true);
   });
 });
