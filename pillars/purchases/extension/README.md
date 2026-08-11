@@ -129,8 +129,15 @@ observed request, and the two replay loops — including all three shapes the
 end of a history has been seen to take, which is where the bugs that
 survived into real use lived.
 
-`popup.js` has no automated test (POPS-1319); it is a remote control with
-no state of its own, and is checked by using it.
+`popup.js` is a remote control with no state of its own — everything it can
+get wrong is button-enablement and guidance-message selection, both pure
+functions of the one status object `window.__popsEveryday.status()`
+returns. Those two functions are split out into `popup-pure.js`, loaded by
+`popup.html` before `popup.js`, and `tests/popup-pure.test.js` evaluates it
+the same way `tests/pure.test.js` evaluates `pure.js`. What it does not
+cover — and does not try to — is the `chrome.scripting` and
+`chrome.downloads` plumbing that wires those two functions to the DOM and
+the page; that is Chrome's, and is checked by using the extension.
 
 ## Failure modes worth knowing
 
