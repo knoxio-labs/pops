@@ -308,3 +308,19 @@ jobs:
       - name: UI flow (Maestro, against a real BFM)
         working-directory: .
         run: mise run e2e:ios
+
+      # Maestro writes a screenshot and the full view hierarchy for every step
+      # it ran, and they are the only way to tell a real regression from a tap
+      # the simulator swallowed. Without this they die with the runner and the
+      # next person re-runs the job hoping to learn something.
+      #
+      # `if: failure()` rather than `always()`: a green run's artefacts are
+      # 30 MB of screenshots nobody opens.
+      - name: Maestro's screenshots and view hierarchies
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maestro-debug
+          path: ~/.maestro/tests
+          retention-days: 7
+          if-no-files-found: warn

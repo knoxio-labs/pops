@@ -59,4 +59,4 @@ name: Pair this device, then open a transaction
 #
 # Read as one utterance by VoiceOver, hence the comma: the label and the value
 # are drawn as two lines and announced as one.
-- assertVisible: 'Account, Offset Savings'
+- assertVisible: 'Account, Everyday'
