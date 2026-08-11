@@ -49,6 +49,18 @@ export interface GateResult {
   /** Fees the merchant added — a card surcharge, a small-order fee. */
   readonly surchargeCents: number;
   /**
+   * Stated delivery, kept apart from {@link GateResult.surchargeCents} so
+   * `purchases.shippingCents` can answer what delivery cost.
+   *
+   * The split is the model's and **this gate cannot check it**. Both terms
+   * enter the sum with the same sign, so a delivery fee filed as a
+   * surcharge produces an identical total and an identical verdict. That is
+   * the same species of blind spot as a reading whose amounts are right and
+   * whose product names are wrong: the arithmetic is proven, the filing is
+   * not, and nothing here claims otherwise.
+   */
+  readonly shippingCents: number;
+  /**
    * True when the stated tax was already inside the line prices — which is
    * what made the sum agree. The figure is then a statement about the
    * total, not a component of it, and adding it again would overstate the
@@ -117,6 +129,7 @@ interface Totals {
   readonly taxCents: number;
   readonly discountCents: number;
   readonly surchargeCents: number;
+  readonly shippingCents: number;
 }
 
 /**
@@ -137,7 +150,7 @@ function reconcile(totals: Totals): { taxIncluded: boolean; failure: GateFailure
   const { totalCents, lineTotalCents, taxCents, discountCents } = totals;
   if (totalCents === null) return { taxIncluded: false, failure: null };
 
-  const net = lineTotalCents - discountCents + totals.surchargeCents;
+  const net = lineTotalCents - discountCents + totals.surchargeCents + totals.shippingCents;
   const inclusiveDelta = net - totalCents;
   const exclusiveDelta = net + taxCents - totalCents;
 
@@ -155,7 +168,8 @@ function reconcile(totals: Totals): { taxIncluded: boolean; failure: GateFailure
       deltaCents: delta,
       detail:
         `lines total ${String(lineTotalCents)}c less ${String(discountCents)}c discounts ` +
-        `plus ${String(totals.surchargeCents)}c surcharges is ${String(net)}c, or ` +
+        `plus ${String(totals.surchargeCents)}c surcharges plus ` +
+        `${String(totals.shippingCents)}c shipping is ${String(net)}c, or ` +
         `${String(net + taxCents)}c with the stated ${String(taxCents)}c of tax added, ` +
         `but the receipt states ${String(totalCents)}c`,
     },
@@ -202,6 +216,12 @@ export function gateExtraction(extracted: ExtractedReceipt): GateResult {
   const surchargeCents = sumAmounts(extracted.surcharges, locale, (amount) =>
     failures.push({ kind: 'unreadable-line', detail: `stated surcharge "${amount}" is not money` })
   );
+  const shippingCents = sumAmounts(
+    extracted.shipping === null ? [] : [extracted.shipping],
+    locale,
+    (amount) =>
+      failures.push({ kind: 'unreadable-line', detail: `stated shipping "${amount}" is not money` })
+  );
 
   for (const note of extracted.unreadable) {
     failures.push({ kind: 'damaged', detail: `the model could not read: ${note}` });
@@ -213,6 +233,7 @@ export function gateExtraction(extracted: ExtractedReceipt): GateResult {
     taxCents,
     discountCents,
     surchargeCents,
+    shippingCents,
   });
   if (reconciliation.failure !== null) failures.push(reconciliation.failure);
 
@@ -223,6 +244,7 @@ export function gateExtraction(extracted: ExtractedReceipt): GateResult {
     taxCents,
     discountCents,
     surchargeCents,
+    shippingCents,
     taxIncluded: reconciliation.taxIncluded,
     failures,
   };

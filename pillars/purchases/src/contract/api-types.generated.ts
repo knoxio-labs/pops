@@ -1105,6 +1105,8 @@ export interface operations {
                   merchantName: string | null;
                   purchasedAt: string | null;
                   purchasedOn: string | null;
+                  /** @default null */
+                  shipping: string | null;
                   /** @default [] */
                   surcharges: string[];
                   tax: string | null;

@@ -52,6 +52,37 @@ describe('a reading that holds up', () => {
     expect(outcome.gate.totalCents).toBe(2750);
   });
 
+  it('survives a model that omits the shipping key entirely', async () => {
+    // Most receipts state no delivery, so most readings will omit it. A
+    // required field would fail `safeParse`, and every shape failure comes
+    // back as `unreadable` — discarding an extraction whose money is
+    // perfect over a key about money that was never charged. The default
+    // is what keeps the omission meaning "the receipt did not say".
+    expect(GOOD).not.toContain('shipping');
+
+    const outcome = await readReceipt(saying(GOOD), [IMAGE]);
+
+    expect(outcome.kind).toBe('read');
+    if (outcome.kind !== 'read') return;
+    expect(outcome.extracted.shipping).toBeNull();
+    expect(outcome.gate.shippingCents).toBe(0);
+  });
+
+  it('reads a stated delivery charge through to the gate', async () => {
+    const delivered = JSON.stringify({
+      ...JSON.parse(GOOD),
+      total: '$37.45',
+      shipping: '$9.95',
+    });
+
+    const outcome = await readReceipt(saying(delivered), [IMAGE]);
+
+    expect(outcome.kind).toBe('read');
+    if (outcome.kind !== 'read') return;
+    expect(outcome.gate.shippingCents).toBe(995);
+    expect(outcome.gate.surchargeCents).toBe(0);
+  });
+
   it('tolerates a model that wraps its JSON in prose or a fence', async () => {
     // Refusing these would discard good extractions over punctuation.
     const fenced = await readReceipt(saying('Here you go:\n```json\n' + GOOD + '\n```'), [IMAGE]);

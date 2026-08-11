@@ -90,6 +90,24 @@ export const ExtractedReceiptSchema = z.object({
    * move the total the other way.
    */
   surcharges: z.array(z.string().trim().min(1)).default([]),
+  /**
+   * The delivery, postage or shipping charge the receipt states, or null
+   * when it states none. Its own field rather than another surcharge
+   * because `purchases.shippingCents` exists to answer what delivery cost,
+   * and a fee folded in with a card surcharge cannot answer it.
+   *
+   * Only ever an amount of money. A receipt printing `FREE` or
+   * `Delivery: included` has stated no amount, so it is null — the string
+   * would parse to nothing and collect an `unreadable-line` failure on a
+   * receipt whose money is perfect. `$0.00` is an amount and is harmless.
+   *
+   * Defaulted rather than required, and for the reason
+   * {@link ExtractedReceiptSchema.shape.timeZone} gives: most receipts
+   * state no shipping, and a model that omits the key should not sink an
+   * extraction whose money is perfect. Required, an omission would fail
+   * `safeParse` and come back as `unreadable` rather than `needs-review`.
+   */
+  shipping: z.string().trim().min(1).nullable().default(null),
   lines: z.array(ExtractedLineSchema),
   /**
    * Where the model could not read the paper — a torn corner, a smudged

@@ -291,7 +291,29 @@ describe('re-uploading the same photograph', () => {
 
     expect(response.body.kind).toBe('created');
     expect(response.body.purchase.purchase.surchargeCents).toBe(12);
+    expect(response.body.purchase.purchase.shippingCents).toBe(0);
     expect(response.body.purchase.purchase.totalCents).toBe(2762);
+  });
+
+  it('stores delivery as delivery, not as another fee the merchant added', async () => {
+    // Through every real layer: the mapper, the NOT NULL and the CHECK on
+    // `shipping_cents`, and the serializer that hands it back. An emailed
+    // order almost always carries delivery, and it is the column the amazon
+    // adapter already writes — a receipt row filing it as a surcharge is
+    // the same money under two names in one table.
+    const delivered = JSON.stringify({
+      ...JSON.parse(GOOD_READING),
+      total: '$37.45',
+      shipping: '$9.95',
+    });
+
+    const response = await upload(appWith(saying(delivered)));
+
+    expect(response.body.kind).toBe('created');
+    expect(response.body.purchase.purchase.shippingCents).toBe(995);
+    expect(response.body.purchase.purchase.surchargeCents).toBe(0);
+    expect(response.body.purchase.purchase.subtotalCents).toBe(2750);
+    expect(response.body.purchase.purchase.totalCents).toBe(3745);
   });
 
   it('reads one receipt sent as several photographs', async () => {

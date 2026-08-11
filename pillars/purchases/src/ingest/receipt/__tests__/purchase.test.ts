@@ -208,6 +208,27 @@ describe('the totals', () => {
     expect(purchase.discountCents).toBe(500);
     expect(purchase.totalCents + (purchase.discountCents ?? 0)).toBe(purchase.subtotalCents);
   });
+
+  it('writes delivery to its own column, leaving the surcharge meaning fees', () => {
+    // The point of the whole change. `shippingCents` is what answers "what
+    // did delivery cost this year", and the amazon adapter has always
+    // written it — a delivery fee left in `surchargeCents` puts two answers
+    // for the same money in one table.
+    const purchase = mapped({ total: '$37.45', shipping: '$9.95' });
+
+    expect(purchase.shippingCents).toBe(995);
+    expect(purchase.surchargeCents).toBe(0);
+    // Still the lines and only the lines. Delivery is not goods.
+    expect(purchase.subtotalCents).toBe(2750);
+    expect(purchase.totalCents).toBe(3745);
+  });
+
+  it('carries a delivery charge and a card surcharge as the separate things they are', () => {
+    const purchase = mapped({ total: '$37.57', shipping: '$9.95', surcharges: ['$0.12'] });
+
+    expect(purchase.shippingCents).toBe(995);
+    expect(purchase.surchargeCents).toBe(12);
+  });
 });
 
 describe('a receipt that does not say when it happened', () => {
@@ -250,6 +271,18 @@ describe('the checksum', () => {
         ],
       }).checksum
     );
+  });
+
+  it('changes when a re-reading only moves the fee from surcharge to delivery', () => {
+    // The exact correction this change makes possible, and the one a
+    // recipe over the total, the discount and the lines cannot see: every
+    // one of those is identical between the two readings.
+    const asSurcharge = mapped({ total: '$37.45', surcharges: ['$9.95'] });
+    const asDelivery = mapped({ total: '$37.45', shipping: '$9.95' });
+
+    expect(asSurcharge.totalCents).toBe(asDelivery.totalCents);
+    expect(asSurcharge.items).toEqual(asDelivery.items);
+    expect(asSurcharge.checksum).not.toBe(asDelivery.checksum);
   });
 
   it('differs between two photographs read identically', () => {

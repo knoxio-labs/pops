@@ -3462,6 +3462,12 @@
                               "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
                               "type": "string"
                             },
+                            "shipping": {
+                              "default": null,
+                              "minLength": 1,
+                              "nullable": true,
+                              "type": "string"
+                            },
                             "surcharges": {
                               "default": [],
                               "items": {
@@ -3505,6 +3511,7 @@
                             "tax",
                             "discounts",
                             "surcharges",
+                            "shipping",
                             "lines",
                             "unreadable"
                           ],

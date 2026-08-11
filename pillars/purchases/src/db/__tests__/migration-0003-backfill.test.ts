@@ -10,10 +10,11 @@
  *
  * The database is brought up to 0002 from a copy of the journal truncated
  * at that point, seeded with raw SQL, closed, then reopened against the
- * real migrations folder — which applies 0003 and nothing else, because
- * drizzle's migrator only runs entries newer than the last one recorded.
+ * real migrations folder — which applies every entry after 0002 and none
+ * before, because drizzle's migrator only runs entries newer than the last
+ * one recorded.
  */
-import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -22,6 +23,7 @@ import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { z } from 'zod';
 
 import { openPurchasesDb } from '../open-purchases-db.js';
 
@@ -40,6 +42,19 @@ const THROUGH_0002 = [
   { idx: 1, version: '6', when: 1786100000000, tag: '0001_purchase_tags', breakpoints: true },
   { idx: 2, version: '6', when: 1786200000000, tag: '0002_purchase_surcharge', breakpoints: true },
 ];
+
+/**
+ * Read rather than hard-coded: every migration added after this file was
+ * written lands in the same reopen, and a literal count would fail the next
+ * one for no reason a reader could act on.
+ */
+function journalEntryCount(): number {
+  const journal: unknown = JSON.parse(
+    readFileSync(join(MIGRATIONS_DIR, 'meta', '_journal.json'), 'utf8')
+  );
+  const { entries } = z.object({ entries: z.array(z.unknown()) }).parse(journal);
+  return entries.length;
+}
 
 let dir: string;
 let dbPath: string;
@@ -202,7 +217,7 @@ function itemFlags(itemId: string): ItemFlags {
 }
 
 describe('applying 0003 to a database that already holds adapter-written tags', () => {
-  it('runs only 0003, leaving the earlier migrations recorded once', () => {
+  it('leaves every migration recorded exactly once', () => {
     // If drizzle re-ran 0000 the reopen would have thrown; this asserts the
     // arrangement the rest of the file depends on rather than assuming it.
     const applied = (
@@ -210,7 +225,7 @@ describe('applying 0003 to a database that already holds adapter-written tags', 
         .prepare(`SELECT created_at FROM __drizzle_migrations ORDER BY created_at`)
         .all() as { created_at: number }[]
     ).map((row) => row.created_at);
-    expect(applied).toHaveLength(4);
+    expect(applied).toHaveLength(journalEntryCount());
   });
 
   it('moves every merchant note into the notes table', () => {

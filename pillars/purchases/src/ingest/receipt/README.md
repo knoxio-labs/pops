@@ -45,7 +45,7 @@ generated as an invoice or sent as an email. That single fact is what makes
 a model's reading admissible, and it is why the same gate serves all three:
 
 ```
-Σ lines − discounts + surcharges (+ tax, if the prices exclude it) === the stated total
+Σ lines − discounts + surcharges + shipping (+ tax, if the prices exclude it) === the stated total
 ```
 
 Tax is tried both ways, because two conventions exist and both are
@@ -57,18 +57,42 @@ tax is zero, when they are the same sum. When the price contained it,
 `taxCents` is stored as zero, because carrying it as a component too would
 make it appear twice in any sum of parts.
 
-Surcharges are the other direction: a card surcharge, small-order fee or
-delivery charge is real money the merchant added, and none of the other
-components describe it. A real ALDI receipt is $24.05 of groceries, a 12c
-credit surcharge and a $24.17 total — without somewhere to put the fee it
-can never reconcile, and most Australian card receipts carry one. An
-emailed order almost always carries a delivery charge, which is the same
-shape and goes to the same place.
+Surcharges and shipping are the other direction: a card surcharge, a
+small-order fee and a delivery charge are all real money the merchant
+added, and none of the other components describe them. A real ALDI receipt
+is $24.05 of groceries, a 12c credit surcharge and a $24.17 total — without
+somewhere to put the fee it can never reconcile, and most Australian card
+receipts carry one. An emailed order almost always carries delivery.
 
-That last one is a compromise. `purchases` has a `shippingCents` column and
-this adapter does not write it, so delivery is visible as money the
-merchant added and not as delivery specifically. The arithmetic is right
-either way; the analytical loss is real and separate.
+They are two terms rather than one because `purchases.shippingCents` exists
+to answer what delivery cost, and a delivery fee folded in with a card
+surcharge cannot answer it. The amazon adapter has always written that
+column at order grain, so a single term here left one table holding two
+answers for the same money: `shipping_cents` for an amazon row and
+`surcharge_cents` for a receipt row, with any query summing delivery
+silently zero for exactly the orders that have it.
+
+**The gate cannot check which of the two a fee landed in.** Both enter the
+sum with the same sign, so a delivery charge filed as a surcharge produces
+an identical total and an identical verdict. That is the same species of
+blind spot as a reading whose amounts are right and whose product names are
+wrong: the arithmetic is proven, the filing is not. The split is the
+model's, made where the wording is legible — including on the French,
+German and Japanese receipts the prompt forbids translating, which is why
+it is not a keyword table in code.
+
+The one new way to break a receipt that reconciled before is a model
+reporting the same fee in both fields, which overstates by exactly the fee
+and lands it in review. Under-reporting it in neither understates by the
+same amount, with the same outcome. Both are the safe direction.
+
+Purchases written before the split carry a `shipping-uncertain` tag, added
+by a data-only migration. It means the surcharge **may** include delivery —
+it cannot mean more than that, because nothing recorded which surcharge was
+one, and `surcharge_cents > 0` catches every card surcharge as well. There
+is no correction path short of `DELETE /purchases/:id` and re-uploading,
+which works because the 409 is keyed on `sourceOrderId` in the database
+rather than on the file's presence on disk.
 
 Exactly, to the cent (`gate.ts`). It is not a confidence score and there is
 no threshold to tune. Getting the sum to agree by accident requires the

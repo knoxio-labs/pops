@@ -72,7 +72,13 @@ export const GateFailureSchema = z.object({
     'damaged',
   ]),
   detail: z.string(),
-  /** `Σ lines + tax − discounts − total`, present only on a sum mismatch. */
+  /**
+   * How far the receipt's own arithmetic falls from the total it states,
+   * present only on a sum mismatch:
+   * `Σ lines − discounts + surcharges + shipping (+ tax, when the prices
+   * exclude it) − total`, reported under whichever tax convention came
+   * closer. Negative means the components fall short of the stated total.
+   */
   deltaCents: z.int().optional(),
 });
 
