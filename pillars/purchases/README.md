@@ -72,11 +72,10 @@ A **cash** order (`settlementMode='cash'`) is terminal on arrival — `createPur
 
 ## What is deliberately absent
 
-Not shipped, and not stubbed either:
+- **`pillars/purchases/app`** (POPS-1506). `buildPurchasesManifest` declares no `nav` and no `pages` for that reason — a rail entry pointing at a bundle slot that does not exist is a dead link.
+- **Gmail IMAP ingest** (POPS-242). The ongoing feed, once the export/upload paths proved the reconciliation model — they have: Amazon export, Woolworths and the receipt drop-zone all ingest through `POST /purchases` today. IMAP is the one path still unwritten.
 
-- **The reconciliation engine** (POPS-237). Nothing here links, matches, or sweeps. `purchase_charge_links` and `purchase_match_rules` exist because the schema is easier to get right in one migration than in five, but no code writes to them.
-- **Every ingest adapter** (POPS-238 Amazon export, POPS-239 Woolworths, POPS-242 Gmail IMAP). `POST /purchases` is the seam they all write through.
-- **Any frontend.** `buildPurchasesManifest` declares no `nav` and no `pages` for that reason — a rail entry pointing at a bundle slot that does not exist is a dead link. `search.adapters` and `ai.tools` are empty on the same logic.
+`search.adapters` and `ai.tools` are also empty in the manifest, but not for the frontend reason above — MCP tools and search adapters are backend seams that don't need `app/` to exist, and the `registry` pillar has neither an `app/` nor a frontend either. Whether purchases should carry either is an open decision, tracked as POPS-1753.
 
 ## Tests
 
