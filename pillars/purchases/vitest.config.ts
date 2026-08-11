@@ -48,8 +48,8 @@ export default defineConfig({
        *
        * `branches` sits below the other three because no CI lane ran this
        * gate for long enough that it rotted unnoticed: three modules
-       * (`ingest/receipt/anthropic-vision.ts`, `api/ai-telemetry-deps.ts`,
-       * `api/anthropic-key.ts`) had drifted to 0%, which is what actually
+       * (`src/ingest/receipt/anthropic-vision.ts`, `src/api/ai-telemetry-deps.ts`,
+       * `src/api/anthropic-key.ts`) had drifted to 0%, which is what actually
        * failed `statements`/`functions`/`lines` too. Covering those three,
        * plus targeted edge-case tests across a dozen adjacent modules, put
        * `statements`/`functions`/`lines` back above their original marks
