@@ -15,11 +15,14 @@ import type { AmazonRefund } from './refunds.js';
  *
  * A refund is the only charge this adapter emits: the export publishes no
  * per-charge breakdown of what was *paid*, so a refunded order lands with
- * one negative charge and its full total still residual until the
- * reconciliation engine mints a capture for the transaction it matches.
- * That reads oddly and is right — `computeAccounting` keeps refunds out of
- * the residual entirely (ADR-042), so this can never make the
- * "something is wrong" number go up.
+ * one negative charge and its full total still residual until the next
+ * sweep mints the `derived` capture the export omits. That reads oddly and
+ * is right — `computeAccounting` keeps refunds out of the residual entirely
+ * (ADR-042), so this can never make the "something is wrong" number go up.
+ *
+ * A refund is deliberately not enough to make an order look accounted for:
+ * the minting predicate ignores this role, so a refunded order is minted a
+ * capture for just as an un-refunded one is.
  *
  * No allocations, and `purchase_items.refundedCents` is left alone. The
  * disbursement feed names an order and never a line, and spreading an

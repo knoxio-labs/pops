@@ -48,11 +48,17 @@ export function tearDownUnconfirmedLinks(db: PurchasesDb, chargeIds: readonly st
  * engine's inference rather than a figure the merchant stated, so a later
  * ingest that DOES state charges can be told apart from this.
  *
- * Idempotent by construction: the caller only asks for orders that have no
- * charge at all, so a second sweep finds this one and does not mint a twin.
+ * Idempotent by construction: the caller only asks for orders whose charges
+ * claim none of the total, so a second sweep finds this one and does not
+ * mint a twin.
  * Once minted the row persists — teardown removes links, never charges,
  * because a charge is a fact about the order rather than a guess about the
  * statement.
+ *
+ * The full total even for an order that already carries a refund. A refund
+ * is money that came back, which `computeAccounting` keeps out of the
+ * residual identity entirely, so netting it off here would understate what
+ * was paid and leave the difference unexplained forever.
  */
 export function mintDerivedCharge(
   db: PurchasesDb,

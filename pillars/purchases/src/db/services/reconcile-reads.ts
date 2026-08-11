@@ -73,11 +73,21 @@ export function listSolvableCharges(db: PurchasesDb, scope: ReconcileScope = {})
 }
 
 /**
- * Orders in scope that state no charge at all.
+ * Orders in scope whose charges claim none of the total.
  *
  * Every Amazon order is one of these: the DSAR export publishes no charge
  * breakdown, so without a minted `derived` charge the entire backfill has
- * nothing to match and sits at 100% unexplained forever.
+ * nothing to match and sits at 100% unexplained forever. A refunded order
+ * qualifies as much as an untouched one — a refund states what came back
+ * and never what was paid — and a predicate reading "has no charge row"
+ * instead silently excluded every one of them, permanently.
+ *
+ * `refund` is the only role that leaves an order eligible. `capture` and
+ * `adjustment` both reduce the residual, and an `authorization` is the
+ * merchant's own record of a payment whose capture is the merchant's to
+ * state. What gets minted is the full order total, so minting alongside any
+ * of them would drive the residual negative — an over-explained order,
+ * which is a worse lie than an unexplained one.
  */
 export function listOrdersNeedingDerivedCharge(
   db: PurchasesDb,
@@ -89,9 +99,11 @@ export function listOrdersNeedingDerivedCharge(
   currency: string;
   settlementWindowDays: number | null;
 }[] {
-  // A left join with a null charge id is the "has no charge" predicate, and
-  // it stays one query — the alternative, filtering in JS against a second
-  // read, re-runs that read per row.
+  // A left join with a null charge id is the anti-join, and it stays one
+  // query — the alternative, filtering in JS against a second read, re-runs
+  // that read per row. The role filter has to live in the join condition:
+  // in the WHERE it would be applied to the null row the anti-join is made
+  // of, which matches nothing.
   return db
     .select({
       id: purchases.id,
@@ -102,7 +114,10 @@ export function listOrdersNeedingDerivedCharge(
     })
     .from(purchases)
     .leftJoin(purchaseSources, eq(purchases.source, purchaseSources.id))
-    .leftJoin(purchaseCharges, eq(purchaseCharges.purchaseId, purchases.id))
+    .leftJoin(
+      purchaseCharges,
+      and(eq(purchaseCharges.purchaseId, purchases.id), ne(purchaseCharges.role, 'refund'))
+    )
     .where(
       and(
         isNull(purchaseCharges.id),
