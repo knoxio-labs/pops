@@ -596,14 +596,16 @@ the registry. There is no tunnel fallback here (see
 [The perimeter](#the-perimeter)), so an unset value means `/operator/*` refuses
 everyone — including the operator.
 
-**Provisioned on the fleet since POPS-1487 (2026-08-11).** `cloudflare_access_team_name`
-and `cloudflare_access_aud` are set in the `knoxio/homelab-infra` repo's Ansible
-host vars for capivara, sourced from the existing `pops_public` Access
+**Provisioned on the fleet since POPS-1487 (2026-08-11).** The `knoxio/homelab-infra`
+repo's Ansible host vars for capivara set `cloudflare_access_team_name` and
+`cloudflare_access_aud`, sourced from the existing `pops_public` Access
 application (that repo's `terraform/cloudflare/`) — the app that already
 fronted the whole `pops.jmiranda.dev` domain, including the shell's
-`/bfm-api/` proxy path, so no new Cloudflare resource was needed. `cac-bootstrap`
-asserts the pair is set together or not at all before rendering `.env`; bfm
-itself was deployed to capivara in POPS-1393.
+`/bfm-api/` proxy path, so no new Cloudflare resource was needed.
+`cac-bootstrap` renders those two host vars into this container's
+`CLOUDFLARE_ACCESS_TEAM_NAME` and `CLOUDFLARE_ACCESS_AUD` env vars, asserting
+the pair is set together or not at all before writing `.env`; bfm itself was
+deployed to capivara in POPS-1393.
 
 `CLOUDFLARE_ACCESS_AUD` deserves its own line because it is easy to read as
 optional hardening and is not. Access mints one JWT per application off the
