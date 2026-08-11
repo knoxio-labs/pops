@@ -499,6 +499,32 @@ describe('resolveRouterOperations', () => {
     expect(resolveRouterOperations(source, 'R')).toEqual(['items.get']);
   });
 
+  it('does not mistake a comma inside a multi-arg generic return type for a member separator', () => {
+    const source = 'type R = { items: { get: (i: unknown) => Promise<Result<A, B>>; }; };';
+    expect(resolveRouterOperations(source, 'R')).toEqual(['items.get']);
+  });
+
+  it('resolves every method when several use multi-arg generic return types', () => {
+    const source =
+      'type R = { ' +
+      'items: { get: (i: unknown) => Promise<Result<A, B>>; }; ' +
+      'entities: { list: (i: unknown) => Promise<Map<string, number>>; }; ' +
+      '};';
+    expect(resolveRouterOperations(source, 'R')?.toSorted()).toEqual([
+      'entities.list',
+      'items.get',
+    ]);
+  });
+
+  it('does not mistake the arrow token’s `>` for a generic closer', () => {
+    // A curried arrow return type — `(y) => Promise<Record<string, unknown>>` — has
+    // TWO `<` opens (Promise, Record) and the arrow's own `>` sitting between
+    // them; only the arrow-guard keeps that `>` from being read as a closer.
+    const source =
+      'type R = { items: { get: (i: unknown) => (y: unknown) => Promise<Record<string, unknown>>; }; };';
+    expect(resolveRouterOperations(source, 'R')).toEqual(['items.get']);
+  });
+
   it('resolves to an empty list for a declared-but-empty router type, not an error', () => {
     expect(resolveRouterOperations('type Empty = {};', 'Empty')).toEqual([]);
   });

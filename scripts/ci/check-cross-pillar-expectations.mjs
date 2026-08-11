@@ -1146,11 +1146,13 @@ function matchBrace(text, openIndex) {
  * Top-level `key: value` members of a type-literal body — the text strictly
  * between a type's outer `{` and its matching `}`.
  *
- * Depth-aware so a member's value can itself hold braces, parens or
- * brackets (a nested object type, a function's parameter list, an array
- * type) without those being mistaken for the body's own closing punctuation.
- * A member ends at the next `;` or `,` seen at the body's own depth, or at
- * the end of the body for a final member with no trailing separator.
+ * Depth-aware so a member's value can itself hold braces, parens, brackets
+ * or generics (a nested object type, a function's parameter list, an array
+ * type, `Promise<Result<A, B>>`) without those being mistaken for the
+ * body's own closing punctuation — a comma inside `<A, B>` is not a member
+ * separator. A member ends at the next `;` or `,` seen at the body's own
+ * depth, or at the end of the body for a final member with no trailing
+ * separator.
  *
  * Only the `key: value` property form is modelled (every router type in
  * this tree uses it — see "OPERATION RESOLUTION" in this file's header).
@@ -1191,9 +1193,17 @@ function typeLiteralMembers(body) {
     let depth = 0;
     while (i < body.length) {
       const c = body[i];
-      if (c === '{' || c === '(' || c === '[') depth++;
+      if (c === '{' || c === '(' || c === '[' || c === '<') depth++;
       else if (c === '}' || c === ')' || c === ']') depth--;
-      else if (depth === 0 && (c === ';' || c === ',')) break;
+      // `>` closes a generic UNLESS it is the tail of `=>`: a method value
+      // like `(input) => Promise<Result<A, B>>` opens two `<` (`Result` and
+      // `Promise`'s) and the arrow's `>` must not be read as closing either
+      // one, or the very next `>` (a real closer) reads as depth 0 and lets
+      // the comma inside `<A, B>` end the member early. Same guard `matchAngle`
+      // uses for the identical ambiguity at a call site's generic argument.
+      else if (c === '>') {
+        if (body[i - 1] !== '=') depth--;
+      } else if (depth === 0 && (c === ';' || c === ',')) break;
       i++;
     }
     members.push({ key, valueStart, valueEnd: i });
@@ -2189,6 +2199,24 @@ function selfTest() {
     ).join(',') === 'nudges.create',
     'a method aliased to a named function type, not an inline arrow, must still resolve — the ' +
       'parser reads keys structurally and does not care what shape the value is'
+  );
+  assert(
+    (() => {
+      const withMultiArgGeneric = resolveRouterOperations(
+        'type R = { items: { get: (i) => Promise<Result<A, B>>; }; };',
+        'R'
+      );
+      const withCurriedArrow = resolveRouterOperations(
+        'type R = { items: { get: (i) => (y) => Promise<Record<string, unknown>>; }; };',
+        'R'
+      );
+      return (
+        withMultiArgGeneric?.join(',') === 'items.get' &&
+        withCurriedArrow?.join(',') === 'items.get'
+      );
+    })(),
+    'a comma inside a multi-arg generic return type must not be misread as a member separator, ' +
+      "and an arrow token's own '>' must not be misread as a generic closer"
   );
   assert(
     resolveRouterOperations('type Empty = {};', 'Empty').length === 0,
