@@ -43,10 +43,45 @@
  * ## Mirrors
  *
  * The GitHub sync mints a second issue per merged PR, titled with the commit
- * subject. Those are identified exactly — an issue title that equals a merged
- * commit subject (with any trailing squash-merge `(#1234)` removed) is a
- * mirror — and each orphan is matched to the mirrors that name it, so the
- * closing action can point at one.
+ * subject. Two tests identify one, and each mirror records which fired:
+ *
+ *   - `commit-subject` — the issue title equals a merged commit subject (with
+ *     any trailing squash-merge `(#1234)` removed). This only fires for a PR
+ *     that was squash-merged onto the ref the commits were read from, so it is
+ *     blind to a PR merged with a merge commit (its title never becomes a
+ *     commit subject) and to a PR based on a branch other than that ref (its
+ *     commits reach the ref later, under different SHAs and often a different
+ *     re-squashed subject).
+ *   - `pr-title` — the issue title equals, exactly, the title of a pull
+ *     request supplied via `--prs`. This is the second-line test: it catches
+ *     both classes `commit-subject` cannot see, because a PR's title is
+ *     stable regardless of how or where it merged. It only runs for issues
+ *     `commit-subject` did not already resolve, so an issue is never counted
+ *     under both.
+ *
+ * `commit-subject` is the stronger claim — the matched commit is verifiably
+ * on the ref. `pr-title` trusts the supplied export and says nothing about
+ * whether the PR's commits ever reached the ref; a report must keep the two
+ * apart rather than collapsing them into one count. Each orphan is matched to
+ * the mirrors that name it, so the closing action can point at one.
+ *
+ * Fetching PR titles must not become a hidden network dependency of a tool
+ * whose whole design is that it reads files and holds no credential — `--prs`
+ * takes an exported JSON array the same way `--issues` does. Gather one with:
+ *
+ *   gh pr list --state all --json number,title,baseRefName,createdAt
+ *
+ * ### Known limitation: five same-title `Merged` pairs
+ *
+ * POPS-280/315, POPS-285/349, POPS-1120/1240, POPS-1179/1262 and POPS-663/665
+ * are five pairs of `Merged` issues that share their title exactly (two of the
+ * pairs are identical Dependabot bump subjects). No title-based test — neither
+ * `commit-subject` nor `pr-title` — can tell the two issues in a pair apart:
+ * both match, and which mirror belongs to which issue is undecidable from
+ * title alone. All ten are still correctly identified as mirrors (nothing is
+ * misclassified as human-filed), so this is a precision limit on "which PR"
+ * rather than a false negative — recorded here rather than solved, since
+ * solving it needs a stronger signal than title equality.
  *
  * ## How much of the backlog it saw
  *
@@ -65,12 +100,19 @@
  *
  * Usage:
  *   node scripts/huly-backlog-reconcile.mjs --issues <path.json> [--ref origin/main]
+ *   node scripts/huly-backlog-reconcile.mjs --issues <path.json> --prs <path.json>
  *   node scripts/huly-backlog-reconcile.mjs --issues <path.json> --json
  *   node scripts/huly-backlog-reconcile.mjs --self-test
  *
  * `--issues` takes either a bare JSON array of `{ identifier, title, status }`,
  * or the `{ "result": [...] }` envelope a tracker export arrives in, optionally
  * alongside a `"coverage"` block.
+ *
+ * `--prs` is optional and takes a JSON array of
+ * `{ number, title, baseRefName }` — the shape
+ * `gh pr list --state all --json number,title,baseRefName,createdAt` produces
+ * (a bare array, or the same `{ "result": [...] }` envelope). Omitting it
+ * leaves mirror detection exactly as it was: `commit-subject` only.
  *
  * Exit 0 = ran. Exit 1 = self-test failed. Exit 2 = usage error, or an export
  * this tool could not read. Exit 3 = the export declared coverage and that
@@ -114,9 +156,24 @@ const TRAILER_KEYWORDS = 'closes|close|fixes|fix|resolves|resolve';
 /**
  * @typedef {{ sha: string, subject: string, body: string }} Commit
  * @typedef {{ identifier: string, title?: string, status?: string }} Issue
+ * @typedef {{ number: number, title: string, baseRefName: string }} PullRequest
  * @typedef {'subject-ref' | 'body-trailer'} Evidence
  * @typedef {{ sha: string, subject: string, evidence: Evidence }} FixCommit
  * @typedef {{ sha: string, subject: string, where: 'subject' | 'body', why: string }} Concern
+ * @typedef {{
+ *   identifier: string,
+ *   title: string,
+ *   status: string,
+ *   evidence: 'commit-subject',
+ *   sha: string,
+ * } | {
+ *   identifier: string,
+ *   title: string,
+ *   status: string,
+ *   evidence: 'pr-title',
+ *   prNumber: number,
+ *   baseRefName: string,
+ * }} Mirror
  */
 
 /**
@@ -452,35 +509,71 @@ export function normaliseSubject(subject) {
 }
 
 /**
- * Issues whose title is exactly a merged commit subject: the PR mirrors the
- * GitHub sync minted.
+ * Issues whose title is exactly a merged commit subject, or exactly the title
+ * of a pull request: the PR mirrors the GitHub sync minted.
  *
- * Equality is the whole test, deliberately — status is NOT consulted. Reading
- * `Merged` as the mirror signal would be circular, because that status is not
- * clean: human-filed tickets sit there too, and a mirror someone re-statused
- * would vanish from detection. Equality can in principle collide with a
- * human-filed ticket that reads exactly like a commit subject; nothing here
- * rules that out, and this result never closes anything — it feeds the report
- * and links an orphan to its mirror.
+ * `commit-subject` is tried first; `pr-title` only runs for an issue that test
+ * left unresolved, so an issue is never matched — or double-counted — by both.
+ * See the "Mirrors" section of this file's header comment for what each test
+ * can and cannot see, and the known title-collision limitation.
+ *
+ * Equality is the whole test in both cases, deliberately — status is NOT
+ * consulted. Reading `Merged` as the mirror signal would be circular, because
+ * that status is not clean: human-filed tickets sit there too, and a mirror
+ * someone re-statused would vanish from detection. Equality can in principle
+ * collide with a human-filed ticket that reads exactly like a shipped title;
+ * nothing here rules that out, and this result never closes anything — it
+ * feeds the report and links an orphan to its mirror.
  *
  * @param {Issue[]} issues
  * @param {Commit[]} commits
- * @returns {{ identifier: string, title: string, status: string, sha: string }[]}
+ * @param {PullRequest[]} [prs] Defaults to none — `pr-title` finds nothing.
+ * @returns {Mirror[]}
  */
-export function findMirrors(issues, commits) {
+export function findMirrors(issues, commits, prs = []) {
   /** @type {Map<string, string>} */
   const bySubject = new Map();
   for (const commit of commits) {
     const key = normaliseSubject(commit.subject);
     if (!bySubject.has(key)) bySubject.set(key, commit.sha);
   }
-  /** @type {{ identifier: string, title: string, status: string, sha: string }[]} */
+  /** @type {Map<string, PullRequest>} */
+  const byPrTitle = new Map();
+  for (const pr of prs) {
+    const key = pr.title.trim();
+    if (!byPrTitle.has(key)) byPrTitle.set(key, pr);
+  }
+
+  /** @type {Mirror[]} */
   const mirrors = [];
   for (const issue of issues) {
     const title = (issue.title ?? '').trim();
+    if (title === '') continue;
+    const status = issue.status ?? '';
+
     const sha = bySubject.get(title);
-    if (sha === undefined) continue;
-    mirrors.push({ identifier: issue.identifier, title, status: issue.status ?? '', sha });
+    if (sha !== undefined) {
+      mirrors.push({
+        identifier: issue.identifier,
+        title,
+        status,
+        evidence: 'commit-subject',
+        sha,
+      });
+      continue;
+    }
+
+    const pr = byPrTitle.get(title);
+    if (pr !== undefined) {
+      mirrors.push({
+        identifier: issue.identifier,
+        title,
+        status,
+        evidence: 'pr-title',
+        prNumber: pr.number,
+        baseRefName: pr.baseRefName,
+      });
+    }
   }
   return mirrors;
 }
@@ -491,7 +584,7 @@ export function findMirrors(issues, commits) {
  * @typedef {{
  *   eligible: Verdict[],
  *   skipped: Issue[],
- *   mirrors: { identifier: string, title: string, status: string, sha: string }[],
+ *   mirrors: Mirror[],
  *   commitCount: number,
  *   titledIssueCount: number,
  *   coverage: CoverageVerdict,
@@ -505,19 +598,20 @@ export function findMirrors(issues, commits) {
  * Only issues in `ELIGIBLE_STATUS` are classified — a ticket already moving
  * through the workflow is not something a sweep should be reasoning about.
  *
- * `coverage` is what the export claims about its own completeness. Omitting it
- * does not default to complete — it produces an explicitly unknown verdict,
- * because an export that says nothing about how it was gathered has earned no
- * presumption either way.
+ * `options.coverage` is what the export claims about its own completeness.
+ * Omitting it does not default to complete — it produces an explicitly
+ * unknown verdict, because an export that says nothing about how it was
+ * gathered has earned no presumption either way.
  *
  * @param {Issue[]} issues
  * @param {Commit[]} commits
  * @param {string} prefix
- * @param {Coverage} [coverage]
+ * @param {{ coverage?: Coverage, prs?: PullRequest[] }} [options]
  * @returns {Report}
  */
-export function reconcile(issues, commits, prefix, coverage) {
-  const mirrors = findMirrors(issues, commits);
+export function reconcile(issues, commits, prefix, options = {}) {
+  const { coverage, prs } = options;
+  const mirrors = findMirrors(issues, commits, prs);
 
   /** @type {Map<string, string[]>} */
   const mirrorsByTicket = new Map();
@@ -589,10 +683,13 @@ export function parseGitLog(raw) {
 }
 
 /**
+ * A bare JSON array, or the `{ "result": [...] }` envelope a tracker export
+ * arrives in — shared by `readIssues` and `readPrs` since both accept either.
+ *
  * @param {unknown} parsed
  * @returns {unknown}
  */
-function unwrapIssueList(parsed) {
+function unwrapResultEnvelope(parsed) {
   if (Array.isArray(parsed)) return parsed;
   if (typeof parsed === 'object' && parsed !== null && 'result' in parsed) {
     return /** @type {{ result: unknown }} */ (parsed).result;
@@ -617,7 +714,7 @@ function unwrapIssueList(parsed) {
  * @throws {Error} on a shape this tool cannot faithfully read.
  */
 export function readIssues(parsed) {
-  const list = unwrapIssueList(parsed);
+  const list = unwrapResultEnvelope(parsed);
   if (!Array.isArray(list)) {
     throw new Error('expected a JSON array of issues, or an object with a "result" array');
   }
@@ -652,6 +749,63 @@ export function readIssues(parsed) {
 }
 
 /**
+ * Read an exported pull-request list, accepting either a bare array or the
+ * `{ result: [...] }` envelope — the shape
+ * `gh pr list --state all --json number,title,baseRefName,createdAt` produces
+ * either way, depending on whether it was piped through another tool first.
+ *
+ * Only `number`, `title` and `baseRefName` are read; `createdAt`, if present,
+ * passes through unused. A row missing any of the three is a hard error
+ * rather than a skip, for the same reason `readIssues` refuses rather than
+ * defaults: a silently dropped PR is a `pr-title` mirror this tool will never
+ * find, and nothing about the output would say so.
+ *
+ * @param {unknown} parsed
+ * @returns {PullRequest[]}
+ * @throws {Error} on a shape this tool cannot faithfully read.
+ */
+export function readPrs(parsed) {
+  const list = unwrapResultEnvelope(parsed);
+  if (!Array.isArray(list)) {
+    throw new Error('expected a JSON array of pull requests, or an object with a "result" array');
+  }
+  return list.map((entry, index) => {
+    if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) {
+      throw new Error(`pull request at index ${index} is not an object`);
+    }
+    const record = /** @type {Record<string, unknown>} */ (entry);
+    const rawNumber = record['number'];
+    if (typeof rawNumber !== 'number') {
+      throw new Error(`pull request at index ${index} has no numeric "number"`);
+    }
+    const where = `PR #${rawNumber} (index ${index})`;
+    const title = record['title'];
+    if (typeof title !== 'string' || title.trim() === '') {
+      throw new Error(`${where} has no string "title" — mirror detection reads it`);
+    }
+    const baseRefName = record['baseRefName'];
+    if (typeof baseRefName !== 'string' || baseRefName.trim() === '') {
+      throw new Error(`${where} has no string "baseRefName"`);
+    }
+    return { number: rawNumber, title: title.trim(), baseRefName: baseRefName.trim() };
+  });
+}
+
+/**
+ * A commit-subject match and a PR-title match are different strengths of
+ * evidence (see the "Mirrors" section of this file's header comment) — this
+ * states the split rather than letting a bare total flatten the two together.
+ *
+ * @param {Mirror[]} mirrors
+ * @returns {string}
+ */
+function mirrorEvidenceBreakdown(mirrors) {
+  const commitSubject = mirrors.filter((mirror) => mirror.evidence === 'commit-subject').length;
+  const prTitle = mirrors.filter((mirror) => mirror.evidence === 'pr-title').length;
+  return `${commitSubject} by commit subject, ${prTitle} by PR title`;
+}
+
+/**
  * State the mirror count together with how much of the export it could
  * actually be derived from.
  *
@@ -670,11 +824,15 @@ function mirrorCoverageLine(report) {
   }
   if (report.titledIssueCount < total) {
     return (
-      `PR mirrors found: ${report.mirrors.length} — but only ${report.titledIssueCount} of ` +
-      `${total} rows carried a title, so the rest were not checked.`
+      `PR mirrors found: ${report.mirrors.length} (${mirrorEvidenceBreakdown(report.mirrors)}) — ` +
+      `but only ${report.titledIssueCount} of ${total} rows carried a title, so the rest were ` +
+      'not checked.'
     );
   }
-  return `PR mirrors found across the whole export: ${report.mirrors.length}.`;
+  return (
+    `PR mirrors found across the whole export: ${report.mirrors.length} ` +
+    `(${mirrorEvidenceBreakdown(report.mirrors)}).`
+  );
 }
 
 /**
@@ -738,7 +896,7 @@ function main() {
   if (args.includes('--help') || args.includes('-h')) {
     console.log(
       'Usage: node scripts/huly-backlog-reconcile.mjs --issues <path.json> ' +
-        `[--ref ${DEFAULT_REF}] [--prefix ${DEFAULT_PREFIX}] [--json]\n` +
+        `[--ref ${DEFAULT_REF}] [--prefix ${DEFAULT_PREFIX}] [--prs <path.json>] [--json]\n` +
         '       node scripts/huly-backlog-reconcile.mjs --self-test\n\n' +
         `Cross-references every ${ELIGIBLE_STATUS} issue in the export against commit ` +
         'messages on the ref, and reports which ones already shipped. Reads only; ' +
@@ -746,7 +904,12 @@ function main() {
         'The export may carry a "coverage" block stating which queries produced it ' +
         'and how many rows each returned; every report opens by saying whether that ' +
         'covers the whole backlog, and exits 3 when it demonstrably does not. See ' +
-        'huly-partition-plan.mjs --help for how to gather one.'
+        'huly-partition-plan.mjs --help for how to gather one.\n\n' +
+        '--prs is optional: a JSON export of\n' +
+        '  gh pr list --state all --json number,title,baseRefName,createdAt\n' +
+        'Mirror detection matches against it as a second test, alongside commit\n' +
+        'subjects — see the "Mirrors" section of this file\'s header comment. Omitting\n' +
+        'it leaves mirror detection exactly as it was: commit-subject only.'
     );
     process.exit(2);
   }
@@ -761,6 +924,7 @@ function main() {
   }
   const ref = readFlag(args, '--ref') ?? DEFAULT_REF;
   const prefix = readFlag(args, '--prefix') ?? DEFAULT_PREFIX;
+  const prsPath = readFlag(args, '--prs');
 
   /** @type {Issue[]} */
   let issues;
@@ -779,7 +943,20 @@ function main() {
     console.error(`FAIL — could not read ${issuesPath}: ${detail}`);
     process.exit(2);
   }
-  const report = reconcile(issues, readCommits(ref), prefix, coverage);
+
+  /** @type {PullRequest[]} */
+  let prs = [];
+  if (prsPath !== undefined) {
+    try {
+      prs = readPrs(JSON.parse(readFileSync(prsPath, 'utf8')));
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      console.error(`FAIL — could not read ${prsPath}: ${detail}`);
+      process.exit(2);
+    }
+  }
+
+  const report = reconcile(issues, readCommits(ref), prefix, { coverage, prs });
 
   console.log(args.includes('--json') ? JSON.stringify(report, null, 2) : formatReport(report));
   // An export that declares its own coverage and fails it must not exit 0: a
@@ -869,15 +1046,19 @@ function selfTest() {
       formatReport(reconcile([], commits, 'POPS')).includes('COVERAGE: UNKNOWN'),
     'an export whose query sat on the cap says INCOMPLETE': formatReport(
       reconcile([asBacklog('POPS-1')], commits, 'POPS', {
-        limit: 1,
-        statuses: [ELIGIBLE_STATUS],
-        cells: [{ filter: { status: ELIGIBLE_STATUS }, count: 1 }],
+        coverage: {
+          limit: 1,
+          statuses: [ELIGIBLE_STATUS],
+          cells: [{ filter: { status: ELIGIBLE_STATUS }, count: 1 }],
+        },
       })
     ).includes('COVERAGE: INCOMPLETE'),
     'a tiling export is reported complete': reconcile([asBacklog('POPS-1')], commits, 'POPS', {
-      limit: 200,
-      statuses: [ELIGIBLE_STATUS],
-      cells: [{ filter: { status: ELIGIBLE_STATUS }, count: 1 }],
+      coverage: {
+        limit: 200,
+        statuses: [ELIGIBLE_STATUS],
+        cells: [{ filter: { status: ELIGIBLE_STATUS }, count: 1 }],
+      },
     }).coverage.complete,
     'a mirror is matched on the subject minus its PR number':
       findMirrors(
@@ -890,6 +1071,118 @@ function selfTest() {
         ],
         commits
       ).length === 1,
+    // The two classes commit-subject is blind to (POPS-1726): a merge commit,
+    // whose subject is GitHub's own "Merge pull request #n from …" text rather
+    // than the PR title, and a PR based on a branch other than `main`, whose
+    // commits land on `main` later under a different SHA and often a
+    // different re-squashed subject. Both share one shape once on `main`: the
+    // PR title appears nowhere in `commits.subject`. --prs is the only way to
+    // still find them.
+    'a merge-commit PR is found via PR title, not commit subject': (() => {
+      const pr = {
+        number: 4001,
+        title: 'feat(bfm): pairing code TTL enforcement',
+        baseRefName: 'main',
+      };
+      const mergeCommit = {
+        sha: 'a1b2c3d4e',
+        subject: 'Merge pull request #4001 from knoxio-labs/pops/feat/bfm-pairing-ttl',
+        body: '',
+      };
+      const mirrors = findMirrors(
+        [{ identifier: 'POPS-2001', title: pr.title, status: 'Merged' }],
+        [mergeCommit],
+        [pr]
+      );
+      return (
+        mirrors.length === 1 && mirrors[0]?.evidence === 'pr-title' && mirrors[0]?.prNumber === 4001
+      );
+    })(),
+    'a PR based on a branch other than main is found via PR title': (() => {
+      const pr = {
+        number: 3325,
+        title: 'Collapse lists pillar into @pops/lists (single workspace member, strict exports)',
+        baseRefName: 'lake-migration',
+      };
+      const reSquashedOnMain = {
+        sha: 'f6e5d4c3b',
+        subject: 'chore(lists): finish workspace collapse (lake-migration backport)',
+        body: '',
+      };
+      const mirrors = findMirrors(
+        [{ identifier: 'POPS-2002', title: pr.title, status: 'Merged' }],
+        [reSquashedOnMain],
+        [pr]
+      );
+      return (
+        mirrors.length === 1 &&
+        mirrors[0]?.evidence === 'pr-title' &&
+        mirrors[0]?.baseRefName === 'lake-migration'
+      );
+    })(),
+    'a commit-subject match wins over an available PR-title match, and its evidence says so':
+      (() => {
+        const pr = {
+          number: 3919,
+          title: normaliseSubject(fixesBodyTrailer.subject),
+          baseRefName: 'main',
+        };
+        const mirrors = findMirrors(
+          [{ identifier: 'POPS-1575', title: pr.title, status: 'Merged' }],
+          commits,
+          [pr]
+        );
+        return mirrors.length === 1 && mirrors[0]?.evidence === 'commit-subject';
+      })(),
+    'omitting --prs leaves pr-title finding nothing, same as before this fix':
+      findMirrors(
+        [
+          {
+            identifier: 'POPS-2001',
+            title: 'feat(bfm): pairing code TTL enforcement',
+            status: 'Merged',
+          },
+        ],
+        [{ sha: 'a1', subject: 'Merge pull request #4001 from x/y', body: '' }]
+      ).length === 0,
+    'readPrs reads number, title and baseRefName, ignoring an extra createdAt': (() => {
+      const prs = readPrs([
+        { number: 1, title: 't', baseRefName: 'main', createdAt: '2026-01-01' },
+      ]);
+      return prs.length === 1 && prs[0]?.number === 1 && prs[0]?.baseRefName === 'main';
+    })(),
+    'readPrs refuses a row with no baseRefName rather than silently dropping it': throws(() =>
+      readPrs([{ number: 1, title: 't' }])
+    ),
+    'the report keeps commit-subject and PR-title mirror counts apart, not flattened together':
+      (() => {
+        const pr = {
+          number: 4001,
+          title: 'feat(bfm): pairing code TTL enforcement',
+          baseRefName: 'main',
+        };
+        const mergeCommit = {
+          sha: 'a1b2c3d4e',
+          subject: 'Merge pull request #4001 from knoxio-labs/pops/feat/bfm-pairing-ttl',
+          body: '',
+        };
+        const text = formatReport(
+          reconcile(
+            [
+              {
+                identifier: 'POPS-1575',
+                title: normaliseSubject(fixesBodyTrailer.subject),
+                status: 'Merged',
+              },
+              { identifier: 'POPS-2001', title: pr.title, status: 'Merged' },
+            ],
+            [...commits, mergeCommit],
+            'POPS',
+            { prs: [pr] }
+          )
+        );
+        return text.includes('1 by commit subject, 1 by PR title');
+      })(),
   };
 
   const failed = Object.entries(checks).filter(([, ok]) => !ok);
