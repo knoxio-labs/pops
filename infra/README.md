@@ -78,7 +78,8 @@ replicates `/data/sqlite/<id>.db` with `sync-interval: 1s`, `retention: 24h`,
 `snapshot-interval: 1h`, `validation-interval: 12h`, and interpolates one
 `<ID>_LITESTREAM_REPLICA_URL` — except that `registry-litestream` passes
 `CORE_LITESTREAM_REPLICA_URL` while `registry.yml` reads
-`REGISTRY_LITESTREAM_REPLICA_URL`.
+`REGISTRY_LITESTREAM_REPLICA_URL`, so the reference wiring for `registry` does
+not work as written until one side is renamed to match the other (POPS-1778).
 
 Each sidecar mounts `pops-<id>-data:/data/sqlite:ro`. Only `bfm` has an API
 container writing to that volume; the other ten pillars still write to

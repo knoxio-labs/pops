@@ -190,7 +190,7 @@ function main() {
         'Fails if an infra/litestream/<id>.yml has no <id>-litestream service in ' +
         'infra/docker-compose.yml, or vice versa.'
     );
-    process.exit(2);
+    process.exit(0);
   }
   if (args.includes('--self-test')) {
     process.exit(selfTest() ? 0 : 1);
