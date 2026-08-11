@@ -73,7 +73,7 @@ export function listSolvableCharges(db: PurchasesDb, scope: ReconcileScope = {})
 }
 
 /**
- * Orders in scope whose charges claim none of the total.
+ * Orders in scope whose charges say nothing about what was paid.
  *
  * Every Amazon order is one of these: the DSAR export publishes no charge
  * breakdown, so without a minted `derived` charge the entire backfill has
@@ -82,12 +82,18 @@ export function listSolvableCharges(db: PurchasesDb, scope: ReconcileScope = {})
  * and never what was paid — and a predicate reading "has no charge row"
  * instead silently excluded every one of them, permanently.
  *
- * `refund` is the only role that leaves an order eligible. `capture` and
- * `adjustment` both reduce the residual, and an `authorization` is the
- * merchant's own record of a payment whose capture is the merchant's to
- * state. What gets minted is the full order total, so minting alongside any
- * of them would drive the residual negative — an over-explained order,
- * which is a worse lie than an unexplained one.
+ * `refund` is the only role that leaves an order eligible, and the three
+ * that exclude it do not do so for one reason. `capture` and `adjustment`
+ * each claim part of the total, and what gets minted is the full total, so
+ * minting alongside one drives the residual negative — an over-explained
+ * order, which is a worse lie than an unexplained one. `authorization`
+ * claims none of it (`isResidualBearing` is false for that role, so an
+ * authorization-only order reads as a full residual and minting would in
+ * fact resolve it); it is held out because an authorization is the
+ * merchant's own record of a payment whose capture the merchant states
+ * itself, and a minted second record of that one payment would leave two
+ * near-identical charges competing for one transaction. No adapter emits
+ * that role, so the case has never been exercised against real data.
  */
 export function listOrdersNeedingDerivedCharge(
   db: PurchasesDb,

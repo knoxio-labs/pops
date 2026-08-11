@@ -330,8 +330,8 @@ describe('the derived-charge work set over any generated order', () => {
       const { input } = generateOrder(seed);
       const id = createPurchase(opened.db, input);
 
-      // A refund says what came back; every other role says something about
-      // what went out, and so claims part of the total.
+      // A refund says what came back; every other role states something
+      // about a payment, and so takes the order out of the work set.
       const claimed = (input.charges ?? []).some(
         (charge) => (charge.role ?? 'capture') !== 'refund'
       );
