@@ -238,7 +238,16 @@ function readOrder(seed: number): Readings {
   };
 }
 
-/** Every split this order produced, whatever it was linked to at the time. */
+/**
+ * Every split this order produced, whatever it was linked to at the time.
+ *
+ * The filter predicate is deliberately left unannotated. TypeScript infers
+ * `a is PurchaseAccounting` from the body and then checks that inference
+ * against the return type, so a predicate that stopped narrowing — the
+ * refactor worth catching — fails to compile. Writing `(a): a is
+ * PurchaseAccounting` instead would be an assertion the compiler takes on
+ * trust: an inverted predicate annotated that way compiles clean.
+ */
 function everySplit(readings: Readings): readonly PurchaseAccounting[] {
   return [
     readings.unlinked,
@@ -400,24 +409,42 @@ describe('accounting invariants hold for any generated order', () => {
  * above — the numbers stay internally consistent while the order silently
  * never converges.
  *
- * These tests mutate the shared database instead of only reading it, so
- * unlike the describe block above they are not independent of one another:
- * the work-set membership check has to run before anything below it mints,
- * which is why it reads the corpus's own orders rather than writing fresh
- * ones, and every test after it can assume the corpus's eligible orders are
- * already minted. There is one database for the whole file, not one per
- * property, so that ordering is load-bearing.
+ * These tests mutate the shared database rather than only reading it, and
+ * there is one database for the whole file — so minting is visible to every
+ * test that runs after it. What the work set holds is therefore a question
+ * with two different answers depending on when it is asked, and only the
+ * answer from before any minting is a statement about the predicate.
+ *
+ * So it is asked once, at the moment before the first mint, and every
+ * assertion about membership reads that snapshot. Nothing here depends on
+ * the order vitest picks.
  */
 describe('the derived-charge work set over any generated order', () => {
+  /**
+   * The work set as it stood before anything in this file minted.
+   *
+   * Populated on first use by {@link mintWorkSet}, which takes it before it
+   * writes — so whichever test runs first, this is the pristine reading. A
+   * live call could not serve: by the second test it answers "nothing is
+   * pending", which is true and says nothing about the predicate.
+   */
+  let pristineWorkSet: ReadonlySet<string> | undefined;
+
+  function workSetBeforeAnyMint(): ReadonlySet<string> {
+    pristineWorkSet ??= new Set(listOrdersNeedingDerivedCharge(opened.db).map((order) => order.id));
+    return pristineWorkSet;
+  }
+
   /** One minting pass, the sweep's own two calls with no finance in the way. */
   function mintWorkSet(): number {
+    workSetBeforeAnyMint();
     const orders = listOrdersNeedingDerivedCharge(opened.db);
     for (const order of orders) mintDerivedCharge(opened.db, order);
     return orders.length;
   }
 
   it('holds exactly the orders no charge claims any of', () => {
-    const pending = new Set(listOrdersNeedingDerivedCharge(opened.db).map((order) => order.id));
+    const pending = workSetBeforeAnyMint();
 
     for (const { seed, id, input } of corpus) {
       // A refund says what came back; every other role states something
