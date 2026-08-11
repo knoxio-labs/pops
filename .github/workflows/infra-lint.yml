@@ -52,7 +52,7 @@ jobs:
   sidecar-parity:
     name: Litestream sidecar parity
     # Syntax validity is exactly what let infra/litestream/purchases.yml look
-    # healthy while mounted nowhere (POPS-1470) — this job checks the pairing
+    # healthy while mounted nowhere — this job checks the pairing
     # `yaml-lint` above cannot: every infra/litestream/<id>.yml needs a
     # matching <id>-litestream service in infra/docker-compose.yml, and vice
     # versa. See scripts/ci/check-litestream-sidecar-parity.mjs.

@@ -87,7 +87,7 @@ describe('discoverConfigIds — fixture tree', () => {
     expect(discoverConfigIds(root)).toEqual(['finance', 'media']);
   });
 
-  it('does not list a subdirectory as a config id', () => {
+  it('does not list an entry without a `.yml` suffix, subdirectory included', () => {
     expect(discoverConfigIds(root)).not.toContain('not-a-config');
   });
 });

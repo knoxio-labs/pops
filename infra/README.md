@@ -72,7 +72,8 @@ Eleven configs — `ai`, `bfm`, `cerebrum`, `contacts`, `finance`, `food`,
 `inventory`, `lists`, `media`, `purchases`, `registry` — each mounted
 read-only at `/etc/litestream.yml` into the matching `<id>-litestream`
 sidecar. `check-litestream-sidecar-parity.mjs` (wired into `Infra Lint`)
-fails the build if that pairing ever drifts in either direction. Every config
+fails the build if a config ever loses its sidecar or a sidecar its config; it
+matches ids only, and does not check which file a sidecar mounts. Every config
 replicates `/data/sqlite/<id>.db` with `sync-interval: 1s`, `retention: 24h`,
 `snapshot-interval: 1h`, `validation-interval: 12h`, and interpolates one
 `<ID>_LITESTREAM_REPLICA_URL` — except that `registry-litestream` passes

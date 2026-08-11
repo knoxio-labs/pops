@@ -77,6 +77,7 @@ Runs immediately after `actions/checkout`. **No third-party import, at any depth
 | `scripts/ci/check-vendored-contracts.mjs`        | `quality.yml` → `vendored-contracts`        | OpenAPI JSON, byte comparison, consumer codegen config source |
 | `scripts/ci/check-device-signature-fixture.mjs`  | `quality.yml` → `device-signature-fixture`  | JSON fixture, `node:crypto`                                   |
 | `scripts/ci/check-cross-pillar-expectations.mjs` | `quality.yml` → `cross-pillar-expectations` | OpenAPI JSON, TS source                                       |
+| `scripts/ci/check-litestream-sidecar-parity.mjs` | `infra-lint.yml` → `sidecar-parity`         | Litestream filenames, Compose text                            |
 
 ### Tier B — installs the workspace
 

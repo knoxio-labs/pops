@@ -1,14 +1,19 @@
 #!/usr/bin/env node
 /**
- * Litestream sidecar parity guard (POPS-1470).
+ * Litestream sidecar parity guard.
  *
  * Every reference config `infra/litestream/<id>.yml` is supposed to have a
  * matching `<id>-litestream` service in `infra/docker-compose.yml`, and every
  * `<id>-litestream` service is supposed to have a matching config. Nothing
  * enforced that pairing before this guard — `infra/litestream/purchases.yml`
- * sat complete, well-documented, and mounted nowhere, and the only lint that
- * ever ran against it (`infra-lint.yml`'s `yaml-lint` job) only checks YAML
- * syntax, which a config that replicates nothing satisfies just fine.
+ * sat complete, well-documented, and mounted nowhere. Several checks did read
+ * the file (`infra-lint.yml`'s `yaml-lint` job, the control-character sweep,
+ * the homelab-service isolation guard) and every one of them passes on a
+ * config that replicates nothing: none asks whether anything mounts it.
+ *
+ * This guard matches ids and nothing else. It does not verify that a sidecar
+ * mounts *its own* config, nor that the `pops-<id>-data` volume it reads
+ * exists — a sidecar wired to the wrong file still passes here.
  *
  * A config with no sidecar is the deceptive failure mode: it reads as "this
  * pillar is backed up" to anyone auditing the directory, including its own
