@@ -5,9 +5,8 @@ import Testing
 @testable import FeatureTransactions
 
 /// Whether a page landing tells ``AppShellModel`` — via ``ReachabilityWitness``
-/// — that the backend was just reached. Only a *successful* fetch is
-/// evidence of anything; a failure is not proof the backend is unreachable
-/// bootstrap didn't already have, so it must stay silent.
+/// — that the backend was just reached. Only a *successful* fetch is evidence
+/// of that; a failure proves nothing, so it must stay silent.
 @MainActor
 @Suite("Transactions reachability signal")
 internal struct TransactionsReachabilityTests {

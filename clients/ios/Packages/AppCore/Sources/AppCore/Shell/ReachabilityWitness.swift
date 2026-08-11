@@ -2,7 +2,7 @@
 /// independent of whatever ``AppShellModel``'s own bootstrap call last found.
 ///
 /// Bootstrap and a feature's own repository calls are separate conversations
-/// with the BFM: one failing does not make the other more or less likely to.
+/// with the BFM: one failing says nothing about whether the other will.
 /// A feature succeeding while bootstrap's last answer is
 /// ``BootstrapPhase/failed(_:)`` is real evidence that failure is stale — the
 /// one signal ``AppShellModel/reloadBootstrap()``'s own "never on a schedule"
