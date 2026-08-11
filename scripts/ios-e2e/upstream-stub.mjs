@@ -135,8 +135,19 @@ export function compareRows(a, b) {
 const DEFAULT_LIMIT = 50;
 const DEFAULT_OFFSET = 0;
 
-/** finance's contract bounds on `limit`. */
-const MAX_LIMIT = 500;
+/**
+ * finance's contract bounds, per parameter, from the `transactions.list`
+ * operation in `pillars/finance/openapi/finance.openapi.json`.
+ *
+ * They are not the same bound, and using one for both is a rejection finance
+ * would not make: `limit` is capped at 500, while `offset` runs to
+ * `Number.MAX_SAFE_INTEGER`, so a perfectly ordinary `?offset=1000` would 400
+ * from a stub that shared the ceiling.
+ */
+const BOUNDS = {
+  limit: { min: 1, max: 500 },
+  offset: { min: 0, max: Number.MAX_SAFE_INTEGER },
+};
 
 /**
  * The query string as finance would read it, or the complaint it would answer
@@ -162,20 +173,19 @@ export function parseListQuery(params) {
   // finance's contract types these, so a value that is not a whole number in
   // range never reaches its handler — it is a 400 from the ts-rest layer. `NaN`
   // reaching `slice` here would answer 200 with an empty page instead.
-  const bounded = (name, fallback, min) => {
+  const bounded = (name, fallback) => {
     const raw = params.get(name);
     if (raw === null) return fallback;
     if (!/^\d+$/u.test(raw)) return `${name} must be a whole number`;
+    const { min, max } = BOUNDS[name];
     const value = Number(raw);
-    if (value < min || value > MAX_LIMIT) {
-      return `${name} must be between ${min} and ${MAX_LIMIT}`;
-    }
+    if (value < min || value > max) return `${name} must be between ${min} and ${max}`;
     return value;
   };
 
-  const limit = bounded('limit', DEFAULT_LIMIT, 1);
+  const limit = bounded('limit', DEFAULT_LIMIT);
   if (typeof limit === 'string') return { error: limit };
-  const offset = bounded('offset', DEFAULT_OFFSET, 0);
+  const offset = bounded('offset', DEFAULT_OFFSET);
   if (typeof offset === 'string') return { error: offset };
 
   return {

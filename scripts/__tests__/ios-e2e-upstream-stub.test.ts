@@ -175,6 +175,19 @@ describe('parseListQuery', () => {
     expect(query('offset=0')).toEqual({ query: { limit: 50, offset: 0 } });
     expect(query('offset=-1')).toEqual({ error: 'offset must be a whole number' });
   });
+
+  it('does not hold offset to limit’s ceiling', () => {
+    // finance caps `limit` at 500 and `offset` at Number.MAX_SAFE_INTEGER.
+    // Sharing one bound would reject an ordinary deep page that the real
+    // pillar answers.
+    expect(query('offset=1000')).toEqual({ query: { limit: 50, offset: 1000 } });
+    expect(query(`offset=${Number.MAX_SAFE_INTEGER}`)).toEqual({
+      query: { limit: 50, offset: Number.MAX_SAFE_INTEGER },
+    });
+    expect(query('offset=9007199254740992')).toEqual({
+      error: `offset must be between 0 and ${Number.MAX_SAFE_INTEGER}`,
+    });
+  });
 });
 
 describe('buildRegistrySnapshot', () => {
