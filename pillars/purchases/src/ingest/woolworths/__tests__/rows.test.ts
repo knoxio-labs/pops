@@ -206,6 +206,14 @@ describe('rows the grouper cannot place', () => {
     expect(anomalies[0]?.kind).toBe('unattached-note');
   });
 
+  it('reports a weight row with no product above it', () => {
+    const { items, anomalies } = groupReceiptRows([
+      { description: '0.202 kg NET @ $2.90/kg', amount: '0.59' },
+    ]);
+    expect(items).toHaveLength(0);
+    expect(anomalies[0]?.kind).toBe('unattached-note');
+  });
+
   it('reports a product whose amount never arrives, rather than pricing it at zero', () => {
     // A silent zero would understate the shop and still sum to something
     // plausible.

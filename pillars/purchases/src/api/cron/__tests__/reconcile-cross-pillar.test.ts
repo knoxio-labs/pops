@@ -470,4 +470,30 @@ describe('the tick timer', () => {
 
     expect(lookup.mock.calls.length).toBeGreaterThan(1);
   });
+
+  it('tells a configured logger why a tick failed', async () => {
+    // Not a lookup throwing — `runLeg` already swallows that as an
+    // `unavailable` outcome. This is a failure from OUTSIDE the per-leg
+    // work, e.g. the logger itself, which the worker's own try/catch exists
+    // to survive so the next tick still gets armed.
+    vi.useFakeTimers();
+    seed({ itemUris: [ITEM_URI] });
+    const warn = vi.fn();
+    const info = vi.fn(() => {
+      throw new Error('logger boom');
+    });
+
+    const handle = start({
+      inventoryItem: always({ kind: 'ok' }),
+      intervalMs: 1000,
+      logger: { warn, info },
+    });
+    await vi.advanceTimersByTimeAsync(0);
+    handle.stop();
+
+    expect(warn).toHaveBeenCalledWith(
+      'purchases reconcile tick failed',
+      expect.objectContaining({ error: 'logger boom' })
+    );
+  });
 });

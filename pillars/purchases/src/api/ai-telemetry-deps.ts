@@ -39,12 +39,19 @@ function memoizePricing(lookup: LookupPricingFn): LookupPricingFn {
 }
 
 let cached: CallWithLoggingDeps | undefined;
+let override: CallWithLoggingDeps | undefined;
 
 export function purchasesTelemetryDeps(): CallWithLoggingDeps {
+  if (override) return override;
   cached ??= {
     lookupPricing: memoizePricing(
       httpLookupPricing(process.env['AI_API_URL'] ?? DEFAULT_AI_API_URL)
     ),
   };
   return cached;
+}
+
+/** Test seam: inject fake `report`/`lookupPricing`; pass null to restore. */
+export function __setPurchasesTelemetryDepsForTests(deps: CallWithLoggingDeps | null): void {
+  override = deps ?? undefined;
 }
