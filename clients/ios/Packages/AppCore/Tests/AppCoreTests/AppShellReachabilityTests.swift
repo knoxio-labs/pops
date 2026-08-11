@@ -24,9 +24,11 @@ internal struct AppShellReachabilityTests {
         // whole point being tested elsewhere is that a caller's own
         // completion never depends on this finishing — so the assertion has
         // to wait for the retry to actually land rather than assume
-        // ``noteReachable()`` returning means it has.
-        while fixture.surface?.bootstrap != .answered(.fresh) { await Task.yield() }
+        // ``noteReachable()`` returning means it has. Bounded so a regression
+        // fails this test instead of hanging the suite.
+        let landed = await waitUntil { fixture.surface?.bootstrap == .answered(.fresh) }
 
+        #expect(landed)
         #expect(await fixture.bootstrap.callCount == 2)
     }
 
@@ -63,5 +65,24 @@ internal struct AppShellReachabilityTests {
         await fixture.model.noteReachable()
 
         #expect(await fixture.bootstrap.callCount == 1)
+    }
+
+    /// Yields until `condition` holds, and reports whether it ever did.
+    ///
+    /// Cooperative yielding rather than a sleep: the ``noteReachable()`` Task
+    /// under test runs on this same actor, so yielding is what lets it run,
+    /// and the wait ends the instant the condition holds rather than after a
+    /// duration somebody guessed. The bound is a yield count, not wall-clock
+    /// time, so a regression fails this test instead of hanging the suite,
+    /// and nothing about it is timing dependent. Mirrors `AuthTests`'
+    /// `waitUntil` — not shared, because nothing here crosses that module
+    /// boundary yet for one caller to justify it.
+    @discardableResult
+    private func waitUntil(_ condition: () -> Bool) async -> Bool {
+        for _ in 0..<10_000 {
+            if condition() { return true }
+            await Task.yield()
+        }
+        return false
     }
 }
