@@ -398,7 +398,7 @@ Two consequences, and the second is the expensive one:
 - **Do not read `Merged` as a human decision.** Nobody chose it. Do not file work there, and do not treat a `Merged` issue as the record of a requirement — the commit it mirrors is the record.
 - **A merged PR does not close its ticket.** Set the status yourself when the work lands, or the ticket stays open forever and the next agent spends a full run rediscovering that the fix is already on `main`.
 
-A mirror is identifiable exactly rather than by eye: its title equals a commit subject on `origin/main`, give or take the squash-merge `(#1234)` suffix. `scripts/huly-backlog-reconcile.mjs` decides that, and cross-references an exported backlog against merged commits to name any ticket whose work already shipped. Run it against a tracker export — it reads only, and its `--help` states the evidence it will and will not act on.
+A mirror is identifiable exactly rather than by eye: its title equals a commit subject on `origin/main` (give or take the squash-merge `(#1234)` suffix), or — for a PR merged with a merge commit or based on a branch other than `main` — the title of a pull request supplied via `--prs`. `scripts/huly-backlog-reconcile.mjs` decides that, and cross-references an exported backlog against merged commits (and, optionally, an exported PR list) to name any ticket whose work already shipped. Run it against a tracker export — it reads only, holds no credential, and its `--help` states the evidence it will and will not act on.
 
 #### One query cannot read the whole backlog
 
