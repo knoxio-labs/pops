@@ -43,12 +43,34 @@ if [[ ! -f "$abs_unit/package.json" ]]; then
   exit 0
 fi
 
-has_build="$(node -e "const s=require('$abs_unit/package.json').scripts||{}; process.stdout.write(s.build?'1':'')")"
-has_typecheck="$(node -e "const s=require('$abs_unit/package.json').scripts||{}; process.stdout.write(s.typecheck?'1':'')")"
-has_test="$(node -e "const s=require('$abs_unit/package.json').scripts||{}; process.stdout.write((s['test:coverage']||s.test)?'1':'')")"
+# What proof do we owe this unit? The decision is `proof-surface.mjs`'s, not
+# three blind script-name lookups here — it enumerates every script the unit
+# actually declares, so a rename or drop shows up in the log instead of
+# vanishing into "nothing to prove". `JSON.parse`-ing a malformed package.json
+# throws there same as `require()` did here before; that failure is left loud
+# (no `|| true`).
+if ! proof_output="$(node "$repo_root/scripts/extractability/proof-surface.mjs" "$abs_unit")"; then
+  echo "sandbox: failed to read $unit/package.json — see the error above." >&2
+  exit 1
+fi
+mapfile -t proof <<<"$proof_output"
+# proof-surface.mjs promises exactly 7 lines; check rather than trust it, so a
+# future regression there is a clear failure here instead of an unbound-variable
+# crash under `set -u`.
+if [[ "${#proof[@]}" -ne 7 ]]; then
+  echo "sandbox: proof-surface.mjs printed ${#proof[@]} line(s), expected 7 — raw output:" >&2
+  echo "$proof_output" >&2
+  exit 1
+fi
+has_build="${proof[0]}"
+has_typecheck="${proof[1]}"
+test_script="${proof[2]}"
+has_test="${proof[3]}"
+proof_script_names="${proof[4]:-<none>}"
+proof_no_surface_reason="${proof[5]}"
+proof_decision="${proof[6]}"
 
-# What proof do we owe this unit? Three honest cases — never a silent skip when
-# there IS a surface to prove:
+# Four honest cases — never a silent skip when there IS a surface to prove:
 #
 #   * build present            -> emit-build is the proof (a consumer could
 #                                 `tsc -b` against the published .d.ts).
@@ -64,10 +86,24 @@ has_test="$(node -e "const s=require('$abs_unit/package.json').scripts||{}; proc
 #                                 So we DO prove them; we just skip emit-build.
 #                                 (Mirrors app-quality.yml, which type+tests the
 #                                 app units but never `pnpm build`s them.)
-#   * none of the three        -> genuinely nothing to prove (config/data-only
-#                                 package); skip with a reason.
-if [[ -z "$has_build" && -z "$has_typecheck" && -z "$has_test" ]]; then
-  echo "sandbox: $unit has no build/typecheck/test script — nothing to prove, skipping." >&2
+#   * none of the three, WITH  -> genuinely nothing to prove (config/data-only
+#     a declared opt-out          package); skip with the declared reason.
+#   * none of the three, NO    -> NOT a skip. A proof script most likely got
+#     declared opt-out            renamed or dropped; report what was looked
+#                                  for against what the unit actually declares
+#                                  and fail, rather than pass over it in silence.
+if [[ "$proof_decision" == "violation" ]]; then
+  echo "sandbox: $unit has no recognized build/typecheck/test script and no declared opt-out — refusing to silently skip its EX-2 proof." >&2
+  echo "  looked for: build, typecheck, test:coverage, test" >&2
+  echo "  $unit/package.json declares: $proof_script_names" >&2
+  echo "  if $unit genuinely has nothing to prove (a config/data-only package), say so: add" >&2
+  echo "    \"pops\": { \"extractability\": { \"noProofSurface\": \"<reason>\" } }" >&2
+  echo "  to $unit/package.json." >&2
+  exit 1
+fi
+if [[ "$proof_decision" == "skip-declared" ]]; then
+  echo "sandbox: $unit has no build/typecheck/test script — declared opt-out: $proof_no_surface_reason" >&2
+  echo "  $unit/package.json declares: $proof_script_names" >&2
   exit 0
 fi
 if [[ -z "$has_build" ]]; then
@@ -139,11 +175,7 @@ fi
 # the dedicated test lanes (kept out here to keep EX-2 fast).
 if [[ -z "$has_build" && -n "$has_test" ]]; then
   echo "sandbox: test (isolated) …" >&2
-  if node -e "process.exit((require('./package.json').scripts||{})['test:coverage']?0:1)"; then
-    pnpm run test:coverage
-  else
-    pnpm run test
-  fi
+  pnpm run "$test_script"
 fi
 
 if [[ -n "$has_build" ]]; then

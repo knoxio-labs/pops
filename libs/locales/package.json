@@ -5,5 +5,10 @@
   "type": "module",
   "exports": {
     "./*": "./*"
+  },
+  "pops": {
+    "extractability": {
+      "noProofSurface": "Translation JSON only — no code, no build/typecheck/test step (see README)."
+    }
   }
 }
