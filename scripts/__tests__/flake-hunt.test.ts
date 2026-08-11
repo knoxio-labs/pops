@@ -11,6 +11,7 @@ import {
   UsageError,
   buildSummary,
   defaultOutDirBase,
+  describeArtifacts,
   extractFailures,
   formatDuration,
   formatLoadAverage,
@@ -170,20 +171,25 @@ describe('readJsonReport', () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
-  it('returns undefined for a missing file rather than throwing', () => {
-    expect(readJsonReport(join(dir, 'missing.json'))).toBeUndefined();
+  it('reports a missing file as absent rather than throwing', () => {
+    expect(readJsonReport(join(dir, 'missing.json'))).toEqual({ status: 'absent' });
   });
 
-  it('returns undefined for unparseable JSON rather than throwing', () => {
+  /**
+   * The distinction the retained evidence turns on: a truncated report means
+   * vitest started writing and was killed, which is a different investigation
+   * from a report that was never begun.
+   */
+  it('reports unparseable JSON as unreadable, not as absent', () => {
     const path = join(dir, 'bad.json');
-    writeFileSync(path, '{not json', 'utf8');
-    expect(readJsonReport(path)).toBeUndefined();
+    writeFileSync(path, '{"testResults":[{"name":"a.test.ts","assertionRes', 'utf8');
+    expect(readJsonReport(path)).toEqual({ status: 'unreadable' });
   });
 
   it('parses a real report', () => {
     const path = join(dir, 'good.json');
     writeFileSync(path, JSON.stringify(REAL_SHAPED_FAILING_REPORT), 'utf8');
-    expect(readJsonReport(path)).toEqual(REAL_SHAPED_FAILING_REPORT);
+    expect(readJsonReport(path)).toEqual({ status: 'ok', report: REAL_SHAPED_FAILING_REPORT });
   });
 });
 
@@ -245,7 +251,7 @@ describe('buildSummary', () => {
     const summary = buildSummary({
       ...base,
       failures: extractFailures(REAL_SHAPED_FAILING_REPORT),
-      hadJsonReport: true,
+      jsonReport: 'ok',
     });
     expect(summary).toContain('iteration:   7 of 25');
     expect(summary).toContain('creates every parsed order');
@@ -256,13 +262,63 @@ describe('buildSummary', () => {
   });
 
   it('says plainly when no JSON report was produced', () => {
-    const summary = buildSummary({ ...base, failures: [], hadJsonReport: false });
+    const summary = buildSummary({ ...base, failures: [], jsonReport: 'absent' });
     expect(summary).toContain('No JSON reporter output was found');
   });
 
+  /**
+   * A report that was begun and then truncated is the signature of a hard
+   * kill. Calling that "no output was found" points the reader at a bug in
+   * this tool instead of at the crash that produced the evidence.
+   */
+  it('distinguishes a report that did not parse from one that was never written', () => {
+    const summary = buildSummary({ ...base, failures: [], jsonReport: 'unreadable' });
+    expect(summary).toContain('does not parse');
+    expect(summary).not.toContain('No JSON reporter output was found');
+  });
+
   it('says plainly when the exit was non-zero but nothing failed at the assertion level', () => {
-    const summary = buildSummary({ ...base, failures: [], hadJsonReport: true });
+    const summary = buildSummary({ ...base, failures: [], jsonReport: 'ok' });
     expect(summary).toContain('no failed assertion was found');
+  });
+
+  it('lists what was retained, separating an empty file from an absent one', () => {
+    const summary = buildSummary({
+      ...base,
+      failures: [],
+      jsonReport: 'absent',
+      artifacts: [
+        { name: 'report.json', bytes: null },
+        { name: 'stdout.log', bytes: 0 },
+        { name: 'stderr.log', bytes: 412 },
+      ],
+    });
+    expect(summary).toContain('report.json: NOT WRITTEN');
+    expect(summary).toContain('stdout.log: 0 bytes');
+    expect(summary).toContain('stderr.log: 412 bytes');
+  });
+});
+
+describe('describeArtifacts', () => {
+  let dir: string;
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'flake-hunt-artifacts-'));
+  });
+
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('reads the three files a retained run should carry, absent ones included', () => {
+    writeFileSync(join(dir, 'stdout.log'), '', 'utf8');
+    writeFileSync(join(dir, 'stderr.log'), 'boom\n', 'utf8');
+
+    expect(describeArtifacts(dir)).toEqual([
+      { name: 'report.json', bytes: null },
+      { name: 'stdout.log', bytes: 0 },
+      { name: 'stderr.log', bytes: 5 },
+    ]);
   });
 });
 
@@ -400,6 +456,48 @@ describe('runHunt', () => {
     expect(result.redRuns).toHaveLength(1);
     const [red] = result.redRuns;
     expect(readFileSync(join(red!.dir, 'stderr.log'), 'utf8')).toContain('pnpm ENOENT');
+  });
+
+  it('tells a truncated report.json apart from one that was never written', async () => {
+    const result = await runHunt({
+      filter: '@pops/x',
+      script: 'test',
+      iterations: 1,
+      keepGoing: false,
+      outDir,
+      runIteration: async (_iteration, staging) => {
+        const red = writeRed(staging);
+        // A report vitest began and was killed part-way through writing.
+        writeFileSync(red.jsonPath, '{"testResults":[{"name":"a.test.ts","assert', 'utf8');
+        return red;
+      },
+    });
+
+    const [red] = result.redRuns;
+    const summary = readFileSync(join(red!.dir, 'summary.txt'), 'utf8');
+    expect(summary).toContain('does not parse');
+    expect(summary).not.toContain('No JSON reporter output was found');
+    // The truncated file is evidence, so it is retained and its size is named.
+    expect(summary).toMatch(/report\.json: \d+ bytes/u);
+    expect(existsSync(join(red!.dir, 'report.json'))).toBe(true);
+  });
+
+  it('names every retained artifact in the summary, absent ones included', async () => {
+    const result = await runHunt({
+      filter: '@pops/x',
+      script: 'test',
+      iterations: 1,
+      keepGoing: false,
+      outDir,
+      runIteration: async () => {
+        throw new Error('spawn failed');
+      },
+    });
+
+    const summary = readFileSync(join(result.redRuns[0]!.dir, 'summary.txt'), 'utf8');
+    expect(summary).toContain('report.json: NOT WRITTEN');
+    expect(summary).toContain('stdout.log: 0 bytes');
+    expect(summary).toMatch(/stderr\.log: \d+ bytes/u);
   });
 
   it('retains a stdout.log for a throw that happened before anything wrote one', async () => {

@@ -72,6 +72,7 @@ import {
   mkdtempSync,
   readFileSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from 'node:fs';
 import { constants, loadavg, tmpdir } from 'node:os';
@@ -191,20 +192,33 @@ export function formatDuration(ms) {
 }
 
 /**
- * Read a vitest `--reporter=json` file, tolerating its absence — a process
- * that crashes before vitest finishes (a missing script, a config error)
- * never writes one, and that is itself diagnostic rather than a bug in this
- * tool.
+ * @typedef {{ status: 'ok', report: unknown }
+ *   | { status: 'absent' }
+ *   | { status: 'unreadable' }} JsonReportOutcome
+ */
+
+/**
+ * Read a vitest `--reporter=json` file, distinguishing the two ways there can
+ * be no report to read.
+ *
+ * **`absent` and `unreadable` are different findings and must not be
+ * collapsed.** Nothing written means the process exited before vitest could
+ * write anything — a missing script, a config error, a crash before any test
+ * ran. A file that exists and does not parse means vitest started writing and
+ * was interrupted, which is the signature of a run that died hard (OOM,
+ * SIGKILL) rather than one that failed an assertion. Reporting the second as
+ * the first sends whoever is triaging the retained run looking for a bug in
+ * this tool instead of at the crash — the truncated file IS the evidence.
  *
  * @param {string} path
- * @returns {unknown}
+ * @returns {JsonReportOutcome}
  */
 export function readJsonReport(path) {
-  if (!existsSync(path)) return undefined;
+  if (!existsSync(path)) return { status: 'absent' };
   try {
-    return JSON.parse(readFileSync(path, 'utf8'));
+    return { status: 'ok', report: JSON.parse(readFileSync(path, 'utf8')) };
   } catch {
-    return undefined;
+    return { status: 'unreadable' };
   }
 }
 
@@ -281,7 +295,16 @@ export function extractFailures(report) {
  * @property {readonly [number, number, number]} loadBefore
  * @property {readonly [number, number, number]} loadAfter
  * @property {TestFailure[]} failures
- * @property {boolean} hadJsonReport
+ * @property {JsonReportOutcome['status']} jsonReport What became of the JSON
+ *   reporter's file — written and parsed, never written, or written and
+ *   unparseable.
+ * @property {readonly RetainedArtifact[]} [artifacts] What the retained
+ *   directory actually holds, so the summary can be read on its own.
+ */
+
+/**
+ * @typedef {{ name: string, bytes: number | null }} RetainedArtifact `bytes`
+ *   is null when the file is not there at all.
  */
 
 /**
@@ -306,11 +329,29 @@ export function buildSummary(ctx) {
     '',
   ];
 
-  if (!ctx.hadJsonReport) {
+  if (ctx.artifacts !== undefined && ctx.artifacts.length > 0) {
+    lines.push('RETAINED ALONGSIDE THIS SUMMARY:');
+    for (const artifact of ctx.artifacts) {
+      lines.push(
+        `  ${artifact.name}: ${artifact.bytes === null ? 'NOT WRITTEN' : `${String(artifact.bytes)} bytes`}`
+      );
+    }
+    lines.push('');
+  }
+
+  if (ctx.jsonReport === 'absent') {
     lines.push(
       'No JSON reporter output was found — the process likely exited before',
       'vitest could write one (a missing script, a config error, a crash before',
       'any test ran). See stderr.log for the raw failure.',
+      ''
+    );
+  } else if (ctx.jsonReport === 'unreadable') {
+    lines.push(
+      'The JSON report exists but does not parse — vitest began writing it and',
+      'was interrupted. That points at the run being killed (OOM, SIGKILL,',
+      'a timeout) rather than at a failed assertion; check the exit code above',
+      'against 128 + the signal, and read report.json and stderr.log directly.',
       ''
     );
   } else if (ctx.failures.length === 0) {
@@ -330,6 +371,28 @@ export function buildSummary(ctx) {
   }
 
   return lines.join('\n');
+}
+
+/** The three files a retained red run is supposed to carry. */
+const RETAINED_FILES = ['report.json', 'stdout.log', 'stderr.log'];
+
+/**
+ * What a retained directory actually holds, so `summary.txt` can be read on
+ * its own without listing the directory beside it.
+ *
+ * An empty file and an absent one are the same size and completely different
+ * findings — a zero-byte `stdout.log` means the run produced nothing, a
+ * missing one means this tool failed to keep it — so the two are reported
+ * apart rather than both as `0 bytes`.
+ *
+ * @param {string} dir
+ * @returns {RetainedArtifact[]}
+ */
+export function describeArtifacts(dir) {
+  return RETAINED_FILES.map((name) => {
+    const path = join(dir, name);
+    return { name, bytes: existsSync(path) ? statSync(path).size : null };
+  });
 }
 
 /**
@@ -437,12 +500,13 @@ export async function runHunt(opts) {
       continue;
     }
 
-    const report = readJsonReport(result.jsonPath);
-    const failures = extractFailures(report);
+    const outcome = readJsonReport(result.jsonPath);
+    const failures = outcome.status === 'ok' ? extractFailures(outcome.report) : [];
     const destDir = join(outDir, `run-${String(iteration).padStart(pad, '0')}`);
     mkdirSync(destDir, { recursive: true });
     cpSync(staging, destDir, { recursive: true });
     rmSync(staging, { recursive: true, force: true });
+    const artifacts = describeArtifacts(destDir);
 
     const summary = buildSummary({
       filter,
@@ -455,7 +519,8 @@ export async function runHunt(opts) {
       loadBefore: result.loadBefore,
       loadAfter: result.loadAfter,
       failures,
-      hadJsonReport: report !== undefined,
+      jsonReport: outcome.status,
+      artifacts,
     });
     writeFileSync(join(destDir, 'summary.txt'), summary, 'utf8');
 
@@ -617,6 +682,22 @@ function printUsage() {
  * @returns {boolean}
  */
 function selfTest() {
+  /** @param {JsonReportOutcome['status']} jsonReport */
+  const summaryFor = (jsonReport) =>
+    buildSummary({
+      filter: '@pops/x',
+      script: 'test',
+      iteration: 1,
+      iterations: 1,
+      exitCode: 1,
+      startedAt: '2026-01-01T00:00:00.000Z',
+      endedAt: '2026-01-01T00:00:01.000Z',
+      loadBefore: [0, 0, 0],
+      loadAfter: [0, 0, 0],
+      failures: [],
+      jsonReport,
+    });
+
   const checks = {
     'a filter becomes a filesystem-safe slug':
       slugifyFilter('@pops/purchases') === 'pops-purchases',
@@ -666,19 +747,11 @@ function selfTest() {
     'a malformed report yields no failures rather than throwing':
       extractFailures({ testResults: 'not an array' }).length === 0 &&
       extractFailures(undefined).length === 0,
-    'a summary without a JSON report says so': buildSummary({
-      filter: '@pops/x',
-      script: 'test',
-      iteration: 1,
-      iterations: 1,
-      exitCode: 1,
-      startedAt: '2026-01-01T00:00:00.000Z',
-      endedAt: '2026-01-01T00:00:01.000Z',
-      loadBefore: [0, 0, 0],
-      loadAfter: [0, 0, 0],
-      failures: [],
-      hadJsonReport: false,
-    }).includes('No JSON reporter output'),
+    'a summary without a JSON report says so':
+      summaryFor('absent').includes('No JSON reporter output'),
+    'a summary whose JSON report did not parse says something else':
+      summaryFor('unreadable').includes('does not parse') &&
+      !summaryFor('unreadable').includes('No JSON reporter output'),
   };
 
   const failed = Object.entries(checks).filter(([, ok]) => !ok);
