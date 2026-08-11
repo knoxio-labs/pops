@@ -5,9 +5,12 @@ import {
   describeCell,
   findUncovered,
   isTruncated,
+  narrowingQueries,
   partitionRoots,
   refineCell,
+  titleBase,
   titlePartitions,
+  titleSearchPrefix,
 } from '../huly-partition.mjs';
 
 type Cell = Parameters<typeof describeCell>[0];
@@ -59,6 +62,81 @@ describe('describeCell', () => {
     expect(describeCell({ titleRegex: 'a%', status: 'M', hasComponent: false })).toBe(
       'status=M hasComponent=false titleRegex=a%'
     );
+  });
+
+  it('renders titleSearch the same way, after titleRegex', () => {
+    expect(describeCell({ status: 'M', titleSearch: 'ch' })).toBe('status=M titleSearch=ch');
+  });
+});
+
+describe('titleBase', () => {
+  it('strips a title pattern, leaving the branch it divides', () => {
+    expect(titleBase({ status: 'M', hasComponent: false, titleRegex: 'a%' })).toEqual({
+      status: 'M',
+      component: undefined,
+      hasComponent: false,
+      hasAssignee: undefined,
+      hasDueDate: undefined,
+    });
+  });
+
+  it('strips a titleSearch the same way, so a narrowing query maps back to its branch', () => {
+    const query: Cell = { status: 'M', titleSearch: 'c' };
+    expect(describeCell(titleBase(query))).toBe(describeCell({ status: 'M' }));
+  });
+});
+
+describe('titleSearchPrefix', () => {
+  it.each([
+    ['d%', 'd'],
+    ['f[^e]%', 'f'],
+    // The ticket's own worked example: two patterns that diverge before
+    // either special character, so they yield different, non-empty prefixes.
+    ['c[^h]%', 'c'],
+    ['ch%', 'ch'],
+    ['feat\\([a-e]%', 'feat('],
+    ['[a-m]%', ''],
+    ['%', ''],
+  ])('reads the leading literal substring of %s as %s', (pattern, expected) => {
+    expect(titleSearchPrefix(pattern)).toBe(expected);
+  });
+
+  it('treats an escaped special character as literal', () => {
+    expect(titleSearchPrefix('a\\%b%')).toBe('a%b');
+  });
+
+  it('reads a pattern with no special character as its own whole prefix', () => {
+    expect(titleSearchPrefix('exact')).toBe('exact');
+  });
+});
+
+describe('narrowingQueries', () => {
+  it("builds one titleSearch cross-check per pattern in the ticket's own example", () => {
+    const queries = narrowingQueries({ status: 'Merged' }, ['c[^h]%', 'ch%']);
+    expect(queries.map((query) => query.titleSearch)).toEqual(['c', 'ch']);
+  });
+
+  it('carries the rest of the branch filters into each cross-check', () => {
+    const branch: Cell = { status: 'Merged', hasComponent: false, hasAssignee: true };
+    const [query] = narrowingQueries(branch, ['d%']);
+    expect(query?.status).toBe('Merged');
+    expect(query?.hasComponent).toBe(false);
+    expect(query?.hasAssignee).toBe(true);
+    expect(query?.titleRegex).toBeUndefined();
+  });
+
+  it('dedupes two patterns that share the same literal prefix', () => {
+    const queries = narrowingQueries({ status: 'X' }, ['c[^h]%', 'c[jk]%']);
+    expect(queries).toHaveLength(1);
+    expect(queries[0]?.titleSearch).toBe('c');
+  });
+
+  it('drops a pattern whose special character comes first — nothing narrower than the branch itself', () => {
+    expect(narrowingQueries({ status: 'X' }, ['[a-m]%'])).toEqual([]);
+  });
+
+  it('returns nothing for an empty pattern list', () => {
+    expect(narrowingQueries({ status: 'X' }, [])).toEqual([]);
   });
 });
 

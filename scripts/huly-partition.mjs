@@ -59,7 +59,18 @@
  * clean verdict.
  *
  * Proving the whole thing would take a total count to reconcile against, or an
- * offset/cursor. Both are the upstream server's to add.
+ * offset/cursor. Both are the upstream server's to add — checked as of
+ * 2026-08-11 against the live `mcp__huly-knoxiolabs__list_issues` tool schema
+ * and its responses, neither exists. Failing that, `narrowingQueries` gives
+ * the fallback the risk admits: `titleSearch` is a second, unrelated read path
+ * (case-insensitive substring, not `SIMILAR TO` prefix) over the same branch,
+ * so an identifier it turns up that no title-regex leaf ever returned is
+ * *proof* of a missed row, not another assumption stacked on the first. It
+ * cannot prove the reverse — a title sharing none of the patterns' leading
+ * substrings anywhere slips past both reads alike — so this narrows the
+ * risk in a hand-written pattern set without closing the axis. `assessCoverage`
+ * in `huly-coverage.mjs` folds a declared cross-check into its verdict; the
+ * `ASSUMED, not verified` line never upgrades to verified, only to narrowed.
  *
  * `isTopLevel` is deliberately unused. It is not a partition: `true` returns
  * top-level issues, but `false` returns everything rather than the sub-issues,
@@ -77,22 +88,34 @@ export const DEFAULT_LIMIT = 200;
  *   hasAssignee?: boolean,
  *   hasDueDate?: boolean,
  *   titleRegex?: string,
- * }} Cell A `list_issues` filter combination.
+ *   titleSearch?: string,
+ * }} Cell A `list_issues` filter combination. `titleRegex` and `titleSearch`
+ * are mutually exclusive at the API, mirroring the tool itself: a title
+ * partition leaf carries the former, a narrowing cross-check carries the
+ * latter, and no cell this module builds carries both.
  * @typedef {{ filter: Cell, count: number }} CoverageCell One executed query and how many rows it returned.
+ * @typedef {{ query: Cell, identifiers: string[] }} NarrowingResult One
+ * executed `titleSearch` cross-check (see `narrowingQueries`) and the
+ * identifiers it returned. `query.titleSearch` says which branch it checks;
+ * `identifiers` is compared against the whole export, not just that branch's
+ * declared cells, since the two must never overlap in the first place.
  * @typedef {{
  *   limit?: number,
  *   statuses?: string[],
  *   components?: string[],
  *   cells: CoverageCell[],
+ *   titleNarrowing?: NarrowingResult[],
  * }} Coverage The provenance block an enumerated export carries. `cells` is
  * required: a coverage block that names no queries is a proof of nothing, and
  * `readCoverage` refuses it rather than reading it as an empty one. The other
- * three default, and not to the same effect. An absent `limit` means the API
+ * four default, and not to the same effect. An absent `limit` means the API
  * cap. An absent `statuses` is called out by the assessment, because "every
  * declared status is covered" over no statuses is a claim about nothing. An
  * absent `components` is NOT called out on its own — it only bites where a
  * branch needed the component fan-out, and there it shows up as an uncovered
- * `hasComponent=true` cell rather than as a complaint about the list.
+ * `hasComponent=true` cell rather than as a complaint about the list. An
+ * absent `titleNarrowing` is not called out either: not every export runs the
+ * fallback, and the assumption line says plainly when none did.
  * @typedef {{ branch: Cell, patterns: string[] }} Assumption A branch covered only by title patterns.
  * @typedef {{ uncovered: Cell[], assumed: Assumption[] }} Gaps
  */
@@ -130,17 +153,18 @@ export function describeCell(cell) {
   if (cell.hasAssignee !== undefined) parts.push(`hasAssignee=${cell.hasAssignee}`);
   if (cell.hasDueDate !== undefined) parts.push(`hasDueDate=${cell.hasDueDate}`);
   if (cell.titleRegex !== undefined) parts.push(`titleRegex=${cell.titleRegex}`);
+  if (cell.titleSearch !== undefined) parts.push(`titleSearch=${cell.titleSearch}`);
   return parts.length === 0 ? '(unfiltered)' : parts.join(' ');
 }
 
 /**
- * The same cell with any title pattern stripped — the branch a title split
- * divides.
+ * The same cell with any title pattern or title search stripped — the branch
+ * a title split, or a narrowing cross-check, divides.
  *
  * @param {Cell} cell
  * @returns {Cell}
  */
-function titleBase(cell) {
+export function titleBase(cell) {
   return {
     status: cell.status,
     component: cell.component,
@@ -148,6 +172,83 @@ function titleBase(cell) {
     hasAssignee: cell.hasAssignee,
     hasDueDate: cell.hasDueDate,
   };
+}
+
+/**
+ * The special characters `SIMILAR TO` gives meaning beyond a literal
+ * character: `%`/`_` are the SQL wildcards, the rest are the POSIX regex
+ * extensions Postgres layers on top (bracket classes, alternation,
+ * quantifiers, grouping, anchors).
+ */
+const SIMILAR_TO_SPECIAL = new Set([
+  '%',
+  '_',
+  '(',
+  ')',
+  '|',
+  '*',
+  '+',
+  '?',
+  '{',
+  '}',
+  '[',
+  ']',
+  '^',
+  '$',
+  '.',
+]);
+
+/**
+ * The leading literal substring a `titleRegex` pattern commits to — the part
+ * before its first unescaped wildcard, bracket class, or other special
+ * character. `\x` escapes `x` to a literal, per `SIMILAR TO`.
+ *
+ * This is the exact substring every title the pattern matches must contain,
+ * which is what makes it usable as a `titleSearch` cross-check: `d%` and
+ * `f[^e]%` and `feat\([a-e]%` yield `'d'`, `'f'`, and `'feat('`. A pattern
+ * whose special character comes first (`[a-m]%`) yields `''` — nothing here
+ * is more specific than the whole branch, so it contributes no cross-check.
+ *
+ * @param {string} pattern
+ * @returns {string}
+ */
+export function titleSearchPrefix(pattern) {
+  let prefix = '';
+  let index = 0;
+  while (index < pattern.length) {
+    const char = pattern[index];
+    if (char === '\\' && index + 1 < pattern.length) {
+      prefix += pattern[index + 1];
+      index += 2;
+      continue;
+    }
+    if (SIMILAR_TO_SPECIAL.has(char)) break;
+    prefix += char;
+    index += 1;
+  }
+  return prefix;
+}
+
+/**
+ * The narrowing cross-check queries for one title-partitioned branch: one
+ * `titleSearch` per distinct non-empty leading substring its patterns commit
+ * to, scoped by the same non-title filters as the branch itself.
+ *
+ * `titleSearch` reads case-insensitive substring, anywhere in the title — a
+ * different mechanism from `titleRegex`'s case-sensitive, whole-title
+ * `SIMILAR TO` prefix match. An identifier one of these queries returns that
+ * no title-regex leaf for this branch ever did is not another assumption:
+ * it is a title the patterns provably missed. See the module header for what
+ * this does and does not establish.
+ *
+ * @param {Cell} branch A cell with no `titleRegex`/`titleSearch` of its own —
+ *   the same branch the patterns in `titlePartitions` divide.
+ * @param {string[]} patterns The `titleRegex` patterns dividing `branch`.
+ * @returns {Cell[]}
+ */
+export function narrowingQueries(branch, patterns) {
+  const prefixes = [...new Set(patterns.map(titleSearchPrefix))].filter((prefix) => prefix !== '');
+  return prefixes.map((titleSearch) => ({ ...titleBase(branch), titleSearch }));
 }
 
 /**

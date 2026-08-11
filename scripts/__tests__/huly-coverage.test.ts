@@ -124,6 +124,100 @@ describe('assessCoverage — the title axis, which it cannot verify', () => {
   });
 });
 
+describe('assessCoverage — the narrowing cross-check', () => {
+  // The ticket's own worked example: `c[^h]%` and `ch%` together miss the
+  // title that is exactly "c". A `titleSearch: 'c'` cross-check is a
+  // different read path over the same branch — it would return that title
+  // even though neither pattern above matches it.
+  const gapCoverage = (identifiersFound: string[]): Coverage => ({
+    ...coverageOf(
+      [
+        cell({ status: 'Merged', titleRegex: 'c[^h]%' }, 1),
+        cell({ status: 'Merged', titleRegex: 'ch%' }, 1),
+      ],
+      ['Merged']
+    ),
+    titleNarrowing: [
+      { query: { status: 'Merged', titleSearch: 'c' }, identifiers: identifiersFound },
+    ],
+  });
+
+  it('reports a missed identifier as a proven problem, not another assumption', () => {
+    const verdict = assessCoverage(gapCoverage(['POPS-1', 'POPS-3']), issues('POPS-1', 'POPS-2'));
+    expect(verdict.complete).toBe(false);
+    expect(verdict.problems.join('\n')).toContain('POPS-3');
+    expect(verdict.problems.join('\n')).toContain('titleSearch="c"');
+  });
+
+  it('the assumption line points at the problem rather than repeating it blindly', () => {
+    const verdict = assessCoverage(gapCoverage(['POPS-1', 'POPS-3']), issues('POPS-1', 'POPS-2'));
+    expect(verdict.assumptions[0]).toContain('found a gap');
+  });
+
+  it('marks the branch narrowed, never verified, when the cross-check finds nothing missed', () => {
+    const verdict = assessCoverage(gapCoverage(['POPS-1']), issues('POPS-1', 'POPS-2'));
+    expect(verdict.complete).toBe(true);
+    expect(verdict.assumptions[0]).toContain('narrowed');
+    expect(verdict.assumptions[0]).not.toContain('verified');
+  });
+
+  it('says a branch was not cross-checked at all when no titleNarrowing was declared', () => {
+    const verdict = assessCoverage(
+      coverageOf(
+        [
+          cell({ status: 'Merged', titleRegex: 'c[^h]%' }, 1),
+          cell({ status: 'Merged', titleRegex: 'ch%' }, 1),
+        ],
+        ['Merged']
+      ),
+      issues('POPS-1', 'POPS-2')
+    );
+    expect(verdict.complete).toBe(true);
+    expect(verdict.assumptions[0]).toContain('not cross-checked');
+  });
+
+  it('never lets a narrowed branch upgrade the headline to fully verified', () => {
+    const text = formatCoverage(
+      assessCoverage(gapCoverage(['POPS-1']), issues('POPS-1', 'POPS-2'))
+    ).join('\n');
+    expect(text).toContain('complete on every axis it can verify');
+    expect(text).not.toContain('COVERAGE: complete —');
+  });
+
+  it('matches a cross-check to its branch through the non-title filters, not just status', () => {
+    const verdict = assessCoverage(
+      {
+        ...coverageOf(
+          [
+            cell({ status: 'Merged', hasComponent: false, titleRegex: 'c[^h]%' }, 1),
+            cell({ status: 'Merged', hasComponent: false, titleRegex: 'ch%' }, 1),
+            cell({ status: 'Merged', hasComponent: true }, 1),
+          ],
+          ['Merged']
+        ),
+        titleNarrowing: [
+          {
+            query: { status: 'Merged', hasComponent: false, titleSearch: 'c' },
+            identifiers: ['POPS-1', 'POPS-3'],
+          },
+        ],
+      },
+      issues('POPS-1', 'POPS-2', 'POPS-4')
+    );
+    expect(verdict.problems.join('\n')).toContain('POPS-3');
+  });
+
+  it('treats an identifier the cross-check finds as fine when it was harvested by a sibling branch', () => {
+    // Branches never overlap on their own filters, so an identifier belonging
+    // to THIS branch can only ever have been harvested by one of THIS
+    // branch's own leaves — checking against the whole export is exactly as
+    // strong as checking against the branch alone, and needs no per-cell
+    // identifier bookkeeping in the export format.
+    const verdict = assessCoverage(gapCoverage(['POPS-2']), issues('POPS-1', 'POPS-2'));
+    expect(verdict.complete).toBe(true);
+  });
+});
+
 describe('assessCoverage — every way it must refuse', () => {
   it('refuses a cell that reached the cap, and names it', () => {
     const verdict = assessCoverage(
@@ -332,6 +426,14 @@ describe('readCoverage', () => {
       { coverage: { cells: [{ filter: { titleRegex: /a/u.source.length }, count: 1 }] } },
       /titleRegex must be a string/u,
     ],
+    // The API itself refuses both at once, so a filter naming both can never
+    // be the query that actually ran — accepting it would let an impossible
+    // cell stand in as part of a coverage proof.
+    [
+      'a filter that sets both titleRegex and titleSearch',
+      { coverage: { cells: [{ filter: { titleRegex: 'a%', titleSearch: 'a' }, count: 1 }] } },
+      /sets both titleRegex and titleSearch/u,
+    ],
     ['a zero limit', { coverage: { limit: 0, cells: [] } }, /limit must be a positive integer/u],
     [
       'statuses that are not strings',
@@ -348,8 +450,82 @@ describe('readCoverage', () => {
       { coverage: { components: [''], cells: [] } },
       /components\[0\] is empty/u,
     ],
+    [
+      'titleNarrowing that is not an array',
+      { coverage: { cells: [], titleNarrowing: {} } },
+      /titleNarrowing must be an array/u,
+    ],
+    [
+      'a non-object titleNarrowing entry',
+      { coverage: { cells: [], titleNarrowing: [1] } },
+      /titleNarrowing\[0\] is not an object/u,
+    ],
+    [
+      'a titleNarrowing entry with no query',
+      { coverage: { cells: [], titleNarrowing: [{ identifiers: [] }] } },
+      /titleNarrowing\[0\]\.query must be an object/u,
+    ],
+    // Not merely a query with no title field at all: `titleSearch` is the one
+    // thing that makes a query a cross-check rather than just another cell.
+    [
+      'a titleNarrowing query with no titleSearch',
+      { coverage: { cells: [], titleNarrowing: [{ query: { status: 'M' }, identifiers: [] }] } },
+      /titleNarrowing\[0\]\.query\.titleSearch is required/u,
+    ],
+    [
+      'a titleNarrowing entry with no identifiers',
+      { coverage: { cells: [], titleNarrowing: [{ query: { titleSearch: 'c' } }] } },
+      /titleNarrowing\[0\]\.identifiers must be an array of strings/u,
+    ],
+    [
+      'a titleNarrowing identifiers entry that is not a string',
+      {
+        coverage: {
+          cells: [],
+          titleNarrowing: [{ query: { titleSearch: 'c' }, identifiers: [7] }],
+        },
+      },
+      /titleNarrowing\[0\]\.identifiers must be an array of strings/u,
+    ],
+    [
+      'a titleNarrowing query that sets both titleRegex and titleSearch',
+      {
+        coverage: {
+          cells: [],
+          titleNarrowing: [{ query: { titleRegex: 'a%', titleSearch: 'a' }, identifiers: [] }],
+        },
+      },
+      /sets both titleRegex and titleSearch/u,
+    ],
   ])('throws on %s rather than reading it as undeclared', (_name, parsed, message) => {
     expect(() => readCoverage(parsed)).toThrow(message);
+  });
+
+  it('reads a well-formed titleNarrowing block', () => {
+    const coverage = readCoverage({
+      coverage: {
+        cells: [],
+        titleNarrowing: [
+          { query: { status: 'Merged', titleSearch: 'c' }, identifiers: ['POPS-1'] },
+        ],
+      },
+    });
+    expect(coverage?.titleNarrowing).toEqual([
+      { query: { status: 'Merged', titleSearch: 'c' }, identifiers: ['POPS-1'] },
+    ]);
+  });
+
+  it('reads an absent titleNarrowing as empty rather than as an error', () => {
+    expect(readCoverage({ coverage: { cells: [] } })?.titleNarrowing).toEqual([]);
+  });
+
+  // Not trimmed, unlike `status`/`component`: a search term's edge whitespace
+  // is part of what it matches.
+  it('leaves a titleSearch term exactly as written, whitespace and all', () => {
+    const coverage = readCoverage({
+      coverage: { cells: [], titleNarrowing: [{ query: { titleSearch: ' c ' }, identifiers: [] }] },
+    });
+    expect(coverage?.titleNarrowing?.[0]?.query.titleSearch).toBe(' c ');
   });
 });
 

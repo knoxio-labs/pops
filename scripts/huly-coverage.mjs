@@ -12,7 +12,11 @@
  * That the declared cells tile the whole status list with no gap and no
  * duplicate, that no cell reached the cap, that the row count adds up, and that
  * no identifier arrived twice. A missing branch is named rather than silently
- * absorbed.
+ * absorbed. When an export also declares `titleNarrowing` cross-checks (see
+ * `narrowingQueries` in `huly-partition.mjs`), an identifier one of them
+ * returns that the export never harvested any other way is proven missing,
+ * not merely suspected — that promotes the export to INCOMPLETE with the
+ * identifier named, the same as any other structural problem.
  *
  * ## What is taken on trust
  *
@@ -28,7 +32,11 @@
  *     `list_components`.
  *   - **A title partition tiles its branch.** This one is not merely unchecked
  *     but uncheckable here, so it is reported as an assumption on its own line
- *     rather than folded into the verdict.
+ *     rather than folded into the verdict — even when a narrowing cross-check
+ *     found nothing wrong. Absence of a caught gap is not proof of no gap: a
+ *     title sharing none of the patterns' leading substrings anywhere would
+ *     slip past `titleSearch` exactly as it slipped past `titleRegex`. The
+ *     line says `narrowed`, never `verified`.
  *
  * Every refusal in this module names the row it choked on. That message is the
  * value — a caller that catches these must print it.
@@ -40,6 +48,7 @@ import {
   findUncovered,
   isTruncated,
   partitionRoots,
+  titleBase,
   titlePartitions,
 } from './huly-partition.mjs';
 
@@ -47,6 +56,7 @@ import {
  * @typedef {import('./huly-partition.mjs').Cell} Cell
  * @typedef {import('./huly-partition.mjs').Coverage} Coverage
  * @typedef {import('./huly-partition.mjs').CoverageCell} CoverageCell
+ * @typedef {import('./huly-partition.mjs').NarrowingResult} NarrowingResult
  * @typedef {{
  *   declared: boolean,
  *   complete: boolean,
@@ -167,6 +177,73 @@ function describeStructuralProblems(verdict, statuses) {
 }
 
 /**
+ * @typedef {{ branch: string, prefixes: string[], missing: string[] }} NarrowingByBranch
+ */
+
+/**
+ * Fold the declared `titleNarrowing` cross-checks against the identifiers the
+ * export actually harvested, keyed by the branch each cross-check queried.
+ *
+ * A cross-check's `identifiers` are compared against `harvested` — every
+ * identifier the export holds, from any cell — not just the branch's own
+ * cells, since the partition's whole premise is that branches never overlap:
+ * an identifier `titleSearch` returns for this branch that appears ANYWHERE
+ * else in the export is still a query this branch's own leaves never made,
+ * which is the gap the cross-check exists to catch.
+ *
+ * @param {NarrowingResult[]} narrowing
+ * @param {Set<string>} harvested
+ * @returns {{ byBranch: Map<string, NarrowingByBranch>, problems: string[] }}
+ */
+function foldNarrowing(narrowing, harvested) {
+  /** @type {Map<string, NarrowingByBranch>} */
+  const byBranch = new Map();
+  /** @type {string[]} */
+  const problems = [];
+  for (const { query, identifiers } of narrowing) {
+    const branch = describeCell(titleBase(query));
+    const prefix = /** @type {string} */ (query.titleSearch);
+    const missing = identifiers.filter((identifier) => !harvested.has(identifier));
+    const entry = byBranch.get(branch) ?? { branch, prefixes: [], missing: [] };
+    entry.prefixes.push(prefix);
+    entry.missing.push(...missing);
+    byBranch.set(branch, entry);
+    for (const identifier of missing) {
+      problems.push(
+        `narrowing cross-check titleSearch="${prefix}" on ${branch} found ${identifier}, which no ` +
+          `declared query returned — the title patterns dividing that branch missed it`
+      );
+    }
+  }
+  return { byBranch, problems };
+}
+
+/**
+ * One assumption line: the branch, its patterns, and — when a narrowing
+ * cross-check was declared for it — whether that cross-check turned up
+ * anything the patterns missed. Never claims `verified`; at best `narrowed`.
+ *
+ * @param {import('./huly-partition.mjs').Assumption} assumption
+ * @param {Map<string, NarrowingByBranch>} narrowingByBranch
+ * @returns {string}
+ */
+function formatAssumption(assumption, narrowingByBranch) {
+  const branch = describeCell(assumption.branch);
+  const base =
+    `${branch} is covered only by ${assumption.patterns.length} title pattern(s), and nothing ` +
+    `here can prove they tile it: ${assumption.patterns.join(' | ')}`;
+  const check = narrowingByBranch.get(branch);
+  if (check === undefined) return `${base} — not cross-checked`;
+  if (check.missing.length > 0) {
+    return (
+      `${base} — cross-checked via titleSearch (${check.prefixes.join(', ')}): ` +
+      `found a gap, see the problem(s) above`
+    );
+  }
+  return `${base} — narrowed: titleSearch (${check.prefixes.join(', ')}) found nothing the patterns missed`;
+}
+
+/**
  * Whether an export can be trusted to be the whole of what its filters
  * describe, and if not, precisely why not.
  *
@@ -186,6 +263,9 @@ export function assessCoverage(coverage, issues) {
   const gaps = partitionRoots(statuses).map((root) =>
     findUncovered(root, present, components, titles)
   );
+  const assumed = gaps.flatMap((gap) => gap.assumed);
+  const harvested = new Set(issues.map((issue) => issue.identifier));
+  const narrowing = foldNarrowing(coverage.titleNarrowing ?? [], harvested);
 
   /** @type {CoverageVerdict} */
   const verdict = {
@@ -199,15 +279,8 @@ export function assessCoverage(coverage, issues) {
     uncovered: gaps.flatMap((gap) => gap.uncovered),
     duplicateCells: duplicateCellKeys(cells),
     duplicateIdentifiers: duplicateIdentifiers(issues),
-    problems: [],
-    assumptions: gaps
-      .flatMap((gap) => gap.assumed)
-      .map(
-        (assumption) =>
-          `${describeCell(assumption.branch)} is covered only by ${assumption.patterns.length} ` +
-          `title pattern(s), and nothing here can prove they tile it: ` +
-          assumption.patterns.join(' | ')
-      ),
+    problems: [...narrowing.problems],
+    assumptions: assumed.map((assumption) => formatAssumption(assumption, narrowing.byBranch)),
   };
 
   describeStructuralProblems(verdict, statuses);
@@ -239,6 +312,7 @@ export function readCoverage(parsed) {
     statuses: readStringArray(record['statuses'], 'coverage.statuses'),
     components: readStringArray(record['components'], 'coverage.components'),
     cells: readCells(record['cells']),
+    titleNarrowing: readNarrowing(record['titleNarrowing']),
   };
 }
 
@@ -289,18 +363,53 @@ function readCells(value) {
     if (typeof count !== 'number' || !Number.isInteger(count) || count < 0) {
       throw new Error(`coverage.cells[${index}].count must be a non-negative integer`);
     }
-    return { filter: readFilter(record['filter'], index), count };
+    return { filter: readFilter(record['filter'], `coverage.cells[${index}].filter`), count };
   });
 }
 
 /**
  * @param {unknown} value
- * @param {number} index
+ * @returns {NarrowingResult[]}
+ */
+function readNarrowing(value) {
+  if (value === undefined) return [];
+  if (!Array.isArray(value)) throw new Error('coverage.titleNarrowing must be an array');
+  return value.map((entry, index) => {
+    if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) {
+      throw new Error(`coverage.titleNarrowing[${index}] is not an object`);
+    }
+    const record = /** @type {Record<string, unknown>} */ (entry);
+    const query = readFilter(record['query'], `coverage.titleNarrowing[${index}].query`);
+    if (query.titleSearch === undefined) {
+      throw new Error(
+        `coverage.titleNarrowing[${index}].query.titleSearch is required — a cross-check with ` +
+          `no search term is not a cross-check`
+      );
+    }
+    // Required, unlike the top-level `statuses`/`components` lists: those are
+    // optional axes an export may simply not use, but an entry that names a
+    // query without saying what it returned is not "found nothing", it is
+    // incomplete — the same distinction `readCells` draws by requiring `count`.
+    const where = `coverage.titleNarrowing[${index}].identifiers`;
+    if (record['identifiers'] === undefined) {
+      throw new Error(`${where} must be an array of strings`);
+    }
+    const identifiers = readStringArray(record['identifiers'], where);
+    return { query, identifiers };
+  });
+}
+
+/**
+ * A `Cell` embedded in a coverage block — either a query's `filter` or a
+ * narrowing cross-check's `query`. Both shapes are read the same way.
+ *
+ * @param {unknown} value
+ * @param {string} where Path to this filter, e.g. `coverage.cells[0].filter`.
  * @returns {Cell}
  */
-function readFilter(value, index) {
+function readFilter(value, where) {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-    throw new Error(`coverage.cells[${index}].filter must be an object`);
+    throw new Error(`${where} must be an object`);
   }
   const record = /** @type {Record<string, unknown>} */ (value);
   /** @type {Cell} */
@@ -308,32 +417,39 @@ function readFilter(value, index) {
   for (const key of /** @type {const} */ (['status', 'component'])) {
     const raw = record[key];
     if (raw === undefined) continue;
-    if (typeof raw !== 'string')
-      throw new Error(`coverage.cells[${index}].filter.${key} must be a string`);
+    if (typeof raw !== 'string') throw new Error(`${where}.${key} must be a string`);
     // Refused, not trimmed to nothing. `" "` would become a filter matching no
     // root, so the branch it was meant to cover reads as uncovered and the
     // export is condemned for the wrong reason — a misleading verdict instead
     // of a message naming the row that needs fixing.
-    if (raw.trim() === '') throw new Error(`coverage.cells[${index}].filter.${key} is empty`);
+    if (raw.trim() === '') throw new Error(`${where}.${key} is empty`);
     cell[key] = raw.trim();
   }
   for (const key of /** @type {const} */ (['hasComponent', 'hasAssignee', 'hasDueDate'])) {
     const raw = record[key];
     if (raw === undefined) continue;
     if (typeof raw !== 'boolean') {
-      throw new Error(`coverage.cells[${index}].filter.${key} must be a boolean`);
+      throw new Error(`${where}.${key} must be a boolean`);
     }
     cell[key] = raw;
   }
-  const titleRegex = record['titleRegex'];
-  if (titleRegex !== undefined) {
-    if (typeof titleRegex !== 'string') {
-      throw new Error(`coverage.cells[${index}].filter.titleRegex must be a string`);
+  for (const key of /** @type {const} */ (['titleRegex', 'titleSearch'])) {
+    const raw = record[key];
+    if (raw === undefined) continue;
+    if (typeof raw !== 'string') {
+      throw new Error(`${where}.${key} must be a string`);
     }
-    // Not trimmed, unlike every other field: a pattern's leading and trailing
-    // whitespace is part of what it matches, and quietly removing it would
-    // change which rows the cell claims to have covered.
-    cell.titleRegex = titleRegex;
+    // Not trimmed, unlike every other field: a pattern's or search term's
+    // leading and trailing whitespace is part of what it matches, and quietly
+    // removing it would change which rows the cell claims to have covered.
+    cell[key] = raw;
+  }
+  // The API itself refuses both at once (`titleRegex` and `titleSearch` are
+  // mutually exclusive `list_issues` parameters), so a filter naming both can
+  // never have been the query that actually ran. Accepting it here would let
+  // an impossible cell stand in as part of a coverage proof.
+  if (cell.titleRegex !== undefined && cell.titleSearch !== undefined) {
+    throw new Error(`${where} sets both titleRegex and titleSearch — the API allows only one`);
   }
   return cell;
 }

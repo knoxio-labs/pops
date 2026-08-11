@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { HELP, readCell } from '../huly-partition-plan.mjs';
+import { HELP, readCell, readPatternList } from '../huly-partition-plan.mjs';
 
 describe('readCell', () => {
   it('reads a cell object', () => {
@@ -29,6 +29,33 @@ describe('readCell', () => {
   });
 });
 
+describe('readPatternList', () => {
+  it('splits on comma', () => {
+    expect(readPatternList('d%,f[^e]%')).toEqual(['d%', 'f[^e]%']);
+  });
+
+  it('returns nothing for an undefined argument', () => {
+    expect(readPatternList(undefined)).toEqual([]);
+  });
+
+  it('drops an empty trailing entry', () => {
+    expect(readPatternList('d%,')).toEqual(['d%']);
+  });
+
+  it('drops a whitespace-only entry', () => {
+    expect(readPatternList('d%,   ,e%')).toEqual(['d%', 'e%']);
+  });
+
+  // The whole point of this reader, distinct from the comma lists this tool
+  // reads elsewhere (--statuses, --components): a titleRegex pattern's edge
+  // whitespace is part of what it matches, so unlike those lists, entries
+  // here must survive untrimmed — a caller cross-checking a pattern that
+  // genuinely starts or ends with a space must get that exact pattern back.
+  it('does not trim an entry that has real content', () => {
+    expect(readPatternList(' a%, b %')).toEqual([' a%', ' b %']);
+  });
+});
+
 describe('HELP', () => {
   // The help text is where a caller learns the recipe stops being provable at
   // the title axis. Losing that line loses the only warning most readers see.
@@ -38,8 +65,16 @@ describe('HELP', () => {
   });
 
   it('names every mode it accepts', () => {
-    for (const mode of ['--roots', '--refine', '--assess', '--self-test']) {
+    for (const mode of ['--roots', '--refine', '--narrow', '--assess', '--self-test']) {
       expect(HELP).toContain(mode);
     }
+  });
+
+  // The fallback this tool offers once titleRegex is the only axis left.
+  // Losing this line loses the only place a reader learns the cross-check
+  // exists, or that it narrows rather than closes the gap.
+  it('says the narrowing cross-check narrows the title axis rather than closing it', () => {
+    expect(HELP).toContain('titleSearch');
+    expect(HELP).toContain('narrows');
   });
 });
