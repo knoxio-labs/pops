@@ -207,6 +207,22 @@ extension AppShellModel {
     }
 }
 
+extension AppShellModel: ReachabilityWitness {
+    /// Re-asks bootstrap if the last answer was a failure; a no-op otherwise.
+    ///
+    /// The only phase this improves is ``BootstrapPhase/failed(_:)`` — pending
+    /// has nothing to retry yet, and an answered phase already has a better
+    /// thing on screen than a re-ask driven by a feature that has nothing to
+    /// do with whether the *registry* is current. Routes through
+    /// ``reloadBootstrap()`` rather than duplicating its guards, so this and a
+    /// person foregrounding the app or tapping retry can never disagree about
+    /// when asking again is safe.
+    public func noteReachable() async {
+        guard case .failed = phase else { return }
+        await reloadBootstrap()
+    }
+}
+
 extension RepositoryError {
     /// ``BootstrapService`` does not constrain what it throws, so anything
     /// unrecognised becomes ``RepositoryError/transport(_:)`` — a diagnostic,

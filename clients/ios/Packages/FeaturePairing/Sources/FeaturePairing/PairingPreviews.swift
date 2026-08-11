@@ -42,7 +42,8 @@
             session: SessionStore(),
             dependencies: AppDependencies(
                 transactions: AppDependencies.unbound.transactions,
-                pairing: PreviewPairingService(failure: failing)
+                pairing: PreviewPairingService(failure: failing),
+                reachability: AppDependencies.unbound.reachability
             ),
             camera: PreviewCamera(access: camera),
             device: SystemDeviceDescription(),
