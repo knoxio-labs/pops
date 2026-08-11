@@ -81,10 +81,13 @@ model's, made where the wording is legible — including on the French,
 German and Japanese receipts the prompt forbids translating, which is why
 it is not a keyword table in code.
 
-The one new way to break a receipt that reconciled before is a model
-reporting the same fee in both fields, which overstates by exactly the fee
-and lands it in review. Under-reporting it in neither understates by the
-same amount, with the same outcome. Both are the safe direction.
+Two new ways exist to break a receipt that reconciled before, and both
+overstate by exactly the fee: a model reporting it in both fields, and a
+model reporting it in `shipping` while leaving the row it was printed on
+among the lines — which is how an emailed order states it, and which the
+prompt does not currently forbid (POPS-1814). Under-reporting it in
+neither understates by the same amount. All three land in review, which is
+the safe direction.
 
 Purchases written before the split carry a `shipping-uncertain` tag, added
 by a data-only migration. It means the surcharge **may** include delivery —
