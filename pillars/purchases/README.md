@@ -6,7 +6,7 @@ Port 3013, `purchases.db`, registers itself with `registry` on boot.
 
 ## The shape
 
-An **order** is the single point of entry. Three flat lists hang off it, and the cross-references between those lists are all optional:
+An **order** is the single point of entry. Four flat lists hang off it, and the cross-references between those lists are all optional:
 
 ```
 purchases  (the order)
@@ -17,6 +17,7 @@ purchases  (the order)
   ├─ purchase_charges               every charge, matched or not
   │    ├─ purchase_charge_links     charge → finance transaction
   │    └─ purchase_item_allocations which charge paid for which line
+  ├─ purchase_tags                  facts about the order that aren't fields
   └─ purchase_documents             evidence → documents
 ```
 
