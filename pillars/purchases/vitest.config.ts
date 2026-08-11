@@ -50,15 +50,16 @@ export default defineConfig({
        * gate for long enough that it rotted unnoticed: three modules
        * (`ingest/receipt/anthropic-vision.ts`, `api/ai-telemetry-deps.ts`,
        * `api/anthropic-key.ts`) had drifted to 0%, which is what actually
-       * failed `statements`/`functions`/`lines` too. Bringing those three to
-       * full coverage, plus targeted edge-case tests across a dozen adjacent
-       * modules, recovered `statements`/`functions`/`lines` above their
-       * original marks — those three are raised accordingly — but left
-       * `branches` at ~89%, short of the 91% this threshold used to claim.
-       * The remaining gap is real edge-case branches (locale/timezone
-       * parsing, reconciliation error paths, ingest adapters) spread thin
-       * across ~15 files rather than concentrated in a coverable few; closing
-       * it is tracked separately rather than done here as a drive-by.
+       * failed `statements`/`functions`/`lines` too. Covering those three,
+       * plus targeted edge-case tests across a dozen adjacent modules, put
+       * `statements`/`functions`/`lines` back above their original marks
+       * (`functions` far enough clear to be raised) but left `branches` at
+       * ~89%, short of the 91% this threshold used to claim. The remaining
+       * gap is real edge-case branches (locale/timezone parsing,
+       * reconciliation error paths, ingest adapters) spread thin across the
+       * ~35 files that still have an uncovered branch rather than
+       * concentrated in a coverable few; closing it is tracked separately
+       * rather than done here as a drive-by.
        */
       thresholds: {
         statements: 95,

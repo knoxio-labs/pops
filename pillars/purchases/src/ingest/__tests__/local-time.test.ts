@@ -83,10 +83,7 @@ describe('instantFromLocalParts', () => {
     expect(instant).toBe('2026-08-01T09:00:00.000Z');
   });
 
-  it('crosses a DST boundary correctly (Sydney AEST → AEDT, 6 Oct 2026)', () => {
-    // 2:30am local does not exist on the day clocks spring forward — the
-    // wall-clock reading only makes sense under one of the two offsets, and
-    // this is exactly the correction the two-pass derivation exists for.
+  it('crosses a DST boundary correctly (Sydney AEST → AEDT, 4 Oct 2026)', () => {
     const before = instantFromLocalParts(
       { year: 2026, month: 10, day: 3, hour: 9, minute: 0 },
       'Australia/Sydney'
@@ -97,5 +94,19 @@ describe('instantFromLocalParts', () => {
     );
     expect(before).toBe('2026-10-02T23:00:00.000Z');
     expect(after).toBe('2026-10-09T22:00:00.000Z');
+  });
+
+  it('re-derives the offset when the first guess lands on the wrong side of a transition', () => {
+    // 1am on 4 Oct 2026 is still AEST (+10); clocks jump at 2am. The naive
+    // UTC reading of those parts falls in the Sydney afternoon, where the
+    // offset is already AEDT (+11), so the first guess is an hour out and
+    // only the second pass gets it right. This is the case the two-pass
+    // derivation exists for.
+    expect(
+      instantFromLocalParts(
+        { year: 2026, month: 10, day: 4, hour: 1, minute: 0 },
+        'Australia/Sydney'
+      )
+    ).toBe('2026-10-03T15:00:00.000Z');
   });
 });

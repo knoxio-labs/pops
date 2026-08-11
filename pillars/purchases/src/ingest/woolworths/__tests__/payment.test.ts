@@ -105,7 +105,7 @@ describe('readPayment', () => {
     expect(reading).toEqual({ hint: null, isCash: true, isCard: false, amountCents: 2000 });
   });
 
-  it('treats a payment with no description as unidentified rather than throwing', () => {
+  it('reads a payment with no description off its terminal slip alone', () => {
     const noDescription = { amount: '$1.00', details: [{ text: 'VISA' }] };
     expect(readPayment(asPayments([noDescription])).hint).toBe('Visa');
   });
