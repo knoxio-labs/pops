@@ -46,13 +46,22 @@ fi
 # What proof do we owe this unit? The decision is `proof-surface.mjs`'s, not
 # three blind script-name lookups here — it enumerates every script the unit
 # actually declares, so a rename or drop shows up in the log instead of
-# vanishing into "nothing to prove". `require()`-ing a malformed package.json
-# throws there same as it did here; that failure is left loud (no `|| true`).
+# vanishing into "nothing to prove". `JSON.parse`-ing a malformed package.json
+# throws there same as `require()` did here before; that failure is left loud
+# (no `|| true`).
 if ! proof_output="$(node "$repo_root/scripts/extractability/proof-surface.mjs" "$abs_unit")"; then
   echo "sandbox: failed to read $unit/package.json — see the error above." >&2
   exit 1
 fi
 mapfile -t proof <<<"$proof_output"
+# proof-surface.mjs promises exactly 7 lines; check rather than trust it, so a
+# future regression there is a clear failure here instead of an unbound-variable
+# crash under `set -u`.
+if [[ "${#proof[@]}" -ne 7 ]]; then
+  echo "sandbox: proof-surface.mjs printed ${#proof[@]} line(s), expected 7 — raw output:" >&2
+  echo "$proof_output" >&2
+  exit 1
+fi
 has_build="${proof[0]}"
 has_typecheck="${proof[1]}"
 test_script="${proof[2]}"

@@ -38,6 +38,10 @@
  *   5. SCRIPT_NAMES           the unit's declared script names, comma-joined
  *   6. NO_PROOF_SURFACE_REASON  the declared opt-out reason, or ''
  *   7. DECISION               'prove' | 'skip-declared' | 'violation' (never empty)
+ * Fields 5 and 6 come from package.json content (script names, the free-form
+ * opt-out reason) rather than this script's own fixed vocabulary, so any
+ * embedded newline in either is collapsed to a space before printing — the
+ * 7-line contract must hold regardless of what a unit's package.json contains.
  */
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -111,6 +115,19 @@ export function computeProofSurface(pkg) {
   };
 }
 
+/**
+ * Collapses embedded newlines/carriage-returns to spaces. `noProofSurface` is
+ * free-form JSON text and could legally contain `\n`/`\r`; SCRIPT_NAMES is
+ * derived from package.json keys and unlikely to, but both cross the same
+ * line-delimited wire format below, so both go through this before printing —
+ * an embedded newline must never be able to grow the output past the 7 lines
+ * `sandbox.sh` reads positionally.
+ * @param {string} value
+ */
+export function toWireLine(value) {
+  return value.replace(/\r\n|\r|\n/g, ' ');
+}
+
 /** @param {string[]} argv */
 function main(argv) {
   const [unitDir] = argv;
@@ -128,8 +145,8 @@ function main(argv) {
       surface.hasTypecheck ? '1' : '',
       surface.testScript ?? '',
       surface.hasTest ? '1' : '',
-      surface.scriptNames.join(', '),
-      surface.noProofSurfaceReason ?? '',
+      toWireLine(surface.scriptNames.join(', ')),
+      toWireLine(surface.noProofSurfaceReason ?? ''),
       surface.decision,
     ].join('\n') + '\n'
   );

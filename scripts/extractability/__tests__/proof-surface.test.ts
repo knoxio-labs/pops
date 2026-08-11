@@ -6,11 +6,12 @@ import { fileURLToPath } from 'node:url';
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { computeProofSurface } from '../proof-surface.mjs';
+import { computeProofSurface, toWireLine } from '../proof-surface.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..', '..');
 const sandboxScript = join(repoRoot, 'scripts', 'extractability', 'sandbox.sh');
+const proofSurfaceScript = join(repoRoot, 'scripts', 'extractability', 'proof-surface.mjs');
 
 describe('computeProofSurface', () => {
   it('proves a unit with a build script', () => {
@@ -97,11 +98,28 @@ describe('computeProofSurface', () => {
   });
 });
 
+describe('toWireLine', () => {
+  it('leaves a plain single-line string untouched', () => {
+    expect(toWireLine('data-only, see README')).toBe('data-only, see README');
+  });
+
+  it('collapses embedded newlines and carriage-returns to spaces', () => {
+    // A free-form `noProofSurface` reason is JSON text and could legally
+    // contain `\n`/`\r`. If that reached stdout verbatim it would grow the
+    // 7-line positional payload sandbox.sh reads with `mapfile`, shifting
+    // every field after it.
+    expect(toWireLine('line one\nline two')).toBe('line one line two');
+    expect(toWireLine('line one\r\nline two')).toBe('line one line two');
+    expect(toWireLine('a\nb\rc')).toBe('a b c');
+  });
+});
+
 describe('sandbox.sh: the EX-2 skip decision (real script, fixture units)', () => {
   let root: string;
   let renamedUnit: string;
   let optOutUnit: string;
   let malformedUnit: string;
+  let multilineReasonUnit: string;
 
   beforeAll(() => {
     root = mkdtempSync(join(tmpdir(), 'ex2-proof-surface-'));
@@ -144,6 +162,25 @@ describe('sandbox.sh: the EX-2 skip decision (real script, fixture units)', () =
     malformedUnit = join(root, 'malformed-fixture');
     mkdirSync(malformedUnit, { recursive: true });
     writeFileSync(join(malformedUnit, 'package.json'), '{ this is not valid json');
+
+    multilineReasonUnit = join(root, 'multiline-reason-fixture');
+    mkdirSync(multilineReasonUnit, { recursive: true });
+    writeFileSync(
+      join(multilineReasonUnit, 'package.json'),
+      JSON.stringify(
+        {
+          name: '@pops/multiline-reason-fixture',
+          version: '0.0.0',
+          private: true,
+          // A legal JSON string can carry an embedded newline. The 7-line
+          // wire format between proof-surface.mjs and sandbox.sh must survive
+          // that without shifting field positions.
+          pops: { extractability: { noProofSurface: 'data-only\nsee the README for why' } },
+        },
+        null,
+        2
+      )
+    );
   });
 
   afterAll(() => {
@@ -175,5 +212,25 @@ describe('sandbox.sh: the EX-2 skip decision (real script, fixture units)', () =
 
     expect(result.status).not.toBe(0);
     expect(result.stderr).toContain('failed to read');
+  });
+
+  it('proof-surface.mjs prints exactly 7 lines even when the opt-out reason has an embedded newline', () => {
+    const result = spawnSync('node', [proofSurfaceScript, multilineReasonUnit], {
+      encoding: 'utf8',
+    });
+
+    expect(result.status).toBe(0);
+    expect(result.stdout.split('\n')).toHaveLength(8); // 7 fields + trailing ''
+    expect(result.stdout).toContain('data-only see the README for why');
+    expect(result.stdout).not.toContain('data-only\nsee the README for why');
+  });
+
+  it("sandbox.sh still parses cleanly when a unit's opt-out reason has an embedded newline", () => {
+    const result = spawnSync('bash', [sandboxScript, multilineReasonUnit], { encoding: 'utf8' });
+
+    expect(result.status).toBe(0);
+    expect(result.stderr).toContain('declared opt-out: data-only see the README for why');
+    // The array-length guard must not fire on legitimate input.
+    expect(result.stderr).not.toContain('expected 7');
   });
 });
