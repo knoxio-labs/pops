@@ -58,7 +58,7 @@ describe('a reading that holds up', () => {
     // back as `unreadable` — discarding an extraction whose money is
     // perfect over a key about money that was never charged. The default
     // is what keeps the omission meaning "the receipt did not say".
-    expect(GOOD).not.toContain('shipping');
+    expect(JSON.parse(GOOD)).not.toHaveProperty('shipping');
 
     const outcome = await readReceipt(saying(GOOD), [IMAGE]);
 
