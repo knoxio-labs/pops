@@ -13,6 +13,7 @@ import {
   peelTrailingGroups,
   readFlag,
   readIssues,
+  readPrs,
   readRefGroup,
   reconcile,
   relateCommit,
@@ -21,6 +22,7 @@ import {
 
 type Commit = Parameters<typeof relateCommit>[0];
 type Issue = Parameters<typeof classifyIssue>[0];
+type PullRequest = ReturnType<typeof readPrs>[number];
 
 const PREFIX = 'POPS';
 
@@ -29,6 +31,11 @@ const backlog = (identifier: string, title = identifier): Issue => ({
   identifier,
   title,
   status: 'Backlog',
+});
+const pr = (number: number, title: string, baseRefName = 'main'): PullRequest => ({
+  number,
+  title,
+  baseRefName,
 });
 
 /**
@@ -322,7 +329,7 @@ describe('normaliseSubject / findMirrors', () => {
     );
   });
 
-  it('identifies a mirror whose title is the commit subject minus the PR number', () => {
+  it('identifies a mirror whose title is the commit subject minus the PR number, with commit-subject evidence', () => {
     const mirrors = findMirrors(
       [
         {
@@ -339,6 +346,10 @@ describe('normaliseSubject / findMirrors', () => {
       [FIXES_VIA_BODY_TRAILER]
     );
     expect(mirrors.map((mirror) => mirror.identifier)).toEqual(['POPS-1575']);
+    expect(mirrors[0]).toMatchObject({
+      evidence: 'commit-subject',
+      sha: FIXES_VIA_BODY_TRAILER.sha,
+    });
   });
 
   it('does not call a human-filed ticket a mirror on a near-miss title', () => {
@@ -348,6 +359,138 @@ describe('normaliseSubject / findMirrors', () => {
         [commit('c1', 'fix(x): thing')]
       )
     ).toEqual([]);
+  });
+
+  // POPS-1726: commit-subject only fires for a squash-merged PR. These two
+  // classes of PR never produce a matching commit subject on the ref, yet
+  // both are genuine mirrors — a PR-title test is the only way to see them.
+  describe('pr-title evidence (POPS-1726)', () => {
+    // A merge-commit PR: GitHub writes "Merge pull request #n from …" as the
+    // commit subject, never the PR's own title.
+    const mergeCommitPr = pr(4001, 'feat(bfm): pairing code TTL enforcement', 'main');
+    const mergeCommitOnMain = commit(
+      'a1b2c3d4e0000000000000000000000000000000',
+      'Merge pull request #4001 from knoxio-labs/pops/feat/bfm-pairing-ttl'
+    );
+
+    // A PR based on a long-lived branch other than main (e.g. `lake-migration`
+    // in this repo's real history): its commits reach main later, under a
+    // different SHA and typically a re-squashed subject.
+    const laneMigrationPr = pr(
+      3325,
+      'Collapse lists pillar into @pops/lists (single workspace member, strict exports)',
+      'lake-migration'
+    );
+    const reSquashedOnMain = commit(
+      'f6e5d4c3b0000000000000000000000000000000',
+      'chore(lists): finish workspace collapse (lake-migration backport)'
+    );
+
+    it('finds a merge-commit mirror by PR title when the commit subject never carried it', () => {
+      const mirrors = findMirrors(
+        [{ identifier: 'POPS-2001', title: mergeCommitPr.title, status: 'Merged' }],
+        [mergeCommitOnMain],
+        [mergeCommitPr]
+      );
+      expect(mirrors).toEqual([
+        {
+          identifier: 'POPS-2001',
+          title: mergeCommitPr.title,
+          status: 'Merged',
+          evidence: 'pr-title',
+          ambiguous: false,
+          prNumber: 4001,
+          baseRefName: 'main',
+        },
+      ]);
+    });
+
+    it('finds a mirror whose PR was based on a branch other than main', () => {
+      const mirrors = findMirrors(
+        [{ identifier: 'POPS-2002', title: laneMigrationPr.title, status: 'Merged' }],
+        [reSquashedOnMain],
+        [laneMigrationPr]
+      );
+      expect(mirrors).toEqual([
+        {
+          identifier: 'POPS-2002',
+          title: laneMigrationPr.title,
+          status: 'Merged',
+          evidence: 'pr-title',
+          ambiguous: false,
+          prNumber: 3325,
+          baseRefName: 'lake-migration',
+        },
+      ]);
+    });
+
+    it('prefers commit-subject evidence over an available PR-title match for the same issue', () => {
+      const matchingPr = pr(3919, normaliseSubject(FIXES_VIA_BODY_TRAILER.subject));
+      const mirrors = findMirrors(
+        [{ identifier: 'POPS-1575', title: matchingPr.title, status: 'Merged' }],
+        [FIXES_VIA_BODY_TRAILER],
+        [matchingPr]
+      );
+      expect(mirrors).toEqual([
+        {
+          identifier: 'POPS-1575',
+          title: matchingPr.title,
+          status: 'Merged',
+          evidence: 'commit-subject',
+          sha: FIXES_VIA_BODY_TRAILER.sha,
+        },
+      ]);
+    });
+
+    it('finds nothing by PR title when no --prs list was supplied', () => {
+      expect(
+        findMirrors(
+          [{ identifier: 'POPS-2001', title: mergeCommitPr.title, status: 'Merged' }],
+          [mergeCommitOnMain]
+        )
+      ).toEqual([]);
+    });
+
+    it('does not call a near-miss PR title a mirror', () => {
+      expect(
+        findMirrors(
+          [
+            {
+              identifier: 'POPS-1',
+              title: 'feat(bfm): pairing code TTL enforcement, mostly',
+              status: 'Backlog',
+            },
+          ],
+          [],
+          [mergeCommitPr]
+        )
+      ).toEqual([]);
+    });
+
+    // Two PRs sharing an exact title is the same collision the file header
+    // documents at the issue level (POPS-280/315 etc.) — a repeat Dependabot
+    // bump is the realistic source. Picking either PR arbitrarily would
+    // attach a specific, possibly wrong, prNumber to the mirror as though it
+    // were certain; the mirror must say it cannot tell instead.
+    it('marks a mirror ambiguous, with every candidate PR number, when two PRs share a title', () => {
+      const firstBump = pr(101, 'build(deps): bump lodash from 4.17.20 to 4.17.21');
+      const secondBump = pr(205, 'build(deps): bump lodash from 4.17.20 to 4.17.21');
+      const mirrors = findMirrors(
+        [{ identifier: 'POPS-3001', title: firstBump.title, status: 'Merged' }],
+        [],
+        [firstBump, secondBump]
+      );
+      expect(mirrors).toEqual([
+        {
+          identifier: 'POPS-3001',
+          title: firstBump.title,
+          status: 'Merged',
+          evidence: 'pr-title',
+          ambiguous: true,
+          candidates: [101, 205],
+        },
+      ]);
+    });
   });
 });
 
@@ -395,6 +538,40 @@ describe('reconcile', () => {
 
   it('counts the commits it scanned', () => {
     expect(reconcile([], commits, PREFIX).commitCount).toBe(2);
+  });
+
+  it('links an orphan to a PR-title mirror the commit list alone could not name', () => {
+    const mergeCommitPr = pr(4001, 'feat(bfm): pairing code TTL enforcement (POPS-2000)');
+    const mergeCommitOnMain = commit(
+      'a1b2c3d4e0000000000000000000000000000000',
+      'Merge pull request #4001 from knoxio-labs/pops/feat/bfm-pairing-ttl'
+    );
+    const report = reconcile(
+      [
+        backlog('POPS-2000', 'bfm: pairing code TTL'),
+        { identifier: 'POPS-2001', title: mergeCommitPr.title, status: 'Merged' },
+      ],
+      [...commits, mergeCommitOnMain],
+      PREFIX,
+      { prs: [mergeCommitPr] }
+    );
+    expect(report.eligible[0]?.mirrors).toEqual(['POPS-2001']);
+    expect(report.mirrors[0]).toMatchObject({ evidence: 'pr-title', prNumber: 4001 });
+  });
+
+  it('defaults to no PRs when the argument is omitted, matching pre-fix behaviour', () => {
+    const report = reconcile(
+      [
+        {
+          identifier: 'POPS-2001',
+          title: 'feat(bfm): pairing code TTL enforcement',
+          status: 'Merged',
+        },
+      ],
+      commits,
+      PREFIX
+    );
+    expect(report.mirrors).toEqual([]);
   });
 });
 
@@ -488,6 +665,55 @@ describe('readIssues', () => {
   });
 });
 
+describe('readPrs', () => {
+  it('accepts a bare array and the result envelope alike, matching the shape of gh pr list', () => {
+    const entries = [{ number: 3325, title: 't', baseRefName: 'lake-migration', createdAt: 'x' }];
+    const expected = [{ number: 3325, title: 't', baseRefName: 'lake-migration' }];
+    expect(readPrs(entries)).toEqual(expected);
+    expect(readPrs({ result: entries })).toEqual(expected);
+  });
+
+  it('trims title and baseRefName', () => {
+    expect(readPrs([{ number: 1, title: ' t ', baseRefName: ' main ' }])).toEqual([
+      { number: 1, title: 't', baseRefName: 'main' },
+    ]);
+  });
+
+  it('refuses a shape it does not understand', () => {
+    expect(() => readPrs({ prs: [] })).toThrow(/expected a JSON array/u);
+    expect(() => readPrs('nope')).toThrow(/expected a JSON array/u);
+  });
+
+  it('rejects a row with no numeric number rather than dropping it', () => {
+    expect(() => readPrs([{ title: 't', baseRefName: 'main' }])).toThrow(/no numeric "number"/u);
+    expect(() => readPrs([{ number: '3325', title: 't', baseRefName: 'main' }])).toThrow(
+      /no numeric "number"/u
+    );
+  });
+
+  it('rejects a row with no title, because mirror detection reads it', () => {
+    expect(() => readPrs([{ number: 1, baseRefName: 'main' }])).toThrow(/no string "title"/u);
+  });
+
+  it('rejects a row with no baseRefName rather than silently dropping it', () => {
+    expect(() => readPrs([{ number: 1, title: 't' }])).toThrow(/no string "baseRefName"/u);
+  });
+
+  it('names the offending PR number so the export can be fixed', () => {
+    expect(() =>
+      readPrs([
+        { number: 1, title: 't', baseRefName: 'main' },
+        { number: 2, title: 't' },
+      ])
+    ).toThrow(/PR #2 \(index 1\)/u);
+  });
+
+  it('rejects a non-object row', () => {
+    expect(() => readPrs(['x'])).toThrow(/index 0 is not an object/u);
+    expect(() => readPrs([null])).toThrow(/index 0 is not an object/u);
+  });
+});
+
 describe('readFlag', () => {
   it('reads the value after the flag', () => {
     expect(readFlag(['--issues', 'a.json', '--json'], '--issues')).toBe('a.json');
@@ -530,7 +756,9 @@ describe('formatReport', () => {
       commits,
       PREFIX
     );
-    expect(formatReport(report)).toContain('PR mirrors found across the whole export: 1.');
+    expect(formatReport(report)).toContain(
+      'PR mirrors found across the whole export: 1 (1 by commit subject, 0 by PR title).'
+    );
   });
 
   // A bare count over a partly-titled export describes a narrower sweep than
@@ -563,9 +791,11 @@ describe('formatReport', () => {
 
   it('opens with the completeness claim when the export proves one', () => {
     const report = reconcile([backlog('POPS-1452')], commits, PREFIX, {
-      limit: 200,
-      statuses: ['Backlog'],
-      cells: [{ filter: { status: 'Backlog' }, count: 1 }],
+      coverage: {
+        limit: 200,
+        statuses: ['Backlog'],
+        cells: [{ filter: { status: 'Backlog' }, count: 1 }],
+      },
     });
     expect(report.coverage.complete).toBe(true);
     expect(formatReport(report).split('\n')[0]).toContain('COVERAGE: complete');
@@ -573,9 +803,11 @@ describe('formatReport', () => {
 
   it('opens with INCOMPLETE, and the reason, when a query sat on the cap', () => {
     const report = reconcile([backlog('POPS-1452')], commits, PREFIX, {
-      limit: 1,
-      statuses: ['Backlog'],
-      cells: [{ filter: { status: 'Backlog' }, count: 1 }],
+      coverage: {
+        limit: 1,
+        statuses: ['Backlog'],
+        cells: [{ filter: { status: 'Backlog' }, count: 1 }],
+      },
     });
     expect(report.coverage.complete).toBe(false);
     expect(formatReport(report)).toContain('truncated');
@@ -583,9 +815,11 @@ describe('formatReport', () => {
 
   it('reports a status the export never queried as a hole in the sweep', () => {
     const report = reconcile([backlog('POPS-1452')], commits, PREFIX, {
-      limit: 200,
-      statuses: ['Backlog', 'Merged'],
-      cells: [{ filter: { status: 'Backlog' }, count: 1 }],
+      coverage: {
+        limit: 200,
+        statuses: ['Backlog', 'Merged'],
+        cells: [{ filter: { status: 'Backlog' }, count: 1 }],
+      },
     });
     expect(report.coverage.uncovered).toHaveLength(1);
     expect(formatReport(report)).toContain('no query covers status=Merged');
@@ -601,5 +835,35 @@ describe('formatReport', () => {
     expect(text).toContain('ORPHANS — merged work still in Backlog (1):');
     expect(text).toContain('POPS-1452');
     expect(text).toContain('body-trailer');
+  });
+
+  // POPS-1726: a commit-subject mirror and a PR-title mirror are different
+  // strengths of evidence. The report must state both counts, not one
+  // flattened total that hides which test actually found each one.
+  it('keeps commit-subject and PR-title mirror counts apart rather than flattening them', () => {
+    const mergeCommitPr = pr(4001, 'feat(bfm): pairing code TTL enforcement');
+    const mergeCommitOnMain = commit(
+      'a1b2c3d4e0000000000000000000000000000000',
+      'Merge pull request #4001 from knoxio-labs/pops/feat/bfm-pairing-ttl'
+    );
+    const report = reconcile(
+      [
+        {
+          identifier: 'POPS-1575',
+          title: 'fix(bfm,food,cerebrum): drop redundant 503 check in isUnavailableError copies',
+          status: 'Merged',
+        },
+        { identifier: 'POPS-2001', title: mergeCommitPr.title, status: 'Merged' },
+      ],
+      [...commits, mergeCommitOnMain],
+      PREFIX,
+      { prs: [mergeCommitPr] }
+    );
+    expect(report.mirrors).toHaveLength(2);
+    expect(report.mirrors.map((mirror) => mirror.evidence).toSorted()).toEqual([
+      'commit-subject',
+      'pr-title',
+    ]);
+    expect(formatReport(report)).toContain('1 by commit subject, 1 by PR title');
   });
 });
