@@ -73,7 +73,7 @@ A **cash** order (`settlementMode='cash'`) is terminal on arrival — `createPur
 
 ## What is deliberately absent
 
-- **`pillars/purchases/app`** (POPS-1506). `buildPurchasesManifest` declares no `nav` and no `pages` for that reason — a rail entry pointing at a bundle slot that does not exist is a dead link.
+- **A frontend.** This pillar has no `app/` directory — the slot `pillars/finance/app` and every other UI-bearing pillar fills (POPS-1506). `buildPurchasesManifest` declares no `nav` and no `pages` for that reason — a rail entry pointing at a bundle slot that does not exist is a dead link.
 - **Gmail IMAP ingest** (POPS-242). The ongoing feed, once the export/upload paths proved the reconciliation model — they have: `src/ingest/` carries `amazon/`, `woolworths/` and `receipt/` today. Email is the one source still unwritten.
 
 `search.adapters` and `ai.tools` are also empty in the manifest, but not for the frontend reason above — MCP tools and search adapters are backend seams that don't need `app/` to exist, and the `registry` pillar has neither an `app/` nor a frontend either. Whether purchases should carry either is an open decision, tracked as POPS-1753.
