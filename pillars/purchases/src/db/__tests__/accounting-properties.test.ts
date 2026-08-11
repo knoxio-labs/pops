@@ -158,7 +158,7 @@ function linkCharge(purchaseId: string, ref: string, seed: number): void {
     .run();
 }
 
-/** Every accounting reading the properties below need, for one generated order. */
+/** All the accounting readings the properties below need, for one generated order. */
 interface Readings {
   readonly seed: number;
   /** The id backing `unlinked` / `afterFirstLink` / `linked` — the order as the generator wrote it. */
@@ -168,7 +168,7 @@ interface Readings {
   readonly unlinked: PurchaseAccounting;
   /** The same order once its first charge is linked. Absent when it has no charges. */
   readonly afterFirstLink: PurchaseAccounting | undefined;
-  /** The same order again, once the generator's whole matched set is linked. */
+  /** The same order again, once its first charge (if present) and the generator's whole matched set are linked. */
   readonly linked: PurchaseAccounting;
   /** A copy with every authorization dropped. */
   readonly withoutAuthorizations: PurchaseAccounting;
