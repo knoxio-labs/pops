@@ -918,6 +918,21 @@ services:
       CONTACTS_LITESTREAM_REPLICA_URL: ${CONTACTS_LITESTREAM_REPLICA_URL:-}
     command: ['replicate']
 
+  purchases-litestream:
+    image: litestream/litestream:0.3.13
+    container_name: pops-purchases-litestream
+    restart: unless-stopped
+    profiles:
+      - litestream
+    networks:
+      - backend
+    volumes:
+      - pops-purchases-data:/data/sqlite:ro
+      - ./litestream/purchases.yml:/etc/litestream.yml:ro
+    environment:
+      PURCHASES_LITESTREAM_REPLICA_URL: ${PURCHASES_LITESTREAM_REPLICA_URL:-}
+    command: ['replicate']
+
   # The exception to the section header above: `pops-bfm-data` IS mounted by an
   # API container (`bfm-api`), so this sidecar replicates a live database
   # rather than an empty volume. Still profile-gated like its siblings —
@@ -1258,6 +1273,8 @@ volumes:
     name: pops-cerebrum-data
   pops-contacts-data:
     name: pops-contacts-data
+  pops-purchases-data:
+    name: pops-purchases-data
   # Unlike its neighbours above, this one is mounted — by `bfm-api`, which is
   # greenfield and so was never on the shared `sqlite-data` to be migrated off.
   pops-bfm-data:
