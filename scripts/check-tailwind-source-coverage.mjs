@@ -12,11 +12,30 @@
  * silently stops generating most utilities and the UI collapses with no build
  * error. This guard makes that failure loud at CI time.
  *
+ * Tailwind v4 defines three `@source` forms, and this guard treats them
+ * differently on purpose:
+ *   - `@source "<glob>";`         a plain scan glob — checked for coverage below.
+ *   - `@source inline("<pat>");`  an inline safelist pattern, not a filesystem
+ *     path at all. Accepted, but excluded from the coverage checks — there is
+ *     no file to find empty or uncovered.
+ *   - `@source not "<glob>";`     a negated exclusion. **Banned in this repo**
+ *     rather than modelled: an exclusion can de-scope a subtree Tailwind was
+ *     otherwise covering, with the same silent-collapse failure mode this
+ *     guard exists to catch, and this repo's globs are meant to state
+ *     coverage positively and exhaustively. If a subtree needs excluding,
+ *     narrow the positive globs instead of adding a negative one.
+ * Any `@source` statement matching none of these three shapes is reported as
+ * a violation too — a shape this guard cannot classify is exactly the kind of
+ * rot it exists to catch, so it is never silently skipped.
+ *
  * What it checks:
- *   1. EMPTY GLOBS — every `@source` glob in globals.css must match at least
- *      one real file. A glob that matches nothing is the rename-rot this guard
- *      exists to catch.
- *   2. UNCOVERED SOURCE — no `className`-bearing `.tsx`/`.jsx`/`.mdx` file under
+ *   1. UNRECOGNISED / BANNED STATEMENTS — every `@source` statement must be a
+ *      plain glob or an `inline(...)` pattern. `@source not` and anything else
+ *      this guard cannot classify fail the build with the statement quoted.
+ *   2. EMPTY GLOBS — every plain `@source` glob must match at least one real
+ *      file. A glob that matches nothing is the rename-rot this guard exists
+ *      to catch.
+ *   3. UNCOVERED SOURCE — no `className`-bearing `.tsx`/`.jsx`/`.mdx` file under
  *      `pillars/` or `libs/` may fall outside every glob's reach. The globs only
  *      match `{ts,tsx}` under a `src/` dir, so a UI file authored outside `src/`
  *      or as `.jsx`/`.mdx` would silently lose its styling. (`.storybook/` is
@@ -27,8 +46,10 @@
  *   node scripts/check-tailwind-source-coverage.mjs              check the real tree
  *   node scripts/check-tailwind-source-coverage.mjs --self-test  prove the guard catches rot
  *
- * Exit 0 when every glob is non-empty and every UI file is covered; non-zero on
- * any empty glob, any uncovered file, a failed self-test, or a discovery error.
+ * Exit 0 when every glob is non-empty, every UI file is covered, and every
+ * `@source` statement is a recognised, non-banned shape; non-zero on any
+ * empty glob, uncovered file, banned/unrecognised statement, failed
+ * self-test, or discovery error.
  */
 
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
@@ -53,14 +74,79 @@ const SKIP_DIRS = new Set([
   '.turbo',
 ]);
 
+/** Matches one whole `@source` at-rule statement, from the keyword up to (and
+ * including, if present) its terminating semicolon. Deliberately unopinionated
+ * about what follows `@source` — classification happens in
+ * {@link parseSourceStatements} so a shape this guard cannot recognise is
+ * captured, not dropped. */
+const SOURCE_STATEMENT_RE = /@source\b[^;\n]*;?/g;
+const PLAIN_SOURCE_RE = /^@source\s+['"]([^'"]+)['"]\s*;?$/;
+const INLINE_SOURCE_RE = /^@source\s+inline\(\s*['"]([^'"]*)['"]\s*\)\s*;?$/;
+const NOT_SOURCE_RE = /^@source\s+not\s+['"]([^'"]+)['"]\s*;?$/;
+
 /**
- * Extract the raw `@source` glob strings from a globals.css source.
+ * @typedef {object} SourceStatement
+ * @property {'source' | 'inline' | 'not' | 'unrecognized'} kind
+ * @property {string} raw    The full statement text (trimmed), for reporting.
+ * @property {string} [arg]  The quoted argument, when the statement has one —
+ *   a filesystem glob for `source`/`not`, a safelist pattern for `inline`.
+ */
+
+/**
+ * Extract and classify every `@source` statement from a globals.css source.
+ * The old pattern here required a quote immediately after `@source`, which
+ * matched only the plain form — `@source not "…"` and `@source inline("…")`
+ * put a letter there instead and were silently dropped. This scans for the
+ * `@source` keyword first, independent of what follows, so every statement is
+ * captured; classification is a second pass and anything it cannot place
+ * becomes `unrecognized` rather than vanishing.
  *
  * @param {string} css
- * @returns {string[]}
+ * @returns {SourceStatement[]}
  */
-export function parseSources(css) {
-  return [...css.matchAll(/@source\s+['"]([^'"]+)['"]/g)].map((m) => m[1]);
+export function parseSourceStatements(css) {
+  const statements = css.match(SOURCE_STATEMENT_RE) ?? [];
+  return statements.map((raw) => {
+    const trimmed = raw.trim();
+    const not = trimmed.match(NOT_SOURCE_RE);
+    if (not) return { kind: 'not', raw: trimmed, arg: not[1] };
+    const inline = trimmed.match(INLINE_SOURCE_RE);
+    if (inline) return { kind: 'inline', raw: trimmed, arg: inline[1] };
+    const plain = trimmed.match(PLAIN_SOURCE_RE);
+    if (plain) return { kind: 'source', raw: trimmed, arg: plain[1] };
+    return { kind: 'unrecognized', raw: trimmed };
+  });
+}
+
+/**
+ * @typedef {object} StatementPartition
+ * @property {string[]} sourceGlobs             Raw globs from plain `@source "…"` statements.
+ * @property {SourceStatement[]} inlineStatements `@source inline(...)` statements — accepted, not filesystem globs.
+ * @property {SourceStatement[]} violations       `@source not` (banned) and any unrecognised statement.
+ */
+
+/**
+ * Split parsed `@source` statements into what `run()` needs: usable scan
+ * globs, inline-safelist statements (skipped from file-coverage checks), and
+ * violations. `@source not` is a violation because this repo bans it rather
+ * than modelling its subtractive effect — see the file header.
+ *
+ * @param {SourceStatement[]} statements
+ * @returns {StatementPartition}
+ */
+export function partitionStatements(statements) {
+  /** @type {string[]} */
+  const sourceGlobs = [];
+  /** @type {SourceStatement[]} */
+  const inlineStatements = [];
+  /** @type {SourceStatement[]} */
+  const violations = [];
+  for (const statement of statements) {
+    if (statement.kind === 'source') sourceGlobs.push(/** @type {string} */ (statement.arg));
+    else if (statement.kind === 'inline') inlineStatements.push(statement);
+    else violations.push(statement);
+  }
+  return { sourceGlobs, inlineStatements, violations };
 }
 
 /**
@@ -180,7 +266,8 @@ export function evaluateCoverage(absGlobs, files) {
 /**
  * Drive the guard against the real tree.
  *
- * @returns {boolean} true when every glob is non-empty and every UI file is covered.
+ * @returns {boolean} true when every statement is recognised and non-banned,
+ *   every glob is non-empty, and every UI file is covered.
  */
 function run() {
   if (!existsSync(GLOBALS_CSS)) {
@@ -188,13 +275,14 @@ function run() {
     return false;
   }
   const cssDir = dirname(GLOBALS_CSS);
-  const rawGlobs = parseSources(readFileSync(GLOBALS_CSS, 'utf8'));
-  if (rawGlobs.length === 0) {
+  const statements = parseSourceStatements(readFileSync(GLOBALS_CSS, 'utf8'));
+  if (statements.length === 0) {
     console.error(
-      `No @source globs found in ${GLOBALS_CSS}. Expected explicit pillar/lib sources.`
+      `No @source statements found in ${GLOBALS_CSS}. Expected explicit pillar/lib sources.`
     );
     return false;
   }
+  const { sourceGlobs: rawGlobs, inlineStatements, violations } = partitionStatements(statements);
   const absGlobs = rawGlobs.map((g) => resolve(cssDir, g));
 
   const baseDirs = new Set([resolve(repoRoot, 'pillars'), resolve(repoRoot, 'libs')]);
@@ -214,12 +302,37 @@ function run() {
     const abs = resolve(cssDir, g);
     if (!emptyGlobs.includes(abs)) console.log(`  OK    ${g}`);
   }
-
-  if (emptyGlobs.length === 0 && uncovered.length === 0) {
-    console.log('OK — every @source glob matches files and every UI file is covered.');
-    return true;
+  for (const statement of inlineStatements) {
+    console.log(`  ..    ${statement.raw}  (inline safelist pattern — not a scanned glob)`);
   }
 
+  const ok = violations.length === 0 && emptyGlobs.length === 0 && uncovered.length === 0;
+
+  if (violations.length > 0) {
+    const banned = violations.filter((v) => v.kind === 'not');
+    const unrecognized = violations.filter((v) => v.kind === 'unrecognized');
+    if (banned.length > 0) {
+      console.error(
+        `FAIL — ${banned.length} @source not statement(s) found; this repo bans @source exclusions:`
+      );
+      for (const v of banned) console.error(`  XX  ${v.raw}`);
+      console.error(
+        '  An exclusion can silently de-scope a subtree Tailwind was covering, with no build ' +
+          'error — the same failure mode this guard exists to catch. Narrow the positive ' +
+          '@source globs instead of excluding from them.'
+      );
+    }
+    if (unrecognized.length > 0) {
+      console.error(
+        `FAIL — ${unrecognized.length} @source statement(s) this guard does not recognise:`
+      );
+      for (const v of unrecognized) console.error(`  XX  ${v.raw}`);
+      console.error(
+        '  Supported forms: `@source "<glob>";` and `@source inline("<pattern>");`. ' +
+          '`@source not` is banned in this repo (see above).'
+      );
+    }
+  }
   if (emptyGlobs.length > 0) {
     console.error(`FAIL — ${emptyGlobs.length} @source glob(s) match no files (stale path?):`);
     for (const abs of emptyGlobs) {
@@ -239,13 +352,18 @@ function run() {
       '  Move it under a covered `src/` dir (as .ts/.tsx) or widen the @source globs, or its Tailwind classes will not generate.'
     );
   }
-  return false;
+
+  if (ok) {
+    console.log('OK — every @source glob matches files and every UI file is covered.');
+  }
+  return ok;
 }
 
 /**
- * Synthetic fixtures proving the guard catches a stale (empty) glob and an
- * uncovered UI file, and passes a correct tree. Mirrors the `--self-test`
- * convention in check-bundle-map-coverage.mjs.
+ * Synthetic fixtures proving the guard catches a stale (empty) glob, an
+ * uncovered UI file, a banned `@source not`, and an unrecognised `@source`
+ * statement — and passes a correct tree. Mirrors the `--self-test` convention
+ * in check-bundle-map-coverage.mjs.
  *
  * @returns {boolean}
  */
@@ -267,6 +385,28 @@ function selfTest() {
   const good = evaluateCoverage(goodGlobs, files);
   const stale = evaluateCoverage(staleGlobs, files);
 
+  const goodCss = [
+    `@source "${root}/pillars/**/src/**/*.{ts,tsx}";`,
+    `@source "${root}/libs/**/src/**/*.{ts,tsx}";`,
+  ].join('\n');
+  const bannedCss = [
+    `@source "${root}/pillars/**/src/**/*.{ts,tsx}";`,
+    `@source not "${root}/legacy/**/*.ts";`,
+  ].join('\n');
+  const inlineCss = [
+    `@source "${root}/pillars/**/src/**/*.{ts,tsx}";`,
+    `@source inline("bg-red-{50,100,900}");`,
+  ].join('\n');
+  const malformedCss = [
+    `@source "${root}/pillars/**/src/**/*.{ts,tsx}";`,
+    `@source url("weird.css");`,
+  ].join('\n');
+
+  const goodPartition = partitionStatements(parseSourceStatements(goodCss));
+  const bannedPartition = partitionStatements(parseSourceStatements(bannedCss));
+  const inlinePartition = partitionStatements(parseSourceStatements(inlineCss));
+  const malformedPartition = partitionStatements(parseSourceStatements(malformedCss));
+
   const checks = {
     'regex matches a nested app/src .tsx': pillarsSrc.test(
       `${root}/pillars/finance/app/src/Dashboard.tsx`
@@ -278,12 +418,26 @@ function selfTest() {
     'good globs flag the outside-src + .jsx files': good.uncovered.length === 2,
     'good globs exempt .storybook': !good.uncovered.some((p) => p.includes('/.storybook/')),
     'stale apps/packages globs flagged empty': stale.emptyGlobs.length === 2,
+    'plain-only css has no violations': goodPartition.violations.length === 0,
+    'plain-only css yields two source globs': goodPartition.sourceGlobs.length === 2,
+    '@source not is captured, not dropped': bannedPartition.violations.length === 1,
+    '@source not is classified as banned (kind "not")':
+      bannedPartition.violations[0]?.kind === 'not',
+    '@source not does not count as a usable glob': bannedPartition.sourceGlobs.length === 1,
+    '@source inline(...) is not a violation': inlinePartition.violations.length === 0,
+    '@source inline(...) is tracked separately from source globs':
+      inlinePartition.inlineStatements.length === 1 && inlinePartition.sourceGlobs.length === 1,
+    'an unrecognised @source shape is captured, not dropped':
+      malformedPartition.violations.length === 1,
+    'an unrecognised @source shape is classified "unrecognized"':
+      malformedPartition.violations[0]?.kind === 'unrecognized',
   };
 
   const ok = Object.values(checks).every(Boolean);
   if (ok) {
     console.log(
-      'self-test OK — guard flags empty (stale) globs and uncovered UI files, passes a correct tree.'
+      'self-test OK — guard flags empty (stale) globs, uncovered UI files, banned ' +
+        '@source not, and unrecognised @source statements; passes a correct tree.'
     );
   } else {
     console.error('SELF-TEST FAILED — guard did not behave as expected:');
