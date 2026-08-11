@@ -4,7 +4,7 @@ import { defineConfig, configDefaults } from 'vitest/config';
 export default defineConfig({
   test: {
     environment: 'node',
-    exclude: [...configDefaults.exclude, 'app/**', 'overlay-ego/**'],
+    exclude: [...configDefaults.exclude, 'app/**', 'overlay-ego/**', '**/*.live-seam.test.ts'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json-summary', 'html'],
