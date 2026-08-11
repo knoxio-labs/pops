@@ -14,17 +14,17 @@ breaking change for every downstream deployer.
 | Key         | Docker name      | On it                                                                                                                |
 | ----------- | ---------------- | -------------------------------------------------------------------------------------------------------------------- |
 | `frontend`  | `pops-frontend`  | Every pillar API except `documents-api`, plus `pops-orchestrator`, `pops-shell`, `pops-docs`, `metabase`             |
-| `backend`   | `pops-backend`   | Every pillar API, both workers, `pops-orchestrator`, `pops-redis`, `pops-mcp`, `moltbot`, the 10 Litestream sidecars |
+| `backend`   | `pops-backend`   | Every pillar API, both workers, `pops-orchestrator`, `pops-redis`, `pops-mcp`, `moltbot`, the 11 Litestream sidecars |
 | `documents` | `pops-documents` | `documents-api`, `paperless-ngx`, `paperless-redis` — paperless is on this network only                              |
 
 `registry-api` carries the extra alias `core-api` on both `frontend` and
 `backend`.
 
-**Volumes** — 20, each explicitly `name:`d: `pops-sqlite-data`,
+**Volumes** — 21, each explicitly `name:`d: `pops-sqlite-data`,
 `pops-redis-data`, `pops-metabase-data`, `pops-paperless-{data,media,consume}`,
 `pops-paperless-redis`, `pops-food-ingest-data`, `pops-cerebrum-engrams-data`,
-`pops-media-images-data`, plus 10 per-pillar `pops-<id>-data`. Of those 10 only
-`pops-bfm-data` is mounted by an API container; the other 9 exist for the
+`pops-media-images-data`, plus 11 per-pillar `pops-<id>-data`. Of those 11 only
+`pops-bfm-data` is mounted by an API container; the other 10 exist for the
 Litestream sidecars and the pillars they belong to still write to the shared
 `pops-sqlite-data`.
 
@@ -49,7 +49,7 @@ Each pillar's `*_SQLITE_PATH` and `*_SELF_BASE_URL` are inline, not host env.
 ## prod vs dev
 
 Dev builds the same services from `pillars/<id>/Dockerfile` and pins no GHCR
-image except on `media-api`. Prod defines 35 services, dev 21. Profiles keep
+image except on `media-api`. Prod defines 36 services, dev 21. Profiles keep
 `litestream` / `moltbot` / `mcp` out of a plain `up` in prod, `moltbot` / `mcp`
 in dev. 15 services carry
 `com.centurylinklabs.watchtower.enable: 'true'`; `cerebrum-api`,
@@ -69,17 +69,18 @@ no such dependency; dev has no food worker at all.
 ## `litestream/`
 
 Eleven configs — `ai`, `bfm`, `cerebrum`, `contacts`, `finance`, `food`,
-`inventory`, `lists`, `media`, `purchases`, `registry`. Ten are mounted
-read-only at `/etc/litestream.yml` into the matching `<id>-litestream` sidecar;
-`purchases.yml` has no sidecar at all (POPS-1470). Every one replicates
-`/data/sqlite/<id>.db` with `sync-interval: 1s`, `retention: 24h`,
+`inventory`, `lists`, `media`, `purchases`, `registry` — each mounted
+read-only at `/etc/litestream.yml` into the matching `<id>-litestream`
+sidecar. `check-litestream-sidecar-parity.mjs` (wired into `Infra Lint`)
+fails the build if that pairing ever drifts in either direction. Every config
+replicates `/data/sqlite/<id>.db` with `sync-interval: 1s`, `retention: 24h`,
 `snapshot-interval: 1h`, `validation-interval: 12h`, and interpolates one
 `<ID>_LITESTREAM_REPLICA_URL` — except that `registry-litestream` passes
 `CORE_LITESTREAM_REPLICA_URL` while `registry.yml` reads
 `REGISTRY_LITESTREAM_REPLICA_URL`.
 
 Each sidecar mounts `pops-<id>-data:/data/sqlite:ro`. Only `bfm` has an API
-container writing to that volume; the other nine pillars still write to
+container writing to that volume; the other ten pillars still write to
 `pops-sqlite-data`, so their sidecars would replicate an empty volume and the
 configs are reference-only until the per-pillar split lands.
 
