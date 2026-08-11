@@ -253,6 +253,14 @@ run = [
   "tsc --noEmit -p scripts/extractability/__tests__/tsconfig.json",
 ]
 
+[tasks."backlog:reconcile"]
+description = "Cross-reference a gathered Huly backlog export against merged commits and report orphans (AGENTS.md 'Reconciling on a cadence')"
+# No credential lives here — this forwards to a script that reads an export
+# you already gathered (via the Huly MCP tools + huly-partition-plan.mjs) and
+# never talks to the tracker itself. Usage:
+#   mise run backlog:reconcile -- --issues <export.json> [--ref origin/main]
+run = "node scripts/huly-backlog-reconcile.mjs \"$@\""
+
 # ============================================================================
 # Database Management
 # ============================================================================

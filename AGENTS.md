@@ -412,6 +412,12 @@ Those four axes are enumerable, so `--assess` can prove they tile. They are also
 
 You do **not** need an issue to start work. The tracker exists for work that is deferred, not for permission to begin. But the converse is a hard rule: **anything you decide not to do right now gets filed before the PR merges** — a gap between what a README claims and what the code does, a shortcut taken under time pressure, a missing test, a follow-up you can see coming. File it with enough context to act on without this conversation, then let it go.
 
+#### Reconciling on a cadence
+
+`scripts/huly-backlog-reconcile.mjs` is deliberately not a tracker client — it takes an exported issue list and holds no credential. That means nothing in this repo can run it unattended: a GitHub Actions schedule would need a Huly token in repo secrets, which is exactly the shape `format-drift-watchdog.yml` was removed for — a second reporting path and a stored credential paying for coverage a cheaper path already has (see that removal's commit message). So the sweep runs as a periodic **agent-run chore** instead: an agent already holds Huly MCP credentials in-session, which makes the run credential-free from the repo's perspective.
+
+`mise run backlog:reconcile` is the second half of that chore — it forwards straight to the script, so it only ever runs against an export you already gathered. The first half is the partition recipe above: query `{status: "Backlog"}` (the only status the reconciler classifies), refine it with `huly-partition-plan.mjs --refine` if it comes back truncated, assemble the rows into `{ "result": [...], "coverage": {...} }`, and confirm with `--assess` before trusting it. Read the verdicts; apply them by hand. The tool never writes back to Huly, and neither should the chore that runs it — a false positive here buries live work.
+
 ### Test Mandate
 
 Every non-trivial piece of code ships with tests — not optional. "Non-trivial" = anything with logic (conditionals, derived state, data transformation, API calls, event handling). Pure pass-through presentational components are the only exception.
