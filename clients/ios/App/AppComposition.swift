@@ -75,7 +75,8 @@ internal final class AppComposition {
         self.authenticated = authenticated
         pairingDependencies = AppDependencies(
             transactions: AppDependencies.unbound.transactions,
-            pairing: BFMDevicePairingService(credentialStore: credentialStore)
+            pairing: BFMDevicePairingService(credentialStore: credentialStore),
+            reachability: AppDependencies.unbound.reachability
         )
         shell = AppShellModel(
             session: session,
@@ -93,7 +94,8 @@ internal final class AppComposition {
 
         let dependencies = AppDependencies(
             transactions: BFMTransactionsRepository(client: authenticated(device)),
-            pairing: BFMDevicePairingService(credentialStore: credentialStore)
+            pairing: BFMDevicePairingService(credentialStore: credentialStore),
+            reachability: shell
         )
         bound = (device, dependencies)
         return dependencies

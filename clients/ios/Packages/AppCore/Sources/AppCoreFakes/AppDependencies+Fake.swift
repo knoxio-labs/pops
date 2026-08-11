@@ -5,8 +5,9 @@ extension AppDependencies {
     /// per protocol as this list grows.
     public static func fake(
         transactions: any TransactionsRepository = InMemoryTransactionsRepository(),
-        pairing: any DevicePairingService = FakeDevicePairingService()
+        pairing: any DevicePairingService = FakeDevicePairingService(),
+        reachability: any ReachabilityWitness = FakeReachabilityWitness()
     ) -> AppDependencies {
-        AppDependencies(transactions: transactions, pairing: pairing)
+        AppDependencies(transactions: transactions, pairing: pairing, reachability: reachability)
     }
 }

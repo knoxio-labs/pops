@@ -52,6 +52,7 @@
                 session.canAddInput(input)
             else { return }
             session.addInput(input)
+            configureFocus(device)
 
             let output = AVCaptureMetadataOutput()
             guard session.canAddOutput(output) else { return }
@@ -63,6 +64,30 @@
             output.setMetadataObjectsDelegate(self, queue: .main)
             if output.availableMetadataObjectTypes.contains(.qr) {
                 output.metadataObjectTypes = [.qr]
+            }
+        }
+
+        /// A QR code is scanned close to the lens with the phone hunting for
+        /// distance, which is exactly the case continuous AF exists for — but
+        /// the session default is a property of whatever the device was doing
+        /// before this session opened it, not something this call can rely on.
+        /// Smooth AF trades focus speed for less visible hunting, which reads
+        /// as "it works" instead of "it's fighting the code" while framing.
+        private func configureFocus(_ device: AVCaptureDevice) {
+            guard device.isFocusModeSupported(.continuousAutoFocus) else { return }
+            do {
+                try device.lockForConfiguration()
+            } catch {
+                // Locking failed (device disconnected mid-configure, or another
+                // client grabbed it) — the session default focus mode still
+                // applies, so scanning keeps working, just without the tuning.
+                return
+            }
+            defer { device.unlockForConfiguration() }
+
+            device.focusMode = .continuousAutoFocus
+            if device.isSmoothAutoFocusSupported {
+                device.isSmoothAutoFocusEnabled = true
             }
         }
     }

@@ -43,6 +43,12 @@ public final class TransactionsListViewModel {
 
     private let repository: any TransactionsRepository
 
+    /// Told about every page this loads successfully, so a stale bootstrap
+    /// failure sitting above this screen — see ``AppShellModel``'s "never on
+    /// a schedule" retry policy — has a way to hear that the backend answered
+    /// something after all, without this model knowing that policy exists.
+    private let reachability: any ReachabilityWitness
+
     /// Where a tap goes. Held here rather than reached for in the view so that
     /// "tapping a row opens that transaction" is a value a test reads back off
     /// ``Router/path`` instead of a gesture somebody has to make on a phone.
@@ -83,6 +89,7 @@ public final class TransactionsListViewModel {
     ///     navigate is the kind of defect that survives a test suite.
     public init(dependencies: AppDependencies, router: Router) {
         repository = dependencies.transactions
+        reachability = dependencies.reachability
         self.router = router
     }
 }
@@ -128,7 +135,7 @@ extension TransactionsListViewModel {
         do {
             let page = try await repository.transactions(after: nil)
             guard epoch == generation else { return }
-            show(page.transactions, nextCursor: page.nextCursor)
+            await show(page.transactions, nextCursor: page.nextCursor)
         } catch let error where error.isCancellation {
             return
         } catch {
@@ -190,7 +197,7 @@ extension TransactionsListViewModel {
         do {
             let page = try await repository.transactions(after: nil)
             guard epoch == generation else { return }
-            show(page.transactions, nextCursor: page.nextCursor)
+            await show(page.transactions, nextCursor: page.nextCursor)
         } catch let error where error.isCancellation {
             guard epoch == generation else { return }
             settlePagingIfLoading()
@@ -215,7 +222,7 @@ extension TransactionsListViewModel {
         do {
             let page = try await repository.transactions(after: cursor)
             guard epoch == generation else { return }
-            show(merging: page.transactions, nextCursor: page.nextCursor)
+            await show(merging: page.transactions, nextCursor: page.nextCursor)
         } catch let error where error.isCancellation {
             // Not a failure to report, but the `.loading` set above is this
             // call's to undo — left there, the footer spins forever and no
@@ -228,15 +235,16 @@ extension TransactionsListViewModel {
         }
     }
 
-    private func show(_ transactions: [Transaction], nextCursor: String?) {
+    private func show(_ transactions: [Transaction], nextCursor: String?) async {
         cursor = nextCursor
         hasLoaded = true
         state = transactions.isEmpty ? .empty : .loaded(transactions)
         settlePaging()
+        await reachability.noteReachable()
     }
 
-    private func show(merging incoming: [Transaction], nextCursor: String?) {
-        show(rows(merging: incoming), nextCursor: nextCursor)
+    private func show(merging incoming: [Transaction], nextCursor: String?) async {
+        await show(rows(merging: incoming), nextCursor: nextCursor)
     }
 
     /// Appends the rows that are not already on screen.

@@ -13,3 +13,7 @@ internal struct UnboundDevicePairingService: DevicePairingService {
         throw PairingError.dependencyNotBound
     }
 }
+
+internal struct UnboundReachabilityWitness: ReachabilityWitness {
+    func noteReachable() async {}
+}

@@ -113,7 +113,8 @@
         TransactionsListViewModel(
             dependencies: AppDependencies(
                 transactions: previewRepository(pages: pages, failing: failing),
-                pairing: AppDependencies.unbound.pairing
+                pairing: AppDependencies.unbound.pairing,
+                reachability: AppDependencies.unbound.reachability
             ),
             router: Router()
         )
@@ -132,7 +133,8 @@
             dependencies: AppDependencies(
                 transactions: previewRepository(
                     failing: failing, details: details, detailNeverAnswers: detailNeverAnswers),
-                pairing: AppDependencies.unbound.pairing
+                pairing: AppDependencies.unbound.pairing,
+                reachability: AppDependencies.unbound.reachability
             )
         )
     }
@@ -154,7 +156,8 @@
         TransactionsFlowView(
             dependencies: AppDependencies(
                 transactions: previewRepository(),
-                pairing: AppDependencies.unbound.pairing
+                pairing: AppDependencies.unbound.pairing,
+                reachability: AppDependencies.unbound.reachability
             ),
             router: Router()
         )
