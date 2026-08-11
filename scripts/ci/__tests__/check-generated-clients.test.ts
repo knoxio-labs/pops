@@ -409,6 +409,8 @@ describe('findExpectedTargetSetViolations', () => {
     command: 'openapi-ts && oxfmt --write src/x-api',
     outputDir: 'src/x-api',
   }));
+  const [firstFullTarget] = clean;
+  if (firstFullTarget === undefined) throw new Error('clean must not be empty');
 
   it('reports nothing when the discovered set matches exactly', () => {
     expect(findExpectedTargetSetViolations(clean)).toEqual([]);
@@ -441,5 +443,21 @@ describe('findExpectedTargetSetViolations', () => {
     );
     const violations = findExpectedTargetSetViolations(moved);
     expect(violations.some((message) => message.includes(firstExpectedKey))).toBe(true);
+  });
+
+  it('reports two units colliding on the same pkgName:scriptName key, instead of silently keeping one', () => {
+    // A naive `new Map(targets.map(...))` collapses duplicates and keeps whichever comes
+    // last, which would let this check pass even though discovery returned an ambiguous
+    // result — this is the degenerate case that guards against that.
+    const colliding = { ...firstFullTarget, pkgDir: 'pillars/other/app' };
+    const violations = findExpectedTargetSetViolations([colliding, ...clean]);
+    expect(
+      violations.some(
+        (message) =>
+          message.includes(firstExpectedKey) &&
+          message.includes('pillars/other/app') &&
+          message.includes(firstFullTarget.pkgDir)
+      )
+    ).toBe(true);
   });
 });

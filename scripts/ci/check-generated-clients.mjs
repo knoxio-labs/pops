@@ -259,18 +259,38 @@ function targetKey(target) {
  * Compares a freshly discovered, unfiltered target set against
  * `EXPECTED_TARGETS` and reports every discrepancy: an expected target that
  * did not come back, one that came back on the wrong side of the app
- * matrix, and any target that was not expected at all. Returns an empty
- * array only when the two sets match exactly — that is the "pass" case.
+ * matrix, one that was not expected at all, and two units that collided on
+ * the same `pkgName:scriptName` key. That last case matters on its own:
+ * collapsing duplicates into a `Map` via its constructor keeps whichever
+ * entry comes last and silently drops the other, which would let the
+ * pinned-set check pass even though discovery returned an ambiguous result.
+ * Returns an empty array only when the two sets match exactly — that is the
+ * "pass" case.
  *
  * @param {GeneratedClientTarget[]} targets Full, unfiltered discovery — not scoped by `--pkg`/`--exclude-app-matrix`.
  * @returns {string[]}
  */
 export function findExpectedTargetSetViolations(targets) {
-  const discovered = new Map(targets.map((target) => [targetKey(target), target]));
-  const expectedKeys = new Set(EXPECTED_TARGETS.map((target) => targetKey(target)));
-
   /** @type {string[]} */
   const messages = [];
+
+  /** @type {Map<string, GeneratedClientTarget>} */
+  const discovered = new Map();
+  for (const target of targets) {
+    const key = targetKey(target);
+    const existing = discovered.get(key);
+    if (existing !== undefined) {
+      messages.push(
+        `discovered ${key} twice — once from ${existing.pkgDir}, once from ${target.pkgDir} — ` +
+          'two units declare the same package name and script name.'
+      );
+      continue;
+    }
+    discovered.set(key, target);
+  }
+
+  const expectedKeys = new Set(EXPECTED_TARGETS.map((target) => targetKey(target)));
+
   for (const expected of EXPECTED_TARGETS) {
     const key = targetKey(expected);
     const found = discovered.get(key);
@@ -570,6 +590,8 @@ function selfTestExpectedTargetSet() {
   const wrongMatrixFlag = clean.map((target, index) =>
     index === 0 ? { ...target, inAppMatrix: !target.inAppMatrix } : target
   );
+  const collidingTarget = clean[1];
+  const duplicateKey = [{ ...collidingTarget, pkgDir: 'pillars/other/app' }, ...clean];
 
   const scenarios = {
     'passes when the discovered set matches EXPECTED_TARGETS exactly':
@@ -583,6 +605,13 @@ function selfTestExpectedTargetSet() {
     'reports a target that moved across the app-matrix boundary': findExpectedTargetSetViolations(
       wrongMatrixFlag
     ).some((message) => message.includes(targetKey(EXPECTED_TARGETS[0]))),
+    'reports two units colliding on the same key instead of silently keeping one':
+      findExpectedTargetSetViolations(duplicateKey).some(
+        (message) =>
+          message.includes(targetKey(collidingTarget)) &&
+          message.includes('pillars/other/app') &&
+          message.includes(collidingTarget.pkgDir)
+      ),
   };
 
   const ok = Object.values(scenarios).every(Boolean);
@@ -591,7 +620,8 @@ function selfTestExpectedTargetSet() {
     for (const [name, pass] of Object.entries(scenarios)) console.error(`  ${name}: ${pass}`);
   } else {
     console.log(
-      'self-test OK — pinned target set catches a dropped target, an unexpected one, and one that moved app-matrix side.'
+      'self-test OK — pinned target set catches a dropped target, an unexpected one, one that ' +
+        'moved app-matrix side, and two units colliding on the same key.'
     );
   }
   return ok;
