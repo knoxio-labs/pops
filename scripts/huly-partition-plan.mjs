@@ -12,13 +12,16 @@
  * Usage:
  *   node scripts/huly-partition-plan.mjs --roots --statuses Backlog,Done
  *   node scripts/huly-partition-plan.mjs --refine '{"status":"Merged"}' --components ios,bfm
+ *   node scripts/huly-partition-plan.mjs --narrow '{"status":"Merged"}' --patterns 'd%,f[^e]%'
  *   node scripts/huly-partition-plan.mjs --assess <export.json>
  *   node scripts/huly-partition-plan.mjs --self-test
  *
  * Exit 0 = ran, and for `--assess`, coverage is complete.
  * Exit 1 = the tool ran and the answer is no: `--self-test` failed, `--assess`
- *          found the export incomplete, or `--refine` has no enumerable filter
- *          left for that cell and the caller must write `titleRegex` patterns.
+ *          found the export incomplete, `--refine` has no enumerable filter
+ *          left for that cell and the caller must write `titleRegex` patterns,
+ *          or `--narrow` has nothing to check because every pattern given
+ *          starts with a wildcard or bracket class.
  * Exit 2 = usage error, or an export this tool could not read. Deliberately not
  *          1: "your file is malformed" and "your backlog is short" are
  *          different events, and a caller switching on the code must not
@@ -31,7 +34,13 @@ import { fileURLToPath } from 'node:url';
 
 import { readFlag } from './cli-flags.mjs';
 import { assessCoverage, formatCoverage, readCoverage, readRows } from './huly-coverage.mjs';
-import { describeCell, isTruncated, partitionRoots, refineCell } from './huly-partition.mjs';
+import {
+  describeCell,
+  isTruncated,
+  narrowingQueries,
+  partitionRoots,
+  refineCell,
+} from './huly-partition.mjs';
 
 /**
  * @typedef {import('./huly-partition.mjs').Cell} Cell
@@ -40,11 +49,15 @@ import { describeCell, isTruncated, partitionRoots, refineCell } from './huly-pa
 
 export const HELP = `Usage: node scripts/huly-partition-plan.mjs --roots --statuses <a,b,c>
        node scripts/huly-partition-plan.mjs --refine '<cell json>' [--components <a,b>]
+       node scripts/huly-partition-plan.mjs --narrow '<branch json>' --patterns <a,b,c>
        node scripts/huly-partition-plan.mjs --assess <export.json>
        node scripts/huly-partition-plan.mjs --self-test
 
 --roots   prints the query per workflow status to start from.
 --refine  prints the queries that replace one truncated cell.
+--narrow  prints the titleSearch cross-check queries for a branch that had to
+          be divided by titleRegex — run them, then add the results to the
+          export's "coverage.titleNarrowing" before --assess.
 --assess  reads an export's "coverage" block and says whether it covers the
           whole backlog. Exits 1 when it does not.
 
@@ -54,7 +67,11 @@ and query the children. Never keep a capped result.
 status, the three booleans and component are enumerable, so --assess proves
 those tile. Past them only titleRegex is left, it is hand-written, and no
 finite set bounds it — a branch divided that way is reported as an assumption
-this tool did not check.`;
+this tool did not check. --narrow is the fallback: titleSearch is a different
+read path over the same branch, so an identifier it finds that the titleRegex
+leaves never returned is a proven gap, not another assumption. It narrows the
+risk; it does not close it, and --assess never reports a narrowed branch as
+verified.`;
 
 /**
  * @param {string | undefined} value
@@ -112,6 +129,44 @@ function runRefine(args) {
     return 1;
   }
   console.log(JSON.stringify(children, null, 2));
+  return 0;
+}
+
+/**
+ * @param {string[]} args
+ * @returns {number}
+ */
+function runNarrow(args) {
+  const raw = readFlag(args, '--narrow');
+  if (raw === undefined) {
+    console.error('FAIL — --narrow needs a branch cell, e.g. --narrow \'{"status":"Merged"}\'.');
+    return 2;
+  }
+  /** @type {Cell} */
+  let branch;
+  try {
+    branch = readCell(raw);
+  } catch (error) {
+    console.error(`FAIL — --narrow could not read that as a cell: ${messageOf(error)}`);
+    return 2;
+  }
+  const patterns = readList(readFlag(args, '--patterns'));
+  if (patterns.length === 0) {
+    console.error(
+      'FAIL — --narrow needs --patterns <a,b,c>, the titleRegex set that divides this branch.'
+    );
+    return 2;
+  }
+  const queries = narrowingQueries(branch, patterns);
+  if (queries.length === 0) {
+    console.error(
+      'FAIL — every pattern given has no literal leading substring (e.g. `[a-m]%`), so ' +
+        'titleSearch has nothing narrower than the whole branch to check. Rewrite the split to ' +
+        'bisect on a leading character, or accept this branch as unnarrowable.'
+    );
+    return 1;
+  }
+  console.log(JSON.stringify(queries, null, 2));
   return 0;
 }
 
@@ -179,6 +234,7 @@ function main() {
   if (args.includes('--self-test')) process.exit(selfTest() ? 0 : 1);
   if (args.includes('--roots')) process.exit(runRoots(args));
   if (args.includes('--refine')) process.exit(runRefine(args));
+  if (args.includes('--narrow')) process.exit(runNarrow(args));
   if (args.includes('--assess')) process.exit(runAssess(args));
   console.error('FAIL — no mode given. See --help.');
   process.exit(2);
@@ -216,6 +272,28 @@ function selfTest() {
     },
     [issue('POPS-1'), issue('POPS-2')]
   );
+  const missedTitleSplit = {
+    limit: 200,
+    statuses: ['Merged'],
+    cells: [
+      cell({ status: 'Merged', titleRegex: 'c[^h]%' }, 1),
+      cell({ status: 'Merged', titleRegex: 'ch%' }, 1),
+    ],
+    titleNarrowing: [
+      {
+        query: { status: 'Merged', titleSearch: 'c' },
+        identifiers: ['POPS-1', 'POPS-3'],
+      },
+    ],
+  };
+  const narrowedClean = assessCoverage(
+    {
+      ...missedTitleSplit,
+      titleNarrowing: [{ query: { status: 'Merged', titleSearch: 'c' }, identifiers: ['POPS-1'] }],
+    },
+    [issue('POPS-1'), issue('POPS-2')]
+  );
+  const narrowedGap = assessCoverage(missedTitleSplit, [issue('POPS-1'), issue('POPS-2')]);
 
   const checks = {
     'a full-page result is truncated': isTruncated(200, 200),
@@ -243,6 +321,27 @@ function selfTest() {
     'and the report says so out loud rather than reading clean': formatCoverage(titleSplit)
       .join('\n')
       .includes('ASSUMED, not verified'),
+    'an un-cross-checked assumption says so':
+      titleSplit.assumptions[0]?.includes('not cross-checked'),
+    // The exact pair the ticket names: `c[^h]%` stops at its bracket class and
+    // contributes `titleSearch: 'c'` — on its own enough to surface a title
+    // that is exactly "c", since "c" contains "c". `ch%` runs on to its `%`
+    // and contributes the more specific `'ch'`; the two patterns diverge
+    // before either special character, so nothing here dedupes them.
+    "narrowingQueries reproduces the ticket's own example as two queries":
+      narrowingQueries({ status: 'Merged' }, ['c[^h]%', 'ch%'])
+        .map((query) => query.titleSearch)
+        .join(',') === 'c,ch',
+    'narrowingQueries dedupes two patterns that share the same literal prefix':
+      narrowingQueries({ status: 'Merged' }, ['c[^h]%', 'c[jk]%']).length === 1,
+    'a bracket-led pattern with no literal prefix contributes no cross-check':
+      narrowingQueries({ status: 'Merged' }, ['[a-m]%']).length === 0,
+    'a narrowing cross-check that finds nothing missed says narrowed, never verified':
+      narrowedClean.complete &&
+      (narrowedClean.assumptions[0]?.includes('narrowed') ?? false) &&
+      !(narrowedClean.assumptions[0]?.includes('verified') ?? true),
+    'a narrowing cross-check that finds a missed identifier fails the export, not just the assumption':
+      !narrowedGap.complete && narrowedGap.problems.some((problem) => problem.includes('POPS-3')),
   };
 
   const failed = Object.entries(checks).filter(([, ok]) => !ok);

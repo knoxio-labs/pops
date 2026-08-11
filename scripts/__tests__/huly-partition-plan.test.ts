@@ -38,8 +38,16 @@ describe('HELP', () => {
   });
 
   it('names every mode it accepts', () => {
-    for (const mode of ['--roots', '--refine', '--assess', '--self-test']) {
+    for (const mode of ['--roots', '--refine', '--narrow', '--assess', '--self-test']) {
       expect(HELP).toContain(mode);
     }
+  });
+
+  // The fallback this tool offers once titleRegex is the only axis left.
+  // Losing this line loses the only place a reader learns the cross-check
+  // exists, or that it narrows rather than closes the gap.
+  it('says the narrowing cross-check narrows the title axis rather than closing it', () => {
+    expect(HELP).toContain('titleSearch');
+    expect(HELP).toContain('narrows');
   });
 });
