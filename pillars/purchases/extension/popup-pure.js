@@ -12,9 +12,10 @@
 /**
  * Which message to show, and whether it is an error.
  *
- * Checked in the order a user runs into them: a run already in progress
- * explains itself before anything else does, and the two missing templates
- * are reported before "ready" so a disabled button always says why. Getting
+ * Checked in the order a user runs into them: an error outranks everything,
+ * including a run in progress; short of an error, a run in progress explains
+ * itself before anything else does; and the two missing templates are
+ * reported before "ready" so a disabled button always says why. Getting
  * this wrong sends the user scrolling a list that does not need scrolling,
  * which is how it was got wrong while this extension was being built.
  */
