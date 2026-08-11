@@ -6,7 +6,6 @@ const FETCH_TIMEOUT_MS = 2_000;
 
 interface RegistrySnapshotEntry {
   pillarId?: unknown;
-  registered?: unknown;
   status?: unknown;
 }
 
@@ -14,9 +13,15 @@ interface RegistrySnapshotBody {
   pillars?: unknown;
 }
 
+/**
+ * The real `/registry/pillars` payload has no `registered` field — the
+ * registry pillar's own snapshot builder emits `registeredAt` plus a
+ * live-computed `status` (`pillars/registry/src/api/modules/registry/snapshot.ts`).
+ * Presence in the snapshot at all, with a non-`unavailable` status, is what
+ * "has registered" means on the wire.
+ */
 function isRegisteredAndHealthy(entry: RegistrySnapshotEntry, pillarId: string): boolean {
   if (entry.pillarId !== pillarId) return false;
-  if (entry.registered === false) return false;
   return entry.status !== 'unavailable';
 }
 
