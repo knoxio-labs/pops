@@ -521,6 +521,31 @@ describe('resolveRouterOperations', () => {
     );
     expect(resolveRouterOperations(scanned.scannable, 'GhostRouter')).toBeNull();
   });
+
+  it(
+    'resolves to null on method-shorthand syntax rather than a garbage operation manufactured ' +
+      'from the parameter name',
+    () => {
+      const source = 'type X = { entities: { get(): Y; set(v: Z): void; }; };';
+      expect(resolveRouterOperations(source, 'X')).toBeNull();
+    }
+  );
+
+  it('resolves to null for multiple consecutive method-shorthand members, not a partial list', () => {
+    const source = 'type X = { a: { m1(): A; m2(): B; m3(): C; }; };';
+    expect(resolveRouterOperations(source, 'X')).toBeNull();
+  });
+
+  it('terminates rather than looping on a body that never satisfies the key: value shape', () => {
+    // Regression: the member scanner used to `continue` without fully skipping
+    // an unmodelled member, which a reviewer flagged as a potential infinite
+    // loop. It provably terminates (this test itself would hang and fail on
+    // Vitest's default timeout if it did not), but must ALSO resolve to null
+    // rather than a partial parse — both properties matter, not just the one
+    // that was flagged.
+    const pathological = `type X = { ${'get(): Y; '.repeat(500)} };`;
+    expect(resolveRouterOperations(pathological, 'X')).toBeNull();
+  });
 });
 
 describe('discoverCallSites — fixture tree', () => {

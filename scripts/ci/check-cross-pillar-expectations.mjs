@@ -1152,14 +1152,19 @@ function matchBrace(text, openIndex) {
  * A member ends at the next `;` or `,` seen at the body's own depth, or at
  * the end of the body for a final member with no trailing separator.
  *
- * Only bare-identifier keys are recognised (every router type in this tree
- * uses them); a quoted or computed key stops this scan the same way an
- * unexpected character does — skipped rather than mis-parsed, since a
- * malformed read here would report a wrong operation list instead of no
- * operation list, which is the direction ADR-045 says to avoid.
+ * Only the `key: value` property form is modelled (every router type in
+ * this tree uses it — see "OPERATION RESOLUTION" in this file's header).
+ * A key not followed by `:` — method-shorthand (`get(): Y`), a quoted or
+ * computed key, or anything else this scanner does not recognise — aborts
+ * the WHOLE parse and returns `null` rather than skipping just that member:
+ * once one member's shape is unmodelled, later text originally meant as its
+ * value (parameter names, return-type tokens) would otherwise be misread as
+ * unrelated keys, silently manufacturing operations nobody declared. `null`
+ * here, not a partial list, is what keeps that impossible — the direction
+ * ADR-045 says a guard that cannot explain what it sees must take.
  *
  * @param {string} body
- * @returns {TypeMember[]}
+ * @returns {TypeMember[] | null}
  */
 function typeLiteralMembers(body) {
   /** @type {TypeMember[]} */
@@ -1180,7 +1185,7 @@ function typeLiteralMembers(body) {
     while (i < body.length && /\s/u.test(body[i])) i++;
     if (body[i] === '?') i++;
     while (i < body.length && /\s/u.test(body[i])) i++;
-    if (body[i] !== ':') continue;
+    if (body[i] !== ':') return null;
     i++;
     const valueStart = i;
     let depth = 0;
@@ -1231,11 +1236,15 @@ function findTypeLiteralBody(scannable, typeName) {
  * from its own local declaration — see "OPERATION RESOLUTION" in this file's
  * header for why the type's keys are trusted as the operation list.
  *
- * Two things return `null`, and both are reported by the caller rather than
- * treated as "no operations": the type is not declared in `scannable` at
- * all (imported, misspelled, or not a bare identifier `firstTypeArgName`
- * could read off the call site), or it is declared but not as an object
- * type literal (a union, a mapped type, a re-export of something else).
+ * Three things return `null`, and all are reported by the caller rather
+ * than treated as "no operations": the type is not declared in `scannable`
+ * at all (imported, misspelled, or not a bare identifier `firstTypeArgName`
+ * could read off the call site); it is declared but not as an object type
+ * literal (a union, a mapped type, a re-export of something else); or it IS
+ * an object literal but a domain or method member is written in a shape
+ * `typeLiteralMembers` does not model (method-shorthand, a quoted or
+ * computed key) — see that function's own doc comment for why the whole
+ * result is discarded rather than just the one member.
  *
  * A type found and parsed but genuinely empty (`type X = {}`) returns `[]`,
  * which the caller treats the same as `null` — a router with no operations
@@ -1251,17 +1260,21 @@ export function resolveRouterOperations(scannable, typeName) {
   const body = findTypeLiteralBody(scannable, typeName);
   if (body === null) return null;
   const outer = scannable.slice(body.start, body.end);
+  const domains = typeLiteralMembers(outer);
+  if (domains === null) return null;
 
   /** @type {string[]} */
   const operations = [];
-  for (const domain of typeLiteralMembers(outer)) {
+  for (const domain of domains) {
     const value = outer.slice(domain.valueStart, domain.valueEnd);
     const firstNonSpace = value.search(/\S/u);
     if (firstNonSpace === -1 || value[firstNonSpace] !== '{') continue;
     const close = matchBrace(value, firstNonSpace);
     if (close === -1) continue;
     const inner = value.slice(firstNonSpace + 1, close);
-    for (const method of typeLiteralMembers(inner)) {
+    const methods = typeLiteralMembers(inner);
+    if (methods === null) return null;
+    for (const method of methods) {
       operations.push(`${domain.key}.${method.key}`);
     }
   }
@@ -2193,6 +2206,18 @@ function selfTest() {
   assert(
     resolveRouterOperations('...', null) === null,
     'a call site with no type argument at all must resolve to null'
+  );
+  assert(
+    resolveRouterOperations('type X = { entities: { get(): Y; set(v: Z): void; }; };', 'X') ===
+      null,
+    'method-shorthand (no colon before the parameter list) must resolve to null, not to a ' +
+      "garbage operation manufactured from the parameter name — a parser that CAN'T explain " +
+      'this shape must say so rather than guess at what it found'
+  );
+  assert(
+    resolveRouterOperations('type X = { a: { m1(): A; m2(): B; m3(): C; }; };', 'X') === null,
+    'multiple consecutive method-shorthand members must still resolve to null, not to a partial ' +
+      'or empty list that reads as "this router has no operations" when it plainly has three'
   );
   assert(
     firstTypeArgName('FinanceTransactionsRouter, unknown') === 'FinanceTransactionsRouter',
