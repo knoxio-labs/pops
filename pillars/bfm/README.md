@@ -596,28 +596,14 @@ the registry. There is no tunnel fallback here (see
 [The perimeter](#the-perimeter)), so an unset value means `/operator/*` refuses
 everyone — including the operator.
 
-**It is not set on the fleet today.** No pillar in this repo has ever set it —
-the registry runs without it and leans on exactly the fallback bfm refuses. The
-compose service passes all three variables through as `${VAR:-}`, so the
-plumbing is in place and the values are an operator step: **POPS-1487**, which
-needs the Access application's AUD tag and bfm's bypassed hostname from
-POPS-1389. Until that lands, `/operator/*` answers `401` in production and the
-Devices page is dark. It fails closed rather than open, which is the right
-direction, but it does mean a deployment that forgets it looks like a broken
-page rather than an insecure one.
-
-`CLOUDFLARE_ACCESS_AUD` deserves its own line because it is easy to read as
-optional hardening and is not. Access mints one JWT per application off the
-**same** team signing keys, so with the team name set but no audience, a token
-issued for any other protected app on the team verifies here too.
-
-**It is not set on the fleet today.** No pillar in this repo has ever set it —
-the registry runs without it and leans on exactly the fallback bfm refuses. The
-compose service passes all three variables through as `${VAR:-}`, so the
-plumbing is in place and the values are an operator step: **POPS-1487**, which
-needs the Access application's AUD tag and bfm's bypassed hostname from
-POPS-1389. Until that lands, `/operator/*` answers `401` to everyone in
-production and the Devices page is dark.
+**Provisioned on the fleet since POPS-1487 (2026-08-11).** `cloudflare_access_team_name`
+and `cloudflare_access_aud` are set in homelab-infra's
+`ansible/inventory/host_vars/capivara.yml`, sourced from the existing
+`pops_public` Access application (`terraform/cloudflare/access.tf`) — the app
+that already fronted the whole `pops.jmiranda.dev` domain, including the
+shell's `/bfm-api/` proxy path, so no new Cloudflare resource was needed.
+`cac-bootstrap` asserts the pair is set together or not at all before
+rendering `.env`; bfm itself was deployed to capivara in POPS-1393.
 
 `CLOUDFLARE_ACCESS_AUD` deserves its own line because it is easy to read as
 optional hardening and is not. Access mints one JWT per application off the
