@@ -53,7 +53,11 @@ describe('food -> lists live seam', () => {
   let listsProcess: SpawnedPillarProcess;
   let tempDir: string;
   let originalRegistryUrl: string | undefined;
-  let originalFetch: typeof fetch;
+  // Initialized at declaration, not inside beforeAll: afterAll always
+  // restores globalThis.fetch = originalFetch, so if beforeAll threw before
+  // reaching the assignment, an uninitialized originalFetch would leave
+  // fetch permanently undefined for the rest of the run.
+  let originalFetch: typeof fetch = globalThis.fetch;
   let wireLog: RecordedRequest[];
 
   beforeAll(async () => {

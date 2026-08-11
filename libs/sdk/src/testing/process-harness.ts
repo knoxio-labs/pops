@@ -45,6 +45,8 @@ const DEFAULT_STARTUP_TIMEOUT_MS = 20_000;
 const HEALTH_POLL_INTERVAL_MS = 200;
 const HEALTH_FETCH_TIMEOUT_MS = 2_000;
 const STOP_GRACE_MS = 5_000;
+/** SIGKILL cannot be caught or ignored, so a short wait is enough — this is a failure signal, not a real grace period. */
+const KILL_GRACE_MS = 2_000;
 
 export interface SpawnPillarProcessOptions {
   /** Used only in error/diagnostic messages, e.g. `'registry'`, `'lists'`. */
@@ -152,11 +154,23 @@ export async function spawnPillarProcess(
     async stop() {
       if (state.exited) return;
       killGroup(child.pid, 'SIGTERM');
-      const deadline = Date.now() + STOP_GRACE_MS;
-      while (!state.exited && Date.now() < deadline) await sleep(HEALTH_POLL_INTERVAL_MS);
-      if (!state.exited) killGroup(child.pid, 'SIGKILL');
+      await waitForExit(state, STOP_GRACE_MS);
+      if (state.exited) return;
+
+      killGroup(child.pid, 'SIGKILL');
+      await waitForExit(state, KILL_GRACE_MS);
+      if (!state.exited) {
+        throw new Error(
+          `[${options.label}] process (pid ${String(child.pid)}) did not exit after SIGKILL`
+        );
+      }
     },
   };
+}
+
+async function waitForExit(state: ExitState, timeoutMs: number): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (!state.exited && Date.now() < deadline) await sleep(HEALTH_POLL_INTERVAL_MS);
 }
 
 /**
