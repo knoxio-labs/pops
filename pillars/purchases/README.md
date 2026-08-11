@@ -6,7 +6,7 @@ Port 3013, `purchases.db`, registers itself with `registry` on boot.
 
 ## The shape
 
-An **order** is the single point of entry. Three flat lists hang off it, and the cross-references between those lists are all optional:
+An **order** is the single point of entry. Five flat lists hang off it, and the cross-references between those lists are all optional:
 
 ```
 purchases  (the order)
@@ -17,6 +17,7 @@ purchases  (the order)
   ├─ purchase_charges               every charge, matched or not
   │    ├─ purchase_charge_links     charge → finance transaction
   │    └─ purchase_item_allocations which charge paid for which line
+  ├─ purchase_tags                  facts about the order that aren't fields
   └─ purchase_documents             evidence → documents
 ```
 
@@ -58,7 +59,7 @@ Folding `awaitingImport` into the residual would flag every recent order as brok
 
 **`position` is not cosmetic.** Ids are random UUIDs and every row written in one ingest shares a `createdAt` to the second, so without an explicit position the read order of lines, deliveries and charges is genuinely non-deterministic — a 100-line grocery receipt would render shuffled, and the deterministic candidate ordering the reconciliation engine needs for re-derivation to be safe would not hold.
 
-**`merchantEntityId` is operative; `merchantEntityName` is only its label.** Entities live in `contacts` and are read live. Nothing here resolves an entity by name, and no mirror table exists — the same invariant finance carries on `transaction_corrections` (`pillars/finance/src/db/schema/corrections.ts`).
+**`merchantEntityId` is operative; `merchantEntityName` is only its label.** Entities live in `contacts` and are read live, and no mirror table exists — the same invariant finance carries on `transaction_corrections` (`pillars/finance/src/db/schema/corrections.ts`). Receipt ingest resolves a merchant name against `contacts` once, at write time, and stores the id it got back; no read path resolves by name.
 
 **`finance` has no idea this pillar exists.** No foreign key crosses the boundary and no schema change was made on the finance side, which is what lets the two be migrated and restored independently.
 
@@ -72,23 +73,22 @@ A **cash** order (`settlementMode='cash'`) is terminal on arrival — `createPur
 
 ## What is deliberately absent
 
-Not shipped, and not stubbed either:
+- **A frontend.** This pillar has no `app/` directory — the slot `pillars/finance/app` and every other UI-bearing pillar fills (POPS-1506). `buildPurchasesManifest` declares no `nav` and no `pages` for that reason — a rail entry pointing at a bundle slot that does not exist is a dead link.
+- **Gmail IMAP ingest** (POPS-242). The ongoing feed, once the export/upload paths proved the reconciliation model — they have: `src/ingest/` carries `amazon/`, `woolworths/` and `receipt/` today. Email is the one source still unwritten.
 
-- **The reconciliation engine** (POPS-237). Nothing here links, matches, or sweeps. `purchase_charge_links` and `purchase_match_rules` exist because the schema is easier to get right in one migration than in five, but no code writes to them.
-- **Every ingest adapter** (POPS-238 Amazon export, POPS-239 Woolworths, POPS-242 Gmail IMAP). `POST /purchases` is the seam they all write through.
-- **Any frontend.** `buildPurchasesManifest` declares no `nav` and no `pages` for that reason — a rail entry pointing at a bundle slot that does not exist is a dead link. `search.adapters` and `ai.tools` are empty on the same logic.
+`search.adapters` and `ai.tools` are also empty in the manifest, but not for the frontend reason above — MCP tools and search adapters are backend seams that don't need `app/` to exist, and the `registry` pillar has neither an `app/` nor a frontend either. Whether purchases should carry either is an open decision, tracked as POPS-1753.
 
 ## Tests
 
 Three of these do work the rest cannot, and are worth knowing about before changing anything here.
 
-**`contract-conformance.test.ts`** parses every response the pillar actually returns back through the zod schema the contract publishes. ts-rest validates _requests_ against the contract but not responses, so without this the contract is only half-enforced — and the generated Hey API client a frontend consumes is derived from those schemas, so a field returned as `null` where the schema says `string` produces a client whose types are a polite fiction. It also asserts `POST` and a subsequent `GET` return identical bodies, and that every declared route carries a unique `operationId`.
+**`contract-conformance.test.ts`** parses responses back through the zod schema the contract publishes. ts-rest validates _requests_ against the contract but not responses, so without this the contract is only half-enforced — and the generated Hey API client a frontend consumes is derived from those schemas, so a field returned as `null` where the schema says `string` produces a client whose types are a polite fiction. It also asserts `POST` and a subsequent `GET` return identical bodies, and that every declared route carries a unique `operationId`. It does not reach every declared route: the receipts and reconcile-write paths are unparsed (POPS-1772).
 
 **`accounting-properties.test.ts`** generates orders from a seeded PRNG and asserts what must hold for _any_ combination: the identity reconstructs, authorizations move nothing, a refund never raises the residual, every bucket is a safe integer. The example-based tests beside it were written from the same understanding that produced the code and share its blind spots — this one found a real modelling error on its first run. Generation is seeded rather than random, and the seed is printed on failure, so a case can be replayed.
 
-**`schema-migration-drift.test.ts`** covers the third gap. The drizzle definitions and the hand-written migration are two independent descriptions of the same database and nothing forces them to agree — there is no `drizzle-kit generate` step here. It introspects the migrated database and diffs it against the drizzle schema in both directions, including NOT NULL, foreign keys, `ON DELETE` behaviour and the indexes the hot paths depend on. Without it, a column added to `src/db/schema/*.ts` without a matching migration edit would typecheck, pass every service test that doesn't touch it, and fail in production on the first INSERT.
+**`schema-migration-drift.test.ts`** covers the third gap. The drizzle definitions and the hand-written migration are two independent descriptions of the same database and nothing forces them to agree — there is no `drizzle-kit generate` step here. It introspects the migrated database and diffs its tables, columns and NOT NULL against the drizzle schema in both directions. Without it, a column added to `src/db/schema/*.ts` without a matching migration edit would typecheck, pass every service test that doesn't touch it, and fail in production on the first INSERT. Foreign keys, `ON DELETE` behaviour and indexes are checked against literal lists inside the test rather than against drizzle, so that guarantee does not extend to them (POPS-1773).
 
-Coverage carries a threshold ratchet in `vitest.config.ts`; the service layer sits at 100% statements.
+Coverage carries a threshold ratchet in `vitest.config.ts`.
 
 ## Local development
 
