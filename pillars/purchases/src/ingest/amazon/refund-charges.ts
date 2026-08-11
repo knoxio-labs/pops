@@ -22,7 +22,7 @@ import type { AmazonRefund } from './refunds.js';
  *
  * A refund is deliberately not enough to make an order look accounted for:
  * the minting predicate ignores this role, so a refunded order is minted a
- * capture for just as an un-refunded one is.
+ * capture just as an un-refunded one is.
  *
  * No allocations, and `purchase_items.refundedCents` is left alone. The
  * disbursement feed names an order and never a line, and spreading an
