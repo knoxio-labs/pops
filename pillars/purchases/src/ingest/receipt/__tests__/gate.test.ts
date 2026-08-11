@@ -352,6 +352,28 @@ describe('delivery, in its own term', () => {
     expect(result.failures[0]?.detail).toContain('FREE');
   });
 
+  it('names delivery when the model kept the label beside the money', () => {
+    // The likelier misreading than "FREE": the receipt does state an amount,
+    // and the model copies the line it was printed on. `parseAmountCents` is
+    // anchored, so "Delivery $9.95" is not money — the term contributes
+    // nothing and the sum it belonged to is short by exactly the fee. Two
+    // failures, and neither would say "delivery" without the detail naming
+    // the field. The prompt is what prevents this; the gate is what refuses
+    // to admit it when the prompt does not take.
+    const labelled = receipt({ total: '$37.45', shipping: 'Delivery $9.95' });
+
+    const result = gateExtraction(labelled);
+
+    expect(result.admissible).toBe(false);
+    expect(result.shippingCents).toBe(0);
+    expect(result.failures.map((f) => f.kind)).toEqual(['unreadable-line', 'sum-mismatch']);
+    expect(result.failures[0]?.detail).toContain('shipping');
+    expect(result.failures[0]?.detail).toContain('Delivery $9.95');
+
+    const mismatch = result.failures.find((f) => f.kind === 'sum-mismatch');
+    expect(mismatch?.kind === 'sum-mismatch' ? mismatch.deltaCents : null).toBe(-995);
+  });
+
   it('adds a delivery charge stated as a negative, and refuses the result', () => {
     // Chosen, not inherited. `sumAmounts` normalises the sign, so a
     // "-$9.95" delivery adds 9.95 and the receipt lands in review rather

@@ -133,8 +133,10 @@ export const PROMPT_FIELDS: Readonly<Record<string, string>> = {
     'fee and then repeats it in a totals line has charged one fee, so ' +
     'report it once',
   shipping:
-    'the delivery, postage or shipping charge stated, exactly as stated, or ' +
-    'null. Null unless an amount of money is stated — a receipt printing ' +
+    'the delivery, postage or shipping charge stated, or null. The amount ' +
+    'only, without the wording stated beside it: a receipt printing ' +
+    '"Delivery $9.95" has stated "$9.95", and the label is not part of the ' +
+    'money. Null unless an amount of money is stated — a receipt printing ' +
     '"FREE", "Delivery: included" or nothing at all has stated no amount, ' +
     'and the word alone is not money. "$0.00" is an amount and may be ' +
     'reported. Report it here and not in "surcharges"',

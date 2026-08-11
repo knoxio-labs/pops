@@ -12,6 +12,7 @@ vi.mock('../extraction.js', async (importOriginal) => {
   return { ...actual, parseExtraction: vi.fn(actual.parseExtraction) };
 });
 
+import { parseAmountCents } from '../../money.js';
 import { ExtractedLineSchema, ExtractedReceiptSchema, parseExtraction } from '../extraction.js';
 import { readReceipt } from '../read-receipt.js';
 import { extractionPrompt, kindOf, MEDIA_TYPES, PROMPT_FIELDS } from '../vision.js';
@@ -200,6 +201,36 @@ describe('the prompt', () => {
     ];
 
     expect(Object.keys(PROMPT_FIELDS).toSorted()).toEqual([...new Set(schemaKeys)].toSorted());
+  });
+
+  it('asks for the money without its label wherever the gate parses money', () => {
+    // `parseAmountCents` is anchored, so it takes money-only strings and
+    // nothing else. A field told merely to report "exactly as stated"
+    // invites the label printed beside the figure, and the gate then fails
+    // the receipt twice over: the term is unreadable, and the sum it should
+    // have joined no longer agrees. So every field the gate parses has to
+    // say so, and this is what says it.
+    expect(parseAmountCents('Delivery $9.95')).toBeNull();
+    expect(parseAmountCents('$9.95')).toBe(995);
+
+    for (const field of ['amount', 'discounts', 'surcharges', 'shipping']) {
+      expect(PROMPT_FIELDS[field], `${field} does not rule out the wording`).toMatch(
+        /amount only/iu
+      );
+    }
+  });
+
+  it('keeps delivery null unless money was stated, and a stated zero reportable', () => {
+    // The three clauses that decide what `shipping` means, and the ones a
+    // rewording is most likely to lose. Without the first two a waived
+    // delivery arrives as "FREE", which is not money and lands a perfectly
+    // good receipt in review; without the third, a merchant who prints
+    // "$0.00" is indistinguishable from one who charged nothing at all.
+    const shipping = PROMPT_FIELDS['shipping'] ?? '';
+
+    expect(shipping).toMatch(/null unless an amount of money is stated/iu);
+    expect(shipping).toMatch(/FREE/u);
+    expect(shipping).toMatch(/"\$0\.00" is an amount/u);
   });
 
   it('carries the load-bearing instructions into every kind', () => {
