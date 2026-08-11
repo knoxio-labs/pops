@@ -352,7 +352,7 @@ describe('findDrift', () => {
     const findings = findDrift([contract], read);
     expect(findings).toHaveLength(1);
     expect(first(findings).kind).toBe('unreadable');
-    expect(first(findings).detail).toContain('canonical source exists but could not be read');
+    expect(first(findings).detail).toContain('could not read the canonical source');
   });
 
   it('reports an unreadable vendored copy distinctly from an unreadable source', () => {
@@ -365,7 +365,7 @@ describe('findDrift', () => {
     const findings = findDrift([contract], read);
     expect(findings).toHaveLength(1);
     expect(first(findings).kind).toBe('unreadable');
-    expect(first(findings).detail).toContain('vendored copy exists but could not be read');
+    expect(first(findings).detail).toContain('could not read the vendored copy');
   });
 });
 

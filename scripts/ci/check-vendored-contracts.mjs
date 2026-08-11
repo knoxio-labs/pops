@@ -282,7 +282,7 @@ export function findDrift(contracts, read) {
         kind: 'unreadable',
         copy,
         source,
-        detail: `canonical source exists but could not be read: ${String(error)}`,
+        detail: `could not read the canonical source (not simply missing): ${String(error)}`,
       });
       continue;
     }
@@ -299,7 +299,7 @@ export function findDrift(contracts, read) {
         kind: 'unreadable',
         copy,
         source,
-        detail: `vendored copy exists but could not be read: ${String(error)}`,
+        detail: `could not read the vendored copy (not simply missing): ${String(error)}`,
       });
       continue;
     }
@@ -429,11 +429,15 @@ function rel(to) {
  * Self-test half one: every directory shape in ``VENDOR_DIRECTORIES`` is
  * actually scanned, and each copy is paired with the right producer spec.
  *
- * This half exists because the script treats "found nothing" as success — a
- * mis-typed entry, or a consuming unit whose layout moved, would take a whole
- * unit kind out of the scan and still exit 0 with an approving message. Built
- * from `VENDOR_DIRECTORIES` rather than from a fixed list of paths, so a new
- * entry is covered the moment it is added.
+ * `main()` now hard-fails when discovery finds nothing at all (see the
+ * `discovered.length === 0` check below), so total loss is no longer the
+ * silent case. What that floor does NOT catch is a mis-typed
+ * `VENDOR_DIRECTORIES` entry, or one consuming unit's layout moving while
+ * another's stays put — either would drop a whole unit kind (or one
+ * consumer) out of the scan while `discovered.length` stays comfortably
+ * non-zero, and print `OK` about a repo that has quietly lost a check. This
+ * half proves the SHAPE is scanned correctly, built from `VENDOR_DIRECTORIES`
+ * itself so a new entry is covered the moment it is added.
  *
  * What this half does NOT prove is that today's real copies are still where
  * this shape says they should be — only that the shape itself is scanned
