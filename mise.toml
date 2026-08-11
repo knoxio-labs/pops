@@ -259,7 +259,7 @@ description = "Cross-reference a gathered Huly backlog export against merged com
 # you already gathered (via the Huly MCP tools + huly-partition-plan.mjs) and
 # never talks to the tracker itself. Usage:
 #   mise run backlog:reconcile -- --issues <export.json> [--ref origin/main]
-run = "node scripts/huly-backlog-reconcile.mjs $@"
+run = "node scripts/huly-backlog-reconcile.mjs \"$@\""
 
 # ============================================================================
 # Database Management
