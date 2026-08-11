@@ -8,6 +8,7 @@ import {
   discoverConfigIds,
   extractSidecarIds,
   findDrift,
+  parseArgs,
 } from '../check-litestream-sidecar-parity.mjs';
 
 describe('extractSidecarIds', () => {
@@ -89,6 +90,35 @@ describe('discoverConfigIds — fixture tree', () => {
 
   it('does not list an entry without a `.yml` suffix, subdirectory included', () => {
     expect(discoverConfigIds(root)).not.toContain('not-a-config');
+  });
+});
+
+describe('parseArgs', () => {
+  it('recognises --help and -h', () => {
+    expect(parseArgs(['--help'])).toEqual({ kind: 'help' });
+    expect(parseArgs(['-h'])).toEqual({ kind: 'help' });
+  });
+
+  it('recognises --self-test', () => {
+    expect(parseArgs(['--self-test'])).toEqual({ kind: 'self-test' });
+  });
+
+  it('recognises a plain run with no arguments', () => {
+    expect(parseArgs([])).toEqual({ kind: 'run' });
+  });
+
+  it('rejects an unrecognised argument instead of falling through to a run', () => {
+    expect(parseArgs(['--self-tst'])).toEqual({
+      kind: 'error',
+      message: 'Unrecognised argument: --self-tst',
+    });
+  });
+
+  it('rejects an unrecognised argument even alongside a recognised one', () => {
+    expect(parseArgs(['--self-test', '--bogus'])).toEqual({
+      kind: 'error',
+      message: 'Unrecognised argument: --bogus',
+    });
   });
 });
 

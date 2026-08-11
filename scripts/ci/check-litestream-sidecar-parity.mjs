@@ -123,10 +123,46 @@ export function findDrift(configIds, sidecarIds) {
   };
 }
 
+const USAGE =
+  'Usage: node scripts/ci/check-litestream-sidecar-parity.mjs [--self-test]\n' +
+  'Fails if an infra/litestream/<id>.yml has no <id>-litestream service in ' +
+  'infra/docker-compose.yml, or vice versa.';
+
+/**
+ * @typedef {{ kind: 'help' } | { kind: 'self-test' } | { kind: 'run' } | { kind: 'error', message: string }} ParsedArgs
+ */
+
+/**
+ * Classify argv into what `main` should do next — a pure function so
+ * `--self-test` can exercise the unknown-argument path directly, without
+ * spawning a subprocess to observe an exit code.
+ *
+ * This script takes no argument other than `--help`/`-h` and `--self-test`.
+ * Anything else — a typo'd flag, a stray positional — is an error: falling
+ * through to a normal run would make e.g. `--self-tst` silently run the
+ * real parity check instead of the self-test, and a clean tree would make
+ * that read as "the self-test passed".
+ *
+ * @param {string[]} args
+ * @returns {ParsedArgs}
+ */
+export function parseArgs(args) {
+  if (args.includes('--help') || args.includes('-h')) return { kind: 'help' };
+
+  const unrecognised = args.filter((arg) => arg !== '--self-test');
+  if (unrecognised.length > 0) {
+    return { kind: 'error', message: `Unrecognised argument: ${unrecognised[0]}` };
+  }
+
+  return args.includes('--self-test') ? { kind: 'self-test' } : { kind: 'run' };
+}
+
 /**
  * Self-test: prove the detector flags a synthetic missing/orphan id and
- * passes a clean fixture. CI runs this so a regression that neuters the
- * guard is caught without relying on a real tree violation.
+ * passes a clean fixture, and that argument parsing recognises `--help`,
+ * `--self-test`, a plain run, and rejects anything else. CI runs this so a
+ * regression that neuters the guard is caught without relying on a real
+ * tree violation.
  *
  * @returns {boolean}
  */
@@ -166,33 +202,46 @@ function selfTest() {
   const extractOk =
     extracted.length === 2 && extracted.includes('finance') && extracted.includes('ghost');
 
-  const ok = cleanOk && missingOk && orphanOk && extractOk;
+  const helpOk = parseArgs(['--help']).kind === 'help' && parseArgs(['-h']).kind === 'help';
+  const selfTestOk = parseArgs(['--self-test']).kind === 'self-test';
+  const runOk = parseArgs([]).kind === 'run';
+  const badArg = parseArgs(['--self-tst']);
+  const unknownArgOk =
+    badArg.kind === 'error' && badArg.message === 'Unrecognised argument: --self-tst';
+
+  const ok =
+    cleanOk && missingOk && orphanOk && extractOk && helpOk && selfTestOk && runOk && unknownArgOk;
   if (!ok) {
     console.error('SELF-TEST FAILED — guard did not behave as expected:');
     console.error(`  clean fixture passed:              ${cleanOk}`);
     console.error(`  caught config with no sidecar:      ${missingOk}`);
     console.error(`  caught sidecar with no config:       ${orphanOk}`);
     console.error(`  extracted only top-level services:   ${extractOk}`);
+    console.error(`  recognised --help/-h:                ${helpOk}`);
+    console.error(`  recognised --self-test:              ${selfTestOk}`);
+    console.error(`  recognised a plain run:              ${runOk}`);
+    console.error(`  rejected an unrecognised argument:   ${unknownArgOk}`);
   } else {
     console.log(
       'self-test OK — guard catches a config with no sidecar, a sidecar with no config, ' +
-        'and ignores a nested key sharing the sidecar suffix.'
+        'ignores a nested key sharing the sidecar suffix, and rejects an unrecognised argument.'
     );
   }
   return ok;
 }
 
 function main() {
-  const args = process.argv.slice(2);
-  if (args.includes('--help') || args.includes('-h')) {
-    console.log(
-      'Usage: node scripts/ci/check-litestream-sidecar-parity.mjs [--self-test]\n' +
-        'Fails if an infra/litestream/<id>.yml has no <id>-litestream service in ' +
-        'infra/docker-compose.yml, or vice versa.'
-    );
+  const parsed = parseArgs(process.argv.slice(2));
+
+  if (parsed.kind === 'error') {
+    console.error(`${parsed.message}\n${USAGE}`);
+    process.exit(2);
+  }
+  if (parsed.kind === 'help') {
+    console.log(USAGE);
     process.exit(0);
   }
-  if (args.includes('--self-test')) {
+  if (parsed.kind === 'self-test') {
     process.exit(selfTest() ? 0 : 1);
   }
 
