@@ -825,8 +825,10 @@ xcrun simctl install "$udid" "$app"
 
 # Minted as late as possible: the BFM expires a pairing code five minutes after
 # issuing it, and the flow spends it in the first ten seconds.
+# `|| true` so a refused connection or an HTTP error reaches the message below
+# rather than aborting the task under `set -e` with a bare curl exit code.
 code=$(curl -fsS -X POST "$base/operator/pairing/codes" \
-  -H 'content-type: application/json' -d '{}' | jq -r '.code // empty')
+  -H 'content-type: application/json' -d '{}' | jq -r '.code // empty' || true)
 if [ -z "$code" ]; then
   echo "e2e: $base/operator/pairing/codes returned no code. A 401 here means that BFM" >&2
   echo "     is running with NODE_ENV=production, where the route needs a Cloudflare" >&2

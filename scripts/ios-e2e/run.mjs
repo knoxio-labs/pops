@@ -81,6 +81,9 @@ const HOST = '127.0.0.1';
 const BOOT_TIMEOUT_MS = 30_000;
 const BOOT_POLL_MS = 100;
 
+/** How long the pillar gets to shut down cleanly before it is killed. */
+const SHUTDOWN_GRACE_MS = 5_000;
+
 /** Satisfies the BFM's boot check, which refuses anything under 32 characters. */
 const ACCESS_TOKEN_SECRET = 'ios-e2e-access-token-secret-not-a-real-key';
 
@@ -215,13 +218,24 @@ async function mintPairingCode(baseURL) {
 }
 
 /**
+ * Ends the pillar, and does not wait forever for it to agree.
+ *
+ * Its `SIGTERM` handler calls `server.close()`, which drains in-flight requests
+ * before the callback fires — so a keep-alive socket nobody is using still
+ * holds it open. A harness that waited on that would hang until the job's
+ * 45-minute ceiling and report a timeout rather than a finished run.
+ *
  * @param {import('node:child_process').ChildProcess} child
  * @returns {Promise<void>}
  */
 function stop(child) {
   if (child.exitCode !== null) return Promise.resolve();
   return new Promise((resolve) => {
-    child.once('exit', () => resolve());
+    const kill = setTimeout(() => child.kill('SIGKILL'), SHUTDOWN_GRACE_MS);
+    child.once('exit', () => {
+      clearTimeout(kill);
+      resolve();
+    });
     child.kill('SIGTERM');
   });
 }
@@ -242,6 +256,37 @@ async function main() {
   const dataDir = mkdtempSync(join(tmpdir(), 'pops-ios-e2e-'));
   /** @type {Array<() => Promise<void>>} */
   const teardown = [async () => rmSync(dataDir, { recursive: true, force: true })];
+  let tornDown = false;
+
+  /**
+   * Every step runs even when one throws. They are independent — a pillar, a
+   * socket and a directory — and the one that fails is never a reason to leave
+   * the other two behind, least of all a listening port.
+   */
+  const tearDown = async () => {
+    if (tornDown) return;
+    tornDown = true;
+    for (const step of teardown) {
+      try {
+        await step();
+      } catch (error) {
+        process.stderr.write(`ios-e2e: teardown step failed: ${String(error)}\n`);
+      }
+    }
+  };
+
+  // A signal has to reach the teardown, not just this process. Ctrl-C happens
+  // to work without this — the terminal signals the whole foreground group, so
+  // the pillar dies with its parent — but `kill` on this pid alone does not,
+  // and it leaves a BFM listening on a port with nobody left who knows it is
+  // there. That is the exact state that made this harness pair against a
+  // stranger's pillar once already; see this file's note on the port.
+  for (const signal of ['SIGINT', 'SIGTERM']) {
+    process.once(signal, () => {
+      process.stderr.write(`\nios-e2e: ${signal} — tearing down.\n`);
+      void tearDown().then(() => process.exit(130));
+    });
+  }
 
   try {
     const upstream = await startUpstreamStub({ rows: seededTransactions, host: HOST });
@@ -287,7 +332,9 @@ async function main() {
           `ios-e2e: pairing code ${code}, good until ${expiresAt}\n` +
           'ios-e2e: type both into the app; Ctrl-C to tear this down.\n\n'
       );
-      await new Promise((resolve) => process.once('SIGINT', resolve));
+      // Waits for a signal, which the handlers above turn into a teardown and
+      // an exit. Nothing resolves this.
+      await new Promise(() => {});
       return;
     }
 
@@ -295,7 +342,7 @@ async function main() {
       env: { ...process.env, POPS_BFM_BASE_URL: baseURL.origin },
     });
   } finally {
-    for (const step of teardown) await step();
+    await tearDown();
   }
 }
 
