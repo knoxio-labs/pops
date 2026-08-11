@@ -15,7 +15,14 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { isResidualBearing } from '../../contract/constants.js';
-import { createPurchase, getPurchase, purchaseChargeLinks, purchaseCharges } from '../index.js';
+import {
+  createPurchase,
+  getPurchase,
+  listOrdersNeedingDerivedCharge,
+  mintDerivedCharge,
+  purchaseChargeLinks,
+  purchaseCharges,
+} from '../index.js';
 import { openTempDb, seedAmazonSource } from './helpers.js';
 
 import type { SettlementRole } from '../../contract/constants.js';
@@ -86,6 +93,21 @@ function generateOrder(seed: number): GeneratedOrder {
       charges,
     },
     matchedRefs,
+  };
+}
+
+/**
+ * The same order with everything but its refunds stripped.
+ *
+ * This is the shape every refunded Amazon order has: the export publishes
+ * what came back and never what was paid.
+ */
+function refundsOnly(input: CreatePurchaseInput): CreatePurchaseInput {
+  return {
+    ...input,
+    checksum: `${input.checksum}-refunds-only`,
+    sourceOrderId: `${String(input.sourceOrderId)}-refunds-only`,
+    charges: (input.charges ?? []).filter((charge) => charge.role === 'refund'),
   };
 }
 
@@ -256,6 +278,20 @@ describe('accounting invariants hold for any generated order', () => {
     }
   });
 
+  it('an order stating only refunds is fully residual until a capture is minted', () => {
+    for (let seed = 1; seed <= CASES; seed += 1) {
+      const { input } = generateOrder(seed);
+      const id = createPurchase(opened.db, refundsOnly(input));
+      const a = getPurchase(opened.db, id)?.accounting;
+
+      // The shape the whole minting predicate exists for: money came back,
+      // and nothing whatsoever is known about what went out.
+      expect(a?.residualCents, `seed ${String(seed)}`).toBe(input.totalCents);
+      expect(a?.matchedCents, `seed ${String(seed)}`).toBe(0);
+      expect(a?.awaitingImportCents, `seed ${String(seed)}`).toBe(0);
+    }
+  });
+
   it('every bucket is an integer — no float ever leaks in', () => {
     for (let seed = 1; seed <= CASES; seed += 1) {
       const { input, matchedRefs } = generateOrder(seed);
@@ -270,5 +306,83 @@ describe('accounting invariants hold for any generated order', () => {
         );
       }
     }
+  });
+});
+
+/**
+ * The minting predicate, held to the same standard as the split it feeds.
+ *
+ * `listOrdersNeedingDerivedCharge` decides which orders the engine can ever
+ * reach, so a wrong answer here is invisible in every accounting assertion
+ * above — the numbers stay internally consistent while the order silently
+ * never converges.
+ */
+describe('the derived-charge work set over any generated order', () => {
+  /** One minting pass, the sweep's own two calls with no finance in the way. */
+  function mintWorkSet(): number {
+    const orders = listOrdersNeedingDerivedCharge(opened.db);
+    for (const order of orders) mintDerivedCharge(opened.db, order);
+    return orders.length;
+  }
+
+  it('holds exactly the orders no charge claims any of', () => {
+    for (let seed = 1; seed <= CASES; seed += 1) {
+      const { input } = generateOrder(seed);
+      const id = createPurchase(opened.db, input);
+
+      // A refund says what came back; every other role states something
+      // about a payment, and so takes the order out of the work set.
+      const claimed = (input.charges ?? []).some(
+        (charge) => (charge.role ?? 'capture') !== 'refund'
+      );
+      const selected = listOrdersNeedingDerivedCharge(opened.db).some((order) => order.id === id);
+
+      expect(selected, `seed ${String(seed)}`).toBe(!claimed);
+    }
+  });
+
+  it('converges a refunded order: zero residual, net spend of total less refunds', () => {
+    for (let seed = 1; seed <= CASES; seed += 1) {
+      const { input } = generateOrder(seed);
+      const id = createPurchase(opened.db, refundsOnly(input));
+      mintWorkSet();
+
+      const a = getPurchase(opened.db, id)?.accounting;
+      if (a === undefined) throw new Error('missing accounting');
+
+      expect(a.residualCents, `seed ${String(seed)}`).toBe(0);
+      expect(a.matchedCents + a.awaitingImportCents + a.residualCents, `seed ${String(seed)}`).toBe(
+        a.totalCents
+      );
+      // Minting the full total alongside an existing refund double-counts
+      // nothing: the refund is orthogonal to the identity, so what is left
+      // is exactly what the order cost.
+      expect(a.netSpendCents, `seed ${String(seed)}`).toBe(a.totalCents - a.refundedCents);
+    }
+  });
+
+  it('leaves an order that already states a charge exactly as it was', () => {
+    for (let seed = 1; seed <= CASES; seed += 1) {
+      const { input } = generateOrder(seed);
+      if (!(input.charges ?? []).some((charge) => (charge.role ?? 'capture') !== 'refund'))
+        continue;
+
+      const id = createPurchase(opened.db, input);
+      const before = getPurchase(opened.db, id)?.accounting;
+      mintWorkSet();
+
+      // The over-mint failure mode: a full-total capture on top of a charge
+      // that already claims part of the total drives the residual negative.
+      expect(getPurchase(opened.db, id)?.accounting, `seed ${String(seed)}`).toEqual(before);
+    }
+  });
+
+  it('empties itself in one pass, so a second sweep mints no twin', () => {
+    for (let seed = 1; seed <= CASES; seed += 1) {
+      createPurchase(opened.db, refundsOnly(generateOrder(seed).input));
+    }
+
+    expect(mintWorkSet()).toBe(CASES);
+    expect(mintWorkSet()).toBe(0);
   });
 });

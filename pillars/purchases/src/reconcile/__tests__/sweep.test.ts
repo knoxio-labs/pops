@@ -11,11 +11,11 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { FINANCE_UNAVAILABLE, financeReturning } from '../../api/finance/__tests__/fixtures.js';
 import { openTempDb, seedAmazonSource } from '../../db/__tests__/helpers.js';
-import { confirmLink, createPurchase, listConfirmedLinks } from '../../db/index.js';
+import { confirmLink, createPurchase, getPurchase, listConfirmedLinks } from '../../db/index.js';
 import { runSweep } from '../sweep.js';
 
 import type { FinanceClient } from '../../api/finance/client.js';
-import type { OpenedPurchasesDb } from '../../db/index.js';
+import type { CreateChargeInput, OpenedPurchasesDb } from '../../db/index.js';
 import type { PurchasesDb } from '../../db/index.js';
 
 let opened: OpenedPurchasesDb;
@@ -34,7 +34,7 @@ afterEach(() => {
   cleanup();
 });
 
-function anAmazonOrder(totalCents: number, checksum: string) {
+function anAmazonOrder(totalCents: number, checksum: string, charges: CreateChargeInput[] = []) {
   return createPurchase(db, {
     source: 'amazon',
     sourceOrderId: checksum,
@@ -43,6 +43,7 @@ function anAmazonOrder(totalCents: number, checksum: string) {
     currency: 'AUD',
     totalCents,
     checksum,
+    charges,
   });
 }
 
@@ -97,6 +98,80 @@ describe('derived charges', () => {
     expect(result.kind).toBe('swept');
     if (result.kind !== 'swept') return;
     expect(result.linksWritten).toBe(1);
+  });
+});
+
+describe('an order whose only charge is a refund', () => {
+  const aRefund: CreateChargeInput = { amountCents: -4520, role: 'refund', origin: 'merchant' };
+
+  it('gets a derived capture too, and reconciles to a zero residual', async () => {
+    // A refund states what came back, never what was paid, so a refunded
+    // Amazon order is as chargeless as any other. Excluding it is what left
+    // every refunded order 100% unexplained with a negative net spend.
+    const id = anAmazonOrder(5220, 'refunded', [aRefund]);
+
+    const result = await runSweep(deps(financeReturning()));
+
+    expect(result.kind).toBe('swept');
+    if (result.kind !== 'swept') return;
+    expect(result.derivedChargesMinted).toBe(1);
+    expect(getPurchase(db, id)?.accounting).toEqual({
+      totalCents: 5220,
+      matchedCents: 0,
+      awaitingImportCents: 5220,
+      residualCents: 0,
+      refundedCents: 4520,
+      netSpendCents: 700,
+    });
+  });
+
+  it('does not mint a second capture on the next sweep', async () => {
+    anAmazonOrder(5220, 'refunded', [aRefund]);
+    await runSweep(deps(financeReturning()));
+
+    const second = await runSweep(deps(financeReturning()));
+    expect(second.kind).toBe('swept');
+    if (second.kind !== 'swept') return;
+    expect(second.derivedChargesMinted).toBe(0);
+  });
+
+  it('matches the capture it minted against the payment, leaving the refund unmatched', async () => {
+    const id = anAmazonOrder(5220, 'refunded', [aRefund]);
+
+    const result = await runSweep(deps(financeReturning({ id: 't1', amountCents: 5220 })));
+
+    expect(result.kind).toBe('swept');
+    if (result.kind !== 'swept') return;
+    expect(result.linksWritten).toBe(1);
+    // The refund's own transaction has not been imported, so it stays in its
+    // own bucket rather than reopening the residual.
+    expect(getPurchase(db, id)?.accounting).toMatchObject({
+      matchedCents: 5220,
+      awaitingImportCents: 0,
+      residualCents: 0,
+      refundedCents: 4520,
+    });
+  });
+});
+
+describe('an order that already states what it cost', () => {
+  it('is left alone when the stated charge is an adjustment', async () => {
+    // An adjustment already claims part of the total, so a full-total
+    // capture minted on top would drive the residual negative — an
+    // over-explained order, which is a worse lie than an unexplained one.
+    const id = anAmazonOrder(5000, 'adjusted', [
+      { sourceChargeRef: 'adj-1', amountCents: 5000, role: 'adjustment' },
+    ]);
+
+    const result = await runSweep(deps(financeReturning()));
+
+    expect(result.kind).toBe('swept');
+    if (result.kind !== 'swept') return;
+    expect(result.derivedChargesMinted).toBe(0);
+    expect(getPurchase(db, id)?.accounting).toMatchObject({
+      awaitingImportCents: 5000,
+      residualCents: 0,
+    });
   });
 });
 

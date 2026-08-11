@@ -71,13 +71,13 @@ export async function runSweep(deps: SweepDeps, scope: ReconcileScope = {}): Pro
   // harmless one: a derived charge moves an order's money out of `residual`
   // and into `awaitingImport`, so minting during an outage would change what
   // the user sees as explained while reporting that nothing happened.
-  const chargeless = listOrdersNeedingDerivedCharge(db, scope);
+  const needingDerived = listOrdersNeedingDerivedCharge(db, scope);
   const existing = listSolvableCharges(db, scope);
-  if (chargeless.length === 0 && existing.length === 0) return emptySweep();
+  if (needingDerived.length === 0 && existing.length === 0) return emptySweep();
 
   const window = unionOfWindows([
     ...windowsFor(existing, defaultWindowDays),
-    ...windowsFor(chargeless, defaultWindowDays),
+    ...windowsFor(needingDerived, defaultWindowDays),
   ]);
   if (window === null) return emptySweep();
 
@@ -90,7 +90,7 @@ export async function runSweep(deps: SweepDeps, scope: ReconcileScope = {}): Pro
 
   // One transaction for every write the sweep makes. Minting reads its own
   // work list inside it, so two concurrent sweeps cannot both see the same
-  // order as chargeless and mint a twin. Teardown and persist share it for a
+  // order as needing one and mint a twin. Teardown and persist share it for a
   // different reason: a sweep that discarded links and then failed would
   // leave every order in its window looking unpaid.
   let result: SweepResult | null = null;
@@ -129,13 +129,13 @@ function windowsFor(
 }
 
 /**
- * Give every chargeless order a `derived` charge, so the same sweep can
- * match it. Amazon states no charges at all, so without this its whole
- * backlog is invisible to the solver.
+ * Give every order that states no payment a `derived` charge, so the same
+ * sweep can match it. Amazon states none at all beyond its refunds, so
+ * without this its whole backlog is invisible to the solver.
  *
  * The work list is re-read here rather than passed in, and the caller runs
  * this inside its transaction: reading outside it would let two concurrent
- * sweeps both observe the same order as chargeless and mint a twin.
+ * sweeps both observe the same order as needing one and mint a twin.
  */
 function mintMissingCharges(db: PurchasesDb, scope: ReconcileScope): number {
   const orders = listOrdersNeedingDerivedCharge(db, scope);
