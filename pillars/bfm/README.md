@@ -597,13 +597,13 @@ the registry. There is no tunnel fallback here (see
 everyone — including the operator.
 
 **Provisioned on the fleet since POPS-1487 (2026-08-11).** `cloudflare_access_team_name`
-and `cloudflare_access_aud` are set in homelab-infra's
-`ansible/inventory/host_vars/capivara.yml`, sourced from the existing
-`pops_public` Access application (`terraform/cloudflare/access.tf`) — the app
-that already fronted the whole `pops.jmiranda.dev` domain, including the
-shell's `/bfm-api/` proxy path, so no new Cloudflare resource was needed.
-`cac-bootstrap` asserts the pair is set together or not at all before
-rendering `.env`; bfm itself was deployed to capivara in POPS-1393.
+and `cloudflare_access_aud` are set in the `knoxio/homelab-infra` repo's Ansible
+host vars for capivara, sourced from the existing `pops_public` Access
+application (that repo's `terraform/cloudflare/`) — the app that already
+fronted the whole `pops.jmiranda.dev` domain, including the shell's
+`/bfm-api/` proxy path, so no new Cloudflare resource was needed. `cac-bootstrap`
+asserts the pair is set together or not at all before rendering `.env`; bfm
+itself was deployed to capivara in POPS-1393.
 
 `CLOUDFLARE_ACCESS_AUD` deserves its own line because it is easy to read as
 optional hardening and is not. Access mints one JWT per application off the
