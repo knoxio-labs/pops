@@ -162,6 +162,32 @@ describe('parseListQuery', () => {
     });
   });
 
+  it('refuses an anchor half that is present but malformed', () => {
+    // finance's contract types both: `beforeDate` carries the YYYY-MM-DD
+    // pattern and `beforeId` a minLength of 1, so neither shape reaches its
+    // handler. Left through here, a `beforeDate` that is not a date anchors a
+    // string comparison against something that is not one and returns the
+    // wrong page rather than an error.
+    expect(query('beforeDate=2026-03&beforeId=c')).toEqual({
+      error: 'beforeDate must be a YYYY-MM-DD date',
+    });
+    expect(query('beforeDate=yesterday&beforeId=c')).toEqual({
+      error: 'beforeDate must be a YYYY-MM-DD date',
+    });
+    expect(query('beforeDate=2026-03-03&beforeId=')).toEqual({
+      error: 'beforeId must not be empty',
+    });
+  });
+
+  it('shapes each half before it weighs the pair', () => {
+    // A malformed half is reported as malformed, not as its partner being
+    // missing — the same order finance applies, and the difference between
+    // "fix this value" and "send the other one".
+    expect(query('beforeDate=nonsense')).toEqual({
+      error: 'beforeDate must be a YYYY-MM-DD date',
+    });
+  });
+
   it('refuses a limit that is not a whole number in range', () => {
     // Left to `Number()` this arrives at `slice` as `NaN` and answers 200 with
     // an empty page — which the app draws as "no transactions yet".

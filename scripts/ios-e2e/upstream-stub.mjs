@@ -165,6 +165,20 @@ const BOUNDS = {
 export function parseListQuery(params) {
   const beforeDate = params.get('beforeDate') ?? undefined;
   const beforeId = params.get('beforeId') ?? undefined;
+
+  // Each half is shaped before the pair is weighed, which is the order finance
+  // applies them in: its contract types both parameters, so a malformed one is
+  // a 400 from the ts-rest layer and never reaches the handler that checks
+  // they came together. An unshaped `beforeDate` here would anchor a string
+  // comparison against something that is not a date and quietly return the
+  // wrong page; an empty `beforeId` counts as supplied and anchors on ''.
+  if (beforeDate !== undefined && !/^\d{4}-\d{2}-\d{2}$/u.test(beforeDate)) {
+    return { error: 'beforeDate must be a YYYY-MM-DD date' };
+  }
+  if (beforeId !== undefined && beforeId.length === 0) {
+    return { error: 'beforeId must not be empty' };
+  }
+
   if ((beforeDate === undefined) !== (beforeId === undefined)) {
     const missing = beforeDate === undefined ? 'beforeDate' : 'beforeId';
     return { error: `beforeDate and beforeId must be supplied together; ${missing} is missing` };
