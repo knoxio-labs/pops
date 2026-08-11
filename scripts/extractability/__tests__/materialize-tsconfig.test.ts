@@ -102,6 +102,19 @@ describe('main — a tsconfig renamed away in the sandbox copy', () => {
     expect(exitCode).toBe(1);
     expect(stderr.join('')).toContain('missing from');
   });
+
+  it('also fires for tsconfig.build.json, not only tsconfig.json', () => {
+    const fixtures = buildFixtures(root);
+    const exitCode = main([
+      fixtures.renamedBuildJsonInSandbox.sandboxDir,
+      fixtures.renamedBuildJsonInSandbox.originalDir,
+    ]);
+
+    expect(exitCode).toBe(1);
+    const message = stderr.join('');
+    expect(message).toContain('tsconfig.build.json');
+    expect(message).toContain('missing from the sandbox copy');
+  });
 });
 
 describe('main — a tsconfig that exists but does not parse', () => {
@@ -114,6 +127,19 @@ describe('main — a tsconfig that exists but does not parse', () => {
     expect(message).toContain(join(fixtures.malformed.sandboxDir, 'tsconfig.json'));
     expect(message).toContain('does not parse as JSON');
     expect(stdout.join('')).not.toContain('materialised');
+  });
+
+  it('also fires for tsconfig.build.json, not only tsconfig.json', () => {
+    const fixtures = buildFixtures(root);
+    const exitCode = main([
+      fixtures.malformedBuildJson.sandboxDir,
+      fixtures.malformedBuildJson.originalDir,
+    ]);
+
+    expect(exitCode).toBe(1);
+    const message = stderr.join('');
+    expect(message).toContain(join(fixtures.malformedBuildJson.sandboxDir, 'tsconfig.build.json'));
+    expect(message).toContain('does not parse as JSON');
   });
 });
 

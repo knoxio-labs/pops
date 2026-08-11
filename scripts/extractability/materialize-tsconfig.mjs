@@ -264,11 +264,19 @@ function normaliseOption(key, value) {
  * apart, shared between `--self-test` and the Vitest suite so the two fixture
  * sets cannot drift apart:
  *
- *   - `withRealExtends`  — a genuine out-of-unit extends that must be inlined.
- *   - `withoutTsconfig`  — no known tsconfig name in either copy (fine).
- *   - `renamedInSandbox` — the original has one, the sandbox copy does not: a
- *                          rename, a delete, or an incomplete copy.
- *   - `malformed`        — present in both copies, but truncated JSON.
+ *   - `withRealExtends`         — a genuine out-of-unit extends that must be
+ *                                 inlined, under `tsconfig.json`.
+ *   - `withoutTsconfig`         — no known tsconfig name in either copy (fine).
+ *   - `renamedInSandbox`        — `tsconfig.json`: the original has one, the
+ *                                 sandbox copy does not — a rename, a delete,
+ *                                 or an incomplete copy.
+ *   - `malformed`               — `tsconfig.json`, present in both copies,
+ *                                 but truncated JSON.
+ *   - `renamedBuildJsonInSandbox` / `malformedBuildJson` — the same two
+ *                                 failure modes again, under
+ *                                 `tsconfig.build.json`, so the second known
+ *                                 name is proven independently rather than
+ *                                 assumed to behave like the first.
  *
  * @param {string} rootDir an empty directory to build the tree under
  */
@@ -284,21 +292,23 @@ export function buildFixtures(rootDir) {
     extends: '../../base/tsconfig.base.json',
     compilerOptions: { module: 'nodenext' },
   });
+  const truncated = '{ "extends": "../../base/tsconfig.base.json", "compilerOptions": {';
 
   /**
    * @param {string} scenario
    * @param {{ original?: string, sandbox?: string }} content
+   * @param {string} [name]
    */
-  const pair = (scenario, content) => {
+  const pair = (scenario, content, name = 'tsconfig.json') => {
     const originalDir = join(rootDir, 'original', scenario);
     const sandboxDir = join(rootDir, 'sandbox', scenario);
     mkdirSync(originalDir, { recursive: true });
     mkdirSync(sandboxDir, { recursive: true });
     if (content.original !== undefined) {
-      writeFileSync(join(originalDir, 'tsconfig.json'), content.original);
+      writeFileSync(join(originalDir, name), content.original);
     }
     if (content.sandbox !== undefined) {
-      writeFileSync(join(sandboxDir, 'tsconfig.json'), content.sandbox);
+      writeFileSync(join(sandboxDir, name), content.sandbox);
     }
     return { originalDir, sandboxDir };
   };
@@ -307,10 +317,17 @@ export function buildFixtures(rootDir) {
     withRealExtends: pair('with-real-extends', { original: realExtends, sandbox: realExtends }),
     withoutTsconfig: pair('without-tsconfig', {}),
     renamedInSandbox: pair('renamed-in-sandbox', { original: realExtends }),
-    malformed: pair('malformed', {
-      original: '{ "extends": "../../base/tsconfig.base.json", "compilerOptions": {',
-      sandbox: '{ "extends": "../../base/tsconfig.base.json", "compilerOptions": {',
-    }),
+    malformed: pair('malformed', { original: truncated, sandbox: truncated }),
+    renamedBuildJsonInSandbox: pair(
+      'renamed-build-json-in-sandbox',
+      { original: realExtends },
+      'tsconfig.build.json'
+    ),
+    malformedBuildJson: pair(
+      'malformed-build-json',
+      { original: truncated, sandbox: truncated },
+      'tsconfig.build.json'
+    ),
   };
 }
 
@@ -380,6 +397,26 @@ function selfTest() {
     assert(
       malformedExit === 1,
       `expected exit 1 for a tsconfig that fails to parse, got ${malformedExit}`
+    );
+
+    // The same two failure modes again under the SECOND known name — proven
+    // independently rather than assumed to behave like tsconfig.json.
+    const renamedBuildJsonExit = main([
+      fixtures.renamedBuildJsonInSandbox.sandboxDir,
+      fixtures.renamedBuildJsonInSandbox.originalDir,
+    ]);
+    assert(
+      renamedBuildJsonExit === 1,
+      `expected exit 1 when the original has a tsconfig.build.json the sandbox copy lost, got ${renamedBuildJsonExit}`
+    );
+
+    const malformedBuildJsonExit = main([
+      fixtures.malformedBuildJson.sandboxDir,
+      fixtures.malformedBuildJson.originalDir,
+    ]);
+    assert(
+      malformedBuildJsonExit === 1,
+      `expected exit 1 for a tsconfig.build.json that fails to parse, got ${malformedBuildJsonExit}`
     );
   } finally {
     rmSync(root, { recursive: true, force: true });
