@@ -62,6 +62,16 @@ on:
       - "clients/ios/**"
       - "pillars/bfm/openapi/**"
       - ".github/workflows/ios-quality.yml"
+  # THE EXPENSIVE ONE, AND DELIBERATELY UNCONDITIONAL. A merge group cannot be
+  # path-filtered — `paths:` is rejected outright on this event — so every queue
+  # entry pays a full macOS compile, docs-only changes included. That is the
+  # price of the queue and it was priced in: the break that motivated it was a
+  # Swift signature change and a Swift call site landing six minutes apart, each
+  # green against a base that did not contain the other, and this job is the
+  # only thing in the repo that can see it. Narrowing the queue lane means
+  # hand-rolling this filter against the merge group's diff, and a filter that
+  # is wrong reports green having compiled nothing.
+  merge_group:
 
 concurrency:
   group: ios-quality-${{ github.workflow }}-${{ github.ref }}

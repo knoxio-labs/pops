@@ -42,6 +42,13 @@ on:
   push:
     branches: [main]
     paths: ["**"] # main rebuilds via the changed-set
+  # A merge group cannot carry a `paths:` filter (the key is rejected on this
+  # event), so this fires on every one. The matrix still narrows itself:
+  # `_discover-units.yml` diffs against `origin/main`, and a merge group's head
+  # is the queued PR's commits sitting on top of exactly that — so the changed
+  # set it computes there is the same one the PR run computed, against the base
+  # the change will actually land on.
+  merge_group:
 
 concurrency:
   group: unit-quality-${{ github.workflow }}-${{ github.ref }}

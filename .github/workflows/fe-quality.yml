@@ -25,6 +25,13 @@ on:
       - "libs/types/**"
       - "libs/ui/**"
       - ".github/workflows/fe-quality.yml"
+  # A merge group cannot carry a `paths:` filter, and `dorny/paths-filter` has
+  # no diff base on this event either — so the queue lane takes the same
+  # unconditional route a push to `main` takes. Every step below therefore keys
+  # on "not a pull request" rather than on `push`: reading it as `push` alone
+  # would leave a merge group running the job with every step skipped, which
+  # reports green having checked nothing.
+  merge_group:
 
 jobs:
   changes:
@@ -63,41 +70,41 @@ jobs:
         run: echo "No shell/UI changes detected — skipping quality checks"
 
       - uses: actions/checkout@v7
-        if: github.event_name == 'push' || needs.changes.outputs.relevant == 'true'
+        if: github.event_name != 'pull_request' || needs.changes.outputs.relevant == 'true'
 
       - name: Install pnpm
-        if: github.event_name == 'push' || needs.changes.outputs.relevant == 'true'
+        if: github.event_name != 'pull_request' || needs.changes.outputs.relevant == 'true'
         uses: pnpm/action-setup@v6
 
       - uses: actions/setup-node@v7
-        if: github.event_name == 'push' || needs.changes.outputs.relevant == 'true'
+        if: github.event_name != 'pull_request' || needs.changes.outputs.relevant == 'true'
         with:
           node-version: "24"
           cache: pnpm
 
       - name: Install dependencies
-        if: github.event_name == 'push' || needs.changes.outputs.relevant == 'true'
+        if: github.event_name != 'pull_request' || needs.changes.outputs.relevant == 'true'
         run: pnpm install --frozen-lockfile
 
       - name: Build shared packages
-        if: github.event_name == 'push' || needs.changes.outputs.relevant == 'true'
+        if: github.event_name != 'pull_request' || needs.changes.outputs.relevant == 'true'
         run: pnpm --filter "@pops/shell^..." --filter "!./pillars/*/app" build
 
       - name: Type check
-        if: github.event_name == 'push' || needs.changes.outputs.relevant == 'true'
+        if: github.event_name != 'pull_request' || needs.changes.outputs.relevant == 'true'
         run: cd pillars/shell && pnpm typecheck
 
       # The committed nginx.conf is the prod BOOT FALLBACK (PRD-255). Gate it
       # for drift here, not only via the Vitest snapshot, so a stale fallback
       # fails the build.
       - name: nginx fallback conf drift gate
-        if: github.event_name == 'push' || needs.changes.outputs.relevant == 'true'
+        if: github.event_name != 'pull_request' || needs.changes.outputs.relevant == 'true'
         run: cd pillars/shell && pnpm gen:nginx:check
 
       - name: Test
-        if: github.event_name == 'push' || needs.changes.outputs.relevant == 'true'
+        if: github.event_name != 'pull_request' || needs.changes.outputs.relevant == 'true'
         run: cd pillars/shell && pnpm test
 
       - name: Build
-        if: github.event_name == 'push' || needs.changes.outputs.relevant == 'true'
+        if: github.event_name != 'pull_request' || needs.changes.outputs.relevant == 'true'
         run: cd pillars/shell && pnpm build

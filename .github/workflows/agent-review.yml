@@ -50,9 +50,19 @@ name: Agent Review
 # The property to keep: `agent-review`'s conclusion reflects the head it ran on,
 # never the draft state at the time of some earlier push.
 
+# RUNS ON MERGE GROUPS TOO, for the same reason it runs on drafts: `agent-review`
+# is a required context, and a required context that never reports on the merge
+# group's head holds that entry in the queue until the check-response timeout
+# evicts it. The guards are identical there; only the two PR-shaped inputs move.
+# `github.base_ref` is empty outside a pull request, so the isolation litmus
+# reads the merge group's own base instead, and the LLM step — which needs a PR
+# number to comment on and has no one to talk to inside a queue — is now
+# explicitly pull-request-only rather than relying on a null `draft` field.
+
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
+  merge_group:
 
 permissions:
   pull-requests: write
@@ -83,7 +93,13 @@ jobs:
           node scripts/ci/check-docs-model.mjs --self-test
           node scripts/ci/check-tests-typechecked.mjs --self-test
       - name: Isolation litmus — no cross-contract reach-behind
-        run: node scripts/ci/check-contract-isolation.mjs --base "origin/${{ github.base_ref }}"
+        # `github.base_ref` is a pull-request-only field. On a merge group the
+        # equivalent is `merge_group.base_ref`, which is a FULL ref
+        # (`refs/heads/main`) where the other is a bare branch name — hence the
+        # prefix strip rather than two spellings of the same command.
+        env:
+          BASE_REF: ${{ github.base_ref || github.event.merge_group.base_ref }}
+        run: node scripts/ci/check-contract-isolation.mjs --base "origin/${BASE_REF#refs/heads/}"
       - name: Lib-never-imports-pillar guard
         run: node scripts/ci/check-lib-no-pillar-import.mjs
       - name: Known-pillars drift guard (PILLARS tuple vs on-disk data pillars)
@@ -103,8 +119,13 @@ jobs:
       # at STEP level, which leaves the job — and therefore the required check —
       # reporting success either way. `ready_for_review` re-runs the workflow, so
       # the review still happens the moment the PR is marked ready.
+      #
+      # The event test is not redundant with the draft test. Outside a pull
+      # request `github.event.pull_request` is null, and GitHub coerces both
+      # sides of `null == false` to 0 — so the draft condition alone is TRUE on
+      # a merge group, and this step would run with an empty `--pr`.
       - name: LLM review (advisory — federation invariants rubric)
-        if: github.event.pull_request.draft == false
+        if: github.event_name == 'pull_request' && github.event.pull_request.draft == false
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
