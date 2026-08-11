@@ -41,8 +41,15 @@ describe('extractSidecarIds', () => {
     expect(extractSidecarIds(source)).toEqual([]);
   });
 
-  it('stops at the next top-level key even with no trailing section', () => {
-    const source = ['services:', '  finance-litestream:', '    image: x'].join('\n');
+  it('stops at the next top-level key, ignoring a look-alike key in the section after it', () => {
+    const source = [
+      'services:',
+      '  finance-litestream:',
+      '    image: x',
+      'volumes:',
+      '  ghost-litestream:',
+      '    name: pops-ghost-data',
+    ].join('\n');
     expect(extractSidecarIds(source)).toEqual(['finance']);
   });
 
