@@ -88,6 +88,11 @@ function readApiKey(req: Request): string | undefined {
  * Log a rejection with enough detail to act on — the account and the scope it
  * was missing — and never the key. A 403 is most often an account that needs
  * widening, and the operator cannot widen what the log does not name.
+ *
+ * The uncredentialled 401 gets its own wording. It is reachable only under
+ * `requireCredential`, and it is the one rejection where no key was presented
+ * at all — calling it a credentialled request would mis-tell the operator the
+ * single fact that distinguishes it from a bad key.
  */
 function logRejection(logPrefix: string, result: ServiceAccountAuthResult): void {
   if (result.reason === 'missing-scope') {
@@ -97,10 +102,11 @@ function logRejection(logPrefix: string, result: ServiceAccountAuthResult): void
     );
     return;
   }
-  console.warn(
-    `[${logPrefix}] rejected a credentialled request (${result.reason}) for ` +
-      `'${result.requiredScope ?? 'unknown'}'`
-  );
+  const subject =
+    result.reason === 'no-credential'
+      ? 'an uncredentialled request'
+      : `a credentialled request (${result.reason})`;
+  console.warn(`[${logPrefix}] rejected ${subject} for '${result.requiredScope ?? 'unknown'}'`);
 }
 
 /**

@@ -186,6 +186,16 @@ describe('the rejection log', () => {
     expect(logged).toContain('invalid-credential');
     expect(logged).not.toContain(KEY);
   });
+
+  it('does not call a request that presented no key a credentialled one', async () => {
+    const warn = vi.spyOn(console, 'warn');
+    await request(appWith(verifierReturning({ outcome: 'rejected' }), true)).get('/orders');
+
+    const logged = warn.mock.calls.flat().join(' ');
+    expect(logged).toContain('rejected an uncredentialled request');
+    expect(logged).toContain('widgets.orders.list');
+    expect(logged).not.toContain('rejected a credentialled request');
+  });
 });
 
 describe('failing closed', () => {
