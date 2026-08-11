@@ -20,7 +20,13 @@ internal struct AppShellReachabilityTests {
         await bootstrap.setResult(.success(.fake()))
         await fixture.model.noteReachable()
 
-        #expect(fixture.surface?.bootstrap == .answered(.fresh))
+        // ``noteReachable()`` starts the retry without awaiting it — the
+        // whole point being tested elsewhere is that a caller's own
+        // completion never depends on this finishing — so the assertion has
+        // to wait for the retry to actually land rather than assume
+        // ``noteReachable()`` returning means it has.
+        while fixture.surface?.bootstrap != .answered(.fresh) { await Task.yield() }
+
         #expect(await fixture.bootstrap.callCount == 2)
     }
 

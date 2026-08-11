@@ -77,15 +77,17 @@
             guard device.isFocusModeSupported(.continuousAutoFocus) else { return }
             do {
                 try device.lockForConfiguration()
-                device.focusMode = .continuousAutoFocus
-                if device.isSmoothAutoFocusSupported {
-                    device.isSmoothAutoFocusEnabled = true
-                }
-                device.unlockForConfiguration()
             } catch {
                 // Locking failed (device disconnected mid-configure, or another
                 // client grabbed it) — the session default focus mode still
                 // applies, so scanning keeps working, just without the tuning.
+                return
+            }
+            defer { device.unlockForConfiguration() }
+
+            device.focusMode = .continuousAutoFocus
+            if device.isSmoothAutoFocusSupported {
+                device.isSmoothAutoFocusEnabled = true
             }
         }
     }

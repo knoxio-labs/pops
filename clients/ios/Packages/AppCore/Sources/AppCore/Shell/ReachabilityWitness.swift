@@ -10,5 +10,11 @@
 /// request of its own to notice.
 public protocol ReachabilityWitness: Sendable {
     /// Something else in the app just completed a successful request.
+    ///
+    /// A conformer must return promptly — whatever it decides to do about
+    /// this is its own concern, never the caller's to wait on. The caller is
+    /// typically a fetch's own success path, and its completion (a pull to
+    /// refresh finishing, say) must not end up gated on a retry this triggers
+    /// somewhere else.
     func noteReachable() async
 }

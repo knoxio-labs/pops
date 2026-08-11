@@ -208,7 +208,7 @@ extension AppShellModel {
 }
 
 extension AppShellModel: ReachabilityWitness {
-    /// Re-asks bootstrap if the last answer was a failure; a no-op otherwise.
+    /// Starts a re-ask if the last answer was a failure; a no-op otherwise.
     ///
     /// The only phase this improves is ``BootstrapPhase/failed(_:)`` — pending
     /// has nothing to retry yet, and an answered phase already has a better
@@ -217,9 +217,17 @@ extension AppShellModel: ReachabilityWitness {
     /// ``reloadBootstrap()`` rather than duplicating its guards, so this and a
     /// person foregrounding the app or tapping retry can never disagree about
     /// when asking again is safe.
+    ///
+    /// Deliberately does not await the retry itself: a feature reports success
+    /// through this from inside its own success path (see
+    /// ``ReachabilityWitness``), and a transactions refresh finishing must not
+    /// depend on an unrelated bootstrap round trip finishing too — that would
+    /// turn "the list loaded" into "the list loaded, and also whatever else
+    /// this happens to be wired to." ``reloadBootstrap()``'s own `isAsking`
+    /// guard is what keeps this safe to fire without a handle on it.
     public func noteReachable() async {
         guard case .failed = phase else { return }
-        await reloadBootstrap()
+        Task { await reloadBootstrap() }
     }
 }
 
