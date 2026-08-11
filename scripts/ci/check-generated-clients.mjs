@@ -10,11 +10,13 @@
  *
  * Discovery is driven from each unit's `package.json`, not a hardcoded list:
  * a `generate:*` script counts as a Hey API client generator when one of its
- * `&&`-separated steps is literally the `openapi-ts` binary — the shape every
- * such script in this repo uses (`openapi-ts [...] && oxfmt --write <dir>`).
- * That excludes the unrelated `generate:openapi` / `generate:manifest` /
- * `generate:api-types` / `generate:prompt-catalog` scripts pillars also
- * declare, which produce other artefacts entirely.
+ * `&&`- or `;`-separated steps invokes the `openapi-ts` binary — directly,
+ * through `pnpm exec`/`npx`, or behind a leading `KEY=VALUE` env prefix —
+ * the shapes such a script can take in this repo (plain form:
+ * `openapi-ts [...] && oxfmt --write <dir>`). That excludes the unrelated
+ * `generate:openapi` / `generate:manifest` / `generate:api-types` /
+ * `generate:prompt-catalog` scripts pillars also declare, which produce
+ * other artefacts entirely.
  *
  * Candidate units are `pillars/<id>/app` (own-pillar and cross-pillar
  * consumer clients), `pillars/<id>` (a pillar-level client, e.g. the shell's
@@ -22,6 +24,16 @@
  * overlay-ego's). This mirrors how `app-quality.yml` and `unit-quality.yml`
  * already partition the workspace for typecheck/test, so a twelfth pillar
  * or a new lib client needs no edit here — it is discovered.
+ *
+ * Discovery tolerating every known script shape still only defends against
+ * the forms this file knows about. `EXPECTED_TARGETS` below is the second,
+ * independent line of defence: the exact target set this repo owns today,
+ * checked on every real invocation (not only in the sibling Vitest suite),
+ * so a discovery break — including one from a wrapper form nobody has
+ * written yet — fails the guard directly instead of only the vitest lane in
+ * a different CI job. Adding or removing a Hey API client leg means editing
+ * this list in the same commit; that is the point, not friction to route
+ * around.
  *
  * `--pkg <name>` scopes to one package (what `app-quality.yml`'s per-app
  * matrix row passes, so each app still fails in isolation like every other
@@ -80,21 +92,52 @@ const HEY_API_BIN = 'openapi-ts';
  * @property {boolean} inAppMatrix Whether `pkgDir` is a `pillars/<id>/app` unit.
  */
 
+/** Package-manager wrappers a script may invoke `openapi-ts` through. */
+const RUNNER_WRAPPERS = [['pnpm', 'exec'], ['npx']];
+
+/** A leading `KEY=VALUE` env assignment token, e.g. `NODE_OPTIONS=--max-old-space-size=4096`. */
+const ENV_ASSIGNMENT = /^[A-Za-z_][A-Za-z0-9_]*=\S*$/u;
+
 /**
- * True when `command` runs the Hey API generator as one of its
- * `&&`-separated steps. A substring match would also fire on
+ * True when a single step (already split off `&&`/`;`) invokes the
+ * `openapi-ts` binary — bare, through `pnpm exec`/`npx`, and/or behind one
+ * or more leading env-var assignments. Tokenises on whitespace rather than
+ * matching a fixed string, so it does not depend on exactly which wrapper or
+ * how many env vars precede the binary; it does not attempt to honour
+ * quoted, space-containing env values, which none of this repo's scripts use.
+ *
+ * @param {string} step
+ * @returns {boolean}
+ */
+function stepInvokesHeyApiGenerator(step) {
+  const tokens = step.split(/\s+/u).filter((token) => token.length > 0);
+  let i = 0;
+  while (i < tokens.length && ENV_ASSIGNMENT.test(tokens[i])) i++;
+  for (const wrapper of RUNNER_WRAPPERS) {
+    if (wrapper.every((word, offset) => tokens[i + offset] === word)) {
+      i += wrapper.length;
+      break;
+    }
+  }
+  return tokens[i] === HEY_API_BIN;
+}
+
+/**
+ * True when `command` runs the Hey API generator as one of its `&&`- or
+ * `;`-separated steps. A substring match would also fire on
  * `generate-openapi.ts` (it doesn't contain the token, but nothing here
- * should rely on that coincidence) — this checks the first word of each step
- * instead, so only an actual invocation of the `openapi-ts` binary matches.
+ * should rely on that coincidence) — this checks each step's binary
+ * position instead, so only an actual invocation of the `openapi-ts` binary
+ * matches, wrapped or not.
  *
  * @param {string} command
  * @returns {boolean}
  */
 export function invokesHeyApiGenerator(command) {
   return command
-    .split('&&')
+    .split(/&&|;/u)
     .map((step) => step.trim())
-    .some((step) => step === HEY_API_BIN || step.startsWith(`${HEY_API_BIN} `));
+    .some((step) => stepInvokesHeyApiGenerator(step));
 }
 
 /**
@@ -172,6 +215,86 @@ export function discoverCandidateDirs(root) {
 /** @param {string} root @returns {GeneratedClientTarget[]} */
 export function discoverGeneratedClientTargets(root) {
   return discoverCandidateDirs(root).flatMap((dir) => scanUnit(root, dir));
+}
+
+/**
+ * @typedef {object} ExpectedTarget
+ * @property {string} pkgName
+ * @property {string} scriptName
+ * @property {boolean} inAppMatrix
+ */
+
+/**
+ * The exact set of `generate:*` Hey API client scripts this repo owns today.
+ * This is the pinned invariant ADR-045 recommends over a bare discovery
+ * floor: a floor only catches losing every target, this catches losing (or
+ * gaining) any one of them. Adding, removing, or renaming a Hey API client
+ * leg means editing this list in the same commit — `findExpectedTargetSetViolations`
+ * fails loudly otherwise, on every real invocation of this guard, not only
+ * in the sibling Vitest suite.
+ *
+ * @type {ExpectedTarget[]}
+ */
+export const EXPECTED_TARGETS = [
+  { pkgName: '@pops/app-ai', scriptName: 'generate:api', inAppMatrix: true },
+  { pkgName: '@pops/app-bfm', scriptName: 'generate:api', inAppMatrix: true },
+  { pkgName: '@pops/app-cerebrum', scriptName: 'generate:cerebrum-client', inAppMatrix: true },
+  { pkgName: '@pops/app-finance', scriptName: 'generate:finance-client', inAppMatrix: true },
+  { pkgName: '@pops/app-finance', scriptName: 'generate:contacts-client', inAppMatrix: true },
+  { pkgName: '@pops/app-food', scriptName: 'generate:food-client', inAppMatrix: true },
+  { pkgName: '@pops/app-food', scriptName: 'generate:lists-client', inAppMatrix: true },
+  { pkgName: '@pops/app-inventory', scriptName: 'generate:inventory-client', inAppMatrix: true },
+  { pkgName: '@pops/app-lists', scriptName: 'generate:lists-client', inAppMatrix: true },
+  { pkgName: '@pops/app-media', scriptName: 'generate:media-client', inAppMatrix: true },
+  { pkgName: '@pops/shell', scriptName: 'generate:registry-client', inAppMatrix: false },
+  { pkgName: '@pops/overlay-ego', scriptName: 'generate:ego-client', inAppMatrix: false },
+];
+
+/** @param {{ pkgName: string, scriptName: string }} target @returns {string} */
+function targetKey(target) {
+  return `${target.pkgName}:${target.scriptName}`;
+}
+
+/**
+ * Compares a freshly discovered, unfiltered target set against
+ * `EXPECTED_TARGETS` and reports every discrepancy: an expected target that
+ * did not come back, one that came back on the wrong side of the app
+ * matrix, and any target that was not expected at all. Returns an empty
+ * array only when the two sets match exactly — that is the "pass" case.
+ *
+ * @param {GeneratedClientTarget[]} targets Full, unfiltered discovery — not scoped by `--pkg`/`--exclude-app-matrix`.
+ * @returns {string[]}
+ */
+export function findExpectedTargetSetViolations(targets) {
+  const discovered = new Map(targets.map((target) => [targetKey(target), target]));
+  const expectedKeys = new Set(EXPECTED_TARGETS.map((target) => targetKey(target)));
+
+  /** @type {string[]} */
+  const messages = [];
+  for (const expected of EXPECTED_TARGETS) {
+    const key = targetKey(expected);
+    const found = discovered.get(key);
+    if (found === undefined) {
+      messages.push(
+        `expected target ${key} was not discovered — its generate:* script was renamed, ` +
+          'removed, or its command no longer matches a known Hey API invocation.'
+      );
+    } else if (found.inAppMatrix !== expected.inAppMatrix) {
+      messages.push(
+        `${key} is ${found.inAppMatrix ? 'inside' : 'outside'} the app matrix now, expected ` +
+          `${expected.inAppMatrix ? 'inside' : 'outside'} — its unit moved.`
+      );
+    }
+  }
+  for (const key of discovered.keys()) {
+    if (!expectedKeys.has(key)) {
+      messages.push(
+        `discovered ${key}, which is not in EXPECTED_TARGETS — add it there once its ` +
+          'generated client is committed.'
+      );
+    }
+  }
+  return messages;
 }
 
 /**
@@ -421,11 +544,65 @@ function selfTestOutcomes() {
   return ok;
 }
 
+/** @param {ExpectedTarget} expected @returns {GeneratedClientTarget} */
+function fullTargetFor(expected) {
+  return {
+    ...expected,
+    pkgDir: 'pillars/x/app',
+    command: 'openapi-ts && oxfmt --write src/x-api',
+    outputDir: 'src/x-api',
+  };
+}
+
+/** @returns {boolean} */
+function selfTestExpectedTargetSet() {
+  const clean = EXPECTED_TARGETS.map(fullTargetFor);
+  const missingOne = clean.slice(1);
+  const droppedKey = targetKey(EXPECTED_TARGETS[0]);
+  const withExtra = [
+    ...clean,
+    fullTargetFor({
+      pkgName: '@pops/app-bogus',
+      scriptName: 'generate:bogus-client',
+      inAppMatrix: true,
+    }),
+  ];
+  const wrongMatrixFlag = clean.map((target, index) =>
+    index === 0 ? { ...target, inAppMatrix: !target.inAppMatrix } : target
+  );
+
+  const scenarios = {
+    'passes when the discovered set matches EXPECTED_TARGETS exactly':
+      findExpectedTargetSetViolations(clean).length === 0,
+    'reports a dropped target instead of silently passing': findExpectedTargetSetViolations(
+      missingOne
+    ).some((message) => message.includes(droppedKey)),
+    'reports a target that is not in EXPECTED_TARGETS': findExpectedTargetSetViolations(
+      withExtra
+    ).some((message) => message.includes('@pops/app-bogus')),
+    'reports a target that moved across the app-matrix boundary': findExpectedTargetSetViolations(
+      wrongMatrixFlag
+    ).some((message) => message.includes(targetKey(EXPECTED_TARGETS[0]))),
+  };
+
+  const ok = Object.values(scenarios).every(Boolean);
+  if (!ok) {
+    console.error('SELF-TEST FAILED (expected target set):');
+    for (const [name, pass] of Object.entries(scenarios)) console.error(`  ${name}: ${pass}`);
+  } else {
+    console.log(
+      'self-test OK — pinned target set catches a dropped target, an unexpected one, and one that moved app-matrix side.'
+    );
+  }
+  return ok;
+}
+
 /** @returns {boolean} */
 function selfTest() {
   const discovery = selfTestDiscovery();
   const outcomes = selfTestOutcomes();
-  return discovery && outcomes;
+  const expectedTargetSet = selfTestExpectedTargetSet();
+  return discovery && outcomes && expectedTargetSet;
 }
 
 function main() {
@@ -448,7 +625,19 @@ function main() {
   const pkgFilter = pkgFlagIndex === -1 ? null : (args[pkgFlagIndex + 1] ?? null);
   const excludeAppMatrix = args.includes('--exclude-app-matrix');
 
-  let targets = discoverGeneratedClientTargets(repoRoot);
+  const allTargets = discoverGeneratedClientTargets(repoRoot);
+
+  const expectedSetViolations = findExpectedTargetSetViolations(allTargets);
+  if (expectedSetViolations.length > 0) {
+    console.error(
+      `FAIL — discovered target set does not match the ${EXPECTED_TARGETS.length} pinned in ` +
+        'EXPECTED_TARGETS (scripts/ci/check-generated-clients.mjs):'
+    );
+    for (const message of expectedSetViolations) console.error(`  ${message}`);
+    process.exit(1);
+  }
+
+  let targets = allTargets;
   if (pkgFilter !== null) targets = targets.filter((t) => t.pkgName === pkgFilter);
   if (excludeAppMatrix) targets = targets.filter((t) => !t.inAppMatrix);
 
