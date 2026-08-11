@@ -27,11 +27,21 @@
  * with no matching producer spec is itself a failure (stale or mis-named) so
  * the convention can't rot silently.
  *
+ * A directory scan cannot prove a copy still exists once its directory has
+ * moved — it just finds nothing there and moves on. So this guard also reads
+ * what each consumer's OWN codegen config expects (`VENDOR_DECLARATIONS`,
+ * `deriveExpectedContracts`) and cross-checks that expectation against the
+ * filesystem independently of the directory walk (`findMoved`). A `contracts/`
+ * or `Contracts/` directory that moves without its declaration following is
+ * then a reported mismatch, not an empty scan that prints success.
+ *
  * Usage:
  *   node scripts/ci/check-vendored-contracts.mjs
  *   node scripts/ci/check-vendored-contracts.mjs --self-test
  *
- * Exit 0 = every vendored copy matches its source. Exit 1 = drift / orphan.
+ * Exit 0 = every vendored copy matches its source and every declared
+ * expectation is on disk. Exit 1 = drift / orphan / moved / unreadable, or
+ * total discovery loss.
  */
 
 import {
@@ -46,6 +56,8 @@ import {
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import { isFileNotFound } from './fixture-copies.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..');
@@ -72,6 +84,72 @@ const VENDOR_DIRECTORIES = [
   ['pillars', 'app', 'contracts'],
   ['clients', 'Contracts'],
 ];
+
+/**
+ * How each `VENDOR_DIRECTORIES` entry's consumer DECLARES that it depends on a
+ * vendored copy, independent of the directory scan `discoverVendoredContracts`
+ * performs. See {@link deriveExpectedContracts}.
+ *
+ * Indexed the same as `VENDOR_DIRECTORIES` — entry `i` here answers for unit
+ * kind `i` there. Checked at load time below rather than left to go out of
+ * sync silently.
+ */
+const VENDOR_DECLARATIONS = [
+  {
+    /**
+     * A pnpm app's Hey API codegen config:
+     * `pillars/<consumer>/app/openapi-ts*.config.ts`, whichever one points at
+     * a vendored input.
+     *
+     * @param {string} consumerDir
+     * @returns {string[]}
+     */
+    findDeclarationFiles(consumerDir) {
+      const appDir = join(consumerDir, 'app');
+      if (!existsSync(appDir)) return [];
+      return readdirSync(appDir, { withFileTypes: true })
+        .filter((entry) => entry.isFile() && /^openapi-ts.*\.config\.ts$/.test(entry.name))
+        .map((entry) => join(appDir, entry.name));
+    },
+    /** @param {string} text @returns {string[]} */
+    extractDeclaredFilenames(text) {
+      const names = [];
+      const pattern =
+        /input:\s*fileURLToPath\(\s*new URL\(\s*'\.\/contracts\/([^']+\.openapi\.json)'/g;
+      for (const match of text.matchAll(pattern)) names.push(match[1]);
+      return names;
+    },
+  },
+  {
+    /**
+     * The Swift client's `mise run generate:*-client` task, whose run script
+     * assigns `vendored=Contracts/<pillar>.openapi.json` before copying over
+     * it. `clients/ios` is in neither the pnpm nor the Rust workspace, so
+     * there is no `.config.ts` on this side — `mise.toml`'s own task body is
+     * the only place this expectation is written down.
+     *
+     * @param {string} consumerDir
+     * @returns {string[]}
+     */
+    findDeclarationFiles(consumerDir) {
+      const miseToml = join(consumerDir, 'mise.toml');
+      return existsSync(miseToml) ? [miseToml] : [];
+    },
+    /** @param {string} text @returns {string[]} */
+    extractDeclaredFilenames(text) {
+      const names = [];
+      const pattern = /vendored\s*=\s*Contracts\/([^\s'"]+\.openapi\.json)/g;
+      for (const match of text.matchAll(pattern)) names.push(match[1]);
+      return names;
+    },
+  },
+];
+
+if (VENDOR_DECLARATIONS.length !== VENDOR_DIRECTORIES.length) {
+  throw new Error(
+    'VENDOR_DECLARATIONS must have exactly one entry per VENDOR_DIRECTORIES entry, in the same order'
+  );
+}
 
 /**
  * @typedef {object} VendoredContract
@@ -115,29 +193,124 @@ export function discoverVendoredContracts(root) {
 }
 
 /**
+ * @typedef {object} DeclaredCopy
+ * @property {string} copy        Absolute path the declaration expects a vendored copy at.
+ * @property {string} source      Absolute path of the canonical producer spec.
+ * @property {string} pillarId    Producer pillar id (derived from the declared filename).
+ * @property {string} declaredBy  Absolute path of the file that declares this expectation.
+ */
+
+/**
+ * Derive every vendored copy a consumer's OWN codegen config says it depends
+ * on — independent of `discoverVendoredContracts`'s directory walk.
+ *
+ * That walk reports nothing when a consumer's copy directory moves; the file
+ * that used to be found simply is not visited, and an empty scan looks
+ * exactly like a healthy one. This function never visits that directory: it
+ * reads each consumer's OWN config (which the consumer's real build depends
+ * on, so it cannot drift from reality without breaking that build too) and
+ * extracts the path recorded there. `findMoved` then checks that the path
+ * still exists, which is what turns a moved directory into a reported
+ * mismatch instead of silence.
+ *
+ * @param {string} root Repo root to scan.
+ * @returns {DeclaredCopy[]}
+ */
+export function deriveExpectedContracts(root) {
+  /** @type {DeclaredCopy[]} */
+  const found = [];
+  const pillarsDir = join(root, 'pillars');
+
+  VENDOR_DIRECTORIES.forEach(([unitKind, ...withinUnit], index) => {
+    const unitKindDir = join(root, unitKind);
+    if (!existsSync(unitKindDir)) return;
+    const { findDeclarationFiles, extractDeclaredFilenames } = VENDOR_DECLARATIONS[index];
+
+    for (const consumer of readdirSync(unitKindDir, { withFileTypes: true })) {
+      if (!consumer.isDirectory()) continue;
+      const consumerDir = join(unitKindDir, consumer.name);
+
+      for (const declarationFile of findDeclarationFiles(consumerDir)) {
+        const text = readOrNull(declarationFile);
+        // Vanished between readdir and read: a TOCTOU race, not a finding
+        // this function makes — `deriveExpectedContracts` only reports what
+        // a config says, and a config that is not there says nothing.
+        if (text === null) continue;
+
+        for (const filename of extractDeclaredFilenames(text)) {
+          const pillarId = filename.slice(0, -VENDORED_SUFFIX.length);
+          found.push({
+            copy: join(consumerDir, ...withinUnit, filename),
+            source: join(pillarsDir, pillarId, 'openapi', filename),
+            pillarId,
+            declaredBy: declarationFile,
+          });
+        }
+      }
+    }
+  });
+
+  return found.toSorted((a, b) => a.copy.localeCompare(b.copy));
+}
+
+/**
  * @typedef {object} DriftFinding
- * @property {'orphan' | 'drift'} kind
+ * @property {'orphan' | 'drift' | 'unreadable'} kind
  * @property {string} copy
  * @property {string} source
+ * @property {string} [detail] Present for `'unreadable'` — which side, and why.
  */
 
 /**
  * Compare each vendored copy against its canonical source.
  *
  * @param {VendoredContract[]} contracts
- * @param {(p: string) => string | null} read Reads a file, or null if absent.
+ * @param {(p: string) => string | null} read Reads a file; `null` means absent,
+ *   throws for any other read failure (see `readOrNull`).
  * @returns {DriftFinding[]}
  */
 export function findDrift(contracts, read) {
   /** @type {DriftFinding[]} */
   const findings = [];
   for (const { copy, source } of contracts) {
-    const sourceText = read(source);
+    let sourceText;
+    try {
+      sourceText = read(source);
+    } catch (error) {
+      findings.push({
+        kind: 'unreadable',
+        copy,
+        source,
+        detail: `canonical source exists but could not be read: ${String(error)}`,
+      });
+      continue;
+    }
     if (sourceText === null) {
       findings.push({ kind: 'orphan', copy, source });
       continue;
     }
-    const copyText = read(copy);
+
+    let copyText;
+    try {
+      copyText = read(copy);
+    } catch (error) {
+      findings.push({
+        kind: 'unreadable',
+        copy,
+        source,
+        detail: `vendored copy exists but could not be read: ${String(error)}`,
+      });
+      continue;
+    }
+    if (copyText === null) {
+      findings.push({
+        kind: 'unreadable',
+        copy,
+        source,
+        detail: 'vendored copy was found by the scan but had vanished by the time it was read',
+      });
+      continue;
+    }
     if (copyText !== sourceText) {
       findings.push({ kind: 'drift', copy, source });
     }
@@ -145,12 +318,62 @@ export function findDrift(contracts, read) {
   return findings;
 }
 
-/** @param {string} path @returns {string | null} */
-function readOrNull(path) {
+/**
+ * @typedef {object} MovedFinding
+ * @property {'moved'} kind
+ * @property {string} copy
+ * @property {string} source
+ * @property {string} declaredBy
+ */
+
+/**
+ * Cross-check every config-declared expectation against the filesystem.
+ *
+ * A moved `contracts/`/`Contracts/` directory is exactly the case the
+ * directory-scan side of this guard cannot see — it just finds nothing there.
+ * The declaration a consumer's own config makes does not move just because
+ * the directory did, so checking it independently is what turns that move
+ * into a reported failure.
+ *
+ * @param {DeclaredCopy[]} expected
+ * @param {(p: string) => boolean} exists
+ * @returns {MovedFinding[]}
+ */
+export function findMoved(expected, exists) {
+  /** @type {MovedFinding[]} */
+  const findings = [];
+  for (const declared of expected) {
+    if (!exists(declared.copy)) {
+      findings.push({
+        kind: 'moved',
+        copy: declared.copy,
+        source: declared.source,
+        declaredBy: declared.declaredBy,
+      });
+    }
+  }
+  return findings;
+}
+
+/**
+ * Read a file's text, or `null` if it does not exist.
+ *
+ * Distinguishes "not there" from "there but unreadable" — the latter (EACCES,
+ * a directory where a file was expected, …) is a genuine environment problem,
+ * not a stale or mis-named vendored copy, and collapsing the two into the same
+ * `null` misreports a permissions failure as "orphan". Reuses `isFileNotFound`
+ * from `./fixture-copies.mjs` rather than repeating the errno check, so the
+ * two guards cannot drift into disagreeing about what `null` means.
+ *
+ * @param {string} path
+ * @returns {string | null}
+ */
+export function readOrNull(path) {
   try {
     return readFileSync(path, 'utf8');
-  } catch {
-    return null;
+  } catch (error) {
+    if (isFileNotFound(error)) return null;
+    throw error;
   }
 }
 
@@ -168,6 +391,10 @@ function rel(to) {
  * unit kind out of the scan and still exit 0 with an approving message. Built
  * from `VENDOR_DIRECTORIES` rather than from a fixed list of paths, so a new
  * entry is covered the moment it is added.
+ *
+ * What this half does NOT prove is that today's real copies are still where
+ * this shape says they should be — only that the shape itself is scanned
+ * correctly. `selfTestDeclaration` below covers that gap.
  *
  * @returns {boolean}
  */
@@ -249,19 +476,122 @@ function selfTestDrift() {
     const orphan = findings.find((f) => f.kind === 'orphan' && f.copy.endsWith('copy-orphan.json'));
     const matchedAllowed = !findings.some((f) => f.copy.endsWith('copy-match.json'));
 
-    const ok = Boolean(drift) && Boolean(orphan) && matchedAllowed && findings.length === 2;
+    // A `read` that THROWS for a reason other than not-found (EACCES, say)
+    // must be reported as `'unreadable'`, never crash the whole self-test —
+    // proof that the readOrNull/findDrift split does not just move the bug
+    // this guard exists to catch one level up.
+    const throwingRead = (/** @type {string} */ p) => {
+      if (p.endsWith('copy-unreadable.json'))
+        throw Object.assign(new Error('EACCES'), { code: 'EACCES' });
+      return read(p);
+    };
+    const unreadableFindings = findDrift(
+      [
+        {
+          copy: join(dir, 'copy-unreadable.json'),
+          source: join(dir, 'src-match.json'),
+          pillarId: 'u',
+        },
+      ],
+      throwingRead
+    );
+    const caughtUnreadable =
+      unreadableFindings.length === 1 && unreadableFindings[0].kind === 'unreadable';
+
+    const ok =
+      Boolean(drift) &&
+      Boolean(orphan) &&
+      matchedAllowed &&
+      findings.length === 2 &&
+      caughtUnreadable;
     if (!ok) {
       console.error('SELF-TEST FAILED (drift):');
-      console.error(`  caught drift:          ${Boolean(drift)}`);
-      console.error(`  caught orphan:         ${Boolean(orphan)}`);
-      console.error(`  allowed identical:     ${matchedAllowed}`);
-      console.error(`  exactly 2 findings:    ${findings.length === 2}`);
+      console.error(`  caught drift:              ${Boolean(drift)}`);
+      console.error(`  caught orphan:             ${Boolean(orphan)}`);
+      console.error(`  allowed identical:         ${matchedAllowed}`);
+      console.error(`  exactly 2 findings:        ${findings.length === 2}`);
+      console.error(`  reported unreadable, not crashed: ${caughtUnreadable}`);
     } else {
-      console.log('self-test OK — flags drift + orphan, allows an identical copy.');
+      console.log('self-test OK — flags drift + orphan + unreadable, allows an identical copy.');
     }
     return ok;
   } finally {
     rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+/**
+ * Self-test half three: prove `deriveExpectedContracts` + `findMoved` catch
+ * the failure `selfTestDiscovery` cannot — a consumer's vendored-copy
+ * directory moving out from under a declaration that still names it.
+ *
+ * Builds one synthetic consumer per `VENDOR_DIRECTORIES` entry with both a
+ * declaration file and a matching vendored copy (the positive case: nothing
+ * flagged), then deletes just the FIRST consumer's copy while leaving its
+ * declaration untouched (the degenerate case) and asserts that is reported,
+ * not silently absent.
+ *
+ * @returns {boolean}
+ */
+function selfTestDeclaration() {
+  const root = mkdtempSync(join(tmpdir(), 'vendored-declaration-'));
+  try {
+    /** @type {string[]} */
+    const copies = [];
+    for (const [index, [unitKind, ...withinUnit]] of VENDOR_DIRECTORIES.entries()) {
+      const pillarId = `declared${index}`;
+      mkdirSync(join(root, 'pillars', pillarId, 'openapi'), { recursive: true });
+      writeFileSync(join(root, 'pillars', pillarId, 'openapi', `${pillarId}.openapi.json`), '{}\n');
+
+      const consumerDir = join(root, unitKind, `consumer${index}`);
+      const contractsDir = join(consumerDir, ...withinUnit);
+      mkdirSync(contractsDir, { recursive: true });
+      const copy = join(contractsDir, `${pillarId}.openapi.json`);
+      writeFileSync(copy, '{}\n');
+      copies.push(copy);
+
+      if (index === 0) {
+        mkdirSync(join(consumerDir, 'app'), { recursive: true });
+        writeFileSync(
+          join(consumerDir, 'app', `openapi-ts.${pillarId}.config.ts`),
+          `export default { input: fileURLToPath(new URL('./contracts/${pillarId}.openapi.json', import.meta.url)) };\n`
+        );
+      } else {
+        writeFileSync(
+          join(consumerDir, 'mise.toml'),
+          `[tasks."generate:${pillarId}-client"]\nrun = '''\nvendored=Contracts/${pillarId}.openapi.json\n'''\n`
+        );
+      }
+    }
+
+    const expectedBefore = deriveExpectedContracts(root);
+    const positiveOk =
+      expectedBefore.length === VENDOR_DIRECTORIES.length &&
+      findMoved(expectedBefore, existsSync).length === 0;
+
+    // The degenerate case: the first consumer's vendored-copy directory
+    // moves (simulated by deleting the file it held), but nothing told its
+    // declaration file, so the declaration still names the old path.
+    rmSync(copies[0]);
+
+    const expectedAfter = deriveExpectedContracts(root);
+    const moved = findMoved(expectedAfter, existsSync);
+    const caughtMove =
+      moved.length === 1 && moved[0].copy === copies[0] && moved[0].kind === 'moved';
+
+    const ok = positiveOk && caughtMove;
+    if (!ok) {
+      console.error('SELF-TEST FAILED (declaration):');
+      console.error(`  positive case (config + copy agree, nothing flagged): ${positiveOk}`);
+      console.error(`  moved contracts directory is reported, not silent:    ${caughtMove}`);
+    } else {
+      console.log(
+        'self-test OK — a config-declared vendored copy that moves is reported, not silent.'
+      );
+    }
+    return ok;
+  } finally {
+    rmSync(root, { recursive: true, force: true });
   }
 }
 
@@ -272,22 +602,51 @@ function main() {
     process.exit(2);
   }
   if (argv.includes('--self-test')) {
-    // Both halves run even when the first fails, so one invocation reports
+    // All three halves run even when one fails, so one invocation reports
     // every problem.
     const discovery = selfTestDiscovery();
     const drift = selfTestDrift();
-    process.exit(discovery && drift ? 0 : 1);
+    const declaration = selfTestDeclaration();
+    process.exit(discovery && drift && declaration ? 0 : 1);
   }
 
-  const contracts = discoverVendoredContracts(repoRoot);
-  if (contracts.length === 0) {
-    console.log('OK — no vendored pillar contracts found.');
-    process.exit(0);
+  /** @type {VendoredContract[]} */
+  let discovered;
+  /** @type {DeclaredCopy[]} */
+  let expected;
+  try {
+    discovered = discoverVendoredContracts(repoRoot);
+    expected = deriveExpectedContracts(repoRoot);
+  } catch (error) {
+    console.error(`FAIL — could not scan the tree for vendored contracts: ${String(error)}`);
+    process.exit(1);
   }
 
-  const findings = findDrift(contracts, readOrNull);
+  // "Found nothing" is a finding, not success: at least one vendored contract
+  // is known to exist in this repo today (clients/ios cannot depend on
+  // @pops/bfm and will always vendor its snapshot — see ADR-043). If that
+  // ever legitimately drops to zero, this floor is the line to change, in the
+  // same commit as whatever removed the last vendored contract — not a
+  // silent side effect of one moving.
+  if (discovered.length === 0) {
+    console.error(
+      'FAIL — discovered zero vendored pillar contracts, but this repo is known to vendor ' +
+        'at least one (see the doc comment on VENDOR_DIRECTORIES in this script). Either ' +
+        'every vendored copy was deliberately removed — update this floor in the same commit ' +
+        '— or a consuming unit’s contracts directory moved and the scan can no longer see it.'
+    );
+    process.exit(1);
+  }
+
+  const driftFindings = findDrift(discovered, readOrNull);
+  const movedFindings = findMoved(expected, existsSync);
+  const findings = [...driftFindings, ...movedFindings];
+
   if (findings.length === 0) {
-    console.log(`OK — ${contracts.length} vendored contract(s) match their canonical source.`);
+    console.log(
+      `OK — ${discovered.length} vendored contract(s) match their canonical source, ` +
+        `${expected.length} config-declared expectation(s) all present on disk.`
+    );
     process.exit(0);
   }
 
@@ -297,16 +656,24 @@ function main() {
       console.error(
         `  ${rel(f.copy)}\n      no canonical source at ${rel(f.source)} (stale or mis-named vendored copy)`
       );
-    } else {
+    } else if (f.kind === 'drift') {
       console.error(
         `  ${rel(f.copy)}\n      drifted from ${rel(f.source)} — re-vendor and regenerate the client`
+      );
+    } else if (f.kind === 'unreadable') {
+      console.error(`  ${rel(f.copy)}\n      ${f.detail}`);
+    } else {
+      console.error(
+        `  ${rel(f.copy)}\n      declared by ${rel(f.declaredBy)} but not on disk — its ` +
+          'vendored-contracts directory moved, or the file was renamed, without re-vendoring'
       );
     }
   }
   console.error(
     '\nA vendored contract must stay byte-identical to its producing pillar’s ' +
-      'canonical OpenAPI snapshot. Copy the source over the vendored file and ' +
-      'rerun the consumer’s generate:*-client script.'
+      'canonical OpenAPI snapshot, at the path its own consumer declares in its codegen ' +
+      'config. Copy the source over the vendored file and rerun the consumer’s ' +
+      'generate:*-client script.'
   );
   process.exit(1);
 }
