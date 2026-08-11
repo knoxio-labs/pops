@@ -128,10 +128,17 @@ describe('the list row', () => {
     expect(schema.properties?.['data']?.items?.required?.toSorted()).toEqual(LIST_ROW_FIELDS);
   });
 
-  it('pins the currency to a single value rather than an open string', () => {
+  it('leaves the currency an open string, so a second currency still renders', () => {
+    // Not a `type`/`literal` pin: this field sits inside every array element
+    // of a page a build already on a phone still calls. An `enum` here
+    // becomes a closed Swift enum, and the day bfm emits a currency besides
+    // `MOBILE_CURRENCY`, every such build fails to decode the whole page —
+    // one bad value, not just the row it is on.
     const schema = okSchema(LIST_PATH);
 
-    expect(schema.properties?.['data']?.items?.properties?.['currency']?.enum).toEqual(['AUD']);
+    const currency = schema.properties?.['data']?.items?.properties?.['currency'];
+    expect(currency?.type).toBe('string');
+    expect(currency?.enum).toBeUndefined();
   });
 
   it('leaves the transaction type an open string, so a new finance type still renders', () => {
