@@ -171,8 +171,16 @@ const TRAILER_KEYWORDS = 'closes|close|fixes|fix|resolves|resolve';
  *   title: string,
  *   status: string,
  *   evidence: 'pr-title',
+ *   ambiguous: false,
  *   prNumber: number,
  *   baseRefName: string,
+ * } | {
+ *   identifier: string,
+ *   title: string,
+ *   status: string,
+ *   evidence: 'pr-title',
+ *   ambiguous: true,
+ *   candidates: number[],
  * }} Mirror
  */
 
@@ -517,6 +525,14 @@ export function normaliseSubject(subject) {
  * See the "Mirrors" section of this file's header comment for what each test
  * can and cannot see, and the known title-collision limitation.
  *
+ * The collision that limitation names at the issue level also happens at the
+ * PR level: two PRs (a repeat Dependabot bump is the common case) can share
+ * one title. Picking either arbitrarily would attach a specific `prNumber` to
+ * the mirror as though it were certain, which is worse than not naming one —
+ * a caller would read it as fact. So a title with more than one PR behind it
+ * marks the mirror `ambiguous: true` with every candidate's number, instead of
+ * guessing which PR it was.
+ *
  * Equality is the whole test in both cases, deliberately — status is NOT
  * consulted. Reading `Merged` as the mirror signal would be circular, because
  * that status is not clean: human-filed tickets sit there too, and a mirror
@@ -537,11 +553,11 @@ export function findMirrors(issues, commits, prs = []) {
     const key = normaliseSubject(commit.subject);
     if (!bySubject.has(key)) bySubject.set(key, commit.sha);
   }
-  /** @type {Map<string, PullRequest>} */
+  /** @type {Map<string, PullRequest[]>} */
   const byPrTitle = new Map();
   for (const pr of prs) {
     const key = pr.title.trim();
-    if (!byPrTitle.has(key)) byPrTitle.set(key, pr);
+    byPrTitle.set(key, [...(byPrTitle.get(key) ?? []), pr]);
   }
 
   /** @type {Mirror[]} */
@@ -563,15 +579,27 @@ export function findMirrors(issues, commits, prs = []) {
       continue;
     }
 
-    const pr = byPrTitle.get(title);
-    if (pr !== undefined) {
+    const candidates = byPrTitle.get(title);
+    if (candidates === undefined) continue;
+    if (candidates.length === 1) {
+      const [pr] = candidates;
       mirrors.push({
         identifier: issue.identifier,
         title,
         status,
         evidence: 'pr-title',
+        ambiguous: false,
         prNumber: pr.number,
         baseRefName: pr.baseRefName,
+      });
+    } else {
+      mirrors.push({
+        identifier: issue.identifier,
+        title,
+        status,
+        evidence: 'pr-title',
+        ambiguous: true,
+        candidates: candidates.map((pr) => pr.number),
       });
     }
   }

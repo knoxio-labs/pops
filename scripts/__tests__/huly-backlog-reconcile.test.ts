@@ -398,6 +398,7 @@ describe('normaliseSubject / findMirrors', () => {
           title: mergeCommitPr.title,
           status: 'Merged',
           evidence: 'pr-title',
+          ambiguous: false,
           prNumber: 4001,
           baseRefName: 'main',
         },
@@ -416,6 +417,7 @@ describe('normaliseSubject / findMirrors', () => {
           title: laneMigrationPr.title,
           status: 'Merged',
           evidence: 'pr-title',
+          ambiguous: false,
           prNumber: 3325,
           baseRefName: 'lake-migration',
         },
@@ -463,6 +465,31 @@ describe('normaliseSubject / findMirrors', () => {
           [mergeCommitPr]
         )
       ).toEqual([]);
+    });
+
+    // Two PRs sharing an exact title is the same collision the file header
+    // documents at the issue level (POPS-280/315 etc.) — a repeat Dependabot
+    // bump is the realistic source. Picking either PR arbitrarily would
+    // attach a specific, possibly wrong, prNumber to the mirror as though it
+    // were certain; the mirror must say it cannot tell instead.
+    it('marks a mirror ambiguous, with every candidate PR number, when two PRs share a title', () => {
+      const firstBump = pr(101, 'build(deps): bump lodash from 4.17.20 to 4.17.21');
+      const secondBump = pr(205, 'build(deps): bump lodash from 4.17.20 to 4.17.21');
+      const mirrors = findMirrors(
+        [{ identifier: 'POPS-3001', title: firstBump.title, status: 'Merged' }],
+        [],
+        [firstBump, secondBump]
+      );
+      expect(mirrors).toEqual([
+        {
+          identifier: 'POPS-3001',
+          title: firstBump.title,
+          status: 'Merged',
+          evidence: 'pr-title',
+          ambiguous: true,
+          candidates: [101, 205],
+        },
+      ]);
     });
   });
 });
