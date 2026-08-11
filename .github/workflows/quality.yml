@@ -25,6 +25,20 @@ name: Quality
 # in any workflow here loses that guard while something conditional sits
 # upstream of it.
 #
+# `merge_group` TAKES THE PUSH PATH, and that is the whole point of it. A merge
+# group is prospective `main` — the PR's commits already sitting on top of the
+# base they will land on — so the branch that sweeps the whole tree is the
+# correct one to run there, and it is the branch that is already proven. Nothing
+# else in this file needed a condition: `github.event_name == 'pull_request'` is
+# false on a merge group, so `scope` emits "." exactly as it does on a push.
+#
+# A merge-group run CANNOT be path-filtered. `paths:` is accepted only on
+# `push`, `pull_request` and `pull_request_target`; under `merge_group` it is a
+# workflow syntax error. Any scoping in the queue lane therefore has to be
+# hand-rolled inside the workflow, which is the one place a scoping bug is
+# unaffordable — it would leave the queue reporting green over checks it never
+# ran, which is the failure the queue exists to prevent.
+#
 # NO `paths-ignore`: this workflow must trigger on EVERY PR, including docs-only
 # ones. A required status check that never runs is reported as "Expected —
 # waiting for status" forever and blocks the PR. The ruleset flag
@@ -63,6 +77,7 @@ on:
   pull_request:
   push:
     branches: [main]
+  merge_group:
 
 jobs:
   discover:
@@ -78,7 +93,7 @@ jobs:
       dirs: ${{ steps.compute.outputs.dirs }}
     steps:
       - id: compute
-        name: Changed unit dirs (PR), or "." for a full-tree sweep (push to main)
+        name: Changed unit dirs (PR), or "." for a full-tree sweep (merge group / push to main)
         env:
           CHANGED: ${{ needs.discover.outputs.changed }}
         run: |

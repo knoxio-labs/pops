@@ -118,6 +118,50 @@ stays gated and unfiltered: it is what guarantees the context reports on every
 PR, docs-only ones included, and a required context that never reports blocks
 its PR forever.
 
+### The merge queue, and the `merge_group` trigger it depends on
+
+`main` is behind a **merge queue**. A pull request is never merged on the
+strength of its own run: the queue rebuilds it on top of `main`'s current tip as
+a temporary `gh-readonly-queue/main/...` ref, re-runs the required checks
+against that, and merges only if they pass there. Two PRs that are each green
+against a base that does not contain the other — different files, no textual
+conflict, an incompatibility only a compiler can see — are what this exists to
+stop.
+
+**Every workflow behind a required context therefore triggers on `merge_group`.**
+`quality.yml` and `agent-review.yml` for the five directly-required contexts,
+and all eight of the workflows `ci-gate.yml` aggregates, or `CI Gate` would go
+green on the merge group having observed nothing. Deleting a `merge_group:`
+trigger from any of them does not turn a check off, it makes that check never
+report on the queue's ref — and an entry whose required check never reports sits
+until the queue's check-response timeout evicts it. A queue that evicts
+everything is indistinguishable, from the outside, from a repo where nothing can
+merge.
+
+**A merge-group run cannot be path-filtered.** `paths:` is accepted only on
+`push`, `pull_request` and `pull_request_target`; under `merge_group` it is a
+workflow syntax error, and `dorny/paths-filter` has no diff base on the event
+either. So each workflow's `merge_group` trigger is unconditional and the queue
+lane runs what a push to `main` runs — including a full macOS compile in
+`ios-quality.yml` on every entry, docs-only ones included. The alternative is
+hand-rolling each filter against the merge group's diff, in the one lane where a
+filter that is silently wrong reports green having built nothing.
+
+Two consequences worth stating, because both look like bugs from the outside:
+
+- **A step condition spelled `github.event_name == 'push'` is a trap here.** The
+  `changes` jobs in `fe-quality.yml` and `docker-build.yml` are pull-request-only,
+  so on a merge group their outputs are empty; a step gated on `push` alone is
+  skipped, the job still concludes `success`, and the workflow reports green
+  having run nothing. Those conditions read `!= 'pull_request'` for that reason.
+- **`github.base_ref` is empty on a merge group.** Anything that needs the base
+  reads `github.event.merge_group.base_ref` instead, which is a full
+  `refs/heads/…` ref rather than a bare branch name (`agent-review.yml`'s
+  isolation litmus). Anything that needs a PR number — the advisory LLM review —
+  is explicitly `github.event_name == 'pull_request'`, since
+  `github.event.pull_request.draft == false` is *true* when the payload has no
+  pull request at all: GitHub coerces both sides of `null == false` to `0`.
+
 ## `_discover-units.yml`
 
 Reusable (`on: workflow_call`), called by `unit-quality.yml` and `quality.yml`.
@@ -140,15 +184,15 @@ files only, no install.
 
 | File                             | Trigger                                                       | Runs                                                                                                             |
 | -------------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `quality.yml`                    | every PR + push to `main` — **no path filter, deliberately**  | 15 jobs incl. `Lint`, `Format`, `Module boundaries`, `Duplication check`; scoped to changed units on PRs, whole tree on `main`. No job is advisory — see the `CI Gate` rules above |
-| `unit-quality.yml`               | PR/push on unit + shared-root paths                           | ts and rust lanes over the changed-unit matrix                                                                      |
-| `app-quality.yml`                | PR/push on `pillars/*/app/**`, `pillars/*/openapi/**`, FE libs | each `@pops/app-*`'s own typecheck + test                                                                           |
-| `fe-quality.yml`                 | PR/push on `pillars/shell/**`, apps, openapi, FE libs         | the shell's `Quality Checks` job                                                                                     |
-| `rust-quality.yml`               | PR/push on Cargo files, `deny.toml`, `pillars/contacts/**`, `libs/pops-*`, `scripts/extractability/**` | `fmt + clippy + build + test`                                       |
-| `registry-generated-quality.yml` | PR/push on `libs/module-registry/**`, `libs/types/**`         | `generated.ts` drift                                                                                                |
-| `ios-quality.yml`                | PR/push on `clients/ios/**`, `pillars/bfm/openapi/**`         | `macos-latest`; selects the Xcode pinned in `clients/ios/mise.toml`, then `mise run lint` and `mise run -j 1 test ::: lint:analyze` — one step, because both share a single compile. Caches no derived data, deliberately; the header says why |
-| `agent-review.yml`               | every PR, drafts included                                     | eight guard scripts under `scripts/ci/`, each `--self-test`ed first, then an advisory LLM review (that last step alone is skipped on drafts) |
-| `docker-build.yml`               | PR/push on Dockerfiles, `infra/docker*`, lockfile             | builder stage of every `pillars/*/Dockerfile`; `docker compose config --quiet` on both compose files after stubbing 12 secret files |
+| `quality.yml`                    | every PR + push to `main` + every merge group — **no path filter, deliberately** | 15 jobs incl. `Lint`, `Format`, `Module boundaries`, `Duplication check`; scoped to changed units on PRs, whole tree on `main`. No job is advisory — see the `CI Gate` rules above |
+| `unit-quality.yml`               | PR/push on unit + shared-root paths; every merge group        | ts and rust lanes over the changed-unit matrix                                                                      |
+| `app-quality.yml`                | PR/push on `pillars/*/app/**`, `pillars/*/openapi/**`, FE libs; every merge group | each `@pops/app-*`'s own typecheck + test                                                                           |
+| `fe-quality.yml`                 | PR/push on `pillars/shell/**`, apps, openapi, FE libs; every merge group | the shell's `Quality Checks` job                                                                                     |
+| `rust-quality.yml`               | PR/push on Cargo files, `deny.toml`, `pillars/contacts/**`, `libs/pops-*`, `scripts/extractability/**`; every merge group | `fmt + clippy + build + test`                                       |
+| `registry-generated-quality.yml` | PR/push on `libs/module-registry/**`, `libs/types/**`; every merge group | `generated.ts` drift                                                                                                |
+| `ios-quality.yml`                | PR/push on `clients/ios/**`, `pillars/bfm/openapi/**`; **every merge group, unfiltered** | `macos-latest`; selects the Xcode pinned in `clients/ios/mise.toml`, then `mise run lint` and `mise run -j 1 test ::: lint:analyze` — one step, because both share a single compile. Caches no derived data, deliberately; the header says why |
+| `agent-review.yml`               | every PR, drafts included; every merge group                  | eight guard scripts under `scripts/ci/`, each `--self-test`ed first, then an advisory LLM review (that last step alone is skipped on drafts) |
+| `docker-build.yml`               | PR/push on Dockerfiles, `infra/docker*`, lockfile; every merge group | builder stage of every `pillars/*/Dockerfile`; `docker compose config --quiet` on both compose files after stubbing 12 secret files |
 | `pillar-quality.yml`             | push to `main` only                                           | full image (`push: false`) per `pillars/<x>` that has a `package.json`                                               |
 | `pillar-schema-coverage.yml`     | PR/push on `pillars/*/src/db/**`, migrations                  | per-pillar coverage, an injected-table self-test, and a static `Pillar schema coverage` aggregator job               |
 | `publish-images.yml`             | push to `main`, `v*` tags, dispatch (`only` input)            | four static app images plus every `pops-<x>` discovered from the prod compose's `image:` refs                        |
