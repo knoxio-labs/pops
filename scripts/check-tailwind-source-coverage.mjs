@@ -150,8 +150,30 @@ export function partitionStatements(statements) {
 }
 
 /**
- * Compile a filesystem glob (supporting `**`, `*`, `?`, and `{a,b}` brace
- * lists) into an anchored RegExp matched against absolute POSIX-style paths.
+ * Find the index of the `]` that closes a `[...]` bracket expression starting
+ * at `open` (the index of the `[`), honouring the glob rule that a `]`
+ * appearing immediately after `[` — or after a `[!`/`[^` negation marker —
+ * is a literal member of the class rather than the closer (`[]abc]` matches
+ * `]`, `a`, `b`, or `c`). Returns -1 when no closing `]` exists in the rest
+ * of the string, in which case the `[` is glob-literal, not a class opener.
+ *
+ * @param {string} glob
+ * @param {number} open
+ * @returns {number}
+ */
+function findBracketClassEnd(glob, open) {
+  let j = open + 1;
+  if (glob[j] === '!' || glob[j] === '^') j++;
+  if (glob[j] === ']') j++;
+  while (j < glob.length && glob[j] !== ']') j++;
+  return j < glob.length ? j : -1;
+}
+
+/**
+ * Compile a filesystem glob (supporting `**`, `*`, `?`, `{a,b}` brace lists,
+ * and `[...]` bracket character classes — including `[a-z]` ranges and
+ * `[!abc]`/`[^abc]` negation) into an anchored RegExp matched against
+ * absolute POSIX-style paths.
  *
  * @param {string} glob
  * @returns {RegExp}
@@ -183,6 +205,29 @@ export function globToRegExp(glob) {
         .join('|');
       re += `(?:${inner})`;
       i = end;
+    } else if (c === '[') {
+      const end = findBracketClassEnd(glob, i);
+      if (end === -1) {
+        re += '\\['; // no matching `]` in the rest of the glob — literal `[`
+      } else {
+        let j = i + 1;
+        let negate = false;
+        if (glob[j] === '!' || glob[j] === '^') {
+          negate = true;
+          j++;
+        }
+        // `]` and `\` are the only characters that still need escaping for a
+        // JS character class; `-` is left alone so `a-z` ranges keep working.
+        const content = glob.slice(j, end).replace(/\\/g, '\\\\').replace(/\]/g, '\\]');
+        // A negated class is spliced with a `(?!\/)` guard rather than a
+        // slash folded into the class body: appending `/` to the class text
+        // risks forming an unintended range (e.g. content ending in `-`
+        // would make `-/` read as "hyphen through slash"). This keeps `[!…]`
+        // consistent with `?` and `*`, neither of which crosses a path
+        // segment either.
+        re += negate ? `(?:(?!\\/)[^${content}])` : `[${content}]`;
+        i = end;
+      }
     } else if ('.+^$()|[]\\'.includes(c)) {
       re += `\\${c}`;
     } else {
@@ -194,13 +239,18 @@ export function globToRegExp(glob) {
 
 /**
  * The directory to start walking for a glob: the static prefix before its
- * first metacharacter.
+ * first metacharacter. `[` counts alongside `*`, `?`, and `{` — a bracket
+ * class that opens before any other wildcard (e.g. `pillars/[a-z]` followed
+ * by more pattern) would otherwise leave the literal `[a-z]` text in the
+ * prefix, `existsSync` would find no such directory, and `walk` would
+ * silently index nothing under it — the glob then reports empty regardless
+ * of what it should match.
  *
  * @param {string} absGlob
  * @returns {string}
  */
-function globBaseDir(absGlob) {
-  const metaIdx = absGlob.search(/[*?{]/);
+export function globBaseDir(absGlob) {
+  const metaIdx = absGlob.search(/[*?{[]/);
   const prefix = metaIdx === -1 ? absGlob : absGlob.slice(0, metaIdx);
   return prefix.endsWith('/') ? prefix.slice(0, -1) : dirname(prefix);
 }
@@ -385,6 +435,18 @@ function selfTest() {
   const good = evaluateCoverage(goodGlobs, files);
   const stale = evaluateCoverage(staleGlobs, files);
 
+  // Bracket character classes: POPS-1788 fixed these compiling to a regex
+  // that could never match (the `[`/`]` were escaped as literal text), which
+  // failed safe — the empty-glob check above already caught it — but still
+  // meant a bracket glob was unusable. These prove it now compiles correctly.
+  const bracketClass = globToRegExp(`${root}/pillars/[a-z]*/src/index.ts`);
+  const negatedClass = globToRegExp(`${root}/pillars/[!Z]*/src/index.ts`);
+  const caretNegatedClass = globToRegExp(`${root}/pillars/[^Z]*/src/index.ts`);
+  const rangeClass = globToRegExp(`${root}/pillars/[0-9]*/src/index.ts`);
+  const segmentGuard = globToRegExp(`${root}/x/[!Z]/y`);
+  const leadingBracketLiteral = globToRegExp(`${root}/[]a]bc`);
+  const unterminatedBracket = globToRegExp(`${root}/[abc`);
+
   const goodCss = [
     `@source "${root}/pillars/**/src/**/*.{ts,tsx}";`,
     `@source "${root}/libs/**/src/**/*.{ts,tsx}";`,
@@ -431,6 +493,34 @@ function selfTest() {
       malformedPartition.violations.length === 1,
     'an unrecognised @source shape is classified "unrecognized"':
       malformedPartition.violations[0]?.kind === 'unrecognized',
+    '[a-z] bracket class matches a lowercase-led segment': bracketClass.test(
+      `${root}/pillars/finance/src/index.ts`
+    ),
+    '[a-z] bracket class rejects an uppercase-led segment': !bracketClass.test(
+      `${root}/pillars/Finance/src/index.ts`
+    ),
+    '[!Z] negation excludes the listed char': !negatedClass.test(
+      `${root}/pillars/Zeta/src/index.ts`
+    ),
+    '[!Z] negation accepts an unlisted char': negatedClass.test(
+      `${root}/pillars/finance/src/index.ts`
+    ),
+    '[^Z] negation behaves the same as [!Z]': !caretNegatedClass.test(
+      `${root}/pillars/Zeta/src/index.ts`
+    ),
+    '[0-9] range matches a digit': rangeClass.test(`${root}/pillars/9food/src/index.ts`),
+    '[0-9] range rejects a non-digit': !rangeClass.test(`${root}/pillars/afood/src/index.ts`),
+    'a negated class never matches a path separator': !segmentGuard.test(`${root}/x//y`),
+    'a negated class still matches an ordinary char': segmentGuard.test(`${root}/x/a/y`),
+    'a `]` immediately after `[` is a literal class member': leadingBracketLiteral.test(
+      `${root}/]bc`
+    ),
+    'that same class still matches its other listed member': leadingBracketLiteral.test(
+      `${root}/abc`
+    ),
+    'an unterminated `[` falls back to a literal character': unterminatedBracket.test(
+      `${root}/[abc`
+    ),
   };
 
   const ok = Object.values(checks).every(Boolean);
