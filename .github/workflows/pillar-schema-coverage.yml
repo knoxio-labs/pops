@@ -15,9 +15,17 @@ on:
       - "scripts/check-pillar-schema-coverage.mjs"
       - ".github/workflows/pillar-schema-coverage.yml"
 
+# cancel-in-progress is deliberately OFF — see the matching note in
+# ios-quality.yml and the CONVERGENCE comment in ci-gate.yml: cancelling a
+# superseded run and admitting the new one is not atomic, and the race can
+# drop the new run's registration entirely rather than merely delaying it.
+# This workflow isn't gated by `CI Gate`, but a dropped registration here is
+# indistinguishable from a genuine skip to anything else that depends on it.
+# A superseded run is left to finish instead; `queue: single` (the default)
+# still caps this group at one pending run.
 concurrency:
   group: pillar-schema-coverage-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   discover:

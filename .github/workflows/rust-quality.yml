@@ -39,9 +39,16 @@ on:
   # lane re-runs this for every entry.
   merge_group:
 
+# cancel-in-progress is deliberately OFF — see the matching note in
+# ios-quality.yml and the CONVERGENCE comment in ci-gate.yml: cancelling a
+# superseded run and admitting the new one is not atomic, and the race can
+# drop the new run's registration entirely rather than merely delaying it,
+# which leaves the required `CI Gate` check stuck `in_progress`. A superseded
+# run is left to finish instead; `queue: single` (the default) still caps
+# this group at one pending run.
 concurrency:
   group: rust-quality-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   quality:
