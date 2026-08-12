@@ -1,0 +1,65 @@
+appId: com.knoxiolabs.pops
+name: Transactions that cannot be fetched say so, and are not an empty list
+---
+- clearState
+- clearKeychain
+- launchApp
+
+- assertVisible:
+    id: 'pairing-code-field'
+
+- tapOn:
+    id: 'pairing-server-field'
+- eraseText
+- inputText: ${CONTROL_BASE_URL}
+
+- tapOn:
+    id: 'pairing-code-field'
+- inputText: ${PAIRING_CODE}
+
+- tapOn:
+    id: 'pairing-submit'
+
+# Healthy first, and asserted on a row rather than on the list: the failure
+# below has to be the difference between a working federation and a broken one,
+# and a list that was empty all along would make every assertion after this
+# pass without proving anything.
+- assertVisible:
+    id: 'transactions-list'
+- assertVisible:
+    id: 'transaction-row-e2e-groceries'
+
+- runScript: scripts/finance-stops-answering.js
+- assertTrue: ${output.outage.status == 200}
+- assertTrue: ${output.outage.state.financeOutage == true}
+
+# Relaunched rather than refreshed, because the two produce different screens
+# and this one is about the first: `loadFirstPage` failing is the state that
+# competes with the empty list, while a failed refresh keeps the rows and draws
+# a banner over them. A relaunch is also the honest shape of the complaint —
+# somebody opens the app and the rows are not there.
+- stopApp
+- launchApp
+
+# `TransactionsCopy.message(for: .unavailable)`. The sentence this whole state
+# exists for: "finance is down" and "you have no transactions" are the two
+# readings of an empty screen, and the app is not allowed to guess.
+- assertVisible: 'Your transactions are temporarily unreachable'
+- assertNotVisible: 'No transactions yet.'
+
+# The federation itself is fine — the registry answered and finance served its
+# contract, so only the data is missing. If this banner were up, the flow would
+# be exercising a registry outage instead, which reaches the phone as a
+# different screen entirely.
+- assertNotVisible: 'Some of Pops could not be reached, so this may be out of date.'
+
+# A state, not a dead end. finance answers again and the screen's own Retry
+# gets the rows back, which is what proves the sentence above was reporting a
+# condition rather than describing a corner the app cannot leave.
+- runScript: scripts/finance-answers-again.js
+- assertTrue: ${output.recovery.state.financeOutage == false}
+
+- tapOn: 'Retry'
+- assertVisible:
+    id: 'transaction-row-e2e-groceries'
+- assertNotVisible: 'Your transactions are temporarily unreachable'

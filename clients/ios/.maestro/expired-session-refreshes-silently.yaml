@@ -1,0 +1,67 @@
+appId: com.knoxiolabs.pops
+name: An expired access token is renewed without the screen noticing
+---
+# Unpaired every time, for the reason `pairing-to-transaction-detail.yaml`
+# gives: the device key and the tokens live in the keychain, outside the
+# container `clearState` empties.
+- clearState
+- clearKeychain
+- launchApp
+
+- assertVisible:
+    id: 'pairing-code-field'
+
+# The control plane, not the pillar. It forwards everything to the same real
+# BFM — `scripts/ios-e2e/control-plane.mjs` says why the app has to reach the
+# pillar through something the harness can reach into.
+- tapOn:
+    id: 'pairing-server-field'
+- eraseText
+- inputText: ${CONTROL_BASE_URL}
+
+- tapOn:
+    id: 'pairing-code-field'
+- inputText: ${PAIRING_CODE}
+
+- tapOn:
+    id: 'pairing-submit'
+
+- assertVisible:
+    id: 'transactions-list'
+
+# Everything is healthy at this point, so the banner must not be up. It is also
+# drawn ABOVE the list, and a late arrival would move the row out from under
+# the tap below (POPS-1835).
+- assertNotVisible: 'Some of Pops could not be reached, so this may be out of date.'
+
+# From here the next authenticated request carries a token the BFM will refuse
+# as too old. One request, armed once: the app has been idle on this screen
+# since the list loaded, so the tap below is what spends it.
+- runScript: scripts/expire-the-next-access-token.js
+- assertTrue: ${output.arming.status == 200}
+- assertTrue: ${output.arming.state.armed == true}
+
+- tapOn:
+    id: 'transaction-row-e2e-groceries'
+
+# The whole point, stated as the absence of a symptom: the detail screen is
+# here, with the field only `GET /mobile/finance/transactions/{id}` returns, so
+# the rejected request was retried and answered. Nobody was sent back to
+# pairing and nothing said the device was signed out.
+- assertVisible:
+    id: 'transaction-detail'
+- assertVisible: 'Account, Everyday'
+- assertNotVisible: 'This device is no longer signed in.'
+- assertNotVisible:
+    id: 'pairing-code-field'
+
+# A silent recovery is silent, and every assertion above would also hold if the
+# arming had done nothing at all — the screen after a refresh looks exactly like
+# the screen after no rejection. So the flow ends by reading back what the
+# harness saw: one token aged, one refresh spent.
+- runScript: scripts/read-harness-state.js
+- assertTrue: ${output.harness.substitutions == 1}
+- assertTrue: ${output.harness.refreshes == 1}
+# Consumed, not still waiting. A second `/mobile` call meeting a stale arming
+# is a different test from this one.
+- assertTrue: ${output.harness.armed == false}
