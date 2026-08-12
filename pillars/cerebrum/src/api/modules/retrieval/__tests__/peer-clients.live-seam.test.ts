@@ -71,7 +71,11 @@ import { FINANCE_PILLAR_ID } from '../peer-clients.js';
 const execFileAsync = promisify(execFile);
 
 const REDIS_IMAGE = 'redis:7-alpine';
-const REDIS_RUN_TIMEOUT_MS = 60_000;
+// Generous: on a cold Docker cache `docker run` blocks on the image pull
+// before the container even starts, and a first pull of a small Alpine-based
+// image can still take the better part of a minute on a slow or rate-limited
+// connection.
+const REDIS_RUN_TIMEOUT_MS = 120_000;
 const REDIS_STOP_TIMEOUT_MS = 10_000;
 const REDIS_READY_TIMEOUT_MS = 20_000;
 const REDIS_READY_POLL_INTERVAL_MS = 200;
@@ -79,6 +83,21 @@ const REDIS_READY_POLL_INTERVAL_MS = 200;
 interface EphemeralRedis {
   url: string;
   stop(): Promise<void>;
+}
+
+/**
+ * `docker stop`/`rm` on a container that is already gone (daemon restart,
+ * out-of-band cleanup) fails with this daemon-reported message — the only
+ * case cleanup should treat as success rather than a real failure.
+ */
+function isMissingContainerError(err: unknown): boolean {
+  return (
+    typeof err === 'object' &&
+    err !== null &&
+    'stderr' in err &&
+    typeof (err as { stderr: unknown }).stderr === 'string' &&
+    (err as { stderr: string }).stderr.includes('No such container')
+  );
 }
 
 /**
@@ -108,6 +127,9 @@ async function startEphemeralRedis(): Promise<EphemeralRedis> {
   try {
     await waitForRedisReady(url, REDIS_READY_TIMEOUT_MS);
   } catch (err) {
+    // Best-effort: `waitForRedisReady` already failed, so this is cleanup on
+    // an already-erroring path — `err` below is what the caller sees either
+    // way, and there is no test to keep alive by being strict here.
     await execFileAsync('docker', ['rm', '-f', containerName], {
       timeout: REDIS_STOP_TIMEOUT_MS,
     }).catch(() => {});
@@ -117,9 +139,15 @@ async function startEphemeralRedis(): Promise<EphemeralRedis> {
   return {
     url,
     async stop() {
-      await execFileAsync('docker', ['stop', '-t', '2', containerName], {
-        timeout: REDIS_STOP_TIMEOUT_MS,
-      }).catch(() => {});
+      try {
+        await execFileAsync('docker', ['stop', '-t', '2', containerName], {
+          timeout: REDIS_STOP_TIMEOUT_MS,
+        });
+      } catch (err) {
+        // Anything other than "it's already gone" is a real cleanup failure
+        // (e.g. a leaked, still-running container) and should surface.
+        if (!isMissingContainerError(err)) throw err;
+      }
     },
   };
 }
@@ -248,7 +276,9 @@ describe('cerebrum -> finance live seam', () => {
       // give it a little longer than the default.
       startupTimeoutMs: 30_000,
     });
-  }, 60_000);
+    // Wide enough to absorb a cold `docker pull` of the Redis image
+    // (REDIS_RUN_TIMEOUT_MS) on top of the three pillar spawns above.
+  }, 150_000);
 
   afterAll(async () => {
     await cerebrumProcess?.stop();
