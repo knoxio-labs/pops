@@ -116,13 +116,20 @@ jobs:
             # See the Outputs comment above — origin/<branch> is not a usable
             # "other side" here, it is (at best) the same commit as HEAD. Use
             # the push event's own before/after boundary instead. `before` is
-            # all-zeros on a branch's first push, and can name a commit this
-            # checkout's history doesn't contain after a force-push — either
-            # way there is no diff worth trusting, so fall through to the
+            # all-zeros on a branch's first push, can name a commit this
+            # checkout's history doesn't contain after a force-push, or —
+            # also a force-push, but the sneakier case — can resolve to a
+            # real commit that is NOT an ancestor of HEAD (e.g. a rewritten
+            # history where the old tip is still reachable from some other
+            # ref). Diffing against an unrelated tip would produce an
+            # arbitrary changed-set instead of "what this push actually
+            # changed", which is worse than no diff at all. Every one of
+            # these is "no diff worth trusting", so fall through to the
             # shared-root "build everything" path below rather than silently
-            # computing "nothing changed".
+            # computing "nothing changed" or something plausible-looking but
+            # wrong.
             before='${{ github.event.before }}'
-            if [ -n "$before" ] && [ "$before" != "0000000000000000000000000000000000000000" ] && git cat-file -e "${before}^{commit}" 2>/dev/null; then
+            if [ -n "$before" ] && [ "$before" != "0000000000000000000000000000000000000000" ] && git merge-base --is-ancestor "$before" HEAD 2>/dev/null; then
               base="$before"
             else
               base=""
