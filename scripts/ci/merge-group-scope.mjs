@@ -206,6 +206,45 @@ export function pullRequestPaths(source, label) {
 }
 
 /**
+ * The environment variables git uses to point itself at a repository OTHER than
+ * the one in `cwd`.
+ *
+ * Every one of these is exported into the environment of a git hook. A
+ * `.husky/pre-push` that runs this script's Vitest suite therefore hands it a
+ * `GIT_INDEX_FILE`, a `GIT_DIR` and friends belonging to the repo being pushed,
+ * and the self-test's throwaway fixture repos inherit them: `git init` in a
+ * temp directory fails outright, or worse, succeeds against somebody else's
+ * index. Found exactly that way — the suite passed standalone and failed in the
+ * hook. Credential and transport variables (`GIT_ASKPASS`, `GIT_SSH_COMMAND`,
+ * `GIT_TERMINAL_PROMPT`, …) are deliberately NOT in this list: the fetch
+ * fallback needs them.
+ */
+const GIT_LOCATION_VARS = [
+  'GIT_DIR',
+  'GIT_WORK_TREE',
+  'GIT_INDEX_FILE',
+  'GIT_COMMON_DIR',
+  'GIT_OBJECT_DIRECTORY',
+  'GIT_ALTERNATE_OBJECT_DIRECTORIES',
+  'GIT_PREFIX',
+  'GIT_QUARANTINE_PATH',
+  'GIT_NAMESPACE',
+];
+
+/**
+ * `process.env` with the repository-location overrides removed, so every git
+ * invocation here is about the directory it is run in and nothing else.
+ *
+ * @param {Record<string, string | undefined>} [extra]
+ * @returns {Record<string, string | undefined>}
+ */
+function gitEnv(extra = {}) {
+  const env = { ...process.env, ...extra };
+  for (const name of GIT_LOCATION_VARS) delete env[name];
+  return env;
+}
+
+/**
  * Run git, or raise with what it said.
  *
  * @param {readonly string[]} args
@@ -215,7 +254,12 @@ export function pullRequestPaths(source, label) {
  */
 function git(args, cwd) {
   try {
-    return execFileSync('git', [...args], { cwd, encoding: 'utf8', stdio: 'pipe' });
+    return execFileSync('git', [...args], {
+      cwd,
+      encoding: 'utf8',
+      stdio: 'pipe',
+      env: gitEnv(),
+    });
   } catch (error) {
     const stderr = (/** @type {{ stderr?: string }} */ (error).stderr ?? '').trim();
     throw new ScopeError(`git ${args.join(' ')} failed: ${stderr || String(error)}`);
@@ -231,7 +275,11 @@ function git(args, cwd) {
  */
 function hasCommit(sha, cwd) {
   try {
-    execFileSync('git', ['cat-file', '-e', `${sha}^{commit}`], { cwd, stdio: 'ignore' });
+    execFileSync('git', ['cat-file', '-e', `${sha}^{commit}`], {
+      cwd,
+      stdio: 'ignore',
+      env: gitEnv(),
+    });
     return true;
   } catch {
     return false;
@@ -254,7 +302,11 @@ function hasCommit(sha, cwd) {
 function requireCommit(sha, cwd, role) {
   if (hasCommit(sha, cwd)) return;
   try {
-    execFileSync('git', ['fetch', '--no-tags', '--quiet', 'origin', sha], { cwd, stdio: 'pipe' });
+    execFileSync('git', ['fetch', '--no-tags', '--quiet', 'origin', sha], {
+      cwd,
+      stdio: 'pipe',
+      env: gitEnv(),
+    });
   } catch {
     // Reported below by the presence check, with the SHA that is missing.
   }
@@ -279,7 +331,11 @@ export function changedFiles({ base, head, cwd }) {
   requireCommit(base, cwd, 'base');
   requireCommit(head, cwd, 'head');
   try {
-    execFileSync('git', ['merge-base', '--is-ancestor', base, head], { cwd, stdio: 'ignore' });
+    execFileSync('git', ['merge-base', '--is-ancestor', base, head], {
+      cwd,
+      stdio: 'ignore',
+      env: gitEnv(),
+    });
   } catch {
     throw new ScopeError(
       `base ${base} is not an ancestor of head ${head}. A merge-queue head is built directly ` +
@@ -406,13 +462,15 @@ function gitIn(dir, args) {
     cwd: dir,
     encoding: 'utf8',
     stdio: 'pipe',
-    env: {
-      ...process.env,
+    // Identity is supplied rather than read from the machine's git config, so
+    // the fixtures commit on a runner that has none. The location vars are
+    // stripped by `gitEnv` — see the comment on `GIT_LOCATION_VARS`.
+    env: gitEnv({
       GIT_AUTHOR_NAME: 'scope',
       GIT_AUTHOR_EMAIL: 'scope@example.invalid',
       GIT_COMMITTER_NAME: 'scope',
       GIT_COMMITTER_EMAIL: 'scope@example.invalid',
-    },
+    }),
   });
 }
 
@@ -555,6 +613,35 @@ export function selfTest() {
         decision.baseProvenance.startsWith('--base'),
         `expected the explicit base, got ${decision.baseProvenance}`
       );
+    },
+  });
+
+  cases.push({
+    name: 'answers the same inside a git hook’s environment',
+    run: () => {
+      // The regression that put `GIT_LOCATION_VARS` in this file. A hook
+      // exports GIT_DIR / GIT_INDEX_FILE / GIT_WORK_TREE, and every git call
+      // here inherited them: the suite passed standalone and failed under
+      // `.husky/pre-push`, which is the worst possible place to learn it. The
+      // values below are deliberately unusable, so anything that stopped
+      // stripping them fails rather than quietly using the ambient repo.
+      const saved = { ...process.env };
+      process.env.GIT_DIR = join(tmpdir(), 'merge-group-scope-not-a-repo', '.git');
+      process.env.GIT_WORK_TREE = join(tmpdir(), 'merge-group-scope-not-a-repo');
+      process.env.GIT_INDEX_FILE = join(tmpdir(), 'merge-group-scope-not-an-index');
+      try {
+        const { dir, base, head } = repo({ touched: ['clients/ios/App/Main.swift'] });
+        const decision = scopeLane({
+          workflowPath: '.github/workflows/subject.yml',
+          base,
+          head,
+          cwd: dir,
+        });
+        assert(decision.selected, 'an ambient GIT_DIR must not change the answer');
+      } finally {
+        for (const name of GIT_LOCATION_VARS) delete process.env[name];
+        Object.assign(process.env, saved);
+      }
     },
   });
 
