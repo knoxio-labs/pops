@@ -32,6 +32,22 @@ POPS_XCODE_VERSION = "26.6"
 # current Xcode both ship.
 POPS_IOS_SIMULATOR = "iPhone 17"
 
+# How long Maestro's XCUITest driver (`LocalXCTestInstaller`) waits, after it
+# finishes installing the runner on the simulator, for that runner to report
+# itself alive — read straight off `System.getenv`, with no CLI flag
+# equivalent. Maestro's own default is 120000 (120s); GitHub-hosted macOS
+# runners run close enough to that ceiling under provisioning/simulator-boot
+# contention that a driver which goes on to attach fine still times out
+# outright — the same job failed twice in a row this way on a documentation-
+# only diff that could not plausibly have caused it, then passed cleanly on an
+# unmodified rerun, which is runner contention rather than a code issue.
+# Maestro's own CI doubles its default for exactly this reason, on the same
+# runner class this repo uses, so this matches rather than invents a number.
+# `[tasks.e2e]` below pairs the wider ceiling with one bounded retry on the
+# specific timeout this produces, since a fixed ceiling — however wide — still
+# fails outright on whichever run needs longer than it.
+MAESTRO_DRIVER_STARTUP_TIMEOUT = "240000"
+
 # Where the one shared iOS-Simulator compile lands, and the compiler log it
 # leaves behind. `build:for-testing` writes both; `test` runs against the
 # products and `lint:analyze` reads the log, so the tree is compiled once per
@@ -866,35 +882,80 @@ fi
 echo "e2e: driving $(echo "$flows" | wc -l | tr -d ' ') flow(s)."
 
 for flow in $flows; do
-  # Between flows rather than inside them, and before the code is minted. A
-  # flow that fails halfway leaves the harness however it left it — finance
-  # still refusing, a token-ageing still armed — and the next flow would then
-  # fail for a reason that belongs to the previous one. Counters go back to
-  # zero here too, so a flow asserting "one refresh" means its own.
-  curl -fsS -X POST "$control/__e2e/reset" -o /dev/null
+  attempt=1
+  # One retry, so two attempts total — bounded on purpose. See the retry
+  # branch below for which failures this covers.
+  max_attempts=2
+  while :; do
+    # Between flows (and again on a same-flow retry) rather than inside one,
+    # and before the code is minted. An attempt that fails partway leaves the
+    # harness however it left it — finance still refusing, a token-ageing
+    # still armed — and the next attempt would then fail for a reason that
+    # belongs to the previous one. Counters go back to zero here too, so a
+    # flow asserting "one refresh" means its own.
+    curl -fsS -X POST "$control/__e2e/reset" -o /dev/null
 
-  # Minted per flow and as late as possible: every flow pairs from scratch, a
-  # code is spent once, and the BFM expires an unspent one on its own TTL —
-  # five minutes by default, raised for the BFM `scripts/ios-e2e/run.mjs`
-  # starts (`BFM_PAIRING_CODE_TTL_MS`, see that file) because installing
-  # Maestro's own driver and settling the simulator both happen after this
-  # curl and before the flow's first step.
-  # `|| true` so a refused connection or an HTTP error reaches the message below
-  # rather than aborting the task under `set -e` with a bare curl exit code.
-  code=$(curl -fsS -X POST "$base/operator/pairing/codes" \
-    -H 'content-type: application/json' -d '{}' | jq -r '.code // empty' || true)
-  if [ -z "$code" ]; then
-    echo "e2e: $base/operator/pairing/codes returned no code. A 401 here means that BFM" >&2
-    echo "     is running with NODE_ENV=production, where the route needs a Cloudflare" >&2
-    echo "     Access identity this task has no way to present." >&2
-    exit 1
-  fi
+    # Minted per attempt and as late as possible: every attempt pairs from
+    # scratch, a code is spent once, and the BFM expires an unspent one on its
+    # own TTL — five minutes by default, raised for the BFM
+    # `scripts/ios-e2e/run.mjs` starts (`BFM_PAIRING_CODE_TTL_MS`, see that
+    # file) because installing Maestro's own driver and settling the
+    # simulator both happen after this curl and before the flow's first step.
+    # `|| true` so a refused connection or an HTTP error reaches the message
+    # below rather than aborting the task under `set -e` with a bare curl
+    # exit code.
+    code=$(curl -fsS -X POST "$base/operator/pairing/codes" \
+      -H 'content-type: application/json' -d '{}' | jq -r '.code // empty' || true)
+    if [ -z "$code" ]; then
+      echo "e2e: $base/operator/pairing/codes returned no code. A 401 here means that BFM" >&2
+      echo "     is running with NODE_ENV=production, where the route needs a Cloudflare" >&2
+      echo "     Access identity this task has no way to present." >&2
+      exit 1
+    fi
 
-  echo "e2e: $flow"
-  maestro --device "$udid" test "$flow" \
-    -e BFM_BASE_URL="$base" \
-    -e CONTROL_BASE_URL="$control" \
-    -e PAIRING_CODE="$code"
+    echo "e2e: $flow (attempt $attempt of $max_attempts)"
+    maestro_log=$(mktemp)
+    # Captured from the `if`'s branches rather than from `$?` after the `fi`:
+    # an `if` whose condition is false and has no matching `else` exits 0
+    # regardless of what the condition itself returned, so reading `$?` below
+    # the `fi` silently turns every failure into a false "success". The
+    # pipeline is the condition specifically so `set -e` does not abort the
+    # script here — this line has to decide whether a failure is retryable,
+    # not the shell.
+    if maestro --device "$udid" test "$flow" \
+        -e BFM_BASE_URL="$base" \
+        -e CONTROL_BASE_URL="$control" \
+        -e PAIRING_CODE="$code" 2>&1 | tee "$maestro_log"; then
+      status=0
+    else
+      status="${PIPESTATUS[0]}"
+    fi
+    if [ "$status" -eq 0 ]; then
+      rm -f "$maestro_log"
+      break
+    fi
+
+    # A bounded retry for exactly one failure shape: Maestro's own XCUITest
+    # driver never attaching before ITS OWN internal ceiling
+    # (MAESTRO_DRIVER_STARTUP_TIMEOUT, set in this file's [env]), which fires
+    # before the flow's first step runs and so cannot be a real assertion
+    # failure — this job has failed twice in a row this way on a
+    # documentation-only diff, then passed cleanly on an unmodified rerun,
+    # which is GitHub-hosted macOS runner contention rather than app or flow
+    # behaviour. Anything else — an actual flow failure, a network error, a
+    # different driver exception — exhausts the attempt immediately instead,
+    # so a genuine regression still fails the job on its first try rather than
+    # being retried into a false green.
+    if [ "$attempt" -ge "$max_attempts" ] || ! grep -q 'IOSDriverTimeoutException' "$maestro_log"; then
+      rm -f "$maestro_log"
+      exit "$status"
+    fi
+    echo "e2e: $flow — the iOS XCUITest driver did not attach before its startup ceiling" >&2
+    echo "     (runner contention, not a flow failure). Retrying: attempt $((attempt + 1)) of" >&2
+    echo "     $max_attempts, with a fresh pairing code." >&2
+    rm -f "$maestro_log"
+    attempt=$((attempt + 1))
+  done
 done
 '''
 
