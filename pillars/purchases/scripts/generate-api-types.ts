@@ -5,9 +5,12 @@
  * fully-typed HTTP calls without importing anything server-internal from
  * this pillar.
  *
- * Drift check:
+ * Regenerate after an OpenAPI spec change:
  *   pnpm --filter @pops/purchases generate:api-types
- *   git diff --exit-code pillars/purchases/src/contract/api-types.generated.ts
+ *
+ * The `api-types-drift` job in `.github/workflows/quality.yml` re-runs this
+ * for every pillar and fails the build on any diff — see
+ * scripts/ci/check-api-types-drift.mjs.
  */
 import { execFileSync } from 'node:child_process';
 import { writeFileSync } from 'node:fs';

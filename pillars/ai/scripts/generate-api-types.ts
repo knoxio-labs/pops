@@ -7,9 +7,12 @@
  * Polyglot consumers (Rust, Swift) skip this file and generate their own
  * types from the JSON spec.
  *
- * Drift check (build step in `.github/workflows/pillar-quality.yml`):
+ * Regenerate after an OpenAPI spec change:
  *   pnpm --filter @pops/ai generate:api-types
- *   git diff --exit-code pillars/ai/src/contract/api-types.generated.ts
+ *
+ * The `api-types-drift` job in `.github/workflows/quality.yml` re-runs this
+ * for every pillar and fails the build on any diff — see
+ * scripts/ci/check-api-types-drift.mjs.
  */
 import { execFileSync } from 'node:child_process';
 import { writeFileSync } from 'node:fs';

@@ -613,6 +613,35 @@ jobs:
       - name: Regenerate and verify every non-app-matrix generated client
         run: node scripts/ci/check-generated-clients.mjs --exclude-app-matrix
 
+  api-types-drift:
+    name: Generated OpenAPI type-map drift
+    # Every data pillar with a REST contract carries a
+    # `pillars/<id>/scripts/generate-api-types.ts` that projects its committed
+    # OpenAPI spec into `src/contract/api-types.generated.ts` (the
+    # `paths`/`components` types a frontend composes with `openapi-fetch`).
+    # Nothing regenerated and diffed that output before this job — each
+    # script's own header comment used to say so. This is deliberately a
+    # SEPARATE guard from `generated-clients` above: that one discovers
+    # `generate:*` scripts that invoke the `openapi-ts` CLI binary directly;
+    # these scripts instead run a project-local TS file that calls the
+    # `openapi-typescript` library function itself and writes a path baked
+    # into the script, not a `--write <dir>` CLI argument, so they need their
+    # own discovery and their own runner. See
+    # scripts/ci/check-api-types-drift.mjs.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Gate self-test (proves it catches drift, a generator error, and missing output)
+        run: node scripts/ci/check-api-types-drift.mjs --self-test
+      - name: Regenerate and verify every generated api-types module
+        run: node scripts/ci/check-api-types-drift.mjs
+
   escape-hatches:
     name: Escape-hatch ratchet
     # Type-safety escape hatches (`as any`, `as unknown as`, `as never`,
