@@ -88,6 +88,18 @@ mise/config.local.toml
 .config/mise.local.toml
 .config/mise/config.local.toml
 .config/mise/mise.local.toml
+# The same six spellings again, but for a per-environment config (mise inserts
+# the environment immediately before ".local.toml", e.g. `mise.local.toml` ->
+# `mise.ci.local.toml` — not `mise.local.ci.toml`). The `*` matches any
+# environment name, not just `ci` (the only one this repo's workflows set
+# today, per discoverMiseEnvValues in check-mise-tool-overrides.mjs), so a
+# future workflow adding a new MISE_ENV value doesn't reopen this gap.
+mise.*.local.toml
+.mise.*.local.toml
+mise/config.*.local.toml
+.config/mise.*.local.toml
+.config/mise/config.*.local.toml
+.config/mise/mise.*.local.toml
 
 *storybook.log
 storybook-static
