@@ -12,7 +12,12 @@ import { describe, expect, it } from 'vitest';
 import { BareOriginParseError } from '@pops/pillar-sdk/pillar-env';
 
 import { BootEnvError } from '../../boot-env.js';
-import { DEFAULT_REGISTRY_URL, resolveInternalBaseUrls, resolveRegistryUrl } from '../env.js';
+import {
+  DEFAULT_REGISTRY_URL,
+  resolveDiscoveryFetchTimeoutMs,
+  resolveInternalBaseUrls,
+  resolveRegistryUrl,
+} from '../env.js';
 
 describe('resolveRegistryUrl', () => {
   it('falls back to the in-cluster registry host when unset', () => {
@@ -108,5 +113,40 @@ describe('resolveInternalBaseUrls', () => {
       expect((error as BootEnvError).cause).toBeInstanceOf(Error);
       expect(String((error as { cause?: Error }).cause?.message)).toContain('missing a colon');
     }
+  });
+});
+
+describe('resolveDiscoveryFetchTimeoutMs', () => {
+  it('reads absence as "leave the SDK default alone", not as zero', () => {
+    expect(resolveDiscoveryFetchTimeoutMs({})).toBeUndefined();
+  });
+
+  it('treats a blank value as unset, not as an override', () => {
+    expect(
+      resolveDiscoveryFetchTimeoutMs({ POPS_DISCOVERY_FETCH_TIMEOUT_MS: '   ' })
+    ).toBeUndefined();
+  });
+
+  it('parses a positive integer override', () => {
+    expect(resolveDiscoveryFetchTimeoutMs({ POPS_DISCOVERY_FETCH_TIMEOUT_MS: '20000' })).toBe(
+      20_000
+    );
+  });
+
+  it.each([
+    ['zero', '0'],
+    ['a negative number', '-5000'],
+    ['a fraction', '2500.5'],
+    ['not a number', 'twenty-thousand'],
+  ])('rejects %s', (_label, value) => {
+    expect(() =>
+      resolveDiscoveryFetchTimeoutMs({ POPS_DISCOVERY_FETCH_TIMEOUT_MS: value })
+    ).toThrow(BootEnvError);
+  });
+
+  it('names the variable in the error', () => {
+    expect(() =>
+      resolveDiscoveryFetchTimeoutMs({ POPS_DISCOVERY_FETCH_TIMEOUT_MS: 'nope' })
+    ).toThrow(/POPS_DISCOVERY_FETCH_TIMEOUT_MS/);
   });
 });

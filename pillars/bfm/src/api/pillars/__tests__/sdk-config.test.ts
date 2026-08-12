@@ -11,7 +11,11 @@
  */
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { disposeDiscoveryClient, pillarRegistry } from '@pops/pillar-sdk/discovery';
+import {
+  DEFAULT_FETCH_TIMEOUT_MS,
+  disposeDiscoveryClient,
+  pillarRegistry,
+} from '@pops/pillar-sdk/discovery';
 import { getServerSdkConfig, __resetServerSdkConfig } from '@pops/pillar-sdk/server';
 import { configureDiscoveryForTest } from '@pops/pillar-sdk/testing';
 
@@ -26,16 +30,18 @@ afterEach(() => {
   disposeDiscoveryClient();
 });
 
-/** Records the origin the discovery cache actually fetches from. */
-function recordingDiscovery(): { urls: string[] } {
+/** Records the origin and per-fetch deadline the discovery cache actually uses. */
+function recordingDiscovery(): { urls: string[]; timeouts: number[] } {
   const urls: string[] = [];
+  const timeouts: number[] = [];
   configureDiscoveryForTest({
-    fetcher: (registryUrl) => {
+    fetcher: (registryUrl, fetchTimeoutMs) => {
       urls.push(registryUrl);
+      timeouts.push(fetchTimeoutMs);
       return Promise.resolve({ pillars: [], fetchedAt: new Date() });
     },
   });
-  return { urls };
+  return { urls, timeouts };
 }
 
 const KEY_ENV: NodeJS.ProcessEnv = { POPS_INTERNAL_API_KEY: 'pops_sa_test.secret' };
@@ -81,5 +87,23 @@ describe('configureBfmServerSdk', () => {
     const config = configureBfmServerSdk({ ...KEY_ENV });
 
     expect(config.internalBaseUrls).toEqual({});
+  });
+
+  it('leaves the discovery cache at the SDK default fetch timeout when unset', async () => {
+    const discovery = recordingDiscovery();
+
+    configureBfmServerSdk({ ...KEY_ENV });
+    await pillarRegistry();
+
+    expect(discovery.timeouts).toEqual([DEFAULT_FETCH_TIMEOUT_MS]);
+  });
+
+  it('raises the discovery cache fetch timeout from POPS_DISCOVERY_FETCH_TIMEOUT_MS', async () => {
+    const discovery = recordingDiscovery();
+
+    configureBfmServerSdk({ ...KEY_ENV, POPS_DISCOVERY_FETCH_TIMEOUT_MS: '20000' });
+    await pillarRegistry();
+
+    expect(discovery.timeouts).toEqual([20_000]);
   });
 });

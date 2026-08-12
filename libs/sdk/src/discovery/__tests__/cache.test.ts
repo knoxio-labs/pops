@@ -3,9 +3,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { lookupPillar, pillarRegistry } from '../api.js';
 import {
   configureCache,
+  DEFAULT_FETCH_TIMEOUT_MS,
   DEFAULT_REGISTRY_URL,
   disposeDiscoveryClient,
   invalidateRegistryCache,
+  setFetchTimeoutMs,
   type RegistryFetcher,
 } from '../cache.js';
 import { RegistryUnreachableError } from '../types.js';
@@ -277,5 +279,83 @@ describe('discovery cache singleton', () => {
     // disposed configuration, and the disposed fetcher was not consulted again.
     expect(seen).toEqual([DEFAULT_REGISTRY_URL]);
     expect(disposedFetcherCalls).toBe(1);
+  });
+
+  describe('fetchTimeoutMs', () => {
+    it('defaults to DEFAULT_FETCH_TIMEOUT_MS when nothing overrides it', async () => {
+      const seen: number[] = [];
+      withFetcher((_registryUrl, fetchTimeoutMs) => {
+        seen.push(fetchTimeoutMs);
+        return Promise.resolve(fetchResult(pillar('finance', 'http://finance-api:3004')));
+      });
+
+      await pillarRegistry();
+
+      expect(seen).toEqual([DEFAULT_FETCH_TIMEOUT_MS]);
+    });
+
+    it('passes a custom fetchTimeoutMs configured via configureCache', async () => {
+      const seen: number[] = [];
+      configureCache({
+        registryUrl: 'http://registry-api:3001',
+        ttlMs: 30_000,
+        fetchTimeoutMs: 20_000,
+        now: clock.now,
+        setTimeoutImpl: clock.set,
+        clearTimeoutImpl: clock.clear,
+        onWarn: (message, context) => warnings.push({ message, context }),
+        fetcher: (_registryUrl, fetchTimeoutMs) => {
+          seen.push(fetchTimeoutMs);
+          return Promise.resolve(fetchResult(pillar('finance', 'http://finance-api:3004')));
+        },
+      });
+
+      await pillarRegistry();
+
+      expect(seen).toEqual([20_000]);
+    });
+
+    it('setFetchTimeoutMs changes the deadline used by the NEXT fetch, without invalidating the cache', async () => {
+      const seen: number[] = [];
+      withFetcher((_registryUrl, fetchTimeoutMs) => {
+        seen.push(fetchTimeoutMs);
+        return Promise.resolve(fetchResult(pillar('finance', 'http://finance-api:3004')));
+      });
+
+      const first = await pillarRegistry();
+      expect(first.source).toBe('fresh');
+      expect(seen).toEqual([DEFAULT_FETCH_TIMEOUT_MS]);
+
+      setFetchTimeoutMs(20_000);
+
+      // Still within TTL: the cache is untouched by the new deadline, so this
+      // reads the cached snapshot rather than fetching again.
+      clock.advance(1_000);
+      const second = await pillarRegistry();
+      expect(second.source).toBe('cached');
+      expect(seen).toEqual([DEFAULT_FETCH_TIMEOUT_MS]);
+
+      // Past TTL: the background refresh this triggers is the first fetch to
+      // see the new deadline.
+      clock.advance(40_000);
+      await pillarRegistry();
+      expect(seen).toEqual([DEFAULT_FETCH_TIMEOUT_MS, 20_000]);
+    });
+
+    it('clamps a non-positive value to the default and warns', async () => {
+      const seen: number[] = [];
+      withFetcher((_registryUrl, fetchTimeoutMs) => {
+        seen.push(fetchTimeoutMs);
+        return Promise.resolve(fetchResult(pillar('finance', 'http://finance-api:3004')));
+      });
+
+      setFetchTimeoutMs(0);
+      await pillarRegistry();
+
+      expect(seen).toEqual([DEFAULT_FETCH_TIMEOUT_MS]);
+      expect(
+        warnings.some((w) => w.message.includes('fetchTimeoutMs must be a positive number'))
+      ).toBe(true);
+    });
   });
 });

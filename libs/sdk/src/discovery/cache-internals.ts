@@ -1,10 +1,13 @@
 import {
   createSnapshotResolverLeg,
+  DEFAULT_FETCH_TIMEOUT_MS,
   fetchRegistrySnapshot,
   type RegistryFetchResult,
 } from './fetcher.js';
 
 import type { RegistrySnapshot } from './types.js';
+
+export { DEFAULT_FETCH_TIMEOUT_MS } from './fetcher.js';
 
 export const DEFAULT_REGISTRY_URL = 'http://registry-api:3001';
 export const DEFAULT_CACHE_TTL_MS = 30_000;
@@ -14,8 +17,17 @@ export const REFRESH_LEAD_MS = 1_000;
 /**
  * Adapter the cache uses to talk to the registry. Production wires the
  * real {@link fetchRegistrySnapshot}; tests inject a fake to avoid IO.
+ *
+ * `fetchTimeoutMs` arrives as an argument rather than being baked into the
+ * fetcher at creation time — same reason `registryUrl` is — so
+ * {@link createDefaultFetcher}'s one long-lived instance keeps reading
+ * whatever the resolved config currently holds, including a value changed
+ * after boot by `cache.js`'s `setFetchTimeoutMs`.
  */
-export type RegistryFetcher = (registryUrl: string) => Promise<RegistryFetchResult>;
+export type RegistryFetcher = (
+  registryUrl: string,
+  fetchTimeoutMs: number
+) => Promise<RegistryFetchResult>;
 
 export type WarnFn = (message: string, context: Record<string, unknown>) => void;
 
@@ -32,6 +44,8 @@ export type ClearTimerFn = (handle: TimerHandle) => void;
 export type CacheConfig = {
   registryUrl?: string;
   ttlMs?: number;
+  /** Per-HTTP-call abort deadline. Distinct from `ttlMs`: this bounds one fetch, not how long its result stays fresh. */
+  fetchTimeoutMs?: number;
   fetcher?: RegistryFetcher;
   now?: () => number;
   setTimeoutImpl?: SetTimerFn;
@@ -42,6 +56,7 @@ export type CacheConfig = {
 export type ResolvedConfig = {
   registryUrl: string;
   ttlMs: number;
+  fetchTimeoutMs: number;
   fetcher: RegistryFetcher;
   now: () => number;
   setTimeoutImpl: SetTimerFn;
@@ -72,8 +87,8 @@ export type CacheState = {
  */
 export function createDefaultFetcher(): RegistryFetcher {
   const leg = createSnapshotResolverLeg();
-  return (registryUrl: string): Promise<RegistryFetchResult> =>
-    fetchRegistrySnapshot({ registryUrl, leg });
+  return (registryUrl: string, fetchTimeoutMs: number): Promise<RegistryFetchResult> =>
+    fetchRegistrySnapshot({ registryUrl, leg, timeoutMs: fetchTimeoutMs });
 }
 
 export class NodeTimerHandle {
@@ -98,6 +113,17 @@ export function clampTtl(ttlMs: number, onWarn: WarnFn): number {
     return MIN_CACHE_TTL_MS;
   }
   return ttlMs;
+}
+
+export function clampFetchTimeoutMs(fetchTimeoutMs: number, onWarn: WarnFn): number {
+  if (!Number.isFinite(fetchTimeoutMs) || fetchTimeoutMs <= 0) {
+    onWarn('fetchTimeoutMs must be a positive number; using default', {
+      requested: fetchTimeoutMs,
+      applied: DEFAULT_FETCH_TIMEOUT_MS,
+    });
+    return DEFAULT_FETCH_TIMEOUT_MS;
+  }
+  return fetchTimeoutMs;
 }
 
 export function unrefTimer(timer: TimerHandle): void {
@@ -128,6 +154,10 @@ export function createInitialState(overrides: CacheConfig): CacheState {
     config: {
       registryUrl: overrides.registryUrl ?? DEFAULT_REGISTRY_URL,
       ttlMs: clampTtl(overrides.ttlMs ?? DEFAULT_CACHE_TTL_MS, onWarn),
+      fetchTimeoutMs: clampFetchTimeoutMs(
+        overrides.fetchTimeoutMs ?? DEFAULT_FETCH_TIMEOUT_MS,
+        onWarn
+      ),
       fetcher: overrides.fetcher ?? createDefaultFetcher(),
       now: overrides.now ?? Date.now,
       setTimeoutImpl: overrides.setTimeoutImpl ?? defaultSetTimer,

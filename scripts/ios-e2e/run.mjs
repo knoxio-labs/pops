@@ -134,6 +134,33 @@ const PAIRING_CODE_ISSUANCE_LIMIT = 50;
  */
 const PAIRING_CODE_TTL_MS = 30 * 60 * 1000;
 
+/**
+ * Raises the discovery cache's per-fetch abort deadline past the SDK's own
+ * default of 5s (`DEFAULT_FETCH_TIMEOUT_MS` in `libs/sdk/src/discovery/fetcher.ts`),
+ * for the same reason `PAIRING_CODE_ISSUANCE_LIMIT` above raises a production
+ * budget: this run is not what the default was sized for.
+ *
+ * The BFM's `@pops/pillar-sdk` discovery client polls `upstream.url` —
+ * `upstream-stub.mjs`'s registry route — on a background timer for as long as
+ * this process runs, not just once at boot. That poll is a loopback HTTP
+ * round trip between two Node processes sharing this runner's three cores
+ * with `xcodebuild`, the booted simulator and Maestro's own driver, and
+ * `pairing-to-transaction-detail.yaml`'s own comment on why it asserts the
+ * degraded banner absent records the failure mode directly: the fetch aborts
+ * under that contention even though the stub answered, the cache falls back
+ * to serving its last-known-good snapshot as stale, and the app draws "Some
+ * of Pops could not be reached" — correctly, for a registry that genuinely
+ * missed its deadline. That is the same starvation class that forced `-j 1`
+ * onto `ios-quality.yml`'s SwiftLint-analyzer step, and a retry here would
+ * hide a real signal rather than fix a slow one, so this raises the budget
+ * instead: 4x the production default, chosen to absorb scheduling jitter on a
+ * loaded CI host without masking an actual registry outage inside a single
+ * flow's run. `resolveDiscoveryFetchTimeoutMs` in
+ * `pillars/bfm/src/api/pillars/env.ts` is the one place production reads this
+ * variable; every real deployment leaves it unset.
+ */
+const DISCOVERY_FETCH_TIMEOUT_MS = 20_000;
+
 class HarnessError extends Error {}
 
 /**
@@ -418,6 +445,7 @@ async function main() {
         // ends up on.
         POPS_INTERNAL_API_KEY: 'ios-e2e-service-account-key',
         POPS_REGISTRY_URL: upstream.url,
+        POPS_DISCOVERY_FETCH_TIMEOUT_MS: String(DISCOVERY_FETCH_TIMEOUT_MS),
         // Emptied on purpose: with it, the pillar would try to register itself
         // with a registry that is a fixture and has no such route.
         POPS_REGISTRY_ENABLED: '',

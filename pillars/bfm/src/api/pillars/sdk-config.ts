@@ -29,10 +29,14 @@
  * what keeps that honest: it asserts the header reaches the wire, which only
  * holds for the `/server` import.
  */
-import { setRegistryUrl } from '@pops/pillar-sdk/discovery';
+import { setFetchTimeoutMs, setRegistryUrl } from '@pops/pillar-sdk/discovery';
 import { configureServerSdk } from '@pops/pillar-sdk/server';
 
-import { resolveInternalBaseUrls, resolveRegistryUrl } from './env.js';
+import {
+  resolveDiscoveryFetchTimeoutMs,
+  resolveInternalBaseUrls,
+  resolveRegistryUrl,
+} from './env.js';
 import { MissingServiceAccountKeyError, resolveServiceAccountKey } from './service-account.js';
 
 /**
@@ -80,6 +84,12 @@ export function configureBfmServerSdk(env: NodeJS.ProcessEnv = process.env): Bfm
   // POPS_REGISTRY_URL at a tunnel would otherwise still read its roster from
   // `registry-api`, a hostname that does not resolve there.
   setRegistryUrl(registryUrl);
+
+  // Unset in every real deployment, where the SDK's own default stands — see
+  // `resolveDiscoveryFetchTimeoutMs`'s doc comment for the one caller that
+  // raises it.
+  const discoveryFetchTimeoutMs = resolveDiscoveryFetchTimeoutMs(env);
+  if (discoveryFetchTimeoutMs !== undefined) setFetchTimeoutMs(discoveryFetchTimeoutMs);
 
   return { registryUrl, internalBaseUrls: internalBaseUrls ?? {} };
 }

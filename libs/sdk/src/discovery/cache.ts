@@ -1,4 +1,5 @@
 import {
+  clampFetchTimeoutMs,
   clampTtl,
   createInitialState,
   describeError,
@@ -17,6 +18,7 @@ import type { RegistryFetchResult } from './fetcher.js';
 export {
   DEFAULT_REGISTRY_URL,
   DEFAULT_CACHE_TTL_MS,
+  DEFAULT_FETCH_TIMEOUT_MS,
   MIN_CACHE_TTL_MS,
   type CacheConfig,
   type RegistryFetcher,
@@ -33,6 +35,7 @@ export function configureCache(overrides: CacheConfig): void {
   state = createInitialState({
     registryUrl: overrides.registryUrl ?? state.config.registryUrl,
     ttlMs: overrides.ttlMs ?? state.config.ttlMs,
+    fetchTimeoutMs: overrides.fetchTimeoutMs ?? state.config.fetchTimeoutMs,
     fetcher: overrides.fetcher ?? state.config.fetcher,
     now: overrides.now ?? state.config.now,
     setTimeoutImpl: overrides.setTimeoutImpl ?? state.config.setTimeoutImpl,
@@ -49,6 +52,18 @@ export function setRegistryUrl(url: string): void {
 export function setCacheTtlMs(ttlMs: number): void {
   state.config.ttlMs = clampTtl(ttlMs, state.config.onWarn);
   invalidateRegistryCache();
+}
+
+/**
+ * Set the per-fetch abort deadline the discovery cache hands the fetcher on
+ * every call — the initial cold fetch and every background refresh alike.
+ *
+ * Unlike {@link setCacheTtlMs} this does NOT invalidate the cache: a longer or
+ * shorter deadline says nothing about whether an already-cached snapshot is
+ * still fresh, only how long the NEXT fetch attempt is allowed to take.
+ */
+export function setFetchTimeoutMs(fetchTimeoutMs: number): void {
+  state.config.fetchTimeoutMs = clampFetchTimeoutMs(fetchTimeoutMs, state.config.onWarn);
 }
 
 export function invalidateRegistryCache(): void {
@@ -182,7 +197,7 @@ async function invokeFetcher(): Promise<RegistryFetchResult> {
     if (queued.count <= 0) state.queuedFailures = null;
     throw queued.error;
   }
-  return state.config.fetcher(state.config.registryUrl);
+  return state.config.fetcher(state.config.registryUrl, state.config.fetchTimeoutMs);
 }
 
 function armBackgroundRefresh(): void {
