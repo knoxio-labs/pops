@@ -786,27 +786,41 @@ fi
 
 app="$POPS_IOS_DERIVED_DATA/Build/Products/Debug-iphonesimulator/Pops.app"
 
-# Rebuilt when there is nothing to install, or when a source file is newer than
-# what was installed last time. `.build` and `Generated` are pruned for the
-# same reason `lint:analyze` prunes them: SwiftPM checkouts and generated
-# client code are not sources anybody edits, and a checkout restored from cache
-# has a fresh mtime.
+# Rebuilt when there is nothing to install, or when any build input is newer
+# than what was installed last time.
+#
+# ANY FILE, not just `*.swift`, and generated sources are NOT excluded. An
+# earlier version of this borrowed `lint:analyze`'s prune list, which is wrong
+# here because the two are asking different questions: that task is counting
+# the files a person wrote, this one is asking whether the binary is stale.
+# `Packages/BFMClient/Sources/BFMClient/Generated` is compiled into the app —
+# `mise run generate:bfm-client` rewriting it is exactly the change this must
+# catch — and so are asset catalogues, entitlements and `Info.plist`, none of
+# which end in `.swift`.
+#
+# Two things are still pruned, each because it would report staleness that is
+# not there:
+#
+#   - `.build`, SwiftPM's own output. It is not a source, and a checkout
+#     restored from cache carries a fresh mtime.
+#   - `Config/Signing.local.xcconfig`, which the `generate` this task depends on
+#     rewrites on every run when the machine has a team configured. Left in, it
+#     would make every run a rebuild on exactly those machines.
 #
 # Compared against a FILE INSIDE the bundle rather than the bundle directory. A
 # directory's mtime moves when an entry is added or removed from it and not
 # when the bytes of an existing entry change, so a rebuild that only rewrote
 # the binary can leave the `.app` looking older than the sources it was built
-# from — and this would then recompile every run, or, with the timestamps the
-# other way round, install products older than the code. `Info.plist` is
-# rewritten by every build and its absence is itself a reason to rebuild, which
-# is why one test covers both.
+# from. `Info.plist` is rewritten by every build, and its absence is itself a
+# reason to rebuild — which is why one test covers both.
 stamp="$app/Info.plist"
 needs_build=false
 if [ ! -f "$stamp" ]; then
   needs_build=true
-elif [ -n "$(find App AppTests Packages \
-    \( -name .build -o -name Generated \) -type d -prune \
-    -o -type f -name '*.swift' -newer "$stamp" -print -quit)" ]; then
+elif [ -n "$(find App AppTests Packages Config project.yml \
+    -name .build -type d -prune \
+    -o -name Signing.local.xcconfig -prune \
+    -o -type f -newer "$stamp" -print -quit)" ]; then
   needs_build=true
 fi
 
