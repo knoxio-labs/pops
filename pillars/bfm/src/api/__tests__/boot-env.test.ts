@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_PORT,
   DEFAULT_SQLITE_PATH,
+  resolvePairingCodeIssuanceLimit,
   resolvePort,
   resolvePublicBaseUrl,
   resolveSelfBaseUrl,
@@ -10,6 +11,7 @@ import {
   resolveVersion,
   shouldSelfRegister,
 } from '../boot-env.js';
+import { PAIRING_CODE_RATE_LIMIT } from '../rate-limit.js';
 
 describe('resolvePort', () => {
   it('defaults to the pillar port when PORT is absent or empty', () => {
@@ -190,5 +192,33 @@ describe('resolveSqlitePath', () => {
   ])('treats a %s value as unset rather than as a path', (_label, raw) => {
     expect(resolveSqlitePath({ BFM_SQLITE_PATH: raw })).toBe(DEFAULT_SQLITE_PATH);
     expect(resolveSqlitePath({ SQLITE_PATH: raw })).toBe(DEFAULT_SQLITE_PATH);
+  });
+});
+
+// The default is a security control, not a convenience default — see
+// `resolvePairingCodeIssuanceLimit`'s doc comment for why it may be raised at
+// all and for which one caller does it.
+describe('resolvePairingCodeIssuanceLimit', () => {
+  it('defaults to the security limit when unset or empty', () => {
+    expect(resolvePairingCodeIssuanceLimit({})).toBe(PAIRING_CODE_RATE_LIMIT);
+    expect(resolvePairingCodeIssuanceLimit({ BFM_PAIRING_CODE_ISSUANCE_LIMIT: '' })).toBe(
+      PAIRING_CODE_RATE_LIMIT
+    );
+    expect(PAIRING_CODE_RATE_LIMIT).toBe(5);
+  });
+
+  it('accepts a raised budget', () => {
+    expect(resolvePairingCodeIssuanceLimit({ BFM_PAIRING_CODE_ISSUANCE_LIMIT: '50' })).toBe(50);
+  });
+
+  it.each([
+    ['non-numeric', 'notanumber'],
+    ['fractional', '1.5'],
+    ['zero', '0'],
+    ['negative', '-1'],
+  ])('rejects a %s limit rather than silently keeping the default', (_label, raw) => {
+    expect(() => resolvePairingCodeIssuanceLimit({ BFM_PAIRING_CODE_ISSUANCE_LIMIT: raw })).toThrow(
+      /BFM_PAIRING_CODE_ISSUANCE_LIMIT must be a positive integer/u
+    );
   });
 });

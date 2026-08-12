@@ -97,6 +97,23 @@ const SHUTDOWN_GRACE_MS = 5_000;
 /** Satisfies the BFM's boot check, which refuses anything under 32 characters. */
 const ACCESS_TOKEN_SECRET = 'ios-e2e-access-token-secret-not-a-real-key';
 
+/**
+ * Raises `POST /operator/pairing/codes`'s issuance budget for this run only.
+ *
+ * `pillars/bfm/src/api/rate-limit.ts` caps that at 5 per operator per 15
+ * minutes in production — a security control, not a convenience default. This
+ * harness runs every UI flow against ONE long-lived BFM process under the
+ * SAME operator identity (`NODE_ENV=test`'s dev-fallback), and each flow mints
+ * exactly one code, so the production budget caps this run at five flows
+ * regardless of how many `.maestro/*.yaml` files exist — the sixth flow's own
+ * mint answers 429, which reads as a broken flow rather than as what it is: a
+ * security control doing its job against a caller it was never meant to
+ * throttle. `resolvePairingCodeIssuanceLimit` in
+ * `pillars/bfm/src/api/boot-env.ts` is the one place production reads this
+ * variable; every real deployment leaves it unset.
+ */
+const PAIRING_CODE_ISSUANCE_LIMIT = 50;
+
 class HarnessError extends Error {}
 
 /**
@@ -375,6 +392,7 @@ async function main() {
         BFM_SELF_BASE_URL: baseURL.origin,
         BFM_PUBLIC_BASE_URL: baseURL.origin,
         BFM_ACCESS_TOKEN_SECRET: ACCESS_TOKEN_SECRET,
+        BFM_PAIRING_CODE_ISSUANCE_LIMIT: String(PAIRING_CODE_ISSUANCE_LIMIT),
         // The BFM crashes at boot without one. The stub ignores the header it
         // ends up on.
         POPS_INTERNAL_API_KEY: 'ios-e2e-service-account-key',

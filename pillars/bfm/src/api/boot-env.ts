@@ -18,6 +18,8 @@ import { dirname, join } from 'node:path';
 
 import { resolveSelfBaseUrl as resolveFleetSelfBaseUrl } from '@pops/pillar-sdk/pillar-env';
 
+import { PAIRING_CODE_RATE_LIMIT } from './rate-limit.js';
+
 export const DEFAULT_PORT = 3014;
 
 /** Where `bfm.db` lands when neither env var says otherwise. */
@@ -133,4 +135,29 @@ export function resolveSqlitePath(env: NodeJS.ProcessEnv = process.env): string 
   const shared = env['SQLITE_PATH'];
   if (shared !== undefined && shared.trim() !== '') return join(dirname(shared), 'bfm.db');
   return DEFAULT_SQLITE_PATH;
+}
+
+/**
+ * Resolve the pairing-code issuance budget from `BFM_PAIRING_CODE_ISSUANCE_LIMIT`,
+ * defaulting to {@link PAIRING_CODE_RATE_LIMIT}.
+ *
+ * The default is a security control — `rate-limit.ts` states why 5 per
+ * operator per window is "enough to cover a pairing that goes wrong twice" —
+ * and this exists to raise it for exactly one caller: `scripts/ios-e2e/run.mjs`,
+ * which runs every UI flow against ONE long-lived BFM process under ONE
+ * operator identity (`NODE_ENV=test`'s dev-fallback), so the budget that
+ * bounds a human mistyping a code also bounds how many flows a single test
+ * run may pair in fifteen minutes. Unset in every real deployment, where the
+ * default stands.
+ */
+export function resolvePairingCodeIssuanceLimit(env: NodeJS.ProcessEnv = process.env): number {
+  const raw = env['BFM_PAIRING_CODE_ISSUANCE_LIMIT'];
+  if (raw === undefined || raw === '') return PAIRING_CODE_RATE_LIMIT;
+  const parsed = Number(raw);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    throw new BootEnvError(
+      `[bfm-api] BFM_PAIRING_CODE_ISSUANCE_LIMIT must be a positive integer; got '${raw}'`
+    );
+  }
+  return parsed;
 }

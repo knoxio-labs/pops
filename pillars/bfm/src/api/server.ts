@@ -47,6 +47,7 @@ import {
 import { createBfmApiApp } from './app.js';
 import { resolveAccessTokenSigningKey } from './auth/signing-key.js';
 import {
+  resolvePairingCodeIssuanceLimit,
   resolvePort,
   resolvePublicBaseUrl,
   resolveSelfBaseUrl,
@@ -62,6 +63,7 @@ import { createMobileFinanceClient } from './finance/client.js';
 import { buildBfmManifest } from './manifest.js';
 import { createPillarGateway } from './pillars/gateway.js';
 import { configureBfmServerSdk } from './pillars/sdk-config.js';
+import { createRateLimiter, PAIRING_CODE_RATE_WINDOW_MS } from './rate-limit.js';
 
 const port = resolvePort();
 const version = resolveVersion();
@@ -89,6 +91,15 @@ console.warn(`[bfm-api] SQLite at ${sqlitePath}`);
 // is the authenticated `/server` one, which reads that configuration.
 const finance = createMobileFinanceClient(createPillarGateway());
 
+// Unset in every real deployment, where this reconstructs the same limiter
+// `makeBfmRestHandlers` would have built on its own — see
+// `resolvePairingCodeIssuanceLimit`'s doc comment for the one caller that
+// sets it.
+const issuanceLimiter = createRateLimiter({
+  limit: resolvePairingCodeIssuanceLimit(),
+  windowMs: PAIRING_CODE_RATE_WINDOW_MS,
+});
+
 const app = createBfmApiApp({
   version,
   db: bfmDb.db,
@@ -97,6 +108,7 @@ const app = createBfmApiApp({
   internalBaseUrls: sdkConfig.internalBaseUrls,
   finance,
   refreshTokenTtlMs,
+  issuanceLimiter,
 });
 
 let pruneCredentialsWorker: PruneCredentialsWorkerHandle | undefined;
