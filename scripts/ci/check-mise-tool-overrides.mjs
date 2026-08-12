@@ -73,20 +73,61 @@
  *     degenerate case of the same parser, and this repo has never had one.
  *     Out of scope for this guard, not silently dropped: a hand-off issue is
  *     filed in Huly if this ever needs its own scanner.
- *   - `.config/mise/conf.d/*.toml` (fragment files merged in alphabetical
- *     order) is a directory-glob mechanism, not a fixed filename — a
- *     genuinely different discovery shape from "does this exact path exist".
- *     Deliberately deferred rather than folded in here; tracked in Huly.
- *   - Environment-specific configs (`mise.<env>.toml` and friends, activated
- *     by `MISE_ENV`) are a different axis (which environment, not which
- *     unit) and are NOT purely hypothetical here — `mise.ci.toml` at the
- *     repo root is exactly this, and every quality workflow sets
- *     `MISE_ENV: ci`. A per-unit `mise.ci.toml` would therefore genuinely
- *     merge into a real CI run today and this guard would not see it.
- *     Deliberately deferred rather than folded into this filename-set
- *     widening (a different discovery shape again — which `<env>` values are
- *     live has to be read out of the workflows, not assumed); tracked in
- *     Huly rather than left as an unstated gap.
+ * **Two more discovery shapes this guard reads, beyond the six committed
+ * filenames above** — both were deliberately deferred out of the widening
+ * that produced this list, and are now covered here:
+ *
+ *   - **Environment-specific configs** (`mise.<env>.toml` and friends,
+ *     activated by `MISE_ENV`) are a different axis (which environment, not
+ *     which unit) and are NOT hypothetical here — `mise.ci.toml` at the repo
+ *     root is exactly this, and every quality workflow (`app-quality.yml`,
+ *     `registry-generated-quality.yml`, `unit-quality.yml`) sets
+ *     `MISE_ENV: ci`. A per-unit `mise.ci.toml` genuinely merges into a real
+ *     CI run, so this guard reads the env-suffixed variant of every
+ *     {@link COMMITTED_MISE_CONFIG_FILENAMES} entry too (`mise.ci.toml`,
+ *     `.mise.ci.toml`, `.config/mise/config.ci.toml`, …).
+ *
+ *     Which `<env>` values to check is read out of the workflows —
+ *     {@link discoverMiseEnvValues} parses every `.github/workflows/*.yml`
+ *     and `*.yaml` (GitHub Actions accepts both extensions, even though
+ *     every workflow in this repo today happens to use `.yml`) with the
+ *     same YAML parser `config-parse.mjs` gives every other Tier B
+ *     guard and walks the whole document for a key literally named
+ *     `MISE_ENV`, at any nesting depth (workflow-, job- or step-level
+ *     `env:`), rather than grepping for `MISE_ENV: ci` and hardcoding `ci`.
+ *     A new workflow that starts setting `MISE_ENV: staging` is picked up
+ *     automatically the next time this guard runs; nothing here needs
+ *     editing.
+ *
+ *     **Arbitrary or unknown `MISE_ENV` values are out of scope on purpose.**
+ *     This guard only enumerates values a committed workflow actually sets,
+ *     not every string `MISE_ENV` could theoretically hold. That is
+ *     sufficient — not merely convenient — because the workflows are the
+ *     only place `MISE_ENV` is set for any run this guard's own output can
+ *     affect: CI has no other entry point that resolves mise config, so a
+ *     value nobody's workflow sets is a value no CI run ever activates. A
+ *     developer exporting `MISE_ENV=whatever` in their own shell is a local,
+ *     uncommitted invocation choice — the exact category `mise.local.toml`
+ *     and friends are already excluded for (see above): nothing in a fresh
+ *     checkout can reveal what a developer's shell will export, so there is
+ *     no tree state for a guard to read. If this repo ever starts resolving
+ *     `MISE_ENV` from somewhere other than its own workflow YAML (a
+ *     Dockerfile `ENV`, a deploy-time secret), that source becomes a second
+ *     input this function must read — noted here so the next person widening
+ *     it doesn't have to rediscover why workflows were the only source.
+ *
+ *   - **`.config/mise/conf.d/*.toml`** (fragment files mise merges in
+ *     alphabetical order, lowest precedence of everything this guard reads)
+ *     is a directory-glob mechanism, not a fixed filename — a genuinely
+ *     different discovery shape from "does this exact path exist". No unit
+ *     in this repo uses it today; this guard globs
+ *     `<unit-dir>/.config/mise/conf.d/*.toml` per unit anyway (preventative —
+ *     the fixture test proves it, the live-repo assertion proves nothing
+ *     currently relies on it) and reads every fragment found the same way it
+ *     reads any other unit config file. Fragments are not env-suffixed
+ *     themselves — mise's own `conf.d` mechanism has no per-fragment
+ *     environment axis — so no cross product with {@link discoverMiseEnvValues}
+ *     applies here.
  *
  * **Tier B guard**: it reads TOML through a real parser, so the job that runs
  * it installs the workspace first. See the tier amendment in
@@ -102,12 +143,27 @@
  * Exit 0 = clean. Exit 1 = a violation. Exit 2 = usage error.
  */
 
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { ConfigParseError, isMapping, parseToml, scalarText } from './config-parse.mjs';
+import {
+  ConfigParseError,
+  isMapping,
+  parseToml,
+  parseYaml,
+  scalarText,
+  walkMappings,
+} from './config-parse.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..');
@@ -154,6 +210,75 @@ export const GITIGNORED_MISE_CONFIG_FILENAMES = [
   '.mise/config.toml',
   '.mise/config.local.toml',
 ];
+
+/** Workflow directory this guard reads to discover live `MISE_ENV` values. */
+export const WORKFLOWS_DIR = '.github/workflows';
+
+/** `<unit-dir>` suffix mise merges every `*.toml` fragment from, lowest precedence. */
+export const CONF_D_SUFFIX = ['.config', 'mise', 'conf.d'];
+
+/**
+ * mise's env-suffixed spelling of a committed config filename: the
+ * environment name is inserted immediately before the final `.toml`, e.g.
+ * `mise.toml` → `mise.ci.toml`, `.config/mise/config.toml` →
+ * `.config/mise/config.ci.toml`. Every {@link COMMITTED_MISE_CONFIG_FILENAMES}
+ * entry ends in `.toml`, so this holds for all six.
+ *
+ * @param {string} filename One of {@link COMMITTED_MISE_CONFIG_FILENAMES}.
+ * @param {string} env
+ * @returns {string}
+ */
+export function envConfigFilename(filename, env) {
+  return filename.replace(/\.toml$/u, `.${env}.toml`);
+}
+
+/**
+ * @typedef {{ values: string[], violations: string[] }} MiseEnvDiscovery
+ */
+
+/**
+ * Read every literal `MISE_ENV` value this repo's own workflows set, by
+ * parsing each `.github/workflows/*.yml` or `*.yaml` (GitHub Actions accepts
+ * either extension) and walking the whole document for a key named
+ * `MISE_ENV` at any depth — workflow-, job- or step-level `env:` all resolve
+ * the same way to mise, so this does not anchor on one of them. See the
+ * file header for why enumerating workflow-declared values is sufficient
+ * scope, rather than every value `MISE_ENV` could theoretically hold.
+ *
+ * A workflow file that fails to parse is a violation, not a skip — the same
+ * rule every Tier B guard applies to structured config it cannot read.
+ *
+ * @param {string} root
+ * @returns {MiseEnvDiscovery}
+ */
+export function discoverMiseEnvValues(root) {
+  const dir = join(root, ...WORKFLOWS_DIR.split('/'));
+  /** @type {Set<string>} */
+  const values = new Set();
+  /** @type {string[]} */
+  const violations = [];
+  if (!existsSync(dir)) return { values: [], violations };
+
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (!entry.isFile() || !(entry.name.endsWith('.yml') || entry.name.endsWith('.yaml'))) continue;
+    const abs = join(dir, entry.name);
+    const label = relative(root, abs);
+    let doc;
+    try {
+      doc = parseYaml(readFileSync(abs, 'utf8'), label);
+    } catch (error) {
+      violations.push(errorText(error));
+      continue;
+    }
+    for (const { key, value } of walkMappings(doc)) {
+      if (key !== 'MISE_ENV') continue;
+      const text = scalarText(value);
+      if (text !== undefined) values.add(text);
+    }
+  }
+
+  return { values: values.size === 0 ? [] : [...values].toSorted(), violations };
+}
 
 /**
  * Reduce a parsed `[tools]` entry to the version string the callers compare.
@@ -226,41 +351,80 @@ export function parseToolsTable(source, label) {
  */
 
 /**
- * Every {@link COMMITTED_MISE_CONFIG_FILENAMES} entry that exists directly
- * inside `dir`, each paired with the unit dir it belongs to. More than one
- * entry for the same `dir` is legal — mise merges tools additively across
- * every config file it finds in a directory, so a unit that (unusually)
- * carries two of these files has both read, not just the higher-precedence
- * one.
+ * Every `*.toml` fragment mise would merge in from `<dir>/.config/mise/conf.d/`
+ * — a directory glob, not a fixed filename, so it cannot be folded into
+ * {@link COMMITTED_MISE_CONFIG_FILENAMES}'s `existsSync` loop. Every fragment
+ * found is read, in filename order (mise's own merge order for this
+ * mechanism); order does not change what this guard flags, only how it
+ * would print if more than one fragment declared the same tool.
  *
  * @param {string} root
  * @param {string} dir Absolute path.
  * @returns {UnitConfigFile[]}
  */
-function unitConfigFiles(root, dir) {
+function confDFragments(root, dir) {
+  const confDir = join(dir, ...CONF_D_SUFFIX);
+  if (!existsSync(confDir)) return [];
+  return readdirSync(confDir, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && entry.name.endsWith('.toml'))
+    .map((entry) => ({
+      dir: relative(root, dir),
+      file: relative(root, join(confDir, entry.name)),
+    }))
+    .toSorted((a, b) => a.file.localeCompare(b.file));
+}
+
+/**
+ * Every {@link COMMITTED_MISE_CONFIG_FILENAMES} entry (and its env-suffixed
+ * variant for each of `envValues`) that exists directly inside `dir`, plus
+ * every `.config/mise/conf.d/*.toml` fragment under it — each paired with
+ * the unit dir it belongs to. More than one entry for the same `dir` is
+ * legal — mise merges tools additively across every config file it finds in
+ * a directory, so a unit that (unusually) carries several of these has all
+ * of them read, not just the highest-precedence one.
+ *
+ * @param {string} root
+ * @param {string} dir Absolute path.
+ * @param {string[]} envValues
+ * @returns {UnitConfigFile[]}
+ */
+function unitConfigFiles(root, dir, envValues) {
   /** @type {UnitConfigFile[]} */
   const found = [];
   for (const name of COMMITTED_MISE_CONFIG_FILENAMES) {
     const abs = join(dir, name);
     if (existsSync(abs)) found.push({ dir: relative(root, dir), file: relative(root, abs) });
+    for (const env of envValues) {
+      const envAbs = join(dir, envConfigFilename(name, env));
+      if (existsSync(envAbs)) {
+        found.push({ dir: relative(root, dir), file: relative(root, envAbs) });
+      }
+    }
   }
+  found.push(...confDFragments(root, dir));
   return found;
 }
 
 /**
  * Discover every unit config file (relative to `root`) across
  * `pillars/<id>`, `pillars/<id>/app`, `libs/<id>` — checking every filename
- * in {@link COMMITTED_MISE_CONFIG_FILENAMES}, not only `mise.toml`. Mirrors
- * the root `mise.toml`'s `run-all` disk-discovery for which directories
- * count as units; unlike `run-all` (which only ever runs a unit's own
- * `mise.toml`-defined tasks — a separate, task-fan-out concern), this reads
- * every mise-recognised spelling, because a `[tools]` override in any of
- * them genuinely merges into that unit's resolved toolchain.
+ * in {@link COMMITTED_MISE_CONFIG_FILENAMES} (and its env-suffixed variant
+ * for each value {@link discoverMiseEnvValues} finds live in this repo's
+ * workflows), not only `mise.toml`, plus every `.config/mise/conf.d/*.toml`
+ * fragment. Mirrors the root `mise.toml`'s `run-all` disk-discovery for
+ * which directories count as units; unlike `run-all` (which only ever runs a
+ * unit's own `mise.toml`-defined tasks — a separate, task-fan-out concern),
+ * this reads every mise-recognised spelling, because a `[tools]` override in
+ * any of them genuinely merges into that unit's resolved toolchain.
  *
  * @param {string} root
+ * @param {string[]} [envValues] Defaults to {@link discoverMiseEnvValues}'s
+ *   result for `root`; a caller that also needs its parse-failure violations
+ *   (as {@link checkOverrides} does) should call that itself and pass
+ *   `.values` through explicitly.
  * @returns {UnitConfigFile[]} Sorted by dir, then file.
  */
-export function discoverUnitMiseDirs(root) {
+export function discoverUnitMiseDirs(root, envValues = discoverMiseEnvValues(root).values) {
   /** @type {UnitConfigFile[]} */
   const out = [];
   for (const base of UNIT_BASES) {
@@ -269,8 +433,8 @@ export function discoverUnitMiseDirs(root) {
     for (const entry of readdirSync(baseDir, { withFileTypes: true })) {
       if (!entry.isDirectory()) continue;
       const dir = join(baseDir, entry.name);
-      out.push(...unitConfigFiles(root, dir));
-      if (base === 'pillars') out.push(...unitConfigFiles(root, join(dir, 'app')));
+      out.push(...unitConfigFiles(root, dir, envValues));
+      if (base === 'pillars') out.push(...unitConfigFiles(root, join(dir, 'app'), envValues));
     }
   }
   return out.toSorted((a, b) => {
@@ -337,7 +501,10 @@ export function checkOverrides(root) {
     }
   }
 
-  for (const { dir, file } of discoverUnitMiseDirs(root)) {
+  const { values: envValues, violations: envViolations } = discoverMiseEnvValues(root);
+  violations.push(...envViolations);
+
+  for (const { dir, file } of discoverUnitMiseDirs(root, envValues)) {
     /** @type {Record<string, string>} */
     let tools;
     try {
@@ -456,6 +623,97 @@ function unparseableRootIsReported() {
 }
 
 /**
+ * A pnpm fork hidden in a per-unit env-suffixed config (`mise.ci.toml`, live
+ * for this repo's own `MISE_ENV=ci` workflows) must be flagged exactly like
+ * one in the base `mise.toml` — the gap POPS-1794 exists to close. The fixture
+ * plants its own workflow declaring `MISE_ENV: ci` rather than relying on the
+ * real repo's, so this proves the discovery mechanism itself, not just that
+ * this repo happens to set that value today.
+ *
+ * @returns {boolean}
+ */
+function envSuffixedOverrideIsReported() {
+  const dir = mkdtempSync(join(tmpdir(), 'mise-overrides-envsuffix-'));
+  try {
+    writeFileSync(
+      join(dir, 'mise.toml'),
+      '[tools]\nnode = "24"\npnpm = "10"\nrust = "stable"\n',
+      'utf8'
+    );
+    mkdirSync(join(dir, '.github', 'workflows'), { recursive: true });
+    writeFileSync(
+      join(dir, '.github', 'workflows', 'quality.yml'),
+      'name: quality\nenv:\n  MISE_ENV: ci\njobs:\n  build:\n    runs-on: ubuntu-latest\n',
+      'utf8'
+    );
+    mkdirSync(join(dir, 'pillars', 'rogue'), { recursive: true });
+    writeFileSync(
+      join(dir, 'pillars', 'rogue', 'mise.ci.toml'),
+      '[tools]\npnpm = "9.0.0"\n',
+      'utf8'
+    );
+    const { violations } = checkOverrides(dir);
+    return violations.some((v) => v.includes('pillars/rogue/mise.ci.toml') && v.includes('pnpm'));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+/**
+ * A pnpm fork hidden in a `.config/mise/conf.d/*.toml` fragment must be
+ * flagged — the gap POPS-1795 exists to close.
+ *
+ * @returns {boolean}
+ */
+function confDFragmentOverrideIsReported() {
+  const dir = mkdtempSync(join(tmpdir(), 'mise-overrides-confd-'));
+  try {
+    writeFileSync(
+      join(dir, 'mise.toml'),
+      '[tools]\nnode = "24"\npnpm = "10"\nrust = "stable"\n',
+      'utf8'
+    );
+    mkdirSync(join(dir, 'pillars', 'rogue', '.config', 'mise', 'conf.d'), { recursive: true });
+    writeFileSync(
+      join(dir, 'pillars', 'rogue', '.config', 'mise', 'conf.d', '10-pnpm.toml'),
+      '[tools]\npnpm = "9.0.0"\n',
+      'utf8'
+    );
+    const { violations } = checkOverrides(dir);
+    return violations.some((v) => v.includes('conf.d/10-pnpm.toml') && v.includes('pnpm'));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+/**
+ * A workflow YAML this guard cannot parse must be reported, not treated as a
+ * workflow that simply sets no `MISE_ENV`.
+ *
+ * @returns {boolean}
+ */
+function unparseableWorkflowIsReported() {
+  const dir = mkdtempSync(join(tmpdir(), 'mise-overrides-badworkflow-'));
+  try {
+    writeFileSync(
+      join(dir, 'mise.toml'),
+      '[tools]\nnode = "24"\npnpm = "10"\nrust = "stable"\n',
+      'utf8'
+    );
+    mkdirSync(join(dir, '.github', 'workflows'), { recursive: true });
+    writeFileSync(
+      join(dir, '.github', 'workflows', 'broken.yml'),
+      'name: broken\non: [push\n',
+      'utf8'
+    );
+    const { violations } = discoverMiseEnvValues(dir);
+    return violations.some((v) => v.includes('could not be parsed'));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+/**
  * Every spelling case below writes the SAME forbidden declaration — a per-unit
  * `pnpm` fork — in a different legal TOML shape. The scanner this replaced had
  * to be taught each one after it had already slipped through; a real parser
@@ -486,6 +744,12 @@ function selfTest() {
       parseToolsTable('[tools]\npnpm = ["9.0.0", "8"]\n').pnpm === '9.0.0',
     'a missing unit base is a violation, not an empty sweep': missingBaseIsReported(),
     'an unparseable root pin is a violation, not an empty baseline': unparseableRootIsReported(),
+    'sees a pnpm fork hidden in an env-suffixed unit config (mise.ci.toml)':
+      envSuffixedOverrideIsReported(),
+    'sees a pnpm fork hidden in a .config/mise/conf.d/*.toml fragment':
+      confDFragmentOverrideIsReported(),
+    'an unparseable workflow YAML is a violation, not a skipped MISE_ENV source':
+      unparseableWorkflowIsReported(),
   };
 
   const failed = Object.entries(checks).filter(([, ok]) => !ok);

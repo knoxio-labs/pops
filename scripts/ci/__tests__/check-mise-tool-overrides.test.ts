@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -10,10 +10,13 @@ import {
   ALLOWED_UNIT_OVERRIDE_TOOLS,
   checkOverrides,
   COMMITTED_MISE_CONFIG_FILENAMES,
+  discoverMiseEnvValues,
   discoverUnitMiseDirs,
+  envConfigFilename,
   GITIGNORED_MISE_CONFIG_FILENAMES,
   parseToolsTable,
   REQUIRED_ROOT_TOOLS,
+  WORKFLOWS_DIR,
 } from '../check-mise-tool-overrides.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -408,6 +411,408 @@ describe('against the live repo', () => {
         expect(ALLOWED_UNIT_OVERRIDE_TOOLS, `${dir} overrides "${key}"`).toContain(key);
       }
     }
+  });
+
+  it("discovers MISE_ENV=ci — the value this repo's quality workflows actually set", () => {
+    // Not a hardcoded expectation of what the value happens to be today: this
+    // asserts the live discovery mechanism against the real workflows, so a
+    // workflow edit that drops MISE_ENV (or changes its value) fails this
+    // test rather than silently reopening the POPS-1794 gap.
+    expect(discoverMiseEnvValues(repoRoot)).toEqual({ values: ['ci'], violations: [] });
+  });
+});
+
+describe('envConfigFilename', () => {
+  it.each(COMMITTED_MISE_CONFIG_FILENAMES)('inserts the env before the extension of %s', (name) => {
+    expect(envConfigFilename(name, 'ci')).toBe(name.replace(/\.toml$/u, '.ci.toml'));
+  });
+
+  it("produces the filename this repo's root actually uses for MISE_ENV=ci", () => {
+    expect(envConfigFilename('mise.toml', 'ci')).toBe('mise.ci.toml');
+  });
+});
+
+describe('discoverMiseEnvValues — fixture workflows (POPS-1794)', () => {
+  it('reads a workflow-level env: block', () => {
+    const root = mkdtempSync(join(tmpdir(), 'mise-env-values-workflow-'));
+    try {
+      mkdirSync(join(root, '.github', 'workflows'), { recursive: true });
+      writeFileSync(
+        join(root, '.github', 'workflows', 'quality.yml'),
+        'name: quality\nenv:\n  MISE_ENV: ci\njobs:\n  build:\n    runs-on: ubuntu-latest\n'
+      );
+      expect(discoverMiseEnvValues(root)).toEqual({ values: ['ci'], violations: [] });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('reads a workflow filed with the .yaml extension, not only .yml', () => {
+    // GitHub Actions accepts either extension for a workflow file. Every
+    // workflow in this repo today happens to be .yml, but a guard that only
+    // globbed that spelling would silently stop seeing MISE_ENV the day a
+    // new workflow used .yaml instead — exactly the "shape it does not
+    // model is a pass" failure ADR-045 exists to rule out.
+    const root = mkdtempSync(join(tmpdir(), 'mise-env-values-yaml-ext-'));
+    try {
+      mkdirSync(join(root, '.github', 'workflows'), { recursive: true });
+      writeFileSync(
+        join(root, '.github', 'workflows', 'quality.yaml'),
+        'name: quality\nenv:\n  MISE_ENV: ci\njobs:\n  build:\n    runs-on: ubuntu-latest\n'
+      );
+      expect(discoverMiseEnvValues(root)).toEqual({ values: ['ci'], violations: [] });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('reads a job-level env: block, not only workflow-level', () => {
+    const root = mkdtempSync(join(tmpdir(), 'mise-env-values-job-'));
+    try {
+      mkdirSync(join(root, '.github', 'workflows'), { recursive: true });
+      writeFileSync(
+        join(root, '.github', 'workflows', 'quality.yml'),
+        [
+          'name: quality',
+          'jobs:',
+          '  build:',
+          '    runs-on: ubuntu-latest',
+          '    env:',
+          '      MISE_ENV: staging',
+        ].join('\n')
+      );
+      expect(discoverMiseEnvValues(root).values).toEqual(['staging']);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('reads a step-level env: block, not only workflow- or job-level', () => {
+    const root = mkdtempSync(join(tmpdir(), 'mise-env-values-step-'));
+    try {
+      mkdirSync(join(root, '.github', 'workflows'), { recursive: true });
+      writeFileSync(
+        join(root, '.github', 'workflows', 'quality.yml'),
+        [
+          'name: quality',
+          'jobs:',
+          '  build:',
+          '    runs-on: ubuntu-latest',
+          '    steps:',
+          '      - run: mise run test',
+          '        env:',
+          '          MISE_ENV: preview',
+        ].join('\n')
+      );
+      expect(discoverMiseEnvValues(root).values).toEqual(['preview']);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('dedupes the same value declared across multiple workflow files', () => {
+    const root = mkdtempSync(join(tmpdir(), 'mise-env-values-dedupe-'));
+    try {
+      mkdirSync(join(root, '.github', 'workflows'), { recursive: true });
+      writeFileSync(
+        join(root, '.github', 'workflows', 'a.yml'),
+        'name: a\nenv:\n  MISE_ENV: ci\njobs:\n  x:\n    runs-on: ubuntu-latest\n'
+      );
+      writeFileSync(
+        join(root, '.github', 'workflows', 'b.yml'),
+        'name: b\nenv:\n  MISE_ENV: ci\njobs:\n  x:\n    runs-on: ubuntu-latest\n'
+      );
+      expect(discoverMiseEnvValues(root).values).toEqual(['ci']);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('collects every distinct value across workflows, sorted', () => {
+    const root = mkdtempSync(join(tmpdir(), 'mise-env-values-multi-'));
+    try {
+      mkdirSync(join(root, '.github', 'workflows'), { recursive: true });
+      writeFileSync(
+        join(root, '.github', 'workflows', 'a.yml'),
+        'name: a\nenv:\n  MISE_ENV: staging\njobs:\n  x:\n    runs-on: ubuntu-latest\n'
+      );
+      writeFileSync(
+        join(root, '.github', 'workflows', 'b.yml'),
+        'name: b\nenv:\n  MISE_ENV: ci\njobs:\n  x:\n    runs-on: ubuntu-latest\n'
+      );
+      expect(discoverMiseEnvValues(root).values).toEqual(['ci', 'staging']);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('returns no values, not a crash, when there is no workflows directory at all', () => {
+    const root = mkdtempSync(join(tmpdir(), 'mise-env-values-none-'));
+    try {
+      expect(discoverMiseEnvValues(root)).toEqual({ values: [], violations: [] });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('returns no values when the workflows directory has no MISE_ENV anywhere', () => {
+    const root = mkdtempSync(join(tmpdir(), 'mise-env-values-unset-'));
+    try {
+      mkdirSync(join(root, '.github', 'workflows'), { recursive: true });
+      writeFileSync(
+        join(root, '.github', 'workflows', 'quality.yml'),
+        'name: quality\njobs:\n  build:\n    runs-on: ubuntu-latest\n'
+      );
+      expect(discoverMiseEnvValues(root)).toEqual({ values: [], violations: [] });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('reports an unparseable workflow as a violation rather than silently skipping it (ADR-045)', () => {
+    const root = mkdtempSync(join(tmpdir(), 'mise-env-values-badyaml-'));
+    try {
+      mkdirSync(join(root, '.github', 'workflows'), { recursive: true });
+      writeFileSync(join(root, '.github', 'workflows', 'broken.yml'), 'name: broken\non: [push\n');
+      const { values, violations } = discoverMiseEnvValues(root);
+      expect(values).toEqual([]);
+      expect(violations.some((v) => v.includes('could not be parsed'))).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('ignores non-workflow files sitting in the workflows directory', () => {
+    const root = mkdtempSync(join(tmpdir(), 'mise-env-values-nonyml-'));
+    try {
+      mkdirSync(join(root, '.github', 'workflows'), { recursive: true });
+      writeFileSync(join(root, '.github', 'workflows', 'README.md'), '# not a workflow\n');
+      expect(discoverMiseEnvValues(root)).toEqual({ values: [], violations: [] });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('discoverUnitMiseDirs / checkOverrides — env-suffixed unit configs (POPS-1794)', () => {
+  function writeWorkflowSettingMiseEnv(root: string, env: string) {
+    mkdirSync(join(root, '.github', 'workflows'), { recursive: true });
+    writeFileSync(
+      join(root, '.github', 'workflows', 'quality.yml'),
+      `name: quality\nenv:\n  MISE_ENV: ${env}\njobs:\n  build:\n    runs-on: ubuntu-latest\n`
+    );
+  }
+
+  it('finds a unit config filed as the env-suffixed spelling of mise.toml', () => {
+    const root = mkdtempSync(join(tmpdir(), 'mise-env-unit-mise-toml-'));
+    try {
+      writeWorkflowSettingMiseEnv(root, 'ci');
+      mkdirSync(join(root, 'pillars', 'finance'), { recursive: true });
+      writeFileSync(join(root, 'pillars', 'finance', 'mise.ci.toml'), '[tools]\nnode = "22"\n');
+
+      expect(discoverUnitMiseDirs(root)).toContainEqual({
+        dir: 'pillars/finance',
+        file: 'pillars/finance/mise.ci.toml',
+      });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('does not check an env-suffixed spelling for a MISE_ENV value no workflow sets', () => {
+    const root = mkdtempSync(join(tmpdir(), 'mise-env-unit-unset-'));
+    try {
+      writeWorkflowSettingMiseEnv(root, 'ci');
+      mkdirSync(join(root, 'pillars', 'finance'), { recursive: true });
+      // A staging-suffixed file exists on disk, but no workflow activates MISE_ENV=staging.
+      writeFileSync(join(root, 'pillars', 'finance', 'mise.staging.toml'), '[tools]\npnpm = "9"\n');
+
+      const { violations, unitOverrides } = checkOverrides(root);
+      expect(unitOverrides.some((u) => u.file.includes('mise.staging.toml'))).toBe(false);
+      expect(violations.some((v) => v.includes('mise.staging.toml'))).toBe(false);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('flags a pnpm override hidden in a per-unit mise.ci.toml — the exact POPS-1794 scenario', () => {
+    const root = mkdtempSync(join(tmpdir(), 'mise-env-unit-pnpm-'));
+    try {
+      writeFileSync(
+        join(root, 'mise.toml'),
+        '[tools]\nnode = "24.5.0"\npnpm = "10.32.1"\nrust = "stable"\n'
+      );
+      writeWorkflowSettingMiseEnv(root, 'ci');
+      mkdirSync(join(root, 'pillars', 'rogue'), { recursive: true });
+      writeFileSync(join(root, 'pillars', 'rogue', 'mise.ci.toml'), '[tools]\npnpm = "9.0.0"\n');
+
+      const { violations } = checkOverrides(root);
+      expect(
+        violations.some((v) => v.includes('pillars/rogue/mise.ci.toml') && v.includes('pnpm')),
+        `expected a violation naming pillars/rogue/mise.ci.toml; got: ${JSON.stringify(violations)}`
+      ).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('flags an env-suffixed override filed under a non-default filename spelling too', () => {
+    const root = mkdtempSync(join(tmpdir(), 'mise-env-unit-nondefault-'));
+    try {
+      writeFileSync(
+        join(root, 'mise.toml'),
+        '[tools]\nnode = "24.5.0"\npnpm = "10.32.1"\nrust = "stable"\n'
+      );
+      writeWorkflowSettingMiseEnv(root, 'ci');
+      const unitDir = join(root, 'pillars', 'rogue');
+      mkdirSync(join(unitDir, '.config', 'mise'), { recursive: true });
+      writeFileSync(
+        join(unitDir, '.config', 'mise', 'config.ci.toml'),
+        '[tools]\npnpm = "9.0.0"\n'
+      );
+
+      const { violations } = checkOverrides(root);
+      expect(
+        violations.some(
+          (v) => v.includes('pillars/rogue/.config/mise/config.ci.toml') && v.includes('pnpm')
+        )
+      ).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('reports an env-suffixed unit config that fails to parse, rather than skipping it', () => {
+    const root = mkdtempSync(join(tmpdir(), 'mise-env-unit-badtoml-'));
+    try {
+      writeFileSync(
+        join(root, 'mise.toml'),
+        '[tools]\nnode = "24.5.0"\npnpm = "10.32.1"\nrust = "stable"\n'
+      );
+      writeWorkflowSettingMiseEnv(root, 'ci');
+      mkdirSync(join(root, 'pillars', 'finance'), { recursive: true });
+      writeFileSync(join(root, 'pillars', 'finance', 'mise.ci.toml'), '[tools\nnode = "22"\n');
+
+      const { violations } = checkOverrides(root);
+      expect(
+        violations.some(
+          (v) => v.includes('pillars/finance/mise.ci.toml') && v.includes('could not be parsed')
+        )
+      ).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('discoverUnitMiseDirs / checkOverrides — .config/mise/conf.d fragments (POPS-1795)', () => {
+  it('finds a single conf.d fragment', () => {
+    const root = mkdtempSync(join(tmpdir(), 'mise-confd-single-'));
+    try {
+      const unitDir = join(root, 'pillars', 'finance');
+      mkdirSync(join(unitDir, '.config', 'mise', 'conf.d'), { recursive: true });
+      writeFileSync(
+        join(unitDir, '.config', 'mise', 'conf.d', '10-node.toml'),
+        '[tools]\nnode = "22"\n'
+      );
+
+      expect(discoverUnitMiseDirs(root)).toContainEqual({
+        dir: 'pillars/finance',
+        file: 'pillars/finance/.config/mise/conf.d/10-node.toml',
+      });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('reads every fragment in the directory, not only the first', () => {
+    const root = mkdtempSync(join(tmpdir(), 'mise-confd-multi-'));
+    try {
+      const unitDir = join(root, 'pillars', 'finance');
+      mkdirSync(join(unitDir, '.config', 'mise', 'conf.d'), { recursive: true });
+      writeFileSync(
+        join(unitDir, '.config', 'mise', 'conf.d', '10-node.toml'),
+        '[tools]\nnode = "22"\n'
+      );
+      writeFileSync(
+        join(unitDir, '.config', 'mise', 'conf.d', '20-rust.toml'),
+        '[tools]\nrust = "1.80.0"\n'
+      );
+
+      const files = discoverUnitMiseDirs(root).map((f) => f.file);
+      expect(files).toContain('pillars/finance/.config/mise/conf.d/10-node.toml');
+      expect(files).toContain('pillars/finance/.config/mise/conf.d/20-rust.toml');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('ignores a non-.toml file sitting in conf.d', () => {
+    const root = mkdtempSync(join(tmpdir(), 'mise-confd-nontoml-'));
+    try {
+      const unitDir = join(root, 'pillars', 'finance');
+      mkdirSync(join(unitDir, '.config', 'mise', 'conf.d'), { recursive: true });
+      writeFileSync(join(unitDir, '.config', 'mise', 'conf.d', 'README.md'), '# not toml\n');
+
+      expect(discoverUnitMiseDirs(root).some((f) => f.file.includes('conf.d'))).toBe(false);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('flags a pnpm override hidden in a conf.d fragment — the exact POPS-1795 scenario', () => {
+    const root = mkdtempSync(join(tmpdir(), 'mise-confd-pnpm-'));
+    try {
+      writeFileSync(
+        join(root, 'mise.toml'),
+        '[tools]\nnode = "24.5.0"\npnpm = "10.32.1"\nrust = "stable"\n'
+      );
+      const unitDir = join(root, 'pillars', 'rogue');
+      mkdirSync(join(unitDir, '.config', 'mise', 'conf.d'), { recursive: true });
+      writeFileSync(
+        join(unitDir, '.config', 'mise', 'conf.d', '10-pnpm.toml'),
+        '[tools]\npnpm = "9.0.0"\n'
+      );
+
+      const { violations } = checkOverrides(root);
+      expect(
+        violations.some(
+          (v) => v.includes('pillars/rogue/.config/mise/conf.d/10-pnpm.toml') && v.includes('pnpm')
+        ),
+        `expected a violation naming the conf.d fragment; got: ${JSON.stringify(violations)}`
+      ).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('does not confuse a pillar app conf.d fragment for its parent pillar', () => {
+    const root = mkdtempSync(join(tmpdir(), 'mise-confd-app-'));
+    try {
+      const appDir = join(root, 'pillars', 'finance', 'app');
+      mkdirSync(join(appDir, '.config', 'mise', 'conf.d'), { recursive: true });
+      writeFileSync(
+        join(appDir, '.config', 'mise', 'conf.d', '10-node.toml'),
+        '[tools]\nnode = "22"\n'
+      );
+
+      expect(discoverUnitMiseDirs(root)).toContainEqual({
+        dir: 'pillars/finance/app',
+        file: 'pillars/finance/app/.config/mise/conf.d/10-node.toml',
+      });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('is absent from this repo today, as documented in the guard header', () => {
+    expect(discoverUnitMiseDirs(repoRoot).some((f) => f.file.includes('conf.d'))).toBe(false);
+  });
+});
+
+describe('WORKFLOWS_DIR', () => {
+  it('points at the real workflows directory', () => {
+    expect(existsSync(join(repoRoot, WORKFLOWS_DIR))).toBe(true);
   });
 });
 
