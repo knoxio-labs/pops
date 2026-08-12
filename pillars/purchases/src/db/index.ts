@@ -27,6 +27,7 @@ export {
   type ListPurchasesFilter,
   type PurchaseDetail,
   type PurchaseItemDetail,
+  type PurchaseScopeFilter,
   type TaggedItem,
 } from './services/purchase-reads.js';
 
@@ -34,6 +35,14 @@ export {
   confirmItemClassification,
   type ConfirmItemInput,
 } from './services/purchase-item-mutations.js';
+
+export {
+  rollUpMerchantSpend,
+  type CurrencySpend,
+  type MerchantIdentity,
+  type MerchantSpend,
+  type MerchantSpendRollup,
+} from './services/merchant-spend.js';
 
 export { type PurchaseChargeDetail } from './services/purchase-read-charges.js';
 

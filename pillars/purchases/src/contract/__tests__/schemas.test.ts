@@ -11,6 +11,7 @@ import {
   ITEM_KINDS,
   isResidualBearing,
   LINK_TYPES,
+  MERCHANT_RESOLUTIONS,
   PURCHASE_STATUSES,
   RESIDUAL_BEARING_ROLES,
   SETTLEMENT_ROLES,
@@ -18,6 +19,7 @@ import {
 } from '../constants.js';
 import { PurchasesErrorSchema } from '../errors.js';
 import { purchasesManifest } from '../manifest.js';
+import { MerchantIdentitySchema } from '../rest-analytics.js';
 import {
   CentsSchema,
   CurrencySchema,
@@ -179,8 +181,53 @@ describe('closed vocabularies', () => {
     ['ITEM_KINDS', ITEM_KINDS],
     ['LINK_TYPES', LINK_TYPES],
     ['SETTLEMENT_ROLES', SETTLEMENT_ROLES],
+    ['MERCHANT_RESOLUTIONS', MERCHANT_RESOLUTIONS],
   ])('%s has no duplicates', (_label, values) => {
     expect(new Set(values).size).toBe(values.length);
+  });
+});
+
+describe('MerchantIdentitySchema', () => {
+  it('offers exactly the resolutions the vocabulary names', () => {
+    // The union's literals are the only place the vocabulary is restated.
+    // A fourth resolution added to the constant without a variant here would
+    // otherwise be a value the service can produce and the contract rejects,
+    // discovered as a 500 rather than as a failing test.
+    const covered = MerchantIdentitySchema.options.map((option) => option.shape.resolution.value);
+
+    expect(covered.toSorted()).toEqual([...MERCHANT_RESOLUTIONS].toSorted());
+  });
+
+  it('accepts each variant in the shape the fold produces', () => {
+    const variants = [
+      { resolution: 'entity', entityId: 'ent-1', name: 'Bunnings Warehouse' },
+      // An order can carry the operative id and no label at all.
+      { resolution: 'entity', entityId: 'ent-1', name: null },
+      { resolution: 'name', entityId: null, name: 'Amazon' },
+      { resolution: 'unattributed', entityId: null, name: null },
+    ];
+
+    for (const variant of variants) {
+      expect(MerchantIdentitySchema.safeParse(variant).success, JSON.stringify(variant)).toBe(true);
+    }
+  });
+
+  it.each([
+    // The whole point of the discriminator: an `entity` group whose id is
+    // absent is claiming a resolved identity it does not have.
+    ['entity without its id', { resolution: 'entity', entityId: null, name: 'Amazon' }],
+    // A `name` group is keyed on the label, so a null one has no key.
+    ['name without its label', { resolution: 'name', entityId: null, name: null }],
+    // And a name group carrying an id would have been an entity group.
+    ['name carrying an entity id', { resolution: 'name', entityId: 'ent-1', name: 'Amazon' }],
+    [
+      'unattributed carrying a label',
+      { resolution: 'unattributed', entityId: null, name: 'Amazon' },
+    ],
+    ['unattributed carrying an id', { resolution: 'unattributed', entityId: 'ent-1', name: null }],
+    ['an unknown resolution', { resolution: 'vibes', entityId: null, name: null }],
+  ])('rejects %s', (_label, value) => {
+    expect(MerchantIdentitySchema.safeParse(value).success).toBe(false);
   });
 });
 

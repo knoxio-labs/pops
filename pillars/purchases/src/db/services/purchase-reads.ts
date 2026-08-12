@@ -23,6 +23,8 @@ import { groupBy } from './group-by.js';
 import { nowIso, type PurchasesDb } from './internal.js';
 import { selectChargeDetails, type PurchaseChargeDetail } from './purchase-read-charges.js';
 
+import type { SQL } from 'drizzle-orm';
+
 import type { PurchaseStatus } from '../../contract/constants.js';
 import type {
   PurchaseDocumentRow,
@@ -32,13 +34,23 @@ import type {
   PurchaseShipmentRow,
 } from '../schema.js';
 
-export interface ListPurchasesFilter {
+/**
+ * Which orders a read is about, with no say in how many come back.
+ *
+ * Separate from {@link ListPurchasesFilter} because an aggregate has a scope
+ * but no page: a roll-up computed over the first 500 of 748 orders is not a
+ * smaller answer, it is a wrong one.
+ */
+export interface PurchaseScopeFilter {
   readonly sources?: readonly string[];
   readonly statuses?: readonly PurchaseStatus[];
   /** Inclusive lower bound on `orderedAt` (ISO-8601). */
   readonly from?: string;
   /** Inclusive upper bound on `orderedAt` (ISO-8601). */
   readonly to?: string;
+}
+
+export interface ListPurchasesFilter extends PurchaseScopeFilter {
   readonly limit?: number;
   readonly offset?: number;
 }
@@ -89,11 +101,16 @@ export interface PurchaseDetail {
   readonly accounting: PurchaseAccounting;
 }
 
-export function listPurchases(
-  db: PurchasesDb,
-  filter: ListPurchasesFilter = {}
-): readonly PurchaseRow[] {
-  const conditions = [
+/**
+ * The `purchases` predicates a filter denotes, as a list `and()` can take.
+ *
+ * Shared rather than rewritten per caller so an aggregate covers exactly the
+ * rows the index covers for the same filter. Two hand-written copies of
+ * "which orders are in scope" is how a merchant headline comes to disagree
+ * with the list it is a headline for.
+ */
+export function purchaseFilterConditions(filter: PurchaseScopeFilter): readonly SQL[] {
+  return [
     ...(filter.sources && filter.sources.length > 0
       ? [inArray(purchases.source, [...filter.sources])]
       : []),
@@ -103,6 +120,13 @@ export function listPurchases(
     ...(filter.from === undefined ? [] : [gte(purchases.orderedAt, filter.from)]),
     ...(filter.to === undefined ? [] : [lte(purchases.orderedAt, filter.to)]),
   ];
+}
+
+export function listPurchases(
+  db: PurchasesDb,
+  filter: ListPurchasesFilter = {}
+): readonly PurchaseRow[] {
+  const conditions = purchaseFilterConditions(filter);
 
   const base = db.select().from(purchases);
   const filtered = conditions.length > 0 ? base.where(and(...conditions)) : base;

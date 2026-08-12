@@ -21,6 +21,7 @@
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { MerchantSpendRollupSchema } from '../../contract/rest-analytics.js';
 import { QueueEntrySchema, SweepOutcomeSchema } from '../../contract/rest-reconcile.js';
 import {
   PurchaseDetailSchema,
@@ -307,6 +308,51 @@ describe('reconcile responses', () => {
   });
 });
 
+describe('GET /analytics/merchant-spend response', () => {
+  it('conforms, including the unattributed group and a second currency', async () => {
+    await request(app).post('/purchases').send(RICH_ORDER);
+    await request(app)
+      .post('/purchases')
+      .send({ ...BARE_ORDER, checksum: 'anon', sourceOrderId: 'anon' });
+    await request(app)
+      .post('/purchases')
+      .send({
+        ...BARE_ORDER,
+        checksum: 'usd',
+        sourceOrderId: 'usd',
+        currency: 'USD',
+        merchantEntityName: 'Amazon US',
+      });
+
+    const res = await request(app).get('/analytics/merchant-spend');
+    expect(res.status).toBe(200);
+    expectConforms(MerchantSpendRollupSchema, res.body, 'GET /analytics/merchant-spend');
+
+    // The awkward shapes this route has of its own: an order carrying no
+    // merchant at all, and two currencies that must not be added together.
+    //
+    // All three resolutions at once, because `merchant` is a discriminated
+    // union: conformance over one variant says nothing about the other two,
+    // and the fixtures above are chosen to produce one of each.
+    const resolutions = (res.body.merchants as { merchant: { resolution: string } }[]).map(
+      (m) => m.merchant.resolution
+    );
+    expect([...new Set(resolutions)].toSorted()).toEqual(['entity', 'name', 'unattributed']);
+    expect((res.body.totals as { currency: string }[]).map((t) => t.currency)).toEqual([
+      'AUD',
+      'USD',
+    ]);
+  });
+
+  it('conforms when empty', async () => {
+    const res = await request(app).get('/analytics/merchant-spend');
+    // Asserted before conformance so a regression to an error status reads as
+    // one, rather than as an unrelated schema mismatch on the error body.
+    expect(res.status).toBe(200);
+    expectConforms(MerchantSpendRollupSchema, res.body, 'GET /analytics/merchant-spend (empty)');
+  });
+});
+
 describe('the accounting identity holds on the wire', () => {
   it('total reconstructs from the three buckets, with refunds outside it', async () => {
     const res = await request(app).post('/purchases').send(RICH_ORDER);
@@ -341,6 +387,7 @@ describe('the OpenAPI projection describes what is actually served', () => {
       'GET /sources/{id}',
       'PUT /sources/{id}',
       'DELETE /sources/{id}',
+      'GET /analytics/merchant-spend',
     ]) {
       expect(declared, route).toContain(route);
     }
