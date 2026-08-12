@@ -81,14 +81,15 @@ Runs immediately after `actions/checkout`. **No third-party import, at any depth
 
 ### Tier B — installs the workspace
 
-| Guard                                            | Job                                 | Reads                                         | Parser                 |
-| ------------------------------------------------ | ----------------------------------- | --------------------------------------------- | ---------------------- |
-| `scripts/ci/check-mise-tool-overrides.mjs`       | `agent-review.yml` → `agent-review` | `mise.toml` `[tools]`                         | `smol-toml`            |
-| `scripts/ci/check-node-pin.mjs`                  | `agent-review.yml` → `agent-review` | `mise*.toml`, workflow YAML, JSON, Dockerfile | `smol-toml`, `js-yaml` |
-| `scripts/ci/check-homelab-service-isolation.mjs` | `agent-review.yml` → `agent-review` | Compose + Litestream YAML                     | `js-yaml`              |
-| `scripts/extractability/check-cargo-deps.mjs`    | `rust-quality.yml` → `quality`      | Workspace + member `Cargo.toml`               | `smol-toml`            |
-| `scripts/ci/smoke-image.mjs`                     | `docker-build.yml` → `docker-build` | `infra/docker-compose.yml`                    | `js-yaml`, `zod`       |
-| `scripts/ci/check-ci-gate-wiring.mjs`            | `quality.yml` → `Scripts tests`     | Every workflow's YAML                         | `js-yaml`              |
+| Guard                                            | Job                                                       | Reads                                          | Parser                 |
+| ------------------------------------------------ | --------------------------------------------------------- | ---------------------------------------------- | ---------------------- |
+| `scripts/ci/check-mise-tool-overrides.mjs`       | `agent-review.yml` → `agent-review`                       | `mise.toml` `[tools]`                          | `smol-toml`            |
+| `scripts/ci/check-node-pin.mjs`                  | `agent-review.yml` → `agent-review`                       | `mise*.toml`, workflow YAML, JSON, Dockerfile  | `smol-toml`, `js-yaml` |
+| `scripts/ci/check-homelab-service-isolation.mjs` | `agent-review.yml` → `agent-review`                       | Compose + Litestream YAML                      | `js-yaml`              |
+| `scripts/extractability/check-cargo-deps.mjs`    | `rust-quality.yml` → `quality`                            | Workspace + member `Cargo.toml`                | `smol-toml`            |
+| `scripts/ci/smoke-image.mjs`                     | `docker-build.yml` → `docker-build`                       | `infra/docker-compose.yml`                     | `js-yaml`, `zod`       |
+| `scripts/ci/check-ci-gate-wiring.mjs`            | `quality.yml` → `Scripts tests`                           | Every workflow's YAML                          | `js-yaml`              |
+| `scripts/ci/merge-group-scope.mjs`               | `ios-quality.yml` → `scope`, `docker-build.yml` → `scope` | The calling workflow's `on.pull_request.paths` | `js-yaml`              |
 
 `check-ci-gate-wiring.mjs` has no workflow step of its own — it runs through its Vitest suite, in a job that already installs. It was already effectively Tier B and needed no workflow change.
 

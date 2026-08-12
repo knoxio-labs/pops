@@ -23,11 +23,20 @@ on:
       - ".github/workflows/docker-build.yml"
       - "scripts/ci/smoke-image.mjs"
   # A merge group cannot carry a `paths:` filter, and `dorny/paths-filter` has
-  # no diff base on this event either — so the queue lane builds and smokes
-  # every image, the same way a push to `main` does. The conditions below key
-  # on "not a pull request" rather than on `push` for that reason: the
-  # `changes` job does not run on a merge group, so a `push`-only test would
-  # skip every step and report green over sixteen images nobody built.
+  # no diff base on this event either. The `scope` job below is that filter:
+  # it reads the `pull_request.paths` list above off disk and answers it
+  # against the merge group's own diff, so the queue lane is scoped by the
+  # same declaration as the pull-request lane instead of building and smoking
+  # sixteen images on every docs-only merge. The implementation is shared with
+  # `ios-quality.yml` — `scripts/ci/merge-group-scope.mjs` — precisely so this
+  # is not a second hand-copied glob list to keep in step with the one above.
+  #
+  # The conditions below still key on "not a pull request" rather than on
+  # `push`: the `changes` job does not run on a merge group, so a `push`-only
+  # test would skip every step and report green over sixteen images nobody
+  # built. `scope` narrows which merge groups reach those steps; it does not
+  # change what a merge group that DOES reach them runs, which is the full
+  # push-to-main sweep.
   merge_group:
 
 # Workflow-level filter keeps the Docker validation off docs/code-only
@@ -84,11 +93,53 @@ jobs:
               - 'infra/docker-compose*.yml'
               - '.github/workflows/docker-build.yml'
 
+  # The merge-queue counterpart of `changes` above: `dorny/paths-filter` has no
+  # diff base on a merge group, so this job supplies one. Skipped on every other
+  # event, hence the status check functions in the two conditions below it.
+  #
+  # TIER B — it parses this workflow's YAML with a real parser, so it installs.
+  # See docs/architecture/adr-045-guards-must-prove-they-report.md.
+  scope:
+    name: Scope the merge-group lane
+    if: github.event_name == 'merge_group'
+    runs-on: ubuntu-latest
+    outputs:
+      selected: ${{ steps.scope.outputs.selected }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # the merge group's base commit has to be on disk
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Self-test first, for the reason spelled out in ios-quality.yml's copy of
+      # this job: a scoping gate that has quietly stopped selecting reports
+      # `success` over sixteen images nobody built.
+      - name: Scope this workflow against the merge group's diff
+        id: scope
+        env:
+          BASE_SHA: ${{ github.event.merge_group.base_sha }}
+          HEAD_SHA: ${{ github.event.merge_group.head_sha }}
+          HEAD_REF: ${{ github.event.merge_group.head_ref }}
+        run: |
+          set -euo pipefail
+          node scripts/ci/merge-group-scope.mjs --self-test
+          node scripts/ci/merge-group-scope.mjs \
+            --workflow .github/workflows/docker-build.yml \
+            --base "$BASE_SHA" --head "$HEAD_SHA" --head-ref "$HEAD_REF"
+
   discover:
     name: Discover Dockerfiles
     runs-on: ubuntu-latest
-    needs: [changes]
-    if: always()
+    needs: [changes, scope]
+    # `!cancelled()` rather than a bare expression: both `changes` and `scope`
+    # are event-conditional, and a job whose transitive `needs` graph holds a
+    # skipped job takes the default `success()` and is skipped with it. A `scope`
+    # job that FAILED leaves its output empty, so this stays skipped there too.
+    if: ${{ !cancelled() && (github.event_name != 'merge_group' || needs.scope.outputs.selected == 'true') }}
     outputs:
       dockerfiles: ${{ steps.list.outputs.dockerfiles }}
     steps:
@@ -160,8 +211,8 @@ jobs:
   compose-validate:
     name: Validate docker-compose
     runs-on: ubuntu-latest
-    needs: [changes]
-    if: always()
+    needs: [changes, scope]
+    if: ${{ !cancelled() && (github.event_name != 'merge_group' || needs.scope.outputs.selected == 'true') }}
     steps:
       - name: Skip — no compose changes
         if: github.event_name == 'pull_request' && needs.changes.outputs.compose != 'true'

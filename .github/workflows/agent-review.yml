@@ -92,6 +92,12 @@ jobs:
           node scripts/ci/check-homelab-service-isolation.mjs --self-test
           node scripts/ci/check-docs-model.mjs --self-test
           node scripts/ci/check-tests-typechecked.mjs --self-test
+          # Not a guard over the source tree like the eight above — it is the
+          # gate that decides whether the merge queue's macOS compile happens.
+          # It self-tests in its own job too, immediately before it answers;
+          # this preflight is what makes a broken scoper fail on the PR rather
+          # than first inside a queue entry.
+          node scripts/ci/merge-group-scope.mjs --self-test
       - name: Isolation litmus — no cross-contract reach-behind
         # `github.base_ref` is a pull-request-only field. On a merge group the
         # equivalent is `merge_group.base_ref`, which is a FULL ref

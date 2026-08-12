@@ -27,9 +27,22 @@ name: iOS Quality
 # overridden from the command line. That constraint is why the app targets iOS
 # 26 — see the `deploymentTarget` note in `clients/ios/project.yml`.
 #
-# `pillars/bfm/openapi/**` is in the path filter deliberately. The BFM contract
-# is the input the Swift client is generated from, so a contract change has to
-# re-run this job or the generated client rots without a single red check.
+# `pillars/bfm/**` is in the path filter deliberately, and the whole pillar
+# rather than just its `openapi/` directory. The contract is the input the Swift
+# client is generated from, so a contract change has to re-run this job or the
+# generated client rots without a single red check — and the UI flow at the
+# bottom boots that pillar's real server, so its source is an input to this job
+# too. `scripts/ios-e2e/**` is in for the same reason: it is the harness that
+# boots it.
+#
+# The filter is not yet the job's complete input set. `pnpm-lock.yaml` and the
+# BFM's transitive `libs/*` dependencies are also compiled into the process the
+# UI flow talks to, and neither is listed. The merge-queue lane used to cover
+# for that by accident — it ran this job unconditionally — and since it is
+# scoped by this same filter it no longer does. Widening costs a macOS job on
+# every lockfile bump and on a large share of all PRs for the libs, so it is a
+# decision of its own rather than a line to add here quietly; it is tracked, not
+# accepted silently.
 #
 # THIS JOB ALSO RUNS THE ONLY TEST IN THE REPO THAT TOUCHES AN iOS SCREEN. The
 # last steps boot a real `@pops/bfm` and drive the built app against it with
@@ -64,22 +77,36 @@ on:
     branches: [main]
     paths:
       - "clients/ios/**"
-      - "pillars/bfm/openapi/**"
+      - "pillars/bfm/**"
+      - "scripts/ios-e2e/**"
       - ".github/workflows/ios-quality.yml"
   pull_request:
     paths:
       - "clients/ios/**"
-      - "pillars/bfm/openapi/**"
+      - "pillars/bfm/**"
+      - "scripts/ios-e2e/**"
       - ".github/workflows/ios-quality.yml"
-  # THE EXPENSIVE ONE, AND DELIBERATELY UNCONDITIONAL. A merge group cannot be
-  # path-filtered — `paths:` is rejected outright on this event — so every queue
-  # entry pays a full macOS compile, docs-only changes included. That is the
-  # price of the queue and it was priced in: the break that motivated it was a
-  # Swift signature change and a Swift call site landing six minutes apart, each
-  # green against a base that did not contain the other, and this job is the
-  # only thing in the repo that can see it. Narrowing the queue lane means
-  # hand-rolling this filter against the merge group's diff, and a filter that
-  # is wrong reports green having compiled nothing.
+  # THE EXPENSIVE ONE. `paths:` is rejected outright on this event, so the
+  # trigger below is unconditional and the SCOPING happens in a job instead —
+  # the `scope` job, which reads the `pull_request.paths` filter above off disk
+  # and answers it against the merge group's own diff. One implementation
+  # (`scripts/ci/merge-group-scope.mjs`), shared with `docker-build.yml`, rather
+  # than a glob list hand-copied per workflow: widening the filter above widens
+  # the queue lane in the same edit, and neither can drift from the other.
+  #
+  # What the queue is for is unchanged. The break that motivated it was a Swift
+  # signature change and a Swift call site landing six minutes apart, each green
+  # against a base that did not contain the other — and both of those touch
+  # `clients/ios/**`, so both still select this lane, now against a base that
+  # contains whatever merged ahead of them. What stops running is the compile on
+  # a merge group that touches no iOS path at all, which was 33 of the last 39
+  # queue entries at ~20 minutes each.
+  #
+  # The scoping job never answers "not relevant" on an error — an unresolvable
+  # base, a non-ancestor base, an empty diff or an unreadable filter all exit
+  # non-zero, which skips this job via the condition below AND fails the
+  # workflow. A red queue entry costs one re-queue; a wrong skip merges a commit
+  # nothing compiled, which is the failure the queue exists to prevent.
   merge_group:
 
 # cancel-in-progress is deliberately OFF. Cancelling the still-running run for
@@ -101,8 +128,63 @@ permissions:
   contents: read
 
 jobs:
+  # The cheap half of the merge-queue lane: one ubuntu runner deciding whether
+  # the macOS one is needed. Skipped outside a merge group, where the event's
+  # own `paths:` filter has already decided — which is why the job below carries
+  # a status check function in its condition (a job whose transitive `needs`
+  # graph contains a skipped job takes the default `success()` and is skipped
+  # too; `scripts/ci/__tests__/job-skip-inheritance.test.ts` is the story).
+  #
+  # TIER B: it parses this workflow's YAML with a real parser, so it installs
+  # the workspace. See the tier amendment in
+  # docs/architecture/adr-045-guards-must-prove-they-report.md.
+  scope:
+    name: Scope the merge-group lane
+    if: github.event_name == 'merge_group'
+    runs-on: ubuntu-latest
+    outputs:
+      selected: ${{ steps.scope.outputs.selected }}
+    steps:
+      # `fetch-depth: 0` so the merge group's base commit is on disk. The helper
+      # will fetch a missing one, but a fetch that fails is a red gate, and the
+      # base is cheap to have already.
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      # The self-test runs HERE, immediately before the answer it qualifies,
+      # rather than only in `agent-review.yml`'s preflight. This is the one gate
+      # whose wrong answer is invisible — a skip that should have been a build
+      # concludes `success` — so the proof that it still selects and still
+      # deselects is paid for on every queue entry, at about two seconds.
+      - name: Scope this workflow against the merge group's diff
+        id: scope
+        env:
+          BASE_SHA: ${{ github.event.merge_group.base_sha }}
+          HEAD_SHA: ${{ github.event.merge_group.head_sha }}
+          HEAD_REF: ${{ github.event.merge_group.head_ref }}
+        run: |
+          set -euo pipefail
+          node scripts/ci/merge-group-scope.mjs --self-test
+          node scripts/ci/merge-group-scope.mjs \
+            --workflow .github/workflows/ios-quality.yml \
+            --base "$BASE_SHA" --head "$HEAD_SHA" --head-ref "$HEAD_REF"
+
   quality:
     name: build + test + lint + UI flow
+    needs: [scope]
+    # On a pull request or a push to `main` the event's `paths:` filter already
+    # decided and `scope` is skipped, so this must not inherit that skip. On a
+    # merge group it runs only on an explicit `selected=true`: a `scope` job that
+    # FAILED leaves the output empty, so this stays skipped and the workflow goes
+    # red on the scope job — never green over an unbuilt tree.
+    if: ${{ !cancelled() && (github.event_name != 'merge_group' || needs.scope.outputs.selected == 'true') }}
     runs-on: macos-latest
     # A wedged simulator is the classic macOS-CI failure and it does not fail —
     # it hangs. Without a ceiling that burns the job's full 6h default.
