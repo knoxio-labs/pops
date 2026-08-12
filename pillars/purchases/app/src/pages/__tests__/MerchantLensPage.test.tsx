@@ -97,6 +97,16 @@ function nth<T>(items: readonly T[], index: number): T {
   return item;
 }
 
+/**
+ * Queried by its accessible NAME, not by bare role. `@pops/ui`'s `Select`
+ * renders its label as a sibling with no `htmlFor`, so a control that relies
+ * on the `label` prop alone announces as an unnamed combobox — a bare
+ * `getByRole('combobox')` would pass right through that.
+ */
+function periodPicker(): HTMLElement {
+  return screen.getByRole('combobox', { name: enAUPurchases['merchants.period.label'] });
+}
+
 async function settled(): Promise<void> {
   await waitFor(() => {
     expect(screen.queryByRole('status')).toBeNull();
@@ -276,6 +286,7 @@ describe('MerchantLensPage — period', () => {
 
     expect(merchantSpendMock).toHaveBeenCalledWith({ query: {} });
     expect(screen.getByText(enAUPurchases['merchants.period.coveringAll'])).toBeVisible();
+    expect(periodPicker()).toBeVisible();
   });
 
   // The year comes off the rendered option rather than from the clock. The
@@ -287,7 +298,7 @@ describe('MerchantLensPage — period', () => {
     const user = renderPage();
     await settled();
 
-    const picker = screen.getByRole('combobox');
+    const picker = periodPicker();
     const year = nth(within(picker).getAllByRole('option'), 1).textContent ?? '';
     expect(year).toMatch(/^\d{4}$/);
 

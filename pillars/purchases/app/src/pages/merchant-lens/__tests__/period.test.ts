@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { ALL_TIME, periodRange, periodYears } from '../period';
+import { ALL_TIME, parsePeriodSelection, periodRange, periodYears } from '../period';
 
 /**
  * Every spelling of an instant the pillar's `IsoTimestampSchema` admits with a
@@ -98,4 +98,22 @@ describe('periodYears', () => {
     expect(periodYears(new Date('2026-12-31T23:30:00Z'))[0]).toBe('2026');
     expect(periodYears(new Date('2027-01-01T00:30:00Z'))[0]).toBe('2027');
   });
+});
+
+describe('parsePeriodSelection', () => {
+  it('keeps a selection it recognises', () => {
+    expect(parsePeriodSelection(ALL_TIME)).toBe(ALL_TIME);
+    expect(parsePeriodSelection('2026')).toBe('2026');
+  });
+
+  // Falling back to all time shows more than was asked for. Falling back to a
+  // year would silently scope spend away, which is the failure this view is
+  // built against — so the direction of the default is the assertion here.
+  it.each(['', '20261', '202', 'twenty-twenty-six', '2026-01', ' 2026'])(
+    'falls back to all time rather than to a narrower window for %o',
+    (value) => {
+      expect(parsePeriodSelection(value)).toBe(ALL_TIME);
+      expect(periodRange(parsePeriodSelection(value))).toEqual({});
+    }
+  );
 });

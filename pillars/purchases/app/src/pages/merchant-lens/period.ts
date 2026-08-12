@@ -2,11 +2,37 @@ export const ALL_TIME = 'all';
 
 const YEARS_OFFERED = 5;
 
-export type PeriodSelection = typeof ALL_TIME | string;
+/** A calendar year, spelled the way the picker and the wire spell it. */
+export type YearSelection = `${number}`;
+
+/**
+ * A union rather than `typeof ALL_TIME | string`, which collapses to `string`
+ * and constrains nothing — `selection === ALL_TIME` then narrows the other
+ * branch to `string`, so nothing downstream can rely on it being a year.
+ */
+export type PeriodSelection = typeof ALL_TIME | YearSelection;
 
 export interface PeriodRange {
   from?: string;
   to?: string;
+}
+
+function isYear(value: string): value is YearSelection {
+  return /^\d{4}$/u.test(value);
+}
+
+/**
+ * Narrow an arbitrary string — today a `<select>` value, in principle any
+ * caller-supplied one — to a selection this view can act on.
+ *
+ * Anything unrecognised falls back to all time, which shows *more* than was
+ * asked for rather than less. The opposite default would let a bad value
+ * silently scope spend away, which is the failure this whole view is built
+ * against.
+ */
+export function parsePeriodSelection(value: string): PeriodSelection {
+  if (value === ALL_TIME) return ALL_TIME;
+  return isYear(value) ? value : ALL_TIME;
 }
 
 /**
@@ -17,9 +43,9 @@ export interface PeriodRange {
  * offering only the years that already have orders hides the fact that a year
  * is empty behind the year being missing.
  */
-export function periodYears(now: Date): string[] {
+export function periodYears(now: Date): YearSelection[] {
   const current = now.getUTCFullYear();
-  return Array.from({ length: YEARS_OFFERED }, (_, index) => String(current - index));
+  return Array.from({ length: YEARS_OFFERED }, (_, index): YearSelection => `${current - index}`);
 }
 
 /**

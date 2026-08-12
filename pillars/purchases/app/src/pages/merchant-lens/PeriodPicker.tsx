@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Select } from '@pops/ui';
 
-import { ALL_TIME, periodYears, type PeriodSelection } from './period.js';
+import { ALL_TIME, parsePeriodSelection, periodYears, type PeriodSelection } from './period.js';
 
 import type { ReactElement } from 'react';
 
@@ -14,6 +14,7 @@ interface Props {
 
 export function PeriodPicker({ value, onChange, now }: Props): ReactElement {
   const { t } = useTranslation('purchases');
+  const label = t('merchants.period.label');
 
   const options = [
     { value: ALL_TIME, label: t('merchants.period.allTime') },
@@ -22,11 +23,17 @@ export function PeriodPicker({ value, onChange, now }: Props): ReactElement {
 
   return (
     <div className="max-w-xs">
+      {/*
+        `aria-label` rather than the `label` prop alone: `Select` renders its
+        label as a sibling with no `htmlFor`, so the control itself has no
+        accessible name and a screen reader announces a bare combobox.
+      */}
       <Select
-        label={t('merchants.period.label')}
+        label={label}
+        aria-label={label}
         options={options}
         value={value}
-        onChange={(event) => onChange(event.target.value)}
+        onChange={(event) => onChange(parsePeriodSelection(event.target.value))}
       />
     </div>
   );
