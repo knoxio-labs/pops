@@ -180,15 +180,15 @@ runs in the `scope` job itself immediately before the answer it qualifies, not
 only in `agent-review.yml`'s preflight.
 
 The corollary is that a workflow's declared `pull_request.paths` is now
-load-bearing in two lanes. `ios-quality.yml`'s covers `clients/ios/**`,
-`pillars/bfm/**`, `scripts/ios-e2e/**` — the pillar and the harness because its
-UI-flow step boots a real BFM — and `pnpm-lock.yaml`, since a lockfile bump
-changes what that boot resolves. It deliberately does not cover the BFM's
-transitive `libs/*` (today just `libs/sdk` and `libs/types`, per `pnpm list
---filter "@pops/bfm..." --depth Infinity`): that pair is touched far more often
-than the lockfile, both libs are already gated by `unit-quality.yml` (which
-runs the BFM's own typecheck and vitest suite against them), and this job's
-header explains the trade in full.
+load-bearing in two lanes. `ios-quality.yml`'s path filter covers
+`clients/ios/**`, `pillars/bfm/**`, `scripts/ios-e2e/**` — the pillar and the
+harness because its UI-flow step boots a real BFM — and `pnpm-lock.yaml`,
+since a lockfile bump changes what that boot resolves. It deliberately does
+not cover the BFM's transitive `libs/*` (today just `libs/sdk` and
+`libs/types`, per `pnpm list --filter "@pops/bfm..." --depth Infinity`): that
+pair is touched far more often than the lockfile, both libs are already gated
+by `unit-quality.yml` (which runs the BFM's own typecheck and vitest suite
+against them), and this job's header explains the trade in full.
 
 **What it costs and what it saves**, measured on the 39 completed merge-queue
 entries immediately before the change. Each entry's `ios-quality.yml` run took a
