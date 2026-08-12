@@ -114,6 +114,26 @@ const ACCESS_TOKEN_SECRET = 'ios-e2e-access-token-secret-not-a-real-key';
  */
 const PAIRING_CODE_ISSUANCE_LIMIT = 50;
 
+/**
+ * Raises how long a code minted for this run stays redeemable, past the
+ * production default of five minutes (`pillars/bfm/src/db/services/pairing-
+ * codes.ts`'s `DEFAULT_PAIRING_CODE_TTL_MS`).
+ *
+ * A code is minted here and handed to a FRESH `maestro test` invocation — see
+ * `clients/ios/mise.toml`'s `e2e` task, which mints one right before starting
+ * Maestro for that flow. Installing Maestro's own XCTest driver and settling
+ * the simulator both happen after the code already exists and before the
+ * flow's first step runs, so on a slow CI host that overhead alone can spend
+ * the five-minute default before the app ever submits the code. The pillar
+ * cannot tell an expired code from a wrong one — `redeemPairingCode`'s own
+ * doc comment says why — so the failure reads as a rejected pairing on the
+ * pairing screen rather than as what it is: driver startup, not app or BFM
+ * behaviour, eating the code's window. `resolvePairingCodeTtlMs` in
+ * `pillars/bfm/src/api/boot-env.ts` is the one place production reads this
+ * variable; every real deployment leaves it unset.
+ */
+const PAIRING_CODE_TTL_MS = 30 * 60 * 1000;
+
 class HarnessError extends Error {}
 
 /**
@@ -393,6 +413,7 @@ async function main() {
         BFM_PUBLIC_BASE_URL: baseURL.origin,
         BFM_ACCESS_TOKEN_SECRET: ACCESS_TOKEN_SECRET,
         BFM_PAIRING_CODE_ISSUANCE_LIMIT: String(PAIRING_CODE_ISSUANCE_LIMIT),
+        BFM_PAIRING_CODE_TTL_MS: String(PAIRING_CODE_TTL_MS),
         // The BFM crashes at boot without one. The stub ignores the header it
         // ends up on.
         POPS_INTERNAL_API_KEY: 'ios-e2e-service-account-key',
