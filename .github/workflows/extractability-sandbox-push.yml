@@ -1,0 +1,63 @@
+name: Extractability Sandbox (Push)
+
+# The fast-feedback half of EX-2, complementing the nightly sweep in
+# `extractability-sandbox.yml`: fires on every push to `main`
+# that touches a signal correlated with "a unit's exports or dependency shape
+# changed" — its `package.json` (the `exports` field lives there; GitHub
+# Actions `paths:` filters on whole files, not JSON fields, so the file is
+# the filter), its `tsconfig*.json`, or a `Cargo.toml`/`Cargo.lock` (root or
+# per-crate) — and sandboxes ONLY the units `_discover-units.yml`'s `changed`
+# output names for that push, via the same reusable matrix the nightly sweep
+# uses (`_extractability-sandbox-matrix.yml`). Instead of waiting up to 24h
+# for the next nightly run to catch an extraction break, this reports within
+# one push. `pnpm-lock.yaml` is included as the TS analogue of `Cargo.lock` —
+# both are the dependency-shape signal for their half of the workspace.
+#
+# STAYS OUT OF `ci-gate.yml`'s gated list, same as the nightly workflow — see
+# that file's header for why (heavy, EX-2 is a nightly/on-demand signal by
+# the sandbox scripts' own design, not a per-PR gate). This is an additional
+# signal on top of that, not a new merge blocker: it runs post-merge, same as
+# `unit-quality.yml`'s own `push: branches: [main]` lane.
+#
+# `_discover-units.yml`'s `changed` output is computed from a merge-base diff
+# against `origin/<base_ref>` on `pull_request`, which is NOT a usable base
+# on `push` — `origin/main` is refreshed by the same checkout that fetches
+# this run's own commit, so it already includes (usually equals) HEAD by the
+# time the diff runs, and `merge-base(HEAD, HEAD)` is `HEAD`: diffing HEAD
+# against itself is empty regardless of what the push changed. Verified
+# locally against a real commit pair from this repo's history before relying
+# on it here — `_discover-units.yml` now diffs `push` events from
+# `github.event.before` instead, which recovers the actual changed-file list.
+# See that file's own `scan` step and its Outputs comment for the fix.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "pillars/*/package.json"
+      - "pillars/*/tsconfig*.json"
+      - "libs/*/package.json"
+      - "libs/*/tsconfig*.json"
+      - "pillars/*/Cargo.toml"
+      - "libs/*/Cargo.toml"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "pnpm-lock.yaml"
+
+concurrency:
+  # Ref alone is enough here — unlike the nightly workflow, there is no
+  # dispatch-scoped unit input to key on, and a push to `main` is always
+  # sequential (the merge queue serializes what lands there).
+  group: extractability-sandbox-push-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  discover:
+    uses: ./.github/workflows/_discover-units.yml
+
+  sandbox:
+    needs: discover
+    if: needs.discover.outputs.changed != '[]'
+    uses: ./.github/workflows/_extractability-sandbox-matrix.yml
+    with:
+      units: ${{ needs.discover.outputs.changed }}

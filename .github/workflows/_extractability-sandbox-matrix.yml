@@ -1,0 +1,129 @@
+name: Extractability Sandbox Matrix
+
+# Reusable EX-2 fan-out: given a JSON array of `{name,pkg,dir,kind,lang}` unit
+# objects (the shape `_discover-units.yml` emits), sandbox every TS one with
+# `scripts/extractability/sandbox.sh` and every Rust one with
+# `scripts/extractability/cargo-sandbox.sh`. Extracted out of
+# `extractability-sandbox.yml` so its nightly/on-demand sweep and
+# `extractability-sandbox-push.yml`'s push-triggered fast-feedback fan-out
+# share one sandboxing implementation instead of two copies that could
+# drift — the units to sandbox are entirely the CALLER's decision (every
+# discovered unit, one dispatch-scoped unit, or just a push's changed set);
+# this file only knows how to sandbox whatever `inputs.units` names.
+
+on:
+  workflow_call:
+    inputs:
+      units:
+        description: "JSON array of unit objects to sandbox ({name,pkg,dir,kind,lang}), already filtered by the caller."
+        required: true
+        type: string
+
+jobs:
+  ts:
+    # Filtering happens per STEP, not with a job-level `if:` — a job-level
+    # `if:` cannot reference the `matrix` context (GitHub evaluates it before
+    # the matrix expands), so `if: matrix.unit.lang == 'ts'` at job level
+    # fails to parse the whole workflow with "Unrecognized named-value:
+    # 'matrix'". unit-quality.yml uses the same per-step pattern for the
+    # identical reason.
+    name: ${{ matrix.unit.name }} (${{ matrix.unit.kind }}) — sandbox (EX-2)
+    if: inputs.units != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        unit: ${{ fromJson(inputs.units) }}
+    steps:
+      - if: ${{ matrix.unit.lang != 'ts' }}
+        run: echo "skip ${{ matrix.unit.name }} (${{ matrix.unit.lang }})"
+
+      - if: ${{ matrix.unit.lang == 'ts' }}
+        uses: actions/checkout@v7
+
+      - if: ${{ matrix.unit.lang == 'ts' }}
+        uses: pnpm/action-setup@v6
+      - if: ${{ matrix.unit.lang == 'ts' }}
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: pnpm
+
+      # Full workspace install, not a `--filter` subgraph: sandbox.sh's
+      # pack-deps step builds each `@pops/*` dependency via
+      # `pnpm --filter <dep> build` before packing it into a tarball, and
+      # that resolves against the whole installed workspace.
+      - if: ${{ matrix.unit.lang == 'ts' }}
+        name: Install
+        run: pnpm install --frozen-lockfile
+
+      - if: ${{ matrix.unit.lang == 'ts' }}
+        name: Sandbox extraction (EX-2)
+        run: bash scripts/extractability/sandbox.sh ${{ matrix.unit.dir }}
+
+  rust:
+    name: ${{ matrix.unit.name }} (${{ matrix.unit.kind }}) — sandbox (EX-2)
+    if: inputs.units != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        unit: ${{ fromJson(inputs.units) }}
+    steps:
+      - if: ${{ matrix.unit.lang != 'rust' }}
+        run: echo "skip ${{ matrix.unit.name }} (${{ matrix.unit.lang }})"
+
+      - if: ${{ matrix.unit.lang == 'rust' }}
+        uses: actions/checkout@v7
+
+      # Pinned, not `stable` — mirrors rust-quality.yml. Only the compiler is
+      # needed here (cargo-sandbox.sh builds, it does not fmt/clippy), so no
+      # rustfmt/clippy components.
+      - if: ${{ matrix.unit.lang == 'rust' }}
+        name: Install Rust toolchain (pinned from mise.toml)
+        run: |
+          set -euo pipefail
+          version=$(sed -nE 's/^rust *= *"([^"]+)".*/\1/p' mise.toml | head -1)
+          if [ -z "$version" ]; then
+            echo "::error::no rust pin found in mise.toml [tools]"
+            exit 1
+          fi
+          rustup toolchain install "$version" --profile minimal
+          rustup default "$version"
+          rustc --version
+          cargo --version
+
+      # cargo-sandbox.sh's own header: "reuse the caller's registry cache for
+      # speed but keep target/ local to the sandbox so the build is
+      # genuinely isolated" — target/ isolation is the script's own
+      # CARGO_TARGET_DIR handling, this cache is that "caller's registry
+      # cache".
+      - if: ${{ matrix.unit.lang == 'rust' }}
+        name: Cache cargo registry
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+          key: cargo-sandbox-${{ runner.os }}-${{ hashFiles('Cargo.toml', 'Cargo.lock') }}
+          restore-keys: |
+            cargo-sandbox-${{ runner.os }}-
+
+      # cargo-extract.mjs (invoked by cargo-sandbox.sh) reads Cargo.toml
+      # through `smol-toml`, a real workspace dependency — Tier B, so the
+      # workspace is installed first (mirrors rust-quality.yml).
+      - if: ${{ matrix.unit.lang == 'rust' }}
+        uses: pnpm/action-setup@v6
+      - if: ${{ matrix.unit.lang == 'rust' }}
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: pnpm
+
+      - if: ${{ matrix.unit.lang == 'rust' }}
+        run: pnpm install --frozen-lockfile
+
+      - if: ${{ matrix.unit.lang == 'rust' }}
+        name: Sandbox extraction (EX-2)
+        run: bash scripts/extractability/cargo-sandbox.sh ${{ matrix.unit.dir }}
