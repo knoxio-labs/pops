@@ -118,6 +118,17 @@ run-name: >-
 # missing workflow is then required to unstick it. That is the intended trade:
 # a required check that never turns green blocks its own PR, which cannot be
 # merged by accident, where a false green could be.
+#
+# MITIGATION: every gated workflow's own `concurrency:` block now runs with
+# `cancel-in-progress: false` (was `true`) for exactly this reason — cancelling
+# the superseded run and admitting the new one is not atomic on GitHub's side,
+# and that two-phase cancel+admit is what the dec13a17/901923b reproduction
+# above raced on. Without a cancellation to race, a superseded run is left to
+# finish (this repo is public, so the wasted wall-clock costs no Actions
+# minutes) and the next push's run still queues normally. This removes the
+# specific mechanism behind the reproduction above; it does not change what
+# this file does if a run is absent for some other reason — the pending-not-
+# pass handling above stays the correct backstop regardless of cause.
 
 on:
   workflow_run:

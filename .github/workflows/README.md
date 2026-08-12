@@ -21,8 +21,15 @@ verdict converges, and for why it publishes its own check run; the rules the
   wins, ordered by `run_number` then `run_attempt`.
 - The gate fails on `failure`, `cancelled`, `timed_out`, `startup_failure`,
   `action_required` or `stale`.
-- A gated workflow with no run at the SHA is logged as `did not run —
-  path-filtered, treated as pass`.
+- A gated workflow with no run at the SHA is `pass` only when its own
+  `pull_request.paths` filter is a **confirmed** exclusion for this diff
+  (`did not run — path-filtered, treated as pass`); everything else — the
+  filter matches, there is no filter, or the diff can't be determined — is
+  logged as pending, never a pass. One cause of "no run, not a confirmed
+  exclusion" used to be a concurrency-group race silently losing the run's
+  registration entirely; every gated workflow's own `concurrency:` block now
+  runs `cancel-in-progress: false` specifically to close that window — see the
+  MITIGATION paragraph in `ci-gate.yml`'s own CONVERGENCE comment.
 - A run that is not yet `completed` is pending: it does not fail the gate, but it
   does hold it at `in_progress`. A failure concludes immediately (nothing can
   clear it); `success` is only ever published once nothing is left in flight.
