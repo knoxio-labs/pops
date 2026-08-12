@@ -108,6 +108,16 @@ function escapeGlobLiteral(char) {
  * @throws {ScopeError}
  */
 export function globToRegExp(glob) {
+  if (glob.trim().length === 0) {
+    // `''` compiles to /^$/, which matches no path a diff can produce — so an
+    // empty entry would not widen the filter, it would contribute a pattern
+    // that can never select. One of those in a list is invisible; a list of
+    // them deselects the lane on every merge group. Blank is a violation.
+    throw new ScopeError(
+      `path filter ${JSON.stringify(glob)} is blank. An empty pattern matches nothing, so it ` +
+        'can only ever make this gate select less than the workflow declares.'
+    );
+  }
   if (glob.startsWith('!')) {
     throw new ScopeError(
       `path filter "${glob}" is a negation, which this matcher does not model. ` +
@@ -200,9 +210,14 @@ export function pullRequestPaths(source, label) {
   if (!Array.isArray(paths) || paths.length === 0) {
     throw new ScopeError(`${label}: \`on.pull_request.paths\` is not a non-empty sequence`);
   }
-  return paths.map((value, index) =>
-    requireScalar(value, label, `on.pull_request.paths[${index}]`)
-  );
+  return paths.map((value, index) => {
+    const where = `on.pull_request.paths[${index}]`;
+    const pattern = requireScalar(value, label, where);
+    if (pattern.trim().length === 0) {
+      throw new ScopeError(`${label}: ${where} is blank, which can never select anything.`);
+    }
+    return pattern;
+  });
 }
 
 /**
@@ -871,6 +886,26 @@ export function selfTest() {
         () => scopeLane({ workflowPath: '.github/workflows/subject.yml', base, head, cwd: dir }),
         /not a single value/u
       );
+    },
+  });
+
+  cases.push({
+    name: 'refuses a blank paths entry rather than adding a pattern that never matches',
+    run: () => {
+      // `''` compiles to /^$/. Nothing a diff produces matches it, so a blank
+      // entry cannot widen a filter — it can only sit in the list looking like
+      // one more pattern while contributing a guaranteed non-match.
+      const { dir, base, head } = repo({
+        workflow:
+          'name: S\non:\n  pull_request:\n    paths:\n      - clients/ios/**\n      - ""\njobs:\n  q:\n    runs-on: x\n    steps:\n      - run: echo\n',
+        touched: ['clients/ios/App/Main.swift'],
+      });
+      assertRaises(
+        () => scopeLane({ workflowPath: '.github/workflows/subject.yml', base, head, cwd: dir }),
+        /is blank/u
+      );
+      assertRaises(() => globToRegExp(''), /is blank/u);
+      assertRaises(() => globToRegExp('   '), /is blank/u);
     },
   });
 

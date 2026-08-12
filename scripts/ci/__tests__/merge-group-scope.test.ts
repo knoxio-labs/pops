@@ -291,6 +291,11 @@ describe('one glob implementation, two homes', () => {
     expect(() => globToRegExp('!docs/**')).toThrow(ScopeError);
   });
 
+  it('reports a blank pattern, which would compile to a guaranteed non-match', () => {
+    expect(() => globToRegExp('')).toThrow(ScopeError);
+    expect(() => globToRegExp('  ')).toThrow(ScopeError);
+  });
+
   it('no scoped workflow declares a shape the matcher would have to refuse', () => {
     // The check above only matters while it is hypothetical. This is the line
     // that keeps it that way — and it is the reason the refusal is safe to have.
