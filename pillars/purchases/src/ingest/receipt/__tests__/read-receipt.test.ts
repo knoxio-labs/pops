@@ -12,6 +12,7 @@ vi.mock('../extraction.js', async (importOriginal) => {
   return { ...actual, parseExtraction: vi.fn(actual.parseExtraction) };
 });
 
+import { parseAmountCents } from '../../money.js';
 import { ExtractedLineSchema, ExtractedReceiptSchema, parseExtraction } from '../extraction.js';
 import { readReceipt } from '../read-receipt.js';
 import { extractionPrompt, kindOf, MEDIA_TYPES, PROMPT_FIELDS } from '../vision.js';
@@ -50,6 +51,37 @@ describe('a reading that holds up', () => {
     if (outcome.kind !== 'read') return;
     expect(outcome.extracted.merchantName).toBe('Bunnings Warehouse');
     expect(outcome.gate.totalCents).toBe(2750);
+  });
+
+  it('survives a model that omits the shipping key entirely', async () => {
+    // Most receipts state no delivery, so most readings will omit it. A
+    // required field would fail `safeParse`, and every shape failure comes
+    // back as `unreadable` — discarding an extraction whose money is
+    // perfect over a key about money that was never charged. The default
+    // is what keeps the omission meaning "the receipt did not say".
+    expect(JSON.parse(GOOD)).not.toHaveProperty('shipping');
+
+    const outcome = await readReceipt(saying(GOOD), [IMAGE]);
+
+    expect(outcome.kind).toBe('read');
+    if (outcome.kind !== 'read') return;
+    expect(outcome.extracted.shipping).toBeNull();
+    expect(outcome.gate.shippingCents).toBe(0);
+  });
+
+  it('reads a stated delivery charge through to the gate', async () => {
+    const delivered = JSON.stringify({
+      ...JSON.parse(GOOD),
+      total: '$37.45',
+      shipping: '$9.95',
+    });
+
+    const outcome = await readReceipt(saying(delivered), [IMAGE]);
+
+    expect(outcome.kind).toBe('read');
+    if (outcome.kind !== 'read') return;
+    expect(outcome.gate.shippingCents).toBe(995);
+    expect(outcome.gate.surchargeCents).toBe(0);
   });
 
   it('tolerates a model that wraps its JSON in prose or a fence', async () => {
@@ -169,6 +201,36 @@ describe('the prompt', () => {
     ];
 
     expect(Object.keys(PROMPT_FIELDS).toSorted()).toEqual([...new Set(schemaKeys)].toSorted());
+  });
+
+  it('asks for the money without its label wherever the gate parses money', () => {
+    // `parseAmountCents` is anchored, so it takes money-only strings and
+    // nothing else. A field told merely to report "exactly as stated"
+    // invites the label printed beside the figure, and the gate then fails
+    // the receipt twice over: the term is unreadable, and the sum it should
+    // have joined no longer agrees. So every field the gate parses has to
+    // say so, and this is what says it.
+    expect(parseAmountCents('Delivery $9.95')).toBeNull();
+    expect(parseAmountCents('$9.95')).toBe(995);
+
+    for (const field of ['amount', 'discounts', 'surcharges', 'shipping']) {
+      expect(PROMPT_FIELDS[field], `${field} does not rule out the wording`).toMatch(
+        /amount only/iu
+      );
+    }
+  });
+
+  it('keeps delivery null unless money was stated, and a stated zero reportable', () => {
+    // The three clauses that decide what `shipping` means, and the ones a
+    // rewording is most likely to lose. Without the first two a waived
+    // delivery arrives as "FREE", which is not money and lands a perfectly
+    // good receipt in review; without the third, a merchant who prints
+    // "$0.00" is indistinguishable from one who charged nothing at all.
+    const shipping = PROMPT_FIELDS['shipping'] ?? '';
+
+    expect(shipping).toMatch(/null unless an amount of money is stated/iu);
+    expect(shipping).toMatch(/FREE/u);
+    expect(shipping).toMatch(/"\$0\.00" is an amount/u);
   });
 
   it('carries the load-bearing instructions into every kind', () => {

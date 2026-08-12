@@ -52,6 +52,18 @@ const ASSUMED_HOUR = 0;
 export const DATE_UNCERTAIN = 'date-uncertain';
 export const TIMEZONE_UNCERTAIN = 'timezone-uncertain';
 
+/**
+ * Applied by the cutover migration only, never by this mapper.
+ *
+ * Before shipping had its own term, a delivery charge was read into
+ * `surcharges` and written to `surchargeCents`. Those rows cannot be split
+ * afterwards — nothing recorded which surcharge was a delivery — so the
+ * tag says the surcharge **may** include delivery. It is on every receipt
+ * row with a surcharge, including the many whose surcharge is only a card
+ * fee; asserting a clean figure for rows where none exists would be worse.
+ */
+export const SHIPPING_UNCERTAIN = 'shipping-uncertain';
+
 const DEFAULT_CURRENCY = 'AUD';
 
 export interface ReceiptPurchaseResult {
@@ -124,11 +136,18 @@ function occurredAt(extracted: ExtractedReceipt, zone: string): string | null {
  * The file hash alone would be enough for dedup, and is not enough for
  * change detection: re-reading the same upload with a better model should
  * look different, because it is.
+ *
+ * Which is why the surcharge and shipping components are in it. Moving a
+ * $9.95 delivery fee out of one and into the other leaves the total, the
+ * discount and every line untouched, so a recipe over those alone would
+ * call the corrected reading identical to the one it corrects — exactly
+ * the change this hash exists to make visible.
  */
 function checksumFor(key: string, purchase: Omit<CreatePurchaseInput, 'checksum'>): string {
   const hash = createHash('sha256');
   hash.update(`${RECEIPT_SOURCE_ID}:${key}:${purchase.orderedAt}`);
   hash.update(`:${String(purchase.totalCents)}:${String(purchase.discountCents ?? 0)}`);
+  hash.update(`:${String(purchase.surchargeCents ?? 0)}:${String(purchase.shippingCents ?? 0)}`);
   for (const item of purchase.items ?? []) {
     hash.update(
       JSON.stringify([
@@ -202,6 +221,11 @@ export function receiptToPurchase(
     // same reason the Woolworths adapter drops GST.
     taxCents: gate.taxIncluded ? 0 : gate.taxCents,
     surchargeCents: gate.surchargeCents,
+    // Its own column, so "what did delivery cost this year" is answerable
+    // and a delivery fee is not indistinguishable from a card surcharge.
+    // The amazon adapter already writes this column; the receipt path was
+    // the outlier.
+    shippingCents: gate.shippingCents,
     discountCents: gate.discountCents,
     totalCents,
     // Unknown is a valid outcome, not a failure — the escape hatch exists

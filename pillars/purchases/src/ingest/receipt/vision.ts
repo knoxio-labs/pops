@@ -125,11 +125,21 @@ export const PROMPT_FIELDS: Readonly<Record<string, string>> = {
     'in a totals line has stated one discount, so report it once',
   surcharges:
     'each fee the merchant added as an array — a card or credit surcharge, ' +
-    'a small-order fee, a delivery or service charge. The amount only, ' +
-    'without the wording stated beside it. These are added to the total, not ' +
-    'subtracted like a discount, and tax does not belong here. A receipt ' +
-    'that names a fee and then repeats it in a totals line has charged one ' +
-    'fee, so report it once',
+    'a small-order fee, a service charge. The amount only, without the ' +
+    'wording stated beside it. These are added to the total, not subtracted ' +
+    'like a discount, and neither tax nor delivery belongs here: a delivery, ' +
+    'postage or shipping charge belongs in the separate "shipping" field ' +
+    'below and must NOT also appear in this array. A receipt that names a ' +
+    'fee and then repeats it in a totals line has charged one fee, so ' +
+    'report it once',
+  shipping:
+    'the delivery, postage or shipping charge stated, or null. The amount ' +
+    'only, without the wording stated beside it: a receipt printing ' +
+    '"Delivery $9.95" has stated "$9.95", and the label is not part of the ' +
+    'money. Null unless an amount of money is stated — a receipt printing ' +
+    '"FREE", "Delivery: included" or nothing at all has stated no amount, ' +
+    'and the word alone is not money. "$0.00" is an amount and may be ' +
+    'reported. Report it here and not in "surcharges"',
   lines: 'one entry per product, in the order the receipt lists them',
   description: 'the product text verbatim, including abbreviations. Do not expand or tidy them',
   amount:

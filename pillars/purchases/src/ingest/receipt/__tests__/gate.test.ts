@@ -261,6 +261,218 @@ describe('the two conventions for stated tax', () => {
     expect(result.admissible).toBe(false);
     expect(result.failures[0]?.kind).toBe('sum-mismatch');
   });
+
+  it('accepts a delivered order whose prices already contain the tax', () => {
+    // The Australian online order: $27.50 of goods, $9.95 delivery, $37.45
+    // charged, and the GST stated as a fact about that total. Both
+    // conventions have to keep working with a third term in the sum.
+    const inclusive = receipt({ total: '$37.45', tax: '$3.40', shipping: '$9.95' });
+
+    const result = gateExtraction(inclusive);
+
+    expect(result.admissible).toBe(true);
+    expect(result.taxIncluded).toBe(true);
+    expect(result.shippingCents).toBe(995);
+  });
+
+  it('accepts a delivered order that adds the tax to its lines', () => {
+    const exclusive = receipt({ total: '$40.20', tax: '$2.75', shipping: '$9.95' });
+
+    const result = gateExtraction(exclusive);
+
+    expect(result.admissible).toBe(true);
+    expect(result.taxIncluded).toBe(false);
+    expect(result.shippingCents).toBe(995);
+  });
+
+  it('still refuses a delivered order that reconciles under neither', () => {
+    // A third term must not become a third chance to pass. $27.50 of lines
+    // and $9.95 of delivery is $37.45 inclusive or $40.20 exclusive, and
+    // neither is $50.00.
+    const wrong = receipt({ total: '$50.00', tax: '$2.75', shipping: '$9.95' });
+
+    const result = gateExtraction(wrong);
+
+    expect(result.admissible).toBe(false);
+    const mismatch = result.failures.find((f) => f.kind === 'sum-mismatch');
+    expect(mismatch?.deltaCents).toBe(4020 - 5000);
+  });
+});
+
+describe('delivery, in its own term', () => {
+  it('reconciles an online order whose delivery is charged separately', () => {
+    // The case the drop-zone could not previously reconcile without filing
+    // the fee as a surcharge: an emailed order almost always carries one.
+    const delivered = receipt({ total: '$37.45', shipping: '$9.95' });
+
+    const result = gateExtraction(delivered);
+
+    expect(result.admissible).toBe(true);
+    expect(result.shippingCents).toBe(995);
+    // The whole point of the split: the fee is no longer indistinguishable
+    // from a card surcharge.
+    expect(result.surchargeCents).toBe(0);
+  });
+
+  it('treats a receipt that states no delivery, and one stating zero, alike', () => {
+    // Most receipts state none at all. `$0.00` is an amount and parses;
+    // both mean nothing was charged for delivery.
+    expect(gateExtraction(receipt()).shippingCents).toBe(0);
+    expect(gateExtraction(receipt()).admissible).toBe(true);
+
+    const stated = gateExtraction(receipt({ shipping: '$0.00' }));
+    expect(stated.shippingCents).toBe(0);
+    expect(stated.admissible).toBe(true);
+  });
+
+  it('reconciles delivery the merchant then waived', () => {
+    // Charged and refunded on the same paper. The two terms cancel, which
+    // they only do because they are separate terms with opposite signs.
+    const waived = receipt({ total: '$27.50', shipping: '$9.95', discounts: ['$9.95'] });
+
+    const result = gateExtraction(waived);
+
+    expect(result.admissible).toBe(true);
+    expect(result.shippingCents).toBe(995);
+    expect(result.discountCents).toBe(995);
+  });
+
+  it('names delivery when the model wrote a word where money goes', () => {
+    // The prompt says null unless an amount is stated, because "FREE" is
+    // not money. If a model says it anyway the receipt must not be admitted
+    // on a silently-zero shipping term — and the reviewer needs to be told
+    // which field, not just that something failed.
+    const free = receipt({ shipping: 'FREE' });
+
+    const result = gateExtraction(free);
+
+    expect(result.admissible).toBe(false);
+    expect(result.failures.map((f) => f.kind)).toEqual(['unreadable-line']);
+    expect(result.failures[0]?.detail).toContain('shipping');
+    expect(result.failures[0]?.detail).toContain('FREE');
+  });
+
+  it('names delivery when the model kept the label beside the money', () => {
+    // The likelier misreading than "FREE": the receipt does state an amount,
+    // and the model copies the line it was printed on. `parseAmountCents` is
+    // anchored, so "Delivery $9.95" is not money — the term contributes
+    // nothing and the sum it belonged to is short by exactly the fee. Two
+    // failures, and neither would say "delivery" without the detail naming
+    // the field. The prompt is what prevents this; the gate is what refuses
+    // to admit it when the prompt does not take.
+    const labelled = receipt({ total: '$37.45', shipping: 'Delivery $9.95' });
+
+    const result = gateExtraction(labelled);
+
+    expect(result.admissible).toBe(false);
+    expect(result.shippingCents).toBe(0);
+    expect(result.failures.map((f) => f.kind)).toEqual(['unreadable-line', 'sum-mismatch']);
+    expect(result.failures[0]?.detail).toContain('shipping');
+    expect(result.failures[0]?.detail).toContain('Delivery $9.95');
+
+    const mismatch = result.failures.find((f) => f.kind === 'sum-mismatch');
+    expect(mismatch?.kind === 'sum-mismatch' ? mismatch.deltaCents : null).toBe(-995);
+  });
+
+  it('adds a delivery charge stated as a negative, and refuses the result', () => {
+    // Chosen, not inherited. `sumAmounts` normalises the sign, so a
+    // "-$9.95" delivery adds 9.95 and the receipt lands in review rather
+    // than quietly subtracting a charge the merchant added. Wrong in the
+    // safe direction, which is the direction to be wrong in.
+    const negative = gateExtraction(receipt({ shipping: '-$9.95' }));
+
+    expect(negative.shippingCents).toBe(995);
+    expect(negative.admissible).toBe(false);
+  });
+
+  it('refuses the same fee reported as both delivery and a surcharge', () => {
+    // The one new way to break a receipt that reconciled before. While the
+    // prompt change propagates a model may file the fee twice; the sum then
+    // overstates by exactly the fee, which is what the delta must say.
+    const doubled = receipt({ total: '$37.45', shipping: '$9.95', surcharges: ['$9.95'] });
+
+    const result = gateExtraction(doubled);
+
+    expect(result.admissible).toBe(false);
+    const mismatch = result.failures.find((f) => f.kind === 'sum-mismatch');
+    expect(mismatch?.deltaCents).toBe(995);
+  });
+
+  it('refuses the same fee reported as both delivery and a line item', () => {
+    // Same double count, arriving the other way round: an emailed order
+    // lists "Delivery $9.95" among the rows and states it in the totals.
+    const doubled = receipt({
+      total: '$37.45',
+      shipping: '$9.95',
+      lines: [
+        { description: 'Timber Pine DAR 42x19', amount: '$12.50' },
+        { description: 'Screws Bugle 8g 65mm', amount: '$15.00' },
+        { description: 'Delivery', amount: '$9.95' },
+      ],
+    });
+
+    const result = gateExtraction(doubled);
+
+    expect(result.admissible).toBe(false);
+    const mismatch = result.failures.find((f) => f.kind === 'sum-mismatch');
+    expect(mismatch?.deltaCents).toBe(995);
+  });
+
+  it('states the delivery figure in the mismatch, so the sentence explains its own number', () => {
+    // A reviewer has to be able to reconstruct the arithmetic from the one
+    // sentence. With a term in `net` that the sentence does not name, the
+    // quoted total stops following from the quoted parts.
+    const wrong = receipt({ total: '$99.99', shipping: '$9.95', surcharges: ['$0.12'] });
+
+    const mismatch = gateExtraction(wrong).failures.find((f) => f.kind === 'sum-mismatch');
+
+    expect(mismatch?.detail).toContain('2750c');
+    expect(mismatch?.detail).toContain('12c surcharges');
+    expect(mismatch?.detail).toContain('995c shipping');
+    // 2750 − 0 + 12 + 995
+    expect(mismatch?.detail).toContain('3757c');
+    expect(mismatch?.detail).toContain('9999c');
+  });
+});
+
+describe('moving money between surcharges and delivery', () => {
+  // The safety property this change rests on. Both terms enter `net` with
+  // the same sign, so the split cannot alter a verdict: no receipt that
+  // reconciled before stops reconciling because of it, and none that failed
+  // starts passing. Proven over every partition rather than asserted.
+  const partitions: readonly { readonly name: string; readonly over: Partial<ExtractedReceipt> }[] =
+    [
+      { name: 'all of it a surcharge, as before', over: { surcharges: ['$9.95'], shipping: null } },
+      { name: 'all of it delivery', over: { surcharges: [], shipping: '$9.95' } },
+      { name: 'split across both', over: { surcharges: ['$5.00'], shipping: '$4.95' } },
+      {
+        name: 'split across both, the surcharge itemised',
+        over: { surcharges: ['$3.00', '$2.00'], shipping: '$4.95' },
+      },
+    ];
+
+  it('changes no verdict on a receipt that reconciles, under either convention', () => {
+    for (const { name, over } of partitions) {
+      const inclusive = gateExtraction(receipt({ total: '$37.45', tax: '$3.40', ...over }));
+      expect(inclusive.admissible, name).toBe(true);
+      expect(inclusive.taxIncluded, name).toBe(true);
+      expect(inclusive.surchargeCents + inclusive.shippingCents, name).toBe(995);
+
+      const exclusive = gateExtraction(receipt({ total: '$40.20', tax: '$2.75', ...over }));
+      expect(exclusive.admissible, name).toBe(true);
+      expect(exclusive.taxIncluded, name).toBe(false);
+      expect(exclusive.surchargeCents + exclusive.shippingCents, name).toBe(995);
+    }
+  });
+
+  it('changes no verdict, and no delta, on a receipt that does not', () => {
+    for (const { name, over } of partitions) {
+      const result = gateExtraction(receipt({ total: '$99.99', tax: '$2.75', ...over }));
+      expect(result.admissible, name).toBe(false);
+      const mismatch = result.failures.find((f) => f.kind === 'sum-mismatch');
+      expect(mismatch?.deltaCents, name).toBe(3745 + 275 - 9999);
+    }
+  });
 });
 
 describe('a fee the merchant added', () => {
