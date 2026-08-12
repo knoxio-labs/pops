@@ -89,7 +89,9 @@
  *
  *     Which `<env>` values to check is read out of the workflows —
  *     {@link discoverMiseEnvValues} parses every `.github/workflows/*.yml`
- *     with the same YAML parser `config-parse.mjs` gives every other Tier B
+ *     and `*.yaml` (GitHub Actions accepts both extensions, even though
+ *     every workflow in this repo today happens to use `.yml`) with the
+ *     same YAML parser `config-parse.mjs` gives every other Tier B
  *     guard and walks the whole document for a key literally named
  *     `MISE_ENV`, at any nesting depth (workflow-, job- or step-level
  *     `env:`), rather than grepping for `MISE_ENV: ci` and hardcoding `ci`.
@@ -236,12 +238,12 @@ export function envConfigFilename(filename, env) {
 
 /**
  * Read every literal `MISE_ENV` value this repo's own workflows set, by
- * parsing each `.github/workflows/*.yml` and walking the whole document for
- * a key named `MISE_ENV` at any depth — workflow-, job- or step-level `env:`
- * all resolve the same way to mise, so this does not anchor on one of them.
- * See the file header for why enumerating workflow-declared values is
- * sufficient scope, rather than every value `MISE_ENV` could theoretically
- * hold.
+ * parsing each `.github/workflows/*.yml` or `*.yaml` (GitHub Actions accepts
+ * either extension) and walking the whole document for a key named
+ * `MISE_ENV` at any depth — workflow-, job- or step-level `env:` all resolve
+ * the same way to mise, so this does not anchor on one of them. See the
+ * file header for why enumerating workflow-declared values is sufficient
+ * scope, rather than every value `MISE_ENV` could theoretically hold.
  *
  * A workflow file that fails to parse is a violation, not a skip — the same
  * rule every Tier B guard applies to structured config it cannot read.
@@ -258,7 +260,7 @@ export function discoverMiseEnvValues(root) {
   if (!existsSync(dir)) return { values: [], violations };
 
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    if (!entry.isFile() || !entry.name.endsWith('.yml')) continue;
+    if (!entry.isFile() || !(entry.name.endsWith('.yml') || entry.name.endsWith('.yaml'))) continue;
     const abs = join(dir, entry.name);
     const label = relative(root, abs);
     let doc;

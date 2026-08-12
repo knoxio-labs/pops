@@ -447,6 +447,25 @@ describe('discoverMiseEnvValues — fixture workflows (POPS-1794)', () => {
     }
   });
 
+  it('reads a workflow filed with the .yaml extension, not only .yml', () => {
+    // GitHub Actions accepts either extension for a workflow file. Every
+    // workflow in this repo today happens to be .yml, but a guard that only
+    // globbed that spelling would silently stop seeing MISE_ENV the day a
+    // new workflow used .yaml instead — exactly the "shape it does not
+    // model is a pass" failure ADR-045 exists to rule out.
+    const root = mkdtempSync(join(tmpdir(), 'mise-env-values-yaml-ext-'));
+    try {
+      mkdirSync(join(root, '.github', 'workflows'), { recursive: true });
+      writeFileSync(
+        join(root, '.github', 'workflows', 'quality.yaml'),
+        'name: quality\nenv:\n  MISE_ENV: ci\njobs:\n  build:\n    runs-on: ubuntu-latest\n'
+      );
+      expect(discoverMiseEnvValues(root)).toEqual({ values: ['ci'], violations: [] });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it('reads a job-level env: block, not only workflow-level', () => {
     const root = mkdtempSync(join(tmpdir(), 'mise-env-values-job-'));
     try {
