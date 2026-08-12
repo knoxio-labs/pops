@@ -791,12 +791,22 @@ app="$POPS_IOS_DERIVED_DATA/Build/Products/Debug-iphonesimulator/Pops.app"
 # same reason `lint:analyze` prunes them: SwiftPM checkouts and generated
 # client code are not sources anybody edits, and a checkout restored from cache
 # has a fresh mtime.
+#
+# Compared against a FILE INSIDE the bundle rather than the bundle directory. A
+# directory's mtime moves when an entry is added or removed from it and not
+# when the bytes of an existing entry change, so a rebuild that only rewrote
+# the binary can leave the `.app` looking older than the sources it was built
+# from — and this would then recompile every run, or, with the timestamps the
+# other way round, install products older than the code. `Info.plist` is
+# rewritten by every build and its absence is itself a reason to rebuild, which
+# is why one test covers both.
+stamp="$app/Info.plist"
 needs_build=false
-if [ ! -d "$app" ]; then
+if [ ! -f "$stamp" ]; then
   needs_build=true
 elif [ -n "$(find App AppTests Packages \
     \( -name .build -o -name Generated \) -type d -prune \
-    -o -type f -name '*.swift' -newer "$app" -print -quit)" ]; then
+    -o -type f -name '*.swift' -newer "$stamp" -print -quit)" ]; then
   needs_build=true
 fi
 

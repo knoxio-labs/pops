@@ -95,10 +95,10 @@ describe('selectPage', () => {
     { id: 'c', date: '2026-03-03' },
   ];
 
-  it('returns everything, newest first, when nothing is asked for', () => {
+  it('applies finance’s default limit, not "everything", when none is given', () => {
     const page = selectPage(rows, {});
     expect(page.data.map((row) => row.id)).toEqual(['c', 'b', 'a']);
-    expect(page.pagination).toEqual({ total: 3, limit: 3, offset: 0, hasMore: false });
+    expect(page.pagination).toEqual({ total: 3, limit: 50, offset: 0, hasMore: false });
   });
 
   it('reports more when the limit cuts the page short', () => {

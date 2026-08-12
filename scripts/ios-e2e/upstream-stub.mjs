@@ -236,7 +236,12 @@ export function selectPage(rows, query) {
         )
       : ordered;
 
-  const limit = query.limit ?? matching.length;
+  // finance's defaults, not "everything". `parseListQuery` already applies
+  // them on the request path, so this only decides what the helper does when
+  // called directly — and a helper that answered an unlimited page for a query
+  // finance would have capped at 50 is a fixture that cannot be trusted on its
+  // own terms.
+  const limit = query.limit ?? DEFAULT_LIMIT;
   const offset = query.offset ?? DEFAULT_OFFSET;
 
   return {
@@ -322,7 +327,19 @@ export async function startUpstreamStub({
     // be this server's own address rather than a value captured before it had
     // one — the port is only known once it is listening.
     if (url.pathname === '/registry/pillars') {
+      // `address()` is typed as `AddressInfo | string | null` — null before
+      // the socket is listening, a string for a pipe. Neither can happen from
+      // inside a request handler, which is exactly why reading `.port` off it
+      // unguarded would fail as a TypeError thrown out of an http callback:
+      // no response, the BFM's own fetch times out, and the flow reports
+      // "transactions are temporarily unreachable". A 500 that says what
+      // happened is the difference between a diagnosis and a hunt.
       const address = server.address();
+      if (address === null || typeof address === 'string') {
+        return json(500, {
+          message: `ios-e2e upstream stub has no TCP address to advertise (got ${JSON.stringify(address)})`,
+        });
+      }
       return json(200, buildRegistrySnapshot({ financeBaseUrl: `http://${host}:${address.port}` }));
     }
 
