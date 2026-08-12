@@ -1086,6 +1086,56 @@ export type ReconcileUnlinkResponses = {
 
 export type ReconcileUnlinkResponse = ReconcileUnlinkResponses[keyof ReconcileUnlinkResponses];
 
+export type SearchSearchData = {
+  /**
+   * Body
+   */
+  body?: {
+    context?: {
+      app: string | null;
+      entity?: {
+        title: string;
+        type: string;
+        uri: string;
+      };
+      filters?: {
+        [key: string]: string;
+      };
+      page: string | null;
+    };
+    query: {
+      filters?: Array<{
+        field: string;
+        operator: string;
+        value: string;
+      }>;
+      text: string;
+    };
+  };
+  path?: never;
+  query?: never;
+  url: '/search';
+};
+
+export type SearchSearchResponses = {
+  /**
+   * 200
+   */
+  200: {
+    hits: Array<{
+      data: {
+        [key: string]: unknown;
+      };
+      matchField: string;
+      matchType: 'exact' | 'prefix' | 'contains';
+      score: number;
+      uri: string;
+    }>;
+  };
+};
+
+export type SearchSearchResponse = SearchSearchResponses[keyof SearchSearchResponses];
+
 export type SourceListData = {
   body?: never;
   path?: never;

@@ -36,6 +36,8 @@ import type {
   ReconcileUnlinkData,
   ReconcileUnlinkErrors,
   ReconcileUnlinkResponses,
+  SearchSearchData,
+  SearchSearchResponses,
   SourceDeleteData,
   SourceDeleteErrors,
   SourceDeleteResponses,
@@ -226,6 +228,21 @@ export const reconcileUnlink = <ThrowOnError extends boolean = false>(
 ): RequestResult<ReconcileUnlinkResponses, ReconcileUnlinkErrors, ThrowOnError> =>
   (options?.client ?? client).post<ReconcileUnlinkResponses, ReconcileUnlinkErrors, ThrowOnError>({
     url: '/reconcile/unlink',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  });
+
+/**
+ * Search the purchases pillar's orders and line items for the unified search engine
+ */
+export const searchSearch = <ThrowOnError extends boolean = false>(
+  options?: Options<SearchSearchData, ThrowOnError>
+): RequestResult<SearchSearchResponses, unknown, ThrowOnError> =>
+  (options?.client ?? client).post<SearchSearchResponses, unknown, ThrowOnError>({
+    url: '/search',
     ...options,
     headers: {
       'Content-Type': 'application/json',
