@@ -240,11 +240,10 @@ export function globToRegExp(glob) {
 /**
  * The directory to start walking for a glob: the static prefix before its
  * first metacharacter. `[` counts alongside `*`, `?`, and `{` — a bracket
- * class that opens before any other wildcard (e.g. `pillars/[a-z]` followed
- * by more pattern) would otherwise leave the literal `[a-z]` text in the
- * prefix, `existsSync` would find no such directory, and `walk` would
- * silently index nothing under it — the glob then reports empty regardless
- * of what it should match.
+ * class that opens before any other wildcard would otherwise leave its
+ * literal text (e.g. `[a-z]`) in the prefix, `existsSync` would find no such
+ * directory, and `walk` would silently index nothing under it — the glob
+ * then reports empty regardless of what it should match.
  *
  * @param {string} absGlob
  * @returns {string}
