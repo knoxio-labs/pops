@@ -2,10 +2,12 @@ export { lookupPillar, pillarRegistry } from './api.js';
 export {
   setRegistryUrl,
   setCacheTtlMs,
+  setFetchTimeoutMs,
   invalidateRegistryCache,
   disposeDiscoveryClient,
   DEFAULT_REGISTRY_URL,
   DEFAULT_CACHE_TTL_MS,
+  DEFAULT_FETCH_TIMEOUT_MS,
   MIN_CACHE_TTL_MS,
 } from './cache.js';
 export {

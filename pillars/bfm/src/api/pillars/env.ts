@@ -15,6 +15,9 @@ import { parseBareOrigin, parsePillarsEnv } from '@pops/pillar-sdk/pillar-env';
 
 import { BootEnvError } from '../boot-env.js';
 
+/** Where the discovery cache's per-fetch abort deadline is overridden, if it is at all. */
+export const DISCOVERY_FETCH_TIMEOUT_MS_ENV = 'POPS_DISCOVERY_FETCH_TIMEOUT_MS';
+
 /** Where discovery reads the pillar snapshot from. */
 export const REGISTRY_URL_ENV = 'POPS_REGISTRY_URL';
 
@@ -86,4 +89,34 @@ export function resolveInternalBaseUrls(
   }
   if (entries.length === 0) return undefined;
   return Object.fromEntries(entries.map((entry) => [entry.id, entry.baseUrl]));
+}
+
+/**
+ * Resolve the discovery cache's per-fetch abort deadline from
+ * `POPS_DISCOVERY_FETCH_TIMEOUT_MS`, in milliseconds.
+ *
+ * `undefined` when unset — the SDK's own default (`DEFAULT_FETCH_TIMEOUT_MS`,
+ * 5s) stands, which is what every real deployment gets: a routed registry on
+ * the same Docker network answers well inside that. This exists to raise it
+ * for exactly one caller: `scripts/ios-e2e/run.mjs`, whose registry stub is a
+ * loopback Node server sharing a three-core CI runner with `xcodebuild`, the
+ * simulator and Maestro's own driver. Under that contention the fetch, not the
+ * stub's handler, is what misses a 5s deadline — the same class of starvation
+ * that forced `-j 1` on the SwiftLint-analyzer step, and it recurs for as long
+ * as the discovery cache's background refresh keeps polling, not just at boot.
+ *
+ * @throws {BootEnvError} If set to something other than a positive integer.
+ */
+export function resolveDiscoveryFetchTimeoutMs(
+  env: NodeJS.ProcessEnv = process.env
+): number | undefined {
+  const raw = env[DISCOVERY_FETCH_TIMEOUT_MS_ENV];
+  if (raw === undefined || raw.trim() === '') return undefined;
+  const parsed = Number(raw);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    throw new BootEnvError(
+      `[bfm-api] ${DISCOVERY_FETCH_TIMEOUT_MS_ENV} must be a positive integer; got '${raw}'`
+    );
+  }
+  return parsed;
 }
