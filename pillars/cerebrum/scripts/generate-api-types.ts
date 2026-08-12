@@ -9,9 +9,10 @@
  *
  * Regenerate after an OpenAPI spec change:
  *   pnpm --filter @pops/cerebrum generate:api-types
- *   git diff --exit-code pillars/cerebrum/src/contract/api-types.generated.ts
  *
- * Nothing in CI re-runs this and diffs the result.
+ * The `api-types-drift` job in `.github/workflows/quality.yml` re-runs this
+ * for every pillar and fails the build on any diff — see
+ * scripts/ci/check-api-types-drift.mjs.
  */
 import { execFileSync } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
