@@ -4,6 +4,8 @@ import { client } from './client.gen';
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import type {
+  AnalyticsMerchantSpendData,
+  AnalyticsMerchantSpendResponses,
   PurchaseCreateData,
   PurchaseCreateErrors,
   PurchaseCreateResponses,
@@ -64,6 +66,17 @@ export type Options<
    */
   meta?: keyof ClientMeta extends never ? Record<string, unknown> : ClientMeta;
 };
+
+/**
+ * Spend per merchant and currency over a period, with the explained/unexplained split
+ */
+export const analyticsMerchantSpend = <ThrowOnError extends boolean = false>(
+  options?: Options<AnalyticsMerchantSpendData, ThrowOnError>
+): RequestResult<AnalyticsMerchantSpendResponses, unknown, ThrowOnError> =>
+  (options?.client ?? client).get<AnalyticsMerchantSpendResponses, unknown, ThrowOnError>({
+    url: '/analytics/merchant-spend',
+    ...options,
+  });
 
 /**
  * Every line carrying an item tag, across every order

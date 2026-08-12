@@ -4,6 +4,73 @@ export type ClientOptions = {
   baseUrl: `${string}://${string}` | (string & {});
 };
 
+export type AnalyticsMerchantSpendData = {
+  body?: never;
+  path?: never;
+  query?: {
+    sources?: Array<string>;
+    statuses?: Array<'awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored'>;
+    from?: string;
+    to?: string;
+  };
+  url: '/analytics/merchant-spend';
+};
+
+export type AnalyticsMerchantSpendResponses = {
+  /**
+   * 200
+   */
+  200: {
+    merchants: Array<{
+      accounting: {
+        awaitingImportCents: number;
+        matchedCents: number;
+        netSpendCents: number;
+        refundedCents: number;
+        residualCents: number;
+        totalCents: number;
+      };
+      currency: string;
+      merchant:
+        | {
+            entityId: string;
+            name: string | null;
+            resolution: 'entity';
+          }
+        | {
+            entityId: null;
+            name: string;
+            resolution: 'name';
+          }
+        | {
+            entityId: null;
+            name: null;
+            resolution: 'unattributed';
+          };
+      orderCount: number;
+    }>;
+    period: {
+      from: string | null;
+      to: string | null;
+    };
+    totals: Array<{
+      accounting: {
+        awaitingImportCents: number;
+        matchedCents: number;
+        netSpendCents: number;
+        refundedCents: number;
+        residualCents: number;
+        totalCents: number;
+      };
+      currency: string;
+      orderCount: number;
+    }>;
+  };
+};
+
+export type AnalyticsMerchantSpendResponse =
+  AnalyticsMerchantSpendResponses[keyof AnalyticsMerchantSpendResponses];
+
 export type PurchaseItemsByTagData = {
   body?: never;
   path?: never;

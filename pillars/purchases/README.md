@@ -116,7 +116,7 @@ This is not a weaker gate. The whole mechanism is installed — scope table, rev
 ## What is deliberately absent
 
 - **Gmail IMAP ingest** (POPS-242). The ongoing feed, once the export/upload paths proved the reconciliation model — they have: `src/ingest/` carries `amazon/`, `woolworths/` and `receipt/` today. Email is the one source still unwritten.
-- **The reconciliation queue and the merchant lens themselves** (POPS-241). `pillars/purchases/app` exists and mounts one placeholder route; the two views that make it useful are separate work, and the merchant lens additionally has no backend yet (POPS-1752).
+- **The reconciliation queue and the merchant lens themselves** (POPS-241). `pillars/purchases/app` exists and mounts one placeholder route; the two views that make it useful are separate work. Both have their backend now — the reconcile routes since POPS-237, and `GET /analytics/merchant-spend` above since POPS-1752.
 
 **A frontend is no longer among them (POPS-1506).** This pillar used to have no `app/` directory, and `buildPurchasesManifest` declared no `nav` and no `pages` on the grounds that a rail entry pointing at a bundle slot that does not exist is a dead link. That reasoning was never an argument against a frontend — it was an argument against advertising one before the slot existed. `pillars/purchases/app` is that slot, so both dimensions are now declared: one nav item, one page descriptor, one route, kept the same size on purpose. The pillar sits on the app rail between finance and media, because reconciliation is a two-pillar workflow and the operator crosses between them constantly.
 
