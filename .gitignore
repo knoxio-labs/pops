@@ -82,24 +82,33 @@ ai_entity_cache.json
 # here (not just the two that happened to exist already), so
 # check-mise-tool-overrides.mjs can treat "gitignored" as the actual exclusion
 # test rather than "named .local." — see that script's file header.
+#
+# Three of these six contain a slash before the final segment. Git anchors a
+# pattern with a mid-pattern slash to this .gitignore's own directory (the
+# repo root) rather than matching at any depth, so without the `**/` prefix a
+# pillars/<id>/mise/config.local.toml would NOT actually be excluded despite
+# looking like the same "local" spelling as the other three. The `**/` prefix
+# makes all six match uniformly regardless of nesting.
 mise.local.toml
 .mise.local.toml
-mise/config.local.toml
+**/mise/config.local.toml
 .config/mise.local.toml
-.config/mise/config.local.toml
-.config/mise/mise.local.toml
+**/.config/mise/config.local.toml
+**/.config/mise/mise.local.toml
 # The same six spellings again, but for a per-environment config (mise inserts
 # the environment immediately before ".local.toml", e.g. `mise.local.toml` ->
 # `mise.ci.local.toml` — not `mise.local.ci.toml`). The `*` matches any
 # environment name, not just `ci` (the only one this repo's workflows set
 # today, per discoverMiseEnvValues in check-mise-tool-overrides.mjs), so a
-# future workflow adding a new MISE_ENV value doesn't reopen this gap.
+# future workflow adding a new MISE_ENV value doesn't reopen this gap. Same
+# `**/` anchoring fix as above applies to the same three slash-containing
+# spellings.
 mise.*.local.toml
 .mise.*.local.toml
-mise/config.*.local.toml
+**/mise/config.*.local.toml
 .config/mise.*.local.toml
-.config/mise/config.*.local.toml
-.config/mise/mise.*.local.toml
+**/.config/mise/config.*.local.toml
+**/.config/mise/mise.*.local.toml
 
 *storybook.log
 storybook-static
