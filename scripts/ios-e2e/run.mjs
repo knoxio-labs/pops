@@ -118,11 +118,32 @@ function run(command, args, options = {}) {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, { stdio: 'inherit', cwd: REPO_ROOT, ...options });
     child.on('error', reject);
-    child.on('exit', (code) => {
+    child.on('exit', (code, signal) => {
       if (code === 0) return resolve();
-      reject(new HarnessError(`${command} ${args.join(' ')} exited ${code}`));
+      reject(new HarnessError(`${command} ${args.join(' ')} ${describeEnd(code, signal)}`));
     });
   });
+}
+
+/**
+ * How a child process ended, in words.
+ *
+ * `code` is null whenever a signal ended the process, so reporting the code
+ * alone turns every kill into "exited null" — which is the shape a CI failure
+ * arrives in, and the one where the signal is the whole diagnosis: SIGKILL is
+ * an out-of-memory runner, SIGTERM is a cancelled job, SIGSEGV is something
+ * else entirely.
+ *
+ * @param {number | null} code
+ * @param {NodeJS.Signals | null} signal
+ * @returns {string}
+ */
+function describeEnd(code, signal) {
+  if (signal !== null) return `was killed by ${signal}`;
+  if (code !== null) return `exited ${code}`;
+  // Node documents one of the two as always present. If that ever stops being
+  // true, say so rather than printing "null".
+  return 'ended with neither an exit code nor a signal';
 }
 
 /**
@@ -149,9 +170,13 @@ async function waitForHealth(baseURL, expectedVersion, child) {
   const health = new URL('/health', baseURL);
 
   while (Date.now() < deadline) {
-    if (child.exitCode !== null) {
+    // Both are null while it runs, and exactly one is set once it has not —
+    // a pillar killed by a signal has no exit code, so watching the code alone
+    // would poll a dead port until the ceiling.
+    if (child.exitCode !== null || child.signalCode !== null) {
       throw new HarnessError(
-        `the BFM exited ${child.exitCode} before answering ${health}. Its output is above.`
+        `the BFM ${describeEnd(child.exitCode, child.signalCode)} before answering ${health}. ` +
+          'Its output is above.'
       );
     }
     const reported = await readHealthVersion(health);
@@ -229,7 +254,10 @@ async function mintPairingCode(baseURL) {
  * @returns {Promise<void>}
  */
 function stop(child) {
-  if (child.exitCode !== null) return Promise.resolve();
+  // Already gone, by either route — a process killed by a signal has no exit
+  // code, and signalling it again would wait for an `exit` that has been and
+  // gone.
+  if (child.exitCode !== null || child.signalCode !== null) return Promise.resolve();
   return new Promise((resolve) => {
     const kill = setTimeout(() => child.kill('SIGKILL'), SHUTDOWN_GRACE_MS);
     child.once('exit', () => {
