@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# EX-2 — true sandbox extraction (the real litmus; nightly / on exports+dep changes).
+# EX-2 — true sandbox extraction (the real litmus; nightly / on-demand).
 #
 # Copies a unit OUT of the monorepo into a temp dir, replaces its `@pops/*`
 # workspace edges with packed tarballs (the only mutation: "where shared deps
@@ -9,8 +9,10 @@
 # If it secretly reached behind a contract, the reached file isn't in the packed
 # dist and the build fails.
 #
-# Heavy by design — not a per-push gate. Run nightly or on units touching
-# exports/deps.
+# Heavy by design — not a per-push gate. Run nightly or on-demand via
+# .github/workflows/extractability-sandbox.yml, which is what actually
+# invokes this script (it fans out across every unit `_discover-units.yml`
+# discovers).
 #
 # Usage:
 #   scripts/extractability/sandbox.sh <unit-dir>

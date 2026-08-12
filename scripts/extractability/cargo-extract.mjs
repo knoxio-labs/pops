@@ -37,7 +37,8 @@
  *
  * This tool is not one of the guard jobs the ADR-045 tier amendment sorts into
  * Tier A/B: it runs inside `cargo-sandbox.sh`, the nightly / on-demand EX-2
- * check, never inside a per-PR guard job. Every invocation happens against an
+ * check driven by .github/workflows/extractability-sandbox.yml, never inside
+ * a per-PR guard job. Every invocation happens against an
  * already-installed workspace — the same assumption `lib.mjs` in this
  * directory already makes by importing `typescript` — so importing a parser
  * here does not risk a `MODULE_NOT_FOUND` in a required check the way it would

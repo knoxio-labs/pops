@@ -10,7 +10,10 @@
 #
 # Heavy by design (cold registry fetch + full compile per crate) — this is the
 # NIGHTLY / on-demand check, NOT a per-PR gate. The fast per-PR boundary gate is
-# `cargo deny check` + `check-cargo-deps.mjs`.
+# `cargo deny check` + `check-cargo-deps.mjs`. What actually invokes this
+# script is .github/workflows/extractability-sandbox.yml (schedule +
+# workflow_dispatch), fanning out across every Rust workspace member
+# `_discover-units.yml` discovers.
 #
 # Usage:
 #   scripts/extractability/cargo-sandbox.sh <member-dir> [out-dir]

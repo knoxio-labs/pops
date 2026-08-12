@@ -1,6 +1,6 @@
 # .github/workflows
 
-18 workflows. Every job runs on `ubuntu-latest` except `ios-quality.yml`, which needs macOS to compile Swift at all.
+19 workflows. Every job runs on `ubuntu-latest` except `ios-quality.yml`, which needs macOS to compile Swift at all.
 
 ## `ci-gate.yml` — the one static aggregate context
 
@@ -212,6 +212,7 @@ files only, no install.
 | `publish-images.yml`             | push to `main`, `v*` tags, dispatch (`only` input)            | four static app images plus every `pops-<x>` discovered from the prod compose's `image:` refs                        |
 | `release.yml`                    | `workflow_dispatch`                                           | `.github/scripts/release.sh`, then annotated tag + `gh release create`                                               |
 | `infra-lint.yml`                 | PR/push on `infra/litestream/**`, `infra/backup/**`           | YAML lint                                                                                                           |
+| `extractability-sandbox.yml`     | nightly cron + `workflow_dispatch` (optional single-`unit` input) — **not** PR/push, **not** in `ci-gate.yml`'s gated list | EX-2: `sandbox.sh` (TS) / `cargo-sandbox.sh` (Rust) over every unit `_discover-units.yml` discovers — the true zero-workspace extraction proof, too heavy for a per-push gate |
 | `workflows-quality.yml`          | PR/push on `.github/workflows/**`                             | YAML lint                                                                                                           |
 | `fe-test-e2e.yml`                | `workflow_dispatch` only                                      | Playwright, manual — see the header for why it is off PR/push                                                        |
 
