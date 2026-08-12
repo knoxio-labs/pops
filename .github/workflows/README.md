@@ -22,7 +22,12 @@ verdict converges, and for why it publishes its own check run; the rules the
 - The gate fails on `failure`, `cancelled`, `timed_out`, `startup_failure`,
   `action_required` or `stale`.
 - A gated workflow with no run at the SHA is logged as `did not run —
-  path-filtered, treated as pass`.
+  path-filtered, treated as pass`. A gated workflow can also have no run at the
+  SHA for a reason that is NOT a path-filter exclusion — every gated workflow's
+  own `concurrency:` block now runs `cancel-in-progress: false` specifically to
+  shrink that window; see the MITIGATION paragraph in `ci-gate.yml`'s own
+  CONVERGENCE comment for why cancelling a superseded run and admitting its
+  replacement was the race, not the concurrency grouping itself.
 - A run that is not yet `completed` is pending: it does not fail the gate, but it
   does hold it at `in_progress`. A failure concludes immediately (nothing can
   clear it); `success` is only ever published once nothing is left in flight.
