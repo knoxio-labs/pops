@@ -13,8 +13,10 @@ import {
   grantsChecksWrite,
   hasPullRequestPathFilter,
   parseGatedArray,
+  parsePathFilterMap,
   parseWorkflowName,
   parseWorkflowRunTriggers,
+  pullRequestPaths,
 } from '../check-ci-gate-wiring.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -267,6 +269,113 @@ describe('hasPullRequestPathFilter', () => {
   });
 });
 
+describe('pullRequestPaths', () => {
+  it('reads the paths sequence', () => {
+    expect(
+      pullRequestPaths('on:\n  pull_request:\n    paths:\n      - "a/**"\n      - "b.json"\n')
+    ).toEqual(['a/**', 'b.json']);
+  });
+
+  it('reads the inline flow-collection form', () => {
+    expect(pullRequestPaths('on:\n  pull_request:\n    paths: ["a/**", "b.json"]\n')).toEqual([
+      'a/**',
+      'b.json',
+    ]);
+  });
+
+  it('returns undefined for an unfiltered pull_request trigger', () => {
+    expect(
+      pullRequestPaths('on:\n  pull_request:\n  push:\n    branches: [main]\n')
+    ).toBeUndefined();
+  });
+
+  it('returns undefined when there is no pull_request trigger at all', () => {
+    expect(pullRequestPaths('on:\n  push:\n    branches: [main]\n')).toBeUndefined();
+  });
+
+  it('does not read a filter on a sibling trigger as its own', () => {
+    expect(
+      pullRequestPaths('on:\n  pull_request:\n  push:\n    paths:\n      - "a/**"\n')
+    ).toBeUndefined();
+  });
+
+  it('reads past a trailing comment on an entry', () => {
+    expect(
+      pullRequestPaths('on:\n  pull_request:\n    paths:\n      - "a/**" # comment\n')
+    ).toEqual(['a/**']);
+  });
+
+  it('raises when an entry is not a single scalar', () => {
+    expect(() =>
+      pullRequestPaths('on:\n  pull_request:\n    paths:\n      - ["a", "b"]\n')
+    ).toThrow(/pull_request\.paths\[0\] is/u);
+  });
+
+  it('raises when paths itself is not a sequence', () => {
+    expect(() => pullRequestPaths('on:\n  pull_request:\n    paths: "a/**"\n')).toThrow(
+      /pull_request\.paths is not a sequence/u
+    );
+  });
+});
+
+describe('parsePathFilterMap', () => {
+  it('reads a map with one entry', () => {
+    expect(parsePathFilterMap('const PATH_FILTERS = {\n  "A": ["a/**"]\n};\n')).toEqual({
+      A: ['a/**'],
+    });
+  });
+
+  it('reads a map with several entries and nested arrays', () => {
+    const body = [
+      'const PATH_FILTERS = {',
+      '  "A": [',
+      '    "a/**",',
+      '    "a.json"',
+      '  ],',
+      '  "B": [',
+      '    "b/**"',
+      '  ]',
+      '};',
+    ].join('\n');
+    expect(parsePathFilterMap(body)).toEqual({ A: ['a/**', 'a.json'], B: ['b/**'] });
+  });
+
+  it('returns an empty object when there is no PATH_FILTERS declaration', () => {
+    expect(parsePathFilterMap('const other = {};\n')).toEqual({});
+  });
+
+  it('reads the map out of a full workflow document', () => {
+    const source = [
+      'jobs:',
+      '  gate:',
+      '    steps:',
+      '      - with:',
+      '          script: |',
+      '            const PATH_FILTERS = {',
+      '              "A": ["a/**"]',
+      '            };',
+    ].join('\n');
+    expect(parsePathFilterMap(source)).toEqual({ A: ['a/**'] });
+  });
+
+  it('raises on a declaration that is not valid JSON', () => {
+    expect(() => parsePathFilterMap('const PATH_FILTERS = {\n  "A": [a/**]\n};\n')).toThrow(
+      /PATH_FILTERS could not be parsed/u
+    );
+  });
+
+  it('reads the real PATH_FILTERS declared in ci-gate.yml', () => {
+    const gate = readFileSync(join(workflowsDir, 'ci-gate.yml'), 'utf8');
+    const map = parsePathFilterMap(gate);
+    expect(map['iOS Quality']).toEqual([
+      'clients/ios/**',
+      'pillars/bfm/openapi/**',
+      '.github/workflows/ios-quality.yml',
+    ]);
+    expect(map.Quality).toBeUndefined();
+  });
+});
+
 describe('findContinueOnErrorJobs', () => {
   it('names the job that opted out of the workflow conclusion', () => {
     const source = [
@@ -474,6 +583,68 @@ describe('the guard catches each way the wiring goes inert', () => {
     );
     expect(checkCiGateWiring(root).join('\n')).toContain(
       'must stay gated: it is the only gated workflow that runs on every pull request'
+    );
+  });
+
+  it('flags a gated workflow whose real path filter gained an entry PATH_FILTERS lacks', () => {
+    const root = cloneWorkflows();
+    patch(root, 'ios-quality.yml', (s) =>
+      s.replace(
+        '  pull_request:\n    paths:\n      - "clients/ios/**"\n',
+        '  pull_request:\n    paths:\n      - "clients/ios/**"\n      - "docs/**"\n'
+      )
+    );
+    expect(checkCiGateWiring(root).join('\n')).toContain(
+      'PATH_FILTERS["iOS Quality"] does not match ios-quality.yml'
+    );
+  });
+
+  it('flags a PATH_FILTERS entry that lost an entry its real filter still has', () => {
+    const root = cloneWorkflows();
+    patch(root, 'ci-gate.yml', (s) =>
+      s.replace(
+        '"iOS Quality": [\n                "clients/ios/**",\n                "pillars/bfm/openapi/**",\n                ".github/workflows/ios-quality.yml"\n              ]',
+        '"iOS Quality": [\n                "clients/ios/**",\n                ".github/workflows/ios-quality.yml"\n              ]'
+      )
+    );
+    expect(checkCiGateWiring(root).join('\n')).toContain(
+      'PATH_FILTERS["iOS Quality"] does not match ios-quality.yml'
+    );
+  });
+
+  it('flags a gated, path-filtered workflow entirely missing from PATH_FILTERS', () => {
+    const root = cloneWorkflows();
+    patch(root, 'ci-gate.yml', (s) =>
+      s.replace(
+        '"Rust Quality": [\n                "Cargo.toml",\n                "Cargo.lock",\n                "deny.toml",\n                "libs/pops-ai/**",\n                "libs/pops-settings/**",\n                "pillars/contacts/**",\n                "scripts/extractability/**",\n                ".github/workflows/rust-quality.yml"\n              ],\n              ',
+        ''
+      )
+    );
+    expect(checkCiGateWiring(root).join('\n')).toContain(
+      'rust-quality.yml filters `pull_request` by path but ci-gate.yml\'s PATH_FILTERS has no "Rust Quality" entry'
+    );
+  });
+
+  it('flags a PATH_FILTERS entry for a workflow whose real trigger carries no path filter', () => {
+    const root = cloneWorkflows();
+    patch(root, 'ci-gate.yml', (s) =>
+      s.replace('"Unit Quality": [', '"Quality": ["docs/**"],\n              "Unit Quality": [')
+    );
+    expect(checkCiGateWiring(root).join('\n')).toContain(
+      'PATH_FILTERS["Quality"] exists but quality.yml carries no `pull_request.paths` filter'
+    );
+  });
+
+  it('flags a PATH_FILTERS entry whose key is not a gated workflow name', () => {
+    const root = cloneWorkflows();
+    patch(root, 'ci-gate.yml', (s) =>
+      s.replace(
+        '"Unit Quality": [',
+        '"Not A Real Workflow": ["docs/**"],\n              "Unit Quality": ['
+      )
+    );
+    expect(checkCiGateWiring(root).join('\n')).toContain(
+      'PATH_FILTERS has an entry "Not A Real Workflow" that is not in the `gated` array'
     );
   });
 

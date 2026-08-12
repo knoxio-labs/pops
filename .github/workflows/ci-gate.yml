@@ -72,10 +72,52 @@ run-name: >-
 # Only a settled evaluation carries a `conclusion`, and it is posted in a single
 # call, so no evaluation leaves a half-written check run behind.
 #
-# A sibling workflow that did not run at this SHA (path-filtered out) is ABSENT
-# from the API result and treated as non-failing — NOT a missing-required
-# error. Only an OBSERVED failure / cancelled / timed-out / startup-failure
-# conclusion fails the gate.
+# THAT CONVERGENCE ASSUMES THE SIBLING'S RUN EVENTUALLY REGISTERS FOR THIS SHA.
+# It says nothing about a sibling whose run for THIS head SHA never comes into
+# existence at all, which the API reports identically to one genuinely
+# excluded by its own `paths:` filter — both are just an absent row. This was
+# reproduced directly, not hypothesised: commit `dec13a17` touched
+# `clients/ios/**`, so `ios-quality.yml` should have triggered, but its
+# previous run (for the commit `dec13a17` superseded) was still executing
+# under that workflow's `cancel-in-progress` concurrency group, and no new run
+# had registered yet. `listWorkflowRunsForRepo({ head_sha: "dec13a17..." })`
+# legitimately returned zero rows for "iOS Quality" — indistinguishable, from
+# this script's point of view, from a genuine path-filter exclusion — and CI
+# Gate check run `93839365599` published `success` at `2026-08-11T15:53:30Z`
+# reporting "iOS Quality: (did not run — path-filtered, treated as pass)".
+# PR-time convergence did NOT correct it: that branch's `ios-quality.yml` run
+# history holds exactly one run for the whole branch, against an EARLIER
+# commit — neither `dec13a17` nor the branch's eventual HEAD, nor an empty
+# commit pushed specifically to force a fresh registration, ever got one.
+#
+# WHY THIS DOES NOT REACH `main`: `merge_group` cannot carry a `paths:` filter
+# at all — GitHub rejects the key outright on that event — so every one of the
+# eight gated workflows runs UNCONDITIONALLY in the merge queue regardless of
+# the diff (see e.g. `ios-quality.yml`'s own `merge_group:` comment). Confirmed
+# on the same commit: the queue entry that carried it (head_sha `47a5fd1f...`,
+# the commit that actually landed on `main`) ran "iOS Quality" for real,
+# completing at `2026-08-11T17:04:02Z`, and the CI Gate evaluation that
+# followed (check run `93860105727`, `17:04:11Z`) reflects that REAL result,
+# not the absent-run branch. A premature PR-time `success` is therefore a
+# misleading EARLY SIGNAL something could act on too soon — never a way for an
+# unvalidated gated workflow to actually merge.
+#
+# A sibling workflow ABSENT from the API result at this head SHA is treated as
+# non-failing ONLY once its own `pull_request.paths` filter is checked against
+# this evaluation's diff — the `PATH_FILTERS` map and `matchesPathFilter` below,
+# mirroring what `_discover-units.yml` does for `pillars/`/`libs/`, and kept in
+# sync with each gated workflow's real trigger by
+# `scripts/ci/check-ci-gate-wiring.mjs`. A genuine exclusion (a filter is
+# declared and the diff doesn't match it) is a pass. Anything else — the filter
+# matches, the workflow carries no filter at all ("Quality"), the diff couldn't
+# be determined, or this evaluation is neither a `pull_request` nor a
+# `merge_group` event (the only two where the diff is trustworthy) — is
+# PENDING, never a pass. A gated workflow that then never actually registers a
+# run for this SHA (the concurrency-group race above) leaves CI Gate stuck
+# `in_progress` instead of reporting green — an empty commit or re-running the
+# missing workflow is then required to unstick it. That is the intended trade:
+# a required check that never turns green blocks its own PR, which cannot be
+# merged by accident, where a false green could be.
 
 on:
   workflow_run:
@@ -101,6 +143,7 @@ permissions:
   actions: read
   checks: write
   contents: read
+  pull-requests: read
 
 jobs:
   gate:
@@ -128,6 +171,139 @@ jobs:
             ];
             const failing = new Set(["failure", "cancelled", "timed_out", "startup_failure", "action_required", "stale"]);
 
+            // Mirrors each gated workflow's OWN `pull_request.paths` trigger —
+            // "Quality" carries none and is deliberately absent here, since it
+            // is expected on every pull request unconditionally.
+            // `scripts/ci/check-ci-gate-wiring.mjs` asserts this literal object
+            // still matches the real files, so an edit to one without the
+            // other fails CI rather than silently drifting.
+            const PATH_FILTERS = {
+              "Unit Quality": [
+                "pillars/**",
+                "libs/**",
+                "pnpm-lock.yaml",
+                "pnpm-workspace.yaml",
+                "tsconfig.base.json",
+                "tsconfig.build.json",
+                ".oxfmtrc.json",
+                ".oxlintrc.json",
+                "mise.toml",
+                "mise.ci.toml",
+                "Cargo.toml",
+                "Cargo.lock",
+                ".github/workflows/unit-quality.yml",
+                ".github/workflows/_discover-units.yml"
+              ],
+              "FE Quality": [
+                "pillars/shell/**",
+                "pillars/*/app/**",
+                "pillars/*/openapi/**",
+                "libs/navigation/**",
+                "libs/sdk/**",
+                "libs/types/**",
+                "libs/ui/**",
+                ".github/workflows/fe-quality.yml"
+              ],
+              "Rust Quality": [
+                "Cargo.toml",
+                "Cargo.lock",
+                "deny.toml",
+                "libs/pops-ai/**",
+                "libs/pops-settings/**",
+                "pillars/contacts/**",
+                "scripts/extractability/**",
+                ".github/workflows/rust-quality.yml"
+              ],
+              "App Quality": [
+                "pillars/*/app/**",
+                "pillars/*/openapi/**",
+                "libs/navigation/**",
+                "libs/sdk/**",
+                "libs/types/**",
+                "libs/ui/**",
+                "pnpm-lock.yaml",
+                "pnpm-workspace.yaml",
+                "tsconfig.base.json",
+                "tsconfig.build.json",
+                "mise.toml",
+                "mise.ci.toml",
+                ".github/workflows/app-quality.yml"
+              ],
+              "Registry Generated Quality": [
+                "libs/module-registry/**",
+                "libs/types/**",
+                "pillars/**",
+                "packages/**",
+                ".github/workflows/registry-generated-quality.yml"
+              ],
+              "iOS Quality": [
+                "clients/ios/**",
+                "pillars/bfm/openapi/**",
+                ".github/workflows/ios-quality.yml"
+              ],
+              "Docker Build": [
+                "infra/docker*/**",
+                "infra/docker-compose*.yml",
+                "**/Dockerfile",
+                "pnpm-lock.yaml",
+                "pnpm-workspace.yaml",
+                "tsconfig.base.json",
+                ".github/workflows/docker-build.yml",
+                "scripts/ci/smoke-image.mjs"
+              ]
+            };
+
+            // A GitHub Actions `paths:` glob, restricted to what this repo's
+            // workflows actually use: literal segments, `*` within a segment,
+            // and `**` spanning segments. Not a general glob implementation —
+            // `?`, `[...]` and a leading `!` negation are unsupported because
+            // no gated workflow's `pull_request.paths` uses them.
+            function escapeGlobLiteral(char) {
+              return /[.*+?^${}()|[\]\\]/u.test(char) ? `\\${char}` : char;
+            }
+            function globToRegExp(glob) {
+              let source = "";
+              let i = 0;
+              while (i < glob.length) {
+                if (glob.startsWith("**/", i)) {
+                  source += "(?:.*/)?";
+                  i += 3;
+                } else if (glob.startsWith("**", i) && i + 2 === glob.length) {
+                  source += ".*";
+                  i += 2;
+                } else if (glob[i] === "*") {
+                  source += "[^/]*";
+                  i += 1;
+                } else {
+                  source += escapeGlobLiteral(glob[i]);
+                  i += 1;
+                }
+              }
+              return new RegExp(`^${source}$`);
+            }
+
+            // Would `name`'s OWN path filter select at least one file in
+            // `files`? `true` when `name` carries no filter at all (always
+            // expected). `null` when `files` is unknown — a caller must not
+            // read that as "no match".
+            function matchesPathFilter(name, files) {
+              const patterns = PATH_FILTERS[name];
+              if (!patterns) return true;
+              if (files === null) return null;
+              const regexes = patterns.map(globToRegExp);
+              return files.some((file) => regexes.some((re) => re.test(file)));
+            }
+
+            // Test-only seam: `scripts/ci/__tests__/ci-gate-path-filters.test.ts`
+            // sets this global before evaluating this exact script body, so
+            // tests exercise the real, deployed matching logic rather than a
+            // duplicate copy that could drift from it. Always undefined in
+            // production, so this branch never runs there.
+            if (typeof globalThis.__ciGateTestHook === "function") {
+              globalThis.__ciGateTestHook({ globToRegExp, matchesPathFilter, PATH_FILTERS });
+              return;
+            }
+
             core.info(`Triggered by "${process.env.TRIGGERING_WORKFLOW}" (conclusion=${process.env.TRIGGERING_CONCLUSION}) at ${headSha}`);
 
             const runs = await github.paginate(github.rest.actions.listWorkflowRunsForRepo, {
@@ -136,6 +312,35 @@ jobs:
               head_sha: headSha,
               per_page: 100,
             });
+
+            // The diff is only trustworthy for a `pull_request` evaluation
+            // with an identified PR (fetched below), or a `merge_group` one
+            // (where every gated workflow is unconditional regardless of the
+            // diff — `paths:` is not a legal filter on that event at all, so
+            // `matchesPathFilter`'s unfiltered branch already covers it).
+            // Anything else (a `push` to `main`, e.g.) keeps the pre-existing
+            // behavior below: an absent run is treated as filtered-out and
+            // passing. `main` is not gated by branch protection, so getting
+            // this wrong there does not admit a broken merge — see the
+            // CONVERGENCE / WHY THIS DOES NOT REACH `main` comment at the top
+            // of this file.
+            const triggeringEvent = context.payload.workflow_run.event;
+            const pullRequests = context.payload.workflow_run.pull_requests || [];
+            let changedFiles = null;
+            if (triggeringEvent === "pull_request" && pullRequests.length > 0) {
+              try {
+                const files = await github.paginate(github.rest.pulls.listFiles, {
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: pullRequests[0].number,
+                  per_page: 100,
+                });
+                changedFiles = files.map((f) => f.filename);
+              } catch (error) {
+                core.warning(`Could not list changed files for PR #${pullRequests[0].number}: ${error.message}`);
+              }
+            }
+            const diffIsTrustworthy = triggeringEvent === "pull_request" || triggeringEvent === "merge_group";
 
             // Keep the newest run per gated workflow name (a re-run supersedes
             // an earlier attempt for the same workflow at this SHA).
@@ -154,7 +359,17 @@ jobs:
             for (const name of gated) {
               const run = latest.get(name);
               if (!run) {
-                lines.push(`  - ${name}: (did not run — path-filtered, treated as pass)`);
+                const expected = diffIsTrustworthy ? matchesPathFilter(name, changedFiles) : false;
+                if (expected === false) {
+                  lines.push(`  - ${name}: (did not run — path-filtered, treated as pass)`);
+                  continue;
+                }
+                // expected === true (its filter matches this diff, or it has
+                // none) or === null (the diff couldn't be determined) — either
+                // way this is NOT a confirmed path-filter exclusion, so it
+                // cannot count as a pass.
+                pending.push(name);
+                lines.push(`  - ${name}: (no run registered yet for this commit — treated as pending, not pass)`);
                 continue;
               }
               if (run.status !== "completed") {
@@ -179,10 +394,14 @@ jobs:
             // `in_progress`, which reads as "Expected" and holds the merge
             // until the last sibling's completion re-fires this and concludes.
             //
-            // That in-progress check run cannot strand a PR: concurrency
-            // cancels a run only when a NEWER run for the same head SHA starts,
-            // and that successor publishes in turn. The last evaluation for a
-            // commit always concludes.
+            // An in-progress check run from a settled sibling's completion
+            // does not strand a PR on its own: concurrency cancels this job
+            // only when a NEWER run for the same head SHA starts, and that
+            // successor publishes in turn. What CAN strand it is a gated
+            // workflow whose run for this SHA never registers at all — see
+            // the CONVERGENCE comment at the top of this file for why that
+            // happens and why it is the intended failure mode (stuck, not
+            // silently green).
             const settled = failed.length > 0 || pending.length === 0;
 
             const verdict = failed.length > 0
