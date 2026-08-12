@@ -3,13 +3,14 @@
  * needs.
  *
  * `pairing-to-transaction-detail.yaml` needs nothing but a healthy federation,
- * so it dials the BFM directly and this file is not in its path. The three
- * recovery flows each need the world to change WHILE the app is looking at it —
- * a token that has aged, a device an operator revoked, a pillar that stopped
- * answering — and a Maestro flow can reach exactly one thing outside the phone:
- * an HTTP endpoint, through `runScript`. So the seams are HTTP endpoints, and
- * they live here rather than in the BFM, which must never grow a route that
- * exists for a test.
+ * so it dials the BFM directly and this file is not in its path. Every other
+ * flow needs the world to change WHILE the app is looking at it — a token
+ * that has aged, a device an operator revoked, a pillar that stopped
+ * answering, a pillar whose `/openapi` stops answering or answers something
+ * unreadable — and a Maestro flow can reach exactly one thing outside the
+ * phone: an HTTP endpoint, through `runScript`. So the seams are HTTP
+ * endpoints, and they live here rather than in the BFM, which must never grow
+ * a route that exists for a test.
  *
  * ## Why it also proxies
  *
@@ -156,7 +157,14 @@ function agedAuthorization(header, secret) {
  * @param {{
  *   bfmBaseUrl: string,
  *   accessTokenSecret: string,
- *   upstream: { setFinanceOutage: (active: boolean) => void, isFinanceOutage: () => boolean },
+ *   upstream: {
+ *     setFinanceOutage: (active: boolean) => void,
+ *     isFinanceOutage: () => boolean,
+ *     setFinanceOpenApiUnreachable: (active: boolean) => void,
+ *     isFinanceOpenApiUnreachable: () => boolean,
+ *     setFinanceContractMismatch: (active: boolean) => void,
+ *     isFinanceContractMismatch: () => boolean,
+ *   },
  *   host?: string,
  * }} options
  * @returns {Promise<{ url: string, port: number, state: () => Record<string, unknown>, close: () => Promise<void> }>}
@@ -168,7 +176,12 @@ export async function startControlPlane({
   host = '127.0.0.1',
 }) {
   const counters = { armed: false, substitutions: 0, refreshes: 0, lastDeviceId: null };
-  const state = () => ({ ...counters, financeOutage: upstream.isFinanceOutage() });
+  const state = () => ({
+    ...counters,
+    financeOutage: upstream.isFinanceOutage(),
+    financeOpenApiUnreachable: upstream.isFinanceOpenApiUnreachable(),
+    financeContractMismatch: upstream.isFinanceContractMismatch(),
+  });
 
   const control = (method, pathname) => {
     if (method === 'POST' && pathname === '/__e2e/access-token/expire-next') {
@@ -181,6 +194,8 @@ export async function startControlPlane({
       counters.refreshes = 0;
       counters.lastDeviceId = null;
       upstream.setFinanceOutage(false);
+      upstream.setFinanceOpenApiUnreachable(false);
+      upstream.setFinanceContractMismatch(false);
       return { status: 200, body: state() };
     }
     if (method === 'POST' && pathname === '/__e2e/finance/down') {
@@ -189,6 +204,22 @@ export async function startControlPlane({
     }
     if (method === 'POST' && pathname === '/__e2e/finance/up') {
       upstream.setFinanceOutage(false);
+      return { status: 200, body: state() };
+    }
+    if (method === 'POST' && pathname === '/__e2e/finance/openapi-unreachable') {
+      upstream.setFinanceOpenApiUnreachable(true);
+      return { status: 200, body: state() };
+    }
+    if (method === 'POST' && pathname === '/__e2e/finance/openapi-reachable') {
+      upstream.setFinanceOpenApiUnreachable(false);
+      return { status: 200, body: state() };
+    }
+    if (method === 'POST' && pathname === '/__e2e/finance/contract-mismatch') {
+      upstream.setFinanceContractMismatch(true);
+      return { status: 200, body: state() };
+    }
+    if (method === 'POST' && pathname === '/__e2e/finance/contract-ok') {
+      upstream.setFinanceContractMismatch(false);
       return { status: 200, body: state() };
     }
     if (method === 'GET' && pathname === '/__e2e/state') return { status: 200, body: state() };
@@ -202,6 +233,10 @@ export async function startControlPlane({
           'POST /__e2e/access-token/expire-next',
           'POST /__e2e/finance/down',
           'POST /__e2e/finance/up',
+          'POST /__e2e/finance/openapi-unreachable',
+          'POST /__e2e/finance/openapi-reachable',
+          'POST /__e2e/finance/contract-mismatch',
+          'POST /__e2e/finance/contract-ok',
           'POST /__e2e/reset',
           'GET /__e2e/state',
         ],

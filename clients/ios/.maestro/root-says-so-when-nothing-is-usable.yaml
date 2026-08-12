@@ -1,0 +1,72 @@
+appId: com.knoxiolabs.pops
+name: The root screen says why nothing is usable, and Try again leaves it
+---
+# An unpaired launch, every time — the credentials live in the keychain,
+# outside what `clearState` empties.
+- clearState
+- clearKeychain
+- launchApp
+
+- assertVisible:
+    id: 'pairing-code-field'
+
+# Armed before pairing, not after: `AppShellModel.loadBootstrap()` fires the
+# moment pairing lands a paired device (`RootView`'s `.task(id: pairedDevice)`),
+# so the switch has to be thrown before that request exists, not raced against
+# it. `/registry/pillars` keeps answering finance as registered and healthy —
+# only `/openapi` stops answering — which is what keeps this the root's own
+# screen rather than the transactions one `unreachable-transactions-say-so.yaml`
+# already covers.
+- runScript: scripts/openapi-goes-unreachable.js
+- assertTrue: ${output.outage.status == 200}
+- assertTrue: ${output.outage.state.financeOpenApiUnreachable == true}
+
+- tapOn:
+    id: 'pairing-server-field'
+- eraseText
+- inputText: ${CONTROL_BASE_URL}
+
+- tapOn:
+    id: 'pairing-code-field'
+- inputText: ${PAIRING_CODE}
+
+- tapOn:
+    id: 'pairing-submit'
+
+# `RootCopy.nothingAvailable(surface.unavailable)` for a single `unavailable`
+# feature, in full — Maestro matches a text selector as a regex against the
+# WHOLE label, so a prefix of this sentence matches nothing and passes
+# whatever is on screen.
+- assertVisible: 'Transactions is not available right now.'
+
+# AFTER the assertion above, and that order is load-bearing: a relaunch — or
+# here, a first launch racing its own bootstrap answer — is a blank-then-guess
+# screen for a beat, so a negative assertion placed first would pass against
+# whatever that guess happened to be drawing. `AppShellModel.surface` is
+# optimistic before the first answer lands (every renderable feature, marked
+# `pending`), so the transactions screen this build CAN draw is exactly what
+# would flash here if these were ordered the other way.
+- assertNotVisible:
+    id: 'transactions-list'
+
+# The other reading of the same absence, and it must not be on screen here —
+# collapsing the two into "something went wrong" is exactly the regression
+# this flow, and its sibling `root-contract-mismatch-reads-differently.yaml`,
+# exist to catch.
+- assertNotVisible: 'Transactions needs a newer version of this app.'
+
+# finance's contract answers again — a state, not a dead end. The screen's own
+# Try again has to leave the unavailable state on its own, which is what
+# proves the sentence above was reporting a condition rather than describing a
+# corner the app cannot leave.
+- runScript: scripts/openapi-comes-back.js
+- assertTrue: ${output.recovery.state.financeOpenApiUnreachable == false}
+
+- tapOn: 'Try again'
+
+# The seeded row, reached only if `AppShellModel.surface` re-admitted
+# `transactions` to `available` — a screen that merely stopped complaining
+# would not fetch anything to show here.
+- assertVisible:
+    id: 'transaction-row-e2e-groceries'
+- assertNotVisible: 'Transactions is not available right now.'

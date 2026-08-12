@@ -1,0 +1,62 @@
+appId: com.knoxiolabs.pops
+name: A pillar answering something unreadable reads differently from unavailable
+---
+- clearState
+- clearKeychain
+- launchApp
+
+- assertVisible:
+    id: 'pairing-code-field'
+
+# Armed before pairing, for the reason `root-says-so-when-nothing-is-usable.yaml`
+# gives: bootstrap fires the moment pairing lands a device, so the switch has
+# to be thrown first. `/registry/pillars` keeps answering finance as
+# registered and healthy, and `/openapi` answers 200 — it is the body that is
+# unreadable, the misrouted-proxy case `probeContractRoute`'s own doc comment
+# names (`pillars/bfm/src/api/mobile/reachability.ts`).
+- runScript: scripts/openapi-turns-to-garbage.js
+- assertTrue: ${output.mismatch.status == 200}
+- assertTrue: ${output.mismatch.state.financeContractMismatch == true}
+
+- tapOn:
+    id: 'pairing-server-field'
+- eraseText
+- inputText: ${CONTROL_BASE_URL}
+
+- tapOn:
+    id: 'pairing-code-field'
+- inputText: ${PAIRING_CODE}
+
+- tapOn:
+    id: 'pairing-submit'
+
+# `RootCopy.nothingAvailable(surface.unavailable)` for a single
+# `contract-mismatch` feature, in full. This is the sentence that must stay
+# distinct from the `unavailable` one below — "answered something this build
+# cannot read" is a reason to update the app, not to wait.
+- assertVisible: 'Transactions needs a newer version of this app.'
+
+# AFTER the assertion above — `root-says-so-when-nothing-is-usable.yaml`
+# explains why the order matters: the surface is optimistic before the first
+# bootstrap answer lands, so a negative assertion placed first could pass
+# against a screen that has not drawn its real answer yet.
+- assertNotVisible:
+    id: 'transactions-list'
+
+# The reading this flow exists to rule out. If this sentence were on screen
+# instead, `AppShellModel.surface` would have been fed `unavailable` rather
+# than `contract-mismatch`, and this flow would be indistinguishable from
+# `root-says-so-when-nothing-is-usable.yaml` — collapsing the two readings
+# into one is exactly the regression this flow exists to catch.
+- assertNotVisible: 'Transactions is not available right now.'
+
+# finance's contract answers again — same proof of "a state, not a dead end"
+# `root-says-so-when-nothing-is-usable.yaml` gives for the unavailable case.
+- runScript: scripts/openapi-serves-its-contract-again.js
+- assertTrue: ${output.recovery.state.financeContractMismatch == false}
+
+- tapOn: 'Try again'
+
+- assertVisible:
+    id: 'transaction-row-e2e-groceries'
+- assertNotVisible: 'Transactions needs a newer version of this app.'

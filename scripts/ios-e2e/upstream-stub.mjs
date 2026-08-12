@@ -43,6 +43,38 @@
  * while whatever is behind it is not. The SDK maps any unmapped status onto
  * `unavailable` (`libs/sdk/src/client/rest-call.ts`), so the BFM answers
  * `upstream_unavailable` and the app says the sentence.
+ *
+ * ## The `/openapi` switches
+ *
+ * The first bullet above — a stub that stops answering `/openapi` reports
+ * finance `unavailable` — is what
+ * `clients/ios/.maestro/root-says-so-when-nothing-is-usable.yaml` and
+ * `clients/ios/.maestro/root-contract-mismatch-reads-differently.yaml` drive
+ * on purpose: the app's ROOT screen, drawn when nothing is usable at all —
+ * `App/ContentView.swift` and `App/RootCopy.swift` — rather than the
+ * transactions screen the paragraph above is about.
+ * `setFinanceOpenApiUnreachable` resets the connection instead of answering,
+ * and `setFinanceContractMismatch` answers 200 with a body that is not
+ * JSON — the two ways `probeContractRoute`
+ * (`pillars/bfm/src/api/mobile/reachability.ts`) reads `/openapi` as
+ * something other than a healthy pillar, told apart by whether the request
+ * completed at all.
+ *
+ * Both leave `/registry/pillars` reporting finance registered and healthy.
+ * That is deliberate rather than incomplete: `registryVeto` in the same file
+ * decides `unavailable` from the registry's OWN verdict too, without probing
+ * anything, but that verdict is read through `@pops/pillar-sdk/discovery`'s
+ * process-wide cache — thirty seconds by default, five at the shortest the
+ * SDK allows — so flipping it mid-flow and expecting a `Try again` tap to see
+ * the change immediately after would need a wait this suite refuses to add
+ * (`clients/ios/.maestro/README.md`). Driving both states through the LIVE
+ * probe instead — which `reachability.test.ts` and this file's own note above
+ * already establish as a real, common way to reach `unavailable` — keeps
+ * both flows able to prove recovery on the very next request, which a flow
+ * that cannot sleep needs. The registry-veto arm of `registryVeto` has its
+ * own unit coverage in `pillars/bfm/src/api/mobile/__tests__/reachability.test.ts`
+ * and needs no second proof here; this file's job is the client reading
+ * whatever `FeatureReachability` bootstrap reports, not re-deriving it.
  */
 import { readFileSync } from 'node:fs';
 import { createServer } from 'node:http';
@@ -342,10 +374,30 @@ export const FINANCE_OUTAGE_BODY = {
 };
 
 /**
+ * What `/openapi` answers while the contract-mismatch switch is on: a 200
+ * whose body is not JSON. `probeContractRoute`
+ * (`pillars/bfm/src/api/mobile/reachability.ts`) decides `contract-mismatch`
+ * from the content type alone and never reads the body, so this stands in for
+ * the fleet's own history that doc comment names — a misrouted proxy
+ * answering `200 text/html` for an API path.
+ */
+const CONTRACT_MISMATCH_BODY = '<html><body>404 Not Found</body></html>';
+
+/**
  * Starts the registry-and-finance origin the BFM talks to.
  *
  * @param {{ rows: Array<Record<string, unknown>>, contract?: Record<string, unknown>, host?: string }} options
- * @returns {Promise<{ url: string, port: number, close: () => Promise<void>, setFinanceOutage: (active: boolean) => void, isFinanceOutage: () => boolean }>}
+ * @returns {Promise<{
+ *   url: string,
+ *   port: number,
+ *   close: () => Promise<void>,
+ *   setFinanceOutage: (active: boolean) => void,
+ *   isFinanceOutage: () => boolean,
+ *   setFinanceOpenApiUnreachable: (active: boolean) => void,
+ *   isFinanceOpenApiUnreachable: () => boolean,
+ *   setFinanceContractMismatch: (active: boolean) => void,
+ *   isFinanceContractMismatch: () => boolean,
+ * }>}
  */
 export async function startUpstreamStub({
   rows,
@@ -355,6 +407,12 @@ export async function startUpstreamStub({
   const routes = financeRoutes(contract);
   const matchesDetail = pathMatcher(routes.get.path);
   let financeOutage = false;
+  // Whether `/openapi` resets the connection instead of answering — the
+  // `unavailable` half of the app's root screen.
+  let financeOpenApiUnreachable = false;
+  // Whether `/openapi` answers something the BFM cannot read — the
+  // `contract-mismatch` half.
+  let financeContractMismatch = false;
 
   // Serialised once, not per request, and that is a correctness fix rather than
   // a micro-optimisation. finance's snapshot is ~630 kB, `JSON.stringify` of it
@@ -397,6 +455,17 @@ export async function startUpstreamStub({
     }
 
     if (url.pathname === '/openapi') {
+      // Reset rather than merely not-`response.end()`'d: leaving the socket
+      // open and never answering would tie up the BFM's probe for its own
+      // 2s timeout (`DEFAULT_PROBE_TIMEOUT_MS`) on every affected bootstrap
+      // call, which is a real wait this suite does not want. A reset fails
+      // the BFM's `fetch` immediately, the same as a connection nothing is
+      // listening on.
+      if (financeOpenApiUnreachable) return request.socket.destroy();
+      if (financeContractMismatch) {
+        response.writeHead(200, { 'content-type': 'text/html' });
+        return response.end(CONTRACT_MISMATCH_BODY);
+      }
       response.writeHead(200, {
         'content-type': 'application/json',
         'content-length': String(contractBody.byteLength),
@@ -453,5 +522,13 @@ export async function startUpstreamStub({
       financeOutage = active;
     },
     isFinanceOutage: () => financeOutage,
+    setFinanceOpenApiUnreachable: (active) => {
+      financeOpenApiUnreachable = active;
+    },
+    isFinanceOpenApiUnreachable: () => financeOpenApiUnreachable,
+    setFinanceContractMismatch: (active) => {
+      financeContractMismatch = active;
+    },
+    isFinanceContractMismatch: () => financeContractMismatch,
   };
 }
