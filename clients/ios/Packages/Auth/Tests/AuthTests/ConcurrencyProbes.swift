@@ -81,40 +81,21 @@ internal actor Barrier {
     }
 }
 
-/// A one-way switch a test flips when it is ready.
-///
-/// Used to hold a refresh open for as long as it takes every other caller to
-/// pile up behind it — the state the single-flight logic exists for, and the
-/// one a test cannot otherwise be sure it reached.
-internal actor Gate {
-    private var isOpen = false
-    private var waiting: [CheckedContinuation<Void, Never>] = []
-
-    internal func open() {
-        isOpen = true
-        for continuation in waiting { continuation.resume() }
-        waiting.removeAll()
-    }
-
-    internal func wait() async {
-        guard !isOpen else { return }
-        await withCheckedContinuation { waiting.append($0) }
-    }
-}
-
 /// Lets a test wait for at least `target` occurrences of an event to have
 /// happened, signalled the instant the target is reached rather than polled
 /// for.
 ///
 /// Every probe in this file that needs "wait for N somethings to happen"
 /// rather than "wait for a single one-way flag" shares this shape:
-/// ``CountingTokenStore`` counts `TokenStore/load()` calls, `RecordingTransport`
-/// (in `RecordingTransport.swift`) counts arrivals at the transport, and a
-/// test can hand one directly to `ScriptedRefreshExchange` to count arrivals
-/// at the refresh exchange. `record()` is synchronous and lock-based rather
-/// than actor-isolated because every one of those call sites either is itself
-/// synchronous (`load()`) or must not add a suspension point ahead of the
-/// moment being counted.
+/// ``CountingTokenStore`` counts `TokenStore/load()` calls, ``Gate`` counts
+/// arrivals at `wait()`, and `RecordingTransport` (in
+/// `RecordingTransport.swift`) counts arrivals at the transport. `record()`
+/// is synchronous and lock-based rather than actor-isolated because every one
+/// of those call sites either is itself synchronous (`load()`) or must record
+/// atomically with a decision the caller makes immediately afterward
+/// (``Gate/wait()``'s `isOpen` check) rather than a moment before it — an
+/// actor can only guarantee that atomicity for its own state, and the whole
+/// point here is a plain lock any of these types can share.
 ///
 /// ``wait(atLeast:)`` resumes a continuation the instant the target count is
 /// reached, rather than polling a count in a bounded loop. A bounded poll is
@@ -211,6 +192,45 @@ internal final class Countdown: Sendable {
             }
             waiter?.continuation.resume(throwing: CancellationError())
         }
+    }
+}
+
+/// A one-way switch a test flips when it is ready.
+///
+/// Used to hold a refresh open for as long as it takes every other caller to
+/// pile up behind it — the state the single-flight logic exists for, and the
+/// one a test cannot otherwise be sure it reached.
+internal actor Gate {
+    private var isOpen = false
+    private var waiting: [CheckedContinuation<Void, Never>] = []
+    private let arrivals = Countdown()
+
+    internal func open() {
+        isOpen = true
+        for continuation in waiting { continuation.resume() }
+        waiting.removeAll()
+    }
+
+    internal func wait() async {
+        // Recorded first, before the `isOpen` check, and both are part of the
+        // same non-suspending actor turn — so a caller of
+        // ``waitForArrivals(atLeast:)`` that observes the record is
+        // guaranteed this call has already reached (and, since nothing but
+        // `open()` can flip `isOpen`, is about to act on) this exact point.
+        // Recording it instead from outside, ahead of the `await wait()` call
+        // that reaches here, would leave a real gap: the recording task could
+        // be descheduled between recording and actually entering this method,
+        // during which a test could call `open()` and have this call race
+        // straight through without ever parking.
+        arrivals.record()
+        guard !isOpen else { return }
+        await withCheckedContinuation { waiting.append($0) }
+    }
+
+    /// Suspends until `wait()` has been entered at least `target` times. See
+    /// ``Countdown/wait(atLeast:)`` for how the wait is signalled.
+    internal func waitForArrivals(atLeast target: Int) async throws {
+        try await arrivals.wait(atLeast: target)
     }
 }
 
