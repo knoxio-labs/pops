@@ -179,12 +179,18 @@ async function waitForHealth(baseURL, expectedVersion, child) {
           'Its output is above.'
       );
     }
-    const reported = await readHealthVersion(health);
-    if (reported === expectedVersion) return;
-    if (reported !== undefined) {
+    const answer = await probeHealth(health);
+    if (answer.kind === 'version' && answer.version === expectedVersion) return;
+    if (answer.kind === 'version') {
       throw new HarnessError(
         `something else is already serving ${baseURL.origin} — it reports version ` +
-          `"${reported}", not this harness's "${expectedVersion}". Stop it and run this again.`
+          `"${answer.version}", not this harness's "${expectedVersion}". Stop it and run this again.`
+      );
+    }
+    if (answer.kind === 'foreign') {
+      throw new HarnessError(
+        `something is already serving ${baseURL.origin} and it is not a BFM — ` +
+          `${health} answered 2xx with ${answer.why}. Stop it and run this again.`
       );
     }
     await sleep(BOOT_POLL_MS);
@@ -194,22 +200,47 @@ async function waitForHealth(baseURL, expectedVersion, child) {
 }
 
 /**
+ * What is on the other end of the health route, in three kinds rather than two.
+ *
+ * `silent` and `foreign` have to be told apart. Silence is the expected answer
+ * for the first few polls and means keep waiting; a 2xx that is not this
+ * pillar's health shape means a stranger owns the port, and that will still be
+ * true in thirty seconds. Collapsing the second into the first spends the whole
+ * boot ceiling and then reports a timeout, which points at the pillar being
+ * slow rather than at the process that is actually answering.
+ *
  * @param {URL} health
- * @returns {Promise<string | undefined>} the reported version, or `undefined`
- *   when nothing usable answered
+ * @returns {Promise<{ kind: 'version', version: string } | { kind: 'foreign', why: string } | { kind: 'silent' }>}
  */
-async function readHealthVersion(health) {
+async function probeHealth(health) {
+  /** @type {Response} */
+  let response;
   try {
-    const response = await fetch(health, { signal: AbortSignal.timeout(1000) });
-    if (!response.ok) return undefined;
-    const body = await response.json();
-    return typeof body?.version === 'string' ? body.version : undefined;
+    response = await fetch(health, { signal: AbortSignal.timeout(1000) });
   } catch {
-    // Not up yet, or up and not speaking JSON. A refused connection is the
-    // expected answer for the first few polls and says nothing worth
-    // reporting on its own.
-    return undefined;
+    // Refused, reset or timed out. Nothing is listening yet, which is what the
+    // first few polls are for.
+    return { kind: 'silent' };
   }
+
+  // A non-2xx is ambiguous on purpose: a pillar mid-boot can answer 503, and so
+  // can a proxy in front of something else. Waiting is the cheaper mistake, and
+  // the ceiling bounds it.
+  if (!response.ok) return { kind: 'silent' };
+
+  /** @type {unknown} */
+  let body;
+  try {
+    body = await response.json();
+  } catch {
+    return { kind: 'foreign', why: 'a body that is not JSON' };
+  }
+
+  const version = /** @type {{ version?: unknown }} */ (body)?.version;
+  if (typeof version !== 'string') {
+    return { kind: 'foreign', why: 'JSON carrying no `version` string' };
+  }
+  return { kind: 'version', version };
 }
 
 /**

@@ -258,12 +258,17 @@ export function selectPage(rows, query) {
 /**
  * The registry snapshot the BFM reads, with finance pointed at this stub.
  *
- * Both readers in a live BFM parse this — `pillarRegistry()` for the bootstrap
- * roster and `HttpDiscoveryTransport` for the cross-pillar call — and they
- * disagree about which fields are optional. `status` is stated because the
- * client parser rejects an entry without one; the manifest is complete because
- * the discovery parser validates it strictly and rejects the whole snapshot
- * over a single bad entry.
+ * Two readers in a live BFM parse this, with different rules, and the snapshot
+ * has to satisfy the stricter of each — which is not the same reader twice:
+ *
+ * - `pillarRegistry()` (`libs/sdk/src/discovery/snapshot-schema.ts`), behind
+ *   the bootstrap roster, validates `manifest` against the full, `.strict()`
+ *   `ManifestPayloadSchema` and rejects the WHOLE snapshot over one bad entry.
+ *   That is why the manifest below is complete rather than a stub of a stub.
+ * - `HttpDiscoveryTransport` (`libs/sdk/src/client/discovery.ts`), behind the
+ *   cross-pillar call, asks only that `manifest` be an object — but it is the
+ *   one that requires `status`, throwing on an entry without it, where the
+ *   discovery parser treats it as optional. That is why `status` is stated.
  *
  * @param {{ financeBaseUrl: string, now?: string }} options
  * @returns {{ fetchedAt: string, pillars: Array<{ pillarId: string, baseUrl: string, registered: boolean, status: string, lastHeartbeatAt: string, manifest: Record<string, unknown> }> }}
