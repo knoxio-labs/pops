@@ -36,7 +36,12 @@ on:
         type: string
 
 concurrency:
-  group: extractability-sandbox-${{ github.workflow }}
+  # Keyed by the requested unit (or "all" for a full sweep — schedule always
+  # sweeps all, and so does a dispatch with no `unit` input), NOT by workflow
+  # name alone: two `workflow_dispatch` runs scoping DIFFERENT units are
+  # unrelated work and must not cancel each other. A second full sweep
+  # starting before the first finishes is what this still guards against.
+  group: extractability-sandbox-${{ github.workflow }}-${{ github.event.inputs.unit || 'all' }}
   cancel-in-progress: true
 
 jobs:
