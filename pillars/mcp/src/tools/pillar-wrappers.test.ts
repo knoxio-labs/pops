@@ -19,6 +19,7 @@ import { fixtures } from './inventory-fixtures-write.js';
 import { items } from './inventory-items-write.js';
 import { locationTools } from './inventory-locations.js';
 import { mediaTools } from './media.js';
+import { purchasesTools } from './purchases.js';
 
 import type { ToolDef } from './tool-def.js';
 
@@ -51,7 +52,7 @@ vi.mock('../pillar-client.js', () => ({
   getPillar: () => h.recordingHandle(),
 }));
 
-const PILLAR_IDS = ['finance', 'contacts', 'inventory', 'media', 'cerebrum'];
+const PILLAR_IDS = ['finance', 'contacts', 'inventory', 'media', 'cerebrum', 'purchases'];
 
 function handlerFor(tools: readonly ToolDef[], name: string): ToolDef['handler'] {
   const tool = tools.find((t) => t.name === name);
@@ -102,6 +103,21 @@ describe('pillar client wrappers resolve to [domain, proc] operationIds', () => 
   it('inventory locations.list tool → locations.list', async () => {
     await handlerFor(locationTools, 'inventory.locations.list')({});
     expect(h.lastPath()).toEqual(['locations', 'list']);
+  });
+
+  it('purchases orders.get tool → purchase.get', async () => {
+    await handlerFor(purchasesTools, 'purchases.orders.get')({ id: 'ord_1' });
+    expect(h.lastPath()).toEqual(['purchase', 'get']);
+  });
+
+  it('purchases search tool → search.search', async () => {
+    await handlerFor(purchasesTools, 'purchases.search')({ text: 'funnel' });
+    expect(h.lastPath()).toEqual(['search', 'search']);
+  });
+
+  it('purchases merchantSpend tool → analytics.merchantSpend', async () => {
+    await handlerFor(purchasesTools, 'purchases.analytics.merchantSpend')({});
+    expect(h.lastPath()).toEqual(['analytics', 'merchantSpend']);
   });
 
   it('never prefixes the operationId with a pillar id', async () => {

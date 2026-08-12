@@ -8,9 +8,9 @@
  *
  * Auth is split by who is calling. An uncredentialled caller is still admitted
  * — the ingest CLI, the operator smoke script and the two-process test all
- * reach this pillar with no key, and it has no credentialled caller at all. A
- * caller that presents an `X-API-Key` is a machine, and is held to the service
- * account behind that key: see `middleware/service-account-scope.ts`.
+ * reach this pillar with no key. A caller that presents an `X-API-Key` is a
+ * machine, and is held to the service account behind that key: see
+ * `middleware/service-account-scope.ts`.
  */
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';

@@ -44,6 +44,12 @@ export {
   type MerchantSpendRollup,
 } from './services/merchant-spend.js';
 
+export {
+  searchPurchases,
+  type PurchaseSearchHit,
+  type SearchMatchType,
+} from './services/search.js';
+
 export { type PurchaseChargeDetail } from './services/purchase-read-charges.js';
 
 export {
