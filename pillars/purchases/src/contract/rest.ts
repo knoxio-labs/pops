@@ -15,6 +15,7 @@ import { purchasesAnalyticsContract } from './rest-analytics.js';
 import { purchasesPurchaseContract } from './rest-purchases.js';
 import { purchasesReceiptContract } from './rest-receipts.js';
 import { purchasesReconcileContract } from './rest-reconcile.js';
+import { purchasesSearchContract } from './rest-search.js';
 import { purchasesSourceContract } from './rest-sources.js';
 
 const c = initContract();
@@ -25,6 +26,7 @@ export const purchasesContract = c.router(
     purchase: purchasesPurchaseContract,
     receipt: purchasesReceiptContract,
     reconcile: purchasesReconcileContract,
+    search: purchasesSearchContract,
     source: purchasesSourceContract,
   },
   {
