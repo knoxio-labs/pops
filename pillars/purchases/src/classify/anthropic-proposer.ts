@@ -32,7 +32,7 @@ import type { ItemKindProposer } from './propose-item-kind.js';
  * drop-zone uses. The override exists because the right answer will change
  * before this file does.
  */
-export const DEFAULT_ITEM_KIND_MODEL = 'claude-haiku-5';
+export const DEFAULT_ITEM_KIND_MODEL = 'claude-haiku-4-5';
 
 /**
  * A batch is a list of short product names in and a list of enum values
