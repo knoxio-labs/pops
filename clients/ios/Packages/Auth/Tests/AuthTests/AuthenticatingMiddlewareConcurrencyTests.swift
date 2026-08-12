@@ -21,7 +21,11 @@ internal struct AuthenticatingMiddlewareConcurrencyTests {
     /// open until the token store has been read `2 × requests + 1` times —
     /// once per request before it was sent, once per request on the way into
     /// the refresher, once by the rotation itself — so the rotation provably
-    /// cannot have completed before the last caller arrived.
+    /// cannot have completed before the last caller arrived. The wait for that
+    /// count is exact rather than polled, and bounded by a deadline rather
+    /// than a scheduling-turn budget: see
+    /// ``CountingTokenStore/waitForReads(atLeast:)`` and
+    /// ``withDeadline(seconds:_:)``.
     ///
     /// Without the gate this test passes against an implementation with no
     /// single-flight at all, because each late caller finds a token newer than
@@ -51,11 +55,19 @@ internal struct AuthenticatingMiddlewareConcurrencyTests {
                     )
                 }
             }
-            let allArrived = await waitUntil("every request to reach the refresher") {
-                counted.readCount >= 2 * requests + 1
+            // The gate opens unconditionally, deadline or not: every one of the
+            // twenty tasks above is parked behind it via the exchange, and a
+            // gate left shut is twenty tasks the `for try await` below can never
+            // finish awaiting. A failed wait must still fail the test — it just
+            // cannot do that by skipping the open.
+            var readsFailure: (any Error)?
+            do {
+                try await withDeadline { try await counted.waitForReads(atLeast: 2 * requests + 1) }
+            } catch {
+                readsFailure = error
             }
             await gate.open()
-            #expect(allArrived, "a request never reached the refresher")
+            if let readsFailure { throw readsFailure }
 
             for try await response in group { #expect(response.status == .ok) }
         }
