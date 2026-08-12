@@ -144,7 +144,12 @@ describe('the entrypoint gate survives a symlinked ancestor path', () => {
 });
 
 describe('no guard under scripts/ still uses the symlink-unsafe entrypoint idiom', () => {
-  const OLD_IDIOM = "resolve(fileURLToPath(import.meta.url)) === resolve(process.argv[1] ?? '')";
+  // A regex on the structure, not `includes()` on one exact literal: the
+  // idiom's defining shape is comparing a resolve(fileURLToPath(...)) against
+  // a resolve(process.argv[1]...), and that shape survives whitespace
+  // reflow or a dropped `?? ''` fallback — an exact-string match would not.
+  const OLD_IDIOM =
+    /resolve\(\s*fileURLToPath\(\s*import\.meta\.url\s*\)\s*\)\s*===\s*resolve\(\s*process\.argv\[1\]/u;
 
   /** Every `.mjs` file under `scripts/`, walked directly rather than trusting a glob library to be on the guard-tier that can use one. */
   function everyMjsFile(dir: string): string[] {
@@ -161,10 +166,20 @@ describe('no guard under scripts/ still uses the symlink-unsafe entrypoint idiom
     expect(everyMjsFile(scriptsDir).length).toBeGreaterThan(20);
   });
 
-  it('the resolve(argv[1]) comparison does not reappear anywhere under scripts/', () => {
+  it('the resolve(argv[1]) comparison does not reappear anywhere under scripts/, in any spacing', () => {
     const offenders = everyMjsFile(scriptsDir).filter((path) =>
-      readFileSync(path, 'utf8').includes(OLD_IDIOM)
+      OLD_IDIOM.test(readFileSync(path, 'utf8'))
     );
     expect(offenders).toEqual([]);
+  });
+
+  it('the regex actually matches reformatted variants of the idiom, not just the original spacing', () => {
+    // A control for the assertion above: proves the regex is not simply a
+    // literal string match wearing a regex's syntax.
+    const reformatted = 'resolve( fileURLToPath(import.meta.url) )===resolve(process.argv[1])';
+    const noFallback = 'resolve(fileURLToPath(import.meta.url)) === resolve(process.argv[1])';
+    expect(OLD_IDIOM.test(reformatted)).toBe(true);
+    expect(OLD_IDIOM.test(noFallback)).toBe(true);
+    expect(OLD_IDIOM.test('import.meta.main')).toBe(false);
   });
 });
