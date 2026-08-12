@@ -1,7 +1,7 @@
 /**
  * PaperlessClient unit tests — all HTTP calls mocked via
  * `vi.stubGlobal('fetch', ...)`. Moved (workstream 13, ADR-039) from
- * `pillars/inventory/src/api/modules/paperless/` alongside the client
+ * pillars/inventory/src/api/modules/paperless/ alongside the client
  * itself; this file is new — the client previously had no dedicated test.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';

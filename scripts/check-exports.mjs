@@ -568,7 +568,7 @@ export function parseDirsArg(argv) {
  * the parent pillar and silently skip the app's own exports/main/files manifest
  * on the very PR that changed it. Selecting nested units under a scoped dir
  * closes that hole. The `${d}/` boundary keeps `pillars/finance` from matching
- * a sibling like `pillars/finance-x`.
+ * a sibling like pillars/finance-x.
  *
  * @param {Unit[]} units
  * @param {string[] | null} onlyDirs  Result of {@link parseDirsArg}.

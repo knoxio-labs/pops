@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /**
- * Curated prep-state list (see `pillars/food/docs/prds/text-ingest`).
+ * Curated prep-state list.
  * Slugs outside this list get pushed into the ingredient `notes` field
  * by `buildDsl` instead of being emitted as a descriptor segment.
  */

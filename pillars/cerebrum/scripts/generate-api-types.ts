@@ -7,9 +7,11 @@
  * Polyglot consumers (Rust, Swift) skip this file and generate their own
  * types from the JSON spec.
  *
- * Drift check (build step in `.github/workflows/cerebrum-quality.yml`):
+ * Regenerate after an OpenAPI spec change:
  *   pnpm --filter @pops/cerebrum generate:api-types
  *   git diff --exit-code pillars/cerebrum/src/contract/api-types.generated.ts
+ *
+ * Nothing in CI re-runs this and diffs the result.
  */
 import { execFileSync } from 'node:child_process';
 import { writeFileSync } from 'node:fs';

@@ -14,9 +14,9 @@ import type { FridgeViewResponses } from '../../food-api/types.gen.js';
 type FridgeViewOutput = FridgeViewResponses[200];
 
 /**
- * There is intentionally no prep-state filter: the
- * `pillars/food/docs/prds/fridge-view` overview mentions one, but its
- * filter-chip / `fridgeView` schema does not enumerate it. To add one,
+ * There is intentionally no prep-state filter: the fridge view was scoped
+ * to consider one, but its filter-chip / `fridgeView` schema does not
+ * enumerate it. To add one,
  * thread `prepStateId` here, into the request body, and into a
  * `prep_state_id =` clause in
  * `pillars/food/src/api/modules/fridge/view-query.ts`.

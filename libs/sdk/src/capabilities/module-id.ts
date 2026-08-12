@@ -11,7 +11,7 @@
  * Runtime "is this a module the build curates?" checks live in
  * `@pops/module-registry` (`KNOWN_MODULES` / `isInstalledModule`), which is
  * disk-discovered and per-deploy gated. Parent-pillar dispatch lives in the
- * shell's `pillarIdForModule` (`pillars/shell/src/app/pillars.ts`). The only
+ * shell's `pillarIdForModule` (`pillars/shell/src/app/pillars/manifest-pillar.ts`). The only
  * surviving member here is `isKnownPillarId`, the narrowing seam against the
  * curated `PILLARS` value.
  */

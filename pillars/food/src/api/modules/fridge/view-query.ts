@@ -1,6 +1,5 @@
 /**
- * SQL primitives for the fridge view
- * (`pillars/food/docs/prds/fridge-view`).
+ * SQL primitives for the fridge view.
  *
  * Owns the SELECT that pulls every batch row for the current filter
  * combination plus the three head counts (visible / empty / deleted).

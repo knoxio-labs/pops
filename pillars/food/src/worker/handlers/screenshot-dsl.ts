@@ -1,6 +1,5 @@
 /**
- * Zod schema + DSL builder for the screenshot ingest path
- * (`pillars/food/docs/prds/screenshot-ingest`).
+ * Zod schema + DSL builder for the screenshot ingest path.
  *
  * This shape is duplicated across the sibling ingest handlers
  * (`build-dsl.ts`, `web-llm-dsl.ts`) — same schema, parallel copies.
@@ -141,8 +140,7 @@ function renderStep(step: ParsedRecipe['steps'][number]): string {
 }
 
 /**
- * Render a parsed recipe as a grammar-compliant DSL string
- * (`pillars/food/docs/prds/dsl-parser`).
+ * Render a parsed recipe as a grammar-compliant DSL string.
  */
 export function buildDsl(parsed: ParsedRecipe, _opts: BuildDslOpts): string {
   const lines: string[] = [

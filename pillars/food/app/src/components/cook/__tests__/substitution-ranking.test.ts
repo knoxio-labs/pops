@@ -1,6 +1,5 @@
 /**
- * Pins the candidate sort key documented in
- * `pillars/food/docs/prds/cook-time-substitutions`:
+ * Pins the candidate sort key:
  *   1. |ratio - 1.0| ASC
  *   2. context-tag overlap with the recipe DESC
  *   3. earliest batch expiry ASC NULLS LAST

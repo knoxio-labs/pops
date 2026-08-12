@@ -47,7 +47,7 @@ describe('KnownPillarId / ModuleId are open (RD-9)', () => {
   });
 
   it('a hypothetical new pillar / module id is assignable with NO type edit', () => {
-    // The whole point of RD-9: adding `pillars/weather/` requires no edit to
+    // The whole point of RD-9: adding a pillar like "weather" requires no edit to
     // the SDK type — its id is already a valid KnownPillarId / ModuleId. If
     // either of these stopped compiling, the union closed back up.
     const newPillar: KnownPillarId = 'weather';

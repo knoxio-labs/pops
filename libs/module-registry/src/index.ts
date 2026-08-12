@@ -5,7 +5,8 @@
  * This lib is not the live registry — that is the DB in `pillars/registry`,
  * surfaced over the SDK transport. Its job is to validate cross-pillar
  * manifest invariants at build time and emit `generated.ts` as a committed
- * CI drift guard (see `scripts/build.ts` + `scripts/lib.ts:validateManifests`).
+ * CI drift guard (see `scripts/build.ts` and `validateManifests` in
+ * `scripts/lib.ts`).
  *
  * `MODULES` / `KNOWN_MODULES` come from `generated.ts` and reflect the set
  * of in-repo pillar manifests validated at build time.
