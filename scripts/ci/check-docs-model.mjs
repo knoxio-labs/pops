@@ -235,7 +235,8 @@ export function isHistoricalRecord(mdPath) {
 /**
  * Extract the repo paths a markdown source claims exist:
  *   - relative markdown link targets, resolved against the file's own dir
- *   - backticked tokens starting with a known repo root, resolved against the repo root
+ *   - backticked tokens that are either rooted under a known repo root or
+ *     merely shaped like a source file (see {@link resolveBacktickedPathToken})
  *
  * Anchors, query strings and external URLs are ignored.
  *
