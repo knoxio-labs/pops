@@ -8,6 +8,8 @@ Amended 2026-08-03, while implementing the skeleton and before any data existed.
 
 Amended again 2026-08-12: the derived `netSpend` figure is defined as `total − refunded` rather than `matched + awaitingImport − refunded` (POPS-1467). The four published buckets and every identity over them are unchanged. See [Amendment](#amendment--2026-08-12-netspend-is-the-total-less-refunds-not-the-proven-part-less-refunds).
 
+Amended again 2026-08-12: **item tags are purchases' own vocabulary, not finance's**, and a line's classification carries a confirmation marker. See [Classification is proposed, then confirmed](#classification-is-proposed-then-confirmed). The original text said tags come from the finance `tag_vocabulary`; that was never implemented and is now superseded rather than corrected. Finance's vocabulary is transaction-grained and describes what a payment was — `Groceries`, `Eat Out`; an item tag is product-grained and describes what the thing is — `fruit`, `healthy`. Two taxonomies at two grains. The roll-up promised under [Consequences](#consequences) does not follow from this and would need a mapping between the two.
+
 ## Context
 
 A bank transaction is an aggregate. `AMAZON MKTPLACE AU $412.80` records that money moved, and nothing about what was bought. At the scale a household actually transacts — five figures a year across Amazon, PayPal, Woolworths, Coles and Bunnings — the finance pillar can say precisely how much went to a merchant and nothing whatsoever about whether it was worth spending.
@@ -120,9 +122,23 @@ Two amounts, not one, because currency makes them different. A charge carries wh
 
 Card **authorizations** are recorded but excluded from the residual. A hold and its later capture are two transactions for one payment, and counting both makes a correctly-settled order look doubly paid.
 
+### Classification is proposed, then confirmed
+
+_Added by the 2026-08-12 amendment._
+
+No source states what a thing **is**. The Amazon DSAR export has 28 columns and none of them is a category; a till receipt prints a product name. So `purchase_items.kind` and the item tags are POPS judgements, and a deterministic classifier is not good enough to make them silently: measured against the real bundle, a lexical ruleset left 54% of spend with no opinion and missed hardest at the expensive end — robot vacuum, air fryer, GPU, drone.
+
+A model-backed pass therefore **proposes** out of band, a human **confirms**, and a `confirmedAt` marker says which is which — the same idiom `purchase_charge_links` already runs reconciliation on, rather than a second way of saying the same thing. Non-null also covers a value a source stated outright, because a transcription is not a guess a later pass should reconsider.
+
+Three constraints make that safe rather than a guess with extra steps. The proposer can decline, and a declined line stays NULL — the state the column is designed around. It never runs inside an adapter, so ingest keeps working with no API key and a re-ingest does not re-charge for the same answer. And it only ever fills a NULL, so no re-run can reach a decision.
+
+The two are **not** interchangeable to a reader, which is why the wire binds them: `kind` is one object carrying its own marker rather than two sibling fields, and a tag's marker travels on the tag's own row. Two fields would leave "read the pair" a convention, and this repo has already been bitten by one of those.
+
 ### Reuse, not reinvention
 
-The pillar reuses rather than duplicates: money is integer cents (#3665, CF041); merchants are `contacts` entities where the id is operative and the name is only its label (#3807); tags come from the finance `tag_vocabulary`; learned match rules mirror `transaction_corrections` field-for-field; cross-pillar references are soft `pops://` URIs with a `staleAt` companion resolved by a nightly cron, following `home_inventory.purchaseTransactionUri`; and merchant sources live in a table rather than a compiled enum, per the registry lesson in [ADR-035](adr-035-pillar-redefinition-and-implicit-kinds.md).
+The pillar reuses rather than duplicates: money is integer cents (#3665, CF041); merchants are `contacts` entities where the id is operative and the name is only its label (#3807); learned match rules mirror `transaction_corrections` field-for-field; cross-pillar references are soft `pops://` URIs with a `staleAt` companion resolved by a nightly cron, following `home_inventory.purchaseTransactionUri`; and merchant sources live in a table rather than a compiled enum, per the registry lesson in [ADR-035](adr-035-pillar-redefinition-and-implicit-kinds.md).
+
+Item tags are the deliberate exception, and the 2026-08-12 amendment is why. Purchases owns that vocabulary. It is open like `purchase_sources` — adding `sourdough` is a write, not a deploy — and only its shape is closed, to lower-case slugs, because finance's Title Case labels show what happens without that: `Fruit` and `fruit` become two tags nothing joins.
 
 ## Amendment — 2026-08-12: `netSpend` is the total less refunds, not the proven part less refunds
 
@@ -137,7 +153,7 @@ Nothing is lost and nothing is hidden. "Money we can prove moved, net of refunds
 ## Consequences
 
 - **`finance` is untouched.** No migration on the largest table in the fleet. The link table lives in `purchases`, holding `pops://finance/transaction/<id>` URIs.
-- **Existing finance machinery gains line-item granularity for free.** A transaction's effective tags become the roll-up of its linked line items', so budgets and tag rules built for whole transactions start operating on what was actually bought.
+- **Existing finance machinery does not gain line-item granularity for free.** The original text claimed a transaction's effective tags would be the roll-up of its linked line items'. The 2026-08-12 amendment removes that: rolling `fruit` up into finance's transaction-grained vocabulary is the same category error one level up. A roll-up remains possible and now needs a stated mapping between the two taxonomies, which is separate work.
 - **A new gated cross-pillar FE leg.** Rendering purchase detail in the finance transaction view makes `finance/app → purchases` a sanctioned leg under [ADR-040](adr-040-cross-pillar-contract-discipline.md), requiring both a generated client and an entry in the `cross-pillar-clients` CI job (POPS-241).
 - **`documents` becomes a fourth seam.** The Amazon DSAR bundle alone ships 325 tax-invoice PDFs and a delivery-photo manifest, and a tax invoice is the arbiter whenever a CSV's own arithmetic is ambiguous. Evidence attaches to an order or to a single delivery, as a soft `pops://documents/...` URI with a `staleAt` companion — the same treatment every other cross-pillar reference here gets. Without it the evidence is discarded at ingest and the ambiguity becomes permanent.
 - **Inventory's seam is per unit, not per line.** A durable line of quantity three proposes three inventory items, each with its own warranty, location and resale value, so the reference lives on `purchase_item_units`. Landed cost — the line total plus its share of postage and order-level adjustment — is what inventory should value an item at, not the sticker price (POPS-47).
