@@ -1,0 +1,104 @@
+name: Live Seam
+
+# Runs the two "live seam" integration suites — the ones each pillar's
+# `vitest.config.ts` excludes from the default `pnpm test` (the
+# `**/*.live-seam.test.ts` pattern) because they boot 2-3 real pillar
+# processes over loopback HTTP via `@pops/pillar-sdk/testing`
+# (`spawnPillarProcess`) and run an order of magnitude slower than the rest
+# of the sub-second, no-subprocess unit suite:
+#   - pillars/food/src/api/modules/recipes/send-to-list/__tests__/lists-client.live-seam.test.ts
+#     boots registry + lists and drives `createListsClient()` against them.
+#   - pillars/cerebrum/src/api/modules/retrieval/__tests__/peer-clients.live-seam.test.ts
+#     boots registry + finance + cerebrum and drives cerebrum's real
+#     `POST /index/reindex-sources`.
+# Each is normally run by hand via that pillar's `pnpm test:live-seam`.
+#
+# ADVISORY, NOT REQUIRED — deliberately, for a bake-in period. Neither job
+# below is in ci-gate.yml's `gated` array, and neither job name is in the
+# branch ruleset, so a failure here reports on the PR (and blocks nothing) —
+# the only way to make a job genuinely advisory, since a job inside a GATED
+# workflow can't opt out with `continue-on-error` (quality.yml's header, and
+# scripts/ci/check-ci-gate-wiring.mjs, explain why). These suites spawn real
+# OS processes rather than running in-process like the rest of the test
+# suite, which is a different flake surface — process startup timing, health-
+# check polling, ephemeral-port allocation — that nothing else in CI exercises
+# yet. Promoting this workflow into ci-gate.yml's `gated` array (and the
+# ruleset) once it has proven stable under real CI load is tracked in Huly,
+# not here — see this workflow's introducing PR for the issue key.
+#
+# PATH-FILTERED to what can actually reach the seam: the SDK harness both
+# suites depend on, and each suite's own consumer/producer module pair — not
+# the whole pillars/food or pillars/cerebrum tree, which already has its own
+# unit-quality.yml coverage for everything outside these seams.
+#
+# No `merge_group` trigger: that trigger exists so a workflow behind a
+# REQUIRED context reports on the merge queue's ref instead of stranding the
+# queue entry (.github/workflows/README.md, "The merge queue" section). An
+# advisory workflow that never reports there blocks nothing and evicts
+# nothing, so it has no need of one.
+
+on:
+  pull_request:
+    paths:
+      - "libs/sdk/**"
+      - "pillars/food/src/api/modules/recipes/send-to-list/**"
+      - "pillars/food/vitest.live-seam.config.ts"
+      - "pillars/lists/**"
+      - "pillars/cerebrum/src/api/modules/retrieval/**"
+      - "pillars/cerebrum/src/api/modules/thalamus/**"
+      - "pillars/cerebrum/vitest.live-seam.config.ts"
+      - "pillars/finance/**"
+      - ".github/workflows/live-seam.yml"
+  push:
+    branches: [main]
+    paths:
+      - "libs/sdk/**"
+      - "pillars/food/src/api/modules/recipes/send-to-list/**"
+      - "pillars/food/vitest.live-seam.config.ts"
+      - "pillars/lists/**"
+      - "pillars/cerebrum/src/api/modules/retrieval/**"
+      - "pillars/cerebrum/src/api/modules/thalamus/**"
+      - "pillars/cerebrum/vitest.live-seam.config.ts"
+      - "pillars/finance/**"
+      - ".github/workflows/live-seam.yml"
+
+jobs:
+  food-lists:
+    name: food -> lists live seam
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build the pillars this suite spawns (registry, lists, food)
+        # spawnPillarProcess runs each pillar's OWN src/api/server.ts straight
+        # through tsx (no dist build needed for the pillar itself), but that
+        # source still imports its @pops/* lib dependencies through their
+        # package.json `exports`, which point at `dist/` — so registry, lists
+        # and food all need their (and their libs') dist/ present before
+        # either process can boot. Cross-pillar calls are HTTP-only (see
+        # AGENTS.md), so food's own package.json carries no build-time
+        # dependency on lists or registry — each needs its own `--filter`.
+        run: pnpm --filter "@pops/registry..." --filter "@pops/lists..." --filter "@pops/food..." build
+      - name: Run food's live-seam suite
+        run: pnpm --filter @pops/food test:live-seam
+
+  cerebrum-finance:
+    name: cerebrum -> finance live seam
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build the pillars this suite spawns (registry, finance, cerebrum)
+        run: pnpm --filter "@pops/registry..." --filter "@pops/finance..." --filter "@pops/cerebrum..." build
+      - name: Run cerebrum's live-seam suite
+        run: pnpm --filter @pops/cerebrum test:live-seam

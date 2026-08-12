@@ -1,6 +1,6 @@
 # .github/workflows
 
-18 workflows. Every job runs on `ubuntu-latest` except `ios-quality.yml`, which needs macOS to compile Swift at all.
+19 workflows. Every job runs on `ubuntu-latest` except `ios-quality.yml`, which needs macOS to compile Swift at all.
 
 ## `ci-gate.yml` — the one static aggregate context
 
@@ -214,6 +214,7 @@ files only, no install.
 | `infra-lint.yml`                 | PR/push on `infra/litestream/**`, `infra/backup/**`           | YAML lint                                                                                                           |
 | `workflows-quality.yml`          | PR/push on `.github/workflows/**`                             | YAML lint                                                                                                           |
 | `fe-test-e2e.yml`                | `workflow_dispatch` only                                      | Playwright, manual — see the header for why it is off PR/push                                                        |
+| `live-seam.yml`                  | PR/push on `libs/sdk/**`, the food/cerebrum live-seam module pairs, `pillars/lists/**`, `pillars/finance/**`; no merge group | food's and cerebrum's real-process `test:live-seam` suites, each in its own job. **Advisory, not gated** — neither job is in `ci-gate.yml`'s `gated` array or the ruleset, deliberately, for a bake-in period; see the file header |
 
 `publish-images.yml`'s `discover` job filters on `pillars/<x>/Dockerfile`
 existing. `shell`, `mcp`, `orchestrator` and `docs` all have one, so the four
