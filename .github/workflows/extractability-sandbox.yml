@@ -36,17 +36,44 @@ on:
         type: string
 
 concurrency:
-  # Keyed by the requested unit (or "all" for a full sweep — schedule always
-  # sweeps all, and so does a dispatch with no `unit` input), NOT by workflow
-  # name alone: two `workflow_dispatch` runs scoping DIFFERENT units are
-  # unrelated work and must not cancel each other. A second full sweep
-  # starting before the first finishes is what this still guards against.
-  group: extractability-sandbox-${{ github.workflow }}-${{ github.event.inputs.unit || 'all' }}
+  # Keyed by ref AND the requested unit (or "all" for a full sweep — schedule
+  # always sweeps all, and so does a dispatch with no `unit` input). Ref is
+  # load-bearing on its own: without it, a `workflow_dispatch` run on a
+  # feature branch shares a group with the nightly sweep on `main` (or a
+  # dispatch on another branch) and cancels it. Unit is load-bearing
+  # separately: without it, two same-ref dispatches scoping DIFFERENT units
+  # are unrelated work that would still cancel each other. A second full
+  # sweep on the same ref starting before the first finishes is what this
+  # still guards against.
+  group: extractability-sandbox-${{ github.workflow }}-${{ github.ref }}-${{ github.event.inputs.unit || 'all' }}
   cancel-in-progress: true
 
 jobs:
   discover:
     uses: ./.github/workflows/_discover-units.yml
+
+  # A `unit` input that matches no discovered dir (a typo, a renamed/removed
+  # unit) would otherwise make every matrix entry in `ts`/`rust` skip via
+  # their per-step `if:` below — the workflow still reports all-green having
+  # sandboxed nothing. Fail loud instead, mirroring the "never a silent skip
+  # when there IS something to check" rule the sandbox scripts themselves
+  # follow (see sandbox.sh's own `proof-surface.mjs` decision comment).
+  validate-unit-input:
+    name: Validate workflow_dispatch unit input
+    needs: discover
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.unit != ''
+    runs-on: ubuntu-latest
+    steps:
+      - name: unit input names a unit _discover-units.yml actually found
+        run: |
+          set -euo pipefail
+          unit='${{ github.event.inputs.unit }}'
+          units='${{ needs.discover.outputs.units }}'
+          if ! echo "$units" | jq -e --arg u "$unit" 'any(.[]; .dir == $u)' >/dev/null; then
+            echo "::error::unit input '$unit' matches no unit _discover-units.yml discovered (pillars/* or libs/*, maxdepth 1). Every matrix entry below would silently skip and this workflow would report a false green — fix the path." >&2
+            exit 1
+          fi
+          echo "OK — '$unit' is a discovered unit."
 
   ts:
     # `needs.discover.outputs.units` (every unit, not `changed`) — a nightly
@@ -59,7 +86,14 @@ jobs:
     # 'matrix'" and no dispatch can even be created. unit-quality.yml uses the
     # same per-step pattern for the identical reason.
     name: ${{ matrix.unit.name }} (${{ matrix.unit.kind }}) — sandbox (EX-2)
-    needs: discover
+    needs: [discover, validate-unit-input]
+    # `validate-unit-input` is itself conditionally skipped (schedule, or a
+    # dispatch with no `unit`) — an implicit default `if:` inherits that skip
+    # transitively and would skip this job too on every nightly run, which is
+    # the exact "success() over the whole needs graph" trap quality.yml's
+    # header warns about. Spelled explicitly: proceed unless discover failed,
+    # or validate-unit-input ran and failed.
+    if: always() && needs.discover.result == 'success' && needs.validate-unit-input.result != 'failure' && needs.validate-unit-input.result != 'cancelled'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -94,7 +128,9 @@ jobs:
 
   rust:
     name: ${{ matrix.unit.name }} (${{ matrix.unit.kind }}) — sandbox (EX-2)
-    needs: discover
+    needs: [discover, validate-unit-input]
+    # See the `ts` job's identical comment above.
+    if: always() && needs.discover.result == 'success' && needs.validate-unit-input.result != 'failure' && needs.validate-unit-input.result != 'cancelled'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
