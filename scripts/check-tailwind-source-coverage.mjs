@@ -219,13 +219,14 @@ export function globToRegExp(glob) {
         // `]` and `\` are the only characters that still need escaping for a
         // JS character class; `-` is left alone so `a-z` ranges keep working.
         const content = glob.slice(j, end).replace(/\\/g, '\\\\').replace(/\]/g, '\\]');
-        // A negated class is spliced with a `(?!\/)` guard rather than a
-        // slash folded into the class body: appending `/` to the class text
-        // risks forming an unintended range (e.g. content ending in `-`
-        // would make `-/` read as "hyphen through slash"). This keeps `[!…]`
-        // consistent with `?` and `*`, neither of which crosses a path
-        // segment either.
-        re += negate ? `(?:(?!\\/)[^${content}])` : `[${content}]`;
+        // Every class — negated or not — is spliced with a `(?!\/)` guard
+        // rather than a slash folded into the class body: appending `/` to
+        // the class text risks forming an unintended range (e.g. content
+        // ending in `-` would make `-/` read as "hyphen through slash"), and
+        // a positive class that happens to list `/` explicitly (`[/]`) would
+        // otherwise match a path separator. This keeps `[...]` consistent
+        // with `?` and `*`, neither of which crosses a path segment either.
+        re += `(?:(?!\\/)[${negate ? '^' : ''}${content}])`;
         i = end;
       }
     } else if ('.+^$()|[]\\'.includes(c)) {
@@ -443,6 +444,7 @@ function selfTest() {
   const caretNegatedClass = globToRegExp(`${root}/pillars/[^Z]*/src/index.ts`);
   const rangeClass = globToRegExp(`${root}/pillars/[0-9]*/src/index.ts`);
   const segmentGuard = globToRegExp(`${root}/x/[!Z]/y`);
+  const positiveSegmentGuard = globToRegExp(`${root}/x/[a/]/y`);
   const leadingBracketLiteral = globToRegExp(`${root}/[]a]bc`);
   const unterminatedBracket = globToRegExp(`${root}/[abc`);
 
@@ -511,6 +513,11 @@ function selfTest() {
     '[0-9] range rejects a non-digit': !rangeClass.test(`${root}/pillars/afood/src/index.ts`),
     'a negated class never matches a path separator': !segmentGuard.test(`${root}/x//y`),
     'a negated class still matches an ordinary char': segmentGuard.test(`${root}/x/a/y`),
+    'a positive class listing `/` still refuses to match a path separator':
+      !positiveSegmentGuard.test(`${root}/x//y`),
+    'that same positive class still matches its other listed member': positiveSegmentGuard.test(
+      `${root}/x/a/y`
+    ),
     'a `]` immediately after `[` is a literal class member': leadingBracketLiteral.test(
       `${root}/]bc`
     ),

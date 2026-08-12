@@ -186,6 +186,17 @@ describe('globToRegExp — bracket character class (POPS-1788)', () => {
     expect(re.test('/r/x//y')).toBe(false);
   });
 
+  it('a positive class that explicitly lists `/` still refuses to cross a path segment', () => {
+    // A bracket class is a single-character match; without this guard,
+    // `[/]` (or any class listing `/` among its members) would match a
+    // literal path separator, unlike every other construct in this
+    // compiler (`*`, `?`, negated classes) which all stay within one
+    // segment.
+    const re = globToRegExp('/r/x/[a/]/y');
+    expect(re.test('/r/x/a/y')).toBe(true);
+    expect(re.test('/r/x//y')).toBe(false);
+  });
+
   it('a negated class built from a trailing-hyphen body does not form a bogus range', () => {
     // Content `a-` ends in a hyphen; naively appending `/` (`[^a-/]`) would
     // read as the range hyphen-through-slash. The lookahead-based negation
