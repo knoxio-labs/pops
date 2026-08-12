@@ -46,6 +46,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((err: unknown) => {
-  process.stderr.write(`[core] generate-api-types failed: ${String(err)}\n`);
+  process.stderr.write(`[registry] generate-api-types failed: ${String(err)}\n`);
   process.exit(1);
 });
