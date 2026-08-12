@@ -13,6 +13,7 @@ import {
   discoverMiseEnvValues,
   discoverUnitMiseDirs,
   envConfigFilename,
+  GITIGNORED_ENV_LOCAL_MISE_CONFIG_EXAMPLES,
   GITIGNORED_MISE_CONFIG_FILENAMES,
   parseToolsTable,
   REQUIRED_ROOT_TOOLS,
@@ -391,6 +392,33 @@ describe('COMMITTED_MISE_CONFIG_FILENAMES / GITIGNORED_MISE_CONFIG_FILENAMES', (
 
   it('mise.toml itself is not gitignored, as a sanity check on the check above', () => {
     const result = spawnSync('git', ['check-ignore', '-q', 'mise.toml'], { cwd: repoRoot });
+    expect(result.status).toBe(1);
+  });
+});
+
+describe('GITIGNORED_ENV_LOCAL_MISE_CONFIG_EXAMPLES', () => {
+  it('shares no path with COMMITTED_MISE_CONFIG_FILENAMES or GITIGNORED_MISE_CONFIG_FILENAMES', () => {
+    for (const name of [...COMMITTED_MISE_CONFIG_FILENAMES, ...GITIGNORED_MISE_CONFIG_FILENAMES]) {
+      expect(GITIGNORED_ENV_LOCAL_MISE_CONFIG_EXAMPLES).not.toContain(name);
+    }
+  });
+
+  it.each(GITIGNORED_ENV_LOCAL_MISE_CONFIG_EXAMPLES)(
+    '%s is actually gitignored in this repo, not just named ".<env>.local."',
+    (relPath) => {
+      // Same reasoning as GITIGNORED_MISE_CONFIG_FILENAMES above, one axis
+      // wider: an env-suffixed local path this repo had not actually
+      // gitignored is exactly the blind spot this list exists to close.
+      const result = spawnSync('git', ['check-ignore', '-q', relPath], { cwd: repoRoot });
+      expect(result.status, `expected ${relPath} to be gitignored — see .gitignore`).toBe(0);
+    }
+  );
+
+  it('mise.ci.toml — the committed env-suffixed spelling — is not gitignored, as a sanity check', () => {
+    // Proves the .gitignore wildcard on the environment segment only ever
+    // matches the *.local.toml shape, not the committed mise.ci.toml this
+    // guard is supposed to keep reading.
+    const result = spawnSync('git', ['check-ignore', '-q', 'mise.ci.toml'], { cwd: repoRoot });
     expect(result.status).toBe(1);
   });
 });

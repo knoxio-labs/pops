@@ -59,6 +59,22 @@
  *     `check-mise-tool-overrides.test.ts` asserts every one of them against
  *     `git check-ignore`, so a `.gitignore` edit that drops one fails the
  *     same way a code regression would.
+ *   - The env-suffixed spelling of each of those six local paths — mise
+ *     inserts the environment immediately before `.local.toml`, e.g.
+ *     `mise.local.toml` → `mise.ci.local.toml`, not `mise.local.ci.toml` — is
+ *     excluded on the same "is it gitignored" basis, not "is it named
+ *     `.local.`". This axis was a real gap until it wasn't: this repo's
+ *     `.gitignore` used to list only the six non-env-suffixed local paths,
+ *     so a per-unit `mise.ci.local.toml` could reach a checkout uncaught by
+ *     both `.gitignore` and this guard's deliberate "local is out of scope"
+ *     stance. `.gitignore`'s Mise section now also excludes a wildcard on the
+ *     environment segment of each of the six (`mise.*.local.toml` and
+ *     friends), so it isn't tied to `ci` specifically and doesn't need
+ *     editing every time a workflow starts setting a new `MISE_ENV` value.
+ *     {@link GITIGNORED_ENV_LOCAL_MISE_CONFIG_EXAMPLES} gives
+ *     `check-mise-tool-overrides.test.ts` concrete paths — one per spelling,
+ *     plus a second environment beyond `ci` — to assert against
+ *     `git check-ignore`, so this can't quietly reopen.
  *   - `.mise/config.toml` (the non-local, committed-tier path per mise's own
  *     docs) is excluded for the same reason, not a separate one: this repo's
  *     `.gitignore` has ignored the entire `.mise/` directory since mise was
@@ -209,6 +225,29 @@ export const GITIGNORED_MISE_CONFIG_FILENAMES = [
   '.config/mise/config.local.toml',
   '.mise/config.toml',
   '.mise/config.local.toml',
+];
+
+/**
+ * Concrete example paths of the env-suffixed local spelling — one per
+ * {@link GITIGNORED_MISE_CONFIG_FILENAMES} local path that isn't already
+ * swept up by the whole-directory `.mise/` ignore, for the `ci` environment
+ * this repo's workflows actually set today, plus one path repeated for a
+ * second, currently-unused environment (`staging`) to prove `.gitignore`'s
+ * wildcard covers the environment segment generally rather than happening to
+ * match the literal string "ci". `check-mise-tool-overrides.test.ts` asserts
+ * each of these against `git check-ignore`, exactly like
+ * {@link GITIGNORED_MISE_CONFIG_FILENAMES}, so this list and `.gitignore`
+ * cannot silently drift apart either.
+ */
+export const GITIGNORED_ENV_LOCAL_MISE_CONFIG_EXAMPLES = [
+  'mise.ci.local.toml',
+  '.mise.ci.local.toml',
+  'mise/config.ci.local.toml',
+  '.config/mise.ci.local.toml',
+  '.config/mise/mise.ci.local.toml',
+  '.config/mise/config.ci.local.toml',
+  'mise.staging.local.toml',
+  '.config/mise/config.staging.local.toml',
 ];
 
 /** Workflow directory this guard reads to discover live `MISE_ENV` values. */
