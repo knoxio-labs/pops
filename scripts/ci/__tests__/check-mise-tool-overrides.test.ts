@@ -394,6 +394,19 @@ describe('COMMITTED_MISE_CONFIG_FILENAMES / GITIGNORED_MISE_CONFIG_FILENAMES', (
     const result = spawnSync('git', ['check-ignore', '-q', 'mise.toml'], { cwd: repoRoot });
     expect(result.status).toBe(1);
   });
+
+  it.each(GITIGNORED_MISE_CONFIG_FILENAMES)(
+    '%s is also gitignored inside a nested unit directory, not only at the repo root',
+    (relPath) => {
+      // A pattern with a slash anywhere but the end is anchored to the
+      // .gitignore's own directory under git's pathspec rules, so proving a
+      // pattern gitignored at the repo root (the case above) does not prove
+      // it also matches the same filename nested under pillars/<id>/.
+      const nestedPath = join('pillars', 'finance', relPath);
+      const result = spawnSync('git', ['check-ignore', '-q', nestedPath], { cwd: repoRoot });
+      expect(result.status, `expected ${nestedPath} to be gitignored — see .gitignore`).toBe(0);
+    }
+  );
 });
 
 describe('GITIGNORED_ENV_LOCAL_MISE_CONFIG_EXAMPLES', () => {
@@ -421,6 +434,18 @@ describe('GITIGNORED_ENV_LOCAL_MISE_CONFIG_EXAMPLES', () => {
     const result = spawnSync('git', ['check-ignore', '-q', 'mise.ci.toml'], { cwd: repoRoot });
     expect(result.status).toBe(1);
   });
+
+  it.each(GITIGNORED_ENV_LOCAL_MISE_CONFIG_EXAMPLES)(
+    '%s is also gitignored inside a nested unit directory, not only at the repo root',
+    (relPath) => {
+      // Same anchoring gap as GITIGNORED_MISE_CONFIG_FILENAMES above, on the
+      // env-suffixed spellings — they inherit the identical slash-anchoring
+      // behavior from the base six.
+      const nestedPath = join('pillars', 'finance', relPath);
+      const result = spawnSync('git', ['check-ignore', '-q', nestedPath], { cwd: repoRoot });
+      expect(result.status, `expected ${nestedPath} to be gitignored — see .gitignore`).toBe(0);
+    }
+  );
 });
 
 describe('against the live repo', () => {
