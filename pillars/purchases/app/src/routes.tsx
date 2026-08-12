@@ -4,10 +4,9 @@
  * Routes are lazy-loaded for code splitting. The shell imports these via
  * `@pops/app-purchases` and mounts them under `/purchases/*`.
  *
- * One route only. The pillar serves more than this surface renders, but a
- * nav item or a page descriptor without a route behind it is the dead link
- * this pillar's manifest spent its whole life avoiding — each further view
- * arrives with its route.
+ * The pillar serves more than these surfaces render, but a nav item or a page
+ * descriptor without a route behind it is the dead link this pillar's manifest
+ * spent its whole life avoiding — each further view arrives with its route.
  */
 import { lazy } from 'react';
 
@@ -17,6 +16,10 @@ import type { IconName } from '@pops/navigation';
 
 const ReconcileQueuePage = lazy(() =>
   import('./pages/ReconcileQueuePage').then((m) => ({ default: m.ReconcileQueuePage }))
+);
+
+const MerchantLensPage = lazy(() =>
+  import('./pages/MerchantLensPage').then((m) => ({ default: m.MerchantLensPage }))
 );
 
 /** Local type mirror for compile-time safety (shell owns the canonical types). */
@@ -37,7 +40,18 @@ export const navConfig = {
   icon: 'Receipt',
   color: 'rose',
   basePath: '/purchases',
-  items: [{ path: '', label: 'Reconcile', labelKey: 'purchases.reconcile', icon: 'Receipt' }],
+  items: [
+    { path: '', label: 'Reconcile', labelKey: 'purchases.reconcile', icon: 'Receipt' },
+    {
+      path: '/merchants',
+      label: 'Merchants',
+      labelKey: 'purchases.merchants',
+      icon: 'Building2',
+    },
+  ],
 } satisfies AppNavConfigShape;
 
-export const routes: RouteObject[] = [{ index: true, element: <ReconcileQueuePage /> }];
+export const routes: RouteObject[] = [
+  { index: true, element: <ReconcileQueuePage /> },
+  { path: 'merchants', element: <MerchantLensPage /> },
+];

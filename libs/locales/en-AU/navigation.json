@@ -53,5 +53,6 @@
   "bfm": "Devices",
   "bfm.devices": "Devices",
   "purchases": "Purchases",
-  "purchases.reconcile": "Reconcile"
+  "purchases.reconcile": "Reconcile",
+  "purchases.merchants": "Merchants"
 }
