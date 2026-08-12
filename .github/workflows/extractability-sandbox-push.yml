@@ -11,7 +11,17 @@ name: Extractability Sandbox (Push)
 # uses (`_extractability-sandbox-matrix.yml`). Instead of waiting up to 24h
 # for the next nightly run to catch an extraction break, this reports within
 # one push. `pnpm-lock.yaml` is included as the TS analogue of `Cargo.lock` —
-# both are the dependency-shape signal for their half of the workspace.
+# both are the dependency-shape signal for their half of the workspace. The
+# root `tsconfig.base.json`/`tsconfig.build.json` are included too: every
+# unit's own tsconfig `extends` one of these, so a change here changes what
+# "compiles correctly in isolation" means for every TS unit at once — the
+# same category of signal as a unit's own `tsconfig*.json`, just shared
+# instead of per-unit. `_discover-units.yml`'s OTHER shared-root files
+# (`pnpm-workspace.yaml`, `.oxfmtrc.json`, `.oxlintrc.json`, `mise.toml`,
+# `mise.ci.toml`) are deliberately NOT in `paths:` below — lint/format
+# config and toolchain version pins are not an exports-or-dependency-shape
+# signal, so a change there stays on the nightly sweep's 24h signal instead
+# of this fast one, same as it always has.
 #
 # STAYS OUT OF `ci-gate.yml`'s gated list, same as the nightly workflow — see
 # that file's header for why (heavy, EX-2 is a nightly/on-demand signal by
@@ -43,6 +53,8 @@ on:
       - "Cargo.toml"
       - "Cargo.lock"
       - "pnpm-lock.yaml"
+      - "tsconfig.base.json"
+      - "tsconfig.build.json"
 
 concurrency:
   # Ref alone is enough here — unlike the nightly workflow, there is no
