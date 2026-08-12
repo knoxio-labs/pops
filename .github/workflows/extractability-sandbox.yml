@@ -46,21 +46,31 @@ jobs:
   ts:
     # `needs.discover.outputs.units` (every unit, not `changed`) — a nightly
     # sweep proves the whole fleet regardless of what any one PR touched.
+    #
+    # Filtering happens per STEP, not with a job-level `if:` — a job-level
+    # `if:` cannot reference the `matrix` context (GitHub evaluates it before
+    # the matrix expands), so `if: matrix.unit.lang == 'ts'` at job level
+    # fails to parse the whole workflow with "Unrecognized named-value:
+    # 'matrix'" and no dispatch can even be created. unit-quality.yml uses the
+    # same per-step pattern for the identical reason.
     name: ${{ matrix.unit.name }} (${{ matrix.unit.kind }}) — sandbox (EX-2)
     needs: discover
-    if: >-
-      matrix.unit.lang == 'ts' &&
-      (github.event_name != 'workflow_dispatch' || github.event.inputs.unit == '' || github.event.inputs.unit == matrix.unit.dir)
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         unit: ${{ fromJson(needs.discover.outputs.units) }}
     steps:
-      - uses: actions/checkout@v7
+      - if: ${{ matrix.unit.lang != 'ts' || (github.event_name == 'workflow_dispatch' && github.event.inputs.unit != '' && github.event.inputs.unit != matrix.unit.dir) }}
+        run: echo "skip ${{ matrix.unit.name }} (${{ matrix.unit.lang }})"
 
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
+      - if: ${{ matrix.unit.lang == 'ts' && (github.event_name != 'workflow_dispatch' || github.event.inputs.unit == '' || github.event.inputs.unit == matrix.unit.dir) }}
+        uses: actions/checkout@v7
+
+      - if: ${{ matrix.unit.lang == 'ts' && (github.event_name != 'workflow_dispatch' || github.event.inputs.unit == '' || github.event.inputs.unit == matrix.unit.dir) }}
+        uses: pnpm/action-setup@v6
+      - if: ${{ matrix.unit.lang == 'ts' && (github.event_name != 'workflow_dispatch' || github.event.inputs.unit == '' || github.event.inputs.unit == matrix.unit.dir) }}
+        uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: pnpm
@@ -69,30 +79,34 @@ jobs:
       # pack-deps step builds each `@pops/*` dependency via
       # `pnpm --filter <dep> build` before packing it into a tarball, and
       # that resolves against the whole installed workspace.
-      - name: Install
+      - if: ${{ matrix.unit.lang == 'ts' && (github.event_name != 'workflow_dispatch' || github.event.inputs.unit == '' || github.event.inputs.unit == matrix.unit.dir) }}
+        name: Install
         run: pnpm install --frozen-lockfile
 
-      - name: Sandbox extraction (EX-2)
+      - if: ${{ matrix.unit.lang == 'ts' && (github.event_name != 'workflow_dispatch' || github.event.inputs.unit == '' || github.event.inputs.unit == matrix.unit.dir) }}
+        name: Sandbox extraction (EX-2)
         run: bash scripts/extractability/sandbox.sh ${{ matrix.unit.dir }}
 
   rust:
     name: ${{ matrix.unit.name }} (${{ matrix.unit.kind }}) — sandbox (EX-2)
     needs: discover
-    if: >-
-      matrix.unit.lang == 'rust' &&
-      (github.event_name != 'workflow_dispatch' || github.event.inputs.unit == '' || github.event.inputs.unit == matrix.unit.dir)
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         unit: ${{ fromJson(needs.discover.outputs.units) }}
     steps:
-      - uses: actions/checkout@v7
+      - if: ${{ matrix.unit.lang != 'rust' || (github.event_name == 'workflow_dispatch' && github.event.inputs.unit != '' && github.event.inputs.unit != matrix.unit.dir) }}
+        run: echo "skip ${{ matrix.unit.name }} (${{ matrix.unit.lang }})"
+
+      - if: ${{ matrix.unit.lang == 'rust' && (github.event_name != 'workflow_dispatch' || github.event.inputs.unit == '' || github.event.inputs.unit == matrix.unit.dir) }}
+        uses: actions/checkout@v7
 
       # Pinned, not `stable` — mirrors rust-quality.yml. Only the compiler is
       # needed here (cargo-sandbox.sh builds, it does not fmt/clippy), so no
       # rustfmt/clippy components.
-      - name: Install Rust toolchain (pinned from mise.toml)
+      - if: ${{ matrix.unit.lang == 'rust' && (github.event_name != 'workflow_dispatch' || github.event.inputs.unit == '' || github.event.inputs.unit == matrix.unit.dir) }}
+        name: Install Rust toolchain (pinned from mise.toml)
         run: |
           set -euo pipefail
           version=$(sed -nE 's/^rust *= *"([^"]+)".*/\1/p' mise.toml | head -1)
@@ -110,7 +124,8 @@ jobs:
       # genuinely isolated" — target/ isolation is the script's own
       # CARGO_TARGET_DIR handling, this cache is that "caller's registry
       # cache".
-      - name: Cache cargo registry
+      - if: ${{ matrix.unit.lang == 'rust' && (github.event_name != 'workflow_dispatch' || github.event.inputs.unit == '' || github.event.inputs.unit == matrix.unit.dir) }}
+        name: Cache cargo registry
         uses: actions/cache@v6
         with:
           path: |
@@ -124,13 +139,17 @@ jobs:
       # cargo-extract.mjs (invoked by cargo-sandbox.sh) reads Cargo.toml
       # through `smol-toml`, a real workspace dependency — Tier B, so the
       # workspace is installed first (mirrors rust-quality.yml).
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
+      - if: ${{ matrix.unit.lang == 'rust' && (github.event_name != 'workflow_dispatch' || github.event.inputs.unit == '' || github.event.inputs.unit == matrix.unit.dir) }}
+        uses: pnpm/action-setup@v6
+      - if: ${{ matrix.unit.lang == 'rust' && (github.event_name != 'workflow_dispatch' || github.event.inputs.unit == '' || github.event.inputs.unit == matrix.unit.dir) }}
+        uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: pnpm
 
-      - run: pnpm install --frozen-lockfile
+      - if: ${{ matrix.unit.lang == 'rust' && (github.event_name != 'workflow_dispatch' || github.event.inputs.unit == '' || github.event.inputs.unit == matrix.unit.dir) }}
+        run: pnpm install --frozen-lockfile
 
-      - name: Sandbox extraction (EX-2)
+      - if: ${{ matrix.unit.lang == 'rust' && (github.event_name != 'workflow_dispatch' || github.event.inputs.unit == '' || github.event.inputs.unit == matrix.unit.dir) }}
+        name: Sandbox extraction (EX-2)
         run: bash scripts/extractability/cargo-sandbox.sh ${{ matrix.unit.dir }}
