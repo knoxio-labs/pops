@@ -46,8 +46,16 @@ beforeEach(() => {
   seedAmazonSource(opened);
 });
 
-afterEach(() => {
+afterEach(async () => {
   for (const handle of handles) handle.stop();
+  // `stop()` only cancels the NEXT scheduled tick — every handle's
+  // constructor already fired one immediately (`void tick()` in
+  // `startReconcileCrossPillarWorker`), and this file's tests race that
+  // against their own explicit `runOnce()` call. Closing the database
+  // before draining leaves that first tick free to resume against a handle
+  // that is already gone; see "draining before the database closes" below
+  // for the failure this exists to prevent.
+  await Promise.all(handles.map((handle) => handle.drain()));
   cleanup();
   vi.useRealTimers();
 });
@@ -495,5 +503,79 @@ describe('the tick timer', () => {
       'purchases reconcile tick failed',
       expect.objectContaining({ error: 'logger boom' })
     );
+  });
+});
+
+describe('draining before the database closes', () => {
+  /**
+   * `start()`'s constructor fires a tick immediately (`void tick()` inside
+   * `startReconcileCrossPillarWorker`), and every other test in this file
+   * races that against its own explicit `runOnce()` call. Both tests below
+   * make that race deterministic instead of relying on it to happen to
+   * finish in time: a lookup that never resolves until the test says so
+   * keeps a tick genuinely suspended, mid-leg, until the assertions need it
+   * to move.
+   */
+  function suspendedLookup(): {
+    lookup: ReconcileLookupFn;
+    resolve: (result: ReconcileLookupResult) => void;
+  } {
+    let resolve: ((result: ReconcileLookupResult) => void) | undefined;
+    const gate = new Promise<ReconcileLookupResult>((res) => {
+      resolve = res;
+    });
+    if (resolve === undefined) throw new Error('Promise executor did not run synchronously');
+    return { lookup: () => gate, resolve };
+  }
+
+  it('closing the handle out from under a suspended tick breaks its write, not just its read', async () => {
+    // The failure `drain()` exists to prevent. `stop()` alone cancels only
+    // the NEXT scheduled tick — it does nothing for the one already
+    // running — so a caller that closes the database right after `stop()`
+    // (exactly what an un-drained shutdown, or this file's old `afterEach`,
+    // used to do) races a tick that is still going to write.
+    seed({ itemUris: [ITEM_URI] });
+    const { lookup, resolve } = suspendedLookup();
+    const handle = start({ inventoryItem: lookup });
+
+    const tick = handle.runOnce();
+    handle.stop();
+
+    // The leg has already read its URI list and is suspended on the
+    // lookup — the read landed before the close below, so only the WRITE
+    // that follows the lookup is at risk.
+    opened.raw.close();
+    resolve({ kind: 'ok' });
+
+    await expect(tick).rejects.toThrow(/database connection is not open/i);
+  });
+
+  it('drain() waits for that same tick, so a caller that drains first never sees the failure above', async () => {
+    seed({ itemUris: [ITEM_URI] });
+    const { lookup, resolve } = suspendedLookup();
+    const handle = start({ inventoryItem: lookup });
+
+    const tick = handle.runOnce();
+    handle.stop();
+
+    let drained = false;
+    const draining = handle.drain().then(() => {
+      drained = true;
+    });
+
+    // Still suspended on the lookup, so drain() must not have resolved yet
+    // — otherwise this test would pass without proving anything.
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(drained).toBe(false);
+
+    resolve({ kind: 'ok' });
+    await draining;
+    expect(drained).toBe(true);
+
+    await expect(tick).resolves.toMatchObject({ resolved: 1 });
+    // Only now — after drain(), not just stop() — is closing the handle
+    // the safe operation a real shutdown depends on it being.
+    expect(() => opened.raw.close()).not.toThrow();
   });
 });

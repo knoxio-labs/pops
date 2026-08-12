@@ -66,12 +66,32 @@ export interface ReconcileWorkerOptions {
 }
 
 export interface ReconcileWorkerHandle {
+  /** Cancel the next scheduled tick. Does NOT wait for a tick already running. */
   stop: () => void;
   /**
    * Run one pass and return its stats. Exposed for tests and for a boot
    * script that wants an immediate pass before arming the timer.
+   *
+   * A call made while a pass is already in flight joins that pass rather
+   * than starting a second, overlapping one — the worker has no
+   * `request()`-style burst trigger to coalesce, so there is never a reason
+   * for two passes to read `options.db` at once.
    */
   runOnce: () => Promise<ReconcileTickStats>;
+  /**
+   * Settle any in-flight pass.
+   *
+   * The shutdown primitive, not a test helper — mirrors `SweepRunner.drain`.
+   * `stop()` only cancels the next scheduled timer; the pass this worker
+   * fires immediately on construction (`void tick()` below) is already
+   * running by the time a caller gets a handle back, and a pass reads and
+   * writes through `options.db` across several `await`s. Closing that
+   * database before `drain()` resolves lets a suspended pass resume against
+   * a handle that is gone, which better-sqlite3 does not fail softly for
+   * every call site — see `reconcile-cross-pillar.test.ts`'s "draining
+   * before the database closes" cases.
+   */
+  drain: () => Promise<void>;
 }
 
 export function startReconcileCrossPillarWorker(
@@ -83,8 +103,10 @@ export function startReconcileCrossPillarWorker(
 
   let timer: NodeJS.Timeout | undefined;
   let stopped = false;
+  /** The currently-running pass, if any — what `drain()` waits on. */
+  let inFlight: Promise<ReconcileTickStats> | null = null;
 
-  async function runOnce(): Promise<ReconcileTickStats> {
+  async function runPass(): Promise<ReconcileTickStats> {
     const legs: ReconcileLegStats[] = [];
     const totals = emptyCounts();
     for (const leg of LEGS) {
@@ -97,6 +119,14 @@ export function startReconcileCrossPillarWorker(
     // that wants the per-leg numbers reads them.
     logger?.info?.('purchases reconcile tick complete', { ...totals });
     return { ...totals, legs };
+  }
+
+  function runOnce(): Promise<ReconcileTickStats> {
+    if (inFlight !== null) return inFlight;
+    inFlight = runPass().finally(() => {
+      inFlight = null;
+    });
+    return inFlight;
   }
 
   function arm(): void {
@@ -125,5 +155,10 @@ export function startReconcileCrossPillarWorker(
       if (timer !== undefined) clearTimeout(timer);
     },
     runOnce,
+    async drain(): Promise<void> {
+      while (inFlight !== null) {
+        await inFlight.catch(() => undefined);
+      }
+    },
   };
 }

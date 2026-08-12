@@ -136,21 +136,21 @@ function shutdown(signal: NodeJS.Signals): void {
   if (shuttingDown) return;
   shuttingDown = true;
   console.warn(`[purchases-api] Shutting down (${signal})`);
-  // Cancel the timers, then WAIT for a sweep that is already running. A
-  // sweep awaits finance between its reads and its writes, so closing the
-  // database here would fail those writes mid-transaction on the way out.
-  //
-  // The URI cron needs no drain, for a different reason: each URI it has
-  // already decided is committed on its own before the next await, so
-  // closing the database cannot tear a write in half. A shutdown mid-tick
-  // does leave the REST of that tick's URIs unvisited — they keep whatever
-  // flag they had and are revisited on the next boot, which is the same
-  // position every URI is in between two nightly ticks anyway.
+  // Cancel the timers, then WAIT for both triggers to settle before the
+  // database closes underneath them. The sweep needs this so its
+  // finance-then-write sequence never fails mid-transaction on the way out;
+  // the URI cron needs it for a native-handle reason rather than a SQL one —
+  // each URI it has already decided is committed on its own before the next
+  // await, so a shutdown mid-tick cannot tear a write in half, but a tick
+  // suspended on a lookup resumes by calling back into `purchasesDb.raw`,
+  // and better-sqlite3 does not fail every one of those calls softly once
+  // the handle is closed. Undrained, a mid-tick shutdown also leaves the
+  // rest of that tick's URIs unvisited — they keep whatever flag they had
+  // and are revisited on the next boot, the same position every URI is in
+  // between two nightly ticks anyway, so draining costs nothing here.
   reconcileUriWorker.stop();
   sweepRunner.stop();
-  void sweepRunner
-    .drain()
-    .catch(() => undefined)
+  void Promise.all([sweepRunner.drain().catch(() => undefined), reconcileUriWorker.drain()])
     .then(() => pillarHandle?.stop() ?? Promise.resolve())
     .catch(() => undefined)
     .finally(() => {
