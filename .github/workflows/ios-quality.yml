@@ -35,14 +35,38 @@ name: iOS Quality
 # too. `scripts/ios-e2e/**` is in for the same reason: it is the harness that
 # boots it.
 #
-# The filter is not yet the job's complete input set. `pnpm-lock.yaml` and the
-# BFM's transitive `libs/*` dependencies are also compiled into the process the
-# UI flow talks to, and neither is listed. The merge-queue lane used to cover
-# for that by accident — it ran this job unconditionally — and since it is
-# scoped by this same filter it no longer does. Widening costs a macOS job on
-# every lockfile bump and on a large share of all PRs for the libs, so it is a
-# decision of its own rather than a line to add here quietly; it is tracked, not
-# accepted silently.
+# TWO MORE INPUTS FEED THE PROCESS THE UI FLOW TALKS TO: `pnpm-lock.yaml` and
+# the BFM's transitive workspace dependencies. The merge-queue lane used to
+# cover for both by accident — it ran this job unconditionally — and since it
+# is scoped by this same filter it no longer does (see the `merge_group`
+# trigger comment below). They were priced separately and decided separately:
+#
+# `pnpm-lock.yaml` IS in the filter, because a lockfile bump changes what
+# `pnpm install --frozen-lockfile --filter "@pops/bfm..."` resolves and
+# therefore what the booted BFM is. Measured over the 27 PRs behind the last 39
+# queue entries, it touched 2 of them (~7%) — cheap enough that closing a real
+# gap wins.
+#
+# `libs/*` IS NOT, and that is a decision rather than an oversight.
+# `pnpm list --filter "@pops/bfm..." --depth Infinity` shows the BFM's only
+# transitive workspace dependencies are `libs/sdk` and `libs/types` today, but
+# even that pair alone is a different order of magnitude from a lockfile bump:
+# of the last 100 commits to `libs/sdk` or `libs/types`, 24 touched neither
+# `clients/ios/**`, `pillars/bfm/**` nor `scripts/ios-e2e/**` — so listing them
+# would newly select this ~20-minute macOS lane on roughly a quarter of all
+# commits, in both the PR and the queue lane, which is most of what narrowing
+# the queue lane (see the `merge_group` comment) was for. Both libs are already
+# `libs/**`, gated by `unit-quality.yml`, which runs the BFM's own typecheck and
+# vitest suite against whatever they resolve to on every such change — a break
+# serious enough to matter fails there first, before this job would ever get a
+# chance to see it. What staying out costs is coverage for a narrower case: a
+# change that passes the BFM's own suite but still misbehaves against a real
+# booted process and a real device flow. Real, but not worth a macOS job on a
+# quarter of all commits to catch slightly earlier than the next `libs/sdk` or
+# `libs/types` PR that also happens to touch `clients/ios/**`. If the
+# transitive set grows past two libs, or a libs-only break ever reaches
+# production having passed `unit-quality.yml`, that trade is worth reopening —
+# the `pnpm list` command above still shows what to point the filter at.
 #
 # THIS JOB ALSO RUNS THE ONLY TEST IN THE REPO THAT TOUCHES AN iOS SCREEN. The
 # last steps boot a real `@pops/bfm` and drive the built app against it with
@@ -79,12 +103,14 @@ on:
       - "clients/ios/**"
       - "pillars/bfm/**"
       - "scripts/ios-e2e/**"
+      - "pnpm-lock.yaml"
       - ".github/workflows/ios-quality.yml"
   pull_request:
     paths:
       - "clients/ios/**"
       - "pillars/bfm/**"
       - "scripts/ios-e2e/**"
+      - "pnpm-lock.yaml"
       - ".github/workflows/ios-quality.yml"
   # THE EXPENSIVE ONE. `paths:` is rejected outright on this event, so the
   # trigger below is unconditional and the SCOPING happens in a job instead —

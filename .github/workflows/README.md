@@ -181,9 +181,14 @@ only in `agent-review.yml`'s preflight.
 
 The corollary is that a workflow's declared `pull_request.paths` is now
 load-bearing in two lanes. `ios-quality.yml`'s covers `clients/ios/**`,
-`pillars/bfm/**` and `scripts/ios-e2e/**` — the pillar and the harness because
-its UI-flow step boots a real BFM — and still does not cover `pnpm-lock.yaml`
-or the BFM's transitive `libs/*`.
+`pillars/bfm/**`, `scripts/ios-e2e/**` — the pillar and the harness because its
+UI-flow step boots a real BFM — and `pnpm-lock.yaml`, since a lockfile bump
+changes what that boot resolves. It deliberately does not cover the BFM's
+transitive `libs/*` (today just `libs/sdk` and `libs/types`, per `pnpm list
+--filter "@pops/bfm..." --depth Infinity`): that pair is touched far more often
+than the lockfile, both libs are already gated by `unit-quality.yml` (which
+runs the BFM's own typecheck and vitest suite against them), and this job's
+header explains the trade in full.
 
 **What it costs and what it saves**, measured on the 39 completed merge-queue
 entries immediately before the change. Each entry's `ios-quality.yml` run took a
@@ -267,7 +272,7 @@ caller's decision; this file only knows how to sandbox whatever `units` names.
 | `fe-quality.yml`                 | PR/push on `pillars/shell/**`, apps, openapi, FE libs; every merge group | the shell's `Quality Checks` job                                                                                     |
 | `rust-quality.yml`               | PR/push on Cargo files, `deny.toml`, `pillars/contacts/**`, `libs/pops-*`, `scripts/extractability/**`; every merge group | `fmt + clippy + build + test`                                       |
 | `registry-generated-quality.yml` | PR/push on `libs/module-registry/**`, `libs/types/**`; every merge group | `generated.ts` drift                                                                                                |
-| `ios-quality.yml`                | PR/push on `clients/ios/**`, `pillars/bfm/**`, `scripts/ios-e2e/**`; every merge group, **scoped by a `scope` job to that same filter** | `macos-latest`; selects the Xcode pinned in `clients/ios/mise.toml`, then `mise run lint` and `mise run -j 1 test ::: lint:analyze` — one step, because both share a single compile. Caches no derived data, deliberately; the header says why |
+| `ios-quality.yml`                | PR/push on `clients/ios/**`, `pillars/bfm/**`, `scripts/ios-e2e/**`, `pnpm-lock.yaml`; every merge group, **scoped by a `scope` job to that same filter** | `macos-latest`; selects the Xcode pinned in `clients/ios/mise.toml`, then `mise run lint` and `mise run -j 1 test ::: lint:analyze` — one step, because both share a single compile. Caches no derived data, deliberately; the header says why |
 | `agent-review.yml`               | every PR, drafts included; every merge group                  | eight guard scripts under `scripts/ci/`, each `--self-test`ed first, then an advisory LLM review (that last step alone is skipped on drafts) |
 | `docker-build.yml`               | PR/push on Dockerfiles, `infra/docker*`, lockfile; every merge group, **scoped by a `scope` job to that same filter** | the FULL image of every `pillars/*/Dockerfile`, each then started on fresh volumes and probed by `scripts/ci/smoke-image.mjs`; `docker compose config --quiet` on both compose files after stubbing 12 secret files |
 | `pillar-quality.yml`             | push to `main` only                                           | full image (`push: false`) per `pillars/<x>` that has a `package.json`                                               |

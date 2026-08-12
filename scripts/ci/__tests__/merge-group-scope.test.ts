@@ -114,6 +114,7 @@ describe('reading a workflow’s own pull_request.paths', () => {
       'clients/ios/**',
       'pillars/bfm/**',
       'scripts/ios-e2e/**',
+      'pnpm-lock.yaml',
       '.github/workflows/ios-quality.yml',
     ]);
   });
