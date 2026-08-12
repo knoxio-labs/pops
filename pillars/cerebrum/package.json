@@ -41,7 +41,7 @@
     "generate:api-types": "tsx scripts/generate-api-types.ts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.115.0",
+    "@anthropic-ai/sdk": "^0.116.0",
     "@pops/ai-telemetry": "workspace:*",
     "@pops/pillar-sdk": "workspace:*",
     "@pops/pillar-settings": "workspace:*",
@@ -72,7 +72,7 @@
     "@vitest/coverage-v8": "^4.1.10",
     "openapi-typescript": "^7.13.0",
     "supertest": "^7.1.4",
-    "tsx": "^4.23.10",
+    "tsx": "^4.23.11",
     "typescript": "^6.0.3",
     "vitest": "^4.1.10"
   }
