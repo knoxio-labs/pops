@@ -46,10 +46,19 @@ on:
 
 concurrency:
   # Ref alone is enough here — unlike the nightly workflow, there is no
-  # dispatch-scoped unit input to key on, and a push to `main` is always
-  # sequential (the merge queue serializes what lands there).
+  # dispatch-scoped unit input to key on. NOT cancel-in-progress, unlike the
+  # nightly workflow's group: two pushes to `main` close together do not
+  # carry the same diff, so a later push's run is not a superset of an
+  # earlier one's — the merge queue serializes what LANDS on `main`, but two
+  # merges landing minutes apart still each get their own distinct `changed`
+  # set. Cancelling an in-flight run for an older push in favor of a newer
+  # one would silently drop that older push's units from ever getting an
+  # EX-2 result, rather than just delaying it. Queue instead: `main` merges
+  # rarely enough, and this workflow's scoped-to-`changed` runs are cheap
+  # enough (a handful of units at most, not the nightly's full fleet), that
+  # a short backlog is the acceptable cost for not losing signal.
   group: extractability-sandbox-push-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   discover:
@@ -57,7 +66,11 @@ jobs:
 
   sandbox:
     needs: discover
-    if: needs.discover.outputs.changed != '[]'
+    # `needs.discover.result == 'success'` first: without it, a `discover`
+    # FAILURE leaves `needs.discover.outputs.changed` empty, and `'' != '[]'`
+    # is true — this job would still run and hand the reusable matrix an
+    # invalid `units` value instead of just not running.
+    if: needs.discover.result == 'success' && needs.discover.outputs.changed != '[]'
     uses: ./.github/workflows/_extractability-sandbox-matrix.yml
     with:
       units: ${{ needs.discover.outputs.changed }}

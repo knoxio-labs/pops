@@ -1,6 +1,6 @@
 # .github/workflows
 
-20 workflows. Every job runs on `ubuntu-latest` except `ios-quality.yml`, which needs macOS to compile Swift at all.
+22 files under `.github/workflows`: 20 that trigger on their own (the table below) plus 2 reusable `workflow_call`-only helpers with no trigger of their own — `_discover-units.yml` and `_extractability-sandbox-matrix.yml`, each documented in its own section instead of the table. Every job runs on `ubuntu-latest` except `ios-quality.yml`, which needs macOS to compile Swift at all.
 
 ## `ci-gate.yml` — the one static aggregate context
 
