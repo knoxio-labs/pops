@@ -66,8 +66,18 @@ interface SeededItem {
 }
 
 /**
- * The world as it stood at 0002: three sources, and lines carrying the
- * exact tag shapes the Woolworths mapper and the drop-zone wrote.
+ * Explicit, so `confirmed_at` on a surviving row can be checked against the
+ * timestamp the row was actually written at rather than against "some
+ * string". A default would land at migration time and hide a backfill that
+ * stamped `now` over the caller's own history.
+ */
+const TAG_WRITTEN_AT = '2026-03-04T05:06:07.008Z';
+
+/**
+ * The world as it stood at 0002: four sources, lines carrying the exact tag
+ * shapes the Woolworths mapper and the drop-zone wrote, and lines carrying
+ * what a caller could put in `POST /purchases` when its body still took a
+ * free-form `tags: string[]`.
  */
 const SEED: readonly SeededItem[] = [
   {
@@ -85,6 +95,23 @@ const SEED: readonly SeededItem[] = [
   // Entered by hand, stating a category the column was always documented to
   // hold. It must come out the other side untouched.
   { id: 'b-manual', source: 'bunnings', merchantCategory: 'Garden' },
+  // Both kinds on one line: two slugs a caller asserted, and one piece of
+  // prose. The partition has to split a single item's rows two ways.
+  { id: 'b-both', source: 'bunnings', tags: ['fruit', 'single-origin', 'Qty 2 @ $9.24 each'] },
+  // The same two strings again. `(item_id, tag)` means a duplicate can only
+  // exist across lines, and each row must be decided on its own.
+  { id: 'b-dup', source: 'bunnings', tags: ['fruit', 'Qty 2 @ $9.24 each'] },
+  // Every way a string can miss the slug shape. None may survive as a tag.
+  {
+    id: 'b-misshapen',
+    source: 'bunnings',
+    tags: ['-leading', 'trailing-', 'double--hyphen', 'Upper', 'has space', 'under_score', '1.5'],
+  },
+  // A caller's tag on a line the mapper also marked promotional.
+  { id: 'w-promo-tagged', source: 'woolworths', tags: ['promotional-price', 'healthy'] },
+  // Adapter prose that happens to be slug-shaped, and therefore
+  // indistinguishable from an assertion.
+  { id: 'w-slug-prose', source: 'woolworths', tags: ['special'] },
 ];
 
 function seedThrough0002(): void {
@@ -112,7 +139,9 @@ function seedThrough0002(): void {
       )
       .run(item.id, `p-${item.source}`, position, item.id, item.merchantCategory ?? null);
     for (const tag of item.tags ?? []) {
-      raw.prepare(`INSERT INTO purchase_item_tags (item_id, tag) VALUES (?, ?)`).run(item.id, tag);
+      raw
+        .prepare(`INSERT INTO purchase_item_tags (item_id, tag, created_at) VALUES (?, ?, ?)`)
+        .run(item.id, tag, TAG_WRITTEN_AT);
     }
   }
   raw.close();
@@ -138,6 +167,20 @@ function notesOf(itemId: string): string[] {
       .prepare(`SELECT note FROM purchase_item_notes WHERE item_id = ? ORDER BY position`)
       .all(itemId) as { note: string }[]
   ).map((row) => row.note);
+}
+
+interface SurvivingTag {
+  tag: string;
+  created_at: string;
+  confirmed_at: string | null;
+}
+
+function tagsOf(itemId: string): SurvivingTag[] {
+  return opened.raw
+    .prepare(
+      `SELECT tag, created_at, confirmed_at FROM purchase_item_tags WHERE item_id = ? ORDER BY tag`
+    )
+    .all(itemId) as SurvivingTag[];
 }
 
 interface ItemFlags {
@@ -170,17 +213,19 @@ describe('applying 0003 to a database that already holds adapter-written tags', 
     expect(applied).toHaveLength(4);
   });
 
-  it('moves every merchant note into the notes table, and empties the tag table', () => {
+  it('moves every merchant note into the notes table', () => {
     expect(notesOf('w-promo')).toEqual(['PRICE REDUCED BY $7.26 each', 'Qty 2 @ $9.24 each']);
     expect(notesOf('w-plain')).toEqual(['0.202 kg NET @ $2.90/kg']);
     expect(notesOf('r-note')).toEqual(['2 @ $3.00']);
     expect(notesOf('w-gst-only')).toEqual([]);
     expect(notesOf('a-new')).toEqual([]);
+  });
 
-    const remaining = opened.raw.prepare(`SELECT count(*) AS n FROM purchase_item_tags`).get() as {
-      n: number;
-    };
-    expect(remaining.n).toBe(0);
+  it('gives a moved note the timestamp its tag row was written at', () => {
+    const rows = opened.raw
+      .prepare(`SELECT DISTINCT created_at FROM purchase_item_notes`)
+      .all() as { created_at: string }[];
+    expect(rows.map((row) => row.created_at)).toEqual([TAG_WRITTEN_AT]);
   });
 
   it('does not carry `promotional-price` across as a note', () => {
@@ -231,9 +276,102 @@ describe('applying 0003 to a database that already holds adapter-written tags', 
 
   it('cascades the new notes away with their line', () => {
     opened.raw.prepare(`DELETE FROM purchases WHERE id = 'p-woolworths'`).run();
-    const left = opened.raw.prepare(`SELECT count(*) AS n FROM purchase_item_notes`).get() as {
-      n: number;
-    };
-    expect(left.n).toBe(1);
+    expect(notesOf('w-promo')).toEqual([]);
+    expect(notesOf('w-plain')).toEqual([]);
+    expect(notesOf('r-note')).toEqual(['2 @ $3.00']);
+  });
+});
+
+/**
+ * The half of the partition that is destructive, and the reason this file
+ * exists at all.
+ *
+ * `purchase_item_tags` held adapter prose and caller-asserted POPS tags in
+ * the same rows, and the first draft of 0003 emptied the table outright
+ * after moving the prose out. That is silent, one-way, and runs inside
+ * `openPurchasesDb` at process start: a classification a caller asserted
+ * through `POST /purchases` — the exact thing the confirmed/proposed
+ * distinction exists to protect — would have been gone before anyone could
+ * look. Shape is the only signal available to tell the two apart, so these
+ * tests pin what each shape does.
+ */
+describe('the tags a caller asserted survive 0003', () => {
+  it('keeps a slug-shaped tag, marked asserted from its own created_at', () => {
+    expect(tagsOf('b-both')).toEqual([
+      { tag: 'fruit', created_at: TAG_WRITTEN_AT, confirmed_at: TAG_WRITTEN_AT },
+      { tag: 'single-origin', created_at: TAG_WRITTEN_AT, confirmed_at: TAG_WRITTEN_AT },
+    ]);
+  });
+
+  it('does not stamp the confirmation with the time the migration ran', () => {
+    // `confirmed_at = created_at` is not decoration. Stamping `now` would
+    // date every asserted tag in the fleet to whenever the container
+    // happened to restart, and there is no second copy to restore from.
+    const stamped = opened.raw
+      .prepare(`SELECT count(*) AS n FROM purchase_item_tags WHERE confirmed_at <> created_at`)
+      .get() as { n: number };
+    expect(stamped.n).toBe(0);
+  });
+
+  it('splits one line whose rows are both kinds', () => {
+    expect(tagsOf('b-both').map((row) => row.tag)).toEqual(['fruit', 'single-origin']);
+    expect(notesOf('b-both')).toEqual(['Qty 2 @ $9.24 each']);
+  });
+
+  it('decides a repeated string the same way on every line it appears on', () => {
+    expect(tagsOf('b-dup').map((row) => row.tag)).toEqual(['fruit']);
+    expect(notesOf('b-dup')).toEqual(['Qty 2 @ $9.24 each']);
+  });
+
+  it('moves everything that misses the slug shape, keeping none of it', () => {
+    expect(tagsOf('b-misshapen')).toEqual([]);
+    expect(notesOf('b-misshapen')).toEqual([
+      '-leading',
+      '1.5',
+      'Upper',
+      'double--hyphen',
+      'has space',
+      'trailing-',
+      'under_score',
+    ]);
+  });
+
+  it('numbers the notes from zero even where a tag was held back', () => {
+    // The window function runs after the WHERE, so excluding the kept rows
+    // must not leave a hole where `single-origin` would have sorted.
+    const positions = opened.raw
+      .prepare(`SELECT position FROM purchase_item_notes WHERE item_id = 'b-both'`)
+      .all() as { position: number }[];
+    expect(positions.map((row) => row.position)).toEqual([0]);
+  });
+
+  it('consumes `promotional-price` without taking the tag beside it', () => {
+    // Slug-shaped, but a POPS-minted marker for what is now a column. The
+    // fact is not lost — it moves to `promotional_price`.
+    expect(tagsOf('w-promo-tagged').map((row) => row.tag)).toEqual(['healthy']);
+    expect(notesOf('w-promo-tagged')).toEqual([]);
+    expect(itemFlags('w-promo-tagged').promotional_price).toBe(1);
+  });
+
+  it('keeps slug-shaped prose as a tag, because nothing can tell it apart', () => {
+    // The one case the shape decides wrongly, and deliberately so: the
+    // prose is re-derivable by re-ingesting the export, an asserted tag is
+    // not, so an ambiguous row is kept rather than destroyed.
+    expect(tagsOf('w-slug-prose').map((row) => row.tag)).toEqual(['special']);
+    expect(notesOf('w-slug-prose')).toEqual([]);
+  });
+
+  it('leaves nothing unmarked behind in the tag table', () => {
+    // A survivor without a marker would read as a machine proposal that no
+    // pass ever made.
+    const unmarked = opened.raw
+      .prepare(`SELECT count(*) AS n FROM purchase_item_tags WHERE confirmed_at IS NULL`)
+      .get() as { n: number };
+    expect(unmarked.n).toBe(0);
+  });
+
+  it('cascades a surviving tag away with its line', () => {
+    opened.raw.prepare(`DELETE FROM purchases WHERE id = 'p-bunnings'`).run();
+    expect(tagsOf('b-both')).toEqual([]);
   });
 });

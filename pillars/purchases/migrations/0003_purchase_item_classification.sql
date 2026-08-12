@@ -67,23 +67,49 @@ CREATE INDEX `idx_purchase_items_promotional_price` ON `purchase_items` (`promot
 -- Backfill. Required, not optional: without it the new docstrings are false
 -- against rows already in the table on day one.
 --
--- Every row in `purchase_item_tags` today was written by an ingest adapter
--- — the Woolworths receipt mapper and the receipt drop-zone are the only
--- writers that have ever existed — so all of it is merchant prose except
--- the literal `promotional-price` marker.
+-- `purchase_item_tags` holds two unrelated things and the tag's *shape* is
+-- what tells them apart. A row matching the item-tag slug shape is a value
+-- a caller asserted through `POST /purchases`, whose body took a free-form
+-- `tags: string[]` until this branch closed it to the slug. That is a
+-- classification, nothing re-derives it, and it survives — marked asserted
+-- from the timestamp it was written at, which is the honest one. Everything
+-- else is merchant prose an ingest adapter wrote, and moves.
+--
+-- `promotional-price` is slug-shaped and is neither. It is a POPS-minted
+-- marker for what is now a boolean, consumed below into `promotional_price`,
+-- so it is the one literal this partition excludes by name. A caller who
+-- asserted it by hand still gets the fact, on the column that now holds it.
+--
+-- The shape test is spelled with GLOB because SQLite has no REGEXP without
+-- a host-supplied function and a migration runs before anything can
+-- register one. It is the SQL equivalent of `ITEM_TAG_PATTERN` in
+-- `src/contract/constants.ts`: alphanumeric runs joined by single hyphens,
+-- with no leading, trailing or doubled hyphen and no other character.
+UPDATE `purchase_item_tags` SET `confirmed_at` = `created_at`
+WHERE `tag` <> 'promotional-price'
+  AND `tag` GLOB '[a-z0-9]*'
+  AND `tag` GLOB '*[a-z0-9]'
+  AND NOT `tag` GLOB '*[^a-z0-9-]*'
+  AND instr(`tag`, '--') = 0;--> statement-breakpoint
+
+-- The prose, keyed off the marker the statement above set so the shape test
+-- is written once. The window function runs after the WHERE, so excluding
+-- the tags does not leave gaps in `position`.
 --
 -- Known loss: `purchase_item_tags` has no position column, so the order the
 -- notes were printed in is already gone and they come back alphabetical.
--- Both backfills are re-runnable from the original exports, so an operator
--- who wants exact fidelity can `DELETE /purchases/:id` and re-ingest the
--- source instead.
+-- This backfill is re-runnable from the original exports, so an operator who
+-- wants exact fidelity can `DELETE /purchases/:id` and re-ingest the source
+-- instead. That asymmetry is why the partition keeps the tags rather than
+-- the prose when the shape is ambiguous: no export restores a hand-asserted
+-- classification.
 INSERT INTO `purchase_item_notes` (`item_id`, `position`, `note`, `created_at`)
 SELECT `item_id`,
        ROW_NUMBER() OVER (PARTITION BY `item_id` ORDER BY `tag`) - 1,
        `tag`,
        `created_at`
 FROM `purchase_item_tags`
-WHERE `tag` <> 'promotional-price';--> statement-breakpoint
+WHERE `confirmed_at` IS NULL AND `tag` <> 'promotional-price';--> statement-breakpoint
 
 -- A Woolworths receipt states the `^` on every line it applies to, so the
 -- absence of one is the merchant saying "not on special" — 0, not unknown.
@@ -109,4 +135,7 @@ SET `merchant_condition` = `merchant_category`, `merchant_category` = NULL
 WHERE `merchant_category` IS NOT NULL
   AND `purchase_id` IN (SELECT `id` FROM `purchases` WHERE `source` = 'amazon');--> statement-breakpoint
 
-DELETE FROM `purchase_item_tags`;
+-- What is left unmarked is what has already been copied elsewhere: prose now
+-- in `purchase_item_notes`, and `promotional-price` now in
+-- `promotional_price`. The asserted tags carry a `confirmed_at` and stay.
+DELETE FROM `purchase_item_tags` WHERE `confirmed_at` IS NULL;

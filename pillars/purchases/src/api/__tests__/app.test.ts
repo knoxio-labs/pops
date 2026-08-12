@@ -148,6 +148,45 @@ describe('POST /purchases', () => {
     expect(tamper.landedCostCents).toBe(4499);
   });
 
+  it('stores a note exactly as sent, including the whitespace around it', async () => {
+    // `notes` is documented as verbatim merchant prose, and a receipt's
+    // leading indent is part of the printed text a reviewer checks a
+    // reading against. The schema used to `.trim()` it, which made the
+    // stored value quietly different from the submitted one.
+    const padded = '  0.202 kg NET @ $2.90/kg  ';
+    const res = await request(app)
+      .post('/purchases')
+      .send({
+        ...minimalOrder,
+        items: [
+          {
+            name: 'Loose Fuji Apples',
+            unitPriceCents: 586,
+            lineTotalCents: 586,
+            notes: [padded],
+          },
+        ],
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.items[0].notes).toEqual([padded]);
+
+    const stored = await request(app).get(`/purchases/${String(res.body.purchase.id)}`);
+    expect(stored.body.items[0].notes).toEqual([padded]);
+  });
+
+  it('rejects a blank note rather than trimming it into an empty string', async () => {
+    const res = await request(app)
+      .post('/purchases')
+      .send({
+        ...minimalOrder,
+        items: [
+          { name: 'Loose Fuji Apples', unitPriceCents: 586, lineTotalCents: 586, notes: ['   '] },
+        ],
+      });
+    expect(res.status).toBe(400);
+  });
+
   it('rejects fractional cents rather than rounding them', async () => {
     const res = await request(app)
       .post('/purchases')

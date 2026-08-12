@@ -563,7 +563,7 @@
                         },
                         "notes": {
                           "items": {
-                            "minLength": 1,
+                            "pattern": "\\S",
                             "type": "string"
                           },
                           "type": "array"

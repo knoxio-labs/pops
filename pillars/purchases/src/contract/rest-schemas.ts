@@ -52,6 +52,19 @@ export const QueryBoolSchema = z.preprocess((v) => v === true || v === 'true', z
  */
 const RefSchema = z.string().trim().min(1);
 
+/**
+ * A string that must carry at least one non-whitespace character and is
+ * handed on exactly as it arrived.
+ *
+ * The distinction from `z.string().trim().min(1)` is that `.trim()` is a
+ * transform, so the value the handler writes is not the value the caller
+ * sent. That is fine for a wiring handle and wrong for anything documented
+ * as verbatim.
+ */
+const NonBlankTextSchema = z
+  .string()
+  .regex(/\S/u, 'expected at least one non-whitespace character');
+
 export const CreateShipmentBodySchema = z.object({
   ref: RefSchema,
   /**
@@ -104,8 +117,15 @@ export const CreateItemBodySchema = z.object({
    * land asserted, and a guard test holds the adapters to writing none.
    */
   tags: z.array(ItemTagSchema).optional(),
-  /** Verbatim merchant prose, in printed order. Duplicates are kept. */
-  notes: z.array(z.string().trim().min(1)).optional(),
+  /**
+   * Verbatim merchant prose, in printed order. Duplicates are kept.
+   *
+   * Not `.trim()`: leading and trailing whitespace is part of the printed
+   * text, and a schema that quietly rewrote it would make the word
+   * `verbatim` above false — the column exists so a reviewer can check a
+   * reading against the paper. Blank is rejected rather than trimmed away.
+   */
+  notes: z.array(NonBlankTextSchema).optional(),
   units: z.array(CreateItemUnitBodySchema).optional(),
 });
 
