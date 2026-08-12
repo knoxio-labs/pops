@@ -41,13 +41,16 @@ export function QueueEntryRow({ entry, isActive, onSelect }: QueueEntryRowProps)
       data-charge-id={entry.chargeId}
       onClick={() => onSelect(entry)}
       className={cn(
-        'grid cursor-pointer gap-4 rounded-md border p-4 md:grid-cols-[2fr_auto_3fr]',
+        'grid cursor-pointer gap-4 rounded-md border p-4 md:grid-cols-6',
         isActive ? 'border-primary bg-accent/40' : 'border-border'
       )}
     >
       <ChargeSummary entry={entry} />
       <DeltaCell entry={entry} />
-      <section aria-label={t('reconcile.entry.proposalsColumn')} className="space-y-2">
+      <section
+        aria-label={t('reconcile.entry.proposalsColumn')}
+        className="space-y-2 md:col-span-3"
+      >
         {entry.proposed.length === 0 ? (
           <p className="text-muted-foreground text-sm">{t('reconcile.entry.noProposals')}</p>
         ) : (
@@ -64,7 +67,7 @@ function ChargeSummary({ entry }: { entry: QueueEntry }): ReactElement {
   const { t } = useTranslation('purchases');
 
   return (
-    <section aria-label={t('reconcile.entry.chargeColumn')} className="space-y-1">
+    <section aria-label={t('reconcile.entry.chargeColumn')} className="space-y-1 md:col-span-2">
       <p className="font-medium">
         {entry.merchantEntityName ?? t('reconcile.entry.unknownMerchant', { source: entry.source })}
       </p>
