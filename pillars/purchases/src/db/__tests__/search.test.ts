@@ -28,7 +28,8 @@ afterEach(() => {
 function orderWithItems(
   checksum: string,
   merchantEntityName: string | null,
-  items: readonly { name: string; sku?: string | null }[]
+  items: readonly { name: string; sku?: string | null }[],
+  orderedAt?: string
 ): string {
   return createPurchase(
     opened.db,
@@ -36,6 +37,7 @@ function orderWithItems(
       checksum,
       sourceOrderId: checksum,
       merchantEntityName,
+      ...(orderedAt === undefined ? {} : { orderedAt }),
       items: items.map((item, index) => ({
         ref: `i${String(index)}`,
         name: item.name,
@@ -174,5 +176,70 @@ describe('both adapters together', () => {
     orderWithItems('a', 'Amazon', [{ name: 'Dosing funnel' }]);
 
     expect(searchPurchases(opened.db, 'kayak')).toEqual([]);
+  });
+});
+
+/**
+ * What decides which hits come back.
+ *
+ * `LIKE '%text%'` returns rows in whatever order the scan reached them,
+ * which is the order they were written. These seed more matches than any
+ * response holds and put the row that should win where that order would
+ * lose it, so a rank that only ever saw part of the corpus — or a cut that
+ * kept whichever rows arrived first — shows up as a missing hit rather than
+ * as a reordering nobody notices.
+ */
+describe('which matches survive to the response', () => {
+  const MORE_THAN_ANY_RESPONSE_HOLDS = 150;
+
+  function fillerOrders(count: number): void {
+    for (let index = 0; index < count; index += 1) {
+      orderWithItems(`filler-${String(index)}`, `Reseller of vevor gear ${String(index)}`, []);
+    }
+  }
+
+  it('scores every matching order, so the exact match written last still wins', () => {
+    fillerOrders(MORE_THAN_ANY_RESPONSE_HOLDS);
+    const id = orderWithItems('exact', 'Vevor', []);
+
+    const hits = searchPurchases(opened.db, 'vevor');
+
+    expect(hits[0]?.matchType).toBe('exact');
+    expect(hits[0]?.uri).toBe(`pops:purchases/purchase/${id}`);
+  });
+
+  it('scores every matching line, so the exact line written last still wins', () => {
+    const filler = Array.from({ length: MORE_THAN_ANY_RESPONSE_HOLDS }, (_, index) => ({
+      name: `Spare vevor part ${String(index)}`,
+    }));
+    orderWithItems('bulk', 'Amazon', [...filler, { name: 'Vevor' }]);
+
+    const hits = searchPurchases(opened.db, 'vevor');
+
+    expect(hits[0]?.matchType).toBe('exact');
+    expect(hits[0]?.uri).toContain('/purchase-item/');
+    expect(hits[0]?.data['name']).toBe('Vevor');
+  });
+
+  it('cuts equally-scored hits by date, so the same data always answers the same', () => {
+    // Every one of these scores identically and there are more of them than
+    // come back, so the cut is decided entirely by the tie-break. Written
+    // oldest first: keeping the order the scan produced would answer with
+    // the oldest.
+    for (let index = 0; index < 40; index += 1) {
+      const minute = String(index + 1).padStart(2, '0');
+      orderWithItems(
+        `filler-${String(index)}`,
+        `Reseller of vevor gear ${String(index)}`,
+        [],
+        `2026-01-01T00:${minute}:00Z`
+      );
+    }
+
+    const dates = searchPurchases(opened.db, 'vevor').map((hit) => hit.data['orderedAt']);
+
+    expect(dates).toHaveLength(25);
+    expect(dates[0]).toBe('2026-01-01T00:40:00Z');
+    expect(dates.at(-1)).toBe('2026-01-01T00:16:00Z');
   });
 });

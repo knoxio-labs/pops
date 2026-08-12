@@ -19,13 +19,23 @@
  * a four-figure row count and an index would be a second thing to keep in
  * step with the writes.
  *
- * **The cap is per adapter, the ranking is over the union.** Capping per
- * adapter first is what stops 100 order hits starving every line hit out of
- * the response; sorting afterwards is what makes the single returned list
- * actually ranked. Concatenating two already-sorted lists is not a sorted
- * list — a 0.5 order hit would sit above a 1.0 item hit — and the orchestrator
- * re-sorting a section does not save the MCP tool, which reads this response
- * directly.
+ * **Nothing is dropped before it is scored.** A `LIKE '%text%'` predicate
+ * cannot use an index, so the scan reads the whole table whatever happens
+ * next and returns rows in no order worth the name. A cap applied to that
+ * would decide the answer by which rows were written first: the exact match
+ * a query is looking for sits behind a hundred weaker ones and is never
+ * scored at all, and the response changes as the table grows. Scoring the
+ * scan costs one pass over the rows the predicate already visited.
+ *
+ * **The cap is per adapter and lands after the ranking**, so the hits it
+ * drops are the ones that matched worst. Per adapter rather than over the
+ * whole response, because one cap over the union lets a hundred order hits
+ * starve every line hit out of an answer only the lines can give.
+ *
+ * **The ranking is over the union.** Concatenating two already-sorted lists
+ * is not a sorted list — a 0.5 order hit would sit above a 1.0 item hit —
+ * and the orchestrator re-sorting a section does not save the MCP tool,
+ * which reads this response directly.
  *
  * A truncated ranked list is what a search result *is*, unlike the merchant
  * roll-up where a truncated answer is a wrong one: the score ordering means
@@ -50,15 +60,22 @@ export interface PurchaseSearchHit {
   readonly data: Record<string, unknown>;
 }
 
-/**
- * Candidate rows read per adapter before ranking. Comfortably above the five
- * the shell renders, so the top of the ranked list is stable rather than
- * being whatever SQLite returned first.
- */
-const CANDIDATE_LIMIT = 100;
-
-/** Hits returned per adapter after ranking. */
+/** Hits returned per adapter, applied to the ranked list and nowhere else. */
 const HITS_PER_ADAPTER = 25;
+
+/**
+ * A scored hit and the order date that breaks its ties.
+ *
+ * Scores come from a three-value scale, so far more hits tie than not and
+ * the cap usually falls inside a tied run. Ordering that run by date rather
+ * than leaving it to the scan makes the response a function of the data —
+ * the same query over the same rows answers the same, and among matches that
+ * are equally good the recent order is the one being asked about.
+ */
+interface ScoredCandidate {
+  readonly hit: PurchaseSearchHit;
+  readonly orderedAt: string;
+}
 
 function classify(
   value: string,
@@ -119,10 +136,9 @@ function searchOrders(db: PurchasesDb, text: string): PurchaseSearchHit[] {
         containsInsensitive(purchases.source, text)
       )
     )
-    .limit(CANDIDATE_LIMIT)
     .all();
 
-  const hits: PurchaseSearchHit[] = [];
+  const candidates: ScoredCandidate[] = [];
   for (const row of rows) {
     const match = bestMatch(
       [
@@ -134,28 +150,31 @@ function searchOrders(db: PurchasesDb, text: string): PurchaseSearchHit[] {
     );
     if (match === null) continue;
 
-    hits.push({
-      uri: `pops:purchases/purchase/${row.id}`,
-      score: match.score,
-      matchField: match.field,
-      matchType: match.matchType,
-      data: {
-        source: row.source,
-        sourceOrderId: row.sourceOrderId,
-        // Both, never one: the id is the operative identity and the name is
-        // only its label, and every export-ingested order carries the label
-        // alone. A consumer that sees only a name must not read it as an id.
-        merchantEntityId: row.merchantEntityId,
-        merchantEntityName: row.merchantEntityName,
-        orderedAt: row.orderedAt,
-        currency: row.currency,
-        totalCents: row.totalCents,
-        status: row.status,
+    candidates.push({
+      orderedAt: row.orderedAt,
+      hit: {
+        uri: `pops:purchases/purchase/${row.id}`,
+        score: match.score,
+        matchField: match.field,
+        matchType: match.matchType,
+        data: {
+          source: row.source,
+          sourceOrderId: row.sourceOrderId,
+          // Both, never one: the id is the operative identity and the name is
+          // only its label, and every export-ingested order carries the label
+          // alone. A consumer that sees only a name must not read it as an id.
+          merchantEntityId: row.merchantEntityId,
+          merchantEntityName: row.merchantEntityName,
+          orderedAt: row.orderedAt,
+          currency: row.currency,
+          totalCents: row.totalCents,
+          status: row.status,
+        },
       },
     });
   }
 
-  return rank(hits);
+  return rank(candidates);
 }
 
 function searchItems(db: PurchasesDb, text: string): PurchaseSearchHit[] {
@@ -180,10 +199,9 @@ function searchItems(db: PurchasesDb, text: string): PurchaseSearchHit[] {
         containsInsensitive(purchaseItems.sku, text)
       )
     )
-    .limit(CANDIDATE_LIMIT)
     .all();
 
-  const hits: PurchaseSearchHit[] = [];
+  const candidates: ScoredCandidate[] = [];
   for (const row of rows) {
     const match = bestMatch(
       [
@@ -194,37 +212,63 @@ function searchItems(db: PurchasesDb, text: string): PurchaseSearchHit[] {
     );
     if (match === null) continue;
 
-    hits.push({
-      uri: `pops:purchases/purchase-item/${row.id}`,
-      score: match.score,
-      matchField: match.field,
-      matchType: match.matchType,
-      data: {
-        // A line cannot be addressed without its order — the pillar's only
-        // item route is scoped under one, and a hit that omitted this would
-        // be unreachable.
-        purchaseId: row.purchaseId,
-        name: row.name,
-        sku: row.sku,
-        quantity: row.quantity,
-        lineTotalCents: row.lineTotalCents,
-        refundedCents: row.refundedCents,
-        orderedAt: row.orderedAt,
-        currency: row.currency,
-        merchantEntityName: row.merchantEntityName,
+    candidates.push({
+      orderedAt: row.orderedAt,
+      hit: {
+        uri: `pops:purchases/purchase-item/${row.id}`,
+        score: match.score,
+        matchField: match.field,
+        matchType: match.matchType,
+        data: {
+          // A line cannot be addressed without its order — the pillar's only
+          // item route is scoped under one, and a hit that omitted this would
+          // be unreachable.
+          purchaseId: row.purchaseId,
+          name: row.name,
+          sku: row.sku,
+          quantity: row.quantity,
+          lineTotalCents: row.lineTotalCents,
+          refundedCents: row.refundedCents,
+          orderedAt: row.orderedAt,
+          currency: row.currency,
+          merchantEntityName: row.merchantEntityName,
+        },
       },
     });
   }
 
-  return rank(hits);
+  return rank(candidates);
 }
 
 function byScoreDescending(a: PurchaseSearchHit, b: PurchaseSearchHit): number {
   return b.score - a.score;
 }
 
-function rank(hits: readonly PurchaseSearchHit[]): PurchaseSearchHit[] {
-  return hits.toSorted(byScoreDescending).slice(0, HITS_PER_ADAPTER);
+function compareAscending(a: string, b: string): number {
+  if (a === b) return 0;
+  return a < b ? -1 : 1;
+}
+
+/**
+ * Score, then recency, then uri — a total order, because two rows never
+ * share a uri. Without that last term a tie at the cap would be settled by
+ * the scan again, one step further down.
+ */
+function byRank(a: ScoredCandidate, b: ScoredCandidate): number {
+  const byScore = byScoreDescending(a.hit, b.hit);
+  if (byScore !== 0) return byScore;
+
+  const byRecency = compareAscending(b.orderedAt, a.orderedAt);
+  if (byRecency !== 0) return byRecency;
+
+  return compareAscending(a.hit.uri, b.hit.uri);
+}
+
+function rank(candidates: readonly ScoredCandidate[]): PurchaseSearchHit[] {
+  return candidates
+    .toSorted(byRank)
+    .slice(0, HITS_PER_ADAPTER)
+    .map((candidate) => candidate.hit);
 }
 
 /**
@@ -233,7 +277,9 @@ function rank(hits: readonly PurchaseSearchHit[]): PurchaseSearchHit[] {
  *
  * `toSorted` is stable, so an order hit and a line hit that tie keep the
  * adapter order above — orders first, matching the declaration order in the
- * manifest.
+ * manifest. Each adapter has already put its own hits in a total order, so
+ * that leaves the whole response decided by the rows rather than by the
+ * scan that read them.
  */
 export function searchPurchases(db: PurchasesDb, text: string): PurchaseSearchHit[] {
   const trimmed = text.trim();
