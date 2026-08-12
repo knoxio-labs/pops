@@ -44,8 +44,7 @@
  * 7-line contract must hold regardless of what a unit's package.json contains.
  */
 import { readFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 
 /** @param {unknown} value */
 function isNonEmptyString(value) {
@@ -153,6 +152,6 @@ function main(argv) {
   return 0;
 }
 
-if (resolve(fileURLToPath(import.meta.url)) === resolve(process.argv[1] ?? '')) {
+if (import.meta.main) {
   process.exit(main(process.argv.slice(2)));
 }
