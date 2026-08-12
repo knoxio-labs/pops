@@ -152,12 +152,29 @@ export const mockPillarContacts = {
   },
 };
 
+export const mockPillarPurchases = {
+  purchases: {
+    purchase: {
+      list: vi.fn().mockResolvedValue(callOk({ items: [] })),
+      get: vi.fn().mockResolvedValue(callOk(null)),
+      itemsByTag: vi.fn().mockResolvedValue(callOk({ items: [] })),
+    },
+    analytics: {
+      merchantSpend: vi
+        .fn()
+        .mockResolvedValue(callOk({ period: { from: null, to: null }, merchants: [], totals: [] })),
+    },
+    search: { search: vi.fn().mockResolvedValue(callOk({ hits: [] })) },
+  },
+};
+
 const PILLAR_MOCKS = {
   inventory: mockPillarInventory,
   finance: mockPillarFinance,
   media: mockPillarMedia,
   cerebrum: mockPillarCerebrum,
   contacts: mockPillarContacts,
+  purchases: mockPillarPurchases,
 } as const;
 
 /**

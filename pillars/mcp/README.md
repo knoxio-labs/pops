@@ -1,17 +1,17 @@
 # @pops/mcp
 
-MCP (Model Context Protocol) HTTP gateway for POPS. Exposes inventory, finance, media, and Cerebrum data as tools that AI agents (Claude Desktop, Claude Code, any MCP client) call over the local network. Writes exist only for `inventory`; the finance, media, and cerebrum surfaces are read-only. Each tool dispatches to the owning pillar over REST through `@pops/pillar-sdk`; the gateway owns no database and no business logic.
+MCP (Model Context Protocol) HTTP gateway for POPS. Exposes inventory, finance, purchases, media, and Cerebrum data as tools that AI agents (Claude Desktop, Claude Code, any MCP client) call over the local network. Writes exist only for `inventory`; the finance, purchases, media, and cerebrum surfaces are read-only. Each tool dispatches to the owning pillar over REST through `@pops/pillar-sdk`; the gateway owns no database and no business logic.
 
 - **Transport:** Streamable HTTP (`POST /mcp`), stateless — a fresh server + transport per request
 - **Port:** 3011 (configurable via `MCP_PORT`), listens on `0.0.0.0` inside the container; both compose files publish it on the host as `${MCP_BIND_ADDR:-0.0.0.0}:3011:3011`
 - **Inbound auth:** `POST /mcp` requires `Authorization: Bearer <MCP_INBOUND_TOKEN>` when `MCP_INBOUND_TOKEN` is set; `/health` and `/ready` stay open. See `src/auth.ts` for the unset-token behaviour.
 - **Outbound auth:** Authenticates to pillars with a service-account key (`POPS_INTERNAL_API_KEY`, legacy `POPS_API_KEY`, or the `POPS_API_KEY_FILE` Docker-secret pattern).
 
-The tool surface — 38 tools over the `inventory`, `finance`, `contacts`, `media`, and `cerebrum` pillars — lives in [`src/tools/`](src/tools/README.md).
+The tool surface — 43 tools over the `inventory`, `finance`, `contacts`, `media`, `cerebrum` and `purchases` pillars — lives in [`src/tools/`](src/tools/README.md).
 
 ## Prerequisites
 
-1. **Target pillars reachable** — the gateway is a REST client, not a standalone data source. Inventory, finance, contacts, media, cerebrum, and the registry must be running.
+1. **Target pillars reachable** — the gateway is a REST client, not a standalone data source. Inventory, finance, contacts, media, cerebrum, purchases, and the registry must be running.
 2. **A service-account key** — supplied via `POPS_INTERNAL_API_KEY` / `POPS_API_KEY` / `POPS_API_KEY_FILE` (the compose secret `pops_api_key`).
 
 ## Running locally (dev)

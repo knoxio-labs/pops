@@ -6,13 +6,13 @@ Nothing here owns data or business logic — that stays in the pillar, and the
 gateway never touches a database.
 
 `index.ts` concatenates the per-family arrays into one flat `allTools`. Most
-names are `<pillar>.<domain>.<op>`; `finance.search` and `cerebrum.search` are
-`<pillar>.<op>`. The server lists them verbatim and routes a call by exact name
+names are `<pillar>.<domain>.<op>`; `finance.search`, `cerebrum.search` and
+`purchases.search` are `<pillar>.<op>`. The server lists them verbatim and routes a call by exact name
 lookup, so a name is the whole routing table.
 
 ## Invariants every handler upholds
 
-These hold across all 38 tools; a new adapter that breaks one is a bug even
+These hold across all 43 tools; a new adapter that breaks one is a bug even
 though nothing enforces it mechanically.
 
 - **Required args are checked before the pillar is called.** `reqStr` (or an
@@ -24,6 +24,11 @@ though nothing enforces it mechanically.
 - **Constrained args coerce, they do not reject.** An unrecognised `type`,
   `mode`, `period`, `active`, or `matchType` falls back to the documented
   default (or is dropped) rather than forwarding an unknown value downstream.
+  `purchases.*` deviates on `statuses` and says so in the code: dropping an
+  unknown status would silently widen a filtered query to every order, so the
+  value is forwarded and the pillar's contract answers `400`. Coercion is safe
+  where the fallback is the documented default and wrong where it is "no
+  filter".
 - **Patch tools forward only keys present in the args.** `0` is a value, not an
   absence. The comment above the `copyNull*` / `copyOpt*` helpers in `utils.ts`
   says which one matches a column's nullability.
@@ -34,6 +39,16 @@ though nothing enforces it mechanically.
   the entity table. Finance only owns the transaction usage rollup.
 - The `finance.*` family is read-only on purpose: no create/update/delete tool
   is wired, and `finance.test.ts` asserts no mutation-shaped name ever appears.
+- The `purchases.*` family is read-only for a sharper reason, asserted the same
+  way in `purchases.test.ts`. Every write on that pillar is an ingest (which
+  needs a checksum only an adapter can compute) or a classification decision —
+  and `PATCH /purchases/:id/items/:itemId` is the single place a machine
+  proposal becomes a human assertion. A tool that could call it would erase the
+  distinction `kindConfirmedAt` exists to hold.
+- `purchases.*` needs a grant. That pillar admits an uncredentialled caller but
+  holds a caller presenting an `X-API-Key` to that key's scopes, and MCP always
+  presents one. Without `purchases.purchase`, `purchases.analytics` and
+  `purchases.search` on the MCP service account, all five tools return `403`.
 
 ## Not here
 

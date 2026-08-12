@@ -20,9 +20,11 @@
  */
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { z } from 'zod';
 
 import { MerchantSpendRollupSchema } from '../../contract/rest-analytics.js';
 import { QueueEntrySchema, SweepOutcomeSchema } from '../../contract/rest-reconcile.js';
+import { SearchHitSchema } from '../../contract/rest-search.js';
 import {
   PurchaseDetailSchema,
   PurchaseSchema,
@@ -36,7 +38,6 @@ import { financeReturning } from '../finance/__tests__/fixtures.js';
 import { __resetPillarRegistryCache } from '../pillars/registry.js';
 
 import type { Express } from 'express';
-import type { z } from 'zod';
 
 import type { OpenedPurchasesDb } from '../../db/index.js';
 
@@ -353,6 +354,39 @@ describe('GET /analytics/merchant-spend response', () => {
   });
 });
 
+/**
+ * The `/search` response envelope. Assembled here rather than exported from
+ * the contract because the contract states it inline in the route's
+ * `responses`, and a second exported copy could disagree with the one the
+ * router actually validates against.
+ */
+const SearchHitsSchema = z.object({ hits: z.array(SearchHitSchema) });
+
+describe('POST /search response', () => {
+  it('conforms, so the federator parses what it is handed', async () => {
+    // The orchestrator does not validate a pillar's hits — it forwards them
+    // to the shell, which drops a section whose shape it cannot read. A hit
+    // that fails here fails silently in production.
+    await request(app).post('/purchases').send(RICH_ORDER);
+
+    const res = await request(app)
+      .post('/search')
+      .send({ query: { text: 'a' } });
+
+    expect(res.status).toBe(200);
+    expectConforms(SearchHitsSchema, res.body, 'POST /search');
+    expect((res.body.hits as unknown[]).length).toBeGreaterThan(0);
+  });
+
+  it('conforms when nothing matches', async () => {
+    const res = await request(app)
+      .post('/search')
+      .send({ query: { text: 'kayak' } });
+    expect(res.status).toBe(200);
+    expectConforms(SearchHitsSchema, res.body, 'POST /search (empty)');
+  });
+});
+
 describe('the accounting identity holds on the wire', () => {
   it('total reconstructs from the three buckets, with refunds outside it', async () => {
     const res = await request(app).post('/purchases').send(RICH_ORDER);
@@ -388,6 +422,7 @@ describe('the OpenAPI projection describes what is actually served', () => {
       'PUT /sources/{id}',
       'DELETE /sources/{id}',
       'GET /analytics/merchant-spend',
+      'POST /search',
     ]) {
       expect(declared, route).toContain(route);
     }
