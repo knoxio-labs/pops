@@ -160,8 +160,17 @@ zod schemas. The seam these flows exist for is the phone's.
 
 Nothing here covers the registry's OWN verdict on a pillar — `registered:
 false` or `status: 'unavailable'` in `/registry/pillars`, read by
-`registryVeto` before the BFM asks the pillar anything at all. That arm of
-`FeatureReachability.unavailable` has its own unit coverage in
-`pillars/bfm/src/api/mobile/__tests__/reachability.test.ts`; driving it from
-this suite would need the registry-discovery cache invalidated mid-flow, which
-nothing here can reach without adding the BFM a route that exists for a test.
+`registryVeto` before the BFM asks the pillar anything at all — and nothing
+needs to. That arm has its own unit coverage in
+`pillars/bfm/src/api/mobile/__tests__/reachability.test.ts`, and the wire
+value it produces is the same `reachability: 'unavailable'` the probe-timeout
+arm above produces. `ContentView.swift` passes the withheld features straight
+through to `RootCopy.swift`, and `RootCopy` is the only code that reads a
+`FeatureAvailability`'s `FeatureReachability` — neither ever asks which of the
+two signals set it, so a flow that drove the registry branch would exercise
+the exact same client code the two flows above already do. Driving it anyway
+would need the registry-discovery cache invalidated mid-flow, and there is no
+way to do that here without either adding the BFM a route that exists for a
+test, or waiting out the discovery cache's 5-second enforced floor
+(`MIN_CACHE_TTL_MS` in `@pops/pillar-sdk/discovery`) — the one thing this
+suite refuses to do.
