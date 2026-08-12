@@ -186,12 +186,13 @@ its UI-flow step boots a real BFM — and still does not cover `pnpm-lock.yaml`
 or the BFM's transitive `libs/*`.
 
 **What it costs and what it saves**, measured on the 39 completed merge-queue
-entries immediately before the change: median entry wall clock 20 minutes (mean
-20.1, p90 28), and **33 of the 39 touched no iOS path at all**. The `scope` job
-that replaces those compiles is 32 seconds end to end on a warm pnpm cache, of
-which the self-test plus the answer is one second. So the gate pays about half a
-minute to decide whether to spend twenty minutes, and on five entries in six it
-decides not to.
+entries immediately before the change. Each entry's `ios-quality.yml` run took a
+median of 20 minutes end to end (mean 20.1 minutes, 90th percentile 28 minutes),
+and **33 of the 39 touched no iOS path at all** — so five compiles in six were
+spent on a merge group the job had nothing to say about. The `scope` job that
+now decides between them takes 32 seconds, of which its self-test and its answer
+are one second and the rest is checkout plus a warm-cache `pnpm install`. Half a
+minute to decide whether to spend twenty.
 
 Two consequences worth stating, because both look like bugs from the outside:
 
