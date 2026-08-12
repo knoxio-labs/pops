@@ -337,7 +337,8 @@ jobs:
                 });
                 changedFiles = files.map((f) => f.filename);
               } catch (error) {
-                core.warning(`Could not list changed files for PR #${pullRequests[0].number}: ${error.message}`);
+                const message = error instanceof Error ? error.message : String(error);
+                core.warning(`Could not list changed files for PR #${pullRequests[0].number}: ${message}`);
               }
             }
             const diffIsTrustworthy = triggeringEvent === "pull_request" || triggeringEvent === "merge_group";
