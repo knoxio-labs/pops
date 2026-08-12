@@ -4,9 +4,18 @@ import { manifest, navConfig, routes } from '../index';
 
 import type { RouteObject } from 'react-router';
 
-/** The nav `path` a route answers to; the index route answers to `''`. */
+/**
+ * The nav `path` a route answers to.
+ *
+ * Route paths are relative to the shell's `/purchases/*` mount and nav paths
+ * are rooted — `pillars/shell/src/app/nav/registry.test.ts` requires every nav
+ * item to be `''` or to start with `/`. Translating here rather than storing
+ * one form twice is what lets the pairing below compare them at all.
+ */
 function navPathOf(route: RouteObject): string {
-  return route.index === true ? '' : (route.path ?? '');
+  if (route.index === true) return '';
+  const path = route.path ?? '';
+  return path === '' ? '' : `/${path}`;
 }
 
 describe('app-purchases module manifest', () => {
@@ -50,6 +59,15 @@ describe('app-purchases module manifest', () => {
 
   it('serves the reconcile queue from the index route', () => {
     expect(routes.some((route) => route.index === true)).toBe(true);
+  });
+
+  // The shell asserts this across every registered app, where a violation
+  // reads as an unrelated pillar's failure. Asserting it at the source names
+  // the owner.
+  it('roots every nav item path, as the shell requires', () => {
+    for (const item of navConfig.items) {
+      expect(item.path === '' || item.path.startsWith('/')).toBe(true);
+    }
   });
 
   it('declares no backend slot (app surface only)', () => {

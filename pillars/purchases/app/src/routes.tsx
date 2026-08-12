@@ -43,7 +43,7 @@ export const navConfig = {
   items: [
     { path: '', label: 'Reconcile', labelKey: 'purchases.reconcile', icon: 'Receipt' },
     {
-      path: 'merchants',
+      path: '/merchants',
       label: 'Merchants',
       labelKey: 'purchases.merchants',
       icon: 'Building2',
