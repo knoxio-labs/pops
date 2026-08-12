@@ -77,8 +77,8 @@ function ChargeSummary({ entry }: { entry: QueueEntry }): ReactElement {
 }
 
 const DELTA_TONE = {
-  balanced: 'text-emerald-600 dark:text-emerald-400',
-  short: 'text-amber-600 dark:text-amber-400',
+  balanced: 'text-success',
+  short: 'text-warning',
   over: 'text-destructive',
 } as const;
 

@@ -1,8 +1,8 @@
 import { useTranslation } from 'react-i18next';
 
-import { Button } from '@pops/ui';
+import { Button, CheckboxInput } from '@pops/ui';
 
-import type { ChangeEvent, ReactElement } from 'react';
+import type { ReactElement } from 'react';
 
 import type { QueueFilterState, QueueKind } from './types.js';
 
@@ -25,10 +25,6 @@ interface QueueFiltersProps {
 export function QueueFilters({ value, onChange }: QueueFiltersProps): ReactElement {
   const { t } = useTranslation('purchases');
 
-  function handleAutoChange(event: ChangeEvent<HTMLInputElement>): void {
-    onChange({ ...value, includeAuto: event.target.checked });
-  }
-
   return (
     <div className="flex flex-wrap items-center gap-3">
       <div role="group" aria-label={t('reconcile.filter.kindLabel')} className="flex gap-2">
@@ -45,10 +41,12 @@ export function QueueFilters({ value, onChange }: QueueFiltersProps): ReactEleme
         ))}
       </div>
 
-      <label className="flex items-center gap-2 text-sm">
-        <input type="checkbox" checked={value.includeAuto} onChange={handleAutoChange} />
-        {t('reconcile.filter.includeAuto')}
-      </label>
+      <CheckboxInput
+        id="reconcile-include-auto"
+        label={t('reconcile.filter.includeAuto')}
+        checked={value.includeAuto}
+        onCheckedChange={(includeAuto) => onChange({ ...value, includeAuto: includeAuto === true })}
+      />
     </div>
   );
 }
