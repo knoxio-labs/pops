@@ -899,6 +899,7 @@ export type ReceiptUploadResponses = {
           merchantName: string | null;
           purchasedAt: string | null;
           purchasedOn: string | null;
+          shipping: string | null;
           surcharges: Array<string>;
           tax: string | null;
           timeZone: string | null;
