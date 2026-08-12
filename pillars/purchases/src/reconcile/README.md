@@ -132,9 +132,3 @@ Three layers, each covering what the one below cannot:
 | `infra/smoke/purchases-reconcile.sh` | the Docker network and the compose file                                                         |
 
 Only the last needs Docker, which is why it is a script rather than a test — a suite that takes minutes stops being run.
-
-## What slice 2 does not do
-
-`combined` (several charges settled by one transaction) is the same subset-sum with the sides exchanged. It needs to consider an order's charges as a group rather than one at a time, which is a change to the solver's traversal rather than to its arithmetic. The `combined` link type exists in the vocabulary and is not yet produced.
-
-The three **triggers** are not wired: nothing calls `runSweep` yet. Nor is the contract surface — reconcile queue, confirm, unlink — so `confirmLink` exists and has no route.
