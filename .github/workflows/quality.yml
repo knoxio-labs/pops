@@ -337,7 +337,9 @@ jobs:
   # These surface phantom-dependency and baseline-growth regressions. Like every
   # other job in this workflow they are load-bearing through the aggregated
   # `CI Gate` context — see the file header. EX-2 (full sandbox) is heavy and
-  # runs nightly, not here.
+  # runs nightly (plus on demand), not here — see
+  # .github/workflows/extractability-sandbox.yml, which is NOT part of this
+  # aggregated gate.
   extractability-deps:
     name: Extractability — declared deps (EX-1)
     runs-on: ubuntu-latest

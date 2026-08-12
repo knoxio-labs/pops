@@ -1,0 +1,196 @@
+name: Extractability Sandbox
+
+# The real EX-2 proof: each unit stands alone with zero workspace path
+# resolution — `scripts/extractability/sandbox.sh` for TS units,
+# `scripts/extractability/cargo-sandbox.sh` for the Rust workspace members.
+# Both scripts, and `cargo-extract.mjs` underneath the Rust one, describe
+# themselves as "nightly / on-demand" — this file is what makes that true.
+# Before this workflow existed, nothing invoked either script anywhere in
+# CI; grepping the workflows for "sandbox.sh" found only comments.
+#
+# Heavy by design (a full `pnpm install`/`cargo build` per unit, cold) — see
+# each script's own header for why. That is also why this is its own
+# workflow rather than a job inside `quality.yml`: it is NOT part of the
+# aggregated `CI Gate` context (`ci-gate.yml` does not list "Extractability
+# Sandbox" in its `workflows:`/`gated` arrays) and never blocks a PR or the
+# merge queue. A red run here is a nightly signal to fix on its own
+# schedule, not a merge blocker.
+#
+# Scope note: this sweeps every unit nightly plus on demand
+# (`workflow_dispatch`, optionally scoped to one unit). It does NOT also
+# trigger on "exports+dep changes" pushes to fan out over just the changed
+# units — that faster, narrower trigger is a legitimate follow-up (tracked
+# separately) but doubles the trigger surface this pass needs to get right,
+# so it stayed out.
+
+on:
+  schedule:
+    # 03:17 UTC daily — off-peak, offset from the hour so it doesn't line up
+    # with every other cron a shared runner pool tends to collect at :00.
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+    inputs:
+      unit:
+        description: "Single unit dir to sandbox (e.g. pillars/finance, libs/pops-ai). Leave blank to sweep every unit."
+        required: false
+        type: string
+
+concurrency:
+  # Keyed by ref AND the requested unit (or "all" for a full sweep — schedule
+  # always sweeps all, and so does a dispatch with no `unit` input). Ref is
+  # load-bearing on its own: without it, a `workflow_dispatch` run on a
+  # feature branch shares a group with the nightly sweep on `main` (or a
+  # dispatch on another branch) and cancels it. Unit is load-bearing
+  # separately: without it, two same-ref dispatches scoping DIFFERENT units
+  # are unrelated work that would still cancel each other. A second full
+  # sweep on the same ref starting before the first finishes is what this
+  # still guards against.
+  group: extractability-sandbox-${{ github.workflow }}-${{ github.ref }}-${{ github.event.inputs.unit || 'all' }}
+  cancel-in-progress: true
+
+jobs:
+  discover:
+    uses: ./.github/workflows/_discover-units.yml
+
+  # A `unit` input that matches no discovered dir (a typo, a renamed/removed
+  # unit) would otherwise make every matrix entry in `ts`/`rust` skip via
+  # their per-step `if:` below — the workflow still reports all-green having
+  # sandboxed nothing. Fail loud instead, mirroring the "never a silent skip
+  # when there IS something to check" rule the sandbox scripts themselves
+  # follow (see sandbox.sh's own `proof-surface.mjs` decision comment).
+  validate-unit-input:
+    name: Validate workflow_dispatch unit input
+    needs: discover
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.unit != ''
+    runs-on: ubuntu-latest
+    steps:
+      - name: unit input names a unit _discover-units.yml actually found
+        run: |
+          set -euo pipefail
+          unit='${{ github.event.inputs.unit }}'
+          units='${{ needs.discover.outputs.units }}'
+          if ! echo "$units" | jq -e --arg u "$unit" 'any(.[]; .dir == $u)' >/dev/null; then
+            echo "::error::unit input '$unit' matches no unit _discover-units.yml discovered (pillars/* or libs/*, maxdepth 1). Every matrix entry below would silently skip and this workflow would report a false green — fix the path." >&2
+            exit 1
+          fi
+          echo "OK — '$unit' is a discovered unit."
+
+  ts:
+    # `needs.discover.outputs.units` (every unit, not `changed`) — a nightly
+    # sweep proves the whole fleet regardless of what any one PR touched.
+    #
+    # Filtering happens per STEP, not with a job-level `if:` — a job-level
+    # `if:` cannot reference the `matrix` context (GitHub evaluates it before
+    # the matrix expands), so `if: matrix.unit.lang == 'ts'` at job level
+    # fails to parse the whole workflow with "Unrecognized named-value:
+    # 'matrix'" and no dispatch can even be created. unit-quality.yml uses the
+    # same per-step pattern for the identical reason.
+    name: ${{ matrix.unit.name }} (${{ matrix.unit.kind }}) — sandbox (EX-2)
+    needs: [discover, validate-unit-input]
+    # `validate-unit-input` is itself conditionally skipped (schedule, or a
+    # dispatch with no `unit`) — an implicit default `if:` inherits that skip
+    # transitively and would skip this job too on every nightly run, which is
+    # the exact "success() over the whole needs graph" trap quality.yml's
+    # header warns about. Spelled explicitly: proceed unless discover failed,
+    # or validate-unit-input ran and failed.
+    if: always() && needs.discover.result == 'success' && needs.validate-unit-input.result != 'failure' && needs.validate-unit-input.result != 'cancelled'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        unit: ${{ fromJson(needs.discover.outputs.units) }}
+    steps:
+      - if: ${{ matrix.unit.lang != 'ts' || (github.event_name == 'workflow_dispatch' && github.event.inputs.unit != '' && github.event.inputs.unit != matrix.unit.dir) }}
+        run: echo "skip ${{ matrix.unit.name }} (${{ matrix.unit.lang }})"
+
+      - if: ${{ matrix.unit.lang == 'ts' && (github.event_name != 'workflow_dispatch' || github.event.inputs.unit == '' || github.event.inputs.unit == matrix.unit.dir) }}
+        uses: actions/checkout@v7
+
+      - if: ${{ matrix.unit.lang == 'ts' && (github.event_name != 'workflow_dispatch' || github.event.inputs.unit == '' || github.event.inputs.unit == matrix.unit.dir) }}
+        uses: pnpm/action-setup@v6
+      - if: ${{ matrix.unit.lang == 'ts' && (github.event_name != 'workflow_dispatch' || github.event.inputs.unit == '' || github.event.inputs.unit == matrix.unit.dir) }}
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: pnpm
+
+      # Full workspace install, not a `--filter` subgraph: sandbox.sh's
+      # pack-deps step builds each `@pops/*` dependency via
+      # `pnpm --filter <dep> build` before packing it into a tarball, and
+      # that resolves against the whole installed workspace.
+      - if: ${{ matrix.unit.lang == 'ts' && (github.event_name != 'workflow_dispatch' || github.event.inputs.unit == '' || github.event.inputs.unit == matrix.unit.dir) }}
+        name: Install
+        run: pnpm install --frozen-lockfile
+
+      - if: ${{ matrix.unit.lang == 'ts' && (github.event_name != 'workflow_dispatch' || github.event.inputs.unit == '' || github.event.inputs.unit == matrix.unit.dir) }}
+        name: Sandbox extraction (EX-2)
+        run: bash scripts/extractability/sandbox.sh ${{ matrix.unit.dir }}
+
+  rust:
+    name: ${{ matrix.unit.name }} (${{ matrix.unit.kind }}) — sandbox (EX-2)
+    needs: [discover, validate-unit-input]
+    # See the `ts` job's identical comment above.
+    if: always() && needs.discover.result == 'success' && needs.validate-unit-input.result != 'failure' && needs.validate-unit-input.result != 'cancelled'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        unit: ${{ fromJson(needs.discover.outputs.units) }}
+    steps:
+      - if: ${{ matrix.unit.lang != 'rust' || (github.event_name == 'workflow_dispatch' && github.event.inputs.unit != '' && github.event.inputs.unit != matrix.unit.dir) }}
+        run: echo "skip ${{ matrix.unit.name }} (${{ matrix.unit.lang }})"
+
+      - if: ${{ matrix.unit.lang == 'rust' && (github.event_name != 'workflow_dispatch' || github.event.inputs.unit == '' || github.event.inputs.unit == matrix.unit.dir) }}
+        uses: actions/checkout@v7
+
+      # Pinned, not `stable` — mirrors rust-quality.yml. Only the compiler is
+      # needed here (cargo-sandbox.sh builds, it does not fmt/clippy), so no
+      # rustfmt/clippy components.
+      - if: ${{ matrix.unit.lang == 'rust' && (github.event_name != 'workflow_dispatch' || github.event.inputs.unit == '' || github.event.inputs.unit == matrix.unit.dir) }}
+        name: Install Rust toolchain (pinned from mise.toml)
+        run: |
+          set -euo pipefail
+          version=$(sed -nE 's/^rust *= *"([^"]+)".*/\1/p' mise.toml | head -1)
+          if [ -z "$version" ]; then
+            echo "::error::no rust pin found in mise.toml [tools]"
+            exit 1
+          fi
+          rustup toolchain install "$version" --profile minimal
+          rustup default "$version"
+          rustc --version
+          cargo --version
+
+      # cargo-sandbox.sh's own header: "reuse the caller's registry cache for
+      # speed but keep target/ local to the sandbox so the build is
+      # genuinely isolated" — target/ isolation is the script's own
+      # CARGO_TARGET_DIR handling, this cache is that "caller's registry
+      # cache".
+      - if: ${{ matrix.unit.lang == 'rust' && (github.event_name != 'workflow_dispatch' || github.event.inputs.unit == '' || github.event.inputs.unit == matrix.unit.dir) }}
+        name: Cache cargo registry
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+          key: cargo-sandbox-${{ runner.os }}-${{ hashFiles('Cargo.toml', 'Cargo.lock') }}
+          restore-keys: |
+            cargo-sandbox-${{ runner.os }}-
+
+      # cargo-extract.mjs (invoked by cargo-sandbox.sh) reads Cargo.toml
+      # through `smol-toml`, a real workspace dependency — Tier B, so the
+      # workspace is installed first (mirrors rust-quality.yml).
+      - if: ${{ matrix.unit.lang == 'rust' && (github.event_name != 'workflow_dispatch' || github.event.inputs.unit == '' || github.event.inputs.unit == matrix.unit.dir) }}
+        uses: pnpm/action-setup@v6
+      - if: ${{ matrix.unit.lang == 'rust' && (github.event_name != 'workflow_dispatch' || github.event.inputs.unit == '' || github.event.inputs.unit == matrix.unit.dir) }}
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: pnpm
+
+      - if: ${{ matrix.unit.lang == 'rust' && (github.event_name != 'workflow_dispatch' || github.event.inputs.unit == '' || github.event.inputs.unit == matrix.unit.dir) }}
+        run: pnpm install --frozen-lockfile
+
+      - if: ${{ matrix.unit.lang == 'rust' && (github.event_name != 'workflow_dispatch' || github.event.inputs.unit == '' || github.event.inputs.unit == matrix.unit.dir) }}
+        name: Sandbox extraction (EX-2)
+        run: bash scripts/extractability/cargo-sandbox.sh ${{ matrix.unit.dir }}
