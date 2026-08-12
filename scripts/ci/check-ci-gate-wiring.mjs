@@ -29,6 +29,13 @@
  * becomes invisible to the gate. Nothing in `quality.yml` is advisory, and a
  * job that wants to be must leave the gated workflow rather than hide inside it.
  *
+ * A fifth piece: the script's `PATH_FILTERS` object mirrors each gated
+ * workflow's OWN `pull_request.paths`, so an absent run can be checked
+ * against the PR diff before it is trusted as a genuine path-filter
+ * exclusion rather than a run that just hasn't registered yet for this SHA.
+ * A mirror that drifts from the real filter breaks that check silently in
+ * either direction — this guard diffs the two.
+ *
  * **Tier B guard**: the workflows go through a real YAML parser, so the job
  * that runs it installs the workspace first. See the tier amendment in
  * [ADR-045](../../docs/architecture/adr-045-guards-must-prove-they-report.md).
@@ -51,7 +58,14 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { isMapping, parseYaml, requireScalar, scalarText, walkMappings } from './config-parse.mjs';
+import {
+  ConfigParseError,
+  isMapping,
+  parseYaml,
+  requireScalar,
+  scalarText,
+  walkMappings,
+} from './config-parse.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..');
@@ -194,6 +208,61 @@ export function hasPullRequestPathFilter(source) {
 }
 
 /**
+ * Read a workflow's `pull_request.paths` sequence.
+ *
+ * Returns `undefined` when the trigger is unfiltered (runs on every pull
+ * request) so a caller can tell "no filter" apart from "filter matched
+ * nothing" — the two have opposite meanings for `ci-gate.yml`'s absent-run
+ * handling. `paths-ignore` is deliberately not read here: no gated workflow
+ * uses it (`hasPullRequestPathFilter` above still catches one that starts).
+ *
+ * @param {string} source
+ * @returns {string[] | undefined}
+ * @throws {import('./config-parse.mjs').ConfigParseError}
+ */
+export function pullRequestPaths(source) {
+  const pullRequest = triggers(workflowDoc(source)).pull_request;
+  if (!isMapping(pullRequest)) return undefined;
+  const paths = pullRequest.paths;
+  if (paths === undefined) return undefined;
+  if (!Array.isArray(paths)) {
+    throw new ConfigParseError('workflow', 'pull_request.paths is not a sequence');
+  }
+  return paths.map((value, index) =>
+    requireScalar(value, 'workflow', `pull_request.paths[${index}]`)
+  );
+}
+
+/**
+ * Read the `PATH_FILTERS` object literal out of `ci-gate.yml`'s embedded
+ * script — the runtime mirror of every gated workflow's `pull_request.paths`
+ * that `matchesPathFilter` checks an absent run against before treating it as
+ * a genuine path-filter exclusion. Written as valid JSON (double-quoted
+ * strings, no trailing commas) specifically so it can be read this way rather
+ * than needing a JS evaluator.
+ *
+ * @param {string} source  A workflow document, or the script body alone.
+ * @returns {Record<string, string[]>}
+ * @throws {import('./config-parse.mjs').ConfigParseError}
+ */
+export function parsePathFilterMap(source) {
+  let body = source;
+  try {
+    const fromWorkflow = embeddedScript(source);
+    if (fromWorkflow !== '') body = fromWorkflow;
+  } catch {
+    // Not a workflow document — treat the input as the script body itself.
+  }
+  const block = /const\s+PATH_FILTERS\s*=\s*(\{[\s\S]*?\n\s*\});/u.exec(body);
+  if (!block) return {};
+  try {
+    return JSON.parse(block[1]);
+  } catch (error) {
+    throw new ConfigParseError('ci-gate.yml PATH_FILTERS', error);
+  }
+}
+
+/**
  * Job names in a workflow that carry a job-level `continue-on-error` opt-out.
  *
  * Anything other than a literal `false` counts. `continue-on-error` accepts an
@@ -268,6 +337,90 @@ function readWorkflowNames(root) {
 }
 
 /**
+ * Cross-checks ci-gate.yml's hardcoded `PATH_FILTERS` mirror (the runtime
+ * script's stand-in for each gated workflow's `pull_request.paths`, read
+ * purely by regex from a repo checkout with no `pnpm install`) against the
+ * real filters, read through the YAML parser this Tier B guard already pays
+ * for. A gated workflow whose real filter drifts from its mirror silently
+ * breaks the absent-run handling in one of two directions: a stale, narrower
+ * mirror lets a genuinely-triggered workflow's absence pass as "filtered
+ * out"; a stale, wider one leaves CI Gate pending for a workflow that was
+ * never going to run.
+ *
+ * @param {string} script  ci-gate.yml's embedded script body.
+ * @param {string[]} gated  The `gated` array read from that script.
+ * @param {Map<string, string>} known  Workflow display name -> file name.
+ * @param {string} workflowsDir  Absolute path to `.github/workflows`.
+ * @returns {string[]}
+ */
+function checkPathFilterMirror(script, gated, known, workflowsDir) {
+  /** @type {string[]} */
+  const violations = [];
+
+  /** @type {Record<string, string[]>} */
+  let mirrored;
+  try {
+    mirrored = parsePathFilterMap(script);
+  } catch (error) {
+    return [
+      `ci-gate.yml's PATH_FILTERS could not be read: ${error instanceof Error ? error.message : String(error)}`,
+    ];
+  }
+
+  for (const name of gated) {
+    const file = known.get(name);
+    if (!file) continue; // reported separately, above.
+
+    /** @type {string[] | undefined} */
+    let real;
+    try {
+      real = pullRequestPaths(readFileSync(join(workflowsDir, file), 'utf8'));
+    } catch (error) {
+      violations.push(
+        `${file}'s \`pull_request.paths\` could not be read: ` +
+          (error instanceof Error ? error.message : String(error))
+      );
+      continue;
+    }
+
+    const mirror = mirrored[name];
+    if (real === undefined) {
+      if (mirror !== undefined) {
+        violations.push(
+          `ci-gate.yml's PATH_FILTERS["${name}"] exists but ${file} carries no \`pull_request.paths\` ` +
+            'filter — remove the entry. An unfiltered workflow is expected on every pull request, and ' +
+            'a stale filter entry would let a genuine absence pass as "path-filtered" instead.'
+        );
+      }
+      continue;
+    }
+    if (mirror === undefined) {
+      violations.push(
+        `${file} filters \`pull_request\` by path but ci-gate.yml's PATH_FILTERS has no "${name}" ` +
+          'entry — an absent run for it is always treated as pending rather than checked against the diff.'
+      );
+      continue;
+    }
+    if (JSON.stringify(mirror) !== JSON.stringify(real)) {
+      violations.push(
+        `ci-gate.yml's PATH_FILTERS["${name}"] does not match ${file}'s \`pull_request.paths\` — ` +
+          `expected ${JSON.stringify(real)}, found ${JSON.stringify(mirror)}.`
+      );
+    }
+  }
+
+  for (const name of Object.keys(mirrored)) {
+    if (!gated.includes(name)) {
+      violations.push(
+        `ci-gate.yml's PATH_FILTERS has an entry "${name}" that is not in the \`gated\` array.`
+      );
+    }
+  }
+
+  return violations;
+}
+
+/**
  * @param {string} root
  * @returns {string[]} Human-readable violations; empty means the wiring holds.
  */
@@ -329,6 +482,8 @@ export function checkCiGateWiring(root) {
       );
     }
   }
+
+  violations.push(...checkPathFilterMirror(script, gated, known, workflowsDir));
 
   if (!/checks\.create\(/u.test(script) || !/head_sha:\s*headSha/u.test(script)) {
     violations.push(
@@ -397,7 +552,8 @@ function main() {
       'Usage: node scripts/ci/check-ci-gate-wiring.mjs [--self-test]\n' +
         "Fails when ci-gate.yml's trigger list and `gated` array disagree, when it references " +
         'an unknown workflow, when it stops publishing its verdict at the observed head SHA, ' +
-        'or when the always-running gated workflow gains a path filter or an advisory job.'
+        'when the always-running gated workflow gains a path filter or an advisory job, or when ' +
+        "its PATH_FILTERS mirror disagrees with a gated workflow's real `pull_request.paths`."
     );
     process.exit(2);
   }
