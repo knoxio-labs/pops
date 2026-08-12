@@ -91,9 +91,11 @@ describe('the entrypoint gate survives a symlinked ancestor path', () => {
 
   it('a fixed guard runs to completion when invoked through the symlink', () => {
     const { linkDir } = symlinkedSandbox();
-    const stdout = execFileSync('node', [join(linkDir, 'huly-partition-plan.mjs'), '--self-test'], {
-      encoding: 'utf8',
-    });
+    const stdout = execFileSync(
+      process.execPath,
+      [join(linkDir, 'huly-partition-plan.mjs'), '--self-test'],
+      { encoding: 'utf8' }
+    );
 
     // The exact degenerate case this ticket fixed: a regressed entrypoint
     // gate exits 0 here too (execFileSync only throws on a nonzero exit), so
@@ -105,11 +107,9 @@ describe('the entrypoint gate survives a symlinked ancestor path', () => {
   it('produces the same result through the realpath, showing the symlink is incidental to the pass', () => {
     const { storeDir } = symlinkedSandbox();
     const stdout = execFileSync(
-      'node',
+      process.execPath,
       [join(storeDir, 'huly-partition-plan.mjs'), '--self-test'],
-      {
-        encoding: 'utf8',
-      }
+      { encoding: 'utf8' }
     );
     expect(stdout).toContain('self-test OK');
   });
@@ -136,7 +136,9 @@ describe('the entrypoint gate survives a symlinked ancestor path', () => {
       ].join('\n')
     );
 
-    const stdout = execFileSync('node', [join(linkDir, 'broken-guard.mjs')], { encoding: 'utf8' });
+    const stdout = execFileSync(process.execPath, [join(linkDir, 'broken-guard.mjs')], {
+      encoding: 'utf8',
+    });
     expect(stdout).toBe('');
   });
 });
