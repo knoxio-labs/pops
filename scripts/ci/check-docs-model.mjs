@@ -18,7 +18,7 @@
  *   3. Every repo path a markdown file points at actually exists. Docs
  *      accumulate hand-maintained indexes — repo trees, "key files" tables,
  *      pillar and lib listings — and they drift silently because nothing
- *      reads them. `libs/db-types` was named in three files and had never
+ *      reads them. libs/db-types was named in three files and had never
  *      existed. A path that no longer resolves is a lie the reader cannot
  *      detect, so it fails the build instead.
  *
@@ -30,6 +30,33 @@
  *      explanation of why the guard exists. A comment is where the WHY
  *      lives (ADR-041), which makes a dangling pointer there the most
  *      expensive kind.
+ *
+ *      Check 4 resolves two shapes of token, deliberately not the same one:
+ *      a bare mention of a docs/ path needs no code formatting to be a claim
+ *      (`extractSourceDocClaims`'s pass 1), because docs/ names one specific
+ *      tree and nothing else in this repo collides with it. Anything else —
+ *      any other path rooted under {@link PATH_ROOTS}, such as the real
+ *      clients/ios/.maestro/pairing-to-transaction-detail.yaml named from a
+ *      Swift doc comment — is resolved only inside a backtick (pass 2),
+ *      reusing {@link SOURCE_FILE_RE} and the rootedness check Markdown prose
+ *      already applies rather than growing a second, `.md`-shaped list.
+ *
+ *      Two things were deliberate here, not oversights. First, the backtick:
+ *      a comment naming a docs/ path is unambiguous on its own, but a bare
+ *      mention of a neighbouring source file in running prose is as often
+ *      just talking about the code as it is making a checkable claim, and
+ *      only the backtick — the same signal a README already requires — tells
+ *      the two apart. Second, unlike Markdown, a comment's backtick alone is
+ *      not enough: pass 2 requires the token to be rooted, and drops
+ *      Markdown's other allowance (a directory-relative token merely shaped
+ *      like a source file, e.g. `components/Foo.tsx`). Markdown prose rarely
+ *      backticks a relative path as pure illustration; this repo's own guard
+ *      scripts constantly do — an example `main` field, an alternate
+ *      config-filename spelling, a NodeNext `./index.js` import specifier
+ *      naming a sibling `.ts` module. Trying the wider rule against this
+ *      tree surfaced over a hundred such non-claims and zero real ones a
+ *      rooted-only pass would have missed, which is the evidence, not a
+ *      guess, behind narrowing pass 2 to `PATH_ROOTS`.
  *
  *   5. A README that states an absence names the Huly issue tracking it.
  *
@@ -212,7 +239,7 @@ export function isHistoricalRecord(mdPath) {
  *
  * Anchors, query strings and external URLs are ignored.
  *
- * A backticked token is ambiguous: `scripts/foo.ts` inside
+ * A backticked token is ambiguous: scripts/foo.ts inside
  * `pillars/shell/README.md` may mean the repo-root `scripts/` or that
  * pillar's own. Both are offered as candidates and the claim holds if
  * either resolves.
@@ -234,22 +261,54 @@ export function extractPathClaims(source, mdPath) {
     claims.push({ raw: target, candidates: [join(fromDir, clean)] });
   }
 
-  for (const match of source.matchAll(/`([^`\n]+)`/gu)) {
-    const token = match[1].trim().replace(/[.,;:]$/u, '');
-    if (isPlaceholderPath(token) || /\s/u.test(token) || !token.includes('/')) continue;
-
-    // Either an explicit repo-root path, or a directory-relative one naming a
-    // real source file — `components/PhotoGallery.tsx` in a page README means
-    // that page's own `components/`, and used to slip through unchecked.
-    const rooted = PATH_ROOTS.some((rootDir) => token.startsWith(rootDir));
-    const looksLikeSourceFile = SOURCE_FILE_RE.test(token);
-    if (!rooted && !looksLikeSourceFile) continue;
-    if (token.startsWith('@')) continue; // npm scope, not a path
-
-    claims.push({ raw: token, candidates: [token, join(fromDir, token)] });
+  for (const match of source.matchAll(BACKTICKED_TOKEN_RE)) {
+    const resolved = resolveBacktickedPathToken(match[1], fromDir);
+    if (resolved) claims.push(resolved);
   }
 
   return claims;
+}
+
+/** A single-backtick-delimited inline-code span, as Markdown and every supported comment syntax spell it. */
+const BACKTICKED_TOKEN_RE = /`([^`\n]+)`/gu;
+
+/**
+ * Decide whether a backticked inline-code token is a real in-repo path claim,
+ * and build its resolution candidates if so. Shared by {@link extractPathClaims}
+ * (Markdown prose) and {@link extractSourceDocClaims} (source comments) so the
+ * two never grow a second, independent opinion about what a path looks like —
+ * both reuse {@link SOURCE_FILE_RE} and {@link PATH_ROOTS} rather than a
+ * `.md`-shaped or comment-shaped list of their own.
+ *
+ * They *do* draw the line in different places, by design — see the module
+ * docstring's check 4 for the evidence. A token counts as a path claim when
+ * it is an explicit repo-root path (`rooted`); Markdown prose additionally
+ * accepts a directory-relative token naming a real source file —
+ * `components/PhotoGallery.tsx` in a page README means that page's own
+ * `components/`. Comment prose does not get that second allowance
+ * (`rootedOnly`): this codebase's own guard scripts routinely backtick a
+ * relative, unrooted path purely as illustration — an example `main` field,
+ * an alternate config-file spelling a matcher considers, a NodeNext import
+ * specifier like `./index.js` describing a sibling `.ts` module — and none of
+ * those are pointers a reader is meant to follow. A README rarely does this;
+ * a JSDoc `@param` example constantly does. An npm scope (`@pops/ui`), a
+ * template, or anything with whitespace is never a path claim either way.
+ *
+ * @param {string} rawToken Content between the backticks, unprocessed.
+ * @param {string} fromDir Directory the file-relative candidate resolves against.
+ * @param {{ rootedOnly?: boolean }} [options]
+ * @returns {{ raw: string, candidates: string[] } | null}
+ */
+function resolveBacktickedPathToken(rawToken, fromDir, { rootedOnly = false } = {}) {
+  const token = rawToken.trim().replace(/[.,;:]$/u, '');
+  if (isPlaceholderPath(token) || /\s/u.test(token) || !token.includes('/')) return null;
+  if (token.startsWith('@')) return null; // npm scope, not a path
+
+  const rooted = PATH_ROOTS.some((rootDir) => token.startsWith(rootDir));
+  const looksLikeSourceFile = !rootedOnly && SOURCE_FILE_RE.test(token);
+  if (!rooted && !looksLikeSourceFile) return null;
+
+  return { raw: token, candidates: [token, join(fromDir, token)] };
 }
 
 /**
@@ -358,8 +417,8 @@ export function resolvePathClaims(root, claims) {
     const targets = candidates.map((c) => c.replace(/\/$/u, '')).filter((c) => c !== '');
     if (targets.length === 0) continue;
     if (targets.some(existsWithinRoot)) continue;
-    // Prose abbreviates cross-unit references — `worker/ai/client.ts` for
-    // `pillars/food/src/worker/ai/client.ts`. Accept when some real file
+    // Prose abbreviates cross-unit references — worker/ai/client.ts for
+    // pillars/food/src/worker/ai/client.ts. Accept when some real file
     // ends with the token; only a path matching nothing at all is a lie.
     if (allPaths.some((p) => p.endsWith('/' + targets[0]))) continue;
     misses.push({ file, claim: raw, candidates: targets });
@@ -400,6 +459,15 @@ export const HASH_COMMENT_EXTS = new Set(['yml', 'yaml', 'sh', 'bash', 'toml']);
  * Dot-directories the source walk descends into. Everything under a dot is
  * skipped by default, but the workflow files are exactly where the CI-guard
  * rationale lives, so `.github` is not optional.
+ *
+ * Known gap, deliberately not closed here: a comment written *inside* some
+ * other dot-directory that carries a scanned extension — `.maestro/*.yaml`,
+ * `.storybook/*.ts` — goes unread by this walk regardless of what it claims.
+ * Deciding which dot-dirs besides `.github` are trustworthy enough to widen
+ * this set (and proving none of them hide something this guard should not
+ * read, e.g. secrets tooling) is a separate question from the `.md`-only
+ * filter this file's check 4 fixes, so it is tracked instead of folded in
+ * here.
  */
 const SCANNED_DOT_DIRS = new Set(['.github']);
 
@@ -569,16 +637,36 @@ function findCommentStart(line, slash) {
 export const DOC_PATH_TOKEN_RE = /(?:^|[\s`'"([<])((?:[\w.-]+\/)*docs\/[\w./-]*[\w])/gu;
 
 /**
- * The doc paths a source file's comments claim exist.
+ * The path claims a source file's comments make, from two independent passes
+ * that are additive, not alternatives — a token either could name only under
+ * `docs/`, or only be recognisable via a backtick, and dropping either pass
+ * would blind the guard to the claims the other cannot see.
  *
- * Two shapes count, and the line is drawn where a token stops being prose and
- * starts being a pointer the reader is meant to follow:
+ * Pass 1 resolves a bare mention of a path under a `docs/` tree, backticked
+ * or not, because `docs/` names one specific tree and nothing else in this
+ * repo collides with it. Two shapes count here, at the line where a token
+ * stops being prose and starts being a pointer: a markdown file anywhere
+ * under a `docs/` tree, root-level or a pillar's own; or a directory two or
+ * more levels inside the repo-root `docs/` tree, so a whole deleted sub-tree
+ * is caught even when no file is named. One level is not enough — a comment
+ * mentioning code-only PRs living under `docs/` is using the slash as an
+ * "or", not naming a `docs/`-rooted directory.
  *
- *   - a markdown file under any `docs/` tree, root-level or a pillar's own;
- *   - a directory two or more levels inside the repo-root `docs/` tree, so a
- *     whole deleted sub-tree is caught even when no file is named. One level
- *     is not enough: a comment writing "docs/code-only PRs" is using the
- *     slash as an "or", not naming `docs/code-only`.
+ * Pass 2 resolves any *backticked* in-repo path, reusing
+ * {@link resolveBacktickedPathToken} unchanged from {@link extractPathClaims}
+ * (its Markdown counterpart) rather than growing a second, `.md`-shaped list.
+ * This is the fix for the asymmetry a markdown file never had: a comment
+ * naming the real fixture at
+ * `clients/ios/.maestro/pairing-to-transaction-detail.yaml`, or any other
+ * backticked path shaped like {@link SOURCE_FILE_RE} or rooted under
+ * {@link PATH_ROOTS}, used to be dropped before resolution just because it
+ * did not end in `.md` — even though the identical claim two directories
+ * away, in a README, was already checked.
+ *
+ * The two passes disagree on one thing deliberately: pass 1 also accepts a
+ * bare, non-backticked `docs/` mention; pass 2 requires the backtick. That
+ * was a real decision, not an oversight — see the module docstring's check 4
+ * for why a bare mention of a non-`docs/` path is left alone.
  *
  * @param {string} source
  * @param {string} filePath Repo-relative path of the source file.
@@ -589,6 +677,13 @@ export function extractSourceDocClaims(source, filePath) {
   const fromDir = dirname(filePath);
   /** @type {PathClaim[]} */
   const claims = [];
+  const seen = new Set();
+  const push = (raw, candidates) => {
+    if (seen.has(raw)) return;
+    seen.add(raw);
+    claims.push({ file: filePath, raw, candidates });
+  };
+
   for (const comment of extractComments(source, ext)) {
     for (const match of comment.matchAll(DOC_PATH_TOKEN_RE)) {
       const token = match[1];
@@ -596,7 +691,11 @@ export function extractSourceDocClaims(source, filePath) {
       const namesAFile = token.endsWith('.md');
       const deepRootDocsDir = token.startsWith('docs/') && token.split('/').length > 2;
       if (!namesAFile && !deepRootDocsDir) continue;
-      claims.push({ file: filePath, raw: token, candidates: [token, join(fromDir, token)] });
+      push(token, [token, join(fromDir, token)]);
+    }
+    for (const match of comment.matchAll(BACKTICKED_TOKEN_RE)) {
+      const resolved = resolveBacktickedPathToken(match[1], fromDir, { rootedOnly: true });
+      if (resolved) push(resolved.raw, resolved.candidates);
     }
   }
   return claims;
@@ -781,7 +880,7 @@ function selfTest() {
   const ok4 = resolvedLink !== undefined && resolvedLink.candidates.includes('libs/ui/README.md');
 
   // A backticked token offers both a repo-root and a file-relative candidate,
-  // so `scripts/x.ts` inside pillars/shell/ can mean that pillar's own scripts/.
+  // so scripts/x.ts inside pillars/shell/ can mean that pillar's own scripts/.
   const ambiguous = extractPathClaims('`scripts/x.ts`', 'pillars/shell/README.md').at(0);
   const ok5 =
     ambiguous !== undefined &&
@@ -828,7 +927,7 @@ function selfTest() {
 
   // A backticked Swift path with a slash is extracted as a claim — `.swift`
   // was missing from SOURCE_FILE_RE, so an iOS README could name a source
-  // file (e.g. `Tests/AuthTests/Foo.swift`) that this guard never checked.
+  // file (e.g. Tests/AuthTests/Foo.swift) that this guard never checked.
   const swiftClaim = extractPathClaims(
     'see `Sources/Foo/Bar.swift`',
     'clients/ios/Packages/Foo/README.md'
@@ -887,7 +986,7 @@ function selfTest() {
       'see docs/f.md';
 
   // A URL's `/docs/` tail is not a repo path; a bare nested doc directory is
-  // prose; a one-level `docs/x` is a prose slash. A markdown file anywhere
+  // prose; a one-level docs/x is a prose slash. A markdown file anywhere
   // under a docs tree, and a deep root-docs directory, are claims.
   const sourceClaims = extractSourceDocClaims(
     '// see https://mise.jdx.dev/docs/tasks and docs/gone/x.md and docs/gone/deeper\n' +
@@ -906,9 +1005,18 @@ function selfTest() {
   // End-to-end against a real tree: one dangling doc pointer per newly
   // scanned file type is reported, a resolving one is not, and the string
   // literals this guard's own self-test uses as fixtures are left alone.
+  //
+  // The same tree also carries the degenerate case ADR-045 requires for the
+  // fix this guard exists to prove: a dangling *non*-`.md` path, backticked
+  // and rooted under `PATH_ROOTS`, planted in every supported comment syntax
+  // (POPS-1825) — the class of pointer `extractSourceDocClaims` used to drop
+  // before resolution no matter how it was written.
   const sourceFixtureRoot = mkdtempSync(join(tmpdir(), 'docs-model-source-'));
   let ok15 = false;
   let ok16 = false;
+  let ok19 = false;
+  let ok20 = false;
+  let ok21 = false;
   try {
     execFileSync('git', ['init', '-q'], { cwd: sourceFixtureRoot });
     mkdirSync(join(sourceFixtureRoot, 'docs', 'architecture'), { recursive: true });
@@ -916,25 +1024,42 @@ function selfTest() {
     mkdirSync(join(sourceFixtureRoot, '.github', 'workflows'), { recursive: true });
     mkdirSync(join(sourceFixtureRoot, 'scripts'), { recursive: true });
     mkdirSync(join(sourceFixtureRoot, 'libs', 'x', 'src'), { recursive: true });
+    mkdirSync(join(sourceFixtureRoot, 'libs', 'x', 'fixtures'), { recursive: true });
+    writeFileSync(join(sourceFixtureRoot, 'libs', 'x', 'fixtures', 'real.yaml'), 'real: true\n');
+    mkdirSync(join(sourceFixtureRoot, 'clients', 'ios', 'Packages', 'Foo', 'Sources', 'Foo'), {
+      recursive: true,
+    });
+
+    const nonMdClaims =
+      'Also `libs/x/fixtures/ghost.yaml` and `libs/x/fixtures/real.yaml`, ' +
+      'not `sibling.ts` (unrooted, ignored even though it too does not exist).';
     writeFileSync(
       join(sourceFixtureRoot, 'libs', 'x', 'src', 'a.ts'),
-      '/** See docs/plans/ghost-ts.md. */\nexport const a = 1;\n'
+      `/** See docs/plans/ghost-ts.md. ${nonMdClaims} */\nexport const a = 1;\n`
     );
     writeFileSync(
       join(sourceFixtureRoot, 'libs', 'x', 'src', 'b.rs'),
-      '//! See docs/plans/ghost-rs.md.\npub fn b() {}\n'
+      `//! See docs/plans/ghost-rs.md. ${nonMdClaims}\npub fn b() {}\n`
     );
     writeFileSync(
       join(sourceFixtureRoot, '.github', 'workflows', 'w.yml'),
-      '# See docs/plans/ghost-yml.md.\nname: w\n'
+      `# See docs/plans/ghost-yml.md. ${nonMdClaims}\nname: w\n`
     );
     writeFileSync(
       join(sourceFixtureRoot, 'scripts', 's.sh'),
-      '#!/usr/bin/env bash\n# See docs/plans/ghost-sh.md.\n'
+      `#!/usr/bin/env bash\n# See docs/plans/ghost-sh.md. ${nonMdClaims}\n`
     );
     writeFileSync(
       join(sourceFixtureRoot, 'Cargo.toml'),
-      '# See docs/plans/ghost-toml.md and docs/architecture/adr-001-real.md.\n'
+      `# See docs/plans/ghost-toml.md and docs/architecture/adr-001-real.md. ${nonMdClaims}\n`
+    );
+    // The real POPS-1825 fixture: two sibling Swift doc comments naming a
+    // Maestro-flow-shaped path, one real (itself) and one dangling.
+    writeFileSync(
+      join(sourceFixtureRoot, 'clients', 'ios', 'Packages', 'Foo', 'Sources', 'Foo', 'Bar.swift'),
+      '/// Keys on `clients/ios/Packages/Foo/Sources/Foo/Bar.swift` (itself) and\n' +
+        '/// `clients/ios/Packages/Foo/Sources/Foo/Ghost.swift` (deleted).\n' +
+        'internal enum Bar {}\n'
     );
     // The fixture strings this guard's own self-test passes to
     // `extractPathClaims` are deliberately unresolvable. They live in string
@@ -952,6 +1077,25 @@ function selfTest() {
         claimed.includes(`docs/plans/ghost-${kind}.md`)
       ) && !claimed.includes('docs/architecture/adr-001-real.md');
     ok16 = !claimed.some((c) => ['docs/thing.md', 'docs/x.md'].includes(c));
+
+    const danglingNonMd = [
+      ['libs/x/src/a.ts', 'libs/x/fixtures/ghost.yaml'],
+      ['libs/x/src/b.rs', 'libs/x/fixtures/ghost.yaml'],
+      ['.github/workflows/w.yml', 'libs/x/fixtures/ghost.yaml'],
+      ['scripts/s.sh', 'libs/x/fixtures/ghost.yaml'],
+      ['Cargo.toml', 'libs/x/fixtures/ghost.yaml'],
+      [
+        'clients/ios/Packages/Foo/Sources/Foo/Bar.swift',
+        'clients/ios/Packages/Foo/Sources/Foo/Ghost.swift',
+      ],
+    ];
+    ok19 = danglingNonMd.every(([file, claim]) =>
+      brokenSource.some((b) => b.file === file && b.claim === claim)
+    );
+    ok20 =
+      !claimed.includes('libs/x/fixtures/real.yaml') &&
+      !claimed.includes('clients/ios/Packages/Foo/Sources/Foo/Bar.swift');
+    ok21 = !claimed.includes('sibling.ts');
   } finally {
     rmSync(sourceFixtureRoot, { recursive: true, force: true });
   }
@@ -1008,6 +1152,16 @@ function selfTest() {
   if (!ok17) console.error('self-test FAILED: this guard reports itself against the real tree');
   if (!ok18)
     console.error('self-test FAILED: a path claim that escapes the repo root was not caught');
+  if (!ok19)
+    console.error(
+      'self-test FAILED: a dangling non-.md backticked comment path was missed in some syntax'
+    );
+  if (!ok20)
+    console.error('self-test FAILED: a resolving non-.md backticked comment path was reported');
+  if (!ok21)
+    console.error(
+      'self-test FAILED: an unrooted backticked comment token was resolved (should be ignored)'
+    );
   return (
     ok1 &&
     ok2 &&
@@ -1026,7 +1180,10 @@ function selfTest() {
     ok15 &&
     ok16 &&
     ok17 &&
-    ok18
+    ok18 &&
+    ok19 &&
+    ok20 &&
+    ok21
   );
 }
 
