@@ -349,13 +349,23 @@ describe('accounting invariants hold for any generated order', () => {
     }
   });
 
-  it('net spend is what was paid less what came back', () => {
+  it('net spend is the order total less what came back, whatever is linked', () => {
     for (const readings of corpus) {
       for (const a of everySplit(readings)) {
         expect(a.netSpendCents, `seed ${String(readings.seed)}`).toBe(
-          a.matchedCents + a.awaitingImportCents - a.refundedCents
+          a.totalCents - a.refundedCents
         );
       }
+    }
+  });
+
+  it('net spend is unmoved by linking a charge', () => {
+    for (const { seed, unlinked: before, afterFirstLink: after } of corpus) {
+      if (after === undefined) continue;
+
+      // Importing a bank statement changes what can be proven, never what
+      // was spent.
+      expect(after.netSpendCents, `seed ${String(seed)}`).toBe(before.netSpendCents);
     }
   });
 
@@ -445,6 +455,21 @@ describe('the derived-charge work set over any generated order', () => {
       // nothing: the refund is orthogonal to the identity, so what is left
       // is exactly what the order cost.
       expect(a.netSpendCents, `seed ${String(seed)}`).toBe(a.totalCents - a.refundedCents);
+    }
+  });
+
+  it('does not move net spend when it mints', () => {
+    mintWorkSet();
+
+    for (const { seed, refundsOnly: before, refundsOnlyId } of corpus) {
+      const after = getPurchase(opened.db, refundsOnlyId)?.accounting;
+      if (after === undefined) throw new Error('missing accounting');
+
+      // Minting is bookkeeping catching up with what the merchant already
+      // stated. A cron run cannot change what an order cost, so the headline
+      // figure has to read the same before and after — otherwise a merchant
+      // total is a function of how many sweeps have happened.
+      expect(after.netSpendCents, `seed ${String(seed)}`).toBe(before.netSpendCents);
     }
   });
 

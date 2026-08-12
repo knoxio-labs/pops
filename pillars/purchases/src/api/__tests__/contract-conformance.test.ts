@@ -286,7 +286,7 @@ describe('the accounting identity holds on the wire', () => {
 
     expect(a.matchedCents + a.awaitingImportCents + a.residualCents).toBe(a.totalCents);
     expect(a.refundedCents).toBe(500);
-    expect(a.netSpendCents).toBe(a.matchedCents + a.awaitingImportCents - a.refundedCents);
+    expect(a.netSpendCents).toBe(a.totalCents - a.refundedCents);
   });
 });
 

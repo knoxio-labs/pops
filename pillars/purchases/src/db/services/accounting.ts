@@ -35,6 +35,18 @@
  * with `refundedCents` orthogonal to it, and `netSpendCents` the derived
  * headline figure — exposed here rather than left to each consumer, because
  * three frontends computing it independently is three chances to disagree.
+ *
+ * **What the headline figure answers.** `netSpendCents` is `totalCents −
+ * refundedCents`: the merchant's own statement of what the order cost, less
+ * what came back. It deliberately does not consult the three buckets, which
+ * answer the separate question of how much of that cost can be proven
+ * through the bank. Deriving it from `matched + awaitingImport` instead made
+ * the figure a function of import and sweep history — $0 for an order whose
+ * capture had not been minted yet, its full total minutes later, with
+ * nothing about the spend having changed — and it dropped gift-card and
+ * rewards money that ADR-042 counts as spend. Summed for a merchant it is
+ * `Σtotal − Σrefunded`, additive and stable, whereas the old form moved
+ * under the aggregate every time a cron ran.
  */
 import { isResidualBearing } from '../../contract/constants.js';
 
@@ -56,7 +68,12 @@ export interface PurchaseAccounting {
   readonly residualCents: number;
   /** Magnitude of money returned. Positive. Orthogonal to the identity above. */
   readonly refundedCents: number;
-  /** `matched + awaitingImport − refunded`. What the order actually cost. */
+  /**
+   * `totalCents − refundedCents`. What the order actually cost, independent
+   * of how much of it can be proven through the bank. Never clamped: negative
+   * means refunds exceeded the order total, a genuine over-refund worth
+   * seeing rather than hiding (ADR-042).
+   */
   readonly netSpendCents: number;
 }
 
@@ -99,7 +116,7 @@ export function computeAccounting(
     awaitingImportCents,
     residualCents: totalCents - matchedCents - awaitingImportCents,
     refundedCents,
-    netSpendCents: matchedCents + awaitingImportCents - refundedCents,
+    netSpendCents: totalCents - refundedCents,
   };
 }
 

@@ -72,7 +72,7 @@ describe('PurchaseAccountingSchema', () => {
         awaitingImportCents: 0,
         residualCents: -100,
         refundedCents: 0,
-        netSpendCents: 5778,
+        netSpendCents: 5678,
       }).success
     ).toBe(true);
   });
@@ -93,15 +93,17 @@ describe('PurchaseAccountingSchema', () => {
     ).toBe(false);
   });
 
-  it('permits a negative net spend, which a refunded-in-full order genuinely has', () => {
+  it('permits a negative net spend, which a genuine over-refund produces', () => {
+    // More came back than the order ever cost. A refund in full now reads
+    // 0, so the only way to reach a negative is the case worth surfacing.
     expect(
       PurchaseAccountingSchema.safeParse({
         totalCents: 5678,
-        matchedCents: 0,
+        matchedCents: 5678,
         awaitingImportCents: 0,
-        residualCents: 5678,
-        refundedCents: 5678,
-        netSpendCents: -5678,
+        residualCents: 0,
+        refundedCents: 6000,
+        netSpendCents: -322,
       }).success
     ).toBe(true);
   });
