@@ -18,6 +18,7 @@ import {
   IngestMethodSchema,
   IsoTimestampSchema,
   ItemKindSchema,
+  ItemTagSchema,
   NonNegativeCentsSchema,
   PopsUriSchema,
   PurchaseStatusSchema,
@@ -87,9 +88,40 @@ export const CreateItemBodySchema = z.object({
   allocatedShippingCents: NonNegativeCentsSchema.optional(),
   allocatedAdjustmentCents: CentsSchema.optional(),
   merchantCategory: z.string().nullable().optional(),
+  merchantCondition: z.string().nullable().optional(),
+  promotionalPrice: z.boolean().nullable().optional(),
+  gstApplicable: z.boolean().nullable().optional(),
+  /**
+   * Only where the source states it outright — never inferred. A kind
+   * supplied here lands *asserted*, because a transcription of what a
+   * merchant said is not a guess a later pass should reconsider.
+   */
   kind: ItemKindSchema.nullable().optional(),
-  tags: z.array(z.string()).optional(),
+  /**
+   * POPS item tags. No shipped source states one, so an adapter supplying
+   * these is asserting a classification of its own — which is the bug this
+   * table was carrying. Like {@link CreateItemBodySchema.shape.kind} these
+   * land asserted, and a guard test holds the adapters to writing none.
+   */
+  tags: z.array(ItemTagSchema).optional(),
+  /** Verbatim merchant prose, in printed order. Duplicates are kept. */
+  notes: z.array(z.string().trim().min(1)).optional(),
   units: z.array(CreateItemUnitBodySchema).optional(),
+});
+
+/**
+ * The confirmation body for one line.
+ *
+ * Both fields are optional and both are meaningful when explicitly null:
+ * `kind: null` retracts a wrong confirmation to unclassified rather than to
+ * a different wrong answer, and an empty `tags` array clears the line's
+ * tags. Omitting a field leaves it alone, so confirming a kind does not
+ * silently drop tags a proposal pass put there.
+ */
+export const PatchItemBodySchema = z.object({
+  kind: ItemKindSchema.nullable().optional(),
+  /** Replaces the line's tags outright — what is not listed is rejected. */
+  tags: z.array(ItemTagSchema).optional(),
 });
 
 export const CreateChargeAllocationBodySchema = z.object({
@@ -177,6 +209,6 @@ export const ListPurchasesQuerySchema = z.object({
 });
 
 export const ListItemsByTagQuerySchema = z.object({
-  tag: z.string().trim().min(1),
+  tag: ItemTagSchema,
   limit: z.coerce.number().int().min(1).max(500).optional(),
 });

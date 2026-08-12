@@ -13,10 +13,31 @@ import {
   ListItemsByTagQuerySchema,
   ListPurchasesQuerySchema,
   OkSchema,
+  PatchItemBodySchema,
 } from './rest-schemas.js';
-import { PurchaseDetailSchema, PurchaseItemSchema, PurchaseSchema } from './schemas/purchase.js';
+import {
+  IsoTimestampSchema,
+  PurchaseDetailSchema,
+  PurchaseItemDetailSchema,
+  PurchaseItemSchema,
+  PurchaseSchema,
+} from './schemas/purchase.js';
 
 const c = initContract();
+
+/**
+ * A line that carries the requested tag, with the tag's own confirmation
+ * marker beside it.
+ *
+ * The marker travels because the item alone cannot carry it — the tag is on
+ * the join row, not the line — and a list of lines "tagged `snack`" that
+ * silently mixes proposals with decisions is exactly the counterfactual a
+ * consumer must not compute.
+ */
+const TaggedItemSchema = z.object({
+  item: PurchaseItemSchema,
+  confirmedAt: IsoTimestampSchema.nullable(),
+});
 
 export const purchasesPurchaseContract = c.router({
   list: {
@@ -59,11 +80,31 @@ export const purchasesPurchaseContract = c.router({
     responses: { 200: OkSchema, 404: ErrorBodySchema },
     summary: 'Hard-delete an order (everything hanging off it cascades)',
   },
+  /**
+   * The pillar's first item-level mutation, and the only way an item tag or
+   * a confirmed kind is ever written.
+   *
+   * Scoped under the order rather than a bare `/items/:itemId` so a line
+   * cannot be addressed without its order — the id is a random UUID and a
+   * caller that has one but not the other is guessing.
+   */
+  patchItem: {
+    method: 'PATCH',
+    path: '/purchases/:id/items/:itemId',
+    pathParams: z.object({ id: z.string(), itemId: z.string() }),
+    body: PatchItemBodySchema,
+    responses: {
+      200: PurchaseItemDetailSchema,
+      400: ErrorBodySchema,
+      404: ErrorBodySchema,
+    },
+    summary: "Confirm a line's kind and item tags",
+  },
   itemsByTag: {
     method: 'GET',
     path: '/items',
     query: ListItemsByTagQuerySchema,
-    responses: { 200: z.object({ items: z.array(PurchaseItemSchema) }) },
-    summary: 'Every line carrying a tag, across every order',
+    responses: { 200: z.object({ items: z.array(TaggedItemSchema) }) },
+    summary: 'Every line carrying an item tag, across every order',
   },
 });

@@ -52,8 +52,26 @@ export interface CreateItemInput {
   readonly allocatedShippingCents?: number;
   readonly allocatedAdjustmentCents?: number;
   readonly merchantCategory?: string | null;
+  /** Amazon's `Product Condition`, verbatim. Not a category. */
+  readonly merchantCondition?: string | null;
+  /** `^` on a Woolworths receipt. Undefined where the source states nothing. */
+  readonly promotionalPrice?: boolean | null;
+  /** `#` on a Woolworths receipt: GST applies. */
+  readonly gstApplicable?: boolean | null;
+  /**
+   * Only where the source states it outright. A kind supplied here is
+   * persisted as *asserted* — `kindConfirmedAt` is set at ingest — because
+   * transcribing what a merchant said is not a guess a later classification
+   * pass should be free to overwrite.
+   */
   readonly kind?: ItemKind | null;
+  /**
+   * POPS item tags. No shipped source states one, so supplying these means
+   * asserting a classification; they persist confirmed, like `kind`.
+   */
   readonly tags?: readonly string[];
+  /** Verbatim merchant prose, in printed order. Duplicates are meaningful. */
+  readonly notes?: readonly string[];
   readonly units?: readonly CreateItemUnitInput[];
 }
 

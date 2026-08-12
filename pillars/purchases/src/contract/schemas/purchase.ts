@@ -6,6 +6,7 @@ import {
   DOCUMENT_KINDS,
   INGEST_METHODS,
   ITEM_KINDS,
+  ITEM_TAG_PATTERN,
   LINK_TYPES,
   PURCHASE_STATUSES,
   SETTLEMENT_MODES,
@@ -113,6 +114,37 @@ export const PurchaseShipmentSchema = z.object({
   updatedAt: IsoTimestampSchema,
 });
 
+/**
+ * An item tag: purchases' own product-grained vocabulary.
+ *
+ * Lower-case slugs, rejected rather than normalised when they are not.
+ * Rejecting is what keeps `Fruit` and `fruit` from becoming two tags — the
+ * drift finance's Title Case `tag_vocabulary` already has — and it tells
+ * the caller, where a silent `.toLowerCase()` would not.
+ */
+export const ItemTagSchema = z
+  .string()
+  .regex(ITEM_TAG_PATTERN, 'expected a lower-case slug, e.g. fruit or single-origin');
+
+/**
+ * A classification bound to the marker that says whether to trust it.
+ *
+ * The whole point of the object is that a consumer cannot obtain
+ * {@link value} without {@link confirmedAt}. Two sibling fields would leave
+ * "read the pair" a convention, and this repo has already been bitten by
+ * one of those — finance's `entity_id`/`entity_name`.
+ */
+export const ItemKindClassificationSchema = z.object({
+  value: ItemKindSchema,
+  /** Null while this is a machine proposal; set once it is asserted. */
+  confirmedAt: IsoTimestampSchema.nullable(),
+});
+
+export const PurchaseItemTagSchema = z.object({
+  tag: ItemTagSchema,
+  confirmedAt: IsoTimestampSchema.nullable(),
+});
+
 export const PurchaseItemSchema = z.object({
   id: z.string(),
   purchaseId: z.string(),
@@ -129,7 +161,11 @@ export const PurchaseItemSchema = z.object({
   allocatedShippingCents: NonNegativeCentsSchema,
   allocatedAdjustmentCents: CentsSchema,
   merchantCategory: z.string().nullable(),
-  kind: ItemKindSchema.nullable(),
+  merchantCondition: z.string().nullable(),
+  promotionalPrice: z.boolean().nullable(),
+  gstApplicable: z.boolean().nullable(),
+  /** Null means unclassified. See {@link ItemKindClassificationSchema}. */
+  kind: ItemKindClassificationSchema.nullable(),
   createdAt: IsoTimestampSchema,
 });
 
@@ -229,7 +265,10 @@ export const PurchaseAccountingSchema = z.object({
 
 export const PurchaseItemDetailSchema = z.object({
   item: PurchaseItemSchema,
-  tags: z.array(z.string()),
+  /** POPS classification, each carrying whether it is asserted or proposed. */
+  tags: z.array(PurchaseItemTagSchema),
+  /** Verbatim merchant prose, in the order it was printed. */
+  notes: z.array(z.string()),
   units: z.array(PurchaseItemUnitSchema),
   landedCostCents: CentsSchema,
 });

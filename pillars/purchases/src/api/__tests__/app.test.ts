@@ -136,12 +136,15 @@ describe('POST /purchases', () => {
     });
   });
 
-  it('projects tags as an array and computes landed cost', async () => {
+  it('projects tags with their confirmation marker and computes landed cost', async () => {
     const res = await request(app).post('/purchases').send(fullOrder);
     const tamper = res.body.items.find(
       (i: { item: { sku: string } }) => i.item.sku === 'B0DSVZQ8P5'
     );
-    expect(tamper.tags).toEqual(['coffee', 'kitchen']);
+    expect(tamper.tags.map((t: { tag: string }) => t.tag)).toEqual(['coffee', 'kitchen']);
+    // Stated in the payload, so asserted — a caller supplying an item tag is
+    // classifying, and nothing may later reconsider it as if it were a guess.
+    for (const tag of tamper.tags) expect(tag.confirmedAt).not.toBeNull();
     expect(tamper.landedCostCents).toBe(4499);
   });
 
@@ -248,16 +251,26 @@ describe('GET /purchases', () => {
 });
 
 describe('GET /items', () => {
-  it('finds lines by tag across orders', async () => {
+  it('finds lines by tag across orders, each with that tag`s marker', async () => {
     await request(app).post('/purchases').send(fullOrder);
     const res = await request(app).get('/items?tag=coffee');
     expect(res.status).toBe(200);
     expect(res.body.items).toHaveLength(1);
-    expect(res.body.items[0].sku).toBe('B0DSVZQ8P5');
+    expect(res.body.items[0].item.sku).toBe('B0DSVZQ8P5');
+    // Without this a caller summing "everything tagged coffee" cannot tell
+    // which of those labels anyone ever agreed with.
+    expect(res.body.items[0].confirmedAt).not.toBeNull();
   });
 
   it('requires a tag', async () => {
     const res = await request(app).get('/items');
+    expect(res.status).toBe(400);
+  });
+
+  it('rejects a tag that is not a lower-case slug rather than finding nothing', async () => {
+    // `Coffee` and `coffee` being two tags is the drift finance already has
+    // in `tag_vocabulary`. A 400 says so; an empty list would not.
+    const res = await request(app).get('/items?tag=Coffee');
     expect(res.status).toBe(400);
   });
 });

@@ -83,7 +83,7 @@ function checksumFor(purchase: {
     // promotion's wording and the GST mark are read off the receipt like
     // everything else, so a change to either is a change to the purchase.
     //
-    // JSON rather than delimiters, because `tags` holds verbatim promo
+    // JSON rather than delimiters, because `notes` holds verbatim promo
     // text. Joining on a separator is not injective — `["a~b","c"]` and
     // `["a","b","c"]` produce the same string — so a merchant whose
     // wording happens to contain the separator could hide a real change.
@@ -93,8 +93,9 @@ function checksumFor(purchase: {
         item.quantity,
         item.unitPriceCents,
         item.lineTotalCents,
-        item.merchantCategory,
-        item.tags,
+        item.gstApplicable,
+        item.promotionalPrice,
+        item.notes,
       ])
     );
   }
@@ -108,11 +109,14 @@ function toItem(grouped: ReturnType<typeof groupReceiptRows>['items'][number]): 
     unitPriceCents: grouped.unitPriceCents,
     lineTotalCents: grouped.lineTotalCents,
     // The receipt's own wording for a promotion, kept verbatim rather than
-    // parsed into a discount the merchant never stated as one, plus the `^`
-    // marker as a tag of its own so "was this on special" is answerable
-    // without re-reading prose.
-    tags: grouped.promotional ? [...grouped.notes, 'promotional-price'] : grouped.notes,
-    merchantCategory: grouped.gstApplicable ? 'gst-applicable' : null,
+    // parsed into a discount the merchant never stated as one. Prose, so it
+    // is evidence rather than classification, and ordered.
+    notes: grouped.notes,
+    // Both are one printed character — `^` and `#` — on a receipt that
+    // prints them on every line they apply to. So the absence of one is the
+    // merchant saying "no", not saying nothing.
+    promotionalPrice: grouped.promotional,
+    gstApplicable: grouped.gstApplicable,
   };
 }
 

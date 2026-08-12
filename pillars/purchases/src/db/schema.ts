@@ -11,7 +11,8 @@
  *     ├─ purchase_shipments             every delivery
  *     ├─ purchase_items                 every line, complete
  *     │    ├─ purchase_item_units       per-unit identity → inventory
- *     │    └─ purchase_item_tags
+ *     │    ├─ purchase_item_tags        POPS classification, proposed or asserted
+ *     │    └─ purchase_item_notes       verbatim merchant prose, ordered
  *     ├─ purchase_charges               every charge, matched or not
  *     │    ├─ purchase_charge_links     charge → finance transaction
  *     │    └─ purchase_item_allocations which charge paid for which line
@@ -38,6 +39,7 @@ import type {
 } from './schema/charges.js';
 import type { purchaseDocuments as purchaseDocumentsTable } from './schema/documents.js';
 import type {
+  purchaseItemNotes as purchaseItemNotesTable,
   purchaseItems as purchaseItemsTable,
   purchaseItemTags as purchaseItemTagsTable,
   purchaseItemUnits as purchaseItemUnitsTable,
@@ -52,7 +54,12 @@ import type { purchaseSources as purchaseSourcesTable } from './schema/sources.j
 
 export { purchaseChargeLinks, purchaseCharges, purchaseItemAllocations } from './schema/charges.js';
 export { purchaseDocuments } from './schema/documents.js';
-export { purchaseItems, purchaseItemTags, purchaseItemUnits } from './schema/items.js';
+export {
+  purchaseItemNotes,
+  purchaseItems,
+  purchaseItemTags,
+  purchaseItemUnits,
+} from './schema/items.js';
 export { purchases, purchaseShipments, purchaseTags } from './schema/purchases.js';
 export { purchaseMatchRules } from './schema/rules.js';
 export { purchaseSources } from './schema/sources.js';
@@ -66,6 +73,7 @@ export type PurchaseItemInsert = InferInsertModel<typeof purchaseItemsTable>;
 export type PurchaseItemUnitRow = InferSelectModel<typeof purchaseItemUnitsTable>;
 export type PurchaseItemUnitInsert = InferInsertModel<typeof purchaseItemUnitsTable>;
 export type PurchaseItemTagRow = InferSelectModel<typeof purchaseItemTagsTable>;
+export type PurchaseItemNoteRow = InferSelectModel<typeof purchaseItemNotesTable>;
 export type PurchaseTagRow = InferSelectModel<typeof purchaseTagsTable>;
 export type PurchaseChargeRow = InferSelectModel<typeof purchaseChargesTable>;
 export type PurchaseChargeInsert = InferInsertModel<typeof purchaseChargesTable>;

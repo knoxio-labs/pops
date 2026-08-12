@@ -1,4 +1,5 @@
 export type {
+  Classified,
   Purchase,
   PurchaseAccounting,
   PurchaseCharge,
@@ -6,6 +7,7 @@ export type {
   PurchaseDocument,
   PurchaseItem,
   PurchaseItemAllocation,
+  PurchaseItemTag,
   PurchaseItemUnit,
   PurchaseShipment,
 } from './purchase.js';

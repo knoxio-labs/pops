@@ -69,6 +69,23 @@ export const ITEM_KINDS = ['consumable', 'durable', 'digital', 'service'] as con
 export type ItemKind = (typeof ITEM_KINDS)[number];
 
 /**
+ * The shape of a POPS item tag — purchases' own product-grained vocabulary
+ * (`fruit`, `healthy`, `single-origin`), not finance's transaction-grained
+ * `tag_vocabulary`.
+ *
+ * The vocabulary itself is open, for the reason `purchase_sources` is rows:
+ * adding `sourdough` must be a write, not a deploy. Only the *shape* is
+ * closed, and only because finance's Title Case labels show what happens
+ * without it — `Fruit` and `fruit` become two tags nothing joins.
+ */
+export const ITEM_TAG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/u;
+
+/** True when `value` is a well-formed item tag slug. */
+export function isItemTag(value: string): boolean {
+  return ITEM_TAG_PATTERN.test(value);
+}
+
+/**
  * How a charge↔transaction link was derived.
  *
  * Derivation only. What the money *is* — a capture, a hold, a refund — is

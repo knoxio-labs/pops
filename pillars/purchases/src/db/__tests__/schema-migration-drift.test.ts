@@ -17,6 +17,7 @@ import {
   purchaseCharges,
   purchaseDocuments,
   purchaseItemAllocations,
+  purchaseItemNotes,
   purchaseItems,
   purchaseItemTags,
   purchaseItemUnits,
@@ -51,6 +52,7 @@ const ALL_TABLES: readonly SQLiteTable[] = [
   purchaseItems,
   purchaseItemUnits,
   purchaseItemTags,
+  purchaseItemNotes,
   purchaseMatchRules,
   purchaseCharges,
   purchaseChargeLinks,
@@ -134,6 +136,7 @@ describe('foreign keys declared in drizzle are enforced by the migration', () =>
     purchase_items: ['purchases', 'purchase_shipments'],
     purchase_item_units: ['purchase_items'],
     purchase_item_tags: ['purchase_items'],
+    purchase_item_notes: ['purchase_items'],
     purchase_charges: ['purchases', 'purchase_shipments'],
     purchase_charge_links: ['purchase_charges', 'purchase_match_rules'],
     purchase_item_allocations: ['purchase_charges', 'purchase_items'],
@@ -159,6 +162,7 @@ describe('cascade behaviour is what the schema claims', () => {
     ['purchase_items', 'purchase_shipments', 'SET NULL'],
     ['purchase_item_units', 'purchase_items', 'CASCADE'],
     ['purchase_item_tags', 'purchase_items', 'CASCADE'],
+    ['purchase_item_notes', 'purchase_items', 'CASCADE'],
     ['purchase_charges', 'purchases', 'CASCADE'],
     ['purchase_charges', 'purchase_shipments', 'SET NULL'],
     ['purchase_charge_links', 'purchase_charges', 'CASCADE'],
@@ -187,6 +191,8 @@ describe('indexes the hot paths depend on', () => {
     'idx_purchases_status',
     'idx_purchase_items_purchase',
     'idx_purchase_items_shipment',
+    'idx_purchase_items_kind',
+    'idx_purchase_items_promotional_price',
     'idx_purchase_item_tags_tag',
     'idx_purchase_charges_purchase',
     'idx_purchase_charge_links_transaction',
@@ -208,4 +214,36 @@ describe('indexes the hot paths depend on', () => {
     );
     expect(EXPECTED_INDEXES.filter((name) => !live.has(name))).toEqual([]);
   });
+});
+
+/**
+ * Index *names* agreeing is not enough. The first index change this pillar
+ * made kept its name and changed what it covers, and a name-only check
+ * passes just as happily for a composite silently reverted to one column —
+ * which costs nothing visible until the query it exists for starts
+ * scanning.
+ */
+describe('index columns match the drizzle declarations', () => {
+  function liveColumns(indexName: string): string[] {
+    return (
+      opened.raw.prepare(`PRAGMA index_info(${indexName})`).all() as {
+        seqno: number;
+        name: string | null;
+      }[]
+    )
+      .toSorted((a, b) => a.seqno - b.seqno)
+      .map((row) => row.name ?? '(expression)');
+  }
+
+  for (const table of ALL_TABLES) {
+    for (const declared of getTableConfig(table).indexes) {
+      const { name, columns } = declared.config;
+      it(`${name} covers what drizzle says`, () => {
+        const expected = columns.map((column) =>
+          'name' in column && typeof column.name === 'string' ? column.name : '(expression)'
+        );
+        expect(liveColumns(name)).toEqual(expected);
+      });
+    }
+  }
 });

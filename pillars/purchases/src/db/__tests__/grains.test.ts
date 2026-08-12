@@ -348,7 +348,7 @@ describe('tags', () => {
         ],
       })
     );
-    expect(getPurchase(opened.db, id)?.items[0]?.tags).toEqual(['coffee']);
+    expect(getPurchase(opened.db, id)?.items[0]?.tags.map((t) => t.tag)).toEqual(['coffee']);
   });
 
   it('handles a grocery-scale shop', () => {
