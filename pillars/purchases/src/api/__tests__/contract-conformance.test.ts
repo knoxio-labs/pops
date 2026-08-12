@@ -342,6 +342,9 @@ describe('GET /analytics/merchant-spend response', () => {
 
   it('conforms when empty', async () => {
     const res = await request(app).get('/analytics/merchant-spend');
+    // Asserted before conformance so a regression to an error status reads as
+    // one, rather than as an unrelated schema mismatch on the error body.
+    expect(res.status).toBe(200);
     expectConforms(MerchantSpendRollupSchema, res.body, 'GET /analytics/merchant-spend (empty)');
   });
 });

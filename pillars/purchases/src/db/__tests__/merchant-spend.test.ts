@@ -107,13 +107,20 @@ function linkFirstCharge(purchaseId: string, uri: string): void {
  * Sum every order the same filter selects, read one at a time through
  * `getPurchase`.
  *
- * This is the roll-up's oracle: the numbers a consumer would get by paging
+ * This is the roll-up's oracle: the numbers a consumer would get by reading
  * the index and summing client-side, which is exactly what a merchant lens
  * would otherwise have to do. If the aggregate and this disagree, one of
  * them is lying to a user.
+ *
+ * It reads one page at the index's maximum rather than paging, and asserts
+ * the corpus fits. A silently truncated oracle would be worse than no
+ * oracle: it would compare part of the corpus against all of it and blame
+ * the roll-up.
  */
 function foldEveryOrder(): { accounting: PurchaseAccounting; orderCount: number } {
-  const rows = listPurchases(opened.db, { limit: 500 });
+  const cap = 500;
+  const rows = listPurchases(opened.db, { limit: cap });
+  if (rows.length === cap) throw new Error(`corpus reached the ${String(cap)}-row oracle cap`);
   let accounting = ZERO;
   for (const row of rows) {
     const detail = getPurchase(opened.db, row.id);
