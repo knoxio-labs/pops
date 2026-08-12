@@ -256,6 +256,7 @@ jobs:
                 "clients/ios/**",
                 "pillars/bfm/**",
                 "scripts/ios-e2e/**",
+                "pnpm-lock.yaml",
                 ".github/workflows/ios-quality.yml"
               ],
               "Docker Build": [
