@@ -13,6 +13,7 @@ import { describe, expect, it } from 'vitest';
 import {
   cargoWorkspaceMembers,
   decide,
+  decideScripts,
   globRoot,
   isInsideWorkspace,
   parseRefUpdates,
@@ -272,6 +273,66 @@ describe('decide', () => {
   it('reports at most three examples so the hook stays readable', () => {
     const many = Array.from({ length: 40 }, (_, i) => `clients/ios/File${i}.swift`);
     expect(decide(many, scope).examples).toHaveLength(3);
+  });
+});
+
+describe('decideScripts', () => {
+  // `decide` folds `scripts/` into its "inside" set so a scripts-only push
+  // still pays for the compiled-graph typecheck, but that verdict never
+  // triggers `mise run test:scripts` / `typecheck:scripts` — the two
+  // CI-required tasks that actually check scripts/ (see the blind-spot note
+  // above `[tasks."typecheck:scripts"]` in mise.toml). `decideScripts` is the
+  // independent question the pre-push hook needs to ask before it runs those
+  // two tasks locally.
+  it('runs when the push touches scripts/', () => {
+    expect(decideScripts(['scripts/huly-partition.mjs']).verdict).toBe('run');
+  });
+
+  it('runs when scripts/ is touched alongside other paths', () => {
+    expect(decideScripts(['libs/ui/src/index.ts', 'scripts/ci/check-node-pin.mjs']).verdict).toBe(
+      'run'
+    );
+  });
+
+  it('skips a push that never touches scripts/', () => {
+    expect(
+      decideScripts(['pillars/finance/src/index.ts', 'docs/architecture/adr-045.md']).verdict
+    ).toBe('skip');
+  });
+
+  it('skips a push confined to the iOS client', () => {
+    expect(
+      decideScripts([
+        'clients/ios/App/PopsApp.swift',
+        'clients/ios/Packages/AppCore/Sources/AppCore/Router.swift',
+      ]).verdict
+    ).toBe('skip');
+  });
+
+  it('does not treat a directory that merely starts with "scripts" as scripts/', () => {
+    // Same reasoning as `isInsideWorkspace`'s equivalent case: a prefix match
+    // would quietly widen the trigger to an unrelated directory.
+    expect(decideScripts(['scripts-old/x.mjs']).verdict).toBe('skip');
+  });
+
+  it('runs when the diff could not be read', () => {
+    // The same asymmetry as `decide`: an unreadable diff must never be read as
+    // permission to skip the scripts checks.
+    expect(decideScripts(undefined).verdict).toBe('run');
+  });
+
+  it('skips a push that adds no changed paths at all', () => {
+    expect(decideScripts([]).verdict).toBe('skip');
+  });
+
+  it('names the paths that forced its verdict', () => {
+    const ran = decideScripts(['libs/ui/src/index.ts', 'scripts/ci/check-node-pin.mjs']);
+    expect(ran.examples).toEqual(['scripts/ci/check-node-pin.mjs']);
+  });
+
+  it('reports at most three examples so the hook stays readable', () => {
+    const many = Array.from({ length: 40 }, (_, i) => `scripts/file-${i}.mjs`);
+    expect(decideScripts(many).examples).toHaveLength(3);
   });
 });
 

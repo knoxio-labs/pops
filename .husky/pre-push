@@ -4,9 +4,18 @@
 # unconditionally: it is `tsc -b` over the whole compiled graph plus a fan-out
 # to 24 units, one of which runs `cargo check`, and a branch that touches only
 # `clients/ios` (in neither workspace — ADR-043) cannot affect any of it.
-# scripts/pre-push-scope.mjs decides, and defaults to `run` on any doubt; the
-# `|| decision=run` below keeps that true even if node itself cannot start.
-decision=$(node scripts/pre-push-scope.mjs) || decision=run
+# scripts/pre-push-scope.mjs decides, and prints two verdicts (one per line):
+# the compiled-graph decision, then whether this push touches scripts/ — a
+# tree `tsc -b tsconfig.build.json` and the compiled-graph fan-out never reach
+# (see mise.toml's `[tasks."typecheck:scripts"]` comment). Both default to
+# `run` on any doubt; the `|| output=...` below keeps that true even if node
+# itself cannot start.
+output=$(node scripts/pre-push-scope.mjs) || output="run
+run"
+decision=$(printf '%s\n' "$output" | sed -n '1p')
+scripts_decision=$(printf '%s\n' "$output" | sed -n '2p')
+[ -n "$decision" ] || decision=run
+[ -n "$scripts_decision" ] || scripts_decision=run
 
 if [ "$decision" = skip ]; then
   echo "pre-push: nothing in this push reaches the pnpm/cargo workspace — typecheck skipped."
@@ -24,6 +33,16 @@ else
     echo "          run 'pnpm install --frozen-lockfile' and push again."
   fi
   pnpm typecheck
+
+  if [ "$scripts_decision" = run ]; then
+    # `mise run typecheck` never reaches scripts/ (no mise.toml there for the
+    # run-all fan-out, and tsconfig.build.json's `references` stop at libs/*
+    # and pillars/*), but quality.yml's scripts-tests job gates it in CI
+    # regardless — run the same two tasks here so a scripts/-touching push
+    # can't pass locally and still fail there.
+    mise run test:scripts
+    mise run typecheck:scripts
+  fi
 fi
 
 branch=$(git branch --show-current)

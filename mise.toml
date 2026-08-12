@@ -249,7 +249,9 @@ description = "Run the root-owned scripts/ test suite (gates CI checks under scr
 # `scripts/` is root-owned tooling (CI guards, extractability checks) that is
 # never extracted into a unit, so it has no per-unit mise.toml and is invisible
 # to the `run-all` fan-out. The root `vitest.config.ts` includes only
-# `scripts/**/*.test.ts`; this task is the entry point CI runs.
+# `scripts/**/*.test.ts`; this task is the entry point both CI and the
+# `.husky/pre-push` hook run (the hook only when the push touches `scripts/`,
+# via `scripts/pre-push-scope.mjs`'s `decideScripts`).
 run = "vitest run scripts/"
 
 [tasks."typecheck:scripts"]
@@ -259,8 +261,9 @@ description = "Type-check the root-owned scripts/ test projects (gates CI checks
 # `tsc -b tsconfig.build.json` (references only libs/* and pillars/*) nor the
 # `run-all` fan-out (scripts/ has no mise.toml) ever reaches — vitest's esbuild
 # transform runs these tests without type-checking them. This task is the
-# entry point CI runs, mirroring `test:scripts` above for the identical blind
-# spot in typechecking rather than testing.
+# entry point both CI and the `.husky/pre-push` hook run, mirroring
+# `test:scripts` above for the identical blind spot in typechecking rather
+# than testing.
 run = [
   "tsc --noEmit -p scripts/__tests__/tsconfig.json",
   "tsc --noEmit -p scripts/ci/__tests__/tsconfig.json",

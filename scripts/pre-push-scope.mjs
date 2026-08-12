@@ -12,8 +12,11 @@
  * all of it to check TypeScript the change could not reach — and could be
  * failed by a stale `node_modules` in a package it never opened.
  *
- * This decides, from the diff alone, whether that is worth running. It answers
- * `run` or `skip` on stdout and explains itself on stderr.
+ * This decides, from the diff alone, whether that is worth running. It prints
+ * two `run`/`skip` tokens on stdout, one per line — the compiled-graph verdict
+ * above, then a second verdict for whether `mise run test:scripts` and
+ * `mise run typecheck:scripts` are worth running (see `decideScripts` below) —
+ * and explains both on stderr.
  *
  * THE ANSWER IS DELIBERATELY LOPSIDED. `run` is not a verdict, it is the
  * absence of one: anything this cannot confidently place outside the workspace
@@ -42,11 +45,11 @@
  *   node scripts/pre-push-scope.mjs              read git's pre-push refs on stdin
  *   node scripts/pre-push-scope.mjs --self-test  prove the decision logic still decides
  *
- * In DECISION MODE the exit code is always 0: the verdict is the stdout token,
- * not the status, so a crash (non-zero, no output) is indistinguishable from
- * `run` to the caller rather than being mistaken for `skip`. `--self-test` is
- * not decision mode and does exit non-zero when it fails — it is a check, and a
- * check that cannot fail is not one.
+ * In DECISION MODE the exit code is always 0: the verdicts are the stdout
+ * tokens, not the status, so a crash (non-zero, no output) is indistinguishable
+ * from `run`/`run` to the caller rather than being mistaken for `skip`.
+ * `--self-test` is not decision mode and does exit non-zero when it fails — it
+ * is a check, and a check that cannot fail is not one.
  */
 
 import { execFileSync } from 'node:child_process';
@@ -58,16 +61,25 @@ const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..');
 
 /**
+ * `scripts/`'s root name, shared between the always-inside set below and
+ * {@link decideScripts}'s own, narrower question — whether THIS push touches
+ * `scripts/` at all, regardless of what else it touches.
+ */
+const SCRIPTS_ROOT = 'scripts';
+
+/**
  * Roots that are always inside, whatever the manifests say.
  *
  * `scripts/` is root-owned tooling in no workspace — it has no `package.json`
  * and no `mise.toml`, so neither the pnpm globs nor the cargo members name it —
- * but `mise run typecheck:scripts` type-checks it in CI and its own tsconfig
- * projects reach into `tsconfig.base.json`. Treating it as outside would make
- * this hook silent about the one tree whose type errors already have a habit of
- * reaching `main` (see the blind-spot note on `typecheck:scripts` in mise.toml).
+ * and its own tsconfig projects reach into `tsconfig.base.json`. Treating it as
+ * outside would make this hook silent about the one tree whose type errors
+ * already have a habit of reaching `main`. Note this only forces the
+ * COMPILED-GRAPH verdict below to `run`; it does not by itself run
+ * `mise run typecheck:scripts` / `test:scripts` — that is `decideScripts`'s job
+ * (see the blind-spot note on those two tasks in mise.toml).
  */
-const ALWAYS_INSIDE = ['scripts'];
+const ALWAYS_INSIDE = [SCRIPTS_ROOT];
 
 /** A SHA of all zeros: git's way of saying "this ref does not exist yet". */
 const NULL_SHA = /^0+$/u;
@@ -302,6 +314,52 @@ export function decide(paths, scope) {
 }
 
 /**
+ * Whether this push is worth `mise run test:scripts` + `mise run
+ * typecheck:scripts` — the two CI-required tasks (`quality.yml`'s
+ * `scripts-tests` job) that close the blind spot documented above
+ * `[tasks."typecheck:scripts"]` in mise.toml: `tsc -b tsconfig.build.json`
+ * only references `libs/*` and `pillars/*`, and `run-all` never reaches
+ * `scripts/` because it has no `mise.toml`, so nothing `decide` triggers
+ * type-checks or runs the `scripts/**` test suite.
+ *
+ * Deliberately independent of {@link decide}: that decision's "inside" set
+ * folds `scripts/` in via `ALWAYS_INSIDE` for a different reason (so a
+ * scripts-only push still pays for the compiled-graph typecheck), and mixing
+ * the two questions into one verdict would make it impossible to run the
+ * scripts checks ONLY when scripts/ is actually touched.
+ *
+ * @param {string[] | undefined} paths  Changed paths, or undefined if git could not be asked.
+ * @returns {Decision}
+ */
+export function decideScripts(paths) {
+  if (paths === undefined) {
+    return {
+      verdict: 'run',
+      reason: 'could not read the diff, so nothing is being assumed',
+      examples: [],
+    };
+  }
+  if (paths.length === 0) {
+    return { verdict: 'skip', reason: 'this push adds no commits', examples: [] };
+  }
+  const touched = paths.filter(
+    (path) => path === SCRIPTS_ROOT || path.startsWith(`${SCRIPTS_ROOT}/`)
+  );
+  if (touched.length > 0) {
+    return {
+      verdict: 'run',
+      reason: `${touched.length} of ${paths.length} changed path(s) are under ${SCRIPTS_ROOT}/`,
+      examples: touched.slice(0, 3),
+    };
+  }
+  return {
+    verdict: 'skip',
+    reason: `no changed path is under ${SCRIPTS_ROOT}/`,
+    examples: [],
+  };
+}
+
+/**
  * Run a git command, or return undefined if it fails for any reason.
  *
  * @param {string[]} args
@@ -417,9 +475,16 @@ function readRepoFile(name) {
 }
 
 /**
- * Decide for the real repo and the real push, and print the verdict.
+ * @typedef {object} Decisions
+ * @property {Decision} decision         The compiled-graph verdict (`decide`).
+ * @property {Decision} scriptsDecision  The scripts/-suite verdict (`decideScripts`).
+ */
+
+/**
+ * Decide for the real repo and the real push, and print both verdicts — one
+ * per line, compiled-graph first, then scripts/.
  *
- * @returns {Decision}
+ * @returns {Decisions}
  */
 function run() {
   const scope = workspaceRoots(readRepoFile('pnpm-workspace.yaml'), readRepoFile('Cargo.toml'));
@@ -437,7 +502,9 @@ function run() {
           .filter((line) => line !== '');
 
   const decision = decide(paths, scope);
+  const scriptsDecision = decideScripts(paths);
   console.log(decision.verdict);
+  console.log(scriptsDecision.verdict);
 
   const inside = [...scope.roots].toSorted((a, b) => a.localeCompare(b)).join(', ');
   console.error(`pre-push scope: ${decision.reason}.`);
@@ -449,7 +516,11 @@ function run() {
       `                inside = root files + ${inside} (from ${scope.sources.join('; ')})`
     );
   }
-  return decision;
+  console.error(`pre-push scripts scope: ${scriptsDecision.reason}.`);
+  if (scriptsDecision.examples.length > 0) {
+    console.error(`                        e.g. ${scriptsDecision.examples.join(', ')}`);
+  }
+  return { decision, scriptsDecision };
 }
 
 /**
@@ -507,6 +578,16 @@ function selfTest() {
       .everything,
     'git ref lines parse': parseRefUpdates('refs/heads/x aaa refs/heads/x bbb').length === 1,
     'a short ref line is ignored': parseRefUpdates('garbage').length === 0,
+    'a scripts/ push runs the scripts checks':
+      decideScripts(['scripts/pre-push-scope.mjs']).verdict === 'run',
+    'a non-scripts push skips the scripts checks': decideScripts(swiftOnly).verdict === 'skip',
+    'a directory merely starting with "scripts" does not run the scripts checks':
+      decideScripts(['scripts-old/x.mjs']).verdict === 'skip',
+    'an unreadable diff runs the scripts checks too': decideScripts(undefined).verdict === 'run',
+    'an empty push skips the scripts checks': decideScripts([]).verdict === 'skip',
+    'the scripts decision is independent of the compiled-graph one':
+      decide(swiftOnly, scope).verdict === 'skip' &&
+      decideScripts([...swiftOnly, 'scripts/huly-partition.mjs']).verdict === 'run',
   };
 
   const ok = Object.values(checks).every(Boolean);
