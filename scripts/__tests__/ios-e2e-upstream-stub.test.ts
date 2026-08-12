@@ -327,6 +327,94 @@ describe('the finance outage switch', () => {
   });
 });
 
+/**
+ * The two ways `/openapi` stops looking like a healthy pillar to
+ * `probeContractRoute` (`pillars/bfm/src/api/mobile/reachability.ts`) — the
+ * seams `root-says-so-when-nothing-is-usable.yaml` and
+ * `root-contract-mismatch-reads-differently.yaml` throw. Both leave
+ * `/registry/pillars` and the data routes alone: the point of each is that
+ * the BFM never gets far enough to ask them anything.
+ */
+describe('the root-unreachable switches', () => {
+  let stub: Awaited<ReturnType<typeof startUpstreamStub>>;
+
+  beforeEach(async () => {
+    stub = await startUpstreamStub({ rows: seededTransactions });
+  });
+
+  afterEach(async () => {
+    await stub.close();
+  });
+
+  const get = (path: string) => fetch(`${stub.url}${path}`);
+
+  it('answers /openapi normally until a switch is thrown', async () => {
+    const contract = await get('/openapi');
+    expect(contract.status).toBe(200);
+    expect(contract.headers.get('content-type')).toContain('json');
+    expect(stub.isFinanceOpenApiUnreachable()).toBe(false);
+    expect(stub.isFinanceContractMismatch()).toBe(false);
+  });
+
+  it('resets the connection instead of answering /openapi while unreachable', async () => {
+    stub.setFinanceOpenApiUnreachable(true);
+
+    // A reset connection is a rejected fetch, not a response — the same
+    // failure `probeContractRoute`'s catch branch reads as `unavailable`.
+    await expect(get('/openapi')).rejects.toThrow();
+  });
+
+  it('answers 200 with a body that is not JSON while it is a contract mismatch', async () => {
+    stub.setFinanceContractMismatch(true);
+
+    const answered = await get('/openapi');
+    expect(answered.status).toBe(200);
+    expect(answered.headers.get('content-type')).not.toContain('json');
+  });
+
+  it('keeps the registry entry registered and healthy under either switch', async () => {
+    // `registryVeto` would otherwise short-circuit reachability from the
+    // registry's own verdict rather than the live probe these switches exist
+    // to drive — see `upstream-stub.mjs`'s own note on why.
+    for (const arm of [
+      () => stub.setFinanceOpenApiUnreachable(true),
+      () => stub.setFinanceContractMismatch(true),
+    ]) {
+      arm();
+      const registry = await get('/registry/pillars');
+      expect(registry.status).toBe(200);
+      const entry = (await registry.json()).pillars[0];
+      expect(entry.registered).toBe(true);
+      expect(entry.status).toBe('healthy');
+      stub.setFinanceOpenApiUnreachable(false);
+      stub.setFinanceContractMismatch(false);
+    }
+  });
+
+  it('leaves the data routes answering under either switch', async () => {
+    for (const arm of [
+      () => stub.setFinanceOpenApiUnreachable(true),
+      () => stub.setFinanceContractMismatch(true),
+    ]) {
+      arm();
+      expect((await get('/transactions')).status).toBe(200);
+      stub.setFinanceOpenApiUnreachable(false);
+      stub.setFinanceContractMismatch(false);
+    }
+  });
+
+  it('answers /openapi normally again once both switches go back', async () => {
+    stub.setFinanceOpenApiUnreachable(true);
+    stub.setFinanceOpenApiUnreachable(false);
+    stub.setFinanceContractMismatch(true);
+    stub.setFinanceContractMismatch(false);
+
+    const contract = await get('/openapi');
+    expect(contract.status).toBe(200);
+    expect(contract.headers.get('content-type')).toContain('json');
+  });
+});
+
 describe('the seeded rows', () => {
   it('carry every field the BFM requires of a finance detail response', () => {
     // `pillars/bfm/src/api/finance/wire.ts` requires all of these and answers

@@ -126,11 +126,15 @@ describe('the control plane', () => {
   let bfm: Server;
   let seen: Seen[];
   let outage: boolean;
+  let openApiUnreachable: boolean;
+  let contractMismatch: boolean;
   let control: Awaited<ReturnType<typeof startControlPlane>>;
 
   beforeEach(async () => {
     seen = [];
     outage = false;
+    openApiUnreachable = false;
+    contractMismatch = false;
 
     bfm = createServer((request: IncomingMessage, response) => {
       const chunks: Buffer[] = [];
@@ -159,6 +163,14 @@ describe('the control plane', () => {
           outage = active;
         },
         isFinanceOutage: () => outage,
+        setFinanceOpenApiUnreachable: (active: boolean) => {
+          openApiUnreachable = active;
+        },
+        isFinanceOpenApiUnreachable: () => openApiUnreachable,
+        setFinanceContractMismatch: (active: boolean) => {
+          contractMismatch = active;
+        },
+        isFinanceContractMismatch: () => contractMismatch,
       },
     });
   });
@@ -199,6 +211,8 @@ describe('the control plane', () => {
       refreshes: 0,
       lastDeviceId: null,
       financeOutage: false,
+      financeOpenApiUnreachable: false,
+      financeContractMismatch: false,
     });
     expect(seen).toEqual([]);
   });
@@ -224,6 +238,8 @@ describe('the control plane', () => {
     // died mid-outage would hand the next one a pillar that refuses
     // everything, and that flow would fail for the previous one's reason.
     await call('/__e2e/finance/down', { method: 'POST' });
+    await call('/__e2e/finance/openapi-unreachable', { method: 'POST' });
+    await call('/__e2e/finance/contract-mismatch', { method: 'POST' });
     await arm();
     await call('/mobile/bootstrap', { headers: { authorization: bearer('device-1') } });
     await call('/devices/refresh', { method: 'POST', body: '{}' });
@@ -234,8 +250,12 @@ describe('the control plane', () => {
       refreshes: 0,
       lastDeviceId: null,
       financeOutage: false,
+      financeOpenApiUnreachable: false,
+      financeContractMismatch: false,
     });
     expect(outage).toBe(false);
+    expect(openApiUnreachable).toBe(false);
+    expect(contractMismatch).toBe(false);
   });
 
   it('refuses a target that could resolve to another host', async () => {
@@ -331,6 +351,30 @@ describe('the control plane', () => {
       expect.objectContaining({ financeOutage: false })
     );
     expect(outage).toBe(false);
+  });
+
+  it('throws the root-unreachable switch both ways', async () => {
+    expect(
+      await (await call('/__e2e/finance/openapi-unreachable', { method: 'POST' })).json()
+    ).toEqual(expect.objectContaining({ financeOpenApiUnreachable: true }));
+    expect(openApiUnreachable).toBe(true);
+
+    expect(
+      await (await call('/__e2e/finance/openapi-reachable', { method: 'POST' })).json()
+    ).toEqual(expect.objectContaining({ financeOpenApiUnreachable: false }));
+    expect(openApiUnreachable).toBe(false);
+  });
+
+  it('throws the contract-mismatch switch both ways', async () => {
+    expect(
+      await (await call('/__e2e/finance/contract-mismatch', { method: 'POST' })).json()
+    ).toEqual(expect.objectContaining({ financeContractMismatch: true }));
+    expect(contractMismatch).toBe(true);
+
+    expect(await (await call('/__e2e/finance/contract-ok', { method: 'POST' })).json()).toEqual(
+      expect.objectContaining({ financeContractMismatch: false })
+    );
+    expect(contractMismatch).toBe(false);
   });
 
   it('reports a BFM it cannot reach as its own failure', async () => {

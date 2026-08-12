@@ -2,14 +2,16 @@
 
 The only tests in this client that exercise a screen the way somebody holding
 the phone does — everything else stops at the view model. One happy path and
-three recoveries, each starting from an unpaired launch:
+five recoveries, each starting from an unpaired launch:
 
-| Flow                                      | What it proves                                                                     |
-| ----------------------------------------- | ---------------------------------------------------------------------------------- |
-| `pairing-to-transaction-detail.yaml`      | A pairing code reaches the list, and a row reaches the full record behind it.      |
-| `expired-session-refreshes-silently.yaml` | A refused access token is renewed and the request retried, with nothing on screen. |
-| `revoked-device-returns-to-pairing.yaml`  | A revoked device lands back on pairing, saying which of the two reasons it was.    |
-| `unreachable-transactions-say-so.yaml`    | Transactions that cannot be fetched say so instead of reading as an empty list.    |
+| Flow                                            | What it proves                                                                                                                    |
+| ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `pairing-to-transaction-detail.yaml`            | A pairing code reaches the list, and a row reaches the full record behind it.                                                     |
+| `expired-session-refreshes-silently.yaml`       | A refused access token is renewed and the request retried, with nothing on screen.                                                |
+| `revoked-device-returns-to-pairing.yaml`        | A revoked device lands back on pairing, saying which of the two reasons it was.                                                   |
+| `unreachable-transactions-say-so.yaml`          | Transactions that cannot be fetched say so instead of reading as an empty list.                                                   |
+| `root-says-so-when-nothing-is-usable.yaml`      | A feature the BFM reports `unavailable` never opens its screen; the root says so and Try again leaves it once the pillar answers. |
+| `root-contract-mismatch-reads-differently.yaml` | A pillar answering something unreadable reads as a different sentence from `unavailable`, not the same one.                       |
 
 ## Running them
 
@@ -34,7 +36,7 @@ addresses and a live pairing code so the screens can be driven by hand.
 `mise -C clients/ios run e2e` is the client's half on its own. It takes
 `POPS_BFM_BASE_URL` and `POPS_E2E_CONTROL_URL` and speaks nothing but HTTP to
 either. Both are required rather than one being optional, because a lane that
-quietly drives one flow instead of four reports the same green as a lane that
+quietly drives one flow instead of six reports the same green as a lane that
 drove all of them.
 
 **The flows are found, not listed.** The task globs `.maestro/*.yaml`, so a new
@@ -131,6 +133,16 @@ call the seams are in `scripts/` beside the flows, one per switch.
   serving the registry and its `/openapi`. `scripts/ios-e2e/upstream-stub.mjs`
   explains why the obvious version — closing the whole stub — puts a different
   screen in front of the assertion.
+- **Nothing usable at all** — the root screen, not the transactions one — is
+  `/openapi` resetting the connection instead of answering, while the registry
+  keeps reporting finance registered and healthy. `scripts/ios-e2e/upstream-stub.mjs`
+  argues for driving this through the live probe rather than the registry's
+  own verdict: the latter is cached process-wide for up to thirty seconds, so
+  proving `Try again` recovers would need a wait this suite refuses to add.
+- **A contract mismatch** is the same `/openapi` answering 200 with a body
+  that is not JSON — a misrouted proxy's signature, and the one case that must
+  read as a different sentence from "nothing usable at all" rather than the
+  same one.
 
 A silent recovery leaves no mark on a screenshot, so the expiry flow finishes
 by reading `GET /__e2e/state` back: one token aged, one refresh spent. Without
@@ -146,7 +158,10 @@ response — is covered in-process by
 `pillars/bfm/src/api/__tests__/mobile-transactions.test.ts`, against the same
 zod schemas. The seam these flows exist for is the phone's.
 
-Nothing here covers the screen the app draws when the BFM reports every feature
-unavailable — a registry outage, rather than a pillar behind one — which is the
-root's own `RootCopy.nothingAvailable` and not a transactions screen at all
-(POPS-1864).
+Nothing here covers the registry's OWN verdict on a pillar — `registered:
+false` or `status: 'unavailable'` in `/registry/pillars`, read by
+`registryVeto` before the BFM asks the pillar anything at all. That arm of
+`FeatureReachability.unavailable` has its own unit coverage in
+`pillars/bfm/src/api/mobile/__tests__/reachability.test.ts`; driving it from
+this suite would need the registry-discovery cache invalidated mid-flow, which
+nothing here can reach without adding the BFM a route that exists for a test.
