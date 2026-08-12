@@ -22,7 +22,9 @@ Deterministic first, AI never. Matching is arithmetic, and a model asked to part
 | 3     | one candidate smaller than the charge — a part-payment   | `partial` |
 | 5     | anything ambiguous or unmatched                          | review    |
 
-**Stage 4, learned rules, is deliberately absent.** `purchase_match_rules` is a descriptor-pattern table mirroring finance's `transaction_corrections` — `descriptionPattern`, `matchType`, `source`, `priority` — not a purchase-to-transaction pointer. What a matched pattern should do to the ladder depends on how the review queue writes rules when a user accepts a link (POPS-241), so implementing it now would embed a second, incompatible rule model in the engine. It has its own slice, POPS-1309.
+**Stage 4, learned rules, is deliberately absent.** `purchase_match_rules` is a descriptor-pattern table mirroring finance's `transaction_corrections` — `descriptionPattern`, `matchType`, `source`, `priority` — not a purchase-to-transaction pointer. Implementing it against a guessed rule model would embed a second, incompatible one in the engine. It has its own slice, POPS-1309.
+
+The queue UI (POPS-241) was expected to settle the semantics by defining how a rule gets written. It did not, and the reason is worth recording rather than leaving as a dangling reference: **nothing writes to `purchase_match_rules`**. `POST /reconcile/confirm` sets `confirmedAt` on the link and stops there; `POST /reconcile/unlink` deletes a link and records nothing. So the table is still empty by construction, POPS-1309's input does not exist, and the rule-writing half is tracked separately as POPS-1898.
 
 ## Three phases, not one loop
 
