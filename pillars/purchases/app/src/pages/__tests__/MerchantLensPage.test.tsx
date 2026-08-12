@@ -278,17 +278,27 @@ describe('MerchantLensPage — period', () => {
     expect(screen.getByText(enAUPurchases['merchants.period.coveringAll'])).toBeVisible();
   });
 
+  // The year comes off the rendered option rather than from the clock. The
+  // component captures its `now` at mount and this assertion runs later, so
+  // recomputing the year here would disagree with the picker for the one
+  // render that straddles a UTC New Year.
   it('puts a chosen year on the wire as an inclusive window', async () => {
     rollupReturns([namedMerchant('Amazon')]);
     const user = renderPage();
     await settled();
 
-    const year = String(new Date().getUTCFullYear());
-    await user.selectOptions(screen.getByRole('combobox'), year);
+    const picker = screen.getByRole('combobox');
+    const year = nth(within(picker).getAllByRole('option'), 1).textContent ?? '';
+    expect(year).toMatch(/^\d{4}$/);
+
+    await user.selectOptions(picker, year);
 
     await waitFor(() => {
       expect(merchantSpendMock).toHaveBeenCalledWith({
-        query: { from: `${year}-01-01T00:00:00Z`, to: `${year}-12-31T23:59:59Z` },
+        query: {
+          from: `${year}-01-01T00:00:00.000000000Z`,
+          to: `${year}-12-31T23:59:59Z`,
+        },
       });
     });
   });
