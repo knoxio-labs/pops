@@ -187,6 +187,7 @@ describe('resolveBootRegistry — never-brick on a zero-UI live snapshot', () =>
     // And the app rail is the full in-repo floor, in nav.order — never blank.
     expect(result.registeredApps.map((a) => a.id)).toEqual([
       'finance',
+      'purchases',
       'media',
       'inventory',
       'food',
@@ -236,6 +237,7 @@ describe('resolveBootRegistry — never-brick fallback (snapshot empty)', () => 
     expect(result.registeredApps.length).toBeGreaterThan(0);
     expect(result.registeredApps.map((a) => a.id)).toEqual([
       'finance',
+      'purchases',
       'media',
       'inventory',
       'food',

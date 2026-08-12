@@ -2,7 +2,7 @@
  * i18next initialization for the POPS shell.
  *
  * Supported locales: en-AU (default), pt-BR.
- * Namespaces: common, shell, navigation, inventory, cerebrum, finance, food, lists, ai, media, bfm, ui.
+ * Namespaces: common, shell, navigation, inventory, cerebrum, finance, food, lists, ai, media, bfm, purchases, ui.
  *
  * Language preference is persisted to localStorage under the key `pops-locale`.
  */
@@ -19,6 +19,7 @@ import enAUInventory from '@pops/locales/en-AU/inventory.json';
 import enAULists from '@pops/locales/en-AU/lists.json';
 import enAUMedia from '@pops/locales/en-AU/media.json';
 import enAUNavigation from '@pops/locales/en-AU/navigation.json';
+import enAUPurchases from '@pops/locales/en-AU/purchases.json';
 import enAUShell from '@pops/locales/en-AU/shell.json';
 import enAUUi from '@pops/locales/en-AU/ui.json';
 import ptBRAi from '@pops/locales/pt-BR/ai.json';
@@ -31,6 +32,7 @@ import ptBRInventory from '@pops/locales/pt-BR/inventory.json';
 import ptBRLists from '@pops/locales/pt-BR/lists.json';
 import ptBRMedia from '@pops/locales/pt-BR/media.json';
 import ptBRNavigation from '@pops/locales/pt-BR/navigation.json';
+import ptBRPurchases from '@pops/locales/pt-BR/purchases.json';
 import ptBRShell from '@pops/locales/pt-BR/shell.json';
 import ptBRUi from '@pops/locales/pt-BR/ui.json';
 
@@ -81,6 +83,7 @@ void i18n.use(initReactI18next).init({
     'ai',
     'media',
     'bfm',
+    'purchases',
     'ui',
   ],
   defaultNS: 'common',
@@ -98,6 +101,7 @@ void i18n.use(initReactI18next).init({
       ai: enAUAi,
       media: enAUMedia,
       bfm: enAUBfm,
+      purchases: enAUPurchases,
       ui: enAUUi,
     },
     'pt-BR': {
@@ -112,6 +116,7 @@ void i18n.use(initReactI18next).init({
       ai: ptBRAi,
       media: ptBRMedia,
       bfm: ptBRBfm,
+      purchases: ptBRPurchases,
       ui: ptBRUi,
     },
   },

@@ -2149,6 +2149,67 @@ importers:
         specifier: ^4.1.10
         version: 4.1.10(@types/node@25.9.4)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@25.9.4)(typescript@6.0.3))(vite@8.2.0(@types/node@25.9.4)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.10)(yaml@2.9.0))
 
+  pillars/purchases/app:
+    dependencies:
+      '@hey-api/client-fetch':
+        specifier: ^0.13.1
+        version: 0.13.1(@hey-api/openapi-ts@0.99.0(magicast@0.5.4)(typescript@6.0.3))
+      '@pops/navigation':
+        specifier: workspace:*
+        version: link:../../../libs/navigation
+      '@pops/types':
+        specifier: workspace:*
+        version: link:../../../libs/types
+      '@pops/ui':
+        specifier: workspace:*
+        version: link:../../../libs/ui
+      i18next:
+        specifier: ^26.3.6
+        version: 26.3.6(typescript@6.0.3)
+      react:
+        specifier: ^19.2.8
+        version: 19.2.8
+      react-dom:
+        specifier: ^19.2.8
+        version: 19.2.8(react@19.2.8)
+      react-i18next:
+        specifier: ^17.0.11
+        version: 17.0.11(i18next@26.3.6(typescript@6.0.3))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@6.0.3)
+      react-router:
+        specifier: ^8.3.0
+        version: 8.3.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+    devDependencies:
+      '@hey-api/openapi-ts':
+        specifier: ^0.99.0
+        version: 0.99.0(magicast@0.5.4)(typescript@6.0.3)
+      '@pops/locales':
+        specifier: workspace:*
+        version: link:../../../libs/locales
+      '@testing-library/jest-dom':
+        specifier: ^7.0.0
+        version: 7.0.0(@testing-library/dom@10.4.1)
+      '@testing-library/react':
+        specifier: ^16.3.2
+        version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      '@types/react':
+        specifier: ^19.2.18
+        version: 19.2.18
+      '@types/react-dom':
+        specifier: ^19.2.4
+        version: 19.2.4(@types/react@19.2.18)
+      '@vitest/coverage-v8':
+        specifier: ^4.1.10
+        version: 4.1.10(vitest@4.1.10)
+      jsdom:
+        specifier: ^30.0.1
+        version: 30.0.1(@noble/hashes@1.8.0)
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: ^4.1.10
+        version: 4.1.10(@types/node@25.9.5)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@25.9.5)(typescript@6.0.3))(vite@8.2.0(@types/node@25.9.5)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.10)(yaml@2.9.0))
+
   pillars/registry:
     dependencies:
       '@pops/pillar-sdk':
@@ -2251,6 +2312,9 @@ importers:
       '@pops/app-media':
         specifier: workspace:*
         version: link:../media/app
+      '@pops/app-purchases':
+        specifier: workspace:*
+        version: link:../purchases/app
       '@pops/locales':
         specifier: workspace:*
         version: link:../../libs/locales
