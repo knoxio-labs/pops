@@ -10,11 +10,12 @@ describe('nav registry', () => {
     expect(registeredApps.length).toBeGreaterThan(0);
   });
 
-  // Parity gate — the eight in-repo pillars must render in this exact
+  // Parity gate — the nine in-repo pillars must render in this exact
   // order; drift here is an observable app-rail regression.
-  it('renders the eight in-repo pillars in their pinned order', () => {
+  it('renders the nine in-repo pillars in their pinned order', () => {
     expect(registeredApps.map((app) => app.id)).toEqual([
       'finance',
+      'purchases',
       'media',
       'inventory',
       'food',

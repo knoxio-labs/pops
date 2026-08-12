@@ -2,10 +2,10 @@ name: App Quality
 
 # Runs each `pillars/*/app` frontend unit's OWN typecheck + test suite.
 #
-# These 8 members (`@pops/app-{ai,bfm,cerebrum,finance,food,inventory,lists,
-# media}`, real pnpm workspace members per `pnpm-workspace.yaml`'s
-# `pillars/*/*`) live at maxdepth 2 and collide on basename `app`, so they are
-# deliberately OUT of `unit-quality.yml`'s `find -maxdepth 1` disk-discovery.
+# These members (`@pops/app-<id>` — real pnpm workspace members per
+# `pnpm-workspace.yaml`'s `pillars/*/*`, one per UI-bearing pillar) live at
+# maxdepth 2 and collide on basename `app`, so they are deliberately OUT of
+# `unit-quality.yml`'s `find -maxdepth 1` disk-discovery.
 # Before this workflow they were only type+built TRANSITIVELY by the shell in
 # `fe-quality.yml`, which never runs their ~180 standalone vitest files — so
 # their unit tests never ran in CI. This closes that gap: a dedicated, disk-
@@ -17,7 +17,7 @@ name: App Quality
 # IS built (`^...`) so the app's compiled deps (`@pops/types`, `@pops/ui`, the
 # owning pillar's generated client, …) resolve before typecheck/test import
 # them. This generalises the former single-app `ai-quality.yml` (now retired
-# — app-ai is just another row in this matrix) to all 8 app units.
+# — app-ai is just another row in this matrix) to every app unit.
 #
 # Codegen drift: every app's generated Hey API client(s) (`generate:*`
 # scripts — an app's own client, plus a cross-pillar consumer client where it

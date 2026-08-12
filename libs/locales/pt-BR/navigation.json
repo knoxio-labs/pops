@@ -51,5 +51,7 @@
   "ai.usage": "Uso de IA",
   "ai.cache": "Cache",
   "bfm": "Dispositivos",
-  "bfm.devices": "Dispositivos"
+  "bfm.devices": "Dispositivos",
+  "purchases": "Compras",
+  "purchases.reconcile": "Conciliação"
 }

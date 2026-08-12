@@ -1,0 +1,5 @@
+{
+  "reconcile.title": "Reconcile",
+  "reconcile.intro": "Match purchase documents against the finance transactions that paid for them.",
+  "reconcile.placeholder": "The reconciliation queue is not built yet. The pillar already serves it — this page is the shell slot it renders into."
+}

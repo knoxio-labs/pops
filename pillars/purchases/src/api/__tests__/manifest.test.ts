@@ -14,12 +14,35 @@ describe('buildPurchasesManifest', () => {
     });
   });
 
-  it('declares no nav and no pages while the pillar ships no frontend', () => {
-    // A rail entry pointing at a bundle slot that does not exist is a dead
-    // link. These arrive with the UI, not before it.
+  it('declares the rail entry the app mounts', () => {
     const manifest = buildPurchasesManifest('0.1.0');
-    expect(manifest.nav).toBeUndefined();
-    expect(manifest.pages).toBeUndefined();
+    expect(manifest.nav).toMatchObject({
+      id: PURCHASES_PILLAR_ID,
+      basePath: '/purchases',
+      order: 15,
+    });
+  });
+
+  // The wire nav ordering is what the shell rail sorts on, and 15 puts
+  // purchases next to finance (10) rather than at the end. It also has to
+  // agree with the bundle-map `navOrder` the shell reads, which is a
+  // separate literal in a separate package.
+  it('orders the rail entry between finance and media', () => {
+    const order = buildPurchasesManifest('0.1.0').nav?.order;
+    expect(order).toBeGreaterThan(10);
+    expect(order).toBeLessThan(20);
+  });
+
+  // A nav item with no page behind it is the dead link this manifest kept
+  // both dimensions empty to avoid. They arrived together and stay matched.
+  it('declares one page descriptor per nav item', () => {
+    const manifest = buildPurchasesManifest('0.1.0');
+    expect(manifest.pages).toHaveLength(manifest.nav?.items.length ?? 0);
+    expect(manifest.pages?.[0]).toEqual({
+      path: '',
+      index: true,
+      bundleSlot: 'purchases-reconcile',
+    });
   });
 
   it('declares no search adapters or AI tools it cannot serve', () => {

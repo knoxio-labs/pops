@@ -24,10 +24,14 @@ import { useEffect } from 'react';
  *   - `navOrder`              — mirrors `nav.order` from the pillar's
  *                               wire-format manifest payload
  *                               (`pillars/<id>/src/api/manifest.ts`).
- *                               Values follow the sparse scheme (finance=10,
- *                               media=20, inventory=30, food=40, lists=50,
- *                               cerebrum=60, ai=70, bfm=80) so the app rail
- *                               renders the eight entries in that order.
+ *                               Values follow a sparse scheme (finance=10,
+ *                               purchases=15, media=20, inventory=30,
+ *                               food=40, lists=50, cerebrum=60, ai=70,
+ *                               bfm=80) so the app rail renders the nine
+ *                               entries in that order. The gaps are the
+ *                               point: purchases took 15 to sit beside
+ *                               finance, which it reconciles against,
+ *                               without renumbering everything after it.
  *   - `captureOverlayBundles` — kebab-case bundle slot → component +
  *                               (optional) hook reference. The shell's
  *                               `CaptureModal` resolves
@@ -53,6 +57,7 @@ import { manifest as foodManifest } from '@pops/app-food';
 import { manifest as inventoryManifest } from '@pops/app-inventory';
 import { manifest as listsManifest } from '@pops/app-lists';
 import { manifest as mediaManifest } from '@pops/app-media';
+import { manifest as purchasesManifest } from '@pops/app-purchases';
 import { manifest as egoManifest } from '@pops/overlay-ego';
 
 import type { ComponentType } from 'react';
@@ -115,6 +120,7 @@ const CEREBRUM_INGEST_FORM_BUNDLE: CaptureOverlayBundle = {
 
 export const WORKSPACE_BUNDLE_MAP: Readonly<Record<string, BundleEntry>> = {
   finance: { manifest: financeManifest, navOrder: 10 },
+  purchases: { manifest: purchasesManifest, navOrder: 15 },
   media: { manifest: mediaManifest, navOrder: 20 },
   inventory: { manifest: inventoryManifest, navOrder: 30 },
   food: { manifest: foodManifest, navOrder: 40 },

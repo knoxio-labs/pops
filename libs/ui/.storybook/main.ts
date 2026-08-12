@@ -65,6 +65,10 @@ const config: StorybookConfig = {
             find: '@pops/app-media',
             replacement: path.resolve(__dirname, '../../../pillars/media/app/src'),
           },
+          {
+            find: '@pops/app-purchases',
+            replacement: path.resolve(__dirname, '../../../pillars/purchases/app/src'),
+          },
         ],
       },
     });

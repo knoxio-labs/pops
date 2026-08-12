@@ -110,9 +110,20 @@ describe('synthetic pillar mounts via registry', () => {
 
     expect(ids).toContain(SYNTHETIC_ID);
 
-    const realOrder = ['finance', 'media', 'inventory', 'food', 'lists', 'cerebrum', 'ai', 'bfm'];
+    const realOrder = [
+      'finance',
+      'purchases',
+      'media',
+      'inventory',
+      'food',
+      'lists',
+      'cerebrum',
+      'ai',
+      'bfm',
+    ];
     expect(ids).toEqual([
       'finance',
+      'purchases',
       'media',
       SYNTHETIC_ID,
       'inventory',

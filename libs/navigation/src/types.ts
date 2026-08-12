@@ -54,6 +54,7 @@ export type IconName =
   | 'Package'
   | 'PiggyBank'
   | 'Plug'
+  | 'Receipt'
   | 'Search'
   | 'Settings'
   | 'ShieldCheck'

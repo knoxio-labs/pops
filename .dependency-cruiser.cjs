@@ -52,9 +52,20 @@ module.exports = {
       name: 'pillar-no-cross-internal',
       severity: 'error',
       comment:
-        'ISO-R2 (supersedes no-cross-app-import): a pillar may consume another pillar ONLY through its published contract package (@pops/<other>, resolved via that package exports map). Reaching into pillars/<other>/src|app|db|migrations by filesystem path is a behind-the-contract reach that breaks black-box isolation + extraction. Same-pillar imports are fine.',
-      from: { path: '^pillars/([^/]+)/' },
+        'ISO-R2 (supersedes no-cross-app-import): a pillar may consume another pillar ONLY through its published contract package (@pops/<other>, resolved via that package exports map). Reaching into pillars/<other>/src|app|db|migrations by filesystem path is a behind-the-contract reach that breaks black-box isolation + extraction. Same-pillar imports are fine. The shell is carved out because it composes every pillar app by design — see `shell-no-cross-internal`, which holds it to the same standard with that one edge allowed.',
+      from: { path: '^pillars/([^/]+)/', pathNot: '^pillars/shell/' },
       to: { path: '^pillars/[^/]+/', pathNot: '^pillars/$1/' },
+    },
+    {
+      name: 'shell-no-cross-internal',
+      severity: 'error',
+      comment:
+        "ISO-R2 (shell): the shell composes the single in-repo SPA (ADR-002) by importing every pillar's @pops/app-<id> package, so that one edge is allowed — but only as far as the exports map goes. Those packages point `main` at src/index.ts rather than a built dist/ (which every other pillar package does, and doNotFollow skips), which is the only reason this edge resolves into the cruised tree at all. Everything past the entrypoint is the reach ISO-R2 forbids: not another pillar's src|db|migrations, and not an app's pages or generated client either.",
+      from: { path: '^pillars/shell/' },
+      to: {
+        path: '^pillars/[^/]+/',
+        pathNot: ['^pillars/shell/', '^pillars/[^/]+/app/src/index\\.ts$'],
+      },
     },
     {
       name: 'no-deep-internal-import',
