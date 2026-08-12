@@ -652,16 +652,17 @@ export const DOC_PATH_TOKEN_RE = /(?:^|[\s`'"([<])((?:[\w.-]+\/)*docs\/[\w./-]*[
  * mentioning code-only PRs living under `docs/` is using the slash as an
  * "or", not naming a `docs/`-rooted directory.
  *
- * Pass 2 resolves any *backticked* in-repo path, reusing
- * {@link resolveBacktickedPathToken} unchanged from {@link extractPathClaims}
- * (its Markdown counterpart) rather than growing a second, `.md`-shaped list.
- * This is the fix for the asymmetry a markdown file never had: a comment
- * naming the real fixture at
- * `clients/ios/.maestro/pairing-to-transaction-detail.yaml`, or any other
- * backticked path shaped like {@link SOURCE_FILE_RE} or rooted under
- * {@link PATH_ROOTS}, used to be dropped before resolution just because it
- * did not end in `.md` — even though the identical claim two directories
- * away, in a README, was already checked.
+ * Pass 2 resolves any *backticked*, {@link PATH_ROOTS}-rooted in-repo path,
+ * reusing {@link resolveBacktickedPathToken} — the same function
+ * {@link extractPathClaims} (its Markdown counterpart) calls, just with
+ * `rootedOnly: true` — rather than growing a second, `.md`-shaped list. This
+ * is the fix for the asymmetry a markdown file never had: a comment naming
+ * the real fixture at `clients/ios/.maestro/pairing-to-transaction-detail.yaml`
+ * used to be dropped before resolution just because it did not end in `.md`
+ * — even though the identical claim two directories away, in a README, was
+ * already checked. See {@link resolveBacktickedPathToken}'s own docstring for
+ * why comments don't get Markdown's other allowance (a bare, unrooted token
+ * merely shaped like {@link SOURCE_FILE_RE}).
  *
  * The two passes disagree on one thing deliberately: pass 1 also accepts a
  * bare, non-backticked `docs/` mention; pass 2 requires the backtick. That

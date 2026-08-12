@@ -3,9 +3,8 @@
  *
  * The fast path: fetch the page, look for a schema.org Recipe JSON-LD
  * block, map it to the DSL deterministically. When JSON-LD is missing
- * or malformed, this handler currently returns a `JsonLdMissing` failure
- * so the dispatch shell makes the absence visible — the LLM fallback in
- * `web-llm.ts` will replace that branch once wired.
+ * or malformed, this handler returns a `JsonLdMissing` failure so the
+ * dispatch shell makes the absence visible.
  *
  * No LLM call lives here; no `ai_inference_log` rows are written.
  */
