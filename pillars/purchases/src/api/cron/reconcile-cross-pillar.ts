@@ -66,7 +66,13 @@ export interface ReconcileWorkerOptions {
 }
 
 export interface ReconcileWorkerHandle {
-  /** Cancel the next scheduled tick. Does NOT wait for a tick already running. */
+  /**
+   * Cancel the next scheduled tick. Does NOT wait for a tick already
+   * running — call this BEFORE `drain()`, never `drain()` alone. `drain()`
+   * only settles the pass in flight; without `stop()` first, a caller free
+   * to arm the next tick can still schedule one that runs after the
+   * database this handle was built on is gone.
+   */
   stop: () => void;
   /**
    * Run one pass and return its stats. Exposed for tests and for a boot
@@ -79,17 +85,20 @@ export interface ReconcileWorkerHandle {
    */
   runOnce: () => Promise<ReconcileTickStats>;
   /**
-   * Settle any in-flight pass.
+   * Settle any in-flight pass. Always call `stop()` first — `drain()` does
+   * not cancel timers itself, so `drain()` alone lets `tick()` re-arm and
+   * start a fresh pass right after this one settles.
    *
    * The shutdown primitive, not a test helper — mirrors `SweepRunner.drain`.
    * `stop()` only cancels the next scheduled timer; the pass this worker
    * fires immediately on construction (`void tick()` below) is already
    * running by the time a caller gets a handle back, and a pass reads and
    * writes through `options.db` across several `await`s. Closing that
-   * database before `drain()` resolves lets a suspended pass resume against
-   * a handle that is gone, which better-sqlite3 does not fail softly for
-   * every call site — see `reconcile-cross-pillar.test.ts`'s "draining
-   * before the database closes" cases.
+   * database before `stop()` and `drain()` both resolve lets a suspended
+   * pass resume against a handle that is gone, which better-sqlite3 does
+   * not fail softly for every call site — see
+   * `reconcile-cross-pillar.test.ts`'s "draining before the database
+   * closes" cases.
    */
   drain: () => Promise<void>;
 }
