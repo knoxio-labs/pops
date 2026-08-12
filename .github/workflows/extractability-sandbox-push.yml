@@ -5,8 +5,10 @@ name: Extractability Sandbox (Push)
 # that touches a signal correlated with "a unit's exports or dependency shape
 # changed" — its `package.json` (the `exports` field lives there; GitHub
 # Actions `paths:` filters on whole files, not JSON fields, so the file is
-# the filter), its `tsconfig*.json`, or a `Cargo.toml`/`Cargo.lock` (root or
-# per-crate) — and sandboxes ONLY the units `_discover-units.yml`'s `changed`
+# the filter), its `tsconfig*.json`, its own `Cargo.toml` (per-crate — every
+# Rust unit has one), or the single workspace-root `Cargo.lock` (Cargo
+# workspaces have exactly one lockfile, never a per-crate one) — and
+# sandboxes ONLY the units `_discover-units.yml`'s `changed`
 # output names for that push, via the same reusable matrix the nightly sweep
 # uses (`_extractability-sandbox-matrix.yml`). Instead of waiting up to 24h
 # for the next nightly run to catch an extraction break, this reports within
