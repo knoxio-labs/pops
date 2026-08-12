@@ -458,19 +458,22 @@ export const HASH_COMMENT_EXTS = new Set(['yml', 'yaml', 'sh', 'bash', 'toml']);
 
 /**
  * Dot-directories the source walk descends into. Everything under a dot is
- * skipped by default, but the workflow files are exactly where the CI-guard
- * rationale lives, so `.github` is not optional.
+ * skipped by default; each entry below was checked for both a
+ * scanned-extension file to actually read and anything `.env`-adjacent
+ * before being admitted — this set is a vetted allowlist, not "any dot-dir
+ * that happens to compile".
  *
- * Known gap, deliberately not closed here: a comment written *inside* some
- * other dot-directory that carries a scanned extension — `.maestro/*.yaml`,
- * `.storybook/*.ts` — goes unread by this walk regardless of what it claims.
- * Deciding which dot-dirs besides `.github` are trustworthy enough to widen
- * this set (and proving none of them hide something this guard should not
- * read, e.g. secrets tooling) is a separate question from the `.md`-only
- * filter this file's check 4 fixes, so it is tracked instead of folded in
- * here.
+ * - `.github` — workflow YAML, exactly where the CI-guard rationale lives.
+ * - `.maestro` (`clients/ios/.maestro`) — Maestro E2E flow YAML and its
+ *   driver scripts, which name doc paths the same way a README does.
+ * - `.storybook` (`libs/ui/.storybook`) — Storybook TS config.
+ *
+ * `.husky` also exists in this repo but stays out: its hooks are
+ * extension-less shell files (`pre-commit`, `pre-push`), so neither
+ * {@link SLASH_COMMENT_EXTS} nor {@link HASH_COMMENT_EXTS} matches anything
+ * inside it today — admitting it would widen the walk for zero coverage.
  */
-const SCANNED_DOT_DIRS = new Set(['.github']);
+const SCANNED_DOT_DIRS = new Set(['.github', '.maestro', '.storybook']);
 
 /**
  * Every source, workflow and shell file whose comments are scanned. Markdown
@@ -1011,14 +1014,16 @@ function selfTest() {
   // The same tree also carries the degenerate case ADR-045 requires for the
   // fix this guard exists to prove: a dangling *non*-`.md` path, backticked
   // and rooted under `PATH_ROOTS`, planted in every supported comment syntax
-  // (POPS-1825) — the class of pointer `extractSourceDocClaims` used to drop
-  // before resolution no matter how it was written.
+  // — the class of pointer `extractSourceDocClaims` used to drop before
+  // resolution no matter how it was written.
   const sourceFixtureRoot = mkdtempSync(join(tmpdir(), 'docs-model-source-'));
   let ok15 = false;
   let ok16 = false;
   let ok19 = false;
   let ok20 = false;
   let ok21 = false;
+  let ok22 = false;
+  let ok23 = false;
   try {
     execFileSync('git', ['init', '-q'], { cwd: sourceFixtureRoot });
     mkdirSync(join(sourceFixtureRoot, 'docs', 'architecture'), { recursive: true });
@@ -1055,7 +1060,7 @@ function selfTest() {
       join(sourceFixtureRoot, 'Cargo.toml'),
       `# See docs/plans/ghost-toml.md and docs/architecture/adr-001-real.md. ${nonMdClaims}\n`
     );
-    // The real POPS-1825 fixture: two sibling Swift doc comments naming a
+    // The real fixture: two sibling Swift doc comments naming a
     // Maestro-flow-shaped path, one real (itself) and one dangling.
     writeFileSync(
       join(sourceFixtureRoot, 'clients', 'ios', 'Packages', 'Foo', 'Sources', 'Foo', 'Bar.swift'),
@@ -1071,6 +1076,26 @@ function selfTest() {
       "extractPathClaims('`x`', 'docs/thing.md');\n" +
         "extractPathClaims('`y`', 'docs/x.md');\n" +
         "const t = '`docs/architecture/adr-NNN-slug.md`';\n"
+    );
+    // SCANNED_DOT_DIRS coverage: a dangling pointer planted inside each
+    // newly admitted dot-directory must be caught, and one planted inside a
+    // real but deliberately-unadmitted dot-directory (`.husky`) must not —
+    // proving the walk still discriminates rather than having started
+    // reading every dot-dir once one of them was let in.
+    mkdirSync(join(sourceFixtureRoot, 'clients', 'ios', '.maestro'), { recursive: true });
+    writeFileSync(
+      join(sourceFixtureRoot, 'clients', 'ios', '.maestro', 'flow.yaml'),
+      '# See docs/plans/ghost-maestro.md.\nname: flow\n'
+    );
+    mkdirSync(join(sourceFixtureRoot, 'libs', 'ui', '.storybook'), { recursive: true });
+    writeFileSync(
+      join(sourceFixtureRoot, 'libs', 'ui', '.storybook', 'main.ts'),
+      '// See docs/plans/ghost-storybook.md.\nexport default {};\n'
+    );
+    mkdirSync(join(sourceFixtureRoot, '.husky'), { recursive: true });
+    writeFileSync(
+      join(sourceFixtureRoot, '.husky', 'pre-commit.sh'),
+      '# See docs/plans/ghost-husky.md.\nnpx lint-staged\n'
     );
     const brokenSource = findBrokenSourceDocPaths(sourceFixtureRoot);
     const claimed = brokenSource.map((b) => b.claim);
@@ -1098,6 +1123,10 @@ function selfTest() {
       !claimed.includes('libs/x/fixtures/real.yaml') &&
       !claimed.includes('clients/ios/Packages/Foo/Sources/Foo/Bar.swift');
     ok21 = !claimed.includes('sibling.ts');
+    ok22 =
+      claimed.includes('docs/plans/ghost-maestro.md') &&
+      claimed.includes('docs/plans/ghost-storybook.md');
+    ok23 = !claimed.includes('docs/plans/ghost-husky.md');
   } finally {
     rmSync(sourceFixtureRoot, { recursive: true, force: true });
   }
@@ -1164,6 +1193,12 @@ function selfTest() {
     console.error(
       'self-test FAILED: an unrooted backticked comment token was resolved (should be ignored)'
     );
+  if (!ok22)
+    console.error(
+      'self-test FAILED: a dangling pointer inside an admitted dot-directory was not caught'
+    );
+  if (!ok23)
+    console.error('self-test FAILED: a dot-directory outside SCANNED_DOT_DIRS was scanned anyway');
   return (
     ok1 &&
     ok2 &&
@@ -1185,7 +1220,9 @@ function selfTest() {
     ok18 &&
     ok19 &&
     ok20 &&
-    ok21
+    ok21 &&
+    ok22 &&
+    ok23
   );
 }
 
