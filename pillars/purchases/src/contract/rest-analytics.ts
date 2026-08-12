@@ -37,12 +37,35 @@ export const MerchantResolutionSchema = z.enum(MERCHANT_RESOLUTIONS);
  * sharing a label share this group and a rename splits one. `unattributed` —
  * the order names no merchant, and is here rather than dropped so the groups
  * still add up to the spend.
+ *
+ * A union rather than three optional-looking fields beside a tag, because
+ * `resolution` does not describe the row, it constrains it: an `entity` group
+ * without an `entityId` and a `name` group without a `name` are both the same
+ * bug — a group presented at a confidence its own key cannot support. Flat,
+ * that bug validates and reaches a consumer, which then has to re-derive the
+ * invariant with a non-null assertion it has no grounds for. The variants are
+ * exhaustive over {@link MERCHANT_RESOLUTIONS}, asserted in the contract
+ * tests rather than trusted.
  */
-export const MerchantIdentitySchema = z.object({
-  entityId: z.string().nullable(),
-  name: z.string().nullable(),
-  resolution: MerchantResolutionSchema,
-});
+export const MerchantIdentitySchema = z.discriminatedUnion('resolution', [
+  z.object({
+    resolution: z.literal('entity'),
+    entityId: z.string(),
+    /** An order carrying the id is not obliged to also state the label. */
+    name: z.string().nullable(),
+  }),
+  z.object({
+    resolution: z.literal('name'),
+    entityId: z.null(),
+    /** The grouping key itself, so never absent. */
+    name: z.string(),
+  }),
+  z.object({
+    resolution: z.literal('unattributed'),
+    entityId: z.null(),
+    name: z.null(),
+  }),
+]);
 
 /**
  * One merchant's spend in one currency.

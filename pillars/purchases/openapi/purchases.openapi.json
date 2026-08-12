@@ -108,23 +108,66 @@
                             "type": "string"
                           },
                           "merchant": {
-                            "additionalProperties": false,
-                            "properties": {
-                              "entityId": {
-                                "nullable": true,
-                                "type": "string"
+                            "oneOf": [
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "entityId": {
+                                    "type": "string"
+                                  },
+                                  "name": {
+                                    "nullable": true,
+                                    "type": "string"
+                                  },
+                                  "resolution": {
+                                    "enum": ["entity"],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["resolution", "entityId", "name"],
+                                "type": "object"
                               },
-                              "name": {
-                                "nullable": true,
-                                "type": "string"
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "entityId": {
+                                    "enum": [null],
+                                    "nullable": true,
+                                    "type": "string"
+                                  },
+                                  "name": {
+                                    "type": "string"
+                                  },
+                                  "resolution": {
+                                    "enum": ["name"],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["resolution", "entityId", "name"],
+                                "type": "object"
                               },
-                              "resolution": {
-                                "enum": ["entity", "name", "unattributed"],
-                                "type": "string"
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "entityId": {
+                                    "enum": [null],
+                                    "nullable": true,
+                                    "type": "string"
+                                  },
+                                  "name": {
+                                    "enum": [null],
+                                    "nullable": true,
+                                    "type": "string"
+                                  },
+                                  "resolution": {
+                                    "enum": ["unattributed"],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["resolution", "entityId", "name"],
+                                "type": "object"
                               }
-                            },
-                            "required": ["entityId", "name", "resolution"],
-                            "type": "object"
+                            ]
                           },
                           "orderCount": {
                             "maximum": 9007199254740991,

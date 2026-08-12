@@ -104,6 +104,13 @@ function linkFirstCharge(purchaseId: string, uri: string): void {
 }
 
 /**
+ * Deliberately smaller than the corpus, so the loop below runs more than
+ * once. A page size that happened to swallow the whole corpus would leave
+ * the paging untested and the oracle back where it started.
+ */
+const ORACLE_PAGE = 100;
+
+/**
  * Sum every order the same filter selects, read one at a time through
  * `getPurchase`.
  *
@@ -112,30 +119,34 @@ function linkFirstCharge(purchaseId: string, uri: string): void {
  * would otherwise have to do. If the aggregate and this disagree, one of
  * them is lying to a user.
  *
- * It reads one page at the index's maximum rather than paging, and asserts
- * the corpus fits. A silently truncated oracle would be worse than no
- * oracle: it would compare part of the corpus against all of it and blame
- * the roll-up.
+ * It pages until the index is exhausted rather than reading one large page.
+ * A truncated oracle is worse than no oracle: it compares part of the corpus
+ * against all of it, reports the difference as a roll-up bug, and the fold
+ * it accuses is the one thing that was correct. `listPurchases` orders by
+ * `orderedAt` then `id`, so the offsets walk a stable sequence.
  */
 function foldEveryOrder(): { accounting: PurchaseAccounting; orderCount: number } {
-  const cap = 500;
-  const rows = listPurchases(opened.db, { limit: cap });
-  if (rows.length === cap) throw new Error(`corpus reached the ${String(cap)}-row oracle cap`);
   let accounting = ZERO;
-  for (const row of rows) {
-    const detail = getPurchase(opened.db, row.id);
-    if (detail === undefined) throw new Error(`purchase ${row.id} vanished`);
-    const a = detail.accounting;
-    accounting = {
-      totalCents: accounting.totalCents + a.totalCents,
-      matchedCents: accounting.matchedCents + a.matchedCents,
-      awaitingImportCents: accounting.awaitingImportCents + a.awaitingImportCents,
-      residualCents: accounting.residualCents + a.residualCents,
-      refundedCents: accounting.refundedCents + a.refundedCents,
-      netSpendCents: accounting.netSpendCents + a.netSpendCents,
-    };
+  let orderCount = 0;
+
+  for (let offset = 0; ; offset += ORACLE_PAGE) {
+    const rows = listPurchases(opened.db, { limit: ORACLE_PAGE, offset });
+    for (const row of rows) {
+      const detail = getPurchase(opened.db, row.id);
+      if (detail === undefined) throw new Error(`purchase ${row.id} vanished`);
+      const a = detail.accounting;
+      accounting = {
+        totalCents: accounting.totalCents + a.totalCents,
+        matchedCents: accounting.matchedCents + a.matchedCents,
+        awaitingImportCents: accounting.awaitingImportCents + a.awaitingImportCents,
+        residualCents: accounting.residualCents + a.residualCents,
+        refundedCents: accounting.refundedCents + a.refundedCents,
+        netSpendCents: accounting.netSpendCents + a.netSpendCents,
+      };
+    }
+    orderCount += rows.length;
+    if (rows.length < ORACLE_PAGE) return { accounting, orderCount };
   }
-  return { accounting, orderCount: rows.length };
 }
 
 function currencyTotal(rollup: MerchantSpendRollup, currency: string): CurrencySpend {
@@ -143,6 +154,14 @@ function currencyTotal(rollup: MerchantSpendRollup, currency: string): CurrencyS
   if (entry === undefined) throw new Error(`no ${currency} total`);
   return entry;
 }
+
+/**
+ * Larger than any one page the oracle reads, and the size of the reference
+ * Amazon bundle. An oracle that stopped at its first page would compare part
+ * of this corpus against all of it, so the number is load-bearing: drop it
+ * below `ORACLE_PAGE` and the paging below stops being exercised at all.
+ */
+const CORPUS_ORDERS = 748;
 
 describe('the roll-up agrees with the per-order split it summarises', () => {
   /**
@@ -152,7 +171,7 @@ describe('the roll-up agrees with the per-order split it summarises', () => {
    * a gift-card residual, and two currencies.
    */
   function seedCorpus(): void {
-    for (let i = 0; i < 40; i += 1) {
+    for (let i = 0; i < CORPUS_ORDERS; i += 1) {
       const merchantEntityName = ['Amazon', 'Woolworths', 'Bunnings'][i % 3] ?? 'Amazon';
       const currency = i % 7 === 0 ? 'USD' : 'AUD';
       const totalCents = 1000 + i * 137;
@@ -194,6 +213,16 @@ describe('the roll-up agrees with the per-order split it summarises', () => {
       }
     }
   }
+
+  it('reaches every seeded order, over more pages than one', () => {
+    // The arrangement the two agreement tests rest on. Without it a shrunk
+    // corpus, or a page grown past it, would leave them comparing a prefix
+    // against the whole and calling that agreement.
+    expect(CORPUS_ORDERS).toBeGreaterThan(ORACLE_PAGE);
+    seedCorpus();
+
+    expect(foldEveryOrder().orderCount).toBe(CORPUS_ORDERS);
+  });
 
   it('reproduces the sum of every order, field for field', () => {
     seedCorpus();
@@ -552,6 +581,101 @@ describe('merchant attribution is reported at the confidence it actually has', (
     expect(rollup.merchants).toHaveLength(1);
     expect(rollup.merchants[0]?.merchant.name).toBe('Bunnings Warehouse');
     expect(rollup.merchants[0]?.accounting.totalCents).toBe(300);
+  });
+
+  it('does not let a newer order that states no merchant erase the label', () => {
+    // `merchantEntityId` is operative and `merchantEntityName` is only its
+    // label, so an order that states no label carries no label information.
+    // Taking it as the newest word would blank a group that has a perfectly
+    // good name, and the group would render nameless for no reason a reader
+    // could act on.
+    createPurchase(
+      opened.db,
+      order({
+        checksum: 'named',
+        merchantEntityId: 'ent-1',
+        merchantEntityName: 'Bunnings',
+        orderedAt: '2026-01-02T01:41:21Z',
+        totalCents: 100,
+      })
+    );
+    createPurchase(
+      opened.db,
+      order({
+        checksum: 'renamed',
+        merchantEntityId: 'ent-1',
+        merchantEntityName: 'Bunnings Warehouse',
+        orderedAt: '2026-03-02T01:41:21Z',
+        totalCents: 200,
+      })
+    );
+    createPurchase(
+      opened.db,
+      order({
+        checksum: 'nameless-newest',
+        merchantEntityId: 'ent-1',
+        merchantEntityName: null,
+        orderedAt: '2026-05-02T01:41:21Z',
+        totalCents: 400,
+      })
+    );
+
+    const rollup = rollUpMerchantSpend(opened.db);
+    expect(rollup.merchants).toHaveLength(1);
+    // The newest order that actually stated one, not the newest order.
+    expect(rollup.merchants[0]?.merchant.name).toBe('Bunnings Warehouse');
+    // And the nameless order is still in the group, not dropped with its label.
+    expect(rollup.merchants[0]?.accounting.totalCents).toBe(700);
+    expect(rollup.merchants[0]?.orderCount).toBe(3);
+  });
+
+  it('takes a label from an older order when the group has none yet', () => {
+    // The mirror image, and the reason "newest wins" cannot be the whole
+    // rule: if the first order folded in states no label, rank alone would
+    // leave the group permanently nameless while a label sat in the corpus.
+    createPurchase(
+      opened.db,
+      order({
+        checksum: 'nameless-newer',
+        merchantEntityId: 'ent-1',
+        merchantEntityName: null,
+        orderedAt: '2026-05-02T01:41:21Z',
+        totalCents: 400,
+      })
+    );
+    createPurchase(
+      opened.db,
+      order({
+        checksum: 'named-older',
+        merchantEntityId: 'ent-1',
+        merchantEntityName: 'Bunnings',
+        orderedAt: '2026-01-02T01:41:21Z',
+        totalCents: 100,
+      })
+    );
+
+    const rollup = rollUpMerchantSpend(opened.db);
+    expect(rollup.merchants).toHaveLength(1);
+    expect(rollup.merchants[0]?.merchant.name).toBe('Bunnings');
+  });
+
+  it('reports an entity group whose orders never named it, rather than inventing one', () => {
+    createPurchase(
+      opened.db,
+      order({
+        checksum: 'id-only',
+        merchantEntityId: 'ent-1',
+        merchantEntityName: null,
+        totalCents: 100,
+      })
+    );
+
+    const rollup = rollUpMerchantSpend(opened.db);
+    expect(rollup.merchants[0]?.merchant).toEqual({
+      resolution: 'entity',
+      entityId: 'ent-1',
+      name: null,
+    });
   });
 });
 

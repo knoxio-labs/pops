@@ -330,10 +330,14 @@ describe('GET /analytics/merchant-spend response', () => {
 
     // The awkward shapes this route has of its own: an order carrying no
     // merchant at all, and two currencies that must not be added together.
+    //
+    // All three resolutions at once, because `merchant` is a discriminated
+    // union: conformance over one variant says nothing about the other two,
+    // and the fixtures above are chosen to produce one of each.
     const resolutions = (res.body.merchants as { merchant: { resolution: string } }[]).map(
       (m) => m.merchant.resolution
     );
-    expect(resolutions).toContain('unattributed');
+    expect([...new Set(resolutions)].toSorted()).toEqual(['entity', 'name', 'unattributed']);
     expect((res.body.totals as { currency: string }[]).map((t) => t.currency)).toEqual([
       'AUD',
       'USD',

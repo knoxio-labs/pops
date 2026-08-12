@@ -50,7 +50,6 @@ import { purchaseFilterConditions, type PurchaseScopeFilter } from './purchase-r
 
 import type { SQL } from 'drizzle-orm';
 
-import type { MerchantResolution } from '../../contract/constants.js';
 import type { PurchaseChargeLinkRow, PurchaseChargeRow } from '../schema.js';
 import type { PurchasesDb } from './internal.js';
 
@@ -66,13 +65,21 @@ import type { PurchasesDb } from './internal.js';
  * merchants sharing a label share a row, and renaming one splits its
  * history.
  */
-export interface MerchantIdentity {
-  /** The resolved `contacts` entity, when one was ever attached. */
-  readonly entityId: string | null;
-  /** The merchant's label. The grouping key itself when `resolution` is `name`. */
-  readonly name: string | null;
-  readonly resolution: MerchantResolution;
-}
+export type MerchantIdentity =
+  | {
+      readonly resolution: 'entity';
+      /** The resolved `contacts` entity. Present, or this is not an entity group. */
+      readonly entityId: string;
+      /** Its label, which an order carrying the id is not obliged to state. */
+      readonly name: string | null;
+    }
+  | {
+      readonly resolution: 'name';
+      readonly entityId: null;
+      /** The grouping key itself, so never absent. */
+      readonly name: string;
+    }
+  | { readonly resolution: 'unattributed'; readonly entityId: null; readonly name: null };
 
 /** One merchant's spend in one currency. */
 export interface MerchantSpend {
@@ -134,9 +141,7 @@ function addAccounting(a: PurchaseAccounting, b: PurchaseAccounting): PurchaseAc
 }
 
 interface MerchantBucket {
-  entityId: string | null;
-  name: string | null;
-  resolution: MerchantResolution;
+  identity: MerchantIdentity;
   currency: string;
   orderCount: number;
   accounting: PurchaseAccounting;
@@ -186,20 +191,20 @@ function selectSettlementRows(
   chargesByPurchase: ReadonlyMap<string, readonly PurchaseChargeRow[]>;
   linksByChargeId: ReadonlyMap<string, readonly PurchaseChargeLinkRow[]>;
 } {
-  const chargeRows = db
+  const chargeQuery = db
     .select({ charge: purchaseCharges })
     .from(purchaseCharges)
-    .innerJoin(purchases, eq(purchases.id, purchaseCharges.purchaseId))
-    .where(and(...scope))
+    .innerJoin(purchases, eq(purchases.id, purchaseCharges.purchaseId));
+  const chargeRows = (scope.length > 0 ? chargeQuery.where(and(...scope)) : chargeQuery)
     .all()
     .map((row) => row.charge);
 
-  const linkRows = db
+  const linkQuery = db
     .select({ link: purchaseChargeLinks })
     .from(purchaseChargeLinks)
     .innerJoin(purchaseCharges, eq(purchaseCharges.id, purchaseChargeLinks.chargeId))
-    .innerJoin(purchases, eq(purchases.id, purchaseCharges.purchaseId))
-    .where(and(...scope))
+    .innerJoin(purchases, eq(purchases.id, purchaseCharges.purchaseId));
+  const linkRows = (scope.length > 0 ? linkQuery.where(and(...scope)) : linkQuery)
     .all()
     .map((row) => row.link);
 
@@ -223,7 +228,7 @@ export function rollUpMerchantSpend(
 ): MerchantSpendRollup {
   const scope = purchaseFilterConditions(filter);
 
-  const orders = db
+  const orderQuery = db
     .select({
       id: purchases.id,
       orderedAt: purchases.orderedAt,
@@ -232,9 +237,8 @@ export function rollUpMerchantSpend(
       merchantEntityId: purchases.merchantEntityId,
       merchantEntityName: purchases.merchantEntityName,
     })
-    .from(purchases)
-    .where(and(...scope))
-    .all();
+    .from(purchases);
+  const orders = (scope.length > 0 ? orderQuery.where(and(...scope)) : orderQuery).all();
   if (orders.length === 0) return { merchants: [], totals: [] };
 
   const { chargesByPurchase, linksByChargeId } = selectSettlementRows(db, scope);
@@ -256,7 +260,7 @@ export function rollUpMerchantSpend(
     const existing = buckets.get(key);
     if (existing === undefined) {
       buckets.set(key, {
-        ...identity,
+        identity,
         currency: order.currency,
         orderCount: 1,
         accounting,
@@ -267,13 +271,7 @@ export function rollUpMerchantSpend(
 
     existing.orderCount += 1;
     existing.accounting = addAccounting(existing.accounting, accounting);
-    // An entity-keyed bucket can span orders written either side of a rename
-    // in `contacts`. The label is only a label, so the newest order's wins —
-    // deterministically, since the id breaks a same-instant tie.
-    if (labelRank > existing.labelRank) {
-      existing.name = identity.name;
-      existing.labelRank = labelRank;
-    }
+    relabel(existing, identity, labelRank);
   }
 
   const merchants = presentBuckets(buckets);
@@ -281,15 +279,34 @@ export function rollUpMerchantSpend(
   return { merchants, totals: totalsByCurrency(merchants) };
 }
 
+/**
+ * Take another order's label for an entity group, if that order has one.
+ *
+ * Only an entity group's label can move: a `name` group is keyed on the label
+ * itself and an `unattributed` one has none by definition.
+ *
+ * Two rules, and the second is the one that is easy to get wrong. The newest
+ * order's label wins, deterministically, because an entity-keyed bucket spans
+ * orders written either side of a rename in `contacts`. But an order that
+ * states *no* label is not a rename to nothing — `merchantEntityId` is
+ * operative and `merchantEntityName` is only its label, so a nameless newer
+ * order carries no label information and must not erase the one the group
+ * has. For the same reason a group that is still nameless takes the first
+ * label it is offered, whatever that order's rank.
+ */
+function relabel(bucket: MerchantBucket, identity: MerchantIdentity, labelRank: string): void {
+  if (bucket.identity.resolution !== 'entity' || identity.name === null) return;
+  if (bucket.identity.name !== null && labelRank <= bucket.labelRank) return;
+
+  bucket.identity = { ...bucket.identity, name: identity.name };
+  bucket.labelRank = labelRank;
+}
+
 /** Drop the fold's bookkeeping fields and put the groups in display order. */
 function presentBuckets(buckets: ReadonlyMap<string, MerchantBucket>): readonly MerchantSpend[] {
   return [...buckets.values()]
     .map((bucket): MerchantSpend => ({
-      merchant: {
-        entityId: bucket.entityId,
-        name: bucket.name,
-        resolution: bucket.resolution,
-      },
+      merchant: bucket.identity,
       currency: bucket.currency,
       orderCount: bucket.orderCount,
       accounting: bucket.accounting,

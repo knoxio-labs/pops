@@ -254,12 +254,28 @@ export interface operations {
                 totalCents: number;
               };
               currency: string;
-              merchant: {
-                entityId: string | null;
-                name: string | null;
-                /** @enum {string} */
-                resolution: 'entity' | 'name' | 'unattributed';
-              };
+              merchant:
+                | {
+                    entityId: string;
+                    name: string | null;
+                    /** @enum {string} */
+                    resolution: 'entity';
+                  }
+                | {
+                    /** @enum {string|null} */
+                    entityId: null;
+                    name: string;
+                    /** @enum {string} */
+                    resolution: 'name';
+                  }
+                | {
+                    /** @enum {string|null} */
+                    entityId: null;
+                    /** @enum {string|null} */
+                    name: null;
+                    /** @enum {string} */
+                    resolution: 'unattributed';
+                  };
               orderCount: number;
             }[];
             period: {
