@@ -5,6 +5,7 @@
  * handle without leaking it through Express.
  */
 import {
+  confirmItemClassification,
   createPurchase,
   deletePurchase,
   getPurchase,
@@ -12,7 +13,11 @@ import {
   listPurchases,
 } from '../../db/index.js';
 import { tryMapServiceError } from './error-mapping.js';
-import { toPurchaseDetailBody } from './serializers.js';
+import {
+  toPurchaseDetailBody,
+  toPurchaseItemBody,
+  toPurchaseItemDetailBody,
+} from './serializers.js';
 
 import type { z } from 'zod';
 
@@ -20,12 +25,14 @@ import type {
   CreatePurchaseBodySchema,
   ListItemsByTagQuerySchema,
   ListPurchasesQuerySchema,
+  PatchItemBodySchema,
 } from '../../contract/rest-schemas.js';
 import type { PurchasesDb } from '../../db/index.js';
 
 type ListQuery = z.infer<typeof ListPurchasesQuerySchema>;
 type TagQuery = z.infer<typeof ListItemsByTagQuerySchema>;
 type CreateBody = z.infer<typeof CreatePurchaseBodySchema>;
+type PatchItemBody = z.infer<typeof PatchItemBodySchema>;
 
 function notFound(id: string) {
   return {
@@ -93,9 +100,44 @@ export function makePurchaseHandlers(db: PurchasesDb, onIngest: () => void = () 
       return { status: 200 as const, body: { ok: true as const } };
     },
 
+    patchItem: async ({
+      params,
+      body,
+    }: {
+      params: { id: string; itemId: string };
+      body: PatchItemBody;
+    }) => {
+      let detail;
+      try {
+        detail = confirmItemClassification(db, params.id, params.itemId, body);
+      } catch (err) {
+        const mapped = tryMapServiceError(err);
+        if (mapped?.status === 400) return { status: 400 as const, body: mapped.body };
+        throw err as Error;
+      }
+      if (detail === undefined) {
+        // One 404 for "no such order" and "no such line on it", because
+        // distinguishing them tells a caller holding a wrong order id that
+        // the line exists somewhere else.
+        return {
+          status: 404 as const,
+          body: {
+            message: `Item ${params.itemId} not found on purchase ${params.id}`,
+            code: 'NOT_FOUND',
+          },
+        };
+      }
+      return { status: 200 as const, body: toPurchaseItemDetailBody(detail) };
+    },
+
     itemsByTag: async ({ query }: { query: TagQuery }) => ({
       status: 200 as const,
-      body: { items: [...listItemsByTag(db, query.tag, query.limit)] },
+      body: {
+        items: listItemsByTag(db, query.tag, query.limit).map((row) => ({
+          item: toPurchaseItemBody(row.item),
+          confirmedAt: row.confirmedAt,
+        })),
+      },
     }),
   };
 }

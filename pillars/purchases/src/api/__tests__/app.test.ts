@@ -136,13 +136,55 @@ describe('POST /purchases', () => {
     });
   });
 
-  it('projects tags as an array and computes landed cost', async () => {
+  it('projects tags with their confirmation marker and computes landed cost', async () => {
     const res = await request(app).post('/purchases').send(fullOrder);
     const tamper = res.body.items.find(
       (i: { item: { sku: string } }) => i.item.sku === 'B0DSVZQ8P5'
     );
-    expect(tamper.tags).toEqual(['coffee', 'kitchen']);
+    expect(tamper.tags.map((t: { tag: string }) => t.tag)).toEqual(['coffee', 'kitchen']);
+    // Stated in the payload, so asserted — a caller supplying an item tag is
+    // classifying, and nothing may later reconsider it as if it were a guess.
+    for (const tag of tamper.tags) expect(tag.confirmedAt).not.toBeNull();
     expect(tamper.landedCostCents).toBe(4499);
+  });
+
+  it('stores a note exactly as sent, including the whitespace around it', async () => {
+    // `notes` is documented as verbatim merchant prose, and a receipt's
+    // leading indent is part of the printed text a reviewer checks a
+    // reading against. The schema used to `.trim()` it, which made the
+    // stored value quietly different from the submitted one.
+    const padded = '  0.202 kg NET @ $2.90/kg  ';
+    const res = await request(app)
+      .post('/purchases')
+      .send({
+        ...minimalOrder,
+        items: [
+          {
+            name: 'Loose Fuji Apples',
+            unitPriceCents: 586,
+            lineTotalCents: 586,
+            notes: [padded],
+          },
+        ],
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.items[0].notes).toEqual([padded]);
+
+    const stored = await request(app).get(`/purchases/${String(res.body.purchase.id)}`);
+    expect(stored.body.items[0].notes).toEqual([padded]);
+  });
+
+  it('rejects a blank note rather than trimming it into an empty string', async () => {
+    const res = await request(app)
+      .post('/purchases')
+      .send({
+        ...minimalOrder,
+        items: [
+          { name: 'Loose Fuji Apples', unitPriceCents: 586, lineTotalCents: 586, notes: ['   '] },
+        ],
+      });
+    expect(res.status).toBe(400);
   });
 
   it('rejects fractional cents rather than rounding them', async () => {
@@ -248,17 +290,108 @@ describe('GET /purchases', () => {
 });
 
 describe('GET /items', () => {
-  it('finds lines by tag across orders', async () => {
+  it("finds lines by tag across orders, each with that tag's marker", async () => {
     await request(app).post('/purchases').send(fullOrder);
     const res = await request(app).get('/items?tag=coffee');
     expect(res.status).toBe(200);
     expect(res.body.items).toHaveLength(1);
-    expect(res.body.items[0].sku).toBe('B0DSVZQ8P5');
+    expect(res.body.items[0].item.sku).toBe('B0DSVZQ8P5');
+    // Without this a caller summing "everything tagged coffee" cannot tell
+    // which of those labels anyone ever agreed with.
+    expect(res.body.items[0].confirmedAt).not.toBeNull();
   });
 
   it('requires a tag', async () => {
     const res = await request(app).get('/items');
     expect(res.status).toBe(400);
+  });
+
+  it('rejects a tag that is not a lower-case slug rather than finding nothing', async () => {
+    // `Coffee` and `coffee` being two tags is the drift finance already has
+    // in `tag_vocabulary`. A 400 says so; an empty list would not.
+    const res = await request(app).get('/items?tag=Coffee');
+    expect(res.status).toBe(400);
+  });
+});
+
+describe('PATCH /purchases/:id/items/:itemId', () => {
+  async function seedLine(): Promise<{ purchaseId: string; itemId: string }> {
+    const created = await request(app).post('/purchases').send(fullOrder);
+    return {
+      purchaseId: String(created.body.purchase.id),
+      // The funnel: no kind, no tags — the state every ingested line is in.
+      itemId: String(created.body.items[1].item.id),
+    };
+  }
+
+  it('confirms a kind and returns the line with its marker set', async () => {
+    const { purchaseId, itemId } = await seedLine();
+    const res = await request(app)
+      .patch(`/purchases/${purchaseId}/items/${itemId}`)
+      .send({ kind: 'durable' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.item.kind.value).toBe('durable');
+    expect(res.body.item.kind.confirmedAt).not.toBeNull();
+  });
+
+  it('retracts a confirmation to unclassified', async () => {
+    const { purchaseId, itemId } = await seedLine();
+    await request(app).patch(`/purchases/${purchaseId}/items/${itemId}`).send({ kind: 'durable' });
+
+    const res = await request(app)
+      .patch(`/purchases/${purchaseId}/items/${itemId}`)
+      .send({ kind: null });
+    expect(res.status).toBe(200);
+    expect(res.body.item.kind).toBeNull();
+  });
+
+  it('rejects a kind outside the closed vocabulary', async () => {
+    const { purchaseId, itemId } = await seedLine();
+    const res = await request(app)
+      .patch(`/purchases/${purchaseId}/items/${itemId}`)
+      .send({ kind: 'vibes' });
+    expect(res.status).toBe(400);
+  });
+
+  it('rejects a body that states nothing', async () => {
+    const { purchaseId, itemId } = await seedLine();
+    const res = await request(app).patch(`/purchases/${purchaseId}/items/${itemId}`).send({});
+    expect(res.status).toBe(400);
+  });
+
+  it('404s for a line that is not on that order', async () => {
+    const { purchaseId } = await seedLine();
+    const res = await request(app)
+      .patch(`/purchases/${purchaseId}/items/no-such-item`)
+      .send({ kind: 'durable' });
+    expect(res.status).toBe(404);
+  });
+
+  it('404s for an order that does not exist', async () => {
+    const { itemId } = await seedLine();
+    const res = await request(app)
+      .patch(`/purchases/no-such-order/items/${itemId}`)
+      .send({ kind: 'durable' });
+    expect(res.status).toBe(404);
+  });
+
+  it('does not disturb the rest of the order', async () => {
+    // The line's money, its delivery and its allocations are facts the
+    // merchant stated. A classification write that touched any of them
+    // would move the residual, which is the figure ADR-042 protects.
+    const { purchaseId, itemId } = await seedLine();
+    const before = await request(app).get(`/purchases/${purchaseId}`);
+    await request(app)
+      .patch(`/purchases/${purchaseId}/items/${itemId}`)
+      .send({ kind: 'consumable', tags: ['snack'] });
+    const after = await request(app).get(`/purchases/${purchaseId}`);
+
+    expect(after.body.accounting).toEqual(before.body.accounting);
+    expect(after.body.charges).toEqual(before.body.charges);
+    expect(after.body.items[1].item.lineTotalCents).toBe(
+      before.body.items[1].item.lineTotalCents as number
+    );
   });
 });
 

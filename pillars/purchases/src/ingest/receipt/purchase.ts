@@ -74,7 +74,9 @@ function toItem(
     quantity,
     lineTotalCents,
     unitPriceCents: Math.round(lineTotalCents / quantity),
-    tags: line.unitNote === undefined ? [] : [line.unitNote],
+    // Prose the receipt printed, not a classification of the product. The
+    // model is never asked what the thing IS — see `extraction.ts`.
+    notes: line.unitNote === undefined ? [] : [line.unitNote],
   };
 }
 
@@ -134,7 +136,7 @@ function checksumFor(key: string, purchase: Omit<CreatePurchaseInput, 'checksum'
         item.quantity,
         item.unitPriceCents,
         item.lineTotalCents,
-        item.tags,
+        item.notes,
       ])
     );
   }

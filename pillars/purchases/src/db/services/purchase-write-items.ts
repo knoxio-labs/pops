@@ -1,44 +1,94 @@
 /**
- * The line grain and below: a line, its tags, and its units.
+ * The line grain and below: a line, its tags, its notes, and its units.
  *
  * Split from `purchase-writes.ts` to keep both files under the per-file
  * size limit — the line is the only part of the order graph with children
  * of its own.
+ *
+ * Tags and notes go to different tables on purpose. A note is prose the
+ * merchant printed and an adapter transcribed; a tag is a POPS
+ * classification nothing in any source states. An ingest payload that
+ * supplies a tag is therefore *asserting* one, which is why tags written
+ * here land confirmed — the same reason a source-stated `kind` does.
  */
+import { isItemTag } from '../../contract/constants.js';
 import { InvalidIngestPayloadError } from '../errors.js';
-import { purchaseItems, purchaseItemTags, purchaseItemUnits } from '../schema.js';
+import {
+  purchaseItemNotes,
+  purchaseItems,
+  purchaseItemTags,
+  purchaseItemUnits,
+} from '../schema.js';
 import { expectRow } from './internal.js';
 import { shipmentIdFor, type IngestContext } from './purchase-write-context.js';
 
+import type { PurchaseItemInsert } from '../schema.js';
 import type { CreateItemInput } from './purchase-input.js';
 
 export function insertItem(ctx: IngestContext, input: CreateItemInput, position: number): void {
   const rows = ctx.tx
     .insert(purchaseItems)
-    .values({
-      purchaseId: ctx.purchase.id,
-      shipmentId: shipmentIdFor(ctx, input.shipmentRef),
-      position,
-      name: input.name,
-      sku: input.sku ?? null,
-      url: input.url ?? null,
-      imageUrl: input.imageUrl ?? null,
-      quantity: input.quantity ?? 1,
-      unitPriceCents: input.unitPriceCents,
-      lineTotalCents: input.lineTotalCents,
-      allocatedShippingCents: input.allocatedShippingCents ?? 0,
-      allocatedAdjustmentCents: input.allocatedAdjustmentCents ?? 0,
-      merchantCategory: input.merchantCategory ?? null,
-      kind: input.kind ?? null,
-      createdAt: ctx.now,
-    })
+    .values(itemRow(ctx, input, position))
     .returning()
     .all();
   const itemId = expectRow(rows, 'createPurchase.item').id;
   registerItemRef(ctx, input.ref, position, itemId);
 
   insertItemTags(ctx, itemId, input);
+  insertItemNotes(ctx, itemId, input);
   insertItemUnits(ctx, itemId, input);
+}
+
+function itemRow(ctx: IngestContext, input: CreateItemInput, position: number): PurchaseItemInsert {
+  return {
+    purchaseId: ctx.purchase.id,
+    shipmentId: shipmentIdFor(ctx, input.shipmentRef),
+    position,
+    name: input.name,
+    sku: input.sku ?? null,
+    url: input.url ?? null,
+    imageUrl: input.imageUrl ?? null,
+    quantity: input.quantity ?? 1,
+    unitPriceCents: input.unitPriceCents,
+    lineTotalCents: input.lineTotalCents,
+    allocatedShippingCents: input.allocatedShippingCents ?? 0,
+    allocatedAdjustmentCents: input.allocatedAdjustmentCents ?? 0,
+    ...productFacts(input, ctx.now),
+    createdAt: ctx.now,
+  };
+}
+
+/**
+ * What the source says about the *thing*, as opposed to about the money.
+ *
+ * Every one of these defaults to null rather than to something plausible.
+ * An absent `gstApplicable` means the source did not say, which is a
+ * different fact from "no GST" and the reason the column is nullable.
+ */
+function productFacts(
+  input: CreateItemInput,
+  now: string
+): Pick<
+  PurchaseItemInsert,
+  | 'merchantCategory'
+  | 'merchantCondition'
+  | 'promotionalPrice'
+  | 'gstApplicable'
+  | 'kind'
+  | 'kindConfirmedAt'
+> {
+  return {
+    merchantCategory: input.merchantCategory ?? null,
+    merchantCondition: input.merchantCondition ?? null,
+    promotionalPrice: input.promotionalPrice ?? null,
+    gstApplicable: input.gstApplicable ?? null,
+    kind: input.kind ?? null,
+    // A kind an adapter supplies came off the source document, so it is a
+    // transcription rather than a proposal and the classification pass must
+    // not reconsider it. Null when there is no kind: the CHECK forbids a
+    // confirmation with nothing under it.
+    kindConfirmedAt: input.kind == null ? null : now,
+  };
 }
 
 /**
@@ -73,10 +123,32 @@ function registerItemRef(
 
 function insertItemTags(ctx: IngestContext, itemId: string, input: CreateItemInput): void {
   // A Set so a source that repeats a tag on one line doesn't trip the
-  // (item_id, tag) primary key.
+  // (item_id, tag) primary key. Safe for tags and wrong for notes, where
+  // two identical notes are two notes — which is why they are separate.
   for (const tag of new Set(input.tags ?? [])) {
-    ctx.tx.insert(purchaseItemTags).values({ itemId, tag, createdAt: ctx.now }).run();
+    if (!isItemTag(tag)) {
+      throw new InvalidIngestPayloadError(
+        `item tag '${tag}' is not a lower-case slug; purchases' item vocabulary is open but its shape is not`
+      );
+    }
+    ctx.tx
+      .insert(purchaseItemTags)
+      .values({ itemId, tag, createdAt: ctx.now, confirmedAt: ctx.now })
+      .run();
   }
+}
+
+/**
+ * Merchant prose, in the order it was printed.
+ *
+ * No de-duplication, deliberately: a receipt that prints the same weight
+ * line twice printed it twice, and the position is what a reviewer checks
+ * the reading against.
+ */
+function insertItemNotes(ctx: IngestContext, itemId: string, input: CreateItemInput): void {
+  (input.notes ?? []).forEach((note, position) => {
+    ctx.tx.insert(purchaseItemNotes).values({ itemId, position, note, createdAt: ctx.now }).run();
+  });
 }
 
 function insertItemUnits(ctx: IngestContext, itemId: string, input: CreateItemInput): void {

@@ -21,11 +21,19 @@ export {
   getPurchase,
   listItemsByTag,
   listPurchases,
+  selectItemDetails,
   setPurchaseStatus,
+  type ItemTagReading,
   type ListPurchasesFilter,
   type PurchaseDetail,
   type PurchaseItemDetail,
+  type TaggedItem,
 } from './services/purchase-reads.js';
+
+export {
+  confirmItemClassification,
+  type ConfirmItemInput,
+} from './services/purchase-item-mutations.js';
 
 export { type PurchaseChargeDetail } from './services/purchase-read-charges.js';
 

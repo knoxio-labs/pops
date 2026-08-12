@@ -13,7 +13,8 @@ purchases  (the order)
   ├─ purchase_shipments             every delivery
   ├─ purchase_items                 every line, complete
   │    ├─ purchase_item_units       per-unit identity → inventory
-  │    └─ purchase_item_tags
+  │    ├─ purchase_item_tags        POPS classification, proposed or asserted
+  │    └─ purchase_item_notes       verbatim merchant prose, ordered
   ├─ purchase_charges               every charge, matched or not
   │    ├─ purchase_charge_links     charge → finance transaction
   │    └─ purchase_item_allocations which charge paid for which line
@@ -58,6 +59,12 @@ Folding `awaitingImport` into the residual would flag every recent order as brok
 **A charge carries two amounts.** `amountCents` is in the settlement currency — what moved on the card, and what the matcher compares against finance transactions. `orderAmountCents` is the same money in the order's currency, which is what the residual is computed in. For a USD AliExpress order settling in AUD they differ; for everything else they are equal, stored anyway so the residual never branches.
 
 **`totalCents` is not constrained to the sum of its components.** Profiling the real Amazon DSAR export found `subtotal + shipping + tax − discount` holding on 926 of 943 rows; the rest drift by cents on older orders. A CHECK on the identity would reject valid orders at ingest, so adapters record the order and route the mismatch to review. Component non-negativity _is_ enforced.
+
+**A classification is never handed over without its provenance.** No source states what a thing is, so `purchase_items.kind` and the item tags are POPS judgements — part machine proposal, part human decision. `kindConfirmedAt` and a tag row's `confirmedAt` are what separate the two: null means a classification pass proposed it and a re-run may reconsider, non-null means it was asserted and nothing may re-derive it. On the wire `kind` is one object carrying its own marker rather than two sibling fields, because two fields leave "read the pair" a convention and a consumer that ignores it reports a guess as a fact.
+
+A proposal runs out of band — `pnpm propose:kinds`, never inside an adapter, so ingest needs no API key — and only ever fills a NULL. Confirming is `PATCH /purchases/:id/items/:itemId`, the pillar's only item-level mutation. To re-propose after a better model, clear the proposals first: `UPDATE purchase_items SET kind = NULL WHERE kind_confirmed_at IS NULL`, which by construction cannot reach a decision.
+
+**Item tags are purchases' vocabulary, not finance's.** `fruit` and `healthy` describe a product; finance's `tag_vocabulary` holds `Groceries` and `Eat Out`, which describe a payment. Different grains, so a tag written here is never validated against finance and never rolled up into it. The vocabulary is open — adding one is a write, not a deploy — and only its shape is closed, to lower-case slugs, because `Fruit` and `fruit` becoming two tags is exactly the drift finance's Title Case labels already carry.
 
 **`position` is not cosmetic.** Ids are random UUIDs and every row written in one ingest shares a `createdAt` to the second, so without an explicit position the read order of lines, deliveries and charges is genuinely non-deterministic — a 100-line grocery receipt would render shuffled, and the deterministic candidate ordering the reconciliation engine needs for re-derivation to be safe would not hold.
 

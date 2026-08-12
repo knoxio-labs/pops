@@ -174,11 +174,14 @@ export const purchaseShipments = sqliteTable(
 /**
  * Facts about a whole order that are not fields.
  *
- * Mirrors `purchase_item_tags` deliberately — same shape, same freedom from
- * a vocabulary — because the need is the same one level up. The first use
- * is `date-uncertain`: a receipt that stated no date is dated from its
- * upload so the purchase exists and can be reviewed, and the tag is what
- * stops that inferred date reading as a fact the paper stated.
+ * **Not the order-grain twin of `purchase_item_tags`**, despite the shape.
+ * An item tag classifies a product and is either proposed or asserted; a
+ * row here records how the order itself was read. The first use is
+ * `date-uncertain`: a receipt that stated no date is dated from its upload
+ * so the purchase exists and can be reviewed, and the tag is what stops
+ * that inferred date reading as a fact the paper stated. There is nothing
+ * to confirm about it — the paper either said or it did not — so this table
+ * carries no confirmation marker.
  *
  * Free-form on purpose. `merchant-uncertain` and `total-uncertain` will
  * want the same treatment, and a closed enum would mean a migration for

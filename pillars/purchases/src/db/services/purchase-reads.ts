@@ -10,6 +10,7 @@ import { and, asc, desc, eq, gte, inArray, lte } from 'drizzle-orm';
 
 import {
   purchaseDocuments,
+  purchaseItemNotes,
   purchaseItems,
   purchaseItemTags,
   purchaseItemUnits,
@@ -42,13 +43,34 @@ export interface ListPurchasesFilter {
   readonly offset?: number;
 }
 
+/**
+ * An item tag as a reader must receive it: never the slug on its own.
+ *
+ * `confirmedAt === null` is a classification pass's proposal; non-null is
+ * an assertion. A list of lines "tagged `snack`" that mixes the two is a
+ * counterfactual computed over guesses.
+ */
+export interface ItemTagReading {
+  readonly tag: string;
+  readonly confirmedAt: string | null;
+}
+
 /** A line with everything hanging off it, plus its derived landed cost. */
 export interface PurchaseItemDetail {
   readonly item: PurchaseItemRow;
-  readonly tags: readonly string[];
+  /** POPS classification. Empty is the normal state — no source states one. */
+  readonly tags: readonly ItemTagReading[];
+  /** Verbatim merchant prose, in printed order. */
+  readonly notes: readonly string[];
   readonly units: readonly PurchaseItemUnitRow[];
   /** `lineTotal + allocatedShipping + allocatedAdjustment`. */
   readonly landedCostCents: number;
+}
+
+/** A line that carries a given tag, with that tag's confirmation marker. */
+export interface TaggedItem {
+  readonly item: PurchaseItemRow;
+  readonly confirmedAt: string | null;
 }
 
 /** An order and every list hanging off it. */
@@ -129,7 +151,10 @@ export function getPurchase(db: PurchasesDb, id: string): PurchaseDetail | undef
   return { purchase, tags, shipments, items, charges, documents, accounting };
 }
 
-function selectItemDetails(db: PurchasesDb, purchaseId: string): readonly PurchaseItemDetail[] {
+export function selectItemDetails(
+  db: PurchasesDb,
+  purchaseId: string
+): readonly PurchaseItemDetail[] {
   const rows = db
     .select()
     .from(purchaseItems)
@@ -145,6 +170,14 @@ function selectItemDetails(db: PurchasesDb, purchaseId: string): readonly Purcha
     .where(inArray(purchaseItemTags.itemId, ids))
     .orderBy(asc(purchaseItemTags.tag))
     .all();
+  // By position, not by insertion order: the position IS the ordering, and
+  // it is the reason notes are not tag rows.
+  const noteRows = db
+    .select()
+    .from(purchaseItemNotes)
+    .where(inArray(purchaseItemNotes.itemId, ids))
+    .orderBy(asc(purchaseItemNotes.position))
+    .all();
   const unitRows = db
     .select()
     .from(purchaseItemUnits)
@@ -153,35 +186,40 @@ function selectItemDetails(db: PurchasesDb, purchaseId: string): readonly Purcha
     .all();
 
   const tagsByItem = groupBy(tagRows, (row) => row.itemId);
+  const notesByItem = groupBy(noteRows, (row) => row.itemId);
   const unitsByItem = groupBy(unitRows, (row) => row.itemId);
 
   return rows.map((item) => ({
     item,
-    tags: (tagsByItem.get(item.id) ?? []).map((row) => row.tag),
+    tags: (tagsByItem.get(item.id) ?? []).map((row) => ({
+      tag: row.tag,
+      confirmedAt: row.confirmedAt,
+    })),
+    notes: (notesByItem.get(item.id) ?? []).map((row) => row.note),
     units: unitsByItem.get(item.id) ?? [],
     landedCostCents: landedCostCents(item),
   }));
 }
 
 /**
- * Every line carrying a given tag, across every order. The query
+ * Every line carrying a given item tag, across every order. The query
  * `purchase_item_tags` exists to serve — a JSON array column would answer
  * it only with a full scan.
+ *
+ * The tag's confirmation marker travels with each line rather than being
+ * dropped. It cannot live on the line itself — the tag is on the join row —
+ * and without it a caller summing "everything tagged `snack`" cannot tell
+ * which of those labels a human ever agreed with.
  */
-export function listItemsByTag(
-  db: PurchasesDb,
-  tag: string,
-  limit = 200
-): readonly PurchaseItemRow[] {
+export function listItemsByTag(db: PurchasesDb, tag: string, limit = 200): readonly TaggedItem[] {
   return db
-    .select({ item: purchaseItems })
+    .select({ item: purchaseItems, confirmedAt: purchaseItemTags.confirmedAt })
     .from(purchaseItemTags)
     .innerJoin(purchaseItems, eq(purchaseItems.id, purchaseItemTags.itemId))
     .where(eq(purchaseItemTags.tag, tag))
     .orderBy(desc(purchaseItems.createdAt), asc(purchaseItems.position), asc(purchaseItems.id))
     .limit(limit)
-    .all()
-    .map((row) => row.item);
+    .all();
 }
 
 /**

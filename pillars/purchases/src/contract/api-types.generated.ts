@@ -10,7 +10,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** Every line carrying a tag, across every order */
+    /** Every line carrying an item tag, across every order */
     get: operations['purchase.itemsByTag'];
     put?: never;
     post?: never;
@@ -54,6 +54,23 @@ export interface paths {
     options?: never;
     head?: never;
     patch?: never;
+    trace?: never;
+  };
+  '/purchases/{id}/items/{itemId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Confirm a line's kind and item tags */
+    patch: operations['purchase.patchItem'];
     trace?: never;
   };
   '/receipts': {
@@ -209,24 +226,33 @@ export interface operations {
         content: {
           'application/json': {
             items: {
-              allocatedAdjustmentCents: number;
-              allocatedShippingCents: number;
-              createdAt: string;
-              id: string;
-              imageUrl: string | null;
-              /** @enum {string|null} */
-              kind: 'consumable' | 'durable' | 'digital' | 'service' | null;
-              lineTotalCents: number;
-              merchantCategory: string | null;
-              name: string;
-              position: number;
-              purchaseId: string;
-              quantity: number;
-              refundedCents: number;
-              shipmentId: string | null;
-              sku: string | null;
-              unitPriceCents: number;
-              url: string | null;
+              confirmedAt: string | null;
+              item: {
+                allocatedAdjustmentCents: number;
+                allocatedShippingCents: number;
+                createdAt: string;
+                gstApplicable: boolean | null;
+                id: string;
+                imageUrl: string | null;
+                kind: {
+                  confirmedAt: string | null;
+                  /** @enum {string} */
+                  value: 'consumable' | 'durable' | 'digital' | 'service';
+                } | null;
+                lineTotalCents: number;
+                merchantCategory: string | null;
+                merchantCondition: string | null;
+                name: string;
+                position: number;
+                promotionalPrice: boolean | null;
+                purchaseId: string;
+                quantity: number;
+                refundedCents: number;
+                shipmentId: string | null;
+                sku: string | null;
+                unitPriceCents: number;
+                url: string | null;
+              };
             }[];
           };
         };
@@ -329,12 +355,16 @@ export interface operations {
           items?: {
             allocatedAdjustmentCents?: number;
             allocatedShippingCents?: number;
+            gstApplicable?: boolean | null;
             imageUrl?: string | null;
             /** @enum {string|null} */
             kind?: 'consumable' | 'durable' | 'digital' | 'service' | null;
             lineTotalCents: number;
             merchantCategory?: string | null;
+            merchantCondition?: string | null;
             name: string;
+            notes?: string[];
+            promotionalPrice?: boolean | null;
             quantity?: number;
             ref?: string;
             shipmentRef?: string | null;
@@ -445,14 +475,20 @@ export interface operations {
                 allocatedAdjustmentCents: number;
                 allocatedShippingCents: number;
                 createdAt: string;
+                gstApplicable: boolean | null;
                 id: string;
                 imageUrl: string | null;
-                /** @enum {string|null} */
-                kind: 'consumable' | 'durable' | 'digital' | 'service' | null;
+                kind: {
+                  confirmedAt: string | null;
+                  /** @enum {string} */
+                  value: 'consumable' | 'durable' | 'digital' | 'service';
+                } | null;
                 lineTotalCents: number;
                 merchantCategory: string | null;
+                merchantCondition: string | null;
                 name: string;
                 position: number;
+                promotionalPrice: boolean | null;
                 purchaseId: string;
                 quantity: number;
                 refundedCents: number;
@@ -462,7 +498,11 @@ export interface operations {
                 url: string | null;
               };
               landedCostCents: number;
-              tags: string[];
+              notes: string[];
+              tags: {
+                confirmedAt: string | null;
+                tag: string;
+              }[];
               units: {
                 createdAt: string;
                 id: string;
@@ -623,14 +663,20 @@ export interface operations {
                 allocatedAdjustmentCents: number;
                 allocatedShippingCents: number;
                 createdAt: string;
+                gstApplicable: boolean | null;
                 id: string;
                 imageUrl: string | null;
-                /** @enum {string|null} */
-                kind: 'consumable' | 'durable' | 'digital' | 'service' | null;
+                kind: {
+                  confirmedAt: string | null;
+                  /** @enum {string} */
+                  value: 'consumable' | 'durable' | 'digital' | 'service';
+                } | null;
                 lineTotalCents: number;
                 merchantCategory: string | null;
+                merchantCondition: string | null;
                 name: string;
                 position: number;
+                promotionalPrice: boolean | null;
                 purchaseId: string;
                 quantity: number;
                 refundedCents: number;
@@ -640,7 +686,11 @@ export interface operations {
                 url: string | null;
               };
               landedCostCents: number;
-              tags: string[];
+              notes: string[];
+              tags: {
+                confirmedAt: string | null;
+                tag: string;
+              }[];
               units: {
                 createdAt: string;
                 id: string;
@@ -734,6 +784,103 @@ export interface operations {
           'application/json': {
             /** @enum {boolean} */
             ok: true;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+          };
+        };
+      };
+    };
+  };
+  'purchase.patchItem': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+        itemId: string;
+      };
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          /** @enum {string|null} */
+          kind?: 'consumable' | 'durable' | 'digital' | 'service' | null;
+          tags?: string[];
+        };
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            item: {
+              allocatedAdjustmentCents: number;
+              allocatedShippingCents: number;
+              createdAt: string;
+              gstApplicable: boolean | null;
+              id: string;
+              imageUrl: string | null;
+              kind: {
+                confirmedAt: string | null;
+                /** @enum {string} */
+                value: 'consumable' | 'durable' | 'digital' | 'service';
+              } | null;
+              lineTotalCents: number;
+              merchantCategory: string | null;
+              merchantCondition: string | null;
+              name: string;
+              position: number;
+              promotionalPrice: boolean | null;
+              purchaseId: string;
+              quantity: number;
+              refundedCents: number;
+              shipmentId: string | null;
+              sku: string | null;
+              unitPriceCents: number;
+              url: string | null;
+            };
+            landedCostCents: number;
+            notes: string[];
+            tags: {
+              confirmedAt: string | null;
+              tag: string;
+            }[];
+            units: {
+              createdAt: string;
+              id: string;
+              inventoryItemStaleAt: string | null;
+              inventoryItemUri: string | null;
+              itemId: string;
+              serialNumber: string | null;
+            }[];
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
           };
         };
       };
@@ -856,14 +1003,20 @@ export interface operations {
                       allocatedAdjustmentCents: number;
                       allocatedShippingCents: number;
                       createdAt: string;
+                      gstApplicable: boolean | null;
                       id: string;
                       imageUrl: string | null;
-                      /** @enum {string|null} */
-                      kind: 'consumable' | 'durable' | 'digital' | 'service' | null;
+                      kind: {
+                        confirmedAt: string | null;
+                        /** @enum {string} */
+                        value: 'consumable' | 'durable' | 'digital' | 'service';
+                      } | null;
                       lineTotalCents: number;
                       merchantCategory: string | null;
+                      merchantCondition: string | null;
                       name: string;
                       position: number;
+                      promotionalPrice: boolean | null;
                       purchaseId: string;
                       quantity: number;
                       refundedCents: number;
@@ -873,7 +1026,11 @@ export interface operations {
                       url: string | null;
                     };
                     landedCostCents: number;
-                    tags: string[];
+                    notes: string[];
+                    tags: {
+                      confirmedAt: string | null;
+                      tag: string;
+                    }[];
                     units: {
                       createdAt: string;
                       id: string;

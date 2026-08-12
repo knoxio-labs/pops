@@ -27,7 +27,7 @@ import {
   PurchaseSchema,
   PurchaseSourceSchema,
 } from '../../contract/schemas/purchase.js';
-import { PurchaseItemSchema } from '../../contract/schemas/purchase.js';
+import { PurchaseItemDetailSchema, PurchaseItemSchema } from '../../contract/schemas/purchase.js';
 import { openTempDb, seedAmazonSource } from '../../db/__tests__/helpers.js';
 import { runSweep } from '../../reconcile/sweep.js';
 import { createPurchasesApiApp } from '../app.js';
@@ -128,14 +128,20 @@ const RICH_ORDER = {
       allocatedShippingCents: 250,
       allocatedAdjustmentCents: -50,
       merchantCategory: 'Kitchen',
+      merchantCondition: 'New',
+      promotionalPrice: true,
+      gstApplicable: false,
       kind: 'durable',
       tags: ['coffee', 'kitchen'],
+      notes: ['PRICE REDUCED BY $7.26 each', 'Qty 2 @ $22.50 each'],
       units: [
         { serialNumber: 'SN-1', inventoryItemUri: 'pops://inventory/item/1' },
         { serialNumber: null },
       ],
     },
-    // No ref, no delivery, no tags, no units, no optional fields at all.
+    // No ref, no delivery, no tags, no notes, no units, no optional fields
+    // at all — including neither of the two nullable booleans, which is the
+    // normal state for every source but a Woolworths receipt.
     { name: 'Digital gift code', unitPriceCents: 1179, lineTotalCents: 1179, kind: 'digital' },
   ],
   charges: [
@@ -216,13 +222,35 @@ describe('GET /purchases response', () => {
 });
 
 describe('GET /items response', () => {
-  it('conforms', async () => {
+  it("conforms, and carries the tag's confirmation marker beside each line", async () => {
     await request(app).post('/purchases').send(RICH_ORDER);
     const res = await request(app).get('/items?tag=coffee');
     expect(res.status).toBe(200);
-    for (const [i, item] of (res.body.items as unknown[]).entries()) {
-      expectConforms(PurchaseItemSchema, item, `GET /items item ${String(i)}`);
+    expect(res.body.items).toHaveLength(1);
+    for (const [i, entry] of (res.body.items as { item: unknown }[]).entries()) {
+      expectConforms(PurchaseItemSchema, entry.item, `GET /items item ${String(i)}`);
     }
+  });
+});
+
+describe('PATCH /purchases/:id/items/:itemId response', () => {
+  it('conforms, and confirming turns a proposal into a judgement', async () => {
+    const created = await request(app).post('/purchases').send(RICH_ORDER);
+    const purchaseId = String(created.body.purchase.id);
+    const itemId = String(created.body.items[1].item.id);
+
+    const res = await request(app)
+      .patch(`/purchases/${purchaseId}/items/${itemId}`)
+      .send({ kind: 'consumable', tags: ['snack'] });
+
+    expect(res.status).toBe(200);
+    expectConforms(PurchaseItemDetailSchema, res.body, 'PATCH item');
+    expect(res.body.item.kind.value).toBe('consumable');
+    expect(res.body.item.kind.confirmedAt).not.toBeNull();
+    expect(res.body.tags).toEqual([
+      { tag: 'snack', confirmedAt: res.body.tags[0].confirmedAt as string },
+    ]);
+    expect(res.body.tags[0].confirmedAt).not.toBeNull();
   });
 });
 

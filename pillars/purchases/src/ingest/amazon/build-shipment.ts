@@ -203,7 +203,10 @@ function buildItem(
     // its allocated share of tax and postage.
     lineTotalCents: unitPriceCents * quantity,
     allocatedAdjustmentCents: readCents(row['Total Discounts']) ?? 0,
-    merchantCategory: readText(row['Product Condition']),
+    // `Product Condition` — `New` on 940 of 943 rows in the reference
+    // bundle, `Used` on 3. A condition, not a category: the export has 28
+    // columns and none of them states what the thing IS.
+    merchantCondition: readText(row['Product Condition']),
   };
 }
 

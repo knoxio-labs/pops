@@ -74,6 +74,24 @@ export interface PurchaseShipment {
   updatedAt: string;
 }
 
+/**
+ * A classification and the evidence for trusting it, inseparably.
+ *
+ * One object rather than two sibling fields because the failure mode of two
+ * fields is silent: a consumer reads the value, never looks at the marker,
+ * and reports a machine's guess as a decision. This shape makes the marker
+ * unavoidable — there is no way to reach {@link value} without passing it.
+ *
+ * `confirmedAt === null` means a classification pass proposed this and a
+ * re-run may reconsider it. Non-null means it was asserted, by a human or
+ * by a source that stated it outright, and nothing may re-derive it.
+ */
+export interface Classified<T> {
+  value: T;
+  /** ISO-8601, or null while this is still a proposal. */
+  confirmedAt: string | null;
+}
+
 /** One line of an order. */
 export interface PurchaseItem {
   id: string;
@@ -96,10 +114,33 @@ export interface PurchaseItem {
   allocatedShippingCents: number;
   /** Signed share of order-level tax and discount not already inside the line total. */
   allocatedAdjustmentCents: number;
-  /** The merchant's own category string, verbatim. Not a POPS tag. */
+  /**
+   * The merchant's own category string, verbatim. Not a POPS tag, and not
+   * a condition. Null on every row the shipped adapters write, because no
+   * shipped source states a category.
+   */
   merchantCategory: string | null;
-  kind: ItemKind | null;
+  /** What condition the merchant sold it in — Amazon's `Product Condition`. */
+  merchantCondition: string | null;
+  /** `^` on a Woolworths receipt. Null where the source states nothing either way. */
+  promotionalPrice: boolean | null;
+  /** `#` on a Woolworths receipt: GST applies. Null where unstated. */
+  gstApplicable: boolean | null;
+  /** What the line item is, and whether that is a judgement or a proposal. */
+  kind: Classified<ItemKind> | null;
   createdAt: string;
+}
+
+/**
+ * An item tag and whether it is a judgement or a proposal.
+ *
+ * Purchases' own product-grained vocabulary — `fruit`, `healthy` — not
+ * finance's transaction-grained `tag_vocabulary`. Lower-case slugs.
+ */
+export interface PurchaseItemTag {
+  tag: string;
+  /** ISO-8601, or null while this is still a proposal. */
+  confirmedAt: string | null;
 }
 
 /** One physical unit of a line, where that unit has its own identity. */

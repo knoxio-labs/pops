@@ -183,6 +183,92 @@ describe('item constraints', () => {
       )
     ).not.toThrow();
   });
+
+  it('rejects a confirmation with no kind under it', () => {
+    // "Confirmed unknown" would be a third state every consumer has to
+    // handle, and the wire shape — one object or null — cannot express it.
+    // The CHECK is what makes that shape total rather than optimistic.
+    const id = createPurchase(opened.db, coffeeOrder());
+    expect(() =>
+      opened.raw
+        .prepare(
+          `UPDATE purchase_items SET kind = NULL, kind_confirmed_at = '2026-08-12T00:00:00.000Z'
+           WHERE purchase_id = ?`
+        )
+        .run(id)
+    ).toThrow(/CHECK constraint failed/i);
+  });
+
+  it('rejects clearing a kind while its confirmation still stands', () => {
+    // The same constraint from the other side: a confirmed line cannot be
+    // half-retracted into a state where the marker outlives the value.
+    const id = createPurchase(opened.db, coffeeOrder());
+    expect(() =>
+      opened.raw.prepare(`UPDATE purchase_items SET kind = NULL WHERE purchase_id = ?`).run(id)
+    ).toThrow(/CHECK constraint failed/i);
+  });
+
+  it('rejects a receipt-character boolean that is neither stated value', () => {
+    expect(() =>
+      createPurchase(
+        opened.db,
+        amazonOrder({
+          checksum: 'bad-promo',
+          sourceOrderId: 'bad-promo',
+          items: [{ name: 'x', unitPriceCents: 100, lineTotalCents: 100 }],
+        })
+      )
+    ).not.toThrow();
+    expect(() =>
+      opened.raw.prepare(`UPDATE purchase_items SET promotional_price = 2`).run()
+    ).toThrow(/CHECK constraint failed/i);
+  });
+});
+
+describe('item tag constraints', () => {
+  it('rejects a tag that is not a lower-case slug', () => {
+    // The vocabulary is open; its shape is not. `Coffee` and `coffee`
+    // becoming two tags is the drift finance already carries in
+    // `tag_vocabulary`, and the join index cannot bridge it.
+    expect(() =>
+      createPurchase(
+        opened.db,
+        amazonOrder({
+          items: [{ name: 'x', unitPriceCents: 100, lineTotalCents: 100, tags: ['Coffee'] }],
+        })
+      )
+    ).toThrow(InvalidIngestPayloadError);
+  });
+
+  it('persists a stated tag as asserted, never as a proposal', () => {
+    const id = createPurchase(
+      opened.db,
+      amazonOrder({
+        checksum: 'stated-tag',
+        sourceOrderId: 'stated-tag',
+        items: [{ name: 'x', unitPriceCents: 100, lineTotalCents: 100, tags: ['coffee'] }],
+      })
+    );
+    const rows = opened.raw
+      .prepare(
+        `SELECT t.confirmed_at AS confirmedAt FROM purchase_item_tags t
+         JOIN purchase_items i ON i.id = t.item_id WHERE i.purchase_id = ?`
+      )
+      .all(id) as { confirmedAt: string | null }[];
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.confirmedAt).not.toBeNull();
+  });
+
+  it('persists a source-stated kind as asserted, so no pass may reconsider it', () => {
+    const id = createPurchase(opened.db, coffeeOrder());
+    const rows = opened.raw
+      .prepare(
+        `SELECT kind, kind_confirmed_at AS confirmedAt FROM purchase_items WHERE purchase_id = ?`
+      )
+      .all(id) as { kind: string | null; confirmedAt: string | null }[];
+    expect(rows.map((r) => r.kind)).toEqual(['durable', 'durable']);
+    for (const row of rows) expect(row.confirmedAt).not.toBeNull();
+  });
 });
 
 describe('ingest idempotency', () => {

@@ -184,7 +184,11 @@ describe('the line items', () => {
       ],
     }).items;
     expect(items?.[0]).toMatchObject({ quantity: 1, unitPriceCents: 1250 });
-    expect(items?.[0]?.tags).toEqual(['0.202 kg NET @ $2.90/kg']);
+    // A note rather than a tag: the model transcribes what was printed and
+    // is never asked what the product is, so the drop-zone asserts no
+    // classification at all.
+    expect(items?.[0]?.notes).toEqual(['0.202 kg NET @ $2.90/kg']);
+    expect(items?.[0]?.tags).toBeUndefined();
   });
 });
 
