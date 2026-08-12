@@ -153,6 +153,7 @@ extension PairingView {
         PopsButton(PairingCopy.pairButton) { Task { await model.pair() } }
             .disabled(!model.canSubmit)
             .accessibilityHint(model.submissionProblem.map(PairingCopy.blockedHint) ?? "")
+            .accessibilityIdentifier(PairingAccessibility.submitButton)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
 

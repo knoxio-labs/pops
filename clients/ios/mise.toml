@@ -1,5 +1,10 @@
 [tools]
 jq = "1.8.2"
+# The UI-level test runner — see .maestro/README.md for why it and not
+# XCUITest. Pinned like every other tool here: Maestro's element matching and
+# its command set both move between releases, so an unpinned one turns a flow
+# that passed yesterday into a red required check with no commit behind it.
+maestro = "cli-2.8.0"
 swiftlint = "0.65.0"
 xcodegen = "2.46.0"
 
@@ -744,6 +749,122 @@ exit $status
 # re-vendoring breaks the build — but the re-vendor step cannot live here:
 # ADR-043 says a client never reaches into a pillar's directory. The task that
 # does both is `fixture:device-signature` at the repo root; prefer it.
+# The UI-level lane: install the built app on the simulator and drive
+# `.maestro/pairing-to-transaction-detail.yaml` against a BFM that is already
+# running. That README argues for Maestro over XCUITest; this task is about
+# what has to be true before a flow can run.
+#
+# IT DOES NOT START A SERVER, and that is a boundary rather than an omission.
+# ADR-043 says a client consumes the federation over HTTP and never reaches
+# into a pillar's directory, so booting `@pops/bfm` belongs to the repo root —
+# `mise run e2e:ios` there does both halves and is the one command to run. What
+# this task does over HTTP, it does through the BFM's published contract:
+# `POST /operator/pairing/codes` is the same route the operator's Devices page
+# calls.
+#
+# IT DOES NOT BUILD EITHER, unless it has to. `build:for-testing` wipes its own
+# derived-data directory and recompiles the whole tree — seven minutes, and the
+# reason is in that task — so a lane that always depended on it would double
+# the cost of the CI job it runs inside, seconds after `test` compiled the same
+# sources. It builds when the products are missing or older than a Swift file,
+# and says which it did.
+[tasks.e2e]
+description = "Drive the pairing → transaction flow on the simulator against a running BFM (repo root: `mise run e2e:ios`)"
+depends = ["generate"]
+run = '''
+set -eu
+set -o pipefail
+
+base="${POPS_BFM_BASE_URL:-}"
+if [ -z "$base" ]; then
+  echo "e2e: no POPS_BFM_BASE_URL. This lane drives the app against a BFM that is" >&2
+  echo "     already running; it does not start one. From the repo root:" >&2
+  echo "         mise run e2e:ios" >&2
+  echo "     boots a real pillar against a temporary database and calls this task." >&2
+  exit 1
+fi
+
+app="$POPS_IOS_DERIVED_DATA/Build/Products/Debug-iphonesimulator/Pops.app"
+
+# Rebuilt when there is nothing to install, or when any build input is newer
+# than what was installed last time.
+#
+# ANY FILE, not just `*.swift`, and generated sources are NOT excluded. An
+# earlier version of this borrowed `lint:analyze`'s prune list, which is wrong
+# here because the two are asking different questions: that task is counting
+# the files a person wrote, this one is asking whether the binary is stale.
+# `Packages/BFMClient/Sources/BFMClient/Generated` is compiled into the app —
+# `mise run generate:bfm-client` rewriting it is exactly the change this must
+# catch — and so are asset catalogues, entitlements and `Info.plist`, none of
+# which end in `.swift`.
+#
+# Two things are still pruned, each because it would report staleness that is
+# not there:
+#
+#   - `.build`, SwiftPM's own output. It is not a source, and a checkout
+#     restored from cache carries a fresh mtime.
+#   - `Config/Signing.local.xcconfig`, which the `generate` this task depends on
+#     rewrites on every run when the machine has a team configured. Left in, it
+#     would make every run a rebuild on exactly those machines.
+#
+# Compared against a FILE INSIDE the bundle rather than the bundle directory. A
+# directory's mtime moves when an entry is added or removed from it and not
+# when the bytes of an existing entry change, so a rebuild that only rewrote
+# the binary can leave the `.app` looking older than the sources it was built
+# from. `Info.plist` is rewritten by every build, and its absence is itself a
+# reason to rebuild — which is why one test covers both.
+stamp="$app/Info.plist"
+needs_build=false
+if [ ! -f "$stamp" ]; then
+  needs_build=true
+elif [ -n "$(find App AppTests Packages Config project.yml \
+    -name .build -type d -prune \
+    -o -name Signing.local.xcconfig -prune \
+    -o -type f -newer "$stamp" -print -quit)" ]; then
+  needs_build=true
+fi
+
+if [ "$needs_build" = true ]; then
+  echo "e2e: compiling — no products at $app, or a source is newer than them."
+  mise run build:for-testing
+else
+  echo "e2e: reusing the products under $POPS_IOS_DERIVED_DATA."
+fi
+
+# The simulator `test` runs on, and the one it leaves booted. Preferring an
+# already-booted device of that name is what keeps this from starting a second
+# one alongside it; `bootstatus -b` boots only if it has to and waits either
+# way.
+udid=$(xcrun simctl list devices available -j \
+  | jq -r --arg name "$POPS_IOS_SIMULATOR" \
+    '[.devices[][] | select(.name == $name)] | (map(select(.state == "Booted")) + .) | .[0].udid // empty')
+if [ -z "$udid" ]; then
+  echo "e2e: no simulator named '$POPS_IOS_SIMULATOR' is available. 'xcrun simctl list devices'" >&2
+  echo "     lists what this Xcode has; POPS_IOS_SIMULATOR in this file names the one" >&2
+  echo "     every lane here uses." >&2
+  exit 1
+fi
+xcrun simctl bootstatus "$udid" -b > /dev/null
+xcrun simctl install "$udid" "$app"
+
+# Minted as late as possible: the BFM expires a pairing code five minutes after
+# issuing it, and the flow spends it in the first ten seconds.
+# `|| true` so a refused connection or an HTTP error reaches the message below
+# rather than aborting the task under `set -e` with a bare curl exit code.
+code=$(curl -fsS -X POST "$base/operator/pairing/codes" \
+  -H 'content-type: application/json' -d '{}' | jq -r '.code // empty' || true)
+if [ -z "$code" ]; then
+  echo "e2e: $base/operator/pairing/codes returned no code. A 401 here means that BFM" >&2
+  echo "     is running with NODE_ENV=production, where the route needs a Cloudflare" >&2
+  echo "     Access identity this task has no way to present." >&2
+  exit 1
+fi
+
+maestro --device "$udid" test .maestro/pairing-to-transaction-detail.yaml \
+  -e BFM_BASE_URL="$base" \
+  -e PAIRING_CODE="$code"
+'''
+
 [tasks."fixture:device-signature:generate"]
 description = "Regenerate this client's copy of the iOS↔BFM signature fixture (the repo root's `fixture:device-signature` also re-vendors)"
 run = "swift Tools/generate-device-signature-fixture.swift > Contracts/device-signature-v1.json"

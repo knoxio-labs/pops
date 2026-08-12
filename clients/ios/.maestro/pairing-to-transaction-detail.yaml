@@ -1,0 +1,75 @@
+appId: com.knoxiolabs.pops
+name: Pair this device, then open a transaction
+---
+# An unpaired launch, every time. `clearState` empties the app container, which
+# is where the paired device is recorded; `clearKeychain` removes the device
+# key and tokens, which live outside it. Without the second one a re-run starts
+# on the transactions list and never sees the screen this flow is about.
+- clearState
+- clearKeychain
+- launchApp
+
+- assertVisible:
+    id: 'pairing-code-field'
+
+# The Debug build prefills this with the address in project.yml. The harness
+# serves on a free port instead — scripts/ios-e2e/run.mjs says why — so the
+# prefill is erased and the real one typed, which is also the path somebody
+# pairing without a QR code takes.
+- tapOn:
+    id: 'pairing-server-field'
+- eraseText
+- inputText: ${BFM_BASE_URL}
+
+- tapOn:
+    id: 'pairing-code-field'
+- inputText: ${PAIRING_CODE}
+
+# No `hideKeyboard` first: the form is a ScrollView, so SwiftUI insets it for
+# the keyboard and the button stays on screen with the keys up. Maestro cannot
+# dismiss this keyboard anyway — there is no standard dismiss action on a plain
+# SwiftUI TextField, and it says so and fails.
+- tapOn:
+    id: 'pairing-submit'
+
+# Nothing waits here. Pairing generates a key, spends the code, stores the
+# credentials and asks the BFM what to show — and every `assertVisible` below
+# retries until the element is there or Maestro gives up, which is the whole
+# reason this file has no sleeps in it.
+- assertVisible:
+    id: 'transactions-list'
+
+# The federation behind this flow is healthy, so this banner must not be on
+# screen — and this is the assertion that found the first thing this flow ever
+# caught. The app could not decode `device.lastSeenAt` out of
+# `GET /mobile/bootstrap`, because the BFM emits milliseconds and the generated
+# client's date decoding refused them, so every launch fell back to the feature
+# list the binary was compiled with and drew this over it. Nothing below this
+# layer saw it: the unit fixtures spell that timestamp without milliseconds.
+#
+# It is also what makes the rest of this flow reliable. The banner is drawn
+# ABOVE the list, so arriving late it moves every row down and a tap already
+# aimed at one lands on nothing — twice on CI, as POPS-1835.
+- assertNotVisible: 'Some of Pops could not be reached, so this may be out of date.'
+
+# The seeded row, by the id the server gave it. The rows read as one sentence
+# to VoiceOver — description, amount, date — and the amount and date are
+# formatted for the simulator's locale, so asserting on the sentence would be
+# asserting on the runner's region settings. The identifier carries the
+# transaction's own id and nothing else.
+- tapOn:
+    id: 'transaction-row-e2e-groceries'
+
+- assertVisible:
+    id: 'transaction-detail'
+
+# The account line, which proves the detail request happened. The screen opens
+# seeded from the row the list already had — description, amount, date, type,
+# entity, tags — and `Account` is one of the fields only
+# `GET /mobile/finance/transactions/{id}` returns. A flow that stopped at the
+# assertion above would pass against a detail screen that never called
+# anything.
+#
+# Read as one utterance by VoiceOver, hence the comma: the label and the value
+# are drawn as two lines and announced as one.
+- assertVisible: 'Account, Everyday'

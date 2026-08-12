@@ -29,6 +29,36 @@ internal struct BootstrapTests {
         try await service(StubTransport(status: .ok, json: json)).bootstrap()
     }
 
+    /// The same response as ``healthy``, with the timestamp spelled the way the
+    /// BFM actually spells it.
+    ///
+    /// `device.lastSeenAt` is a `Date().toISOString()`, so it carries
+    /// milliseconds — and every fixture in this suite was written without them,
+    /// which is why nothing here noticed that the generated client's default
+    /// date decoding refused the real thing. The app answered by falling back
+    /// to its compiled feature list under a "could not be reached" banner, on a
+    /// federation that was healthy. Caught by the Maestro flow's first run
+    /// against a real pillar (POPS-1698).
+    private static let healthyWithMilliseconds = """
+        {"device":{"id":"device-7","name":"Joao's iPhone","lastSeenAt":"2026-08-10T09:15:00.123Z"},\
+        "registry":{"source":"fresh"},\
+        "pillars":[{"id":"finance","reachability":"healthy"}],\
+        "features":[{"id":"transactions","reachability":"healthy"}]}
+        """
+
+    @Test("decodes the millisecond timestamp a real BFM sends")
+    func decodesFractionalSeconds() async throws {
+        let snapshot = try await snapshot(Self.healthyWithMilliseconds)
+
+        let expected = try Date(
+            "2026-08-10T09:15:00.123Z",
+            strategy: Date.ISO8601FormatStyle(includingFractionalSeconds: true)
+        )
+
+        #expect(snapshot.device.lastSeenAt == expected)
+        #expect(snapshot.registrySource == .fresh)
+    }
+
     @Test("the response becomes the app's own vocabulary")
     func mapsTheResponse() async throws {
         let snapshot = try await snapshot(Self.healthy)

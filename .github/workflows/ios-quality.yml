@@ -31,6 +31,15 @@ name: iOS Quality
 # is the input the Swift client is generated from, so a contract change has to
 # re-run this job or the generated client rots without a single red check.
 #
+# THIS JOB ALSO RUNS THE ONLY TEST IN THE REPO THAT TOUCHES AN iOS SCREEN. The
+# last steps boot a real `@pops/bfm` and drive the built app against it with
+# Maestro; `clients/ios/.maestro/README.md` says why Maestro and not XCUITest,
+# and `scripts/ios-e2e/run.mjs` says what the pillar is talking to. It lives
+# here rather than in a workflow of its own because it needs what this job
+# already paid for — one compile of the tree, one booted simulator — and
+# because `ci-gate.yml` already lists "iOS Quality", so a second gated context
+# would be a second thing to wire and a second thing to forget.
+#
 # THERE IS NO DerivedData CACHE HERE, AND THAT IS DELIBERATE. It cannot help
 # the step that costs. `build:for-testing` wipes its own private
 # `.derived-data` directory before every build, because a complete compiler
@@ -82,7 +91,7 @@ permissions:
 
 jobs:
   quality:
-    name: build + test + lint
+    name: build + test + lint + UI flow
     runs-on: macos-latest
     # A wedged simulator is the classic macOS-CI failure and it does not fail —
     # it hangs. Without a ceiling that burns the job's full 6h default.
@@ -92,10 +101,14 @@ jobs:
         working-directory: clients/ios
     env:
       # mise merges config UP the tree, so a bare `mise install` here would also
-      # install the root `mise.toml`'s node, pnpm and Rust — a full rustup
-      # toolchain download in a job that compiles no Rust. Disabling them leaves
-      # exactly the three tools `clients/ios/mise.toml` declares.
-      MISE_DISABLE_TOOLS: rust,node,pnpm
+      # install the root `mise.toml`'s Rust — a full rustup toolchain download
+      # in a job that compiles no Rust.
+      #
+      # Node and pnpm used to be disabled alongside it, and are not any more:
+      # the UI-level step at the bottom of this job runs a real `@pops/bfm`
+      # for the app to talk to, and that is a Node process. They cost about
+      # twenty seconds to install; Rust costs minutes.
+      MISE_DISABLE_TOOLS: rust
 
     steps:
       - uses: actions/checkout@v7
@@ -258,3 +271,56 @@ jobs:
       # wall clock and the isolation — costed in POPS-1746.
       - name: Test + SwiftLint analyzer rules (one shared compile)
         run: "mise run -j 1 test ::: lint:analyze"
+
+      # Everything below drives the built app on the simulator the step above
+      # just left booted, against a real BFM. `clients/ios/.maestro/README.md`
+      # argues for Maestro over XCUITest; what follows is only about getting a
+      # pillar running next to it.
+      #
+      # THERE IS NO DOCKER ON THIS RUNNER. GitHub's macOS images ship no Docker
+      # daemon, so `infra/docker-compose.dev.yml` — the obvious way to get a
+      # BFM — is not available here and no amount of `docker compose` will make
+      # it so. The pillar is a Node process: install its subgraph, build it,
+      # run it. `scripts/ios-e2e/run.mjs` does the last two.
+      - name: Expose bundled node-gyp on PATH
+        # mise-installed node bundles node-gyp under npm but does not put it on
+        # PATH, so better-sqlite3 — which the BFM opens its database with —
+        # fails its pnpm lifecycle build with `node-gyp: not found` on any
+        # platform with no prebuild for this Node ABI. The same step, for the
+        # same reason, is in `unit-quality.yml`.
+        working-directory: .
+        run: |
+          set -euo pipefail
+          gyp_bin="$(dirname "$(mise which node)")/../lib/node_modules/npm/bin/node-gyp-bin"
+          [ -x "$gyp_bin/node-gyp" ] || { echo "::error::bundled node-gyp not found at $gyp_bin"; exit 1; }
+          echo "$gyp_bin" >> "$GITHUB_PATH"
+
+      - name: Install the BFM's subgraph
+        # Not the whole workspace: this job needs one pillar to run, and
+        # `@pops/bfm...` pulls exactly it and what it imports.
+        working-directory: .
+        run: pnpm install --frozen-lockfile --filter "@pops/bfm..."
+
+      # Last, because it is the only step here that depends on every earlier
+      # one: it installs the products `build:for-testing` wrote and drives the
+      # simulator `test` booted. Its own task rebuilds when those are missing,
+      # so a reordering degrades into a second compile rather than into a lie.
+      - name: UI flow (Maestro, against a real BFM)
+        working-directory: .
+        run: mise run e2e:ios
+
+      # Maestro writes a screenshot and the full view hierarchy for every step
+      # it ran, and they are the only way to tell a real regression from a tap
+      # the simulator swallowed. Without this they die with the runner and the
+      # next person re-runs the job hoping to learn something.
+      #
+      # `if: failure()` rather than `always()`: a green run's artefacts are
+      # 30 MB of screenshots nobody opens.
+      - name: Maestro's screenshots and view hierarchies
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maestro-debug
+          path: ~/.maestro/tests
+          retention-days: 7
+          if-no-files-found: warn

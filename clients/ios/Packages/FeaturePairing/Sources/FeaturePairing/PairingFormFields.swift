@@ -16,6 +16,7 @@ internal struct PairingFormFields: View {
                 PairingTextField(
                     label: PairingCopy.serverLabel,
                     placeholder: PairingCopy.serverPlaceholder,
+                    identifier: PairingAccessibility.serverField,
                     text: $model.baseURLText
                 )
                 .popsURLFieldStyle()
@@ -23,6 +24,7 @@ internal struct PairingFormFields: View {
                 PairingTextField(
                     label: PairingCopy.codeLabel,
                     placeholder: PairingCopy.codePlaceholder,
+                    identifier: PairingAccessibility.codeField,
                     text: $model.codeText
                 )
                 .popsPairingCodeFieldStyle()
@@ -30,6 +32,7 @@ internal struct PairingFormFields: View {
                 PairingTextField(
                     label: PairingCopy.nameLabel,
                     placeholder: PairingCopy.namePlaceholder,
+                    identifier: PairingAccessibility.deviceNameField,
                     text: $model.deviceNameText
                 )
             }
@@ -47,6 +50,10 @@ internal struct PairingFormFields: View {
 internal struct PairingTextField: View {
     internal let label: String
     internal let placeholder: String
+    /// The stable name for the field itself, from ``PairingAccessibility``.
+    /// Applied to the `TextField` rather than to the surrounding stack, so
+    /// what it names is the element that takes typing.
+    internal let identifier: String
     @Binding internal var text: String
 
     internal var body: some View {
@@ -58,6 +65,7 @@ internal struct PairingTextField: View {
                 .font(.popsBody)
                 .foregroundStyle(Color.popsForeground)
                 .accessibilityLabel(label)
+                .accessibilityIdentifier(identifier)
             Rectangle()
                 .fill(Color.popsSeparator)
                 .frame(height: PopsBorder.hairline)

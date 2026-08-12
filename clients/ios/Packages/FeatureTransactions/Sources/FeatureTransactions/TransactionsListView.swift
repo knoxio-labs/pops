@@ -81,6 +81,10 @@ extension TransactionsListView {
         }
         .scrollBounceBehavior(.always)
         .refreshable { await model.refresh() }
+        // Names the screen rather than any one row, so a flow can say "the
+        // list is up" before saying what is on it — and get told which of the
+        // two failed rather than only that something did.
+        .accessibilityIdentifier(TransactionsAccessibility.list)
     }
 
     /// Each row is a `Button` so it is tappable, and so VoiceOver announces it
@@ -100,6 +104,7 @@ extension TransactionsListView {
                     TransactionRowView(transaction: transaction, presentation: presentation)
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier(TransactionsAccessibility.row(transaction.id))
             }
         } else {
             EmptyStateView(message: TransactionsCopy.empty)

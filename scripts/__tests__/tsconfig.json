@@ -8,5 +8,5 @@
     "noEmit": true,
     "types": ["node", "vitest/globals"]
   },
-  "include": ["*.ts", "../*.mjs"]
+  "include": ["*.ts", "../*.mjs", "../ios-e2e/*.mjs"]
 }
