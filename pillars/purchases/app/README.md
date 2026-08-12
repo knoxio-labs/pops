@@ -65,6 +65,36 @@ Reads take the server's 50-row default and the view says when the page came
 back full. No offset cursor: confirming drains the queue from underneath the
 cursor, so an offset over a shrinking list is the wrong shape.
 
+## The merchant lens
+
+The roll-up layer only.
+
+`/purchases/merchants` reads `GET /analytics/merchant-spend` and renders one
+section per currency, one row per merchant. Three things about it are load
+bearing rather than stylistic:
+
+- **The unexplained bucket is always on screen**, including when it is zero.
+  Hiding it when there is nothing to report would make its absence mean two
+  things at once — "all accounted for" and "this view does not show that" —
+  and a reader cannot tell those apart. `residualCents` comes verbatim from
+  the server and the explained figure is its complement, never the reverse.
+- **The percentage never reads 100% while a residual exists.** A one-cent
+  residual against a five-figure total rounds to 100, which is the exact
+  false certainty
+  [ADR-042](../../../docs/architecture/adr-042-purchase-documents-and-transaction-reconciliation.md)
+  refuses one layer down. The share clamps to 99, and is withheld entirely
+  when the figures are not a part-of-whole (a negative total, or more linked
+  than was ever spent).
+- **Merchant attribution is reported, not assumed.** The roll-up groups on a
+  resolved entity, on a bare label, or not at all, and the legend on the page
+  says what each costs. A label total presented as an entity total is the
+  same class of error as a dropped residual, one dimension over.
+
+The tag treemap, the per-item history and the inventory cross-reference the
+merchant lens is specified to drill into have no routes behind them. The page
+names them as absent rather than rendering an empty panel, which would read
+as a statement about the data instead of about the software.
+
 ## Layout
 
 ```
@@ -72,14 +102,15 @@ src/
   index.ts                         entrypoint — re-exports manifest, navConfig, routes
   manifest.ts                      ModuleManifest (id='purchases')
   routes.tsx                       route table + navConfig
+  money.ts                         cents → currency string, degrading on an unknown code
   purchases-api/                   generated Hey API client (do not hand-edit)
-  purchases-api-runtime-config.ts  client baseUrl ('/purchases-api')
   purchases-api-helpers.ts         unwrap() for the generated {data,error} results
+  purchases-api-runtime-config.ts  client baseUrl ('/purchases-api')
   pages/
     ReconcileQueuePage.tsx         /purchases — the reconciliation queue
     reconcile/
       types.ts                     view types aliased off the generated client
-      money.ts                     cents formatting + the delta's three states
+      money.ts                     the delta's three states
       useReconcileQueue.ts         GET /reconcile/queue
       useReconcileDecisions.ts     confirm/unlink, and what they persist
       useQueueCursor.ts            where the keyboard points
@@ -87,6 +118,18 @@ src/
       QueueEntryRow.tsx            one row: charge · delta · proposals
       QueueFilters.tsx             kind + includeAuto
       DecisionBar.tsx              accept/reject, the shortcut hint, the caveat
+    MerchantLensPage.tsx           /purchases/merchants — spend per merchant
+    merchant-lens/
+      types.ts                     view types aliased off the generated client
+      period.ts                    the period vocabulary and the window it sends
+      explained-split.ts           explained/unexplained, and when a share is meaningful
+      useMerchantLensModel.ts      GET /analytics/merchant-spend, folded per currency
+      CurrencyGroupSection.tsx     one currency, its total, its merchants
+      MerchantRow.tsx              one merchant: headline, split, figures
+      ExplainedSplit.tsx           the split and its meter
+      PeriodPicker.tsx             all time, or a year
+      AttributionLegend.tsx        what each grouping badge means and costs
+      AbsentDrillDown.tsx          the layers with no route behind them
 ```
 
 The generated client under `src/purchases-api/` is produced from
