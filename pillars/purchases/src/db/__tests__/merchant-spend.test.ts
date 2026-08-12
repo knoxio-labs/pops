@@ -108,9 +108,9 @@ function linkFirstCharge(purchaseId: string, uri: string): void {
  * `getPurchase`.
  *
  * This is the roll-up's oracle: the numbers a consumer would get by paging
- * the index and summing client-side, which is exactly what POPS-241 would
- * otherwise have to do. If the aggregate and this disagree, one of them is
- * lying to a user.
+ * the index and summing client-side, which is exactly what a merchant lens
+ * would otherwise have to do. If the aggregate and this disagree, one of
+ * them is lying to a user.
  */
 function foldEveryOrder(): { accounting: PurchaseAccounting; orderCount: number } {
   const rows = listPurchases(opened.db, { limit: 500 });
@@ -353,6 +353,42 @@ describe('the unexplained bucket is returned, not left to a consumer', () => {
     expect(rollup.merchants[0]?.accounting.residualCents).toBe(3000);
     // And it is still counted as spend — that money left the household.
     expect(rollup.merchants[0]?.accounting.netSpendCents).toBe(10_000);
+  });
+
+  it('keeps an over-charged order’s residual negative once summed', () => {
+    // Charges exceeding the order total make the residual negative, and it
+    // has to stay negative through the fold: a merchant whose charges
+    // over-run their orders is a real bookkeeping fault, and a floor at zero
+    // would report the books as balanced (ADR-042). Summing matters
+    // separately from the per-order case — a clamp applied while adding two
+    // splits is invisible to any single-order fixture.
+    createPurchase(
+      opened.db,
+      order({
+        checksum: 'overcharged',
+        merchantEntityName: 'Overcharged',
+        totalCents: 1000,
+        charges: [{ sourceChargeRef: 'cap', amountCents: 2500 }],
+      })
+    );
+    createPurchase(
+      opened.db,
+      order({ checksum: 'plain', merchantEntityName: 'Overcharged', totalCents: 500 })
+    );
+
+    const rollup = rollUpMerchantSpend(opened.db);
+    const group = rollup.merchants.find((m) => m.merchant.name === 'Overcharged');
+
+    // 1000 − 2500 matched = −1500, plus 500 wholly unexplained.
+    expect(group?.accounting.residualCents).toBe(-1000);
+    expect(group?.accounting.matchedCents).toBe(0);
+    expect(group?.accounting.awaitingImportCents).toBe(2500);
+    expect(currencyTotal(rollup, 'AUD').accounting.residualCents).toBe(-1000);
+    // And the identity still closes over the negative bucket.
+    const total = currencyTotal(rollup, 'AUD').accounting;
+    expect(total.matchedCents + total.awaitingImportCents + total.residualCents).toBe(
+      total.totalCents
+    );
   });
 
   it('surfaces an over-refund as a negative figure rather than clamping it', () => {

@@ -48,7 +48,10 @@ import { computeAccounting, type PurchaseAccounting } from './accounting.js';
 import { groupBy } from './group-by.js';
 import { purchaseFilterConditions, type PurchaseScopeFilter } from './purchase-reads.js';
 
+import type { SQL } from 'drizzle-orm';
+
 import type { MerchantResolution } from '../../contract/constants.js';
+import type { PurchaseChargeLinkRow, PurchaseChargeRow } from '../schema.js';
 import type { PurchasesDb } from './internal.js';
 
 /**
@@ -173,6 +176,40 @@ function identify(
 }
 
 /**
+ * The charges on the orders a scope selects, and the links on those charges,
+ * indexed for the fold to look up by id.
+ */
+function selectSettlementRows(
+  db: PurchasesDb,
+  scope: readonly SQL[]
+): {
+  chargesByPurchase: ReadonlyMap<string, readonly PurchaseChargeRow[]>;
+  linksByChargeId: ReadonlyMap<string, readonly PurchaseChargeLinkRow[]>;
+} {
+  const chargeRows = db
+    .select({ charge: purchaseCharges })
+    .from(purchaseCharges)
+    .innerJoin(purchases, eq(purchases.id, purchaseCharges.purchaseId))
+    .where(and(...scope))
+    .all()
+    .map((row) => row.charge);
+
+  const linkRows = db
+    .select({ link: purchaseChargeLinks })
+    .from(purchaseChargeLinks)
+    .innerJoin(purchaseCharges, eq(purchaseCharges.id, purchaseChargeLinks.chargeId))
+    .innerJoin(purchases, eq(purchases.id, purchaseCharges.purchaseId))
+    .where(and(...scope))
+    .all()
+    .map((row) => row.link);
+
+  return {
+    chargesByPurchase: groupBy(chargeRows, (row) => row.purchaseId),
+    linksByChargeId: groupBy(linkRows, (row) => row.chargeId),
+  };
+}
+
+/**
  * Spend per merchant and currency over the orders a filter selects.
  *
  * Orders naming no merchant are their own `unattributed` bucket rather than
@@ -200,25 +237,7 @@ export function rollUpMerchantSpend(
     .all();
   if (orders.length === 0) return { merchants: [], totals: [] };
 
-  const chargeRows = db
-    .select({ charge: purchaseCharges })
-    .from(purchaseCharges)
-    .innerJoin(purchases, eq(purchases.id, purchaseCharges.purchaseId))
-    .where(and(...scope))
-    .all()
-    .map((row) => row.charge);
-
-  const linkRows = db
-    .select({ link: purchaseChargeLinks })
-    .from(purchaseChargeLinks)
-    .innerJoin(purchaseCharges, eq(purchaseCharges.id, purchaseChargeLinks.chargeId))
-    .innerJoin(purchases, eq(purchases.id, purchaseCharges.purchaseId))
-    .where(and(...scope))
-    .all()
-    .map((row) => row.link);
-
-  const chargesByPurchase = groupBy(chargeRows, (row) => row.purchaseId);
-  const linksByChargeId = groupBy(linkRows, (row) => row.chargeId);
+  const { chargesByPurchase, linksByChargeId } = selectSettlementRows(db, scope);
 
   const buckets = new Map<string, MerchantBucket>();
   for (const order of orders) {
@@ -257,7 +276,14 @@ export function rollUpMerchantSpend(
     }
   }
 
-  const merchants = [...buckets.values()]
+  const merchants = presentBuckets(buckets);
+
+  return { merchants, totals: totalsByCurrency(merchants) };
+}
+
+/** Drop the fold's bookkeeping fields and put the groups in display order. */
+function presentBuckets(buckets: ReadonlyMap<string, MerchantBucket>): readonly MerchantSpend[] {
+  return [...buckets.values()]
     .map((bucket): MerchantSpend => ({
       merchant: {
         entityId: bucket.entityId,
@@ -269,8 +295,6 @@ export function rollUpMerchantSpend(
       accounting: bucket.accounting,
     }))
     .sort(compareMerchantSpend);
-
-  return { merchants, totals: totalsByCurrency(merchants) };
 }
 
 /**
