@@ -77,27 +77,68 @@ internal actor Gate {
     }
 }
 
-/// A ``TokenStore`` that counts reads.
+/// A ``TokenStore`` that lets a test wait for a specific number of reads to
+/// have happened, rather than poll for it.
 ///
-/// The count is the only externally visible proof that a caller has entered
-/// `DeviceSessionRefresher` and got as far as looking at the stored pair —
-/// every path through it reads the store exactly once before deciding what to
-/// do. It is what turns "twenty callers were probably concurrent" into
-/// "nineteen callers were parked when the twentieth rotation began".
+/// The read count is the only externally visible proof that a caller has
+/// entered `DeviceSessionRefresher` and got as far as looking at the stored
+/// pair — every path through it reads the store exactly once before deciding
+/// what to do. It is what turns "twenty callers were probably concurrent"
+/// into "nineteen callers were parked when the twentieth rotation began".
 ///
-/// Synchronous, because ``TokenStore`` is: an actor could not witness it.
+/// ``waitForReads(atLeast:)`` resumes a continuation the instant the target
+/// count is reached, rather than polling `readCount` in a bounded loop. A
+/// bounded poll is a proxy for "the other tasks got enough scheduling turns
+/// to make that many reads", and that proxy fails under real CPU starvation —
+/// a lint job saturating the runner's cores alongside this suite is a
+/// documented case, in `ios-quality.yml`'s note on `mise run -j 1`. This type
+/// makes the wait exact instead: a starved run is slower, never wrong.
+///
+/// Synchronous apart from the wait, because ``TokenStore`` is: an actor could
+/// not witness `load()`.
 internal final class CountingTokenStore: TokenStore {
+    private typealias Continuation = CheckedContinuation<Void, any Error>
+
+    private struct Waiter {
+        let target: Int
+        let continuation: Continuation
+    }
+
+    private struct State {
+        var count = 0
+        var nextWaiterID = 0
+        // An id sits here from the moment `waitForReads` is called until its
+        // outcome is decided one way or another. Registered *before* the
+        // continuation exists, so `onCancel` — which can run concurrently with,
+        // or even before, the code below that creates the continuation — always
+        // has something to claim. Without this, a cancellation that lands in
+        // that gap would find no waiter to resume and the continuation
+        // registered a moment later would then wait for a signal that already
+        // happened and is never coming again.
+        var pendingIDs: Set<Int> = []
+        var waiters: [Int: Waiter] = [:]
+    }
+
     private let wrapped: any TokenStore
-    private let reads = Mutex<Int>(0)
+    private let state = Mutex<State>(State())
 
     internal init(_ wrapped: any TokenStore) {
         self.wrapped = wrapped
     }
 
-    internal var readCount: Int { reads.withLock { $0 } }
-
     internal func load() throws -> DeviceTokens? {
-        reads.withLock { $0 += 1 }
+        let ready: [Waiter] = state.withLock { state in
+            state.count += 1
+            let count = state.count
+            let readyIDs = state.waiters.filter { $0.value.target <= count }.map(\.key)
+            var ready: [Waiter] = []
+            for id in readyIDs {
+                state.pendingIDs.remove(id)
+                if let waiter = state.waiters.removeValue(forKey: id) { ready.append(waiter) }
+            }
+            return ready
+        }
+        for waiter in ready { waiter.continuation.resume() }
         return try wrapped.load()
     }
 
@@ -108,6 +149,89 @@ internal final class CountingTokenStore: TokenStore {
     internal func wipe() throws {
         try wrapped.wipe()
     }
+
+    /// Suspends until at least `target` reads have happened, or throws
+    /// ``CancellationError`` if the calling task is cancelled first — which is
+    /// what lets ``withDeadline(seconds:_:)`` actually end this wait on a
+    /// regression instead of leaving it parked past the deadline.
+    ///
+    /// Resumed synchronously from inside `load()` the moment the count
+    /// reaches `target` — including immediately, if it already has by the
+    /// time this is called — so there is no window in which a caller could
+    /// miss the signal by arriving late.
+    internal func waitForReads(atLeast target: Int) async throws {
+        let id = state.withLock { state -> Int in
+            let id = state.nextWaiterID
+            state.nextWaiterID += 1
+            state.pendingIDs.insert(id)
+            return id
+        }
+        try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { (continuation: Continuation) in
+                let outcome: Result<Void, any Error>? = state.withLock { state in
+                    guard state.pendingIDs.contains(id) else {
+                        return .failure(CancellationError())
+                    }
+                    if state.count >= target {
+                        state.pendingIDs.remove(id)
+                        return .success(())
+                    }
+                    state.waiters[id] = Waiter(target: target, continuation: continuation)
+                    return nil
+                }
+                if let outcome { continuation.resume(with: outcome) }
+            }
+        } onCancel: {
+            let waiter: Waiter? = state.withLock { state in
+                state.pendingIDs.remove(id)
+                return state.waiters.removeValue(forKey: id)
+            }
+            waiter?.continuation.resume(throwing: CancellationError())
+        }
+    }
+}
+
+/// Fails fast instead of hanging when `operation` never completes.
+///
+/// Every wait in this file that proves concurrency is signalled exactly —
+/// ``Gate/wait()``, ``CountingTokenStore/waitForReads(atLeast:)`` — so a
+/// correct implementation resolves in milliseconds. `seconds` only needs to
+/// be far past that: it exists to turn "the implementation regressed and the
+/// signal this was waiting for never came" into a fast, clear failure instead
+/// of a suite that hangs until CI kills the job — the same failure mode
+/// ``Barrier``'s own bound exists to avoid (see its doc comment).
+///
+/// A `Task.sleep` racing the real wait, not a test-level time limit trait:
+/// that a trait cancels the test's task is not, by itself, enough — the
+/// operation still has to *notice* the cancellation to stop waiting, which
+/// only holds if every primitive it calls is itself cancellation-aware. That
+/// held for ``CountingTokenStore/waitForReads(atLeast:)`` only after fixing
+/// it to be so; racing here keeps the requirement local to this function
+/// instead of resting on every current and future caller getting it right,
+/// and does not depend on a trait actually being honoured by whatever
+/// toolchain runs the suite.
+internal func withDeadline<T: Sendable>(
+    seconds: Double = 30,
+    _ operation: @Sendable @escaping () async throws -> T
+) async throws -> T {
+    try await withThrowingTaskGroup(of: T.self) { group in
+        group.addTask { try await operation() }
+        group.addTask {
+            try await Task.sleep(for: .seconds(seconds))
+            throw DeadlineExceeded()
+        }
+        defer { group.cancelAll() }
+        guard let result = try await group.next() else {
+            // Unreachable: two tasks were just added above and this is the
+            // first `next()` call, so at least one has a result to give.
+            throw DeadlineExceeded()
+        }
+        return result
+    }
+}
+
+internal struct DeadlineExceeded: Error, CustomStringConvertible {
+    internal var description: String { "operation did not complete within the deadline" }
 }
 
 /// Yields until `condition` holds, and reports whether it ever did.
@@ -116,8 +240,15 @@ internal final class CountingTokenStore: TokenStore {
 /// on the same executor, so yielding is what lets them run — and the wait ends
 /// the instant the condition holds rather than after a duration somebody
 /// guessed. The bound exists so a regression fails the suite instead of hanging
-/// it; it is not a timeout in wall-clock terms and nothing about it is timing
-/// dependent.
+/// it.
+///
+/// It is not a wall-clock timeout, but the bound is still a bet on how many
+/// scheduling turns this suite's tasks get before it is exhausted — a bet
+/// that loses under real CPU starvation, not just a slow machine: see
+/// `ios-quality.yml`'s note on `mise run -j 1` for a documented case. Prefer
+/// a primitive that is signalled exactly, like
+/// ``CountingTokenStore/waitForReads(atLeast:)``, over adding a new caller
+/// here where the condition can be made exact instead of merely observed.
 ///
 /// It **returns** rather than throwing, and the difference is not stylistic.
 /// Every caller has a gate to open afterwards, and a throw would skip it —

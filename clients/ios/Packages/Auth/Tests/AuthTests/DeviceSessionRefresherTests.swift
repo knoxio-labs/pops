@@ -56,7 +56,10 @@ internal struct DeviceSessionRefresherTests {
     /// does not assert "one rotation happened"; it asserts "nineteen callers
     /// were parked *inside* the refresher while the twentieth's rotation was in
     /// flight, and none of them started a second one" — which is the state the
-    /// BFM burns a token family for.
+    /// BFM burns a token family for. The wait for that count is exact rather
+    /// than polled, and bounded by a deadline rather than a scheduling-turn
+    /// budget: see ``CountingTokenStore/waitForReads(atLeast:)`` and
+    /// ``withDeadline(seconds:_:)``.
     @Test("twenty concurrent callers produce exactly one rotation")
     func concurrentCallersRotateOnce() async throws {
         let callers = 20
@@ -71,11 +74,19 @@ internal struct DeviceSessionRefresherTests {
             for _ in 0..<callers {
                 group.addTask { try await fixture.refreshedTokens(replacing: "access-1") }
             }
-            let allArrived = await waitUntil("every caller to reach the refresher") {
-                counted.readCount >= callers + 1
+            // The gate opens unconditionally, deadline or not: every one of the
+            // twenty callers above is parked behind it via the exchange, and a
+            // gate left shut is twenty callers the `for try await` below can
+            // never finish awaiting. A failed wait must still fail the test —
+            // it just cannot do that by skipping the open.
+            var readsFailure: (any Error)?
+            do {
+                try await withDeadline { try await counted.waitForReads(atLeast: callers + 1) }
+            } catch {
+                readsFailure = error
             }
             await gate.open()
-            #expect(allArrived, "a caller never reached the refresher")
+            if let readsFailure { throw readsFailure }
 
             for try await tokens in group { #expect(tokens.accessToken == "access-2") }
         }
