@@ -33,6 +33,7 @@
     "generate:openapi": "tsx scripts/generate-openapi.ts",
     "ingest:amazon": "tsx scripts/ingest-amazon.ts",
     "ingest:woolworths": "tsx scripts/ingest-woolworths.ts",
+    "propose:kinds": "tsx scripts/propose-kinds.ts",
     "start": "node dist/api/server.js",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
