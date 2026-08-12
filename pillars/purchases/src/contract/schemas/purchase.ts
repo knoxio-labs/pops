@@ -211,7 +211,10 @@ export const PurchaseSourceSchema = z.object({
  *
  * The identity consumers can rely on:
  * `totalCents === matchedCents + awaitingImportCents + residualCents`,
- * with `refundedCents` orthogonal and `netSpendCents` the headline figure.
+ * with `refundedCents` orthogonal and `netSpendCents` the headline figure,
+ * `totalCents − refundedCents`. That last one answers what the order cost,
+ * not how much of it has been proven — "money we can prove moved, net of
+ * refunds" stays derivable as `matched + awaitingImport − refunded`.
  */
 export const PurchaseAccountingSchema = z.object({
   totalCents: CentsSchema,
@@ -220,6 +223,7 @@ export const PurchaseAccountingSchema = z.object({
   residualCents: CentsSchema,
   /** Positive magnitude, so `refundedCents: 1179` reads as "$11.79 came back". */
   refundedCents: NonNegativeCentsSchema,
+  /** Signed and unclamped: negative is a genuine over-refund, not an artefact. */
   netSpendCents: CentsSchema,
 });
 

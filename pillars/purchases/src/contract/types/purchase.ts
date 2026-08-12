@@ -206,6 +206,10 @@ export interface PurchaseAccounting {
    * it in made getting a refund raise the "something is wrong" number.
    */
   refundedCents: number;
-  /** `matched + awaitingImport − refunded`. What the order actually cost. */
+  /**
+   * `totalCents − refundedCents`. What the order actually cost, independent
+   * of how much of it can be proven through the bank. Signed and unclamped:
+   * negative means refunds exceeded the total, a genuine over-refund.
+   */
   netSpendCents: number;
 }

@@ -6,6 +6,8 @@ Accepted — 2026-08-01. Introduces the `purchases` pillar (POPS-236).
 
 Amended 2026-08-03, while implementing the skeleton and before any data existed. The original decision — a separate pillar, links re-derived rather than patched, matching by arithmetic rather than AI, a visible residual — stands unchanged. What the amendment adds is the **grain**, which the original stated only as "line items" and which contact with a real Amazon export showed to be four levels rather than two. See [Grain](#grain-four-levels-not-two) and [Charges do not depend on finance](#charges-do-not-depend-on-finance).
 
+Amended again 2026-08-12: the derived `netSpend` figure is defined as `total − refunded` rather than `matched + awaitingImport − refunded` (POPS-1467). The four published buckets and every identity over them are unchanged. See [Amendment](#amendment--2026-08-12-netspend-is-the-total-less-refunds-not-the-proven-part-less-refunds).
+
 ## Context
 
 A bank transaction is an aggregate. `AMAZON MKTPLACE AU $412.80` records that money moved, and nothing about what was bought. At the scale a household actually transacts — five figures a year across Amazon, PayPal, Woolworths, Coles and Bunnings — the finance pillar can say precisely how much went to a merchant and nothing whatsoever about whether it was worth spending.
@@ -121,6 +123,16 @@ Card **authorizations** are recorded but excluded from the residual. A hold and 
 ### Reuse, not reinvention
 
 The pillar reuses rather than duplicates: money is integer cents (#3665, CF041); merchants are `contacts` entities where the id is operative and the name is only its label (#3807); tags come from the finance `tag_vocabulary`; learned match rules mirror `transaction_corrections` field-for-field; cross-pillar references are soft `pops://` URIs with a `staleAt` companion resolved by a nightly cron, following `home_inventory.purchaseTransactionUri`; and merchant sources live in a table rather than a compiled enum, per the registry lesson in [ADR-035](adr-035-pillar-redefinition-and-implicit-kinds.md).
+
+## Amendment — 2026-08-12: `netSpend` is the total less refunds, not the proven part less refunds
+
+The split above names `netSpend` as the derived headline figure without saying what derives it. The implementation computed `matched + awaitingImport − refunded`, and that answers a different question than the field's name: how much movement can currently be proven, rather than what the order cost. `netSpend` is therefore **`total − refunded`**, signed and unclamped.
+
+The old form made the headline a function of import and sweep history rather than of spending. An Amazon order read $0 before its first sweep and its full total after one — nothing about the money had changed, a cron had run. It also dropped gift-card and rewards money, which this ADR counts as spend everywhere else: the $56.78 order paying $40.00 on a card and $16.78 off a gift balance reported $40.00.
+
+Two properties decided it. Under summation, `Σtotal − Σrefunded` is additive and independent of import state, which is what a per-merchant roll-up (POPS-1752) needs; the old form drifts under the aggregate every time the sweep runs, and clamping at zero — the obvious way to stop a refunded order reading negative — breaks additivity outright, since `Σ max(0, net) ≠ max(0, Σ net)`. And the two forms already agree wherever an order carries a capture covering its total, which is exactly what minting guarantees (POPS-1760), so this states the steady state at ingest instead of after a sweep.
+
+Nothing is lost and nothing is hidden. "Money we can prove moved, net of refunds" stays derivable by any consumer from the published buckets as `matched + awaitingImport − refunded`; the proof-of-payment story is left entirely to `matched`, `awaitingImport` and `residual`; and `netSpend` keeps the no-clamping rule the residual has, so a negative reads as what it is — refunds exceeding the order total, a genuine over-refund.
 
 ## Consequences
 

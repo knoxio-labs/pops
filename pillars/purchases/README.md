@@ -39,9 +39,11 @@ Four grains, because real purchase data has four and collapsing any of them lose
 | `awaitingImportCents` | charged, no transaction yet                                       | wait             |
 | `residualCents`       | no charge accounts for it — gift card, rewards, or a genuine miss | a human looks    |
 | `refundedCents`       | money returned, as a positive magnitude                           | none             |
-| `netSpendCents`       | `matched + awaitingImport − refunded`                             | the headline one |
+| `netSpendCents`       | `total − refunded`                                                | the headline one |
 
 The identity to rely on: `totalCents === matchedCents + awaitingImportCents + residualCents`, with `refundedCents` orthogonal to it.
+
+`netSpendCents` answers what the order **cost**, not how much of it has been proven. It is the merchant's own total less what came back, so it does not move when a statement imports or when the sweep mints a derived capture — a merchant headline that changed because a cron ran would be reporting import history rather than spending. It also keeps gift-card and rewards money, which is spent money no bank transaction will ever show. Summed for a merchant it stays additive: `Σtotal − Σrefunded`. "Money we can prove moved, net of refunds" is still there for any consumer that wants it, as `matched + awaitingImport − refunded`. Like the residual it is never clamped: negative means refunds exceeded the order total, which is a real over-refund.
 
 Folding `awaitingImport` into the residual would flag every recent order as broken until its statement imports — the false alarm that teaches someone to ignore the number. Folding **refunds** in is worse, and an earlier version did: a fully-paid order with an $11.79 refund reported an $11.79 residual, presenting returned money as missing money, so receiving a refund made the "something is wrong" number go _up_. A property test now asserts a refund can never increase the residual.
 

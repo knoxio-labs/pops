@@ -107,7 +107,7 @@ describe('an order whose only charge is a refund', () => {
   it('gets a derived capture too, and reconciles to a zero residual', async () => {
     // A refund states what came back, never what was paid, so a refunded
     // Amazon order is as chargeless as any other. Excluding it is what left
-    // every refunded order 100% unexplained with a negative net spend.
+    // every refunded order permanently 100% unexplained.
     const id = anAmazonOrder(5220, 'refunded', [aRefund]);
 
     const result = await runSweep(deps(financeReturning()));

@@ -76,7 +76,10 @@ describe('a charge the bank has not caught up with', () => {
 });
 
 describe('an order with no charge asserted at all', () => {
-  it('is entirely residual — nobody has claimed this money', () => {
+  it('is entirely residual, and still cost what the merchant said it cost', () => {
+    // Nobody has claimed this money, so all of it is unexplained — but the
+    // merchant stated the total at ingest, and net spend reports that rather
+    // than waiting for a charge to appear.
     const id = createPurchase(opened.db, amazonOrder({ totalCents: 5678 }));
 
     expect(getPurchase(opened.db, id)?.accounting).toEqual({
@@ -85,7 +88,7 @@ describe('an order with no charge asserted at all', () => {
       awaitingImportCents: 0,
       residualCents: 5678,
       refundedCents: 0,
-      netSpendCents: 0,
+      netSpendCents: 5678,
     });
   });
 });
@@ -102,13 +105,16 @@ describe('gift card part-payment', () => {
     );
     matchCharge(id, 'chg-1', 'pops://finance/transaction/t1');
 
+    // The $16.78 off the gift balance is money spent, not money that never
+    // moved: it stays in the residual because no charge accounts for it, and
+    // it stays in net spend because the order still cost $56.78.
     expect(getPurchase(opened.db, id)?.accounting).toEqual({
       totalCents: 5678,
       matchedCents: 4000,
       awaitingImportCents: 0,
       residualCents: 1678,
       refundedCents: 0,
-      netSpendCents: 4000,
+      netSpendCents: 5678,
     });
   });
 });
@@ -169,6 +175,47 @@ describe('a refund', () => {
       refundedCents: 1179,
       netSpendCents: 4499,
     });
+  });
+
+  it('reads as unexplained, not as negative spend, when it is the only charge', () => {
+    // The shape every refunded Amazon order arrives in: the export publishes
+    // what came back and never what was paid. The order still cost $52.20
+    // less the $45.20 that came back, and the fact that nothing proves the
+    // payment is what the residual is for.
+    const id = createPurchase(
+      opened.db,
+      amazonOrder({
+        totalCents: 5220,
+        charges: [{ sourceChargeRef: 'ref', amountCents: -4520, role: 'refund' }],
+      })
+    );
+
+    expect(getPurchase(opened.db, id)?.accounting).toEqual({
+      totalCents: 5220,
+      matchedCents: 0,
+      awaitingImportCents: 0,
+      residualCents: 5220,
+      refundedCents: 4520,
+      netSpendCents: 700,
+    });
+  });
+
+  it('drives net spend negative when it genuinely exceeds the order total', () => {
+    // An over-refund is a real thing a merchant can do, and the only signal
+    // it happened is the sign. Clamping here would hide it, exactly as
+    // clamping the residual would hide over-charging (ADR-042).
+    const id = createPurchase(
+      opened.db,
+      amazonOrder({
+        totalCents: 5678,
+        charges: [
+          { sourceChargeRef: 'cap', amountCents: 5678 },
+          { sourceChargeRef: 'ref', amountCents: -6000, role: 'refund' },
+        ],
+      })
+    );
+
+    expect(getPurchase(opened.db, id)?.accounting.netSpendCents).toBe(-322);
   });
 });
 
