@@ -1,14 +1,16 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { seededTransactions } from '../ios-e2e/transactions-fixture.mjs';
 import {
   buildRegistrySnapshot,
   compareRows,
   financeRoutes,
+  FINANCE_OUTAGE_BODY,
   parseListQuery,
   pathMatcher,
   readFinanceContract,
   selectPage,
+  startUpstreamStub,
 } from '../ios-e2e/upstream-stub.mjs';
 
 const minimalContract = {
@@ -266,6 +268,62 @@ describe('buildRegistrySnapshot', () => {
       'uri',
       'version',
     ]);
+  });
+});
+
+describe('the finance outage switch', () => {
+  let stub: Awaited<ReturnType<typeof startUpstreamStub>>;
+
+  beforeEach(async () => {
+    stub = await startUpstreamStub({ rows: seededTransactions });
+  });
+
+  afterEach(async () => {
+    await stub.close();
+  });
+
+  const get = (path: string) => fetch(`${stub.url}${path}`);
+
+  it('serves the rows until the switch is thrown', async () => {
+    expect((await get('/transactions')).status).toBe(200);
+    expect((await get('/transactions/e2e-groceries')).status).toBe(200);
+    expect(stub.isFinanceOutage()).toBe(false);
+  });
+
+  it('refuses both data routes while it is on', async () => {
+    stub.setFinanceOutage(true);
+
+    for (const path of ['/transactions', '/transactions/e2e-groceries']) {
+      const answered = await get(path);
+      expect(answered.status).toBe(503);
+      expect(await answered.json()).toEqual(FINANCE_OUTAGE_BODY);
+    }
+  });
+
+  it('keeps serving the registry and the contract, which is the whole point', async () => {
+    // The BFM's bootstrap probes `/openapi` and reads the registry. If either
+    // stopped answering, the app would never open the transactions screen at
+    // all — `AppShellModel.surface` filters an unreachable feature out — and
+    // the flow would be asserting against the root's "not available right now"
+    // instead of the list's "temporarily unreachable".
+    stub.setFinanceOutage(true);
+
+    const registry = await get('/registry/pillars');
+    expect(registry.status).toBe(200);
+    expect((await registry.json()).pillars[0].status).toBe('healthy');
+
+    const contract = await get('/openapi');
+    expect(contract.status).toBe(200);
+    expect(contract.headers.get('content-type')).toContain('json');
+  });
+
+  it('answers again when the switch goes back', async () => {
+    stub.setFinanceOutage(true);
+    stub.setFinanceOutage(false);
+
+    const answered = await get('/transactions');
+    expect(answered.status).toBe(200);
+    expect((await answered.json()).data).toHaveLength(seededTransactions.length);
   });
 });
 

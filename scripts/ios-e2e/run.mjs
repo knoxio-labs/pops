@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Boots the federation the iOS app's Maestro flow needs, then drives it.
+ * Boots the federation the iOS app's Maestro flows need, then drives them.
  *
  * The app is pointed at a **real** `@pops/bfm` process — real pairing codes,
  * real ECDSA key parsing, real access tokens, real SQLite, real keyset paging —
@@ -15,8 +15,8 @@
  * directory. Building and running `@pops/bfm` is reaching in, so it happens
  * here — the same split as `fixture:device-signature` in the root `mise.toml`,
  * which owns the copy step neither unit may perform on the other. The
- * `clients/ios` half of this (`mise -C clients/ios run e2e`) is handed a base
- * URL and speaks nothing but HTTP to it.
+ * `clients/ios` half of this (`mise -C clients/ios run e2e`) is handed two base
+ * URLs and speaks nothing but HTTP to either.
  *
  * ## There is no Docker here, deliberately
  *
@@ -46,8 +46,17 @@
  * taken between this process choosing it and the pillar binding it, and a
  * stranger answering `/health` looks exactly like success.
  *
+ * ## The second origin
+ *
+ * `control-plane.mjs` listens on a port of its own and forwards everything that
+ * is not `/__e2e/` to the pillar. The recovery flows pair against it, because
+ * each of them needs something to change mid-run — a token aged past its
+ * expiry, finance refusing to answer — and an HTTP endpoint is the only thing a
+ * Maestro flow can reach outside the phone. The happy-path flow does not, and
+ * still dials the pillar directly.
+ *
  * Usage:
- *   node scripts/ios-e2e/run.mjs              run the flow, then tear everything down
+ *   node scripts/ios-e2e/run.mjs              run every flow, then tear everything down
  *   node scripts/ios-e2e/run.mjs --serve-only boot the federation, print how to reach it, wait
  *
  * Exit 0 = the flow passed. Exit 1 = it did not, or the federation would not
@@ -63,6 +72,7 @@ import { join } from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 
+import { startControlPlane } from './control-plane.mjs';
 import { seededTransactions } from './transactions-fixture.mjs';
 import { startUpstreamStub } from './upstream-stub.mjs';
 
@@ -384,12 +394,26 @@ async function main() {
     await waitForHealth(baseURL, buildVersion, bfm);
     process.stdout.write(`ios-e2e: bfm on ${baseURL.origin}, database under ${dataDir}\n`);
 
+    const control = await startControlPlane({
+      bfmBaseUrl: baseURL.origin,
+      accessTokenSecret: ACCESS_TOKEN_SECRET,
+      upstream,
+    });
+    teardown.unshift(control.close);
+    // The same identity check, through the proxy this time. A control plane
+    // that forwards nothing looks identical to a healthy one until a flow pairs
+    // against it and fails on a screen twenty minutes later; asking it for the
+    // BFM's own `/health` proves the whole path before anything is driven.
+    await waitForHealth(new URL(control.url), buildVersion, bfm);
+    process.stdout.write(`ios-e2e: control plane on ${control.url}, proxying to the bfm\n`);
+
     if (serveOnly) {
       const { code, expiresAt } = await mintPairingCode(baseURL);
       process.stdout.write(
         `\nios-e2e: server address ${baseURL.origin}\n` +
+          `ios-e2e: recovery-flow server address ${control.url} (same bfm, switchable)\n` +
           `ios-e2e: pairing code ${code}, good until ${expiresAt}\n` +
-          'ios-e2e: type both into the app; Ctrl-C to tear this down.\n\n'
+          'ios-e2e: type either address and the code into the app; Ctrl-C to tear this down.\n\n'
       );
       // Waits for a signal, which the handlers above turn into a teardown and
       // an exit. Nothing resolves this.
@@ -398,7 +422,11 @@ async function main() {
     }
 
     await run('mise', ['-C', 'clients/ios', 'run', 'e2e'], {
-      env: { ...process.env, POPS_BFM_BASE_URL: baseURL.origin },
+      env: {
+        ...process.env,
+        POPS_BFM_BASE_URL: baseURL.origin,
+        POPS_E2E_CONTROL_URL: control.url,
+      },
     });
   } finally {
     await tearDown();

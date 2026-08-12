@@ -1,0 +1,63 @@
+appId: com.knoxiolabs.pops
+name: A device revoked mid-use lands back on pairing, and says why
+---
+- clearState
+- clearKeychain
+- launchApp
+
+- assertVisible:
+    id: 'pairing-code-field'
+
+- tapOn:
+    id: 'pairing-server-field'
+- eraseText
+- inputText: ${CONTROL_BASE_URL}
+
+- tapOn:
+    id: 'pairing-code-field'
+- inputText: ${PAIRING_CODE}
+
+- tapOn:
+    id: 'pairing-submit'
+
+- assertVisible:
+    id: 'transactions-list'
+- assertVisible:
+    id: 'transaction-row-e2e-groceries'
+
+# The operator cuts this handset off while it is sitting on the list. Through
+# the BFM's own `DELETE /operator/devices/:id`, which is the route the Devices
+# page calls; the app is not told, and nothing on screen changes yet.
+- runScript: scripts/revoke-this-device.js
+# The handset this flow is holding, as the operator's own list shows it: found,
+# and trusted right up until the call below.
+- assertTrue: ${output.revocation.matched == 1}
+- assertTrue: ${output.revocation.wasLive == true}
+- assertTrue: ${output.revocation.status == 200}
+# A device that was already revoked would make every assertion below pass for
+# the wrong reason — this flow would be proving that a revoked device stays
+# revoked, which is not the thing anyone is worried about.
+- assertTrue: ${output.revocation.alreadyRevoked == false}
+
+# The tap is what discovers it. The detail request answers 403, and a 403 is
+# the one refusal `AuthenticatingMiddleware` does not retry: the credentials are
+# destroyed and the session ends before the error reaches a screen.
+- tapOn:
+    id: 'transaction-row-e2e-groceries'
+
+# `PairingCopy.explanation(for:)` for `RevocationReason.revokedByOperator`.
+# Asserted as the sentence rather than by identifier because the sentence IS
+# the requirement: being returned to pairing with no explanation is
+# indistinguishable from the app having lost its mind.
+- assertVisible: 'This device was removed on your Pops server. Pair it again to continue.'
+
+# The other reason renders a different sentence from the same screen, and the
+# two must not be confused — one is somebody's decision, the other is a fault
+# to report.
+- assertNotVisible: "This device's sign-in expired and could not be renewed. Pair it again."
+
+# Back at pairing, not merely showing a message over the list.
+- assertVisible:
+    id: 'pairing-code-field'
+- assertNotVisible:
+    id: 'transactions-list'

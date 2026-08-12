@@ -749,10 +749,15 @@ exit $status
 # re-vendoring breaks the build — but the re-vendor step cannot live here:
 # ADR-043 says a client never reaches into a pillar's directory. The task that
 # does both is `fixture:device-signature` at the repo root; prefer it.
-# The UI-level lane: install the built app on the simulator and drive
-# `.maestro/pairing-to-transaction-detail.yaml` against a BFM that is already
-# running. That README argues for Maestro over XCUITest; this task is about
-# what has to be true before a flow can run.
+# The UI-level lane: install the built app on the simulator and drive every
+# flow in `.maestro/` against a BFM that is already running. That README argues
+# for Maestro over XCUITest; this task is about what has to be true before a
+# flow can run.
+#
+# THE FLOWS ARE FOUND, NOT LISTED. A list here is a list to forget, and the way
+# it is forgotten is silent: a flow nobody added runs nowhere and the job stays
+# green. The glob is checked for emptiness instead, so a directory that moved
+# fails the lane rather than passing it having driven nothing.
 #
 # IT DOES NOT START A SERVER, and that is a boundary rather than an omission.
 # ADR-043 says a client consumes the federation over HTTP and never reaches
@@ -769,18 +774,23 @@ exit $status
 # sources. It builds when the products are missing or older than a Swift file,
 # and says which it did.
 [tasks.e2e]
-description = "Drive the pairing → transaction flow on the simulator against a running BFM (repo root: `mise run e2e:ios`)"
+description = "Drive every UI flow on the simulator against a running BFM (repo root: `mise run e2e:ios`)"
 depends = ["generate"]
 run = '''
 set -eu
 set -o pipefail
 
 base="${POPS_BFM_BASE_URL:-}"
-if [ -z "$base" ]; then
-  echo "e2e: no POPS_BFM_BASE_URL. This lane drives the app against a BFM that is" >&2
-  echo "     already running; it does not start one. From the repo root:" >&2
+control="${POPS_E2E_CONTROL_URL:-}"
+if [ -z "$base" ] || [ -z "$control" ]; then
+  echo "e2e: no POPS_BFM_BASE_URL and/or POPS_E2E_CONTROL_URL. This lane drives the app" >&2
+  echo "     against a BFM that is already running; it does not start one. From the" >&2
+  echo "     repo root:" >&2
   echo "         mise run e2e:ios" >&2
-  echo "     boots a real pillar against a temporary database and calls this task." >&2
+  echo "     boots a real pillar against a temporary database, starts the control plane" >&2
+  echo "     the recovery flows throw their switches through, and calls this task." >&2
+  echo "     Both addresses are needed: the recovery flows cannot revoke a device or" >&2
+  echo "     age a token against a BFM nobody here controls." >&2
   exit 1
 fi
 
@@ -847,22 +857,42 @@ fi
 xcrun simctl bootstatus "$udid" -b > /dev/null
 xcrun simctl install "$udid" "$app"
 
-# Minted as late as possible: the BFM expires a pairing code five minutes after
-# issuing it, and the flow spends it in the first ten seconds.
-# `|| true` so a refused connection or an HTTP error reaches the message below
-# rather than aborting the task under `set -e` with a bare curl exit code.
-code=$(curl -fsS -X POST "$base/operator/pairing/codes" \
-  -H 'content-type: application/json' -d '{}' | jq -r '.code // empty' || true)
-if [ -z "$code" ]; then
-  echo "e2e: $base/operator/pairing/codes returned no code. A 401 here means that BFM" >&2
-  echo "     is running with NODE_ENV=production, where the route needs a Cloudflare" >&2
-  echo "     Access identity this task has no way to present." >&2
+flows=$(find .maestro -maxdepth 1 -name '*.yaml' | sort)
+if [ -z "$flows" ]; then
+  echo "e2e: no flows under .maestro. A lane that drives nothing and reports success is" >&2
+  echo "     worse than one that fails, so this is a failure." >&2
   exit 1
 fi
+echo "e2e: driving $(echo "$flows" | wc -l | tr -d ' ') flow(s)."
 
-maestro --device "$udid" test .maestro/pairing-to-transaction-detail.yaml \
-  -e BFM_BASE_URL="$base" \
-  -e PAIRING_CODE="$code"
+for flow in $flows; do
+  # Between flows rather than inside them, and before the code is minted. A
+  # flow that fails halfway leaves the harness however it left it — finance
+  # still refusing, a token-ageing still armed — and the next flow would then
+  # fail for a reason that belongs to the previous one. Counters go back to
+  # zero here too, so a flow asserting "one refresh" means its own.
+  curl -fsS -X POST "$control/__e2e/reset" -o /dev/null
+
+  # Minted per flow and as late as possible: every flow pairs from scratch, a
+  # code is spent once, and the BFM expires an unspent one five minutes after
+  # issuing it.
+  # `|| true` so a refused connection or an HTTP error reaches the message below
+  # rather than aborting the task under `set -e` with a bare curl exit code.
+  code=$(curl -fsS -X POST "$base/operator/pairing/codes" \
+    -H 'content-type: application/json' -d '{}' | jq -r '.code // empty' || true)
+  if [ -z "$code" ]; then
+    echo "e2e: $base/operator/pairing/codes returned no code. A 401 here means that BFM" >&2
+    echo "     is running with NODE_ENV=production, where the route needs a Cloudflare" >&2
+    echo "     Access identity this task has no way to present." >&2
+    exit 1
+  fi
+
+  echo "e2e: $flow"
+  maestro --device "$udid" test "$flow" \
+    -e BFM_BASE_URL="$base" \
+    -e CONTROL_BASE_URL="$control" \
+    -e PAIRING_CODE="$code"
+done
 '''
 
 [tasks."fixture:device-signature:generate"]

@@ -1,11 +1,17 @@
 # UI-level flows
 
-One flow today: an unpaired launch types a pairing code, lands on the
-transactions list, and opens a transaction's detail. It is the only test in
-this client that exercises a screen the way somebody holding the phone does —
-everything else stops at the view model.
+The only tests in this client that exercise a screen the way somebody holding
+the phone does — everything else stops at the view model. One happy path and
+three recoveries, each starting from an unpaired launch:
 
-## Running it
+| Flow                                      | What it proves                                                                     |
+| ----------------------------------------- | ---------------------------------------------------------------------------------- |
+| `pairing-to-transaction-detail.yaml`      | A pairing code reaches the list, and a row reaches the full record behind it.      |
+| `expired-session-refreshes-silently.yaml` | A refused access token is renewed and the request retried, with nothing on screen. |
+| `revoked-device-returns-to-pairing.yaml`  | A revoked device lands back on pairing, saying which of the two reasons it was.    |
+| `unreachable-transactions-say-so.yaml`    | Transactions that cannot be fetched say so instead of reading as an empty list.    |
+
+## Running them
 
 From the **repo root**, one command:
 
@@ -14,19 +20,26 @@ mise run e2e:ios
 ```
 
 That boots a real `@pops/bfm` against a temporary SQLite database, points it at
-a registry-and-finance fixture, builds the app if it needs building, installs
-it on the simulator every other lane uses, mints a pairing code over the BFM's
-own operator route, and runs the flow. `scripts/ios-e2e/run.mjs` is that
-command and carries the reasoning for each part of it, including why it runs
-the pillar with Node rather than Docker and why it does not use port 3014.
+a registry-and-finance fixture, starts the control plane the recovery flows
+throw their switches through, builds the app if it needs building, installs it
+on the simulator every other lane uses, and runs each flow against a pairing
+code minted for it over the BFM's own operator route.
+`scripts/ios-e2e/run.mjs` is that command and carries the reasoning for each
+part of it, including why it runs the pillar with Node rather than Docker and
+why it does not use port 3014.
 
-`mise run e2e:ios -- --serve-only` stops after booting: it prints a server
-address and a live pairing code so the screens can be driven by hand.
+`mise run e2e:ios -- --serve-only` stops after booting: it prints both server
+addresses and a live pairing code so the screens can be driven by hand.
 
 `mise -C clients/ios run e2e` is the client's half on its own. It takes
-`POPS_BFM_BASE_URL` and speaks nothing but HTTP to it, so it will drive the app
-against any BFM — including a real deployment, if a pairing code can be minted
-there.
+`POPS_BFM_BASE_URL` and `POPS_E2E_CONTROL_URL` and speaks nothing but HTTP to
+either. Both are required rather than one being optional, because a lane that
+quietly drives one flow instead of four reports the same green as a lane that
+drove all of them.
+
+**The flows are found, not listed.** The task globs `.maestro/*.yaml`, so a new
+flow runs without anything being added anywhere — and an empty glob fails the
+lane rather than passing it having driven nothing.
 
 ## Why Maestro and not XCUITest
 
@@ -66,23 +79,74 @@ the sentences VoiceOver speaks, and those are the wrong thing to key a test on:
 they are prose, they change when the copy does, and on a list row they include
 an amount and a date formatted for the device's locale.
 
-So the flow asserts on identifiers where it is checking that something is
+So a flow asserts on identifiers where it is checking that something is
 **there**, and on text only where the text is a fact rather than a phrasing —
 `Account, Everyday` is a field label and a value the server sent.
 
-The rows the flow expects come from `scripts/ios-e2e/transactions-fixture.mjs`.
-Changing a description or an account there fails this flow, which is the point.
+The recovery flows are the exception, and deliberately: the sentence **is** the
+requirement. Being returned to the pairing screen with no explanation is
+indistinguishable from the app having lost its mind, and an empty transactions
+list and an unreachable one are the same pixels with opposite meanings. Those
+flows assert the sentences from `PairingCopy.explanation(for:)` and
+`TransactionsCopy.message(for:)` verbatim, and assert the neighbouring sentence
+is absent — a copy edit that merges two of them is exactly the regression worth
+failing on.
 
-## What this flow does not prove
+**A text selector is a regex matched against the WHOLE label**, which is the
+trap worth knowing before writing one: a prefix of a sentence matches nothing,
+so `assertVisible` on it fails against a screen that is showing exactly that
+sentence, and `assertNotVisible` on it passes against anything at all. Quote
+the sentence in full, or spell the `.*` deliberately — the expiry flow does the
+second, because the detail screen composes its lead-in with a second sentence
+naming the failure.
 
-The BFM it runs against is real. The `finance` pillar behind it is not: a
+**Only `assertVisible` waits.** `assertNotVisible` answers the moment the
+element is absent, which a screen mid-transition always is, so a negative
+assertion is worth only as much as the positive one in front of it. Every
+`assertNotVisible` here sits behind an `assertVisible` that settles the screen
+first; moving one above it turns it into a line that cannot fail.
+
+The rows the flows expect come from `scripts/ios-e2e/transactions-fixture.mjs`.
+Changing a description or an account there fails them, which is the point.
+
+## The seams the recovery flows throw
+
+A Maestro flow can reach exactly one thing outside the phone: an HTTP endpoint,
+through `runScript`. So each seam is one, and they live in
+`scripts/ios-e2e/control-plane.mjs` — a harness process that forwards
+everything except `/__e2e/*` to the same real BFM. The recovery flows pair
+against it; the happy path still dials the pillar directly. The scripts that
+call the seams are in `scripts/` beside the flows, one per switch.
+
+- **An expired session** ages one request's bearer token. The harness owns the
+  signing secret, so it can mint a token of the same device with a real past
+  `exp`, and the pillar's own `verifyAccessToken` answers the 401.
+  `scripts/ios-e2e/aged-access-token.mjs` argues for that over shortening
+  `ACCESS_TOKEN_TTL_SECONDS`, on both security and determinism.
+- **A revoked device** is revoked through the BFM's own
+  `DELETE /operator/devices/:id`, the route the operator's Devices page calls —
+  not a write into the temp database, which would skip the half of the story
+  that is the route.
+- **Unreachable transactions** are finance refusing its data routes while still
+  serving the registry and its `/openapi`. `scripts/ios-e2e/upstream-stub.mjs`
+  explains why the obvious version — closing the whole stub — puts a different
+  screen in front of the assertion.
+
+A silent recovery leaves no mark on a screenshot, so the expiry flow finishes
+by reading `GET /__e2e/state` back: one token aged, one refresh spent. Without
+it every assertion in that flow would also hold if the arming had done nothing.
+
+## What these flows do not prove
+
+The BFM they run against is real. The `finance` pillar behind it is not: a
 fixture serves finance's own committed OpenAPI snapshot, so the routes and
 operation ids the BFM resolves are finance's real ones, but the rows are
 invented. What that leaves uncovered — the BFM's reading of a real finance
 response — is covered in-process by
 `pillars/bfm/src/api/__tests__/mobile-transactions.test.ts`, against the same
-zod schemas. The seam this flow exists for is the phone's.
+zod schemas. The seam these flows exist for is the phone's.
 
-The recovery paths are not covered either, deliberately: a session that expires
-mid-flow, a device revoked from the operator page, a BFM that cannot be
-reached. Those are POPS-1817, and they are the obvious second flow.
+Nothing here covers the screen the app draws when the BFM reports every feature
+unavailable — a registry outage, rather than a pillar behind one — which is the
+root's own `RootCopy.nothingAvailable` and not a transactions screen at all
+(POPS-1864).

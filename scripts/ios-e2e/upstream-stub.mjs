@@ -21,6 +21,28 @@
  * add a second pillar, a second SQLite database and a seeding step to a macOS
  * job, to exercise a BFM-to-finance boundary that `pillars/bfm/src/api/__tests__/mobile-transactions.test.ts`
  * already covers in-process. The seam this flow exists to cover is the phone's.
+ *
+ * ## The outage switch
+ *
+ * {@link startUpstreamStub} hands back `setFinanceOutage`, which makes the two
+ * data routes answer 503 while `/registry/pillars` and `/openapi` keep
+ * answering. That combination is the only one that puts the transactions
+ * screen's "temporarily unreachable" sentence on a phone, and it took a
+ * reading of the app to find out:
+ *
+ * - the BFM's bootstrap probes `/openapi`, so a stub that stopped answering it
+ *   entirely reports finance as `unavailable`, and the app then draws the
+ *   ROOT's "Transactions is not available right now." instead of ever opening
+ *   the transactions screen (`AppShellModel.surface` filters on
+ *   `FeatureReachability.isUsable`);
+ * - closing the whole socket does the same thing one step earlier — no
+ *   registry, no pillars, no features at all.
+ *
+ * So "finance is down" for this harness means "finance is up and refusing",
+ * which is also the commoner real outage: a pillar serving its static contract
+ * while whatever is behind it is not. The SDK maps any unmapped status onto
+ * `unavailable` (`libs/sdk/src/client/rest-call.ts`), so the BFM answers
+ * `upstream_unavailable` and the app says the sentence.
  */
 import { readFileSync } from 'node:fs';
 import { createServer } from 'node:http';
@@ -308,10 +330,22 @@ export function buildRegistrySnapshot({ financeBaseUrl, now = new Date().toISOSt
 }
 
 /**
+ * What finance answers on its data routes while the outage switch is on.
+ *
+ * finance's own error envelope, which requires `message` and nothing else. The
+ * status is what carries the meaning: the SDK maps everything it does not
+ * model onto `unavailable`, so 503 is read by the BFM as "finance did not
+ * answer" and reaches the phone as `upstream_unavailable`.
+ */
+export const FINANCE_OUTAGE_BODY = {
+  message: 'finance is not serving transactions right now',
+};
+
+/**
  * Starts the registry-and-finance origin the BFM talks to.
  *
  * @param {{ rows: Array<Record<string, unknown>>, contract?: Record<string, unknown>, host?: string }} options
- * @returns {Promise<{ url: string, port: number, close: () => Promise<void> }>}
+ * @returns {Promise<{ url: string, port: number, close: () => Promise<void>, setFinanceOutage: (active: boolean) => void, isFinanceOutage: () => boolean }>}
  */
 export async function startUpstreamStub({
   rows,
@@ -320,6 +354,7 @@ export async function startUpstreamStub({
 }) {
   const routes = financeRoutes(contract);
   const matchesDetail = pathMatcher(routes.get.path);
+  let financeOutage = false;
 
   // Serialised once, not per request, and that is a correctness fix rather than
   // a micro-optimisation. finance's snapshot is ~630 kB, `JSON.stringify` of it
@@ -370,6 +405,7 @@ export async function startUpstreamStub({
     }
 
     if (request.method === routes.list.method && url.pathname === routes.list.path) {
+      if (financeOutage) return json(503, FINANCE_OUTAGE_BODY);
       const parsed = parseListQuery(url.searchParams);
       // finance's error envelope, which requires `message` and nothing else.
       // The BFM turns a 400 into `upstream_invalid_request`, so a bad query
@@ -381,6 +417,7 @@ export async function startUpstreamStub({
     if (request.method === routes.get.method) {
       const params = matchesDetail(url.pathname);
       if (params !== null) {
+        if (financeOutage) return json(503, FINANCE_OUTAGE_BODY);
         const found = rows.find((row) => row.id === params.id);
         if (found === undefined) return json(404, { message: `no transaction ${params.id}` });
         return json(200, { data: found });
@@ -401,6 +438,20 @@ export async function startUpstreamStub({
   return {
     url: `http://${host}:${port}`,
     port,
-    close: () => new Promise((resolve) => server.close(() => resolve())),
+    // `close()` on its own stops accepting NEW connections and then waits for
+    // the open ones to end, and undici — which every SDK call and every
+    // reachability probe goes through — keeps its sockets alive for reuse. So
+    // a bare close both hangs (nothing ends those sockets) and does not close
+    // (the BFM keeps being served down a connection it already had), which is
+    // two ways for a teardown to be a lie.
+    close: () =>
+      new Promise((resolve) => {
+        server.closeAllConnections();
+        server.close(() => resolve());
+      }),
+    setFinanceOutage: (active) => {
+      financeOutage = active;
+    },
+    isFinanceOutage: () => financeOutage,
   };
 }
