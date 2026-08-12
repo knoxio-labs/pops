@@ -10,14 +10,12 @@
  * `@pops/pillar-express`. What is left here is the choice of what purchases
  * gates, and its posture.
  *
- * **Purchases does not require a credential.** Every caller it has today
- * presents none — the ingest CLI, the operator smoke script, the two-process
- * test — and it has no credentialled caller at all: nothing in the tree calls
- * `pillar('purchases')`. Requiring one would 401 the pillar's only working
- * data paths in order to constrain an empty set. The gate still installs the
- * whole mechanism, so the first credentialled caller is bound to its grant and
- * to revocation without a second change. The README records the reversal
- * precondition.
+ * **Purchases does not require a credential.** Its ingest paths present none —
+ * the ingest CLI, the operator smoke script, the two-process test — and
+ * requiring one would 401 them. Its credentialled callers reach it through
+ * `pillar('purchases')` and are bound to their grant here: the MCP tools in
+ * `pillars/mcp/src/tools/purchases.ts`, and the orchestrator's federated
+ * search. The README records what would reverse the `false`.
  *
  * The required scope is derived from the contract itself, so a route added to
  * `purchasesContract` is gated the moment it exists; there is no second list to

@@ -7,11 +7,12 @@
  * does not cover the operation, and a live credential that does. Plus the one
  * that decides whether it fails closed: a registry that cannot be reached.
  *
- * The no-credential case is the load-bearing one here, not a formality.
- * Purchases has no credentialled caller at all and three uncredentialled ones
- * — the ingest CLI, the operator smoke script, `two-process.test.ts` — so
- * "an uncredentialled request still reaches the handler" is the assertion that
- * the pillar's only working data paths survived this change.
+ * The no-credential case is the load-bearing one here, not a formality. Three
+ * uncredentialled callers carry the pillar's ingest paths — the ingest CLI,
+ * the operator smoke script, `two-process.test.ts` — so "an uncredentialled
+ * request still reaches the handler" is the assertion that they survived this
+ * change. The credentialled cases now have real callers too: the MCP tools and
+ * the orchestrator's federated search both present a key.
  */
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';

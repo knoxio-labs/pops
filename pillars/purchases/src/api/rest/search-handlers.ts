@@ -8,8 +8,9 @@
  * response type expects.
  *
  * `context` arrives in the envelope and is deliberately unread. Other pillars
- * narrow on it; purchases has no app, so there is no context to narrow by,
- * and honouring it in name only would be a claim the pillar cannot back.
+ * narrow on it; purchases' app mounts one index route and no entity page, so
+ * there is no `context.page` or `context.entity` worth narrowing by yet, and
+ * honouring it in name only would be a claim the pillar cannot back.
  */
 import { searchPurchases } from '../../db/index.js';
 
