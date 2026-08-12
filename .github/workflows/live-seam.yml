@@ -27,9 +27,14 @@ name: Live Seam
 # not here — see this workflow's introducing PR for the issue key.
 #
 # PATH-FILTERED to what can actually reach the seam: the SDK harness both
-# suites depend on, and each suite's own consumer/producer module pair — not
-# the whole pillars/food or pillars/cerebrum tree, which already has its own
-# unit-quality.yml coverage for everything outside these seams.
+# suites depend on, each suite's own consumer/producer module pair, and
+# registry — both suites boot a real registry process for discovery, so a
+# registry change that breaks self-registration or resolution in a way its
+# own unit suite and docker-build.yml's /health-only smoke probe can't see
+# (neither drives a real cross-pillar `pillar()` call) is exactly the kind of
+# regression this workflow exists to catch. Not the whole pillars/food or
+# pillars/cerebrum tree, which already has its own unit-quality.yml coverage
+# for everything outside these seams.
 #
 # No `merge_group` trigger: that trigger exists so a workflow behind a
 # REQUIRED context reports on the merge queue's ref instead of stranding the
@@ -41,6 +46,7 @@ on:
   pull_request:
     paths:
       - "libs/sdk/**"
+      - "pillars/registry/**"
       - "pillars/food/src/api/modules/recipes/send-to-list/**"
       - "pillars/food/vitest.live-seam.config.ts"
       - "pillars/lists/**"
@@ -53,6 +59,7 @@ on:
     branches: [main]
     paths:
       - "libs/sdk/**"
+      - "pillars/registry/**"
       - "pillars/food/src/api/modules/recipes/send-to-list/**"
       - "pillars/food/vitest.live-seam.config.ts"
       - "pillars/lists/**"
