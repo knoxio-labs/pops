@@ -59,7 +59,16 @@ public struct BFMHTTPClient: Sendable {
         transport: any ClientTransport,
         middlewares: [any ClientMiddleware] = []
     ) {
-        generated = Client(serverURL: baseURL, transport: transport, middlewares: middlewares)
+        // The configuration exists for one reason: the date transcoder. The
+        // runtime's default reads `withInternetDateTime` alone and refuses a
+        // fractional part, which every TypeScript pillar's `toISOString()`
+        // emits — see ``BFMDateTranscoder``.
+        generated = Client(
+            serverURL: baseURL,
+            configuration: Configuration(dateTranscoder: BFMDateTranscoder()),
+            transport: transport,
+            middlewares: middlewares
+        )
     }
 
     /// Asks the BFM whether it is alive.

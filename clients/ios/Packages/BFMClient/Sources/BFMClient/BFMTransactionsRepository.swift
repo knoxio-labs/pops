@@ -334,15 +334,13 @@ extension BFMTransactionsRepository {
     /// unlike ``day(from:in:)``'s date-only value, this one carries a time and
     /// a zone of its own.
     ///
-    /// Both spellings are accepted because both are legitimate ISO-8601 and
-    /// which one arrives is the producer's serialiser's choice, not a contract
-    /// term: `toISOString()` emits milliseconds, most other emitters do not.
-    /// Rejecting one of them would fail the screen over a formatting detail no
-    /// reader could act on. Anything that is neither is still a mismatch.
+    /// The rule about which spellings count lives in ``ISO8601Instant``, which
+    /// the generated client's date transcoder reads too. It was written here
+    /// first and applied only here, and the cost of that was the bootstrap
+    /// response failing to decode against a real BFM — the same producer, the
+    /// same millisecond, a different code path.
     private static func instant(from raw: String) -> Date? {
-        let withFraction = Date.ISO8601FormatStyle(includingFractionalSeconds: true)
-        if let parsed = try? Date(raw, strategy: withFraction) { return parsed }
-        return try? Date(raw, strategy: Date.ISO8601FormatStyle())
+        ISO8601Instant.parse(raw)
     }
 }
 

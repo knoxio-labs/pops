@@ -39,6 +39,19 @@ name: Pair this device, then open a transaction
 - assertVisible:
     id: 'transactions-list'
 
+# The federation behind this flow is healthy, so this banner must not be on
+# screen — and this is the assertion that found the first thing this flow ever
+# caught. The app could not decode `device.lastSeenAt` out of
+# `GET /mobile/bootstrap`, because the BFM emits milliseconds and the generated
+# client's date decoding refused them, so every launch fell back to the feature
+# list the binary was compiled with and drew this over it. Nothing below this
+# layer saw it: the unit fixtures spell that timestamp without milliseconds.
+#
+# It is also what makes the rest of this flow reliable. The banner is drawn
+# ABOVE the list, so arriving late it moves every row down and a tap already
+# aimed at one lands on nothing — twice on CI, as POPS-1835.
+- assertNotVisible: 'Some of Pops could not be reached, so this may be out of date.'
+
 # The seeded row, by the id the server gave it. The rows read as one sentence
 # to VoiceOver — description, amount, date — and the amount and date are
 # formatted for the simulator's locale, so asserting on the sentence would be

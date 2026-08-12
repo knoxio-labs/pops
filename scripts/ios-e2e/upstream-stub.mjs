@@ -321,6 +321,19 @@ export async function startUpstreamStub({
   const routes = financeRoutes(contract);
   const matchesDetail = pathMatcher(routes.get.path);
 
+  // Serialised once, not per request, and that is a correctness fix rather than
+  // a micro-optimisation. finance's snapshot is ~630 kB, `JSON.stringify` of it
+  // blocks this single-threaded process for a noticeable slice of a second, and
+  // the BFM probes `/openapi` on every bootstrap under a 2s timeout while its
+  // discovery refresh polls `/registry/pillars` under a 5s one. On a three-core
+  // runner already driving a simulator, restringifying that document under each
+  // probe is enough to miss those deadlines — and a missed refresh marks the
+  // snapshot stale, which the app draws as "Some of Pops could not be reached"
+  // ABOVE the transactions list. The banner appearing between Maestro resolving
+  // a row and tapping it moves the row out from under the tap: the flow's
+  // failure was a tap that landed on nothing (POPS-1835).
+  const contractBody = Buffer.from(JSON.stringify(contract));
+
   const server = createServer((request, response) => {
     const url = new URL(request.url ?? '/', `http://${host}`);
     const json = (status, body) => {
@@ -349,7 +362,11 @@ export async function startUpstreamStub({
     }
 
     if (url.pathname === '/openapi') {
-      return json(200, contract);
+      response.writeHead(200, {
+        'content-type': 'application/json',
+        'content-length': String(contractBody.byteLength),
+      });
+      return response.end(contractBody);
     }
 
     if (request.method === routes.list.method && url.pathname === routes.list.path) {
