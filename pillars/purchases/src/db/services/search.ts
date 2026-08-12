@@ -19,12 +19,17 @@
  * a four-figure row count and an index would be a second thing to keep in
  * step with the writes.
  *
- * **The cap is per adapter and deliberate.** A search box shows five hits
- * per section, so returning every one of 748 orders that contain `a` costs a
- * fanout for hits nothing will render. Unlike the merchant roll-up — where a
- * truncated answer is a wrong answer — a truncated ranked list is what a
- * search result *is*, and the score ordering means the dropped tail is the
- * part that matched worst.
+ * **The cap is per adapter, the ranking is over the union.** Capping per
+ * adapter first is what stops 100 order hits starving every line hit out of
+ * the response; sorting afterwards is what makes the single returned list
+ * actually ranked. Concatenating two already-sorted lists is not a sorted
+ * list — a 0.5 order hit would sit above a 1.0 item hit — and the orchestrator
+ * re-sorting a section does not save the MCP tool, which reads this response
+ * directly.
+ *
+ * A truncated ranked list is what a search result *is*, unlike the merchant
+ * roll-up where a truncated answer is a wrong one: the score ordering means
+ * the dropped tail is the part that matched worst.
  */
 import { eq, like, or, sql } from 'drizzle-orm';
 
@@ -214,16 +219,24 @@ function searchItems(db: PurchasesDb, text: string): PurchaseSearchHit[] {
   return rank(hits);
 }
 
+function byScoreDescending(a: PurchaseSearchHit, b: PurchaseSearchHit): number {
+  return b.score - a.score;
+}
+
 function rank(hits: readonly PurchaseSearchHit[]): PurchaseSearchHit[] {
-  return hits.toSorted((a, b) => b.score - a.score).slice(0, HITS_PER_ADAPTER);
+  return hits.toSorted(byScoreDescending).slice(0, HITS_PER_ADAPTER);
 }
 
 /**
- * Both adapters' hits, concatenated. A blank query returns nothing rather
- * than everything: an empty search box must not page the whole pillar.
+ * Both adapters' hits as one ranked list. A blank query returns nothing
+ * rather than everything: an empty search box must not page the whole pillar.
+ *
+ * `toSorted` is stable, so an order hit and a line hit that tie keep the
+ * adapter order above — orders first, matching the declaration order in the
+ * manifest.
  */
 export function searchPurchases(db: PurchasesDb, text: string): PurchaseSearchHit[] {
   const trimmed = text.trim();
   if (trimmed.length === 0) return [];
-  return [...searchOrders(db, trimmed), ...searchItems(db, trimmed)];
+  return [...searchOrders(db, trimmed), ...searchItems(db, trimmed)].toSorted(byScoreDescending);
 }

@@ -131,6 +131,22 @@ describe('the line-item adapter', () => {
 });
 
 describe('both adapters together', () => {
+  it('ranks across both adapters, not one adapter after the other', () => {
+    // The order matches as a prefix; the line matches exactly.
+    // Concatenating two already-sorted lists would put the weaker order hit
+    // first, and the MCP tool reads this response with no engine in between
+    // to re-sort it.
+    orderWithItems('a', 'Bunnings Warehouse', [{ name: 'Bunnings' }]);
+
+    const hits = searchPurchases(opened.db, 'bunnings');
+
+    expect(hits[0]?.matchType).toBe('exact');
+    expect(hits[0]?.uri).toContain('/purchase-item/');
+    expect(hits.map((hit) => hit.score)).toEqual(
+      [...hits.map((h) => h.score)].toSorted((x, y) => y - x)
+    );
+  });
+
   it('returns one flat list, because that is what a pillar /search returns', () => {
     orderWithItems('a', 'Amazon', [{ name: 'Amazon Basics cable' }]);
 
