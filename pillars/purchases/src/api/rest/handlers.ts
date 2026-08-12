@@ -8,6 +8,7 @@
 import { initServer } from '@ts-rest/express';
 
 import { purchasesContract } from '../../contract/rest.js';
+import { makeAnalyticsHandlers } from './analytics-handlers.js';
 import { makePurchaseHandlers } from './purchase-handlers.js';
 import { makeReceiptHandlers } from './receipt-handlers.js';
 import { makeReconcileHandlers, type SweepTrigger } from './reconcile-handlers.js';
@@ -31,6 +32,7 @@ export function makePurchasesRestHandlers(deps: {
   merchant?: MerchantResolver;
 }): ReturnType<typeof server.router<typeof purchasesContract>> {
   return server.router(purchasesContract, {
+    analytics: makeAnalyticsHandlers(deps.purchasesDb.db),
     purchase: makePurchaseHandlers(deps.purchasesDb.db, deps.onIngest),
     receipt: makeReceiptHandlers(deps.purchasesDb.db, deps.vision, deps.onIngest, deps.merchant),
     reconcile: makeReconcileHandlers(deps.purchasesDb.db, deps.sweep),

@@ -3,6 +3,23 @@
  * Do not edit by hand — regenerate via `pnpm -F @pops/purchases generate:api-types`.
  */
 export interface paths {
+  '/analytics/merchant-spend': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Spend per merchant and currency over a period, with the explained/unexplained split */
+    get: operations['analytics.merchantSpend'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/items': {
     parameters: {
       query?: never;
@@ -206,6 +223,66 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+  'analytics.merchantSpend': {
+    parameters: {
+      query?: {
+        sources?: string[];
+        statuses?: ('awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored')[];
+        from?: string;
+        to?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            merchants: {
+              accounting: {
+                awaitingImportCents: number;
+                matchedCents: number;
+                netSpendCents: number;
+                refundedCents: number;
+                residualCents: number;
+                totalCents: number;
+              };
+              currency: string;
+              merchant: {
+                entityId: string | null;
+                name: string | null;
+                /** @enum {string} */
+                resolution: 'entity' | 'name' | 'unattributed';
+              };
+              orderCount: number;
+            }[];
+            period: {
+              from: string | null;
+              to: string | null;
+            };
+            totals: {
+              accounting: {
+                awaitingImportCents: number;
+                matchedCents: number;
+                netSpendCents: number;
+                refundedCents: number;
+                residualCents: number;
+                totalCents: number;
+              };
+              currency: string;
+              orderCount: number;
+            }[];
+          };
+        };
+      };
+    };
+  };
   'purchase.itemsByTag': {
     parameters: {
       query: {

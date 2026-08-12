@@ -6,6 +6,230 @@
   },
   "openapi": "3.0.2",
   "paths": {
+    "/analytics/merchant-spend": {
+      "get": {
+        "operationId": "analytics.merchantSpend",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "sources",
+            "schema": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          },
+          {
+            "in": "query",
+            "name": "statuses",
+            "schema": {
+              "items": {
+                "enum": ["awaiting_settlement", "linked", "partial", "settled_cash", "ignored"],
+                "type": "string"
+              },
+              "type": "array"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "schema": {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "schema": {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "merchants": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "accounting": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "awaitingImportCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "matchedCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "netSpendCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "refundedCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "residualCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "totalCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "totalCents",
+                              "matchedCents",
+                              "awaitingImportCents",
+                              "residualCents",
+                              "refundedCents",
+                              "netSpendCents"
+                            ],
+                            "type": "object"
+                          },
+                          "currency": {
+                            "pattern": "^[A-Z]{3}$",
+                            "type": "string"
+                          },
+                          "merchant": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "entityId": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "name": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "resolution": {
+                                "enum": ["entity", "name", "unattributed"],
+                                "type": "string"
+                              }
+                            },
+                            "required": ["entityId", "name", "resolution"],
+                            "type": "object"
+                          },
+                          "orderCount": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          }
+                        },
+                        "required": ["merchant", "currency", "orderCount", "accounting"],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "period": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "from": {
+                          "nullable": true,
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                          "type": "string"
+                        },
+                        "to": {
+                          "nullable": true,
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                          "type": "string"
+                        }
+                      },
+                      "required": ["from", "to"],
+                      "type": "object"
+                    },
+                    "totals": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "accounting": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "awaitingImportCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "matchedCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "netSpendCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "refundedCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "residualCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "totalCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "totalCents",
+                              "matchedCents",
+                              "awaitingImportCents",
+                              "residualCents",
+                              "refundedCents",
+                              "netSpendCents"
+                            ],
+                            "type": "object"
+                          },
+                          "currency": {
+                            "pattern": "^[A-Z]{3}$",
+                            "type": "string"
+                          },
+                          "orderCount": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          }
+                        },
+                        "required": ["currency", "orderCount", "accounting"],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": ["period", "merchants", "totals"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          }
+        },
+        "summary": "Spend per merchant and currency over a period, with the explained/unexplained split",
+        "tags": ["analytics"]
+      }
+    },
     "/items": {
       "get": {
         "operationId": "purchase.itemsByTag",

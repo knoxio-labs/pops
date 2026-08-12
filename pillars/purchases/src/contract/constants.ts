@@ -162,6 +162,23 @@ export const AUTO_LINK_POLICIES = ['auto', 'review'] as const;
 export type AutoLinkPolicy = (typeof AUTO_LINK_POLICIES)[number];
 
 /**
+ * How firmly a spend roll-up's merchant grouping is attributed.
+ *
+ * Not persisted, and so not backed by a CHECK — this is a property of a read
+ * projection, decided per row at aggregate time from whether the order
+ * carries a `contacts` entity, only a label, or neither.
+ *
+ * Three-way rather than two because `merchantEntityId` is operative and
+ * `merchantEntityName` is only its label. Every export adapter sets the name
+ * and none sets the id, so collapsing the two would present a string match
+ * as a resolved identity: two merchants sharing a label would share a
+ * headline, and a rename would silently split one merchant's history in
+ * half.
+ */
+export const MERCHANT_RESOLUTIONS = ['entity', 'name', 'unattributed'] as const;
+export type MerchantResolution = (typeof MERCHANT_RESOLUTIONS)[number];
+
+/**
  * Floor for a stored match confidence. Mirrors finance's
  * `MIN_MATCH_CONFIDENCE` so a rule migrated between the two pillars keeps
  * its meaning.
