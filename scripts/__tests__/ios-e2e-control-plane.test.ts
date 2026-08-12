@@ -1,5 +1,6 @@
 import { createHmac } from 'node:crypto';
 import { createServer, type IncomingMessage, type Server } from 'node:http';
+import { connect } from 'node:net';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -94,6 +95,24 @@ describe('deviceIdFrom', () => {
     expect(deviceIdFrom(`header.${emptySub}.signature`)).toBeNull();
   });
 });
+
+/**
+ * One request line, sent down a socket, because `fetch` refuses to produce the
+ * request targets this needs to test.
+ */
+function rawRequest(baseUrl: string, requestLine: string): Promise<string> {
+  const { hostname, port } = new URL(baseUrl);
+  return new Promise((resolve, reject) => {
+    const socket = connect({ host: hostname, port: Number(port) }, () => {
+      socket.write(`${requestLine}\r\nHost: ${hostname}:${port}\r\nConnection: close\r\n\r\n`);
+    });
+    let answer = '';
+    socket.setEncoding('utf8');
+    socket.on('data', (chunk: string) => (answer += chunk));
+    socket.on('error', reject);
+    socket.on('end', () => resolve(answer));
+  });
+}
 
 /** One request as the pretend BFM saw it. */
 interface Seen {
@@ -217,6 +236,21 @@ describe('the control plane', () => {
       financeOutage: false,
     });
     expect(outage).toBe(false);
+  });
+
+  it('refuses a target that could resolve to another host', async () => {
+    // HTTP/1.1 addresses a proxy in absolute form, and `//host/x` is
+    // protocol-relative. Either one, resolved against the BFM's origin, leaves
+    // with the phone's bearer token attached and arrives somewhere nobody here
+    // chose. Sent down a raw socket because `fetch` will not produce them.
+    const answers = await Promise.all(
+      ['GET http://127.0.0.1:1/stolen HTTP/1.1', 'GET //127.0.0.1:1/stolen HTTP/1.1'].map((line) =>
+        rawRequest(control.url, line)
+      )
+    );
+
+    for (const answer of answers) expect(answer).toContain('400 Bad Request');
+    expect(seen).toEqual([]);
   });
 
   it('names an unknown control route rather than forwarding it', async () => {

@@ -83,6 +83,21 @@ function forwardable(name) {
   return !NOT_FORWARDED.has(name.toLowerCase());
 }
 
+/**
+ * Whether a request target is a plain path, and nothing that could resolve
+ * somewhere else.
+ *
+ * HTTP/1.1 lets a client address a proxy in absolute form — `GET
+ * http://elsewhere/x` — and `//elsewhere/x` is protocol-relative. Resolved
+ * against the BFM's origin, either one leaves with the phone's bearer token
+ * attached and arrives at a host nobody here chose. This process is a local
+ * harness and no flow has ever sent such a target, which is exactly why it
+ * should refuse one rather than discover the exception later.
+ */
+function isOriginForm(target) {
+  return typeof target === 'string' && target.startsWith('/') && !target.startsWith('//');
+}
+
 /** @returns {Promise<Buffer>} */
 function readBody(request) {
   return new Promise((resolve, reject) => {
@@ -217,11 +232,20 @@ export async function startControlPlane({
   };
 
   const server = createServer((request, response) => {
-    const target = new URL(request.url ?? '/', bfmBaseUrl);
     const json = (status, body) => {
       response.writeHead(status, { 'content-type': 'application/json' });
       response.end(JSON.stringify(body));
     };
+
+    if (!isOriginForm(request.url)) {
+      return json(400, {
+        message:
+          'ios-e2e control plane forwards origin-form targets only; ' +
+          `${String(request.url)} could resolve to another host`,
+      });
+    }
+
+    const target = new URL(request.url, bfmBaseUrl);
 
     if (target.pathname.startsWith(CONTROL_PREFIX)) {
       const answer = control(request.method ?? 'GET', target.pathname);
