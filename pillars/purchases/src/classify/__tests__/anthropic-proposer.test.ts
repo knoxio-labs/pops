@@ -126,7 +126,7 @@ describe('propose', () => {
     expect(request.messages[0]?.content).toContain('1. (amazon) Robot vacuum [B0ROBOT]');
   });
 
-  it('reports usage under its own operation, not the receipt reader`s', async () => {
+  it("reports usage under its own operation, not the receipt reader's", async () => {
     // Two Claude callers in one pillar. Sharing an operation name would
     // make a runaway sweep indistinguishable from receipt uploads.
     const captured = captureReports();

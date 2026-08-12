@@ -118,11 +118,11 @@ describe('what the adapters do state instead', () => {
     );
   });
 
-  it('keeps the drop-zone`s printed unit note', () => {
+  it("keeps the drop-zone's printed unit note", () => {
     expect(receiptItems().flatMap((item) => item.notes ?? [])).toEqual(['2 @ $7.50']);
   });
 
-  it('keeps Amazon`s product condition out of the category column', () => {
+  it("keeps Amazon's product condition out of the category column", () => {
     const items = amazonItems();
     expect(items.map((item) => item.merchantCategory).filter((v) => v !== undefined)).toEqual([]);
     expect(items.some((item) => item.merchantCondition === 'New')).toBe(true);

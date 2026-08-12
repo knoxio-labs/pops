@@ -251,7 +251,7 @@ describe('GET /purchases', () => {
 });
 
 describe('GET /items', () => {
-  it('finds lines by tag across orders, each with that tag`s marker', async () => {
+  it("finds lines by tag across orders, each with that tag's marker", async () => {
     await request(app).post('/purchases').send(fullOrder);
     const res = await request(app).get('/items?tag=coffee');
     expect(res.status).toBe(200);

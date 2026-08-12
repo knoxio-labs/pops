@@ -65,7 +65,8 @@ export function confirmItemClassification(
         .select({ id: purchaseItems.id })
         .from(purchaseItems)
         .where(and(eq(purchaseItems.id, itemId), eq(purchaseItems.purchaseId, purchaseId)))
-        .all().length > 0;
+        .limit(1)
+        .get() !== undefined;
     if (!belongs) return false;
 
     if (input.kind !== undefined) {
@@ -94,5 +95,8 @@ export function confirmItemClassification(
   });
 
   if (!applied) return undefined;
+  // Through the order's own assembly rather than a second read path built
+  // for one line. A confirmation is a human-paced write, so re-reading a
+  // hundred-line shop costs nothing worth having two ways to shape a line.
   return selectItemDetails(db, purchaseId).find((detail) => detail.item.id === itemId);
 }

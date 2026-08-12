@@ -222,7 +222,7 @@ describe('GET /purchases response', () => {
 });
 
 describe('GET /items response', () => {
-  it('conforms, and carries the tag`s confirmation marker beside each line', async () => {
+  it("conforms, and carries the tag's confirmation marker beside each line", async () => {
     await request(app).post('/purchases').send(RICH_ORDER);
     const res = await request(app).get('/items?tag=coffee');
     expect(res.status).toBe(200);
