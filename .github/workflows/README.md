@@ -1,6 +1,6 @@
 # .github/workflows
 
-19 workflows. Every job runs on `ubuntu-latest` except `ios-quality.yml`, which needs macOS to compile Swift at all.
+22 workflow YAML files (this README isn't one): 20 that trigger on their own (the table below) plus 2 reusable `workflow_call`-only helpers with no trigger of their own — `_discover-units.yml` and `_extractability-sandbox-matrix.yml`, each documented in its own section instead of the table. Every job runs on `ubuntu-latest` except `ios-quality.yml`, which needs macOS to compile Swift at all.
 
 ## `ci-gate.yml` — the one static aggregate context
 
@@ -170,7 +170,8 @@ Two consequences worth stating, because both look like bugs from the outside:
 
 ## `_discover-units.yml`
 
-Reusable (`on: workflow_call`), called by `unit-quality.yml` and `quality.yml`.
+Reusable (`on: workflow_call`), called by `unit-quality.yml`, `quality.yml`,
+and both `extractability-sandbox.yml` and `extractability-sandbox-push.yml`.
 Its `list` job scans `pillars/` and `libs/` at maxdepth 1 and emits
 `{name, pkg, dir, kind, lang}` per unit, reading `pkg` from `package.json#name`
 or a `Cargo.toml` `[package].name`; manifest-less dirs are skipped and a unit
@@ -180,6 +181,16 @@ unit when `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `tsconfig.base.json`,
 `tsconfig.build.json`, `.oxfmtrc.json`, `.oxlintrc.json`, `mise.toml`,
 `mise.ci.toml`, `Cargo.toml` or `Cargo.lock` changed). The header explains why
 the scan stops at maxdepth 1.
+
+The diff's base differs by event: `pull_request` (and `merge_group`) diff from
+`merge-base(origin/<base_ref>, HEAD)`, the PR's fork point. `push` diffs from
+`github.event.before` instead — `origin/<branch>` is refreshed by the same
+checkout that fetches the run's own commit, so on a push it already includes
+(usually equals) HEAD, and `merge-base(HEAD, HEAD)` is `HEAD`: diffing HEAD
+against itself is empty no matter what the push changed. This was verified
+against a real commit pair from this repo's history before
+`extractability-sandbox-push.yml` was allowed to depend on it — see the `scan`
+step's own comments.
 
 A third output, `changedClientDirs`, applies the same rule to `clients/*`
 instead: outside the pnpm/cargo workspace (ADR-043), so it carries no
@@ -193,6 +204,17 @@ A second job, `assert-app-coverage`, enumerates the 7 `pillars/*/app` dirs,
 requires each `package.json#name` to match `@pops/app-*`, and greps both
 `fe-quality.yml` and `app-quality.yml` for a `pillars/*/app/**` trigger — reading
 files only, no install.
+
+## `_extractability-sandbox-matrix.yml`
+
+Reusable (`on: workflow_call`, one input: `units`, a JSON array of
+`{name,pkg,dir,kind,lang}` objects). Sandboxes every TS unit in `units` with
+`scripts/extractability/sandbox.sh` and every Rust one with
+`scripts/extractability/cargo-sandbox.sh`, exactly as `extractability-sandbox.yml`
+did inline before this file existed. Extracted so the nightly/on-demand sweep and the
+push-triggered fan-out (below) share one sandboxing implementation instead of
+two copies that could drift apart — which units to sandbox is entirely the
+caller's decision; this file only knows how to sandbox whatever `units` names.
 
 ## The rest
 
@@ -212,7 +234,8 @@ files only, no install.
 | `publish-images.yml`             | push to `main`, `v*` tags, dispatch (`only` input)            | four static app images plus every `pops-<x>` discovered from the prod compose's `image:` refs                        |
 | `release.yml`                    | `workflow_dispatch`                                           | `.github/scripts/release.sh`, then annotated tag + `gh release create`                                               |
 | `infra-lint.yml`                 | PR/push on `infra/litestream/**`, `infra/backup/**`           | YAML lint                                                                                                           |
-| `extractability-sandbox.yml`     | nightly cron + `workflow_dispatch` (optional single-`unit` input) — **not** PR/push, **not** in `ci-gate.yml`'s gated list | EX-2: `sandbox.sh` (TS) / `cargo-sandbox.sh` (Rust) over every unit `_discover-units.yml` discovers — the true zero-workspace extraction proof, too heavy for a per-push gate |
+| `extractability-sandbox.yml`     | nightly cron + `workflow_dispatch` (optional single-`unit` input) — **not** PR/push, **not** in `ci-gate.yml`'s gated list | EX-2 via `_extractability-sandbox-matrix.yml` over every unit `_discover-units.yml` discovers (or just the dispatched one) — the true zero-workspace extraction proof, too heavy for a per-push gate |
+| `extractability-sandbox-push.yml` | push to `main` on a unit's `package.json`/`tsconfig*.json`/`Cargo.toml`/`Cargo.lock`/`pnpm-lock.yaml` — **not** PR, **not** in `ci-gate.yml`'s gated list | EX-2 via `_extractability-sandbox-matrix.yml`, scoped to ONLY `_discover-units.yml`'s `changed` set for that push — fast feedback on an exports/dep-shape change instead of waiting for the nightly sweep |
 | `workflows-quality.yml`          | PR/push on `.github/workflows/**`                             | YAML lint                                                                                                           |
 | `fe-test-e2e.yml`                | `workflow_dispatch` only                                      | Playwright, manual — see the header for why it is off PR/push                                                        |
 | `live-seam.yml`                  | PR/push on `libs/sdk/**`, `pillars/registry/**`, the food/cerebrum live-seam module pairs + their `vitest.live-seam.config.ts`, `pillars/lists/**`, `pillars/finance/**`, and its own workflow file; no merge group | food's and cerebrum's real-process `test:live-seam` suites, each in its own job. **Advisory, not gated** — neither job is in `ci-gate.yml`'s `gated` array or the ruleset, deliberately, for a bake-in period; see the file header |

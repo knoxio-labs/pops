@@ -35,6 +35,17 @@ name: Discover Units
 #   changed — units touched by this PR's diff, OR all units when a shared
 #             root (lockfile / base tsconfig / formatter / mise root / Cargo
 #             root) changed. Drives the unit-quality matrix.
+#
+#             The diff's BASE differs by event, because `origin/<branch>` is
+#             not a stable "other side" across all of them: on `pull_request`
+#             it is `merge-base(origin/<base_ref>, HEAD)`, the PR's fork
+#             point. On `push`, `origin/<branch>` is refreshed by the SAME
+#             checkout that fetches this run's own commit, so by the time
+#             this step runs it already includes (usually equals) HEAD —
+#             `merge-base(HEAD, HEAD)` is `HEAD`, and diffing HEAD against
+#             itself is empty regardless of what the push actually changed.
+#             `push` therefore diffs from `github.event.before` (the ref tip
+#             immediately prior to the push) instead — see the `scan` step.
 #   changedClientDirs — clients/* dirs touched by this PR's diff, OR every
 #             clients/* dir when the same shared root changed. `clients/` has
 #             no package.json/Cargo.toml (ADR-043), so `emit` below never
@@ -101,16 +112,52 @@ jobs:
           echo "Discovered units:"
           echo "$units" | jq .
 
-          base=$(git merge-base "origin/${{ github.base_ref || 'main' }}" HEAD || echo HEAD~1)
-          diff=$(git diff --name-only "$base" HEAD)
-          echo "Changed files vs $base:"
+          if [ "${{ github.event_name }}" = "push" ]; then
+            # See the Outputs comment above — origin/<branch> is not a usable
+            # "other side" here, it is (at best) the same commit as HEAD. Use
+            # the push event's own before/after boundary instead. `before` is
+            # all-zeros on a branch's first push, can name a commit this
+            # checkout's history doesn't contain after a force-push, or —
+            # also a force-push, but the sneakier case — can resolve to a
+            # real commit that is NOT an ancestor of HEAD (e.g. a rewritten
+            # history where the old tip is still reachable from some other
+            # ref). Diffing against an unrelated tip would produce an
+            # arbitrary changed-set instead of "what this push actually
+            # changed", which is worse than no diff at all. Every one of
+            # these is "no diff worth trusting", so fall through to the
+            # shared-root "build everything" path below rather than silently
+            # computing "nothing changed" or something plausible-looking but
+            # wrong.
+            before='${{ github.event.before }}'
+            if [ -n "$before" ] && [ "$before" != "0000000000000000000000000000000000000000" ] && git merge-base --is-ancestor "$before" HEAD 2>/dev/null; then
+              base="$before"
+            else
+              base=""
+            fi
+          else
+            base=$(git merge-base "origin/${{ github.base_ref || 'main' }}" HEAD || echo HEAD~1)
+          fi
+
+          if [ -n "$base" ]; then
+            diff=$(git diff --name-only "$base" HEAD)
+          else
+            diff=""
+          fi
+          echo "Changed files vs ${base:-<no usable base for this push - treating as full sweep>}:"
           echo "$diff"
 
           # A shared-root touch invalidates everything (lockfile / base
-          # tsconfig / formatter / linter / mise root / cargo root) -> build ALL.
+          # tsconfig / formatter / linter / mise root / cargo root) -> build
+          # ALL. An unusable push base (above, `base` left empty) gets the
+          # same treatment: no diff to trust means no unit can be safely
+          # excluded either.
           shared_root_pattern='^(pnpm-lock\.yaml|pnpm-workspace\.yaml|tsconfig\.base\.json|tsconfig\.build\.json|\.oxfmtrc\.json|\.oxlintrc\.json|mise\.toml|mise\.ci\.toml|Cargo\.toml|Cargo\.lock)$'
-          if echo "$diff" | grep -qE "$shared_root_pattern"; then
-            echo "Shared root changed — building ALL units."
+          if [ -z "$base" ] || echo "$diff" | grep -qE "$shared_root_pattern"; then
+            if [ -z "$base" ]; then
+              echo "No usable git base for this push's diff — building ALL units."
+            else
+              echo "Shared root changed — building ALL units."
+            fi
             echo "changed=$units" >> "$GITHUB_OUTPUT"
             shared_root_changed=1
           else
