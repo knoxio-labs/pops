@@ -2,6 +2,7 @@
   "name": "@pops/types",
   "version": "0.1.0",
   "private": true,
+  "description": "Dependency-free type vocabulary shared by every pillar: manifest, registry, settings, feature and search descriptors.",
   "files": [
     "dist/**"
   ],
