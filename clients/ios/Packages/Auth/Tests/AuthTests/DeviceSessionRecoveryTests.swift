@@ -192,8 +192,14 @@ internal struct DeviceSessionRecoveryTests {
     @Test("a revocation during a rotation is not undone by the rotation's write")
     func revocationDuringRotationWins() async throws {
         let gate = Gate()
+        let reachedExchange = Countdown()
         let fixture = try RefresherFixture(
-            exchange: ScriptedRefreshExchange(beforeRefresh: { await gate.wait() })
+            exchange: ScriptedRefreshExchange(
+                beforeRefresh: {
+                    reachedExchange.record()
+                    await gate.wait()
+                }
+            )
         )
 
         let rotation = Task { try await fixture.refreshedTokens(replacing: "access-1") }
@@ -203,13 +209,25 @@ internal struct DeviceSessionRecoveryTests {
         // below deletes that key — so synchronising on the challenge count
         // raced the signature and produced `credentialsRejected` from a lost
         // key rather than the `deviceRevoked` this test is about, on roughly
-        // one run in five.
-        let parked = await waitUntil("the rotation to park inside the exchange") {
-            await gate.hasParked
+        // one run in five. The wait for that arrival is exact rather than
+        // polled, and bounded by a deadline rather than a scheduling-turn
+        // budget: see ``Countdown/wait(atLeast:)`` and
+        // ``withDeadline(seconds:_:)``.
+        //
+        // The gate opens (and the revocation lands) unconditionally, deadline
+        // or not: the rotation task above is parked behind the gate via the
+        // exchange, and a gate left shut is a task `rotation.value` below can
+        // never finish awaiting. A failed wait must still fail the test — it
+        // just cannot do that by skipping the open.
+        var parkFailure: (any Error)?
+        do {
+            try await withDeadline { try await reachedExchange.wait(atLeast: 1) }
+        } catch {
+            parkFailure = error
         }
         await fixture.refresher.deviceWasRevoked()
         await gate.open()
-        #expect(parked, "the rotation never reached the exchange")
+        if let parkFailure { throw parkFailure }
 
         await #expect(throws: SessionRefreshError.deviceRevoked) { try await rotation.value }
 

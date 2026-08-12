@@ -22,6 +22,7 @@ internal final class RecordingTransport: Sendable {
     }
 
     private let recorded = Mutex<[Attempt]>([])
+    private let arrivals = Countdown()
     private let respond: @Sendable (HTTPRequest) async -> HTTPResponse.Status
 
     internal init(respond: @escaping @Sendable (HTTPRequest) async -> HTTPResponse.Status) {
@@ -29,6 +30,12 @@ internal final class RecordingTransport: Sendable {
     }
 
     internal var attempts: [Attempt] { recorded.withLock { $0 } }
+
+    /// Suspends until at least `target` requests have reached the transport.
+    /// See ``Countdown/wait(atLeast:)`` for how the wait is signalled.
+    internal func waitForAttempts(atLeast target: Int) async throws {
+        try await arrivals.wait(atLeast: target)
+    }
 
     /// Answers `unauthorized` while the request carries `staleAccessToken` and
     /// `ok` once it carries anything else — the shape of an ordinary expiry.
@@ -63,6 +70,7 @@ internal final class RecordingTransport: Sendable {
                     )
                 )
             }
+            arrivals.record()
             return (HTTPResponse(status: await respond(request)), nil)
         }
     }
