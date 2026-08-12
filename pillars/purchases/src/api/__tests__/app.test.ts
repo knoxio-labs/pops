@@ -275,6 +275,87 @@ describe('GET /items', () => {
   });
 });
 
+describe('PATCH /purchases/:id/items/:itemId', () => {
+  async function seedLine(): Promise<{ purchaseId: string; itemId: string }> {
+    const created = await request(app).post('/purchases').send(fullOrder);
+    return {
+      purchaseId: String(created.body.purchase.id),
+      // The funnel: no kind, no tags — the state every ingested line is in.
+      itemId: String(created.body.items[1].item.id),
+    };
+  }
+
+  it('confirms a kind and returns the line with its marker set', async () => {
+    const { purchaseId, itemId } = await seedLine();
+    const res = await request(app)
+      .patch(`/purchases/${purchaseId}/items/${itemId}`)
+      .send({ kind: 'durable' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.item.kind.value).toBe('durable');
+    expect(res.body.item.kind.confirmedAt).not.toBeNull();
+  });
+
+  it('retracts a confirmation to unclassified', async () => {
+    const { purchaseId, itemId } = await seedLine();
+    await request(app).patch(`/purchases/${purchaseId}/items/${itemId}`).send({ kind: 'durable' });
+
+    const res = await request(app)
+      .patch(`/purchases/${purchaseId}/items/${itemId}`)
+      .send({ kind: null });
+    expect(res.status).toBe(200);
+    expect(res.body.item.kind).toBeNull();
+  });
+
+  it('rejects a kind outside the closed vocabulary', async () => {
+    const { purchaseId, itemId } = await seedLine();
+    const res = await request(app)
+      .patch(`/purchases/${purchaseId}/items/${itemId}`)
+      .send({ kind: 'vibes' });
+    expect(res.status).toBe(400);
+  });
+
+  it('rejects a body that states nothing', async () => {
+    const { purchaseId, itemId } = await seedLine();
+    const res = await request(app).patch(`/purchases/${purchaseId}/items/${itemId}`).send({});
+    expect(res.status).toBe(400);
+  });
+
+  it('404s for a line that is not on that order', async () => {
+    const { purchaseId } = await seedLine();
+    const res = await request(app)
+      .patch(`/purchases/${purchaseId}/items/no-such-item`)
+      .send({ kind: 'durable' });
+    expect(res.status).toBe(404);
+  });
+
+  it('404s for an order that does not exist', async () => {
+    const { itemId } = await seedLine();
+    const res = await request(app)
+      .patch(`/purchases/no-such-order/items/${itemId}`)
+      .send({ kind: 'durable' });
+    expect(res.status).toBe(404);
+  });
+
+  it('does not disturb the rest of the order', async () => {
+    // The line's money, its delivery and its allocations are facts the
+    // merchant stated. A classification write that touched any of them
+    // would move the residual, which is the figure ADR-042 protects.
+    const { purchaseId, itemId } = await seedLine();
+    const before = await request(app).get(`/purchases/${purchaseId}`);
+    await request(app)
+      .patch(`/purchases/${purchaseId}/items/${itemId}`)
+      .send({ kind: 'consumable', tags: ['snack'] });
+    const after = await request(app).get(`/purchases/${purchaseId}`);
+
+    expect(after.body.accounting).toEqual(before.body.accounting);
+    expect(after.body.charges).toEqual(before.body.charges);
+    expect(after.body.items[1].item.lineTotalCents).toBe(
+      before.body.items[1].item.lineTotalCents as number
+    );
+  });
+});
+
 describe('sources', () => {
   it('upserts idempotently so a deployment seed can re-run', async () => {
     const first = await request(app)
