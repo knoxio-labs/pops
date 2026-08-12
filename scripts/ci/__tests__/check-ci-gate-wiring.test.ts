@@ -369,7 +369,8 @@ describe('parsePathFilterMap', () => {
     const map = parsePathFilterMap(gate);
     expect(map['iOS Quality']).toEqual([
       'clients/ios/**',
-      'pillars/bfm/openapi/**',
+      'pillars/bfm/**',
+      'scripts/ios-e2e/**',
       '.github/workflows/ios-quality.yml',
     ]);
     expect(map.Quality).toBeUndefined();
@@ -603,7 +604,7 @@ describe('the guard catches each way the wiring goes inert', () => {
     const root = cloneWorkflows();
     patch(root, 'ci-gate.yml', (s) =>
       s.replace(
-        '"iOS Quality": [\n                "clients/ios/**",\n                "pillars/bfm/openapi/**",\n                ".github/workflows/ios-quality.yml"\n              ]',
+        '"iOS Quality": [\n                "clients/ios/**",\n                "pillars/bfm/**",\n                "scripts/ios-e2e/**",\n                ".github/workflows/ios-quality.yml"\n              ]',
         '"iOS Quality": [\n                "clients/ios/**",\n                ".github/workflows/ios-quality.yml"\n              ]'
       )
     );

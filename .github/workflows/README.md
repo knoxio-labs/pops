@@ -151,14 +151,39 @@ until the queue's check-response timeout evicts it. A queue that evicts
 everything is indistinguishable, from the outside, from a repo where nothing can
 merge.
 
-**A merge-group run cannot be path-filtered.** `paths:` is accepted only on
-`push`, `pull_request` and `pull_request_target`; under `merge_group` it is a
-workflow syntax error, and `dorny/paths-filter` has no diff base on the event
-either. So each workflow's `merge_group` trigger is unconditional and the queue
-lane runs what a push to `main` runs — including a full macOS compile in
-`ios-quality.yml` on every entry, docs-only ones included. The alternative is
-hand-rolling each filter against the merge group's diff, in the one lane where a
-filter that is silently wrong reports green having built nothing.
+**A merge-group TRIGGER cannot be path-filtered, so the scoping moved into a
+job.** `paths:` is accepted only on `push`, `pull_request` and
+`pull_request_target`; under `merge_group` it is a workflow syntax error, and
+`dorny/paths-filter` has no diff base on the event either. Every workflow's
+`merge_group` trigger is therefore unconditional and always registers a run.
+What the two expensive ones do inside that run is scoped:
+`ios-quality.yml` and `docker-build.yml` each open with a cheap `ubuntu-latest`
+`scope` job that runs `scripts/ci/merge-group-scope.mjs`, which reads **that
+workflow's own `on.pull_request.paths`** off disk and answers it against
+`git diff <merge_group.base_sha>..<merge_group.head_sha>`. The expensive jobs
+are conditioned on its `selected` output. Every other gated workflow's queue
+lane still runs what a push to `main` runs.
+
+One implementation, not one glob list per workflow: widening a workflow's
+`pull_request.paths` widens its queue lane in the same edit, and the two cannot
+drift. The helper is the only thing in the fleet whose wrong answer is
+invisible — a skip that should have been a build leaves the workflow concluding
+`success` and `CI Gate` aggregating it — so it has no tolerant branch at all.
+An unresolvable base, a base that is not an ancestor of the head, an **empty
+diff** (the signature of a wrong base, and the input that would deselect every
+lane at once), a missing or unparseable workflow, a `pull_request` trigger with
+no `paths:` — each exits non-zero, which skips the expensive job *and* fails the
+workflow. A red queue entry costs one re-queue; a wrong skip merges a commit
+nothing compiled. Its `--self-test` proves both directions (it selects a
+touching diff, it deselects a non-touching one) and every refusal above, and it
+runs in the `scope` job itself immediately before the answer it qualifies, not
+only in `agent-review.yml`'s preflight.
+
+The corollary is that a workflow's declared `pull_request.paths` is now
+load-bearing in two lanes. `ios-quality.yml`'s covers `clients/ios/**`,
+`pillars/bfm/**` and `scripts/ios-e2e/**` — the pillar and the harness because
+its UI-flow step boots a real BFM — and still does not cover `pnpm-lock.yaml`
+or the BFM's transitive `libs/*`.
 
 Two consequences worth stating, because both look like bugs from the outside:
 
@@ -233,9 +258,9 @@ caller's decision; this file only knows how to sandbox whatever `units` names.
 | `fe-quality.yml`                 | PR/push on `pillars/shell/**`, apps, openapi, FE libs; every merge group | the shell's `Quality Checks` job                                                                                     |
 | `rust-quality.yml`               | PR/push on Cargo files, `deny.toml`, `pillars/contacts/**`, `libs/pops-*`, `scripts/extractability/**`; every merge group | `fmt + clippy + build + test`                                       |
 | `registry-generated-quality.yml` | PR/push on `libs/module-registry/**`, `libs/types/**`; every merge group | `generated.ts` drift                                                                                                |
-| `ios-quality.yml`                | PR/push on `clients/ios/**`, `pillars/bfm/openapi/**`; **every merge group, unfiltered** | `macos-latest`; selects the Xcode pinned in `clients/ios/mise.toml`, then `mise run lint` and `mise run -j 1 test ::: lint:analyze` — one step, because both share a single compile. Caches no derived data, deliberately; the header says why |
+| `ios-quality.yml`                | PR/push on `clients/ios/**`, `pillars/bfm/**`, `scripts/ios-e2e/**`; every merge group, **scoped by a `scope` job to that same filter** | `macos-latest`; selects the Xcode pinned in `clients/ios/mise.toml`, then `mise run lint` and `mise run -j 1 test ::: lint:analyze` — one step, because both share a single compile. Caches no derived data, deliberately; the header says why |
 | `agent-review.yml`               | every PR, drafts included; every merge group                  | eight guard scripts under `scripts/ci/`, each `--self-test`ed first, then an advisory LLM review (that last step alone is skipped on drafts) |
-| `docker-build.yml`               | PR/push on Dockerfiles, `infra/docker*`, lockfile; every merge group | the FULL image of every `pillars/*/Dockerfile`, each then started on fresh volumes and probed by `scripts/ci/smoke-image.mjs`; `docker compose config --quiet` on both compose files after stubbing 12 secret files |
+| `docker-build.yml`               | PR/push on Dockerfiles, `infra/docker*`, lockfile; every merge group, **scoped by a `scope` job to that same filter** | the FULL image of every `pillars/*/Dockerfile`, each then started on fresh volumes and probed by `scripts/ci/smoke-image.mjs`; `docker compose config --quiet` on both compose files after stubbing 12 secret files |
 | `pillar-quality.yml`             | push to `main` only                                           | full image (`push: false`) per `pillars/<x>` that has a `package.json`                                               |
 | `pillar-schema-coverage.yml`     | PR/push on `pillars/*/src/db/**`, migrations                  | per-pillar coverage, an injected-table self-test, and a static `Pillar schema coverage` aggregator job               |
 | `publish-images.yml`             | push to `main`, `v*` tags, dispatch (`only` input)            | four static app images plus every `pops-<x>` discovered from the prod compose's `image:` refs                        |

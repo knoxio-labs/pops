@@ -92,8 +92,13 @@ run-name: >-
 #
 # WHY THIS DOES NOT REACH `main`: `merge_group` cannot carry a `paths:` filter
 # at all — GitHub rejects the key outright on that event — so every one of the
-# eight gated workflows runs UNCONDITIONALLY in the merge queue regardless of
-# the diff (see e.g. `ios-quality.yml`'s own `merge_group:` comment). Confirmed
+# eight gated workflows is TRIGGERED unconditionally in the merge queue and
+# registers a run there regardless of the diff. Two of them (`ios-quality.yml`,
+# `docker-build.yml`) now scope their expensive jobs INSIDE that run, via a
+# `scope` job and `scripts/ci/merge-group-scope.mjs` — a skipped job still
+# leaves the workflow concluding `success`, so what this script reads is
+# unchanged, and the absent-run handling below is still never reached on a
+# merge group. Confirmed
 # on the same commit: the queue entry that carried it (head_sha `47a5fd1f...`,
 # the commit that actually landed on `main`) ran "iOS Quality" for real,
 # completing at `2026-08-11T17:04:02Z`, and the CI Gate evaluation that
@@ -249,7 +254,8 @@ jobs:
               ],
               "iOS Quality": [
                 "clients/ios/**",
-                "pillars/bfm/openapi/**",
+                "pillars/bfm/**",
+                "scripts/ios-e2e/**",
                 ".github/workflows/ios-quality.yml"
               ],
               "Docker Build": [
@@ -325,10 +331,12 @@ jobs:
             });
 
             // The diff is only trustworthy for a `pull_request` evaluation
-            // with an identified PR (fetched below), or a `merge_group` one
-            // (where every gated workflow is unconditional regardless of the
-            // diff — `paths:` is not a legal filter on that event at all, so
-            // `matchesPathFilter`'s unfiltered branch already covers it).
+            // with an identified PR (fetched below), or a `merge_group` one —
+            // where every gated workflow is TRIGGERED unconditionally (`paths:`
+            // is not a legal filter on that event) and therefore always has a
+            // run to read. A workflow that scopes itself inside that run still
+            // registers one and still concludes, so the absent-run path below
+            // is unreachable there either way.
             // Anything else (a `push` to `main`, e.g.) keeps the pre-existing
             // behavior below: an absent run is treated as filtered-out and
             // passing. `main` is not gated by branch protection, so getting

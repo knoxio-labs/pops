@@ -205,6 +205,12 @@ describe('Tier B — a job whose guards need a parser keeps its install', () => 
     ['agent-review.yml', 'agent-review'],
     ['rust-quality.yml', 'quality'],
     ['docker-build.yml', 'docker-build'],
+    // The two merge-queue scoping jobs. `merge-group-scope.mjs` parses the
+    // workflow it is scoping, so losing the install here would not be a slower
+    // gate — it would be a MODULE_NOT_FOUND in the job that decides whether a
+    // macOS compile happens at all.
+    ['ios-quality.yml', 'scope'],
+    ['docker-build.yml', 'scope'],
   ];
 
   it.each(REQUIRED_INSTALLS)('%s → %s installs the workspace', (workflow, job) => {
