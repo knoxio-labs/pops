@@ -11,9 +11,11 @@
  * turns OpenAPI into TS `paths`. Polyglot consumers (Rust, Swift)
  * skip this file and generate their own types from the JSON spec.
  *
- * Drift check (in `.github/workflows/lists-quality.yml`):
+ * Regenerate after an OpenAPI spec change:
  *   pnpm --filter @pops/lists generate:api-types
  *   git diff --exit-code pillars/lists/src/contract/api-types.generated.ts
+ *
+ * Nothing in CI re-runs this and diffs the result.
  */
 import { execFileSync } from 'node:child_process';
 import { writeFileSync } from 'node:fs';

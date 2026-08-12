@@ -1,11 +1,9 @@
 /**
- * DSL builder for the LLM-extracted recipe
- * (`pillars/food/docs/prds/web-llm-fallback`).
+ * DSL builder for the LLM-extracted recipe.
  *
- * Pure function: `ExtractedRecipe` → DSL string
- * (`pillars/food/docs/prds/dsl-parser`). Scoped to the web-llm handler;
- * `build-dsl.ts` and `screenshot-dsl.ts` carry parallel copies of the
- * same shape.
+ * Pure function: `ExtractedRecipe` → DSL string. Scoped to the web-llm
+ * handler; `build-dsl.ts` and `screenshot-dsl.ts` carry parallel copies
+ * of the same shape.
  *
  * Invariants worth knowing:
  *   - Slug derivation is best-effort kebab-case; collision is the

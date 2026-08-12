@@ -129,10 +129,9 @@ function composeSummary(parsed: ExtractedRecipe, opts: BuildDslOptions): string 
 }
 
 /**
- * Render the LLM-extracted recipe as a recipe-DSL string
- * (`pillars/food/docs/prds/dsl-parser`). Pure function — no DB lookups,
- * no slug-collision suffixing here (recipe create owns that via
- * `slug_registry`; see `pillars/food/docs/prds/recipe-model`).
+ * Render the LLM-extracted recipe as a recipe-DSL string. Pure function —
+ * no DB lookups, no slug-collision suffixing here (recipe create owns
+ * that via `slug_registry`).
  *
  * Invariants:
  *   - First non-comment line is `@recipe(...)`.

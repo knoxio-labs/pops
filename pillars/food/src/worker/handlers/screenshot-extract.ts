@@ -1,6 +1,5 @@
 /**
- * Screenshot extraction pipeline
- * (`pillars/food/docs/prds/screenshot-ingest`).
+ * Screenshot extraction pipeline.
  *
  * Runs file read → Claude vision → JSON parse → zod validation,
  * returning the structured `ParsedRecipe` (or a typed failure) for the

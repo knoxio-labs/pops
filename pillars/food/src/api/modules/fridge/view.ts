@@ -2,7 +2,7 @@ import { groupIntoSections, toUtcMidnight } from './view-grouping.js';
 import { resolveRecipeSlugs, selectCounts, selectRows } from './view-query.js';
 
 /**
- * Fridge view query (`pillars/food/docs/prds/fridge-view`).
+ * Fridge view query.
  *
  * Reads `batches` joined to `ingredient_variants` / `ingredients` /
  * `prep_states`, applies the filter inputs, and projects into the

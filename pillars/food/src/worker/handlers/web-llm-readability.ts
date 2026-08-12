@@ -1,5 +1,5 @@
 /**
- * Readability extraction (`pillars/food/docs/prds/web-llm-fallback`).
+ * Readability extraction for the web-llm fallback.
  *
  * Wraps Mozilla Readability in a JSDOM container, returns the cleaned
  * article body or null when the page doesn't have enough content to be

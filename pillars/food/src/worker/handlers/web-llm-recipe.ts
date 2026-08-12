@@ -1,6 +1,5 @@
 /**
- * Zod schema for the Claude-extracted recipe JSON
- * (`pillars/food/docs/prds/web-llm-fallback`).
+ * Zod schema for the Claude-extracted recipe JSON.
  *
  * Scoped to the web-llm handler; `extracted-recipe.ts` carries a
  * parallel copy of the same shape. The schema is strict about required

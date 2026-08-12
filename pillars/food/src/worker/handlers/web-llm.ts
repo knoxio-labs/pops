@@ -1,12 +1,10 @@
 import { buildWebLlmDsl } from './web-llm-dsl.js';
 /**
- * Web URL LLM-fallback handler
- * (`pillars/food/docs/prds/web-llm-fallback`).
+ * Web URL LLM-fallback handler.
  *
  * `web-url.ts` owns the JSON-LD primary path; this module's
- * `processWithLlm` is the JSON-LD-miss fallback. It is not yet wired
- * into the `url-web` dispatch — `web-url.ts` still returns
- * `JsonLdMissing` instead of calling here.
+ * `processWithLlm` is the LLM-based extraction path for the case where
+ * JSON-LD is missing or malformed.
  */
 import { extractWithClaudeWebLlm } from './web-llm-extract.js';
 import { extractReadable } from './web-llm-readability.js';

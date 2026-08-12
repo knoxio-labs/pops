@@ -1,6 +1,5 @@
 /**
- * Instagram acquisition (yt-dlp + cookies); see
- * `pillars/food/docs/prds/instagram-acquisition`.
+ * Instagram acquisition (yt-dlp + cookies).
  *
  * Downloads a single Instagram reel by spawning the pinned `yt-dlp` from
  * the worker container with a cookie file mounted in by the operator.

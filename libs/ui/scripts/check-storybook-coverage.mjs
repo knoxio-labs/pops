@@ -24,7 +24,7 @@
  *   1. A frontend package with NO alias — its stories cannot resolve the
  *      pillar they render (issue #2706).
  *   2. An alias whose `replacement` points at a missing or WRONG directory —
- *      e.g. `@pops/app-ai` mapped at `pillars/registry/app/src` (which does
+ *      e.g. `@pops/app-ai` mapped at pillars/registry/app/src (which does
  *      not exist) instead of `pillars/ai/app/src`. The original key-only check
  *      passed this silently; the alias only breaks once an AI-pillar story is
  *      filed. Validating the resolved path makes that drift loud at CI time.

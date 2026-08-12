@@ -1,6 +1,5 @@
 /**
- * Screenshot ingest handler
- * (`pillars/food/docs/prds/screenshot-ingest`).
+ * Screenshot ingest handler.
  *
  * Reads the image written to disk by the producer, runs one Claude
  * vision call, builds a DSL string from the structured response and
@@ -11,8 +10,7 @@
  * - Malformed JSON / zod fail / SDK throw → `VisionExtractFailed`.
  * - File-read failure → `FileReadFailed`. The worker posts the result
  *   via `workerComplete`, so BullMQ marks the job complete — no
- *   automatic retry. The retry surface is the Failed tab
- *   (`pillars/food/docs/prds/rejected-and-failed-tabs`), which reads
+ *   automatic retry. The retry surface is the Failed tab, which reads
  *   `ingest_sources.error_code` and exposes a Retry button.
  *
  * Cancellation is cooperative: checked before the file read, between

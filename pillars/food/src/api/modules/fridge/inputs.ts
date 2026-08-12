@@ -1,6 +1,5 @@
 /**
- * Input Zod schemas for the fridge endpoints
- * (`pillars/food/docs/prds/fridge-view`).
+ * Input Zod schemas for the fridge endpoints.
  *
  * `RecipesUsingBatchInputSchema` powers the "Cook now" picker on a batch row.
  */
