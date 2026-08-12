@@ -22,7 +22,7 @@ Deterministic first, AI never. Matching is arithmetic, and a model asked to part
 | 3     | one candidate smaller than the charge — a part-payment   | `partial` |
 | 5     | anything ambiguous or unmatched                          | review    |
 
-**Stage 4, learned rules, is deliberately absent.** `purchase_match_rules` is a descriptor-pattern table mirroring finance's `transaction_corrections` — `descriptionPattern`, `matchType`, `source`, `priority` — not a purchase-to-transaction pointer. What a matched pattern should do to the ladder depends on how the review queue writes rules when a user accepts a link (POPS-241), so implementing it now would embed a second, incompatible rule model in the engine. It has its own slice.
+**Stage 4, learned rules, is deliberately absent.** `purchase_match_rules` is a descriptor-pattern table mirroring finance's `transaction_corrections` — `descriptionPattern`, `matchType`, `source`, `priority` — not a purchase-to-transaction pointer. What a matched pattern should do to the ladder depends on how the review queue writes rules when a user accepts a link (POPS-241), so implementing it now would embed a second, incompatible rule model in the engine. It has its own slice, POPS-1309.
 
 ## Three phases, not one loop
 
