@@ -92,6 +92,20 @@ flows assert the sentences from `PairingCopy.explanation(for:)` and
 is absent — a copy edit that merges two of them is exactly the regression worth
 failing on.
 
+**A text selector is a regex matched against the WHOLE label**, which is the
+trap worth knowing before writing one: a prefix of a sentence matches nothing,
+so `assertVisible` on it fails against a screen that is showing exactly that
+sentence, and `assertNotVisible` on it passes against anything at all. Quote
+the sentence in full, or spell the `.*` deliberately — the expiry flow does the
+second, because the detail screen composes its lead-in with a second sentence
+naming the failure.
+
+**Only `assertVisible` waits.** `assertNotVisible` answers the moment the
+element is absent, which a screen mid-transition always is, so a negative
+assertion is worth only as much as the positive one in front of it. Every
+`assertNotVisible` here sits behind an `assertVisible` that settles the screen
+first; moving one above it turns it into a line that cannot fail.
+
 The rows the flows expect come from `scripts/ios-e2e/transactions-fixture.mjs`.
 Changing a description or an account there fails them, which is the point.
 

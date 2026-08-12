@@ -178,9 +178,45 @@ describe('the control plane', () => {
       armed: false,
       substitutions: 0,
       refreshes: 0,
+      lastDeviceId: null,
       financeOutage: false,
     });
     expect(seen).toEqual([]);
+  });
+
+  it('names the device on the most recent authenticated request', async () => {
+    // How the revocation flow knows which handset to cut off. Every flow pairs
+    // from scratch against one database, so the operator's list holds several
+    // live devices by the third one and "the only one" is not an answer.
+    await call('/mobile/bootstrap', { headers: { authorization: bearer('device-7') } });
+    expect(await (await call('/__e2e/state')).json()).toEqual(
+      expect.objectContaining({ lastDeviceId: 'device-7' })
+    );
+
+    // Not moved by a route that carries no credential, and not unset by one.
+    await call('/devices/refresh', { method: 'POST', body: '{}' });
+    expect(await (await call('/__e2e/state')).json()).toEqual(
+      expect.objectContaining({ lastDeviceId: 'device-7' })
+    );
+  });
+
+  it('puts everything back on reset, including the switch a failed flow left thrown', async () => {
+    // The lane calls this between flows. Without the finance half, a flow that
+    // died mid-outage would hand the next one a pillar that refuses
+    // everything, and that flow would fail for the previous one's reason.
+    await call('/__e2e/finance/down', { method: 'POST' });
+    await arm();
+    await call('/mobile/bootstrap', { headers: { authorization: bearer('device-1') } });
+    await call('/devices/refresh', { method: 'POST', body: '{}' });
+
+    expect(await (await call('/__e2e/reset', { method: 'POST' })).json()).toEqual({
+      armed: false,
+      substitutions: 0,
+      refreshes: 0,
+      lastDeviceId: null,
+      financeOutage: false,
+    });
+    expect(outage).toBe(false);
   });
 
   it('names an unknown control route rather than forwarding it', async () => {

@@ -34,6 +34,17 @@
  * substitutions were spent and how many refreshes went past, and the flow
  * asserts on both — which is what makes it a test of the refresh rather than a
  * second test of the detail screen.
+ *
+ * It also reports `lastDeviceId`, read off the bearer token of the most recent
+ * authenticated request. That is how the revocation flow names the handset it
+ * is holding: every flow pairs from scratch against a database this run
+ * created, so by the third one `GET /operator/devices` lists three perfectly
+ * live devices and "the only one" is not an answer.
+ *
+ * `POST /__e2e/reset` puts all of it back, and the lane calls it BETWEEN flows
+ * rather than each flow calling it first. A flow that fails halfway leaves the
+ * harness however it left it — finance still refusing, an arming unspent — and
+ * the next flow would then fail for a reason belonging to the previous one.
  */
 import { createServer } from 'node:http';
 
@@ -98,6 +109,17 @@ function forwardedHeaders(incoming) {
 }
 
 /**
+ * The device a request speaks for, or null when it carries no readable token.
+ *
+ * Same shape `requireDevice` accepts, so a header this reads is one the pillar
+ * would have read too.
+ */
+function deviceOnRequest(header) {
+  const token = /^Bearer +(?<token>\S+)$/iu.exec(header ?? '')?.groups?.['token'];
+  return token === undefined ? null : deviceIdFrom(token);
+}
+
+/**
  * A bearer header for the same device, aged past its expiry — or null when
  * there is nothing to age.
  *
@@ -108,9 +130,7 @@ function forwardedHeaders(incoming) {
  * loud outcome.
  */
 function agedAuthorization(header, secret) {
-  const token = /^Bearer +(?<token>\S+)$/iu.exec(header ?? '')?.groups?.['token'];
-  if (token === undefined) return null;
-  const deviceId = deviceIdFrom(token);
+  const deviceId = deviceOnRequest(header);
   if (deviceId === null) return null;
   return `Bearer ${mintAgedAccessToken({ deviceId, secret, expiredForSeconds: 3_600 })}`;
 }
@@ -132,12 +152,20 @@ export async function startControlPlane({
   upstream,
   host = '127.0.0.1',
 }) {
-  const counters = { armed: false, substitutions: 0, refreshes: 0 };
+  const counters = { armed: false, substitutions: 0, refreshes: 0, lastDeviceId: null };
   const state = () => ({ ...counters, financeOutage: upstream.isFinanceOutage() });
 
   const control = (method, pathname) => {
     if (method === 'POST' && pathname === '/__e2e/access-token/expire-next') {
       counters.armed = true;
+      return { status: 200, body: state() };
+    }
+    if (method === 'POST' && pathname === '/__e2e/reset') {
+      counters.armed = false;
+      counters.substitutions = 0;
+      counters.refreshes = 0;
+      counters.lastDeviceId = null;
+      upstream.setFinanceOutage(false);
       return { status: 200, body: state() };
     }
     if (method === 'POST' && pathname === '/__e2e/finance/down') {
@@ -159,6 +187,7 @@ export async function startControlPlane({
           'POST /__e2e/access-token/expire-next',
           'POST /__e2e/finance/down',
           'POST /__e2e/finance/up',
+          'POST /__e2e/reset',
           'GET /__e2e/state',
         ],
       },
@@ -167,12 +196,17 @@ export async function startControlPlane({
 
   const proxy = async (request, target) => {
     const headers = forwardedHeaders(request.headers);
-    if (counters.armed && target.pathname.startsWith(AUTHENTICATED_PREFIX)) {
-      const aged = agedAuthorization(headers.get('authorization'), accessTokenSecret);
-      if (aged !== null) {
-        headers.set('authorization', aged);
-        counters.armed = false;
-        counters.substitutions += 1;
+    if (target.pathname.startsWith(AUTHENTICATED_PREFIX)) {
+      const deviceId = deviceOnRequest(headers.get('authorization'));
+      if (deviceId !== null) counters.lastDeviceId = deviceId;
+
+      if (counters.armed) {
+        const aged = agedAuthorization(headers.get('authorization'), accessTokenSecret);
+        if (aged !== null) {
+          headers.set('authorization', aged);
+          counters.armed = false;
+          counters.substitutions += 1;
+        }
       }
     }
     if (request.method === 'POST' && target.pathname === REFRESH_PATH) counters.refreshes += 1;

@@ -51,7 +51,12 @@ name: An expired access token is renewed without the screen noticing
 - assertVisible:
     id: 'transaction-detail'
 - assertVisible: 'Account, Everyday'
-- assertNotVisible: 'This device is no longer signed in.'
+# The banner this screen draws over a row it could not complete, whatever the
+# reason was. Matched with a trailing `.*` because Maestro matches a text
+# selector as a regex against the WHOLE label, and `TransactionsCopy` composes
+# that lead-in with a second sentence naming the failure — a bare prefix would
+# match nothing and pass no matter what was on screen.
+- assertNotVisible: 'Could not load the full record.*'
 - assertNotVisible:
     id: 'pairing-code-field'
 

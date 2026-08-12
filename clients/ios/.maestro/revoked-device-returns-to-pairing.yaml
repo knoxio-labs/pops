@@ -29,7 +29,10 @@ name: A device revoked mid-use lands back on pairing, and says why
 # the BFM's own `DELETE /operator/devices/:id`, which is the route the Devices
 # page calls; the app is not told, and nothing on screen changes yet.
 - runScript: scripts/revoke-this-device.js
-- assertTrue: ${output.revocation.listed == 1}
+# The handset this flow is holding, as the operator's own list shows it: found,
+# and trusted right up until the call below.
+- assertTrue: ${output.revocation.matched == 1}
+- assertTrue: ${output.revocation.wasLive == true}
 - assertTrue: ${output.revocation.status == 200}
 # A device that was already revoked would make every assertion below pass for
 # the wrong reason — this flow would be proving that a revoked device stays

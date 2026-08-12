@@ -866,6 +866,13 @@ fi
 echo "e2e: driving $(echo "$flows" | wc -l | tr -d ' ') flow(s)."
 
 for flow in $flows; do
+  # Between flows rather than inside them, and before the code is minted. A
+  # flow that fails halfway leaves the harness however it left it — finance
+  # still refusing, a token-ageing still armed — and the next flow would then
+  # fail for a reason that belongs to the previous one. Counters go back to
+  # zero here too, so a flow asserting "one refresh" means its own.
+  curl -fsS -X POST "$control/__e2e/reset" -o /dev/null
+
   # Minted per flow and as late as possible: every flow pairs from scratch, a
   # code is spent once, and the BFM expires an unspent one five minutes after
   # issuing it.
