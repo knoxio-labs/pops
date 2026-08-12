@@ -874,8 +874,11 @@ for flow in $flows; do
   curl -fsS -X POST "$control/__e2e/reset" -o /dev/null
 
   # Minted per flow and as late as possible: every flow pairs from scratch, a
-  # code is spent once, and the BFM expires an unspent one five minutes after
-  # issuing it.
+  # code is spent once, and the BFM expires an unspent one on its own TTL —
+  # five minutes by default, raised for the BFM `scripts/ios-e2e/run.mjs`
+  # starts (`BFM_PAIRING_CODE_TTL_MS`, see that file) because installing
+  # Maestro's own driver and settling the simulator both happen after this
+  # curl and before the flow's first step.
   # `|| true` so a refused connection or an HTTP error reaches the message below
   # rather than aborting the task under `set -e` with a bare curl exit code.
   code=$(curl -fsS -X POST "$base/operator/pairing/codes" \

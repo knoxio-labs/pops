@@ -48,6 +48,7 @@ import { createBfmApiApp } from './app.js';
 import { resolveAccessTokenSigningKey } from './auth/signing-key.js';
 import {
   resolvePairingCodeIssuanceLimit,
+  resolvePairingCodeTtlMs,
   resolvePort,
   resolvePublicBaseUrl,
   resolveSelfBaseUrl,
@@ -100,6 +101,11 @@ const issuanceLimiter = createRateLimiter({
   windowMs: PAIRING_CODE_RATE_WINDOW_MS,
 });
 
+// Unset in every real deployment, where `makeBfmRestHandlers` falls back to
+// the service's own default — see `resolvePairingCodeTtlMs`'s doc comment for
+// the one caller that raises it.
+const pairingCodeTtlMs = resolvePairingCodeTtlMs();
+
 const app = createBfmApiApp({
   version,
   db: bfmDb.db,
@@ -109,6 +115,7 @@ const app = createBfmApiApp({
   finance,
   refreshTokenTtlMs,
   issuanceLimiter,
+  pairingCodeTtlMs,
 });
 
 let pruneCredentialsWorker: PruneCredentialsWorkerHandle | undefined;

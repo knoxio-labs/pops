@@ -18,6 +18,7 @@ import { dirname, join } from 'node:path';
 
 import { resolveSelfBaseUrl as resolveFleetSelfBaseUrl } from '@pops/pillar-sdk/pillar-env';
 
+import { DEFAULT_PAIRING_CODE_TTL_MS } from '../db/index.js';
 import { PAIRING_CODE_RATE_LIMIT } from './rate-limit.js';
 
 export const DEFAULT_PORT = 3014;
@@ -157,6 +158,34 @@ export function resolvePairingCodeIssuanceLimit(env: NodeJS.ProcessEnv = process
   if (!Number.isInteger(parsed) || parsed <= 0) {
     throw new BootEnvError(
       `[bfm-api] BFM_PAIRING_CODE_ISSUANCE_LIMIT must be a positive integer; got '${raw}'`
+    );
+  }
+  return parsed;
+}
+
+/**
+ * Resolve how long a minted pairing code stays redeemable, from
+ * `BFM_PAIRING_CODE_TTL_MS`, defaulting to {@link DEFAULT_PAIRING_CODE_TTL_MS}.
+ *
+ * The default is a security control — `pairing-codes.ts`'s header sizes it as
+ * "the window an unredeemed code is worth guessing in" for a human who scans a
+ * QR or types twelve characters within seconds of it appearing. This exists to
+ * raise it for exactly one caller: `scripts/ios-e2e/run.mjs`, which mints a
+ * code and then hands it to a *fresh* `maestro test` invocation — installing
+ * Maestro's own XCTest driver and booting the simulator both happen after the
+ * code exists and before the flow's first step runs, so a slow CI host can
+ * spend the whole five-minute default before the app ever submits the code.
+ * `redeemPairingCode` cannot tell that apart from a wrong one, so the failure
+ * reads as a rejected pairing rather than as what it is. Unset in every real
+ * deployment, where the default stands.
+ */
+export function resolvePairingCodeTtlMs(env: NodeJS.ProcessEnv = process.env): number {
+  const raw = env['BFM_PAIRING_CODE_TTL_MS'];
+  if (raw === undefined || raw === '') return DEFAULT_PAIRING_CODE_TTL_MS;
+  const parsed = Number(raw);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    throw new BootEnvError(
+      `[bfm-api] BFM_PAIRING_CODE_TTL_MS must be a positive integer; got '${raw}'`
     );
   }
   return parsed;

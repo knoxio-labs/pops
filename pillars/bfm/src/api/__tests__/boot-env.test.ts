@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
+import { DEFAULT_PAIRING_CODE_TTL_MS } from '../../db/index.js';
 import {
   DEFAULT_PORT,
   DEFAULT_SQLITE_PATH,
   resolvePairingCodeIssuanceLimit,
+  resolvePairingCodeTtlMs,
   resolvePort,
   resolvePublicBaseUrl,
   resolveSelfBaseUrl,
@@ -219,6 +221,34 @@ describe('resolvePairingCodeIssuanceLimit', () => {
   ])('rejects a %s limit rather than silently keeping the default', (_label, raw) => {
     expect(() => resolvePairingCodeIssuanceLimit({ BFM_PAIRING_CODE_ISSUANCE_LIMIT: raw })).toThrow(
       /BFM_PAIRING_CODE_ISSUANCE_LIMIT must be a positive integer/u
+    );
+  });
+});
+
+// The default is a security control, not a convenience default — see
+// `resolvePairingCodeTtlMs`'s doc comment for why it may be raised at all and
+// for which one caller does it.
+describe('resolvePairingCodeTtlMs', () => {
+  it('defaults to the security TTL when unset or empty', () => {
+    expect(resolvePairingCodeTtlMs({})).toBe(DEFAULT_PAIRING_CODE_TTL_MS);
+    expect(resolvePairingCodeTtlMs({ BFM_PAIRING_CODE_TTL_MS: '' })).toBe(
+      DEFAULT_PAIRING_CODE_TTL_MS
+    );
+    expect(DEFAULT_PAIRING_CODE_TTL_MS).toBe(5 * 60 * 1000);
+  });
+
+  it('accepts a raised TTL', () => {
+    expect(resolvePairingCodeTtlMs({ BFM_PAIRING_CODE_TTL_MS: '1800000' })).toBe(1_800_000);
+  });
+
+  it.each([
+    ['non-numeric', 'notanumber'],
+    ['fractional', '1.5'],
+    ['zero', '0'],
+    ['negative', '-1'],
+  ])('rejects a %s TTL rather than silently keeping the default', (_label, raw) => {
+    expect(() => resolvePairingCodeTtlMs({ BFM_PAIRING_CODE_TTL_MS: raw })).toThrow(
+      /BFM_PAIRING_CODE_TTL_MS must be a positive integer/u
     );
   });
 });
