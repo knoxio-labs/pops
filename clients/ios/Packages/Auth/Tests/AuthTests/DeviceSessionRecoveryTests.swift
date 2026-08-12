@@ -203,13 +203,30 @@ internal struct DeviceSessionRecoveryTests {
         // below deletes that key — so synchronising on the challenge count
         // raced the signature and produced `credentialsRejected` from a lost
         // key rather than the `deviceRevoked` this test is about, on roughly
-        // one run in five.
-        let parked = await waitUntil("the rotation to park inside the exchange") {
-            await gate.hasParked
+        // one run in five. `waitForArrivals` is signalled from inside
+        // `Gate.wait()` itself, atomically with the check that decides whether
+        // a caller parks — signalling from outside, ahead of the call into
+        // `wait()`, would reopen exactly this race: a caller could observe the
+        // signal and open the gate before the rotation's own call reached
+        // `wait()`, so it raced straight through instead of parking. The wait
+        // for that arrival is exact rather than polled, and bounded by a
+        // deadline rather than a scheduling-turn budget: see
+        // ``Gate/waitForArrivals(atLeast:)`` and ``withDeadline(seconds:_:)``.
+        //
+        // The gate opens (and the revocation lands) unconditionally, deadline
+        // or not: the rotation task above is parked behind the gate via the
+        // exchange, and a gate left shut is a task `rotation.value` below can
+        // never finish awaiting. A failed wait must still fail the test — it
+        // just cannot do that by skipping the open.
+        var parkFailure: (any Error)?
+        do {
+            try await withDeadline { try await gate.waitForArrivals(atLeast: 1) }
+        } catch {
+            parkFailure = error
         }
         await fixture.refresher.deviceWasRevoked()
         await gate.open()
-        #expect(parked, "the rotation never reached the exchange")
+        if let parkFailure { throw parkFailure }
 
         await #expect(throws: SessionRefreshError.deviceRevoked) { try await rotation.value }
 

@@ -89,7 +89,11 @@ internal struct AuthenticatingMiddlewareConcurrencyTests {
     /// Two requests whose tokens expire while both are in the air. Neither may
     /// be held up by the other's refresh, and neither may deadlock waiting for
     /// it: the gate is opened only once both have reached the transport, so a
-    /// middleware that serialised them would never get there.
+    /// middleware that serialised them would never get there. The wait for
+    /// that count is exact rather than polled, and bounded by a deadline
+    /// rather than a scheduling-turn budget: see
+    /// ``RecordingTransport/waitForAttempts(atLeast:)`` and
+    /// ``withDeadline(seconds:_:)``.
     @Test("a token expiring under two in-flight requests deadlocks neither")
     func expiryUnderConcurrentRequestsDoesNotDeadlock() async throws {
         let fixture = try MiddlewareFixture()
@@ -105,11 +109,19 @@ internal struct AuthenticatingMiddlewareConcurrencyTests {
             group.addTask {
                 try await fixture.send(.mobile("/mobile/bootstrap?second"), through: transport)
             }
-            let bothArrived = await waitUntil("both requests to reach the transport") {
-                transport.attempts.count == 2
+            // The gate opens unconditionally, deadline or not: both tasks
+            // above are parked behind it, and a gate left shut is two tasks
+            // the `for try await` below can never finish awaiting. A failed
+            // wait must still fail the test — it just cannot do that by
+            // skipping the open.
+            var arrivalFailure: (any Error)?
+            do {
+                try await withDeadline { try await transport.waitForAttempts(atLeast: 2) }
+            } catch {
+                arrivalFailure = error
             }
             await gate.open()
-            #expect(bothArrived, "a request never reached the transport")
+            if let arrivalFailure { throw arrivalFailure }
 
             for try await response in group { #expect(response.status == .ok) }
         }
