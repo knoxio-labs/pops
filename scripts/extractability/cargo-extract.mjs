@@ -575,6 +575,6 @@ function main() {
   console.log(`cargo-extract: ${member} -> ${out} (workspace edges inlined)`);
 }
 
-if (resolve(fileURLToPath(import.meta.url)) === resolve(process.argv[1] ?? '')) {
+if (import.meta.main) {
   main();
 }

@@ -32,8 +32,7 @@
  */
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
 
 import ts from 'typescript';
 
@@ -434,6 +433,6 @@ function selfTest() {
   return 0;
 }
 
-if (resolve(fileURLToPath(import.meta.url)) === resolve(process.argv[1] ?? '')) {
+if (import.meta.main) {
   process.exit(main(process.argv.slice(2)));
 }

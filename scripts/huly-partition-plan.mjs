@@ -29,8 +29,6 @@
  */
 
 import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 import { readFlag } from './cli-flags.mjs';
 import { assessCoverage, formatCoverage, readCoverage, readRows } from './huly-coverage.mjs';
@@ -374,6 +372,6 @@ function selfTest() {
   return true;
 }
 
-if (resolve(fileURLToPath(import.meta.url)) === resolve(process.argv[1] ?? '')) {
+if (import.meta.main) {
   main();
 }

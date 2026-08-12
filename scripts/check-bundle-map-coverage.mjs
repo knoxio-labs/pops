@@ -278,6 +278,6 @@ function main() {
   process.exit(run() ? 0 : 1);
 }
 
-if (resolve(fileURLToPath(import.meta.url)) === resolve(process.argv[1] ?? '')) {
+if (import.meta.main) {
   main();
 }
