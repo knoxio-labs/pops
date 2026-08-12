@@ -15,7 +15,7 @@ export const MIN_CACHE_TTL_MS = 5_000;
 export const REFRESH_LEAD_MS = 1_000;
 
 /**
- * Adapter the cache uses to talk to the registry. Production wires the
+ * The adapter the cache uses to talk to the registry. Production wires the
  * real {@link fetchRegistrySnapshot}; tests inject a fake to avoid IO.
  *
  * `fetchTimeoutMs` arrives as an argument rather than being baked into the
