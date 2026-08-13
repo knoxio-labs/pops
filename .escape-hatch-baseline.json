@@ -17,15 +17,6 @@
   "libs/ui/src/components/NumberInput.hooks.ts": {
     "eslint-disable": 1
   },
-  "pillars/ai/scripts/generate-openapi.ts": {
-    "as unknown as": 2
-  },
-  "pillars/cerebrum/scripts/generate-openapi.ts": {
-    "as unknown as": 2
-  },
-  "pillars/finance/scripts/generate-openapi.ts": {
-    "as unknown as": 2
-  },
   "pillars/food/app/src/components/useDslEditorView.ts": {
     "eslint-disable": 1
   },
@@ -34,9 +25,6 @@
   },
   "pillars/food/app/src/pages/recipes/RecipeEditPage.tsx": {
     "eslint-disable": 1
-  },
-  "pillars/food/scripts/generate-openapi.ts": {
-    "as unknown as": 2
   },
   "pillars/food/src/worker/ai/web-llm-anthropic.ts": {
     "as unknown as": 1
@@ -49,18 +37,6 @@
     "eslint-disable": 1
   },
   "pillars/inventory/app/src/pages/location-tree-page/sections/LocationNode.tsx": {
-    "as unknown as": 2
-  },
-  "pillars/inventory/scripts/generate-openapi.ts": {
-    "as unknown as": 2
-  },
-  "pillars/lists/scripts/generate-openapi.ts": {
-    "as unknown as": 1
-  },
-  "pillars/media/scripts/generate-openapi.ts": {
-    "as unknown as": 2
-  },
-  "pillars/registry/scripts/generate-openapi.ts": {
     "as unknown as": 2
   }
 }
