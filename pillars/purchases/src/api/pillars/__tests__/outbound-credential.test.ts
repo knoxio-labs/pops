@@ -13,7 +13,10 @@
  *
  * The key is a throwaway literal. Never put a real one in a fixture.
  */
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest';
 
@@ -29,6 +32,7 @@ import { createDocumentLookup, createInventoryItemLookup } from '../../cron/pill
 import { createFinanceClient, type FinanceRouter } from '../../finance/client.js';
 import { __resetOutboundCredentialReports } from '../outbound.js';
 import { configurePurchasesServerSdk } from '../sdk-config.js';
+import { SERVICE_ACCOUNT_KEY_ENV, SERVICE_ACCOUNT_KEY_FILE_ENV } from '../service-account.js';
 
 const SERVICE_ACCOUNT_KEY = 'pops_sa_TESTTEST.testsecret_not_a_real_key_000000';
 
@@ -100,6 +104,14 @@ let received: Received[];
 let status: number;
 /** Silenced, and asserted on where a credential failure must be loud. */
 let errorLog: MockInstance<(...args: unknown[]) => void>;
+/** Holds the mounted-secret fixture; recreated and removed per test. */
+let secretsDir: string;
+
+/** Forget both key sources, so nothing ambient decides a case here. */
+function clearKeyEnv(): void {
+  delete process.env[SERVICE_ACCOUNT_KEY_ENV];
+  delete process.env[SERVICE_ACCOUNT_KEY_FILE_ENV];
+}
 
 function registrySnapshot(): string {
   return JSON.stringify({
@@ -157,9 +169,11 @@ beforeEach(async () => {
   received = [];
   status = 200;
   resetSdk();
-  // The SDK falls back to this variable at call time, so an ambient one
-  // would quietly credential the no-key cases below.
-  delete process.env['POPS_INTERNAL_API_KEY'];
+  // Both sources, not just the inline one: `resolveServiceAccountKey` reads
+  // the file first, so an ambient `_FILE` pointing at a real secret would
+  // quietly credential the no-key cases below and pass for the wrong reason.
+  clearKeyEnv();
+  secretsDir = mkdtempSync(join(tmpdir(), 'purchases-secrets-'));
   errorLog = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
   server = createServer(routes);
@@ -176,7 +190,8 @@ afterEach(async () => {
   resetSdk();
   errorLog.mockRestore();
   delete process.env['POPS_REGISTRY_URL'];
-  delete process.env['POPS_INTERNAL_API_KEY'];
+  clearKeyEnv();
+  rmSync(secretsDir, { recursive: true, force: true });
   await new Promise<void>((resolve, reject) => {
     server.close((err) => {
       if (err) reject(err);
@@ -230,12 +245,17 @@ describe('every outbound leg', () => {
   });
 
   it('reads the key from a mounted secret file in preference to the environment', async () => {
-    // The production source. `resolveServiceAccountKey`'s own tests cover the
-    // file reader; this one proves the value it returns is what reaches the
-    // wire, which is the part a refactor of the boot wiring could break.
-    process.env['POPS_INTERNAL_API_KEY'] = SERVICE_ACCOUNT_KEY;
-    expect(configurePurchasesServerSdk()).toBe(true);
+    // The production source, end to end: `resolveServiceAccountKey`'s own
+    // tests cover the reader, and this proves the value it returns is what
+    // reaches the wire — the part a refactor of the boot wiring could break
+    // while every file-reader test stayed green. The env var is set to a
+    // decoy, so a wiring that read the wrong source would send that instead.
+    const keyFile = join(secretsDir, 'pops_purchases_api_key');
+    writeFileSync(keyFile, `${SERVICE_ACCOUNT_KEY}\n`, 'utf8');
+    process.env[SERVICE_ACCOUNT_KEY_FILE_ENV] = keyFile;
+    process.env[SERVICE_ACCOUNT_KEY_ENV] = 'pops_sa_ENVENVEN.env_key_that_must_not_win_000000';
 
+    expect(configurePurchasesServerSdk()).toBe(true);
     await createInventoryItemLookup()('abc');
 
     expect(received[0]?.apiKey).toBe(SERVICE_ACCOUNT_KEY);
