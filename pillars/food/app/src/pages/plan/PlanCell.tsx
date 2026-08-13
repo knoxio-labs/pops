@@ -72,7 +72,7 @@ function cellClassName({ layout, past, allCooked, isOver }: CellClassNameArgs): 
   return [
     base,
     past ? 'bg-muted/30' : '',
-    allCooked ? 'bg-green-100/30' : '',
+    allCooked ? 'bg-success/10' : '',
     isOver ? 'outline outline-2 outline-primary/40' : '',
   ]
     .filter(Boolean)
