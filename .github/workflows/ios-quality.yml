@@ -391,6 +391,25 @@ jobs:
       - name: Test + SwiftLint analyzer rules (one shared compile)
         run: "mise run -j 1 test ::: lint:analyze"
 
+      # THE ONE INVARIANT HERE THAT BUILDING, TESTING AND LINTING DO NOT COVER:
+      # a shipped binary names no BFM host, and is re-pointed by re-pairing
+      # rather than by a rebuild (POPS-1392). Debug builds fine with a host
+      # baked in — that is the state this check exists to distinguish Release
+      # from — so nothing above can see a regression in it.
+      #
+      # It matters more here than the usual gate does because this app is
+      # DISTRIBUTED: a Release that bakes in a hostname is not a bad deploy to
+      # be rolled forward, it is an install on hardware the operator does not
+      # control.
+      #
+      # It is a SECOND FULL COMPILE of the tree, in the Release configuration
+      # and into its own `-derivedDataPath`, sharing nothing above but the
+      # generated xcodeproj. That cost is the reason it sits here rather than
+      # up with `lint`: everything cheaper, and everything more likely to fail,
+      # has already reported by this point.
+      - name: Release carries no BFM host
+        run: mise run verify:release-carries-no-host
+
       # Everything below drives the built app on the simulator the step above
       # just left booted, against a real BFM. `clients/ios/.maestro/README.md`
       # argues for Maestro over XCUITest; what follows is only about getting a
