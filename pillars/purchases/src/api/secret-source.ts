@@ -15,7 +15,7 @@
  */
 import { readFileSync } from 'node:fs';
 
-/** Where one secret may be found, and what to call the pair in a log. */
+/** The two places one secret may be found. Their names are what a log says. */
 export interface SecretSource {
   /** Variable naming a file that holds the value (production). */
   readonly fileEnvVar: string;

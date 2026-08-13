@@ -300,6 +300,23 @@ describe('a callee that refuses this pillar credential', () => {
     );
   });
 
+  it('says the key is missing rather than refused when none was sent', async () => {
+    // Different jobs: provision a key versus widen a grant. A shared
+    // headline would send whoever reads it to the wrong one half the time.
+    seed({ itemUris: [ITEM_URI] });
+    const warn = vi.fn();
+
+    await start({
+      inventoryItem: always({ kind: 'unauthorized', reason: 'no-credential' }),
+      logger: { warn },
+    }).runOnce();
+
+    expect(warn).toHaveBeenCalledWith(
+      'purchases reconcile has no service-account key (preserved for ops)',
+      expect.objectContaining({ leg: 'inventory-item', reason: 'no-credential' })
+    );
+  });
+
   it('still accounts for every URI in the work set exactly once', async () => {
     seed({ itemUris: [ITEM_URI] });
 

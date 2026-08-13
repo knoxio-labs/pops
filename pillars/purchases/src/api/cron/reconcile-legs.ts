@@ -205,6 +205,19 @@ function legMeta(ctx: ApplyContext): { leg: string; uri: string } {
   return { leg: ctx.leg.label, uri: ctx.uri };
 }
 
+/**
+ * The reason a credential outcome could not probe, as a headline.
+ *
+ * `no-credential` is this process holding no key at all — nothing was sent
+ * and no callee has an opinion yet — which is a different job from a key
+ * that was sent and refused.
+ */
+function credentialWarning(reason: string): string {
+  return reason === 'no-credential'
+    ? 'purchases reconcile has no service-account key (preserved for ops)'
+    : 'purchases reconcile credential refused (preserved for ops)';
+}
+
 /** One warning about a URI whose row was left exactly as it was. */
 function warnPreserved(ctx: ApplyContext, message: string, reason: string): void {
   ctx.logger?.warn?.(message, { ...legMeta(ctx), reason });
@@ -226,11 +239,10 @@ function applyResult(ctx: ApplyContext, result: ReconcileLookupResult): void {
       return;
     case 'unauthorized':
       ctx.stats.unauthorized += 1;
-      warnPreserved(
-        ctx,
-        'purchases reconcile credential refused (preserved for ops)',
-        result.reason
-      );
+      // The two reasons send an operator to different places — a grant to
+      // widen versus a key to provision — so the headline says which rather
+      // than leaving it to whoever reads the `reason` field.
+      warnPreserved(ctx, credentialWarning(result.reason), result.reason);
       return;
     case 'unavailable':
       ctx.stats.unavailable += 1;
