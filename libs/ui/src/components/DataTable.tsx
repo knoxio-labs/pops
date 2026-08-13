@@ -75,13 +75,7 @@ export function DataTable<TData, TValue>({
   useFilteredCountNotifier(table, onFilteredCountChange);
   return (
     <div className={cn('space-y-4', className)}>
-      {/* prettier-ignore */}
-      {filters && filters.length > 0 && (
-        <FilterBar
-          filters={filters}
-          table={table as unknown as TanStackTable<unknown>}
-        />
-      )}
+      {filters && filters.length > 0 && <FilterBar filters={filters} table={table} />}
       <DataTableToolbar
         table={table}
         searchable={searchable}

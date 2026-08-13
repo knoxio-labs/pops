@@ -5,12 +5,6 @@
   "libs/ui/src/components/DataTable.hook.ts": {
     "eslint-disable": 1
   },
-  "libs/ui/src/components/DataTable.tsx": {
-    "as unknown as": 1
-  },
-  "libs/ui/src/components/MediaCard.tsx": {
-    "as unknown as": 1
-  },
   "pillars/ai/scripts/generate-openapi.ts": {
     "as unknown as": 2
   },
@@ -34,13 +28,6 @@
   },
   "pillars/food/src/worker/ai/web-llm-anthropic.ts": {
     "as unknown as": 1
-  },
-  "pillars/inventory/app/src/components/ValueBreakdown.tsx": {
-    "as never": 1,
-    "as unknown as": 1
-  },
-  "pillars/inventory/app/src/pages/location-tree-page/sections/LocationNode.tsx": {
-    "as unknown as": 2
   },
   "pillars/inventory/scripts/generate-openapi.ts": {
     "as unknown as": 2
