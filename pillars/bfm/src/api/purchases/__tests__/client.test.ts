@@ -191,6 +191,27 @@ describe('when the answer is not one bfm can use', () => {
     });
   });
 
+  it('refuses a purchase date the phone could not parse', async () => {
+    // A date that reaches the confirmation screen unparseable renders as a
+    // blank or as today, and neither is distinguishable from a receipt that
+    // stated no date — which purchases signals a completely different way.
+    const { client } = clientAnswering(purchasesCreated({ orderedAt: '13/08/2026' }));
+
+    const outcome = await client.uploadReceipt(PARTS);
+
+    expect(outcome.kind).toBe('contract-mismatch');
+  });
+
+  it('accepts an offset timestamp, which purchases’ own contract admits', async () => {
+    const { client } = clientAnswering(
+      purchasesCreated({ orderedAt: '2026-08-13T12:15:00+10:00' })
+    );
+
+    const outcome = await client.uploadReceipt(PARTS);
+
+    expect(isGatewayOk(outcome)).toBe(true);
+  });
+
   it('treats an outcome arm it has never seen the same way', async () => {
     const { client } = clientAnswering({ kind: 'ok', value: { kind: 'quarantined' } });
 

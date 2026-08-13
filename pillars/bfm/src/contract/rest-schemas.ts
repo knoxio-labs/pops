@@ -356,7 +356,20 @@ export const MobileReceiptPurchaseSchema = z.object({
   totalCents: z.number().int(),
   /** ISO 4217, an open string for the reason {@link MobileTransactionSchema} states. */
   currency: z.string(),
-  /** ISO-8601 with a timezone. The receipt's own date when it stated one. */
+  /**
+   * ISO-8601 with a timezone — the receipt's own date when it stated one.
+   *
+   * A string on the wire rather than `z.iso.datetime()`, matching
+   * {@link MobileTransactionDetailSchema.shape.lastEditedTime}, and the reason
+   * is what the format keyword becomes downstream: a `date-time` generates a
+   * `Foundation.Date` on the iOS client, which decodes or fails. purchases'
+   * own contract admits `±HH:MM` offsets as readily as `Z`, so declaring the
+   * format here would promise a narrower vocabulary than the producer serves
+   * and turn a perfectly valid offset timestamp into a decode failure on a
+   * handset. The guarantee is enforced instead where a bad value can still be
+   * turned into an operator-visible 502 — `api/purchases/wire.ts` validates it
+   * against purchases' own pattern before it is ever published here.
+   */
   orderedAt: z.string(),
   /** Line items read off the receipt. What "12 items, $84.20" is drawn from. */
   itemCount: z.number().int().nonnegative(),
