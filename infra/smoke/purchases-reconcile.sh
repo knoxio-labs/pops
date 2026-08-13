@@ -32,7 +32,10 @@ set -euo pipefail
 COMPOSE_FILE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/docker-compose.yml"
 SERVICES=(registry-api finance-api purchases-api)
 KEEP_UP="${KEEP_UP:-0}"
-API_KEY="${POPS_INTERNAL_API_KEY:-}"
+# Trimmed before it is checked, so a key that is only whitespace fails the
+# guard below rather than being sent as one — matching what the ingest CLI
+# does, and keeping "refuses to start without one" true for both callers.
+API_KEY="$(printf '%s' "${POPS_INTERNAL_API_KEY:-}" | tr -d '[:space:]')"
 
 # Unique per run so a re-run is not a 409 against the previous run's data.
 STAMP="$(date +%s)"
