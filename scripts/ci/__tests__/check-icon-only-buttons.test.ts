@@ -1,0 +1,151 @@
+/**
+ * ADR-045: a guard ships with a test proving it REPORTS, not merely that it
+ * passes. The tree carries no violations today, so a suite that only ran the
+ * guard would be green whether or not the matcher still works. These drive
+ * the pure core over source it must flag, over source it must not, and over
+ * the real frontend tree — so a matcher that silently stops matching, or a
+ * discovery walk that silently stops finding files, fails here.
+ */
+
+import { execFileSync } from 'node:child_process';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+import { describe, expect, it } from 'vitest';
+
+import { findViolations, isScannable } from '../check-icon-only-buttons.mjs';
+
+const here = dirname(fileURLToPath(import.meta.url));
+const repoRoot = resolve(here, '..', '..', '..');
+const guard = join(repoRoot, 'scripts', 'ci', 'check-icon-only-buttons.mjs');
+
+describe('an icon-only button with no aria-label is reported', () => {
+  it.each(['icon', 'icon-xs', 'icon-sm', 'icon-lg'])('Button size="%s"', (size) => {
+    const hits = findViolations(
+      'pillars/x/app/src/A.tsx',
+      `<Button size="${size}"><Trash2 /></Button>`
+    );
+    expect(hits).toHaveLength(1);
+    expect(hits[0]?.size).toBe(size);
+  });
+
+  it('reports ButtonPrimitive the same as Button', () => {
+    const hits = findViolations(
+      'pillars/x/app/src/A.tsx',
+      '<ButtonPrimitive size="icon"><X /></ButtonPrimitive>'
+    );
+    expect(hits).toHaveLength(1);
+    expect(hits[0]?.component).toBe('ButtonPrimitive');
+  });
+
+  it('reports a title-only button — title is not a substitute for aria-label', () => {
+    const hits = findViolations(
+      'pillars/x/app/src/A.tsx',
+      '<Button size="icon" title="Delete"><Trash2 /></Button>'
+    );
+    expect(hits).toHaveLength(1);
+  });
+
+  it('reports the 1-based line the opening tag starts on', () => {
+    const source = [
+      'function Row() {',
+      '  return (',
+      '    <Button size="icon">',
+      '      <Trash2 />',
+      '    </Button>',
+      '  );',
+      '}',
+    ].join('\n');
+    expect(findViolations('a.tsx', source)).toEqual([
+      expect.objectContaining({ line: 3, component: 'Button', size: 'icon' }),
+    ]);
+  });
+
+  it('does not desync on a `>` inside an attribute expression before the tag closes', () => {
+    const source = [
+      '<Button',
+      '  size="icon-xs"',
+      '  onClick={() => setOpen(x > y)}',
+      '>',
+      '  <Pencil />',
+      '</Button>',
+    ].join('\n');
+    const hits = findViolations('a.tsx', source);
+    expect(hits).toHaveLength(1);
+    expect(hits[0]?.size).toBe('icon-xs');
+  });
+
+  it('reports each offending button on its own line, not just the first', () => {
+    const source = [
+      '<Button size="icon"><Trash2 /></Button>',
+      '<Button size="icon-sm"><X /></Button>',
+    ].join('\n');
+    expect(findViolations('a.tsx', source).map((v) => v.line)).toEqual([1, 2]);
+  });
+});
+
+describe('a labelled or non-icon button is not reported', () => {
+  it('an icon-only Button WITH aria-label is clean', () => {
+    expect(
+      findViolations('a.tsx', '<Button size="icon" aria-label="Delete item"><Trash2 /></Button>')
+    ).toHaveLength(0);
+  });
+
+  it('an icon-only ButtonPrimitive WITH aria-label is clean', () => {
+    expect(
+      findViolations(
+        'a.tsx',
+        '<ButtonPrimitive size="icon-sm" aria-label="Close"><X /></ButtonPrimitive>'
+      )
+    ).toHaveLength(0);
+  });
+
+  it('a prominent icon+text button (default size) is clean', () => {
+    expect(findViolations('a.tsx', '<Button><Plus /> Add Item</Button>')).toHaveLength(0);
+  });
+
+  it('a non-icon size is clean regardless of aria-label', () => {
+    expect(findViolations('a.tsx', '<Button size="sm">Save</Button>')).toHaveLength(0);
+  });
+
+  it('a dynamic size expression is not guessed at', () => {
+    expect(findViolations('a.tsx', '<Button size={dynamicSize}><Trash2 /></Button>')).toHaveLength(
+      0
+    );
+  });
+
+  it('a plain native <button> is out of scope for this guard', () => {
+    expect(
+      findViolations('a.tsx', '<button className="icon-button"><Trash2 /></button>')
+    ).toHaveLength(0);
+  });
+});
+
+describe('isScannable', () => {
+  it('scans app and lib .tsx source', () => {
+    expect(isScannable('pillars/food/app/src/pages/X.tsx')).toBe(true);
+    expect(isScannable('libs/ui/src/components/Foo.tsx')).toBe(true);
+  });
+
+  it('exempts stories, tests, __tests__, generated clients, and non-.tsx files', () => {
+    expect(isScannable('libs/ui/src/primitives/Badge.stories.tsx')).toBe(false);
+    expect(isScannable('pillars/food/app/src/pages/X.test.tsx')).toBe(false);
+    expect(isScannable('libs/ui/src/__tests__/x.tsx')).toBe(false);
+    expect(isScannable('pillars/food/app/src/lists-api/types.gen.tsx')).toBe(false);
+    expect(isScannable('pillars/food/app/src/pages/X.ts')).toBe(false);
+  });
+});
+
+describe('the guard proves itself', () => {
+  it('passes its own --self-test', () => {
+    const output = execFileSync(process.execPath, [guard, '--self-test'], { encoding: 'utf-8' });
+    expect(output).toMatch(/self-test OK/u);
+  });
+
+  it('passes on the real tree and says how much it looked at', () => {
+    const stdout = execFileSync(process.execPath, [guard], { encoding: 'utf-8' });
+    const scanned = Number(/Scanned (\d+) \.tsx file/.exec(stdout)?.[1]);
+    expect(scanned).toBeGreaterThan(200);
+    expect(stdout).toMatch(/OK — every icon-only/u);
+  });
+});

@@ -431,6 +431,26 @@ jobs:
       - name: Every colour in frontend source comes from a design token
         run: node scripts/ci/check-design-tokens.mjs
 
+  icon-only-buttons:
+    name: Icon-only buttons carry aria-label
+    # libs/ui/README.md "Action Icon Standards": a compact (icon-only) action
+    # must carry an aria-label, not just a title — AGENTS.md restates the same
+    # rule. This guard reports any `size="icon"`/"icon-xs"/"icon-sm"/"icon-lg"
+    # `Button`/`ButtonPrimitive` with no `aria-label` on its opening tag. It
+    # reads the source directly and pulls in no third-party deps, so it skips
+    # `pnpm install`. See scripts/ci/check-icon-only-buttons.mjs for what is
+    # deliberately exempt (stories, tests, generated clients).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Gate self-test (proves the guard catches a planted unlabelled icon button)
+        run: node scripts/ci/check-icon-only-buttons.mjs --self-test
+      - name: Every icon-only Button/ButtonPrimitive carries an aria-label
+        run: node scripts/ci/check-icon-only-buttons.mjs
+
   control-characters:
     name: Control characters in committed text
     # A NUL byte once landed inside a template literal, behaved correctly (NUL
