@@ -167,7 +167,7 @@ describe('GET /reconcile/links', () => {
     const purchases = await lookup(TXN);
 
     expect(purchases).toHaveLength(2);
-    expect(purchases.map((entry) => entry.purchase.sourceOrderId).sort()).toEqual(['a', 'b']);
+    expect(purchases.map((entry) => entry.purchase.sourceOrderId).toSorted()).toEqual(['a', 'b']);
     for (const entry of purchases) {
       expect(entry.charges[0]?.link.linkType).toBe('combined');
     }
