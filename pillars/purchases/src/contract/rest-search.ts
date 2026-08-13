@@ -15,6 +15,11 @@
  * from its own OpenAPI projection alone — a polyglot consumer generating a
  * client off `openapi/purchases.openapi.json` has no `@pops/types`.
  *
+ * The filter is the one shape that is deliberately NARROWER than the shared
+ * one rather than a restatement of it: `@pops/types` types `field` and
+ * `operator` as free strings, and this pillar closes both, because a filter
+ * it cannot apply must be refusable rather than silently dropped.
+ *
  * `data` is a permissive record on the wire: each adapter carries its own
  * domain payload and the engine treats it as opaque.
  */
@@ -59,7 +64,13 @@ export type SearchFilterField = (typeof SEARCH_FILTER_FIELDS)[number];
 export const SEARCH_FILTER_OPERATORS = ['eq', 'gte', 'lte'] as const;
 export type SearchFilterOperator = (typeof SEARCH_FILTER_OPERATORS)[number];
 
-/** A structured filter for advanced query syntax. Mirrors `StructuredFilter` in `@pops/types`. */
+/**
+ * A structured filter for advanced query syntax.
+ *
+ * `StructuredFilter` in `@pops/types` narrowed to what this pillar can apply,
+ * not a restatement of it: a caller sending an arbitrary well-formed
+ * `StructuredFilter` is rejected here rather than accepted and ignored.
+ */
 export const SearchFilterSchema = z.object({
   field: z.enum(SEARCH_FILTER_FIELDS),
   operator: z.enum(SEARCH_FILTER_OPERATORS),
