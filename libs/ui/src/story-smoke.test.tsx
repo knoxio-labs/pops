@@ -1,7 +1,6 @@
+import { composeStories, setProjectAnnotations } from '@storybook/react-vite';
 import { cleanup, render } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-
-import { composeStories, setProjectAnnotations } from '@storybook/react-vite';
 
 import previewAnnotations from '../.storybook/preview';
 
