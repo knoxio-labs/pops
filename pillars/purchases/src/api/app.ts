@@ -23,6 +23,7 @@ import { createRegistryServiceAccountVerifier } from '@pops/pillar-sdk/server';
 
 import { purchasesContract } from '../contract/rest.js';
 import { makeRequestHandler, type PurchasesApiDeps } from './handlers.js';
+import { jsonBodyErrorHandler } from './middleware/json-body-error.js';
 import { createServiceAccountScopeMiddleware } from './middleware/service-account-scope.js';
 import { makePurchasesRestHandlers } from './rest/handlers.js';
 
@@ -61,6 +62,7 @@ export function createPurchasesApiApp(deps: PurchasesApiDeps): Express {
   const app = express();
   app.disable('x-powered-by');
   app.use(express.json({ limit: JSON_BODY_LIMIT }));
+  app.use(jsonBodyErrorHandler);
 
   const handlers = makeRequestHandler(deps);
 
