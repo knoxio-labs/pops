@@ -96,7 +96,10 @@ describe('the helper proves itself', () => {
     });
     expect(output).toMatch(/self-test OK/u);
     expect(output).toMatch(/deselects a non-touching one/u);
-  });
+    // The child already carries its own 120s bound; vitest's 5s default sat
+    // inside it, so on a loaded machine the suite failed on the runner's
+    // scheduling rather than on anything the self-test asserts.
+  }, 120_000);
 });
 
 describe('reading a workflow’s own pull_request.paths', () => {

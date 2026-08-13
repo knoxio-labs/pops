@@ -23,6 +23,26 @@ import {
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..', '..');
 
+/**
+ * `git check-ignore` against {@link repoRoot}, run with the caller's git
+ * environment removed.
+ *
+ * Git exports `GIT_DIR` to its hooks as a path relative to the repository it
+ * resolved — inside a linked worktree that is `.git/worktrees/<name>`, which
+ * means nothing from this checkout's directory. A child that inherits it dies
+ * with `fatal: not a git repository` (exit 128), so this suite failed for
+ * every `scripts/`-touching push made from a worktree while passing when run
+ * directly. Nothing here wants the caller's git context: the repository under
+ * test is `repoRoot`.
+ */
+function checkIgnore(relPath: string): number | null {
+  const env = { ...process.env };
+  for (const key of Object.keys(env)) {
+    if (key.startsWith('GIT_')) delete env[key];
+  }
+  return spawnSync('git', ['check-ignore', '-q', relPath], { cwd: repoRoot, env }).status;
+}
+
 describe('parseToolsTable', () => {
   it('reads a plain [tools] table', () => {
     expect(parseToolsTable('[tools]\nnode = "24.5.0"\npnpm = "10.32.1"\n')).toEqual({
@@ -385,14 +405,12 @@ describe('COMMITTED_MISE_CONFIG_FILENAMES / GITIGNORED_MISE_CONFIG_FILENAMES', (
       // would be exactly the invisible-override gap this filename widening
       // exists to close. `check-ignore` works on the pattern alone, so the
       // path need not exist.
-      const result = spawnSync('git', ['check-ignore', '-q', relPath], { cwd: repoRoot });
-      expect(result.status, `expected ${relPath} to be gitignored — see .gitignore`).toBe(0);
+      expect(checkIgnore(relPath), `expected ${relPath} to be gitignored — see .gitignore`).toBe(0);
     }
   );
 
   it('mise.toml itself is not gitignored, as a sanity check on the check above', () => {
-    const result = spawnSync('git', ['check-ignore', '-q', 'mise.toml'], { cwd: repoRoot });
-    expect(result.status).toBe(1);
+    expect(checkIgnore('mise.toml')).toBe(1);
   });
 
   it.each(GITIGNORED_MISE_CONFIG_FILENAMES)(
@@ -403,8 +421,10 @@ describe('COMMITTED_MISE_CONFIG_FILENAMES / GITIGNORED_MISE_CONFIG_FILENAMES', (
       // pattern gitignored at the repo root (the case above) does not prove
       // it also matches the same filename nested under pillars/<id>/.
       const nestedPath = join('pillars', 'finance', relPath);
-      const result = spawnSync('git', ['check-ignore', '-q', nestedPath], { cwd: repoRoot });
-      expect(result.status, `expected ${nestedPath} to be gitignored — see .gitignore`).toBe(0);
+      expect(
+        checkIgnore(nestedPath),
+        `expected ${nestedPath} to be gitignored — see .gitignore`
+      ).toBe(0);
     }
   );
 });
@@ -422,8 +442,7 @@ describe('GITIGNORED_ENV_LOCAL_MISE_CONFIG_EXAMPLES', () => {
       // Same reasoning as GITIGNORED_MISE_CONFIG_FILENAMES above, one axis
       // wider: an env-suffixed local path this repo had not actually
       // gitignored is exactly the blind spot this list exists to close.
-      const result = spawnSync('git', ['check-ignore', '-q', relPath], { cwd: repoRoot });
-      expect(result.status, `expected ${relPath} to be gitignored — see .gitignore`).toBe(0);
+      expect(checkIgnore(relPath), `expected ${relPath} to be gitignored — see .gitignore`).toBe(0);
     }
   );
 
@@ -431,8 +450,7 @@ describe('GITIGNORED_ENV_LOCAL_MISE_CONFIG_EXAMPLES', () => {
     // Proves the .gitignore wildcard on the environment segment only ever
     // matches the *.local.toml shape, not the committed mise.ci.toml this
     // guard is supposed to keep reading.
-    const result = spawnSync('git', ['check-ignore', '-q', 'mise.ci.toml'], { cwd: repoRoot });
-    expect(result.status).toBe(1);
+    expect(checkIgnore('mise.ci.toml')).toBe(1);
   });
 
   it.each(GITIGNORED_ENV_LOCAL_MISE_CONFIG_EXAMPLES)(
@@ -442,8 +460,10 @@ describe('GITIGNORED_ENV_LOCAL_MISE_CONFIG_EXAMPLES', () => {
       // env-suffixed spellings — they inherit the identical slash-anchoring
       // behavior from the base six.
       const nestedPath = join('pillars', 'finance', relPath);
-      const result = spawnSync('git', ['check-ignore', '-q', nestedPath], { cwd: repoRoot });
-      expect(result.status, `expected ${nestedPath} to be gitignored — see .gitignore`).toBe(0);
+      expect(
+        checkIgnore(nestedPath),
+        `expected ${nestedPath} to be gitignored — see .gitignore`
+      ).toBe(0);
     }
   );
 });
@@ -892,7 +912,10 @@ describe('mise actually resolves the merge (real mise binary)', () => {
         expect(resolved, `${dir} should inherit root's ${tool} pin`).toBe(rootTools[tool]);
       }
     }
-  });
+    // One `mise current` process per unit per tool — dozens of real
+    // subprocesses. Vitest's 5s default is a bound on the machine's load, not
+    // on this assertion, and it is the first thing to fail on a busy one.
+  }, 120_000);
 
   it('a unit-level [tools] override wins, and un-overridden tools still inherit', () => {
     if (!miseAvailable) return;
