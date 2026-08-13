@@ -6,13 +6,14 @@
 
 ## TL;DR
 
-You almost never need this runbook. Pushing to `main` already ships the whole fleet:
+You almost never need this runbook — nothing here is a manual step. Pushing to `main` ships the whole fleet and cuts the version:
 
 1. A push to `main` triggers [`publish-images.yml`](../../.github/workflows/publish-images.yml), which rebuilds and pushes **one image per pillar** plus the non-pillar app images.
 2. Each image is tagged `main` and `sha-<short>`.
-3. Watchtower on the deployer (60s poll, label-scoped) sees the new `main` digest and rolls the live containers forward. No manual step.
+3. Watchtower on the deployer (60s poll, label-scoped) sees the new `main` digest and rolls the live containers forward.
+4. The same push triggers [`release.yml`](../../.github/workflows/release.yml), which cuts `vX.Y.Z` **if and only if** the commits since the last tag warrant one — a `chore`/`docs`/`refactor`-only push produces no tag.
 
-Cut a versioned release (`vX.Y.Z`) only when a deployer wants to **pin** to a stable point instead of tracking `main`. That's the whole reason the semver tags exist.
+The semver tags exist so a deployer can **pin** to a stable point instead of tracking `main`. Read on when you need to understand what the bump will be, or to cut a tag by hand.
 
 The full changelog history lives in [GitHub Releases](https://github.com/knoxio-labs/pops/releases) — there's no in-repo `CHANGELOG.md`. The repo ruleset forbids direct pushes to `main`, so the release flow is tag-only by design.
 
@@ -29,9 +30,9 @@ One pillar image can back more than one service: the food worker (`pops-worker-f
 
 > There is no `pops-api` and no single `pops-worker` image. The old monolithic two-image `pops-{api,shell}` model is gone — each pillar is its own image now.
 
-## When to cut a versioned release
+## What a release is for
 
-Cut `vX.Y.Z` when a deployer needs a fixed, reproducible point — typically because **the compose contract changed** in a way they can observe:
+A release is a fixed, reproducible point a deployer can pin to. The commit type decides whether one is cut and how big the bump is, so the commit message is the only lever — there is no "decide to cut a release" step. Say `feat`/`fix` when **the compose contract changed** in a way a deployer can observe:
 
 - service names (e.g. `registry-api`, `pops-worker-food`, `cerebrum-worker`)
 - network names (`pops-frontend`, `pops-backend`, `pops-documents`)
@@ -40,7 +41,7 @@ Cut `vX.Y.Z` when a deployer needs a fixed, reproducible point — typically bec
 - env vars consumed by compose (`POPS_IMAGE_TAG`, `POPS_REGISTRY_URL`, `POPS_DOMAIN`, …)
 - the image names or registries themselves
 
-Internal app refactors that don't change the compose contract don't need a release — `main` and `sha-*` tags are enough for anyone tracking head.
+Internal app refactors that don't change the compose contract don't need a release — `main` and `sha-*` tags are enough for anyone tracking head — but a `fix:` on pillar internals still cuts a patch, which is intended: the tag is cheap and it pins the whole fleet at a known-good point.
 
 ## Versioning scheme
 
@@ -80,20 +81,29 @@ push to main (Conventional Commits)
         │   ghcr.io/knoxio-labs/pops-<id>:main and :sha-<short>
         │   → Watchtower rolls live `main` deployers forward
         │
-        └─▶ (to PIN) run release.yml (workflow_dispatch):
+        └─▶ release.yml (also every push; workflow_dispatch stays for
+              cutting one out of band):
               release.sh reads commits since the last vX.Y.Z tag,
               computes the bump, writes release-notes.md
+                    │  (nothing releasable → exits, no tag)
+                    ▼
+              packs moltbot-bundle-vX.Y.Z.tar.gz
                     │
                     ▼
               tags vX.Y.Z at HEAD + pushes it + gh release create
+              with the moltbot bundle attached
                     │
                     ▼
-              the v* tag re-triggers publish-images.yml, which
+              dispatches publish-images.yml AT THE NEW TAG, which
               re-tags every fleet image with the semver set:
                 vX.Y.Z, X.Y.Z, vX.Y, X.Y, vX, X
 ```
 
-> `release.yml` currently runs `on: workflow_dispatch` only — auto-trigger on push to `main` was parked during the pillar-colocation work so a half-renamed tag→publish chain couldn't reach the live host. Restoring `push: branches: [main]` is tracked in Huly. The publish workflow already runs on every push to `main`; only the _versioned tag_ step is gated.
+> **Why an explicit dispatch rather than the tag push.** GitHub does not start a workflow run from an event created with `GITHUB_TOKEN`, and `workflow_dispatch` is one of only two exceptions to that. The `v*` tag `release.yml` pushes therefore never reached `publish-images.yml` on its own — across ~440 semver tags, GHCR carries `main` and `sha-*` tags and no semver ones at all, so `POPS_IMAGE_TAG=vX.Y.Z` had nothing to resolve to. The dispatch step is what closes that, and it is why the workflow needs `permissions: actions: write`.
+
+## Release assets
+
+Every release carries `moltbot-bundle-vX.Y.Z.tar.gz` alongside the images. The `moltbot` compose profile is served from bind-mounted files rather than from an image, and the bundle is how a deployer gets those files without a source checkout — see [`pillars/moltbot/README.md`](../../pillars/moltbot/README.md). It is built by `scripts/pack-moltbot-bundle.mjs`, which `release.yml` runs before `gh release create`.
 
 ## Manual escape hatch
 

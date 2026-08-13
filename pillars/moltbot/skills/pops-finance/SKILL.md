@@ -75,5 +75,3 @@ Headers:
 - "Show my top 5 merchants by spend"
 - "How much is left in my groceries budget?"
 - "What's on my wish list?"
-  </content>
-  </invoke>

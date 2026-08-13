@@ -1101,8 +1101,8 @@ services:
     profiles:
       - moltbot
     volumes:
-      - ../pillars/moltbot/config/config.yml:/config/config.yml:ro
-      - ../pillars/moltbot/scripts/validate-config.sh:/validate.sh:ro
+      - ${POPS_MOLTBOT_DIR:-../pillars/moltbot}/config/config.yml:/config/config.yml:ro
+      - ${POPS_MOLTBOT_DIR:-../pillars/moltbot}/scripts/validate-config.sh:/validate.sh:ro
     secrets:
       - telegram_bot_token
       - claude_api_key
@@ -1119,22 +1119,22 @@ services:
     networks:
       - backend
     volumes:
-      - ../pillars/moltbot/config/config.yml:/home/node/.moltbot/config.yml:ro
-      - ../pillars/moltbot/skills:/home/node/.moltbot/workspace/skills:ro
+      - ${POPS_MOLTBOT_DIR:-../pillars/moltbot}/config/config.yml:/home/node/.moltbot/config.yml:ro
+      - ${POPS_MOLTBOT_DIR:-../pillars/moltbot}/skills:/home/node/.moltbot/workspace/skills:ro
     secrets:
       - telegram_bot_token
       - claude_api_key
       - pops_api_key
     environment:
       TELEGRAM_BOT_TOKEN_FILE: /run/secrets/telegram_bot_token
-      # NOTE: the moltbot skill prompts still describe the monolith's REST/tRPC
-      # paths. Repointing the hosts is necessary but not sufficient — the finance
-      # skill must drop /budgets/summary + move entities to registry-api, and the
-      # cerebrum skill must switch to the pillar REST paths. Tracked as a gap.
+      # One host var per pillar a skill talks to — the skills address the
+      # pillars' own REST surfaces directly, there is no gateway in front.
+      # `POPS_API_URL` is the cerebrum skill's; the name predates the split.
       POPS_API_URL: http://cerebrum-api:3007
       POPS_API_KEY_FILE: /run/secrets/pops_api_key
-      # Legacy aliases — the finance skill template still references these.
       FINANCE_API_URL: http://finance-api:3004
+      # Both skills present the same registry-minted service-account key; the
+      # scopes on that one key decide what each of them can reach.
       FINANCE_API_KEY_FILE: /run/secrets/pops_api_key
     depends_on:
       moltbot-validator:
