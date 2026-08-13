@@ -22,6 +22,10 @@ const MerchantLensPage = lazy(() =>
   import('./pages/MerchantLensPage').then((m) => ({ default: m.MerchantLensPage }))
 );
 
+const ReceiptDropZonePage = lazy(() =>
+  import('./pages/ReceiptDropZonePage').then((m) => ({ default: m.ReceiptDropZonePage }))
+);
+
 /** Local type mirror for compile-time safety (shell owns the canonical types). */
 interface AppNavConfigShape {
   id: string;
@@ -48,10 +52,17 @@ export const navConfig = {
       labelKey: 'purchases.merchants',
       icon: 'Building2',
     },
+    {
+      path: '/receipts',
+      label: 'Receipts',
+      labelKey: 'purchases.receipts',
+      icon: 'FileText',
+    },
   ],
 } satisfies AppNavConfigShape;
 
 export const routes: RouteObject[] = [
   { index: true, element: <ReconcileQueuePage /> },
   { path: 'merchants', element: <MerchantLensPage /> },
+  { path: 'receipts', element: <ReceiptDropZonePage /> },
 ];

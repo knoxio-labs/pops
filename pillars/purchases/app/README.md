@@ -95,6 +95,48 @@ merchant lens is specified to drill into have no routes behind them. The page
 names them as absent rather than rendering an empty panel, which would read
 as a statement about the data instead of about the software.
 
+## The receipt drop zone
+
+`/purchases/receipts` is the way in. It posts `POST /receipts` — the pillar's
+one intake for merchants that never get a dedicated adapter — and takes all
+three shapes that endpoint accepts: a photographed till slip, a PDF tax
+invoice, or a pasted order confirmation. Files become base64 parts with no
+`data:` prefix, and a pasted body is base64 of its UTF-8 bytes, because the
+contract stores every shape one way.
+
+**One receipt can be several parts, and their order is the receipt's.** A long
+supermarket slip does not fit in one frame, so up to eight parts are staged
+into one upload and one purchase. The staged list is reorderable for that
+reason: the server reads the parts top to bottom, and shuffled frames are a
+different document. Overflow past the eighth part is reported rather than
+trimmed in silence.
+
+**The three outcomes stay three.** `POST /receipts` answers with a
+discriminated union and the page keeps the distinction:
+
+| outcome        | what it means                                         | what the page does                                                               |
+| -------------- | ----------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `created`      | read, and the arithmetic agreed with the stated total | reports the purchase, and says when the bytes were already in the store          |
+| `needs-review` | read, and it did not add up — **nothing was written** | lists the gate's objections with the delta each carries, and renders the reading |
+| `unreadable`   | nothing usable came back                              | says so, with the reason, and where the upload was stored                        |
+
+`needs-review` is deliberately not dressed as a success. Its whole purpose is
+a human comparing the model's reading against the paper, so the extracted
+figures are rendered verbatim — unformatted, because a total tidied into
+`$41.20` is no longer evidence of what was read — and the delta is shown in
+the receipt's own currency, or in bare cents when the receipt named none.
+
+**A 409 is "already recorded", not an error.** The pillar refuses a re-upload
+either by content hash or by finding the same shop at the same instant and
+amount, and both carry `code: 'ALREADY_IMPORTED'`. The page reads that code
+rather than the HTTP status and renders it as an ordinary outcome. The 409
+body carries no purchase, only its id inside the message, which is shown as
+sent.
+
+**There is no purchase to open.** Nothing in this app renders a single
+purchase, so the created panel names that absence instead of offering a link
+to a route that does not exist (POPS-1948).
+
 ## Layout
 
 ```
@@ -130,6 +172,21 @@ src/
       PeriodPicker.tsx             all time, or a year
       AttributionLegend.tsx        what each grouping badge means and costs
       AbsentDrillDown.tsx          the layers with no route behind them
+    ReceiptDropZonePage.tsx        /purchases/receipts — hand a receipt over
+    receipts/
+      types.ts                     view types aliased off the generated client
+      parts.ts                     accepted media types, and the staged-part list operations
+      encode.ts                    bytes and pasted text → bare base64
+      staging.ts                   folding a batch of files into one receipt, bound and all
+      useReceiptStaging.ts         the staged parts and what changes them
+      useReceiptUpload.ts          POST /receipts, and the 409 that is not a failure
+      ReceiptIntake.tsx            drop zone, paste box, staged parts, send
+      StagedPartList.tsx           the parts in the order they will be read
+      PastedTextForm.tsx           an order confirmation, pasted
+      StagingProblems.tsx          what did not become a part, and why
+      OutcomePanel.tsx             one panel per outcome, kept apart
+      OutcomeParts.tsx             the panel frame, a labelled reading, the stored uris
+      ExtractedReading.tsx         what the model read, verbatim
 ```
 
 The generated client under `src/purchases-api/` is produced from
