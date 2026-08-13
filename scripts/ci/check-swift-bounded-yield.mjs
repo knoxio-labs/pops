@@ -101,7 +101,7 @@ export function findYieldCalls(contents) {
   for (let i = 0; i < lines.length; i += 1) {
     const code = stripLineComment(lines[i]);
     if (code.includes('Task.yield()')) {
-      hits.push({ line: i + 1, text: lines[i].trim() });
+      hits.push({ line: i + 1, text: code.trim() });
     }
   }
   return hits;

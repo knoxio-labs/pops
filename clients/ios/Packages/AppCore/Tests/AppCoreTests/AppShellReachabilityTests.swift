@@ -30,7 +30,7 @@ internal struct AppShellReachabilityTests {
         // rather than polled, and raced against a deadline so a regression
         // fails this test instead of hanging the suite.
         let landed = await withDeadline(seconds: 5) {
-            await bootstrap.waitForCompletions(atLeast: 2)
+            try await bootstrap.waitForCompletions(atLeast: 2)
         }
 
         #expect(landed)
@@ -42,14 +42,14 @@ internal struct AppShellReachabilityTests {
     /// be, and asking again on top of it would be a second call for the same
     /// answer rather than a recovery from anything.
     @Test("evidence of reachability does nothing while bootstrap is pending")
-    func evidenceDoesNothingWhilePending() async {
+    func evidenceDoesNothingWhilePending() async throws {
         let bootstrap = FakeBootstrapService()
         await bootstrap.suspendUntilReleased()
         let fixture = AppShellFixture(restored: .paired(device), bootstrap: bootstrap)
         await fixture.model.restoreSession()
 
         async let pending: Void = fixture.model.loadBootstrap()
-        await bootstrap.waitUntilCalled()
+        try await bootstrap.waitUntilCalled()
         await fixture.model.noteReachable()
 
         #expect(await fixture.bootstrap.callCount == 1)
@@ -86,14 +86,23 @@ internal struct AppShellReachabilityTests {
     /// that package boundary yet for one caller to justify it (and `AppCore`
     /// sits upstream of `Auth` in the dependency graph, so it could not
     /// depend on `Auth`'s test target even if it wanted to).
+    ///
+    /// `operation` must be cancellation-aware for the deadline path to
+    /// actually work: `withTaskGroup` waits for every child task to finish
+    /// before returning, even one `cancelAll()` already marked cancelled —
+    /// `group.next()` returning early only picks which result wins the race,
+    /// it does not let this function exit while the loser is still running.
+    /// `FakeBootstrapService`'s waits reject with `CancellationError` the
+    /// moment they observe cancellation (see `CountSignal.wait(atLeast:)`),
+    /// which is what lets the loser actually finish here instead of hanging
+    /// the whole group.
     private func withDeadline(
         seconds: Double,
-        _ operation: @Sendable @escaping () async -> Void
+        _ operation: @Sendable @escaping () async throws -> Void
     ) async -> Bool {
         await withTaskGroup(of: Bool.self) { group in
             group.addTask {
-                await operation()
-                return true
+                (try? await operation()) != nil
             }
             group.addTask {
                 try? await Task.sleep(for: .seconds(seconds))

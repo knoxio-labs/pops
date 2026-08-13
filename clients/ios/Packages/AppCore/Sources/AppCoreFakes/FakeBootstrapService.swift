@@ -1,42 +1,88 @@
 import AppCore
 import Foundation
+import Synchronization
 
-/// Tracks a monotonically increasing count and holds the waiters registered
-/// against it, so a caller can be resumed the instant ``record()`` reaches
-/// their target rather than polled for.
+/// Lets a caller wait for at least `target` occurrences of an event to have
+/// happened, signalled the instant the target is reached rather than polled
+/// for — and cancellation-aware, so a caller racing this against a deadline
+/// (``AppShellReachabilityTests``'s `withDeadline`) can actually be released
+/// when the deadline wins, rather than leaving `withTaskGroup` waiting
+/// forever for a child task that `cancelAll()` marked cancelled but never
+/// woke up.
 ///
-/// Deliberately has no `async` method of its own. `FakeBootstrapService`
-/// calls into this type from inside its own actor-isolated methods, and a
-/// non-`Sendable` class's `async` method called from an actor is itself a
-/// hop off that actor's isolation under Swift 6's strict-concurrency
-/// checking (`sending 'self.calls' risks causing data races`) — so the
-/// `withCheckedContinuation` that turns a count into a suspension point lives
-/// in `FakeBootstrapService` itself, actor-isolated throughout, and this type
-/// only ever does synchronous bookkeeping. See `Countdown` in
-/// `clients/ios/Packages/Auth/Tests/AuthTests/ConcurrencyProbes.swift` for
-/// the shape this took before that constraint was worked around — built to
-/// be `Sendable` and callable from outside a single actor, which needs a
-/// lock this file has no reason to pay for.
-private final class CountSignal {
-    private(set) var count = 0
-    private var waiters: [(target: Int, continuation: CheckedContinuation<Void, Never>)] = []
+/// A direct port of `Countdown` in
+/// `clients/ios/Packages/Auth/Tests/AuthTests/ConcurrencyProbes.swift` — see
+/// its doc comment for the full reasoning (the `pendingIDs` set covering the
+/// register/cancel race, why `record()` returns waiters to resume rather
+/// than resuming under the lock). `Mutex`-protected state is what makes this
+/// safe to call from `onCancel`, which runs on whatever thread issued the
+/// cancellation, not necessarily `FakeBootstrapService`'s own actor.
+private final class CountSignal: @unchecked Sendable {
+    private typealias Continuation = CheckedContinuation<Void, any Error>
+
+    private struct Waiter {
+        let target: Int
+        let continuation: Continuation
+    }
+
+    private struct State {
+        var count = 0
+        var nextWaiterID = 0
+        var pendingIDs: Set<Int> = []
+        var waiters: [Int: Waiter] = [:]
+    }
+
+    private let state = Mutex<State>(State())
+
+    var count: Int { state.withLock { $0.count } }
 
     func record() {
-        count += 1
-        let ready = waiters.filter { $0.target <= count }
-        waiters.removeAll { $0.target <= count }
+        let ready: [Waiter] = state.withLock { state in
+            state.count += 1
+            let count = state.count
+            let readyIDs = state.waiters.filter { $0.value.target <= count }.map(\.key)
+            var ready: [Waiter] = []
+            for id in readyIDs {
+                state.pendingIDs.remove(id)
+                if let waiter = state.waiters.removeValue(forKey: id) { ready.append(waiter) }
+            }
+            return ready
+        }
         for waiter in ready { waiter.continuation.resume() }
     }
 
-    /// Registers `continuation` to resume once `count` reaches `target`, or
-    /// resumes it immediately if that is already true. The caller is always
-    /// an actor-isolated `withCheckedContinuation` body — see this type's
-    /// doc comment for why the suspension itself is not owned here.
-    func registerOrResume(target: Int, continuation: CheckedContinuation<Void, Never>) {
-        if count >= target {
-            continuation.resume()
-        } else {
-            waiters.append((target, continuation))
+    /// Suspends until at least `target` occurrences have been recorded, or
+    /// throws `CancellationError` if the calling task is cancelled first —
+    /// including a cancellation that arrives while this is still suspended,
+    /// which is exactly what a losing `withDeadline` race delivers.
+    func wait(atLeast target: Int) async throws {
+        let id = state.withLock { state -> Int in
+            let id = state.nextWaiterID
+            state.nextWaiterID += 1
+            state.pendingIDs.insert(id)
+            return id
+        }
+        try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { (continuation: Continuation) in
+                let outcome: Result<Void, any Error>? = state.withLock { state in
+                    guard state.pendingIDs.contains(id) else {
+                        return .failure(CancellationError())
+                    }
+                    if state.count >= target {
+                        state.pendingIDs.remove(id)
+                        return .success(())
+                    }
+                    state.waiters[id] = Waiter(target: target, continuation: continuation)
+                    return nil
+                }
+                if let outcome { continuation.resume(with: outcome) }
+            }
+        } onCancel: {
+            let waiter: Waiter? = state.withLock { state in
+                state.pendingIDs.remove(id)
+                return state.waiters.removeValue(forKey: id)
+            }
+            waiter?.continuation.resume(throwing: CancellationError())
         }
     }
 }
@@ -95,8 +141,8 @@ public actor FakeBootstrapService: BootstrapService {
     /// Parks until the first call has reached ``bootstrap()``, so a test can
     /// cancel a request that is genuinely in flight rather than one that has
     /// not started.
-    public func waitUntilCalled() async {
-        await withCheckedContinuation { calls.registerOrResume(target: 1, continuation: $0) }
+    public func waitUntilCalled() async throws {
+        try await calls.wait(atLeast: 1)
     }
 
     /// Parks until at least `target` calls to ``bootstrap()`` have returned or
@@ -104,10 +150,8 @@ public actor FakeBootstrapService: BootstrapService {
     /// "call started". Lets a test wait for a fire-and-forget retry it holds
     /// no handle to (e.g. ``AppShellModel/noteReachable()``) without polling
     /// the effect that retry is expected to have.
-    public func waitForCompletions(atLeast target: Int) async {
-        await withCheckedContinuation {
-            completions.registerOrResume(target: target, continuation: $0)
-        }
+    public func waitForCompletions(atLeast target: Int) async throws {
+        try await completions.wait(atLeast: target)
     }
 }
 
