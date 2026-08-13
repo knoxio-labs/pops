@@ -96,7 +96,13 @@ describe('the helper proves itself', () => {
     });
     expect(output).toMatch(/self-test OK/u);
     expect(output).toMatch(/deselects a non-touching one/u);
-  });
+    // Vitest's 5s default is a deadline on a spawned Node process that itself
+    // shells out to git, sharing a machine with 45 other test files. It takes
+    // ~1s of CPU and ~9s of wall clock on a loaded developer machine, which
+    // failed the pre-push hook deterministically rather than flakily. The
+    // budget that actually bounds this test is the `execFileSync` timeout
+    // above; this just stops the outer one firing first.
+  }, 130_000);
 });
 
 describe('reading a workflow’s own pull_request.paths', () => {
