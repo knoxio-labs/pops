@@ -10,18 +10,30 @@
  */
 import { JOB_STATES, type JobQueuePort, type JobRecord, type JobState } from './ports.js';
 
-/** Raised when an operation names a job the queue does not hold. */
+/**
+ * Raised when an operation names a job the queue does not hold. Carries the
+ * queue and id as fields, not only in the message, so a mounting pillar can
+ * map it onto its own 404 envelope without parsing prose.
+ */
 export class JobNotFoundError extends Error {
-  constructor(queue: string, jobId: string) {
-    super(`No job '${jobId}' on queue '${queue}'`);
+  constructor(
+    readonly queueName: string,
+    readonly jobId: string
+  ) {
+    super(`No job '${jobId}' on queue '${queueName}'`);
     this.name = 'JobNotFoundError';
   }
 }
 
 /** Raised when a job's current state forbids the requested transition. */
 export class JobStateConflictError extends Error {
-  constructor(queue: string, jobId: string, state: string, action: string) {
-    super(`Job '${jobId}' on queue '${queue}' is ${state} and cannot be ${action}`);
+  constructor(
+    readonly queueName: string,
+    readonly jobId: string,
+    readonly state: string,
+    action: string
+  ) {
+    super(`Job '${jobId}' on queue '${queueName}' is ${state} and cannot be ${action}`);
     this.name = 'JobStateConflictError';
   }
 }
@@ -36,7 +48,8 @@ export interface JobSummary {
   readonly data: unknown;
   readonly progress: unknown;
   readonly failedReason: string | null;
-  readonly stacktrace: readonly string[];
+  /** Mutable so a ts-rest handler can return it against a zod array schema. */
+  readonly stacktrace: string[];
   readonly createdAt: string;
   readonly processedAt: string | null;
   readonly finishedAt: string | null;
@@ -78,7 +91,7 @@ export interface ListJobsInput {
 
 /** A page of jobs plus the per-state counts the page was drawn from. */
 export interface ListJobsResult {
-  readonly jobs: readonly JobSummary[];
+  readonly jobs: JobSummary[];
   readonly total: number;
 }
 
@@ -154,9 +167,14 @@ export async function cancelJob(
 export type QueueCounts = Readonly<Record<JobState, number>>;
 
 function toQueueCounts(raw: Record<string, number>): QueueCounts {
-  const counts = {} as Record<JobState, number>;
-  for (const state of JOB_STATES) counts[state] = raw[state] ?? 0;
-  return counts;
+  return {
+    waiting: raw['waiting'] ?? 0,
+    active: raw['active'] ?? 0,
+    completed: raw['completed'] ?? 0,
+    failed: raw['failed'] ?? 0,
+    delayed: raw['delayed'] ?? 0,
+    paused: raw['paused'] ?? 0,
+  };
 }
 
 /** Reads per-state counts for a queue. */

@@ -38,6 +38,7 @@ export {
   replayDeadLetterJob,
   type DeadLetterForwarderDeps,
   type DeadLetterJobData,
+  type DeadLetterReplayFailure,
   type DeadLetterReplayResult,
 } from './dead-letter.js';
 

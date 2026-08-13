@@ -16,6 +16,9 @@
       "path": "../../libs/ai-telemetry/tsconfig.build.json"
     },
     {
+      "path": "../../libs/jobs/tsconfig.build.json"
+    },
+    {
       "path": "../../libs/sdk/tsconfig.build.json"
     },
     {

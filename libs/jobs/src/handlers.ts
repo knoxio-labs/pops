@@ -40,16 +40,19 @@ export class JobsUnavailableError extends Error {
 
 /** Raised when a request names a queue this pillar does not own. */
 export class UnknownQueueError extends Error {
-  constructor(name: string, known: readonly string[]) {
-    super(`Unknown queue '${name}'; this pillar owns: ${known.join(', ')}`);
+  constructor(
+    readonly queueName: string,
+    known: readonly string[]
+  ) {
+    super(`Unknown queue '${queueName}'; this pillar owns: ${known.join(', ')}`);
     this.name = 'UnknownQueueError';
   }
 }
 
 /** Raised when a dead-letter operation targets a queue that has none. */
 export class NoDeadLetterQueueError extends Error {
-  constructor(name: string) {
-    super(`Queue '${name}' has no dead-letter queue`);
+  constructor(readonly queueName: string) {
+    super(`Queue '${queueName}' has no dead-letter queue`);
     this.name = 'NoDeadLetterQueueError';
   }
 }
@@ -80,7 +83,7 @@ export interface JobsListInput {
 
 /** The `/jobs` operations, independent of any HTTP framework. */
 export interface JobsHandlers {
-  queues(): { readonly queues: readonly string[] };
+  queues(): { readonly queues: string[] };
   list(input: JobsListInput): Promise<ListJobsResult & { readonly queue: string }>;
   get(input: { queue?: string | undefined; id: string }): Promise<JobSummary>;
   retry(input: { queue?: string | undefined; id: string }): Promise<JobSummary>;
@@ -92,7 +95,7 @@ export interface JobsHandlers {
     queue?: string | undefined;
     delayed?: boolean | undefined;
   }): Promise<{ readonly queue: string; readonly removed: number }>;
-  stats(): Promise<{ readonly queues: readonly QueueStats[] }>;
+  stats(): Promise<{ readonly queues: QueueStats[] }>;
   listDeadLetter(
     input: JobsListInput
   ): Promise<ListJobsResult & { readonly queue: string; readonly originQueue: string }>;
