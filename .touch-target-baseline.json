@@ -1,0 +1,217 @@
+{
+  "pillars/cerebrum/app/src/pages/query/QueryHistorySidebar.tsx": {
+    "button": 1
+  },
+  "pillars/finance/app/src/pages/wishlist/columns.tsx": {
+    "a": 1
+  },
+  "pillars/food/app/src/components/IngredientChip.tsx": {
+    "a": 1
+  },
+  "pillars/food/app/src/components/RecipeIngredientList.tsx": {
+    "a": 1
+  },
+  "pillars/food/app/src/components/RecipeStepBody.tsx": {
+    "a": 2
+  },
+  "pillars/food/app/src/components/TimerButton.tsx": {
+    "button": 1
+  },
+  "pillars/food/app/src/components/cook/BatchOverridePicker.same-variant.tsx": {
+    "button": 1
+  },
+  "pillars/food/app/src/components/cook/ConsumePreviewPanel.tsx": {
+    "button": 2
+  },
+  "pillars/food/app/src/components/cook/CookModalFields.tsx": {
+    "button": 1
+  },
+  "pillars/food/app/src/components/cook/CookModalYieldFields.tsx": {
+    "button": 1
+  },
+  "pillars/food/app/src/components/cook/ShortfallList.tsx": {
+    "button": 1
+  },
+  "pillars/food/app/src/components/cook/SubstitutionCandidateRow.tsx": {
+    "button": 1
+  },
+  "pillars/food/app/src/pages/data/GlobalSearchBar.tsx": {
+    "button": 1
+  },
+  "pillars/food/app/src/pages/data/aliases/AliasTargetPicker.tsx": {
+    "button": 2
+  },
+  "pillars/food/app/src/pages/data/aliases/AliasesTable.tsx": {
+    "button": 1
+  },
+  "pillars/food/app/src/pages/data/aliases/AliasesTableRow.tsx": {
+    "button": 1
+  },
+  "pillars/food/app/src/pages/data/aliases/AliasesToolbar.tsx": {
+    "button": 1
+  },
+  "pillars/food/app/src/pages/data/ingredients-tab/IngredientTreeNode.tsx": {
+    "button": 1
+  },
+  "pillars/food/app/src/pages/data/substitutions-graph/EdgeDetailPanel.tsx": {
+    "button": 2
+  },
+  "pillars/food/app/src/pages/data/substitutions-graph/NodeDetailPanel.tsx": {
+    "button": 2
+  },
+  "pillars/food/app/src/pages/data/substitutions-graph/SubGraphBody.tsx": {
+    "button": 1
+  },
+  "pillars/food/app/src/pages/data/substitutions-graph/SubGraphHeader.tsx": {
+    "button": 1
+  },
+  "pillars/food/app/src/pages/data/substitutions-tab/endpoint-picker/IngredientSearch.tsx": {
+    "button": 1
+  },
+  "pillars/food/app/src/pages/data/substitutions-tab/endpoint-picker/SelectedPill.tsx": {
+    "button": 1
+  },
+  "pillars/food/app/src/pages/fridge/BatchRow.tsx": {
+    "button": 1
+  },
+  "pillars/food/app/src/pages/fridge/CookNowPicker.tsx": {
+    "button": 1
+  },
+  "pillars/food/app/src/pages/fridge/FridgeFilterBar.tsx": {
+    "button": 3
+  },
+  "pillars/food/app/src/pages/fridge/LocationSection.tsx": {
+    "button": 1
+  },
+  "pillars/food/app/src/pages/inbox/DraftRow.tsx": {
+    "a": 1,
+    "button": 1
+  },
+  "pillars/food/app/src/pages/inbox/DraftsFilters.tsx": {
+    "button": 1
+  },
+  "pillars/food/app/src/pages/inbox/DraftsTab.tsx": {
+    "button": 1
+  },
+  "pillars/food/app/src/pages/inbox/FailedFilters.tsx": {
+    "button": 2
+  },
+  "pillars/food/app/src/pages/inbox/InboxLayout.tsx": {
+    "button": 1
+  },
+  "pillars/food/app/src/pages/inbox/RejectedFilters.tsx": {
+    "button": 2
+  },
+  "pillars/food/app/src/pages/inbox/ViewSourceDialog.tsx": {
+    "a": 1
+  },
+  "pillars/food/app/src/pages/inbox/inspector/EditorPane.tsx": {
+    "button": 1
+  },
+  "pillars/food/app/src/pages/inbox/inspector/ProposedSlugsList.tsx": {
+    "button": 1
+  },
+  "pillars/food/app/src/pages/inbox/inspector/ProvenancePane.tsx": {
+    "a": 2
+  },
+  "pillars/food/app/src/pages/recipes/AutoCreatedBanner.tsx": {
+    "button": 1
+  },
+  "pillars/food/app/src/pages/recipes/RecipeListFilters.tsx": {
+    "button": 1
+  },
+  "pillars/food/app/src/pages/recipes/RecipeVersionDetailPage.tsx": {
+    "button": 1
+  },
+  "pillars/food/app/src/pages/recipes/send-to-list/ListChoiceRow.tsx": {
+    "button": 1
+  },
+  "pillars/food/app/src/pages/recipes/send-to-list/SendToListPreview.tsx": {
+    "button": 1
+  },
+  "pillars/inventory/app/src/components/ConnectionTracePanel.tsx": {
+    "button": 1
+  },
+  "pillars/inventory/app/src/components/ConnectionsList.tsx": {
+    "button": 1
+  },
+  "pillars/inventory/app/src/components/DocumentList.tsx": {
+    "a": 1
+  },
+  "pillars/inventory/app/src/components/SortablePhotoGrid.tsx": {
+    "button": 1
+  },
+  "pillars/inventory/app/src/components/inventory-card/HorizontalCard.tsx": {
+    "button": 1
+  },
+  "pillars/inventory/app/src/components/inventory-card/VerticalCard.tsx": {
+    "button": 1
+  },
+  "pillars/inventory/app/src/components/location-picker/TreeNode.tsx": {
+    "button": 1
+  },
+  "pillars/inventory/app/src/pages/location-tree-page/sections/MoveDialog.tsx": {
+    "button": 2
+  },
+  "pillars/inventory/app/src/pages/location-tree-page/sections/location-node/NodeActions.tsx": {
+    "button": 3
+  },
+  "pillars/inventory/app/src/pages/location-tree-page/sections/location-node/NodeRow.tsx": {
+    "button": 2
+  },
+  "pillars/inventory/app/src/pages/warranties-page/WarrantyRow.tsx": {
+    "a": 1,
+    "button": 1
+  },
+  "pillars/lists/app/src/pages/components/shopping/ClearCheckedDialog.tsx": {
+    "button": 2
+  },
+  "pillars/lists/app/src/pages/components/shopping/ShoppingAddForm.tsx": {
+    "button": 1
+  },
+  "pillars/lists/app/src/pages/components/shopping/ShoppingDetailHeader.tsx": {
+    "button": 2
+  },
+  "pillars/lists/app/src/pages/components/shopping/ShoppingItemRow.tsx": {
+    "button": 1
+  },
+  "pillars/lists/app/src/pages/components/shopping/ShoppingRowBody.tsx": {
+    "button": 1
+  },
+  "pillars/lists/app/src/pages/components/shopping/SwipeDeleteAction.tsx": {
+    "button": 2
+  },
+  "pillars/lists/app/src/pages/components/shopping/UncheckAllDialog.tsx": {
+    "button": 2
+  },
+  "pillars/lists/app/src/pages/detail/ListDeleteDialog.tsx": {
+    "button": 2
+  },
+  "pillars/lists/app/src/pages/detail/ListDetailMenu.tsx": {
+    "button": 2
+  },
+  "pillars/lists/app/src/pages/detail/ListEditModal.tsx": {
+    "button": 3
+  },
+  "pillars/lists/app/src/pages/detail/ListItemAddForm.tsx": {
+    "button": 3
+  },
+  "pillars/lists/app/src/pages/detail/ListItemMenu.tsx": {
+    "button": 2
+  },
+  "pillars/lists/app/src/pages/detail/ListItemRow.tsx": {
+    "button": 2
+  },
+  "pillars/lists/app/src/pages/lists-index/ListsIndexFilters.tsx": {
+    "button": 1
+  },
+  "pillars/shell/src/app/layout/SkipLink.tsx": {
+    "a": 1
+  },
+  "pillars/shell/src/app/layout/app-rail/AppRailFooter.tsx": {
+    "button": 1
+  },
+  "pillars/shell/src/app/layout/app-rail/AppRailIcon.tsx": {
+    "button": 1
+  }
+}
