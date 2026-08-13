@@ -75,6 +75,7 @@ export interface FileListProps {
 }
 
 export function FileList({ files, onRemoveFile }: FileListProps) {
+  const { t } = useTranslation('ui');
   return (
     <ul className="flex flex-col gap-1.5 text-sm">
       {files.map((file, i) => (
@@ -92,7 +93,7 @@ export function FileList({ files, onRemoveFile }: FileListProps) {
               size="icon-sm"
               variant="ghost"
               onClick={() => onRemoveFile(i)}
-              aria-label={`Remove ${file.name}`}
+              aria-label={t('fileUpload.remove', { name: file.name })}
             >
               <X />
             </Button>
