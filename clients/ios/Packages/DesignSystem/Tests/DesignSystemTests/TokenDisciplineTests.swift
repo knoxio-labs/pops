@@ -14,11 +14,24 @@ import Testing
 /// which files they are applied to.
 @Suite("Token discipline")
 internal struct TokenDisciplineTests {
-    private static let packagesRoot = URL(filePath: #filePath)
+    private static let clientRoot = URL(filePath: #filePath)
         .deletingLastPathComponent()  // DesignSystemTests
         .deletingLastPathComponent()  // Tests
         .deletingLastPathComponent()  // DesignSystem
         .deletingLastPathComponent()  // Packages
+        .deletingLastPathComponent()  // clients/ios
+
+    private static let packagesRoot = clientRoot.appending(path: "Packages")
+
+    /// The composition root. It is an Xcode target rather than a SwiftPM
+    /// package, so `scanModules` — which discovers by `Package.swift` — cannot
+    /// find it, and it needs naming explicitly. It is in scope for the same
+    /// reason every module is: it assembles the feature screens, which makes it
+    /// the likeliest place for a `.padding(16)` to land unnoticed.
+    ///
+    /// `Tools/` is a separate tree with a separate gap (POPS-1515) and is not
+    /// folded in here.
+    private static let appRoot = clientRoot.appending(path: "App")
 
     /// What one pass over a `Packages` tree found. Everything but `violations`
     /// exists because the ways this scan can cover less than it claims all look
@@ -30,6 +43,38 @@ internal struct TokenDisciplineTests {
         let emptyRoots: [URL]
         let unrecognised: [URL]
         let violations: [TokenDisciplineScanner.Violation]
+    }
+
+    /// One source root's contribution: what it violated, and whether it held no
+    /// hand-written Swift at all.
+    ///
+    /// Emptiness is returned rather than folded into a clean violation list
+    /// because the two are indistinguishable from the caller's side, and only
+    /// one of them is good news: a root that yields nothing is a root that was
+    /// renamed out from under the scan, not a root with nothing to say.
+    ///
+    /// An absent path is the only failure this is allowed to call empty.
+    /// `fileExists(atPath:)` cannot draw that line — it answers `false` for a
+    /// permission or IO fault exactly as it does for "missing" — so this asks
+    /// `attributesOfItem`, which throws, and re-throws anything that is not
+    /// "no such file".
+    private static func scanSourceRoot(_ root: URL, relativeTo base: URL) throws -> (
+        isEmpty: Bool, violations: [TokenDisciplineScanner.Violation]
+    ) {
+        do {
+            _ = try FileManager.default.attributesOfItem(atPath: root.path)
+        } catch {
+            guard TokenDisciplineScanner.meansPathDoesNotExist(error) else { throw error }
+            return (isEmpty: true, violations: [])
+        }
+        let files = try TokenDisciplineScanner.swiftFiles(under: root)
+        if files.isEmpty { return (isEmpty: true, violations: []) }
+        return (
+            isEmpty: false,
+            violations: try files.flatMap {
+                try TokenDisciplineScanner.violations(in: $0, relativeTo: base)
+            }
+        )
     }
 
     /// Scans every module under a `Packages` directory, discovering them rather
@@ -95,21 +140,12 @@ internal struct TokenDisciplineTests {
             // without the keyword. `attributesOfItem` throws instead, and only
             // an absent path is what this scan is allowed to treat as empty;
             // every other error propagates as itself.
-            do {
-                _ = try FileManager.default.attributesOfItem(atPath: root.path)
-            } catch {
-                guard TokenDisciplineScanner.meansPathDoesNotExist(error) else { throw error }
+            let scan = try scanSourceRoot(root, relativeTo: packages)
+            if scan.isEmpty {
                 emptyRoots.append(root)
                 continue
             }
-            let files = try TokenDisciplineScanner.swiftFiles(under: root)
-            if files.isEmpty {
-                emptyRoots.append(root)
-                continue
-            }
-            violations += try files.flatMap {
-                try TokenDisciplineScanner.violations(in: $0, relativeTo: packages)
-            }
+            violations += scan.violations
         }
         return ModuleScan(
             roots: roots, emptyRoots: emptyRoots, unrecognised: unrecognised,
@@ -141,6 +177,21 @@ internal struct TokenDisciplineTests {
             these modules contributed no Swift source, so nothing scanned them: \
             \(scan.emptyRoots.map(\.path).joined(separator: ", "))
             """)
+
+        #expect(
+            scan.violations.isEmpty,
+            "\n\(scan.violations.map(\.description).joined(separator: "\n"))")
+    }
+
+    @Test("App/ names no colour, metric or font size outside the token layer either")
+    func theAppTargetIsClean() throws {
+        let scan = try Self.scanSourceRoot(Self.appRoot, relativeTo: Self.clientRoot)
+
+        // The same non-empty guard the module roots get, and for the same
+        // reason: `App/` holding no Swift means it moved, not that it is clean.
+        try #require(
+            !scan.isEmpty,
+            "found no Swift under \(Self.appRoot.path) — the scan would pass vacuously")
 
         #expect(
             scan.violations.isEmpty,
