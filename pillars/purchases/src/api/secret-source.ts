@@ -40,8 +40,13 @@ export function resolveSecret(source: SecretSource): string | undefined {
   return fromEnv === undefined || fromEnv === '' ? undefined : fromEnv;
 }
 
-function readSecretFile(path: string | undefined, source: SecretSource): string | undefined {
-  if (path === undefined || path.trim() === '') return undefined;
+function readSecretFile(rawPath: string | undefined, source: SecretSource): string | undefined {
+  // Trimmed before it is opened, not just before it is tested: a path with
+  // stray whitespace from a `.env` edit or a templated compose file names a
+  // file that does not exist, and the fallback would then authenticate as
+  // whatever the environment variable happens to hold.
+  const path = rawPath?.trim() ?? '';
+  if (path === '') return undefined;
   let contents: string;
   try {
     contents = readFileSync(path, 'utf-8').trim();

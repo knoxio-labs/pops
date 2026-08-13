@@ -81,6 +81,18 @@ describe('resolveServiceAccountKey', () => {
     expect(resolveServiceAccountKey(env)).toBeUndefined();
   });
 
+  it('opens a padded path rather than falling back for a file that is really there', () => {
+    // A `.env` edit or a templated compose file leaves whitespace around a
+    // value more often than anyone admits, and falling back here would
+    // authenticate as whatever the inline variable happened to hold.
+    const key = resolveServiceAccountKey({
+      [SERVICE_ACCOUNT_KEY_FILE_ENV]: `  ${keyFile(FILE_KEY)}\n`,
+      [SERVICE_ACCOUNT_KEY_ENV]: ENV_KEY,
+    });
+
+    expect(key).toBe(FILE_KEY);
+  });
+
   it('treats a whitespace-only secret file as no key rather than as a key', () => {
     expect(
       resolveServiceAccountKey({ [SERVICE_ACCOUNT_KEY_FILE_ENV]: keyFile('  \n') })

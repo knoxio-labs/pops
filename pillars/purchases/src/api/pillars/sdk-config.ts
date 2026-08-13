@@ -38,6 +38,11 @@ import {
 export function configurePurchasesServerSdk(env: NodeJS.ProcessEnv = process.env): boolean {
   const apiKey = resolveServiceAccountKey(env);
   if (apiKey === undefined) {
+    // Cleared rather than left alone, so "this environment has no key" cannot
+    // be answered by one an earlier call left behind. Production calls this
+    // once; a test or a reload calling it twice must not silently keep
+    // authenticating as the first environment.
+    configureServerSdk({ apiKey: undefined });
     console.error(
       `[purchases-api] no service-account key: set ${SERVICE_ACCOUNT_KEY_FILE_ENV} to a mounted ` +
         `secret (production) or ${SERVICE_ACCOUNT_KEY_ENV} (local dev). The API serves normally; ` +
