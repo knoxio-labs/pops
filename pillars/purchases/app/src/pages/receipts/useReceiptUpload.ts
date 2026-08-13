@@ -25,13 +25,24 @@ type UploadResult =
   | { kind: 'duplicate'; message: string | null };
 
 /**
- * The 409 the pillar sends for a receipt it already holds, from either of its
- * two duplicate checks. Read off the code rather than the status so the answer
- * does not depend on a `Response` the transport may not have kept.
+ * Every code the pillar sends with a 409 for a receipt it already holds.
+ *
+ * `ALREADY_IMPORTED` comes from the two checks the receipt route makes before
+ * it calls the model. `DUPLICATE_PURCHASE` comes from the write itself, when a
+ * second upload of the same bytes gets past those checks because the first had
+ * not committed yet — the concurrent case, which is the one a user hits by
+ * submitting twice rather than by re-uploading later.
+ */
+const DUPLICATE_CODES = new Set(['ALREADY_IMPORTED', 'DUPLICATE_PURCHASE']);
+
+/**
+ * Read off the code rather than the status so the answer does not depend on a
+ * `Response` the transport may not have kept.
  */
 function duplicateOf(error: unknown): { message: string | null } | null {
   if (typeof error !== 'object' || error === null) return null;
-  if (!('code' in error) || error.code !== 'ALREADY_IMPORTED') return null;
+  if (!('code' in error) || typeof error.code !== 'string') return null;
+  if (!DUPLICATE_CODES.has(error.code)) return null;
   const message = 'message' in error && typeof error.message === 'string' ? error.message : null;
   return { message };
 }

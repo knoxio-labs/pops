@@ -585,21 +585,31 @@ describe('ReceiptDropZonePage — the other answers', () => {
   });
 
   // A receipt already in the system is an ordinary mistake, not a failure.
-  it('reads a duplicate as already recorded rather than as an error', async () => {
-    await uploadOne({
-      error: {
-        code: 'ALREADY_IMPORTED',
-        message: 'This upload has already been read as purchase purchase-77',
-      },
-    });
+  //
+  // Both codes are asserted because they arrive from different places and only
+  // one of them is reachable by uploading the same file twice in a row:
+  // DUPLICATE_PURCHASE comes from the write rejecting a checksum it already
+  // holds, which a second upload reaches only while the first is still in
+  // flight. Testing ALREADY_IMPORTED alone left that path rendering the
+  // destructive refusal panel for a receipt that had in fact been recorded.
+  it.each([
+    { code: 'ALREADY_IMPORTED', from: 'the checks before the model call' },
+    { code: 'DUPLICATE_PURCHASE', from: 'the write itself, on a concurrent upload' },
+  ] as const)(
+    'reads a 409 from $from as already recorded rather than as an error',
+    async ({ code }) => {
+      await uploadOne({
+        error: { code, message: 'This upload has already been read as purchase purchase-77' },
+      });
 
-    expect(await screen.findByText(enAUPurchases['receipts.duplicate.title'])).toBeVisible();
-    expect(
-      screen.getByText('This upload has already been read as purchase purchase-77')
-    ).toBeVisible();
-    expect(screen.queryByRole('alert')).toBeNull();
-    expect(screen.queryByText(enAUPurchases['receipts.refused.title'])).toBeNull();
-  });
+      expect(await screen.findByText(enAUPurchases['receipts.duplicate.title'])).toBeVisible();
+      expect(
+        screen.getByText('This upload has already been read as purchase purchase-77')
+      ).toBeVisible();
+      expect(screen.queryByRole('alert')).toBeNull();
+      expect(screen.queryByText(enAUPurchases['receipts.refused.title'])).toBeNull();
+    }
+  );
 
   it("surfaces a refusal in the server's own words", async () => {
     await uploadOne({

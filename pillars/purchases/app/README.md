@@ -127,11 +127,15 @@ figures are rendered verbatim — unformatted, because a total tidied into
 the receipt's own currency, or in bare cents when the receipt named none.
 
 **A 409 is "already recorded", not an error.** The pillar refuses a re-upload
-either by content hash or by finding the same shop at the same instant and
-amount, and both carry `code: 'ALREADY_IMPORTED'`. The page reads that code
-rather than the HTTP status and renders it as an ordinary outcome. The 409
-body carries no purchase, only its id inside the message, which is shown as
-sent.
+from three places, and the page treats all three the same. Two run before the
+model is called — content hash, and the same shop at the same instant and
+amount — and carry `code: 'ALREADY_IMPORTED'`. The third is the write itself
+rejecting a checksum it already holds, which carries `code:
+'DUPLICATE_PURCHASE'`; a second upload reaches it only when the first had not
+committed yet, so it is the concurrent case rather than the re-upload-later
+one. The page reads the code rather than the HTTP status and renders any of
+them as an ordinary outcome. The 409 body carries no purchase, only its id
+inside the message, which is shown as sent.
 
 **There is no purchase to open.** Nothing in this app renders a single
 purchase, so the created panel names that absence instead of offering a link

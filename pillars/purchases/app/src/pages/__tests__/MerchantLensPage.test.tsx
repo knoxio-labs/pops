@@ -370,6 +370,6 @@ describe('MerchantLensPage — states', () => {
     renderPage();
     await settled();
 
-    expect(document.body.textContent).not.toMatch(/\bmerchants\.[a-zA-Z]/);
+    expect(document.body.textContent).not.toMatch(/merchants\.[a-zA-Z]/);
   });
 });
