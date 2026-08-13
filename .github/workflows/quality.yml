@@ -547,17 +547,19 @@ jobs:
   cross-pillar-clients:
     name: Cross-pillar generated FE clients (ADR-040)
     # Per-consumer generated FE clients (a consumer app's own Hey API client
-    # for a producer pillar's contract, e.g. food/app <- lists, finance/app
-    # <- contacts) are a sanctioned but easily-forgotten seam: nothing forces
-    # a regenerate when the producer's contract changes, so the committed
-    # client can silently outrun it (see ADR-040 and AGENTS.md "Cross-pillar
-    # generated FE clients"). This regenerates every such client from its
-    # producer's current `./openapi` export and fails on any diff. The
+    # for a producer pillar's contract: food/app <- lists, finance/app <-
+    # contacts, finance/app <- purchases) are a sanctioned but easily-forgotten
+    # seam: nothing forces a regenerate when the producer's contract changes,
+    # so the committed client can silently outrun it (see ADR-040 and AGENTS.md
+    # "Cross-pillar generated FE clients"). This regenerates every such client
+    # from its producer's current `./openapi` export and fails on any diff. The
     # `contacts` leg additionally vendors its OpenAPI snapshot (ADR-033); that
     # copy's own drift is covered separately by the `vendored-contracts` job
-    # above — this job only re-runs codegen against whatever is committed.
+    # above — this job only re-runs codegen against whatever is committed. The
+    # `purchases` leg is gated here from the day its client landed, ahead of any
+    # finance page consuming it, so the client cannot rot in the gap.
     #
-    # Both legs are ALSO re-checked, more generally, by app-quality.yml's own
+    # Every leg is ALSO re-checked, more generally, by app-quality.yml's own
     # per-app `Codegen drift` step (`@pops/app-food` and `@pops/app-finance`
     # each own a matrix row that regenerates every one of their generate:*
     # scripts, cross-pillar ones included). That duplication is deliberate,
@@ -579,9 +581,10 @@ jobs:
         run: |
           pnpm --filter @pops/app-food generate:lists-client
           pnpm --filter @pops/app-finance generate:contacts-client
+          pnpm --filter @pops/app-finance generate:purchases-client
       - name: Verify generated clients are up to date
         run: |
-          if ! git diff --exit-code -- pillars/food/app/src/lists-api pillars/finance/app/src/contacts-api; then
+          if ! git diff --exit-code -- pillars/food/app/src/lists-api pillars/finance/app/src/contacts-api pillars/finance/app/src/purchases-api; then
             echo ""
             echo "::error::A cross-pillar generated FE client is out of date."
             echo "Run the owning app's generate:*-client script locally and commit the result."
