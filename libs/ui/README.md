@@ -32,6 +32,46 @@ Story coverage is a convention, not a gate. **Absence from Storybook is not abse
 - **`tsconfig.json` excludes `*.stories.*` and `*.test.*`**, so `mise run typecheck` will not catch a broken story.
 - **`QrCode` does not follow the theme, and that is deliberate.** `--qr-module` / `--qr-quiet-zone` are defined once in `:root` and never overridden in `.dark`: an inverted QR is outside what most phone camera scanners implement, so a themed symbol would render beautifully and refuse to scan on some handsets. It also renders SVG rather than canvas, which is what makes `@pops/ui/testing/decode-qr` possible — that subpath rasterises a rendered symbol and decodes it with `jsQR`, so a consumer can assert what its QR actually encodes instead of asserting a prop reached the component. That is why `jsqr` is a dependency and not a devDependency.
 
+## Action Icon Standards
+
+**Lucide React** is the only icon library — no other icon set is permitted (AGENTS.md). Every interactive action carries an icon: icon-only (with `aria-label`) for compact contexts (table rows, list items), or icon + text for prominent contexts (page CTAs, form buttons). Text-only action labels are not permitted.
+
+| Action          | Icon                              | Banned alternatives |
+| --------------- | --------------------------------- | ------------------- |
+| Add / Create    | `Plus`                            |                     |
+| Edit            | `Pencil`                          | `Edit2`, `PenLine`  |
+| Delete / Remove | `Trash2`                          | `Trash`             |
+| Close / Dismiss | `X`                               |                     |
+| Save / Confirm  | `Check`                           |                     |
+| Move up / down  | `ArrowUp` / `ArrowDown`           |                     |
+| Expand          | `ChevronDown` / `ChevronRight`    |                     |
+| More actions    | `MoreHorizontal` / `MoreVertical` | `Ellipsis`          |
+| Search          | `Search`                          |                     |
+| Settings        | `Settings`                        | `Cog`, `Gear`       |
+| Back / Navigate | `ArrowLeft` / `ChevronLeft`       |                     |
+| External link   | `ExternalLink`                    |                     |
+| Download        | `Download`                        |                     |
+| Upload          | `Upload`                          |                     |
+| Refresh         | `RefreshCw`                       | `RefreshCcw`        |
+
+One icon per action, no aliases. Destructive actions use `variant="ghost"` with `text-destructive` styling.
+
+```tsx
+// Compact (table rows, list items): icon-only + aria-label
+<Button size="icon" aria-label="Delete item">
+  <Trash2 className="h-4 w-4" />
+</Button>
+
+// Prominent (page CTAs, form buttons): icon + text
+<Button>
+  <Plus className="h-4 w-4 mr-2" /> Add Item
+</Button>
+```
+
+- Icon-only buttons **must** have an `aria-label` (not just `title`); `title` may be added alongside for sighted hover tooltips. Enforced by `scripts/ci/check-icon-only-buttons.mjs` (the "Icon-only buttons carry aria-label" CI job) — it reports any icon-sized `Button`/`ButtonPrimitive` whose opening tag has no `aria-label`.
+- Navigation icons are registered in the shared shell registry `pillars/shell/src/app/nav/icon-map.ts`; all nav uses Lucide icons from there.
+- The banned-alternatives column is enforced by the `no-restricted-imports` entries for `lucide-react` in the root `.oxlintrc.json` — importing a banned name fails lint with the canonical replacement in the message. Adding a banned name here without a matching lint entry (or vice versa) lets the table and the gate drift.
+
 ## Constraints
 
 - A lib must never import a pillar (`scripts/ci/check-lib-no-pillar-import.mjs`). Storybook is a deliberate exception; how it reaches pillar frontends without a workspace edge, and what a new frontend pillar must add, is in `scripts/check-storybook-coverage.mjs`.

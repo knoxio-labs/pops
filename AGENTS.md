@@ -474,7 +474,7 @@ pages/
 - Primitives wrap Shadcn/Radix; composites combine primitives.
 - All components consume design tokens — no hardcoded colours or spacing.
 - Every exported component needs a Storybook story.
-- Icons are Lucide only; icon-only buttons must have `aria-label`.
+- Icons are Lucide only; icon-only buttons must have `aria-label`. The full Action Icon Standards vocabulary (canonical icon per action, banned aliases, compact-vs-prominent usage) is in [`libs/ui/README.md`](libs/ui/README.md#action-icon-standards); the banned names are enforced by `no-restricted-imports` in `.oxlintrc.json`.
 - **Reuse before you build** (hard rule above). The library has `Chip` (removable/colored tags), `Badge` (display-only labels), `Button`, `ButtonPrimitive`, `Select`, `Input`, `Dialog`, `WorkflowDialog`, `ChipInput`, and many more — browse `libs/ui/src/components/` and Storybook before assuming something is missing. Correct usage: removable tag chips → `<Chip removable onRemove={...} style={hashToColor(tag)}>text</Chip>`; display-only labels → `<Badge variant="...">text</Badge>`. Never roll your own rounded-pill with an inline × button.
 
 ### Data patterns
