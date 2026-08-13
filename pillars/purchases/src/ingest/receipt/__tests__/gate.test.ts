@@ -475,6 +475,188 @@ describe('moving money between surcharges and delivery', () => {
   });
 });
 
+describe('an extraction error of exactly the stated tax', () => {
+  // Trying both tax conventions is what lets a receipt say which one it was
+  // printed under. It is also the one way a wrong reading reconciles: an
+  // error of exactly the stated tax satisfies the convention the receipt was
+  // NOT printed under, and the arithmetic cannot object because it lands on
+  // zero. These pin both halves — the one that leaves evidence, and the one
+  // that cannot.
+
+  it('refuses a delivery fee double-filed as a surcharge, when the fee is the tax', () => {
+    // The tax-exclusive receipt: $27.50 of goods, $9.95 delivery, $9.95 of
+    // tax, $47.40 charged. A model that files the fee in both fields
+    // overstates the added side by 995 — exactly what the exclusive
+    // convention would have added — so the components land on the stated
+    // total and the receipt reads as tax-inclusive. Admitted, before this,
+    // with `taxCents` then written as zero: a purchase whose own components
+    // do not sum to its own total.
+    const doubled = receipt({
+      total: '$47.40',
+      tax: '$9.95',
+      shipping: '$9.95',
+      surcharges: ['$9.95'],
+    });
+
+    const result = gateExtraction(doubled);
+
+    expect(result.admissible).toBe(false);
+    expect(result.failures.map((f) => f.kind)).toEqual(['ambiguous-tax']);
+    expect(result.failures[0]?.detail).toContain('995c');
+    // Not a mismatch, so there is no discrepancy to state — the contract
+    // carries `deltaCents` only where one exists.
+    expect(result.failures[0]).not.toHaveProperty('deltaCents');
+    // And it must not be written under the convention it fell into.
+    expect(result.taxIncluded).toBe(false);
+  });
+
+  it('refuses the same fee left among the lines as well, when the fee is the tax', () => {
+    // The other channel into it, and the likelier one: an emailed order
+    // prints "Delivery $9.95" as a row, so a model that also fills
+    // `shipping` has stated the fee twice without repeating a field.
+    const doubled = receipt({
+      total: '$47.40',
+      tax: '$9.95',
+      shipping: '$9.95',
+      lines: [
+        { description: 'Timber Pine DAR 42x19', amount: '$12.50' },
+        { description: 'Screws Bugle 8g 65mm', amount: '$15.00' },
+        { description: 'Delivery', amount: '$9.95' },
+      ],
+    });
+
+    const result = gateExtraction(doubled);
+
+    expect(result.admissible).toBe(false);
+    expect(result.failures.map((f) => f.kind)).toEqual(['ambiguous-tax']);
+  });
+
+  it('refuses one fee reported twice in surcharges, when the fee is the tax', () => {
+    // Nothing about the check is a shipping check: it is the same amount
+    // added twice, wherever the model put it.
+    const doubled = receipt({ total: '$47.40', tax: '$9.95', surcharges: ['$9.95', '$9.95'] });
+
+    const result = gateExtraction(doubled);
+
+    expect(result.admissible).toBe(false);
+    expect(result.failures.map((f) => f.kind)).toEqual(['ambiguous-tax']);
+  });
+
+  it('still admits the tax-inclusive receipt the check has to leave alone', () => {
+    // The Australian delivered order, and the reason the check counts two
+    // occurrences rather than one. Nothing here is stated twice.
+    const inclusive = gateExtraction(receipt({ total: '$37.45', tax: '$3.40', shipping: '$9.95' }));
+
+    expect(inclusive.admissible).toBe(true);
+    expect(inclusive.taxIncluded).toBe(true);
+  });
+
+  it('still admits the tax-exclusive receipt the check has to leave alone', () => {
+    const exclusive = gateExtraction(receipt({ total: '$40.20', tax: '$2.75', shipping: '$9.95' }));
+
+    expect(exclusive.admissible).toBe(true);
+    expect(exclusive.taxIncluded).toBe(false);
+  });
+
+  it('admits a tax-inclusive receipt carrying ONE component equal to its tax', () => {
+    // The cost of counting one occurrence instead of two, refused. A
+    // tax-inclusive receipt states a tax of total/11, and on a long shop
+    // some line lands on it by coincidence — $110.00 of goods, $10.00 of
+    // GST, and a $10.00 item. There is no second reading of these figures,
+    // and pushing every such receipt into review would spend the reviewer's
+    // attention on arithmetic that is not in doubt.
+    const coincidence = receipt({
+      total: '$110.00',
+      tax: '$10.00',
+      lines: [
+        { description: 'Timber Pine DAR 42x19', amount: '$100.00' },
+        { description: 'Screws Bugle 8g 65mm', amount: '$10.00' },
+      ],
+    });
+
+    const result = gateExtraction(coincidence);
+
+    expect(result.admissible).toBe(true);
+    expect(result.taxIncluded).toBe(true);
+  });
+
+  it('admits a repeated amount that is not the stated tax', () => {
+    // Two identical items on one receipt is ordinary, and says nothing
+    // about the tax convention. Only a repeat that equals the tax can flip
+    // the reading, so only that is refused.
+    const twins = receipt({
+      total: '$19.90',
+      tax: '$1.81',
+      lines: [
+        { description: 'Coffee Flat White', amount: '$9.95' },
+        { description: 'Coffee Flat White', amount: '$9.95' },
+      ],
+    });
+
+    const result = gateExtraction(twins);
+
+    expect(result.admissible).toBe(true);
+    expect(result.taxIncluded).toBe(true);
+  });
+
+  it('admits a repeated amount when the receipt states no tax at all', () => {
+    // With no tax there is no other convention to fall into: both branches
+    // are the same sum. A receipt that genuinely charged $9.95 twice must
+    // not be refused for a flip that cannot happen.
+    const doubled = receipt({
+      total: '$47.40',
+      tax: null,
+      shipping: '$9.95',
+      surcharges: ['$9.95'],
+    });
+
+    const result = gateExtraction(doubled);
+
+    expect(result.admissible).toBe(true);
+    expect(result.shippingCents).toBe(995);
+    expect(result.surchargeCents).toBe(995);
+  });
+
+  it('leaves a tax-exclusive receipt alone even when it repeats its tax figure', () => {
+    // The check hangs off the inclusive branch alone, and deliberately: a
+    // spurious added component inflates the added side, which can only
+    // reach the total under the inclusive reading. Here $27.50 of goods,
+    // $9.95 delivery, a $9.95 surcharge and $9.95 of tax reconcile under
+    // exactly one convention, so nothing is in doubt.
+    const exclusive = receipt({
+      total: '$57.35',
+      tax: '$9.95',
+      shipping: '$9.95',
+      surcharges: ['$9.95'],
+    });
+
+    const result = gateExtraction(exclusive);
+
+    expect(result.admissible).toBe(true);
+    expect(result.taxIncluded).toBe(false);
+  });
+
+  it('cannot catch the mirror case, where the model dropped what it should have added', () => {
+    // Stated so the limit is explicit, and pinned so a change that claims to
+    // close it has to confront this test. The Australian receipt is $27.50
+    // of goods, $9.95 delivery and $37.45 charged, with $9.95 stated as tax.
+    // A model that drops the delivery row understates the added side by
+    // 9.95, which is exactly what the exclusive convention adds — so it
+    // reconciles as an American receipt instead.
+    //
+    // There is nothing here to detect. The evidence is a figure that is not
+    // present, and an extraction missing a component is indistinguishable
+    // from a receipt that never charged one: these exact figures are also a
+    // correct reading of a tax-exclusive receipt for $27.50 of goods.
+    const dropped = receipt({ total: '$37.45', tax: '$9.95' });
+
+    const result = gateExtraction(dropped);
+
+    expect(result.admissible).toBe(true);
+    expect(result.taxIncluded).toBe(false);
+  });
+});
+
 describe('a fee the merchant added', () => {
   it('reconciles a real ALDI receipt with its card surcharge', () => {
     // The receipt: $24.05 of groceries, a 0.50% credit surcharge of 12c,

@@ -81,13 +81,15 @@ model's, made where the wording is legible — including on the French,
 German and Japanese receipts the prompt forbids translating, which is why
 it is not a keyword table in code.
 
-Two new ways exist to break a receipt that reconciled before, and both
-overstate by exactly the fee: a model reporting it in both fields, and a
-model reporting it in `shipping` while leaving the row it was printed on
-among the lines — which is how an emailed order states it, and which the
-prompt does not currently forbid (POPS-1814). Under-reporting it in
-neither understates by the same amount. All three land in review, which is
-the safe direction.
+Two ways exist to break a receipt that reconciled before the split, and
+both overstate by exactly the fee: a model reporting it in both fields, and
+a model reporting it in `shipping` while leaving the row it was printed on
+among the lines — which is how an emailed order states it. The prompt
+forbids both, in the one field that owns the charge: report it once, in
+`shipping`, and in nothing else. Under-reporting it in neither understates
+by the same amount. All three land in review, which is the safe direction —
+except when the fee happens to equal the stated tax, which is the collision
+below.
 
 Purchases written before the split carry a `shipping-uncertain` tag, added
 by a data-only migration. It means the surcharge **may** include delivery —
@@ -98,8 +100,36 @@ which works because the 409 is keyed on `sourceOrderId` in the database
 rather than on the file's presence on disk.
 
 Exactly, to the cent (`gate.ts`). It is not a confidence score and there is
-no threshold to tune. Getting the sum to agree by accident requires the
-model to have misread the total in precisely the way it misread the lines.
+no threshold to tune. A reading that is wrong and still agrees has to be
+wrong about the total in precisely the way it is wrong about the lines.
+
+**Except for one coincidence, which is smaller than that: an extraction
+error of exactly the stated tax.** Because both conventions are tried, an
+error of that size satisfies the one the receipt was not printed under, and
+the arithmetic lands on zero rather than on the fee. A US-style receipt
+whose $9.95 delivery is filed twice and whose tax is also $9.95 reads as a
+perfectly reconciling Australian one — components that do not sum to their
+own total, admitted, with the tax then stored as zero.
+
+Half of that is caught. The double-file leaves the same amount added twice,
+so a repeated component equal to the stated tax is refused as
+`ambiguous-tax`: the same figures reconcile both ways and the receipt does
+not say which reading it is. Two occurrences and not one — a tax-inclusive
+receipt states a tax of total/11, and on a long shop a single line lands on
+it by coincidence often enough that refusing those would spend a reviewer's
+attention on arithmetic that is not in doubt.
+
+The other half cannot be, and this is a limit rather than a gap: a model
+that _drops_ a component understates by the same amount, and if what it
+dropped equalled the stated tax the exclusive branch reconciles. The
+evidence is a figure that is absent, which is indistinguishable from a
+receipt that never charged one — the same numbers are also a correct
+reading of a genuine tax-exclusive receipt. Nothing in the extraction can
+tell those apart, so nothing here pretends to.
+
+A tax row reported as a line item _and_ in `tax` is one occurrence, not two,
+so it takes the same flip and is not refused (POPS-1998). The prompt is what
+stands against that one.
 
 This is also why `reconcile/` uses no AI at all: matching charges to
 transactions is arithmetic with no stated answer to check against, so a

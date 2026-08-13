@@ -915,6 +915,7 @@ export type ReceiptUploadResponses = {
             | 'no-lines'
             | 'negative-line'
             | 'sum-mismatch'
+            | 'ambiguous-tax'
             | 'damaged';
         }>;
         kind: 'needs-review';

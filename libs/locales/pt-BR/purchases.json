@@ -118,6 +118,7 @@
   "receipts.review.kind.no-lines": "Nenhum item foi lido",
   "receipts.review.kind.negative-line": "Um item veio com valor negativo",
   "receipts.review.kind.sum-mismatch": "As partes não somam o total declarado",
+  "receipts.review.kind.ambiguous-tax": "As partes fecham de duas maneiras diferentes",
   "receipts.review.kind.damaged": "O recibo está danificado ou encoberto",
   "receipts.extracted.heading": "O que o modelo leu",
   "receipts.extracted.merchant": "Comerciante",
