@@ -105,7 +105,9 @@ public actor FakeBootstrapService: BootstrapService {
     /// no handle to (e.g. ``AppShellModel/noteReachable()``) without polling
     /// the effect that retry is expected to have.
     public func waitForCompletions(atLeast target: Int) async {
-        await withCheckedContinuation { completions.registerOrResume(target: target, continuation: $0) }
+        await withCheckedContinuation {
+            completions.registerOrResume(target: target, continuation: $0)
+        }
     }
 }
 
