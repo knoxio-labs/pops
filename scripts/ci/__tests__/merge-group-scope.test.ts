@@ -96,7 +96,13 @@ describe('the helper proves itself', () => {
     });
     expect(output).toMatch(/self-test OK/u);
     expect(output).toMatch(/deselects a non-touching one/u);
-  });
+    // The self-test's 19 cases each build and diff a throwaway git repository,
+    // so this one `it` is ~40 subprocess spawns and lands either side of
+    // Vitest's 5s default depending on what else the machine is doing — and it
+    // sits in the `pre-push` hook, where a bad draw blocks every push. The
+    // budget below is for the spawns, not for hiding a hang: the inner
+    // `execFileSync` still caps the helper itself at 120s.
+  }, 60_000);
 });
 
 describe('reading a workflow’s own pull_request.paths', () => {

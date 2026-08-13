@@ -17,7 +17,14 @@
  * name that has drifted from what the packer emits.
  */
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -43,10 +50,76 @@ interface Commit {
   body?: string;
 }
 
+/**
+ * An environment in which a `git` child process can only see the repository at
+ * its own cwd.
+ *
+ * `process.env` cannot be spread here. Git exports `GIT_DIR`, `GIT_INDEX_FILE`
+ * and friends to the processes it runs, and the husky `pre-push` hook — which
+ * runs this suite before every push — is one of them. Inherited, `git init` in
+ * a temp directory re-initialises the *repository named by `GIT_DIR`* with the
+ * temp directory as its work tree, which flips `core.bare` on the shared config
+ * (breaking `git status` in every sibling worktree) and commits this fixture's
+ * `chore: seed` onto whatever branch is checked out. Observed exactly that way,
+ * on this branch. Every `GIT_*` name is dropped rather than the handful in
+ * {@link REPO_LOCATING_GIT_VARS}, because that list is git's to grow; the named
+ * list is what the pre-flight check reports on.
+ *
+ * The identity vars are then set back deliberately: with no global config
+ * reachable there is no `user.name` for git to find, and a commit without one
+ * fails.
+ */
+function hermeticGitEnv(): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = {};
+  for (const [key, value] of Object.entries(process.env)) {
+    if (!key.startsWith('GIT_')) env[key] = value;
+  }
+  return {
+    ...env,
+    GIT_CONFIG_SYSTEM: '/dev/null',
+    GIT_AUTHOR_NAME: 'Test',
+    GIT_AUTHOR_EMAIL: 'test@example.com',
+    GIT_COMMITTER_NAME: 'Test',
+    GIT_COMMITTER_EMAIL: 'test@example.com',
+  };
+}
+
 interface ReleaseOutcome {
   outputs: Record<string, string>;
   notes: string | undefined;
   stdout: string;
+}
+
+/**
+ * Names that would point a git child process at a repository other than its cwd.
+ *
+ * `scripts/ci/merge-group-scope.mjs` carries the same list, arrived at the same
+ * way and for the same reason; consolidating the two is tracked separately.
+ */
+const REPO_LOCATING_GIT_VARS = [
+  'GIT_DIR',
+  'GIT_WORK_TREE',
+  'GIT_INDEX_FILE',
+  'GIT_COMMON_DIR',
+  'GIT_OBJECT_DIRECTORY',
+  'GIT_ALTERNATE_OBJECT_DIRECTORIES',
+  'GIT_PREFIX',
+  'GIT_QUARANTINE_PATH',
+  'GIT_NAMESPACE',
+] as const;
+
+/**
+ * @param env Environment about to be handed to a `git` child process.
+ * @throws {Error} When any of {@link REPO_LOCATING_GIT_VARS} survived the scrub.
+ */
+export function assertNoInheritedGitEnv(env: NodeJS.ProcessEnv): void {
+  const leaked = REPO_LOCATING_GIT_VARS.filter((name) => env[name] !== undefined);
+  if (leaked.length > 0) {
+    throw new Error(
+      `refusing to run git with an inherited environment: ${leaked.join(', ')} would ` +
+        'point the fixture at a real repository'
+    );
+  }
 }
 
 /**
@@ -65,22 +138,20 @@ function runRelease({
 }): ReleaseOutcome {
   const cwd = mkdtempSync(join(tmpdir(), 'release-sh-'));
   temps.push(cwd);
-  // Hermetic: the developer's global config decides whether a bare `git tag`
-  // is annotated and whether it is signed, and either would make this suite
-  // pass or fail for reasons that have nothing to do with release.sh.
-  const env = {
-    ...process.env,
-    GIT_CONFIG_GLOBAL: '/dev/null',
-    GIT_CONFIG_SYSTEM: '/dev/null',
-    GIT_AUTHOR_NAME: 'Test',
-    GIT_AUTHOR_EMAIL: 'test@example.com',
-    GIT_COMMITTER_NAME: 'Test',
-    GIT_COMMITTER_EMAIL: 'test@example.com',
-  };
+  const env = { ...hermeticGitEnv(), GIT_CONFIG_GLOBAL: '/dev/null' };
+  // Checked BEFORE the first git call, not after. A leaked `GIT_DIR` does not
+  // make `git init` fail — it re-initialises the repository that variable names
+  // and corrupts it. There is no recovering from that after the fact, so the
+  // fixture refuses to run at all rather than verifying the damage afterwards.
+  assertNoInheritedGitEnv(env);
   const git = (...args: string[]): string =>
     execFileSync('git', args, { cwd, encoding: 'utf8', stdio: 'pipe', env });
 
   git('init', '-q', '-b', 'main');
+  const gitDir = git('rev-parse', '--absolute-git-dir').trim();
+  if (!realpathSync(gitDir).startsWith(realpathSync(cwd))) {
+    throw new Error(`fixture git commands resolved to ${gitDir}, outside ${cwd}`);
+  }
   writeFileSync(join(cwd, 'seed'), 'seed\n');
   git('add', '-A');
   git('commit', '-q', '-m', 'chore: seed');
@@ -119,6 +190,51 @@ function runRelease({
 
 /** The tag shapes this repo actually carries alongside its releases. */
 const NOISE_TAGS = ['build-172', 'build-1810', 'v1', 'v2', 'v1.2.3-rc.1', 'v1.2.3.4'] as const;
+
+describe('fixture isolation', () => {
+  // This suite runs inside the husky `pre-push` hook, which git invokes with
+  // GIT_DIR and GIT_INDEX_FILE exported. Spreading `process.env` there pointed
+  // the fixture's `git init` at the real repository: `core.bare` flipped to
+  // true on the config shared by every worktree, `git status` started failing
+  // repo-wide, and `chore: seed` landed on the branch being pushed.
+  it('drops every repo-locating git variable, whatever else is exported', () => {
+    const saved = process.env.GIT_DIR;
+    process.env.GIT_DIR = '/some/real/repo/.git';
+    try {
+      const env = hermeticGitEnv();
+      expect(env.GIT_DIR).toBeUndefined();
+      expect(() => assertNoInheritedGitEnv(env)).not.toThrow();
+      // PATH still has to survive, or `git` is not findable at all.
+      expect(env.PATH).toBe(process.env.PATH);
+      // And the identity has to be put back, or every fixture commit fails.
+      expect(env.GIT_AUTHOR_NAME).toBe('Test');
+    } finally {
+      if (saved === undefined) delete process.env.GIT_DIR;
+      else process.env.GIT_DIR = saved;
+    }
+  });
+
+  it('refuses to run git at all when one leaks through', () => {
+    for (const name of REPO_LOCATING_GIT_VARS) {
+      expect(() => assertNoInheritedGitEnv({ [name]: '/some/real/repo/.git' })).toThrow(
+        /refusing to run git/u
+      );
+    }
+  });
+
+  it('builds its fixtures under the temp directory, never the repo under test', () => {
+    // The end-to-end statement of the same thing: a real run, asserted to have
+    // produced its answer without the repository this file lives in.
+    const before = execFileSync('git', ['rev-parse', 'HEAD'], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+    }).trim();
+    runRelease({ tags: ['v1.0.0'], commits: [{ subject: 'feat: thing' }] });
+    expect(
+      execFileSync('git', ['rev-parse', 'HEAD'], { cwd: repoRoot, encoding: 'utf8' }).trim()
+    ).toBe(before);
+  });
+});
 
 describe('release.sh — previous-tag resolution', () => {
   it('picks the highest strict semver tag out of the real tag zoo', () => {

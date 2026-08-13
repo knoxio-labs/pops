@@ -1,7 +1,7 @@
 # Runbook: Cut a Pops Release
 
 > Audience: anyone with `write` access to `knoxio-labs/pops`.
-> Frequency: only when you want to pin a stable point — day-to-day deploys need no release (see below).
+> Frequency: never, as a manual act — releases cut themselves off `main`. Read this to understand the bump, or to cut one by hand when the workflow is broken.
 > Related: [`infra/README.md`](../../infra/README.md) — the compose deploy contract.
 
 ## TL;DR
