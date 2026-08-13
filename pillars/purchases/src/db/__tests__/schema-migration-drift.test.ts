@@ -7,9 +7,21 @@
  * production on the first INSERT.
  *
  * This test closes that gap by introspecting the migrated database and
- * diffing it against the drizzle definitions, in both directions.
+ * diffing it against the drizzle definitions, in both directions — for
+ * columns, NOT NULL, foreign keys with their ON DELETE behaviour, and
+ * indexes (including the indexes SQLite creates for a `unique()`
+ * constraint or a column-level `.unique()`). Every expectation is read out
+ * of `getTableConfig()`; nothing here is a hand-maintained literal, so a
+ * schema change with no matching migration edit fails without anyone
+ * having to remember to update this file too.
+ *
+ * Column *types* are deliberately not compared. SQLite's type affinity
+ * means the migration's declared column type and drizzle's declared column
+ * type can differ in spelling while affinity-matching (`integer` vs `int`,
+ * or a `text` column drizzle types as an enum), so a literal string compare
+ * would flag drift that changes nothing about how the column behaves.
  */
-import { getTableConfig } from 'drizzle-orm/sqlite-core';
+import { getTableConfig, uniqueKeyName } from 'drizzle-orm/sqlite-core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
@@ -128,121 +140,154 @@ describe('the migration creates nothing the schema barrel forgot to export', () 
   });
 });
 
-describe('foreign keys declared in drizzle are enforced by the migration', () => {
-  const EXPECTED_FKS: Readonly<Record<string, readonly string[]>> = {
-    purchases: ['purchase_sources'],
-    purchase_tags: ['purchases'],
-    purchase_shipments: ['purchases'],
-    purchase_items: ['purchases', 'purchase_shipments'],
-    purchase_item_units: ['purchase_items'],
-    purchase_item_tags: ['purchase_items'],
-    purchase_item_notes: ['purchase_items'],
-    purchase_charges: ['purchases', 'purchase_shipments'],
-    purchase_charge_links: ['purchase_charges', 'purchase_match_rules'],
-    purchase_item_allocations: ['purchase_charges', 'purchase_items'],
-    purchase_documents: ['purchases', 'purchase_shipments'],
-  };
+interface LiveForeignKey {
+  readonly table: string;
+  readonly onDelete: string;
+}
 
-  for (const [table, expected] of Object.entries(EXPECTED_FKS)) {
-    it(`${table} references ${expected.join(', ')}`, () => {
-      const rows = opened.raw.prepare(`PRAGMA foreign_key_list(${table})`).all() as {
-        table: string;
-      }[];
-      expect(rows.map((r) => r.table).toSorted()).toEqual([...expected].toSorted());
-    });
-  }
-});
-
-describe('cascade behaviour is what the schema claims', () => {
-  const EXPECTED_ON_DELETE: readonly (readonly [string, string, string])[] = [
-    ['purchase_shipments', 'purchases', 'CASCADE'],
-    ['purchase_items', 'purchases', 'CASCADE'],
-    // Deliberately SET NULL: removing a delivery must orphan its lines,
-    // not destroy them. The money was still spent.
-    ['purchase_items', 'purchase_shipments', 'SET NULL'],
-    ['purchase_item_units', 'purchase_items', 'CASCADE'],
-    ['purchase_item_tags', 'purchase_items', 'CASCADE'],
-    ['purchase_item_notes', 'purchase_items', 'CASCADE'],
-    ['purchase_charges', 'purchases', 'CASCADE'],
-    ['purchase_charges', 'purchase_shipments', 'SET NULL'],
-    ['purchase_charge_links', 'purchase_charges', 'CASCADE'],
-    ['purchase_item_allocations', 'purchase_charges', 'CASCADE'],
-    ['purchase_item_allocations', 'purchase_items', 'CASCADE'],
-    // A rule must survive being referenced — deleting one must not silently
-    // delete the links it produced.
-    ['purchase_charge_links', 'purchase_match_rules', 'NO ACTION'],
-  ];
-
-  for (const [table, parent, onDelete] of EXPECTED_ON_DELETE) {
-    it(`${table} → ${parent} is ON DELETE ${onDelete}`, () => {
-      const rows = opened.raw.prepare(`PRAGMA foreign_key_list(${table})`).all() as {
-        table: string;
-        on_delete: string;
-      }[];
-      const fk = rows.find((r) => r.table === parent);
-      expect(fk?.on_delete).toBe(onDelete);
-    });
-  }
-});
-
-describe('indexes the hot paths depend on', () => {
-  const EXPECTED_INDEXES: readonly string[] = [
-    'idx_purchases_source_ordered_at',
-    'idx_purchases_status',
-    'idx_purchase_items_purchase',
-    'idx_purchase_items_shipment',
-    'idx_purchase_items_kind',
-    'idx_purchase_items_promotional_price',
-    'idx_purchase_item_tags_tag',
-    'idx_purchase_charges_purchase',
-    'idx_purchase_charge_links_transaction',
-    'idx_purchase_charge_links_confirmed_at',
-    'idx_purchase_item_allocations_item',
-    'uq_purchases_source_order',
-    'uq_purchase_charge_links',
-    'uq_purchase_item_allocations',
-    'uq_purchase_documents',
-  ];
-
-  it('all exist', () => {
-    const live = new Set(
-      (
-        opened.raw.prepare(`SELECT name FROM sqlite_master WHERE type = 'index'`).all() as {
-          name: string;
-        }[]
-      ).map((r) => r.name)
-    );
-    expect(EXPECTED_INDEXES.filter((name) => !live.has(name))).toEqual([]);
-  });
-});
+function liveForeignKeysOf(table: string): LiveForeignKey[] {
+  return (
+    opened.raw.prepare(`PRAGMA foreign_key_list(${table})`).all() as {
+      table: string;
+      on_delete: string;
+    }[]
+  ).map((row) => ({ table: row.table, onDelete: row.on_delete }));
+}
 
 /**
- * Index *names* agreeing is not enough. The first index change this pillar
- * made kept its name and changed what it covers, and a name-only check
- * passes just as happily for a composite silently reverted to one column —
- * which costs nothing visible until the query it exists for starts
- * scanning.
+ * What drizzle declares for one table's foreign keys, in the shape SQLite's
+ * `PRAGMA foreign_key_list` reports them in — so the two can be compared
+ * directly rather than through a hand-kept intermediate list.
  */
-describe('index columns match the drizzle declarations', () => {
-  function liveColumns(indexName: string): string[] {
-    return (
-      opened.raw.prepare(`PRAGMA index_info(${indexName})`).all() as {
-        seqno: number;
-        name: string | null;
-      }[]
-    )
-      .toSorted((a, b) => a.seqno - b.seqno)
-      .map((row) => row.name ?? '(expression)');
-  }
+function declaredForeignKeysOf(table: SQLiteTable): LiveForeignKey[] {
+  return getTableConfig(table).foreignKeys.map((fk) => ({
+    table: getTableConfig(fk.reference().foreignTable).name,
+    // SQLite's own default when a migration states no ON DELETE clause.
+    onDelete: (fk.onDelete ?? 'no action').toUpperCase(),
+  }));
+}
 
+const byTable = (a: LiveForeignKey, b: LiveForeignKey) => a.table.localeCompare(b.table);
+
+describe('foreign keys and their ON DELETE behaviour match drizzle, in both directions', () => {
   for (const table of ALL_TABLES) {
-    for (const declared of getTableConfig(table).indexes) {
-      const { name, columns } = declared.config;
-      it(`${name} covers what drizzle says`, () => {
-        const expected = columns.map((column) =>
-          'name' in column && typeof column.name === 'string' ? column.name : '(expression)'
-        );
-        expect(liveColumns(name)).toEqual(expected);
+    const { name } = getTableConfig(table);
+    it(`${name} references exactly what drizzle declares`, () => {
+      expect(liveForeignKeysOf(name).toSorted(byTable)).toEqual(
+        declaredForeignKeysOf(table).toSorted(byTable)
+      );
+    });
+  }
+});
+
+interface ExpectedIndex {
+  readonly name: string;
+  readonly columns: readonly string[];
+  readonly unique: boolean;
+}
+
+/**
+ * Every index SQLite will actually create for one table: the ones declared
+ * through `index()`/`uniqueIndex()`, the ones declared through the
+ * table-level `unique()` builder, and the ones a column-level `.unique()`
+ * produces under drizzle's own default name — three different drizzle APIs
+ * that all end up as a `CREATE INDEX` in the migration.
+ */
+function expectedIndexesOf(table: SQLiteTable): ExpectedIndex[] {
+  const { indexes, uniqueConstraints, columns } = getTableConfig(table);
+
+  const fromIndexBuilder = indexes.map((index) => ({
+    name: index.config.name,
+    columns: index.config.columns.map((column) =>
+      'name' in column && typeof column.name === 'string' ? column.name : '(expression)'
+    ),
+    unique: index.config.unique,
+  }));
+
+  const fromTableUnique = uniqueConstraints.map((constraint) => ({
+    name:
+      constraint.getName() ??
+      uniqueKeyName(
+        table,
+        constraint.columns.map((c) => c.name)
+      ),
+    columns: constraint.columns.map((c) => c.name),
+    unique: true,
+  }));
+
+  const fromColumnUnique = columns
+    .filter((column) => column.isUnique)
+    .map((column) => ({
+      name: column.uniqueName ?? uniqueKeyName(table, [column.name]),
+      columns: [column.name],
+      unique: true,
+    }));
+
+  return [...fromIndexBuilder, ...fromTableUnique, ...fromColumnUnique];
+}
+
+interface LiveIndex {
+  readonly name: string;
+  readonly unique: boolean;
+}
+
+/**
+ * Excludes SQLite's own `sqlite_autoindex_*` rows: those back an inline
+ * `PRIMARY KEY`/`UNIQUE` column constraint declared directly in
+ * `CREATE TABLE`, which this migration never uses — every unique
+ * constraint here is a standalone `CREATE UNIQUE INDEX`, so an autoindex
+ * appearing at all would itself be schema drift this test should not paper
+ * over by silently excluding it. It is excluded from the *expected* side
+ * for the same reason drizzle never declares one: nothing in `schema.ts`
+ * asks for an inline constraint.
+ */
+function liveIndexesOf(table: string): LiveIndex[] {
+  return (
+    opened.raw.prepare(`PRAGMA index_list(${table})`).all() as {
+      name: string;
+      unique: number;
+    }[]
+  )
+    .filter((row) => !row.name.startsWith('sqlite_autoindex_'))
+    .map((row) => ({ name: row.name, unique: row.unique === 1 }));
+}
+
+function liveIndexColumns(indexName: string): string[] {
+  return (
+    opened.raw.prepare(`PRAGMA index_info(${indexName})`).all() as {
+      seqno: number;
+      name: string | null;
+    }[]
+  )
+    .toSorted((a, b) => a.seqno - b.seqno)
+    .map((row) => row.name ?? '(expression)');
+}
+
+describe('indexes and unique constraints match drizzle exactly, in both directions', () => {
+  for (const table of ALL_TABLES) {
+    const { name } = getTableConfig(table);
+    const declared = expectedIndexesOf(table);
+
+    it(`${name} has exactly the indexes and unique constraints drizzle declares`, () => {
+      // Bidirectional by construction: an index in `schema.ts` with no
+      // migration edit fails the same assertion as a migration index
+      // nothing in `schema.ts` declares.
+      expect(
+        liveIndexesOf(name)
+          .map((i) => i.name)
+          .toSorted()
+      ).toEqual(declared.map((i) => i.name).toSorted());
+    });
+
+    for (const index of declared) {
+      // Name agreement is not enough: the first index change this pillar
+      // made kept its name and changed what it covers, and a name-only
+      // check passes just as happily for a composite silently reverted to
+      // one column — which costs nothing visible until the query it exists
+      // for starts scanning.
+      it(`${index.name} covers what drizzle says and matches its uniqueness`, () => {
+        expect(liveIndexColumns(index.name)).toEqual(index.columns);
+        expect(liveIndexesOf(name).find((i) => i.name === index.name)?.unique).toBe(index.unique);
       });
     }
   }
