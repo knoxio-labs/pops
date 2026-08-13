@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import enAUPurchases from '@pops/locales/en-AU/purchases.json';
@@ -36,7 +37,9 @@ function renderPage(): ReturnType<typeof userEvent.setup> {
   });
   render(
     <QueryClientProvider client={client}>
-      <ReceiptDropZonePage />
+      <MemoryRouter initialEntries={['/purchases/receipts']}>
+        <ReceiptDropZonePage />
+      </MemoryRouter>
     </QueryClientProvider>
   );
   return user;
@@ -449,11 +452,16 @@ describe('ReceiptDropZonePage — created', () => {
     expect(screen.queryByText('till.jpg')).toBeNull();
   });
 
-  it('says there is no purchase page to open rather than offering a dead link', async () => {
+  // This panel used to say there was nothing to open, because there was not.
+  // The link is the whole point of the outcome: the reader's next question is
+  // always "what did it read off the paper", and that is the order page.
+  it('opens the order it just recorded', async () => {
     await uploadOne(created());
 
-    expect(await screen.findByText(enAUPurchases['receipts.created.noDetailView'])).toBeVisible();
-    expect(screen.queryByRole('link')).toBeNull();
+    const link = await screen.findByRole('link', {
+      name: enAUPurchases['receipts.created.open'],
+    });
+    expect(link).toHaveAttribute('href', '/purchases/purchase-77');
   });
 });
 

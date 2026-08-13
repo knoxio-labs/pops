@@ -87,6 +87,17 @@ const PURCHASES_SEARCH_ADAPTERS: readonly SearchAdapterDescriptor[] = [
 ];
 
 /**
+ * The `<pillar>/<entity>` pairs a purchases hit can address.
+ *
+ * Derived from the adapters rather than restated beside them: the URIs
+ * `src/db/services/search.ts` emits are built from the same entity types, so a
+ * new adapter cannot ship a URI shape this manifest never declared.
+ */
+const PURCHASES_URI_TYPES: readonly string[] = PURCHASES_SEARCH_ADAPTERS.map(
+  (adapter) => `${PURCHASES_PILLAR_ID}/${adapter.entityType}`
+);
+
+/**
  * Purchases pillar manifest payload.
  *
  * `nav` and `pages` were empty until this pillar had a frontend, because a
@@ -114,12 +125,14 @@ const PURCHASES_SEARCH_ADAPTERS: readonly SearchAdapterDescriptor[] = [
  * — the same arrangement finance, inventory, media and cerebrum have, none
  * of which declare `ai.tools` either.
  *
- * `uri.types` stays empty because nothing in the fleet resolves a
- * `pops:purchases/*` URI to a route. The app mounts one index route and no
- * order-detail route, so there is still nothing for a hit to land on. Search
- * hits carry those URIs regardless — a hit needs an identity whether or not
- * anything can navigate to it — and the slot is declared once a detail route
- * and a `URI_ROUTE_MAP` entry exist to back it.
+ * `uri.types` names both types the search adapters emit. It was empty while
+ * nothing could resolve them; `pillars/purchases/app` now mounts an order
+ * detail route and `libs/navigation`'s `URI_ROUTE_MAP` carries both prefixes,
+ * so the claim is backed. A line resolves to the order it was bought on —
+ * ADR-012 keeps the id segment one row's primary key, so the order id travels
+ * in the hit's `data` rather than in the URI — and the pillar still emits the
+ * line's own identity, because a hit that named its order would be
+ * indistinguishable from the order's own hit.
  */
 export function buildPurchasesManifest(version: string): ManifestPayload {
   return {
@@ -133,7 +146,7 @@ export function buildPurchasesManifest(version: string): ManifestPayload {
     routes: { queries: ['purchases.search.search'], mutations: [], subscriptions: [] },
     search: { adapters: [...PURCHASES_SEARCH_ADAPTERS] },
     ai: { tools: [] },
-    uri: { types: [] },
+    uri: { types: [...PURCHASES_URI_TYPES] },
     consumedSettings: { keys: [] },
     nav: PURCHASES_NAV,
     pages: [...PURCHASES_PAGES],

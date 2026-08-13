@@ -26,6 +26,10 @@ const ReceiptDropZonePage = lazy(() =>
   import('./pages/ReceiptDropZonePage').then((m) => ({ default: m.ReceiptDropZonePage }))
 );
 
+const PurchaseDetailPage = lazy(() =>
+  import('./pages/PurchaseDetailPage').then((m) => ({ default: m.PurchaseDetailPage }))
+);
+
 /** Local type mirror for compile-time safety (shell owns the canonical types). */
 interface AppNavConfigShape {
   id: string;
@@ -61,8 +65,17 @@ export const navConfig = {
   ],
 } satisfies AppNavConfigShape;
 
+/**
+ * The order detail route carries no nav item, and that is the difference
+ * between the two lists: the rail names places a reader can go from nothing,
+ * and an order is reached from something that already holds its id — a queue
+ * row, an upload, a search hit. It sits last because react-router ranks a
+ * static segment above a dynamic one regardless, and reading it in the order
+ * it is matched is one less thing to hold in mind.
+ */
 export const routes: RouteObject[] = [
   { index: true, element: <ReconcileQueuePage /> },
   { path: 'merchants', element: <MerchantLensPage /> },
   { path: 'receipts', element: <ReceiptDropZonePage /> },
+  { path: ':purchaseId', element: <PurchaseDetailPage /> },
 ];

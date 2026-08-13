@@ -163,7 +163,13 @@ interface UseSearchInputDataArgs {
 
 interface UseSearchInputDataResult {
   sections: SearchResultSection[];
-  orderedUris: string[];
+  /**
+   * Every hit in the order the panel paints them, so an index off the keyboard
+   * selects the same hit a click on that row would — whole, rather than the
+   * URI alone. A hit whose route lives in its `data` is unreachable from a
+   * bare URI, which made the keyboard path resolve less than the mouse one.
+   */
+  orderedHits: SearchResultHit[];
   handleShowMore: (domain: string) => Promise<void>;
 }
 
@@ -181,10 +187,7 @@ export function useSearchInputData({
   });
 
   const sections = useMemo(() => buildSections(searchData?.sections), [searchData]);
-  const orderedUris = useMemo(
-    () => sortSections(sections).flatMap((s) => s.hits.map((h) => h.uri)),
-    [sections]
-  );
+  const orderedHits = useMemo(() => sortSections(sections).flatMap((s) => s.hits), [sections]);
 
   /**
    * The orchestrator has no pagination endpoint yet, so there is nothing more
@@ -194,5 +197,5 @@ export function useSearchInputData({
    */
   const handleShowMore = useCallback((_domain: string): Promise<void> => Promise.resolve(), []);
 
-  return { sections, orderedUris, handleShowMore };
+  return { sections, orderedHits, handleShowMore };
 }

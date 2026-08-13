@@ -137,9 +137,38 @@ one. The page reads the code rather than the HTTP status and renders any of
 them as an ordinary outcome. The 409 body carries no purchase, only its id
 inside the message, which is shown as sent.
 
-**There is no purchase to open.** Nothing in this app renders a single
-purchase, so the created panel names that absence instead of offering a link
-to a route that does not exist (POPS-1948).
+**The created panel opens the order it recorded.** The reader's next question
+after "it was read" is always "read as what", and that is the order page.
+
+## One order
+
+`/purchases/:purchaseId` renders `GET /purchases/{id}` whole: the order's
+identity, its accounting split, its lines with their tags, units and notes,
+its charges with their allocations and links, its deliveries, its documents
+and its tags. It is the destination the rest of this app was missing — the
+queue, the drop zone and a global-search hit each produce a purchase id, and
+each was a dead end while nothing rendered one.
+
+**It carries no rail entry.** Every other route in this app is somewhere a
+reader can go from nothing; an order is only reachable from something that
+already holds its id, so a nav item pointing here could not be built.
+
+**A line-item search hit lands here at `?item=<id>`.** A line has no page of
+its own — the pillar reads one only through its order — so the order is the
+page a line has, and the query names which line was asked for. The line is
+marked rather than the page being filtered to it: the reader asked about a
+line and is being shown the order, and hiding the rest would answer a question
+they did not ask. A line the order no longer carries marks nothing and costs
+nothing.
+
+**A missing order is not a failure.** `404` renders as "no such order", with
+no retry button, because the request worked and the answer was that the order
+is gone. Only the other failures get a retry.
+
+**Nothing on this page follows a cross-pillar URI.** A linked transaction, an
+inventory unit and a document are rendered as the `pops://` references they
+are. This app resolves nothing across that seam, and a link that 404s reads as
+a broken page rather than as a reference to something living elsewhere.
 
 ## Layout
 
@@ -149,6 +178,7 @@ src/
   manifest.ts                      ModuleManifest (id='purchases')
   routes.tsx                       route table + navConfig
   money.ts                         cents → currency string, degrading on an unknown code
+  facts.tsx                        one labelled value, saying what its absence means
   purchases-api/                   generated Hey API client (do not hand-edit)
   purchases-api-helpers.ts         unwrap() for the generated {data,error} results
   purchases-api-runtime-config.ts  client baseUrl ('/purchases-api')
@@ -176,6 +206,15 @@ src/
       PeriodPicker.tsx             all time, or a year
       AttributionLegend.tsx        what each grouping badge means and costs
       AbsentDrillDown.tsx          the layers with no route behind them
+    PurchaseDetailPage.tsx         /purchases/:purchaseId — one order, whole
+    purchase-detail/
+      types.ts                     view types aliased off the generated client
+      usePurchaseDetail.ts         GET /purchases/{id}, and the 404 that is not a failure
+      OrderIdentity.tsx            who, when, how it arrived, how it settles
+      AccountingSplit.tsx          total · matched · awaiting · unexplained · refunded · net
+      LineList.tsx                 the lines, their tags, units and notes
+      ChargeList.tsx               charges, their allocations and their transaction links
+      DeliveryList.tsx             deliveries, and the documents behind the order
     ReceiptDropZonePage.tsx        /purchases/receipts — hand a receipt over
     receipts/
       types.ts                     view types aliased off the generated client

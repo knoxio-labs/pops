@@ -8,6 +8,7 @@
  */
 import { beforeEach, afterEach, describe, expect, it } from 'vitest';
 
+import { buildPurchasesManifest } from '../../api/manifest.js';
 import { createPurchase, searchPurchases } from '../index.js';
 import { amazonOrder, openTempDb, seedAmazonSource } from './helpers.js';
 
@@ -129,6 +130,47 @@ describe('the line-item adapter', () => {
     expect(itemHits).toHaveLength(1);
     expect(itemHits[0]?.matchType).toBe('exact');
     expect(itemHits[0]?.matchField).toBe('name');
+  });
+});
+
+/**
+ * A hit is only useful if something can act on the URI it carries, and two
+ * separate declarations stand between an emitted URI and a shell that opens
+ * it: the manifest's `uri.types`, and `URI_ROUTE_MAP` in `libs/navigation`.
+ * This pins the first — the second is pinned in `pillars/purchases/app`, which
+ * is the package that can see the routes.
+ */
+describe('the URI every hit carries', () => {
+  function typesEmittedFor(text: string): string[] {
+    const types = searchPurchases(opened.db, text).map((hit) => {
+      const [, path = ''] = hit.uri.split('pops:');
+      const segments = path.split('/');
+      return `${segments[0] ?? ''}/${segments[1] ?? ''}`;
+    });
+    return [...new Set(types)].toSorted();
+  }
+
+  it('names a type the manifest declares, for every adapter', () => {
+    orderWithItems('a', 'Amazon', [{ name: 'Amazon Basics cable' }]);
+
+    const emitted = typesEmittedFor('amazon');
+
+    expect(emitted).toEqual(['purchases/purchase', 'purchases/purchase-item']);
+    for (const type of emitted) {
+      expect(buildPurchasesManifest('0.1.0').uri.types).toContain(type);
+    }
+  });
+
+  // ADR-012's id segment is one row's primary key, so a line's URI addresses
+  // the line. The order it opens travels in `data`, asserted above.
+  it('addresses the line itself, not the order it hangs off', () => {
+    const purchaseId = orderWithItems('a', 'Amazon', [{ name: 'Dosing funnel' }]);
+
+    const itemHit = searchPurchases(opened.db, 'dosing').find((hit) =>
+      hit.uri.includes('/purchase-item/')
+    );
+
+    expect(itemHit?.uri).not.toContain(purchaseId);
   });
 });
 
