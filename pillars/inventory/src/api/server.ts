@@ -15,7 +15,6 @@
  */
 import { bootstrapPillar, type PillarBootstrapHandle } from '@pops/pillar-sdk/bootstrap';
 import { resolveSelfBaseUrl } from '@pops/pillar-sdk/pillar-env';
-import { resolveApiKey, SERVER_SDK_API_KEY_ENV } from '@pops/pillar-sdk/server';
 
 import { openInventoryDb } from '../db/index.js';
 import { createInventoryApiApp } from './app.js';
@@ -57,17 +56,6 @@ const server = app.listen(port, () => {
 
 const reconcileIntervalMs = resolveReconcileIntervalMs();
 
-// The reconciler reaches finance and the registry through the server SDK,
-// which authenticates every outbound call with a service-account key. Without
-// one it can still run, but every probe fails to authenticate and no column is
-// ever stamped — silence that would otherwise read as "every reference
-// resolves". Say so once, loudly, at boot.
-if (resolveApiKey() === undefined) {
-  console.error(
-    `[inventory-api] no ${SERVER_SDK_API_KEY_ENV} configured: cross-pillar reconciliation cannot authenticate, so every *_stale_at column stays null until a service-account key is provisioned`
-  );
-}
-
 /**
  * Soft-URI reconciliation cron: resolves `home_inventory.purchase_transaction_uri`
  * and `home_inventory.owner_uri` against their owning pillars and stamps the
@@ -77,7 +65,8 @@ if (resolveApiKey() === undefined) {
  * writes nothing — only a 404 stamps, everything else is left for the next
  * tick — whereas gating the worker would leave every `stale_at` permanently
  * null, which reads as "every reference resolves" and is the exact failure
- * this cron exists to end.
+ * this cron exists to end. A tick with no URIs to resolve is silent and calls
+ * nobody.
  */
 const reconcileUriWorker = startCrossPillarReconciliationWorker({
   db: inventoryDb.db,

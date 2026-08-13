@@ -199,8 +199,55 @@ describe('runReconciliation — happy-path', () => {
     expect(after.ownerStaleAt).toBeNull();
     expect(info).toHaveBeenCalledWith(
       'inventory cross-pillar reconciliation complete',
-      expect.objectContaining({ ok: 2 })
+      expect.objectContaining({ ok: 2, purchaseTransactionUris: 1, ownerUris: 1 })
     );
+  });
+
+  it("reports each leg's work-set size so an empty leg is visibly empty", async () => {
+    seedRow({ id: 'row-1c', purchaseTransactionUri: 'pops://finance/transaction/tx-1c' });
+    const info = vi.fn();
+
+    await runReconciliation({
+      db: inventoryDb.db,
+      proxies: {
+        finance: makeFinanceProxy({ 'tx-1c': {} }),
+        registry: makeRegistryProxy({}),
+      },
+      logger: { info },
+    });
+
+    expect(info).toHaveBeenCalledWith(
+      'inventory cross-pillar reconciliation complete',
+      expect.objectContaining({ purchaseTransactionUris: 1, ownerUris: 0 })
+    );
+  });
+});
+
+describe('runReconciliation — no work', () => {
+  it('says nothing and calls no pillar when both legs are empty', async () => {
+    const finance = makeFinanceProxy({});
+    const registry = makeRegistryProxy({});
+    const info = vi.fn();
+
+    const counters = await runReconciliation({
+      db: inventoryDb.db,
+      proxies: { finance, registry },
+      logger: { info },
+    });
+
+    expect(counters).toEqual({ ok: 0, notFound: 0, unavailable: 0, badUri: 0 });
+    expect(info).not.toHaveBeenCalled();
+    expect(finance.callDynamic).not.toHaveBeenCalled();
+    expect(registry.callDynamic).not.toHaveBeenCalled();
+  });
+
+  it('needs no proxies at all when there is nothing to resolve', async () => {
+    await expect(runReconciliation({ db: inventoryDb.db })).resolves.toEqual({
+      ok: 0,
+      notFound: 0,
+      unavailable: 0,
+      badUri: 0,
+    });
   });
 });
 
