@@ -16,16 +16,29 @@
  *     non-numeric Paperless id, say). Ops-visible; the row is preserved,
  *     because a bad reference is a data problem to look at rather than a
  *     resolution failure to record.
- *   - everything else — unavailable, unauthorized, degraded, conflict, a
- *     contract mismatch. All transient or operational from this side, so
- *     the flag is left exactly as it was and retried next tick.
+ *   - `unauthorized` (HTTP 401/403) — the callee refused this pillar's
+ *     service-account credential. Ops-visible and counted separately,
+ *     because it will not clear on its own: it wants a grant widened or an
+ *     account restored, not a retry. The row is preserved.
+ *   - everything else — unavailable, degraded, conflict, a contract
+ *     mismatch. All transient or operational from this side, so the flag is
+ *     left exactly as it was and retried next tick.
  *
- * `unauthorized` and `contract-mismatch` are not obviously transient, but
- * treating them as `unavailable` is the safe reading: a purchases pillar
- * that cannot authenticate to inventory knows nothing about whether the
- * item exists, and guessing "gone" would mark real references stale.
+ * `contract-mismatch` is not obviously transient, but treating it as
+ * `unavailable` is the safe reading: a purchases pillar that cannot address
+ * inventory knows nothing about whether the item exists, and guessing "gone"
+ * would mark real references stale. That reasoning is what kept
+ * `unauthorized` here too, until purchases started sending a credential —
+ * one that is refused is now a fact about this pillar's own configuration
+ * and is reported as such.
  */
-import { isOk, pillar, type CallResult } from '@pops/pillar-sdk/client';
+import { isOk, type CallResult, type PillarHandle } from '@pops/pillar-sdk/server';
+
+import {
+  credentialledPillar,
+  NO_CREDENTIAL_REASON,
+  UNAUTHORIZED_REASON,
+} from '../pillars/outbound.js';
 
 import type { ReconcileLookupFn, ReconcileLookupResult } from './reconcile-cross-pillar.js';
 
@@ -49,6 +62,7 @@ function classify(result: CallResult<unknown>): ReconcileLookupResult {
     case 'bad-request':
       return { kind: 'bad-uri', reason: result.message ?? 'bad-request' };
     case 'unauthorized':
+      return { kind: 'unauthorized', reason: UNAUTHORIZED_REASON };
     case 'unavailable':
     case 'degraded':
     case 'contract-mismatch':
@@ -57,14 +71,35 @@ function classify(result: CallResult<unknown>): ReconcileLookupResult {
   }
 }
 
+/**
+ * One leg's adapter: resolve a credentialled handle per call, then fold the
+ * answer.
+ *
+ * The handle is built per call rather than once at construction because
+ * `pillar()` from `@pops/pillar-sdk/server` refuses to build one without a
+ * service-account key — constructing eagerly would move a missing key from a
+ * degraded cron to a pillar that will not boot.
+ *
+ * @param pillarId Registry id of the pillar that owns the reference.
+ * @param call Issues the get-by-id request against that pillar's handle.
+ */
+function lookupVia<THandle>(
+  pillarId: string,
+  call: (handle: PillarHandle<THandle>, id: string) => Promise<CallResult<unknown>>
+): ReconcileLookupFn {
+  return async (id: string): Promise<ReconcileLookupResult> => {
+    const handle = credentialledPillar<THandle>(pillarId);
+    if (handle === null) return { kind: 'unauthorized', reason: NO_CREDENTIAL_REASON };
+    return classify(await call(handle, id));
+  };
+}
+
 /** Resolve `pops://inventory/item/<id>` via `GET /items/:id` on the inventory pillar. */
 export function createInventoryItemLookup(): ReconcileLookupFn {
-  return async (id: string): Promise<ReconcileLookupResult> =>
-    classify(await pillar<InventoryHandle>('inventory').items.get({ id }));
+  return lookupVia<InventoryHandle>('inventory', (handle, id) => handle.items.get({ id }));
 }
 
 /** Resolve `pops://documents/document/<id>` via `GET /paperless/documents/:id` on the documents pillar. */
 export function createDocumentLookup(): ReconcileLookupFn {
-  return async (id: string): Promise<ReconcileLookupResult> =>
-    classify(await pillar<DocumentsHandle>('documents').paperless.get({ id }));
+  return lookupVia<DocumentsHandle>('documents', (handle, id) => handle.paperless.get({ id }));
 }

@@ -24,6 +24,13 @@
 # would be admitted — purchases still serves an anonymous caller — which is
 # exactly the hole this script must not sit in.
 #
+# That key is this script's own inbound credential and is separate from the
+# one purchases-api itself sends outbound: the compose service mounts
+# `secrets/pops_purchases_api_key` for that (provisioning:
+# infra/secrets.example/purchases/README.md). Compose refuses to start a
+# service whose secret file is absent, so the `up` below is where a host that
+# has never provisioned it finds out.
+#
 # Exit 0 = purchases reconciled a real order against a real finance
 # transaction across the network. Exit 1 = it did not, with the reason.
 

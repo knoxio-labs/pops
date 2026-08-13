@@ -10,8 +10,14 @@
  * dependency on the producer. It departs from that template in exactly one
  * way, and the departure is the point: see {@link CandidateFetch}.
  */
-import { isOk, pillar, type CallResult, type PillarHandle } from '@pops/pillar-sdk/client';
+import { isOk, type CallResult, type PillarHandle } from '@pops/pillar-sdk/server';
 
+import {
+  credentialledPillar,
+  credentialRejectedMessage,
+  NO_CREDENTIAL_REASON,
+  UNAUTHORIZED_REASON,
+} from '../pillars/outbound.js';
 import {
   FinanceListResponseSchema,
   toCandidateTransaction,
@@ -67,6 +73,11 @@ export type FinanceRouter = {
  * "Finance is unreachable" and "the window is genuinely empty" must
  * therefore be different values, not the same empty array. A sweep that
  * receives `unavailable` must do nothing at all and try again later.
+ *
+ * `reason` is where the *why* lives, and a credential problem is named
+ * there rather than folded in: `unauthorized` and `no-credential` mean the
+ * sweep will keep writing nothing until an operator acts, which is not
+ * something waiting fixes.
  */
 export type CandidateFetch =
   | { readonly kind: 'ok'; readonly transactions: readonly CandidateTransaction[] }
@@ -95,6 +106,13 @@ export interface FinanceClient {
   fetchCandidates(query: CandidateQuery): Promise<CandidateFetch>;
 }
 
+/**
+ * How a handle is obtained per sweep. `null` means this process has no
+ * service-account key, which is a configuration answer rather than a
+ * transport one — see {@link credentialledPillar}.
+ */
+export type FinanceHandleFactory = () => PillarHandle<FinanceRouter> | null;
+
 /** Test-only knobs; production takes the module defaults. */
 export interface FinanceClientOptions {
   /** Override the paging safety cap (default {@link MAX_PAGES}). */
@@ -102,13 +120,17 @@ export interface FinanceClientOptions {
 }
 
 export function createFinanceClient(
-  handleFactory: () => PillarHandle<FinanceRouter> = () => pillar<FinanceRouter>(FINANCE_PILLAR_ID),
+  handleFactory: FinanceHandleFactory = () => credentialledPillar<FinanceRouter>(FINANCE_PILLAR_ID),
   options: FinanceClientOptions = {}
 ): FinanceClient {
   const maxPages = options.maxPages ?? MAX_PAGES;
   return {
     fetchCandidates(query: CandidateQuery): Promise<CandidateFetch> {
-      return pageThroughTransactions(handleFactory(), query, maxPages);
+      const handle = handleFactory();
+      if (handle === null) {
+        return Promise.resolve({ kind: 'unavailable', reason: NO_CREDENTIAL_REASON });
+      }
+      return pageThroughTransactions(handle, query, maxPages);
     },
   };
 }
@@ -158,6 +180,13 @@ type ReadPageResult =
  */
 function readPage(result: CallResult<unknown>): ReadPageResult {
   if (!isOk(result)) {
+    // A refusal is reported once here rather than left to the sweep's
+    // `skipped` line: that line says a window was not reconciled, and an
+    // operator reading it cannot tell a finance outage from a grant that
+    // never included `finance.transactions`.
+    if (result.kind === UNAUTHORIZED_REASON) {
+      console.error(credentialRejectedMessage(FINANCE_PILLAR_ID, 'transactions.list'));
+    }
     return { kind: 'unavailable', reason: result.kind };
   }
 
