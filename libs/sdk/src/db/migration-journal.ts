@@ -41,7 +41,13 @@ export function journalPath(migrationsFolder: string): string {
 }
 
 /**
- * Parse `migrations/meta/_journal.json`, ordered oldest entry first.
+ * Parse `migrations/meta/_journal.json`, in the order drizzle applies it.
+ *
+ * That order is the array's, NOT the timestamps' — and the two differ in this
+ * repo. Finance's journal opens with `0053_finance_pillar_baseline`, whose
+ * `when` is newer than the `0025`–`0052` entries that follow it, because the
+ * baseline CREATEs the tables they ALTER. Sorting by `when` here would stage a
+ * folder that fails on its second statement.
  *
  * @throws When the file is missing or does not carry the fields the migrator
  *   needs — both are deploy-time misconfigurations that must not be swallowed
@@ -49,7 +55,7 @@ export function journalPath(migrationsFolder: string): string {
  */
 export function readMigrationJournal(migrationsFolder: string): MigrationJournalEntry[] {
   const raw: unknown = JSON.parse(readFileSync(journalPath(migrationsFolder), 'utf8'));
-  return [...journalSchema.parse(raw).entries].sort((a, b) => a.when - b.when);
+  return [...journalSchema.parse(raw).entries];
 }
 
 /**

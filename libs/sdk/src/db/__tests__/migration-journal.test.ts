@@ -46,9 +46,13 @@ afterEach(() => {
 });
 
 describe('readMigrationJournal', () => {
-  it('returns entries oldest first, keeping the fields drizzle reads', () => {
-    const folder = writeJournal([ENTRIES[2], ENTRIES[0], ENTRIES[1]]);
-    expect(readMigrationJournal(folder)).toEqual(ENTRIES);
+  it('preserves the array order drizzle applies in, not the timestamp order', () => {
+    // Finance's journal really is out of timestamp order: its baseline entry
+    // is newer than the entries after it, because they ALTER what it CREATEs.
+    // Re-sorting here would stage a folder that fails on its second statement.
+    const outOfOrder = [ENTRIES[2], ENTRIES[0], ENTRIES[1]];
+    const folder = writeJournal(outOfOrder);
+    expect(readMigrationJournal(folder)).toEqual(outOfOrder);
   });
 
   it('throws on a journal missing the timestamp the migrator orders by', () => {
