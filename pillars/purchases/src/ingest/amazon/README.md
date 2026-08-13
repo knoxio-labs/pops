@@ -92,8 +92,10 @@ cd pillars/purchases && pnpm ingest:amazon -- "<bundle-root>" --dry-run
 `<bundle-root>` is the unzipped bundle's top directory — the one that _contains_ `Your Amazon Orders/`, not that folder itself. Amazon names it `Your Orders`, so the path usually ends in it:
 
 ```bash
-pnpm ingest:amazon -- ~/Downloads/"Your Orders"
+POPS_INTERNAL_API_KEY=<key> pnpm ingest:amazon -- ~/Downloads/"Your Orders"
 ```
+
+A real run writes through `POST /purchases`, which is behind the inbound service-account gate, so it needs a key whose account grants `purchases.source` and `purchases.purchase`; the run aborts before its first request without one. The `--dry-run` above needs no key — it parses and reports, and never calls the pillar.
 
 `Your Returns & Refunds/Refund Details.csv` is read from the same root. A bundle from an account that never returned anything does not carry it, and its absence is reported and tolerated; a file that exists and cannot be read is not, because proceeding would land every refunded order at its full total.
 

@@ -5,13 +5,68 @@
  * `/purchases` — the same endpoint every other writer uses, so a backfill
  * exercises the real validation, dedup and write path rather than a private
  * shortcut into the database.
+ *
+ * Every one of those requests carries a service-account key. Purchases admits
+ * an uncredentialled caller, so an absent key would ingest anonymously rather
+ * than fail — which is why {@link createIngestClient} refuses to build a client
+ * without one, and why nothing here takes a bare base URL any more. A caller
+ * that presents a key is held to that account's grant (ADR-044), so the
+ * account a backfill runs as needs `purchases.source` and `purchases.purchase`
+ * or the first request is a 403.
  */
 import type { CreatePurchaseInput } from '../src/db/services/purchase-input.js';
 
 export const DEFAULT_BASE_URL = 'http://localhost:3013';
 
-export function baseUrlFromEnv(): string {
-  return process.env.PURCHASES_BASE_URL ?? DEFAULT_BASE_URL;
+/**
+ * The fleet-wide service-account key variable, the same one the server SDK
+ * reads (`libs/sdk/src/server/config.ts`).
+ */
+export const INGEST_API_KEY_ENV = 'POPS_INTERNAL_API_KEY';
+
+/** Where a backfill writes, and who it writes as. */
+export interface IngestClient {
+  readonly baseUrl: string;
+  readonly apiKey: string;
+}
+
+/**
+ * Resolve the ingest target from the environment.
+ *
+ * @param env Process environment to read; injectable for tests.
+ * @throws When no key is configured. Deliberately fatal rather than
+ *   defaulting to an anonymous call: an anonymous backfill is admitted today,
+ *   so falling back would silently exempt the CLI from the gate it is meant to
+ *   pass, and would keep working right up until `requireCredential` flips.
+ */
+export function createIngestClient(env: NodeJS.ProcessEnv = process.env): IngestClient {
+  const apiKey = env[INGEST_API_KEY_ENV]?.trim() ?? '';
+  if (apiKey === '') {
+    throw new Error(
+      `no service-account key: set ${INGEST_API_KEY_ENV} to a key whose account is granted ` +
+        'purchases.source and purchases.purchase. Ingesting without one would write as an ' +
+        'anonymous caller, which purchases still admits.'
+    );
+  }
+  const baseUrl = env['PURCHASES_BASE_URL']?.trim() ?? '';
+  return { apiKey, baseUrl: baseUrl === '' ? DEFAULT_BASE_URL : baseUrl };
+}
+
+/**
+ * The one place a backfill request is built, so the credential cannot be
+ * dropped from one call site and kept on another.
+ */
+function ingestFetch(
+  client: IngestClient,
+  path: string,
+  method: 'POST' | 'PUT',
+  body: unknown
+): Promise<Response> {
+  return fetch(`${client.baseUrl}${path}`, {
+    method,
+    headers: { 'content-type': 'application/json', 'x-api-key': client.apiKey },
+    body: JSON.stringify(body),
+  });
 }
 
 /** Anomalies are counted by kind: a per-line dump buries the shape of them. */
@@ -39,13 +94,12 @@ export interface SourceRegistration {
   readonly ingestAdapter: string;
 }
 
-export async function upsertSource(baseUrl: string, source: SourceRegistration): Promise<void> {
+export async function upsertSource(
+  client: IngestClient,
+  source: SourceRegistration
+): Promise<void> {
   const { id, ...body } = source;
-  const response = await fetch(`${baseUrl}/sources/${id}`, {
-    method: 'PUT',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(body),
-  });
+  const response = await ingestFetch(client, `/sources/${id}`, 'PUT', body);
   if (!response.ok) {
     throw new Error(
       `could not register the ${id} source (${String(response.status)}): ${await response.text()}`
@@ -60,7 +114,7 @@ export interface BackfillOutcome {
 }
 
 export async function postPurchases(
-  baseUrl: string,
+  client: IngestClient,
   purchases: readonly CreatePurchaseInput[]
 ): Promise<BackfillOutcome> {
   let created = 0;
@@ -68,11 +122,7 @@ export async function postPurchases(
   const failures: string[] = [];
 
   for (const purchase of purchases) {
-    const response = await fetch(`${baseUrl}/purchases`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(purchase),
-    });
+    const response = await ingestFetch(client, '/purchases', 'POST', purchase);
 
     if (response.status === 201) created += 1;
     // A checksum or (source, orderId) that already exists. Re-running a

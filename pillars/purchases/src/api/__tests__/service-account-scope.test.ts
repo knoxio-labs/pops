@@ -7,12 +7,13 @@
  * does not cover the operation, and a live credential that does. Plus the one
  * that decides whether it fails closed: a registry that cannot be reached.
  *
- * The no-credential case is the load-bearing one here, not a formality. Three
- * uncredentialled callers carry the pillar's ingest paths — the ingest CLI,
- * the operator smoke script, `two-process.test.ts` — so "an uncredentialled
- * request still reaches the handler" is the assertion that they survived this
- * change. The credentialled cases now have real callers too: the MCP tools and
- * the orchestrator's federated search both present a key.
+ * The no-credential case is the load-bearing one here, not a formality. Two
+ * uncredentialled callers remain — browser traffic through the shell's nginx,
+ * and `two-process.test.ts` — so "an uncredentialled request still reaches the
+ * handler" is the assertion that they survived this change. The credentialled
+ * cases have real callers too: the MCP tools, the orchestrator's federated
+ * search, and the ingest CLI and operator smoke script, which used to be on
+ * the list above and now send a key of their own.
  */
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -95,7 +96,7 @@ describe('the purchases scope map', () => {
 });
 
 describe('a request with no credential', () => {
-  it('reads without one — the ingest CLI and the smoke script present none', async () => {
+  it('reads without one — browser traffic through the shell presents none', async () => {
     const verify = vi.fn(verifierReturning({ outcome: 'rejected' }));
     const response = await request(app(verify)).get('/purchases');
 
@@ -103,7 +104,7 @@ describe('a request with no credential', () => {
     expect(verify).not.toHaveBeenCalled();
   });
 
-  it('writes without one — this is the only real data path the pillar has', async () => {
+  it('writes without one — the two-process test drives this path with no key', async () => {
     const verify = vi.fn(verifierReturning({ outcome: 'rejected' }));
     const response = await request(app(verify)).post('/purchases').send(newOrder);
 

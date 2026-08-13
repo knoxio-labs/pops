@@ -15,7 +15,14 @@
 # built and containers up, which is minutes rather than milliseconds, and a
 # suite that slow stops being run.
 #
-#   ./infra/smoke/purchases-reconcile.sh
+#   POPS_INTERNAL_API_KEY=<key> ./infra/smoke/purchases-reconcile.sh
+#
+# The key is a service account minted in the registry, and it is required:
+# purchases holds a caller presenting one to that account's grant (ADR-044),
+# so the account this runs as needs `purchases.source` and
+# `purchases.purchase` or the ingest below is a 403. Running without a key
+# would be admitted — purchases still serves an anonymous caller — which is
+# exactly the hole this script must not sit in.
 #
 # Exit 0 = purchases reconciled a real order against a real finance
 # transaction across the network. Exit 1 = it did not, with the reason.
@@ -25,6 +32,10 @@ set -euo pipefail
 COMPOSE_FILE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/docker-compose.yml"
 SERVICES=(registry-api finance-api purchases-api)
 KEEP_UP="${KEEP_UP:-0}"
+# Trimmed before it is checked, so a key that is only whitespace fails the
+# guard below rather than being sent as one — matching what the ingest CLI
+# does, and keeping "refuses to start without one" true for both callers.
+API_KEY="$(printf '%s' "${POPS_INTERNAL_API_KEY:-}" | tr -d '[:space:]')"
 
 # Unique per run so a re-run is not a 409 against the previous run's data.
 STAMP="$(date +%s)"
@@ -36,6 +47,10 @@ TXN_DATE="$(date -u +%Y-%m-%d)"
 
 log() { printf '\n\033[1m▸ %s\033[0m\n' "$*"; }
 fail() { printf '\n\033[31m✗ %s\033[0m\n' "$*" >&2; exit 1; }
+
+if [[ -z "$API_KEY" ]]; then
+  fail "set POPS_INTERNAL_API_KEY to a service-account key granted purchases.source and purchases.purchase"
+fi
 
 cleanup() {
   if [[ "$KEEP_UP" == "1" ]]; then
@@ -50,7 +65,14 @@ trap cleanup EXIT
 # Run a command inside the purchases container. Every call below goes
 # through the Docker network rather than a published port, because the
 # network is part of what is under test.
-in_purchases() { docker compose -f "$COMPOSE_FILE" exec -T purchases-api "$@"; }
+#
+# The key travels as an environment variable rather than interpolated into
+# the `node -e` source below, so it does not land in the container's process
+# arguments.
+in_purchases() {
+  docker compose -f "$COMPOSE_FILE" exec -T \
+    -e "POPS_INTERNAL_API_KEY=$API_KEY" purchases-api "$@"
+}
 
 wait_for_health() {
   local service="$1" url="$2" attempts=60
@@ -114,11 +136,18 @@ in_purchases node -e "
 " || fail "could not seed a finance transaction"
 
 log "Registering the smoke source and ingesting an order"
+# Only the purchases calls carry the key. The finance seed above stays
+# uncredentialled because this account is granted purchases scopes, and a key
+# presented to finance is held to a grant it does not have.
 in_purchases node -e "
   const base = 'http://localhost:3013';
+  const headers = {
+    'content-type': 'application/json',
+    'x-api-key': process.env.POPS_INTERNAL_API_KEY,
+  };
   const put = fetch(base + '/sources/smoke', {
     method: 'PUT',
-    headers: { 'content-type': 'application/json' },
+    headers,
     body: JSON.stringify({
       label: 'Smoke',
       descriptorPattern: 'AMAZON%',
@@ -131,7 +160,7 @@ in_purchases node -e "
       if (!r.ok) throw new Error('source upsert failed: ' + r.status + ' ' + (await r.text()));
       return fetch(base + '/purchases', {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers,
         body: JSON.stringify({
           source: 'smoke',
           sourceOrderId: '${ORDER_ID}',
@@ -157,13 +186,14 @@ log "Waiting for the sweep to reconcile it"
 # network path, not the timer.
 in_purchases node -e "
   const base = 'http://localhost:3013';
+  const headers = { 'x-api-key': process.env.POPS_INTERNAL_API_KEY };
   const deadline = Date.now() + 120000;
 
   async function poll() {
-    const list = await (await fetch(base + '/purchases?limit=500')).json();
+    const list = await (await fetch(base + '/purchases?limit=500', { headers })).json();
     const found = (list.items ?? []).find((p) => p.sourceOrderId === '${ORDER_ID}');
     if (!found) throw new Error('the ingested order is not listed');
-    const detail = await (await fetch(base + '/purchases/' + found.id)).json();
+    const detail = await (await fetch(base + '/purchases/' + found.id, { headers })).json();
     return detail;
   }
 

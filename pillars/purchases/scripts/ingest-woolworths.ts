@@ -1,7 +1,11 @@
 /**
  * Backfill an Everyday Rewards export through `POST /purchases`.
  *
- *   pnpm ingest:woolworths -- ~/Downloads/everyday-receipts-2026-08-07.json [--dry-run]
+ *   POPS_INTERNAL_API_KEY=<key> pnpm ingest:woolworths -- \
+ *     ~/Downloads/everyday-receipts-2026-08-07.json [--dry-run]
+ *
+ * The key is required for a real run and unused by `--dry-run`, which parses
+ * and prints without making a request.
  *
  * The file comes from the Chrome extension in `extension/`; Woolworths
  * offers no export of its own. It contains the EFTPOS terminal block
@@ -12,7 +16,7 @@ import { readFileSync } from 'node:fs';
 
 import { parseWoolworthsExport, WOOLWORTHS_SOURCE_ID } from '../src/ingest/woolworths/index.js';
 import {
-  baseUrlFromEnv,
+  createIngestClient,
   postPurchases,
   reportOutcome,
   summariseAnomalies,
@@ -48,8 +52,8 @@ async function main(): Promise<void> {
     return;
   }
 
-  const baseUrl = baseUrlFromEnv();
-  await upsertSource(baseUrl, {
+  const client = createIngestClient();
+  await upsertSource(client, {
     id: WOOLWORTHS_SOURCE_ID,
     label: 'Woolworths',
     // `WOOLWORTHS 1034 CANTERBURY`, `WOOLWORTHS ONLINE`, `WW METRO ...` all
@@ -65,7 +69,7 @@ async function main(): Promise<void> {
     ingestAdapter: 'everyday-rewards-export',
   });
 
-  reportOutcome(await postPurchases(baseUrl, purchases));
+  reportOutcome(await postPurchases(client, purchases));
 }
 
 await main();
