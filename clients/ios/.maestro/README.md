@@ -43,6 +43,10 @@ drove all of them.
 flow runs without anything being added anywhere — and an empty glob fails the
 lane rather than passing it having driven nothing.
 
+That glob is one directory deep, which is what keeps `subflows/` out of it.
+Everything in there is called through `runFlow` and takes values from its
+caller, so driven on its own it would fail on the ones nobody passed it.
+
 ## Why Maestro and not XCUITest
 
 Decided 2026-08-10. Recorded here so it is not reopened every time someone
@@ -107,6 +111,25 @@ element is absent, which a screen mid-transition always is, so a negative
 assertion is worth only as much as the positive one in front of it. Every
 `assertNotVisible` here sits behind an `assertVisible` that settles the screen
 first; moving one above it turns it into a line that cannot fail.
+
+**Typing does not wait either, and that is the sharper edge of the same rule.**
+`inputText` is not addressed to a field: it types into whatever holds keyboard
+focus, and `tapOn` returns once the tap has been delivered rather than once the
+tapped field has become first responder. On a loaded machine the keystrokes can
+arrive first, and iOS drops them — both commands report `COMPLETED`, the field
+keeps what it already held, and the flow fails much later on something that
+reads like an unrelated bug. This is not hypothetical: it is what
+`expired-session-refreshes-silently.yaml` failed on in the merge queue, as a
+`transactions-list` that was never going to appear, because the server field
+still held the Debug prefill and pairing had dialled a port nothing was
+listening on.
+
+So the pairing preamble lives in `subflows/enter-the-pairing-details.yaml`,
+where every field's value is asserted after it is typed and the typing is
+retried until it lands. Anything else that types into this app should do the
+same. Maestro's `focused` selector looks like the signal to wait on and is not:
+it is mapped from XCUITest's `hasFocus`, the focus engine's notion, which reads
+false on a SwiftUI `TextField` that is holding the keyboard.
 
 The rows the flows expect come from `scripts/ios-e2e/transactions-fixture.mjs`.
 Changing a description or an account there fails them, which is the point.

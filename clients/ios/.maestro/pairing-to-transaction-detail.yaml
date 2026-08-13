@@ -12,25 +12,12 @@ name: Pair this device, then open a transaction
 - assertVisible:
     id: 'pairing-code-field'
 
-# The Debug build prefills this with the address in project.yml. The harness
-# serves on a free port instead — scripts/ios-e2e/run.mjs says why — so the
-# prefill is erased and the real one typed, which is also the path somebody
-# pairing without a QR code takes.
-- tapOn:
-    id: 'pairing-server-field'
-- eraseText
-- inputText: ${BFM_BASE_URL}
-
-- tapOn:
-    id: 'pairing-code-field'
-- inputText: ${PAIRING_CODE}
-
-# No `hideKeyboard` first: the form is a ScrollView, so SwiftUI insets it for
-# the keyboard and the button stays on screen with the keys up. Maestro cannot
-# dismiss this keyboard anyway — there is no standard dismiss action on a plain
-# SwiftUI TextField, and it says so and fails.
-- tapOn:
-    id: 'pairing-submit'
+# The pillar directly, not the control plane: this flow throws no switches, so
+# it has nothing to reach into and dials what a real phone would.
+- runFlow:
+    file: subflows/enter-the-pairing-details.yaml
+    env:
+      SERVER_URL: ${BFM_BASE_URL}
 
 # Nothing waits here. Pairing generates a key, spends the code, stores the
 # credentials and asks the BFM what to show — and every `assertVisible` below
@@ -49,7 +36,7 @@ name: Pair this device, then open a transaction
 #
 # It is also what makes the rest of this flow reliable. The banner is drawn
 # ABOVE the list, so arriving late it moves every row down and a tap already
-# aimed at one lands on nothing — twice on CI, as POPS-1835.
+# aimed at one lands on nothing — which it did, twice, on CI.
 - assertNotVisible: 'Some of Pops could not be reached, so this may be out of date.'
 
 # The seeded row, by the id the server gave it. The rows read as one sentence

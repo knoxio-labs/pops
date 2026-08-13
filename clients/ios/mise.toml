@@ -773,7 +773,10 @@ exit $status
 # THE FLOWS ARE FOUND, NOT LISTED. A list here is a list to forget, and the way
 # it is forgotten is silent: a flow nobody added runs nowhere and the job stays
 # green. The glob is checked for emptiness instead, so a directory that moved
-# fails the lane rather than passing it having driven nothing.
+# fails the lane rather than passing it having driven nothing. It is one
+# directory deep on purpose: `.maestro/subflows/` holds the pieces the flows
+# share through `runFlow`, and each of those takes values from its caller, so
+# driving one on its own would fail on the ones nobody passed it.
 #
 # IT DOES NOT START A SERVER, and that is a boundary rather than an omission.
 # ADR-043 says a client consumes the federation over HTTP and never reaches
