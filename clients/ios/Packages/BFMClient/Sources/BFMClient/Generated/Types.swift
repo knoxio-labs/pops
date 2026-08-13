@@ -46,6 +46,11 @@ internal protocol APIProtocol: Sendable {
     /// - Remark: HTTP `GET /mobile/finance/transactions/{id}`.
     /// - Remark: Generated from `#/paths//mobile/finance/transactions/{id}/get(mobileFinance.getTransaction)`.
     func mobileFinance_getTransaction(_ input: Operations.MobileFinance_getTransaction.Input) async throws -> Operations.MobileFinance_getTransaction.Output
+    /// Hand a photographed, scanned or pasted receipt to the purchases pillar
+    ///
+    /// - Remark: HTTP `POST /mobile/purchases/receipts`.
+    /// - Remark: Generated from `#/paths//mobile/purchases/receipts/post(mobilePurchases.uploadReceipt)`.
+    func mobilePurchases_uploadReceipt(_ input: Operations.MobilePurchases_uploadReceipt.Input) async throws -> Operations.MobilePurchases_uploadReceipt.Output
     /// List paired devices, revoked ones included. Never returns a token or a key
     ///
     /// - Remark: HTTP `GET /operator/devices`.
@@ -142,6 +147,19 @@ extension APIProtocol {
         try await mobileFinance_getTransaction(Operations.MobileFinance_getTransaction.Input(
             path: path,
             headers: headers
+        ))
+    }
+    /// Hand a photographed, scanned or pasted receipt to the purchases pillar
+    ///
+    /// - Remark: HTTP `POST /mobile/purchases/receipts`.
+    /// - Remark: Generated from `#/paths//mobile/purchases/receipts/post(mobilePurchases.uploadReceipt)`.
+    internal func mobilePurchases_uploadReceipt(
+        headers: Operations.MobilePurchases_uploadReceipt.Input.Headers = .init(),
+        body: Operations.MobilePurchases_uploadReceipt.Input.Body? = nil
+    ) async throws -> Operations.MobilePurchases_uploadReceipt.Output {
+        try await mobilePurchases_uploadReceipt(Operations.MobilePurchases_uploadReceipt.Input(
+            headers: headers,
+            body: body
         ))
     }
     /// List paired devices, revoked ones included. Never returns a token or a key
@@ -4442,6 +4460,1235 @@ internal enum Operations {
             /// - Throws: An error if `self` is not `.serviceUnavailable`.
             /// - SeeAlso: `.serviceUnavailable`.
             internal var serviceUnavailable: Operations.MobileFinance_getTransaction.Output.ServiceUnavailable {
+                get throws {
+                    switch self {
+                    case let .serviceUnavailable(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "serviceUnavailable",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
+        }
+        internal enum AcceptableContentType: AcceptableProtocol {
+            case json
+            case other(Swift.String)
+            internal init?(rawValue: Swift.String) {
+                switch rawValue.lowercased() {
+                case "application/json":
+                    self = .json
+                default:
+                    self = .other(rawValue)
+                }
+            }
+            internal var rawValue: Swift.String {
+                switch self {
+                case let .other(string):
+                    return string
+                case .json:
+                    return "application/json"
+                }
+            }
+            internal static var allCases: [Self] {
+                [
+                    .json
+                ]
+            }
+        }
+    }
+    /// Hand a photographed, scanned or pasted receipt to the purchases pillar
+    ///
+    /// - Remark: HTTP `POST /mobile/purchases/receipts`.
+    /// - Remark: Generated from `#/paths//mobile/purchases/receipts/post(mobilePurchases.uploadReceipt)`.
+    internal enum MobilePurchases_uploadReceipt {
+        internal static let id: Swift.String = "mobilePurchases.uploadReceipt"
+        internal struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/header`.
+            internal struct Headers: Sendable, Hashable {
+                internal var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.MobilePurchases_uploadReceipt.AcceptableContentType>]
+                /// Creates a new `Headers`.
+                ///
+                /// - Parameters:
+                ///   - accept:
+                internal init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.MobilePurchases_uploadReceipt.AcceptableContentType>] = .defaultValues()) {
+                    self.accept = accept
+                }
+            }
+            internal var headers: Operations.MobilePurchases_uploadReceipt.Input.Headers
+            /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody`.
+            internal enum Body: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json`.
+                internal struct JsonPayload: Codable, Hashable, Sendable {
+                    /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/PartsPayload`.
+                    internal struct PartsPayloadPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/PartsPayload/dataBase64`.
+                        internal var dataBase64: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/PartsPayload/mediaType`.
+                        internal enum MediaTypePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case imageJpeg = "image/jpeg"
+                            case imagePng = "image/png"
+                            case imageWebp = "image/webp"
+                            case imageGif = "image/gif"
+                            case applicationPdf = "application/pdf"
+                            case textPlain = "text/plain"
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/PartsPayload/mediaType`.
+                        internal var mediaType: Operations.MobilePurchases_uploadReceipt.Input.Body.JsonPayload.PartsPayloadPayload.MediaTypePayload
+                        /// Creates a new `PartsPayloadPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - dataBase64:
+                        ///   - mediaType:
+                        internal init(
+                            dataBase64: Swift.String,
+                            mediaType: Operations.MobilePurchases_uploadReceipt.Input.Body.JsonPayload.PartsPayloadPayload.MediaTypePayload
+                        ) {
+                            self.dataBase64 = dataBase64
+                            self.mediaType = mediaType
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case dataBase64
+                            case mediaType
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.dataBase64 = try container.decode(
+                                Swift.String.self,
+                                forKey: .dataBase64
+                            )
+                            self.mediaType = try container.decode(
+                                Operations.MobilePurchases_uploadReceipt.Input.Body.JsonPayload.PartsPayloadPayload.MediaTypePayload.self,
+                                forKey: .mediaType
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "dataBase64",
+                                "mediaType"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/parts`.
+                    internal typealias PartsPayload = [Operations.MobilePurchases_uploadReceipt.Input.Body.JsonPayload.PartsPayloadPayload]
+                    /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/parts`.
+                    internal var parts: Operations.MobilePurchases_uploadReceipt.Input.Body.JsonPayload.PartsPayload
+                    /// Creates a new `JsonPayload`.
+                    ///
+                    /// - Parameters:
+                    ///   - parts:
+                    internal init(parts: Operations.MobilePurchases_uploadReceipt.Input.Body.JsonPayload.PartsPayload) {
+                        self.parts = parts
+                    }
+                    internal enum CodingKeys: String, CodingKey {
+                        case parts
+                    }
+                    internal init(from decoder: any Swift.Decoder) throws {
+                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                        self.parts = try container.decode(
+                            Operations.MobilePurchases_uploadReceipt.Input.Body.JsonPayload.PartsPayload.self,
+                            forKey: .parts
+                        )
+                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                            "parts"
+                        ])
+                    }
+                }
+                /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/content/application\/json`.
+                case json(Operations.MobilePurchases_uploadReceipt.Input.Body.JsonPayload)
+            }
+            internal var body: Operations.MobilePurchases_uploadReceipt.Input.Body?
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - headers:
+            ///   - body:
+            internal init(
+                headers: Operations.MobilePurchases_uploadReceipt.Input.Headers = .init(),
+                body: Operations.MobilePurchases_uploadReceipt.Input.Body? = nil
+            ) {
+                self.headers = headers
+                self.body = body
+            }
+        }
+        internal enum Output: Sendable, Hashable {
+            internal struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json`.
+                    internal enum JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/case1`.
+                        internal struct Case1Payload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/case1/alreadyStored`.
+                            internal var alreadyStored: Swift.Bool
+                            /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/case1/kind`.
+                            internal enum KindPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case created = "created"
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/case1/kind`.
+                            internal var kind: Operations.MobilePurchases_uploadReceipt.Output.Ok.Body.JsonPayload.Case1Payload.KindPayload
+                            /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/case1/purchase`.
+                            internal struct PurchasePayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/case1/purchase/currency`.
+                                internal var currency: Swift.String
+                                /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/case1/purchase/id`.
+                                internal var id: Swift.String
+                                /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/case1/purchase/itemCount`.
+                                internal var itemCount: Swift.Int
+                                /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/case1/purchase/merchantName`.
+                                internal var merchantName: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/case1/purchase/orderedAt`.
+                                internal var orderedAt: Swift.String
+                                /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/case1/purchase/totalCents`.
+                                internal var totalCents: Swift.Int
+                                /// Creates a new `PurchasePayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - currency:
+                                ///   - id:
+                                ///   - itemCount:
+                                ///   - merchantName:
+                                ///   - orderedAt:
+                                ///   - totalCents:
+                                internal init(
+                                    currency: Swift.String,
+                                    id: Swift.String,
+                                    itemCount: Swift.Int,
+                                    merchantName: Swift.String? = nil,
+                                    orderedAt: Swift.String,
+                                    totalCents: Swift.Int
+                                ) {
+                                    self.currency = currency
+                                    self.id = id
+                                    self.itemCount = itemCount
+                                    self.merchantName = merchantName
+                                    self.orderedAt = orderedAt
+                                    self.totalCents = totalCents
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case currency
+                                    case id
+                                    case itemCount
+                                    case merchantName
+                                    case orderedAt
+                                    case totalCents
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.currency = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .currency
+                                    )
+                                    self.id = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .id
+                                    )
+                                    self.itemCount = try container.decode(
+                                        Swift.Int.self,
+                                        forKey: .itemCount
+                                    )
+                                    self.merchantName = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .merchantName
+                                    )
+                                    self.orderedAt = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .orderedAt
+                                    )
+                                    self.totalCents = try container.decode(
+                                        Swift.Int.self,
+                                        forKey: .totalCents
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "currency",
+                                        "id",
+                                        "itemCount",
+                                        "merchantName",
+                                        "orderedAt",
+                                        "totalCents"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/case1/purchase`.
+                            internal var purchase: Operations.MobilePurchases_uploadReceipt.Output.Ok.Body.JsonPayload.Case1Payload.PurchasePayload
+                            /// Creates a new `Case1Payload`.
+                            ///
+                            /// - Parameters:
+                            ///   - alreadyStored:
+                            ///   - kind:
+                            ///   - purchase:
+                            internal init(
+                                alreadyStored: Swift.Bool,
+                                kind: Operations.MobilePurchases_uploadReceipt.Output.Ok.Body.JsonPayload.Case1Payload.KindPayload,
+                                purchase: Operations.MobilePurchases_uploadReceipt.Output.Ok.Body.JsonPayload.Case1Payload.PurchasePayload
+                            ) {
+                                self.alreadyStored = alreadyStored
+                                self.kind = kind
+                                self.purchase = purchase
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case alreadyStored
+                                case kind
+                                case purchase
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.alreadyStored = try container.decode(
+                                    Swift.Bool.self,
+                                    forKey: .alreadyStored
+                                )
+                                self.kind = try container.decode(
+                                    Operations.MobilePurchases_uploadReceipt.Output.Ok.Body.JsonPayload.Case1Payload.KindPayload.self,
+                                    forKey: .kind
+                                )
+                                self.purchase = try container.decode(
+                                    Operations.MobilePurchases_uploadReceipt.Output.Ok.Body.JsonPayload.Case1Payload.PurchasePayload.self,
+                                    forKey: .purchase
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "alreadyStored",
+                                    "kind",
+                                    "purchase"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/case1`.
+                        case case1(Operations.MobilePurchases_uploadReceipt.Output.Ok.Body.JsonPayload.Case1Payload)
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/case2`.
+                        internal struct Case2Payload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/case2/kind`.
+                            internal enum KindPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case needsReview = "needs-review"
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/case2/kind`.
+                            internal var kind: Operations.MobilePurchases_uploadReceipt.Output.Ok.Body.JsonPayload.Case2Payload.KindPayload
+                            /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/case2/ProblemsPayload`.
+                            internal struct ProblemsPayloadPayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/case2/ProblemsPayload/code`.
+                                internal var code: Swift.String
+                                /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/case2/ProblemsPayload/detail`.
+                                internal var detail: Swift.String
+                                /// Creates a new `ProblemsPayloadPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - code:
+                                ///   - detail:
+                                internal init(
+                                    code: Swift.String,
+                                    detail: Swift.String
+                                ) {
+                                    self.code = code
+                                    self.detail = detail
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case code
+                                    case detail
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.code = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .code
+                                    )
+                                    self.detail = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .detail
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "code",
+                                        "detail"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/case2/problems`.
+                            internal typealias ProblemsPayload = [Operations.MobilePurchases_uploadReceipt.Output.Ok.Body.JsonPayload.Case2Payload.ProblemsPayloadPayload]
+                            /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/case2/problems`.
+                            internal var problems: Operations.MobilePurchases_uploadReceipt.Output.Ok.Body.JsonPayload.Case2Payload.ProblemsPayload
+                            /// Creates a new `Case2Payload`.
+                            ///
+                            /// - Parameters:
+                            ///   - kind:
+                            ///   - problems:
+                            internal init(
+                                kind: Operations.MobilePurchases_uploadReceipt.Output.Ok.Body.JsonPayload.Case2Payload.KindPayload,
+                                problems: Operations.MobilePurchases_uploadReceipt.Output.Ok.Body.JsonPayload.Case2Payload.ProblemsPayload
+                            ) {
+                                self.kind = kind
+                                self.problems = problems
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case kind
+                                case problems
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.kind = try container.decode(
+                                    Operations.MobilePurchases_uploadReceipt.Output.Ok.Body.JsonPayload.Case2Payload.KindPayload.self,
+                                    forKey: .kind
+                                )
+                                self.problems = try container.decode(
+                                    Operations.MobilePurchases_uploadReceipt.Output.Ok.Body.JsonPayload.Case2Payload.ProblemsPayload.self,
+                                    forKey: .problems
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "kind",
+                                    "problems"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/case2`.
+                        case case2(Operations.MobilePurchases_uploadReceipt.Output.Ok.Body.JsonPayload.Case2Payload)
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/case3`.
+                        internal struct Case3Payload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/case3/kind`.
+                            internal enum KindPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case unreadable = "unreadable"
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/case3/kind`.
+                            internal var kind: Operations.MobilePurchases_uploadReceipt.Output.Ok.Body.JsonPayload.Case3Payload.KindPayload
+                            /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/case3/reason`.
+                            internal var reason: Swift.String
+                            /// Creates a new `Case3Payload`.
+                            ///
+                            /// - Parameters:
+                            ///   - kind:
+                            ///   - reason:
+                            internal init(
+                                kind: Operations.MobilePurchases_uploadReceipt.Output.Ok.Body.JsonPayload.Case3Payload.KindPayload,
+                                reason: Swift.String
+                            ) {
+                                self.kind = kind
+                                self.reason = reason
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case kind
+                                case reason
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.kind = try container.decode(
+                                    Operations.MobilePurchases_uploadReceipt.Output.Ok.Body.JsonPayload.Case3Payload.KindPayload.self,
+                                    forKey: .kind
+                                )
+                                self.reason = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .reason
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "kind",
+                                    "reason"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/case3`.
+                        case case3(Operations.MobilePurchases_uploadReceipt.Output.Ok.Body.JsonPayload.Case3Payload)
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            var errors: [any Swift.Error] = []
+                            do {
+                                self = .case1(try .init(from: decoder))
+                                return
+                            } catch {
+                                errors.append(error)
+                            }
+                            do {
+                                self = .case2(try .init(from: decoder))
+                                return
+                            } catch {
+                                errors.append(error)
+                            }
+                            do {
+                                self = .case3(try .init(from: decoder))
+                                return
+                            } catch {
+                                errors.append(error)
+                            }
+                            throw Swift.DecodingError.failedToDecodeOneOfSchema(
+                                type: Self.self,
+                                codingPath: decoder.codingPath,
+                                errors: errors
+                            )
+                        }
+                        internal func encode(to encoder: any Swift.Encoder) throws {
+                            switch self {
+                            case let .case1(value):
+                                try value.encode(to: encoder)
+                            case let .case2(value):
+                                try value.encode(to: encoder)
+                            case let .case3(value):
+                                try value.encode(to: encoder)
+                            }
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/application\/json`.
+                    case json(Operations.MobilePurchases_uploadReceipt.Output.Ok.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobilePurchases_uploadReceipt.Output.Ok.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobilePurchases_uploadReceipt.Output.Ok.Body
+                /// Creates a new `Ok`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobilePurchases_uploadReceipt.Output.Ok.Body) {
+                    self.body = body
+                }
+            }
+            /// 200
+            ///
+            /// - Remark: Generated from `#/paths//mobile/purchases/receipts/post(mobilePurchases.uploadReceipt)/responses/200`.
+            ///
+            /// HTTP response code: `200 ok`.
+            case ok(Operations.MobilePurchases_uploadReceipt.Output.Ok)
+            /// The associated value of the enum case if `self` is `.ok`.
+            ///
+            /// - Throws: An error if `self` is not `.ok`.
+            /// - SeeAlso: `.ok`.
+            internal var ok: Operations.MobilePurchases_uploadReceipt.Output.Ok {
+                get throws {
+                    switch self {
+                    case let .ok(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/400/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/400/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/400/content/json/code`.
+                        internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case invalidCursor = "invalid_cursor"
+                            case invalidRequest = "invalid_request"
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/400/content/json/code`.
+                        internal var code: Operations.MobilePurchases_uploadReceipt.Output.BadRequest.Body.JsonPayload.CodePayload
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/400/content/json/message`.
+                        internal var message: Swift.String
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - message:
+                        internal init(
+                            code: Operations.MobilePurchases_uploadReceipt.Output.BadRequest.Body.JsonPayload.CodePayload,
+                            message: Swift.String
+                        ) {
+                            self.code = code
+                            self.message = message
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case message
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Operations.MobilePurchases_uploadReceipt.Output.BadRequest.Body.JsonPayload.CodePayload.self,
+                                forKey: .code
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "message"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/400/content/application\/json`.
+                    case json(Operations.MobilePurchases_uploadReceipt.Output.BadRequest.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobilePurchases_uploadReceipt.Output.BadRequest.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobilePurchases_uploadReceipt.Output.BadRequest.Body
+                /// Creates a new `BadRequest`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobilePurchases_uploadReceipt.Output.BadRequest.Body) {
+                    self.body = body
+                }
+            }
+            /// 400
+            ///
+            /// - Remark: Generated from `#/paths//mobile/purchases/receipts/post(mobilePurchases.uploadReceipt)/responses/400`.
+            ///
+            /// HTTP response code: `400 badRequest`.
+            case badRequest(Operations.MobilePurchases_uploadReceipt.Output.BadRequest)
+            /// The associated value of the enum case if `self` is `.badRequest`.
+            ///
+            /// - Throws: An error if `self` is not `.badRequest`.
+            /// - SeeAlso: `.badRequest`.
+            internal var badRequest: Operations.MobilePurchases_uploadReceipt.Output.BadRequest {
+                get throws {
+                    switch self {
+                    case let .badRequest(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "badRequest",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct Unauthorized: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/401/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/401/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/401/content/json/code`.
+                        internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case invalidToken = "invalid_token"
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/401/content/json/code`.
+                        internal var code: Operations.MobilePurchases_uploadReceipt.Output.Unauthorized.Body.JsonPayload.CodePayload
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/401/content/json/message`.
+                        internal var message: Swift.String
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - message:
+                        internal init(
+                            code: Operations.MobilePurchases_uploadReceipt.Output.Unauthorized.Body.JsonPayload.CodePayload,
+                            message: Swift.String
+                        ) {
+                            self.code = code
+                            self.message = message
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case message
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Operations.MobilePurchases_uploadReceipt.Output.Unauthorized.Body.JsonPayload.CodePayload.self,
+                                forKey: .code
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "message"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/401/content/application\/json`.
+                    case json(Operations.MobilePurchases_uploadReceipt.Output.Unauthorized.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobilePurchases_uploadReceipt.Output.Unauthorized.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobilePurchases_uploadReceipt.Output.Unauthorized.Body
+                /// Creates a new `Unauthorized`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobilePurchases_uploadReceipt.Output.Unauthorized.Body) {
+                    self.body = body
+                }
+            }
+            /// 401
+            ///
+            /// - Remark: Generated from `#/paths//mobile/purchases/receipts/post(mobilePurchases.uploadReceipt)/responses/401`.
+            ///
+            /// HTTP response code: `401 unauthorized`.
+            case unauthorized(Operations.MobilePurchases_uploadReceipt.Output.Unauthorized)
+            /// The associated value of the enum case if `self` is `.unauthorized`.
+            ///
+            /// - Throws: An error if `self` is not `.unauthorized`.
+            /// - SeeAlso: `.unauthorized`.
+            internal var unauthorized: Operations.MobilePurchases_uploadReceipt.Output.Unauthorized {
+                get throws {
+                    switch self {
+                    case let .unauthorized(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "unauthorized",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct Forbidden: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/403/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/403/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/403/content/json/code`.
+                        internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case deviceRevoked = "device_revoked"
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/403/content/json/code`.
+                        internal var code: Operations.MobilePurchases_uploadReceipt.Output.Forbidden.Body.JsonPayload.CodePayload
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/403/content/json/message`.
+                        internal var message: Swift.String
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - message:
+                        internal init(
+                            code: Operations.MobilePurchases_uploadReceipt.Output.Forbidden.Body.JsonPayload.CodePayload,
+                            message: Swift.String
+                        ) {
+                            self.code = code
+                            self.message = message
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case message
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Operations.MobilePurchases_uploadReceipt.Output.Forbidden.Body.JsonPayload.CodePayload.self,
+                                forKey: .code
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "message"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/403/content/application\/json`.
+                    case json(Operations.MobilePurchases_uploadReceipt.Output.Forbidden.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobilePurchases_uploadReceipt.Output.Forbidden.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobilePurchases_uploadReceipt.Output.Forbidden.Body
+                /// Creates a new `Forbidden`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobilePurchases_uploadReceipt.Output.Forbidden.Body) {
+                    self.body = body
+                }
+            }
+            /// 403
+            ///
+            /// - Remark: Generated from `#/paths//mobile/purchases/receipts/post(mobilePurchases.uploadReceipt)/responses/403`.
+            ///
+            /// HTTP response code: `403 forbidden`.
+            case forbidden(Operations.MobilePurchases_uploadReceipt.Output.Forbidden)
+            /// The associated value of the enum case if `self` is `.forbidden`.
+            ///
+            /// - Throws: An error if `self` is not `.forbidden`.
+            /// - SeeAlso: `.forbidden`.
+            internal var forbidden: Operations.MobilePurchases_uploadReceipt.Output.Forbidden {
+                get throws {
+                    switch self {
+                    case let .forbidden(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "forbidden",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct ContentTooLarge: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/413/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/413/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/413/content/json/code`.
+                        internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case payloadTooLarge = "payload_too_large"
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/413/content/json/code`.
+                        internal var code: Operations.MobilePurchases_uploadReceipt.Output.ContentTooLarge.Body.JsonPayload.CodePayload
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/413/content/json/maxBytes`.
+                        internal var maxBytes: Swift.Int
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/413/content/json/message`.
+                        internal var message: Swift.String
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - maxBytes:
+                        ///   - message:
+                        internal init(
+                            code: Operations.MobilePurchases_uploadReceipt.Output.ContentTooLarge.Body.JsonPayload.CodePayload,
+                            maxBytes: Swift.Int,
+                            message: Swift.String
+                        ) {
+                            self.code = code
+                            self.maxBytes = maxBytes
+                            self.message = message
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case maxBytes
+                            case message
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Operations.MobilePurchases_uploadReceipt.Output.ContentTooLarge.Body.JsonPayload.CodePayload.self,
+                                forKey: .code
+                            )
+                            self.maxBytes = try container.decode(
+                                Swift.Int.self,
+                                forKey: .maxBytes
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "maxBytes",
+                                "message"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/413/content/application\/json`.
+                    case json(Operations.MobilePurchases_uploadReceipt.Output.ContentTooLarge.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobilePurchases_uploadReceipt.Output.ContentTooLarge.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobilePurchases_uploadReceipt.Output.ContentTooLarge.Body
+                /// Creates a new `ContentTooLarge`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobilePurchases_uploadReceipt.Output.ContentTooLarge.Body) {
+                    self.body = body
+                }
+            }
+            /// 413
+            ///
+            /// - Remark: Generated from `#/paths//mobile/purchases/receipts/post(mobilePurchases.uploadReceipt)/responses/413`.
+            ///
+            /// HTTP response code: `413 contentTooLarge`.
+            case contentTooLarge(Operations.MobilePurchases_uploadReceipt.Output.ContentTooLarge)
+            /// The associated value of the enum case if `self` is `.contentTooLarge`.
+            ///
+            /// - Throws: An error if `self` is not `.contentTooLarge`.
+            /// - SeeAlso: `.contentTooLarge`.
+            internal var contentTooLarge: Operations.MobilePurchases_uploadReceipt.Output.ContentTooLarge {
+                get throws {
+                    switch self {
+                    case let .contentTooLarge(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "contentTooLarge",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct TooManyRequests: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/429/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/429/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/429/content/json/code`.
+                        internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case rateLimited = "rate_limited"
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/429/content/json/code`.
+                        internal var code: Operations.MobilePurchases_uploadReceipt.Output.TooManyRequests.Body.JsonPayload.CodePayload
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/429/content/json/message`.
+                        internal var message: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/429/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - message:
+                        ///   - retryAfterSeconds:
+                        internal init(
+                            code: Operations.MobilePurchases_uploadReceipt.Output.TooManyRequests.Body.JsonPayload.CodePayload,
+                            message: Swift.String,
+                            retryAfterSeconds: Swift.Int
+                        ) {
+                            self.code = code
+                            self.message = message
+                            self.retryAfterSeconds = retryAfterSeconds
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case message
+                            case retryAfterSeconds
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Operations.MobilePurchases_uploadReceipt.Output.TooManyRequests.Body.JsonPayload.CodePayload.self,
+                                forKey: .code
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            self.retryAfterSeconds = try container.decode(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "message",
+                                "retryAfterSeconds"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/429/content/application\/json`.
+                    case json(Operations.MobilePurchases_uploadReceipt.Output.TooManyRequests.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobilePurchases_uploadReceipt.Output.TooManyRequests.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobilePurchases_uploadReceipt.Output.TooManyRequests.Body
+                /// Creates a new `TooManyRequests`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobilePurchases_uploadReceipt.Output.TooManyRequests.Body) {
+                    self.body = body
+                }
+            }
+            /// 429
+            ///
+            /// - Remark: Generated from `#/paths//mobile/purchases/receipts/post(mobilePurchases.uploadReceipt)/responses/429`.
+            ///
+            /// HTTP response code: `429 tooManyRequests`.
+            case tooManyRequests(Operations.MobilePurchases_uploadReceipt.Output.TooManyRequests)
+            /// The associated value of the enum case if `self` is `.tooManyRequests`.
+            ///
+            /// - Throws: An error if `self` is not `.tooManyRequests`.
+            /// - SeeAlso: `.tooManyRequests`.
+            internal var tooManyRequests: Operations.MobilePurchases_uploadReceipt.Output.TooManyRequests {
+                get throws {
+                    switch self {
+                    case let .tooManyRequests(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "tooManyRequests",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct BadGateway: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/502/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/502/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/502/content/json/code`.
+                        internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case upstreamUnavailable = "upstream_unavailable"
+                            case upstreamDegraded = "upstream_degraded"
+                            case upstreamContractMismatch = "upstream_contract_mismatch"
+                            case upstreamMisconfigured = "upstream_misconfigured"
+                            case upstreamInvalidRequest = "upstream_invalid_request"
+                            case upstreamConflict = "upstream_conflict"
+                            case notFound = "not_found"
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/502/content/json/code`.
+                        internal var code: Operations.MobilePurchases_uploadReceipt.Output.BadGateway.Body.JsonPayload.CodePayload
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/502/content/json/message`.
+                        internal var message: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/502/content/json/pillar`.
+                        internal var pillar: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/502/content/json/retryable`.
+                        internal var retryable: Swift.Bool
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - message:
+                        ///   - pillar:
+                        ///   - retryable:
+                        internal init(
+                            code: Operations.MobilePurchases_uploadReceipt.Output.BadGateway.Body.JsonPayload.CodePayload,
+                            message: Swift.String,
+                            pillar: Swift.String,
+                            retryable: Swift.Bool
+                        ) {
+                            self.code = code
+                            self.message = message
+                            self.pillar = pillar
+                            self.retryable = retryable
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case message
+                            case pillar
+                            case retryable
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Operations.MobilePurchases_uploadReceipt.Output.BadGateway.Body.JsonPayload.CodePayload.self,
+                                forKey: .code
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            self.pillar = try container.decode(
+                                Swift.String.self,
+                                forKey: .pillar
+                            )
+                            self.retryable = try container.decode(
+                                Swift.Bool.self,
+                                forKey: .retryable
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "message",
+                                "pillar",
+                                "retryable"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/502/content/application\/json`.
+                    case json(Operations.MobilePurchases_uploadReceipt.Output.BadGateway.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobilePurchases_uploadReceipt.Output.BadGateway.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobilePurchases_uploadReceipt.Output.BadGateway.Body
+                /// Creates a new `BadGateway`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobilePurchases_uploadReceipt.Output.BadGateway.Body) {
+                    self.body = body
+                }
+            }
+            /// 502
+            ///
+            /// - Remark: Generated from `#/paths//mobile/purchases/receipts/post(mobilePurchases.uploadReceipt)/responses/502`.
+            ///
+            /// HTTP response code: `502 badGateway`.
+            case badGateway(Operations.MobilePurchases_uploadReceipt.Output.BadGateway)
+            /// The associated value of the enum case if `self` is `.badGateway`.
+            ///
+            /// - Throws: An error if `self` is not `.badGateway`.
+            /// - SeeAlso: `.badGateway`.
+            internal var badGateway: Operations.MobilePurchases_uploadReceipt.Output.BadGateway {
+                get throws {
+                    switch self {
+                    case let .badGateway(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "badGateway",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct ServiceUnavailable: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/503/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/503/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/503/content/json/code`.
+                        internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case upstreamUnavailable = "upstream_unavailable"
+                            case upstreamDegraded = "upstream_degraded"
+                            case upstreamContractMismatch = "upstream_contract_mismatch"
+                            case upstreamMisconfigured = "upstream_misconfigured"
+                            case upstreamInvalidRequest = "upstream_invalid_request"
+                            case upstreamConflict = "upstream_conflict"
+                            case notFound = "not_found"
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/503/content/json/code`.
+                        internal var code: Operations.MobilePurchases_uploadReceipt.Output.ServiceUnavailable.Body.JsonPayload.CodePayload
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/503/content/json/message`.
+                        internal var message: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/503/content/json/pillar`.
+                        internal var pillar: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/503/content/json/retryable`.
+                        internal var retryable: Swift.Bool
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - message:
+                        ///   - pillar:
+                        ///   - retryable:
+                        internal init(
+                            code: Operations.MobilePurchases_uploadReceipt.Output.ServiceUnavailable.Body.JsonPayload.CodePayload,
+                            message: Swift.String,
+                            pillar: Swift.String,
+                            retryable: Swift.Bool
+                        ) {
+                            self.code = code
+                            self.message = message
+                            self.pillar = pillar
+                            self.retryable = retryable
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case message
+                            case pillar
+                            case retryable
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Operations.MobilePurchases_uploadReceipt.Output.ServiceUnavailable.Body.JsonPayload.CodePayload.self,
+                                forKey: .code
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            self.pillar = try container.decode(
+                                Swift.String.self,
+                                forKey: .pillar
+                            )
+                            self.retryable = try container.decode(
+                                Swift.Bool.self,
+                                forKey: .retryable
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "message",
+                                "pillar",
+                                "retryable"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/503/content/application\/json`.
+                    case json(Operations.MobilePurchases_uploadReceipt.Output.ServiceUnavailable.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobilePurchases_uploadReceipt.Output.ServiceUnavailable.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobilePurchases_uploadReceipt.Output.ServiceUnavailable.Body
+                /// Creates a new `ServiceUnavailable`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobilePurchases_uploadReceipt.Output.ServiceUnavailable.Body) {
+                    self.body = body
+                }
+            }
+            /// 503
+            ///
+            /// - Remark: Generated from `#/paths//mobile/purchases/receipts/post(mobilePurchases.uploadReceipt)/responses/503`.
+            ///
+            /// HTTP response code: `503 serviceUnavailable`.
+            case serviceUnavailable(Operations.MobilePurchases_uploadReceipt.Output.ServiceUnavailable)
+            /// The associated value of the enum case if `self` is `.serviceUnavailable`.
+            ///
+            /// - Throws: An error if `self` is not `.serviceUnavailable`.
+            /// - SeeAlso: `.serviceUnavailable`.
+            internal var serviceUnavailable: Operations.MobilePurchases_uploadReceipt.Output.ServiceUnavailable {
                 get throws {
                     switch self {
                     case let .serviceUnavailable(response):
