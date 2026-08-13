@@ -1,6 +1,6 @@
 import AppCore
 import Auth
-import FeatureTransactions
+import FeatureReceiptCapture
 import Foundation
 import SwiftUI
 import Testing
@@ -15,22 +15,36 @@ import Testing
 /// Lives here rather than in a package because `ContentView` is under `App/`,
 /// which is in no package — see `AppTests/README.md`.
 ///
-/// This rasterises rather than inspects the view tree, the same technique
-/// `PrimitiveRenderingTests` and `TransactionDetailRenderingTests` use for the
-/// same reason: nothing else in this tree can see what a `body` actually
-/// draws. A `TabView`'s off-screen tabs are not part of any single frame, so
-/// what a snapshot *can* prove is that the feature shown changes with the
-/// list and its order — which is exactly what `.first` could never do, and
-/// exactly the shape a regression back to it would take.
+/// ## Why this renders `.receiptCapture` and never `.transactions`
+///
+/// `TransactionsFlowView` is the one screen this suite must not construct.
+/// Rendering it through `ImageRenderer` — even indirectly, through
+/// `ContentView` — crashes the host process outright:
+/// `SwiftUICore/Logging.swift:232: Fatal error: no current update to enqueue
+/// action to`, from the list's `.task` starting real async work outside a
+/// SwiftUI transaction `ImageRenderer` never opens. That is the same
+/// limitation `TransactionDetailRenderingTests` documents and works around by
+/// rendering `TransactionDetailCard` rather than the screen it sits in;
+/// `ReceiptCaptureView` is this suite's equivalent safe substitute — a real
+/// production screen with no task and no observable model, so what it proves
+/// about `ContentView`'s single-feature path generalises.
+///
+/// ## Why two-or-more features are not rendered at all
+///
+/// Measured, not assumed, the same way: an `ImageRenderer` asked to flatten
+/// the `TabView` branch logs `Unable to render flattened version of
+/// PlatformViewControllerRepresentableAdaptor<UIKitAdaptableTabView>` and
+/// produces nothing a byte comparison could tell apart. See
+/// ``ContentViewFeatureSwitchingWiringTests`` for how that case is covered
+/// instead.
 @Suite("ContentView feature switching")
 @MainActor
 internal struct ContentViewFeatureSwitchingTests {
-    /// Tall enough to include the tab bar a two-feature surface draws.
     private static let canvas = CGSize(width: 390, height: 844)
 
-    private static func render(_ view: some View) -> Data? {
+    private static func render(_ view: some View, in scheme: ColorScheme = .light) -> Data? {
         let renderer = ImageRenderer(
-            content: view.frame(width: canvas.width, height: canvas.height)
+            content: view.environment(\.colorScheme, scheme).frame(width: canvas.width, height: canvas.height)
         )
         renderer.scale = 1
         guard let image = renderer.cgImage, let pixels = image.dataProvider?.data else {
@@ -63,19 +77,19 @@ internal struct ContentViewFeatureSwitchingTests {
         return ContentView(surface: surface(available: available), shell: bound.shell, composition: bound)
     }
 
-    @Test("zero available features shows the explanation, not a blank screen")
-    func zeroFeaturesShowsTheExplanation() throws {
-        let nothing = try #require(Self.render(contentView(available: [])))
-        let one = try #require(Self.render(contentView(available: [.transactions])))
+    @Test("zero available features renders, and renders real content rather than a blank screen")
+    func zeroFeaturesRendersRealContent() throws {
+        let light = try #require(Self.render(contentView(available: []), in: .light))
+        let dark = try #require(Self.render(contentView(available: []), in: .dark))
 
-        #expect(nothing != one, "the empty state renders identically to a real feature")
+        #expect(light != dark, "the explanation renders identically in both colour schemes")
     }
 
     @Test("exactly one feature fills the screen, matching the shipped single-feature look")
     func oneFeatureMatchesTheBareScreen() throws {
-        let throughContentView = try #require(Self.render(contentView(available: [.transactions])))
-        let bareScreen = try #require(
-            Self.render(TransactionsFlowView(dependencies: .unbound, router: Router())))
+        let throughContentView = try #require(
+            Self.render(contentView(available: [.receiptCapture])))
+        let bareScreen = try #require(Self.render(ReceiptCaptureView()))
 
         #expect(
             throughContentView == bareScreen,
@@ -87,41 +101,67 @@ internal struct ContentViewFeatureSwitchingTests {
         )
     }
 
-    @Test("two features are each reachable, not just the first")
-    func twoFeaturesAreBothReachable() throws {
-        let transactionsFirst = try #require(
-            Self.render(contentView(available: [.transactions, .receiptCapture])))
-        let receiptsFirst = try #require(
-            Self.render(contentView(available: [.receiptCapture, .transactions])))
-        let transactionsOnly = try #require(Self.render(contentView(available: [.transactions])))
+    @Test("zero features does not look like one feature")
+    func zeroFeaturesDoesNotLookLikeOneFeature() throws {
+        let zero = try #require(Self.render(contentView(available: [])))
+        let one = try #require(Self.render(contentView(available: [.receiptCapture])))
 
+        #expect(zero != one)
+    }
+}
+
+/// The half of `ContentView`'s feature-count switch a type checker cannot
+/// hold: that the single-feature branch draws that feature outright with no
+/// extra chrome, and that the multi-feature branch visits every element of
+/// `surface.available`, not just the first. Same technique
+/// `TransactionsScreenBoundaryTests` uses for its own routing table, and for
+/// the same reason a rendered proof does not exist for the multi-feature half
+/// — see ``ContentViewFeatureSwitchingTests``'s doc comment for why.
+@Suite("ContentView feature switching wiring")
+internal struct ContentViewFeatureSwitchingWiringTests {
+    /// `.../AppTests/ContentViewFeatureSwitchingTests.swift`
+    private static let contentViewSource: String = {
+        let path = URL(filePath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: "App/ContentView.swift")
+        return (try? String(contentsOf: path, encoding: .utf8)) ?? ""
+    }()
+
+    /// The scan finds a real file with real content, or every assertion below
+    /// holds just as well for a tree where `ContentView.swift` was deleted.
+    @Test("the scan is reading ContentView's actual source")
+    func scanIsWiredUp() {
+        #expect(!Self.contentViewSource.isEmpty, "App/ContentView.swift is empty or missing")
+    }
+
+    @Test("exactly one feature draws it directly, with no tab chrome")
+    func oneFeatureHasNoWrapper() {
         #expect(
-            transactionsFirst != receiptsFirst,
-            Comment(
-                rawValue: "the BFM's order stopped reaching the switcher — the same two features "
-                    + "render identically no matter which one the server named first"
-            )
-        )
-        #expect(
-            transactionsFirst != transactionsOnly,
-            "a second available feature changed nothing on screen — this is `.first` all over again"
+            Self.contentViewSource.contains("screen(for: surface.available[0])"),
+            "the single-feature branch no longer draws that feature outright"
         )
     }
 
-    @Test("three or more features still render, not just two")
-    func moreThanTwoFeaturesStillRenders() throws {
-        // `MobileFeature` is a raw string wrapper, so a third id this build has
-        // no screen for still reaches `ContentView` — it falls to the
-        // `unavailableExplanation` case in `screen(for:)`. What this proves is
-        // narrower than "reachable": that the switch is over the *whole* list,
-        // not capped at two, which a hand-written two-case branch could easily
-        // regress to without a test naming three.
-        let unknown = MobileFeature(rawValue: "budgets")
-        let two = try #require(
-            Self.render(contentView(available: [.transactions, .receiptCapture])))
-        let three = try #require(
-            Self.render(contentView(available: [.transactions, .receiptCapture, unknown])))
+    @Test("two or more features are drawn by iterating the whole list, not the first one")
+    func multipleFeaturesIterateTheWholeList() {
+        #expect(
+            Self.contentViewSource.contains("ForEach(surface.available"),
+            "the multi-feature branch no longer iterates surface.available"
+        )
+        #expect(
+            !Self.contentViewSource.contains("surface.available.first"),
+            "surface.available.first is back — this is the exact regression POPS-1985 fixed"
+        )
+    }
 
-        #expect(two != three, "a third available feature did not reach the switcher at all")
+    @Test("every screen in the switcher still goes through screen(for:)")
+    func theSwitcherStillNamesTheOneScreenTable() {
+        // `screen(for:)` is the one place a feature id becomes a view. A
+        // switcher that built a view another way would draw *something* for a
+        // second feature — this repo's whole point — while quietly forking the
+        // id-to-screen mapping this file's own doc comment says lives in one
+        // place.
+        #expect(Self.contentViewSource.contains("screen(for: feature)"))
     }
 }
