@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 
 import { encodeText } from './encode.js';
 import { movePart, nextPartId, removePartAt } from './parts.js';
@@ -22,9 +22,19 @@ export interface ReceiptStaging {
  */
 export function useReceiptStaging(): ReceiptStaging {
   const [staging, setStaging] = useState<Staging>(EMPTY_STAGING);
+  /**
+   * Staging is chained so batches land in the order they were added, whatever
+   * order they finish encoding in. Without it a small batch dropped after a
+   * large one can encode first and be staged ahead of it, silently reordering
+   * a document whose order is the whole point. The encode itself still starts
+   * immediately and runs in parallel — only the staging waits.
+   */
+  const staged = useRef<Promise<void>>(Promise.resolve());
 
   const addFiles = useCallback((chosen: File[]): void => {
-    void encodeBatch(chosen).then((batch) => {
+    const encoding = encodeBatch(chosen);
+    staged.current = staged.current.then(async () => {
+      const batch = await encoding;
       setStaging((current) => stage(current, batch));
     });
   }, []);
@@ -47,18 +57,15 @@ export function useReceiptStaging(): ReceiptStaging {
     );
   }, []);
 
+  // A complaint describes the files of the add that raised it. Once the reader
+  // has edited the list it is about a state that no longer exists, so it is
+  // dropped rather than left accusing a file that has since been dealt with.
   const remove = useCallback((index: number): void => {
-    setStaging((current) => ({
-      parts: removePartAt(current.parts, index),
-      problems: current.problems,
-    }));
+    setStaging((current) => ({ parts: removePartAt(current.parts, index), problems: [] }));
   }, []);
 
   const move = useCallback((index: number, offset: -1 | 1): void => {
-    setStaging((current) => ({
-      parts: movePart(current.parts, index, offset),
-      problems: current.problems,
-    }));
+    setStaging((current) => ({ parts: movePart(current.parts, index, offset), problems: [] }));
   }, []);
 
   const clear = useCallback((): void => {

@@ -436,6 +436,19 @@ describe('ReceiptDropZonePage — created', () => {
     expect(screen.queryByText('till.jpg')).toBeNull();
   });
 
+  // A duplicate is the other way a receipt is on record. Leaving its parts
+  // staged lets the next receipt be appended to one already written — the
+  // same hazard the created case clears for, reached by a different answer.
+  it('clears the staged parts when the receipt was already recorded', async () => {
+    await uploadOne({
+      error: { code: 'ALREADY_IMPORTED', message: 'already read as purchase purchase-77' },
+    });
+
+    expect(await screen.findByText(enAUPurchases['receipts.duplicate.title'])).toBeVisible();
+    expect(screen.getByText(enAUPurchases['receipts.parts.empty'])).toBeVisible();
+    expect(screen.queryByText('till.jpg')).toBeNull();
+  });
+
   it('says there is no purchase page to open rather than offering a dead link', async () => {
     await uploadOne(created());
 

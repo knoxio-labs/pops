@@ -13,8 +13,8 @@ import type { ReactElement, ReactNode } from 'react';
 export type OutcomeTone = 'recorded' | 'attention' | 'refused' | 'neutral';
 
 const TONES: Readonly<Record<OutcomeTone, string>> = {
-  recorded: 'border-emerald-500/50 bg-emerald-500/5',
-  attention: 'border-amber-500/60 bg-amber-500/10',
+  recorded: 'border-success/50 bg-success/5',
+  attention: 'border-warning/60 bg-warning/10',
   refused: 'border-destructive/50 bg-destructive/10',
   neutral: 'border-border bg-muted/30',
 };
