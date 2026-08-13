@@ -1,15 +1,22 @@
-// The Simulator half of the camera seam, and the only test in this target that
-// talks to real AVFoundation rather than to `CameraAuthorizing`.
+import Testing
+
+@testable import FeaturePairing
+
+// The imports above are deliberately OUTSIDE the `#if` below, and that is not
+// style. With `@testable import FeaturePairing` inside the conditional, this
+// file compiled on one CI run and failed the next with "cannot find
+// 'SystemCameraAuthorization' in scope" — same bytes, no source change between
+// them, so the module simply was not always loaded. Swift compiles test files in
+// batches (the failing job batched this one with PairingSubmissionTests and
+// PairingViewModelTests), and a conditional import is not reliably honoured
+// across that. An unconditional import costs nothing on any platform; only the
+// suite below needs guarding.
 //
-// Simulator-only on purpose. A Mac has a camera, so the same assertion run on
-// the host toolchain by `mise run test:packages` would be false there and would
-// say nothing about the platform this claim is about. `test:device` runs against
+// Simulator-only because a Mac has a camera, so the same assertion run on the
+// host toolchain by `mise run test:packages` would be false there and would say
+// nothing about the platform this claim is about. `test:device` runs against
 // hardware with a camera and is excluded for the same reason.
 #if targetEnvironment(simulator)
-
-    import Testing
-
-    @testable import FeaturePairing
 
     /// What the Simulator actually reports, asserted rather than assumed.
     ///
