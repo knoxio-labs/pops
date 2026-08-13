@@ -42,7 +42,15 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 2 : undefined,
+  /**
+   * Two, everywhere — not "2 in CI, host default locally". Both webServers
+   * are ONE Vite dev process each, and every worker's first navigation asks
+   * it to transform a module graph. Past a couple of workers they queue
+   * behind each other and the slowest one loses its deadline, which reads as
+   * a flaky assertion and is really just contention. A local run at the host
+   * default reproduced that; at two it does not, and it now matches CI.
+   */
+  workers: 2,
   reporter: process.env.CI ? [['list'], ['html']] : 'html',
 
   /**

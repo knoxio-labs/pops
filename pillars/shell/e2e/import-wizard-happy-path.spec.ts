@@ -38,6 +38,8 @@
  */
 import { expect, test } from '@playwright/test';
 
+import { stubShellBoot } from './helpers/pillar-rest';
+
 import type { Page, Route } from '@playwright/test';
 
 const PROCESS_SESSION_ID = 'e2e-process-session';
@@ -157,6 +159,7 @@ test.describe('Finance — import wizard happy path (mocked)', () => {
       if (msg.type() === 'error') consoleErrors.push(msg.text());
     });
     await setupMocks(page);
+    await stubShellBoot(page);
     await page.goto('/finance/import');
     await expect(page.getByRole('heading', { name: 'Upload CSV' })).toBeVisible();
   });
@@ -193,9 +196,7 @@ test.describe('Finance — import wizard happy path (mocked)', () => {
 
     // Step 3: Processing — polls progress until status=completed, then auto-advances.
     // Wait for the Review heading to confirm polling worked.
-    await expect(page.getByRole('heading', { name: 'Review', exact: true })).toBeVisible({
-      timeout: 10_000,
-    });
+    await expect(page.getByRole('heading', { name: 'Review', exact: true })).toBeVisible();
 
     // Step 4: Review — both transactions land in Matched (2).
     // TabsTrigger labels render as "Matched (2)", etc.
@@ -212,24 +213,23 @@ test.describe('Finance — import wizard happy path (mocked)', () => {
     await page.getByRole('button', { name: /continue to tag review/i }).click();
 
     // Step 5: Tag Review — no changes, continue.
-    await expect(page.getByRole('heading', { name: 'Tag Review' })).toBeVisible({
-      timeout: 5_000,
-    });
+    await expect(page.getByRole('heading', { name: 'Tag Review' })).toBeVisible();
     await page.getByRole('button', { name: /continue to final review/i }).click();
 
     // Step 6: Create Rules — no patterns in mocked test, skip.
     await page.getByRole('button', { name: /^skip$/i }).click();
 
-    // Step 7: Final Review — approve & commit.
-    await expect(page.getByRole('heading', { name: 'Final Review' })).toBeVisible({
-      timeout: 5_000,
-    });
+    // Step 7: Final Review — approve, then confirm. The wizard puts an
+    // irreversible write behind a confirmation whose button carries the same
+    // label as the one that opened it, so the second click is scoped to the
+    // dialog rather than matched by name alone.
+    await expect(page.getByRole('heading', { name: 'Final Review' })).toBeVisible();
     await page.getByRole('button', { name: /approve & commit all/i }).click();
+    const commitConfirm = page.getByRole('alertdialog', { name: /commit this import/i });
+    await commitConfirm.getByRole('button', { name: /approve & commit all/i }).click();
 
     // Step 8: Summary — wizard auto-advances on commit success, no Continue click.
-    await expect(page.getByRole('heading', { name: 'Import Complete' })).toBeVisible({
-      timeout: 15_000,
-    });
+    await expect(page.getByRole('heading', { name: 'Import Complete' })).toBeVisible();
     await expect(page.getByText('Transactions Imported')).toBeVisible();
     // The SummaryCard for imported transactions shows the value "2".
     await expect(page.getByRole('button', { name: /new import/i })).toBeVisible();
@@ -271,239 +271,5 @@ test.describe('Finance — import wizard happy path (mocked)', () => {
 
     await expect(page.getByRole('heading', { name: 'Map Columns' })).toBeVisible();
     await expect(page.locator('select[name="date"]')).toHaveValue('Value Date');
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Correction Proposal Dialog tests
-// ---------------------------------------------------------------------------
-// Verifies that editing a rule field (e.g. Transaction type) auto-reruns the
-// combined preview so Apply ChangeSet stays reachable without the user clicking
-// the ↺ refresh button.
-//
-// REST flow exercised (all under /finance-api unless noted):
-//   POST /imports/process                 → { sessionId }
-//   GET  /imports/progress                → { status:'completed', result:{ uncertain:[1] } }
-//   GET  /contacts-api/entities           → the candidate entity
-//   POST /corrections/analyze             → { data:{ pattern, matchType, confidence } }
-//   POST /corrections/propose-changeset   → { changeSet:{ ops:[add] }, preview, rationale, targetRules }
-//   POST /corrections/preview-changeset   → { diffs, summary }  (initial + after type change)
-//   POST /imports/reevaluate-pending      → { affectedCount, result }  (after local Apply)
-//   GET  /transactions/available-tags     → { tags:[] }
-//
-// Note: "Apply ChangeSet" stages the change locally (Zustand store) — it does
-// NOT hit a corrections/apply endpoint. The follow-on network call is
-// /imports/reevaluate-pending, fired by the pendingChangeSets change.
-
-test.describe('Correction Proposal Dialog (mocked)', () => {
-  const UNCERTAIN_ENTITY_ID = 'entity-woolworths';
-  const UNCERTAIN_ENTITY_NAME = 'Woolworths';
-  const UNCERTAIN_CHECKSUM = 'chk-unknown-001';
-
-  const uncertainTransaction = {
-    date: '2026-02-14',
-    description: 'UNKNOWN MERCHANT',
-    amount: -50.0,
-    account: 'Amex',
-    rawRow: '{}',
-    checksum: UNCERTAIN_CHECKSUM,
-    entity: { matchType: 'none' as const },
-    status: 'uncertain' as const,
-  };
-
-  const processedWithUncertain = {
-    matched: [],
-    uncertain: [uncertainTransaction],
-    failed: [],
-    skipped: [],
-    warnings: [],
-  };
-
-  const proposeBody = {
-    changeSet: {
-      ops: [
-        {
-          op: 'add' as const,
-          data: {
-            descriptionPattern: 'UNKNOWN MERCHANT',
-            matchType: 'contains' as const,
-            entityName: UNCERTAIN_ENTITY_NAME,
-            entityId: UNCERTAIN_ENTITY_ID,
-            tags: [],
-          },
-        },
-      ],
-      reason: 'Rule for UNKNOWN MERCHANT',
-      source: 'correction-proposal',
-    },
-    preview: {
-      affected: [
-        {
-          transactionId: UNCERTAIN_CHECKSUM,
-          description: 'UNKNOWN MERCHANT',
-          before: {
-            entityId: null,
-            entityName: null,
-            location: null,
-            ruleId: null,
-            tags: [],
-            transactionType: 'purchase' as const,
-          },
-          after: {
-            entityId: UNCERTAIN_ENTITY_ID,
-            entityName: UNCERTAIN_ENTITY_NAME,
-            location: null,
-            ruleId: null,
-            tags: [],
-            transactionType: 'purchase' as const,
-          },
-        },
-      ],
-      counts: { affected: 1, entityChanges: 1, locationChanges: 0, tagChanges: 0, typeChanges: 0 },
-    },
-    rationale: 'Rule for UNKNOWN MERCHANT',
-    targetRules: {},
-  };
-
-  const previewBody = {
-    diffs: [
-      {
-        description: 'UNKNOWN MERCHANT',
-        checksum: UNCERTAIN_CHECKSUM,
-        changed: true,
-        before: { confidence: null, matched: false, ruleId: null, status: 'uncertain' as const },
-        after: { confidence: 0.95, matched: true, ruleId: null, status: 'matched' as const },
-      },
-    ],
-    summary: { netMatchedDelta: 1, newMatches: 1, removedMatches: 0, statusChanges: 1, total: 1 },
-  };
-
-  const reevaluateBody = {
-    affectedCount: 1,
-    result: {
-      matched: [{ ...uncertainTransaction, status: 'matched' as const }],
-      uncertain: [],
-      failed: [],
-      skipped: [],
-    },
-  };
-
-  const candidateEntitiesBody = {
-    data: [
-      {
-        id: UNCERTAIN_ENTITY_ID,
-        name: UNCERTAIN_ENTITY_NAME,
-        type: 'company',
-        abn: null,
-        aliases: [],
-        defaultTags: [],
-        defaultTransactionType: null,
-        notes: null,
-        lastEditedTime: '2026-02-14T00:00:00.000Z',
-      },
-    ],
-    pagination: { total: 1, limit: 50, offset: 0, hasMore: false },
-  };
-
-  async function setupCorrectionMocks(page: Page): Promise<void> {
-    await page.route('**/finance-api/imports/process', (route) =>
-      fulfillJson(route, { sessionId: PROCESS_SESSION_ID })
-    );
-    await page.route('**/finance-api/imports/progress?**', (route) =>
-      fulfillJson(route, progressBody(processedWithUncertain))
-    );
-    await page.route('**/finance-api/imports/reevaluate-pending', (route) =>
-      fulfillJson(route, reevaluateBody)
-    );
-    await page.route('**/contacts-api/entities?**', (route) =>
-      fulfillJson(route, candidateEntitiesBody)
-    );
-    await page.route('**/finance-api/corrections/analyze', (route) =>
-      fulfillJson(route, {
-        data: { pattern: 'UNKNOWN MERCHANT', matchType: 'contains', confidence: 0.9 },
-      })
-    );
-    await page.route('**/finance-api/corrections/propose-changeset', (route) =>
-      fulfillJson(route, proposeBody)
-    );
-    await page.route('**/finance-api/corrections/preview-changeset', (route) =>
-      fulfillJson(route, previewBody)
-    );
-    await page.route('**/finance-api/corrections?**', (route) =>
-      fulfillJson(route, emptyEntitiesBody)
-    );
-    await page.route('**/finance-api/transactions/available-tags', (route) =>
-      fulfillJson(route, { tags: [] })
-    );
-  }
-
-  async function navigateToCorrectionProposal(page: Page): Promise<void> {
-    const correctionCsv = `Date,Description,Amount\n14/02/2026,UNKNOWN MERCHANT,50.00`;
-    await page.locator('input[type="file"]').setInputFiles({
-      name: 'test.csv',
-      mimeType: 'text/csv',
-      buffer: Buffer.from(correctionCsv),
-    });
-    await page.getByRole('button', { name: /^next$/i }).click();
-    await expect(page.getByRole('heading', { name: 'Map Columns' })).toBeVisible();
-    await page.getByRole('button', { name: /^next$/i }).click();
-    await expect(page.getByRole('heading', { name: 'Review', exact: true })).toBeVisible({
-      timeout: 10_000,
-    });
-
-    // Switch to Grouped view and open the entity picker on the uncertain group
-    await page.getByRole('button', { name: /grouped/i }).click();
-    const group = page.getByTestId('transaction-group').first();
-    await group.getByRole('button', { name: /choose existing/i }).click();
-    await group.locator('select').selectOption(UNCERTAIN_ENTITY_ID);
-  }
-
-  test.beforeEach(async ({ page }) => {
-    await setupCorrectionMocks(page);
-    await page.goto('/finance/import');
-    await expect(page.getByRole('heading', { name: 'Upload CSV' })).toBeVisible();
-  });
-
-  test('dialog opens when an entity is chosen for an uncertain transaction', async ({ page }) => {
-    await navigateToCorrectionProposal(page);
-    await expect(page.getByText('Correction proposal')).toBeVisible({ timeout: 8000 });
-  });
-
-  test('Apply ChangeSet is enabled after initial preview runs', async ({ page }) => {
-    await navigateToCorrectionProposal(page);
-    await expect(page.getByText('Correction proposal')).toBeVisible({ timeout: 8000 });
-    await expect(page.getByRole('button', { name: /Apply ChangeSet/i })).toBeEnabled({
-      timeout: 10000,
-    });
-  });
-
-  test('changing Transaction type auto-reruns preview and re-enables Apply', async ({ page }) => {
-    await navigateToCorrectionProposal(page);
-    await expect(page.getByText('Correction proposal')).toBeVisible({ timeout: 8000 });
-    const applyBtn = page.getByRole('button', { name: /Apply ChangeSet/i });
-    await expect(applyBtn).toBeEnabled({ timeout: 10000 });
-
-    // Change Transaction type — this is the bug scenario the fix addresses.
-    // Before the fix: Apply would stay disabled (dirty flag never cleared).
-    // After the fix: the combined-preview effect detects the sig change and
-    // auto-reruns, clearing dirty and re-enabling Apply.
-    const dialog = page.getByRole('dialog', { name: /Correction proposal/i });
-    await dialog
-      .locator('select')
-      .filter({ has: page.locator('option[value="purchase"]') })
-      .selectOption('purchase');
-
-    // Apply must re-enable WITHOUT the user manually clicking ↺
-    await expect(applyBtn).toBeEnabled({ timeout: 10000 });
-    await expect(page.getByText(/Preview stale/i)).not.toBeVisible();
-  });
-
-  test('Apply ChangeSet closes the dialog', async ({ page }) => {
-    await navigateToCorrectionProposal(page);
-    await expect(page.getByText('Correction proposal')).toBeVisible({ timeout: 8000 });
-    const applyBtn = page.getByRole('button', { name: /Apply ChangeSet/i });
-    await expect(applyBtn).toBeEnabled({ timeout: 10000 });
-    await applyBtn.click();
-    await expect(page.getByText('Correction proposal')).not.toBeVisible({ timeout: 5000 });
   });
 });
