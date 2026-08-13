@@ -20,6 +20,10 @@ import {
   makeMobileFinanceHandlers,
   type MobileFinanceHandlerDeps,
 } from './mobile-finance-handlers.js';
+import {
+  makeMobilePurchasesHandlers,
+  type MobilePurchasesHandlerDeps,
+} from './mobile-purchases-handlers.js';
 import { makeOperatorHandlers } from './operator-handlers.js';
 
 import type { KeyObject } from 'node:crypto';
@@ -32,7 +36,7 @@ import type { MobileBootstrapDeps } from '../mobile/bootstrap.js';
 
 const server: ReturnType<typeof initServer> = initServer();
 
-export interface BfmRestHandlerDeps extends MobileFinanceHandlerDeps {
+export interface BfmRestHandlerDeps extends MobileFinanceHandlerDeps, MobilePurchasesHandlerDeps {
   /** Build version, surfaced on the health response. */
   version: string;
   /** Open handle to `bfm.db`. */
@@ -134,5 +138,6 @@ export function makeBfmRestHandlers(
       }),
     },
     mobileFinance: makeMobileFinanceHandlers(deps),
+    mobilePurchases: makeMobilePurchasesHandlers(deps),
   });
 }

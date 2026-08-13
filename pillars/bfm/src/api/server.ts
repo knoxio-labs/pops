@@ -64,6 +64,7 @@ import { createMobileFinanceClient } from './finance/client.js';
 import { buildBfmManifest } from './manifest.js';
 import { createPillarGateway } from './pillars/gateway.js';
 import { configureBfmServerSdk } from './pillars/sdk-config.js';
+import { createMobilePurchasesClient } from './purchases/client.js';
 import { createRateLimiter, PAIRING_CODE_RATE_WINDOW_MS } from './rate-limit.js';
 
 const port = resolvePort();
@@ -90,7 +91,9 @@ console.warn(`[bfm-api] SQLite at ${sqlitePath}`);
 
 // Built after `configureBfmServerSdk()` — the gateway's default handle factory
 // is the authenticated `/server` one, which reads that configuration.
-const finance = createMobileFinanceClient(createPillarGateway());
+const gateway = createPillarGateway();
+const finance = createMobileFinanceClient(gateway);
+const purchases = createMobilePurchasesClient(gateway);
 
 // Unset in every real deployment, where this reconstructs the same limiter
 // `makeBfmRestHandlers` would have built on its own — see
@@ -113,6 +116,7 @@ const app = createBfmApiApp({
   publicBaseUrl,
   internalBaseUrls: sdkConfig.internalBaseUrls,
   finance,
+  purchases,
   refreshTokenTtlMs,
   issuanceLimiter,
   pairingCodeTtlMs,
