@@ -241,6 +241,7 @@ export const EXPECTED_TARGETS = [
   { pkgName: '@pops/app-cerebrum', scriptName: 'generate:cerebrum-client', inAppMatrix: true },
   { pkgName: '@pops/app-finance', scriptName: 'generate:finance-client', inAppMatrix: true },
   { pkgName: '@pops/app-finance', scriptName: 'generate:contacts-client', inAppMatrix: true },
+  { pkgName: '@pops/app-finance', scriptName: 'generate:purchases-client', inAppMatrix: true },
   { pkgName: '@pops/app-food', scriptName: 'generate:food-client', inAppMatrix: true },
   { pkgName: '@pops/app-food', scriptName: 'generate:lists-client', inAppMatrix: true },
   { pkgName: '@pops/app-inventory', scriptName: 'generate:inventory-client', inAppMatrix: true },
