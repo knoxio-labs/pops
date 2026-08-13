@@ -97,7 +97,19 @@ xcodegen generate
 [tasks.build]
 description = "Build the app for the iOS Simulator"
 depends = ["generate"]
-run = "xcodebuild -project Pops.xcodeproj -scheme Pops -destination 'generic/platform=iOS Simulator' build"
+# Names the simulator rather than `generic/platform=iOS Simulator`, for the same
+# reason `build:for-testing` below does: a generic destination has no active
+# architecture, so Xcode forces project.yml's Debug `ONLY_ACTIVE_ARCH: YES` back
+# to NO and compiles the whole tree a second time for an x86_64 slice that no
+# runner and no machine here executes. The Debug config comment in project.yml
+# carries the measurement.
+#
+# The x86_64 slice was the only thing here covering an Intel Mac, and dropping it
+# is deliberate: every machine in this project and every GitHub macOS runner is
+# Apple Silicon. Someone building on an Intel Mac should set POPS_IOS_SIMULATOR
+# to a device that boots there; a hardcoded ARCHS would have outlived its reason
+# silently, which is what this avoids.
+run = 'xcodebuild -project Pops.xcodeproj -scheme Pops -destination "platform=iOS Simulator,name=$POPS_IOS_SIMULATOR,OS=latest" build'
 
 [tasks."build:device"]
 description = "Build a signed Release for a physical iPhone"
