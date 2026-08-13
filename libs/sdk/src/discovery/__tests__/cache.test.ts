@@ -380,13 +380,13 @@ describe('discovery cache singleton', () => {
       await pillarRegistry();
       expect(fetcher).toHaveBeenCalledTimes(2);
 
-      // Within the new ttl (20s) but past what the OLD ttl (30s) would have
-      // treated as fresh at this age: still served from cache, proving the
-      // expiry check reads the updated value rather than the one it replaced.
-      clock.advance(15_000);
-      const stillCached = await pillarRegistry();
-      expect(stillCached.source).toBe('cached');
-      expect(fetcher).toHaveBeenCalledTimes(2);
+      // Past the NEW ttl (20s) but still within the OLD one (30s): a cache
+      // still keying its expiry off the replaced 30s value would still call
+      // this cached at 25s elapsed, and the assertions below would fail.
+      clock.advance(25_000);
+      const refreshed = await pillarRegistry();
+      expect(refreshed.source).toBe('fresh');
+      expect(fetcher).toHaveBeenCalledTimes(3);
     });
 
     it('clamps a value below MIN_CACHE_TTL_MS and warns', () => {
