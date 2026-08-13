@@ -6,7 +6,10 @@ import {
   DEFAULT_FETCH_TIMEOUT_MS,
   DEFAULT_REGISTRY_URL,
   disposeDiscoveryClient,
+  getCurrentTtlMs,
   invalidateRegistryCache,
+  MIN_CACHE_TTL_MS,
+  setCacheTtlMs,
   setFetchTimeoutMs,
   type RegistryFetcher,
 } from '../cache.js';
@@ -356,6 +359,67 @@ describe('discovery cache singleton', () => {
       expect(
         warnings.some((w) => w.message.includes('fetchTimeoutMs must be a positive number'))
       ).toBe(true);
+    });
+  });
+
+  describe('setCacheTtlMs', () => {
+    it('updates the ttl used on the next expiry check', async () => {
+      const fetcher = vi
+        .fn()
+        .mockResolvedValue(fetchResult(pillar('finance', 'http://finance-api:3004')));
+      withFetcher(fetcher);
+
+      await pillarRegistry();
+      expect(fetcher).toHaveBeenCalledTimes(1);
+
+      setCacheTtlMs(20_000);
+      expect(getCurrentTtlMs()).toBe(20_000);
+
+      // setCacheTtlMs invalidates the cache, so this call always refetches —
+      // it seeds a fresh snapshot under the new ttl for the check below.
+      await pillarRegistry();
+      expect(fetcher).toHaveBeenCalledTimes(2);
+
+      // Past the NEW ttl (20s) but still within the OLD one (30s): a cache
+      // still keying its expiry off the replaced 30s value would still call
+      // this cached at 25s elapsed, and the assertions below would fail.
+      clock.advance(25_000);
+      const refreshed = await pillarRegistry();
+      expect(refreshed.source).toBe('fresh');
+      expect(fetcher).toHaveBeenCalledTimes(3);
+    });
+
+    it('clamps a value below MIN_CACHE_TTL_MS and warns', () => {
+      setCacheTtlMs(1_000);
+
+      expect(getCurrentTtlMs()).toBe(MIN_CACHE_TTL_MS);
+      expect(
+        warnings.some(
+          (w) =>
+            w.message.includes('ttlMs below minimum; clamped') &&
+            w.context['requested'] === 1_000 &&
+            w.context['applied'] === MIN_CACHE_TTL_MS
+        )
+      ).toBe(true);
+    });
+
+    it('invalidates the cache, unlike setFetchTimeoutMs', async () => {
+      const fetcher = vi
+        .fn()
+        .mockResolvedValue(fetchResult(pillar('finance', 'http://finance-api:3004')));
+      withFetcher(fetcher);
+
+      const first = await pillarRegistry();
+      expect(first.source).toBe('fresh');
+      expect(fetcher).toHaveBeenCalledTimes(1);
+
+      setCacheTtlMs(20_000);
+
+      // No time has passed and the old snapshot was well within its old ttl,
+      // but setCacheTtlMs discards it outright.
+      const second = await pillarRegistry();
+      expect(second.source).toBe('fresh');
+      expect(fetcher).toHaveBeenCalledTimes(2);
     });
   });
 });
