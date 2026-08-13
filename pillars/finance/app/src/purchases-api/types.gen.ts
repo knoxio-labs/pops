@@ -965,6 +965,81 @@ export type ReconcileConfirmResponses = {
 
 export type ReconcileConfirmResponse = ReconcileConfirmResponses[keyof ReconcileConfirmResponses];
 
+export type ReconcileLinksData = {
+  body?: never;
+  path?: never;
+  query: {
+    transactionUri: string;
+  };
+  url: '/reconcile/links';
+};
+
+export type ReconcileLinksResponses = {
+  /**
+   * 200
+   */
+  200: {
+    purchases: Array<{
+      charges: Array<{
+        charge: {
+          amountCents: number;
+          chargedAt: string | null;
+          createdAt: string;
+          currency: string;
+          id: string;
+          orderAmountCents: number;
+          origin: 'merchant' | 'derived';
+          paymentHint: string | null;
+          position: number;
+          purchaseId: string;
+          role: 'capture' | 'authorization' | 'refund' | 'adjustment';
+          shipmentId: string | null;
+          sourceChargeRef: string | null;
+          updatedAt: string;
+        };
+        link: {
+          amountCents: number;
+          chargeId: string;
+          confidence: number;
+          confirmedAt: string | null;
+          createdAt: string;
+          id: string;
+          linkType: 'exact' | 'split' | 'combined' | 'partial' | 'rule' | 'manual';
+          matchRuleId: string | null;
+          transactionUri: string;
+        };
+      }>;
+      linkedCents: number;
+      purchase: {
+        checksum: string;
+        createdAt: string;
+        currency: string;
+        discountCents: number;
+        id: string;
+        ingestMethod: 'email' | 'export' | 'upload' | 'manual';
+        merchantEntityId: string | null;
+        merchantEntityName: string | null;
+        orderedAt: string;
+        paymentHint: string | null;
+        rawRef: string | null;
+        settlementMode: 'card' | 'cash' | 'unknown';
+        shippingCents: number;
+        source: string;
+        sourceOrderId: string | null;
+        status: 'awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored';
+        subtotalCents: number;
+        surchargeCents: number;
+        taxCents: number;
+        totalCents: number;
+        updatedAt: string;
+      };
+    }>;
+    transactionUri: string;
+  };
+};
+
+export type ReconcileLinksResponse = ReconcileLinksResponses[keyof ReconcileLinksResponses];
+
 export type ReconcileQueueData = {
   body?: never;
   path?: never;

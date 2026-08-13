@@ -30,6 +30,16 @@ Four grains, because real purchase data has four and collapsing any of them lose
 
 **Charge grouping is not assumed to equal delivery grouping.** Amazon sometimes charges per product group rather than per box, and whether AliExpress's purchase-time groupings map to deliveries is unverified. So a charge belongs to the _order_ — always correct — and names a shipment only when the evidence supports it. No "charge block" entity has been invented on a guess. If blocks do turn out to equal deliveries, that will show up as `purchase_charges.shipment_id` being reliably populated, and the entity can be introduced then with real data behind it.
 
+## Both directions of the link
+
+`GET /purchases/:id` reads the relationship forwards, from an order to the transactions backing each of its charges. `GET /reconcile/links?transactionUri=…` reads it backwards, and that is the direction a person actually arrives from: you are looking at `AMAZON MKTPLACE AU $412.80` in finance and want to know what it bought.
+
+It returns a list of orders, not one. A combined settlement — several charges, one transaction — is a phase of the matching ladder rather than an anomaly, so an answer shaped as "the purchase" would silently drop spend the transaction on screen really did pay for. Each entry carries the charges involved, the link rows themselves, and `linkedCents`, that order's share of the transaction.
+
+**`GET /reconcile/queue` is not a substitute, and looks like one.** The queue answers "what still wants a decision": confirming a link is what removes its charge from it, and an auto-link source never enters it at all. Both of those are established links and are exactly what a finance view is asking about, so a lookup built by scanning the queue reports "no purchase" for the two states where the relationship is most certain. The reverse lookup indexes `purchase_charge_links` directly and reports each link's `confirmedAt` rather than filtering on it — a consumer that renders a derived link as a settled fact is reporting the engine's guess.
+
+A transaction no order explains is an empty list and a `200`. That is the ordinary case for most of a statement, and a `404` would have consumers treating "this was not a purchase" as a fault.
+
 ## The accounting split
 
 `GET /purchases/:id` returns the split pre-computed, because each number calls for something different and deriving them per consumer is how three frontends end up disagreeing:
