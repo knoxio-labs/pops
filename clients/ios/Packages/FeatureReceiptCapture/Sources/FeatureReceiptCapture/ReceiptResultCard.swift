@@ -39,6 +39,9 @@ internal struct ReceiptResultCard: View {
                     Text(content.reference)
                         .font(.popsCaption)
                         .foregroundStyle(Color.popsMutedForeground)
+                    Text(content.noDestinationNote)
+                        .font(.popsCaption)
+                        .foregroundStyle(Color.popsMutedForeground)
                 }
             }
             .accessibilityElement(children: .ignore)

@@ -42,7 +42,13 @@ internal enum ReceiptResultContent: Hashable, Sendable {
         internal let heading: String
         internal let message: String
         internal let reference: String
-        internal var accessibilityLabel: String { "\(heading). \(message) \(reference)" }
+        /// There is nowhere in the app yet to view the purchase this
+        /// reference points at. Said outright rather than left for the
+        /// reader to discover by tapping a reference that goes nowhere.
+        internal let noDestinationNote: String
+        internal var accessibilityLabel: String {
+            "\(heading). \(message) \(reference) \(noDestinationNote)"
+        }
     }
 
     internal struct NeedsReviewContent: Hashable, Sendable {

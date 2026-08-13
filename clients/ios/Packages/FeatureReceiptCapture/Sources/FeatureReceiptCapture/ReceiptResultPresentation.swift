@@ -34,7 +34,8 @@ extension ReceiptResultPresentation {
             heading: ReceiptResultCopy.createdHeading,
             message: alreadyStored
                 ? ReceiptResultCopy.createdAlreadyStoredMessage : ReceiptResultCopy.createdMessage,
-            reference: ReceiptResultCopy.purchaseReference(purchaseId)
+            reference: ReceiptResultCopy.purchaseReference(purchaseId),
+            noDestinationNote: ReceiptResultCopy.createdNoDestination
         )
     }
 
