@@ -47,11 +47,13 @@ Nothing the screen _decides_ sits inside one, which is the point: which sentence
 
 `CaptureSessionHolder` is the one `@unchecked Sendable` in the package, and it is an assertion rather than a silencing — the reasoning, and why it is preferred to `@preconcurrency import AVFoundation`, is in the file.
 
-## Verification gap: Dynamic Type and VoiceOver
+## Dynamic Type
 
-Nothing automated exercises this screen at accessibility text sizes or under VoiceOver. What the code does about it — a `ScrollView` that is unconditional rather than conditional on overflow, text styles rather than point sizes, a label per field, an accessibility hint naming the field that is blocking submission, and a spoken announcement when a pairing fails — is all reasoning, not measurement. There are `#Preview`s at `.accessibility5`, and a preview is something a person looks at, which is not a gate.
+`PairingDynamicTypeTests` renders this screen at `.large` and at `.accessibility5` and fails unless the accessibility render is strictly taller. It is rendered at a fixed width with its height unconstrained, so the rasterised height is the layout's own answer rather than a canvas size chosen by the test — a screen that clips reports the same height at both sizes, which is the regression being watched for. 390×485 and 390×1230 when it landed.
 
-Filed against the whole app rather than this package, because it applies to every screen the app grows. Delete this section when it lands.
+That covers the one thing reasoning could not: the `ScrollView` here is unconditional rather than conditional on overflow, and if that ever regressed the Pair button would go off-screen with no way to reach it.
+
+**VoiceOver is still unmeasured.** The labels, the hint naming the field blocking submission, and the announcement on a failed pairing are all still reasoning — asserting them needs an accessibility-tree walk under XCUITest, which is candidate (2) in POPS-1583 and was not taken.
 
 ## Running the tests
 
