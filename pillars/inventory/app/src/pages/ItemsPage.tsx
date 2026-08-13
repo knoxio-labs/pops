@@ -1,4 +1,4 @@
-import { Plus } from 'lucide-react';
+import { Package, Plus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import {
@@ -55,21 +55,27 @@ function DeleteItemDialog({
   );
 }
 
+function AddItemButton({ onClick }: { onClick: () => void }) {
+  return (
+    <Button onClick={onClick} prefix={<Plus className="h-4 w-4" />}>
+      Add Item
+    </Button>
+  );
+}
+
 export function ItemsPage() {
   const { t } = useTranslation('inventory');
   const model = useItemsPageModel();
   const { filters, navigate } = model;
   const hasSearchOrFilters = !!filters.search || model.hasActiveFilters;
 
-  const addButton = (
-    <Button onClick={() => navigate('/inventory/items/new')} prefix={<Plus className="h-4 w-4" />}>
-      Add Item
-    </Button>
-  );
-
   return (
     <div className="space-y-6">
-      <PageHeader title={t('title')} actions={addButton} />
+      <PageHeader
+        title={t('title')}
+        icon={<Package className="h-6 w-6 text-muted-foreground" />}
+        actions={<AddItemButton onClick={() => navigate('/inventory/items/new')} />}
+      />
       <FiltersBar
         search={filters.search}
         typeFilter={filters.typeFilter}

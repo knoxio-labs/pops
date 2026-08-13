@@ -708,3 +708,22 @@ jobs:
         run: node scripts/check-touch-targets.mjs --self-test
       - name: No new unsized raw interactive elements vs baseline
         run: node scripts/check-touch-targets.mjs
+
+  title-icon-consistency:
+    name: Title-icon consistency
+    # Within one pillar app, top-level (navConfig) pages must either all pass
+    # an `icon` to PageHeader or none do, and a present icon must match that
+    # page's own nav icon — documented convention only until now. It reads
+    # each app's routes.tsx + page source directly and pulls in no
+    # third-party deps, so it skips `pnpm install`. See
+    # scripts/check-title-icon-consistency.mjs.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Gate self-test (proves the guard catches a mix and a mismatch)
+        run: node scripts/check-title-icon-consistency.mjs --self-test
+      - name: Every app is all-or-none on PageHeader icons, and icons match nav
+        run: node scripts/check-title-icon-consistency.mjs
