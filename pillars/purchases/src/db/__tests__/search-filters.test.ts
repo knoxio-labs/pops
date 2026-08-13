@@ -168,6 +168,19 @@ describe('a value the field cannot hold', () => {
     expect(refusalOf(result)).toContain('2026-01-31T00:00:00');
   });
 
+  it('refuses an offset timestamp, which text comparison would place hours away', () => {
+    // `2026-01-01T10:00:00+10:00` is midnight UTC, but it sorts after every
+    // `2026-01-01T0…Z` value in the column, so the window it produces is not
+    // the window it reads as.
+    const message = refusalOf(
+      searchFilterScope([
+        { field: 'orderedAt', operator: 'gte', value: '2026-01-01T10:00:00+10:00' },
+      ])
+    );
+
+    expect(message).toContain('UTC');
+  });
+
   it('refuses the whole list, not just the bad filter, so no scope is half-applied', () => {
     const result = searchFilterScope([
       { field: 'source', operator: 'eq', value: 'amazon' },

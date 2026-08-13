@@ -70,6 +70,20 @@ function readStatus(scope: ScopeUnderConstruction, value: string): Refusal {
   return null;
 }
 
+/**
+ * `orderedAt` is a text column, so both the bound comparison below and the
+ * SQL `>=`/`<=` it becomes are lexicographic. That matches chronological
+ * order only while every value is written the same way, and an offset form
+ * is the case where it does not: `2026-01-01T10:00:00+10:00` sorts after
+ * every `2026-01-01T0…Z` while naming an instant before them, so the window
+ * would be wrong by hours with nothing to say so. Refused rather than
+ * converted, because converting the bound cannot fix the same skew in a
+ * stored value.
+ */
+function isUtc(value: string): boolean {
+  return value.endsWith('Z');
+}
+
 function readBound(
   scope: ScopeUnderConstruction,
   operator: SearchFilterOperator,
@@ -78,6 +92,9 @@ function readBound(
   const parsed = IsoTimestampSchema.safeParse(value);
   if (!parsed.success) {
     return `Filter value '${value}' is not an ISO-8601 timestamp with a timezone, e.g. 2026-02-02T01:41:21Z`;
+  }
+  if (!isUtc(parsed.data)) {
+    return `Filter value '${value}' must be UTC (ending in 'Z'): orderedAt is compared as text, so an offset would name a different window than it reads as`;
   }
   // Tightest bound wins, which is what the conjunction of two bounds on one
   // field already says.
