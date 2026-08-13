@@ -8,14 +8,14 @@ Today this package is a scaffold: one placeholder screen, reachable from the she
 
 That boundary is asserted, not merely intended: `ModuleBoundaryTests` in `AppCore` fails if any package outside `Auth` and `BFMClient` imports either.
 
-| Concern                                        | Lives in                                        |
-| ----------------------------------------------- | ------------------------------------------------ |
-| The screen                                     | here                                             |
-| Capturing a photograph, the review UI          | not built yet — POPS-1959, POPS-1961             |
-| Camera permission                              | `AppCore` — `CameraAuthorizing`                  |
-| `created` / `needs-review` / `unreadable`      | `AppCore` — `ReceiptCaptureRepository`, `ReceiptOutcome` |
-| `POST /mobile/receipts` and its outcomes       | not built yet — `BFMClient` conformance, POPS-1958 |
-| An end-to-end Maestro flow                     | not built yet — POPS-1963                        |
+| Concern                                   | Lives in                                                 |
+| ----------------------------------------- | -------------------------------------------------------- |
+| The screen                                | here                                                     |
+| Capturing a photograph, the review UI     | not built yet — POPS-1959, POPS-1961                     |
+| Camera permission                         | `AppCore` — `CameraAuthorizing`                          |
+| `created` / `needs-review` / `unreadable` | `AppCore` — `ReceiptCaptureRepository`, `ReceiptOutcome` |
+| `POST /mobile/receipts` and its outcomes  | not built yet — `BFMClient` conformance, POPS-1958       |
+| An end-to-end Maestro flow                | not built yet — POPS-1963                                |
 
 ## Why the placeholder has no dependencies
 
