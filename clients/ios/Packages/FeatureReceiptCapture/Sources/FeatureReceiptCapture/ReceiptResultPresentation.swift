@@ -1,4 +1,5 @@
 import AppCore
+import Foundation
 
 /// How a ``AppCore/ReceiptOutcome`` becomes the lines the result screen
 /// draws.
@@ -153,6 +154,6 @@ extension ReceiptResultPresentation {
 extension String {
     fileprivate var ifNotEmpty: String? {
         let trimmed = trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? nil : self
+        return trimmed.isEmpty ? nil : trimmed
     }
 }

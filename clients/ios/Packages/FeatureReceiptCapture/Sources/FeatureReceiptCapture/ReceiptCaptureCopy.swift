@@ -1,4 +1,5 @@
 import AppCore
+import Foundation
 
 /// Every word this module shows, in one place — matching `FeatureTransactions`
 /// and `FeaturePairing`: the app has no localisation layer, and copy

@@ -97,6 +97,23 @@ internal struct ReceiptResultPresentationTests {
             !content.extractedFields.map(\.label).contains(ReceiptResultCopy.FieldLabel.merchant))
     }
 
+    /// A value that is *not* whitespace-only still has its surrounding
+    /// whitespace trimmed — the receipt printed the padding, not the reader.
+    @Test("surrounding whitespace on a real value is trimmed, not preserved")
+    func surroundingWhitespaceIsTrimmed() throws {
+        let extracted = ExtractedReceipt.fake(merchantName: "  Test Grocer  \n")
+        let result = Self.presentation.content(
+            .needsReview(receiptURIs: [], failures: [.fake()], extracted: extracted))
+
+        guard case .needsReview(let content) = result else {
+            Issue.record("expected needsReview")
+            return
+        }
+        let merchant = try #require(
+            content.extractedFields.first { $0.label == ReceiptResultCopy.FieldLabel.merchant })
+        #expect(merchant.value == "Test Grocer")
+    }
+
     @Test("a sum mismatch carries how far off it was")
     func sumMismatchCarriesTheDelta() throws {
         let failure = ReceiptGateFailure.fake(

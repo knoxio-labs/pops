@@ -53,7 +53,10 @@ internal struct ReceiptResultCard: View {
         VStack(alignment: .leading, spacing: PopsSpacing.lg) {
             heading(
                 title: content.heading, message: content.message, caption: content.photoCount,
-                tone: .popsWarning)
+                tone: .popsWarning
+            )
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(content.accessibilityLabel)
             fieldsCard(
                 title: ReceiptResultCopy.needsReviewWhatFailed, fields: content.failureLines)
             fieldsCard(

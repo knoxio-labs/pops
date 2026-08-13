@@ -1,4 +1,5 @@
 import AppCore
+import Foundation
 import Testing
 
 @testable import FeatureReceiptCapture
