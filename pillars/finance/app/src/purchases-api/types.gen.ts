@@ -959,6 +959,7 @@ export type ReconcileConfirmResponses = {
    * 200
    */
   200: {
+    matchRuleId: string | null;
     ok: true;
   };
 };
@@ -994,6 +995,7 @@ export type ReconcileQueueResponses = {
         amountCents: number;
         confidence: number;
         linkType: 'exact' | 'split' | 'combined' | 'partial' | 'rule' | 'manual';
+        transactionDescription: string | null;
         transactionUri: string;
       }>;
       purchaseId: string;
@@ -1004,6 +1006,42 @@ export type ReconcileQueueResponses = {
 };
 
 export type ReconcileQueueResponse = ReconcileQueueResponses[keyof ReconcileQueueResponses];
+
+export type ReconcileRejectData = {
+  /**
+   * Body
+   */
+  body?: {
+    chargeId: string;
+    transactionUri: string;
+  };
+  path?: never;
+  query?: never;
+  url: '/reconcile/reject';
+};
+
+export type ReconcileRejectErrors = {
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+  };
+};
+
+export type ReconcileRejectError = ReconcileRejectErrors[keyof ReconcileRejectErrors];
+
+export type ReconcileRejectResponses = {
+  /**
+   * 200
+   */
+  200: {
+    ok: true;
+  };
+};
+
+export type ReconcileRejectResponse = ReconcileRejectResponses[keyof ReconcileRejectResponses];
 
 export type ReconcileSweepData = {
   /**

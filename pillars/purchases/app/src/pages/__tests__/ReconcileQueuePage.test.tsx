@@ -24,6 +24,7 @@ vi.mock('../../purchases-api/index.js', () => ({
 function buildLink(overrides: Partial<ProposedLink> = {}): ProposedLink {
   return {
     transactionUri: 'pops:finance/transaction/tx-1',
+    transactionDescription: 'WOOLWORTHS 1234 SYDNEY',
     amountCents: 4599,
     linkType: 'exact',
     confidence: 0.95,

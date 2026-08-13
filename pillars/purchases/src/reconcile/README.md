@@ -14,17 +14,33 @@ Links are **re-derived from scratch on every sweep, never patched**, so identica
 
 Deterministic first, AI never. Matching is arithmetic, and a model asked to partition a set of amounts produces a plausible partition that is wrong.
 
-| stage | what                                                     | link type |
-| ----- | -------------------------------------------------------- | --------- |
-| 0     | block: unclaimed, in window, descriptor match, same sign | —         |
-| 1     | exactly one transaction for the charge amount            | `exact`   |
-| 2     | subset-sum over the remaining candidates                 | `split`   |
-| 3     | one candidate smaller than the charge — a part-payment   | `partial` |
-| 5     | anything ambiguous or unmatched                          | review    |
+| stage | what                                                                   | link type |
+| ----- | ---------------------------------------------------------------------- | --------- |
+| 0     | block: unclaimed, not rejected, in window, descriptor match, same sign | —         |
+| 1     | exactly one transaction for the charge amount                          | `exact`   |
+| 2     | subset-sum over the remaining candidates                               | `split`   |
+| 3     | one candidate smaller than the charge — a part-payment                 | `partial` |
+| 5     | anything ambiguous or unmatched                                        | review    |
 
-**Stage 4, learned rules, is deliberately absent.** `purchase_match_rules` is a descriptor-pattern table mirroring finance's `transaction_corrections` — `descriptionPattern`, `matchType`, `source`, `priority` — not a purchase-to-transaction pointer. Implementing it against a guessed rule model would embed a second, incompatible one in the engine. It has its own slice, POPS-1309.
+**Stage 4, learned rules, is deliberately absent.** `purchase_match_rules` now has a writer — see below — but nothing here reads one back. A rule is a descriptor pattern mirroring finance's `transaction_corrections` (`descriptionPattern`, `matchType`, `source`, `priority`), not a purchase-to-transaction pointer, so what a matched pattern should do to the ladder is a decision with real failure modes: widening blocking is cheap and safe, promoting confidence is not, and licensing a near-miss amount would undercut the premise that matching is exact arithmetic. It has its own slice, POPS-1309.
 
-The queue UI (POPS-241) was expected to settle the semantics by defining how a rule gets written. It did not, and the reason is worth recording rather than leaving as a dangling reference: **nothing writes to `purchase_match_rules`**. `POST /reconcile/confirm` sets `confirmedAt` on the link and stops there; `POST /reconcile/unlink` deletes a link and records nothing. So the table is still empty by construction, POPS-1309's input does not exist, and the rule-writing half is tracked separately as POPS-1898.
+## What a decision persists
+
+A decision that changed nothing durable is the reason the queue used to re-ask the same question forever. Three routes, three different amounts of memory:
+
+| route     | link    | what survives the next sweep                                      |
+| --------- | ------- | ----------------------------------------------------------------- |
+| `confirm` | pinned  | the link, **and** a `purchase_match_rules` row for the descriptor |
+| `reject`  | deleted | a `purchase_link_rejections` row for the pairing                  |
+| `unlink`  | deleted | nothing — by design                                               |
+
+**A confirm learns the merchant, not the link.** The rule is keyed on the accepted transaction's descriptor, normalised so a store number or an order reference does not become part of the pattern (`WOOLWORTHS 1234 SYDNEY` and `WOOLWORTHS 5567 SYDNEY` are one merchant), and scoped to the order's own `source`. The link then carries `match_rule_id`, which is what keeps the rule's `timesApplied` checkable — it equals the number of links naming that rule, so confirming the same link twice is a no-op rather than a second count. A descriptor that normalises to nothing (a terminal emitting a bare reference) writes no rule and still pins the link; refusing a real decision to protect an empty pattern would be the wrong trade.
+
+The descriptor comes from `purchase_charge_links.transaction_description`, written when the sweep proposes the link. The alternatives were both worse: asking finance during the decision makes an accept fail whenever the peer is down, and taking the descriptor from the request body trusts the caller with the value the rule is keyed on.
+
+**A reject is stored as a pairing, not as a negative rule.** The narrowest negative a descriptor-pattern table can express is "descriptors like this never settle this source" — a claim about every future order from the merchant, inferred from one click. When the engine merely picked the wrong one of a merchant's two charges, that inference disables matching for the merchant entirely. What the rejection actually establishes is that these two rows are not a pair, so that is what is stored, and stage 0 consults it.
+
+It is stored in its own table rather than as a column on the link, because a rejected link is not a link: leaving the row would make every reader that sums linked money — the accounting split, the merchant roll-up — count rejected money as matched unless each remembered to exclude it.
 
 ## Three phases, not one loop
 
@@ -74,6 +90,8 @@ It stays narrow (14–21 days, per source). Import lag is absorbed by perpetual 
 A confirmed link removes **both** its charge and its transaction from the solvable set. That is what makes a human decision durable: the pinned transaction cannot be re-used to satisfy some other order on the next sweep.
 
 Feeding the solver's own output back as confirmed produces no further proposals — the property that makes re-derivation safe to run on a timer.
+
+A rejection is the mirror image and removes **neither**. It says the engine paired the wrong two things, not that the transaction is spent, so the transaction stays in the pool for the charge that does settle it — which the same sweep can then claim. Getting this backwards would turn one click into an unexplained order nobody looked at.
 
 ## The sweep
 

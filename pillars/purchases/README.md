@@ -17,6 +17,7 @@ purchases  (the order)
   │    └─ purchase_item_notes       verbatim merchant prose, ordered
   ├─ purchase_charges               every charge, matched or not
   │    ├─ purchase_charge_links     charge → finance transaction
+  │    ├─ purchase_link_rejections  pairings a human ruled out
   │    └─ purchase_item_allocations which charge paid for which line
   ├─ purchase_tags                  facts about the order that aren't fields
   └─ purchase_documents             evidence → documents
