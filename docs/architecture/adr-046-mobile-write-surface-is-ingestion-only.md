@@ -42,5 +42,5 @@ The verb half of constraint 1 is enforced by `src/contract/__tests__/mobile-verb
 - A route added under `/mobile` with a forbidden verb fails the bfm suite, on the contract, before any handler exists to review.
 - bfm's service-account grant widens for the first time since it was minted. It stays an enumerated list rather than becoming `purchases`, so the next widening is still a visible diff.
 - The iOS client gains a request body it can construct wrongly. The upload route declares its own `413` and reuses the existing `400` shape, so every refusal bfm can answer is one the generated client has a case for.
-- The mobile perimeter's rate limiter now bounds an expensive downstream operation, not just reads. Its budget was sized against cheap reads and is unchanged here; whether an upload should cost more than a list page is a question the first real traffic can answer (POPS-1963).
+- The mobile perimeter's rate limiter now bounds an expensive downstream operation, not just reads. Its budget was sized against cheap reads and is unchanged here; whether an upload should cost more than a list page is a question the first real traffic can answer (POPS-1989).
 - Nothing about this ADR is specific to `purchases`. The next pillar to accept phone-captured content — a photographed document, a voice note — inherits the four constraints rather than re-deciding them.

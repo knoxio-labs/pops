@@ -441,7 +441,7 @@ and send it in that header, against the registry's admin surface reachable
 externally through the shell proxy:
 
 ```bash
-curl -sS -X POST https://pops.local/registry-api/service-accounts -H 'Content-Type: application/json' -H "cf-access-jwt-assertion: $ACCESS_JWT" -d '{"name":"bfm","scopes":["finance.transactions"]}'
+curl -sS -X POST https://pops.local/registry-api/service-accounts -H 'Content-Type: application/json' -H "cf-access-jwt-assertion: $ACCESS_JWT" -d '{"name":"bfm","scopes":["finance.transactions","purchases.receipt"]}'
 ```
 
 Two deployment shapes let a bare `curl` through, which is why this can work on
@@ -466,6 +466,18 @@ a single process.
 Rotate by minting a replacement, swapping the file, restarting, and only then
 revoking the old id (`POST /service-accounts/:id/revoke`) — in that order,
 since revocation takes effect on the next request.
+
+**Widening the grant is a rotation, not an edit.** The registry's admin surface
+has exactly three operations — list, create, revoke — so there is no way to add
+a scope to a live account. An account provisioned before a scope was added to
+`BFM_SERVICE_ACCOUNT_SCOPES` keeps the grant it was minted with, and the new
+leg answers `403` naming the missing scope on a producer that enforces (POPS-1990).
+The operator step is the rotation above, with the fuller scope list in the
+create call. Until it runs, the receipt upload still works against today's
+`purchases`, whose `requireCredential` is `false` — which is precisely the
+failure mode worth knowing about, because it means a missing grant is invisible
+until that flag flips. Prove the grant rather than the flag: set
+`requireCredential` to `true` locally and upload once.
 
 ## Deployment
 
