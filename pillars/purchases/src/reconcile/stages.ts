@@ -94,19 +94,16 @@ export function eligibilityFor(
 
   const wantPositive = charge.amountCents > 0;
   const matchesDescriptor = descriptorMatcherFor(charge.descriptorPattern);
-  const rejected = blocking.rejected.get(charge.id) ?? NOTHING_REJECTED;
+  const rejected = blocking.rejected.get(charge.id);
 
   return (transaction) => {
-    if (rejected.has(transaction.uri)) return false;
+    if (rejected?.has(transaction.uri) === true) return false;
     if (!isWithinWindow(transaction.date, window)) return false;
     if (transaction.amountCents === 0) return false;
     if (transaction.amountCents > 0 !== wantPositive) return false;
     return matchesDescriptor(transaction.description);
   };
 }
-
-/** A charge nobody has ruled anything out for. */
-const NOTHING_REJECTED: ReadonlySet<string> = new Set<string>();
 
 /** {@link eligibilityFor}, applied to the unclaimed transactions. */
 export function candidatesFor(

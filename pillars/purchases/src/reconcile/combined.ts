@@ -11,10 +11,9 @@
  * time can only ever ask "does something here sum to *me*".
  */
 
-import { eligibilityFor, linkOf, orderedTransactions } from './stages.js';
+import { eligibilityFor, linkOf, orderedTransactions, type BlockingContext } from './stages.js';
 import { findSubsetSummingTo, MIN_SPLIT_SIZE } from './subset-sum.js';
 
-import type { BlockingContext } from './stages.js';
 import type { ProposedLink, SolvableCharge, SolvableTransaction } from './types.js';
 
 export interface CombinedResult {
