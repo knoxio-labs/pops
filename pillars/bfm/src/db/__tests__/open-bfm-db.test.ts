@@ -10,7 +10,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import Database from 'better-sqlite3';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { openBfmDb } from '../index.js';
 
@@ -116,6 +116,58 @@ describe('openBfmDb', () => {
     const path = join(dir, 'bfm.db');
     writeFileSync(path, 'this is not a sqlite file');
     expect(() => openBfmDb(path)).toThrow();
+  });
+
+  it('closes the handle when a pragma throws, not just when migration does', () => {
+    // A file that is not a database does not fail at `new Database(path)` —
+    // better-sqlite3 opens the descriptor lazily and only touches the file
+    // header on the first real operation, which here is the first pragma
+    // (`journal_mode = WAL`). That throw used to happen BEFORE openBfmDb's
+    // try/catch started, so the already-constructed handle was silently
+    // dropped instead of closed: no compile error, no failing assertion, a
+    // handle now reachable only by whatever GC pass eventually collects it.
+    //
+    // `better-sqlite3` finalises a collected handle by calling back into the
+    // Node-API environment it was created in. Vitest's fork-pool worker tears
+    // that environment down once its files are done — if the GC pass that
+    // collects this leaked handle lands after that teardown starts, the
+    // finalizer aborts the whole worker process with
+    // `Assertion failed: (env) != nullptr`, not a catchable JS error. That is
+    // exactly the shape logged for POPS-1946 (an "Unhandled Errors" /
+    // "Worker exited unexpectedly" failure with this file's tests as
+    // neighbours in the run), and it is why this is asserted directly rather
+    // than left to the "rejects a file that is not a database" case above to
+    // imply — a leak here produces no failing assertion of its own, ever,
+    // except by accident of GC timing on some later, unrelated run.
+    //
+    // Proven via `Database.prototype.pragma`, spied rather than mocked (every
+    // call still runs the real implementation) so the instance `openBfmDb`
+    // actually constructs can be inspected afterwards through its `open`
+    // property, which better-sqlite3 flips to `false` exactly once `close()`
+    // has run.
+    const path = join(dir, 'bfm.db');
+    writeFileSync(path, 'this is not a sqlite file');
+
+    const instances: Database.Database[] = [];
+    const original = Database.prototype.pragma;
+    const spy = vi.spyOn(Database.prototype, 'pragma').mockImplementation(function (
+      this: Database.Database,
+      ...args: [string]
+    ) {
+      instances.push(this);
+      return original.apply(this, args);
+    });
+
+    try {
+      expect(() => openBfmDb(path)).toThrow();
+    } finally {
+      spy.mockRestore();
+    }
+
+    const captured = instances[0];
+    if (captured === undefined)
+      throw new Error('pragma() was never called — test is not exercising the path it claims to');
+    expect(captured.open, 'the handle openBfmDb constructed was never closed').toBe(false);
   });
 
   it('closes the handle when the migration fails, leaving no live connection', () => {
