@@ -119,6 +119,14 @@ receipt states a tax of total/11, and on a long shop a single line lands on
 it by coincidence often enough that refusing those would spend a reviewer's
 attention on arithmetic that is not in doubt.
 
+A repeat sitting entirely among the lines counts too, which costs the
+receipt that genuinely carries two items priced at exactly its stated tax.
+That is the shape overlapping photographs produce, and the arithmetic is the
+declared backstop for a line reported twice — two identical coffees and an
+overlap artefact are the same figures, which is why deduplicating them in
+code was refused as well. The ambiguity is real, and review is where a real
+ambiguity belongs.
+
 The other half cannot be, and this is a limit rather than a gap: a model
 that _drops_ a component understates by the same amount, and if what it
 dropped equalled the stated tax the exclusive branch reconciles. The

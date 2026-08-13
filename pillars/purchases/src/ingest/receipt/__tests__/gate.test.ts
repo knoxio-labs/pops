@@ -599,6 +599,37 @@ describe('an extraction error of exactly the stated tax', () => {
     expect(result.taxIncluded).toBe(true);
   });
 
+  it('refuses a repeat that sits entirely among the lines, and this is the price paid', () => {
+    // The one case where the check costs a receipt that is probably fine:
+    // $110.00 of goods with two $10.00 items, and $10.00 of GST, which is
+    // 110.00/11. It goes to review.
+    //
+    // Kept in scope anyway, because a repeated line is exactly what a
+    // receipt photographed in overlapping frames produces — the prompt says
+    // a line appearing in two images is one line, and this is the backstop
+    // for when the model reports it twice regardless. Two identical items
+    // and an overlap artefact are the same figures, which is why
+    // deduplicating them in code was refused too. Narrowing the check to
+    // repeats involving `shipping` or `surcharges` would buy this receipt
+    // back by going blind to an over-count on the intake likeliest to have
+    // one, and the failure direction here is review rather than a wrong
+    // write.
+    const twoTenDollarItems = receipt({
+      total: '$110.00',
+      tax: '$10.00',
+      lines: [
+        { description: 'Timber Pine DAR 42x19', amount: '$90.00' },
+        { description: 'Screws Bugle 8g 65mm', amount: '$10.00' },
+        { description: 'Screws Bugle 8g 65mm', amount: '$10.00' },
+      ],
+    });
+
+    const result = gateExtraction(twoTenDollarItems);
+
+    expect(result.admissible).toBe(false);
+    expect(result.failures.map((f) => f.kind)).toEqual(['ambiguous-tax']);
+  });
+
   it('admits a repeated amount when the receipt states no tax at all', () => {
     // With no tax there is no other convention to fall into: both branches
     // are the same sum. A receipt that genuinely charged $9.95 twice must

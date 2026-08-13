@@ -183,6 +183,16 @@ interface Totals {
  * arithmetic that is not in doubt. A *repeated* one is the fingerprint of
  * the same money filed twice, which is the error nothing else here can see.
  *
+ * A repeat sitting entirely among the lines counts, and that is a choice. It
+ * is the shape a receipt photographed in overlapping frames produces — the
+ * prompt says a line appearing in two images is one line, and the arithmetic
+ * is the backstop for when it is reported twice anyway. The cost is that two
+ * genuinely identical items priced at exactly the stated tax go to review;
+ * the alternative is being blind to an over-count on the intake most likely
+ * to produce one. Two identical coffees and an overlap artefact are the same
+ * bytes, which is why deduplicating them in code was refused as well — the
+ * ambiguity is real, and review is where a real ambiguity belongs.
+ *
  * The mirror case is not detectable and does not pretend to be: a model
  * that drops a component understates the added side, and if what it dropped
  * equalled the stated tax, the exclusive branch reconciles instead. The
