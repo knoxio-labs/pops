@@ -12,6 +12,7 @@
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { ErrorBodySchema } from '../../contract/rest-schemas.js';
 import { purchasesContract } from '../../contract/rest.js';
 import { openTempDb, seedAmazonSource } from '../../db/__tests__/helpers.js';
 import { createPurchase, upsertSource } from '../../db/index.js';
@@ -263,7 +264,12 @@ describe('POST /search with filters', () => {
         },
       });
 
+    // The contract's own enum rejects this before any handler runs, and a
+    // rejection that never reached a handler still has to be the body the
+    // route declares — otherwise the client generated from that document
+    // cannot decode the 400 it is most likely to receive.
     expect(res.status).toBe(400);
+    expect(ErrorBodySchema.safeParse(res.body).success).toBe(true);
   });
 
   it('rejects an operator it cannot apply', async () => {
@@ -279,6 +285,7 @@ describe('POST /search with filters', () => {
       });
 
     expect(res.status).toBe(400);
+    expect(ErrorBodySchema.safeParse(res.body).success).toBe(true);
   });
 
   it('rejects a supported field paired with an operator it does not take, naming both', async () => {
@@ -294,6 +301,7 @@ describe('POST /search with filters', () => {
       });
 
     expect(res.status).toBe(400);
+    expect(ErrorBodySchema.safeParse(res.body).success).toBe(true);
     expect(res.body.message).toContain('orderedAt');
     expect(res.body.message).toContain('eq');
   });
@@ -311,6 +319,7 @@ describe('POST /search with filters', () => {
       });
 
     expect(res.status).toBe(400);
+    expect(ErrorBodySchema.safeParse(res.body).success).toBe(true);
     expect(res.body.message).toContain('shipped');
   });
 });
