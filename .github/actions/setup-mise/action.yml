@@ -1,0 +1,69 @@
+name: Setup mise
+description: >-
+  Install mise and the toolchain the calling job's mise config pins, from the
+  single jdx/mise-action version this repo agrees on.
+
+# WHY THIS WRAPPER EXISTS.
+#
+# `jdx/mise-action` fetches the mise binary from GitHub Releases whenever the
+# runner's mise cache MISSES — a new runner image, a changed config hash, an
+# evicted key, a fork PR that cannot read the base cache. A warm cache never
+# fetches at all, which is why this is rare and why it is invisible until it
+# is not. Before v4.2.5 that fetch was a single un-retried `curl -fsSL`, so one
+# transient 503 or TLS reset from the release CDN failed the setup step before
+# any step of the job had run.
+#
+# Inside a merge group that reads as `failed_checks` and evicts an otherwise
+# green entry from the queue, costing a full re-queue. Nothing downstream can
+# tell a provisioning blip from a real test failure: both are a red required
+# check on a branch that is fine.
+#
+# v4.2.5 wraps every download — binary, checksum, signature, version probe — in
+# a five-attempt retry with a 2s pause, so the fix is to be ON that version and
+# to be able to prove it. Hence the EXACT patch pin below, where the rest of
+# this repo pins actions by major. `@v4` resolved to the un-retried v4.2.4 on
+# the day the evictions happened and resolves to v4.2.5 today; a major-only pin
+# cannot express "must carry the download retry", and a floating tag makes the
+# question unanswerable from the tree. Dependabot moves this pin forward;
+# `scripts/ci/check-mise-setup-single-source.mjs` refuses one that goes
+# floating, goes to a bare SHA, or drops back below the retry.
+#
+# WHY THE RETRY IS NOT WRAPPED HERE INSTEAD. A composite action's steps reject
+# `continue-on-error`, so there is no way to attempt a nested `uses:` and
+# recover from its failure. The retry has to live inside the action itself,
+# which makes the version the only lever this repo has — and makes pinning it
+# in ONE place the whole point of this file.
+
+inputs:
+  working_directory:
+    description: >-
+      Directory whose mise config selects the toolchain. Empty means the
+      workspace root: mise-action falls through to the process cwd when this
+      input and `install_dir` are both unset.
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - uses: jdx/mise-action@v4.2.5
+      with:
+        working_directory: ${{ inputs.working_directory }}
+
+    # The nested action failing already fails this composite and the job, so
+    # this step is not covering that. It covers the other direction: a setup
+    # that exits 0 having put no mise on PATH. Every job downstream of here
+    # runs `mise run …` or `mise which node`, and a job that sailed past a
+    # no-op setup would resolve those against whatever the runner image
+    # happens to ship — a different toolchain reporting green, which is the
+    # failure this wrapper would otherwise have introduced while fixing the
+    # 503.
+    - name: Prove mise is installed
+      shell: bash
+      run: |
+        set -euo pipefail
+        if ! command -v mise >/dev/null 2>&1; then
+          echo "::error::mise setup reported success but no mise is on PATH."
+          exit 1
+        fi
+        mise --version

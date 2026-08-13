@@ -215,7 +215,7 @@ jobs:
       # ends up installing the same node/pnpm actions/setup-node and
       # pnpm/action-setup would have set up anyway; the two don't fight
       # over PATH because both resolve to the same pinned major.
-      - uses: jdx/mise-action@v4
+      - uses: ./.github/actions/setup-mise
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:

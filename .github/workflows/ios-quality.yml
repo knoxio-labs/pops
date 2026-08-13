@@ -253,7 +253,7 @@ jobs:
           # produced by another toolchain is not a cache — Swift rebuilds it
           # from scratch and the stale one just wastes the restore.
           echo "POPS_XCODE_VERSION=$version" >> "$GITHUB_ENV"
-      - uses: jdx/mise-action@v4
+      - uses: ./.github/actions/setup-mise
         with:
           working_directory: clients/ios
 

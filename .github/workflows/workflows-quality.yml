@@ -1,13 +1,22 @@
 name: Workflows Quality
 
+# Covers `.github/actions/**` as well as `.github/workflows/**`. A local
+# composite action is workflow-shaped YAML that every workflow depends on, and
+# a syntax error in one is found at the same place a syntax error in a workflow
+# is: at run time, in whichever job reached it first. Both the trigger and the
+# lint glob have to name it — a filter that selects the change and a lint that
+# never reads the file is the same as no coverage.
+
 on:
   push:
     branches: [main]
     paths:
       - ".github/workflows/**"
+      - ".github/actions/**"
   pull_request:
     paths:
       - ".github/workflows/**"
+      - ".github/actions/**"
 
 jobs:
   changes:
@@ -24,6 +33,7 @@ jobs:
           filters: |
             relevant:
               - '.github/workflows/**'
+              - '.github/actions/**'
 
   yaml-lint:
     name: YAML Lint
@@ -38,4 +48,6 @@ jobs:
         if: github.event_name == 'push' || needs.changes.outputs.relevant == 'true'
       - name: Lint workflow YAML
         if: github.event_name == 'push' || needs.changes.outputs.relevant == 'true'
-        run: npx yaml-lint .github/workflows/*.yml
+        # Globbed by the shell, so an empty `.github/actions` would expand to a
+        # literal path and fail the lint rather than quietly shortening it.
+        run: npx yaml-lint .github/workflows/*.yml .github/actions/*/action.yml
