@@ -81,6 +81,12 @@ export interface BfmRestHandlerDeps extends MobileFinanceHandlerDeps {
    */
   internalBaseUrls?: Readonly<Record<string, string>>;
   /**
+   * Per-pillar deadline for the bootstrap route's reachability probe, as
+   * resolved once at boot by `resolveProbeTimeoutMs`. Undefined means the
+   * probe's own default (`DEFAULT_PROBE_TIMEOUT_MS`) stands.
+   */
+  probeTimeoutMs?: number;
+  /**
    * Seams for the bootstrap route's registry read, per-pillar probe and clock.
    * Production omits it; tests supply fakes so no probe leaves the process.
    */
@@ -95,7 +101,7 @@ export function makeBfmRestHandlers(
     createRateLimiter({ limit: PAIRING_CODE_RATE_LIMIT, windowMs: PAIRING_CODE_RATE_WINDOW_MS });
 
   const bootstrapDeps: MobileBootstrapDeps = {
-    ...defaultMobileBootstrapDeps(deps.db, deps.internalBaseUrls ?? {}),
+    ...defaultMobileBootstrapDeps(deps.db, deps.internalBaseUrls ?? {}, deps.probeTimeoutMs),
     ...deps.bootstrap,
   };
 

@@ -62,6 +62,7 @@ import {
 } from './cron/prune-credentials.js';
 import { createMobileFinanceClient } from './finance/client.js';
 import { buildBfmManifest } from './manifest.js';
+import { resolveProbeTimeoutMs } from './pillars/env.js';
 import { createPillarGateway } from './pillars/gateway.js';
 import { configureBfmServerSdk } from './pillars/sdk-config.js';
 import { createRateLimiter, PAIRING_CODE_RATE_WINDOW_MS } from './rate-limit.js';
@@ -106,12 +107,17 @@ const issuanceLimiter = createRateLimiter({
 // the one caller that raises it.
 const pairingCodeTtlMs = resolvePairingCodeTtlMs();
 
+// Unset in every real deployment, where the probe's own default stands — see
+// `resolveProbeTimeoutMs`'s doc comment for the one caller that raises it.
+const probeTimeoutMs = resolveProbeTimeoutMs();
+
 const app = createBfmApiApp({
   version,
   db: bfmDb.db,
   accessTokenSigningKey,
   publicBaseUrl,
   internalBaseUrls: sdkConfig.internalBaseUrls,
+  probeTimeoutMs,
   finance,
   refreshTokenTtlMs,
   issuanceLimiter,
