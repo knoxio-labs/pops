@@ -1,3 +1,4 @@
+import { Plus } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 
 import {
@@ -159,7 +160,7 @@ export function EntityCreateDialog(props: EntityCreateDialogProps) {
               Cancel
             </Button>
             <Button type="submit" disabled={!state.name.trim()}>
-              Create Entity
+              <Plus className="h-4 w-4 mr-1.5" /> Create Entity
             </Button>
           </DialogFooter>
         </form>

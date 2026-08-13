@@ -1,3 +1,4 @@
+import { Plus, Upload } from 'lucide-react';
 import { Link } from 'react-router';
 
 import { Badge, Button, Card, SkeletonGrid } from '@pops/ui';
@@ -67,10 +68,14 @@ export function RecentTransactions({ transactions, isLoading }: RecentTransactio
         <p className="text-muted-foreground mb-4">No transactions yet.</p>
         <div className="flex items-center justify-center gap-3">
           <Button asChild size="sm">
-            <Link to="/finance/import">Import</Link>
+            <Link to="/finance/import">
+              <Upload className="h-4 w-4 mr-1.5" /> Import
+            </Link>
           </Button>
           <Button asChild variant="outline" size="sm">
-            <Link to="/finance/transactions">Add Transaction</Link>
+            <Link to="/finance/transactions">
+              <Plus className="h-4 w-4 mr-1.5" /> Add Transaction
+            </Link>
           </Button>
         </div>
       </Card>

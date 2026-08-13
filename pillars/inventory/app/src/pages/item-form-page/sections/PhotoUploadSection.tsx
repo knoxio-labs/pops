@@ -1,4 +1,4 @@
-import { ImageIcon } from 'lucide-react';
+import { ImageIcon, Trash2 } from 'lucide-react';
 
 import { Button } from '@pops/ui';
 
@@ -68,7 +68,7 @@ export function PhotoUploadSection({
             loading={isDeleting}
             loadingText="Deleting..."
           >
-            Delete
+            <Trash2 className="h-3.5 w-3.5 mr-1.5" /> Delete
           </Button>
         </div>
       )}

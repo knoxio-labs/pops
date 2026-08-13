@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Plus } from 'lucide-react';
 /**
  * Slot management drawer: lists `plan_slots` rows. Default slots can be
  * reordered but not renamed or deleted; custom slots support inline rename
@@ -154,7 +155,7 @@ function AddSlotForm({ onSubmit, isPending }: AddSlotFormProps): ReactElement {
           </p>
         )}
         <Button onClick={submit} disabled={isPending} data-testid="add-slot-submit">
-          Add slot
+          <Plus className="h-4 w-4 mr-1.5" /> Add slot
         </Button>
       </div>
     </section>

@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { Check, Trash2 } from 'lucide-react';
 /**
  * Plan entry edit sheet: a right-side drawer on desktop, a bottom-sheet at
  * narrow viewports (via `useIsMobile`). Surfaces servings, notes, a "Mark
@@ -177,7 +178,7 @@ function EditButtons(props: EditButtonsProps): ReactElement {
         <Link to={`/food/recipes/${props.recipeSlug}?cook=${props.entryId}`}>Mark cooked</Link>
       </Button>
       <Button onClick={props.onSave} variant="outline" disabled={props.isSaving}>
-        Save changes
+        <Check className="h-4 w-4 mr-1.5" /> Save changes
       </Button>
       <Button
         onClick={props.onDelete}
@@ -185,7 +186,7 @@ function EditButtons(props: EditButtonsProps): ReactElement {
         disabled={props.isDeleting}
         data-testid="delete-plan-entry"
       >
-        Delete
+        <Trash2 className="h-4 w-4 mr-1.5" /> Delete
       </Button>
     </div>
   );

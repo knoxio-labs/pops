@@ -1,3 +1,4 @@
+import { Plus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import {
@@ -61,7 +62,7 @@ export function AddRootLocationDialog({
               Cancel
             </Button>
             <Button type="submit" disabled={!name.trim() || isPending} loading={isPending}>
-              Create
+              <Plus className="h-4 w-4 mr-1.5" /> Create
             </Button>
           </DialogFooter>
         </form>
