@@ -1,21 +1,34 @@
 #!/usr/bin/env node
 /**
- * Per-pillar mise toolchain override guard — see
+ * Per-unit mise toolchain override guard — see
  * [ADR-039](../../docs/architecture/adr-039-pillar-isolation.md) on why the
- * toolchain pin must not impose fleet-wide lockstep.
+ * toolchain pin must not impose fleet-wide lockstep, and
+ * [ADR-043](../../docs/architecture/adr-043-clients-as-a-unit-kind.md) for
+ * `clients/` as a third unit kind alongside `pillars/` and `libs/`.
  *
  * The root `mise.toml` `[tools]` table (node/pnpm/rust) is the shared
  * default toolchain. mise merges config **up** the directory tree, so any
- * unit (`pillars/<id>`, `pillars/<id>/app`, `libs/<id>`) may declare its own
- * `[tools]` table in its own mise config to override just the tool(s) it
- * needs to trial or lag a bump — everything it doesn't redeclare still
- * resolves from the root pin.
+ * unit (`pillars/<id>`, `pillars/<id>/app`, `libs/<id>`, `clients/<id>`) may
+ * declare its own `[tools]` table in its own mise config to override just
+ * the tool(s) it needs to trial or lag a bump, or to declare a tool the root
+ * pin does not cover at all (a client's own build tooling, e.g.
+ * `xcodegen`) — everything it doesn't redeclare still resolves from the
+ * root pin.
  *
  * This guard keeps that escape hatch narrow and the root pin honest:
  *   - the root `mise.toml` must still declare `[tools]` for node/pnpm/rust
  *     (the documented shared default a per-unit override falls back to);
- *   - a unit may override `node` or `rust` only — `pnpm` manages the single
- *     pnpm workspace lockfile and must not fork per unit.
+ *   - a unit may only OVERRIDE a tool the root pin already declares if that
+ *     tool is on its unit-kind's allow list ({@link
+ *     ALLOWED_UNIT_OVERRIDE_TOOLS_BY_BASE}): `pillars/` and `libs/` may
+ *     override `node` or `rust` (never `pnpm` — it manages the single pnpm
+ *     workspace lockfile and must not fork per unit); `clients/` may
+ *     override none of the three, because ADR-043 keeps a client out of both
+ *     the pnpm workspace and the Cargo workspace entirely, so it has no
+ *     legitimate reason to touch node, pnpm, or rust at all;
+ *   - a unit may freely DECLARE a tool the root pin does not cover at all —
+ *     that is not an override of anything, it is the unit's own tooling
+ *     (`clients/ios/mise.toml`'s `xcodegen` pin is exactly this case).
  *
  * **Which unit config filenames count.** mise does not read only `mise.toml`
  * — `src/config/mod.rs`'s `LOCAL_CONFIG_FILENAMES` (the list the docs at
@@ -184,14 +197,38 @@ import {
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..');
 
-/** Tool keys a non-root unit is permitted to override. */
+/**
+ * Tool keys a `pillars/` or `libs/` unit is permitted to override — the
+ * historical, still-current rule for the two unit kinds that share the root
+ * pin's node/rust toolchain. Kept as its own export because
+ * `check-mise-tool-overrides.test.ts` asserts against it directly; see
+ * {@link ALLOWED_UNIT_OVERRIDE_TOOLS_BY_BASE} for the per-unit-kind rule this
+ * guard actually enforces, including `clients/`'s empty allowance.
+ */
 export const ALLOWED_UNIT_OVERRIDE_TOOLS = ['node', 'rust'];
+
+/**
+ * Tool keys a unit is permitted to override, keyed by its unit-kind base
+ * ({@link UNIT_BASES}). Only applies when the tool is one the root pin
+ * already declares — a unit is always free to declare a tool the root does
+ * not pin at all (see the file header). `pillars/` and `libs/` units are TS
+ * (or, for `contacts`, Cargo) packages that share the root's node/rust
+ * toolchain and may trial or lag one of those two; `clients/` units share
+ * neither — ADR-043 keeps a client out of both the pnpm workspace and the
+ * Cargo workspace entirely — so a client may override none of node, pnpm, or
+ * rust, only ever add tools of its own (e.g. `clients/ios`'s `xcodegen`).
+ */
+export const ALLOWED_UNIT_OVERRIDE_TOOLS_BY_BASE = {
+  pillars: ALLOWED_UNIT_OVERRIDE_TOOLS,
+  libs: ALLOWED_UNIT_OVERRIDE_TOOLS,
+  clients: [],
+};
 
 /** Tools the root pin must declare — the shared default every unit inherits. */
 export const REQUIRED_ROOT_TOOLS = ['node', 'pnpm', 'rust'];
 
 /** Unit-kind directories searched for a per-unit mise config. */
-export const UNIT_BASES = ['pillars', 'libs'];
+export const UNIT_BASES = ['pillars', 'libs', 'clients'];
 
 /**
  * Every non-local mise config filename this guard reads, in mise's own
@@ -446,8 +483,8 @@ function unitConfigFiles(root, dir, envValues) {
 
 /**
  * Discover every unit config file (relative to `root`) across
- * `pillars/<id>`, `pillars/<id>/app`, `libs/<id>` — checking every filename
- * in {@link COMMITTED_MISE_CONFIG_FILENAMES} (and its env-suffixed variant
+ * `pillars/<id>`, `pillars/<id>/app`, `libs/<id>`, `clients/<id>` — checking
+ * every filename in {@link COMMITTED_MISE_CONFIG_FILENAMES} (and its env-suffixed variant
  * for each value {@link discoverMiseEnvValues} finds live in this repo's
  * workflows), not only `mise.toml`, plus every `.config/mise/conf.d/*.toml`
  * fragment. Mirrors the root `mise.toml`'s `run-all` disk-discovery for
@@ -557,13 +594,24 @@ export function checkOverrides(root) {
     const keys = Object.keys(tools);
     if (keys.length === 0) continue;
     unitOverrides.push({ dir, file, overrides: tools });
+
+    // The unit-kind base is the dir's first path segment (`pillars/finance` →
+    // `pillars`, `pillars/finance/app` → `pillars`, `clients/ios` →
+    // `clients`), which is exactly how UNIT_BASES names them.
+    const base = dir.split('/')[0];
+    const allowedOverrides = ALLOWED_UNIT_OVERRIDE_TOOLS_BY_BASE[base] ?? [];
+
     for (const key of keys) {
-      if (!ALLOWED_UNIT_OVERRIDE_TOOLS.includes(key)) {
+      // A key the root pin does not declare at all is not an override of
+      // anything — it is the unit's own tool (clients/ios's `xcodegen`) and
+      // is always allowed, regardless of unit kind.
+      if (!(key in rootTools)) continue;
+      if (!allowedOverrides.includes(key)) {
+        const allowedText =
+          allowedOverrides.length > 0 ? allowedOverrides.join(', ') : '(none for this unit kind)';
         violations.push(
-          `${file} overrides "${key}" — only ${ALLOWED_UNIT_OVERRIDE_TOOLS.join(
-            ', '
-          )} may be overridden per unit (pnpm manages one workspace lockfile; ` +
-            'see AGENTS.md "Toolchain pin").'
+          `${file} overrides "${key}" — only ${allowedText} may be overridden by a ${base}/ unit ` +
+            '(pnpm manages one workspace lockfile; see AGENTS.md "Toolchain pin").'
         );
       }
     }
@@ -726,6 +774,72 @@ function confDFragmentOverrideIsReported() {
 }
 
 /**
+ * A `clients/` unit declaring a tool the root pin does not cover at all (the
+ * `clients/ios/mise.toml` `xcodegen` shape) is not an override of anything
+ * and must be allowed, not flagged.
+ *
+ * @returns {boolean}
+ */
+function clientOwnToolIsAllowed() {
+  const dir = mkdtempSync(join(tmpdir(), 'mise-overrides-client-owntool-'));
+  try {
+    writeFileSync(
+      join(dir, 'mise.toml'),
+      '[tools]\nnode = "24"\npnpm = "10"\nrust = "stable"\n',
+      'utf8'
+    );
+    mkdirSync(join(dir, 'pillars'), { recursive: true });
+    mkdirSync(join(dir, 'libs'), { recursive: true });
+    mkdirSync(join(dir, 'clients', 'ios'), { recursive: true });
+    writeFileSync(
+      join(dir, 'clients', 'ios', 'mise.toml'),
+      '[tools]\nxcodegen = "2.46.0"\n',
+      'utf8'
+    );
+    const { violations, unitOverrides } = checkOverrides(dir);
+    return (
+      violations.length === 0 &&
+      unitOverrides.some((u) => u.dir === 'clients/ios' && u.overrides.xcodegen === '2.46.0')
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+/**
+ * A `clients/` unit may never override a tool the root pin DOES declare —
+ * unlike `pillars/`/`libs/`, it gets no node/rust exception (ADR-043 keeps a
+ * client out of both the pnpm and Cargo workspaces entirely). This proves
+ * both node and pnpm are rejected, not just the pnpm case the pillar/lib
+ * rule already covers.
+ *
+ * @returns {boolean}
+ */
+function clientRootToolOverrideIsReported() {
+  const dir = mkdtempSync(join(tmpdir(), 'mise-overrides-client-roottool-'));
+  try {
+    writeFileSync(
+      join(dir, 'mise.toml'),
+      '[tools]\nnode = "24"\npnpm = "10"\nrust = "stable"\n',
+      'utf8'
+    );
+    mkdirSync(join(dir, 'clients', 'ios'), { recursive: true });
+    writeFileSync(join(dir, 'clients', 'ios', 'mise.toml'), '[tools]\npnpm = "9.0.0"\n', 'utf8');
+
+    mkdirSync(join(dir, 'clients', 'android'), { recursive: true });
+    writeFileSync(join(dir, 'clients', 'android', 'mise.toml'), '[tools]\nnode = "22"\n', 'utf8');
+
+    const { violations } = checkOverrides(dir);
+    return (
+      violations.some((v) => v.includes('clients/ios/mise.toml') && v.includes('pnpm')) &&
+      violations.some((v) => v.includes('clients/android/mise.toml') && v.includes('node'))
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+/**
  * A workflow YAML this guard cannot parse must be reported, not treated as a
  * workflow that simply sets no `MISE_ENV`.
  *
@@ -787,6 +901,10 @@ function selfTest() {
       envSuffixedOverrideIsReported(),
     'sees a pnpm fork hidden in a .config/mise/conf.d/*.toml fragment':
       confDFragmentOverrideIsReported(),
+    'a clients/ unit declaring its own tool (root does not pin it) is allowed':
+      clientOwnToolIsAllowed(),
+    'a clients/ unit overriding a root-pinned tool (node or pnpm) is reported':
+      clientRootToolOverrideIsReported(),
     'an unparseable workflow YAML is a violation, not a skipped MISE_ENV source':
       unparseableWorkflowIsReported(),
   };
