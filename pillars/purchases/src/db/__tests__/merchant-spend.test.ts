@@ -174,9 +174,13 @@ describe('the roll-up agrees with the per-order split it summarises', () => {
    * Every test here used to build both for itself, which made the block the
    * slowest thing in the pillar by roughly 7x and put it over vitest's 5s
    * default on a slow runner. Nothing below writes to this database — they
-   * read it, fold it and compare — so one copy serves all five, and the file
-   * the block owns is its own rather than the one the outer `beforeEach`
-   * opens for the rest of the file.
+   * read it, fold it and compare — so one copy serves all five.
+   *
+   * It is a database of the block's own. The file-level `beforeEach` still
+   * opens one per test here and these five tests ignore it; that is a copy
+   * of an already-migrated file rather than a migration run, so it costs a
+   * couple of milliseconds, and leaving it is cheaper than moving every
+   * other block in the file under a `describe` to avoid it.
    */
   let corpus: OpenedPurchasesDb;
   // A no-op until the arrangement opens something, so a build that fails
