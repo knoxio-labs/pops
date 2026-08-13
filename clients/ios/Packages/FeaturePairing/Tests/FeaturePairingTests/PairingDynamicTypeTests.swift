@@ -21,16 +21,19 @@ import Testing
 /// sizes, which is precisely the failure; a screen that grows reports a larger
 /// one.
 ///
-/// Measured on the iPhone 17 Simulator when this landed: 390×485 at `.large`,
-/// 390×1230 at `.accessibility5`. The assertion is "strictly taller" rather
+/// Measured on the iPhone 17 Simulator when this landed: 320×485 at `.large`,
+/// 320×1397 at `.accessibility5`. The assertion is "strictly taller" rather
 /// than any particular ratio — a threshold would be a number nobody could
 /// defend, and clipping is what this is looking for.
 @Suite("Pairing under Dynamic Type")
 @MainActor
 internal struct PairingDynamicTypeTests {
-    /// The width of the narrowest device this app targets. Fixed so that the
-    /// only variable between the two renders below is the text size.
-    private static let width: CGFloat = 390
+    /// The same 320pt canvas the other rendering suites use, and the hardest
+    /// case rather than a typical one: a narrower screen wraps more text, so it
+    /// reaches the clipping this test looks for sooner than a current handset's
+    /// width would. Fixed so the only variable between the two renders is the
+    /// text size.
+    private static let width: CGFloat = 320
 
     private static func renderedHeight(at size: DynamicTypeSize) -> Int? {
         let model = PairingViewModel(

@@ -106,9 +106,11 @@ depends = ["generate"]
 #
 # The x86_64 slice was the only thing here covering an Intel Mac, and dropping it
 # is deliberate: every machine in this project and every GitHub macOS runner is
-# Apple Silicon. Someone building on an Intel Mac should set POPS_IOS_SIMULATOR
-# to a device that boots there; a hardcoded ARCHS would have outlived its reason
-# silently, which is what this avoids.
+# Apple Silicon. A hardcoded ARCHS would have outlived its reason silently, which
+# is what naming the destination avoids. Someone building on an Intel Mac
+# overrides POPS_IOS_SIMULATOR in a gitignored `mise.local.toml` — NOT by
+# exporting it, because mise's `[env]` beats the shell and an export does
+# nothing. AppTests/README.md carries the same note for the same reason.
 run = 'xcodebuild -project Pops.xcodeproj -scheme Pops -destination "platform=iOS Simulator,name=$POPS_IOS_SIMULATOR,OS=latest" build'
 
 [tasks."build:device"]

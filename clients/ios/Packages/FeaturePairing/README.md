@@ -49,7 +49,7 @@ Nothing the screen _decides_ sits inside one, which is the point: which sentence
 
 ## Dynamic Type
 
-`PairingDynamicTypeTests` renders this screen at `.large` and at `.accessibility5` and fails unless the accessibility render is strictly taller. It is rendered at a fixed width with its height unconstrained, so the rasterised height is the layout's own answer rather than a canvas size chosen by the test — a screen that clips reports the same height at both sizes, which is the regression being watched for. 390×485 and 390×1230 when it landed.
+`PairingDynamicTypeTests` renders this screen at `.large` and at `.accessibility5` and fails unless the accessibility render is strictly taller. It is rendered at a fixed width with its height unconstrained, so the rasterised height is the layout's own answer rather than a canvas size chosen by the test — a screen that clips reports the same height at both sizes, which is the regression being watched for. 320×485 and 320×1397 when it landed, on the same 320pt canvas the other rendering suites use — the narrowest case, which wraps the most text and so reaches clipping soonest.
 
 That covers the one thing reasoning could not: the `ScrollView` here is unconditional rather than conditional on overflow, and if that ever regressed the Pair button would go off-screen with no way to reach it.
 
