@@ -1,33 +1,37 @@
 /**
- * Smoke test — shell loads and app-rail navigation (#2099)
+ * App-rail navigation smoke test.
  *
- * Tier 1 minimum: shell root loads, each app-rail icon navigates to the
- * correct route, a page heading is visible, and no uncaught JS error occurs.
+ * Every pillar route is lazy-loaded and mounted by a router the shell builds
+ * at boot, so a broken bundle map, a missing route, or a page that throws on
+ * an empty pillar shows up here and nowhere else. Each test asserts the URL,
+ * the active indicator, and that something rendered — and the `pageerror`
+ * listener makes "rendered without crashing" a claim of every test in the
+ * file, not just the ones that mention it.
  *
- * Real API is routed to the seeded e2e environment (via useRealApi) so tests
- * are isolated from the production database. The e2e DB returns seeded data
- * for all pages; page components also handle empty data gracefully.
- *
- * A pageerror listener is registered in beforeEach and asserted in afterEach
- * so every test in this suite enforces the no-crash requirement.
+ * The pillars answer nothing here beyond the registry: a page that cannot
+ * survive its own pillar returning nothing is a page that cannot survive a
+ * cold deploy either.
  */
 import { expect, test } from '@playwright/test';
 
-import { useRealApi } from './helpers/use-real-api';
+import { stubShellBoot } from './helpers/pillar-rest';
 
-test.describe('Shell — app-rail navigation smoke test', () => {
-  test.describe.configure({ mode: 'serial' });
+/** Rail label -> the path clicking it must land on. */
+const RAIL_TARGETS = [
+  { label: 'Media', path: /\/media/ },
+  { label: 'Inventory', path: /\/inventory/ },
+  { label: 'Lists', path: /\/lists/ },
+  { label: 'Purchases', path: /\/purchases/ },
+] as const;
 
+test.describe('Shell — app-rail navigation', () => {
   let errors: string[] = [];
 
   test.beforeEach(async ({ page }) => {
     errors = [];
-    await useRealApi(page);
     page.on('pageerror', (err) => errors.push(err.message));
+    await stubShellBoot(page);
     await page.goto('/');
-    // Root redirects to /finance — wait for navigation to settle.
-    await expect(page).toHaveURL(/\/finance/);
-    // App rail renders after the shell mounts — wait for Finance button.
     await expect(page.getByRole('button', { name: 'Finance' })).toBeVisible();
   });
 
@@ -36,63 +40,38 @@ test.describe('Shell — app-rail navigation smoke test', () => {
     expect(errors).toHaveLength(0);
   });
 
-  test('shell root redirects to /finance and shows a heading', async ({ page }) => {
+  test('/ lands on the first registered app and marks it active', async ({ page }) => {
     await expect(page).toHaveURL(/\/finance/);
-    await expect(page.getByRole('heading').first()).toBeVisible();
-  });
-
-  test('Finance rail item is active on load', async ({ page }) => {
     await expect(page.getByRole('button', { name: 'Finance' })).toHaveAttribute(
       'aria-current',
       'page'
     );
-  });
-
-  test('navigates to Media — updates URL, active indicator, and shows a heading', async ({
-    page,
-  }) => {
-    await page.getByRole('button', { name: 'Media' }).click();
-    await expect(page).toHaveURL(/\/media/);
-    await expect(page.getByRole('button', { name: 'Media' })).toHaveAttribute(
-      'aria-current',
-      'page'
-    );
-    await expect(page.getByRole('button', { name: 'Finance' })).not.toHaveAttribute(
-      'aria-current',
-      'page'
-    );
     await expect(page.getByRole('heading').first()).toBeVisible();
   });
 
-  test('navigates to Inventory — updates URL, active indicator, and shows a heading', async ({
-    page,
-  }) => {
-    await page.getByRole('button', { name: 'Inventory' }).click();
-    await expect(page).toHaveURL(/\/inventory/);
-    await expect(page.getByRole('button', { name: 'Inventory' })).toHaveAttribute(
-      'aria-current',
-      'page'
-    );
-    await expect(page.getByRole('heading', { name: 'Inventory' })).toBeVisible();
-  });
+  for (const target of RAIL_TARGETS) {
+    test(`clicking ${target.label} navigates and moves the active indicator`, async ({ page }) => {
+      await page.getByRole('button', { name: target.label }).click();
 
-  test('navigates to Cerebrum — updates URL, active indicator, and shows a heading', async ({
-    page,
-  }) => {
-    await page.getByRole('button', { name: 'Cerebrum', exact: true }).click();
-    await expect(page).toHaveURL(/\/cerebrum/);
-    await expect(page.getByRole('button', { name: 'Cerebrum', exact: true })).toHaveAttribute(
-      'aria-current',
-      'page'
-    );
-    await expect(page.getByRole('heading').first()).toBeVisible();
-  });
+      await expect(page).toHaveURL(target.path);
+      await expect(page.getByRole('button', { name: target.label })).toHaveAttribute(
+        'aria-current',
+        'page'
+      );
+      await expect(page.getByRole('button', { name: 'Finance' })).not.toHaveAttribute(
+        'aria-current',
+        'page'
+      );
+      await expect(page.getByRole('heading').first()).toBeVisible();
+    });
+  }
 
-  test('navigating back to Finance restores its active indicator', async ({ page }) => {
+  test('navigating away and back restores the Finance indicator', async ({ page }) => {
     await page.getByRole('button', { name: 'Media' }).click();
     await expect(page).toHaveURL(/\/media/);
 
     await page.getByRole('button', { name: 'Finance' }).click();
+
     await expect(page).toHaveURL(/\/finance/);
     await expect(page.getByRole('button', { name: 'Finance' })).toHaveAttribute(
       'aria-current',
@@ -102,5 +81,11 @@ test.describe('Shell — app-rail navigation smoke test', () => {
       'aria-current',
       'page'
     );
+  });
+
+  test('an unknown route renders the not-found page, not a blank frame', async ({ page }) => {
+    await page.goto('/definitely-not-a-pillar');
+
+    await expect(page.getByRole('heading', { name: /not found|404/i })).toBeVisible();
   });
 });

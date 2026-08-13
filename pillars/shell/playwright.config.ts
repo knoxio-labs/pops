@@ -8,10 +8,12 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 /**
  * Playwright configuration for POPS Shell E2E tests.
  *
- * NOTE: these specs target a removed tRPC surface (`/trpc/**`, a seeded `e2e`
- * named environment) that no longer exists on the REST pillars, so the suite
- * is dormant — `fe-test-e2e.yml` is gated to `workflow_dispatch` until the
- * specs are rewritten against the REST stack.
+ * No backend is booted. Every spec stands the pillar it exercises up at its
+ * `/<pillar>-api` proxy path with `page.route`, so a run depends on the two
+ * shell dev servers below and nothing else — no pillar process, no SQLite
+ * file, no seeding step. What is under test is the shell and the app bundles
+ * it mounts: that they ask the REST surface for the right thing and render
+ * what came back.
  *
  * Install-set switching (`POPS_APPS` / `POPS_OVERLAYS`, resolved in
  * `libs/module-registry/src/install-set.ts`):
@@ -43,8 +45,20 @@ export default defineConfig({
   workers: process.env.CI ? 2 : undefined,
   reporter: process.env.CI ? [['list'], ['html']] : 'html',
 
-  globalSetup: './e2e/global-setup.ts',
-  globalTeardown: './e2e/global-teardown.ts',
+  /**
+   * The one place a wait is configured. Specs carry no per-call timeouts:
+   * every assertion is an auto-waiting `expect(locator)`, and a spec that
+   * needs a longer deadline than the next one is a spec racing something it
+   * should be awaiting instead.
+   *
+   * The default 5s is raised here because both webServers are Vite in DEV
+   * mode: the first navigation to a route transforms that page's module graph
+   * on demand, and a cold transform of a large lazy chunk (the import wizard,
+   * the media library) genuinely costs several seconds on a CI runner before
+   * any pixel exists. That cost is paid once per chunk and is not a race — it
+   * is the dev server compiling. Everything after it settles in milliseconds.
+   */
+  expect: { timeout: 15_000 },
 
   use: {
     // Default baseURL targets the all-modules shell. Each project overrides
