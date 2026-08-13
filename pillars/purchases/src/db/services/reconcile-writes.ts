@@ -8,8 +8,14 @@
  */
 import { and, eq, inArray, isNull } from 'drizzle-orm';
 
-import { purchaseChargeLinks, purchaseCharges } from '../schema.js';
+import {
+  purchaseChargeLinks,
+  purchaseCharges,
+  purchaseLinkRejections,
+  purchases,
+} from '../schema.js';
 import { expectRow, type PurchasesDb } from './internal.js';
+import { recordMatchRule } from './match-rules.js';
 
 import type { ProposedLink } from '../../reconcile/types.js';
 
@@ -108,6 +114,7 @@ export function persistProposedLinks(db: PurchasesDb, links: readonly ProposedLi
       .values({
         chargeId: link.chargeId,
         transactionUri: link.transactionUri,
+        transactionDescription: link.transactionDescription,
         amountCents: link.amountCents,
         linkType: link.linkType,
         confidence: link.confidence,
@@ -130,13 +137,12 @@ export function chargeIdsForPurchases(db: PurchasesDb, purchaseIds: readonly str
 }
 
 /**
- * Remove one link entirely, confirmed or not.
+ * Remove one link entirely, confirmed or not, remembering nothing.
  *
  * Un-pinning rather than rejecting: the next sweep is free to re-derive it,
- * and probably will. Rejecting a proposal *so that it stays rejected* needs
- * somewhere to remember the decision, which is `purchase_match_rules` and
- * therefore POPS-1309 — a reject that the next sweep silently undoes would
- * be worse than no reject at all.
+ * and probably will. That is the whole difference from {@link rejectLink},
+ * and both exist because they answer different questions — "this pin was a
+ * mistake, reconsider it" against "these two are not a pair".
  */
 export function unlinkCharge(db: PurchasesDb, chargeId: string, transactionUri: string): boolean {
   return (
@@ -152,23 +158,126 @@ export function unlinkCharge(db: PurchasesDb, chargeId: string, transactionUri: 
   );
 }
 
-/** Confirm a link, pinning it against every future re-derivation. */
-export function confirmLink(
+/**
+ * Rule a pairing out for good: drop the link and remember the decision.
+ *
+ * The rejection is what survives. Deleting alone is `unlinkCharge`, whose
+ * effect the next sweep undoes; the row in `purchase_link_rejections` is
+ * what the solver's blocking stage consults so the pairing is never
+ * proposed again.
+ *
+ * Both writes share one transaction. A delete that landed without its
+ * rejection would present as a working reject that quietly reverts on the
+ * next sweep — the exact failure this replaces.
+ *
+ * False means there was no such link, which the route reports rather than
+ * swallowing: the user acted on a proposal a sweep has since re-derived
+ * away, and telling them it was rejected would be a lie they discover when
+ * it reappears.
+ */
+export function rejectLink(
   db: PurchasesDb,
   chargeId: string,
   transactionUri: string,
   nowIso: string
 ): boolean {
-  return (
-    db
-      .update(purchaseChargeLinks)
-      .set({ confirmedAt: nowIso })
+  return db.transaction((tx) => {
+    const removed = unlinkCharge(tx, chargeId, transactionUri);
+    if (!removed) return false;
+
+    tx.insert(purchaseLinkRejections)
+      .values({ chargeId, transactionUri, rejectedAt: nowIso })
+      // Deciding the same way twice is the same decision. The pair is the
+      // primary key, so the second reject keeps the first one's timestamp
+      // rather than restating it.
+      .onConflictDoNothing()
+      .run();
+
+    return true;
+  });
+}
+
+/** What a confirm did, beyond pinning. */
+export interface ConfirmOutcome {
+  /** False when no such link exists — the queue was read before a sweep. */
+  readonly pinned: boolean;
+  /**
+   * The rule this link is now attributed to, or null when the descriptor
+   * carried no pattern worth keying on — or when the link predates
+   * descriptors being recorded at all.
+   */
+  readonly matchRuleId: string | null;
+}
+
+/**
+ * Confirm a link: pin it, and teach the matcher what the pin was about.
+ *
+ * Pinning alone is what shipped first, and it answers one charge forever
+ * while telling the engine nothing about the merchant that produced it — so
+ * the hundredth order from the same source asks the same question the first
+ * one did. The rule written here is the durable half: a descriptor pattern
+ * scoped to the order's source, which is a claim that outlives the link.
+ *
+ * `matchRuleId` on the link is what ties the two together. It makes the
+ * rule's `timesApplied` checkable — one attributed link per count — and it
+ * is what a later reader needs to explain a link by naming the rule behind
+ * it rather than asserting one exists.
+ *
+ * **Confirming an already-confirmed link does nothing.** Not defensive
+ * coding: without it a double-click counts a second application of a rule
+ * that gained no second link, and the counter stops meaning anything. The
+ * decision is already recorded, so reporting it as made is honest.
+ */
+export function confirmLink(
+  db: PurchasesDb,
+  chargeId: string,
+  transactionUri: string,
+  nowIso: string
+): ConfirmOutcome {
+  return db.transaction((tx) => {
+    const found = tx
+      .select({
+        transactionDescription: purchaseChargeLinks.transactionDescription,
+        confidence: purchaseChargeLinks.confidence,
+        confirmedAt: purchaseChargeLinks.confirmedAt,
+        matchRuleId: purchaseChargeLinks.matchRuleId,
+        source: purchases.source,
+        entityId: purchases.merchantEntityId,
+        entityName: purchases.merchantEntityName,
+      })
+      .from(purchaseChargeLinks)
+      .innerJoin(purchaseCharges, eq(purchaseCharges.id, purchaseChargeLinks.chargeId))
+      .innerJoin(purchases, eq(purchases.id, purchaseCharges.purchaseId))
       .where(
         and(
           eq(purchaseChargeLinks.chargeId, chargeId),
           eq(purchaseChargeLinks.transactionUri, transactionUri)
         )
       )
-      .run().changes > 0
-  );
+      .all();
+
+    const link = found[0];
+    if (link === undefined) return { pinned: false, matchRuleId: null };
+    if (link.confirmedAt !== null) return { pinned: true, matchRuleId: link.matchRuleId };
+
+    const matchRuleId = recordMatchRule(tx, {
+      transactionDescription: link.transactionDescription,
+      source: link.source,
+      entityId: link.entityId,
+      entityName: link.entityName,
+      confidence: link.confidence,
+    });
+
+    tx.update(purchaseChargeLinks)
+      .set({ confirmedAt: nowIso, matchRuleId })
+      .where(
+        and(
+          eq(purchaseChargeLinks.chargeId, chargeId),
+          eq(purchaseChargeLinks.transactionUri, transactionUri)
+        )
+      )
+      .run();
+
+    return { pinned: true, matchRuleId };
+  });
 }

@@ -80,6 +80,7 @@ export {
 export {
   listConfirmedLinks,
   listOrdersNeedingDerivedCharge,
+  listRejectedPairings,
   listSolvableCharges,
   type ReconcileScope,
 } from './services/reconcile-reads.js';
@@ -94,11 +95,15 @@ export {
 export {
   chargeIdsForPurchases,
   confirmLink,
+  rejectLink,
   unlinkCharge,
   mintDerivedCharge,
   persistProposedLinks,
   tearDownUnconfirmedLinks,
+  type ConfirmOutcome,
 } from './services/reconcile-writes.js';
+
+export { recordMatchRule, type MatchRuleEvidence } from './services/match-rules.js';
 
 export {
   clearDocumentUriStale,

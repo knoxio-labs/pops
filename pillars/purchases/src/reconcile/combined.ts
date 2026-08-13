@@ -14,6 +14,7 @@
 import { eligibilityFor, linkOf, orderedTransactions } from './stages.js';
 import { findSubsetSummingTo, MIN_SPLIT_SIZE } from './subset-sum.js';
 
+import type { BlockingContext } from './stages.js';
 import type { ProposedLink, SolvableCharge, SolvableTransaction } from './types.js';
 
 export interface CombinedResult {
@@ -42,7 +43,7 @@ export function matchCombined(
   charges: readonly SolvableCharge[],
   transactions: readonly SolvableTransaction[],
   claimed: ReadonlySet<string>,
-  defaultWindowDays: number
+  blocking: BlockingContext
 ): CombinedResult {
   const links: ProposedLink[] = [];
   const matchedChargeIds = new Set<string>();
@@ -52,7 +53,7 @@ export function matchCombined(
   // loop below is nested, and `eligibilityFor` builds a regex.
   const admissible = charges.map((charge) => ({
     charge,
-    accepts: eligibilityFor(charge, defaultWindowDays),
+    accepts: eligibilityFor(charge, blocking),
   }));
 
   for (const transaction of orderedTransactions(transactions)) {

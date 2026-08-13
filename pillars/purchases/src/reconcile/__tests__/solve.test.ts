@@ -33,6 +33,7 @@ function run(input: Partial<SolverInput> = {}): SolverOutput {
     charges: [charge()],
     transactions: [txn()],
     confirmed: [],
+    rejected: [],
     defaultWindowDays: 21,
     ...input,
   });
@@ -46,6 +47,10 @@ describe('stage 1 — exact', () => {
       {
         chargeId: 'chg-1',
         transactionUri: 'pops://finance/transaction/t1',
+        // Carried so a later confirm can key a match rule on it. The solver
+        // itself never matches on this — blocking reads the source's own
+        // pattern.
+        transactionDescription: 'AMAZON MKTPLACE AU',
         amountCents: 4128,
         linkType: 'exact',
         confidence: 0.99,

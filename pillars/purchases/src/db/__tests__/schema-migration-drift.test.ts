@@ -18,6 +18,7 @@ import {
   purchaseDocuments,
   purchaseItemAllocations,
   purchaseItemNotes,
+  purchaseLinkRejections,
   purchaseItems,
   purchaseItemTags,
   purchaseItemUnits,
@@ -56,6 +57,7 @@ const ALL_TABLES: readonly SQLiteTable[] = [
   purchaseMatchRules,
   purchaseCharges,
   purchaseChargeLinks,
+  purchaseLinkRejections,
   purchaseItemAllocations,
   purchaseDocuments,
 ];
@@ -139,6 +141,7 @@ describe('foreign keys declared in drizzle are enforced by the migration', () =>
     purchase_item_notes: ['purchase_items'],
     purchase_charges: ['purchases', 'purchase_shipments'],
     purchase_charge_links: ['purchase_charges', 'purchase_match_rules'],
+    purchase_link_rejections: ['purchase_charges'],
     purchase_item_allocations: ['purchase_charges', 'purchase_items'],
     purchase_documents: ['purchases', 'purchase_shipments'],
   };
@@ -166,6 +169,9 @@ describe('cascade behaviour is what the schema claims', () => {
     ['purchase_charges', 'purchases', 'CASCADE'],
     ['purchase_charges', 'purchase_shipments', 'SET NULL'],
     ['purchase_charge_links', 'purchase_charges', 'CASCADE'],
+    // A rejection is a fact about a pairing. Delete the charge and the
+    // pairing it was half of no longer exists to be ruled out.
+    ['purchase_link_rejections', 'purchase_charges', 'CASCADE'],
     ['purchase_item_allocations', 'purchase_charges', 'CASCADE'],
     ['purchase_item_allocations', 'purchase_items', 'CASCADE'],
     // A rule must survive being referenced — deleting one must not silently
@@ -200,6 +206,8 @@ describe('indexes the hot paths depend on', () => {
     'idx_purchase_item_allocations_item',
     'uq_purchases_source_order',
     'uq_purchase_charge_links',
+    'uq_purchase_match_rules_pattern_source',
+    'idx_purchase_link_rejections_charge',
     'uq_purchase_item_allocations',
     'uq_purchase_documents',
   ];
