@@ -227,11 +227,10 @@ describe('re-deciding does not duplicate', () => {
     expect(new Set(ruleIds).size).toBe(1);
     const rules = ruleRows();
     expect(rules).toHaveLength(1);
-    // The invariant that makes the counter readable: one count per link
-    // attributed to the rule, checkable against the links themselves.
-    expect(rules[0]?.timesApplied).toBe(
-      linkRows().filter((link) => link.matchRuleId === rules[0]?.id).length
-    );
+    // One count per attribution earned. Both links name the rule, and both
+    // are attributions a later ranking is entitled to weigh.
+    expect(rules[0]?.timesApplied).toBe(2);
+    expect(linkRows().every((link) => link.matchRuleId === rules[0]?.id)).toBe(true);
   });
 
   it('counts nothing extra when the same link is confirmed twice', async () => {
@@ -244,9 +243,47 @@ describe('re-deciding does not duplicate', () => {
 
     expect(second).toEqual(first);
     expect(ruleRows()).toHaveLength(1);
-    // A double-click must not claim a second link the rule never gained.
+    // The counter is never revised downward, so a double-click's extra
+    // count would be permanent. That is what makes the no-op load-bearing
+    // rather than tidy.
     expect(ruleRows()[0]?.timesApplied).toBe(1);
     expect(onlyLink().confirmedAt).toBe(NOW);
+  });
+
+  it('leaves the count alone when a confirmed link is taken back', async () => {
+    // `timesApplied` is a history, not a live count of the links naming the
+    // rule. Decrementing here would make it look exact while still drifting
+    // the moment a purchase's cascade removes a link, and a counter that
+    // looks exact and is not is worse than one that says what it is.
+    anOrder({ checksum: 'a' });
+    await runSweep(deps(financeReturning({ id: 't1' })));
+    const link = onlyLink();
+    const { matchRuleId } = confirmLink(db, link.chargeId, link.uri, NOW);
+
+    unlinkCharge(db, link.chargeId, link.uri);
+
+    expect(linkRows()).toHaveLength(0);
+    expect(ruleRows()).toMatchObject([{ id: matchRuleId, timesApplied: 1, isActive: 1 }]);
+  });
+
+  it('counts a re-confirmation after a rejection, because it is a new one', async () => {
+    // The rule explained a link, lost it, and explained another. Both are
+    // real applications; collapsing them would hide that the operator had
+    // to answer twice.
+    anOrder({ checksum: 'a' });
+    const finance = financeReturning({ id: 't1' });
+    await runSweep(deps(finance));
+    const first = onlyLink();
+    confirmLink(db, first.chargeId, first.uri, NOW);
+    rejectLink(db, first.chargeId, first.uri, NOW);
+
+    anOrder({ checksum: 'b', sourceOrderId: 'b' });
+    await runSweep(deps(finance));
+    const second = onlyLink();
+    confirmLink(db, second.chargeId, second.uri, NOW);
+
+    expect(ruleRows()).toHaveLength(1);
+    expect(ruleRows()[0]?.timesApplied).toBe(2);
   });
 });
 

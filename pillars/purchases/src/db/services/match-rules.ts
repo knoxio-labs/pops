@@ -46,11 +46,14 @@ export interface MatchRuleEvidence {
  * writing a second one saying the same thing. Three fields move on the way
  * through:
  *
- * - `timesApplied` counts the links attributed to this rule, so it stays
- *   equal to the number of `purchase_charge_links` rows carrying its id —
- *   an invariant a reader can check rather than a counter nobody can
- *   interpret. The caller is responsible for not calling twice for one
- *   link, which is why confirming an already-confirmed link is a no-op.
+ * - `timesApplied` counts the attributions this rule has ever earned, and
+ *   is **never revised downward**. It is a history, as its name says and as
+ *   finance reads the same column, not a live count of the links that
+ *   currently name it: unlinking or rejecting a confirmed link does not
+ *   un-apply the rule that explained it, and a cascade from a deleted
+ *   purchase could not be reflected here at all. What the caller does owe
+ *   it is one call per attribution, which is why confirming an
+ *   already-confirmed link is a no-op rather than a second count.
  * - `isActive` returns to true. Confirming a merchant whose rule was
  *   deactivated is an affirmation, and leaving it inert would discard the
  *   decision silently.

@@ -218,15 +218,15 @@ export interface ConfirmOutcome {
  * one did. The rule written here is the durable half: a descriptor pattern
  * scoped to the order's source, which is a claim that outlives the link.
  *
- * `matchRuleId` on the link is what ties the two together. It makes the
- * rule's `timesApplied` checkable — one attributed link per count — and it
- * is what a later reader needs to explain a link by naming the rule behind
- * it rather than asserting one exists.
+ * `matchRuleId` on the link is what ties the two together, and it is what a
+ * later reader needs to explain a link by naming the rule behind it rather
+ * than asserting one exists.
  *
  * **Confirming an already-confirmed link does nothing.** Not defensive
- * coding: without it a double-click counts a second application of a rule
- * that gained no second link, and the counter stops meaning anything. The
- * decision is already recorded, so reporting it as made is honest.
+ * coding: without it a double-click records a second application of a rule
+ * that explained nothing new, and `timesApplied` — a history that is never
+ * revised downward — would carry that forever. The decision is already
+ * recorded, so reporting it as made is honest.
  */
 export function confirmLink(
   db: PurchasesDb,
