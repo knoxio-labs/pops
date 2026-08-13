@@ -120,6 +120,8 @@ Then write release notes in the GitHub Release UI. `publish-images.yml` runs on 
 
 ## Pinning a release as a deployer
 
+> Only tags cut **after** the publish dispatch landed resolve on GHCR. The 444 semver git tags that predate it have no matching image tags — nothing backfilled them, and nothing will. Pin to a tag you can see with `docker manifest inspect ghcr.io/knoxio-labs/pops-registry:vX.Y.Z`, or track `main`.
+
 ```bash
 echo 'POPS_IMAGE_TAG=v0.1.0' >> .env
 docker compose -f infra/docker-compose.yml pull
