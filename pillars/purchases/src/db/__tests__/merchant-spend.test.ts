@@ -16,7 +16,7 @@
  * refactor can silently break.
  */
 import { asc, eq } from 'drizzle-orm';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import {
   createPurchase,
@@ -38,15 +38,15 @@ import type {
   MerchantSpendRollup,
   OpenedPurchasesDb,
   PurchaseAccounting,
+  PurchasesDb,
 } from '../index.js';
 
 let opened: OpenedPurchasesDb;
 let cleanup: () => void;
 
-beforeEach(() => {
-  ({ opened, cleanup } = openTempDb());
-  seedAmazonSource(opened);
-  upsertSource(opened.db, {
+function seedSources(target: OpenedPurchasesDb): void {
+  seedAmazonSource(target);
+  upsertSource(target.db, {
     id: 'woolworths',
     label: 'Woolworths',
     descriptorPattern: 'WOOLWORTHS%',
@@ -54,6 +54,11 @@ beforeEach(() => {
     autoLinkPolicy: 'auto',
     ingestAdapter: 'woolworths-receipt',
   });
+}
+
+beforeEach(() => {
+  ({ opened, cleanup } = openTempDb());
+  seedSources(opened);
 });
 
 afterEach(() => {
@@ -84,16 +89,15 @@ function order(
   };
 }
 
-function linkFirstCharge(purchaseId: string, uri: string): void {
-  const charge = opened.db
+function linkFirstCharge(db: PurchasesDb, purchaseId: string, uri: string): void {
+  const charge = db
     .select()
     .from(purchaseCharges)
     .where(eq(purchaseCharges.purchaseId, purchaseId))
     .orderBy(asc(purchaseCharges.position), asc(purchaseCharges.id))
     .all()[0];
   if (charge === undefined) throw new Error(`no charge on ${purchaseId}`);
-  opened.db
-    .insert(purchaseChargeLinks)
+  db.insert(purchaseChargeLinks)
     .values({
       chargeId: charge.id,
       transactionUri: uri,
@@ -125,14 +129,14 @@ const ORACLE_PAGE = 100;
  * it accuses is the one thing that was correct. `listPurchases` orders by
  * `orderedAt` then `id`, so the offsets walk a stable sequence.
  */
-function foldEveryOrder(): { accounting: PurchaseAccounting; orderCount: number } {
+function foldEveryOrder(db: PurchasesDb): { accounting: PurchaseAccounting; orderCount: number } {
   let accounting = ZERO;
   let orderCount = 0;
 
   for (let offset = 0; ; offset += ORACLE_PAGE) {
-    const rows = listPurchases(opened.db, { limit: ORACLE_PAGE, offset });
+    const rows = listPurchases(db, { limit: ORACLE_PAGE, offset });
     for (const row of rows) {
-      const detail = getPurchase(opened.db, row.id);
+      const detail = getPurchase(db, row.id);
       if (detail === undefined) throw new Error(`purchase ${row.id} vanished`);
       const a = detail.accounting;
       accounting = {
@@ -164,152 +168,160 @@ function currencyTotal(rollup: MerchantSpendRollup, currency: string): CurrencyS
 const CORPUS_ORDERS = 748;
 
 /**
- * The bound for the corpus block below, which is the only work in this pillar
- * that vitest's 5s default does not comfortably cover.
+ * The bound on building the corpus, which is the one piece of work in this
+ * pillar that vitest's defaults do not comfortably cover.
  *
- * Every test in it seeds `CORPUS_ORDERS` orders, with their charges and
- * links, into a real on-disk SQLite database, and the first three then read
- * each one back through `getPurchase` — a page at a time — to compare the
- * roll-up against that oracle field for field. The seconds are therefore
- * genuine I/O rather than a wait on anything: the slowest costs ~0.7s with
- * the box to itself and ~2.2s inside the full suite, and does not move when
- * the machine is deliberately starved. A CI runner several times slower per
- * core is what pushes it past 5s, and it alone — every other test in this
- * file finishes in single-digit milliseconds.
- *
- * Scoped to this block rather than raised for the pillar, so a genuinely slow
- * test anywhere else still fails at the default, and so work that grew here
- * by an order of magnitude would still fail at this one.
+ * Writing `CORPUS_ORDERS` orders with their charges and links into a real
+ * on-disk database and reading every one of them back through `getPurchase`
+ * is genuine I/O rather than a wait on anything — ~0.6s with the box to
+ * itself, ~2.5s inside the full suite. It is now paid once for the block
+ * instead of once per test, so this bounds an arrangement rather than an
+ * assertion: it is here to fail a corpus build that has hung, not to give a
+ * slow test room. An order of magnitude above the worst observed, and stated
+ * explicitly so vitest's 10s hook default is not what decides it on a runner
+ * several times slower per core. Every test in the block runs at the
+ * pillar's 5s default.
  */
-const CORPUS_TIMEOUT_MS = 20_000;
+const CORPUS_ARRANGEMENT_TIMEOUT_MS = 20_000;
 
-describe(
-  'the roll-up agrees with the per-order split it summarises',
-  { timeout: CORPUS_TIMEOUT_MS },
-  () => {
-    /**
-     * A corpus wide enough that a fold bug shows up. Deliberately mixes the
-     * shapes that break naive aggregates: several charges on one order, an
-     * order with none at all, refunds, an authorization that must not count,
-     * a gift-card residual, and two currencies.
-     */
-    function seedCorpus(): void {
-      for (let i = 0; i < CORPUS_ORDERS; i += 1) {
-        const merchantEntityName = ['Amazon', 'Woolworths', 'Bunnings'][i % 3] ?? 'Amazon';
-        const currency = i % 7 === 0 ? 'USD' : 'AUD';
-        const totalCents = 1000 + i * 137;
-        const charges: CreateChargeInput[] = [];
+describe('the roll-up agrees with the per-order split it summarises', () => {
+  /**
+   * The corpus and its oracle, built once for the whole block.
+   *
+   * Every test here used to build both for itself, which made the block the
+   * slowest thing in the pillar by roughly 7x and put it over vitest's 5s
+   * default on a slow runner. Nothing below writes to this database — they
+   * read it, fold it and compare — so one copy serves all five, and the file
+   * the block owns is its own rather than the one the outer `beforeEach`
+   * opens for the rest of the file.
+   */
+  let corpus: OpenedPurchasesDb;
+  let releaseCorpus: () => void;
+  let oracle: { accounting: PurchaseAccounting; orderCount: number };
 
-        if (i % 5 !== 0) {
-          charges.push({
-            sourceChargeRef: `cap-${String(i)}`,
-            amountCents: totalCents - (i % 400),
-          });
-        }
-        if (i % 4 === 0) {
-          charges.push({
-            sourceChargeRef: `auth-${String(i)}`,
-            amountCents: totalCents,
-            role: 'authorization',
-          });
-        }
-        if (i % 6 === 0) {
-          charges.push({
-            sourceChargeRef: `ref-${String(i)}`,
-            amountCents: -(i % 300) - 1,
-            role: 'refund',
-          });
-        }
+  /**
+   * A corpus wide enough that a fold bug shows up. Deliberately mixes the
+   * shapes that break naive aggregates: several charges on one order, an
+   * order with none at all, refunds, an authorization that must not count,
+   * a gift-card residual, and two currencies.
+   */
+  function seedCorpus(db: PurchasesDb): void {
+    for (let i = 0; i < CORPUS_ORDERS; i += 1) {
+      const merchantEntityName = ['Amazon', 'Woolworths', 'Bunnings'][i % 3] ?? 'Amazon';
+      const currency = i % 7 === 0 ? 'USD' : 'AUD';
+      const totalCents = 1000 + i * 137;
+      const charges: CreateChargeInput[] = [];
 
-        const id = createPurchase(
-          opened.db,
-          order({
-            checksum: `corpus-${String(i)}`,
-            merchantEntityName,
-            merchantEntityId: i % 9 === 0 ? 'ent-amazon' : null,
-            currency,
-            totalCents,
-            orderedAt: `2026-0${String((i % 9) + 1)}-02T01:41:21Z`,
-            source: i % 2 === 0 ? 'amazon' : 'woolworths',
-            charges,
-          })
-        );
-        if (i % 3 === 0 && charges.length > 0) {
-          linkFirstCharge(id, `pops://finance/transaction/t-${String(i)}`);
-        }
+      if (i % 5 !== 0) {
+        charges.push({
+          sourceChargeRef: `cap-${String(i)}`,
+          amountCents: totalCents - (i % 400),
+        });
+      }
+      if (i % 4 === 0) {
+        charges.push({
+          sourceChargeRef: `auth-${String(i)}`,
+          amountCents: totalCents,
+          role: 'authorization',
+        });
+      }
+      if (i % 6 === 0) {
+        charges.push({
+          sourceChargeRef: `ref-${String(i)}`,
+          amountCents: -(i % 300) - 1,
+          role: 'refund',
+        });
+      }
+
+      const id = createPurchase(
+        db,
+        order({
+          checksum: `corpus-${String(i)}`,
+          merchantEntityName,
+          merchantEntityId: i % 9 === 0 ? 'ent-amazon' : null,
+          currency,
+          totalCents,
+          orderedAt: `2026-0${String((i % 9) + 1)}-02T01:41:21Z`,
+          source: i % 2 === 0 ? 'amazon' : 'woolworths',
+          charges,
+        })
+      );
+      if (i % 3 === 0 && charges.length > 0) {
+        linkFirstCharge(db, id, `pops://finance/transaction/t-${String(i)}`);
       }
     }
-
-    it('reaches every seeded order, over more pages than one', () => {
-      // The arrangement the two agreement tests rest on. Without it a shrunk
-      // corpus, or a page grown past it, would leave them comparing a prefix
-      // against the whole and calling that agreement.
-      expect(CORPUS_ORDERS).toBeGreaterThan(ORACLE_PAGE);
-      seedCorpus();
-
-      expect(foldEveryOrder().orderCount).toBe(CORPUS_ORDERS);
-    });
-
-    it('reproduces the sum of every order, field for field', () => {
-      seedCorpus();
-      const expected = foldEveryOrder();
-      const rollup = rollUpMerchantSpend(opened.db);
-
-      const summed = rollup.totals.reduce(
-        (acc, entry) => ({
-          totalCents: acc.totalCents + entry.accounting.totalCents,
-          matchedCents: acc.matchedCents + entry.accounting.matchedCents,
-          awaitingImportCents: acc.awaitingImportCents + entry.accounting.awaitingImportCents,
-          residualCents: acc.residualCents + entry.accounting.residualCents,
-          refundedCents: acc.refundedCents + entry.accounting.refundedCents,
-          netSpendCents: acc.netSpendCents + entry.accounting.netSpendCents,
-        }),
-        ZERO
-      );
-
-      expect(summed).toEqual(expected.accounting);
-    });
-
-    it('counts every order exactly once, whatever hangs off it', () => {
-      seedCorpus();
-      const expected = foldEveryOrder();
-
-      const rollup = rollUpMerchantSpend(opened.db);
-      const counted = rollup.merchants.reduce((n, entry) => n + entry.orderCount, 0);
-      const countedInTotals = rollup.totals.reduce((n, entry) => n + entry.orderCount, 0);
-
-      expect(counted).toBe(expected.orderCount);
-      expect(countedInTotals).toBe(expected.orderCount);
-    });
-
-    it('the merchant groups add back up to the currency totals', () => {
-      seedCorpus();
-      const rollup = rollUpMerchantSpend(opened.db);
-
-      for (const total of rollup.totals) {
-        const groups = rollup.merchants.filter((m) => m.currency === total.currency);
-        const summed = groups.reduce((n, g) => n + g.accounting.netSpendCents, 0);
-        expect(summed, total.currency).toBe(total.accounting.netSpendCents);
-        expect(
-          groups.reduce((n, g) => n + g.orderCount, 0),
-          total.currency
-        ).toBe(total.orderCount);
-      }
-    });
-
-    it('the accounting identity survives summation, per group and per currency', () => {
-      seedCorpus();
-      const rollup = rollUpMerchantSpend(opened.db);
-
-      for (const { accounting: a, currency } of [...rollup.merchants, ...rollup.totals]) {
-        expect(a.matchedCents + a.awaitingImportCents + a.residualCents, currency).toBe(
-          a.totalCents
-        );
-        expect(a.netSpendCents, currency).toBe(a.totalCents - a.refundedCents);
-      }
-    });
   }
-);
+
+  beforeAll(() => {
+    ({ opened: corpus, cleanup: releaseCorpus } = openTempDb());
+    seedSources(corpus);
+    seedCorpus(corpus.db);
+    oracle = foldEveryOrder(corpus.db);
+  }, CORPUS_ARRANGEMENT_TIMEOUT_MS);
+
+  afterAll(() => {
+    releaseCorpus();
+  });
+
+  it('reaches every seeded order, over more pages than one', () => {
+    // The arrangement the two agreement tests rest on. Without it a shrunk
+    // corpus, or a page grown past it, would leave them comparing a prefix
+    // against the whole and calling that agreement.
+    expect(CORPUS_ORDERS).toBeGreaterThan(ORACLE_PAGE);
+
+    expect(oracle.orderCount).toBe(CORPUS_ORDERS);
+  });
+
+  it('reproduces the sum of every order, field for field', () => {
+    const rollup = rollUpMerchantSpend(corpus.db);
+
+    const summed = rollup.totals.reduce(
+      (acc, entry) => ({
+        totalCents: acc.totalCents + entry.accounting.totalCents,
+        matchedCents: acc.matchedCents + entry.accounting.matchedCents,
+        awaitingImportCents: acc.awaitingImportCents + entry.accounting.awaitingImportCents,
+        residualCents: acc.residualCents + entry.accounting.residualCents,
+        refundedCents: acc.refundedCents + entry.accounting.refundedCents,
+        netSpendCents: acc.netSpendCents + entry.accounting.netSpendCents,
+      }),
+      ZERO
+    );
+
+    expect(summed).toEqual(oracle.accounting);
+  });
+
+  it('counts every order exactly once, whatever hangs off it', () => {
+    const rollup = rollUpMerchantSpend(corpus.db);
+    const counted = rollup.merchants.reduce((n, entry) => n + entry.orderCount, 0);
+    const countedInTotals = rollup.totals.reduce((n, entry) => n + entry.orderCount, 0);
+
+    expect(counted).toBe(oracle.orderCount);
+    expect(countedInTotals).toBe(oracle.orderCount);
+  });
+
+  it('the merchant groups add back up to the currency totals', () => {
+    const rollup = rollUpMerchantSpend(corpus.db);
+
+    for (const total of rollup.totals) {
+      const groups = rollup.merchants.filter((m) => m.currency === total.currency);
+      const summed = groups.reduce((n, g) => n + g.accounting.netSpendCents, 0);
+      expect(summed, total.currency).toBe(total.accounting.netSpendCents);
+      expect(
+        groups.reduce((n, g) => n + g.orderCount, 0),
+        total.currency
+      ).toBe(total.orderCount);
+    }
+  });
+
+  it('the accounting identity survives summation, per group and per currency', () => {
+    const rollup = rollUpMerchantSpend(corpus.db);
+
+    for (const { accounting: a, currency } of [...rollup.merchants, ...rollup.totals]) {
+      expect(a.matchedCents + a.awaitingImportCents + a.residualCents, currency).toBe(a.totalCents);
+      expect(a.netSpendCents, currency).toBe(a.totalCents - a.refundedCents);
+    }
+  });
+});
 
 describe('an order is counted once however many rows hang off it', () => {
   it('does not multiply the total by its charges, or by their links', () => {
@@ -329,8 +341,8 @@ describe('an order is counted once however many rows hang off it', () => {
         ],
       })
     );
-    linkFirstCharge(id, 'pops://finance/transaction/one');
-    linkFirstCharge(id, 'pops://finance/transaction/two');
+    linkFirstCharge(opened.db, id, 'pops://finance/transaction/one');
+    linkFirstCharge(opened.db, id, 'pops://finance/transaction/two');
 
     const rollup = rollUpMerchantSpend(opened.db);
 
@@ -360,7 +372,7 @@ describe('the headline figure does not move when bookkeeping catches up', () => 
     );
 
     const before = rollUpMerchantSpend(opened.db);
-    linkFirstCharge(id, 'pops://finance/transaction/late');
+    linkFirstCharge(opened.db, id, 'pops://finance/transaction/late');
     const after = rollUpMerchantSpend(opened.db);
 
     expect(after.totals[0]?.accounting.netSpendCents).toBe(
