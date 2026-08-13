@@ -4392,12 +4392,15 @@
                           "additionalProperties": false,
                           "properties": {
                             "field": {
+                              "enum": ["source", "status", "orderedAt"],
                               "type": "string"
                             },
                             "operator": {
+                              "enum": ["eq", "gte", "lte"],
                               "type": "string"
                             },
                             "value": {
+                              "minLength": 1,
                               "type": "string"
                             }
                           },
@@ -4462,6 +4465,26 @@
               }
             },
             "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
           }
         },
         "summary": "Search the purchases pillar's orders and line items for the unified search engine",
