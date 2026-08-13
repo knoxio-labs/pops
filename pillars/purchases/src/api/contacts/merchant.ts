@@ -17,10 +17,10 @@
  * Unknown is therefore a valid outcome and not a failure, exactly as
  * POPS-240 asks: the escape hatch exists for merchants nothing recognises.
  */
-import { isOk, type CallResult, type PillarHandle } from '@pops/pillar-sdk/server';
+import { isOk, pillar, type CallResult, type PillarHandle } from '@pops/pillar-sdk/server';
 
 import {
-  credentialledPillar,
+  credentialled,
   credentialRejectedMessage,
   UNAUTHORIZED_REASON,
 } from '../pillars/outbound.js';
@@ -161,7 +161,9 @@ export function createMerchantResolver(handle?: PillarHandle<ContactsRouter>): M
       const seed = searchSeed(receiptMerchantName);
       if (seed === null) return null;
 
-      const contacts = handle ?? credentialledPillar<ContactsRouter>(CONTACTS_PILLAR_ID);
+      const contacts =
+        handle ??
+        credentialled(CONTACTS_PILLAR_ID, () => pillar<ContactsRouter>(CONTACTS_PILLAR_ID));
       if (contacts === null) return null;
 
       let result: CallResult<unknown>;

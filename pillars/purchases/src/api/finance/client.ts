@@ -10,10 +10,10 @@
  * dependency on the producer. It departs from that template in exactly one
  * way, and the departure is the point: see {@link CandidateFetch}.
  */
-import { isOk, type CallResult, type PillarHandle } from '@pops/pillar-sdk/server';
+import { isOk, pillar, type CallResult, type PillarHandle } from '@pops/pillar-sdk/server';
 
 import {
-  credentialledPillar,
+  credentialled,
   credentialRejectedMessage,
   NO_CREDENTIAL_REASON,
   UNAUTHORIZED_REASON,
@@ -109,7 +109,7 @@ export interface FinanceClient {
 /**
  * How a handle is obtained per sweep. `null` means this process has no
  * service-account key, which is a configuration answer rather than a
- * transport one — see {@link credentialledPillar}.
+ * transport one — see {@link credentialled}.
  */
 export type FinanceHandleFactory = () => PillarHandle<FinanceRouter> | null;
 
@@ -120,7 +120,8 @@ export interface FinanceClientOptions {
 }
 
 export function createFinanceClient(
-  handleFactory: FinanceHandleFactory = () => credentialledPillar<FinanceRouter>(FINANCE_PILLAR_ID),
+  handleFactory: FinanceHandleFactory = () =>
+    credentialled(FINANCE_PILLAR_ID, () => pillar<FinanceRouter>(FINANCE_PILLAR_ID)),
   options: FinanceClientOptions = {}
 ): FinanceClient {
   const maxPages = options.maxPages ?? MAX_PAGES;

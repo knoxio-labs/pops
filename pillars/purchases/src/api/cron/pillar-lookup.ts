@@ -32,15 +32,15 @@
  * one that is refused is now a fact about this pillar's own configuration
  * and is reported as such.
  */
-import { isOk, type CallResult, type PillarHandle } from '@pops/pillar-sdk/server';
+import { isOk, pillar, type CallResult, type PillarHandle } from '@pops/pillar-sdk/server';
 
-import {
-  credentialledPillar,
-  NO_CREDENTIAL_REASON,
-  UNAUTHORIZED_REASON,
-} from '../pillars/outbound.js';
+import { credentialled, NO_CREDENTIAL_REASON, UNAUTHORIZED_REASON } from '../pillars/outbound.js';
 
 import type { ReconcileLookupFn, ReconcileLookupResult } from './reconcile-cross-pillar.js';
+
+/** The pillar ids, module-level so each `pillar()` call resolves statically. */
+const INVENTORY_PILLAR_ID = 'inventory';
+const DOCUMENTS_PILLAR_ID = 'documents';
 
 type InventoryHandle = {
   items: {
@@ -72,23 +72,22 @@ function classify(result: CallResult<unknown>): ReconcileLookupResult {
 }
 
 /**
- * One leg's adapter: resolve a credentialled handle per call, then fold the
- * answer.
+ * One leg's adapter: connect, then fold the answer.
  *
  * The handle is built per call rather than once at construction because
  * `pillar()` from `@pops/pillar-sdk/server` refuses to build one without a
  * service-account key — constructing eagerly would move a missing key from a
  * degraded cron to a pillar that will not boot.
  *
- * @param pillarId Registry id of the pillar that owns the reference.
+ * @param connect Builds the credentialled handle, or `null` with no key.
  * @param call Issues the get-by-id request against that pillar's handle.
  */
 function lookupVia<THandle>(
-  pillarId: string,
+  connect: () => PillarHandle<THandle> | null,
   call: (handle: PillarHandle<THandle>, id: string) => Promise<CallResult<unknown>>
 ): ReconcileLookupFn {
   return async (id: string): Promise<ReconcileLookupResult> => {
-    const handle = credentialledPillar<THandle>(pillarId);
+    const handle = connect();
     if (handle === null) return { kind: 'unauthorized', reason: NO_CREDENTIAL_REASON };
     return classify(await call(handle, id));
   };
@@ -96,10 +95,16 @@ function lookupVia<THandle>(
 
 /** Resolve `pops://inventory/item/<id>` via `GET /items/:id` on the inventory pillar. */
 export function createInventoryItemLookup(): ReconcileLookupFn {
-  return lookupVia<InventoryHandle>('inventory', (handle, id) => handle.items.get({ id }));
+  return lookupVia(
+    () => credentialled(INVENTORY_PILLAR_ID, () => pillar<InventoryHandle>(INVENTORY_PILLAR_ID)),
+    (handle, id) => handle.items.get({ id })
+  );
 }
 
 /** Resolve `pops://documents/document/<id>` via `GET /paperless/documents/:id` on the documents pillar. */
 export function createDocumentLookup(): ReconcileLookupFn {
-  return lookupVia<DocumentsHandle>('documents', (handle, id) => handle.paperless.get({ id }));
+  return lookupVia(
+    () => credentialled(DOCUMENTS_PILLAR_ID, () => pillar<DocumentsHandle>(DOCUMENTS_PILLAR_ID)),
+    (handle, id) => handle.paperless.get({ id })
+  );
 }

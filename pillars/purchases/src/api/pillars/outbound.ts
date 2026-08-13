@@ -1,13 +1,20 @@
 /**
- * The one way this pillar builds an outbound cross-pillar handle, and the
- * one vocabulary it uses to report a credential problem.
+ * What every outbound cross-pillar leg does about the credential, in one
+ * place, plus the vocabulary they all report a credential problem in.
  *
  * `@pops/pillar-sdk` exports two `pillar()` functions with the same name and
  * the same shape. The `/client` one is unauthenticated: a backend that
  * imports it compiles, runs, and silently sends no `X-API-Key`, which works
  * exactly until the callee starts requiring one and then fails as an
- * indistinguishable outage. Every outbound leg here therefore goes through
- * {@link credentialledPillar}, and none imports `pillar()` directly.
+ * indistinguishable outage. Every leg here builds its handle from the
+ * `/server` one, wrapped in {@link credentialled}.
+ *
+ * The wrapper takes a thunk rather than a pillar id, so the `pillar()` call
+ * stays at the leg with its literal id and its router type. That is not
+ * style: `scripts/ci/check-cross-pillar-expectations.mjs` reads those two
+ * things to pin each seam to the producer's published contract, and a
+ * wrapper that resolved the id itself would hide all four seams from the
+ * gate behind one unresolvable call.
  *
  * The second job is telling two failures apart. "The pillar is down" and
  * "the pillar refused this pillar's credential" call for different actions —
@@ -17,7 +24,7 @@
  * all carries {@link NO_CREDENTIAL_REASON}, and neither is ever reported as a
  * bare `unavailable`.
  */
-import { pillar, PillarServerSdkError, type PillarHandle } from '@pops/pillar-sdk/server';
+import { PillarServerSdkError, type PillarHandle } from '@pops/pillar-sdk/server';
 
 import {
   PURCHASES_SERVICE_ACCOUNT_NAME,
@@ -42,16 +49,22 @@ export const UNAUTHORIZED_REASON = 'unauthorized';
 const reportedMissingKey = new Set<string>();
 
 /**
- * Build a credentialled handle for `pillarId`.
+ * Build a leg's handle, answering `null` instead of throwing when this
+ * process holds no service-account key.
  *
- * @param pillarId Registry id of the pillar to call.
- * @returns The handle, or `null` when this process has no service-account key
- *   — the caller then reports {@link NO_CREDENTIAL_REASON} rather than
- *   attempting an anonymous call the callee may or may not still admit.
+ * @param pillarId Registry id of the pillar being called, for the log line.
+ * @param connect Builds the handle — always `() => pillar<TRouter>(id)` from
+ *   `@pops/pillar-sdk/server`, called here so its refusal is handled once.
+ * @returns The handle, or `null` when there is no key — the caller then
+ *   reports {@link NO_CREDENTIAL_REASON} rather than attempting an anonymous
+ *   call the callee may or may not still admit.
  */
-export function credentialledPillar<TRouter>(pillarId: string): PillarHandle<TRouter> | null {
+export function credentialled<TRouter>(
+  pillarId: string,
+  connect: () => PillarHandle<TRouter>
+): PillarHandle<TRouter> | null {
   try {
-    return pillar<TRouter>(pillarId);
+    return connect();
   } catch (error) {
     if (!(error instanceof PillarServerSdkError)) throw error;
     if (!reportedMissingKey.has(pillarId)) {
