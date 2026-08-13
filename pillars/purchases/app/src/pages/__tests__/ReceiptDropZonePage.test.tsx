@@ -533,15 +533,29 @@ describe('ReceiptDropZonePage — needs review', () => {
     expect(screen.getByText('the line under the tomatoes')).toBeVisible();
   });
 
+  // Asserted per field rather than by counting the marker. The base fixture
+  // already leaves three fields unread, so any count-based assertion is
+  // satisfied before the nulls below are applied and would pass against a
+  // panel that ignored them entirely.
   it('says which readings were missing instead of rendering a blank', async () => {
     await uploadOne(
       needsReview({ extracted: extracted({ merchantName: null, tax: null, purchasedOn: null }) })
     );
 
     expect(await screen.findByText(enAUPurchases['receipts.extracted.heading'])).toBeVisible();
-    expect(screen.getAllByText(enAUPurchases['receipts.extracted.missing']).length).toBeGreaterThan(
-      2
-    );
+
+    const valueFor = (label: string): string | null | undefined =>
+      screen.getByText(label).nextElementSibling?.textContent;
+
+    for (const label of ['merchant', 'tax', 'purchasedOn'] as const) {
+      expect(valueFor(enAUPurchases[`receipts.extracted.${label}`])).toBe(
+        enAUPurchases['receipts.extracted.missing']
+      );
+    }
+
+    // A field that WAS read still shows its reading, so the marker is not
+    // simply being rendered for every field.
+    expect(valueFor(enAUPurchases['receipts.extracted.total'])).toBe('41.20');
   });
 
   it('says a reading with no lines has none', async () => {
