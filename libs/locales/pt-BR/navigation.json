@@ -54,5 +54,6 @@
   "bfm.devices": "Dispositivos",
   "purchases": "Compras",
   "purchases.reconcile": "Conciliação",
-  "purchases.merchants": "Comerciantes"
+  "purchases.merchants": "Comerciantes",
+  "purchases.receipts": "Recibos"
 }

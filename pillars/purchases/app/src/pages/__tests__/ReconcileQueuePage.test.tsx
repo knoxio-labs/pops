@@ -140,7 +140,7 @@ describe('ReconcileQueuePage — copy', () => {
     renderQueue();
     await screen.findByRole('listbox');
 
-    expect(document.body.textContent).not.toMatch(/\b(?:reconcile|merchants)\.[a-zA-Z]/);
+    expect(document.body.textContent).not.toMatch(/(?:reconcile|merchants)\.[a-zA-Z]/);
   });
 
   it('has a label for every link type the contract allows', async () => {
