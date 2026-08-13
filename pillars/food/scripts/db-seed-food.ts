@@ -6,24 +6,32 @@
  * sets `SQLITE_PATH` to the food pillar's dev DB.
  */
 import { existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 import BetterSqlite3 from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 
 import { compileRecipeVersion } from '../src/dsl/compile.js';
 import { seedFood } from '../src/seed/index.js';
+import { assertSeedTargetIsDev, SeedTargetRefusedError } from './dev-seed-guard.js';
 
-if (process.env.NODE_ENV === 'production') {
-  console.error("❌ Refusing to run: NODE_ENV is 'production'.");
-  console.error('   This script is for development/testing only.');
+const PACKAGE_ROOT = fileURLToPath(new URL('..', import.meta.url));
+
+let DB_PATH: string;
+try {
+  DB_PATH = assertSeedTargetIsDev({
+    dbPath: process.env.SQLITE_PATH ?? './data/food.db',
+    packageRoot: PACKAGE_ROOT,
+  });
+} catch (error) {
+  if (!(error instanceof SeedTargetRefusedError)) throw error;
+  console.error(`❌ ${error.message}`);
   process.exit(1);
 }
 
-const DB_PATH = process.env.SQLITE_PATH ?? './data/pops.db';
-
 if (!existsSync(DB_PATH)) {
   console.error(`❌ Database not found at ${DB_PATH}`);
-  console.warn("💡 Run 'mise db:init' to create the database first");
+  console.warn('💡 Start the food pillar once — it creates and migrates its own database on boot');
   process.exit(1);
 }
 
