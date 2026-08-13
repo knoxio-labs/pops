@@ -26,6 +26,7 @@
  */
 import { createHash } from 'node:crypto';
 
+import { allocateProRata } from '../allocation.js';
 import { instantFromLocalParts, isKnownTimeZone, storeTimeZone } from '../local-time.js';
 import { parseAmountCents } from '../money.js';
 import { receiptKey } from './store.js';
@@ -90,6 +91,25 @@ function toItem(
     // model is never asked what the thing IS — see `extraction.ts`.
     notes: line.unitNote === undefined ? [] : [line.unitNote],
   };
+}
+
+/**
+ * Split one order-level shipping figure across its lines, pro-rata by
+ * each line's own `lineTotalCents`.
+ *
+ * The receipt states one delivery figure for the whole order — there is
+ * no per-line postage the way `Total Amount` states one for Amazon — so
+ * this is the same basis the amazon adapter uses for `Shipping Charge`.
+ */
+function withAllocatedShipping(
+  items: readonly CreateItemInput[],
+  shippingCents: number
+): CreateItemInput[] {
+  const shares = allocateProRata(
+    shippingCents,
+    items.map((item) => item.lineTotalCents)
+  );
+  return items.map((item, index) => ({ ...item, allocatedShippingCents: shares[index] ?? 0 }));
 }
 
 /**
@@ -196,7 +216,7 @@ export function receiptToPurchase(
   ];
 
   const locale = { currency: extracted.currency };
-  const items = extracted.lines
+  const readItems = extracted.lines
     .map((line) => toItem(line, locale))
     .filter((item): item is CreateItemInput => item !== null);
   if (gate.totalCents === null) {
@@ -206,6 +226,7 @@ export function receiptToPurchase(
     throw new Error('receiptToPurchase requires a gated reading with a readable total');
   }
   const totalCents = gate.totalCents;
+  const items = withAllocatedShipping(readItems, gate.shippingCents);
 
   const withoutChecksum: Omit<CreatePurchaseInput, 'checksum'> = {
     source: RECEIPT_SOURCE_ID,

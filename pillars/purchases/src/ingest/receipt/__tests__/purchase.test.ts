@@ -275,13 +275,21 @@ describe('the checksum', () => {
 
   it('changes when a re-reading only moves the fee from surcharge to delivery', () => {
     // The exact correction this change makes possible, and the one a
-    // recipe over the total, the discount and the lines cannot see: every
-    // one of those is identical between the two readings.
+    // recipe over the total and the discount cannot see: both are
+    // identical between the two readings. The items are not — a surcharge
+    // carries no per-item allocation, a shipping figure does (POPS-1789) —
+    // so only that field of each item is expected to move.
     const asSurcharge = mapped({ total: '$37.45', surcharges: ['$9.95'] });
     const asDelivery = mapped({ total: '$37.45', shipping: '$9.95' });
 
     expect(asSurcharge.totalCents).toBe(asDelivery.totalCents);
-    expect(asSurcharge.items).toEqual(asDelivery.items);
+    expect(asSurcharge.items?.every((item) => item.allocatedShippingCents === 0)).toBe(true);
+    expect(asDelivery.items).toEqual(
+      asSurcharge.items?.map((item, index) => ({
+        ...item,
+        allocatedShippingCents: index === 0 ? 452 : 543,
+      }))
+    );
     expect(asSurcharge.checksum).not.toBe(asDelivery.checksum);
   });
 
