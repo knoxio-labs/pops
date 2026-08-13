@@ -10,12 +10,14 @@
  * `@pops/pillar-express`. What is left here is the choice of what purchases
  * gates, and its posture.
  *
- * **Purchases does not require a credential.** Its ingest paths present none —
- * the ingest CLI, the operator smoke script, the two-process test — and
- * requiring one would 401 them. Its credentialled callers reach it through
- * `pillar('purchases')` and are bound to their grant here: the MCP tools in
- * `pillars/mcp/src/tools/purchases.ts`, and the orchestrator's federated
- * search. The README records what would reverse the `false`.
+ * **Purchases does not require a credential.** Browser traffic arrives through
+ * the shell's nginx with no key, and the two-process test drives the real
+ * server without one; requiring a credential would 401 both. The ingest CLI
+ * and the operator smoke script no longer belong on that list — they present a
+ * key and are bound to its grant like any other machine caller, alongside the
+ * MCP tools in `pillars/mcp/src/tools/purchases.ts` and the orchestrator's
+ * federated search, which reach this pillar through `pillar('purchases')`. The
+ * README records what would reverse the `false`.
  *
  * The required scope is derived from the contract itself, so a route added to
  * `purchasesContract` is gated the moment it exists; there is no second list to

@@ -5,11 +5,14 @@
  * megabyte directory the user downloads and unzips, and the upload surface
  * that would accept it belongs with the receipt drop-zone (POPS-240).
  *
- *   pnpm ingest:amazon -- "<bundle-root>" [--dry-run]
+ *   POPS_INTERNAL_API_KEY=<key> pnpm ingest:amazon -- "<bundle-root>" [--dry-run]
  *
  * `<bundle-root>` is the directory CONTAINING `Your Amazon Orders/`, not
  * that folder itself. Amazon names it `Your Orders`, so the path usually
  * ends in it — which reads as if the inner folder were meant.
+ *
+ * The key is required for a real run and unused by `--dry-run`, which parses
+ * and prints without making a request.
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -20,7 +23,7 @@ import {
   parseAmazonOrderHistory,
 } from '../src/ingest/amazon/index.js';
 import {
-  baseUrlFromEnv,
+  createIngestClient,
   postPurchases,
   reportOutcome,
   summariseAnomalies,
@@ -87,8 +90,8 @@ async function main(): Promise<void> {
     return;
   }
 
-  const baseUrl = baseUrlFromEnv();
-  await upsertSource(baseUrl, {
+  const client = createIngestClient();
+  await upsertSource(client, {
     id: AMAZON_SOURCE_ID,
     label: 'Amazon',
     // No bank descriptor is the bare word AMAZON — it is `AMAZON MKTPLACE
@@ -100,7 +103,7 @@ async function main(): Promise<void> {
     ingestAdapter: 'amazon-dsar-export',
   });
 
-  reportOutcome(await postPurchases(baseUrl, orders));
+  reportOutcome(await postPurchases(client, orders));
 }
 
 await main();

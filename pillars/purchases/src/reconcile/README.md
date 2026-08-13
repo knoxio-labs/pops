@@ -133,4 +133,4 @@ Three layers, each covering what the one below cannot:
 | `two-process.test.ts`                | the real entry point boots, migrates a fresh DB, starts the runner and reconciles over a socket |
 | `infra/smoke/purchases-reconcile.sh` | the Docker network and the compose file                                                         |
 
-Only the last needs Docker, which is why it is a script rather than a test — a suite that takes minutes stops being run.
+Only the last needs Docker, which is why it is a script rather than a test — a suite that takes minutes stops being run. It also needs a service-account key in `POPS_INTERNAL_API_KEY`, granted `purchases.source` and `purchases.purchase`: it presents that key on every purchases call and refuses to start without one (POPS-1806).
