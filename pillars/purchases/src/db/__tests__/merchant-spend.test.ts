@@ -29,7 +29,7 @@ import {
   rollUpMerchantSpend,
   upsertSource,
 } from '../index.js';
-import { openTempDb, seedAmazonSource } from './helpers.js';
+import { ARRANGEMENT_TIMEOUT_MS, openTempDb, seedAmazonSource } from './helpers.js';
 
 import type {
   CreateChargeInput,
@@ -167,23 +167,6 @@ function currencyTotal(rollup: MerchantSpendRollup, currency: string): CurrencyS
  */
 const CORPUS_ORDERS = 748;
 
-/**
- * The bound on building the corpus, which is the one piece of work in this
- * pillar that vitest's defaults do not comfortably cover.
- *
- * Writing `CORPUS_ORDERS` orders with their charges and links into a real
- * on-disk database and reading every one of them back through `getPurchase`
- * is genuine I/O rather than a wait on anything — ~0.6s with the box to
- * itself, ~2.5s inside the full suite. It is now paid once for the block
- * instead of once per test, so this bounds an arrangement rather than an
- * assertion: it is here to fail a corpus build that has hung, not to give a
- * slow test room. An order of magnitude above the worst observed, and stated
- * explicitly so vitest's 10s hook default is not what decides it on a runner
- * several times slower per core. Every test in the block runs at the
- * pillar's 5s default.
- */
-const CORPUS_ARRANGEMENT_TIMEOUT_MS = 20_000;
-
 describe('the roll-up agrees with the per-order split it summarises', () => {
   /**
    * The corpus and its oracle, built once for the whole block.
@@ -257,7 +240,7 @@ describe('the roll-up agrees with the per-order split it summarises', () => {
     seedSources(corpus);
     seedCorpus(corpus.db);
     oracle = foldEveryOrder(corpus.db);
-  }, CORPUS_ARRANGEMENT_TIMEOUT_MS);
+  }, ARRANGEMENT_TIMEOUT_MS);
 
   afterAll(() => {
     releaseCorpus();

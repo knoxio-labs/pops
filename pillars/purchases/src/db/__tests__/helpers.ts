@@ -110,6 +110,20 @@ export function openTempDb(): TempDb {
 }
 
 /**
+ * The bound to give a `beforeAll` that builds one of these arrangements.
+ *
+ * Vitest's 10s hook default is not the right number for work that is done
+ * once for a whole block: it has been seen to fire on a developer box busy
+ * with a dozen unrelated builds, where the arrangement was not slow and
+ * nothing was wrong. The arrangements it covers cost well under a second
+ * each with the box to themselves, so this is not headroom for a slow test
+ * — it is far enough above them to mean only one thing when it fires, which
+ * is that the build has hung. Every *test* still runs at vitest's 5s
+ * default, which is where a wall-clock assertion belongs.
+ */
+export const ARRANGEMENT_TIMEOUT_MS = 30_000;
+
+/**
  * Freeze what an opened database currently holds, so an expensive
  * arrangement can be built once and handed to many tests.
  *

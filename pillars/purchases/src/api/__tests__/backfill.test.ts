@@ -16,7 +16,12 @@
 import request from 'supertest';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { openTempDb, seedAmazonSource, snapshotTempDb } from '../../db/__tests__/helpers.js';
+import {
+  ARRANGEMENT_TIMEOUT_MS,
+  openTempDb,
+  seedAmazonSource,
+  snapshotTempDb,
+} from '../../db/__tests__/helpers.js';
 import { ORDER_HISTORY_CSV } from '../../ingest/amazon/__tests__/__fixtures__/order-history.js';
 import { parseAmazonOrderHistory } from '../../ingest/amazon/order-history.js';
 import { runSweep } from '../../reconcile/sweep.js';
@@ -110,7 +115,7 @@ beforeAll(async () => {
   backfilled = snapshotTempDb(temp.opened);
   temp.cleanup();
   __resetPillarRegistryCache();
-});
+}, ARRANGEMENT_TIMEOUT_MS);
 
 describe('the parser output is acceptable to the real API', () => {
   useBackfilledDb();
