@@ -42,6 +42,7 @@ afterEach(() => {
 });
 
 const NOW = '2026-03-10T00:00:00Z';
+const TXN = 'pops://finance/transaction/t1';
 
 function anOrder(overrides: Partial<CreatePurchaseInput> & { checksum: string }): string {
   return createPurchase(db, {
@@ -196,10 +197,13 @@ describe('confirming teaches the matcher', () => {
     expect(ruleRows()).toHaveLength(0);
   });
 
-  it('reports the link is gone rather than inventing a rule for it', () => {
-    const purchaseId = anOrder({ checksum: 'a' });
+  it('refuses a decision about a link that does not exist', () => {
+    // What the queue produces when a sweep has re-derived since it was
+    // read: the charge and transaction the user acted on no longer name a
+    // link. No order here has been swept, so no link exists for any charge.
+    anOrder({ checksum: 'a' });
 
-    expect(confirmLink(db, purchaseId, 'pops://finance/transaction/t1', NOW)).toEqual({
+    expect(confirmLink(db, 'charge-that-never-existed', TXN, NOW)).toEqual({
       pinned: false,
       matchRuleId: null,
     });

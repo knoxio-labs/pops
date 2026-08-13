@@ -74,11 +74,13 @@ export function orderedTransactions(
  * than a charge that cannot be matched at all.
  *
  * Rejections are the one input here that came from a human rather than
- * from the data. They belong at this stage precisely because blocking is
- * the only place a candidate can be removed without the ladder ever forming
- * an opinion about it: a rejected pairing produces no link, no review entry
- * and no claim on the transaction, which is what leaves that transaction
- * free for the charge it actually settles.
+ * from the data. They belong at this stage because blocking is the only
+ * place a candidate can leave without the ladder forming an opinion about
+ * the PAIRING: the transaction is not linked and not claimed, so it stays
+ * available to the charge that actually settles it. The charge still
+ * reaches an outcome of its own — with nothing else in range it reports
+ * `no-candidate`, which is the honest reading of a window whose only
+ * candidate the operator has ruled out.
  */
 export function eligibilityFor(
   charge: SolvableCharge,
