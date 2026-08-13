@@ -109,12 +109,18 @@ let backfillStatuses: number[];
 
 beforeAll(async () => {
   const temp = openTempDb();
-  seedAmazonSource(temp.opened);
-  __resetPillarRegistryCache();
-  backfillStatuses = await postAll(appOver(temp.opened));
-  backfilled = snapshotTempDb(temp.opened);
-  temp.cleanup();
-  __resetPillarRegistryCache();
+  try {
+    seedAmazonSource(temp.opened);
+    __resetPillarRegistryCache();
+    backfillStatuses = await postAll(appOver(temp.opened));
+    backfilled = snapshotTempDb(temp.opened);
+  } finally {
+    // An arrangement that throws half way must not leave a database handle
+    // and a primed registry cache behind for the tests that follow to trip
+    // over — a leak here would read as a flake in whatever ran next.
+    temp.cleanup();
+    __resetPillarRegistryCache();
+  }
 }, ARRANGEMENT_TIMEOUT_MS);
 
 describe('the parser output is acceptable to the real API', () => {

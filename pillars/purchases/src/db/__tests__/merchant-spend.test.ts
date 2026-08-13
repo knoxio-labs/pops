@@ -179,7 +179,9 @@ describe('the roll-up agrees with the per-order split it summarises', () => {
    * opens for the rest of the file.
    */
   let corpus: OpenedPurchasesDb;
-  let releaseCorpus: () => void;
+  // A no-op until the arrangement opens something, so a build that fails
+  // before it does reports its own error rather than one from teardown.
+  let releaseCorpus: () => void = () => undefined;
   let oracle: { accounting: PurchaseAccounting; orderCount: number };
 
   /**
