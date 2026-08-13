@@ -226,6 +226,20 @@ xcodebuild -project Pops.xcodeproj -scheme Pops \
 # Read out of the generated scheme rather than out of project.yml, because the
 # scheme is the thing xcodebuild will act on, and `depends = ["generate"]`
 # means it was written from project.yml seconds earlier.
+# NO `-parallel-testing-enabled`, and that is a decision rather than an omission.
+# xcodebuild parallelises by cloning the simulator once per worker and running
+# them at once — on a GitHub macOS runner's THREE cores. That is the same
+# starvation that made `AuthenticatingMiddlewareConcurrencyTests
+# .twentyConcurrentRejectionsRefreshOnce` fail one run in three, and the reason
+# `ios-quality.yml` runs this task and `lint:analyze` with `-j 1` instead of
+# concurrently. Re-introducing it here would undo that fix from the other side.
+#
+# The upside it would be bought with is small: this task is 208s of a 1587s job,
+# most of the rest being the Maestro UI flow at 925s, and a clone plus boot is
+# tens of seconds each. Measured before assuming — the numbers are from run
+# 31694380928. If the flag is ever revisited, the bar is the one that matters
+# for a required check: not a faster run, but several consecutive runs with no
+# new flakiness.
 [tasks.test]
 description = "Run every package's tests, and the app's own target, on the iOS Simulator"
 depends = ["build:for-testing"]
@@ -943,6 +957,17 @@ for flow in $flows; do
       status="${PIPESTATUS[0]}"
     fi
     if [ "$status" -eq 0 ]; then
+      # A retry that WORKED is the one outcome this loop can produce that
+      # nobody would otherwise ever see: the job goes green, and the evidence
+      # sits in the middle of a fifteen-minute log. `::notice::` puts it on the
+      # run summary instead, which is what makes the first genuine occurrence
+      # findable — the retry branch below has never been observed firing in
+      # CI, and until one is seen it is code that has only ever been reasoned
+      # about. Harmless noise outside Actions; it is one line, and only on the
+      # path that already did something worth reporting.
+      if [ "$attempt" -gt 1 ]; then
+        echo "::notice title=iOS e2e driver retry recovered::$flow passed on attempt $attempt of $max_attempts after an IOSDriverTimeoutException (e2e-driver-retry-recovered)"
+      fi
       rm -f "$maestro_log"
       break
     fi
@@ -962,6 +987,7 @@ for flow in $flows; do
       rm -f "$maestro_log"
       exit "$status"
     fi
+    echo "::notice title=iOS e2e driver retry fired::$flow hit an IOSDriverTimeoutException on attempt $attempt (e2e-driver-retry-fired)"
     echo "e2e: $flow — the iOS XCUITest driver did not attach before its startup ceiling" >&2
     echo "     (runner contention, not a flow failure). Retrying: attempt $((attempt + 1)) of" >&2
     echo "     $max_attempts, with a fresh pairing code." >&2
