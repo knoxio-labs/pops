@@ -361,6 +361,36 @@ describe('ReceiptDropZonePage — staging what is sent', () => {
       screen.getByRole('button', { name: enAUPurchases['receipts.action.submit'] })
     ).toBeDisabled();
   });
+
+  // A second send of the same parts can only be refused as a duplicate, and a
+  // model reading a photograph takes long enough for an impatient second click.
+  it('says it is reading, and will not send the same parts again while it does', async () => {
+    let answer = (outcome: { data: CreatedOutcome }): void => {
+      throw new Error(`the upload was never called, so ${outcome.data.kind} cannot be answered`);
+    };
+    receiptUploadMock.mockReturnValue(
+      new Promise((resolve) => {
+        answer = resolve;
+      })
+    );
+    const user = renderPage();
+
+    await user.upload(dropZoneInput(), frame('till.jpg', 'frame-one'));
+    expect(await screen.findByText('till.jpg')).toBeVisible();
+    await submit(user);
+
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      enAUPurchases['receipts.status.uploading']
+    );
+    expect(
+      screen.getByRole('button', { name: enAUPurchases['receipts.action.submit'] })
+    ).toBeDisabled();
+
+    answer(created());
+
+    expect(await screen.findByText(enAUPurchases['receipts.created.title'])).toBeVisible();
+    expect(receiptUploadMock).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('ReceiptDropZonePage — created', () => {
