@@ -8,8 +8,13 @@ the only source; this directory is what makes its output trustworthy.
 extension/  →  export.json  →  parseWoolworthsExport()  →  POST /purchases
 ```
 
-Run it with `pnpm --filter @pops/purchases ingest:woolworths -- <file>`.
-Add `--dry-run` to parse and report without writing.
+Run it with
+`POPS_INTERNAL_API_KEY=<key> pnpm --filter @pops/purchases ingest:woolworths -- <file>`.
+The key's account needs `purchases.source` and `purchases.purchase`; a real
+run aborts before its first request without one.
+
+Add `--dry-run` to parse and report without writing — that path calls the
+pillar not at all and needs no key.
 
 ## Why this needs a tested module
 

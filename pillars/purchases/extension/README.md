@@ -37,8 +37,13 @@ tab is not.
 Ingest the file with:
 
 ```bash
-pnpm --filter @pops/purchases ingest:woolworths ~/Downloads/everyday-receipts-2026-08-07.json
+POPS_INTERNAL_API_KEY=<key> pnpm --filter @pops/purchases ingest:woolworths -- ~/Downloads/everyday-receipts-2026-08-07.json
 ```
+
+The key's account needs `purchases.source` and `purchases.purchase` — the
+write path is behind the pillar's inbound service-account gate, and the run
+aborts before its first request without one. Add `--dry-run` to parse and
+report without writing, which needs no key.
 
 ## The contract it depends on
 
