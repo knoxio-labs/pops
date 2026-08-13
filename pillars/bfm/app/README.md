@@ -111,11 +111,10 @@ function argument: the page test needs `shouldAdvanceTime` for React Query to
 settle, which lets real milliseconds into the fake clock and makes an exact
 readout assertion flaky.
 
-The browser-level walkthrough is `pillars/shell/e2e/bfm-devices-pairing.spec.ts`.
-It stubs bfm's operator routes itself rather than using
-`e2e/helpers/use-real-api`, so it does not depend on the harness rewrite that
-suite is waiting on (POPS-1311) — but that suite is gated to
-`workflow_dispatch`, so this spec does not run in CI until POPS-1311 lands.
+The browser-level walkthrough is `pillars/shell/e2e/bfm-devices-pairing.spec.ts`,
+run by the shell's Playwright suite on every pull request that touches this app.
+It fulfils bfm's three operator routes at the `/bfm-api` proxy path itself, so
+the pillar does not have to be up for it.
 
 ## Run
 

@@ -2,7 +2,7 @@
 /**
  * `CI Gate` wiring guard.
  *
- * `ci-gate.yml` collapses eight quality workflows into ONE static context so a
+ * `ci-gate.yml` collapses nine quality workflows into ONE static context so a
  * branch ruleset can require it. Four separate pieces of that wiring report
  * green when they drift, and nothing else notices:
  *

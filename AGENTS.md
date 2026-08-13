@@ -138,7 +138,7 @@ cd pillars/contacts && cargo test                # contacts is Rust (axum)
 
 Tests live next to the code they cover (`pillars/<id>/src/**/__tests__/`, `libs/<lib>/src/**`). A pillar applies its own migrations against a real in-memory/temp SQLite DB inside its own tests — no shared monolith test path.
 
-**Databases:** no shared step, no global init/seed/clear. Each pillar migrates its own SQLite DB on startup; per-pillar seed/reset scripts (where present) live in that pillar's `package.json` / mise tasks. E2E tests in `pillars/shell/e2e/` drive against the pillars they exercise.
+**Databases:** no shared step, no global init/seed/clear. Each pillar migrates its own SQLite DB on startup; per-pillar seed/reset scripts (where present) live in that pillar's `package.json` / mise tasks. E2E tests in `pillars/shell/e2e/` stand their pillar's REST surface up with `page.route` and start no backend at all — see that directory's README.
 
 **Redis:** optional for most pillars (degraded mode = queues + cache disabled). `food` and `cerebrum` workers need it — start Redis for job-queue/cache work. Local: `REDIS_URL=redis://localhost:6379` in the pillar's `.env`. Prod: `REDIS_URL=redis://pops-redis:6379` via Docker Compose.
 

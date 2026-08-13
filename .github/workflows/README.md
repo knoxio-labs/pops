@@ -5,9 +5,9 @@
 ## `ci-gate.yml` — the one static aggregate context
 
 `ci-gate.yml` runs a job named `Publish CI Gate verdict`, triggered
-`on: workflow_run` `types: [completed]` of eight workflows: Unit Quality, FE
+`on: workflow_run` `types: [completed]` of nine workflows: Unit Quality, FE
 Quality, Rust Quality, App Quality, Quality, Registry Generated Quality, iOS
-Quality, Docker Build. Each name appears twice in that file — in the trigger
+Quality, Docker Build, E2E Tests. Each name appears twice in that file — in the trigger
 array and in the `gated` array inside the script — and either alone is inert. It
 reads their conclusions through the Actions API and runs none of them itself. The
 file header carries the argument for `workflow_run` over `needs:`, for why the
@@ -143,7 +143,7 @@ it. Trigger first, rule second.
 
 **Every workflow behind a required context therefore triggers on `merge_group`.**
 `quality.yml` and `agent-review.yml` for the five directly-required contexts,
-and all eight of the workflows `ci-gate.yml` aggregates, or `CI Gate` would go
+and all nine of the workflows `ci-gate.yml` aggregates, or `CI Gate` would go
 green on the merge group having observed nothing. Deleting a `merge_group:`
 trigger from any of them does not turn a check off, it makes that check never
 report on the queue's ref — and an entry whose required check never reports sits
@@ -283,7 +283,7 @@ caller's decision; this file only knows how to sandbox whatever `units` names.
 | `extractability-sandbox.yml`     | nightly cron + `workflow_dispatch` (optional single-`unit` input) — **not** PR/push, **not** in `ci-gate.yml`'s gated list | EX-2 via `_extractability-sandbox-matrix.yml` over every unit `_discover-units.yml` discovers (or just the dispatched one) — the true zero-workspace extraction proof, too heavy for a per-push gate |
 | `extractability-sandbox-push.yml` | push to `main` on a unit's `package.json`/`tsconfig*.json`/`Cargo.toml`/`Cargo.lock`/`pnpm-lock.yaml` — **not** PR, **not** in `ci-gate.yml`'s gated list | EX-2 via `_extractability-sandbox-matrix.yml`, scoped to ONLY `_discover-units.yml`'s `changed` set for that push — fast feedback on an exports/dep-shape change instead of waiting for the nightly sweep |
 | `workflows-quality.yml`          | PR/push on `.github/workflows/**`                             | YAML lint                                                                                                           |
-| `fe-test-e2e.yml`                | `workflow_dispatch` only                                      | Playwright, manual — see the header for why it is off PR/push                                                        |
+| `fe-test-e2e.yml`                | PR on the shell/app/nav/registry/sdk/types/ui paths, push to `main`, merge group, dispatch | Playwright over the shell and the app bundles it mounts; no pillar backend runs — each spec fulfils its own `/<pillar>-api` surface |
 | `live-seam.yml`                  | PR/push on `libs/sdk/**`, `pillars/registry/**`, the food/cerebrum live-seam module pairs + their `vitest.live-seam.config.ts`, `pillars/lists/**`, `pillars/finance/**`, and its own workflow file; no merge group | food's and cerebrum's real-process `test:live-seam` suites, each in its own job. **Advisory, not gated** — neither job is in `ci-gate.yml`'s `gated` array or the ruleset, deliberately, for a bake-in period; see the file header |
 
 `publish-images.yml`'s `discover` job filters on `pillars/<x>/Dockerfile`
