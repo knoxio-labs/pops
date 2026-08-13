@@ -11,8 +11,9 @@
  * that folder itself. Amazon names it `Your Orders`, so the path usually
  * ends in it — which reads as if the inner folder were meant.
  *
- * The key is required for a real run and unused by `--dry-run`, which parses
- * and prints without making a request.
+ * The key is required for a real run and checked before the bundle is
+ * parsed, so a missing one fails fast rather than after minutes of CSV work.
+ * `--dry-run` needs no key; it parses and prints without making a request.
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -26,6 +27,7 @@ import {
   createIngestClient,
   postPurchases,
   reportOutcome,
+  runCli,
   summariseAnomalies,
   upsertSource,
 } from './backfill.js';
@@ -63,9 +65,14 @@ function readRefundDetails(bundlePath: string): string | undefined {
   }
 }
 
-async function main(): Promise<void> {
-  const argv = process.argv.slice(2);
+export async function main(argv: readonly string[] = process.argv.slice(2)): Promise<void> {
   const bundlePath = readBundlePath(argv);
+  const dryRun = argv.includes('--dry-run');
+
+  // Resolved before the bundle is read: a multi-hundred-megabyte DSAR parse
+  // is real wall-clock time, and a missing key should fail before any of it
+  // rather than after.
+  const client = dryRun ? undefined : createIngestClient();
 
   const csvPath = join(bundlePath, ORDER_HISTORY_PATH);
   const { orders, anomalies } = parseAmazonOrderHistory(
@@ -85,12 +92,11 @@ async function main(): Promise<void> {
   );
   if (anomalies.length > 0) console.warn(`anomalies: ${summariseAnomalies(anomalies)}`);
 
-  if (argv.includes('--dry-run')) {
+  if (client === undefined) {
     console.warn('--dry-run: nothing was written');
     return;
   }
 
-  const client = createIngestClient();
   await upsertSource(client, {
     id: AMAZON_SOURCE_ID,
     label: 'Amazon',
@@ -106,4 +112,7 @@ async function main(): Promise<void> {
   reportOutcome(await postPurchases(client, orders));
 }
 
-await main();
+// Guarded so importing `main` for tests does not also run the CLI.
+if (import.meta.url === `file://${process.argv[1]}`) {
+  await runCli(main);
+}

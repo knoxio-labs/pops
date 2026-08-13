@@ -147,3 +147,17 @@ export function reportOutcome(outcome: BackfillOutcome): void {
   for (const failure of outcome.failures.slice(0, 10)) console.error(`  ${failure}`);
   if (outcome.failures.length > 0) process.exitCode = 1;
 }
+
+/**
+ * Run a CLI's `main`, printing a failure as a one-line message rather than
+ * letting it surface as an unhandled rejection with a stack trace — the
+ * shape every failure in these scripts should have, config errors included.
+ */
+export async function runCli(main: () => Promise<void>): Promise<void> {
+  try {
+    await main();
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exitCode = 1;
+  }
+}

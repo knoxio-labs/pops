@@ -16,6 +16,7 @@ import {
   DEFAULT_BASE_URL,
   INGEST_API_KEY_ENV,
   postPurchases,
+  runCli,
   upsertSource,
   type IngestClient,
   type SourceRegistration,
@@ -181,6 +182,40 @@ describe('postPurchases', () => {
 
     expect(outcome).toEqual({ created: 0, skipped: 1, failures: [] });
     expect(apiKeyOf(callAt(0).init)).toBe(CLIENT.apiKey);
+  });
+});
+
+describe('runCli', () => {
+  afterEach(() => {
+    process.exitCode = undefined;
+  });
+
+  it('leaves the exit code untouched when main succeeds', async () => {
+    await runCli(() => Promise.resolve());
+
+    expect(process.exitCode).toBeUndefined();
+  });
+
+  it('prints a config error as a message, not a stack trace, and fails the run', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    await runCli(() =>
+      Promise.reject(new Error(`no service-account key: set ${INGEST_API_KEY_ENV}`))
+    );
+
+    expect(process.exitCode).toBe(1);
+    expect(errorSpy).toHaveBeenCalledWith(`no service-account key: set ${INGEST_API_KEY_ENV}`);
+    errorSpy.mockRestore();
+  });
+
+  it('stringifies a non-Error rejection rather than throwing out of the run', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    await runCli(() => Promise.reject('boom'));
+
+    expect(process.exitCode).toBe(1);
+    expect(errorSpy).toHaveBeenCalledWith('boom');
+    errorSpy.mockRestore();
   });
 });
 
