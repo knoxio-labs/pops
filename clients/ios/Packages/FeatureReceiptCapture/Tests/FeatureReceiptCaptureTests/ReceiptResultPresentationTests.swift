@@ -12,7 +12,8 @@ internal struct ReceiptResultPresentationTests {
 
     @Test("a fresh write and a re-upload of the same bytes read differently")
     func createdDistinguishesAlreadyStored() {
-        let fresh = Self.presentation.content(.created(purchaseId: "purchase-1", alreadyStored: false))
+        let fresh = Self.presentation.content(
+            .created(purchaseId: "purchase-1", alreadyStored: false))
         let repeated = Self.presentation.content(
             .created(purchaseId: "purchase-1", alreadyStored: true))
 
@@ -92,7 +93,8 @@ internal struct ReceiptResultPresentationTests {
             Issue.record("expected needsReview")
             return
         }
-        #expect(!content.extractedFields.map(\.label).contains(ReceiptResultCopy.FieldLabel.merchant))
+        #expect(
+            !content.extractedFields.map(\.label).contains(ReceiptResultCopy.FieldLabel.merchant))
     }
 
     @Test("a sum mismatch carries how far off it was")
@@ -116,7 +118,8 @@ internal struct ReceiptResultPresentationTests {
     /// something about a distance it never measured.
     @Test("a failure with no delta draws no delta phrase")
     func noDeltaMeansNoDeltaPhrase() throws {
-        let failure = ReceiptGateFailure.fake(kind: .noLines, detail: "no lines read", deltaCents: nil)
+        let failure = ReceiptGateFailure.fake(
+            kind: .noLines, detail: "no lines read", deltaCents: nil)
         let result = Self.presentation.content(
             .needsReview(receiptURIs: [], failures: [failure], extracted: .fake()))
 
@@ -144,10 +147,11 @@ internal struct ReceiptResultPresentationTests {
             return
         }
         #expect(Set(content.failureLines.map(\.id)).count == content.failureLines.count)
-        #expect(content.failureLines.map(\.label) == [
-            ReceiptResultCopy.gateFailureLabel(.negativeLine),
-            ReceiptResultCopy.gateFailureLabel(.negativeLine),
-        ])
+        #expect(
+            content.failureLines.map(\.label) == [
+                ReceiptResultCopy.gateFailureLabel(.negativeLine),
+                ReceiptResultCopy.gateFailureLabel(.negativeLine),
+            ])
         #expect(content.failureLines.map(\.value) == ["line 1", "line 2"])
     }
 

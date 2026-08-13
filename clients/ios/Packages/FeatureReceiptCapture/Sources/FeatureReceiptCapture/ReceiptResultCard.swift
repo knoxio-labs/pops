@@ -54,8 +54,10 @@ internal struct ReceiptResultCard: View {
             heading(
                 title: content.heading, message: content.message, caption: content.photoCount,
                 tone: .popsWarning)
-            fieldsCard(title: ReceiptResultCopy.needsReviewWhatFailed, fields: content.failureLines)
-            fieldsCard(title: ReceiptResultCopy.needsReviewWhatWeRead, fields: content.extractedFields)
+            fieldsCard(
+                title: ReceiptResultCopy.needsReviewWhatFailed, fields: content.failureLines)
+            fieldsCard(
+                title: ReceiptResultCopy.needsReviewWhatWeRead, fields: content.extractedFields)
         }
     }
 

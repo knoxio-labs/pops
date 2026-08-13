@@ -120,7 +120,8 @@ internal struct ReceiptResultRenderingTests {
             let outcome = ReceiptOutcome.needsReview(
                 receiptURIs: ["uri-1"], failures: [.fake()], extracted: .fake())
             let stock = try #require(Self.render(Self.card(outcome)))
-            let huge = try #require(Self.render(Self.card(outcome).dynamicTypeSize(.accessibility5)))
+            let huge = try #require(
+                Self.render(Self.card(outcome).dynamicTypeSize(.accessibility5)))
 
             #expect(stock != huge, "Dynamic Type is not reaching this card")
         }

@@ -18,7 +18,8 @@ internal struct ReceiptResultViewModelTests {
     private static let parts = [ReceiptPart(mediaType: .jpeg, data: Data([0x01, 0x02]))]
 
     private func model(
-        _ repository: any ReceiptCaptureRepository, parts: [ReceiptPart] = ReceiptResultViewModelTests.parts
+        _ repository: any ReceiptCaptureRepository,
+        parts: [ReceiptPart] = ReceiptResultViewModelTests.parts
     ) -> ReceiptResultViewModel {
         ReceiptResultViewModel(parts: parts, dependencies: .fake(receiptCapture: repository))
     }

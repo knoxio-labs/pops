@@ -8,15 +8,15 @@ Photograph or paste a receipt and let the purchases pillar's model turn it into 
 
 That boundary is asserted, not merely intended: `ModuleBoundaryTests` in `AppCore` fails if any package outside `Auth` and `BFMClient` imports either.
 
-| Concern                                                                          | Lives in                                              |
-| --------------------------------------------------------------------------------- | ------------------------------------------------------ |
-| The capture screen                                                               | here — still the POPS-1959 placeholder                |
-| The result screen (`created` / `needs-review` / `unreadable`, plus gateway failures) | here — `ReceiptResultView`, `ReceiptResultViewModel` |
-| Capturing a photograph, wiring the two screens together                          | not built yet — POPS-1959                             |
-| Camera permission                                                                | `AppCore` — `CameraAuthorizing`                       |
-| `created` / `needs-review` / `unreadable`                                        | `AppCore` — `ReceiptCaptureRepository`, `ReceiptOutcome` |
-| `POST /mobile/receipts` and its outcomes                                         | not built yet — `BFMClient` conformance, POPS-1958    |
-| An end-to-end Maestro flow                                                       | not built yet — POPS-1963                             |
+| Concern                                                                              | Lives in                                                 |
+| ------------------------------------------------------------------------------------ | -------------------------------------------------------- |
+| The capture screen                                                                   | here — still the POPS-1959 placeholder                   |
+| The result screen (`created` / `needs-review` / `unreadable`, plus gateway failures) | here — `ReceiptResultView`, `ReceiptResultViewModel`     |
+| Capturing a photograph, wiring the two screens together                              | not built yet — POPS-1959                                |
+| Camera permission                                                                    | `AppCore` — `CameraAuthorizing`                          |
+| `created` / `needs-review` / `unreadable`                                            | `AppCore` — `ReceiptCaptureRepository`, `ReceiptOutcome` |
+| `POST /mobile/receipts` and its outcomes                                             | not built yet — `BFMClient` conformance, POPS-1958       |
+| An end-to-end Maestro flow                                                           | not built yet — POPS-1963                                |
 
 ## Why the result screen is not wired into the app yet
 

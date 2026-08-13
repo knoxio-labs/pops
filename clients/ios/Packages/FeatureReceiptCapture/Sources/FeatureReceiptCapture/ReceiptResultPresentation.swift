@@ -11,8 +11,6 @@ import AppCore
 /// to trust that a blank line means the receipt never said, not that this
 /// screen dropped something.
 internal struct ReceiptResultPresentation: Sendable {
-    internal init() {}
-
     internal func content(_ outcome: ReceiptOutcome) -> ReceiptResultContent {
         switch outcome {
         case .created(let purchaseId, let alreadyStored):
@@ -27,7 +25,8 @@ internal struct ReceiptResultPresentation: Sendable {
 }
 
 extension ReceiptResultPresentation {
-    private func created(purchaseId: String, alreadyStored: Bool) -> ReceiptResultContent
+    private func created(purchaseId: String, alreadyStored: Bool)
+        -> ReceiptResultContent
         .CreatedContent
     {
         ReceiptResultContent.CreatedContent(
@@ -51,7 +50,8 @@ extension ReceiptResultPresentation {
         )
     }
 
-    private func unreadable(receiptURIs: [String], reason: String) -> ReceiptResultContent
+    private func unreadable(receiptURIs: [String], reason: String)
+        -> ReceiptResultContent
         .UnreadableContent
     {
         ReceiptResultContent.UnreadableContent(
