@@ -218,10 +218,11 @@ per PR: `min_entries_to_merge` is 3, and `min_entries_to_merge_wait_minutes` is
 deliberately left at 5 so a lone PR on the fast path — the 2.9-minute case —
 cannot be made to wait longer than the run it is waiting for.
 
-`check_response_timeout_minutes` is 75 for the same reason it is not 60: the
-worst observed in-queue iOS run was 52 minutes end to end, and a check that does
-not report inside the timeout evicts its entry. Eight minutes of headroom is
-less than a cold macOS runner acquisition.
+`check_response_timeout_minutes` is 75, raised from 60. A check that does not
+report inside that window evicts its entry, and the worst in-queue
+`ios-quality.yml` run observed was 52 minutes end to end — which at 60 left
+eight minutes of margin, less than a cold macOS runner acquisition can spend
+before the job even starts. At 75 that margin is 23.
 
 Two consequences worth stating, because both look like bugs from the outside:
 
