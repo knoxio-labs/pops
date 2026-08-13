@@ -51,7 +51,10 @@ internal struct ContentView: View {
                 ForEach(surface.available, id: \.self) { feature in
                     screen(for: feature)
                         .tabItem {
-                            Label(RootCopy.name(of: feature), systemImage: RootCopy.symbol(for: feature))
+                            Label(
+                                RootCopy.name(of: feature),
+                                systemImage: RootCopy.symbol(for: feature)
+                            )
                         }
                         .tag(feature)
                 }

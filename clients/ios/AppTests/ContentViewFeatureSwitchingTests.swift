@@ -44,7 +44,10 @@ internal struct ContentViewFeatureSwitchingTests {
 
     private static func render(_ view: some View, in scheme: ColorScheme = .light) -> Data? {
         let renderer = ImageRenderer(
-            content: view.environment(\.colorScheme, scheme).frame(width: canvas.width, height: canvas.height)
+            content:
+                view
+                .environment(\.colorScheme, scheme)
+                .frame(width: canvas.width, height: canvas.height)
         )
         renderer.scale = 1
         guard let image = renderer.cgImage, let pixels = image.dataProvider?.data else {
@@ -74,7 +77,11 @@ internal struct ContentViewFeatureSwitchingTests {
 
     private func contentView(available: [MobileFeature]) -> ContentView {
         let bound = composition()
-        return ContentView(surface: surface(available: available), shell: bound.shell, composition: bound)
+        return ContentView(
+            surface: surface(available: available),
+            shell: bound.shell,
+            composition: bound
+        )
     }
 
     @Test("zero available features renders, and renders real content rather than a blank screen")
@@ -94,9 +101,9 @@ internal struct ContentViewFeatureSwitchingTests {
         #expect(
             throughContentView == bareScreen,
             Comment(
-                rawValue: "a single available feature is drawing something other than its own screen "
-                    + "outright — this is the regression the ticket calls out: a tab bar appearing "
-                    + "for one feature"
+                rawValue: "a single available feature is drawing something other than its own "
+                    + "screen outright — this is the regression the ticket calls out: a tab bar "
+                    + "appearing for one feature"
             )
         )
     }
