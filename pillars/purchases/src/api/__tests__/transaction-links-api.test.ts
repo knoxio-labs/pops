@@ -227,6 +227,15 @@ describe('GET /reconcile/links', () => {
     expect(first[0]?.purchase.id).not.toBe(second[0]?.purchase.id);
   });
 
+  it('rejects a well-formed URI from the wrong pillar', async () => {
+    // The failure this catches is silent otherwise: an inventory URI is a
+    // valid pops:// reference, matches no link, and comes back as an empty
+    // list that reads as "no order bought this".
+    await request(app)
+      .get('/reconcile/links?transactionUri=pops%3A%2F%2Finventory%2Fitem%2F1')
+      .expect(400);
+  });
+
   it('rejects a URI that is not a pops:// reference', async () => {
     // A malformed URI would otherwise return an empty list, which reads as
     // "no purchase" rather than "you asked the wrong question".

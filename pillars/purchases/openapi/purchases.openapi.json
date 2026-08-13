@@ -4001,7 +4001,7 @@
             "name": "transactionUri",
             "required": true,
             "schema": {
-              "pattern": "^pops:\\/\\/[a-z0-9-]+\\/[a-z0-9-]+\\/[^/\\s]+$",
+              "pattern": "^pops:\\/\\/finance\\/transaction\\/[^/\\s]+$",
               "type": "string"
             }
           }
@@ -4302,7 +4302,7 @@
                       "type": "array"
                     },
                     "transactionUri": {
-                      "pattern": "^pops:\\/\\/[a-z0-9-]+\\/[a-z0-9-]+\\/[^/\\s]+$",
+                      "pattern": "^pops:\\/\\/finance\\/transaction\\/[^/\\s]+$",
                       "type": "string"
                     }
                   },

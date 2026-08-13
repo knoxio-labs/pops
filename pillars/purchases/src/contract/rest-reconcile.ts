@@ -69,8 +69,24 @@ export const ReconcileQueueQuerySchema = z.object({
   offset: z.coerce.number().int().min(0).optional(),
 });
 
+/**
+ * A `pops://finance/transaction/<id>` reference specifically.
+ *
+ * Narrower than {@link PopsUriSchema}, and deliberately narrower than the
+ * stored column, which stays generic. It exists for the one place a URI is
+ * an INPUT: a lookup keyed on a well-formed URI from another pillar matches
+ * no link and returns an empty list, which reads as "no order bought this"
+ * rather than "you asked the wrong question".
+ */
+const FinanceTransactionUriSchema = z
+  .string()
+  .regex(
+    /^pops:\/\/finance\/transaction\/[^/\s]+$/u,
+    'expected a finance transaction URI, e.g. pops://finance/transaction/<id>'
+  );
+
 export const TransactionLinksQuerySchema = z.object({
-  transactionUri: PopsUriSchema,
+  transactionUri: FinanceTransactionUriSchema,
 });
 
 /** One charge and the link attaching it to the transaction being asked about. */
@@ -86,7 +102,7 @@ export const LinkedChargeSchema = z.object({
 
 export const LinkedPurchaseSchema = z.object({
   purchase: PurchaseSchema,
-  /** Newest charge position first within the order, so rendering is stable. */
+  /** Ordered by the charge's own `position`, ascending, so rendering is stable. */
   charges: z.array(LinkedChargeSchema),
   /**
    * `Σ charges[].link.amountCents` — how much of the transaction this order
@@ -105,7 +121,7 @@ export const LinkedPurchaseSchema = z.object({
  * status would make a consumer treat the ordinary case as a fault.
  */
 export const TransactionLinksSchema = z.object({
-  transactionUri: PopsUriSchema,
+  transactionUri: FinanceTransactionUriSchema,
   purchases: z.array(LinkedPurchaseSchema),
 });
 
