@@ -184,8 +184,8 @@ describe('search — aggregation & empty query', () => {
 });
 
 /**
- * `query.filters` (POPS-2022): the contract advertises structured filters and
- * the handler must apply them, not silently drop them. Each case below plants
+ * `query.filters`: the contract advertises structured filters and the
+ * handler must apply them, not silently drop them. Each case below plants
  * a row a naive text match would return, then proves a filter that should
  * exclude it actually does — the shape of failure this suite is written
  * against is a filter that arrives and changes nothing.

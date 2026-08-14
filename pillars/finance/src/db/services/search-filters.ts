@@ -1,8 +1,8 @@
 /**
  * `POST /search`'s structured filters, read as a per-adapter scope.
  *
- * Unlike purchases (POPS-1966), finance's three adapters — transactions,
- * budgets, wishlist — are not two views of one entity sharing a single scope;
+ * Unlike purchases, finance's three adapters — transactions, budgets,
+ * wishlist — are not two views of one entity sharing a single scope;
  * they are three unrelated domains with no columns in common. So a filter
  * narrows exactly the one adapter its field belongs to, and the other two are
  * unaffected by it — the same way `GET /budgets` takes no `type` param and

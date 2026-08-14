@@ -8,13 +8,14 @@
  *   - wishlist
  * Hits from all three are concatenated into one response.
  *
- * `query.filters` (POPS-2022) is read into a per-adapter scope by
- * `searchFilterScope` and narrows the SQL each adapter scans, before the text
- * match/ranking runs — the same order purchases narrows in (POPS-1966), so an
- * excluded row cannot occupy a slot in a capped adapter (`BUDGETS_DEFAULT_LIMIT`)
- * that a caller asked not to see. An unreadable filter refuses the whole
- * request (`ValidationError` → 400) rather than dropping it, because a
- * dropped filter reproduces the defect this exists to fix.
+ * `query.filters` is read into a per-adapter scope by `searchFilterScope` and
+ * narrows the SQL each adapter scans, before the text match/ranking runs —
+ * the same order purchases narrows in — so an excluded row cannot occupy a
+ * slot in a capped adapter (`BUDGETS_DEFAULT_LIMIT`) that a caller asked not
+ * to see. An unreadable filter refuses the whole request (`ValidationError`
+ * → 400) rather than dropping it: a silently dropped filter looks identical
+ * to a filter that matched everything, which is the defect this exists to
+ * fix.
  *
  * `uri` shapes are a cross-pillar contract: the search orchestrator dispatches
  * on them and caches client links keyed by them, so they must stay stable.

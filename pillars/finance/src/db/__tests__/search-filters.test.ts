@@ -1,8 +1,8 @@
 /**
  * Reading `POST /search`'s filters as a per-adapter scope.
  *
- * The failure these are written against is silence (POPS-2022): a filter the
- * pillar cannot apply must never turn into a scope that omits it, because the
+ * The failure these are written against is silence: a filter the pillar
+ * cannot apply must never turn into a scope that omits it, because the
  * caller receives a 200 either way and the results of an ignored filter are
  * indistinguishable from a filter that matched broadly. So every case here
  * asserts one of two things — the scope says what the filter said, or the

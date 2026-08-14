@@ -21,9 +21,9 @@
  * The filter is the one shape that is deliberately NARROWER than the shared
  * one rather than a restatement of it: `@pops/types` types `field` and
  * `operator` as free strings, and this pillar closes both, because a filter
- * it cannot apply must be refusable rather than silently dropped (POPS-2022 —
- * the same defect POPS-1966 fixed in purchases, whose filter vocabulary this
- * one mirrors in shape, not in field names: purchases' three adapters are two
+ * it cannot apply must be refusable rather than silently dropped — the same
+ * defect purchases fixed in its own filter vocabulary, which this one
+ * mirrors in shape, not in field names: purchases' three adapters are two
  * views of ONE entity sharing one scope, finance's three adapters are three
  * UNRELATED domains, so each field below narrows exactly one of them rather
  * than a single scope shared by all three).
