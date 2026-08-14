@@ -161,6 +161,21 @@ const PAIRING_CODE_TTL_MS = 30 * 60 * 1000;
  */
 const DISCOVERY_FETCH_TIMEOUT_MS = 20_000;
 
+/**
+ * Raises the reachability probe's per-pillar `GET /openapi` deadline past
+ * `reachability.ts`'s own default of 2s (`DEFAULT_PROBE_TIMEOUT_MS`), for the
+ * same reason `DISCOVERY_FETCH_TIMEOUT_MS` above raises the discovery
+ * deadline: the probe is a second loopback fetch from the same BFM process
+ * to the same `upstream-stub.mjs`, racing the same three-core contention —
+ * and the tighter of the two deadlines, so at least as exposed to it. Unlike
+ * discovery, no CI run has actually missed this one yet; this raises it
+ * anyway, on the same 4x-the-production-default reasoning, rather than wait
+ * for a flake to prove the exposure is real. `resolveProbeTimeoutMs` in
+ * `pillars/bfm/src/api/pillars/env.ts` is the one place production reads this
+ * variable; every real deployment leaves it unset.
+ */
+const PROBE_TIMEOUT_MS = 8_000;
+
 class HarnessError extends Error {}
 
 /**
@@ -446,6 +461,7 @@ async function main() {
         POPS_INTERNAL_API_KEY: 'ios-e2e-service-account-key',
         POPS_REGISTRY_URL: upstream.url,
         POPS_DISCOVERY_FETCH_TIMEOUT_MS: String(DISCOVERY_FETCH_TIMEOUT_MS),
+        POPS_PROBE_TIMEOUT_MS: String(PROBE_TIMEOUT_MS),
         // Emptied on purpose: with it, the pillar would try to register itself
         // with a registry that is a fixture and has no such route.
         POPS_REGISTRY_ENABLED: '',

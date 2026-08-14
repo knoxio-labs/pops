@@ -62,8 +62,10 @@ import {
 } from './cron/prune-credentials.js';
 import { createMobileFinanceClient } from './finance/client.js';
 import { buildBfmManifest } from './manifest.js';
+import { resolveProbeTimeoutMs } from './pillars/env.js';
 import { createPillarGateway } from './pillars/gateway.js';
 import { configureBfmServerSdk } from './pillars/sdk-config.js';
+import { createMobilePurchasesClient } from './purchases/client.js';
 import { createRateLimiter, PAIRING_CODE_RATE_WINDOW_MS } from './rate-limit.js';
 
 const port = resolvePort();
@@ -90,7 +92,9 @@ console.warn(`[bfm-api] SQLite at ${sqlitePath}`);
 
 // Built after `configureBfmServerSdk()` — the gateway's default handle factory
 // is the authenticated `/server` one, which reads that configuration.
-const finance = createMobileFinanceClient(createPillarGateway());
+const gateway = createPillarGateway();
+const finance = createMobileFinanceClient(gateway);
+const purchases = createMobilePurchasesClient(gateway);
 
 // Unset in every real deployment, where this reconstructs the same limiter
 // `makeBfmRestHandlers` would have built on its own — see
@@ -106,13 +110,19 @@ const issuanceLimiter = createRateLimiter({
 // the one caller that raises it.
 const pairingCodeTtlMs = resolvePairingCodeTtlMs();
 
+// Unset in every real deployment, where the probe's own default stands — see
+// `resolveProbeTimeoutMs`'s doc comment for the one caller that raises it.
+const probeTimeoutMs = resolveProbeTimeoutMs();
+
 const app = createBfmApiApp({
   version,
   db: bfmDb.db,
   accessTokenSigningKey,
   publicBaseUrl,
   internalBaseUrls: sdkConfig.internalBaseUrls,
+  probeTimeoutMs,
   finance,
+  purchases,
   refreshTokenTtlMs,
   issuanceLimiter,
   pairingCodeTtlMs,

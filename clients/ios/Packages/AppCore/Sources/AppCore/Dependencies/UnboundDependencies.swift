@@ -17,3 +17,9 @@ internal struct UnboundDevicePairingService: DevicePairingService {
 internal struct UnboundReachabilityWitness: ReachabilityWitness {
     func noteReachable() async {}
 }
+
+internal struct UnboundReceiptCaptureRepository: ReceiptCaptureRepository {
+    func capture(_ parts: [ReceiptPart]) async throws -> ReceiptOutcome {
+        throw RepositoryError.dependencyNotBound
+    }
+}

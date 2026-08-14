@@ -23,6 +23,15 @@
  */
 import { hasScopeFor } from './service-account-scope.js';
 
+/**
+ * Canonical header name for a presented service-account key. Defined once so
+ * the server SDK's `pillar()` (the attaching caller) and every verifier
+ * (the checking callee) cannot drift on the spelling — see
+ * {@link INTERNAL_CREDENTIAL_HEADER} in `internal-token.ts` for the sibling
+ * credential this mirrors.
+ */
+export const SERVICE_ACCOUNT_HEADER = 'x-api-key';
+
 /** The registry-resolved identity behind a presented key. */
 export interface ServiceAccountPrincipal {
   readonly id: string;

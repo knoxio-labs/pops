@@ -125,12 +125,15 @@ They are excluded, not hidden: `includeAuto=true` surfaces the low-priority buck
 
 ## Testing this across processes
 
-Three layers, each covering what the one below cannot:
+Two layers run in CI, each covering what the one below cannot:
 
-| layer                                | what only it proves                                                                             |
-| ------------------------------------ | ----------------------------------------------------------------------------------------------- |
-| `finance-http.test.ts`               | the SDK proxy really resolves and calls, in-process                                             |
-| `two-process.test.ts`                | the real entry point boots, migrates a fresh DB, starts the runner and reconciles over a socket |
-| `infra/smoke/purchases-reconcile.sh` | the Docker network and the compose file                                                         |
+| layer                  | what only it proves                                                                             |
+| ---------------------- | ----------------------------------------------------------------------------------------------- |
+| `finance-http.test.ts` | the SDK proxy really resolves and calls, in-process                                             |
+| `two-process.test.ts`  | the real entry point boots, migrates a fresh DB, starts the runner and reconciles over a socket |
 
-Only the last needs Docker, which is why it is a script rather than a test — a suite that takes minutes stops being run. It also needs a service-account key in `POPS_INTERNAL_API_KEY`, granted `purchases.source` and `purchases.purchase`: it presents that key on every call into the purchases contract and refuses to start without one (POPS-1806). Its `/health` probes carry none, health being outside the contract and gated by nothing, and neither does its finance seed — that is a call into another pillar, where a purchases-scoped key would be held to a grant it does not have.
+A third layer, `infra/smoke/purchases-reconcile.sh`, covers what neither of those can: the Docker network and the compose file. It is **operator-verified only** — no CI lane runs it, scheduled or otherwise, and there is deliberately no plan to change that here. It needs a service-account key in `POPS_INTERNAL_API_KEY`, granted `purchases.source` and `purchases.purchase`; minting one in CI would mean either storing a long-lived credential as a repo secret against a stack the CI run does not own, or running the compose stack with `NODE_ENV` off `production` so the registry's dev-fallback identity can self-mint one — and that changes what the smoke test is actually exercising. Both are a real decision for whoever owns that credential and that stack, not a default to reach for from inside a fix elsewhere in `scripts/` (POPS-1972).
+
+Concretely: this script is **not part of the CI gate**. It presents its key on every call into the purchases contract and refuses to start without one (POPS-1806) — but nothing runs it, so a regression in that presentation (wrong header, wrong host, a stale variable name) is caught only when an operator runs the script by hand. `backfill.test.ts` under `pillars/purchases/scripts/__tests__/` covers the equivalent credential-presentation behaviour for the TypeScript ingest CLIs, which is exercised the ordinary way in CI; this script has no equivalent, and a text-matching regex over its contents was rejected as worse than no coverage — it would assert spelling, not behaviour, and pass against a script that sends the header to the wrong place.
+
+Reviewing a change to this script therefore means reading it as carefully as the tests it does not have: run it by hand (`POPS_INTERNAL_API_KEY=<key> ./infra/smoke/purchases-reconcile.sh`) before merging anything that touches its request or auth handling. Its `/health` probes carry no key, health being outside the contract and gated by nothing, and neither does its finance seed — that is a call into another pillar, where a purchases-scoped key would be held to a grant it does not have.

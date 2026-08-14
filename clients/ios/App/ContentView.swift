@@ -1,5 +1,6 @@
 import AppCore
 import DesignSystem
+import FeatureReceiptCapture
 import FeatureTransactions
 import SwiftUI
 
@@ -48,6 +49,8 @@ internal struct ContentView: View {
         switch feature {
         case FeatureTransactions.feature:
             TransactionsFlowView(dependencies: dependencies, router: composition.router)
+        case FeatureReceiptCapture.feature:
+            ReceiptCaptureView()
         default:
             // Unreachable: `RootFeature.renderable` is what the shell filters
             // against, so a feature with no screen is never offered. Drawn as
