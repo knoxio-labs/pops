@@ -537,7 +537,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: "24"
-      - name: Gate self-test (proves the guard catches PRAGMA foreign_keys in every form)
+      - name: Gate self-test (proves the guard's stated coverage — see the file header)
         run: node scripts/ci/check-migration-fk-pragma.mjs --self-test
       - name: No migration file relies on PRAGMA foreign_keys
         run: node scripts/ci/check-migration-fk-pragma.mjs
