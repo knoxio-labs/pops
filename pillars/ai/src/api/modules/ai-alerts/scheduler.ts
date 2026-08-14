@@ -1,10 +1,11 @@
 /**
- * In-process, env-gated scheduler for the AI alert evaluator
- * (see pillars/ai/docs/prds/ai-observability).
+ * The DEGRADED scheduler for the AI alert evaluator: a self-contained
+ * `setInterval` loop calling `runEvaluation` directly against the pillar's own
+ * AiDb handle every 5 minutes. OFF unless `AI_ALERTS_SCHEDULER_ENABLED=true`.
  *
- * A self-contained `setInterval` loop that calls `runEvaluation` directly
- * against the pillar's own AiDb handle every 5 minutes. It is OFF by default
- * and only starts when `AI_ALERTS_SCHEDULER_ENABLED=true`.
+ * With Redis configured the pillar runs the evaluator as a durable repeatable
+ * job instead (`src/api/jobs/runner.ts`); this loop is what remains when there
+ * is no Redis, and its schedule restarts with the process.
  */
 import { type AiDb } from '../../../db/index.js';
 import { logger } from '../../shared/logger.js';

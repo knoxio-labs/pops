@@ -1,0 +1,21 @@
+[tasks.build]
+description = "Emit dist/ + .d.ts"
+run = "tsc -b tsconfig.build.json"
+sources = ["src/**/*.ts", "tsconfig.build.json", "package.json"]
+outputs = ["dist/**"]
+
+[tasks.typecheck]
+run = "tsc --noEmit"
+
+[tasks.test]
+run = "vitest run"
+
+[tasks."test:live-seam"]
+description = "Durability suite against a throwaway Redis container (requires Docker)"
+run = "vitest run --config vitest.live-seam.config.ts"
+
+[tasks.lint]
+run = "oxlint src && oxfmt --check ."
+
+[tasks.dev]
+run = "tsc -b tsconfig.build.json --watch --preserveWatchOutput"

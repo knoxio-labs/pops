@@ -9,7 +9,7 @@
     "paths": {
       "@ui/*": ["./src/*"]
     },
-    "types": []
+    "types": ["vite/client"]
   },
   "include": ["src"],
   "exclude": ["node_modules", "src/**/*.stories.*", "src/**/*.mdx"]
