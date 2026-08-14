@@ -89,10 +89,13 @@ name: Live Seam
 # "@pops/purchases..." build` does not build and `pnpm --filter @pops/bfm
 # test:live-seam` does not import — both already have their own coverage
 # elsewhere (app-quality.yml / fe-quality.yml for the former, its own
-# `extension/tests/` for the latter, run outside this workflow). `README.md`,
-# `Dockerfile` and `mise.toml` are docs/tooling/image-build inputs this job
-# never reads. Excluding that quintet is what took the last-100-commits
-# purchases-touching count from 29 down to 20.
+# `extension/tests/` for the latter, run outside this workflow). `README.md`
+# is prose nothing in the job parses, `Dockerfile` is read only by
+# docker-build.yml's image build, and `mise.toml` only pins local dev tool
+# versions — none of the three changes what `pnpm --filter
+# "@pops/purchases..." build` produces or what the spawned process runs.
+# Excluding that quintet is what took the last-100-commits purchases-touching
+# count from 29 down to 20.
 #
 # No `merge_group` trigger: that trigger exists so a workflow behind a
 # REQUIRED context reports on the merge queue's ref instead of stranding the
