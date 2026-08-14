@@ -25,6 +25,14 @@ export type ReconcileLookupResult =
   | { kind: 'ok' }
   | { kind: 'not-found' }
   | { kind: 'bad-uri'; reason: string }
+  /**
+   * The owning pillar refused this pillar's service-account credential, or
+   * this process had none to send. Preserved like `unavailable` — a pillar
+   * that would not answer says nothing about whether the row exists — but
+   * counted and logged apart from it, because waiting fixes an outage and
+   * does not fix a grant.
+   */
+  | { kind: 'unauthorized'; reason: string }
   | { kind: 'unavailable'; reason: string };
 
 /**
@@ -51,14 +59,21 @@ export interface ReconcileWorkerLogger {
 }
 
 /**
- * The four outcomes a URI in the work set can have, tallied per leg and
+ * The five outcomes a URI in the work set can have, tallied per leg and
  * again per tick. Not just probed URIs: one addressed to the wrong pillar
  * is counted as `badUri` by {@link runLeg} without ever being probed.
+ *
+ * `unauthorized` is deliberately not folded into `unavailable`. A tick that
+ * reports every URI unavailable reads as a peer being down and is normally
+ * survivable; the same tick reporting them unauthorized means this pillar
+ * cannot reconcile at all until a grant is fixed, and it will keep saying so
+ * every night until someone does.
  */
 export interface ReconcileCounts {
   resolved: number;
   staleMarked: number;
   badUri: number;
+  unauthorized: number;
   unavailable: number;
 }
 
@@ -136,7 +151,7 @@ export const LEGS: readonly ReconcileLeg[] = [
 ];
 
 export function emptyCounts(): ReconcileCounts {
-  return { resolved: 0, staleMarked: 0, badUri: 0, unavailable: 0 };
+  return { resolved: 0, staleMarked: 0, badUri: 0, unauthorized: 0, unavailable: 0 };
 }
 
 /** Fold one leg's counters into a running total. */
@@ -144,6 +159,7 @@ export function addCounts(into: ReconcileCounts, from: ReconcileCounts): void {
   into.resolved += from.resolved;
   into.staleMarked += from.staleMarked;
   into.badUri += from.badUri;
+  into.unauthorized += from.unauthorized;
   into.unavailable += from.unavailable;
 }
 
@@ -189,6 +205,24 @@ function legMeta(ctx: ApplyContext): { leg: string; uri: string } {
   return { leg: ctx.leg.label, uri: ctx.uri };
 }
 
+/**
+ * The reason a credential outcome could not probe, as a headline.
+ *
+ * `no-credential` is this process holding no key at all — nothing was sent
+ * and no callee has an opinion yet — which is a different job from a key
+ * that was sent and refused.
+ */
+function credentialWarning(reason: string): string {
+  return reason === 'no-credential'
+    ? 'purchases reconcile has no service-account key (preserved for ops)'
+    : 'purchases reconcile credential refused (preserved for ops)';
+}
+
+/** One warning about a URI whose row was left exactly as it was. */
+function warnPreserved(ctx: ApplyContext, message: string, reason: string): void {
+  ctx.logger?.warn?.(message, { ...legMeta(ctx), reason });
+}
+
 function applyResult(ctx: ApplyContext, result: ReconcileLookupResult): void {
   switch (result.kind) {
     case 'ok':
@@ -201,20 +235,21 @@ function applyResult(ctx: ApplyContext, result: ReconcileLookupResult): void {
       return;
     case 'bad-uri':
       ctx.stats.badUri += 1;
-      ctx.logger?.warn?.('purchases reconcile bad uri (preserved for ops)', {
-        ...legMeta(ctx),
-        reason: result.reason,
-      });
+      warnPreserved(ctx, 'purchases reconcile bad uri (preserved for ops)', result.reason);
+      return;
+    case 'unauthorized':
+      ctx.stats.unauthorized += 1;
+      // The two reasons send an operator to different places — a grant to
+      // widen versus a key to provision — so the headline says which rather
+      // than leaving it to whoever reads the `reason` field.
+      warnPreserved(ctx, credentialWarning(result.reason), result.reason);
       return;
     case 'unavailable':
       ctx.stats.unavailable += 1;
       // `safeLookup` has already logged this URI with the thrown message;
       // a second line here would just repeat it.
       if (result.reason === 'lookup-threw') return;
-      ctx.logger?.warn?.('purchases reconcile owning pillar unavailable', {
-        ...legMeta(ctx),
-        reason: result.reason,
-      });
+      warnPreserved(ctx, 'purchases reconcile owning pillar unavailable', result.reason);
       return;
   }
 }
