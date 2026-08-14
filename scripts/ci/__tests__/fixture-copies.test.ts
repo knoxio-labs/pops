@@ -12,6 +12,7 @@ import {
   repoCopyReader,
   resolveCanonical,
   selfTestCopyHandling,
+  selfTestRealTreeDiscovery,
   selfTestUndeclaredDiscovery,
 } from '../fixture-copies.mjs';
 
@@ -335,5 +336,113 @@ describe('selfTestUndeclaredDiscovery', () => {
     expect(errors.mock.calls.flat().join('\n')).toContain('no declared copy to derive a basename');
 
     errors.mockRestore();
+  });
+});
+
+describe('selfTestRealTreeDiscovery', () => {
+  // POPS-2259: the original version only asserted `undeclared.length === 0`,
+  // which a walk that discovers NOTHING satisfies identically to a walk that
+  // discovers exactly the declared copies. These prove the fix distinguishes
+  // the two: a healthy walk against a real tree passes, and a walk that finds
+  // fewer files than `copies` declares — the shape of a dead or narrowed
+  // `discoverFilesNamed` — fails by name.
+  let root: string;
+
+  function file(relPath: string, contents = '{}') {
+    const abs = join(root, relPath);
+    mkdirSync(join(abs, '..'), { recursive: true });
+    writeFileSync(abs, contents);
+  }
+
+  function setup() {
+    root = mkdtempSync(join(tmpdir(), 'fixture-real-tree-'));
+  }
+
+  function teardown() {
+    rmSync(root, { recursive: true, force: true });
+  }
+
+  it('passes when the walk finds every declared copy and nothing else', () => {
+    setup();
+    try {
+      file('producer/thing-v1.json');
+      file('consumer/thing-v1.json');
+      const errors = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      const logs = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+
+      expect(
+        selfTestRealTreeDiscovery(root, ['producer', 'consumer'], 'thing-v1.json', COPIES)
+      ).toBe(true);
+      expect(errors).not.toHaveBeenCalled();
+      expect(logs.mock.calls.flat().join('\n')).toContain('discovers exactly the 2 declared copy');
+
+      errors.mockRestore();
+      logs.mockRestore();
+    } finally {
+      teardown();
+    }
+  });
+
+  it('fails when the walk finds nothing — the case an unqualified undeclared.length === 0 check cannot see', () => {
+    setup();
+    try {
+      // No files written: `root` is empty, so a real (non-dead) walk would
+      // legitimately find nothing here too. What this proves is not that the
+      // walk is dead — it is that a walk finding fewer than the declared set
+      // is reported as a failure, not read as "nothing undeclared, so OK".
+      const errors = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+      expect(
+        selfTestRealTreeDiscovery(root, ['producer', 'consumer'], 'thing-v1.json', COPIES)
+      ).toBe(false);
+      const errorText = errors.mock.calls.flat().join('\n');
+      expect(errorText).toContain('expected to discover exactly the 2 declared copy path(s)');
+      expect(errorText).toContain('missing (declared, not found):     producer/thing-v1.json');
+      expect(errorText).toContain('missing (declared, not found):     consumer/thing-v1.json');
+
+      errors.mockRestore();
+    } finally {
+      teardown();
+    }
+  });
+
+  it('fails when the walk finds only some of the declared copies', () => {
+    setup();
+    try {
+      file('producer/thing-v1.json');
+      // consumer/thing-v1.json deliberately not written.
+      const errors = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+      expect(
+        selfTestRealTreeDiscovery(root, ['producer', 'consumer'], 'thing-v1.json', COPIES)
+      ).toBe(false);
+      const errorText = errors.mock.calls.flat().join('\n');
+      expect(errorText).toContain('missing (declared, not found):     consumer/thing-v1.json');
+      expect(errorText).not.toContain('missing (declared, not found):     producer/thing-v1.json');
+
+      errors.mockRestore();
+    } finally {
+      teardown();
+    }
+  });
+
+  it('still fails on a genuinely undeclared extra copy, same as before', () => {
+    setup();
+    try {
+      file('producer/thing-v1.json');
+      file('consumer/thing-v1.json');
+      file('stray/thing-v1.json');
+      const errors = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+      expect(
+        selfTestRealTreeDiscovery(root, ['producer', 'consumer', 'stray'], 'thing-v1.json', COPIES)
+      ).toBe(false);
+      const errorText = errors.mock.calls.flat().join('\n');
+      expect(errorText).toContain('undeclared (found, not declared): stray/thing-v1.json');
+
+      errors.mockRestore();
+    } finally {
+      teardown();
+    }
   });
 });
