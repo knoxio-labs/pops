@@ -220,6 +220,8 @@ export type {
   ImportsReevaluateWithPendingRulesResponse,
   ImportsReevaluateWithPendingRulesResponses,
   SearchSearchData,
+  SearchSearchError,
+  SearchSearchErrors,
   SearchSearchResponse,
   SearchSearchResponses,
   SettingsEnsureData,

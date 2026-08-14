@@ -5324,8 +5324,10 @@ export interface operations {
           };
           query: {
             filters?: {
-              field: string;
-              operator: string;
+              /** @enum {string} */
+              field: 'type' | 'entityId' | 'date' | 'period' | 'active' | 'priority';
+              /** @enum {string} */
+              operator: 'eq' | 'gte' | 'lte';
               value: string;
             }[];
             text: string;
@@ -5351,6 +5353,19 @@ export interface operations {
               score: number;
               uri: string;
             }[];
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
           };
         };
       };

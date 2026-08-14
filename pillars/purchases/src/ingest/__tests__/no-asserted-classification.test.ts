@@ -63,10 +63,12 @@ function receiptItems(): readonly CreateItemInput[] {
       { description: 'Screws Bugle 8g 65mm', amount: '$15.00', unitNote: '2 @ $7.50' },
     ],
   });
+  const gate = gateExtraction(extracted);
+  if (!gate.admissible) throw new Error('receipt fixture stopped reconciling');
   return (
     receiptToPurchase(
       extracted,
-      gateExtraction(extracted),
+      gate,
       [
         {
           sha256: sha,
