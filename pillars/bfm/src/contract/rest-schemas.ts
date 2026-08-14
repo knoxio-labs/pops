@@ -256,6 +256,174 @@ export const MobileTransactionsPageSchema = z.object({
 export type MobileTransactionsPage = z.infer<typeof MobileTransactionsPageSchema>;
 
 /**
+ * What a `/mobile` write answers when the request body is larger than bfm
+ * accepts.
+ *
+ * Declared on the route rather than left to Express's default, which is an
+ * HTML error page: a status the generated Swift client cannot decode is a
+ * status the app meets as a decoding crash rather than as a refusal it can
+ * explain. `maxBytes` is carried so the app can say what the ceiling was
+ * without a second copy of the number compiled into it.
+ *
+ * The cap is bfm's own and is enforced here rather than left to the pillar
+ * behind it (ADR-046). Forwarding a payload that was always going to be
+ * refused would spend the internal network on it first.
+ */
+export const MobilePayloadTooLargeErrorSchema = z.object({
+  code: z.literal('payload_too_large'),
+  maxBytes: z.number().int().positive(),
+  message: z.string(),
+});
+
+export type MobilePayloadTooLargeError = z.infer<typeof MobilePayloadTooLargeErrorSchema>;
+
+/**
+ * The largest JSON body a `/mobile` upload may carry, in bytes.
+ *
+ * Sized between the two things it sits between: eight phone photographs of one
+ * long receipt, base64-inflated by a third, still fit — and it stays well under
+ * the 20mb `purchases` accepts, so bfm is always the one that refuses. A cap
+ * that matched the producer's would leave the two disagreeing at the boundary,
+ * which is the case where the phone gets an upstream error for something bfm
+ * could have named itself.
+ */
+export const MOBILE_UPLOAD_MAX_BYTES = 12 * 1024 * 1024;
+
+/**
+ * Media types the receipt upload accepts.
+ *
+ * A mirror of `purchases`' own list rather than an import of it — bfm may not
+ * depend on a sibling pillar's package — so the two can drift. That drift is
+ * survivable in one direction only, which is why the list is closed on a
+ * REQUEST field: a type purchases dropped is refused here as a `400` the app
+ * can act on, and a type purchases added is simply not offered yet. The
+ * opposite arrangement, an open string, would hand the phone a `502` from a
+ * producer refusing bytes bfm promised to accept.
+ */
+export const MOBILE_RECEIPT_MEDIA_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+  'application/pdf',
+  'text/plain',
+] as const;
+
+/**
+ * How many parts one receipt may be sent as. Mirrors `purchases`'
+ * `MAX_RECEIPT_PARTS` so an upload bfm accepts is not one the producer will
+ * reject — the cheaper refusal is the one that never leaves the handset.
+ */
+export const MOBILE_RECEIPT_MAX_PARTS = 8;
+
+export const MobileReceiptPartSchema = z.object({
+  mediaType: z.enum(MOBILE_RECEIPT_MEDIA_TYPES),
+  /** The file, base64 with no data-URI prefix — `purchases`' own encoding. */
+  dataBase64: z.string().min(1),
+});
+
+export type MobileReceiptPart = z.infer<typeof MobileReceiptPartSchema>;
+
+/**
+ * One receipt, in order, top to bottom. Several photographs of one piece of
+ * paper are one upload and one purchase, not several receipts.
+ *
+ * No idempotency key. `purchases` content-addresses the bytes, so a phone
+ * retrying a timed-out upload sends the same photograph and gets the same
+ * purchase back with `alreadyStored` set. A key minted here would be a second
+ * dedup rule, and the first time the two disagreed the user would have two
+ * purchases for one receipt (ADR-046).
+ */
+export const MobileReceiptUploadBodySchema = z.object({
+  parts: z.array(MobileReceiptPartSchema).min(1).max(MOBILE_RECEIPT_MAX_PARTS),
+});
+
+export type MobileReceiptUploadBody = z.infer<typeof MobileReceiptUploadBodySchema>;
+
+/**
+ * The purchase a read receipt became, as a confirmation screen draws it.
+ *
+ * Money is `purchases`' and is mirrored, not reinterpreted — integer cents,
+ * the representation that pillar persists and publishes. It differs from the
+ * finance leg's decimal dollars for exactly that reason: each producer's own
+ * representation survives the trip, because converting is where two services
+ * come to disagree about what somebody spent.
+ */
+export const MobileReceiptPurchaseSchema = z.object({
+  id: z.string(),
+  /** Merchant as purchases resolved it, or null when it could not. */
+  merchantName: z.string().nullable(),
+  totalCents: z.number().int(),
+  /** ISO 4217, an open string for the reason {@link MobileTransactionSchema} states. */
+  currency: z.string(),
+  /**
+   * ISO-8601 with a timezone — the receipt's own date when it stated one.
+   *
+   * A string on the wire rather than `z.iso.datetime()`, matching
+   * {@link MobileTransactionDetailSchema.shape.lastEditedTime}, and the reason
+   * is what the format keyword becomes downstream: a `date-time` generates a
+   * `Foundation.Date` on the iOS client, which decodes or fails. purchases'
+   * own contract admits `±HH:MM` offsets as readily as `Z`, so declaring the
+   * format here would promise a narrower vocabulary than the producer serves
+   * and turn a perfectly valid offset timestamp into a decode failure on a
+   * handset. The guarantee is enforced instead where a bad value can still be
+   * turned into an operator-visible 502 — `api/purchases/wire.ts` validates it
+   * against purchases' own pattern before it is ever published here.
+   */
+  orderedAt: z.string(),
+  /** Line items read off the receipt. What "12 items, $84.20" is drawn from. */
+  itemCount: z.number().int().nonnegative(),
+});
+
+export type MobileReceiptPurchase = z.infer<typeof MobileReceiptPurchaseSchema>;
+
+/** One thing the producer's arithmetic gate objected to, in the receipt's terms. */
+export const MobileReceiptProblemSchema = z.object({
+  /**
+   * The producer's own failure kind, left an open string: a gate that grows a
+   * seventh reason must not make every needs-review upload fail to decode on a
+   * handset that has not been updated. Nothing on the phone branches on it.
+   */
+  code: z.string(),
+  detail: z.string(),
+});
+
+/**
+ * What became of an uploaded receipt.
+ *
+ * Three arms rather than success-or-failure, because the producer's three
+ * outcomes are materially different and the app draws each one differently: a
+ * reading that agreed with the receipt's own total is a purchase, a reading
+ * that did not is a real purchase awaiting a human, and a receipt the model
+ * could not read at all is neither. Collapsing any two loses the distinction
+ * the whole feature rests on.
+ *
+ * `needs-review` deliberately does NOT carry the full extracted reading the
+ * producer returns. Reviewing one is a side-by-side comparison against the
+ * photograph, which is the operator surface's job on a screen big enough for
+ * it; sending a phone a payload it cannot act on would be paid for on cellular
+ * for nothing.
+ */
+export const MobileReceiptOutcomeSchema = z.discriminatedUnion('kind', [
+  z.object({
+    kind: z.literal('created'),
+    purchase: MobileReceiptPurchaseSchema,
+    /** True when these exact bytes had already been stored — a retry, not a duplicate. */
+    alreadyStored: z.boolean(),
+  }),
+  z.object({
+    kind: z.literal('needs-review'),
+    problems: z.array(MobileReceiptProblemSchema),
+  }),
+  z.object({
+    kind: z.literal('unreadable'),
+    reason: z.string(),
+  }),
+]);
+
+export type MobileReceiptOutcome = z.infer<typeof MobileReceiptOutcomeSchema>;
+
+/**
  * How reachable one member of the federation is, as bfm observed it.
  *
  * Four values rather than a boolean, and the same four the cross-pillar

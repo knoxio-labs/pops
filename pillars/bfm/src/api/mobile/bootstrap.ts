@@ -49,12 +49,16 @@ export interface MobileBootstrapDeps {
 
 export function defaultMobileBootstrapDeps(
   db: BfmDb,
-  baseUrlOverrides: Readonly<Record<string, string>>
+  baseUrlOverrides: Readonly<Record<string, string>>,
+  probeTimeoutMs?: number
 ): MobileBootstrapDeps {
   return {
     db,
     readRegistry: pillarRegistry,
-    probe: defaultProbeDeps(baseUrlOverrides),
+    probe:
+      probeTimeoutMs === undefined
+        ? defaultProbeDeps(baseUrlOverrides)
+        : defaultProbeDeps(baseUrlOverrides, probeTimeoutMs),
     now: () => new Date(),
   };
 }

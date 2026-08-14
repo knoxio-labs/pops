@@ -62,7 +62,7 @@ function StatusPills({
   return (
     <>
       {wasSkipped && (
-        <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-xs text-amber-500">
+        <span className="inline-flex items-center gap-1 rounded-full bg-warning/10 px-2 py-0.5 text-xs text-warning">
           <AlertTriangle className="h-3 w-3" />
           Skipped
         </span>
@@ -116,7 +116,7 @@ function LogEntryHeader({
               {entry.targetFreeGb.toFixed(1)} GB
             </span>
           </div>
-          {wasSkipped && <p className="text-xs text-amber-500">{entry.skippedReason}</p>}
+          {wasSkipped && <p className="text-xs text-warning">{entry.skippedReason}</p>}
         </div>
         <ChevronDown
           className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`}
@@ -145,7 +145,7 @@ function LogEntryBody({ details }: { details: LogDetails | null }) {
 
 function getBorderClass(hasError: boolean, wasSkipped: boolean): string {
   if (hasError) return 'border-destructive/50';
-  if (wasSkipped) return 'border-amber-500/50';
+  if (wasSkipped) return 'border-warning/50';
   return '';
 }
 

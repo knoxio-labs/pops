@@ -12,9 +12,10 @@
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { ErrorBodySchema } from '../../contract/rest-schemas.js';
 import { purchasesContract } from '../../contract/rest.js';
 import { openTempDb, seedAmazonSource } from '../../db/__tests__/helpers.js';
-import { createPurchase } from '../../db/index.js';
+import { createPurchase, upsertSource } from '../../db/index.js';
 import { createPurchasesApiApp } from '../app.js';
 import { buildPurchasesManifest } from '../manifest.js';
 import { __resetPillarRegistryCache } from '../pillars/registry.js';
@@ -130,6 +131,196 @@ describe('POST /search', () => {
   it('rejects an envelope with no query rather than searching for nothing', async () => {
     const res = await request(app).post('/search').send({});
     expect(res.status).toBe(400);
+  });
+});
+
+/**
+ * `query.filters` on the wire.
+ *
+ * The contract publishes this field, so it reaches every generated client
+ * and the MCP tool. A caller that sends one and gets a 200 back must be able
+ * to trust that it was applied — there is nothing in an unfiltered response
+ * that says otherwise, which is why an unapplicable filter is refused here
+ * rather than dropped.
+ */
+describe('POST /search with filters', () => {
+  /**
+   * The order a hit belongs to, whichever adapter produced it — an order hit
+   * is its own, and a line hit belongs to the order it was bought on.
+   */
+  function owningPurchaseIds(hits: readonly { uri: string; data: Record<string, unknown> }[]) {
+    return hits.map((hit) =>
+      hit.uri.includes('/purchase-item/') ? hit.data['purchaseId'] : hit.uri.split('/').at(-1)
+    );
+  }
+
+  function seedWoolworthsOrder(): string {
+    upsertSource(opened.db, { id: 'woolworths', label: 'Woolworths' });
+    return createPurchase(opened.db, {
+      source: 'woolworths',
+      sourceOrderId: 'WW-1',
+      ingestMethod: 'upload',
+      orderedAt: '2025-11-02T01:41:21Z',
+      currency: 'AUD',
+      totalCents: 1200,
+      checksum: 'woolworths:WW-1',
+      merchantEntityName: 'Woolworths',
+      items: [
+        {
+          ref: 'i0',
+          name: 'Dosing funnel 58mm',
+          unitPriceCents: 1200,
+          lineTotalCents: 1200,
+        },
+      ],
+    });
+  }
+
+  it('scopes to the requested source instead of answering with every source', async () => {
+    const amazon = seedCoffeeOrder();
+    const woolworths = seedWoolworthsOrder();
+
+    const res = await request(app)
+      .post('/search')
+      .send({
+        query: {
+          text: 'dosing funnel',
+          filters: [{ field: 'source', operator: 'eq', value: 'woolworths' }],
+        },
+      });
+
+    // The text matches the same line in both orders and matches neither
+    // merchant, so every hit here comes from the item adapter — the half a
+    // scope applied to the order query alone would leave wide open.
+    const ids = owningPurchaseIds(res.body.hits);
+    expect(res.status).toBe(200);
+    expect(ids).toContain(woolworths);
+    expect(ids).not.toContain(amazon);
+  });
+
+  it('scopes to the requested window at both ends', async () => {
+    const amazon = seedCoffeeOrder();
+    const woolworths = seedWoolworthsOrder();
+
+    const res = await request(app)
+      .post('/search')
+      .send({
+        query: {
+          text: 'dosing funnel',
+          filters: [
+            { field: 'orderedAt', operator: 'gte', value: '2026-01-01T00:00:00Z' },
+            { field: 'orderedAt', operator: 'lte', value: '2026-12-31T23:59:59Z' },
+          ],
+        },
+      });
+
+    const ids = owningPurchaseIds(res.body.hits);
+    expect(res.status).toBe(200);
+    expect(ids).toContain(amazon);
+    expect(ids).not.toContain(woolworths);
+  });
+
+  it('scopes to the requested status', async () => {
+    seedCoffeeOrder();
+
+    const res = await request(app)
+      .post('/search')
+      .send({
+        query: {
+          text: 'dosing funnel',
+          filters: [{ field: 'status', operator: 'eq', value: 'linked' }],
+        },
+      });
+
+    // The seeded order is awaiting settlement, so a status it does not carry
+    // must empty the response rather than pass through.
+    expect(res.status).toBe(200);
+    expect(res.body.hits).toEqual([]);
+  });
+
+  it('treats an empty filter list as no filter at all', async () => {
+    seedCoffeeOrder();
+
+    const filtered = await request(app)
+      .post('/search')
+      .send({ query: { text: 'dosing funnel', filters: [] } });
+    const unfiltered = await request(app)
+      .post('/search')
+      .send({ query: { text: 'dosing funnel' } });
+
+    expect(filtered.status).toBe(200);
+    expect(filtered.body).toEqual(unfiltered.body);
+  });
+
+  it('rejects a field it cannot narrow on rather than ignoring it', async () => {
+    seedCoffeeOrder();
+
+    const res = await request(app)
+      .post('/search')
+      .send({
+        query: {
+          text: 'dosing funnel',
+          filters: [{ field: 'merchantEntityName', operator: 'eq', value: 'Amazon' }],
+        },
+      });
+
+    // The contract's own enum rejects this before any handler runs, and a
+    // rejection that never reached a handler still has to be the body the
+    // route declares — otherwise the client generated from that document
+    // cannot decode the 400 it is most likely to receive.
+    expect(res.status).toBe(400);
+    expect(ErrorBodySchema.safeParse(res.body).success).toBe(true);
+  });
+
+  it('rejects an operator it cannot apply', async () => {
+    seedCoffeeOrder();
+
+    const res = await request(app)
+      .post('/search')
+      .send({
+        query: {
+          text: 'dosing funnel',
+          filters: [{ field: 'source', operator: 'contains', value: 'amaz' }],
+        },
+      });
+
+    expect(res.status).toBe(400);
+    expect(ErrorBodySchema.safeParse(res.body).success).toBe(true);
+  });
+
+  it('rejects a supported field paired with an operator it does not take, naming both', async () => {
+    seedCoffeeOrder();
+
+    const res = await request(app)
+      .post('/search')
+      .send({
+        query: {
+          text: 'dosing funnel',
+          filters: [{ field: 'orderedAt', operator: 'eq', value: '2026-02-02T01:41:21Z' }],
+        },
+      });
+
+    expect(res.status).toBe(400);
+    expect(ErrorBodySchema.safeParse(res.body).success).toBe(true);
+    expect(res.body.message).toContain('orderedAt');
+    expect(res.body.message).toContain('eq');
+  });
+
+  it('rejects a value the field cannot hold, naming it', async () => {
+    seedCoffeeOrder();
+
+    const res = await request(app)
+      .post('/search')
+      .send({
+        query: {
+          text: 'dosing funnel',
+          filters: [{ field: 'status', operator: 'eq', value: 'shipped' }],
+        },
+      });
+
+    expect(res.status).toBe(400);
+    expect(ErrorBodySchema.safeParse(res.body).success).toBe(true);
+    expect(res.body.message).toContain('shipped');
   });
 });
 

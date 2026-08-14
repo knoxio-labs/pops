@@ -1,6 +1,6 @@
 import { CheckCircle2, Database, ServerCog, XCircle } from 'lucide-react';
 
-import { cn } from '@pops/ui';
+import { cn, statusBadgeToneClass } from '@pops/ui';
 
 import type { FeatureCredentialStatus } from '@pops/types';
 
@@ -47,9 +47,8 @@ export function CredentialChip({ credential }: CredentialChipProps) {
 function chipClass(state: 'ok' | 'env' | 'missing'): string {
   return cn(
     'inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full border font-medium',
-    state === 'ok' &&
-      'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:text-emerald-400',
-    state === 'env' && 'bg-sky-500/10 text-sky-600 border-sky-500/20 dark:text-sky-400',
-    state === 'missing' && 'bg-rose-500/10 text-rose-600 border-rose-500/20 dark:text-rose-400'
+    state === 'ok' && statusBadgeToneClass.success,
+    state === 'env' && statusBadgeToneClass.info,
+    state === 'missing' && statusBadgeToneClass.destructive
   );
 }

@@ -69,7 +69,9 @@ function TreeRow<T>({
         'flex items-center gap-1 py-1',
         isSelected && 'bg-accent text-accent-foreground rounded-sm'
       )}
-      style={{ paddingLeft: `${level * 14}px` }}
+      style={{
+        paddingLeft: `calc(${level} * var(--tree-indent-step) + var(--tree-indent-base))`,
+      }}
     >
       {hasChildren ? (
         <button

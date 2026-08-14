@@ -13,11 +13,9 @@
  * `purchaseId` — a line is meaningless without the order it was bought on.
  *
  * **Matching is a candidate scan, then a rank.** `LIKE '%text%'` narrows in
- * SQL and {@link classify} scores what comes back, mirroring
- * `pillars/finance/src/api/rest/search-handlers.ts` so two pillars do not
- * disagree about what counts as an exact match. No FTS index: the corpus is
- * a four-figure row count and an index would be a second thing to keep in
- * step with the writes.
+ * SQL and `search-ranking.ts` scores what comes back. No FTS index: the
+ * corpus is a four-figure row count and an index would be a second thing to
+ * keep in step with the writes.
  *
  * **Nothing is dropped before it is scored.** A `LIKE '%text%'` predicate
  * cannot use an index, so the scan reads the whole table whatever happens
@@ -32,6 +30,14 @@
  * whole response, because one cap over the union lets a hundred order hits
  * starve every line hit out of an answer only the lines can give.
  *
+ * **A scope narrows in SQL, before anything is scored.** Both adapters take
+ * the same one and take it through `purchaseFilterConditions`, so a filtered
+ * search covers exactly the orders the index covers for the same filter, and
+ * an item is in scope exactly when its order is. Applying it after the rank
+ * instead would let excluded orders spend the cap: the twenty-sixth-best
+ * match in the requested source would be dropped for twenty-five better
+ * matches the caller asked not to see.
+ *
  * **The ranking is over the union.** Concatenating two already-sorted lists
  * is not a sorted list — a 0.5 order hit would sit above a 1.0 item hit —
  * and the orchestrator re-sorting a section does not save the MCP tool,
@@ -41,82 +47,51 @@
  * roll-up where a truncated answer is a wrong one: the score ordering means
  * the dropped tail is the part that matched worst.
  */
-import { eq, like, or, sql } from 'drizzle-orm';
+import { and, eq, like, or, sql } from 'drizzle-orm';
 
 import { purchaseItems, purchases } from '../schema.js';
+import { purchaseFilterConditions } from './purchase-reads.js';
+import { bestMatch, byScoreDescending, rank } from './search-ranking.js';
 
 import type { SQL } from 'drizzle-orm';
 import type { AnySQLiteColumn } from 'drizzle-orm/sqlite-core';
 
+import type { PurchaseItemRow, PurchaseRow } from '../schema.js';
 import type { PurchasesDb } from './internal.js';
-
-export type SearchMatchType = 'exact' | 'prefix' | 'contains';
-
-export interface PurchaseSearchHit {
-  readonly uri: string;
-  readonly score: number;
-  readonly matchField: string;
-  readonly matchType: SearchMatchType;
-  readonly data: Record<string, unknown>;
-}
-
-/** Hits returned per adapter, applied to the ranked list and nowhere else. */
-const HITS_PER_ADAPTER = 25;
+import type { PurchaseScopeFilter } from './purchase-reads.js';
+import type { PurchaseSearchHit, ScoredCandidate } from './search-ranking.js';
 
 /**
- * A scored hit and the order date that breaks its ties.
- *
- * Scores come from a three-value scale, so far more hits tie than not and
- * the cap usually falls inside a tied run. Ordering that run by date rather
- * than leaving it to the scan makes the response a function of the data —
- * the same query over the same rows answers the same, and among matches that
- * are equally good the recent order is the one being asked about.
+ * The columns each adapter scans, projected from the row types so a schema
+ * change reaches the hit payload rather than being re-declared beside it.
  */
-interface ScoredCandidate {
-  readonly hit: PurchaseSearchHit;
-  readonly orderedAt: string;
-}
+type OrderRow = Pick<
+  PurchaseRow,
+  | 'id'
+  | 'source'
+  | 'sourceOrderId'
+  | 'merchantEntityId'
+  | 'merchantEntityName'
+  | 'orderedAt'
+  | 'currency'
+  | 'totalCents'
+  | 'status'
+>;
 
-function classify(
-  value: string,
-  queryText: string
-): { score: number; matchType: SearchMatchType } | null {
-  const lower = value.toLowerCase();
-  const q = queryText.toLowerCase();
+type ItemRow = Pick<
+  PurchaseItemRow,
+  'id' | 'purchaseId' | 'name' | 'sku' | 'quantity' | 'lineTotalCents' | 'refundedCents'
+> &
+  Pick<PurchaseRow, 'orderedAt' | 'currency' | 'merchantEntityName'>;
 
-  if (lower === q) return { score: 1.0, matchType: 'exact' };
-  if (lower.startsWith(q)) return { score: 0.8, matchType: 'prefix' };
-  if (lower.includes(q)) return { score: 0.5, matchType: 'contains' };
-  return null;
-}
-
-/**
- * The best-scoring field of a row, so a row that matches on two fields is
- * one hit at its strongest match rather than two hits competing with each
- * other for the same section.
- */
-function bestMatch(
-  candidates: readonly { readonly field: string; readonly value: string | null }[],
-  text: string
-): { field: string; score: number; matchType: SearchMatchType } | null {
-  let best: { field: string; score: number; matchType: SearchMatchType } | null = null;
-  for (const candidate of candidates) {
-    if (candidate.value === null) continue;
-    const match = classify(candidate.value, text);
-    if (match === null) continue;
-    if (best === null || match.score > best.score) {
-      best = { field: candidate.field, score: match.score, matchType: match.matchType };
-    }
-  }
-  return best;
-}
+export type { PurchaseSearchHit, SearchMatchType } from './search-ranking.js';
 
 function containsInsensitive(column: AnySQLiteColumn, text: string): SQL {
   return like(sql`lower(${column})`, `%${text.toLowerCase()}%`);
 }
 
-function searchOrders(db: PurchasesDb, text: string): PurchaseSearchHit[] {
-  const rows = db
+function orderRows(db: PurchasesDb, text: string, scope: PurchaseScopeFilter): OrderRow[] {
+  return db
     .select({
       id: purchases.id,
       source: purchases.source,
@@ -130,55 +105,55 @@ function searchOrders(db: PurchasesDb, text: string): PurchaseSearchHit[] {
     })
     .from(purchases)
     .where(
-      or(
-        containsInsensitive(purchases.merchantEntityName, text),
-        containsInsensitive(purchases.sourceOrderId, text),
-        containsInsensitive(purchases.source, text)
+      and(
+        or(
+          containsInsensitive(purchases.merchantEntityName, text),
+          containsInsensitive(purchases.sourceOrderId, text),
+          containsInsensitive(purchases.source, text)
+        ),
+        ...purchaseFilterConditions(scope)
       )
     )
     .all();
-
-  const candidates: ScoredCandidate[] = [];
-  for (const row of rows) {
-    const match = bestMatch(
-      [
-        { field: 'merchantEntityName', value: row.merchantEntityName },
-        { field: 'sourceOrderId', value: row.sourceOrderId },
-        { field: 'source', value: row.source },
-      ],
-      text
-    );
-    if (match === null) continue;
-
-    candidates.push({
-      orderedAt: row.orderedAt,
-      hit: {
-        uri: `pops:purchases/purchase/${row.id}`,
-        score: match.score,
-        matchField: match.field,
-        matchType: match.matchType,
-        data: {
-          source: row.source,
-          sourceOrderId: row.sourceOrderId,
-          // Both, never one: the id is the operative identity and the name is
-          // only its label, and every export-ingested order carries the label
-          // alone. A consumer that sees only a name must not read it as an id.
-          merchantEntityId: row.merchantEntityId,
-          merchantEntityName: row.merchantEntityName,
-          orderedAt: row.orderedAt,
-          currency: row.currency,
-          totalCents: row.totalCents,
-          status: row.status,
-        },
-      },
-    });
-  }
-
-  return rank(candidates);
 }
 
-function searchItems(db: PurchasesDb, text: string): PurchaseSearchHit[] {
-  const rows = db
+function orderCandidate(row: OrderRow, text: string): ScoredCandidate | null {
+  const match = bestMatch(
+    [
+      { field: 'merchantEntityName', value: row.merchantEntityName },
+      { field: 'sourceOrderId', value: row.sourceOrderId },
+      { field: 'source', value: row.source },
+    ],
+    text
+  );
+  if (match === null) return null;
+
+  return {
+    orderedAt: row.orderedAt,
+    hit: {
+      uri: `pops:purchases/purchase/${row.id}`,
+      score: match.score,
+      matchField: match.field,
+      matchType: match.matchType,
+      data: {
+        source: row.source,
+        sourceOrderId: row.sourceOrderId,
+        // Both, never one: the id is the operative identity and the name is
+        // only its label, and every export-ingested order carries the label
+        // alone. A consumer that sees only a name must not read it as an id.
+        merchantEntityId: row.merchantEntityId,
+        merchantEntityName: row.merchantEntityName,
+        orderedAt: row.orderedAt,
+        currency: row.currency,
+        totalCents: row.totalCents,
+        status: row.status,
+      },
+    },
+  };
+}
+
+function itemRows(db: PurchasesDb, text: string, scope: PurchaseScopeFilter): ItemRow[] {
+  return db
     .select({
       id: purchaseItems.id,
       purchaseId: purchaseItems.purchaseId,
@@ -194,81 +169,63 @@ function searchItems(db: PurchasesDb, text: string): PurchaseSearchHit[] {
     .from(purchaseItems)
     .innerJoin(purchases, eq(purchaseItems.purchaseId, purchases.id))
     .where(
-      or(
-        containsInsensitive(purchaseItems.name, text),
-        containsInsensitive(purchaseItems.sku, text)
+      and(
+        or(
+          containsInsensitive(purchaseItems.name, text),
+          containsInsensitive(purchaseItems.sku, text)
+        ),
+        ...purchaseFilterConditions(scope)
       )
     )
     .all();
+}
 
+function itemCandidate(row: ItemRow, text: string): ScoredCandidate | null {
+  const match = bestMatch(
+    [
+      { field: 'name', value: row.name },
+      { field: 'sku', value: row.sku },
+    ],
+    text
+  );
+  if (match === null) return null;
+
+  return {
+    orderedAt: row.orderedAt,
+    hit: {
+      uri: `pops:purchases/purchase-item/${row.id}`,
+      score: match.score,
+      matchField: match.field,
+      matchType: match.matchType,
+      data: {
+        // A line cannot be addressed without its order — the pillar's only
+        // item route is scoped under one, and a hit that omitted this would
+        // be unreachable.
+        purchaseId: row.purchaseId,
+        name: row.name,
+        sku: row.sku,
+        quantity: row.quantity,
+        lineTotalCents: row.lineTotalCents,
+        refundedCents: row.refundedCents,
+        orderedAt: row.orderedAt,
+        currency: row.currency,
+        merchantEntityName: row.merchantEntityName,
+      },
+    },
+  };
+}
+
+function scored<TRow>(
+  rows: readonly TRow[],
+  toCandidate: (row: TRow, text: string) => ScoredCandidate | null,
+  text: string
+): PurchaseSearchHit[] {
   const candidates: ScoredCandidate[] = [];
   for (const row of rows) {
-    const match = bestMatch(
-      [
-        { field: 'name', value: row.name },
-        { field: 'sku', value: row.sku },
-      ],
-      text
-    );
-    if (match === null) continue;
-
-    candidates.push({
-      orderedAt: row.orderedAt,
-      hit: {
-        uri: `pops:purchases/purchase-item/${row.id}`,
-        score: match.score,
-        matchField: match.field,
-        matchType: match.matchType,
-        data: {
-          // A line cannot be addressed without its order — the pillar's only
-          // item route is scoped under one, and a hit that omitted this would
-          // be unreachable.
-          purchaseId: row.purchaseId,
-          name: row.name,
-          sku: row.sku,
-          quantity: row.quantity,
-          lineTotalCents: row.lineTotalCents,
-          refundedCents: row.refundedCents,
-          orderedAt: row.orderedAt,
-          currency: row.currency,
-          merchantEntityName: row.merchantEntityName,
-        },
-      },
-    });
+    const candidate = toCandidate(row, text);
+    if (candidate !== null) candidates.push(candidate);
   }
-
   return rank(candidates);
-}
-
-function byScoreDescending(a: PurchaseSearchHit, b: PurchaseSearchHit): number {
-  return b.score - a.score;
-}
-
-function compareAscending(a: string, b: string): number {
-  if (a === b) return 0;
-  return a < b ? -1 : 1;
-}
-
-/**
- * Score, then recency, then uri — a total order, because two rows never
- * share a uri. Without that last term a tie at the cap would be settled by
- * the scan again, one step further down.
- */
-function byRank(a: ScoredCandidate, b: ScoredCandidate): number {
-  const byScore = byScoreDescending(a.hit, b.hit);
-  if (byScore !== 0) return byScore;
-
-  const byRecency = compareAscending(b.orderedAt, a.orderedAt);
-  if (byRecency !== 0) return byRecency;
-
-  return compareAscending(a.hit.uri, b.hit.uri);
-}
-
-function rank(candidates: readonly ScoredCandidate[]): PurchaseSearchHit[] {
-  return candidates
-    .toSorted(byRank)
-    .slice(0, HITS_PER_ADAPTER)
-    .map((candidate) => candidate.hit);
 }
 
 /**
@@ -281,8 +238,16 @@ function rank(candidates: readonly ScoredCandidate[]): PurchaseSearchHit[] {
  * that leaves the whole response decided by the rows rather than by the
  * scan that read them.
  */
-export function searchPurchases(db: PurchasesDb, text: string): PurchaseSearchHit[] {
+export function searchPurchases(
+  db: PurchasesDb,
+  text: string,
+  scope: PurchaseScopeFilter = {}
+): PurchaseSearchHit[] {
   const trimmed = text.trim();
   if (trimmed.length === 0) return [];
-  return [...searchOrders(db, trimmed), ...searchItems(db, trimmed)].toSorted(byScoreDescending);
+
+  return [
+    ...scored(orderRows(db, trimmed, scope), orderCandidate, trimmed),
+    ...scored(itemRows(db, trimmed, scope), itemCandidate, trimmed),
+  ].toSorted(byScoreDescending);
 }

@@ -18,14 +18,14 @@ export function FieldWrapper({ field, children, saveState }: FieldWrapperProps) 
       <div className="flex items-center gap-2">
         <Label className="text-sm text-muted-foreground">{field.label}</Label>
         {field.requiresRestart && (
-          <Badge variant="outline" className="text-amber-500 border-amber-500 text-xs px-1.5 py-0">
+          <Badge variant="outline" className="text-warning border-warning text-xs px-1.5 py-0">
             Requires restart
           </Badge>
         )}
         {saveState === 'saving' && (
           <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
         )}
-        {saveState === 'saved' && <CheckCircle2 className="h-3 w-3 text-green-500" />}
+        {saveState === 'saved' && <CheckCircle2 className="h-3 w-3 text-success" />}
       </div>
       {children}
       {field.description && <p className="text-xs text-muted-foreground">{field.description}</p>}

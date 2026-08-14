@@ -76,7 +76,8 @@ internal final class AppComposition {
         pairingDependencies = AppDependencies(
             transactions: AppDependencies.unbound.transactions,
             pairing: BFMDevicePairingService(credentialStore: credentialStore),
-            reachability: AppDependencies.unbound.reachability
+            reachability: AppDependencies.unbound.reachability,
+            receiptCapture: AppDependencies.unbound.receiptCapture
         )
         shell = AppShellModel(
             session: session,
@@ -95,7 +96,12 @@ internal final class AppComposition {
         let dependencies = AppDependencies(
             transactions: BFMTransactionsRepository(client: authenticated(device)),
             pairing: BFMDevicePairingService(credentialStore: credentialStore),
-            reachability: shell
+            reachability: shell,
+            // Left unbound: `BFMClient` has no `POST /mobile/receipts` conformance
+            // yet, so there is nothing real to point this at. A screen that reads
+            // it fails with `dependencyNotBound` rather than reaching a client that
+            // does not exist.
+            receiptCapture: AppDependencies.unbound.receiptCapture
         )
         bound = (device, dependencies)
         return dependencies

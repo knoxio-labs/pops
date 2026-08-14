@@ -17,12 +17,19 @@ function useDragListeners({
   dragStartValue,
   commitValue,
 }: UseDragListenersArgs) {
+  // `commitValue` closes over `min`/`max`/`onChange` and is rebuilt on every
+  // render, so depending on it directly would detach and reattach the document
+  // listeners on each committed drag step. Reading it through a ref keeps the
+  // listeners mounted for the whole gesture while still calling the latest one.
+  const commitValueRef = useRef(commitValue);
+  commitValueRef.current = commitValue;
+
   useEffect(() => {
     if (!isDragging) return;
     const handleMouseMove = (e: MouseEvent) => {
       const deltaY = dragStartY.current - e.clientY;
       const deltaValue = Math.round(deltaY / 2) * step;
-      commitValue(dragStartValue.current + deltaValue);
+      commitValueRef.current(dragStartValue.current + deltaValue);
     };
     const handleMouseUp = () => setIsDragging(false);
     document.addEventListener('mousemove', handleMouseMove);
@@ -31,8 +38,7 @@ function useDragListeners({
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isDragging, step]);
+  }, [isDragging, step, setIsDragging, dragStartY, dragStartValue]);
 }
 
 export interface UseNumberInputArgs {

@@ -14,6 +14,11 @@
  * account a backfill runs as needs `purchases.source` and `purchases.purchase`
  * or the first request is a 403.
  */
+import { resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
+
+import { SERVICE_ACCOUNT_HEADER } from '@pops/pillar-sdk/server';
+
 import type { CreatePurchaseInput } from '../src/db/services/purchase-input.js';
 
 export const DEFAULT_BASE_URL = 'http://localhost:3013';
@@ -64,7 +69,7 @@ function ingestFetch(
 ): Promise<Response> {
   return fetch(`${client.baseUrl}${path}`, {
     method,
-    headers: { 'content-type': 'application/json', 'x-api-key': client.apiKey },
+    headers: { 'content-type': 'application/json', [SERVICE_ACCOUNT_HEADER]: client.apiKey },
     body: JSON.stringify(body),
   });
 }
@@ -146,4 +151,39 @@ export function reportOutcome(outcome: BackfillOutcome): void {
   );
   for (const failure of outcome.failures.slice(0, 10)) console.error(`  ${failure}`);
   if (outcome.failures.length > 0) process.exitCode = 1;
+}
+
+/**
+ * Whether the module at `moduleUrl` is the file the process was started with,
+ * so importing a CLI's `main` for a test does not also run the CLI.
+ *
+ * Both sides are normalised before comparison. Interpolating the entry path
+ * into `file://` instead compares an unencoded path against the percent-encoded
+ * URL `import.meta.url` always is, so any entry path containing a space, `#`,
+ * `?` or a non-ASCII character fails to match and the CLI silently does
+ * nothing — a checkout under `~/My Projects` is enough.
+ *
+ * @param moduleUrl The calling module's `import.meta.url`.
+ * @param entryPath The process entry path; injectable for tests.
+ */
+export function isCliEntrypoint(
+  moduleUrl: string,
+  entryPath: string | undefined = process.argv[1]
+): boolean {
+  if (entryPath === undefined || entryPath === '') return false;
+  return moduleUrl === pathToFileURL(resolve(entryPath)).href;
+}
+
+/**
+ * Run a CLI's `main`, printing a failure as a one-line message rather than
+ * letting it surface as an unhandled rejection with a stack trace — the
+ * shape every failure in these scripts should have, config errors included.
+ */
+export async function runCli(main: () => Promise<void>): Promise<void> {
+  try {
+    await main();
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exitCode = 1;
+  }
 }

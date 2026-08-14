@@ -250,6 +250,91 @@ describe('an unreachable owning pillar', () => {
   });
 });
 
+/**
+ * The failure this cron is worst at surviving, because it survives it
+ * perfectly: a callee that refuses the credential answers every URI, every
+ * night, forever, and nothing about the row changes. Folded into
+ * `unavailable` it reads as an outage that will pass on its own. It will
+ * not.
+ */
+describe('a callee that refuses this pillar credential', () => {
+  it.each([
+    ['a rejected key', { kind: 'unauthorized', reason: 'unauthorized' } as const],
+    ['no key in this process', { kind: 'unauthorized', reason: 'no-credential' } as const],
+  ])('preserves the row and counts it apart from an outage on %s', async (_label, outcome) => {
+    seed({ itemUris: [ITEM_URI] });
+
+    const stats = await start({ inventoryItem: always(outcome) }).runOnce();
+
+    expect(unitStaleAt()).toEqual([null]);
+    expect(stats).toMatchObject({ unauthorized: 1, unavailable: 0, staleMarked: 0, resolved: 0 });
+  });
+
+  it('leaves an ALREADY-stale flag stale rather than clearing it', async () => {
+    seed({ itemUris: [ITEM_URI] });
+    markInventoryItemUriStale(opened.db, ITEM_URI, '2026-01-01T00:00:00.000Z');
+
+    await start({
+      inventoryItem: always({ kind: 'unauthorized', reason: 'unauthorized' }),
+    }).runOnce();
+
+    expect(unitStaleAt()).toEqual(['2026-01-01T00:00:00.000Z']);
+  });
+
+  it('names the credential in the log rather than reporting the pillar down', async () => {
+    seed({ itemUris: [ITEM_URI] });
+    const warn = vi.fn();
+
+    await start({
+      inventoryItem: always({ kind: 'unauthorized', reason: 'unauthorized' }),
+      logger: { warn },
+    }).runOnce();
+
+    expect(warn).toHaveBeenCalledWith(
+      'purchases reconcile credential refused (preserved for ops)',
+      expect.objectContaining({ leg: 'inventory-item', uri: ITEM_URI, reason: 'unauthorized' })
+    );
+    expect(warn).not.toHaveBeenCalledWith(
+      'purchases reconcile owning pillar unavailable',
+      expect.anything()
+    );
+  });
+
+  it('says the key is missing rather than refused when none was sent', async () => {
+    // Different jobs: provision a key versus widen a grant. A shared
+    // headline would send whoever reads it to the wrong one half the time.
+    seed({ itemUris: [ITEM_URI] });
+    const warn = vi.fn();
+
+    await start({
+      inventoryItem: always({ kind: 'unauthorized', reason: 'no-credential' }),
+      logger: { warn },
+    }).runOnce();
+
+    expect(warn).toHaveBeenCalledWith(
+      'purchases reconcile has no service-account key (preserved for ops)',
+      expect.objectContaining({ leg: 'inventory-item', reason: 'no-credential' })
+    );
+  });
+
+  it('still accounts for every URI in the work set exactly once', async () => {
+    seed({ itemUris: [ITEM_URI] });
+
+    const stats = await start({
+      inventoryItem: always({ kind: 'unauthorized', reason: 'unauthorized' }),
+    }).runOnce();
+
+    const inventory = legStats(stats, 'inventory-item');
+    expect(
+      inventory.resolved +
+        inventory.staleMarked +
+        inventory.badUri +
+        inventory.unauthorized +
+        inventory.unavailable
+    ).toBe(inventory.checked);
+  });
+});
+
 describe('a URI the owning pillar cannot make sense of', () => {
   it('preserves the row and counts it as a bad URI', async () => {
     seed({ itemUris: [ITEM_URI] });
@@ -336,8 +421,24 @@ describe('per-leg work-set reporting', () => {
     const stats = await start({ document: always({ kind: 'ok' }) }).runOnce();
 
     expect(stats.legs).toEqual([
-      { leg: 'inventory-item', checked: 0, resolved: 0, staleMarked: 0, badUri: 0, unavailable: 0 },
-      { leg: 'document', checked: 1, resolved: 1, staleMarked: 0, badUri: 0, unavailable: 0 },
+      {
+        leg: 'inventory-item',
+        checked: 0,
+        resolved: 0,
+        staleMarked: 0,
+        badUri: 0,
+        unauthorized: 0,
+        unavailable: 0,
+      },
+      {
+        leg: 'document',
+        checked: 1,
+        resolved: 1,
+        staleMarked: 0,
+        badUri: 0,
+        unauthorized: 0,
+        unavailable: 0,
+      },
     ]);
     // The totals both legs collapse into, and which on their own say nothing
     // about the inventory leg having been skipped entirely.
@@ -368,10 +469,16 @@ describe('per-leg work-set reporting', () => {
       resolved: 1,
       staleMarked: 1,
       badUri: 1,
+      unauthorized: 0,
       unavailable: 0,
     });
-    expect(inventory.resolved + inventory.staleMarked + inventory.badUri + inventory.unavailable) //
-      .toBe(inventory.checked);
+    expect(
+      inventory.resolved +
+        inventory.staleMarked +
+        inventory.badUri +
+        inventory.unauthorized +
+        inventory.unavailable
+    ).toBe(inventory.checked);
   });
 
   it('sums the leg counters into the tick totals', async () => {

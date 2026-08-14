@@ -139,8 +139,15 @@ export const PROMPT_FIELDS: Readonly<Record<string, string>> = {
     'money. Null unless an amount of money is stated — a receipt printing ' +
     '"FREE", "Delivery: included" or nothing at all has stated no amount, ' +
     'and the word alone is not money. "$0.00" is an amount and may be ' +
-    'reported. Report it here and not in "surcharges"',
-  lines: 'one entry per product, in the order the receipt lists them',
+    'reported. Report the charge ONCE, here: not in "surcharges", and not ' +
+    'as one of the "lines" either — an emailed order or an invoice usually ' +
+    'prints it as a row of its own, and that row is this field',
+  lines:
+    'one entry per product, in the order the receipt lists them. A row is a ' +
+    'product only when it names something bought: a delivery, postage or ' +
+    'shipping row belongs in "shipping", a fee in "surcharges", a reduction ' +
+    'in "discounts", and tax and the total in their own fields — none of ' +
+    'those is a line, however much the receipt prints it like one',
   description: 'the product text verbatim, including abbreviations. Do not expand or tidy them',
   amount:
     'the money stated for that line, exactly as stated — but the amount ' +

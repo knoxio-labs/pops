@@ -8,10 +8,10 @@ import type { ListKind } from './types.js';
  * comment for the rationale behind keeping `app-lists` free of `@pops/ui`.
  */
 const KIND_COLOURS: Record<ListKind, string> = {
-  shopping: 'bg-sky-100 text-sky-900 dark:bg-sky-900/40 dark:text-sky-100',
-  packing: 'bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-100',
-  todo: 'bg-emerald-100 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-100',
-  generic: 'bg-slate-200 text-slate-900 dark:bg-slate-700/60 dark:text-slate-100',
+  shopping: 'bg-info/15 text-info',
+  packing: 'bg-warning/15 text-warning',
+  todo: 'bg-success/15 text-success',
+  generic: 'bg-muted text-muted-foreground',
 };
 
 export function ListKindChip({ kind }: { kind: ListKind }) {

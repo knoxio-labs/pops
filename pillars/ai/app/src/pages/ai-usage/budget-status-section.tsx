@@ -26,8 +26,8 @@ function budgetUsageLabel(b: {
 
 function barColorClass(pct: number) {
   if (pct >= 80) return 'bg-destructive';
-  if (pct >= 60) return 'bg-amber-500';
-  return 'bg-emerald-500';
+  if (pct >= 60) return 'bg-warning';
+  return 'bg-success';
 }
 
 export function BudgetStatusSection() {
@@ -64,7 +64,7 @@ export function BudgetStatusSection() {
               <div className="flex items-center justify-between text-xs text-muted-foreground">
                 <span>{budgetUsageLabel(b)}</span>
                 {b.projectedExhaustionDate && (
-                  <span className="text-amber-600">Exhausts {b.projectedExhaustionDate}</span>
+                  <span className="text-warning">Exhausts {b.projectedExhaustionDate}</span>
                 )}
               </div>
             </Card>

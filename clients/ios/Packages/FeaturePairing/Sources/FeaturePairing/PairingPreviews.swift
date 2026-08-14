@@ -43,7 +43,8 @@
             dependencies: AppDependencies(
                 transactions: AppDependencies.unbound.transactions,
                 pairing: PreviewPairingService(failure: failing),
-                reachability: AppDependencies.unbound.reachability
+                reachability: AppDependencies.unbound.reachability,
+                receiptCapture: AppDependencies.unbound.receiptCapture
             ),
             camera: PreviewCamera(access: camera),
             device: SystemDeviceDescription(),

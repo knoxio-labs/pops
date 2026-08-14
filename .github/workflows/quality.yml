@@ -410,6 +410,27 @@ jobs:
       - name: Every @source glob matches files and every UI file is covered
         run: node scripts/check-tailwind-source-coverage.mjs
 
+  design-tokens:
+    name: Design tokens in frontend source
+    # AGENTS.md "Styling" says colours come from design tokens and nothing
+    # else, and until this job nothing enforced it — so every cleanup grew
+    # back, one `text-amber-600` at a time. This guard reports raw Tailwind
+    # palette utilities (under any variant chain) and literal hex/rgb/oklch
+    # inside arbitrary values, across every frontend source tree. It reads the
+    # source directly and pulls in no third-party deps, so it skips
+    # `pnpm install`. See scripts/ci/check-design-tokens.mjs for what is
+    # deliberately exempt (stories, tests, generated clients, the theme itself).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Gate self-test (proves the guard catches a planted raw colour)
+        run: node scripts/ci/check-design-tokens.mjs --self-test
+      - name: Every colour in frontend source comes from a design token
+        run: node scripts/ci/check-design-tokens.mjs
+
   control-characters:
     name: Control characters in committed text
     # A NUL byte once landed inside a template literal, behaved correctly (NUL
@@ -432,6 +453,29 @@ jobs:
         run: node scripts/ci/check-control-characters.mjs --self-test
       - name: No disallowed control characters in tracked text
         run: node scripts/ci/check-control-characters.mjs
+
+  swift-bounded-yield:
+    name: Bounded-yield polls in Swift tests
+    # Three fixes landed for the same defect in clients/ios/Packages/Auth's
+    # concurrency tests: a `Task.yield()` loop polling a condition is a proxy
+    # for "the task under test got enough scheduling turns to make progress",
+    # unsound under real CPU starvation. A fourth sighting in
+    # clients/ios/Packages/AppCore turned up only because someone grepped for
+    # it by hand while fixing the third. This guard is that grep, made
+    # permanent — it fails the build on any `Task.yield()` call anywhere in
+    # clients/ios Swift source, so the next sighting is caught at the PR that
+    # introduces it. Pure `node:fs`/`node:child_process`, no third-party deps,
+    # so it skips `pnpm install`. See scripts/ci/check-swift-bounded-yield.mjs.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Gate self-test (proves the guard catches a planted Task.yield() call)
+        run: node scripts/ci/check-swift-bounded-yield.mjs --self-test
+      - name: No disallowed Task.yield() polling in clients/ios
+        run: node scripts/ci/check-swift-bounded-yield.mjs
 
   vendored-contracts:
     name: Vendored contract drift (ADR-033)

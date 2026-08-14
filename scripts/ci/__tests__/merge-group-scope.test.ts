@@ -85,21 +85,28 @@ function needsOf(job: Record<string, unknown> | undefined): string[] {
 }
 
 describe('the helper proves itself', () => {
-  it('passes its own --self-test', () => {
-    // The same invocation the `scope` jobs run before they answer. Asserted
-    // here as well so a self-test that has stopped proving anything fails in
-    // `Quality`'s Scripts tests job on the PR, not first inside a merge queue.
-    const output = execFileSync(process.execPath, [helper, '--self-test'], {
-      cwd: repoRoot,
-      encoding: 'utf8',
-      timeout: 120_000,
-    });
-    expect(output).toMatch(/self-test OK/u);
-    expect(output).toMatch(/deselects a non-touching one/u);
-    // The child already carries its own 120s bound; vitest's 5s default sat
-    // inside it, so on a loaded machine the suite failed on the runner's
-    // scheduling rather than on anything the self-test asserts.
-  }, 120_000);
+  // The subprocess's own timeout below is 120s; vitest's it()-level default is
+  // only 5s, well under what this legitimately takes under concurrent
+  // CI/dev-machine load. Match the two rather than let the outer one cut off
+  // first.
+  const SELF_TEST_TIMEOUT_MS = 120_000;
+
+  it(
+    'passes its own --self-test',
+    () => {
+      // The same invocation the `scope` jobs run before they answer. Asserted
+      // here as well so a self-test that has stopped proving anything fails in
+      // `Quality`'s Scripts tests job on the PR, not first inside a merge queue.
+      const output = execFileSync(process.execPath, [helper, '--self-test'], {
+        cwd: repoRoot,
+        encoding: 'utf8',
+        timeout: SELF_TEST_TIMEOUT_MS,
+      });
+      expect(output).toMatch(/self-test OK/u);
+      expect(output).toMatch(/deselects a non-touching one/u);
+    },
+    SELF_TEST_TIMEOUT_MS
+  );
 });
 
 describe('reading a workflow’s own pull_request.paths', () => {
