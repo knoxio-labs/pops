@@ -451,6 +451,28 @@ jobs:
       - name: Every icon-only Button/ButtonPrimitive carries an aria-label
         run: node scripts/ci/check-icon-only-buttons.mjs
 
+  icon-dynamic-import:
+    name: No dynamic import of lucide-react
+    # .oxlintrc.json's no-restricted-imports only inspects static `import`/
+    # `export … from` declarations, so `await import('lucide-react')` and
+    # `require('lucide-react')` bypass the banned-icon-name gate entirely.
+    # This guard bans the dynamic-call shape outright (whole package or any
+    # subpath, regardless of which name is later destructured off the
+    # result) — see scripts/ci/check-icon-dynamic-import.mjs for exactly
+    # which specifier forms it resolves statically and which it deliberately
+    # leaves undecidable. It reads the source directly and pulls in no
+    # third-party deps, so it skips `pnpm install`.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Gate self-test (proves the guard catches a planted dynamic import)
+        run: node scripts/ci/check-icon-dynamic-import.mjs --self-test
+      - name: No dynamic import()/require() call reaches lucide-react
+        run: node scripts/ci/check-icon-dynamic-import.mjs
+
   control-characters:
     name: Control characters in committed text
     # A NUL byte once landed inside a template literal, behaved correctly (NUL
@@ -551,13 +573,19 @@ jobs:
           node-version: "24"
       - name: Self-test (fires for a producer with consumers, silent for one without)
         run: node scripts/ci/report-contract-consumers.mjs --self-test
+      - name: Self-test (base resolution across pull_request / merge_group / push)
+        run: node scripts/ci/resolve-report-base.mjs --self-test
       - name: Name the vendored consumers this change obliges
+        env:
+          # `github.base_ref` is a pull-request-only field, same as
+          # `agent-review.yml`'s `BASE_REF`. `github.event.merge_group.base_ref`
+          # is its merge-group equivalent. `main` is the final fallback for
+          # `push`, where neither is set. See resolve-report-base.mjs for what
+          # each of the three resolves to and why.
+          BASE_REF: ${{ github.base_ref || github.event.merge_group.base_ref || 'main' }}
         run: |
           set -euo pipefail
-          # Same base recipe as _discover-units.yml: on a PR the fork point, and
-          # on a push/merge group `origin/main` — which is HEAD there, so the
-          # diff is empty and the report is correctly silent.
-          base=$(git merge-base "origin/${{ github.base_ref || 'main' }}" HEAD || true)
+          base=$(node scripts/ci/resolve-report-base.mjs --ref "$BASE_REF")
           if [ -n "$base" ]; then
             git diff --name-only "$base" HEAD > "$RUNNER_TEMP/changed-files.txt"
             node scripts/ci/report-contract-consumers.mjs --changed-from "$RUNNER_TEMP/changed-files.txt"
@@ -565,7 +593,7 @@ jobs:
             # No usable base. The script then reports EVERY vendored leg under a
             # header saying it could not scope itself — the loud outcome, not the
             # silent one that would be indistinguishable from "nothing changed".
-            echo "No merge base against origin/${{ github.base_ref || 'main' }} — reporting every leg."
+            echo "No merge base against origin/$BASE_REF — reporting every leg."
             node scripts/ci/report-contract-consumers.mjs
           fi
 

@@ -29,6 +29,17 @@
  * element's OWN h/w evidence (box + 2 * inset >= 44 on each axis). Evidence
  * from a neighbouring element — a sibling, a parent, anything outside this
  * tag's own attribute list — never counts.
+ *
+ * A utility gated behind a bare `sm:`/`md:`/`lg:`/`xl:`/`2xl:` (or
+ * `min-[…]:`) variant does NOT count on its own: Tailwind's breakpoints are
+ * min-width, so that utility applies only ABOVE the given width — exactly
+ * the opposite of the phone-width viewport this gate exists to protect. The
+ * base/unprefixed cascade is what a narrow viewport actually renders, so
+ * proof must come from there (a breakpoint variant may only ever ADD to an
+ * already-sufficient base, never substitute for one). A `max-sm:`/`max-md:`/…
+ * variant is the mirror case — it applies only BELOW the given width, i.e.
+ * down to and including the phone-width viewport — so it counts the same as
+ * unprefixed evidence.
  * Classes built up through a variable (`cn(baseClasses)`) are invisible to a
  * text scan and are reported as violations — false positives lean toward
  * "flag it", which a baseline absorbs for existing code and a human resolves
@@ -110,6 +121,42 @@ const INSET_RE =
 const PX_PER_STEP = 4;
 const REM_PX = 16;
 
+/** Tailwind's default min-width breakpoint names — bare, they gate a utility ABOVE that width. */
+const MIN_WIDTH_BREAKPOINTS = new Set(['sm', 'md', 'lg', 'xl', '2xl']);
+
+/** Characters that can appear inside a Tailwind class token, outside of quotes. */
+const CLASS_TOKEN_CHAR_RE = /[\w:\-.[\]/%]/;
+
+/**
+ * Does the class token this match sits in carry a variant that gates it to
+ * ONLY the width range above a breakpoint (`sm:`, `md:`, `min-[640px]:`, …)?
+ * Such a match proves nothing about the base/phone-width cascade. A bare
+ * `max-sm:`/`max-md:`/… variant is the opposite — it applies AT AND BELOW
+ * that width — so it is not disqualifying.
+ * @param {string} tagText
+ * @param {number} matchIndex
+ * @returns {boolean}
+ */
+function hasMinWidthOnlyPrefix(tagText, matchIndex) {
+  let start = matchIndex;
+  while (start > 0 && CLASS_TOKEN_CHAR_RE.test(tagText[start - 1])) start--;
+  const prefix = tagText.slice(start, matchIndex);
+  if (!prefix) return false;
+  const variants = prefix.split(':').filter(Boolean);
+  return variants.some((v) => MIN_WIDTH_BREAKPOINTS.has(v) || /^min-\[/.test(v));
+}
+
+/**
+ * Every regex match against `tagText` that is not gated behind a min-width-only
+ * breakpoint variant — the only matches allowed to count as base-viewport proof.
+ * @param {string} tagText
+ * @param {RegExp} re
+ * @returns {RegExpMatchArray[]}
+ */
+function baseEvidence(tagText, re) {
+  return [...tagText.matchAll(re)].filter((m) => !hasMinWidthOnlyPrefix(tagText, m.index ?? 0));
+}
+
 /**
  * The largest pixel magnitude a `dimensionRe`/`INSET_RE` match set proves,
  * or `null` if the tag carries no evidence for that property at all.
@@ -159,10 +206,10 @@ function combineWithSize(axis, size) {
  * @returns {boolean}
  */
 function isCompliant(tagText) {
-  const size = maxPx([...tagText.matchAll(dimensionRe('size'))]);
-  const h = maxPx([...tagText.matchAll(dimensionRe('h'))]);
-  const w = maxPx([...tagText.matchAll(dimensionRe('w'))]);
-  const inset = maxPx([...tagText.matchAll(INSET_RE)]);
+  const size = maxPx(baseEvidence(tagText, dimensionRe('size')));
+  const h = maxPx(baseEvidence(tagText, dimensionRe('h')));
+  const w = maxPx(baseEvidence(tagText, dimensionRe('w')));
+  const inset = maxPx(baseEvidence(tagText, INSET_RE));
 
   const hBase = combineWithSize(h, size);
   const wBase = combineWithSize(w, size);
@@ -491,12 +538,20 @@ function selfTest() {
     '<button className="h-6 w-6 before:-inset-0.5"><XIcon /></button>',
     // Width evidence alone must not stand in for height too.
     '<a href="/y" className="w-64 text-sm underline">link</a>',
+    // A bare min-width breakpoint only sizes the box ABOVE that width — the
+    // base/phone-width cascade this element actually renders is unsized.
+    '<button className="sm:h-11 sm:w-11" onClick={onClick}>Row</button>',
   ].join('\n');
   const clean = [
     '<button className="size-11" onClick={onClick}><XIcon /></button>',
     '<button className="min-h-11 min-w-11 px-3" onClick={onClick}>Row</button>',
     '<a href="/x" className="min-w-[44px] min-h-[44px] flex items-center">link</a>',
     '<button className="relative h-6 w-6 before:absolute before:-inset-2.5 before:content-[\'\']">x</button>',
+    // max-sm: applies AT AND BELOW that width, i.e. down through the phone
+    // viewport — the mirror of sm:, and valid proof for that reason.
+    '<button className="max-sm:h-11 max-sm:w-11" onClick={onClick}>Row</button>',
+    // An already-sufficient base may be grown further by a breakpoint variant.
+    '<button className="h-11 w-11 sm:h-16 sm:w-16" onClick={onClick}>Row</button>',
   ].join('\n');
 
   const dirtyHits = findViolations('pillars/x/app/src/A.tsx', dirty);
@@ -517,6 +572,9 @@ function selfTest() {
     'reports an anchor sized on only one axis (w-64, no height evidence)': dirtyHits.some(
       (v) => v.line === 8
     ),
+    'reports a button sized only via a bare sm: breakpoint (unsized below 640px)': dirtyHits.some(
+      (v) => v.line === 9
+    ),
     'stays silent on a button sized via size-11': cleanHits.every(
       (v) => v.line !== 1 // line 1 of `clean` carries size-11
     ),
@@ -524,6 +582,11 @@ function selfTest() {
     'stays silent on arbitrary min-w-[44px]/min-h-[44px]': !cleanHits.some((v) => v.line === 3),
     'stays silent on before:-inset expansion sized against its own box': !cleanHits.some(
       (v) => v.line === 4
+    ),
+    'stays silent on a button sized only via max-sm: (sized down through the phone viewport)':
+      !cleanHits.some((v) => v.line === 5),
+    'stays silent when a sufficient base is further grown by sm:': !cleanHits.some(
+      (v) => v.line === 6
     ),
     'a story is exempt': !isScannable('pillars/food/app/src/pages/X.stories.tsx'),
     'a test is exempt': !isScannable('pillars/food/app/src/pages/X.test.tsx'),

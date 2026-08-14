@@ -1,6 +1,6 @@
 name: Live Seam
 
-# Runs the two "live seam" integration suites — the ones each pillar's
+# Runs the three "live seam" integration suites — the ones each pillar's
 # `vitest.config.ts` excludes from the default `pnpm test` (the
 # `**/*.live-seam.test.ts` pattern) because they boot 2-3 real pillar
 # processes over loopback HTTP via `@pops/pillar-sdk/testing`
@@ -11,6 +11,12 @@ name: Live Seam
 #   - pillars/cerebrum/src/api/modules/retrieval/__tests__/peer-clients.live-seam.test.ts
 #     boots registry + finance + cerebrum and drives cerebrum's real
 #     `POST /index/reindex-sources`.
+#   - pillars/bfm/src/api/purchases/__tests__/receipt-upload.live-seam.test.ts
+#     boots registry + purchases + bfm and drives bfm's real
+#     `POST /mobile/purchases/receipts`, with purchases' vision model
+#     replaced by a fixture-driven fake HTTP server (no real model call) and
+#     its service-account gate flipped to mandatory for the run, so the
+#     `X-API-Key` grant is actually proved rather than assumed.
 # Each is normally run by hand via that pillar's `pnpm test:live-seam`.
 #
 # ADVISORY, NOT REQUIRED — deliberately, for a bake-in period. Neither job
@@ -54,6 +60,8 @@ on:
       - "pillars/cerebrum/src/api/modules/thalamus/**"
       - "pillars/cerebrum/vitest.live-seam.config.ts"
       - "pillars/finance/**"
+      - "pillars/bfm/**"
+      - "pillars/purchases/**"
       - ".github/workflows/live-seam.yml"
   push:
     branches: [main]
@@ -67,6 +75,8 @@ on:
       - "pillars/cerebrum/src/api/modules/thalamus/**"
       - "pillars/cerebrum/vitest.live-seam.config.ts"
       - "pillars/finance/**"
+      - "pillars/bfm/**"
+      - "pillars/purchases/**"
       - ".github/workflows/live-seam.yml"
 
 jobs:
@@ -109,3 +119,19 @@ jobs:
         run: pnpm --filter "@pops/registry..." --filter "@pops/finance..." --filter "@pops/cerebrum..." build
       - name: Run cerebrum's live-seam suite
         run: pnpm --filter @pops/cerebrum test:live-seam
+
+  bfm-purchases:
+    name: bfm -> purchases live seam
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build the pillars this suite spawns (registry, purchases, bfm)
+        run: pnpm --filter "@pops/registry..." --filter "@pops/purchases..." --filter "@pops/bfm..." build
+      - name: Run bfm's live-seam suite
+        run: pnpm --filter @pops/bfm test:live-seam

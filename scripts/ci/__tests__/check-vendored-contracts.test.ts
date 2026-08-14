@@ -29,6 +29,7 @@ import {
   discoverVendoredContracts,
   findDrift,
   findMoved,
+  KNOWN_VENDORED_LEGS,
   readOrNull,
   statKind,
 } from '../check-vendored-contracts.mjs';
@@ -106,26 +107,28 @@ function declareTsPairWithoutCopy(root: string, consumer: string, pillarId: stri
 }
 
 describe('discoverVendoredContracts / deriveExpectedContracts against the real repo', () => {
-  it('agree on exactly the three known vendored contracts today', () => {
-    // Pinned rather than left as a floor: the repo's own doc comments name
-    // exactly these three ("pillars/finance/app/contracts/contacts.openapi.json",
-    // "pillars/finance/app/contracts/purchases.openapi.json", and
-    // "clients/ios/Contracts/bfm.openapi.json"). A fourth legitimate one
-    // means updating this pin in the same commit; that friction is the point
-    // — it is what makes a change to this convention visible instead of a
-    // floor silently swallowing it.
+  it('agree on exactly the legs KNOWN_VENDORED_LEGS pins', () => {
+    // KNOWN_VENDORED_LEGS is the guard's own independent pin (see its doc
+    // comment in check-vendored-contracts.mjs) — a literal the self-test
+    // checks the real tree against, typed by hand rather than derived from
+    // VENDOR_DIRECTORIES. Reusing it here rather than duplicating a second
+    // hand-typed array keeps this test and the `--self-test` CLI path
+    // checking the exact same expectation instead of two lists that could
+    // drift from each other. A new leg landing here without updating
+    // KNOWN_VENDORED_LEGS in the same commit is the friction ADR-045 asks
+    // for — visible on the commit that adds it, not a silently-widened floor.
     const discovered = discoverVendoredContracts(repoRoot);
     const expected = deriveExpectedContracts(repoRoot);
 
-    const discoveredPaths = discovered.map((c) => c.copy.slice(repoRoot.length + 1)).toSorted();
+    const discoveredLegs = discovered
+      .map((c) => `${c.pillarId} -> ${c.copy.slice(repoRoot.length + 1)}`)
+      .toSorted();
     const expectedPaths = expected.map((c) => c.copy.slice(repoRoot.length + 1)).toSorted();
 
-    expect(discoveredPaths).toEqual([
-      'clients/ios/Contracts/bfm.openapi.json',
-      'pillars/finance/app/contracts/contacts.openapi.json',
-      'pillars/finance/app/contracts/purchases.openapi.json',
-    ]);
-    expect(expectedPaths).toEqual(discoveredPaths);
+    expect(discoveredLegs).toEqual([...KNOWN_VENDORED_LEGS].toSorted());
+    expect(expectedPaths).toEqual(
+      discovered.map((c) => c.copy.slice(repoRoot.length + 1)).toSorted()
+    );
   });
 
   it('leaves every discovered copy free of drift or orphaning against the real tree', () => {
@@ -411,8 +414,11 @@ describe('the guard CLI', () => {
     expect(stdout).toContain('3 config-declared expectation(s)');
   });
 
-  it('its self-test passes', () => {
-    expect(() => execFileSync('node', [guardPath, '--self-test'], { stdio: 'pipe' })).not.toThrow();
+  it('its self-test passes, including the independent leg-set pin', () => {
+    const stdout = execFileSync('node', [guardPath, '--self-test'], { encoding: 'utf8' });
+    expect(stdout).toContain(
+      `self-test OK — discovers exactly the ${KNOWN_VENDORED_LEGS.length} pinned vendored leg(s).`
+    );
   });
 
   it('fails loudly, not with OK, when discovery finds zero vendored contracts', () => {
