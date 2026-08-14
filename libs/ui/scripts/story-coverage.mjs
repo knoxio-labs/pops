@@ -5,9 +5,15 @@
  * file, or carry an entry in `storybook-coverage-allowlist.mjs`. `.ts` counts
  * too — a component built with `React.createElement` instead of JSX needs no
  * `.tsx` extension and would otherwise never enter the subject set. Whether a
- * given `.ts` export is *actually* a component is a PascalCase-name
- * heuristic, the same one `.tsx` discovery already runs on; it is not exact
- * for either extension. A module whose only PascalCase exports are forwards
+ * given export is *actually* a component is a heuristic for both extensions,
+ * and neither is exact. `.tsx` discovery is a plain PascalCase-name test.
+ * `.ts` discovery is narrower — a PascalCase name only counts when its own
+ * declaration is function/arrow/class-extends shaped *and* the file shows a
+ * `createElement` signal — because a `.ts` file is exactly where a zod
+ * schema, a token map, or a plain class is likely to sit under a
+ * PascalCase name with no rendering intent at all; see
+ * `readComponentExports`'s `requireTsComponentShape` for the exact rule and
+ * what it cannot decide. A module whose only PascalCase exports are forwards
  * of another module's names — `export { X } from './y'` — is a barrel, not a
  * subject, at any depth: see `isBarrelModule`.
  *
@@ -193,6 +199,50 @@ function readBraceExportOrigins(source) {
 }
 
 /**
+ * Whether `name`'s own declaration in `source` has a shape a component could
+ * plausibly have: a function declaration, an arrow function, or a class that
+ * extends a base class. A plain object literal (`export const Tokens =
+ * {...}`), a call expression (`export const Schema = z.object({...})`), or a
+ * class with no `extends` are excluded — none of them render anything.
+ *
+ * This is a syntactic pattern match, not a parse: it looks for the shape
+ * anywhere `name`'s declaration reads in the source, not a scoped AST lookup.
+ * It can be fooled by a second, unrelated declaration of the same identifier
+ * elsewhere in the file (rare, and TypeScript itself would reject the
+ * redeclaration in most such cases).
+ *
+ * @param {string} source
+ * @param {string} name
+ * @returns {boolean}
+ */
+function isFunctionOrClassShaped(source, name) {
+  const patterns = [
+    new RegExp(`function\\s+${name}\\s*\\(`),
+    new RegExp(
+      `(?:const|let|var)\\s+${name}\\s*(?::[^=]+)?=\\s*(?:\\([^)]*\\)|[A-Za-z_$][\\w$]*)\\s*=>`
+    ),
+    new RegExp(`class\\s+${name}\\s+extends\\s+`),
+  ];
+  return patterns.some((pattern) => pattern.test(source));
+}
+
+/**
+ * Whether `source` shows any sign of building React elements imperatively —
+ * the only way a `.ts` file can be a component, since that extension does not
+ * permit JSX syntax at all. Requires both a `react` import and a call that
+ * looks like `createElement(...)`, so `React.createElement` and a destructured
+ * `createElement` both count, but a file that merely imports `react` for its
+ * types (or calls an unrelated `createElement`-named function of its own)
+ * does not.
+ *
+ * @param {string} source
+ * @returns {boolean}
+ */
+function hasCreateElementSignal(source) {
+  return /from\s+['"]react['"]/.test(source) && /\bcreateElement\s*\(/.test(source);
+}
+
+/**
  * PascalCase value exports of a module — the components it publishes.
  * SCREAMING_SNAKE constants and `export type` are excluded; both are exported
  * from component modules and neither is renderable.
@@ -204,13 +254,41 @@ function readBraceExportOrigins(source) {
  * `export default () => null;` or `export default function () {}`) is not a
  * shape this repo's components use today; it is not detected here.
  *
+ * `requireTsComponentShape` narrows the PascalCase-name heuristic for `.ts`
+ * files: a locally declared or locally re-exported name is only kept when its
+ * own declaration is function/arrow/class-extends shaped (see
+ * {@link isFunctionOrClassShaped}) AND the file shows a `createElement`
+ * signal (see {@link hasCreateElementSignal}). This is still a heuristic, not
+ * a type check — it cannot see through a component wrapped in a call
+ * expression (`export const Foo = memo(() => createElement('div'))` reads as
+ * a call, not an arrow, so it is excluded — a false negative, which fails
+ * closed: the module quietly does not demand a story rather than wrongly
+ * flagging it). It never applies to a *forwarded* name (`export { X } from
+ * './y'`) — the module that actually declares `X` is checked on its own
+ * terms when the walk reaches it.
+ *
+ * `.tsx` discovery is untouched: it keeps the plain PascalCase-name
+ * heuristic, with the same false-positive risk this narrowing exists to
+ * close for `.ts` — a `.tsx` file's real subjects are overwhelmingly actual
+ * components in practice, so tightening it further was not this ticket's
+ * scope.
+ *
  * @param {string} source
+ * @param {{ requireTsComponentShape?: boolean }} [options]
  * @returns {string[]}
  */
-export function readComponentExports(source) {
+export function readComponentExports(source, options = {}) {
+  const { requireTsComponentShape = false } = options;
   const declared = readDeclaredComponentNames(source);
   const { local, forwarded } = readBraceExportOrigins(source);
-  return [...new Set([...declared, ...local, ...forwarded])];
+  let ownNames = new Set([...declared, ...local]);
+  if (requireTsComponentShape) {
+    const hasReactSignal = hasCreateElementSignal(source);
+    ownNames = new Set(
+      [...ownNames].filter((name) => hasReactSignal && isFunctionOrClassShaped(source, name))
+    );
+  }
+  return [...new Set([...ownNames, ...forwarded])];
 }
 
 /**
@@ -250,12 +328,16 @@ function isBarrelModule(source) {
  * set the moment someone grouped it.
  *
  * `.ts` is included, not just `.tsx`, because a component can be declared
- * with `React.createElement` and never need JSX syntax at all. The heuristic
- * is the same PascalCase-export test `readComponentExports` already applies
- * to `.tsx`; it is not an "is this actually a component" check and cannot
- * be — it will treat a PascalCase-named non-component `.ts` export (an enum,
- * a class that is not a component, a constant object) as a subject the same
- * way it already would if that export lived in a `.tsx` file.
+ * with `React.createElement` and never need JSX syntax at all. A `.ts`
+ * export additionally has to look function/class-shaped and the file has to
+ * show a `createElement` signal (see {@link readComponentExports}'s
+ * `requireTsComponentShape`) — narrower than the plain PascalCase-name test
+ * `.tsx` still runs. It remains a heuristic, not an "is this actually a
+ * component" check: it can still be fooled (a component hidden behind a
+ * wrapping call expression reads as non-function-shaped and is silently
+ * excluded — a false negative, not a false positive), and `.tsx` files keep
+ * the original, looser PascalCase-only test with the same false-positive
+ * risk that test has always carried.
  *
  * A module is skipped as a subject when {@link isBarrelModule} says every
  * PascalCase name it exports is forwarded rather than declared — this is
@@ -275,8 +357,10 @@ function collectComponentModules(file, visited, modules) {
   visited.add(file);
 
   const source = readFileSync(file, 'utf8');
-  const isComponentFile = file.endsWith('.tsx') || file.endsWith('.ts');
-  if (isComponentFile && readComponentExports(source).length > 0 && !isBarrelModule(source)) {
+  const isTsxFile = file.endsWith('.tsx');
+  const isTsFile = !isTsxFile && file.endsWith('.ts');
+  const exports = readComponentExports(source, { requireTsComponentShape: isTsFile });
+  if ((isTsxFile || isTsFile) && exports.length > 0 && !isBarrelModule(source)) {
     modules.add(file);
   }
 
