@@ -64,23 +64,28 @@
  * governs its value — not the base's — is what actually renders. A variant
  * whose magnitude only grows the base further (`max-sm:h-16` on an
  * `h-11` base) is untouched: growth can never bring an axis under the floor.
- * This check is deliberately narrow to `h`/`w`/`size` — it does NOT extend
- * to a scoped variant shrinking a `before:-inset-*` expansion below what its
- * own box needs (`h-6 w-6 before:-inset-9 max-sm:before:-inset-0`); that
- * would need combining the scoped inset against the base box the same way
- * {@link isCompliant} does for the unprefixed case, which is real scope this
- * gate does not cover yet.
- * The scoped-shrink check is also narrow to a NUMERIC magnitude — a bare
- * spacing step or an arbitrary `px`/`rem` value. A scoped utility whose value
- * is not a pixel-comparable number (`sm:h-auto`, `sm:h-px`, `sm:h-1/2`,
- * `sm:h-[calc(100%-40px)]`) fails open: it proves nothing, in either
- * direction, so it is silently treated as "not a shrink" rather than flagged.
- * That is a stated limit, not an oversight — `auto`/a percentage/a `calc()`
- * expression is genuinely undecidable against a fixed 44px floor without a
- * layout engine, and this scanner is deliberately a text-only heuristic. It
- * is the same fail-open direction the base-evidence check already takes for
- * `w-11/12` and other non-absolute values, so an author relying on one of
- * these to shrink a control below 44px gets no warning here.
+ * The same shrink check applies to a scoped `before:-inset-*` variant: its
+ * own magnitude, combined with the element's OWN base box per axis exactly
+ * as {@link isCompliant} combines the unprefixed inset (`box + 2 * inset`),
+ * is what renders at the widths the variant governs. `h-6 w-6
+ * before:-inset-9 max-sm:before:-inset-0` proves 96px unprefixed (24 + 2*36)
+ * but only 24px below 640px, where the scoped `-inset-0` — not the
+ * unprefixed `-inset-9` — is what actually applies. A scoped inset that only
+ * grows the expansion further is not flagged, matching the growth-only
+ * exemption the `h`/`w`/`size` check already gives.
+ * The scoped-shrink check — both the `h`/`w`/`size` form and the inset form —
+ * is also narrow to a NUMERIC magnitude — a bare spacing step or an
+ * arbitrary `px`/`rem` value. A scoped utility whose value is not a
+ * pixel-comparable number (`sm:h-auto`, `sm:h-px`, `sm:h-1/2`,
+ * `sm:h-[calc(100%-40px)]`, `sm:before:-inset-px`) fails open: it proves
+ * nothing, in either direction, so it is silently treated as "not a shrink"
+ * rather than flagged. That is a stated limit, not an oversight —
+ * `auto`/a percentage/a `calc()` expression is genuinely undecidable against
+ * a fixed 44px floor without a layout engine, and this scanner is
+ * deliberately a text-only heuristic. It is the same fail-open direction the
+ * base-evidence check already takes for `w-11/12` and other non-absolute
+ * values, so an author relying on one of these to shrink a control below
+ * 44px gets no warning here.
  * Classes built up through a variable (`cn(baseClasses)`) are invisible to a
  * text scan and are reported as violations — false positives lean toward
  * "flag it", which a baseline absorbs for existing code and a human resolves
@@ -409,6 +414,35 @@ function hasUndersizedScopedVariant(tagText, prop) {
 }
 
 /**
+ * Does `tagText` carry a viewport-width-scoped `before:-inset-*` variant
+ * whose own magnitude, combined with the element's own base box per axis
+ * (`box + 2 * scopedInset`), falls below the 44px floor? The mirror of
+ * {@link hasUndersizedScopedVariant} for the pseudo-element expansion
+ * pattern: {@link isCompliant} combines an unprefixed `before:-inset-*` with
+ * the base box the same way (`box + 2 * inset`) to prove compliance, so a
+ * scoped inset that is smaller than the one the base relied on is exactly as
+ * real a shrink as a scoped `h`/`w` — at the widths it governs, ITS value is
+ * what renders, not the unprefixed inset's. `hBase`/`wBase` are the same
+ * base-box readings {@link isCompliant} already computed (size-combined,
+ * un-shrunk by a same-axis scoped `h`/`w`/`size`, which is checked
+ * separately) — the box the scoped inset is combined against. A scoped
+ * inset that only grows the expansion further (magnitude large enough that
+ * `box + 2 * scopedInset >= 44`) is not flagged, matching the growth-only
+ * exemption {@link hasUndersizedScopedVariant} already gives.
+ * @param {string} tagText
+ * @param {number | null} hBase
+ * @param {number | null} wBase
+ * @returns {boolean}
+ */
+function hasUndersizedScopedInset(tagText, hBase, wBase) {
+  if (hBase === null || wBase === null) return false;
+  const scopedInset = minPx(scopedEvidence(tagText, INSET_RE));
+  if (scopedInset === null) return false;
+  const expansion = scopedInset * 2;
+  return hBase + expansion < 44 || wBase + expansion < 44;
+}
+
+/**
  * `size-*` sets both axes at once: combine a `size` reading with a `h`/`w`
  * reading by taking whichever proves more, treating a missing reading as
  * "no evidence" rather than zero.
@@ -432,7 +466,10 @@ function combineWithSize(axis, size) {
  * can still be a ~20px-tall line of text, and a tall control with no width
  * evidence can be a single narrow glyph. Once the base clears the floor, a
  * same-axis viewport-width-scoped variant that itself sets a magnitude below
- * the floor still fails the element — see {@link hasUndersizedScopedVariant}.
+ * the floor still fails the element — see {@link hasUndersizedScopedVariant}
+ * for the `h`/`w`/`size` form and {@link hasUndersizedScopedInset} for a
+ * scoped `before:-inset-*` variant that shrinks the expansion below what the
+ * base box needs.
  * @param {string} tagText
  * @returns {boolean}
  */
@@ -452,7 +489,8 @@ function isCompliant(tagText) {
   return (
     !hasUndersizedScopedVariant(tagText, 'h') &&
     !hasUndersizedScopedVariant(tagText, 'w') &&
-    !hasUndersizedScopedVariant(tagText, 'size')
+    !hasUndersizedScopedVariant(tagText, 'size') &&
+    !hasUndersizedScopedInset(tagText, hBase, wBase)
   );
 }
 
@@ -810,6 +848,9 @@ function selfTest() {
     // A scoped max-h/max-w IS a real shrink — a ceiling caps the box below
     // its base size at the width the variant governs.
     '<button className="h-11 w-11 sm:max-h-6 sm:max-w-6" onClick={onClick}>Row</button>',
+    // The gap POPS-2224 closes: an unprefixed before:-inset-* proves 96px
+    // (24 + 2*36), but max-sm:before:-inset-0 renders 24px below 640px.
+    '<button className="h-6 w-6 before:-inset-9 max-sm:before:-inset-0" onClick={onClick}><XIcon /></button>',
   ].join('\n');
   const clean = [
     '<button className="size-11" onClick={onClick}><XIcon /></button>',
@@ -826,6 +867,11 @@ function selfTest() {
     // against an already-sufficient base.
     '<button className="h-11 w-11 sm:min-w-0" onClick={onClick}>Row</button>',
     '<button className="h-11 w-11 max-sm:min-w-0" onClick={onClick}>Row</button>',
+    // A scoped before:-inset-* whose magnitude shrinks relative to the
+    // unprefixed one but combined with the box still clears the floor.
+    '<button className="h-6 w-6 before:-inset-9 max-sm:before:-inset-4" onClick={onClick}><XIcon /></button>',
+    // A scoped before:-inset-* that only grows the expansion further.
+    '<button className="h-6 w-6 before:-inset-9 sm:before:-inset-12" onClick={onClick}><XIcon /></button>',
   ].join('\n');
 
   const dirtyHits = findViolations('pillars/x/app/src/A.tsx', dirty);
@@ -883,6 +929,8 @@ function selfTest() {
     ),
     'reports a sufficient base shrunk by a scoped max-h/max-w (a ceiling, a real shrink)':
       dirtyHits.some((v) => v.line === 22),
+    'reports a sufficient before:-inset-* expansion shrunk below 640px by max-sm:before:-inset-0':
+      dirtyHits.some((v) => v.line === 23),
     'stays silent on a button sized via size-11': cleanHits.every(
       (v) => v.line !== 1 // line 1 of `clean` carries size-11
     ),
@@ -901,6 +949,11 @@ function selfTest() {
     ),
     'stays silent on a scoped min-w-0 (max-sm: direction, a floor, not a shrink)': !cleanHits.some(
       (v) => v.line === 8
+    ),
+    'stays silent when a scoped before:-inset-* shrinks the magnitude but the expansion still clears the floor':
+      !cleanHits.some((v) => v.line === 9),
+    'stays silent when a scoped before:-inset-* only grows the expansion further': !cleanHits.some(
+      (v) => v.line === 10
     ),
     'a story is exempt': !isScannable('pillars/food/app/src/pages/X.stories.tsx'),
     'a test is exempt': !isScannable('pillars/food/app/src/pages/X.test.tsx'),
