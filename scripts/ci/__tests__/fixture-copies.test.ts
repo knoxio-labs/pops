@@ -1,11 +1,18 @@
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 import { describe, expect, it, vi } from 'vitest';
 
 import {
   checkCopies,
+  discoverFilesNamed,
+  findUndeclaredCopies,
   isFileNotFound,
   repoCopyReader,
   resolveCanonical,
   selfTestCopyHandling,
+  selfTestUndeclaredDiscovery,
 } from '../fixture-copies.mjs';
 
 const COPIES = Object.freeze([
@@ -181,5 +188,152 @@ describe('isFileNotFound', () => {
     expect(isFileNotFound(new Error('no code'))).toBe(false);
     expect(isFileNotFound(null)).toBe(false);
     expect(isFileNotFound('ENOENT')).toBe(false);
+  });
+});
+
+describe('discoverFilesNamed', () => {
+  // POPS-2206: neither guard ever asked the filesystem what copies exist —
+  // both only ever read paths a FixtureCopy[] declared. These plant an
+  // undeclared copy in a TEMP tree, never the real repo tree: a file planted
+  // for real under pillars/ would be visible to every other tree-scanning
+  // guard's own self-test running concurrently in `vitest run scripts/`.
+  let root: string;
+
+  function file(relPath: string, contents = '{}') {
+    const abs = join(root, relPath);
+    mkdirSync(join(abs, '..'), { recursive: true });
+    writeFileSync(abs, contents);
+  }
+
+  function setup() {
+    root = mkdtempSync(join(tmpdir(), 'fixture-discovery-'));
+  }
+
+  function teardown() {
+    rmSync(root, { recursive: true, force: true });
+  }
+
+  it('finds a declared-shape copy under a scanned root', () => {
+    setup();
+    try {
+      file('pillars/bfm/contracts/thing-v1.json');
+
+      expect(discoverFilesNamed(root, ['pillars', 'libs', 'clients'], 'thing-v1.json')).toEqual([
+        'pillars/bfm/contracts/thing-v1.json',
+      ]);
+    } finally {
+      teardown();
+    }
+  });
+
+  it('finds an undeclared copy at a location no shape-specific walk would visit', () => {
+    setup();
+    try {
+      file('pillars/bfm/contracts/thing-v1.json');
+      file('pillars/purchases/contracts/thing-v1.json', '{ "corrupted": true }');
+
+      expect(discoverFilesNamed(root, ['pillars', 'libs', 'clients'], 'thing-v1.json')).toEqual([
+        'pillars/bfm/contracts/thing-v1.json',
+        'pillars/purchases/contracts/thing-v1.json',
+      ]);
+    } finally {
+      teardown();
+    }
+  });
+
+  it('does not match a same-directory file with a different name', () => {
+    setup();
+    try {
+      file('pillars/bfm/contracts/thing-v1.json');
+      file('pillars/bfm/contracts/other-v1.json');
+
+      expect(discoverFilesNamed(root, ['pillars'], 'thing-v1.json')).toEqual([
+        'pillars/bfm/contracts/thing-v1.json',
+      ]);
+    } finally {
+      teardown();
+    }
+  });
+
+  it('skips node_modules, dot-directories and build output', () => {
+    setup();
+    try {
+      file('pillars/bfm/node_modules/dep/thing-v1.json');
+      file('pillars/bfm/.turbo/thing-v1.json');
+      file('pillars/bfm/dist/thing-v1.json');
+      file('pillars/bfm/contracts/thing-v1.json');
+
+      expect(discoverFilesNamed(root, ['pillars'], 'thing-v1.json')).toEqual([
+        'pillars/bfm/contracts/thing-v1.json',
+      ]);
+    } finally {
+      teardown();
+    }
+  });
+
+  it('only walks the given scan roots, not the whole tree', () => {
+    setup();
+    try {
+      file('scripts/ci/__tests__/thing-v1.json');
+      file('pillars/bfm/contracts/thing-v1.json');
+
+      expect(discoverFilesNamed(root, ['pillars', 'libs', 'clients'], 'thing-v1.json')).toEqual([
+        'pillars/bfm/contracts/thing-v1.json',
+      ]);
+    } finally {
+      teardown();
+    }
+  });
+
+  it('returns nothing for a scan root that does not exist, rather than throwing', () => {
+    setup();
+    try {
+      expect(discoverFilesNamed(root, ['pillars', 'libs', 'clients'], 'thing-v1.json')).toEqual([]);
+    } finally {
+      teardown();
+    }
+  });
+});
+
+describe('findUndeclaredCopies', () => {
+  it('reports nothing when discovery finds exactly the declared copies', () => {
+    const paths = COPIES.map((copy) => copy.path);
+
+    expect(findUndeclaredCopies(paths, COPIES)).toEqual([]);
+  });
+
+  it('does not flag the canonical copy — it is declared like any other', () => {
+    expect(findUndeclaredCopies([CANONICAL], COPIES)).toEqual([]);
+  });
+
+  it('names a discovered path that is not one of the declared copies', () => {
+    const planted = 'pillars/purchases/contracts/thing-v1.json';
+
+    expect(findUndeclaredCopies([...COPIES.map((c) => c.path), planted], COPIES)).toEqual([
+      planted,
+    ]);
+  });
+});
+
+describe('selfTestUndeclaredDiscovery', () => {
+  it('passes for a well-behaved copy set', () => {
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const logs = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+
+    expect(selfTestUndeclaredDiscovery(COPIES)).toBe(true);
+    expect(errors).not.toHaveBeenCalled();
+    expect(logs).toHaveBeenCalled();
+
+    errors.mockRestore();
+    logs.mockRestore();
+  });
+
+  it('fails loudly when handed a comparison that cannot report — proving it can fail', () => {
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    expect(selfTestUndeclaredDiscovery([])).toBe(false);
+    expect(errors.mock.calls.flat().join('\n')).toContain('no declared copy to derive a basename');
+
+    errors.mockRestore();
   });
 });
