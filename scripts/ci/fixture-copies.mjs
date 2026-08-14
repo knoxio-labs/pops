@@ -258,6 +258,47 @@ export function selfTestUndeclaredDiscovery(copies) {
 }
 
 /**
+ * Prove {@link findUndeclaredCopies} against the REAL tree: no file named
+ * `basename` sits under `scanRoots` outside `copies` in this repo, right now.
+ *
+ * {@link selfTestUndeclaredDiscovery} only proves the comparison mechanism
+ * against a fabricated discovered-path list — it never calls
+ * {@link discoverFilesNamed} at all, so it cannot see a stray copy actually
+ * present on disk. This is the leg `check-vendored-contracts.mjs`'s
+ * `selfTestLegSet` runs for the same reason: `findUnvendoredContracts(repoRoot)`
+ * there is called against the real tree, not a synthetic one, so a stray file
+ * genuinely on disk fails `--self-test` by path. This does the equivalent scan
+ * for a fixture copy set, without planting anything — {@link discoverFilesNamed}
+ * only reads; it never writes — so it carries none of the cross-suite
+ * concurrency risk {@link selfTestUndeclaredDiscovery}'s docstring describes:
+ * that risk is specific to a self-test PLANTING a file for real, not to
+ * reading the tree as it already stands.
+ *
+ * @param {string} repoRoot Absolute path to the repo root.
+ * @param {readonly string[]} scanRoots Repo-relative directories to walk.
+ * @param {string} basename Exact filename to match.
+ * @param {readonly FixtureCopy[]} copies
+ * @returns {boolean}
+ */
+export function selfTestRealTreeDiscovery(repoRoot, scanRoots, basename, copies) {
+  const discovered = discoverFilesNamed(repoRoot, scanRoots, basename);
+  const undeclared = findUndeclaredCopies(discovered, copies);
+  const ok = undeclared.length === 0;
+
+  if (!ok) {
+    console.error(
+      `SELF-TEST FAILED (real-tree discovery): an undeclared copy of ${basename} is on disk.`
+    );
+    for (const path of undeclared) console.error(`  undeclared: ${path}`);
+  } else {
+    console.log(
+      `self-test OK — no undeclared copy of ${basename} is on disk under ${scanRoots.join(', ')}.`
+    );
+  }
+  return ok;
+}
+
+/**
  * Whether a `readFileSync` rejection means the file is absent, as opposed to
  * present but unreadable.
  *
