@@ -6,6 +6,7 @@
  * sets `SQLITE_PATH` to the food pillar's dev DB.
  */
 import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import BetterSqlite3 from 'better-sqlite3';
@@ -20,7 +21,7 @@ const PACKAGE_ROOT = fileURLToPath(new URL('..', import.meta.url));
 let DB_PATH: string;
 try {
   DB_PATH = assertSeedTargetIsDev({
-    dbPath: process.env.SQLITE_PATH ?? './data/food.db',
+    dbPath: process.env.SQLITE_PATH ?? join(PACKAGE_ROOT, 'data', 'food.db'),
     packageRoot: PACKAGE_ROOT,
   });
 } catch (error) {

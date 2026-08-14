@@ -42,6 +42,8 @@ const selfBaseUrl = resolveSelfBaseUrl({
   processLabel: 'inventory-api',
 });
 
+const reconcileIntervalMs = resolveReconcileIntervalMs();
+
 const inventoryDb = openInventoryDb(resolveInventorySqlitePath());
 const app = createInventoryApiApp({
   inventoryDb,
@@ -53,8 +55,6 @@ const app = createInventoryApiApp({
 const server = app.listen(port, () => {
   console.warn(`[inventory-api] Listening on port ${port}`);
 });
-
-const reconcileIntervalMs = resolveReconcileIntervalMs();
 
 /**
  * Soft-URI reconciliation cron: resolves `home_inventory.purchase_transaction_uri`
