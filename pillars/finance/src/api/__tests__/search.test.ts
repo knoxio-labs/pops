@@ -182,3 +182,206 @@ describe('search — aggregation & empty query', () => {
     expect((await client().search.run({ query: { text: '   ' } })).hits).toEqual([]);
   });
 });
+
+/**
+ * `query.filters`: the contract advertises structured filters and the
+ * handler must apply them, not silently drop them. Each case below plants
+ * a row a naive text match would return, then proves a filter that should
+ * exclude it actually does — the shape of failure this suite is written
+ * against is a filter that arrives and changes nothing.
+ */
+describe('search — query.filters', () => {
+  it('narrows transactions by type, excluding a same-text match of a different type', async () => {
+    await client().transactions.create({
+      description: 'Widget purchase',
+      account: 'a',
+      amount: -10,
+      date: '2026-01-01',
+      type: 'purchase',
+    });
+    await client().transactions.create({
+      description: 'Widget refund',
+      account: 'a',
+      amount: 10,
+      date: '2026-01-02',
+      type: 'refund',
+    });
+
+    const { hits } = await client().search.run({
+      query: { text: 'widget', filters: [{ field: 'type', operator: 'eq', value: 'refund' }] },
+    });
+    const txHits = withScheme(hits, 'pops:finance/transaction/');
+    expect(txHits).toHaveLength(1);
+    expect(firstHit(txHits).data).toMatchObject({ description: 'Widget refund' });
+  });
+
+  it('narrows transactions by entityId', async () => {
+    await client().transactions.create({
+      description: 'Coffee run',
+      account: 'a',
+      amount: -5,
+      date: '2026-01-01',
+      type: 'purchase',
+      entityId: 'ent-cafe',
+    });
+    await client().transactions.create({
+      description: 'Coffee beans',
+      account: 'a',
+      amount: -12,
+      date: '2026-01-02',
+      type: 'purchase',
+      entityId: 'ent-grocer',
+    });
+
+    const { hits } = await client().search.run({
+      query: {
+        text: 'coffee',
+        filters: [{ field: 'entityId', operator: 'eq', value: 'ent-cafe' }],
+      },
+    });
+    const txHits = withScheme(hits, 'pops:finance/transaction/');
+    expect(txHits).toHaveLength(1);
+    expect(firstHit(txHits).data).toMatchObject({ description: 'Coffee run' });
+  });
+
+  it('narrows transactions by a date lower bound', async () => {
+    await client().transactions.create({
+      description: 'Rent January',
+      account: 'a',
+      amount: -100,
+      date: '2026-01-01',
+      type: 'purchase',
+    });
+    await client().transactions.create({
+      description: 'Rent February',
+      account: 'a',
+      amount: -100,
+      date: '2026-02-01',
+      type: 'purchase',
+    });
+
+    const { hits } = await client().search.run({
+      query: { text: 'rent', filters: [{ field: 'date', operator: 'gte', value: '2026-02-01' }] },
+    });
+    const txHits = withScheme(hits, 'pops:finance/transaction/');
+    expect(txHits).toHaveLength(1);
+    expect(firstHit(txHits).data).toMatchObject({ description: 'Rent February' });
+  });
+
+  it('narrows transactions by a date upper bound', async () => {
+    await client().transactions.create({
+      description: 'Rent January',
+      account: 'a',
+      amount: -100,
+      date: '2026-01-01',
+      type: 'purchase',
+    });
+    await client().transactions.create({
+      description: 'Rent February',
+      account: 'a',
+      amount: -100,
+      date: '2026-02-01',
+      type: 'purchase',
+    });
+
+    const { hits } = await client().search.run({
+      query: { text: 'rent', filters: [{ field: 'date', operator: 'lte', value: '2026-01-31' }] },
+    });
+    const txHits = withScheme(hits, 'pops:finance/transaction/');
+    expect(txHits).toHaveLength(1);
+    expect(firstHit(txHits).data).toMatchObject({ description: 'Rent January' });
+  });
+
+  it('narrows budgets by period, without constraining transactions or wishlist', async () => {
+    await client().budgets.create({ category: 'Travel fund', period: 'Monthly' });
+    await client().budgets.create({ category: 'Travel savings', period: 'Yearly' });
+
+    const { hits } = await client().search.run({
+      query: { text: 'travel', filters: [{ field: 'period', operator: 'eq', value: 'Yearly' }] },
+    });
+    const budgetHits = hits.filter((h) => h.uri.startsWith('/budgets/'));
+    expect(budgetHits).toHaveLength(1);
+    expect(firstHit(budgetHits).data).toMatchObject({ category: 'Travel savings' });
+  });
+
+  it('narrows budgets by active', async () => {
+    await client().budgets.create({ category: 'Groceries active', active: true });
+    await client().budgets.create({ category: 'Groceries inactive', active: false });
+
+    const { hits } = await client().search.run({
+      query: {
+        text: 'groceries',
+        filters: [{ field: 'active', operator: 'eq', value: 'true' }],
+      },
+    });
+    const budgetHits = hits.filter((h) => h.uri.startsWith('/budgets/'));
+    expect(budgetHits).toHaveLength(1);
+    expect(firstHit(budgetHits).data).toMatchObject({ category: 'Groceries active' });
+  });
+
+  it('narrows wishlist by priority', async () => {
+    await client().wishlist.create({ item: 'Camera lens', priority: 'Soon' });
+    await client().wishlist.create({ item: 'Camera bag', priority: 'Dreaming' });
+
+    const { hits } = await client().search.run({
+      query: {
+        text: 'camera',
+        filters: [{ field: 'priority', operator: 'eq', value: 'Dreaming' }],
+      },
+    });
+    const wishHits = hits.filter((h) => h.uri === '/finance/wishlist');
+    expect(wishHits).toHaveLength(1);
+    expect(firstHit(wishHits).data).toMatchObject({ item: 'Camera bag' });
+  });
+
+  it('rejects an unknown filter field at the schema before any handler runs', async () => {
+    await expect(
+      client().search.run({
+        query: { text: 'x', filters: [{ field: 'notAField', operator: 'eq', value: 'x' }] },
+      })
+    ).rejects.toMatchObject({ status: 400 });
+  });
+
+  it('rejects a field/operator pairing the field does not support, naming both halves', async () => {
+    await expect(
+      client().search.run({
+        query: { text: 'x', filters: [{ field: 'type', operator: 'gte', value: 'purchase' }] },
+      })
+    ).rejects.toMatchObject({ status: 400 });
+  });
+
+  it('rejects a value the field cannot hold', async () => {
+    await expect(
+      client().search.run({
+        query: { text: 'x', filters: [{ field: 'type', operator: 'eq', value: 'shipped' }] },
+      })
+    ).rejects.toMatchObject({ status: 400 });
+  });
+
+  it('rejects two conflicting equality filters on the same field rather than picking one', async () => {
+    await expect(
+      client().search.run({
+        query: {
+          text: 'x',
+          filters: [
+            { field: 'type', operator: 'eq', value: 'purchase' },
+            { field: 'type', operator: 'eq', value: 'refund' },
+          ],
+        },
+      })
+    ).rejects.toMatchObject({ status: 400 });
+  });
+
+  it('an empty filter list behaves exactly like no filters', async () => {
+    await client().transactions.create({
+      description: 'Unfiltered widget',
+      account: 'a',
+      amount: -1,
+      date: '2026-01-01',
+      type: 'purchase',
+    });
+
+    const { hits } = await client().search.run({ query: { text: 'widget', filters: [] } });
+    expect(withScheme(hits, 'pops:finance/transaction/')).toHaveLength(1);
+  });
+});
