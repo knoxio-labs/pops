@@ -25,7 +25,7 @@ One scan is one receipt and one call. `VNDocumentCameraViewController` collects 
 Three consequences follow, and each is enforced on the handset rather than discovered from a rejection:
 
 - **At most `ReceiptPart.maxPerReceipt` pages.** The BFM refuses more. A longer scan is refused here, with the count, before any bytes are sent.
-- **All of it or none of it.** If a page cannot be encoded, the whole scan is refused. A receipt short a page still adds up to *a* total, just not the printed one, so a short upload would come back as a confident wrong reading.
+- **All of it or none of it.** If a page cannot be encoded, the whole scan is refused. A receipt short a page still adds up to _a_ total, just not the printed one, so a short upload would come back as a confident wrong reading.
 - **Pages are bounded before they are sent.** `ReceiptPageBudget` caps a page's longest edge and its JPEG quality, so eight full-resolution photographs are not what somebody standing in a shop tries to upload.
 
 ## Why the camera is presented modally and never inside a navigation stack

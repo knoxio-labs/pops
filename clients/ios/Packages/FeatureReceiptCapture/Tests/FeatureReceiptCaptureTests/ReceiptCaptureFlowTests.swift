@@ -1,6 +1,7 @@
 import AppCore
 import AppCoreFakes
 import Foundation
+import SwiftUI
 import Testing
 
 @testable import FeatureReceiptCapture
@@ -259,5 +260,63 @@ internal struct ReceiptCaptureFlowTests {
         // never been sent.
         #expect(second.id != first.id)
         #expect(second.parts.count == 2)
+    }
+
+    /// The property above — two submissions get two different IDs — is not
+    /// what actually protects anybody. `ReceiptCaptureView` has to key its
+    /// `ReceiptResultView` on that ID with `.id(submission.id)`, or SwiftUI
+    /// treats the second submission as the same view as the first: the
+    /// `@State`-boxed result model never resets, `.task` never reruns, and
+    /// the screen keeps showing the first receipt's outcome for a second
+    /// receipt that was never uploaded. This test exercises the view, not the
+    /// model, so it fails if that key is ever dropped.
+    ///
+    /// `ImageRenderer` cannot rasterise past a `.task` (see
+    /// `ReceiptResultRenderingTests`), so this does not compare pixels. It
+    /// reuses one `ImageRenderer` across two submissions — the documented way
+    /// to exercise SwiftUI's view-identity/state machinery outside a real
+    /// host — and asserts through the repository the screen submits to:
+    /// whether the second submission's `.task` ever ran at all.
+    @Test("a second receipt's result screen submits again rather than reusing the first one's")
+    func aSecondReceiptResubmitsThroughTheView() async {
+        let repository = ScriptedReceiptCaptureRepository(
+            script: [
+                .outcome(.unreadable(receiptURIs: [], reason: "first")),
+                .outcome(.unreadable(receiptURIs: [], reason: "second")),
+            ])
+        let model = ReceiptCaptureViewModel(
+            dependencies: .fake(receiptCapture: repository),
+            camera: StubCameraAuthorization(standing: .authorized))
+
+        model.didCapture(Self.pages(1), from: 1)
+        let renderer = ImageRenderer(
+            content: ReceiptCaptureView(model: model).frame(width: 320, height: 700))
+        renderer.scale = 1
+        _ = renderer.cgImage
+        await repository.waitUntilCalled(1)
+
+        model.captureAnother()
+        model.didCapture(Self.pages(2), from: 2)
+        renderer.content = ReceiptCaptureView(model: model).frame(width: 320, height: 700)
+        _ = renderer.cgImage
+
+        // A bounded backstop, not a poll: the success path is the
+        // genuinely-signalled `waitUntilCalled` continuation. This only keeps
+        // a regression that never submits the second receipt from hanging
+        // the suite instead of failing it.
+        await withTaskGroup(of: Void.self) { group in
+            group.addTask { await repository.waitUntilCalled(2) }
+            group.addTask { try? await Task.sleep(for: .seconds(2)) }
+            await group.next()
+            group.cancelAll()
+        }
+
+        #expect(
+            await repository.callCount == 2,
+            """
+            the second receipt never reached the repository — the result screen kept the first \
+            submission's identity instead of starting a fresh one
+            """)
+        #expect(await repository.received.map(\.count) == [1, 2])
     }
 }
