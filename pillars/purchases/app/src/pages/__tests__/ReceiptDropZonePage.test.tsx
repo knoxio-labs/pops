@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -54,8 +54,30 @@ function frame(name: string, bytes: string, type = 'image/jpeg'): File {
   return new File([bytes], name, { type });
 }
 
+/** Dropped from the desktop — the path the input's `accept` cannot filter. */
+function dropOnZone(files: File[]): void {
+  const zone = dropZoneInput().closest('[role="button"]');
+  if (zone === null) throw new Error('the drop zone rendered no drop target');
+  fireEvent.drop(zone, { dataTransfer: { files } });
+}
+
 async function submit(user: ReturnType<typeof userEvent.setup>): Promise<void> {
   await user.click(screen.getByRole('button', { name: enAUPurchases['receipts.action.submit'] }));
+}
+
+const RAW_CATALOG_KEY = /receipts\.[a-zA-Z]/;
+
+/**
+ * `aria-label` values a screen reader reads but `document.body.textContent`
+ * never includes, since an attribute carries no text node of its own. A key
+ * i18next echoes back unresolved (`receipts.parts.moveDown`) is exactly as
+ * wrong here as it is in visible copy, and this is the only query that can
+ * catch it.
+ */
+function leakedAriaLabels(): string[] {
+  return Array.from(document.body.querySelectorAll('[aria-label]'))
+    .map((element) => element.getAttribute('aria-label') ?? '')
+    .filter((label) => RAW_CATALOG_KEY.test(label));
 }
 
 function sentParts(): { mediaType: string; dataBase64: string }[] {
@@ -309,10 +331,12 @@ describe('ReceiptDropZonePage — staging what is sent', () => {
     expect(screen.getByText(enAUPurchases['receipts.parts.empty'])).toBeVisible();
   });
 
+  // Dragged in rather than chosen: the dialog's own accept filter never sees a
+  // dragged file, which is the only way an unaccepted one still gets this far.
   it('names a file the upload cannot read and never puts it on the wire', async () => {
     const user = renderPage();
 
-    await user.upload(dropZoneInput(), [
+    dropOnZone([
       frame('till.heic', 'bytes', 'image/heic'),
       frame('invoice.pdf', 'bytes', 'application/pdf'),
     ]);
@@ -380,9 +404,7 @@ describe('ReceiptDropZonePage — staging what is sent', () => {
     expect(await screen.findByText('till.jpg')).toBeVisible();
     await submit(user);
 
-    expect(await screen.findByRole('status')).toHaveTextContent(
-      enAUPurchases['receipts.status.uploading']
-    );
+    expect(await screen.findByText(enAUPurchases['receipts.status.uploading'])).toBeVisible();
     expect(
       screen.getByRole('button', { name: enAUPurchases['receipts.action.submit'] })
     ).toBeDisabled();
@@ -692,9 +714,8 @@ describe('ReceiptDropZonePage — the other answers', () => {
       },
     });
 
-    const alert = await screen.findByRole('alert');
-    expect(within(alert).getByText(enAUPurchases['receipts.refused.title'])).toBeVisible();
-    expect(within(alert).getByText('The upload is not a valid image/jpeg file')).toBeVisible();
+    expect(await screen.findByText(enAUPurchases['receipts.refused.title'])).toBeVisible();
+    expect(screen.getByText('The upload is not a valid image/jpeg file')).toBeVisible();
     expect(screen.queryByText(enAUPurchases['receipts.duplicate.title'])).toBeNull();
   });
 
@@ -706,9 +727,8 @@ describe('ReceiptDropZonePage — the other answers', () => {
       },
     });
 
-    const alert = await screen.findByRole('alert');
     expect(
-      within(alert).getByText('No vision model is configured; set ANTHROPIC_API_KEY')
+      await screen.findByText('No vision model is configured; set ANTHROPIC_API_KEY')
     ).toBeVisible();
   });
 
@@ -747,6 +767,28 @@ describe('ReceiptDropZonePage — the other answers', () => {
     await submit(user);
 
     expect(await screen.findByText(enAUPurchases[settles])).toBeVisible();
-    expect(document.body.textContent).not.toMatch(/receipts\.[a-zA-Z]/);
+    expect(document.body.textContent).not.toMatch(RAW_CATALOG_KEY);
+    expect(leakedAriaLabels()).toEqual([]);
+  });
+
+  // The staged-parts list carries two catalog keys that name no visible text
+  // — `ariaLabel` on the `<ol>` itself and `moveDown` on the second button —
+  // so `leakedAriaLabels` above is the only guard that would ever catch a
+  // typo in either. Asserted by value here as well, so a rename that breaks
+  // the catalog lookup fails loudly rather than as a silent key echo.
+  it('names the staged-parts list and its move-later control from the catalog', async () => {
+    const user = renderPage();
+
+    await user.upload(dropZoneInput(), [frame('a.jpg', 'first'), frame('b.jpg', 'second')]);
+    expect(await screen.findByText('b.jpg')).toBeVisible();
+
+    expect(
+      screen.getByRole('list', { name: enAUPurchases['receipts.parts.ariaLabel'] })
+    ).toBeVisible();
+    expect(
+      screen.getByRole('button', {
+        name: enAUPurchases['receipts.parts.moveDown'].replace('{{name}}', 'a.jpg'),
+      })
+    ).toBeVisible();
   });
 });

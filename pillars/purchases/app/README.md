@@ -37,23 +37,21 @@ Confirming one and leaving the rest would pin half a partition.
 This is narrower than POPS-241 describes, and the page says so in its own copy
 rather than implying otherwise.
 
-| the view calls it | it calls                  | which does                                                 |
-| ----------------- | ------------------------- | ---------------------------------------------------------- |
-| Accept            | `POST /reconcile/confirm` | sets `confirmedAt`, pinning the link against re-derivation |
-| Reject            | `POST /reconcile/unlink`  | deletes the link, and remembers nothing                    |
+| the view calls it | it calls                  | which does                                                         |
+| ----------------- | ------------------------- | ------------------------------------------------------------------ |
+| Accept            | `POST /reconcile/confirm` | pins the link, and writes the merchant rule the pin was made under |
+| Reject            | `POST /reconcile/unlink`  | deletes the link, and remembers nothing                            |
 
-**No `purchase_match_rule` is written.** Nothing in the pillar writes that
-table — the ticket's "accepting writes a rule, rejecting feeds it negatively"
-is unbuilt on the server, not skipped here, and inventing a client-side stand-in
-would put a second rule model in front of the one POPS-1309 has to read. That
-half is POPS-1898, which blocks POPS-1309.
+**The view has not caught up with the server.** `POST /reconcile/reject` now
+exists and is the durable decision — it records the pairing so no later sweep
+proposes it again — while `unlink` stays deliberately temporary. This page still
+calls `unlink`, so its Reject button is still the un-pin rather than the
+rejection, and `reconcile.action.caveat` still describes that honestly. Moving
+it across, and surfacing the rule a confirm reports back, is POPS-2008.
 
-**There is no reject endpoint**, by an explicit decision in
-`src/contract/rest-reconcile.ts`: a reject the next sweep silently re-derives is
-worse than no reject. `unlink` is honest about being temporary, so a rejected
-charge comes back as unexplained rather than leaving the queue — which is why
-the cursor is keyed by charge id and parks on the successor before the refetch
-lands, instead of counting indexes.
+That is also why the cursor is keyed by charge id and parks on the successor
+before the refetch lands, instead of counting indexes: an unlinked charge comes
+back as unexplained rather than leaving the queue.
 
 An unexplained charge (no proposals) has nothing to confirm or delete, so both
 keys refuse rather than firing a request that would 404. Nothing can link it by
@@ -140,6 +138,22 @@ inside the message, which is shown as sent.
 **There is no purchase to open.** Nothing in this app renders a single
 purchase, so the created panel names that absence instead of offering a link
 to a route that does not exist (POPS-1948).
+
+**A too-large upload answers the same shape as any other refusal.** The
+pillar's `express.json()` limit rejects an oversized body before the contract
+ever sees it; `jsonBodyErrorHandler`
+(`pillars/purchases/src/api/middleware/json-body-error.ts`) catches that
+rejection and answers `413` with the contract's own `{ message, code }` body
+instead of Express's default HTML error page, which the generated client
+cannot parse into a readable `error`.
+
+**One live region, on the wrapper.** `ReceiptDropZonePage` wraps the whole
+outcome panel in a single `aria-live="polite"` region rather than also
+marking individual outcomes `role="status"`/`role="alert"` — a live region
+nested inside another announces unpredictably in several screen readers. The
+wrapper is the one kept because it is the only mechanism that reaches every
+outcome (`created`, `duplicate`, `needs-review`, `unreadable` never had a
+role of their own; only `uploading` and `refused` did).
 
 ## Layout
 

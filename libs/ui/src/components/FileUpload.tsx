@@ -15,10 +15,17 @@ import {
   useRef,
   useState,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { cn } from '../lib/utils';
 import { DropZone, FileList } from './FileUpload.parts';
-import { validateFiles } from './FileUpload.utils';
+import {
+  describeFileValidationError,
+  validateFiles,
+  type FileValidationError,
+} from './FileUpload.utils';
+
+export type { FileValidationError, FileValidationErrorReason } from './FileUpload.utils';
 
 export interface FileUploadProps {
   multiple?: boolean;
@@ -26,11 +33,24 @@ export interface FileUploadProps {
   maxSize?: number;
   maxFiles?: number;
   onFilesSelected: (files: File[]) => void;
-  onError?: (message: string) => void;
+  /**
+   * Called for each refused file. `error.message` is the library's own
+   * translated default (from the `ui` catalog) — a consumer that wants its
+   * own wording ignores it and builds a message from `error.type` and the
+   * rejected file / bound instead.
+   */
+  onError?: (error: FileValidationError) => void;
   files?: File[];
   onRemoveFile?: (index: number) => void;
   captureSlot?: ReactNode;
   prompt?: ReactNode;
+  /**
+   * The line under the prompt naming what may be dropped. Left out, it is the
+   * `ui` catalog's `Accepts <the raw accept attribute>` — readable enough for a
+   * generic drop zone, redundant beside a page that already spells the same
+   * list out in words. Pass `null` to drop it, or a node to phrase it.
+   */
+  acceptHint?: ReactNode;
   disabled?: boolean;
   className?: string;
 }
@@ -55,6 +75,7 @@ function useFileHandlers({
 > & {
   setIsDragging: (v: boolean) => void;
 }): FileHandlers {
+  const { t } = useTranslation('ui');
   const handleFiles = useCallback(
     (list: FileList | null) => {
       if (!list || list.length === 0) return;
@@ -64,11 +85,13 @@ function useFileHandlers({
         accept,
         maxSize,
         maxFiles,
-        onError,
+        onError:
+          onError &&
+          ((reason) => onError({ ...reason, message: describeFileValidationError(t, reason) })),
       });
       if (valid.length > 0) onFilesSelected(valid);
     },
-    [multiple, accept, maxSize, maxFiles, onError, onFilesSelected]
+    [multiple, accept, maxSize, maxFiles, onError, onFilesSelected, t]
   );
   return {
     handleDrop: (e) => {
@@ -94,6 +117,7 @@ export function FileUpload(props: FileUploadProps) {
     onRemoveFile,
     captureSlot,
     prompt,
+    acceptHint,
     disabled,
     className,
     maxSize,
@@ -124,6 +148,7 @@ export function FileUpload(props: FileUploadProps) {
         multiple={multiple}
         accept={accept}
         prompt={prompt}
+        acceptHint={acceptHint}
         onDrop={handleDrop}
         onChange={handleChange}
       />

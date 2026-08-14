@@ -85,10 +85,11 @@ function needsOf(job: Record<string, unknown> | undefined): string[] {
 }
 
 describe('the helper proves itself', () => {
-  // The subprocess's own timeout below is 120s; vitest's it()-level default is
-  // only 5s, well under what this legitimately takes under concurrent
-  // CI/dev-machine load. Match the two rather than let the outer one cut off
-  // first.
+  // The self-test's 19 cases each build and diff a throwaway git repository, so
+  // this one call is ~40 subprocess spawns and lands either side of Vitest's 5s
+  // default depending on what else the machine is doing — and it sits in the
+  // pre-push hook, where a bad draw blocks every push. Match the outer test
+  // budget to the inner subprocess cap so the outer one never cuts off first.
   const SELF_TEST_TIMEOUT_MS = 120_000;
 
   it(

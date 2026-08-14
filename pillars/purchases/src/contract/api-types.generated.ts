@@ -116,7 +116,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Pin a link so re-derivation never revises it */
+    /** Pin a link and learn the merchant descriptor behind it */
     post: operations['reconcile.confirm'];
     delete?: never;
     options?: never;
@@ -158,6 +158,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/reconcile/reject': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Rule a pairing out for good, so no later sweep proposes it again */
+    post: operations['reconcile.reject'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/reconcile/sweep': {
     parameters: {
       query?: never;
@@ -184,7 +201,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Remove a link. The next sweep may re-derive it — see POPS-1309 */
+    /** Remove a link without recording a decision. A later sweep may re-derive it */
     post: operations['reconcile.unlink'];
     delete?: never;
     options?: never;
@@ -1330,6 +1347,7 @@ export interface operations {
         };
         content: {
           'application/json': {
+            matchRuleId: string | null;
             /** @enum {boolean} */
             ok: true;
           };
@@ -1468,12 +1486,56 @@ export interface operations {
                 confidence: number;
                 /** @enum {string} */
                 linkType: 'exact' | 'split' | 'combined' | 'partial' | 'rule' | 'manual';
+                transactionDescription: string | null;
                 transactionUri: string;
               }[];
               purchaseId: string;
               source: string;
               sourceOrderId: string | null;
             }[];
+          };
+        };
+      };
+    };
+  };
+  'reconcile.reject': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          chargeId: string;
+          transactionUri: string;
+        };
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            /** @enum {boolean} */
+            ok: true;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
           };
         };
       };

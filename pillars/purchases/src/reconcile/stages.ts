@@ -17,6 +17,21 @@ import {
 } from './types.js';
 import { isWithinWindow, settlementWindowFor } from './window.js';
 
+/**
+ * What blocking needs beyond the charge itself.
+ *
+ * One object rather than two arguments because every stage that narrows a
+ * candidate pool passes the whole thing straight through, and a rejection
+ * set that has to be looked up by the caller is one a caller can forget to
+ * look up — which fails silently, as a pairing quietly proposed again.
+ */
+export interface BlockingContext {
+  /** Settlement window for a source that declares none. */
+  readonly defaultWindowDays: number;
+  /** Pairings a human ruled out, indexed by charge. */
+  readonly rejected: ReadonlyMap<string, ReadonlySet<string>>;
+}
+
 export type MatchOutcome =
   | { kind: 'linked'; links: readonly ProposedLink[] }
   | { kind: 'review'; reason: ChargeForReview['reason'] };
@@ -57,23 +72,34 @@ export function orderedTransactions(
  * negative transaction in the window count as a candidate — routing it to
  * `ambiguous` review as though the problem were too much evidence rather
  * than a charge that cannot be matched at all.
+ *
+ * Rejections are the one input here that came from a human rather than
+ * from the data. They belong at this stage because blocking is the only
+ * place a candidate can leave without the ladder forming an opinion about
+ * the PAIRING: the transaction is not linked and not claimed, so it stays
+ * available to the charge that actually settles it. The charge still
+ * reaches an outcome of its own — with nothing else in range it reports
+ * `no-candidate`, which is the honest reading of a window whose only
+ * candidate the operator has ruled out.
  */
 export function eligibilityFor(
   charge: SolvableCharge,
-  defaultWindowDays: number
+  blocking: BlockingContext
 ): (transaction: SolvableTransaction) => boolean {
   if (charge.amountCents === 0) return () => false;
 
   const window = settlementWindowFor(
     charge.orderedAt,
-    charge.settlementWindowDays ?? defaultWindowDays
+    charge.settlementWindowDays ?? blocking.defaultWindowDays
   );
   if (window === null) return () => false;
 
   const wantPositive = charge.amountCents > 0;
   const matchesDescriptor = descriptorMatcherFor(charge.descriptorPattern);
+  const rejected = blocking.rejected.get(charge.id);
 
   return (transaction) => {
+    if (rejected?.has(transaction.uri) === true) return false;
     if (!isWithinWindow(transaction.date, window)) return false;
     if (transaction.amountCents === 0) return false;
     if (transaction.amountCents > 0 !== wantPositive) return false;
@@ -86,9 +112,9 @@ export function candidatesFor(
   charge: SolvableCharge,
   transactions: readonly SolvableTransaction[],
   claimed: ReadonlySet<string>,
-  defaultWindowDays: number
+  blocking: BlockingContext
 ): readonly SolvableTransaction[] {
-  const accepts = eligibilityFor(charge, defaultWindowDays);
+  const accepts = eligibilityFor(charge, blocking);
   return orderedTransactions(
     transactions.filter((transaction) => !claimed.has(transaction.uri) && accepts(transaction))
   );
@@ -180,6 +206,7 @@ export function linkOf(
   return {
     chargeId: charge.id,
     transactionUri: transaction.uri,
+    transactionDescription: transaction.description,
     amountCents,
     linkType,
     confidence: STAGE_CONFIDENCE[linkType],

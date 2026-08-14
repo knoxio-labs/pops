@@ -42,7 +42,12 @@ KEEP_UP="${KEEP_UP:-0}"
 # Trimmed before it is checked, so a key that is only whitespace fails the
 # guard below rather than being sent as one — matching what the ingest CLI
 # does, and keeping "refuses to start without one" true for both callers.
-API_KEY="$(printf '%s' "${POPS_INTERNAL_API_KEY:-}" | tr -d '[:space:]')"
+#
+# Exported under its own name (not copied into a second variable) so
+# `in_purchases` below can forward it to `docker compose exec` by name only —
+# see the comment there for why that is the point.
+POPS_INTERNAL_API_KEY="$(printf '%s' "${POPS_INTERNAL_API_KEY:-}" | tr -d '[:space:]')"
+export POPS_INTERNAL_API_KEY
 
 # Unique per run so a re-run is not a 409 against the previous run's data.
 STAMP="$(date +%s)"
@@ -55,7 +60,7 @@ TXN_DATE="$(date -u +%Y-%m-%d)"
 log() { printf '\n\033[1m▸ %s\033[0m\n' "$*"; }
 fail() { printf '\n\033[31m✗ %s\033[0m\n' "$*" >&2; exit 1; }
 
-if [[ -z "$API_KEY" ]]; then
+if [[ -z "$POPS_INTERNAL_API_KEY" ]]; then
   fail "set POPS_INTERNAL_API_KEY to a service-account key granted purchases.source and purchases.purchase"
 fi
 
@@ -73,12 +78,16 @@ trap cleanup EXIT
 # through the Docker network rather than a published port, because the
 # network is part of what is under test.
 #
-# The key travels as an environment variable rather than interpolated into
-# the `node -e` source below, so it does not land in the container's process
-# arguments.
+# `-e POPS_INTERNAL_API_KEY` names the variable and no value — `docker
+# compose exec` then forwards the value from this process's own environment
+# (exported above) rather than taking one on the command line. That keeps the
+# key out of BOTH process lists it could otherwise land in: the container's,
+# which `-e VAR=value` already avoided, and this host's, where `-e
+# VAR=value` would still put the plaintext key in `docker compose`'s own argv
+# — readable by any local user via `ps` for as long as the exec runs.
 in_purchases() {
   docker compose -f "$COMPOSE_FILE" exec -T \
-    -e "POPS_INTERNAL_API_KEY=$API_KEY" purchases-api "$@"
+    -e POPS_INTERNAL_API_KEY purchases-api "$@"
 }
 
 wait_for_health() {

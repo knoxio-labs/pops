@@ -312,6 +312,47 @@ describe('decisions', () => {
     expect(full.body.accounting.matchedCents).toBe(4128);
   });
 
+  it('names the rule a confirm learned', async () => {
+    const chargeId = await seedProposal();
+
+    const res = await request(app)
+      .post('/reconcile/confirm')
+      .send({ chargeId, transactionUri: TXN })
+      .expect(200);
+
+    // A bare `{ ok: true }` cannot tell a decision that taught the matcher
+    // from one whose descriptor carried nothing to learn.
+    expect(res.body).toEqual({ ok: true, matchRuleId: expect.any(String) });
+  });
+
+  it('keeps a rejected pairing out of every later sweep', async () => {
+    const chargeId = await seedProposal();
+
+    await request(app)
+      .post('/reconcile/reject')
+      .send({ chargeId, transactionUri: TXN })
+      .expect(200);
+    // The same finance window the proposal came from. An unlink here would
+    // hand back the identical proposal.
+    await request(app).post('/reconcile/sweep').send({}).expect(200);
+
+    const res = await request(app).get('/reconcile/queue').expect(200);
+    expect(res.body.items[0].proposed).toEqual([]);
+  });
+
+  it('404s a reject for a link that is already gone', async () => {
+    const chargeId = await seedProposal();
+    await request(app)
+      .post('/reconcile/reject')
+      .send({ chargeId, transactionUri: TXN })
+      .expect(200);
+
+    await request(app)
+      .post('/reconcile/reject')
+      .send({ chargeId, transactionUri: TXN })
+      .expect(404);
+  });
+
   it('removes a link on unlink', async () => {
     const chargeId = await seedProposal();
     await request(app)
