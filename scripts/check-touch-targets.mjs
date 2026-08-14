@@ -56,36 +56,44 @@
  * cascade order in general — it cannot tell whether a scoped variant applies
  * a class through cn() or another indirection the way a base evidence class
  * built through a variable can hide from it. It DOES catch the one cascade
- * fact cheap enough to check without simulating specificity: a same-axis
- * sizing utility gated behind a viewport-width variant (either direction —
- * `max-sm:h-6` shrinks below 640px, `sm:h-6` shrinks at and above 640px)
- * whose OWN magnitude is below the 44px floor is flagged even when the
- * unprefixed base alone would pass, because at the widths that variant
- * governs its value — not the base's — is what actually renders. A variant
- * whose magnitude only grows the base further (`max-sm:h-16` on an
- * `h-11` base) is untouched: growth can never bring an axis under the floor.
- * The same shrink check applies to a scoped `before:-inset-*` variant: its
- * own magnitude, combined with the element's OWN base box per axis exactly
- * as {@link isCompliant} combines the unprefixed inset (`box + 2 * inset`),
- * is what renders at the widths the variant governs. `h-6 w-6
- * before:-inset-9 max-sm:before:-inset-0` proves 96px unprefixed (24 + 2*36)
- * but only 24px below 640px, where the scoped `-inset-0` — not the
- * unprefixed `-inset-9` — is what actually applies. A scoped inset that only
- * grows the expansion further is not flagged, matching the growth-only
- * exemption the `h`/`w`/`size` check already gives.
- * The scoped-shrink check — both the `h`/`w`/`size` form and the inset form —
- * is also narrow to a NUMERIC magnitude — a bare spacing step or an
- * arbitrary `px`/`rem` value. A scoped utility whose value is not a
- * pixel-comparable number (`sm:h-auto`, `sm:h-px`, `sm:h-1/2`,
- * `sm:h-[calc(100%-40px)]`, `sm:before:-inset-px`) fails open: it proves
- * nothing, in either direction, so it is silently treated as "not a shrink"
- * rather than flagged. That is a stated limit, not an oversight —
- * `auto`/a percentage/a `calc()` expression is genuinely undecidable against
- * a fixed 44px floor without a layout engine, and this scanner is
- * deliberately a text-only heuristic. It is the same fail-open direction the
- * base-evidence check already takes for `w-11/12` and other non-absolute
- * values, so an author relying on one of these to shrink a control below
- * 44px gets no warning here.
+ * fact cheap enough to check without simulating specificity in general: for
+ * EACH viewport-width regime a tag mentions (the unprefixed base, plus one
+ * regime per distinct `sm:`/`max-sm:`/`[@media…]:` segment it carries scoped
+ * `h`/`w`/`size`/inset evidence for — see {@link isCompliantAtRegime}), the
+ * box and the `before:-inset-*` expansion that regime ITSELF renders — not a
+ * mix of one regime's box and another's inset, and not the unprefixed base's,
+ * unless the regime sets none of its own — must independently clear 44px.
+ * `h-6 w-6 before:-inset-9 sm:h-11 sm:w-11 sm:before:-inset-0` passes: below
+ * 640px the base regime is a 24px box with a 36px expansion (96px), and at
+ * 640px+ the `sm` regime is a real 44px box with no expansion needed (its OWN
+ * `-inset-0`, not the unprefixed `-inset-9`, is what applies there). The
+ * `max-sm:` mirror of that idiom passes for the same reason. Conversely
+ * `h-6 w-6 before:-inset-9 max-sm:before:-inset-0` still fails: the `max-sm`
+ * regime sets no box of its own, so it falls back to the unprefixed 24px box,
+ * combined with `max-sm`'s OWN 0px expansion (its own inset, not the
+ * unprefixed one) — 24px below 640px, not the 96px the unprefixed pairing
+ * alone would suggest. A regime whose own box/inset only grows what it falls
+ * back to (`max-sm:h-16` added to an `h-11` base) is untouched: growth can
+ * never bring an axis under the floor.
+ * A `before:-inset-x-*`/`before:-inset-y-*` per-axis form is recognised
+ * alongside the all-sides `before:-inset-*`: `-inset-x` feeds only the WIDTH
+ * axis (`inset-inline`), `-inset-y` only the HEIGHT axis (`inset-block`), and
+ * — confirmed against the pinned `tailwindcss@4.3.3` — an axis form overrides
+ * only its own axis of an all-sides value at the same scope, not both; see
+ * {@link effectiveInsetPx}. A scoped axis inset therefore shrinks only the
+ * axis it names, exactly as real as an all-sides scoped shrink.
+ * The scoped-shrink check — the `h`/`w`/`size` form and both inset forms — is
+ * also narrow to a NUMERIC magnitude — a bare spacing step or an arbitrary
+ * `px`/`rem` value. A scoped utility whose value is not a pixel-comparable
+ * number (`sm:h-auto`, `sm:h-px`, `sm:h-1/2`, `sm:h-[calc(100%-40px)]`,
+ * `sm:before:-inset-px`) fails open: it proves nothing, in either direction,
+ * so it is silently treated as "not a shrink" rather than flagged. That is a
+ * stated limit, not an oversight — `auto`/a percentage/a `calc()` expression
+ * is genuinely undecidable against a fixed 44px floor without a layout
+ * engine, and this scanner is deliberately a text-only heuristic. It is the
+ * same fail-open direction the base-evidence check already takes for
+ * `w-11/12` and other non-absolute values, so an author relying on one of
+ * these to shrink a control below 44px gets no warning here.
  * Classes built up through a variable (`cn(baseClasses)`) are invisible to a
  * text scan and are reported as violations — false positives lean toward
  * "flag it", which a baseline absorbs for existing code and a human resolves
@@ -183,6 +191,27 @@ function shrinkDimensionRe(prop) {
 const INSET_RE =
   /(?<![\w-])before:-inset-(?:(\d+(?:\.\d+)?)(?![\d./])|\[(\d+(?:\.\d+)?)(px|rem)?\])/g;
 
+/**
+ * The per-axis mirrors of {@link INSET_RE}: `before:-inset-x-*` sets
+ * `inset-inline` (left + right, the WIDTH-axis expansion) and
+ * `before:-inset-y-*` sets `inset-block` (top + bottom, the HEIGHT-axis
+ * expansion) instead of all four sides. Compiled with the pinned
+ * `tailwindcss@4.3.3`, an axis form emitted after an all-sides `-inset-*` at
+ * equal specificity overrides only that one axis — `before:-inset-9
+ * before:-inset-x-0` renders a 0px horizontal expansion and a 36px vertical
+ * one, not 36px on both. {@link effectiveInsetPx} models that override.
+ * @param {'x' | 'y'} axis
+ * @returns {RegExp}
+ */
+function insetAxisRe(axis) {
+  return new RegExp(
+    `(?<![\\w-])before:-inset-${axis}-(?:(\\d+(?:\\.\\d+)?)(?![\\d./])|\\[(\\d+(?:\\.\\d+)?)(px|rem)?\\])`,
+    'g'
+  );
+}
+const INSET_X_RE = insetAxisRe('x');
+const INSET_Y_RE = insetAxisRe('y');
+
 /** Tailwind's spacing scale is linear: step N = N * 4px, fractional steps included. */
 const PX_PER_STEP = 4;
 const REM_PX = 16;
@@ -191,12 +220,28 @@ const REM_PX = 16;
 const GLOBALS_CSS_PATH = join(repoRoot, 'libs/ui/src/theme/globals.css');
 
 /**
+ * Tailwind v4's built-in breakpoint names, honoured whether or not
+ * {@link GLOBALS_CSS_PATH} redeclares them: `@theme` in Tailwind v4 is
+ * ADDITIVE over the default theme, not a replacement for it, so `sm:`/`2xl:`
+ * compile to real viewport media queries even if `globals.css` never
+ * mentions `--breakpoint-sm`/`--breakpoint-2xl` at all. Verified against the
+ * pinned `tailwindcss@4.3.3`: with only a custom `--breakpoint-phone`
+ * declared, `sm:h-11`/`2xl:w-11` still emit `@media (width >= 40rem)` /
+ * `@media (width >= 96rem)` alongside the custom one.
+ */
+const TAILWIND_DEFAULT_BREAKPOINTS = new Set(['sm', 'md', 'lg', 'xl', '2xl']);
+
+/**
  * Breakpoint names used by both `<name>:` (min-width) and `max-<name>:`
- * (max-width) variants, read from the `--breakpoint-*` custom properties in
- * {@link GLOBALS_CSS_PATH} rather than hardcoded — a hardcoded copy agrees
- * with that file only until someone adds or renames a breakpoint there, at
- * which point this gate would silently go blind to the new name in both the
- * base-evidence and scoped-shrink directions with nothing to notice.
+ * (max-width) variants: the union of {@link TAILWIND_DEFAULT_BREAKPOINTS}
+ * (which Tailwind honours unconditionally) and whatever `--breakpoint-*`
+ * custom properties {@link GLOBALS_CSS_PATH} adds. Reading `globals.css` at
+ * all — rather than hardcoding only the defaults — is what keeps this gate
+ * from drifting when someone adds a custom breakpoint there; unioning with
+ * the defaults, rather than trusting `globals.css` alone, is what keeps it
+ * from going blind if someone deletes a now-"redundant" default
+ * redeclaration. The derived set can only grow, never shrink below what
+ * Tailwind honours by default.
  * @returns {Set<string>}
  */
 function loadBreakpointNames() {
@@ -205,6 +250,7 @@ function loadBreakpointNames() {
   if (names.size === 0) {
     throw new Error(`no --breakpoint-* custom properties found in ${GLOBALS_CSS_PATH}`);
   }
+  for (const name of TAILWIND_DEFAULT_BREAKPOINTS) names.add(name);
   return names;
 }
 
@@ -227,14 +273,27 @@ const BREAKPOINT_NAMES = loadBreakpointNames();
  * (missing real evidence) is cheaper than a false positive (accepting a
  * container query as proof of viewport-width sizing).
  *
- * The `[@media(...)]` arm deliberately recognises ANY spelling that
- * constrains `width`, rather than enumerating every syntax Tailwind/CSS
- * allows: an arbitrary media variant this gate fails to recognise falls
- * through to {@link baseEvidence} and is read as unprefixed, every-width
- * proof — the exact failure this gate exists to prevent (POPS-2174,
- * POPS-2204). Erring toward "this IS viewport-scoped" for an unrecognised
- * `[@media(...)]` variant costs, at worst, a false positive a baseline
- * absorbs; erring the other way ships an unsized control.
+ * The `[@media…]` arm recognises ANY arbitrary variant that starts with
+ * `[@media` and mentions `width`, regardless of what comes between —
+ * `[@media(min-width:640px)]`, `[@media_screen_and_(min-width:640px)]`,
+ * `[@media_only_screen_and_(min-width:640px)]`, `[@media_all_and_(...)]`, a
+ * media TYPE (`screen`/`print`/`all`) named ahead of the feature list
+ * included. It deliberately does NOT require `(` to follow `@media`
+ * immediately — an earlier anchor that did (`/^\[@media[_ ]?\(/`) let any
+ * spelling naming a media type before the feature fall through to
+ * {@link baseEvidence} and read as unprefixed, every-width proof, which is
+ * the exact failure this gate exists to prevent (POPS-2174, POPS-2204,
+ * POPS-2253) — confirmed against the pinned `tailwindcss@4.3.3`, which
+ * compiles `[@media_screen_and_(min-width:640px)]:h-11` to a real
+ * `@media screen and (min-width:640px)` viewport query. Rather than
+ * enumerate every media-type spelling Tailwind/CSS allows, the anchor only
+ * requires the `[@media` prefix and leaves the rest to the `width` check
+ * below it: an arbitrary media variant this gate still fails to recognise
+ * (one that never mentions `width` at all, e.g. a bare `prefers-color-scheme`
+ * query) falls through to {@link baseEvidence}. Erring toward "this IS
+ * viewport-scoped" for a `[@media…]` variant that does mention `width` costs,
+ * at worst, a false positive a baseline absorbs; erring the other way ships
+ * an unsized control.
  * @param {string} segment
  * @returns {boolean}
  */
@@ -245,7 +304,7 @@ function isViewportWidthScopedVariant(segment) {
   for (const name of BREAKPOINT_NAMES) {
     if (bare === `max-${name}`) return true;
   }
-  return /^\[@media[_ ]?\(/.test(segment) && /\bwidth\b/i.test(segment);
+  return /^\[@media/.test(segment) && /\bwidth\b/i.test(segment);
 }
 
 /**
@@ -292,9 +351,9 @@ function splitVariantSegments(prefix) {
  * to be seen, not truncated at the first non-word character it contains.
  * @param {string} tagText
  * @param {number} matchIndex
- * @returns {boolean}
+ * @returns {string[]}
  */
-function hasViewportWidthScopedPrefix(tagText, matchIndex) {
+function variantSegmentsFor(tagText, matchIndex) {
   let start = matchIndex;
   let depth = 0;
   while (start > 0) {
@@ -313,8 +372,36 @@ function hasViewportWidthScopedPrefix(tagText, matchIndex) {
     start--;
   }
   const prefix = tagText.slice(start, matchIndex);
-  if (!prefix) return false;
-  return splitVariantSegments(prefix).some(isViewportWidthScopedVariant);
+  if (!prefix) return [];
+  return splitVariantSegments(prefix);
+}
+
+/**
+ * Does the class token this match sits in carry a variant that gates it to
+ * only PART of the viewport-width range? See {@link variantSegmentsFor} for
+ * why the walk tracks `[`/`]` depth.
+ * @param {string} tagText
+ * @param {number} matchIndex
+ * @returns {boolean}
+ */
+function hasViewportWidthScopedPrefix(tagText, matchIndex) {
+  return variantSegmentsFor(tagText, matchIndex).some(isViewportWidthScopedVariant);
+}
+
+/**
+ * The single viewport-width-scoped variant segment (`sm`, `max-sm`,
+ * `[@media(min-width:640px)]`, …) gating this match, or `null` if the match
+ * carries none — i.e. it is base evidence, per {@link hasViewportWidthScopedPrefix}.
+ * Used to group a scoped `h`/`w`/`size`/inset match with the OTHER scoped
+ * matches on the same tag that render at the same width regime, rather than
+ * combining it with the unprefixed base regardless of whether that same
+ * regime also resizes the box (POPS-2255).
+ * @param {string} tagText
+ * @param {number} matchIndex
+ * @returns {string | null}
+ */
+function viewportVariantFor(tagText, matchIndex) {
+  return variantSegmentsFor(tagText, matchIndex).find(isViewportWidthScopedVariant) ?? null;
 }
 
 /**
@@ -372,77 +459,6 @@ function maxPx(matches) {
 }
 
 /**
- * The smallest pixel magnitude a match set proves, or `null` if empty. Used
- * against scoped evidence: the smallest magnitude a viewport-width variant
- * sets is the one that matters for "does this shrink below the floor",
- * unlike base evidence where the largest is the strongest proof.
- * @param {RegExpMatchArray[]} matches
- * @returns {number | null}
- */
-function minPx(matches) {
-  let best = null;
-  for (const m of matches) {
-    const px = pxOf(m);
-    if (best === null || px < best) best = px;
-  }
-  return best;
-}
-
-/**
- * Does `tagText` carry a viewport-width-scoped variant on `prop` (`h`, `w`,
- * or `size`) whose own magnitude is below the 44px floor? This is the
- * narrow cascade fact this gate checks without modelling specificity in
- * general: a same-axis scoped utility can only ever be the value that
- * renders at the widths it governs, so a magnitude below the floor there is
- * a real violation regardless of what the unprefixed base proves. Growth
- * variants (magnitude >= 44) are not flagged — they can never shrink
- * anything.
- * A scoped `min-h`/`min-w`/`min-size` utility is never shrink evidence, even
- * though its base-evidence counterpart is: a min- value is a floor, and a
- * floor cannot shrink anything below what the base box already renders. A
- * scoped `max-h`/`max-w`/`max-size` utility, on the other hand, IS shrink
- * evidence — a ceiling is exactly the primitive that caps a box below its
- * base size — which is why this reads through {@link shrinkDimensionRe}
- * rather than {@link dimensionRe}.
- * @param {string} tagText
- * @param {'h' | 'w' | 'size'} prop
- * @returns {boolean}
- */
-function hasUndersizedScopedVariant(tagText, prop) {
-  const min = minPx(scopedEvidence(tagText, shrinkDimensionRe(prop)));
-  return min !== null && min < 44;
-}
-
-/**
- * Does `tagText` carry a viewport-width-scoped `before:-inset-*` variant
- * whose own magnitude, combined with the element's own base box per axis
- * (`box + 2 * scopedInset`), falls below the 44px floor? The mirror of
- * {@link hasUndersizedScopedVariant} for the pseudo-element expansion
- * pattern: {@link isCompliant} combines an unprefixed `before:-inset-*` with
- * the base box the same way (`box + 2 * inset`) to prove compliance, so a
- * scoped inset that is smaller than the one the base relied on is exactly as
- * real a shrink as a scoped `h`/`w` — at the widths it governs, ITS value is
- * what renders, not the unprefixed inset's. `hBase`/`wBase` are the same
- * base-box readings {@link isCompliant} already computed (size-combined,
- * un-shrunk by a same-axis scoped `h`/`w`/`size`, which is checked
- * separately) — the box the scoped inset is combined against. A scoped
- * inset that only grows the expansion further (magnitude large enough that
- * `box + 2 * scopedInset >= 44`) is not flagged, matching the growth-only
- * exemption {@link hasUndersizedScopedVariant} already gives.
- * @param {string} tagText
- * @param {number | null} hBase
- * @param {number | null} wBase
- * @returns {boolean}
- */
-function hasUndersizedScopedInset(tagText, hBase, wBase) {
-  if (hBase === null || wBase === null) return false;
-  const scopedInset = minPx(scopedEvidence(tagText, INSET_RE));
-  if (scopedInset === null) return false;
-  const expansion = scopedInset * 2;
-  return hBase + expansion < 44 || wBase + expansion < 44;
-}
-
-/**
  * `size-*` sets both axes at once: combine a `size` reading with a `h`/`w`
  * reading by taking whichever proves more, treating a missing reading as
  * "no evidence" rather than zero.
@@ -457,41 +473,162 @@ function combineWithSize(axis, size) {
 }
 
 /**
+ * Every match of `re` against `tagText` that is scoped to exactly `regime` —
+ * the one viewport-width-scoped variant segment string (`sm`, `max-sm`,
+ * `[@media(min-width:640px)]`, …) all of a width regime's own evidence must
+ * share for {@link boxPxForRegime}/{@link insetPxForRegime} to treat it as
+ * "this regime's own reading" rather than falling back to the base.
+ * @param {string} tagText
+ * @param {RegExp} re
+ * @param {string} regime
+ * @returns {RegExpMatchArray[]}
+ */
+function matchesForRegime(tagText, re, regime) {
+  return scopedEvidence(tagText, re).filter(
+    (m) => viewportVariantFor(tagText, m.index ?? 0) === regime
+  );
+}
+
+/**
+ * Every distinct viewport-width regime this tag carries scoped `h`/`w`/
+ * `size`/inset (all-sides or per-axis) evidence for — one "width the gate has
+ * to prove compliance at" per regime, in addition to the unprefixed base.
+ * @param {string} tagText
+ * @returns {Set<string>}
+ */
+function scopedRegimes(tagText) {
+  /** @type {Set<string>} */
+  const regimes = new Set();
+  const res = [
+    shrinkDimensionRe('h'),
+    shrinkDimensionRe('w'),
+    shrinkDimensionRe('size'),
+    INSET_RE,
+    INSET_X_RE,
+    INSET_Y_RE,
+  ];
+  for (const re of res) {
+    for (const m of scopedEvidence(tagText, re)) {
+      const regime = viewportVariantFor(tagText, m.index ?? 0);
+      if (regime !== null) regimes.add(regime);
+    }
+  }
+  return regimes;
+}
+
+/**
+ * The box magnitude `prop` (`h`, `w`, or `size`) renders in `regime` — a
+ * `null` `regime` reads unprefixed (base) evidence via {@link dimensionRe};
+ * a non-null `regime` reads only that regime's OWN scoped evidence via
+ * {@link shrinkDimensionRe} (a floor-only `min-` utility never renders as the
+ * box, whether base or scoped — see {@link shrinkDimensionRe}'s docstring).
+ * @param {string} tagText
+ * @param {'h' | 'w' | 'size'} prop
+ * @param {string | null} regime
+ * @returns {number | null}
+ */
+function boxPxForRegime(tagText, prop, regime) {
+  if (regime === null) return maxPx(baseEvidence(tagText, dimensionRe(prop)));
+  return maxPx(matchesForRegime(tagText, shrinkDimensionRe(prop), regime));
+}
+
+/**
+ * The effective `before:-inset-*` magnitude for one axis (`h` → the
+ * `before:-inset-y-*`/vertical mirror, `w` → `before:-inset-x-*`/horizontal)
+ * at `regime`, falling back in this order: this regime's own per-axis
+ * reading, then this regime's own all-sides reading, then the unprefixed
+ * per-axis reading, then the unprefixed all-sides reading. Modelled on the
+ * real cascade confirmed against the pinned `tailwindcss@4.3.3`: an axis form
+ * emitted after an all-sides one at equal specificity overrides only that
+ * axis, so `before:-inset-9 before:-inset-x-0` renders 0px of horizontal
+ * expansion but the unaltered 36px of vertical — reading the axis form ahead
+ * of the all-sides one is what keeps a per-axis override from being masked by
+ * a same-scope all-sides value it does not actually apply to (POPS-2256).
+ * `regime === null` skips straight to the unprefixed readings.
+ * @param {string} tagText
+ * @param {'h' | 'w'} axis
+ * @param {string | null} regime
+ * @returns {number | null}
+ */
+function effectiveInsetPx(tagText, axis, regime) {
+  const axisRe = axis === 'h' ? INSET_Y_RE : INSET_X_RE;
+  if (regime !== null) {
+    const regimeAxis = maxPx(matchesForRegime(tagText, axisRe, regime));
+    if (regimeAxis !== null) return regimeAxis;
+    const regimeAll = maxPx(matchesForRegime(tagText, INSET_RE, regime));
+    if (regimeAll !== null) return regimeAll;
+  }
+  const baseAxis = maxPx(baseEvidence(tagText, axisRe));
+  if (baseAxis !== null) return baseAxis;
+  return maxPx(baseEvidence(tagText, INSET_RE));
+}
+
+/**
+ * Does the box this element renders at `regime` (or, for `regime === null`,
+ * at the unprefixed base) clear 44px on both axes, once `size-*` is combined
+ * in and the `before:-inset-*` expansion — all-sides or per-axis, falling
+ * back to the unprefixed inset when this regime sets none — is added? This is
+ * the single computation both the base-evidence check and every scoped
+ * regime run through, which is what keeps a scoped `h`/`w`/`size` shrink and
+ * a scoped inset shrink from being evaluated against two different boxes
+ * (POPS-2255): `h-6 w-6 before:-inset-9 sm:h-11 sm:w-11 sm:before:-inset-0`
+ * evaluates the `sm` regime's own `h-11`/`w-11` combined with `sm`'s own
+ * `-inset-0`, not `sm`'s inset against the unprefixed `h-6`/`w-6`.
+ * `hFallback`/`wFallback` are the unprefixed base box readings, used on
+ * either axis this regime sets no `h`/`w`/`size` evidence of its own for — a
+ * regime that only touches the inset, or only one axis of the box, is never
+ * penalised for what it leaves alone.
+ * @param {string} tagText
+ * @param {string | null} regime
+ * @param {number | null} hFallback
+ * @param {number | null} wFallback
+ * @returns {boolean}
+ */
+function isCompliantAtRegime(tagText, regime, hFallback, wFallback) {
+  const h = boxPxForRegime(tagText, 'h', regime);
+  const w = boxPxForRegime(tagText, 'w', regime);
+  const size = boxPxForRegime(tagText, 'size', regime);
+  const hBox = combineWithSize(h, size) ?? hFallback;
+  const wBox = combineWithSize(w, size) ?? wFallback;
+  if (hBox === null || wBox === null) return false;
+
+  const hInset = effectiveInsetPx(tagText, 'h', regime);
+  const wInset = effectiveInsetPx(tagText, 'w', regime);
+  const hExpansion = hInset === null ? 0 : hInset * 2;
+  const wExpansion = wInset === null ? 0 : wInset * 2;
+
+  return hBox + hExpansion >= 44 && wBox + wExpansion >= 44;
+}
+
+/**
  * Does this element's OWN opening-tag text prove its tappable area reaches
- * 44px on both axes? `size-*` counts for both `h` and `w`. A `before:-inset-*`
- * expansion only counts once combined with the element's own base box on that
- * axis (`box + 2 * inset >= 44`) — an inset with no box evidence, or too small
- * an inset for the box it is paired with, proves nothing. A single axis of
- * evidence (only `w`, only `h`) is never sufficient on its own: a wide link
- * can still be a ~20px-tall line of text, and a tall control with no width
- * evidence can be a single narrow glyph. Once the base clears the floor, a
- * same-axis viewport-width-scoped variant that itself sets a magnitude below
- * the floor still fails the element — see {@link hasUndersizedScopedVariant}
- * for the `h`/`w`/`size` form and {@link hasUndersizedScopedInset} for a
- * scoped `before:-inset-*` variant that shrinks the expansion below what the
- * base box needs.
+ * 44px on both axes at EVERY width — the unprefixed base, and every
+ * viewport-width regime a scoped `h`/`w`/`size`/inset utility governs? A
+ * single axis of evidence (only `w`, only `h`) is never sufficient on its
+ * own: a wide link can still be a ~20px-tall line of text, and a tall
+ * control with no width evidence can be a single narrow glyph. See
+ * {@link isCompliantAtRegime} for how one width's box + inset expansion is
+ * combined; a regime that sets no box/inset of its own falls back to the
+ * unprefixed base's, so a scoped variant that only grows (or only touches one
+ * of box/inset) is never penalised for what it leaves alone.
  * @param {string} tagText
  * @returns {boolean}
  */
 function isCompliant(tagText) {
-  const size = maxPx(baseEvidence(tagText, dimensionRe('size')));
-  const h = maxPx(baseEvidence(tagText, dimensionRe('h')));
-  const w = maxPx(baseEvidence(tagText, dimensionRe('w')));
-  const inset = maxPx(baseEvidence(tagText, INSET_RE));
+  if (!isCompliantAtRegime(tagText, null, null, null)) return false;
 
-  const hBase = combineWithSize(h, size);
-  const wBase = combineWithSize(w, size);
-  if (hBase === null || wBase === null) return false;
-
-  const expansion = inset === null ? 0 : inset * 2;
-  if (hBase + expansion < 44 || wBase + expansion < 44) return false;
-
-  return (
-    !hasUndersizedScopedVariant(tagText, 'h') &&
-    !hasUndersizedScopedVariant(tagText, 'w') &&
-    !hasUndersizedScopedVariant(tagText, 'size') &&
-    !hasUndersizedScopedInset(tagText, hBase, wBase)
+  const hBase = combineWithSize(
+    boxPxForRegime(tagText, 'h', null),
+    boxPxForRegime(tagText, 'size', null)
   );
+  const wBase = combineWithSize(
+    boxPxForRegime(tagText, 'w', null),
+    boxPxForRegime(tagText, 'size', null)
+  );
+  for (const regime of scopedRegimes(tagText)) {
+    if (!isCompliantAtRegime(tagText, regime, hBase, wBase)) return false;
+  }
+  return true;
 }
 
 /**
@@ -851,6 +988,18 @@ function selfTest() {
     // The gap POPS-2224 closes: an unprefixed before:-inset-* proves 96px
     // (24 + 2*36), but max-sm:before:-inset-0 renders 24px below 640px.
     '<button className="h-6 w-6 before:-inset-9 max-sm:before:-inset-0" onClick={onClick}><XIcon /></button>',
+    // POPS-2256: the per-axis before:-inset-x-* collapses only the WIDTH
+    // expansion below 640px — 24px wide, even though the height is still 96.
+    '<button className="h-6 w-6 before:-inset-9 max-sm:before:-inset-x-0" onClick={onClick}><XIcon /></button>',
+    // POPS-2256: the mirror, before:-inset-y-* collapsing only the HEIGHT.
+    '<button className="h-6 w-6 before:-inset-9 max-sm:before:-inset-y-0" onClick={onClick}><XIcon /></button>',
+    // POPS-2253: a media TYPE ahead of the feature list — no unprefixed base
+    // at all, so this is unsized below 640px exactly like sm: alone.
+    '<button className="[@media_screen_and_(min-width:640px)]:h-11 [@media_screen_and_(min-width:640px)]:w-11" onClick={onClick}>Row</button>',
+    // POPS-2253: "only screen and", same hole.
+    '<button className="[@media_only_screen_and_(min-width:640px)]:h-11 [@media_only_screen_and_(min-width:640px)]:w-11" onClick={onClick}>Row</button>',
+    // POPS-2253: a sufficient base shrunk by a media-type-prefixed max-width query.
+    '<button className="h-11 w-11 [@media_screen_and_(max-width:600px)]:h-6 [@media_screen_and_(max-width:600px)]:w-6" onClick={onClick}>Row</button>',
   ].join('\n');
   const clean = [
     '<button className="size-11" onClick={onClick}><XIcon /></button>',
@@ -872,6 +1021,13 @@ function selfTest() {
     '<button className="h-6 w-6 before:-inset-9 max-sm:before:-inset-4" onClick={onClick}><XIcon /></button>',
     // A scoped before:-inset-* that only grows the expansion further.
     '<button className="h-6 w-6 before:-inset-9 sm:before:-inset-12" onClick={onClick}><XIcon /></button>',
+    // POPS-2255: the canonical fix idiom — compact box + inset expansion
+    // below 640px, a real 44px box with no expansion needed at/above it. The
+    // sm regime's OWN h-11/w-11, not the unprefixed h-6/w-6, is what the
+    // sm:before:-inset-0 combines against.
+    '<button className="h-6 w-6 before:-inset-9 sm:h-11 sm:w-11 sm:before:-inset-0" onClick={onClick}><XIcon /></button>',
+    // POPS-2255: the max-sm: mirror of the same idiom.
+    '<button className="h-11 w-11 max-sm:h-6 max-sm:w-6 max-sm:before:-inset-9" onClick={onClick}>Row</button>',
   ].join('\n');
 
   const dirtyHits = findViolations('pillars/x/app/src/A.tsx', dirty);
@@ -931,6 +1087,17 @@ function selfTest() {
       dirtyHits.some((v) => v.line === 22),
     'reports a sufficient before:-inset-* expansion shrunk below 640px by max-sm:before:-inset-0':
       dirtyHits.some((v) => v.line === 23),
+    'reports a sufficient before:-inset-* expansion collapsed on the WIDTH axis only by max-sm:before:-inset-x-0':
+      dirtyHits.some((v) => v.line === 24),
+    'reports a sufficient before:-inset-* expansion collapsed on the HEIGHT axis only by max-sm:before:-inset-y-0':
+      dirtyHits.some((v) => v.line === 25),
+    'reports a button gated only by a [@media_screen_and_(...)] media-type variant': dirtyHits.some(
+      (v) => v.line === 26
+    ),
+    'reports a button gated only by a [@media_only_screen_and_(...)] media-type variant':
+      dirtyHits.some((v) => v.line === 27),
+    'reports a sufficient base shrunk by a [@media_screen_and_(max-width:...)] media-type variant':
+      dirtyHits.some((v) => v.line === 28),
     'stays silent on a button sized via size-11': cleanHits.every(
       (v) => v.line !== 1 // line 1 of `clean` carries size-11
     ),
@@ -955,6 +1122,9 @@ function selfTest() {
     'stays silent when a scoped before:-inset-* only grows the expansion further': !cleanHits.some(
       (v) => v.line === 10
     ),
+    'stays silent on the canonical fix idiom: compact box + inset below 640px, a real box with no inset needed at/above it (sm regime combines with its OWN box, not the unprefixed one)':
+      !cleanHits.some((v) => v.line === 11),
+    'stays silent on the max-sm: mirror of the same idiom': !cleanHits.some((v) => v.line === 12),
     'a story is exempt': !isScannable('pillars/food/app/src/pages/X.stories.tsx'),
     'a test is exempt': !isScannable('pillars/food/app/src/pages/X.test.tsx'),
     'a __tests__ file is exempt': !isScannable('pillars/food/app/src/__tests__/x.tsx'),
