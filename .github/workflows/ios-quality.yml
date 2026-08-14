@@ -259,6 +259,15 @@ jobs:
         with:
           working_directory: clients/ios
 
+      # The host-toolchain loop every package README documents (`swift test
+      # --package-path Packages/<name>`), run for real rather than assumed to
+      # still work. It needs no Xcode project and boots no simulator, so it
+      # runs before `generate` pays for either — a package that fails to
+      # build or test on the host toolchain is answered in the time this
+      # step takes, not after the rest of the job's compile.
+      - name: Test packages (host toolchain)
+        run: mise run test:packages
+
       - name: Generate Pops.xcodeproj
         run: mise run generate
 

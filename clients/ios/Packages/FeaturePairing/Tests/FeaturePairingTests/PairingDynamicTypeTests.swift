@@ -25,50 +25,58 @@ import Testing
 /// 320×1397 at `.accessibility5`. The assertion is "strictly taller" rather
 /// than any particular ratio — a threshold would be a number nobody could
 /// defend, and clipping is what this is looking for.
-@Suite("Pairing under Dynamic Type")
-@MainActor
-internal struct PairingDynamicTypeTests {
-    /// The same 320pt canvas the other rendering suites use, and the hardest
-    /// case rather than a typical one: a narrower screen wraps more text, so it
-    /// reaches the clipping this test looks for sooner than a current handset's
-    /// width would. Fixed so the only variable between the two renders is the
-    /// text size.
-    private static let width: CGFloat = 320
+///
+/// iOS only, and the conditional is the honest kind: macOS has no Dynamic
+/// Type, so `.environment(\.dynamicTypeSize, ...)` does not change the text
+/// size the host toolchain lays out, and `.large` and `.accessibility5`
+/// rasterise to the same height there — this suite is not answering a
+/// question the host toolchain can ask.
+#if os(iOS)
+    @Suite("Pairing under Dynamic Type")
+    @MainActor
+    internal struct PairingDynamicTypeTests {
+        /// The same 320pt canvas the other rendering suites use, and the hardest
+        /// case rather than a typical one: a narrower screen wraps more text, so it
+        /// reaches the clipping this test looks for sooner than a current handset's
+        /// width would. Fixed so the only variable between the two renders is the
+        /// text size.
+        private static let width: CGFloat = 320
 
-    private static func renderedHeight(at size: DynamicTypeSize) -> Int? {
-        let model = PairingViewModel(
-            session: SessionStore(),
-            dependencies: .fake(pairing: FakeDevicePairingService()),
-            camera: StubCameraAuthorization(standing: .authorized),
-            device: StubDeviceDescription()
-        )
-        let renderer = ImageRenderer(
-            content: PairingView(model: model)
-                .environment(\.dynamicTypeSize, size)
-                .frame(width: width)
-        )
-        renderer.scale = 1
-        return renderer.cgImage?.height
+        private static func renderedHeight(at size: DynamicTypeSize) -> Int? {
+            let model = PairingViewModel(
+                session: SessionStore(),
+                dependencies: .fake(pairing: FakeDevicePairingService()),
+                camera: StubCameraAuthorization(standing: .authorized),
+                device: StubDeviceDescription()
+            )
+            let renderer = ImageRenderer(
+                content: PairingView(model: model)
+                    .environment(\.dynamicTypeSize, size)
+                    .frame(width: width)
+            )
+            renderer.scale = 1
+            return renderer.cgImage?.height
+        }
+
+        @Test("the form grows with the text instead of clipping")
+        func accessibilitySizeRendersTaller() throws {
+            let standard = try #require(
+                Self.renderedHeight(at: .large), "the pairing screen failed to rasterise at .large")
+            let accessibility = try #require(
+                Self.renderedHeight(at: .accessibility5),
+                "the pairing screen failed to rasterise at .accessibility5")
+
+            // Non-empty first. A renderer that produced a zero-height image would
+            // satisfy nothing below it and would read as a clean pass.
+            try #require(standard > 0, "the pairing screen rasterised to zero height at .large")
+
+            #expect(
+                accessibility > standard,
+                """
+                the pairing screen is \(accessibility)pt tall at .accessibility5 and \
+                \(standard)pt at .large — it is not growing with the text, so its \
+                content is being clipped rather than made reachable
+                """)
+        }
     }
-
-    @Test("the form grows with the text instead of clipping")
-    func accessibilitySizeRendersTaller() throws {
-        let standard = try #require(
-            Self.renderedHeight(at: .large), "the pairing screen failed to rasterise at .large")
-        let accessibility = try #require(
-            Self.renderedHeight(at: .accessibility5),
-            "the pairing screen failed to rasterise at .accessibility5")
-
-        // Non-empty first. A renderer that produced a zero-height image would
-        // satisfy nothing below it and would read as a clean pass.
-        try #require(standard > 0, "the pairing screen rasterised to zero height at .large")
-
-        #expect(
-            accessibility > standard,
-            """
-            the pairing screen is \(accessibility)pt tall at .accessibility5 and \
-            \(standard)pt at .large — it is not growing with the text, so its \
-            content is being clipped rather than made reachable
-            """)
-    }
-}
+#endif
