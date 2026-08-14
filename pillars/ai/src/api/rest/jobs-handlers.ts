@@ -12,6 +12,7 @@
  * 503 rather than having baked an empty registry in at startup.
  */
 import {
+  DeadLetterReplayError,
   JobNotFoundError,
   JobStateConflictError,
   JobsUnavailableError,
@@ -22,15 +23,9 @@ import {
   type JobsHandlerDeps,
   type ManagedJobQueue,
 } from '@pops/pillar-jobs';
-import { DeadLetterReplayError } from '@pops/pillar-jobs';
 
 import { getAiMaintenanceQueues } from '../jobs/queue.js';
-import {
-  ConflictError,
-  NotFoundError,
-  ServiceUnavailableError,
-  ValidationError,
-} from '../shared/errors.js';
+import { ConflictError, NotFoundError, ServiceUnavailableError } from '../shared/errors.js';
 import { runHttp } from './error-mapping.js';
 
 import type { ServerInferRequest } from '@ts-rest/core';
@@ -57,8 +52,10 @@ function translate(err: unknown): never {
   if (err instanceof JobNotFoundError) throw new NotFoundError('Job', err.jobId);
   if (err instanceof JobStateConflictError) throw new ConflictError(err.message);
   if (err instanceof DeadLetterReplayError) {
-    if (err.reason === 'missing') throw new NotFoundError('Dead-letter job', err.message);
-    if (err.reason === 'malformed') throw new ValidationError(err.message);
+    if (err.reason === 'missing') throw new NotFoundError('Dead-letter job', err.jobId);
+    // `malformed` and `foreign` are both 409: the request is well formed, it
+    // is the parked payload that cannot go where the caller asked. A 400
+    // would invite the caller to retry with a different body, which is futile.
     throw new ConflictError(err.message);
   }
   throw err as Error;

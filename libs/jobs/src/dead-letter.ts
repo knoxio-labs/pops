@@ -121,10 +121,16 @@ export function createDeadLetterForwarder(
  */
 export type DeadLetterReplayFailure = 'missing' | 'malformed' | 'foreign';
 
-/** Raised when a replay names a dead-letter job that is absent or unusable. */
+/**
+ * Raised when a replay names a dead-letter job that is absent or unusable.
+ *
+ * `jobId` is carried separately from `message` so a transport can build its
+ * own envelope around the identifier instead of nesting the prose.
+ */
 export class DeadLetterReplayError extends Error {
   constructor(
     readonly reason: DeadLetterReplayFailure,
+    readonly jobId: string,
     message: string,
     options?: { cause?: unknown }
   ) {
@@ -161,12 +167,13 @@ export async function replayDeadLetterJob(deps: {
 }): Promise<DeadLetterReplayResult> {
   const job = await deps.deadLetterQueue.getJob(deps.jobId);
   if (job === undefined) {
-    throw new DeadLetterReplayError('missing', `No dead-letter job '${deps.jobId}'`);
+    throw new DeadLetterReplayError('missing', deps.jobId, `No dead-letter job '${deps.jobId}'`);
   }
   const parsed = DeadLetterJobDataSchema.safeParse(job.data);
   if (!parsed.success) {
     throw new DeadLetterReplayError(
       'malformed',
+      deps.jobId,
       `Dead-letter job '${deps.jobId}' does not carry a replayable payload`,
       { cause: parsed.error }
     );
@@ -175,6 +182,7 @@ export async function replayDeadLetterJob(deps: {
   if (payload.originQueue !== deps.originQueue.name) {
     throw new DeadLetterReplayError(
       'foreign',
+      deps.jobId,
       `Dead-letter job '${deps.jobId}' belongs to queue '${payload.originQueue}', not ` +
         `'${deps.originQueue.name}'`
     );

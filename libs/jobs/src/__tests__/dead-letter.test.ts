@@ -174,7 +174,7 @@ describe('replayDeadLetterJob', () => {
     });
   });
 
-  it('refuses an id the dead-letter queue does not hold', async () => {
+  it('refuses an id the dead-letter queue does not hold, naming that id', async () => {
     await expect(
       replayDeadLetterJob({
         deadLetterQueue: new FakeQueue<DeadLetterJobData>('ai.maintenance.dead-letter'),
@@ -182,6 +182,37 @@ describe('replayDeadLetterJob', () => {
         jobId: 'missing',
       })
     ).rejects.toThrow(DeadLetterReplayError);
+
+    await expect(
+      replayDeadLetterJob({
+        deadLetterQueue: new FakeQueue<DeadLetterJobData>('ai.maintenance.dead-letter'),
+        originQueue: new FakeQueue('ai.maintenance'),
+        jobId: 'missing',
+      })
+    ).rejects.toMatchObject({ reason: 'missing', jobId: 'missing' });
+  });
+
+  it('carries the job id on every replay failure, not only the absent one', async () => {
+    const malformed = new FakeJob({ id: 'dl-bad', data: { nonsense: true } });
+    await expect(
+      replayDeadLetterJob({
+        deadLetterQueue: new FakeQueue('ai.maintenance.dead-letter', [malformed]),
+        originQueue: new FakeQueue('ai.maintenance'),
+        jobId: 'dl-bad',
+      })
+    ).rejects.toMatchObject({ reason: 'malformed', jobId: 'dl-bad' });
+
+    const foreign = new FakeJob<DeadLetterJobData>({
+      id: 'dl-foreign',
+      data: { ...payload, originQueue: 'other.maintenance' },
+    });
+    await expect(
+      replayDeadLetterJob({
+        deadLetterQueue: new FakeQueue('ai.maintenance.dead-letter', [foreign]),
+        originQueue: new FakeQueue('ai.maintenance'),
+        jobId: 'dl-foreign',
+      })
+    ).rejects.toMatchObject({ reason: 'foreign', jobId: 'dl-foreign' });
   });
 
   it('refuses a payload that is not a dead-letter record', async () => {
