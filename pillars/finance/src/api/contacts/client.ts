@@ -27,8 +27,26 @@
  * (TRANSIENT — retry later), while `bad-request`/`unauthorized`/
  * `contract-mismatch`/`not-found` throw {@link ContactsPermanentError}
  * (PERMANENT — retrying the same input never helps).
+ *
+ * `/server`, not `/client` (POPS-2021). The handle is built through
+ * {@link credentialled} from `../pillars/outbound.js`, which attaches this
+ * pillar's service-account key as `X-API-Key` and answers `null` instead of
+ * throwing when this process holds none — every read then degrades exactly
+ * as it does against an unreachable contacts, and `createOrFetchByName`
+ * throws the same TRANSIENT {@link ContactsUnavailableError} a real outage
+ * would. A callee-refused credential (`kind === 'unauthorized'`) is logged
+ * distinctly via {@link credentialRejectedMessage} rather than folded into
+ * the generic "degraded" warning, because it will not clear on retry the way
+ * an outage does.
  */
-import { isOk, pillar, type CallResult, type PillarHandle } from '@pops/pillar-sdk/client';
+import { isOk, pillar, type CallResult, type PillarHandle } from '@pops/pillar-sdk/server';
+
+import {
+  credentialled,
+  credentialRejectedMessage,
+  NO_CREDENTIAL_REASON,
+  UNAUTHORIZED_REASON,
+} from '../pillars/outbound.js';
 
 /** The contacts pillar id, as registered with the registry. */
 export const CONTACTS_PILLAR_ID = 'contacts';
@@ -172,16 +190,24 @@ const MAX_PAGES = 5000;
 
 function warnDegraded(operation: string, result: CallResult<unknown>): void {
   if (isOk(result)) return;
+  if (result.kind === UNAUTHORIZED_REASON) {
+    console.error(credentialRejectedMessage(CONTACTS_PILLAR_ID, operation));
+    return;
+  }
   console.warn(
     `[contacts] ${operation} degraded (kind=${result.kind}); substituting empty contact set`
   );
 }
 
 async function pageThroughEntities(
-  handle: PillarHandle<ContactsRouter>,
+  handle: PillarHandle<ContactsRouter> | null,
   query: { search?: string; type?: string },
   maxPages: number
 ): Promise<ContactEntity[]> {
+  // `credentialled()` already logged the no-key case once for this
+  // process; nothing else to say here beyond substituting the same empty
+  // set a real outage would.
+  if (handle === null) return [];
   const all: ContactEntity[] = [];
   for (let page = 0; page < maxPages; page++) {
     const result = await handle.entities.list({
@@ -213,12 +239,16 @@ export interface ContactsClientOptions {
 
 /**
  * Build the default contacts client over the pillar SDK. `handleFactory` is
- * injectable purely so unit tests can supply a stub router; production passes
- * the real `pillar('contacts')`.
+ * injectable purely so unit tests can supply a stub router; production
+ * passes the real, credentialled `pillar('contacts')` — built fresh per
+ * call, not once at construction, because `pillar()` from
+ * `@pops/pillar-sdk/server` refuses to build a handle without a
+ * service-account key and constructing eagerly would move a missing key
+ * from a degraded client to a pillar that will not boot.
  */
 export function createContactsClient(
-  handleFactory: () => PillarHandle<ContactsRouter> = () =>
-    pillar<ContactsRouter>(CONTACTS_PILLAR_ID),
+  handleFactory: () => PillarHandle<ContactsRouter> | null = () =>
+    credentialled(CONTACTS_PILLAR_ID, () => pillar<ContactsRouter>(CONTACTS_PILLAR_ID)),
   options: ContactsClientOptions = {}
 ): ContactsClient {
   const maxPages = options.maxPages ?? MAX_PAGES;
@@ -228,7 +258,9 @@ export function createContactsClient(
     },
 
     async fetchEntityDefaultTags(entityId: string): Promise<string[]> {
-      const result = await handleFactory().entities.get({ id: entityId });
+      const handle = handleFactory();
+      if (handle === null) return [];
+      const result = await handle.entities.get({ id: entityId });
       if (!isOk(result)) {
         if (result.kind !== 'not-found') warnDegraded('entities.get', result);
         return [];
@@ -238,6 +270,9 @@ export function createContactsClient(
 
     async createOrFetchByName(name: string, type: string): Promise<CreateOrFetchResult> {
       const handle = handleFactory();
+      if (handle === null) {
+        throw new ContactsUnavailableError(NO_CREDENTIAL_REASON);
+      }
       const preexisting = await fetchByExactName(handle, name, maxPages);
       if (preexisting) return { id: preexisting.id, name: preexisting.name, created: false };
 
@@ -251,6 +286,9 @@ export function createContactsClient(
         throw new ContactsUnavailableError(`409 for "${name}" but no existing contact found`);
       }
       if (isPermanentCreateFailureKind(created.kind)) {
+        if (created.kind === UNAUTHORIZED_REASON) {
+          console.error(credentialRejectedMessage(CONTACTS_PILLAR_ID, 'entities.create'));
+        }
         throw new ContactsPermanentError(created.kind);
       }
       throw new ContactsUnavailableError(created.kind);

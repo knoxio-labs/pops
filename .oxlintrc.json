@@ -47,6 +47,12 @@
             "importNames": ["RefreshCcw"],
             "message": "Banned icon name — use 'RefreshCw' for refresh actions (Action Icon Standards, AGENTS.md)."
           }
+        ],
+        "patterns": [
+          {
+            "regex": "^lucide-react/",
+            "message": "Deep lucide-react subpath import is banned — import icons by name from the top-level package (Action Icon Standards, AGENTS.md)."
+          }
         ]
       }
     ],

@@ -12,10 +12,13 @@
  * This guard reads frontend source and reports any `Button` or
  * `ButtonPrimitive` JSX element whose `size` prop is an icon size
  * (`icon`, `icon-xs`, `icon-sm`, `icon-lg`) and whose opening tag carries no
- * `aria-label` attribute. A `size` value that isn't a string literal (a
- * variable, a ternary) is not statically decidable and is skipped rather than
- * guessed at — false negatives here are safer than false positives on a
- * required check.
+ * non-empty, statically-known `aria-label`/`aria-labelledby`. A quoted string
+ * literal decides either attribute whether it's bare (`size="icon"`) or
+ * brace-wrapped (`size={'icon'}`); an empty string or a literal `undefined`
+ * does not count as a label. A value this guard can't resolve at all (a
+ * variable, a ternary, a template with interpolation) is not statically
+ * decidable and is skipped rather than guessed at — false negatives here are
+ * safer than false positives on a required check.
  *
  * Usage:
  *   node scripts/ci/check-icon-only-buttons.mjs              check the real tree
@@ -53,6 +56,80 @@ const GENERATED_CLIENT_RE = /\/src\/[a-z-]+-api\//;
 
 /** An icon-only `size` value: `icon`, `icon-xs`, `icon-sm`, `icon-lg`. */
 const ICON_SIZE_RE = /^icon(?:-(?:xs|sm|lg))?$/;
+
+/**
+ * Matches a `size=` or `aria-label=`/`aria-labelledby=` attribute, anchored
+ * so a prefixed lookalike (`data-aria-label`, `iconSize`) never matches: the
+ * lookbehind rejects an attribute name preceded by a word character or a
+ * hyphen. Captures the raw value text — a quoted string or a `{…}`
+ * expression — for the caller to interpret.
+ *
+ * @param {string} attrName
+ * @returns {RegExp}
+ */
+function attrValueRe(attrName) {
+  return new RegExp(
+    `(?<![\\w-])${attrName}\\s*=\\s*("(?:[^"\\\\]|\\\\.)*"|'(?:[^'\\\\]|\\\\.)*'|\\{[^}]*\\})`,
+    'g'
+  );
+}
+
+const SIZE_ATTR_RE = attrValueRe('size');
+const ARIA_LABEL_ATTR_RE = attrValueRe('aria-label(?:ledby)?');
+
+/**
+ * A quoted string literal's content, or `null` if `text` isn't one. Used
+ * both directly on an attribute value and on the inner text of a `{…}`
+ * expression, so `size={'icon'}` decides the same way `size="icon"` does.
+ *
+ * @param {string} text
+ * @returns {string | null}
+ */
+function stringLiteralContent(text) {
+  const trimmed = text.trim();
+  const match = /^(["'`])([\s\S]*)\1$/.exec(trimmed);
+  return match ? match[2] : null;
+}
+
+/**
+ * Resolve an attribute's raw captured value to a statically-known string, or
+ * `null` when it isn't one (a variable, a template with interpolation, a
+ * ternary — anything this guard can't evaluate). Handles both a bare quoted
+ * literal (`"icon"`) and a brace-wrapped literal (`{'icon'}`); a brace-wrapped
+ * `undefined` resolves to the empty string, matching how it renders.
+ *
+ * @param {string} raw
+ * @returns {string | null}
+ */
+function resolveStaticValue(raw) {
+  const trimmed = raw.trim();
+  if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+    const inner = trimmed.slice(1, -1).trim();
+    if (inner === 'undefined') return '';
+    return stringLiteralContent(inner);
+  }
+  return stringLiteralContent(trimmed);
+}
+
+/**
+ * Does this opening tag carry a statically-decidable, non-empty accessible
+ * name via `aria-label` or `aria-labelledby`? A value this guard can't
+ * statically resolve (a variable, a template literal with interpolation) is
+ * treated as present — false negatives here are safer than flagging the many
+ * legitimate `aria-label={computedLabel}` call sites, mirroring the same
+ * trade-off this guard already makes for a dynamic `size`.
+ *
+ * @param {string} tag
+ * @returns {boolean}
+ */
+function hasAccessibleName(tag) {
+  for (const match of tag.matchAll(ARIA_LABEL_ATTR_RE)) {
+    const resolved = resolveStaticValue(match[1]);
+    if (resolved === null) return true;
+    if (resolved.trim() !== '') return true;
+  }
+  return false;
+}
 
 /**
  * @typedef {object} Violation
@@ -134,14 +211,17 @@ export function findViolations(relPath, source) {
   const tagStartRe = new RegExp(`<(${BUTTON_COMPONENTS.join('|')})\\b`, 'g');
   for (const match of source.matchAll(tagStartRe)) {
     const tag = extractOpeningTag(source, match.index);
-    const sizeMatch = /\bsize\s*=\s*["']([\w-]+)["']/.exec(tag);
-    if (!sizeMatch || !ICON_SIZE_RE.test(sizeMatch[1])) continue;
-    if (/\baria-label\s*=/.test(tag)) continue;
+    SIZE_ATTR_RE.lastIndex = 0;
+    const sizeAttrMatch = SIZE_ATTR_RE.exec(tag);
+    if (!sizeAttrMatch) continue;
+    const size = resolveStaticValue(sizeAttrMatch[1]);
+    if (size === null || !ICON_SIZE_RE.test(size)) continue;
+    if (hasAccessibleName(tag)) continue;
     violations.push({
       file: relPath,
       line: source.slice(0, match.index).split('\n').length,
       component: match[1],
-      size: sizeMatch[1],
+      size,
     });
   }
   return violations;
@@ -226,8 +306,11 @@ function run() {
 /**
  * Synthetic fixtures proving the guard reports an icon-only Button with no
  * aria-label (default, primitive, and each icon size), stays silent when one
- * is present, stays silent on a non-icon size or a title-only button, and
- * does not desync on a `>` inside an attribute expression.
+ * is present, stays silent on a non-icon size or a title-only button, does
+ * not desync on a `>` inside an attribute expression, and does not treat an
+ * empty, whitespace-only, undefined, or decoy (`data-aria-label`) attribute
+ * as a real accessible name — while still deciding a brace-wrapped string
+ * literal size and accepting a valid `aria-labelledby`.
  *
  * @returns {boolean}
  */
@@ -237,6 +320,11 @@ function selfTest() {
     '<ButtonPrimitive size="icon-sm"><X /></ButtonPrimitive>',
     '<Button size="icon-lg" title="Delete"><Trash2 /></Button>',
     '<Button\n  size="icon-xs"\n  onClick={() => setOpen(x > y)}\n>\n  <Pencil />\n</Button>',
+    '<Button size="icon" aria-label=""><Trash2 /></Button>',
+    '<Button size="icon" aria-label={undefined}><Trash2 /></Button>',
+    '<Button size="icon" data-aria-label="x"><Trash2 /></Button>',
+    "<Button size={'icon'}><Trash2 /></Button>",
+    '<Button size="icon" aria-label="   "><Trash2 /></Button>',
   ].join('\n');
   const clean = [
     '<Button size="icon" aria-label="Delete item"><Trash2 /></Button>',
@@ -244,10 +332,14 @@ function selfTest() {
     '<Button>Add Item</Button>',
     '<Button size="sm">Save</Button>',
     '<Button size={dynamicSize}><Trash2 /></Button>',
+    '<Button size={\'icon\'} aria-label="Delete"><Trash2 /></Button>',
+    '<Button size="icon" aria-labelledby={headingId}><Trash2 /></Button>',
+    '<Button size="icon" aria-labelledby="delete-heading"><Trash2 /></Button>',
   ].join('\n');
 
   const dirtyHits = findViolations('pillars/x/app/src/A.tsx', dirty);
   const cleanHits = findViolations('pillars/x/app/src/B.tsx', clean);
+  const dirtyLines = new Set(dirtyHits.map((v) => v.line));
 
   const checks = {
     'reports a default-composite icon size': dirtyHits.some(
@@ -260,8 +352,12 @@ function selfTest() {
     'does not desync on a `>` inside an attribute expression': dirtyHits.some(
       (v) => v.size === 'icon-xs'
     ),
-    'reports every dirty line, not just the first':
-      new Set(dirtyHits.map((v) => v.line)).size === 4,
+    'reports an empty aria-label as no label': dirtyLines.has(10),
+    'reports aria-label={undefined} as no label': dirtyLines.has(11),
+    'reports data-aria-label as a decoy, not a real aria-label': dirtyLines.has(12),
+    "reports size={'icon'} — a brace-wrapped literal is decidable": dirtyLines.has(13),
+    'reports a whitespace-only aria-label as no label': dirtyLines.has(14),
+    'reports every dirty line, not just the first': dirtyLines.size === 9,
     'an icon button WITH aria-label is not a violation': !cleanHits.some(
       (v) => v.size === 'icon' && v.component === 'Button'
     ),
@@ -271,6 +367,8 @@ function selfTest() {
     'a prominent icon+text button is not a violation': cleanHits.every((v) => v.size !== undefined),
     'a non-icon size is not a violation': !cleanHits.some((v) => v.size === 'sm'),
     'a dynamic size expression is not guessed at': !cleanHits.some((v) => v.size === 'dynamicSize'),
+    "size={'icon'} with a real aria-label, and both aria-labelledby forms, are not violations":
+      cleanHits.length === 0,
     'a .tsx under an app src is scannable': isScannable('pillars/food/app/src/pages/X.tsx'),
     'a story is exempt': !isScannable('libs/ui/src/primitives/Badge.stories.tsx'),
     'a test is exempt': !isScannable('pillars/food/app/src/pages/X.test.tsx'),

@@ -25,6 +25,7 @@ import { startReconcileEntityOrphansWorker } from './cron/reconcile-entity-orpha
 import { startReconcilePairedTransfersWorker } from './cron/reconcile-paired-transfers.js';
 import { resolveFinanceSqlitePath } from './finance-sqlite-path.js';
 import { buildFinanceCapabilityReporter, buildFinanceManifest } from './manifest.js';
+import { configureFinanceServerSdk } from './pillars/sdk-config.js';
 
 function resolvePort(): number {
   const raw = process.env['PORT'];
@@ -46,6 +47,12 @@ const selfBaseUrl = resolveSelfBaseUrl({
 });
 
 const financeDb = openFinanceDb(resolveFinanceSqlitePath());
+
+// Before anything that can call out. Reports rather than throws when no key
+// is available: this pillar's own contract surface needs none, and the legs
+// that do each say `no-credential` instead of degrading into `unavailable`.
+configureFinanceServerSdk();
+
 const contacts = createContactsClient();
 const app = createFinanceApiApp({
   financeDb,
