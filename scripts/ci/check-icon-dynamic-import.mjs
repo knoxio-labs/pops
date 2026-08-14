@@ -22,7 +22,12 @@
  * What this guard resolves statically, and what it deliberately does not:
  *
  *   - A bare or double-quoted string literal argument to `import()` /
- *     `require()` — resolved exactly.
+ *     `require()` — resolved exactly, whether it is the call's only
+ *     argument, has a trailing comma (`` import('lucide-react',) ``), or is
+ *     followed by a second argument such as import attributes
+ *     (`` import('lucide-react', { with: { type: 'json' } }) ``). The
+ *     specifier is fully known from the first argument alone, so whatever
+ *     follows a comma does not change whether it targets `lucide-react`.
  *   - A template-literal argument with NO interpolation (`` import(`lucide-react`) ``)
  *     — resolved exactly, same as a string literal.
  *   - A template-literal argument whose STATIC leading quasi is a
@@ -129,23 +134,41 @@ const SOURCE_EXT = new Set(['.ts', '.tsx', '.mts', '.cts', '.js', '.jsx', '.mjs'
  * file/expression) — the one thing that must NOT precede it is another
  * identifier character or `.`, because that would make `import`/`require`
  * part of a longer name or a property access rather than the call itself.
- * Asserting the negative is both shorter and exhaustive by construction.
+ * Asserting the negative is both shorter and exhaustive by construction —
+ * over the ASCII identifier characters `\w` matches. Without the `u` flag,
+ * `\w` does not cover non-ASCII identifier characters, so a non-ASCII
+ * prefix (e.g. `Ωimport('lucide-react')`) is not excluded and would
+ * false-positive. No identifier in this repo is non-ASCII, so that gap is
+ * accepted rather than closed.
  */
 const NOT_PRECEDED_BY_IDENTIFIER = String.raw`(?<![\w$.])`;
 
 /**
- * A dynamic `import()`/`require()` call whose sole argument is a plain
+ * What can legally follow the specifier argument, once it has already been
+ * matched: either the call ends right there (a bare `)`, the shape this
+ * guard has always matched), or a `,` — meaning there is more to the
+ * argument list. That covers a bare trailing comma (`import('x',)`) and a
+ * second argument of any shape (`import('x', { with: { type: 'json' } })`)
+ * alike, without enumerating either one: the specifier is already fully
+ * resolved by the time this fires, so nothing past the comma changes
+ * whether it targets `lucide-react` — only whether the call happens to take
+ * more arguments than one.
+ */
+const CALL_TAIL = String.raw`\s*(?:,|\))`;
+
+/**
+ * A dynamic `import()`/`require()` call whose first argument is a plain
  * string literal or a template literal. Deliberately does NOT match a static
  * `import … from`/`export … from` declaration — see file header.
  */
 const DYNAMIC_CALL_RE = new RegExp(
-  `${NOT_PRECEDED_BY_IDENTIFIER}(?:await\\s+)?(import|require)\\s*\\(\\s*(?:['"]([^'"]*)['"]|\`([^\`]*)\`)\\s*\\)`,
+  `${NOT_PRECEDED_BY_IDENTIFIER}(?:await\\s+)?(import|require)\\s*\\(\\s*(?:['"]([^'"]*)['"]|\`([^\`]*)\`)${CALL_TAIL}`,
   'gm'
 );
 
-/** A dynamic call whose sole argument is a bare identifier. */
+/** A dynamic call whose first argument is a bare identifier. */
 const DYNAMIC_IDENT_CALL_RE = new RegExp(
-  `${NOT_PRECEDED_BY_IDENTIFIER}(?:await\\s+)?(import|require)\\s*\\(\\s*([A-Za-z_$][\\w$]*)\\s*\\)`,
+  `${NOT_PRECEDED_BY_IDENTIFIER}(?:await\\s+)?(import|require)\\s*\\(\\s*([A-Za-z_$][\\w$]*)${CALL_TAIL}`,
   'gm'
 );
 
@@ -338,10 +361,13 @@ function run() {
  * Synthetic fixtures proving the guard reports every resolvable dynamic form
  * (string literal, template literal without interpolation, template literal
  * with an interpolated subpath tail, require(), a same-file single-hop
- * variable trace, a call as the first element of an array literal, and a
- * call immediately after `=>` with no space), stays silent on the shapes
- * documented as undecidable, and stays silent on a static import/dynamic
- * import of an unrelated package.
+ * variable trace, a call as the first element of an array literal, a call
+ * immediately after `=>` with no space, a call with a second argument such
+ * as import attributes, and a call with a bare trailing comma), stays silent
+ * on the shapes documented as undecidable, and stays silent on a static
+ * import/dynamic import of an unrelated package — including the same
+ * second-argument and trailing-comma shapes, so a resolved-but-unrelated
+ * specifier is still correctly ignored.
  *
  * @returns {boolean}
  */
@@ -356,6 +382,8 @@ function selfTest() {
     'const e = await import(spec);',
     "Promise.all([import('lucide-react')]);",
     "const j = () =>import('lucide-react');",
+    "const l = await import('lucide-react', { with: { type: 'json' } });",
+    "const m = await import('lucide-react',);",
   ].join('\n');
 
   const clean = [
@@ -370,6 +398,8 @@ function selfTest() {
     "// const commented = await import('lucide-react');",
     "const k = foo.import('lucide-react');",
     "myimport('lucide-react');",
+    "const n = await import('some-other-package', { with: { type: 'json' } });",
+    "const o = await import('some-other-package',);",
   ].join('\n');
 
   const dirtyHits = findViolations('pillars/x/app/src/A.tsx', dirty);
@@ -384,7 +414,9 @@ function selfTest() {
     'reports a same-file single-hop variable-traced import': dirtyLines.has(7),
     'reports a call as the first element of an array literal': dirtyLines.has(8),
     'reports a call immediately after `=>` with no space': dirtyLines.has(9),
-    'reports every dirty line, not just the first': dirtyHits.length === 7,
+    'reports a call with a second argument (import attributes)': dirtyLines.has(10),
+    'reports a call with a bare trailing comma and no second argument': dirtyLines.has(11),
+    'reports every dirty line, not just the first': dirtyHits.length === 9,
     "does not flag a static named import (oxlint's job)": !cleanHits.some((v) => v.line === 1),
     'does not flag a static export-from re-export': !cleanHits.some(
       (v) => v.line === 2 || v.line === 3
@@ -402,6 +434,10 @@ function selfTest() {
     ),
     'does not flag `import`/`require` as a substring of a longer identifier (myimport(...))':
       !cleanHits.some((v) => v.line === 11),
+    'does not flag a second argument on an unrelated package': !cleanHits.some(
+      (v) => v.line === 12
+    ),
+    'does not flag a trailing comma on an unrelated package': !cleanHits.some((v) => v.line === 13),
     'clean fixture reports nothing at all': cleanHits.length === 0,
   };
 
