@@ -580,6 +580,33 @@ describe('an extraction error of exactly the stated tax', () => {
     expect(result.taxIncluded).toBe(true);
   });
 
+  it('admits the tax row itself filed once among the lines, and this is the same cost paid a different way', () => {
+    // The likelier way the single-occurrence case above actually arrives: not
+    // a coincidentally-priced product but the tax row itself, mis-filed as a
+    // line by a model reading a PDF or pasted order confirmation, where tax
+    // prints as a row like any other. $27.50 of goods, $9.95 of tax stated
+    // separately, and the same $9.95 repeated as a line — one occurrence in
+    // `addedCents`, so `duplicatesTheStatedTax` cannot tell it apart from the
+    // coincidence above. Both are the same figures with two readings, and the
+    // prompt already says a tax row is not a line; this is what happens when
+    // a model does not listen.
+    const taxRowAsLine = receipt({
+      total: '$37.45',
+      tax: '$9.95',
+      lines: [
+        { description: 'Timber Pine DAR 42x19', amount: '$12.50' },
+        { description: 'Screws Bugle 8g 65mm', amount: '$15.00' },
+        { description: 'Sales Tax', amount: '$9.95' },
+      ],
+    });
+
+    const result = gateExtraction(taxRowAsLine);
+
+    expect(result.admissible).toBe(true);
+    expect(result.taxIncluded).toBe(true);
+    expect(result.taxCents).toBe(995);
+  });
+
   it('admits a repeated amount that is not the stated tax', () => {
     // Two identical items on one receipt is ordinary, and says nothing
     // about the tax convention. Only a repeat that equals the tax can flip
