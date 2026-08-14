@@ -23,6 +23,7 @@
 import { createHash } from 'node:crypto';
 
 import { REGISTRY_SERVICE_ACCOUNT_SELF_PATH } from '../registry-paths.js';
+import { SERVICE_ACCOUNT_HEADER } from './service-account-auth.js';
 
 import type {
   ServiceAccountPrincipal,
@@ -99,7 +100,7 @@ async function fetchSelf(query: RegistryQuery, apiKey: string): Promise<Response
   try {
     return await query.fetchImpl(query.url, {
       method: 'GET',
-      headers: { accept: 'application/json', 'x-api-key': apiKey },
+      headers: { accept: 'application/json', [SERVICE_ACCOUNT_HEADER]: apiKey },
       signal: controller.signal,
     });
   } catch (cause) {

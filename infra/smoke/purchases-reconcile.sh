@@ -141,6 +141,8 @@ log "Registering the smoke source and ingesting an order"
 # presented to finance is held to a grant it does not have.
 in_purchases node -e "
   const base = 'http://localhost:3013';
+  // Header name is literal by necessity (inline shell script, no import). The
+  // canonical spelling lives in SERVICE_ACCOUNT_HEADER, libs/sdk/src/server/service-account-auth.ts.
   const headers = {
     'content-type': 'application/json',
     'x-api-key': process.env.POPS_INTERNAL_API_KEY,
