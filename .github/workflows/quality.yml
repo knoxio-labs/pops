@@ -551,13 +551,19 @@ jobs:
           node-version: "24"
       - name: Self-test (fires for a producer with consumers, silent for one without)
         run: node scripts/ci/report-contract-consumers.mjs --self-test
+      - name: Self-test (base resolution across pull_request / merge_group / push)
+        run: node scripts/ci/resolve-report-base.mjs --self-test
       - name: Name the vendored consumers this change obliges
+        env:
+          # `github.base_ref` is a pull-request-only field, same as
+          # `agent-review.yml`'s `BASE_REF`. `github.event.merge_group.base_ref`
+          # is its merge-group equivalent. `main` is the final fallback for
+          # `push`, where neither is set. See resolve-report-base.mjs for what
+          # each of the three resolves to and why.
+          BASE_REF: ${{ github.base_ref || github.event.merge_group.base_ref || 'main' }}
         run: |
           set -euo pipefail
-          # Same base recipe as _discover-units.yml: on a PR the fork point, and
-          # on a push/merge group `origin/main` — which is HEAD there, so the
-          # diff is empty and the report is correctly silent.
-          base=$(git merge-base "origin/${{ github.base_ref || 'main' }}" HEAD || true)
+          base=$(node scripts/ci/resolve-report-base.mjs --ref "$BASE_REF")
           if [ -n "$base" ]; then
             git diff --name-only "$base" HEAD > "$RUNNER_TEMP/changed-files.txt"
             node scripts/ci/report-contract-consumers.mjs --changed-from "$RUNNER_TEMP/changed-files.txt"
@@ -565,7 +571,7 @@ jobs:
             # No usable base. The script then reports EVERY vendored leg under a
             # header saying it could not scope itself — the loud outcome, not the
             # silent one that would be indistinguishable from "nothing changed".
-            echo "No merge base against origin/${{ github.base_ref || 'main' }} — reporting every leg."
+            echo "No merge base against origin/$BASE_REF — reporting every leg."
             node scripts/ci/report-contract-consumers.mjs
           fi
 

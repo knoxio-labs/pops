@@ -107,6 +107,57 @@ describe('an icon-only button with no aria-label is reported', () => {
     ).toHaveLength(1);
   });
 
+  it('reports a ternary aria-label with an empty-string "else" branch', () => {
+    expect(
+      findViolations(
+        'a.tsx',
+        '<Button size="icon" aria-label={isEditing ? "Save" : ""}><Trash2 /></Button>'
+      )
+    ).toHaveLength(1);
+  });
+
+  it('reports the reversed ternary — empty-string branch first', () => {
+    expect(
+      findViolations(
+        'a.tsx',
+        '<Button size="icon" aria-label={isEditing ? "" : "Save"}><Trash2 /></Button>'
+      )
+    ).toHaveLength(1);
+  });
+
+  it('reports a ternary aria-label with an undefined branch', () => {
+    expect(
+      findViolations(
+        'a.tsx',
+        '<Button size="icon" aria-label={isEditing ? undefined : "Save"}><Trash2 /></Button>'
+      )
+    ).toHaveLength(1);
+  });
+
+  it('reports cond && "Label" — the left side has an always-reachable falsy path', () => {
+    expect(
+      findViolations(
+        'a.tsx',
+        '<Button size="icon" aria-label={cond && "Close"}><Trash2 /></Button>'
+      )
+    ).toHaveLength(1);
+  });
+
+  it('reports x ?? "" — an unresolvable left with a decidably-empty right', () => {
+    expect(
+      findViolations('a.tsx', '<Button size="icon" aria-label={x ?? ""}><Trash2 /></Button>')
+    ).toHaveLength(1);
+  });
+
+  it('reports a nested ternary with a buried empty-string branch', () => {
+    expect(
+      findViolations(
+        'a.tsx',
+        '<Button size="icon" aria-label={a ? (b ? "Save" : "") : "Close"}><Trash2 /></Button>'
+      )
+    ).toHaveLength(1);
+  });
+
   it("reports size={'icon'} — a brace-wrapped string literal is statically decidable", () => {
     const hits = findViolations('a.tsx', "<Button size={'icon'}><Trash2 /></Button>");
     expect(hits).toHaveLength(1);
@@ -168,6 +219,42 @@ describe('a labelled or non-icon button is not reported', () => {
   it('a dynamic aria-label expression is treated as present, not guessed at', () => {
     expect(
       findViolations('a.tsx', '<Button size="icon" aria-label={computedLabel}><Trash2 /></Button>')
+    ).toHaveLength(0);
+  });
+
+  it('a ternary aria-label with two decidably non-empty branches is clean', () => {
+    expect(
+      findViolations(
+        'a.tsx',
+        '<Button size="icon" aria-label={isEditing ? "Save" : "Edit"}><Trash2 /></Button>'
+      )
+    ).toHaveLength(0);
+  });
+
+  it('"Close" && "Delete" is clean — the left is a decidably-truthy literal', () => {
+    expect(
+      findViolations(
+        'a.tsx',
+        '<Button size="icon" aria-label={"Close" && "Delete"}><Trash2 /></Button>'
+      )
+    ).toHaveLength(0);
+  });
+
+  it('labelA ?? "Close" is clean — an unresolvable left with a non-empty right is fail-open', () => {
+    expect(
+      findViolations(
+        'a.tsx',
+        '<Button size="icon" aria-label={labelA ?? "Close"}><Trash2 /></Button>'
+      )
+    ).toHaveLength(0);
+  });
+
+  it('a ternary unresolvable on both branches is fail-open, deliberately', () => {
+    expect(
+      findViolations(
+        'a.tsx',
+        '<Button size="icon" aria-label={cond ? labelA : labelB}><Trash2 /></Button>'
+      )
     ).toHaveLength(0);
   });
 

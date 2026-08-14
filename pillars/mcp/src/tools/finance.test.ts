@@ -278,18 +278,34 @@ describe('finance.search', () => {
   it('includes well-formed structured filters', async () => {
     await tool.handler({
       text: 'groceries',
-      filters: [{ field: 'account', operator: 'eq', value: 'checking' }],
+      filters: [{ field: 'entityId', operator: 'eq', value: 'ent_1' }],
     });
     expect(search.search).toHaveBeenCalledWith({
       query: {
         text: 'groceries',
-        filters: [{ field: 'account', operator: 'eq', value: 'checking' }],
+        filters: [{ field: 'entityId', operator: 'eq', value: 'ent_1' }],
       },
     });
   });
 
   it('drops malformed filter entries', async () => {
-    await tool.handler({ text: 'groceries', filters: [{ field: 'account' }] });
+    await tool.handler({ text: 'groceries', filters: [{ field: 'entityId' }] });
+    expect(search.search).toHaveBeenCalledWith({ query: { text: 'groceries' } });
+  });
+
+  it('drops filters whose field is outside the enforced vocabulary', async () => {
+    await tool.handler({
+      text: 'groceries',
+      filters: [{ field: 'account', operator: 'eq', value: 'checking' }],
+    });
+    expect(search.search).toHaveBeenCalledWith({ query: { text: 'groceries' } });
+  });
+
+  it('drops filters whose operator is outside the enforced vocabulary', async () => {
+    await tool.handler({
+      text: 'groceries',
+      filters: [{ field: 'entityId', operator: 'contains', value: 'ent_1' }],
+    });
     expect(search.search).toHaveBeenCalledWith({ query: { text: 'groceries' } });
   });
 

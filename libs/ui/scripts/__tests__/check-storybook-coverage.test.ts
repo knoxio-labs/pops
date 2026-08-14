@@ -196,7 +196,7 @@ describe('checkAliasCoverage', () => {
 });
 
 describe('listExportedComponentModules', () => {
-  it('keeps only barrel-exported .tsx modules that export a component', () => {
+  it('keeps only barrel-exported modules that export a component — camelCase helpers and non-component constants are excluded regardless of extension', () => {
     const root = makeTree({
       'index.ts': [
         "export * from './components/Chip';",
@@ -210,6 +210,28 @@ describe('listExportedComponentModules', () => {
       'lib/format.ts': 'export function formatCurrency() { return ""; }',
     });
     expect(listExportedComponentModules(root)).toEqual([resolve(root, 'components/Chip.tsx')]);
+  });
+
+  it('discovers a component declared in a .ts file — no JSX, built with createElement, so no .tsx extension is required (POPS-2178)', () => {
+    const root = makeTree({
+      'index.ts': "export * from './components/TsOnly';",
+      'components/TsOnly.ts': [
+        "import { createElement } from 'react';",
+        "export const TsOnly = () => createElement('div');",
+      ].join('\n'),
+    });
+    expect(listExportedComponentModules(root)).toEqual([resolve(root, 'components/TsOnly.ts')]);
+  });
+
+  it('does not treat the root barrel itself as a component module even though it re-exports PascalCase names via `export { X, Y } from` — only the file that declares them is the subject', () => {
+    const root = makeTree({
+      'index.ts': "export { Button as ButtonPrimitive } from './components/button';",
+      'components/button.ts': [
+        "import { createElement } from 'react';",
+        "export const Button = () => createElement('button');",
+      ].join('\n'),
+    });
+    expect(listExportedComponentModules(root)).toEqual([resolve(root, 'components/button.ts')]);
   });
 
   it('throws instead of reporting an empty set when the barrel is missing', () => {
@@ -298,6 +320,49 @@ describe('story discovery', () => {
       resolve(root, 'components/Chip.tsx'),
       resolve(root, 'primitives/nested/badge.tsx'),
     ]);
+  });
+});
+
+describe('end-to-end: a .ts-declared component with no story (POPS-2178)', () => {
+  function pipeline(root: string) {
+    const componentModules = listExportedComponentModules(root);
+    const storyFiles = listStoryFiles(root);
+    return checkStoryCoverage({ srcDir: root, componentModules, storyFiles, allowlist: {} });
+  }
+
+  it('fails, naming the .ts component, when discovery runs through listExportedComponentModules and checkStoryCoverage together — not just when componentModules is hand-supplied', () => {
+    const root = makeTree({
+      'index.ts': [
+        "export * from './components/TsOnly';",
+        "export * from './components/Chip';",
+      ].join('\n'),
+      'components/TsOnly.ts': [
+        "import { createElement } from 'react';",
+        "export const TsOnly = () => createElement('div');",
+      ].join('\n'),
+      'components/Chip.tsx': 'export const Chip = () => null;',
+      'components/Chip.stories.tsx': "import { Chip } from './Chip';",
+    });
+    expect(pipeline(root)).toEqual([
+      'components/TsOnly.ts: exports a component but no story imports it.',
+    ]);
+  });
+
+  it('passes once the .ts component gains a story', () => {
+    const root = makeTree({
+      'index.ts': [
+        "export * from './components/TsOnly';",
+        "export * from './components/Chip';",
+      ].join('\n'),
+      'components/TsOnly.ts': [
+        "import { createElement } from 'react';",
+        "export const TsOnly = () => createElement('div');",
+      ].join('\n'),
+      'components/TsOnly.stories.tsx': "import { TsOnly } from './TsOnly';",
+      'components/Chip.tsx': 'export const Chip = () => null;',
+      'components/Chip.stories.tsx': "import { Chip } from './Chip';",
+    });
+    expect(pipeline(root)).toEqual([]);
   });
 });
 

@@ -471,7 +471,7 @@ jobs:
       # 30 MB of screenshots nobody opens.
       - name: Maestro's screenshots and view hierarchies
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: maestro-debug
           path: ~/.maestro/tests
