@@ -34,6 +34,8 @@
  */
 import { expect, test, type Page } from '@playwright/test';
 
+import { stubShellBoot } from './helpers/pillar-rest';
+
 // ---------------------------------------------------------------------------
 // Fixtures
 // ---------------------------------------------------------------------------
@@ -259,6 +261,7 @@ test.describe('Media — watchlist: Plex sync push (mocked)', () => {
       if (msg.type() === 'error') consoleErrors.push(msg.text());
     });
 
+    await stubShellBoot(page);
     await installMediaMocks(page);
   });
 
@@ -280,36 +283,30 @@ test.describe('Media — watchlist: Plex sync push (mocked)', () => {
     // 1. Navigate to /media/watchlist — the mocked list contains 4 items
     //    (Matrix, Interstellar, Fight Club, Shogun).
     await page.goto('/media/watchlist');
-    await expect(page.getByRole('heading', { level: 1, name: 'Watchlist' })).toBeVisible({
-      timeout: 10_000,
-    });
+    await expect(page.getByRole('heading', { level: 1, name: 'Watchlist' })).toBeVisible();
 
     // The button starts in the idle state.
     const button = page.getByTestId('watchlist-plex-sync-button');
-    await expect(button).toBeVisible({ timeout: 10_000 });
+    await expect(button).toBeVisible();
     await expect(button).toHaveText(/Sync with Plex/);
     await expect(button).toBeEnabled();
 
     // Confirm a watchlist item is visible BEFORE the sync — the WatchlistItem
     // renders the title in an <h3>.
-    await expect(page.getByRole('heading', { level: 3, name: 'The Matrix' }).first()).toBeVisible({
-      timeout: 10_000,
-    });
+    await expect(page.getByRole('heading', { level: 3, name: 'The Matrix' }).first()).toBeVisible();
 
     // 2. Click the sync button. The first status poll returns `running`,
     //    so the button flips to "Syncing…" + disabled.
     await button.click();
-    await expect(button).toBeDisabled({ timeout: 10_000 });
-    await expect(button).toHaveText(/Syncing…/, { timeout: 10_000 });
+    await expect(button).toBeDisabled();
+    await expect(button).toHaveText(/Syncing…/);
 
     // 3. The poll interval is 1500ms (see useStatusPolling); the second
     //    poll returns `completed`. The hook surfaces a success toast and
     //    the button re-enables back to the idle copy.
-    await expect(page.getByText('Watchlist sync complete').first()).toBeVisible({
-      timeout: 10_000,
-    });
-    await expect(button).toBeEnabled({ timeout: 10_000 });
-    await expect(button).toHaveText(/Sync with Plex/, { timeout: 10_000 });
+    await expect(page.getByText('Watchlist sync complete').first()).toBeVisible();
+    await expect(button).toBeEnabled();
+    await expect(button).toHaveText(/Sync with Plex/);
 
     // 4. The watchlist remains visible after the sync — the list query is
     //    invalidated on completion and re-fetches the same mocked rows.

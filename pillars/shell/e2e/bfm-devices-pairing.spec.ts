@@ -1,19 +1,14 @@
 /**
  * bfm Devices — mint a pairing code, see the paired handset, revoke it.
  *
- * Self-contained by design. The rest of this suite routes through
- * `helpers/use-real-api`, which targets the deleted tRPC monolith's seeded
- * `e2e` environment and is why the whole suite is gated to
- * `workflow_dispatch` (POPS-1311). This spec fulfils bfm's three operator
- * routes at the `/bfm-api` proxy path instead, so it depends on nothing that
- * rewrite has to replace and will run unchanged the day the harness comes
- * back.
- *
- * bfm itself does not need to be up. What is under test is the page: that it
- * asks for a code, renders what came back, lists what is paired, and cuts a
- * device off only after the operator confirms.
+ * bfm itself does not need to be up: its three operator routes are fulfilled
+ * at the `/bfm-api` proxy path. What is under test is the page — that it asks
+ * for a code, renders what came back, lists what is paired, and cuts a device
+ * off only after the operator confirms.
  */
-import { expect, test, type Page, type Route } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
+
+import { json, stubShellBoot } from './helpers/pillar-rest';
 
 const PAIRING_CODE = '7QK4-9M2X-P3ND';
 const PAIRING_URL = `https://bfm.example.test/devices/pair?code=${PAIRING_CODE}`;
@@ -26,10 +21,6 @@ const TRUSTED_DEVICE = {
   lastSeenAt: '2026-08-08T09:00:00.000Z',
   revokedAt: null,
 };
-
-function json(route: Route, status: number, body: unknown): Promise<void> {
-  return route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
-}
 
 /**
  * Stand in for bfm's operator surface.
@@ -67,6 +58,7 @@ async function stubOperatorApi(
 }
 
 async function openDevices(page: Page): Promise<void> {
+  await stubShellBoot(page);
   await page.goto('/bfm');
   await expect(page.getByRole('heading', { name: 'Devices' })).toBeVisible();
 }

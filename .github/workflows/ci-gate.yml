@@ -17,7 +17,7 @@ run-name: >-
 # of those is required by name, and all of them block a merge through this
 # context. See .github/workflows/README.md.
 #
-# WHY workflow_run (not needs:): the gated jobs live across EIGHT separate
+# WHY workflow_run (not needs:): the gated jobs live across NINE separate
 # workflows, each with its OWN path filters. `needs:` only sees jobs in the
 # same run, and folding them into one workflow would (a) double-run every job
 # or (b) rename the existing required `Lint`/`Format`/… contexts and break the
@@ -92,7 +92,7 @@ run-name: >-
 #
 # WHY THIS DOES NOT REACH `main`: `merge_group` cannot carry a `paths:` filter
 # at all — GitHub rejects the key outright on that event — so every one of the
-# eight gated workflows is TRIGGERED unconditionally in the merge queue and
+# nine gated workflows is TRIGGERED unconditionally in the merge queue and
 # registers a run there regardless of the diff. Two of them (`ios-quality.yml`,
 # `docker-build.yml`) now scope their expensive jobs INSIDE that run, via a
 # `scope` job and `scripts/ci/merge-group-scope.mjs` — a skipped job still
@@ -146,6 +146,7 @@ on:
       - "Registry Generated Quality"
       - "iOS Quality"
       - "Docker Build"
+      - "E2E Tests"
     types: [completed]
 
 # Key on the observed head SHA, not the gate's own ref: every sibling
@@ -184,6 +185,7 @@ jobs:
               "Registry Generated Quality",
               "iOS Quality",
               "Docker Build",
+              "E2E Tests",
             ];
             const failing = new Set(["failure", "cancelled", "timed_out", "startup_failure", "action_required", "stale"]);
 
@@ -268,6 +270,15 @@ jobs:
                 "tsconfig.base.json",
                 ".github/workflows/docker-build.yml",
                 "scripts/ci/smoke-image.mjs"
+              ],
+              "E2E Tests": [
+                "pillars/**",
+                "libs/**",
+                "pnpm-lock.yaml",
+                "pnpm-workspace.yaml",
+                "tsconfig.base.json",
+                "tsconfig.build.json",
+                ".github/workflows/fe-test-e2e.yml"
               ]
             };
 

@@ -40,6 +40,8 @@
  */
 import { expect, test, type Page } from '@playwright/test';
 
+import { stubShellBoot } from './helpers/pillar-rest';
+
 // ---------------------------------------------------------------------------
 // Fixture — a movie NOT in the mocked library. Inception (tmdbId 27205)
 // starts the card in the "Add to Library" state.
@@ -340,6 +342,7 @@ test.describe('Media — library: search TMDB and add a movie', () => {
       if (msg.type() === 'error') consoleErrors.push(msg.text());
     });
 
+    await stubShellBoot(page);
     await installMediaMocks(page);
   });
 
@@ -360,18 +363,14 @@ test.describe('Media — library: search TMDB and add a movie', () => {
   test('adds a movie from TMDB search and it surfaces in the library grid', async ({ page }) => {
     // 1. Start on /media — mocked library.list returns an empty collection.
     await page.goto('/media');
-    await expect(page.getByRole('heading', { level: 1, name: 'Library' })).toBeVisible({
-      timeout: 10_000,
-    });
+    await expect(page.getByRole('heading', { level: 1, name: 'Library' })).toBeVisible();
 
     // 2. Follow the header "Search" link to /media/search. Scope to the
     //    header region so the search-page input nav link isn't confused with
     //    other "Search" affordances on the page.
     await page.getByRole('link', { name: 'Search', exact: true }).first().click();
     await expect(page).toHaveURL(/\/media\/search/);
-    await expect(page.getByRole('heading', { level: 1, name: 'Search' })).toBeVisible({
-      timeout: 10_000,
-    });
+    await expect(page.getByRole('heading', { level: 1, name: 'Search' })).toBeVisible();
 
     // 3. Type into the TMDB search. SearchInput uses a 300ms debounce; typing
     //    into the native <input> and waiting for the result card is enough —
@@ -381,7 +380,7 @@ test.describe('Media — library: search TMDB and add a movie', () => {
     // 4. The mocked TMDB search returns one movie. The result card renders
     //    the title as an <h3>.
     const resultHeading = page.getByRole('heading', { level: 3, name: MOVIE_TITLE });
-    await expect(resultHeading).toBeVisible({ timeout: 10_000 });
+    await expect(resultHeading).toBeVisible();
 
     // 5. Click "Add to Library" on the result card. Semantic button label.
     //    `.filter({ visible: true })` guards against responsive duplicates.
@@ -389,25 +388,21 @@ test.describe('Media — library: search TMDB and add a movie', () => {
       .getByRole('button', { name: /Add to Library/i })
       .filter({ visible: true })
       .first();
-    await expect(addButton).toBeVisible({ timeout: 10_000 });
+    await expect(addButton).toBeVisible();
     await addButton.click();
 
     // 6. The mocked mutation resolves → the card replaces the Add button
     //    with the "In Library" badge (session-level state). Also a success
     //    toast surfaces via sonner.
-    await expect(page.getByText('In Library').filter({ visible: true }).first()).toBeVisible({
-      timeout: 10_000,
-    });
+    await expect(page.getByText('In Library').filter({ visible: true }).first()).toBeVisible();
     await expect(
       page.getByText('Movie added to library').filter({ visible: true }).first()
-    ).toBeVisible({ timeout: 10_000 });
+    ).toBeVisible();
 
     // 7. Navigate back to /media — mocked library.list now returns the new
     //    movie. The MediaCard renders as a Link with aria-label
     //    `${title} (Movie)`, which is a stable semantic hook.
     await page.goto('/media');
-    await expect(page.getByRole('link', { name: `${MOVIE_TITLE} (Movie)` }).first()).toBeVisible({
-      timeout: 10_000,
-    });
+    await expect(page.getByRole('link', { name: `${MOVIE_TITLE} (Movie)` }).first()).toBeVisible();
   });
 });

@@ -1,26 +1,48 @@
 name: E2E Tests
 
-# DISABLED on push/PR (lake-migration). This suite was written against the
-# deleted `apps/pops-api` tRPC monolith: every spec mocks/routes `/trpc/**`
-# (a surface the REST pillar stack does not serve) and the harness seeded an
-# `e2e` named environment via `POST :3000/env/...` (an endpoint that no
-# longer exists). The lake is now seven independent REST pillars plus a
-# static-built shell, so the suite cannot pass without a full rewrite against
-# the REST stack — out of scope for the workflow-repair pass.
+# Playwright against the shell and the app bundles it mounts. No pillar
+# backend is started: every spec fulfils the REST surface it exercises at the
+# `/<pillar>-api` proxy path with `page.route`, so the only processes are the
+# two shell dev servers `pillars/shell/playwright.config.ts` defines.
 #
-# Until that rewrite lands, the workflow is `workflow_dispatch` only so it
-# never gates CI by booting a deleted backend. Manual runs still build the
-# shell and start Playwright's shell webServers for ad-hoc investigation;
-# specs that depend on the deleted tRPC API will fail and that is expected.
+# The build step below is wider than the shell's own dependency closure on
+# purpose. The finance-only webServer runs `scripts/build-registry-snapshot.ts`
+# first, which discovers every pillar's `./manifest` export by importing its
+# built `dist/contract/manifest.js`. A pillar the shell does not depend on
+# still has to be built, or that server never starts and BOTH projects fail.
 #
-# Follow-up: TODO(e2e-rest-rewrite) — rewrite the specs against the REST
-# pillars and re-enable push/pull_request triggers here.
+# The filter below is that same closure, not the shell's. Narrowing it to the
+# shell and the app bundles leaves every non-app pillar file — a manifest under
+# `pillars/<id>/src/`, anything its `build` script reads — able to break both
+# webServers while this workflow reports nothing at all, and the failure then
+# surfaces in the merge queue where it ejects the whole batch. `pillars/**` and
+# `libs/**` are the two roots the build step's `--filter` expressions resolve
+# to; the root configs are what `tsc -b` reads underneath them.
 on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - "pillars/**"
+      - "libs/**"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "tsconfig.base.json"
+      - "tsconfig.build.json"
+      - ".github/workflows/fe-test-e2e.yml"
+  merge_group:
   workflow_dispatch:
+
+concurrency:
+  group: fe-test-e2e-${{ github.workflow }}-${{ github.ref }}
+  # Cancelling a superseded run and admitting its replacement is not atomic on
+  # GitHub's side, and `CI Gate` reads an absent run as pending forever. See
+  # the MITIGATION note in ci-gate.yml.
+  cancel-in-progress: false
 
 jobs:
   e2e-tests:
-    name: Playwright E2E Tests (manual)
+    name: Playwright E2E Tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -40,8 +62,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build shared packages
-        run: pnpm --filter "@pops/shell^..." --filter "!./pillars/*/app" build
+      - name: Build pillars and shared packages
+        run: pnpm --filter "./pillars/*" --filter "@pops/shell^..." build
 
       - name: Cache Playwright browsers
         id: playwright-cache
@@ -65,11 +87,6 @@ jobs:
       - name: Run Playwright tests
         run: |
           cd pillars/shell
-          # Boots the two shell webServers defined in playwright.config.ts:
-          #   - chromium-all-modules — canonical workspace registry
-          #   - chromium-finance-only — POPS_APPS=finance,core registry snapshot
-          # There is no longer a pops-api webServer; specs that target the
-          # deleted /trpc surface fail by design until the REST rewrite.
           pnpm test:e2e
         env:
           CI: true

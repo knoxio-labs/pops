@@ -1,85 +1,83 @@
 /**
- * Smoke test — global search returns results (#2105)
+ * Federated search — the top bar against the orchestrator's REST surface.
  *
- * Tier 1 minimum: the top-bar search input opens, accepts a query matching a
- * seeded entity ("Woolworths"), renders a results panel with at least one
- * result, and the panel closes on Escape.
- *
- * Real API against the seeded 'e2e' SQLite environment. The desktop search
- * input is always mounted in the shell's <TopBar> and the viewport used by
- * the 'webkit' project (Desktop Safari) is wide enough for the `md:flex`
- * breakpoint, so no mobile-overlay fallback is needed.
- *
- * Crash detection is wired into beforeEach/afterEach so every test in this
- * suite verifies the page does not crash.
+ * `useSearchInputData` (`libs/navigation`) posts to
+ * `/orchestrator-api/search` and renders the `{ sections }` envelope it gets
+ * back, dropping any section whose owning module this build did not mount.
+ * The install-set half of that filter is asserted in the finance-only spec;
+ * here the shell mounts everything, so what is under test is the round trip:
+ * typing issues the POST, and the sections that come back become the panel.
  */
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
-import { useRealApi } from './helpers/use-real-api';
+import {
+  CROSS_MODULE_SEARCH_SECTIONS,
+  SEARCH_QUERY,
+  stubOrchestratorSearch,
+  stubShellBoot,
+} from './helpers/pillar-rest';
 
-test.describe('Global search — smoke test', () => {
-  let pageErrors: string[] = [];
-  let consoleErrors: string[] = [];
+function searchBox(page: Page) {
+  return page.getByRole('textbox', { name: 'Search POPS' });
+}
 
+test.describe('Shell — federated search', () => {
   test.beforeEach(async ({ page }) => {
-    pageErrors = [];
-    consoleErrors = [];
-    await useRealApi(page);
-    // Register before navigation so errors on first load are captured.
-    page.on('pageerror', (err) => pageErrors.push(err.message));
-    page.on('console', (msg) => {
-      if (msg.type() === 'error') consoleErrors.push(msg.text());
-    });
+    await stubShellBoot(page);
     await page.goto('/');
-    // Root redirects to /finance — wait for navigation and shell mount.
-    await expect(page).toHaveURL(/\/finance/);
-    await expect(page.getByRole('textbox', { name: 'Search POPS' })).toBeVisible();
+    await expect(searchBox(page)).toBeVisible();
   });
 
   test.afterEach(async ({ page }) => {
     await page.unrouteAll({ behavior: 'ignoreErrors' });
-    const realConsoleErrors = consoleErrors.filter(
-      (e) =>
-        !e.includes('React Router') &&
-        !e.includes('Download the React DevTools') &&
-        !e.includes('Failed to load resource')
+  });
+
+  test('typing posts the query to the orchestrator and renders its sections', async ({ page }) => {
+    await stubOrchestratorSearch(page, CROSS_MODULE_SEARCH_SECTIONS);
+
+    // Captured from the wire rather than asserted on the stub's arguments:
+    // the point of the test is that the shell sends the orchestrator's
+    // documented body, and only the real request can say whether it did.
+    const posted = page.waitForRequest(
+      (request) => request.url().includes('/orchestrator-api/search') && request.method() === 'POST'
     );
-    expect(pageErrors).toHaveLength(0);
-    expect(realConsoleErrors).toHaveLength(0);
-  });
 
-  test('typing "Woolworths" returns at least one result and Escape closes the panel', async ({
-    page,
-  }) => {
-    const searchBox = page.getByRole('textbox', { name: 'Search POPS' });
+    await searchBox(page).fill(SEARCH_QUERY);
 
-    // Trigger search — focus opens the panel; typing submits the query.
-    await searchBox.click();
-    await searchBox.fill('Woolworths');
+    const body: unknown = (await posted).postDataJSON();
+    expect(body).toMatchObject({ query: { text: SEARCH_QUERY } });
 
-    // Results panel appears (SearchResultsPanel uses data-testid="search-results-panel").
     const panel = page.getByTestId('search-results-panel');
-    await expect(panel).toBeVisible({ timeout: 10_000 });
-
-    // At least one result references the seeded "Woolworths" entity. Scope to
-    // the panel to avoid matching any unrelated "Woolworths" text on the page
-    // beneath (e.g. the transactions list on /finance).
-    await expect(panel.getByText(/Woolworths/i).first()).toBeVisible();
-
-    // Escape dismisses the panel (usePanelDismiss + useSearchKeyboardNav).
-    await page.keyboard.press('Escape');
-    await expect(panel).toBeHidden();
+    await expect(panel).toBeVisible();
+    await expect(panel.getByTestId('section-movies')).toBeVisible();
+    await expect(panel.getByTestId('section-transactions')).toBeVisible();
+    await expect(panel.getByText('The Matrix')).toBeVisible();
   });
 
-  test('Cmd+K focuses the global search input', async ({ page }) => {
-    const searchBox = page.getByRole('textbox', { name: 'Search POPS' });
+  test('a section for an unmounted module is dropped', async ({ page }) => {
+    await stubOrchestratorSearch(page, [
+      ...CROSS_MODULE_SEARCH_SECTIONS,
+      {
+        domain: 'sightings',
+        moduleId: 'not-a-pillar',
+        hits: [{ uri: 'pops://ghost/sighting/1', data: { title: 'Ghost result' } }],
+      },
+    ]);
 
-    // Click elsewhere first so the input doesn't already own focus.
-    await page.getByRole('heading').first().click();
-    await expect(searchBox).not.toBeFocused();
+    await searchBox(page).fill(SEARCH_QUERY);
 
-    // Shortcut registered on document — works from any page.
-    await page.keyboard.press('Meta+k');
-    await expect(searchBox).toBeFocused();
+    const panel = page.getByTestId('search-results-panel');
+    await expect(panel.getByTestId('section-movies')).toBeVisible();
+    await expect(panel.getByTestId('section-sightings')).toHaveCount(0);
+    await expect(panel.getByText('Ghost result')).toHaveCount(0);
+  });
+
+  test('an orchestrator outage leaves the shell usable', async ({ page }) => {
+    await page.route(/\/orchestrator-api\/search$/, (route) => route.abort('failed'));
+
+    await searchBox(page).fill(SEARCH_QUERY);
+
+    await expect(searchBox(page)).toHaveValue(SEARCH_QUERY);
+    await expect(page.getByRole('button', { name: 'Finance' })).toBeVisible();
   });
 });
