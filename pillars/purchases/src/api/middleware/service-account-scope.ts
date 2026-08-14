@@ -10,14 +10,21 @@
  * `@pops/pillar-express`. What is left here is the choice of what purchases
  * gates, and its posture.
  *
- * **Purchases does not require a credential.** Browser traffic arrives through
- * the shell's nginx with no key, and the two-process test drives the real
- * server without one; requiring a credential would 401 both. The ingest CLI
- * and the operator smoke script no longer belong on that list — they present a
- * key and are bound to its grant like any other machine caller, alongside the
- * MCP tools in `pillars/mcp/src/tools/purchases.ts` and the orchestrator's
- * federated search, which reach this pillar through `pillar('purchases')`. The
- * README records what would reverse the `false`.
+ * **Purchases does not require a credential — in production.** Browser
+ * traffic arrives through the shell's nginx with no key, and the two-process
+ * test drives the real server without one; requiring a credential would 401
+ * both. The ingest CLI and the operator smoke script no longer belong on that
+ * list — they present a key and are bound to its grant like any other machine
+ * caller, alongside the MCP tools in `pillars/mcp/src/tools/purchases.ts` and
+ * the orchestrator's federated search, which reach this pillar through
+ * `pillar('purchases')`. The README records what would reverse the default.
+ *
+ * {@link REQUIRE_CREDENTIAL_ENV} is that reversal, scoped to a test rather
+ * than a deployment: a live-seam suite that only ever sends a credentialled
+ * call cannot tell "the grant was checked" from "nothing was checked and
+ * happened to agree" unless the uncredentialled path is closed for the
+ * duration of the test. Never set in a real deployment — doing so 401s the
+ * shell's browser traffic, which carries no key and never will.
  *
  * The required scope is derived from the contract itself, so a route added to
  * `purchasesContract` is gated the moment it exists; there is no second list to
@@ -38,10 +45,22 @@ import type { ContractScopeMap, ServiceAccountVerifier } from '@pops/pillar-sdk/
  */
 const PURCHASES_SCOPE_ROOT = 'purchases';
 
+/**
+ * Test-only escape hatch that flips the gate's posture to mandatory. See this
+ * file's header for why a live-seam suite needs it and why nothing else may
+ * ever set it.
+ */
+export const REQUIRE_CREDENTIAL_ENV = 'PURCHASES_REQUIRE_SERVICE_ACCOUNT_CREDENTIAL';
+
+function resolveRequireCredential(env: NodeJS.ProcessEnv = process.env): boolean {
+  return env[REQUIRE_CREDENTIAL_ENV] === 'true';
+}
+
 const gate = createServiceAccountScopeGate({
   contract: purchasesContract,
   rootScope: PURCHASES_SCOPE_ROOT,
   logPrefix: 'purchases-api',
+  requireCredential: resolveRequireCredential(),
 });
 
 /**
