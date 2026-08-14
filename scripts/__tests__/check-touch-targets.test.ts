@@ -173,6 +173,38 @@ describe('findViolations', () => {
     });
   });
 
+  describe('a viewport-width variant shrinking an already-sufficient base', () => {
+    it.each([
+      ['max-sm: below 640px', 'h-11 w-11 max-sm:h-6 max-sm:w-6'],
+      ['sm: at/above 640px — the mirror direction', 'h-11 w-11 sm:h-6 sm:w-6'],
+      ['an arbitrary max-[…]: bound', 'h-11 w-11 max-[600px]:h-6 max-[600px]:w-6'],
+      [
+        'the long-hand arbitrary max-width media form',
+        'h-11 w-11 [@media(max-width:600px)]:h-6 [@media(max-width:600px)]:w-6',
+      ],
+      ['a stacked max-sm:hover: variant', 'h-11 w-11 max-sm:hover:h-6 max-sm:hover:w-6'],
+      ['max-sm:size-* shrinking both axes via one utility', 'h-11 w-11 max-sm:size-6'],
+    ])(
+      'flags a sufficient base shrunk below the floor by %s, even though the unprefixed base alone would pass',
+      (_label, className) => {
+        const src = `<button className="${className}"><XIcon /></button>`;
+        expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([
+          { file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'button' },
+        ]);
+      }
+    );
+
+    it('does not flag a scoped variant whose magnitude equals the floor exactly', () => {
+      const src = '<button className="h-11 w-11 max-sm:h-11 max-sm:w-11"><XIcon /></button>';
+      expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([]);
+    });
+
+    it('does not flag a scoped variant that only grows the base further', () => {
+      const src = '<button className="h-11 w-11 max-sm:h-16 max-sm:w-16"><XIcon /></button>';
+      expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([]);
+    });
+  });
+
   describe('container-query and other non-viewport-width variants', () => {
     it.each([
       ['@sm:', '@sm:h-11 @sm:w-11'],
