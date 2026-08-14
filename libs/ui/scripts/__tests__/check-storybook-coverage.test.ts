@@ -14,6 +14,15 @@ import {
   readValueImportSpecifiers,
   resolveRelativeImport,
 } from '../story-coverage.mjs';
+import { STORY_COVERAGE_ALLOWLIST } from '../storybook-coverage-allowlist.mjs';
+
+/**
+ * The guard fails a stale allowlist entry but happily accepts a new one, so on
+ * its own the list can grow to cover every export one honest line at a time
+ * with every run green. Pinning the size makes taking debt on a visible edit
+ * here: lower it when an entry earns a story, raise it only deliberately.
+ */
+const ALLOWLIST_PINNED_SIZE = 33;
 
 const tempRoots: string[] = [];
 
@@ -310,5 +319,9 @@ describe('the real @pops/ui tree', () => {
 
   it('passes both invariants', () => {
     expect(run()).toBe(true);
+  });
+
+  it('holds the allowlist at its pinned size', () => {
+    expect(Object.keys(STORY_COVERAGE_ALLOWLIST)).toHaveLength(ALLOWLIST_PINNED_SIZE);
   });
 });

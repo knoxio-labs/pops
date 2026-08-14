@@ -22,7 +22,7 @@ find libs/ui/src -name '*.tsx' | xargs grep -l '<keyword>'
 ls libs/ui/src/components libs/ui/src/primitives
 ```
 
-Story coverage is a gate: `scripts/check-storybook-coverage.mjs` fails when a barrel-exported `.tsx` module no story imports appears, unless it is listed in `scripts/storybook-coverage-allowlist.mjs`. That allowlist is the pre-existing debt and only shrinks — an entry that gains a story, or stops being exported, fails the same gate. **Absence from Storybook is still not absence from the library** until the list is empty.
+Story coverage is a gate: `scripts/check-storybook-coverage.mjs` fails when a barrel-exported `.tsx` module no story imports appears, unless it is listed in `scripts/storybook-coverage-allowlist.mjs`. That allowlist is the pre-existing debt. What the gate enforces is that entries stay honest and that the list does not grow behind your back: a stale entry — one whose module has since gained a story, or stopped being exported — fails, an entry without a reason fails, and `scripts/__tests__/check-storybook-coverage.test.ts` pins the entry count, so taking new debt on means editing that number in the same diff. Adding an entry is allowed; adding one quietly is not. **Absence from Storybook is still not absence from the library** until the list is empty.
 
 ## What first-time consumers get wrong
 

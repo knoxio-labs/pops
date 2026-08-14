@@ -11,7 +11,9 @@
  *
  * The allowlist is a ratchet, not an escape hatch: an entry whose module has
  * since gained a story, or whose module is no longer exported at all, is
- * itself a violation, so the list can only shrink.
+ * itself a violation. A *new* entry is accepted here — what stops the list
+ * growing silently is the size pinned in
+ * `scripts/__tests__/check-storybook-coverage.test.ts`.
  *
  * Per ADR-045 discovery reports rather than passes when it loses its subject:
  * a missing barrel throws, and zero component modules or zero story files are
@@ -218,7 +220,7 @@ export function checkStoryCoverage({ srcDir, componentModules, storyFiles, allow
       errors.push(`${key}: exports a component but no story imports it.`);
     } else if (isStoried && isAllowlisted) {
       errors.push(
-        `${key}: has a story now — delete its storybook-coverage-allowlist.mjs entry (the list only shrinks).`
+        `${key}: has a story now — delete its storybook-coverage-allowlist.mjs entry and lower the pinned size in scripts/__tests__/check-storybook-coverage.test.ts.`
       );
     }
   }

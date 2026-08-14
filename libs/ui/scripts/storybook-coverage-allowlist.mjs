@@ -4,8 +4,9 @@
  * Every entry is a debt, not a decision: the story-coverage half of
  * `check-storybook-coverage.mjs` fails when a module listed here gains a story
  * (the entry is then stale) and when a module listed here stops being
- * exported, so the list can only shrink. Adding an entry is how you take debt
- * on knowingly; there is no way to silence the guard without one.
+ * exported. Adding an entry is how you take debt on knowingly; there is no way
+ * to silence the guard without one, and `scripts/__tests__/` pins this list's
+ * size so a new entry cannot land without also editing that number.
  *
  * Keys are `libs/ui/src`-relative paths. Values say why the module has no
  * story yet. The uniform reason below is the honest one for this batch: they
