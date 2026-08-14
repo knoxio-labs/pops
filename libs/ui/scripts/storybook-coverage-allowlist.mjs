@@ -21,7 +21,6 @@ export const STORY_COVERAGE_ALLOWLIST = {
   'components/DurationFieldInput.tsx': 'Predates the story-coverage gate.',
   'components/EmptyState.tsx': 'Predates the story-coverage gate.',
   'components/ErrorBoundary.tsx': 'Predates the story-coverage gate.',
-  'components/FileUpload.tsx': 'Predates the story-coverage gate.',
   'components/ImageGallery.tsx': 'Predates the story-coverage gate.',
   'components/ImageWithFallback.tsx': 'Predates the story-coverage gate.',
   'components/MediaCard.tsx': 'Predates the story-coverage gate.',
