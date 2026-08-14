@@ -49,6 +49,36 @@ pillars/ai/
     └── db/         PRIVATE: drizzle schema + services + the ai.db opener
 ```
 
+## Background work
+
+Two periodic passes run behind env gates that are OFF by default: the alert
+evaluator (`AI_ALERTS_SCHEDULER_ENABLED`, every 5 minutes) and the
+observability summary + inference-log retention pass
+(`AI_OBSERVABILITY_SCHEDULER_ENABLED`, hourly).
+
+How they are scheduled depends on Redis, and Redis is optional here:
+
+- **With `REDIS_URL` (or `REDIS_HOST`)** they are BullMQ repeatable jobs on the
+  pillar's own `ai.maintenance` queue, consumed by a worker inside the API
+  process — both tasks write this pillar's SQLite handle, which a separate
+  worker container could not share. The schedule lives in Redis, so it
+  survives a restart, and every boot reconciles rather than re-registers:
+  an unchanged schedule is left alone, a changed cadence replaces in place,
+  and a schedule whose gate has since been turned off is removed.
+- **Without Redis** the pre-existing `setInterval` loops run instead
+  (`src/api/modules/*/scheduler.ts`). The feature still works; its schedule
+  simply restarts with the process.
+
+A job that exhausts its three attempts moves to `ai.maintenance.dead-letter`
+carrying its payload, failure reason, stack and attempt count, and is
+replayable from there.
+
+`/jobs` is the management surface over those queues — list, read, retry,
+cancel, drain, per-state stats, and the dead-letter inbox. The routes are
+declared once in `@pops/pillar-jobs` so every producing pillar exposes the same
+shape; with no Redis they answer **503** rather than pretending an empty,
+healthy queue. Nothing aggregates them across pillars yet (POPS-2006).
+
 ## Registration
 
 On boot, when `POPS_REGISTRY_ENABLED=true`, the server registers via

@@ -1,7 +1,8 @@
 # DO NOT EDIT — hand-written for the ai pillar.
 # Keep it narrow: only @pops/ai and its transitive @pops/* deps
-# (@pops/ai-telemetry, @pops/pillar-sdk, @pops/pillar-settings, @pops/types),
-# queried via `pnpm m ls --filter "@pops/ai..." --json --depth -1`.
+# (@pops/ai-telemetry, @pops/contract-openapi, @pops/pillar-jobs, @pops/pillar-sdk,
+# @pops/pillar-settings, @pops/types), queried via
+# `pnpm m ls --filter "@pops/ai..." --json --depth -1`.
 #
 # Mirrors pillars/core/Dockerfile with the ai dep set + port 3008, plus the
 # @pops/ai-telemetry COPY block (the ingest route imports its record-schema).
@@ -25,6 +26,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json .oxfmtrc
 COPY pillars/ai/package.json ./pillars/ai/
 COPY libs/ai-telemetry/package.json ./libs/ai-telemetry/
 COPY libs/contract-openapi/package.json ./libs/contract-openapi/
+COPY libs/jobs/package.json ./libs/jobs/
 COPY libs/sdk/package.json ./libs/sdk/
 COPY libs/settings/package.json ./libs/settings/
 COPY libs/types/package.json ./libs/types/
@@ -41,6 +43,10 @@ COPY libs/ai-telemetry/tsconfig.build.json ./libs/ai-telemetry/tsconfig.build.js
 COPY libs/contract-openapi/src ./libs/contract-openapi/src
 COPY libs/contract-openapi/tsconfig.json ./libs/contract-openapi/tsconfig.json
 COPY libs/contract-openapi/tsconfig.build.json ./libs/contract-openapi/tsconfig.build.json
+
+COPY libs/jobs/src ./libs/jobs/src
+COPY libs/jobs/tsconfig.json ./libs/jobs/tsconfig.json
+COPY libs/jobs/tsconfig.build.json ./libs/jobs/tsconfig.build.json
 
 COPY libs/sdk/src ./libs/sdk/src
 COPY libs/sdk/tsconfig.json ./libs/sdk/tsconfig.json

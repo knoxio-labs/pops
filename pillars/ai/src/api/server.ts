@@ -5,8 +5,10 @@
  * the cross-pillar ingest, and (when `POPS_REGISTRY_ENABLED=true`) registers
  * with the registry pillar via `bootstrapPillar` — the same handshake every
  * pillar uses. The two AI-ops schedulers (observability rollup + alert
- * evaluation) are env-gated OFF by default and run queue-free. SIGTERM/SIGINT
- * stop the schedulers, deregister, then close the HTTP server and DB.
+ * evaluation) are env-gated OFF by default and run as durable repeatable jobs
+ * when Redis is configured, as interval loops when it is not. SIGTERM/SIGINT
+ * stop the schedulers and their queues, deregister, then close the HTTP server
+ * and DB.
  */
 import { bootstrapPillar, type PillarBootstrapHandle } from '@pops/pillar-sdk/bootstrap';
 import { resolveSelfBaseUrl } from '@pops/pillar-sdk/pillar-env';
@@ -15,8 +17,8 @@ import { openAiDb } from '../db/index.js';
 import { buildAiCapabilityReporter, buildAiManifest } from './ai-manifest.js';
 import { resolveAiSqlitePath } from './ai-sqlite-path.js';
 import { createAiApiApp } from './app.js';
-import { startAlertsScheduler } from './modules/ai-alerts/scheduler.js';
-import { startObservabilityScheduler } from './modules/ai-observability/scheduler.js';
+import { closeAiMaintenanceQueues } from './jobs/queue.js';
+import { startAiSchedulers } from './jobs/runner.js';
 
 function resolvePort(): number {
   const raw = process.env['PORT'];
@@ -44,10 +46,10 @@ const server = app.listen(port, () => {
   console.warn(`[ai-api] Listening on port ${port}`);
 });
 
-// AI Ops summary + retention. OFF unless AI_OBSERVABILITY_SCHEDULER_ENABLED=true.
-const stopObservabilityScheduler = startObservabilityScheduler(aiDb.db);
-// AI alert evaluator. OFF unless AI_ALERTS_SCHEDULER_ENABLED=true.
-const stopAlertsScheduler = startAlertsScheduler(aiDb.db);
+// AI Ops summary + retention and the alert evaluator. Each is OFF unless its
+// own env gate is `true`; with Redis configured they run as durable repeatable
+// jobs, without it as the pre-existing interval loops.
+const schedulers = await startAiSchedulers(aiDb.db);
 
 let pillarHandle: PillarBootstrapHandle | undefined;
 if (process.env['POPS_REGISTRY_ENABLED'] === 'true') {
@@ -63,13 +65,15 @@ function shutdown(signal: NodeJS.Signals): void {
   if (shuttingDown) return;
   shuttingDown = true;
   console.warn(`[ai-api] Shutting down (${signal})`);
-  stopObservabilityScheduler();
-  stopAlertsScheduler();
-  void (pillarHandle?.stop() ?? Promise.resolve()).finally(() => {
-    server.close(() => {
-      aiDb.raw.close();
+  void schedulers
+    .stop()
+    .then(() => closeAiMaintenanceQueues())
+    .then(() => pillarHandle?.stop())
+    .finally(() => {
+      server.close(() => {
+        aiDb.raw.close();
+      });
     });
-  });
 }
 
 process.on('SIGTERM', shutdown);

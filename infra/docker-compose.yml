@@ -549,6 +549,11 @@ services:
       PORT: '3008'
       AI_SQLITE_PATH: /data/sqlite/ai.db
       AI_SELF_BASE_URL: http://ai-api:3008
+      # Makes this pillar's two maintenance passes durable BullMQ repeatable
+      # jobs (schedule held in Redis, so it survives a restart) and its /jobs
+      # management surface answerable. Without it the pillar falls back to
+      # in-process interval loops and /jobs answers 503 — degraded, not broken.
+      REDIS_URL: redis://pops-redis:6379
       # Verifies a per-caller `x-pops-internal-credential` on `POST /ai-usage/record`
       # (ADR-039 E22). The reporting pillars (finance/food/cerebrum) each present
       # their own credential; the accepted secrets are provisioned per deploy.
@@ -558,6 +563,8 @@ services:
     depends_on:
       registry-api:
         condition: service_started
+      pops-redis:
+        condition: service_healthy
     healthcheck:
       test:
         [

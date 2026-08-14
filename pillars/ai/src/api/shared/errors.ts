@@ -47,3 +47,15 @@ export class UnauthorizedError extends HttpError {
     this.name = 'UnauthorizedError';
   }
 }
+
+/**
+ * A dependency this route needs is not configured, so the surface exists but
+ * cannot answer. Job management raises it when the pillar has no Redis —
+ * degraded, not broken, and distinctly not a 404.
+ */
+export class ServiceUnavailableError extends HttpError {
+  constructor(message: string) {
+    super(503, message);
+    this.name = 'ServiceUnavailableError';
+  }
+}

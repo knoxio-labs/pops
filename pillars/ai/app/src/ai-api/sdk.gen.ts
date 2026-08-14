@@ -63,6 +63,33 @@ import type {
   AiUsageGetHistoryResponses,
   AiUsageGetStatsData,
   AiUsageGetStatsResponses,
+  JobsCancelData,
+  JobsCancelErrors,
+  JobsCancelResponses,
+  JobsDrainData,
+  JobsDrainErrors,
+  JobsDrainResponses,
+  JobsGetData,
+  JobsGetErrors,
+  JobsGetResponses,
+  JobsListData,
+  JobsListDeadLetterData,
+  JobsListDeadLetterErrors,
+  JobsListDeadLetterResponses,
+  JobsListErrors,
+  JobsListResponses,
+  JobsQueuesData,
+  JobsQueuesErrors,
+  JobsQueuesResponses,
+  JobsReplayDeadLetterData,
+  JobsReplayDeadLetterErrors,
+  JobsReplayDeadLetterResponses,
+  JobsRetryData,
+  JobsRetryErrors,
+  JobsRetryResponses,
+  JobsStatsData,
+  JobsStatsErrors,
+  JobsStatsResponses,
   SettingsEnsureData,
   SettingsEnsureErrors,
   SettingsEnsureResponses,
@@ -447,6 +474,126 @@ export const aiUsageGetStats = <ThrowOnError extends boolean = false>(
   (options?.client ?? client).get<AiUsageGetStatsResponses, unknown, ThrowOnError>({
     url: '/ai-usage/stats',
     ...options,
+  });
+
+/**
+ * List jobs on a queue, optionally filtered by state
+ */
+export const jobsList = <ThrowOnError extends boolean = false>(
+  options?: Options<JobsListData, ThrowOnError>
+): RequestResult<JobsListResponses, JobsListErrors, ThrowOnError> =>
+  (options?.client ?? client).get<JobsListResponses, JobsListErrors, ThrowOnError>({
+    url: '/jobs',
+    ...options,
+  });
+
+/**
+ * List jobs parked in a queue’s dead-letter sibling
+ */
+export const jobsListDeadLetter = <ThrowOnError extends boolean = false>(
+  options?: Options<JobsListDeadLetterData, ThrowOnError>
+): RequestResult<JobsListDeadLetterResponses, JobsListDeadLetterErrors, ThrowOnError> =>
+  (options?.client ?? client).get<
+    JobsListDeadLetterResponses,
+    JobsListDeadLetterErrors,
+    ThrowOnError
+  >({ url: '/jobs/dead-letter', ...options });
+
+/**
+ * Re-enqueue a dead-lettered job onto its origin queue
+ */
+export const jobsReplayDeadLetter = <ThrowOnError extends boolean = false>(
+  options: Options<JobsReplayDeadLetterData, ThrowOnError>
+): RequestResult<JobsReplayDeadLetterResponses, JobsReplayDeadLetterErrors, ThrowOnError> =>
+  (options.client ?? client).post<
+    JobsReplayDeadLetterResponses,
+    JobsReplayDeadLetterErrors,
+    ThrowOnError
+  >({
+    url: '/jobs/dead-letter/{id}/replay',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Remove every waiting (and by default delayed) job from a queue
+ */
+export const jobsDrain = <ThrowOnError extends boolean = false>(
+  options?: Options<JobsDrainData, ThrowOnError>
+): RequestResult<JobsDrainResponses, JobsDrainErrors, ThrowOnError> =>
+  (options?.client ?? client).post<JobsDrainResponses, JobsDrainErrors, ThrowOnError>({
+    url: '/jobs/drain',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  });
+
+/**
+ * List the job queues this pillar owns
+ */
+export const jobsQueues = <ThrowOnError extends boolean = false>(
+  options?: Options<JobsQueuesData, ThrowOnError>
+): RequestResult<JobsQueuesResponses, JobsQueuesErrors, ThrowOnError> =>
+  (options?.client ?? client).get<JobsQueuesResponses, JobsQueuesErrors, ThrowOnError>({
+    url: '/jobs/queues',
+    ...options,
+  });
+
+/**
+ * Per-state job counts for every queue, including dead-letter depth
+ */
+export const jobsStats = <ThrowOnError extends boolean = false>(
+  options?: Options<JobsStatsData, ThrowOnError>
+): RequestResult<JobsStatsResponses, JobsStatsErrors, ThrowOnError> =>
+  (options?.client ?? client).get<JobsStatsResponses, JobsStatsErrors, ThrowOnError>({
+    url: '/jobs/stats',
+    ...options,
+  });
+
+/**
+ * Read a single job
+ */
+export const jobsGet = <ThrowOnError extends boolean = false>(
+  options: Options<JobsGetData, ThrowOnError>
+): RequestResult<JobsGetResponses, JobsGetErrors, ThrowOnError> =>
+  (options.client ?? client).get<JobsGetResponses, JobsGetErrors, ThrowOnError>({
+    url: '/jobs/{id}',
+    ...options,
+  });
+
+/**
+ * Remove a job that is not currently being processed
+ */
+export const jobsCancel = <ThrowOnError extends boolean = false>(
+  options: Options<JobsCancelData, ThrowOnError>
+): RequestResult<JobsCancelResponses, JobsCancelErrors, ThrowOnError> =>
+  (options.client ?? client).post<JobsCancelResponses, JobsCancelErrors, ThrowOnError>({
+    url: '/jobs/{id}/cancel',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Re-run a finished job
+ */
+export const jobsRetry = <ThrowOnError extends boolean = false>(
+  options: Options<JobsRetryData, ThrowOnError>
+): RequestResult<JobsRetryResponses, JobsRetryErrors, ThrowOnError> =>
+  (options.client ?? client).post<JobsRetryResponses, JobsRetryErrors, ThrowOnError>({
+    url: '/jobs/{id}/retry',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
   });
 
 /**
