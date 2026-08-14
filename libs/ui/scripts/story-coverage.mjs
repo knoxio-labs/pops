@@ -1,8 +1,13 @@
 /**
- * Story coverage for `@pops/ui`: every `.tsx` module the `src/index.ts` barrel
- * re-exports (i.e. every module that publishes a component to the pillars)
- * must be imported by at least one `*.stories.tsx` file, or carry an entry in
- * `storybook-coverage-allowlist.mjs`.
+ * Story coverage for `@pops/ui`: every `.tsx` or `.ts` module the
+ * `src/index.ts` barrel re-exports (i.e. every module that publishes a
+ * component to the pillars) must be imported by at least one `*.stories.tsx`
+ * file, or carry an entry in `storybook-coverage-allowlist.mjs`. `.ts` counts
+ * too — a component built with `React.createElement` instead of JSX needs no
+ * `.tsx` extension and would otherwise never enter the subject set
+ * (POPS-2178). Whether a given `.ts` export is *actually* a component is a
+ * PascalCase-name heuristic, the same one `.tsx` discovery already runs on;
+ * it is not exact for either extension.
  *
  * "Imported by a story" is the rule rather than "is the `component:` of a
  * story meta" because the compound primitives (Accordion, Tabs, Table…) are
@@ -154,26 +159,44 @@ export function readComponentExports(source) {
 
 /**
  * Follow every relative re-export from `file` — recursing through any
- * intermediate barrel, `.ts` or `.tsx`, at any depth — collecting `.tsx`
- * leaves that export a component. A directory grouped behind its own
+ * intermediate barrel, `.ts` or `.tsx`, at any depth — collecting `.tsx` and
+ * `.ts` leaves that export a component. A directory grouped behind its own
  * `index.ts` (`export * from './components/widgets'` resolving to
  * `widgets/index.ts`) is exactly the shape this walks through rather than
  * stopping at: the earlier single-hop version skipped any barrel target not
  * itself ending `.tsx`, so a folder-of-components dropped out of the subject
  * set the moment someone grouped it.
  *
+ * `.ts` is included, not just `.tsx`, because a component can be declared
+ * with `React.createElement` and never need JSX syntax at all — POPS-2178.
+ * The heuristic is the same PascalCase-export test `readComponentExports`
+ * already applies to `.tsx`; it is not an "is this actually a component"
+ * check and cannot be — it will treat a PascalCase-named non-component `.ts`
+ * export (an enum, a class that is not a component, a constant object) as a
+ * subject the same way it already would if that export lived in a `.tsx`
+ * file. `isRoot` exists to keep that heuristic from firing on the crawl's
+ * own entry point: `src/index.ts` legitimately re-exports dozens of
+ * PascalCase names via `export { X, Y } from './somewhere'`, and without this
+ * guard the barrel itself would be flagged as an unstoried "component
+ * module" purely for aggregating other modules' exports. A barrel reached by
+ * recursion (a nested `components/widgets/index.ts`) is not exempted the
+ * same way — same as an intermediate `.tsx` forwarder, it becomes a subject
+ * in its own right if it re-exports a PascalCase name directly.
+ *
  * @param {string} file — absolute path
  * @param {Set<string>} visited — absolute paths already walked, mutated
  * @param {Set<string>} modules — absolute paths of discovered component
  *   modules, mutated
+ * @param {boolean} [isRoot] — true only for the initial `src/index.ts` call
  * @returns {void}
  */
-function collectComponentModules(file, visited, modules) {
+function collectComponentModules(file, visited, modules, isRoot = false) {
   if (visited.has(file)) return;
   visited.add(file);
 
   const source = readFileSync(file, 'utf8');
-  if (file.endsWith('.tsx') && readComponentExports(source).length > 0) {
+  const isComponentFile = file.endsWith('.tsx') || file.endsWith('.ts');
+  if (!isRoot && isComponentFile && readComponentExports(source).length > 0) {
     modules.add(file);
   }
 
@@ -201,7 +224,7 @@ export function listExportedComponentModules(srcDir) {
   }
   /** @type {Set<string>} */
   const modules = new Set();
-  collectComponentModules(barrel, new Set(), modules);
+  collectComponentModules(barrel, new Set(), modules, true);
   return [...modules].toSorted();
 }
 
