@@ -46,7 +46,7 @@ export function FromPlanItem({ item, showTagItLink }: FromPlanItemProps): ReactE
         {showTagItLink ? (
           <Link
             to={`/food/data/ingredients?focus=${String(item.ingredientId)}`}
-            className="text-xs text-amber-600 hover:underline"
+            className="text-xs text-warning hover:underline"
             data-testid="tag-it-link"
           >
             {t('shopping.fromPlan.tagItLink')}

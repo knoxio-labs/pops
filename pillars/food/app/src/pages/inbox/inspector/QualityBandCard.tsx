@@ -38,7 +38,7 @@ export function QualityBandCard({ quality }: Props): ReactElement {
           <li key={signal.code} className="flex items-center justify-between gap-2 text-sm">
             <span>{t(`inbox.qualitySignal.${signal.code}`, { defaultValue: signal.code })}</span>
             <span
-              className={`tabular-nums ${signal.weight < 0 ? 'text-destructive' : 'text-emerald-600'}`}
+              className={`tabular-nums ${signal.weight < 0 ? 'text-destructive' : 'text-success'}`}
             >
               {signal.weight > 0 ? '+' : ''}
               {signal.weight}

@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { createFinanceClient, type FinanceRouter } from '../client.js';
 
-import type { CallResult, PillarHandle } from '@pops/pillar-sdk/client';
+import type { CallResult, PillarHandle } from '@pops/pillar-sdk/server';
 
 interface WireRow {
   id: string;
@@ -145,6 +145,40 @@ describe('an outage is not an empty window', () => {
     const result = await createFinanceClient(() => handle).fetchCandidates(WINDOW);
 
     expect(result.kind).toBe('unavailable');
+  });
+});
+
+/**
+ * A sweep that writes nothing is correct here whatever the cause — but an
+ * operator reading `skipped` needs to know whether to wait or to fix a
+ * grant, and those are the same line unless the reason says otherwise.
+ */
+describe('a finance that refuses the credential', () => {
+  it('reports the refusal as the reason rather than a bare outage', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const { handle } = stubHandle([{ kind: 'unauthorized', pillar: 'finance' }]);
+
+    const result = await createFinanceClient(() => handle).fetchCandidates(WINDOW);
+
+    expect(result.kind).toBe('unavailable');
+    if (result.kind === 'unavailable') expect(result.reason).toBe('unauthorized');
+    expect(error).toHaveBeenCalledWith(expect.stringContaining('service-account credential'));
+    error.mockRestore();
+  });
+
+  it('says so without asking finance when this process has no key at all', async () => {
+    const calls: unknown[] = [];
+    const result = await createFinanceClient(() => {
+      calls.push('built');
+      return null;
+    }).fetchCandidates(WINDOW);
+
+    expect(result.kind).toBe('unavailable');
+    if (result.kind === 'unavailable') expect(result.reason).toBe('no-credential');
+    // An anonymous fallback is what the credential work removed: purchases
+    // still admits keyless callers, so a call made without a key would look
+    // fine until the callee stops admitting them.
+    expect(calls).toEqual(['built']);
   });
 });
 

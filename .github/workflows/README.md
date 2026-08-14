@@ -199,6 +199,31 @@ now decides between them takes 32 seconds, of which its self-test and its answer
 are one second and the rest is checkout plus a warm-cache `pnpm install`. Half a
 minute to decide whether to spend twenty.
 
+**The queue groups entries, and that is the other half of the cost.** With
+`min_entries_to_merge: 1` the queue formed a group per entry, so each PR bought
+its own run of everything. Measured on the 15 merges after the `scope` job
+landed, the queue leg — first merge-group run created to merged — split cleanly
+in two: a median of **2.9 minutes** for the entries `scope` deselected iOS on,
+against **85.8 minutes** for the entries it selected. The spread is not the
+queue. `ios-quality.yml` averages 18.8 minutes there and has peaked at 52; every
+other lane sits at or under 2.6.
+
+The gap between 18.8 and 85.8 is re-queues. **Five of those 15 PRs needed more
+than one attempt** — #4047 took six, #4052 and #4049 five — and every eviction
+re-paid the whole iOS lane. None of them was a semantic conflict: classifying
+each red merge-group run in that window found only flakes, so the queue was
+mostly re-running expensive checks against its own instability. Grouping is the
+lever that helps here, because a flake costs one group's run rather than one run
+per PR: `min_entries_to_merge` is 3, and `min_entries_to_merge_wait_minutes` is
+deliberately left at 5 so a lone PR on the fast path — the 2.9-minute case —
+cannot be made to wait longer than the run it is waiting for.
+
+`check_response_timeout_minutes` is 75, raised from 60. A check that does not
+report inside that window evicts its entry, and the worst in-queue
+`ios-quality.yml` run observed was 52 minutes end to end — which at 60 left
+eight minutes of margin, less than a cold macOS runner acquisition can spend
+before the job even starts. At 75 that margin is 23.
+
 Two consequences worth stating, because both look like bugs from the outside:
 
 - **A step condition spelled `github.event_name == 'push'` is a trap here.** The

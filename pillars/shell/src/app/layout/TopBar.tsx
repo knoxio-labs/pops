@@ -38,7 +38,7 @@ export function TopBar() {
           </Button>
 
           <div className="flex items-baseline gap-1.5 min-w-0">
-            <h1 className="text-xl md:text-2xl font-black bg-clip-text text-transparent bg-gradient-to-br from-[oklch(0.7_0.2_150)] via-[oklch(0.6_0.2_260)] to-[oklch(0.6_0.2_320)] tracking-tighter">
+            <h1 className="text-xl md:text-2xl font-black bg-clip-text text-transparent bg-gradient-to-br from-brand-gradient-from via-brand-gradient-via to-brand-gradient-to tracking-tighter">
               POPS
             </h1>
             <BuildVersion />

@@ -15,17 +15,17 @@ import { ExtractionShapeError, parseExtraction } from './extraction.js';
 import { gateExtraction } from './gate.js';
 
 import type { ExtractedReceipt } from './extraction.js';
-import type { GateResult } from './gate.js';
+import type { AdmissibleGate, InadmissibleGate } from './gate.js';
 import type { ReceiptPart, ReceiptVision } from './vision.js';
 
 export type ReadOutcome =
   /** The model read it and the arithmetic agrees. Admissible as fact. */
-  | { readonly kind: 'read'; readonly extracted: ExtractedReceipt; readonly gate: GateResult }
+  | { readonly kind: 'read'; readonly extracted: ExtractedReceipt; readonly gate: AdmissibleGate }
   /** Read, but the figures disagree. A real purchase that needs a human. */
   | {
       readonly kind: 'needs-review';
       readonly extracted: ExtractedReceipt;
-      readonly gate: GateResult;
+      readonly gate: InadmissibleGate;
     }
   /** Nothing usable came back. Not a purchase, and not a receipt with no items. */
   | { readonly kind: 'unreadable'; readonly reason: string };

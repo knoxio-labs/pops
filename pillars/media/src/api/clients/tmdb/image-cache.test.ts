@@ -45,7 +45,7 @@ function mockImageResponse(data = new ArrayBuffer(100), status = 200): Response 
     body: null,
     bodyUsed: false,
     json: () => Promise.resolve({}),
-    blob: () => Promise.resolve(new Blob()),
+    blob: () => Promise.resolve(new Blob([])),
     formData: () => Promise.resolve(new FormData()),
     text: () => Promise.resolve(''),
     bytes: () => Promise.resolve(new Uint8Array()),

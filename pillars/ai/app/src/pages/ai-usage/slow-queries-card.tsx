@@ -14,7 +14,7 @@ export function SlowQueriesCard({ queries }: { queries: SlowQuery[] }) {
   return (
     <Card className="p-4 space-y-3">
       <h3 className="font-semibold text-sm flex items-center gap-2">
-        <Clock className="h-4 w-4 text-amber-500" />
+        <Clock className="h-4 w-4 text-warning" />
         Slow Queries
       </h3>
       <div className="space-y-2">

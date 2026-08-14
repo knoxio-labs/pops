@@ -6,8 +6,11 @@ extension AppDependencies {
     public static func fake(
         transactions: any TransactionsRepository = InMemoryTransactionsRepository(),
         pairing: any DevicePairingService = FakeDevicePairingService(),
-        reachability: any ReachabilityWitness = FakeReachabilityWitness()
+        reachability: any ReachabilityWitness = FakeReachabilityWitness(),
+        receiptCapture: any ReceiptCaptureRepository = InMemoryReceiptCaptureRepository()
     ) -> AppDependencies {
-        AppDependencies(transactions: transactions, pairing: pairing, reachability: reachability)
+        AppDependencies(
+            transactions: transactions, pairing: pairing, reachability: reachability,
+            receiptCapture: receiptCapture)
     }
 }
