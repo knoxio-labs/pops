@@ -5,6 +5,7 @@
  *
  * Spec: pillars/food/docs/prds/planning-page
  */
+import { Plus } from 'lucide-react';
 import { type ReactElement } from 'react';
 
 import {
@@ -49,7 +50,7 @@ export function AddPlanEntryModal(props: AddPlanEntryModalProps): ReactElement {
             Cancel
           </Button>
           <Button onClick={form.submit} disabled={!form.canSubmit} data-testid="add-plan-submit">
-            Add
+            <Plus className="h-4 w-4 mr-1.5" /> Add
           </Button>
         </DialogFooter>
       </DialogContent>

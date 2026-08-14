@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Clock, Database, RefreshCw, Trash2 } from 'lucide-react';
+import { Clock, Database, Pencil, RefreshCw, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button, Switch } from '@pops/ui';
@@ -106,12 +106,13 @@ export function SourceCard({ source, onEdit }: SourceCardProps) {
               syncMutation.mutate({ sourceId: source.id });
             }}
             disabled={syncMutation.isPending || source.enabled !== 1}
+            aria-label={`Sync ${source.name}`}
           >
             <RefreshCw className={`h-3.5 w-3.5 ${syncMutation.isPending ? 'animate-spin' : ''}`} />
           </Button>
         )}
         <Button variant="outline" size="sm" onClick={onEdit}>
-          Edit
+          <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
         </Button>
         {!isManual && (
           <Button
@@ -123,6 +124,7 @@ export function SourceCard({ source, onEdit }: SourceCardProps) {
               }
             }}
             disabled={deleteMutation.isPending}
+            aria-label={`Delete ${source.name}`}
           >
             <Trash2 className="h-3.5 w-3.5 text-destructive" />
           </Button>

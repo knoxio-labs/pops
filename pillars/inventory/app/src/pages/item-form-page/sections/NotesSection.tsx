@@ -1,4 +1,4 @@
-import { Eye, PenLine } from 'lucide-react';
+import { Eye, Pencil } from 'lucide-react';
 import Markdown from 'react-markdown';
 import rehypeSanitize from 'rehype-sanitize';
 
@@ -37,7 +37,7 @@ export function NotesSection({
         >
           {notesPreview ? (
             <>
-              <PenLine className="h-3.5 w-3.5 mr-1" /> Edit
+              <Pencil className="h-3.5 w-3.5 mr-1" /> Edit
             </>
           ) : (
             <>

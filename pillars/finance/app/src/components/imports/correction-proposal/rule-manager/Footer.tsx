@@ -1,3 +1,5 @@
+import { Check } from 'lucide-react';
+
 import { Button } from '@pops/ui';
 
 export function RuleManagerFooter(props: {
@@ -18,7 +20,7 @@ export function RuleManagerFooter(props: {
         Cancel
       </Button>
       <Button onClick={props.onSave} disabled={props.localOpsCount === 0}>
-        Save Changes
+        <Check className="h-4 w-4 mr-1.5" /> Save Changes
       </Button>
     </>
   );

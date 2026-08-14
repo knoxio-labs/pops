@@ -77,6 +77,7 @@ function LeavingMovieCard({
         }}
         disabled={isPending}
         title="Keep in library"
+        aria-label="Keep in library"
       >
         <X className="h-3.5 w-3.5" />
       </Button>
