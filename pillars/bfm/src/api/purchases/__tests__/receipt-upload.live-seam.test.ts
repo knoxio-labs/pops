@@ -38,31 +38,24 @@
  * real model. A test that paid for a model call per run is a test nobody
  * runs.
  *
- * **The 413 purchases' own 20mb ceiling can answer with is proven here too —
- * and it exposes a real gap, not one this file fixes.** `bfm`'s own mount
- * refuses an oversized upload before it ever reaches purchases
- * (`MOBILE_UPLOAD_MAX_BYTES`, 12mb, strictly under purchases' 20mb — see
- * `pillars/bfm/README.md`'s "The mobile write"), so a real phone can never
- * make purchases answer 413 through this route: bfm is always the one that
- * refuses first, by design. Reaching purchases' own ceiling at this seam
+ * **The 413 purchases' own 20mb ceiling can answer with is proven here too.**
+ * `bfm`'s own mount refuses an oversized upload before it ever reaches
+ * purchases (`MOBILE_UPLOAD_MAX_BYTES`, 12mb, strictly under purchases' 20mb —
+ * see `pillars/bfm/README.md`'s "The mobile write"), so a real phone can
+ * never make purchases answer 413 through this route: bfm is always the one
+ * that refuses first, by design. Reaching purchases' own ceiling at this seam
  * needs `PURCHASES_TEST_JSON_BODY_LIMIT_BYTES` — the same kind of test-only
  * knob `PURCHASES_REQUIRE_CREDENTIAL_ENV` is above, gated the same way
  * (`resolveJsonBodyLimitBytes`, `pillars/purchases/src/api/app.ts`) — set well
  * under bfm's own cap so a small, fast body clears bfm's front door and still
- * trips purchases' real `express.json()` limit. What it proves is not flattering:
- * `libs/sdk/src/client/rest-call.ts`'s `mapHttpFailure` has no case for 413 (it
- * maps 400/401/403/404/409 and folds everything else, including 413, into
- * `unavailable`), so bfm reports a real, specific, non-retryable refusal from
- * purchases as `503 upstream_unavailable, retryable: true` — the same shape a
- * dead purchases process would produce. It is the same "a real answer misread
- * as an outage" confusion the BFM client README describes for the handset's own
- * undecodable-response case, but a different defect in a different layer: this
- * one is bfm-server's OUTBOUND cross-pillar mapping (`mapHttpFailure`, shared by
- * every producer call in the repo, not just this route), not the handset's
- * inbound decoding, so it is tracked separately rather than folded into that
- * gap. The test below asserts today's actual behaviour so it fails the moment
- * that mapping changes in either direction — for better (413 gets its own kind)
- * or for worse (the fallthrough starts throwing).
+ * trips purchases' real `express.json()` limit. `libs/sdk/src/client/rest-call.ts`'s
+ * `mapHttpFailure` gives an unmapped 4xx like 413 its own `refused` kind
+ * (permanent, carrying the real status), which `toGatewayFailure` folds onto
+ * the same `invalid-request` outcome `bad-request` gets, so bfm reports this
+ * as `502 upstream_invalid_request, retryable: false` — distinct from the
+ * `503 upstream_unavailable, retryable: true` a dead purchases process would
+ * produce. The test below asserts today's actual behaviour so it fails the
+ * moment that mapping regresses.
  *
  * **The contract-mismatch direction is deliberately NOT driven at this seam.**
  * `toGatewayFailure`'s `contract-mismatch` arm is already unit-tested directly
@@ -459,7 +452,7 @@ describe('bfm -> purchases receipt upload live seam', () => {
   });
 
   describe('a body purchases refuses at its own ceiling', () => {
-    it('reaches purchases, gets a real 413, and bfm reports it as an unavailable upstream — not a receipt outcome', async () => {
+    it('reaches purchases, gets a real 413, and bfm reports it as a refused upstream request, not a retryable outage', async () => {
       // Comfortably under bfm's own 12mb mount, so this clears bfm's front
       // door untouched; comfortably over PURCHASES_TEST_JSON_BODY_LIMIT_BYTES
       // (4096), so purchases' own `express.json()` is what refuses it — see
@@ -473,12 +466,17 @@ describe('bfm -> purchases receipt upload live seam', () => {
       // file's header, "The mobile write" in `pillars/bfm/README.md`) — and
       // not the `payload_too_large` shape bfm's OWN front door answers with
       // either, because bfm never got the chance to refuse this one itself.
-      expect(response.status).toBe(503);
+      // A 413 is a permanent producer refusal, not an outage: `refused` maps
+      // to `502 upstream_invalid_request`, `retryable: false` (see
+      // `toGatewayFailure` / `upstream-error.ts`'s `classify`), not the
+      // `503 upstream_unavailable, retryable: true` a dead purchases process
+      // would produce.
+      expect(response.status).toBe(502);
       const body: unknown = await response.json();
       expect(body).toEqual({
-        code: 'upstream_unavailable',
+        code: 'upstream_invalid_request',
         pillar: 'purchases',
-        retryable: true,
+        retryable: false,
         message: expect.any(String),
       });
 
@@ -517,8 +515,8 @@ describe('bfm -> purchases receipt upload live seam', () => {
 });
 
 /**
- * POPS-2230's own case: purchases answering a real, permanent refusal — not
- * an outage — and bfm reporting it as such to the phone.
+ * The permanent-refusal case: purchases answering a real, permanent refusal
+ * — not an outage — and bfm reporting it as such to the phone.
  *
  * Purchases' own `express.json()` limit (`JSON_BODY_LIMIT_BYTES`,
  * `pillars/purchases/src/api/app.ts`) is 20mb, comfortably above bfm's own
