@@ -8,7 +8,12 @@ import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { openTempDb, seedAmazonSource } from '../../db/__tests__/helpers.js';
-import { createPurchasesApiApp } from '../app.js';
+import {
+  createPurchasesApiApp,
+  JSON_BODY_LIMIT_BYTES,
+  resolveJsonBodyLimitBytes,
+  TEST_JSON_BODY_LIMIT_BYTES_ENV,
+} from '../app.js';
 import { __resetPillarRegistryCache } from '../pillars/registry.js';
 
 import type { Express } from 'express';
@@ -574,6 +579,69 @@ describe('payload rejections', () => {
         documents: [{ documentUri: 'pops://documents/document/x', kind: 'vibes' }],
       });
     expect(res.status).toBe(400);
+  });
+});
+
+describe('resolveJsonBodyLimitBytes', () => {
+  it('keeps the real default when the override is unset', () => {
+    expect(resolveJsonBodyLimitBytes({})).toBe(JSON_BODY_LIMIT_BYTES);
+    expect(resolveJsonBodyLimitBytes({ [TEST_JSON_BODY_LIMIT_BYTES_ENV]: '' })).toBe(
+      JSON_BODY_LIMIT_BYTES
+    );
+  });
+
+  it('keeps the real default on a value that does not parse as a positive integer', () => {
+    expect(resolveJsonBodyLimitBytes({ [TEST_JSON_BODY_LIMIT_BYTES_ENV]: 'not-a-number' })).toBe(
+      JSON_BODY_LIMIT_BYTES
+    );
+    expect(resolveJsonBodyLimitBytes({ [TEST_JSON_BODY_LIMIT_BYTES_ENV]: '0' })).toBe(
+      JSON_BODY_LIMIT_BYTES
+    );
+    expect(resolveJsonBodyLimitBytes({ [TEST_JSON_BODY_LIMIT_BYTES_ENV]: '-5' })).toBe(
+      JSON_BODY_LIMIT_BYTES
+    );
+  });
+
+  it('honours a valid override — a live-seam suite exercising the real ceiling without a huge body', () => {
+    expect(resolveJsonBodyLimitBytes({ [TEST_JSON_BODY_LIMIT_BYTES_ENV]: '4096' })).toBe(4096);
+  });
+
+  it('stays closed in production even if the override is set', () => {
+    expect(
+      resolveJsonBodyLimitBytes({
+        [TEST_JSON_BODY_LIMIT_BYTES_ENV]: '4096',
+        NODE_ENV: 'production',
+      })
+    ).toBe(JSON_BODY_LIMIT_BYTES);
+  });
+});
+
+describe('the body-limit override, wired through the real middleware', () => {
+  const envKey = TEST_JSON_BODY_LIMIT_BYTES_ENV;
+  let previous: string | undefined;
+
+  beforeEach(() => {
+    previous = process.env[envKey];
+    process.env[envKey] = '2048';
+  });
+
+  afterEach(() => {
+    if (previous === undefined) delete process.env[envKey];
+    else process.env[envKey] = previous;
+  });
+
+  it('refuses a body only the override, not the real 20mb default, would reject', async () => {
+    const overridden = createPurchasesApiApp({
+      vision: null,
+      purchasesDb: opened,
+      version: '0.0.1-test',
+    });
+
+    const res = await request(overridden)
+      .post('/purchases')
+      .send({ ...minimalOrder, checksum: 'x'.repeat(4000) });
+
+    expect(res.status).toBe(413);
   });
 });
 
