@@ -1,10 +1,10 @@
 import AppCore
+import DesignSystemTestSupport
 import Foundation
 import SwiftUI
 import Testing
 
 @testable import FeatureReceiptCapture
-import DesignSystemTestSupport
 
 /// The result card actually draws, and draws differently when the outcomes
 /// it is supposed to distinguish differ.

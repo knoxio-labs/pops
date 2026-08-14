@@ -1,10 +1,10 @@
 import AppCore
+import DesignSystemTestSupport
 import Foundation
 import SwiftUI
 import Testing
 
 @testable import FeatureTransactions
-import DesignSystemTestSupport
 
 /// The row actually draws, and draws differently when the things it is supposed
 /// to distinguish differ.

@@ -1,8 +1,8 @@
+import DesignSystemTestSupport
 import SwiftUI
 import Testing
 
 @testable import DesignSystem
-import DesignSystemTestSupport
 
 /// A palette is only plain-looking until someone cannot read it. Every
 /// foreground token is checked against every surface it is allowed to sit on,

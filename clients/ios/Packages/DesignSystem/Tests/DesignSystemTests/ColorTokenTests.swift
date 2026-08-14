@@ -1,8 +1,8 @@
+import DesignSystemTestSupport
 import SwiftUI
 import Testing
 
 @testable import DesignSystem
-import DesignSystemTestSupport
 
 /// Asset-catalogue lookup is by string and fails soft: a misspelled or missing
 /// colorset still renders, it just renders the same colour in both schemes.

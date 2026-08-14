@@ -1,9 +1,9 @@
+import DesignSystemTestSupport
 import Foundation
 import SwiftUI
 import Testing
 
 @testable import DesignSystem
-import DesignSystemTestSupport
 
 /// The previews claim each primitive renders in both colour schemes. Xcode's
 /// canvas is the only place a human sees that, and nothing in CI opens it — so
