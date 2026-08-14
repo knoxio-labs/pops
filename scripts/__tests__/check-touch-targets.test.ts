@@ -63,7 +63,6 @@ describe('findViolations', () => {
   });
 
   it.each([
-    ['a variant-prefixed sizing utility on both axes', 'sm:h-11 sm:w-11'],
     ['an arbitrary sizing value on the min- form on both axes', 'min-h-[44px] min-w-[44px]'],
     ['a three-digit spacing step', 'size-100'],
     ['an arbitrary rem value equal to 44px on both axes', 'h-[2.75rem] w-[2.75rem]'],
@@ -81,6 +80,61 @@ describe('findViolations', () => {
     expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([
       { file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'button' },
     ]);
+  });
+
+  describe('breakpoint-prefixed sizing', () => {
+    it.each([
+      ['a bare sm: on both axes', 'sm:h-11 sm:w-11'],
+      ['a bare md: on both axes', 'md:h-11 md:w-11'],
+      ['a bare lg: on both axes', 'lg:h-11 lg:w-11'],
+      ['a bare xl: on both axes', 'xl:h-11 xl:w-11'],
+      ['a bare 2xl: on both axes', '2xl:h-11 2xl:w-11'],
+      ['an arbitrary min-width variant on both axes', 'min-[640px]:h-11 min-[640px]:w-11'],
+    ])(
+      'flags %s as a violation — it only applies ABOVE that width, not on the phone-width base',
+      (_label, className) => {
+        const src = `<button className="${className}"><XIcon /></button>`;
+        expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([
+          { file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'button' },
+        ]);
+      }
+    );
+
+    it('flags a sub-44px base grown only by a breakpoint variant (base is what a phone renders)', () => {
+      const src = '<button className="h-6 w-6 sm:h-11 sm:w-11"><XIcon /></button>';
+      expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([
+        { file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'button' },
+      ]);
+    });
+
+    it.each([
+      ['a bare max-sm: on both axes', 'max-sm:h-11 max-sm:w-11'],
+      ['a bare max-md: on both axes', 'max-md:h-11 max-md:w-11'],
+    ])(
+      'accepts %s — it applies AT AND BELOW that width, through the phone viewport',
+      (_label, className) => {
+        const src = `<button className="${className}"><XIcon /></button>`;
+        expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([]);
+      }
+    );
+
+    it('accepts a sufficient unprefixed base grown further by a breakpoint variant', () => {
+      const src = '<button className="h-11 w-11 sm:h-16 sm:w-16"><XIcon /></button>';
+      expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([]);
+    });
+
+    it('does not let breakpoint-prefixed evidence launder an undersized before:-inset-* expansion', () => {
+      const src = '<button className="h-6 w-6 sm:before:-inset-9"><XIcon /></button>';
+      expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([
+        { file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'button' },
+      ]);
+    });
+
+    it('accepts a before:-inset-* expansion gated by max-sm:, sized against its own base box', () => {
+      const src =
+        '<button className="relative h-6 w-6 max-sm:before:absolute max-sm:before:-inset-9">x</button>';
+      expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([]);
+    });
   });
 
   describe('evidence holes: sibling laundering, undersized inset, single-axis proof', () => {
