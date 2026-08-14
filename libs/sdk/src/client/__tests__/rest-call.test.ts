@@ -298,6 +298,25 @@ describe('performRestCall — response / error mapping', () => {
     expect(result).toEqual({ kind: 'rate-limited', pillar: 'registry' });
   });
 
+  it.each(['', '   '])(
+    'leaves retryAfterSeconds undefined for an empty/whitespace-only Retry-After (%j)',
+    async (raw) => {
+      const { fetchImpl } = recordingRest(() => jsonOk({}, 429, { 'retry-after': raw }));
+      const result = await performRestCall(ctx(['entities', 'get'], { id: 'ent-1' }, fetchImpl));
+      if (result.kind !== 'rate-limited')
+        throw new Error(`expected rate-limited, got ${result.kind}`);
+      expect(result.retryAfterSeconds).toBeUndefined();
+    }
+  );
+
+  it('leaves retryAfterSeconds undefined for a hex-looking Retry-After (0x10)', async () => {
+    const { fetchImpl } = recordingRest(() => jsonOk({}, 429, { 'retry-after': '0x10' }));
+    const result = await performRestCall(ctx(['entities', 'get'], { id: 'ent-1' }, fetchImpl));
+    if (result.kind !== 'rate-limited')
+      throw new Error(`expected rate-limited, got ${result.kind}`);
+    expect(result.retryAfterSeconds).toBeUndefined();
+  });
+
   it('returns unavailable when fetch rejects (network/abort)', async () => {
     const fetchImpl = fakeFetch(() => {
       throw new Error('network down');

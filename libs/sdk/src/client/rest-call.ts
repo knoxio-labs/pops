@@ -272,13 +272,29 @@ function withMessage<T extends FailureWithMessage>(failure: T, message: string |
  * parser cannot make sense of, is `undefined` rather than a guessed number —
  * a caller with no better information should fall back to its own backoff,
  * not be handed a number that looks authoritative and isn't.
+ *
+ * The delta-seconds form is matched against `/^\d+$/` on the TRIMMED value
+ * before it ever reaches `Number()` — RFC 9110's delta-seconds is `1*DIGIT`,
+ * a non-negative integer, nothing else. This is what rejects an empty or
+ * whitespace-only header as "cannot make sense of" rather than as the `0`
+ * `Number('')`/`Number('   ')` would otherwise produce (read by a caller as
+ * "retry immediately", not as "producer sent nothing"), and it rejects a
+ * hex-looking value like `0x10` the same way `Number` would otherwise accept
+ * it as 16.
+ *
+ * The upper end is deliberately left unclamped: nothing in this SDK schedules
+ * a timer off `retryAfterSeconds` today, so there is no real bound to pick,
+ * and an invented one would just be a second guess sitting next to the one
+ * this function already refuses to make. A caller that eventually does
+ * schedule off this value is the one with the context to decide its own
+ * ceiling.
  */
 function parseRetryAfterSeconds(headers: Headers): number | undefined {
   const raw = headers.get('retry-after');
   if (raw === null) return undefined;
 
-  const seconds = Number(raw);
-  if (Number.isFinite(seconds)) return Math.max(0, seconds);
+  const trimmed = raw.trim();
+  if (/^\d+$/.test(trimmed)) return Math.max(0, Number(trimmed));
 
   const whenMs = Date.parse(raw);
   if (Number.isNaN(whenMs)) return undefined;
