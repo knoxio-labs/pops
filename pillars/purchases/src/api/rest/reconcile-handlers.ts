@@ -5,6 +5,7 @@ import {
   confirmLink,
   listPurchasesForTransaction,
   listReconcileQueue,
+  rejectLink,
   unlinkCharge,
 } from '../../db/index.js';
 import { nowIso } from '../../db/services/internal.js';
@@ -83,17 +84,26 @@ export function makeReconcileHandlers(db: PurchasesDb, sweep?: SweepTrigger) {
     }),
 
     confirm: async ({ body }: { body: Decision }) => {
-      const pinned = confirmLink(db, body.chargeId, body.transactionUri, nowIso());
+      const outcome = confirmLink(db, body.chargeId, body.transactionUri, nowIso());
       // 404 rather than a silent success: the link the user was looking at
       // is gone, and telling them it was confirmed would be a lie they only
       // discover when it reappears in the queue.
-      if (!pinned) return missingLink(body);
-      return { status: 200 as const, body: { ok: true as const } };
+      if (!outcome.pinned) return missingLink(body);
+      return {
+        status: 200 as const,
+        body: { ok: true as const, matchRuleId: outcome.matchRuleId },
+      };
     },
 
     unlink: async ({ body }: { body: Decision }) => {
       const removed = unlinkCharge(db, body.chargeId, body.transactionUri);
       if (!removed) return missingLink(body);
+      return { status: 200 as const, body: { ok: true as const } };
+    },
+
+    reject: async ({ body }: { body: Decision }) => {
+      const rejected = rejectLink(db, body.chargeId, body.transactionUri, nowIso());
+      if (!rejected) return missingLink(body);
       return { status: 200 as const, body: { ok: true as const } };
     },
 

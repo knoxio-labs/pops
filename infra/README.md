@@ -40,11 +40,20 @@ A declared secret is inert — compose materialises one only for services that
 reference it — which is what lets a value be provisioned on the host before the
 release that starts reading it.
 
-**Host env vars** — `POPS_IMAGE_TAG`, `POPS_DOMAIN`, `POPS_REGISTRY_URL`,
+**Host env vars** — `POPS_IMAGE_TAG`, `POPS_IMAGE_OWNER`, `POPS_MOLTBOT_DIR`,
+`POPS_DOMAIN`, `POPS_REGISTRY_URL`,
 `BUILD_VERSION`, `MCP_BIND_ADDR`, `MCP_INBOUND_TOKEN`, `PAPERLESS_BASE_URL`,
 `PAPERLESS_API_TOKEN`, `ANTHROPIC_API_KEY`, the `EMBEDDING_*` / `FOOD_*` /
 `*_LITESTREAM_REPLICA_URL` sets, `DOCKER_CONFIG_DIR`, `DOCKER_API_VERSION`, `TZ`.
 Each pillar's `*_SQLITE_PATH` and `*_SELF_BASE_URL` are inline, not host env.
+
+**Host bind mounts** — the `moltbot` profile is the only part of the stack
+served from files instead of an image. Its four mounts resolve through
+`POPS_MOLTBOT_DIR`, which defaults to `../pillars/moltbot` (the source tree) and
+which a deployer points at an extracted `moltbot-bundle-vX.Y.Z.tar.gz` instead
+— see [`pillars/moltbot/README.md`](../pillars/moltbot/README.md). The remaining
+host paths are not repo content: the litestream profile mounts `./litestream/*.yml`
+next to the compose file, and watchtower mounts the docker socket.
 
 ## prod vs dev
 

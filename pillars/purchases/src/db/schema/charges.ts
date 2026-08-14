@@ -26,7 +26,15 @@
  * deployed, migrated and restored independently (ADR-042).
  */
 import { sql } from 'drizzle-orm';
-import { index, integer, real, sqliteTable, text, unique } from 'drizzle-orm/sqlite-core';
+import {
+  index,
+  integer,
+  primaryKey,
+  real,
+  sqliteTable,
+  text,
+  unique,
+} from 'drizzle-orm/sqlite-core';
 
 import {
   CHARGE_ORIGINS,
@@ -139,6 +147,23 @@ export const purchaseChargeLinks = sqliteTable(
       .references(() => purchaseCharges.id, { onDelete: 'cascade' }),
     /** Soft cross-pillar URI: `pops://finance/transaction/<id>`. Deliberately not a foreign key. */
     transactionUri: text('transaction_uri').notNull(),
+    /**
+     * The transaction's own descriptor, as it read when the link was
+     * proposed.
+     *
+     * Not a mirror of finance and not read back for matching — the sweep
+     * re-fetches descriptors every run. It is here because a decision needs
+     * the evidence it was made about: confirming teaches
+     * `purchase_match_rules`, whose key is a descriptor pattern, and the
+     * decision arrives as a charge and a URI. Without this the pillar would
+     * have to ask finance mid-decision (making a click fail during an
+     * outage) or trust the caller to hand back a descriptor it was never
+     * given.
+     *
+     * Null for a link written before this column existed, which costs a
+     * rule and nothing else.
+     */
+    transactionDescription: text('transaction_description'),
     /** Signed integer cents in the charge's settlement currency. */
     amountCents: integer('amount_cents').notNull(),
     linkType: text('link_type', { enum: LINK_TYPES }).notNull(),
@@ -156,6 +181,48 @@ export const purchaseChargeLinks = sqliteTable(
     index('idx_purchase_charge_links_transaction').on(t.transactionUri),
     // The sweep's tear-down predicate: every unconfirmed link, cheaply.
     index('idx_purchase_charge_links_confirmed_at').on(t.confirmedAt),
+  ]
+);
+
+/**
+ * A pairing a human has ruled out.
+ *
+ * The durable half of a rejection. `unlink` deletes a link and the next
+ * sweep re-derives it, which is why the queue shipped without a reject at
+ * all; a row here is what the solver's stage-0 blocking consults so the
+ * pairing is never proposed again.
+ *
+ * **Deliberately not a negative `purchase_match_rules` row.** A rule is
+ * keyed on a descriptor pattern, so the narrowest negative it can express
+ * is "descriptors like this never settle this source" — a claim about every
+ * future order from the merchant, inferred from one click. When the
+ * engine picked the wrong one of a merchant's two charges, that inference
+ * silently disables matching for the merchant entirely. What the rejection
+ * actually establishes is exactly this pair, so exactly this pair is what
+ * is stored.
+ *
+ * Its own table rather than a column on the link, because a rejected link
+ * is not a link: leaving the row would make every reader that sums linked
+ * money — the accounting split, the merchant roll-up — count rejected money
+ * as matched unless each remembered to exclude it.
+ */
+export const purchaseLinkRejections = sqliteTable(
+  'purchase_link_rejections',
+  {
+    chargeId: text('charge_id')
+      .notNull()
+      .references(() => purchaseCharges.id, { onDelete: 'cascade' }),
+    /** Soft cross-pillar URI, as on the link this replaced. */
+    transactionUri: text('transaction_uri').notNull(),
+    rejectedAt: text('rejected_at')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+  },
+  (t) => [
+    // The pair IS the identity, which is what makes re-deciding idempotent
+    // rather than a second row saying the same thing.
+    primaryKey({ columns: [t.chargeId, t.transactionUri] }),
+    index('idx_purchase_link_rejections_charge').on(t.chargeId),
   ]
 );
 

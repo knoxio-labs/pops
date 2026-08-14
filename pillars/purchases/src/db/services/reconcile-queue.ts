@@ -22,6 +22,14 @@ import type { PurchasesDb } from './internal.js';
 
 export interface QueuedLink {
   readonly transactionUri: string;
+  /**
+   * The transaction's descriptor as the sweep read it. Null only for a link
+   * written before the column existed.
+   *
+   * It is what a confirm turns into a match rule, so showing it is showing
+   * the reader the thing their decision is actually about — not decoration.
+   */
+  readonly transactionDescription: string | null;
   readonly amountCents: number;
   readonly linkType: LinkType;
   readonly confidence: number;
@@ -182,6 +190,7 @@ function proposalsFor(db: PurchasesDb, chargeId: string): QueuedLink[] {
   return db
     .select({
       transactionUri: purchaseChargeLinks.transactionUri,
+      transactionDescription: purchaseChargeLinks.transactionDescription,
       amountCents: purchaseChargeLinks.amountCents,
       linkType: purchaseChargeLinks.linkType,
       confidence: purchaseChargeLinks.confidence,

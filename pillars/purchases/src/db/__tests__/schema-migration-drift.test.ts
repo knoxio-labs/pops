@@ -30,6 +30,7 @@ import {
   purchaseDocuments,
   purchaseItemAllocations,
   purchaseItemNotes,
+  purchaseLinkRejections,
   purchaseItems,
   purchaseItemTags,
   purchaseItemUnits,
@@ -68,6 +69,7 @@ const ALL_TABLES: readonly SQLiteTable[] = [
   purchaseMatchRules,
   purchaseCharges,
   purchaseChargeLinks,
+  purchaseLinkRejections,
   purchaseItemAllocations,
   purchaseDocuments,
 ];

@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import enAUPurchases from '@pops/locales/en-AU/purchases.json';
@@ -37,7 +38,9 @@ function renderPage(): ReturnType<typeof userEvent.setup> {
   });
   render(
     <QueryClientProvider client={client}>
-      <ReceiptDropZonePage />
+      <MemoryRouter initialEntries={['/purchases/receipts']}>
+        <ReceiptDropZonePage />
+      </MemoryRouter>
     </QueryClientProvider>
   );
   return user;
@@ -52,6 +55,13 @@ function dropZoneInput(): HTMLInputElement {
 
 function frame(name: string, bytes: string, type = 'image/jpeg'): File {
   return new File([bytes], name, { type });
+}
+
+/** Dropped from the desktop — the path the input's `accept` cannot filter. */
+function dropOnZone(files: File[]): void {
+  const zone = dropZoneInput().closest('[role="button"]');
+  if (zone === null) throw new Error('the drop zone rendered no drop target');
+  fireEvent.drop(zone, { dataTransfer: { files } });
 }
 
 async function submit(user: ReturnType<typeof userEvent.setup>): Promise<void> {
@@ -324,10 +334,12 @@ describe('ReceiptDropZonePage — staging what is sent', () => {
     expect(screen.getByText(enAUPurchases['receipts.parts.empty'])).toBeVisible();
   });
 
+  // Dragged in rather than chosen: the dialog's own accept filter never sees a
+  // dragged file, which is the only way an unaccepted one still gets this far.
   it('names a file the upload cannot read and never puts it on the wire', async () => {
     const user = renderPage();
 
-    await user.upload(dropZoneInput(), [
+    dropOnZone([
       frame('till.heic', 'bytes', 'image/heic'),
       frame('invoice.pdf', 'bytes', 'application/pdf'),
     ]);
@@ -463,11 +475,16 @@ describe('ReceiptDropZonePage — created', () => {
     expect(screen.queryByText('till.jpg')).toBeNull();
   });
 
-  it('says there is no purchase page to open rather than offering a dead link', async () => {
+  // This panel used to say there was nothing to open, because there was not.
+  // The link is the whole point of the outcome: the reader's next question is
+  // always "what did it read off the paper", and that is the order page.
+  it('opens the order it just recorded', async () => {
     await uploadOne(created());
 
-    expect(await screen.findByText(enAUPurchases['receipts.created.noDetailView'])).toBeVisible();
-    expect(screen.queryByRole('link')).toBeNull();
+    const link = await screen.findByRole('link', {
+      name: enAUPurchases['receipts.created.open'],
+    });
+    expect(link).toHaveAttribute('href', '/purchases/purchase-77');
   });
 });
 

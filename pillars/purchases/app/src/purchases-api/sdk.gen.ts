@@ -32,6 +32,9 @@ import type {
   ReconcileLinksResponses,
   ReconcileQueueData,
   ReconcileQueueResponses,
+  ReconcileRejectData,
+  ReconcileRejectErrors,
+  ReconcileRejectResponses,
   ReconcileSweepData,
   ReconcileSweepErrors,
   ReconcileSweepResponses,
@@ -181,7 +184,7 @@ export const receiptUpload = <ThrowOnError extends boolean = false>(
   });
 
 /**
- * Pin a link so re-derivation never revises it
+ * Pin a link and learn the merchant descriptor behind it
  */
 export const reconcileConfirm = <ThrowOnError extends boolean = false>(
   options?: Options<ReconcileConfirmData, ThrowOnError>
@@ -220,6 +223,21 @@ export const reconcileQueue = <ThrowOnError extends boolean = false>(
   });
 
 /**
+ * Rule a pairing out for good, so no later sweep proposes it again
+ */
+export const reconcileReject = <ThrowOnError extends boolean = false>(
+  options?: Options<ReconcileRejectData, ThrowOnError>
+): RequestResult<ReconcileRejectResponses, ReconcileRejectErrors, ThrowOnError> =>
+  (options?.client ?? client).post<ReconcileRejectResponses, ReconcileRejectErrors, ThrowOnError>({
+    url: '/reconcile/reject',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  });
+
+/**
  * Run a reconciliation sweep now
  */
 export const reconcileSweep = <ThrowOnError extends boolean = false>(
@@ -235,7 +253,7 @@ export const reconcileSweep = <ThrowOnError extends boolean = false>(
   });
 
 /**
- * Remove a link. The next sweep may re-derive it — see POPS-1309
+ * Remove a link without recording a decision. A later sweep may re-derive it
  */
 export const reconcileUnlink = <ThrowOnError extends boolean = false>(
   options?: Options<ReconcileUnlinkData, ThrowOnError>

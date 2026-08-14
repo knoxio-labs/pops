@@ -1,11 +1,31 @@
 import { formatBytes } from '../lib/format';
 
+import type { TFunction } from 'i18next';
+
+/**
+ * Why a file was refused, carrying the data behind the refusal rather than a
+ * rendered sentence — so a consumer can phrase its own copy from `file`,
+ * `accept`, `maxSize` or `maxFiles` instead of parsing a string back apart.
+ */
+export type FileValidationErrorReason =
+  | { readonly type: 'not-accepted'; readonly file: File; readonly accept: string }
+  | { readonly type: 'too-large'; readonly file: File; readonly maxSize: number }
+  /**
+   * `attempted` counts every file of the gesture, including any this same pass
+   * refused for type or size — it is what the user tried to add, so copy of the
+   * shape "you added {{attempted}} but can send {{maxFiles}}" adds up.
+   */
+  | { readonly type: 'too-many'; readonly maxFiles: number; readonly attempted: number };
+
+/** A validation refusal, with a localized default message alongside its reason. */
+export type FileValidationError = FileValidationErrorReason & { readonly message: string };
+
 export interface ValidateArgs {
   list: File[];
   accept?: string;
   maxSize?: number;
   maxFiles?: number;
-  onError?: (message: string) => void;
+  onError?: (reason: FileValidationErrorReason) => void;
 }
 
 function fileMatches(file: File, patterns: string[]): boolean {
@@ -29,19 +49,37 @@ export function validateFiles({ list, accept, maxSize, maxFiles, onError }: Vali
     : [];
   const out: File[] = [];
   for (const file of list) {
-    if (!fileMatches(file, patterns)) {
-      onError?.(`${file.name} is not an accepted file type`);
+    if (accept !== undefined && !fileMatches(file, patterns)) {
+      onError?.({ type: 'not-accepted', file, accept });
       continue;
     }
     if (typeof maxSize === 'number' && file.size > maxSize) {
-      onError?.(`${file.name} exceeds max size of ${formatBytes(maxSize)}`);
+      onError?.({ type: 'too-large', file, maxSize });
       continue;
     }
     out.push(file);
   }
   if (typeof maxFiles === 'number' && out.length > maxFiles) {
-    onError?.(`You can upload at most ${maxFiles} file${maxFiles === 1 ? '' : 's'}`);
+    onError?.({ type: 'too-many', maxFiles, attempted: list.length });
     return out.slice(0, maxFiles);
   }
   return out;
+}
+
+/** The library's own phrasing of a {@link FileValidationErrorReason}, from the `ui` catalog. */
+export function describeFileValidationError(
+  t: TFunction<'ui'>,
+  reason: FileValidationErrorReason
+): string {
+  switch (reason.type) {
+    case 'not-accepted':
+      return t('fileUpload.errors.notAccepted', { name: reason.file.name });
+    case 'too-large':
+      return t('fileUpload.errors.tooLarge', {
+        name: reason.file.name,
+        size: formatBytes(reason.maxSize),
+      });
+    case 'too-many':
+      return t('fileUpload.errors.tooMany', { count: reason.maxFiles });
+  }
 }
