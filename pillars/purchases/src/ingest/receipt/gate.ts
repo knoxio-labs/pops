@@ -213,6 +213,18 @@ interface Totals {
  * arithmetic that is not in doubt. A *repeated* one is the fingerprint of
  * the same money filed twice, which is the error nothing else here can see.
  *
+ * `taxCents` itself is never one of the occurrences counted, even though a
+ * model that reports the tax row both in `tax` and as a line has, in a real
+ * sense, filed the same money twice. It cannot be counted without counting
+ * every stated tax as an occurrence of itself, which reintroduces the same
+ * false-refusal rate on ordinary receipts that requiring two occurrences was
+ * chosen to avoid: an inclusive receipt's `tax` field states a fact about the
+ * total, not a component of it, and a coincidental line landing on that
+ * figure is still coincidence. So a tax row filed once among the lines reads
+ * as one ordinary component, indistinguishable from a real item priced at
+ * exactly the tax — the receipt's own numbers do not say which it is, and
+ * only a second occurrence, wherever it falls, does.
+ *
  * A repeat sitting entirely among the lines counts, and that is a choice. It
  * is the shape a receipt photographed in overlapping frames produces — the
  * prompt says a line appearing in two images is one line, and the arithmetic
