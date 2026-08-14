@@ -10,7 +10,9 @@
  * (the registry is unavailable, the call times out, the SDK reports
  * `degraded`) are logged and the row is left untouched until the next tick.
  * URIs the registry rejects as malformed surface as `bad-uri`; they are
- * logged for ops and the row is preserved as well.
+ * logged for ops and the row is preserved as well. A refused or absent
+ * service-account credential surfaces as its own `unauthorized` outcome,
+ * counted apart from `unavailable` — see `../pillars/outbound.ts`.
  *
  * A recursive `setTimeout` arms the next tick only after the current one
  * resolves, which also makes the worker trivial to drive with
@@ -31,6 +33,14 @@ export type ReconcileLookupResult =
   | { kind: 'ok' }
   | { kind: 'not-found' }
   | { kind: 'bad-uri'; reason: string }
+  /**
+   * The registry refused this pillar's service-account credential, or this
+   * process had none to send. Preserved like `unavailable` — a pillar that
+   * would not answer says nothing about whether the row exists — but
+   * counted and logged apart from it, because waiting fixes an outage and
+   * does not fix a grant.
+   */
+  | { kind: 'unauthorized'; reason: string }
   | { kind: 'unavailable'; reason: string };
 
 export type ReconcileLookupFn = (uri: string) => Promise<ReconcileLookupResult>;
@@ -52,6 +62,15 @@ export interface ReconcileTickStats {
   resolved: number;
   staleMarked: number;
   badUri: number;
+  /**
+   * The registry refused this pillar's credential, or this process held
+   * none to send. Deliberately not folded into `unavailable`: a tick that
+   * reports every URI unavailable reads as the registry being down and is
+   * normally survivable, while the same tick reporting them unauthorized
+   * means this pillar cannot reconcile at all until a grant or a key is
+   * fixed — and it will keep saying so every night until someone does.
+   */
+  unauthorized: number;
   unavailable: number;
 }
 
@@ -66,7 +85,7 @@ export interface ReconcileWorkerHandle {
 }
 
 function emptyStats(): ReconcileTickStats {
-  return { resolved: 0, staleMarked: 0, badUri: 0, unavailable: 0 };
+  return { resolved: 0, staleMarked: 0, badUri: 0, unauthorized: 0, unavailable: 0 };
 }
 
 async function safeLookup(
@@ -129,12 +148,33 @@ function applyResult(ctx: ApplyResultContext): void {
     });
     return;
   }
+  if (result.kind === 'unauthorized') {
+    stats.unauthorized += 1;
+    // The two reasons send an operator to different places — a grant to
+    // widen versus a key to provision — so the headline says which rather
+    // than leaving it to whoever reads the `reason` field.
+    logger?.warn?.(credentialWarning(result.reason), { uri, reason: result.reason });
+    return;
+  }
   stats.unavailable += 1;
   if (result.reason === 'lookup-threw') return;
   logger?.warn?.('finance reconcile pillar unavailable', {
     uri,
     reason: result.reason,
   });
+}
+
+/**
+ * The reason a credential outcome could not probe, as a headline.
+ *
+ * `no-credential` is this process holding no key at all — nothing was sent
+ * and the registry has no opinion yet — which is a different job from a key
+ * that was sent and refused.
+ */
+function credentialWarning(reason: string): string {
+  return reason === 'no-credential'
+    ? 'finance reconcile has no service-account key (preserved for ops)'
+    : 'finance reconcile credential refused (preserved for ops)';
 }
 
 export function startReconcileCrossPillarWorker(

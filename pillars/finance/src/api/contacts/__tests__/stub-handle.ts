@@ -5,6 +5,12 @@
  * TRANSIENT/PERMANENT error classification `createOrFetchByName` applies to
  * a `CallResult`, not a hand-rolled fake that can't reproduce it.
  */
+/**
+ * `CallDynamicFn` is not re-exported from `/server` (only `/client`), but
+ * `PillarHandle`/`CallResult`/`CallableProcedure` are the identical types
+ * either subpath exports — this file builds structural stubs, not live
+ * handles, so which subpath supplies the type is immaterial.
+ */
 import {
   type CallDynamicFn,
   type CallResult,
