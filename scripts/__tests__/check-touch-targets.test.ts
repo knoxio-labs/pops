@@ -17,13 +17,19 @@ describe('findViolations', () => {
     ]);
   });
 
-  it('does not flag a button sized via a direct h-11/size-11/min-h-11/min-w-11 utility', () => {
+  it('does not flag a button sized via a direct size-11/min-h-11+min-w-11 utility', () => {
     const src = [
       '<button className="size-11" onClick={onClick}><XIcon /></button>',
-      '<button className="h-11 px-4" onClick={onClick}>Save</button>',
       '<a href="/x" className="min-w-11 min-h-11 flex items-center">link</a>',
     ].join('\n');
     expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([]);
+  });
+
+  it('still flags a button sized on only one axis (h-11 with no w evidence)', () => {
+    const src = '<button className="h-11 px-4" onClick={onClick}>Save</button>';
+    expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([
+      { file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'button' },
+    ]);
   });
 
   it('does not flag a button sized via an arbitrary >=44px pixel value', () => {
@@ -31,9 +37,9 @@ describe('findViolations', () => {
     expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([]);
   });
 
-  it('does not flag a compact button using the before:-inset-* expansion pattern', () => {
+  it('does not flag a compact button using the before:-inset-* expansion pattern, sized against its own box', () => {
     const src =
-      '<button className="relative before:absolute before:-inset-2.5 before:content-[\'\']">x</button>';
+      '<button className="relative h-6 w-6 before:absolute before:-inset-2.5 before:content-[\'\']">x</button>';
     expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([]);
   });
 
@@ -57,12 +63,80 @@ describe('findViolations', () => {
   });
 
   it.each([
-    ['a variant-prefixed sizing utility', 'sm:h-11 w-6'],
-    ['an arbitrary sizing value on the min- form', 'min-h-[44px]'],
+    ['a variant-prefixed sizing utility on both axes', 'sm:h-11 sm:w-11'],
+    ['an arbitrary sizing value on the min- form on both axes', 'min-h-[44px] min-w-[44px]'],
     ['a three-digit spacing step', 'size-100'],
+    ['an arbitrary rem value equal to 44px on both axes', 'h-[2.75rem] w-[2.75rem]'],
   ])('still accepts %s', (_label, className) => {
     const src = `<button className="${className}"><XIcon /></button>`;
     expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([]);
+  });
+
+  it.each([
+    ['a variant-prefixed height with no width evidence', 'sm:h-11 w-6'],
+    ['an arbitrary min-height with no width evidence', 'min-h-[44px]'],
+    ['max-h, which caps the box rather than sizing it, paired with a real width', 'max-h-11 w-11'],
+  ])('does not accept %s', (_label, className) => {
+    const src = `<button className="${className}"><XIcon /></button>`;
+    expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([
+      { file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'button' },
+    ]);
+  });
+
+  describe('evidence holes: sibling laundering, undersized inset, single-axis proof', () => {
+    it("does not let a sibling element launder an undersized control (evidence scoped to the element's own tag)", () => {
+      const src = [
+        '<a className="block break-all text-sm text-primary underline">link</a>',
+        '<iframe className="h-96 w-full" />',
+      ].join('\n');
+      expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([
+        { file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'a' },
+      ]);
+    });
+
+    it('does not let a sibling on a distant line launder an undersized control either', () => {
+      const src = [
+        '<a className="block break-all text-sm text-primary underline">',
+        '  link',
+        '</a>',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '<iframe className="h-96 w-full" />',
+      ].join('\n');
+      expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([
+        { file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'a' },
+      ]);
+    });
+
+    it('does not accept a before:-inset-* expansion too small to reach 44px given its own box', () => {
+      const src = '<button className="h-6 w-6 before:-inset-0.5"><X /></button>';
+      expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([
+        { file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'button' },
+      ]);
+    });
+
+    it('does not accept a before:-inset-* expansion with no box evidence at all', () => {
+      const src = '<button className="before:-inset-2.5"><X /></button>';
+      expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([
+        { file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'button' },
+      ]);
+    });
+
+    it('does not accept width alone as proof of both axes', () => {
+      const src = '<a href="/x" className="w-64 text-sm underline">link</a>';
+      expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([
+        { file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'a' },
+      ]);
+    });
   });
 
   it('does not mistake a component tag for a raw element (case-sensitive)', () => {
@@ -82,6 +156,24 @@ describe('findViolations', () => {
       '// falls through to a default <button> in that case',
       'export function noop() {}',
     ].join('\n');
+    expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([]);
+  });
+
+  it('finds sizing evidence spread across a multi-line opening tag', () => {
+    const src = [
+      '<button',
+      '  type="button"',
+      '  className="size-11"',
+      '  onClick={onClick}',
+      '>',
+      '  <XIcon />',
+      '</button>',
+    ].join('\n');
+    expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([]);
+  });
+
+  it('does not end the opening tag early on a `>` inside a JSX expression attribute', () => {
+    const src = '<button className="size-11" onClick={() => count > 0}><XIcon /></button>';
     expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([]);
   });
 
