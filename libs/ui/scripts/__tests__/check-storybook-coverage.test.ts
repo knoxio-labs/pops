@@ -190,6 +190,71 @@ describe('readComponentExports', () => {
       const source = 'export const ReceiptSchema = z.object({ total: z.number() });';
       expect(readComponentExports(source)).toEqual(['ReceiptSchema']);
     });
+
+    describe('component wrappers (memo/forwardRef) — POPS-2232', () => {
+      it('includes a memo-wrapped arrow that builds an element, previously excluded because the declaration reads as a call, not an arrow', () => {
+        const source = [
+          "import { memo, createElement } from 'react';",
+          "export const Foo = memo(() => createElement('div'));",
+        ].join('\n');
+        expect(readComponentExports(source, { requireTsComponentShape: true })).toEqual(['Foo']);
+      });
+
+      it('includes a forwardRef-wrapped component with generics and a destructured, spread-forwarding arrow', () => {
+        const source = [
+          "import { createElement, forwardRef } from 'react';",
+          'export const Bar = forwardRef<HTMLInputElement, { value: string }>((props, ref) =>',
+          "  createElement('input', { ...props, ref })",
+          ');',
+        ].join('\n');
+        expect(readComponentExports(source, { requireTsComponentShape: true })).toEqual(['Bar']);
+      });
+
+      it('includes a namespace-qualified React.forwardRef with a multi-line generic argument list', () => {
+        const source = [
+          "import * as React from 'react';",
+          'export const Label = React.forwardRef<',
+          '  HTMLDivElement,',
+          '  { text: string }',
+          ">((props, ref) => React.createElement('div', props, props.text));",
+        ].join('\n');
+        expect(readComponentExports(source, { requireTsComponentShape: true })).toEqual(['Label']);
+      });
+
+      it('keeps a memo-wrapped non-component excluded when the file shows no createElement signal at all — the rule cannot tell a memo-wrapped object-returning function from a memo-wrapped component, and relies entirely on the file-level gate to stay closed', () => {
+        const source = [
+          "import { memo } from 'react';",
+          'export const CachedConfig = memo(() => ({ retries: 3 }));',
+        ].join('\n');
+        expect(readComponentExports(source, { requireTsComponentShape: true })).toEqual([]);
+      });
+
+      it('does not unwrap a wrapper nested two calls deep — memo(forwardRef(...)) is not a single call expression, and is undecidable by this rule', () => {
+        const source = [
+          "import { memo, forwardRef, createElement } from 'react';",
+          "export const Foo = memo(forwardRef((props, ref) => createElement('div', { ...props, ref })));",
+        ].join('\n');
+        expect(readComponentExports(source, { requireTsComponentShape: true })).toEqual([]);
+      });
+
+      it('does not follow an aliased wrapper import — fr(...) is not textually "forwardRef(...)", and is undecidable by this rule', () => {
+        const source = [
+          "import { forwardRef as fr, createElement } from 'react';",
+          "export const Foo = fr(() => createElement('div'));",
+        ].join('\n');
+        expect(readComponentExports(source, { requireTsComponentShape: true })).toEqual([]);
+      });
+
+      it('does not treat a same-named export from a non-React package as a component wrapper, even though a real createElement component sits in the same file', () => {
+        const source = [
+          "import { memo } from 'a-memoization-lib';",
+          "import { createElement } from 'react';",
+          "export const Real = () => createElement('div');",
+          'export const Cached = memo(() => ({ cached: true }));',
+        ].join('\n');
+        expect(readComponentExports(source, { requireTsComponentShape: true })).toEqual(['Real']);
+      });
+    });
   });
 });
 
@@ -434,6 +499,43 @@ describe('listExportedComponentModules', () => {
       'components/widgets.tsx': 'export const Widget = () => null;',
     });
     expect(listExportedComponentModules(root)).toEqual([resolve(root, 'components/widgets.tsx')]);
+  });
+
+  it('discovers a .ts component wrapped in memo — POPS-2232, the gap #4147 left open', () => {
+    const root = makeTree({
+      'index.ts': "export * from './components/MemoOnly';",
+      'components/MemoOnly.ts': [
+        "import { memo, createElement } from 'react';",
+        "export const MemoOnly = memo(() => createElement('div'));",
+      ].join('\n'),
+    });
+    expect(listExportedComponentModules(root)).toEqual([resolve(root, 'components/MemoOnly.ts')]);
+  });
+
+  it('discovers a .ts component wrapped in forwardRef — POPS-2232, the gap #4147 left open', () => {
+    const root = makeTree({
+      'index.ts': "export * from './components/ForwardRefOnly';",
+      'components/ForwardRefOnly.ts': [
+        "import { createElement, forwardRef } from 'react';",
+        'export const ForwardRefOnly = forwardRef((props, ref) =>',
+        "  createElement('input', { ...props, ref })",
+        ');',
+      ].join('\n'),
+    });
+    expect(listExportedComponentModules(root)).toEqual([
+      resolve(root, 'components/ForwardRefOnly.ts'),
+    ]);
+  });
+
+  it('still excludes a .ts memo-wrapped non-component with no createElement anywhere in the file — POPS-2232 closes the wrapper gap without reopening the schema/tokens/class false-positive #4147 closed', () => {
+    const root = makeTree({
+      'index.ts': "export * from './lib/CachedConfig';",
+      'lib/CachedConfig.ts': [
+        "import { memo } from 'react';",
+        'export const CachedConfig = memo(() => ({ retries: 3 }));',
+      ].join('\n'),
+    });
+    expect(listExportedComponentModules(root)).toEqual([]);
   });
 });
 
