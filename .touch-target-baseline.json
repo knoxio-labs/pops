@@ -1,5 +1,26 @@
 {
+  "pillars/cerebrum/app/src/components/ScopePicker.tsx": {
+    "button": 1
+  },
+  "pillars/cerebrum/app/src/components/TagPicker.tsx": {
+    "button": 1
+  },
+  "pillars/cerebrum/app/src/pages/glia-dashboard/AuditActionRow.tsx": {
+    "button": 1
+  },
   "pillars/cerebrum/app/src/pages/query/QueryHistorySidebar.tsx": {
+    "button": 1
+  },
+  "pillars/finance/app/src/components/imports/browse-rules/BrowseRulesSidebarRows.tsx": {
+    "button": 2
+  },
+  "pillars/finance/app/src/components/imports/correction-proposal/ops-list/OpRow.tsx": {
+    "button": 1
+  },
+  "pillars/finance/app/src/components/imports/final-review/Section.tsx": {
+    "button": 1
+  },
+  "pillars/finance/app/src/components/imports/tag-review/GroupTagBar.tsx": {
     "button": 1
   },
   "pillars/finance/app/src/pages/wishlist/columns.tsx": {
@@ -209,6 +230,24 @@
   "pillars/lists/app/src/pages/lists-index/ListsIndexFilters.tsx": {
     "button": 1
   },
+  "pillars/media/app/src/components/ComparisonMovieCard.tsx": {
+    "button": 1
+  },
+  "pillars/media/app/src/components/ComparisonMovieCardActions.tsx": {
+    "button": 2
+  },
+  "pillars/media/app/src/components/ExpandableListRow.tsx": {
+    "button": 1
+  },
+  "pillars/media/app/src/pages/comparison-history/UndoToast.tsx": {
+    "button": 1
+  },
+  "pillars/media/app/src/pages/rotation-log/LogEntry.tsx": {
+    "button": 1
+  },
+  "pillars/media/app/src/pages/tier-list/TierBoardSection.tsx": {
+    "button": 1
+  },
   "pillars/shell/src/app/layout/SkipLink.tsx": {
     "a": 1
   },
@@ -216,6 +255,9 @@
     "button": 1
   },
   "pillars/shell/src/app/layout/app-rail/AppRailIcon.tsx": {
+    "button": 1
+  },
+  "pillars/shell/src/app/pages/settings-page/SectionNav.tsx": {
     "button": 1
   }
 }
