@@ -20,7 +20,7 @@
  * would have quietly imposed one of those on the other.
  */
 
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, realpathSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 
 /**
@@ -28,6 +28,29 @@ import { join, relative, sep } from 'node:path';
  * @property {string} role Why this copy exists, for the failure message.
  * @property {string} path Repo-relative.
  */
+
+/**
+ * Every top-level directory a unit this repo builds can live under. The one
+ * place that answers "what is a unit kind" for every filesystem walk that
+ * hunts for a stray or undeclared copy of something — `discoverFilesNamed`
+ * below, and `findUnvendoredContracts` in `check-vendored-contracts.mjs`.
+ *
+ * Before this constant existed, `check-vendored-contracts.mjs` and
+ * `fixture-copies.mjs` each typed their own root list by hand, and the two
+ * silently disagreed: the former walked `['pillars', 'clients']`, the latter
+ * `['pillars', 'libs', 'clients']`, so a copy planted under `libs/` was
+ * invisible to one guard and caught by the other, depending on which kind of
+ * copy it was (POPS-2235). Importing this constant instead of retyping the
+ * list is what makes that impossible — a new unit kind (or a typo in an old
+ * one) changes what every walk covers in one place, not in however many
+ * guards happened to have their own copy of the list.
+ *
+ * `libs/` is real, not speculative: `libs/overlay-ego` already consumes
+ * `pillars/cerebrum/openapi/cerebrum.openapi.json` at codegen time, the same
+ * cross-unit consumption shape that led `pillars/finance/app` to vendor a
+ * copy of a sibling pillar's contract.
+ */
+export const UNIT_KIND_ROOTS = ['pillars', 'libs', 'clients'];
 
 /**
  * The copy every other copy is compared against and restored from.
@@ -64,9 +87,66 @@ const DISCOVERY_SKIP_DIRS = new Set([
 ]);
 
 /**
+ * Whether `absolutePath` — a symlink — resolves to a regular file that stays
+ * inside `repoRoot`.
+ *
+ * A discovery walk that treats a matching symlink as a find has two things to
+ * get right, and this is both of them:
+ *
+ * 1. It must not loop. Both walks in this module only ever call this for a
+ *    `Dirent` that is a symlink, never one that is a directory — a walk never
+ *    descends into a symlinked directory (see the `entry.isDirectory()`
+ *    branches below and in `check-vendored-contracts.mjs`'s
+ *    `findOpenapiJsonFiles`), so a link back to an ancestor directory is
+ *    never traversed in the first place. That omission is deliberate and is
+ *    the cycle guard — a single-level file symlink cannot cycle, because
+ *    resolving it does not recurse.
+ * 2. It must not silently vouch for a path outside the checkout. Every guard
+ *    that uses this eventually `readFileSync`s what it discovers; a symlink
+ *    is not followed for content that lives outside the repo just because
+ *    its name happens to match what the walk is looking for.
+ *
+ * @param {string} repoRoot Absolute path to the repo root.
+ * @param {string} absolutePath Absolute path of the symlink itself.
+ * @returns {boolean}
+ */
+export function symlinkResolvesToFileInRepo(repoRoot, absolutePath) {
+  // `repoRoot` itself can be reached through a symlinked ancestor — macOS
+  // resolves its default tmp dir (`/var/...`) through `/private/var/...`,
+  // and `mkdtempSync(tmpdir())` in the self-tests below hits exactly that —
+  // so the root has to be realpath'd the same way the candidate is, or a
+  // perfectly in-repo symlink fails containment on nothing but a path-string
+  // mismatch.
+  /** @type {string} */
+  let realRoot;
+  try {
+    realRoot = realpathSync(repoRoot);
+  } catch {
+    return false;
+  }
+  /** @type {string} */
+  let real;
+  try {
+    real = realpathSync(absolutePath);
+  } catch {
+    // Broken link, or a race with something that deleted the target.
+    return false;
+  }
+  if (real !== realRoot && !real.startsWith(realRoot + sep)) return false;
+  try {
+    return statSync(real).isFile();
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Every file under `root/<scanRoot>` (recursively, skipping build/dependency
  * noise and dot-directories) named exactly `basename` — repo-relative,
- * POSIX-separated, sorted.
+ * POSIX-separated, sorted. A symlink named `basename` counts too, provided it
+ * resolves to a regular file inside `repoRoot` (see
+ * {@link symlinkResolvesToFileInRepo}); a symlinked directory is never
+ * descended into.
  *
  * This is the leg POPS-2206 found missing entirely: `checkCopies` and its
  * pin both only ever read paths a `FixtureCopy[]` DECLARED, so a copy placed
@@ -80,7 +160,7 @@ const DISCOVERY_SKIP_DIRS = new Set([
  * assumption that produced this gap.
  *
  * @param {string} repoRoot Absolute path to the repo root.
- * @param {readonly string[]} scanRoots Repo-relative directories to walk (e.g. `['pillars', 'libs', 'clients']`).
+ * @param {readonly string[]} scanRoots Repo-relative directories to walk (see {@link UNIT_KIND_ROOTS}).
  * @param {string} basename Exact filename to match.
  * @returns {string[]}
  */
@@ -91,13 +171,18 @@ export function discoverFilesNamed(repoRoot, scanRoots, basename) {
   /** @param {string} dir */
   const walk = (dir) => {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const entryPath = join(dir, entry.name);
       if (entry.isDirectory()) {
         if (DISCOVERY_SKIP_DIRS.has(entry.name) || entry.name.startsWith('.')) continue;
-        walk(join(dir, entry.name));
+        walk(entryPath);
         continue;
       }
-      if (entry.isFile() && entry.name === basename) {
-        found.push(relative(repoRoot, join(dir, entry.name)).split(sep).join('/'));
+      if (entry.name !== basename) continue;
+      if (
+        entry.isFile() ||
+        (entry.isSymbolicLink() && symlinkResolvesToFileInRepo(repoRoot, entryPath))
+      ) {
+        found.push(relative(repoRoot, entryPath).split(sep).join('/'));
       }
     }
   };

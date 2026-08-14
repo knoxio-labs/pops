@@ -59,13 +59,14 @@ import {
   readFileSync,
   rmSync,
   statSync,
+  symlinkSync,
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { isFileNotFound } from './fixture-copies.mjs';
+import { isFileNotFound, symlinkResolvesToFileInRepo, UNIT_KIND_ROOTS } from './fixture-copies.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..');
@@ -234,13 +235,21 @@ const UNVENDORED_SCAN_IGNORED_DIRS = new Set([
 ]);
 
 /**
- * Recursively collect every `*.openapi.json` file under `dir`.
+ * Recursively collect every `*.openapi.json` file under `dir`. A symlink
+ * named `*.openapi.json` counts too, provided it resolves to a regular file
+ * inside the repo (see `symlinkResolvesToFileInRepo` in `fixture-copies.mjs`)
+ * — that is what closes POPS-2236, where a symlinked contract sitting inside
+ * an already-walked directory was invisible because `entry.isFile()` is
+ * `false` for a symlink. A symlinked DIRECTORY is never descended into; that
+ * omission is deliberate and is this walk's cycle guard (see the doc comment
+ * on `symlinkResolvesToFileInRepo`).
  *
+ * @param {string} repoRoot
  * @param {string} dir
  * @param {string[]} out
  * @returns {string[]}
  */
-function findOpenapiJsonFiles(dir, out = []) {
+function findOpenapiJsonFiles(repoRoot, dir, out = []) {
   /** @type {import('node:fs').Dirent[]} */
   let entries;
   try {
@@ -250,11 +259,18 @@ function findOpenapiJsonFiles(dir, out = []) {
     throw error;
   }
   for (const entry of entries) {
+    const entryPath = join(dir, entry.name);
     if (entry.isDirectory()) {
       if (UNVENDORED_SCAN_IGNORED_DIRS.has(entry.name)) continue;
-      findOpenapiJsonFiles(join(dir, entry.name), out);
-    } else if (entry.isFile() && entry.name.endsWith(VENDORED_SUFFIX)) {
-      out.push(join(dir, entry.name));
+      findOpenapiJsonFiles(repoRoot, entryPath, out);
+      continue;
+    }
+    if (!entry.name.endsWith(VENDORED_SUFFIX)) continue;
+    if (
+      entry.isFile() ||
+      (entry.isSymbolicLink() && symlinkResolvesToFileInRepo(repoRoot, entryPath))
+    ) {
+      out.push(entryPath);
     }
   }
   return out;
@@ -281,28 +297,38 @@ export function isCanonicalContractSource(path, root) {
 }
 
 /**
- * Every `*.openapi.json` file that exists somewhere under `pillars/` or
- * `clients/` but is neither a producer's own canonical spec
+ * Every `*.openapi.json` file that exists somewhere under one of
+ * {@link UNIT_KIND_ROOTS} but is neither a producer's own canonical spec
  * (`isCanonicalContractSource`) nor a vendored copy `discoverVendoredContracts`
  * can pair with one, because it sits outside every `VENDOR_DIRECTORIES` shape.
  *
  * This is the leg `discoverVendoredContracts` structurally cannot provide: a
  * directory walk restricted to a fixed list of shapes can prove those shapes
  * are clean, but says nothing about a file sitting anywhere else. This
- * function asks the filesystem directly, with no shape restriction, and
- * reconciles the answer against the declared shapes and the canonical-source
- * rule — so a vendored copy in an undeclared location is reported by name
- * instead of read as "discovery found nothing, so there is nothing".
+ * function asks the filesystem directly, with no shape restriction beyond
+ * "somewhere a unit can live", and reconciles the answer against the declared
+ * shapes and the canonical-source rule — so a vendored copy in an undeclared
+ * location is reported by name instead of read as "discovery found nothing,
+ * so there is nothing".
+ *
+ * The scan is not `pillars/` and `clients/` typed here by hand — it walks
+ * {@link UNIT_KIND_ROOTS}, the same root list `fixture-copies.mjs`'s
+ * `discoverFilesNamed` uses. Before that constant existed, this guard and
+ * that one each spelled out their own root list, and the lists disagreed:
+ * this one omitted `libs/`, so a `*.openapi.json` planted under
+ * `libs/<unit>/contracts/` was invisible here while an identically-placed
+ * fixture copy would have been caught by the other guard (POPS-2235). A
+ * single shared constant is what makes that kind of drift impossible instead
+ * of merely noticed.
  *
  * @param {string} root Repo root to scan.
  * @returns {string[]} Absolute paths, sorted.
  */
 export function findUnvendoredContracts(root) {
   const discoveredCopies = new Set(discoverVendoredContracts(root).map((c) => c.copy));
-  const candidates = [
-    ...findOpenapiJsonFiles(join(root, 'pillars')),
-    ...findOpenapiJsonFiles(join(root, 'clients')),
-  ];
+  const candidates = UNIT_KIND_ROOTS.flatMap((unitKindRoot) =>
+    findOpenapiJsonFiles(root, join(root, unitKindRoot))
+  );
   return candidates
     .filter((path) => !discoveredCopies.has(path) && !isCanonicalContractSource(path, root))
     .toSorted();
@@ -786,18 +812,24 @@ function selfTestDeclaration() {
  * halves cannot exercise, because every one of them either builds fixtures
  * FROM `VENDOR_DIRECTORIES` (so they can never construct a shape outside it)
  * or feeds hand-built inputs straight to `findDrift`/`findMoved` (so they
- * never touch the filesystem walk at all). This proves three things a
+ * never touch the filesystem walk at all). This proves five things a
  * directory-scan-restricted-to-known-shapes guard structurally cannot:
  *
  *   1. A producer's own canonical spec (`pillars/<id>/openapi/<id>.openapi.json`)
  *      is never mistaken for a vendored copy.
  *   2. A legitimate vendored copy, sitting exactly where `VENDOR_DIRECTORIES`
  *      says it may, is never flagged.
- *   3. A `*.openapi.json` sitting ANYWHERE else under `pillars/`/`clients/` —
- *      this fixture uses `pillars/<id>/contracts/`, the exact directory
- *      shape `pillars/bfm/contracts/` shows is real and reachable in this
- *      repo, not contrived — is reported by path, not silently absent from
- *      an empty scan.
+ *   3. A `*.openapi.json` sitting ANYWHERE else under a `UNIT_KIND_ROOTS`
+ *      entry — this fixture uses `pillars/<id>/contracts/`, the exact
+ *      directory shape `pillars/bfm/contracts/` shows is real and reachable
+ *      in this repo, not contrived — is reported by path, not silently
+ *      absent from an empty scan.
+ *   4. The same stray shape under `libs/` is caught too (POPS-2235) — the
+ *      walk covers every `UNIT_KIND_ROOTS` entry, not the `pillars/` and
+ *      `clients/` pair this guard used to hardcode.
+ *   5. A symlink standing in for a vendored-shaped file, inside a directory
+ *      the walk visits, is caught the same as a regular file would be
+ *      (POPS-2236) — `entry.isFile()` alone would miss it.
  *
  * @returns {boolean}
  */
@@ -833,6 +865,22 @@ function selfTestUnvendoredLocation() {
     const strayCopy = join(strayDir, 'producer-c.openapi.json');
     writeFileSync(strayCopy, '{}\n');
 
+    // 4. The same stray shape, but under `libs/` — the root POPS-2235 found
+    // this walk skipping entirely.
+    const libsStrayDir = join(root, 'libs', 'sdk', 'contracts');
+    mkdirSync(libsStrayDir, { recursive: true });
+    const libsStrayCopy = join(libsStrayDir, 'producer-c.openapi.json');
+    writeFileSync(libsStrayCopy, '{}\n');
+
+    // 5. A symlink, inside a directory the walk already visits, standing in
+    // for a stray vendored-shaped file — POPS-2236.
+    mkdirSync(join(root, 'pillars', 'producer-d', 'openapi'), { recursive: true });
+    const symlinkTarget = join(root, 'pillars', 'producer-d', 'openapi', 'producer-d.openapi.json');
+    writeFileSync(symlinkTarget, '{}\n');
+    const symlinkStrayDir = join(root, 'pillars', 'bfm-like', 'contracts');
+    const symlinkStrayCopy = join(symlinkStrayDir, 'symlinked.openapi.json');
+    symlinkSync(relative(symlinkStrayDir, symlinkTarget), symlinkStrayCopy);
+
     const unvendored = findUnvendoredContracts(root);
 
     const canonicalIgnored = !unvendored.includes(
@@ -840,21 +888,32 @@ function selfTestUnvendoredLocation() {
     );
     const legitIgnored = !unvendored.includes(join(legitCopyDir, 'producer-b.openapi.json'));
     const strayCaught = unvendored.includes(strayCopy);
-    const noExtras = unvendored.length === 1;
+    const libsStrayCaught = unvendored.includes(libsStrayCopy);
+    const symlinkCaught = unvendored.includes(symlinkStrayCopy);
+    const noExtras = unvendored.length === 3;
 
-    const ok = canonicalIgnored && legitIgnored && strayCaught && noExtras;
+    const ok =
+      canonicalIgnored &&
+      legitIgnored &&
+      strayCaught &&
+      libsStrayCaught &&
+      symlinkCaught &&
+      noExtras;
     if (!ok) {
       console.error('SELF-TEST FAILED (unvendored location):');
       console.error(`  ignored a producer's own canonical spec: ${canonicalIgnored}`);
       console.error(`  ignored a legitimately vendored copy:     ${legitIgnored}`);
       console.error(`  caught the copy outside every shape:      ${strayCaught}`);
+      console.error(`  caught the same, under libs/:             ${libsStrayCaught}`);
+      console.error(`  caught a symlinked copy:                  ${symlinkCaught}`);
       console.error(
-        `  exactly one finding:                      ${noExtras} (got ${unvendored.length})`
+        `  exactly three findings:                   ${noExtras} (got ${unvendored.length})`
       );
     } else {
       console.log(
-        'self-test OK — a *.openapi.json outside every declared VENDOR_DIRECTORIES shape is ' +
-          'caught, a producer’s own canonical spec and a legitimately vendored copy are not.'
+        'self-test OK — a *.openapi.json (regular file or symlink) outside every declared ' +
+          'VENDOR_DIRECTORIES shape is caught anywhere under pillars/libs/clients, a producer’s ' +
+          'own canonical spec and a legitimately vendored copy are not.'
       );
     }
     return ok;
@@ -1015,7 +1074,7 @@ function main() {
     console.log(
       `OK — ${discovered.length} vendored contract(s) match their canonical source, ` +
         `${expected.length} config-declared expectation(s) all present on disk, and no ` +
-        `*.openapi.json exists outside those declared shapes.`
+        `*.openapi.json exists outside those declared shapes across ${UNIT_KIND_ROOTS.join('/')}.`
     );
     process.exit(0);
   }

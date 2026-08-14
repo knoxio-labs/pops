@@ -70,13 +70,14 @@ import {
   resolveCanonical,
   selfTestCopyHandling,
   selfTestUndeclaredDiscovery,
+  UNIT_KIND_ROOTS,
 } from './fixture-copies.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..');
 
 /** Directories a discovered-copy walk covers — every unit kind that can vendor this fixture. */
-const SCAN_ROOTS = ['pillars', 'libs', 'clients'];
+const SCAN_ROOTS = UNIT_KIND_ROOTS;
 
 /** The filename a copy of this fixture is always named, wherever it lives. */
 const BASENAME = 'device-signature-v1.json';
