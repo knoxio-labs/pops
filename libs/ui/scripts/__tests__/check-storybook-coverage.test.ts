@@ -263,20 +263,50 @@ describe('listExportedComponentModules', () => {
     ]);
   });
 
-  it('follows a re-export chain two levels deep to the file that actually declares the component, in addition to the forwarding file itself', () => {
+  it('follows a re-export chain two levels deep to the file that actually declares the component — a pure forwarder in the middle is a barrel, not a subject in its own right', () => {
     const root = makeTree({
       'index.ts': "export * from './components/Parent';",
       'components/Parent.tsx': "export { Child } from './Parent.child';",
       'components/Parent.child.tsx': 'export const Child = () => null;',
     });
-    // Parent.tsx forwards `Child` in its own `export { … } from` clause, so it is
-    // itself a (trivial) component-exporting module — same as the real
-    // ScrollShelf.tsx/ScrollShelf.lazy.tsx pair this case models. Both the
-    // forwarder and the file that declares the component are subjects.
+    // Parent.tsx's only export is a forward of `Child` — it declares nothing
+    // of its own, so by the same structural rule that exempts index.ts it is
+    // a barrel: recursion still reaches Parent.child.tsx, but Parent.tsx
+    // itself is not a subject demanding its own story. This differs from the
+    // real ScrollShelf.tsx/ScrollShelf.lazy.tsx pair: ScrollShelf.tsx forwards
+    // LazyScrollShelf *and* declares its own ScrollShelf component, so it
+    // keeps a rendering surface a story would actually exercise and remains
+    // a subject — see the "declares one component and forwards another"
+    // case below.
+    expect(listExportedComponentModules(root)).toEqual([
+      resolve(root, 'components/Parent.child.tsx'),
+    ]);
+  });
+
+  it('does not treat a nested barrel as a subject when it re-exports a component by name, not just by `export *` — the shape a real directory-of-components barrel takes', () => {
+    const root = makeTree({
+      'index.ts': "export * from './components/widgets';",
+      'components/widgets/index.ts': "export { Widget } from './Widget';",
+      'components/widgets/Widget.tsx': 'export const Widget = () => null;',
+    });
+    expect(listExportedComponentModules(root)).toEqual([
+      resolve(root, 'components/widgets/Widget.tsx'),
+    ]);
+  });
+
+  it('treats a nested barrel as a subject once it also declares a component locally, alongside forwarding another', () => {
+    const root = makeTree({
+      'index.ts': "export * from './components/widgets';",
+      'components/widgets/index.ts': [
+        'export const WidgetGroup = () => null;',
+        "export { Widget } from './Widget';",
+      ].join('\n'),
+      'components/widgets/Widget.tsx': 'export const Widget = () => null;',
+    });
     expect(listExportedComponentModules(root).toSorted()).toEqual(
       [
-        resolve(root, 'components/Parent.tsx'),
-        resolve(root, 'components/Parent.child.tsx'),
+        resolve(root, 'components/widgets/index.ts'),
+        resolve(root, 'components/widgets/Widget.tsx'),
       ].toSorted()
     );
   });
