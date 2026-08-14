@@ -219,6 +219,18 @@ export const EXPECTATIONS = [
     usedBy: 'pillars/bfm/src/api/finance/client.ts',
   },
   {
+    consumer: 'bfm',
+    producer: 'purchases',
+    operationId: 'receipt.upload',
+    path: '/receipts',
+    method: 'post',
+    // The whole request is the body: the parts the handset captured, sent
+    // through unchanged so purchases' content-addressed dedup still sees the
+    // same bytes on a retry.
+    query: [],
+    usedBy: 'pillars/bfm/src/api/purchases/client.ts',
+  },
+  {
     consumer: 'finance',
     producer: 'contacts',
     operationId: 'entities.list',

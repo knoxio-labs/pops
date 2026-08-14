@@ -15,6 +15,7 @@ import { openTempDb } from '../../db/__tests__/helpers.js';
 import { createBfmApiApp, type CreateBfmApiAppOptions } from '../app.js';
 import { createMobileFinanceClient } from '../finance/client.js';
 import { createPillarGateway } from '../pillars/gateway.js';
+import { createMobilePurchasesClient } from '../purchases/client.js';
 import { createRateLimiter, type RateLimiter } from '../rate-limit.js';
 
 import type { Express } from 'express';
@@ -27,6 +28,7 @@ import type { RefreshChallengeStore } from '../auth/refresh-challenge.js';
 import type { RefreshRateLimitOptions } from '../auth/refresh-rate-limit.js';
 import type { MobileFinanceClient } from '../finance/client.js';
 import type { PillarHandleFactory } from '../pillars/gateway.js';
+import type { MobilePurchasesClient } from '../purchases/client.js';
 
 /** Long enough to satisfy the resolver's floor; fixed so a failure is reproducible. */
 export const TEST_SIGNING_SECRET = 'test-signing-key-0123456789abcdef';
@@ -96,6 +98,11 @@ export interface TestAppOptions {
    * without saying how fails loudly instead of hanging on a real network call.
    */
   finance?: MobileFinanceClient;
+  /**
+   * Where the `/mobile/purchases/*` routes send an upload. Defaults, like
+   * `finance`, to a client over a gateway whose handle factory throws.
+   */
+  purchases?: MobilePurchasesClient;
   /** Same, for the pairing exchange's budget. */
   pairingRateLimit?: PairingRateLimitOptions;
   /** Same, for the budget the challenge and refresh routes share. */
@@ -111,7 +118,7 @@ export interface TestAppOptions {
 
 const unreachableHandleFactory: PillarHandleFactory = (pillarId: string) => {
   throw new Error(
-    `[bfm-test] this test called ${pillarId} without supplying a fake — pass \`finance\` to createTestApp`
+    `[bfm-test] this test called ${pillarId} without supplying a fake — pass \`finance\` or \`purchases\` to createTestApp`
   );
 };
 
@@ -158,6 +165,9 @@ export function createTestApp(options: TestAppOptions = {}): TestApp {
     version: options.version ?? '0.0.1-test',
     finance:
       options.finance ?? createMobileFinanceClient(createPillarGateway(unreachableHandleFactory)),
+    purchases:
+      options.purchases ??
+      createMobilePurchasesClient(createPillarGateway(unreachableHandleFactory)),
     db: opened.db,
     accessTokenSigningKey,
     publicBaseUrl: options.publicBaseUrl ?? TEST_PUBLIC_BASE_URL,

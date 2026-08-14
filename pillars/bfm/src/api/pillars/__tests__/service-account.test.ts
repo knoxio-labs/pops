@@ -114,7 +114,16 @@ describe('the granted scopes', () => {
   });
 
   it('grants only what bfm calls today', () => {
-    expect(BFM_SERVICE_ACCOUNT_SCOPES).toEqual(['finance.transactions']);
+    expect(BFM_SERVICE_ACCOUNT_SCOPES).toEqual(['finance.transactions', 'purchases.receipt']);
+  });
+
+  it('grants no root scope, so a widening stays a visible diff', () => {
+    // `purchases` alone would authorise `purchases.purchase.delete` as readily
+    // as the upload, and nothing about bfm's traffic would have changed to
+    // reveal it. Dot-prefix matching is what makes the narrow entry a control.
+    for (const scope of BFM_SERVICE_ACCOUNT_SCOPES) {
+      expect(scope).toContain('.');
+    }
   });
 
   it('contains no wildcard', () => {

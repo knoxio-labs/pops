@@ -74,6 +74,7 @@ Runs immediately after `actions/checkout`. **No third-party import, at any depth
 | `scripts/check-tailwind-source-coverage.mjs`     | `quality.yml` → `tailwind-source-coverage`  | CSS `@source` globs, source file paths                        |
 | `scripts/check-escape-hatches.mjs`               | `quality.yml` → `escape-hatches`            | TS/TSX source, JSON baseline                                  |
 | `scripts/ci/check-control-characters.mjs`        | `quality.yml` → `control-characters`        | Every tracked file, raw bytes                                 |
+| `scripts/ci/check-design-tokens.mjs`             | `quality.yml` → `design-tokens`             | Frontend TS/TSX/CSS source, class strings                     |
 | `scripts/ci/check-vendored-contracts.mjs`        | `quality.yml` → `vendored-contracts`        | OpenAPI JSON, byte comparison, consumer codegen config source |
 | `scripts/ci/check-device-signature-fixture.mjs`  | `quality.yml` → `device-signature-fixture`  | JSON fixture, `node:crypto`                                   |
 | `scripts/ci/check-cross-pillar-expectations.mjs` | `quality.yml` → `cross-pillar-expectations` | OpenAPI JSON, TS source                                       |

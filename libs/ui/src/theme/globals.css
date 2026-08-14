@@ -75,13 +75,28 @@
 
   /* StatCard palette tokens — hues not covered by semantic tokens */
   --color-stat-sky: var(--stat-sky);
+  --color-stat-sky-foreground: var(--stat-sky-foreground);
   --color-stat-violet: var(--stat-violet);
+  --color-stat-violet-foreground: var(--stat-violet-foreground);
   --color-stat-rose: var(--stat-rose);
+  --color-stat-rose-foreground: var(--stat-rose-foreground);
   --color-stat-orange: var(--stat-orange);
+  --color-stat-orange-foreground: var(--stat-orange-foreground);
 
   /* QR codes — deliberately theme-invariant, see the :root definitions */
   --color-qr-module: var(--qr-module);
   --color-qr-quiet-zone: var(--qr-quiet-zone);
+
+  /* Print — deliberately theme-invariant, see the :root definitions */
+  --color-print-ink: var(--print-ink);
+  --color-print-rule: var(--print-rule);
+  --color-print-rule-strong: var(--print-rule-strong);
+  --color-print-tint: var(--print-tint);
+
+  /* Wordmark gradient stops */
+  --color-brand-gradient-from: var(--brand-gradient-from);
+  --color-brand-gradient-via: var(--brand-gradient-via);
+  --color-brand-gradient-to: var(--brand-gradient-to);
 
   /* Sidebar */
   --color-sidebar: var(--sidebar);
@@ -206,9 +221,13 @@
 
   /* StatCard palette */
   --stat-sky: oklch(0.6 0.15 220);
+  --stat-sky-foreground: oklch(0.98 0.01 220);
   --stat-violet: oklch(0.6 0.15 290);
+  --stat-violet-foreground: oklch(0.98 0.01 290);
   --stat-rose: oklch(0.6 0.18 12);
+  --stat-rose-foreground: oklch(0.98 0.01 12);
   --stat-orange: oklch(0.65 0.16 50);
+  --stat-orange-foreground: oklch(0.2 0.04 50);
 
   /* QR codes. Not overridden in `.dark`, and that is the point: an inverted
      QR (light modules on a dark quiet zone) is outside what most phone camera
@@ -216,6 +235,21 @@
      beautifully and refuses to scan on some handsets. */
   --qr-module: oklch(0.15 0 0);
   --qr-quiet-zone: oklch(1 0 0);
+
+  /* Print. Not overridden in `.dark` for the same reason as the QR tokens:
+     paper is white whichever theme the screen is in, and a dark-mode report
+     would print as an unreadable ink-flood. Only `print:` utilities may use
+     these — on screen they are the wrong colours by construction. */
+  --print-ink: oklch(0 0 0);
+  --print-rule: oklch(0.87 0 0);
+  --print-rule-strong: oklch(0.71 0 0);
+  --print-tint: oklch(0.96 0 0);
+
+  /* Wordmark gradient. Theme-invariant on purpose — the POPS wordmark is the
+     one piece of chrome that reads the same in both themes. */
+  --brand-gradient-from: oklch(0.7 0.2 150);
+  --brand-gradient-via: oklch(0.6 0.2 260);
+  --brand-gradient-to: oklch(0.6 0.2 320);
 
   /* Status colours */
   --success: oklch(0.55 0.15 150);
@@ -279,9 +313,13 @@
 
   /* StatCard palette */
   --stat-sky: oklch(0.7 0.15 220);
+  --stat-sky-foreground: oklch(0.14 0.02 220);
   --stat-violet: oklch(0.7 0.15 290);
+  --stat-violet-foreground: oklch(0.14 0.02 290);
   --stat-rose: oklch(0.7 0.18 12);
+  --stat-rose-foreground: oklch(0.14 0.02 12);
   --stat-orange: oklch(0.75 0.16 50);
+  --stat-orange-foreground: oklch(0.14 0.03 50);
 
   /* App accent — defaults to primary in dark mode too */
   --app-accent: var(--primary);

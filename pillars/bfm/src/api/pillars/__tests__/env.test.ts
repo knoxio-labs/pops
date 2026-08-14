@@ -16,6 +16,7 @@ import {
   DEFAULT_REGISTRY_URL,
   resolveDiscoveryFetchTimeoutMs,
   resolveInternalBaseUrls,
+  resolveProbeTimeoutMs,
   resolveRegistryUrl,
 } from '../env.js';
 
@@ -148,5 +149,34 @@ describe('resolveDiscoveryFetchTimeoutMs', () => {
     expect(() =>
       resolveDiscoveryFetchTimeoutMs({ POPS_DISCOVERY_FETCH_TIMEOUT_MS: 'nope' })
     ).toThrow(/POPS_DISCOVERY_FETCH_TIMEOUT_MS/);
+  });
+});
+
+describe('resolveProbeTimeoutMs', () => {
+  it('reads absence as "leave the probe default alone", not as zero', () => {
+    expect(resolveProbeTimeoutMs({})).toBeUndefined();
+  });
+
+  it('treats a blank value as unset, not as an override', () => {
+    expect(resolveProbeTimeoutMs({ POPS_PROBE_TIMEOUT_MS: '   ' })).toBeUndefined();
+  });
+
+  it('parses a positive integer override', () => {
+    expect(resolveProbeTimeoutMs({ POPS_PROBE_TIMEOUT_MS: '8000' })).toBe(8_000);
+  });
+
+  it.each([
+    ['zero', '0'],
+    ['a negative number', '-2000'],
+    ['a fraction', '2000.5'],
+    ['not a number', 'eight-thousand'],
+  ])('rejects %s', (_label, value) => {
+    expect(() => resolveProbeTimeoutMs({ POPS_PROBE_TIMEOUT_MS: value })).toThrow(BootEnvError);
+  });
+
+  it('names the variable in the error', () => {
+    expect(() => resolveProbeTimeoutMs({ POPS_PROBE_TIMEOUT_MS: 'nope' })).toThrow(
+      /POPS_PROBE_TIMEOUT_MS/
+    );
   });
 });

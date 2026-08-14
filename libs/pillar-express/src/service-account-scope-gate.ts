@@ -19,6 +19,7 @@ import {
   authorizeServiceAccountRequest,
   buildContractScopeMap,
   resolveContractScope,
+  SERVICE_ACCOUNT_HEADER,
   type ContractScopeMap,
   type ServiceAccountAuthResult,
   type ServiceAccountVerifier,
@@ -81,7 +82,7 @@ const MESSAGES: Record<number, string> = {
 function readApiKey(req: Request): string | undefined {
   // `req.get` collapses a repeated header to one string, so a client sending
   // it twice is not silently read as an array and rejected as malformed.
-  return req.get('x-api-key');
+  return req.get(SERVICE_ACCOUNT_HEADER);
 }
 
 /**

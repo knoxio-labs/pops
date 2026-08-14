@@ -194,8 +194,16 @@ async function mapResponse(pillarId: string, response: Response): Promise<CallRe
  *
  * The collapsed pillars return a `{ message, code? }` envelope for the mapped
  * statuses (see `pillars/*\/src/api/rest/error-mapping.ts`): 400 → bad-request,
- * 401 → unauthorized, 404 → not-found, 409 → conflict. Any other status →
- * `unavailable`.
+ * 401 and 403 → unauthorized, 404 → not-found, 409 → conflict. Any other
+ * status → `unavailable`.
+ *
+ * 403 belongs with 401 rather than in the `unavailable` bucket because it is
+ * the answer the inbound service-account gate gives a live key whose grant
+ * does not cover the operation (ADR-044) — the likeliest way a cross-pillar
+ * call fails once a producer requires a credential. Reported as `unavailable`
+ * it reads as a peer being down, so a caller waits for an outage to pass
+ * where the fix is widening a grant, and best-effort callers swallow it
+ * entirely.
  */
 function mapHttpFailure(pillarId: string, status: number, body: unknown): CallFailure {
   const message = extractErrorMessage(body);
@@ -203,6 +211,7 @@ function mapHttpFailure(pillarId: string, status: number, body: unknown): CallFa
     case 400:
       return withMessage({ kind: 'bad-request', pillar: pillarId }, message);
     case 401:
+    case 403:
       return withMessage({ kind: 'unauthorized', pillar: pillarId }, message);
     case 404:
       return withMessage({ kind: 'not-found', pillar: pillarId }, message);

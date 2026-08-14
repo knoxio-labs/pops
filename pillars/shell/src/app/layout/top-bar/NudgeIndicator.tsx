@@ -87,7 +87,7 @@ export function NudgeIndicator() {
     >
       <Bell className="h-5 w-5" />
       {pendingCount > 0 && (
-        <span className="absolute top-1.5 right-1.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">
+        <span className="absolute top-1.5 right-1.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground">
           {pendingCount > 99 ? '99+' : pendingCount}
         </span>
       )}

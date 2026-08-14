@@ -27,7 +27,7 @@ export function getBadgeText(days: number): string {
 
 function getBadgeColor(days: number): string {
   if (days <= 3) return 'bg-destructive text-destructive-foreground';
-  if (days <= 7) return 'bg-amber-500 text-white';
+  if (days <= 7) return 'bg-warning text-warning-foreground';
   return 'bg-muted text-muted-foreground';
 }
 

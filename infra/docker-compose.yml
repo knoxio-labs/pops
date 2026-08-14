@@ -392,12 +392,26 @@ services:
       - backend
     volumes:
       - sqlite-data:/data/sqlite
+    secrets:
+      - pops_purchases_api_key
     environment:
       NODE_ENV: production
       PORT: '3013'
       PURCHASES_SQLITE_PATH: /data/sqlite/purchases.db
       PURCHASES_SELF_BASE_URL: http://purchases-api:3013
       POPS_REGISTRY_ENABLED: 'true'
+      # A PATH, not the value. The file-based secret keeps the credential out
+      # of the process environment and out of `docker inspect`; an env var
+      # carrying the value itself would be readable by anyone who can run
+      # either. Provisioning: infra/secrets.example/purchases/README.md.
+      #
+      # Unlike bfm, purchases does NOT refuse to boot without it. Its own
+      # contract surface — the order, line and charge readers, receipt and
+      # export ingest — is entirely local, so a missing key costs
+      # reconciliation, merchant resolution and the soft-URI cron rather than
+      # the pillar. Each of those reports `no-credential` every tick instead
+      # of degrading into an indistinguishable `unavailable`.
+      POPS_INTERNAL_API_KEY_FILE: /run/secrets/pops_purchases_api_key
       # Reconciliation sweep cadence. Unset in production (module defaults:
       # 5min coalesce, 15min poll); the smoke test lowers them so it does
       # not wait a quarter of an hour for the first tick.
@@ -1307,6 +1321,12 @@ secrets:
   # per-consumer. Mounted by `bfm-api`.
   pops_bfm_api_key:
     file: ../secrets/pops_bfm_api_key
+  # purchases' own service account, for the same reason. Its grant is the
+  # four domains its outbound legs read and nothing else — see
+  # pillars/purchases/src/api/pillars/service-account.ts. Mounted by
+  # `purchases-api`.
+  pops_purchases_api_key:
+    file: ../secrets/pops_purchases_api_key
   # The HS256 key bfm signs mobile access tokens with, and verifies every
   # `/mobile/*` request against. Mounted by `bfm-api`, which refuses to boot
   # without it. Rotating the value invalidates every live access token, which
