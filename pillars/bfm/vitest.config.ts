@@ -7,7 +7,9 @@ export default defineConfig({
     // `app/` is its own workspace member (`@pops/app-bfm`) with a jsdom
     // environment and its own setup file. Without this it would be swept up
     // by the pillar's node-environment run and fail on a missing `document`.
-    exclude: [...configDefaults.exclude, 'app/**'],
+    // `**/*.live-seam.test.ts` spawns real OS processes and is an order of
+    // magnitude slower than this suite; run it via `pnpm test:live-seam`.
+    exclude: [...configDefaults.exclude, 'app/**', '**/*.live-seam.test.ts'],
     // The default reporter's per-test detail only prints in the final
     // summary, after every file has finished — if the run is ever killed or
     // its output truncated before that (a CI timeout, a piped command that

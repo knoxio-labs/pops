@@ -52,7 +52,12 @@ const PURCHASES_SCOPE_ROOT = 'purchases';
  */
 export const REQUIRE_CREDENTIAL_ENV = 'PURCHASES_REQUIRE_SERVICE_ACCOUNT_CREDENTIAL';
 
-function resolveRequireCredential(env: NodeJS.ProcessEnv = process.env): boolean {
+/**
+ * Exported so the resolution rule itself is unit-testable without re-loading
+ * this module under a different `process.env` — the gate below only ever
+ * calls it once, at import time, which is otherwise untestable in isolation.
+ */
+export function resolveRequireCredential(env: NodeJS.ProcessEnv = process.env): boolean {
   return env[REQUIRE_CREDENTIAL_ENV] === 'true';
 }
 

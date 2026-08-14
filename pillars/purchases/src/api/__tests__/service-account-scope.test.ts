@@ -20,7 +20,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { openTempDb, seedAmazonSource } from '../../db/__tests__/helpers.js';
 import { createPurchasesApiApp } from '../app.js';
-import { purchasesScopeMap } from '../middleware/service-account-scope.js';
+import {
+  purchasesScopeMap,
+  REQUIRE_CREDENTIAL_ENV,
+  resolveRequireCredential,
+} from '../middleware/service-account-scope.js';
 import { __resetPillarRegistryCache } from '../pillars/registry.js';
 
 import type { Express } from 'express';
@@ -202,6 +206,19 @@ describe('failing closed', () => {
 
     expect(response.text).not.toContain(KEY);
     expect(response.text).not.toContain('ECONNREFUSED');
+  });
+});
+
+describe('resolveRequireCredential', () => {
+  it('stays closed on every value that is not the exact string "true"', () => {
+    expect(resolveRequireCredential({})).toBe(false);
+    expect(resolveRequireCredential({ [REQUIRE_CREDENTIAL_ENV]: 'false' })).toBe(false);
+    expect(resolveRequireCredential({ [REQUIRE_CREDENTIAL_ENV]: '1' })).toBe(false);
+    expect(resolveRequireCredential({ [REQUIRE_CREDENTIAL_ENV]: 'TRUE' })).toBe(false);
+  });
+
+  it(`opts in only on the exact string "true" — a live-seam suite's own opt-in, never production`, () => {
+    expect(resolveRequireCredential({ [REQUIRE_CREDENTIAL_ENV]: 'true' })).toBe(true);
   });
 });
 
