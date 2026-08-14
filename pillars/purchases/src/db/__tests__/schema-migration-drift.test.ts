@@ -8,12 +8,12 @@
  *
  * This test closes that gap by introspecting the migrated database and
  * diffing it against the drizzle definitions, in both directions — for
- * columns, NOT NULL, foreign keys with their ON DELETE behaviour, and
- * indexes (including the indexes SQLite creates for a `unique()`
- * constraint or a column-level `.unique()`). Every expectation is read out
- * of `getTableConfig()`; nothing here is a hand-maintained literal, so a
- * schema change with no matching migration edit fails without anyone
- * having to remember to update this file too.
+ * columns, NOT NULL, primary keys, foreign keys with their ON DELETE
+ * behaviour, and indexes (including the indexes SQLite creates for a
+ * `unique()` constraint or a column-level `.unique()`). Every expectation
+ * is read out of `getTableConfig()`; nothing here is a hand-maintained
+ * literal, so a schema change with no matching migration edit fails
+ * without anyone having to remember to update this file too.
  *
  * Column *types* are deliberately not compared. SQLite's type affinity
  * means the migration's declared column type and drizzle's declared column
@@ -180,6 +180,42 @@ describe('foreign keys and their ON DELETE behaviour match drizzle, in both dire
   }
 });
 
+/**
+ * The primary key columns in key order, as SQLite reports them: `pk` is 0
+ * for a non-key column and 1-based position within the key otherwise.
+ */
+function livePrimaryKeyOf(table: string): string[] {
+  return columnsOf(table)
+    .filter((column) => column.pk > 0)
+    .toSorted((a, b) => a.pk - b.pk)
+    .map((column) => column.name);
+}
+
+/**
+ * The same, from drizzle — which spells a single-column key on the column
+ * (`.primaryKey()`) and a composite one on the table (`primaryKey({...})`).
+ */
+function declaredPrimaryKeyOf(table: SQLiteTable): string[] {
+  const { columns, primaryKeys } = getTableConfig(table);
+  const composite = primaryKeys.at(0);
+  if (composite !== undefined) return composite.columns.map((column) => column.name);
+  return columns.filter((column) => column.primary).map((column) => column.name);
+}
+
+describe('primary keys match drizzle, in both directions', () => {
+  for (const table of ALL_TABLES) {
+    const { name } = getTableConfig(table);
+    // The index comparison below cannot see these: SQLite enforces a primary
+    // key through an autoindex it names positionally, which is excluded
+    // there. Column order is part of the assertion because a composite key
+    // reordered still enforces the same uniqueness while making the index it
+    // is built on useless for a lookup on the first column alone.
+    it(`${name} is keyed on exactly the columns drizzle declares, in order`, () => {
+      expect(livePrimaryKeyOf(name)).toEqual(declaredPrimaryKeyOf(table));
+    });
+  }
+});
+
 interface ExpectedIndex {
   readonly name: string;
   readonly columns: readonly string[];
@@ -232,23 +268,31 @@ interface LiveIndex {
 }
 
 /**
- * Excludes SQLite's own `sqlite_autoindex_*` rows: those back an inline
- * `PRIMARY KEY`/`UNIQUE` column constraint declared directly in
- * `CREATE TABLE`, which this migration never uses — every unique
- * constraint here is a standalone `CREATE UNIQUE INDEX`, so an autoindex
- * appearing at all would itself be schema drift this test should not paper
- * over by silently excluding it. It is excluded from the *expected* side
- * for the same reason drizzle never declares one: nothing in `schema.ts`
- * asks for an inline constraint.
+ * Excludes the index SQLite builds to enforce a table's `PRIMARY KEY`
+ * (`PRAGMA index_list` reports it with `origin: 'pk'`). Every table here has
+ * one — a `text` primary key is not a rowid alias, and the join tables
+ * declare composite keys — so these are the normal consequence of a
+ * `PRIMARY KEY` and not something `schema.ts` declares through `index()`,
+ * `unique()` or `.unique()`. Their names are positional
+ * (`sqlite_autoindex_<table>_N`), so comparing them against drizzle would
+ * compare SQLite's numbering rather than anything an author wrote. The
+ * primary keys they stand for are compared directly instead, below.
+ *
+ * Autoindexes with any other origin are deliberately kept. `origin: 'u'`
+ * means an inline `UNIQUE` column constraint, which drizzle never emits —
+ * `.unique()` and `unique()` both produce a named `CREATE UNIQUE INDEX` —
+ * so one appearing is drift, and it fails the comparison below as an index
+ * the migration has and drizzle does not declare.
  */
 function liveIndexesOf(table: string): LiveIndex[] {
   return (
     opened.raw.prepare(`PRAGMA index_list(${table})`).all() as {
       name: string;
       unique: number;
+      origin: string;
     }[]
   )
-    .filter((row) => !row.name.startsWith('sqlite_autoindex_'))
+    .filter((row) => row.origin !== 'pk')
     .map((row) => ({ name: row.name, unique: row.unique === 1 }));
 }
 
