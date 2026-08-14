@@ -14,6 +14,7 @@
  * app carries is that anchor, opaque — see `cursor.ts`.
  */
 import { isGatewayOk, type GatewayOutcome, type PillarGateway } from '../pillars/gateway.js';
+import { parseOrMismatch } from '../pillars/parse-response.js';
 import { encodePageCursor, type PageCursor } from './cursor.js';
 import {
   FinanceTransactionGetResponseSchema,
@@ -79,6 +80,7 @@ export function createMobileFinanceClient(gateway: PillarGateway): MobileFinance
       );
 
       const page = parseOrMismatch(
+        FINANCE_PILLAR_ID,
         outcome,
         FinanceTransactionListResponseSchema,
         'transactions.list'
@@ -95,6 +97,7 @@ export function createMobileFinanceClient(gateway: PillarGateway): MobileFinance
       );
 
       const record = parseOrMismatch(
+        FINANCE_PILLAR_ID,
         outcome,
         FinanceTransactionGetResponseSchema,
         'transactions.get'
@@ -125,36 +128,4 @@ function toPage(rows: FinanceListRows, limit: number): MobileTransactionsPage {
     nextCursor:
       hasMore && last !== undefined ? encodePageCursor({ d: last.date, i: last.id }) : null,
   };
-}
-
-/**
- * Fold a successful gateway outcome through the producer's expected shape.
- *
- * A response bfm cannot read is a `contract-mismatch` — the same kind the
- * gateway raises when finance serves no callable contract at all, and
- * deliberately NOT `unavailable`: finance answered, so retrying will produce
- * exactly the same answer, and telling the phone to retry would spin it
- * against a fault only a deploy can fix.
- */
-function parseOrMismatch<TValue>(
-  outcome: GatewayOutcome<unknown>,
-  schema: z.ZodType<TValue>,
-  operation: string
-): GatewayOutcome<TValue> {
-  if (!isGatewayOk(outcome)) return outcome;
-
-  const result = schema.safeParse(outcome.value);
-  if (!result.success) {
-    console.warn(
-      `[bfm-api] ${FINANCE_PILLAR_ID}.${operation} returned a shape this pillar cannot read: ${result.error.message}`
-    );
-    return {
-      kind: 'contract-mismatch',
-      pillar: FINANCE_PILLAR_ID,
-      status: 502,
-      detail: `${operation} response did not match the expected shape`,
-    };
-  }
-
-  return { kind: 'ok', value: result.data };
 }

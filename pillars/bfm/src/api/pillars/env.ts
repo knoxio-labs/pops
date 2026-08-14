@@ -18,6 +18,9 @@ import { BootEnvError } from '../boot-env.js';
 /** Where the discovery cache's per-fetch abort deadline is overridden, if it is at all. */
 export const DISCOVERY_FETCH_TIMEOUT_MS_ENV = 'POPS_DISCOVERY_FETCH_TIMEOUT_MS';
 
+/** Where the reachability probe's per-pillar `/openapi` deadline is overridden, if it is at all. */
+export const PROBE_TIMEOUT_MS_ENV = 'POPS_PROBE_TIMEOUT_MS';
+
 /** Where discovery reads the pillar snapshot from. */
 export const REGISTRY_URL_ENV = 'POPS_REGISTRY_URL';
 
@@ -116,6 +119,33 @@ export function resolveDiscoveryFetchTimeoutMs(
   if (!Number.isInteger(parsed) || parsed <= 0) {
     throw new BootEnvError(
       `[bfm-api] ${DISCOVERY_FETCH_TIMEOUT_MS_ENV} must be a positive integer; got '${raw}'`
+    );
+  }
+  return parsed;
+}
+
+/**
+ * Resolve the reachability probe's per-pillar `GET /openapi` deadline from
+ * `POPS_PROBE_TIMEOUT_MS`, in milliseconds.
+ *
+ * `undefined` when unset — `reachability.ts`'s own default
+ * (`DEFAULT_PROBE_TIMEOUT_MS`, 2s) stands, which is what every real deployment
+ * gets. This exists for the same reason `resolveDiscoveryFetchTimeoutMs` does:
+ * `scripts/ios-e2e/run.mjs` probes pillars behind the same loopback stub that
+ * discovery's fetch races the CI runner's CPU contention against, under a
+ * TIGHTER fixed deadline (2s vs discovery's 5s) — see this probe's own doc
+ * comment in `../mobile/reachability.ts` for why it is at least as exposed to
+ * that starvation, though no CI run has actually hit it yet.
+ *
+ * @throws {BootEnvError} If set to something other than a positive integer.
+ */
+export function resolveProbeTimeoutMs(env: NodeJS.ProcessEnv = process.env): number | undefined {
+  const raw = env[PROBE_TIMEOUT_MS_ENV];
+  if (raw === undefined || raw.trim() === '') return undefined;
+  const parsed = Number(raw);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    throw new BootEnvError(
+      `[bfm-api] ${PROBE_TIMEOUT_MS_ENV} must be a positive integer; got '${raw}'`
     );
   }
   return parsed;

@@ -42,7 +42,7 @@ export function FromPlanGenerateBar({
         />
       </div>
       {errorMessage === null ? null : (
-        <div className="text-sm text-rose-600" role="alert" data-testid="generate-error">
+        <div className="text-sm text-destructive" role="alert" data-testid="generate-error">
           {errorMessage}
         </div>
       )}

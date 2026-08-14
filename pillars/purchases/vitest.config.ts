@@ -3,6 +3,32 @@ import { defineConfig, configDefaults } from 'vitest/config';
 
 export default defineConfig({
   test: {
+    /**
+     * Neither `testTimeout` nor a worker cap is set here, and that is a
+     * decision rather than an omission.
+     *
+     * This pillar accumulated a flake ticket per test: an assortment of
+     * supertest files missing vitest's 5s default under load, never
+     * reproducing alone, each looking like a contention bug in whatever
+     * write path it happened to be exercising. They were one cause, and the
+     * cause was the suite's own CPU appetite rather than the clock. Every
+     * test opened its own on-disk database and replayed the entire migration
+     * journal to do it — ~23ms, over a thousand times a run — and the two
+     * heaviest blocks rebuilt an expensive corpus once per test. Those are
+     * now built once and copied (see `src/db/__tests__/helpers.ts`), which
+     * cut the suite's CPU by a third and took the slowest test from 4.3s to
+     * under 1s. The whole suite now sits at least 6x clear of the default.
+     *
+     * Raising `testTimeout` for the pillar was rejected because it hides
+     * exactly what this default is worth having for: a genuine regression
+     * that made a 200ms request take six seconds would stop being visible.
+     * Capping `maxWorkers`/`fileParallelism` was rejected because it buys
+     * the same headroom by making every run slower, CI's included, and it
+     * treats the contention as a fact rather than as the removable thing it
+     * turned out to be. If a single block is genuinely slow, bound that
+     * block where a reader can see the measurement, as `merchant-spend`
+     * does for building its corpus.
+     */
     environment: 'node',
     exclude: [...configDefaults.exclude, 'app/**'],
     coverage: {

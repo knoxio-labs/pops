@@ -75,6 +75,16 @@ describe('receiptToPurchase invariants', () => {
       ],
     }),
     'sum-mismatch': receipt({ total: '$99.00' }),
+    // The other reading whose figures are all readable and whose arithmetic
+    // lands on zero: $9.95 of delivery filed in two fields at once, and
+    // $9.95 is the stated tax, so counting it twice reconciles under the
+    // convention this receipt was not printed under.
+    'ambiguous-tax': receipt({
+      total: '$47.40',
+      tax: '$9.95',
+      shipping: '$9.95',
+      surcharges: ['$9.95'],
+    }),
     // Every figure read and reconciled; the model simply could not see part
     // of the paper, so what it did not read may be a line that was there.
     damaged: receipt({ unreadable: ['the bottom third is torn away'] }),

@@ -21,14 +21,22 @@ import { fileURLToPath } from 'node:url';
 import { createExpressEndpoints } from '@ts-rest/express';
 import express, { type Express, type Request, type Response } from 'express';
 
+import { MOBILE_UPLOAD_MAX_BYTES } from '../contract/rest-schemas.js';
 import { bfmContract } from '../contract/rest.js';
 import { createMobileRateLimit, type MobileRateLimitOptions } from './auth/mobile-rate-limit.js';
 import { createPairingRateLimit, type PairingRateLimitOptions } from './auth/pairing-rate-limit.js';
 import { createRefreshRateLimit, type RefreshRateLimitOptions } from './auth/refresh-rate-limit.js';
 import { createRequireDevice } from './auth/require-device.js';
 import { createIdentityMiddleware } from './middleware/identity.js';
-import { CHALLENGE_PATH, MOBILE_PATH_PREFIX, PAIRING_PATH, REFRESH_PATH } from './paths.js';
+import {
+  CHALLENGE_PATH,
+  MOBILE_PATH_PREFIX,
+  MOBILE_RECEIPT_UPLOAD_PATH,
+  PAIRING_PATH,
+  REFRESH_PATH,
+} from './paths.js';
 import { type BfmRestHandlerDeps, makeBfmRestHandlers } from './rest/handlers.js';
+import { createPayloadTooLargeErrorHandler } from './rest/payload-too-large.js';
 import { createRequestValidationErrorHandler } from './rest/request-validation.js';
 
 /**
@@ -126,6 +134,18 @@ export function createBfmApiApp(deps: BfmApiDeps, options: CreateBfmApiAppOption
     createRequireDevice({ db: deps.db, accessTokenSigningKey: deps.accessTokenSigningKey })
   );
 
+  // The upload route's own ceiling, mounted ahead of the default parser so it
+  // is the one that runs there — body-parser marks a request it has read, and
+  // the general parser below skips a body already parsed.
+  //
+  // A raised limit on ONE path rather than on `express.json()` generally: every
+  // other route on this pillar carries a token, a code or a page of rows, and
+  // Express's 100kb default is the right refusal for a caller sending a
+  // megabyte to any of them. This one is behind both the perimeter's budget and
+  // `requireDevice`, so the megabytes it will buffer are a paired handset's.
+  // Its refusal is reshaped below (ADR-046).
+  app.use(MOBILE_RECEIPT_UPLOAD_PATH, express.json({ limit: MOBILE_UPLOAD_MAX_BYTES }));
+
   app.use(express.json());
 
   app.get('/openapi', (_req: Request, res: Response) => {
@@ -147,6 +167,11 @@ export function createBfmApiApp(deps: BfmApiDeps, options: CreateBfmApiAppOption
     // another — see `rest/request-validation.ts`.
     requestValidationErrorHandler: createRequestValidationErrorHandler(),
   });
+
+  // LAST. The body parser throws before any route matches, so its refusal
+  // reaches an error handler rather than a handler — and left to Express's
+  // default it would be an HTML page the generated client cannot decode.
+  app.use(createPayloadTooLargeErrorHandler());
 
   return app;
 }

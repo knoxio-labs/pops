@@ -100,7 +100,7 @@ function Caption({ validation, planEntryCount }: CaptionProps): ReactElement {
   const { t } = useTranslation('food');
   if (!validation.ok) {
     return (
-      <div className="text-sm text-rose-600" role="alert" data-testid="range-error">
+      <div className="text-sm text-destructive" role="alert" data-testid="range-error">
         {validation.reason === 'EndBeforeStart'
           ? t('shopping.fromPlan.endBeforeStart')
           : t('shopping.fromPlan.rangeTooLong')}

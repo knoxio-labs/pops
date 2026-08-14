@@ -16,8 +16,8 @@ export interface RankingRowProps {
 
 function rankColor(rank: number): string {
   if (rank === 1) return 'text-warning';
-  if (rank === 2) return 'text-zinc-400';
-  return 'text-amber-700';
+  if (rank === 2) return 'text-muted-foreground';
+  return 'text-stat-orange';
 }
 
 function confColor(confidence: number): string {
