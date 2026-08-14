@@ -56,12 +56,12 @@ const openapiDocument: unknown = JSON.parse(
  * 413 that reads like a server fault. Matches the limit finance, food,
  * inventory, media and cerebrum already set.
  */
-const JSON_BODY_LIMIT = '20mb';
+export const JSON_BODY_LIMIT_BYTES = 20 * 1024 * 1024;
 
 export function createPurchasesApiApp(deps: PurchasesApiDeps): Express {
   const app = express();
   app.disable('x-powered-by');
-  app.use(express.json({ limit: JSON_BODY_LIMIT }));
+  app.use(express.json({ limit: JSON_BODY_LIMIT_BYTES }));
   app.use(jsonBodyErrorHandler);
 
   const handlers = makeRequestHandler(deps);

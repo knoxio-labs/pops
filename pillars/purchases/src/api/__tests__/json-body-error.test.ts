@@ -10,7 +10,7 @@ import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { openTempDb } from '../../db/__tests__/helpers.js';
-import { createPurchasesApiApp } from '../app.js';
+import { JSON_BODY_LIMIT_BYTES, createPurchasesApiApp } from '../app.js';
 import { __resetPillarRegistryCache } from '../pillars/registry.js';
 
 import type { Express } from 'express';
@@ -40,18 +40,27 @@ afterEach(() => {
 
 describe('a body over the JSON limit', () => {
   it('answers a readable JSON body instead of an HTML error page', async () => {
-    // 20mb is the pillar's configured limit; a receipt with a couple of
-    // oversized photographs clears it easily.
-    const oversizedNote = 'x'.repeat(21 * 1024 * 1024);
-    const res = await request(app).post('/purchases').send({
+    // Pad the payload to just past the pillar's configured limit rather
+    // than hardcoding a second magic size: the test stays meaningful (and
+    // fast) even if JSON_BODY_LIMIT_BYTES changes.
+    const marginBytes = 1024;
+    const bodyWithoutNote = {
       source: 'amazon',
       ingestMethod: 'export',
       orderedAt: '2026-02-02T01:41:21Z',
       currency: 'AUD',
       totalCents: 100,
       checksum: 'oversized',
-      note: oversizedNote,
-    });
+      note: '',
+    };
+    const baseSize = Buffer.byteLength(JSON.stringify(bodyWithoutNote));
+    const oversizedNote = 'x'.repeat(JSON_BODY_LIMIT_BYTES - baseSize + marginBytes);
+    const res = await request(app)
+      .post('/purchases')
+      .send({
+        ...bodyWithoutNote,
+        note: oversizedNote,
+      });
 
     expect(res.status).toBe(413);
     expect(res.headers['content-type']).toMatch(/^application\/json/);
