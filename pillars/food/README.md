@@ -106,3 +106,13 @@ docker build -f pillars/food/Dockerfile .
 The contract (zod) is the single source of truth; OpenAPI and api-types are
 generated projections, drift-checked in CI. Redis is required to run the worker
 (set `REDIS_URL`); the API degrades gracefully without it.
+
+`db:seed:food` wipes twenty-one tables before it seeds, so it is guarded twice.
+`assertSeedTargetIsDev` (`scripts/dev-seed-guard.ts`) refuses a target that is
+not a development database — `NODE_ENV=production`, or a path resolving outside
+the food package, which is what a deployed volume looks like. Past that,
+`assertDestructiveCommandAllowed` (`@pops/pillar-sdk/db`) refuses a database
+that already holds recipes, ingredients or batches — a real kitchen and a stale fixture set look identical
+from here. Re-seeding one you meant to reset is `FORCE=true pnpm --filter
+@pops/food db:seed:food`, which prints the row counts it is about to destroy
+first. See [`docs/runbooks/pillar-go-live.md`](../../docs/runbooks/pillar-go-live.md).

@@ -25,6 +25,10 @@
       "types": "./dist/pillar-env/index.d.ts",
       "default": "./dist/pillar-env/index.js"
     },
+    "./db": {
+      "types": "./dist/db/index.d.ts",
+      "default": "./dist/db/index.js"
+    },
     "./client": {
       "types": "./dist/client/index.d.ts",
       "default": "./dist/client/index.js"

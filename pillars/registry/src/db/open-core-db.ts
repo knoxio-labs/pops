@@ -18,6 +18,8 @@ import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 
+import { withPreMigrationBackup } from '@pops/pillar-sdk/db';
+
 import type { CoreDb } from './services/internal.js';
 
 /**
@@ -59,6 +61,13 @@ export interface OpenedCoreDb {
  * If the migration apply throws (corrupt DB, malformed migration, missing
  * folder), the raw handle is closed before the error is re-thrown so the
  * caller can't leak a locked file descriptor.
+ *
+ * The apply runs behind `withPreMigrationBackup`: a snapshot is taken
+ * first whenever this database has journal entries left to apply AND
+ * already carries a schema of its own, removed once they all land, and
+ * left on disk with its path logged when one throws. A database being
+ * created here — the first-ever mount of the data volume — has nothing
+ * to snapshot and is migrated directly.
  */
 export function openCoreDb(path: string): OpenedCoreDb {
   mkdirSync(dirname(path), { recursive: true });
@@ -67,8 +76,12 @@ export function openCoreDb(path: string): OpenedCoreDb {
   raw.pragma('foreign_keys = ON');
   raw.pragma('busy_timeout = 5000');
   const db = drizzle(raw) as CoreDb;
+  const migrations = migrationsDir();
   try {
-    migrate(db, { migrationsFolder: migrationsDir() });
+    withPreMigrationBackup(
+      { connection: raw, databasePath: path, migrationsFolder: migrations },
+      () => migrate(db, { migrationsFolder: migrations })
+    );
   } catch (err) {
     raw.close();
     throw err;

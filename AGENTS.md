@@ -50,7 +50,7 @@ CI + GitHub Copilot are the **only** merge gates — the user does NOT review PR
 
 ### Production
 
-- **Never run destructive DB commands in production** — per-pillar seed/clear/reset scripts are dev/test only.
+- **Never run destructive DB commands in production** — per-pillar seed/clear/reset scripts are dev/test only, and each one is fronted by a refusal that cannot be forgotten: a containment guard on the target path (`scripts/db/dev-db-guard.ts` for `db:clear:<id>`, `pillars/food/scripts/dev-seed-guard.ts` for the seeder), and, where the command wipes rather than truncates, `assertDestructiveCommandAllowed` from `@pops/pillar-sdk/db` on top of it. Taking a pillar live, verifying it, and recovering a failed migration are in [`docs/runbooks/pillar-go-live.md`](docs/runbooks/pillar-go-live.md), which also carries the safe-vs-destructive command table.
 - **Schema changes go through Drizzle, per pillar:** edit schema → `drizzle-kit generate` → review → commit → deploy → pillar auto-migrates its own SQLite DB on startup.
 - **Each pillar backs up independently** via `infra/litestream/<id>.yml` — there is no single database to back up.
 
