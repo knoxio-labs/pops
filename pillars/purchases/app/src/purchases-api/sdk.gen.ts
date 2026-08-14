@@ -39,6 +39,7 @@ import type {
   ReconcileUnlinkErrors,
   ReconcileUnlinkResponses,
   SearchSearchData,
+  SearchSearchErrors,
   SearchSearchResponses,
   SourceDeleteData,
   SourceDeleteErrors,
@@ -253,8 +254,8 @@ export const reconcileUnlink = <ThrowOnError extends boolean = false>(
  */
 export const searchSearch = <ThrowOnError extends boolean = false>(
   options?: Options<SearchSearchData, ThrowOnError>
-): RequestResult<SearchSearchResponses, unknown, ThrowOnError> =>
-  (options?.client ?? client).post<SearchSearchResponses, unknown, ThrowOnError>({
+): RequestResult<SearchSearchResponses, SearchSearchErrors, ThrowOnError> =>
+  (options?.client ?? client).post<SearchSearchResponses, SearchSearchErrors, ThrowOnError>({
     url: '/search',
     ...options,
     headers: {

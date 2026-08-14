@@ -79,6 +79,8 @@ export type {
   ReconcileUnlinkResponse,
   ReconcileUnlinkResponses,
   SearchSearchData,
+  SearchSearchError,
+  SearchSearchErrors,
   SearchSearchResponse,
   SearchSearchResponses,
   SourceDeleteData,

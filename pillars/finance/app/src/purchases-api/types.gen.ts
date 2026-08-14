@@ -1180,8 +1180,8 @@ export type SearchSearchData = {
     };
     query: {
       filters?: Array<{
-        field: string;
-        operator: string;
+        field: 'source' | 'status' | 'orderedAt';
+        operator: 'eq' | 'gte' | 'lte';
         value: string;
       }>;
       text: string;
@@ -1191,6 +1191,18 @@ export type SearchSearchData = {
   query?: never;
   url: '/search';
 };
+
+export type SearchSearchErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+  };
+};
+
+export type SearchSearchError = SearchSearchErrors[keyof SearchSearchErrors];
 
 export type SearchSearchResponses = {
   /**
