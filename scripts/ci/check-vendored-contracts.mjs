@@ -3,10 +3,15 @@
  * Vendored-contract drift guard.
  *
  * Some units consume a sibling pillar's OpenAPI contract at codegen time but
- * cannot depend on it through a `@pops/*` package, because one side of the seam
- * is not in the pnpm workspace: the producer may be (`contacts`, a Rust pillar
- * pnpm cannot see), or the consumer may be (`clients/ios`, a Swift app —
- * ADR-043).
+ * do not depend on it through a `@pops/*` package. Usually because one side of
+ * the seam is not in the pnpm workspace at all: the producer may be
+ * (`contacts`, a Rust pillar pnpm cannot see), or the consumer may be
+ * (`clients/ios`, a Swift app — ADR-043). But a workspace member can also
+ * choose to vendor a same-workspace producer's spec on purpose: `finance/app`
+ * -> `purchases` vendors rather than depending on `@pops/purchases`, because
+ * that package's `dependencies` (`better-sqlite3`, `express`, `drizzle-orm`,
+ * `@anthropic-ai/sdk`) are the purchases BACKEND's runtime graph, and nothing
+ * in it is needed to read a static JSON file.
  * Per ADR-033 the OpenAPI snapshot IS that pillar's cross-language contract, so
  * the consumer vendors a copy of the published snapshot inside its OWN unit
  * boundary and generates its client from the local copy. That keeps the unit

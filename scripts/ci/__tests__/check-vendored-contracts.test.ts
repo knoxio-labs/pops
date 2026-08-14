@@ -106,10 +106,11 @@ function declareTsPairWithoutCopy(root: string, consumer: string, pillarId: stri
 }
 
 describe('discoverVendoredContracts / deriveExpectedContracts against the real repo', () => {
-  it('agree on exactly the two known vendored contracts today', () => {
+  it('agree on exactly the three known vendored contracts today', () => {
     // Pinned rather than left as a floor: the repo's own doc comments name
-    // exactly these two ("pillars/finance/app/contracts/contacts.openapi.json"
-    // and "clients/ios/Contracts/bfm.openapi.json"). A third legitimate one
+    // exactly these three ("pillars/finance/app/contracts/contacts.openapi.json",
+    // "pillars/finance/app/contracts/purchases.openapi.json", and
+    // "clients/ios/Contracts/bfm.openapi.json"). A fourth legitimate one
     // means updating this pin in the same commit; that friction is the point
     // — it is what makes a change to this convention visible instead of a
     // floor silently swallowing it.
@@ -122,6 +123,7 @@ describe('discoverVendoredContracts / deriveExpectedContracts against the real r
     expect(discoveredPaths).toEqual([
       'clients/ios/Contracts/bfm.openapi.json',
       'pillars/finance/app/contracts/contacts.openapi.json',
+      'pillars/finance/app/contracts/purchases.openapi.json',
     ]);
     expect(expectedPaths).toEqual(discoveredPaths);
   });
@@ -405,8 +407,8 @@ describe('the guard CLI', () => {
   it('passes against the real repo, reporting both mechanisms agree', () => {
     const stdout = execFileSync('node', [guardPath], { encoding: 'utf8' });
     expect(stdout).toContain('OK —');
-    expect(stdout).toContain('2 vendored contract(s)');
-    expect(stdout).toContain('2 config-declared expectation(s)');
+    expect(stdout).toContain('3 vendored contract(s)');
+    expect(stdout).toContain('3 config-declared expectation(s)');
   });
 
   it('its self-test passes', () => {
