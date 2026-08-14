@@ -24,7 +24,7 @@ export function FromPlanPreview({
   const { t } = useTranslation('food');
   if (errorMessage !== null) {
     return (
-      <div className="text-sm text-rose-600" role="alert" data-testid="preview-error">
+      <div className="text-sm text-destructive" role="alert" data-testid="preview-error">
         {errorMessage}
       </div>
     );

@@ -66,10 +66,29 @@ export interface ConfirmedLink {
   readonly transactionUri: string;
 }
 
+/**
+ * A pairing a human ruled out. The mirror image of {@link ConfirmedLink}:
+ * one pins a charge to a transaction, the other keeps them apart.
+ *
+ * It removes the transaction from THIS charge's candidates and from
+ * nothing else's. A rejection says the engine paired the wrong two things,
+ * not that the transaction is spent — leaving it available is what lets the
+ * charge it does belong to claim it on the same sweep.
+ */
+export interface RejectedPairing {
+  readonly chargeId: string;
+  readonly transactionUri: string;
+}
+
 export interface SolverInput {
   readonly charges: readonly SolvableCharge[];
   readonly transactions: readonly SolvableTransaction[];
   readonly confirmed: readonly ConfirmedLink[];
+  /**
+   * Pairings a human ruled out, which the ladder must not propose again.
+   * Without them a reject is a button that the next sweep silently undoes.
+   */
+  readonly rejected: readonly RejectedPairing[];
   /** Default settlement window when a source states none. */
   readonly defaultWindowDays: number;
 }
@@ -78,6 +97,15 @@ export interface SolverInput {
 export interface ProposedLink {
   readonly chargeId: string;
   readonly transactionUri: string;
+  /**
+   * The transaction's descriptor as it read on this sweep.
+   *
+   * Carried so the decision the link is eventually given can be turned into
+   * a `purchase_match_rules` row, whose key is a descriptor pattern. The
+   * solver never matches on it — blocking reads the SOURCE's pattern, and a
+   * rule that scored its own evidence would be a matcher grading itself.
+   */
+  readonly transactionDescription: string;
   /** The portion of the transaction attributed to this charge. */
   readonly amountCents: number;
   readonly linkType: LinkType;

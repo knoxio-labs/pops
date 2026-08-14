@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Button, FileUpload } from '@pops/ui';
 
-import { MAX_RECEIPT_PARTS } from './parts.js';
+import { MAX_RECEIPT_PARTS, RECEIPT_ACCEPT } from './parts.js';
 import { PastedTextForm } from './PastedTextForm.js';
 import { StagedPartList } from './StagedPartList.js';
 import { StagingProblems } from './StagingProblems.js';
@@ -27,9 +27,16 @@ export function ReceiptIntake({ intake, disabled, onSubmit }: ReceiptIntakeProps
       <div className="space-y-2">
         <FileUpload
           multiple
+          accept={RECEIPT_ACCEPT}
           disabled={disabled}
           prompt={t('receipts.drop.prompt')}
+          // The types are already named in words below, so the drop zone's own
+          // hint would repeat them as a raw attribute string.
+          acceptHint={null}
           onFilesSelected={intake.addFiles}
+          onError={(error) => {
+            if (error.type === 'not-accepted') intake.refuse(error.file.name);
+          }}
         />
         <p className="text-muted-foreground text-xs">{t('receipts.drop.accepts')}</p>
         <p className="text-muted-foreground text-xs">

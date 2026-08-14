@@ -915,6 +915,7 @@ export type ReceiptUploadResponses = {
             | 'no-lines'
             | 'negative-line'
             | 'sum-mismatch'
+            | 'ambiguous-tax'
             | 'damaged';
         }>;
         kind: 'needs-review';
@@ -959,11 +960,87 @@ export type ReconcileConfirmResponses = {
    * 200
    */
   200: {
+    matchRuleId: string | null;
     ok: true;
   };
 };
 
 export type ReconcileConfirmResponse = ReconcileConfirmResponses[keyof ReconcileConfirmResponses];
+
+export type ReconcileLinksData = {
+  body?: never;
+  path?: never;
+  query: {
+    transactionUri: string;
+  };
+  url: '/reconcile/links';
+};
+
+export type ReconcileLinksResponses = {
+  /**
+   * 200
+   */
+  200: {
+    purchases: Array<{
+      charges: Array<{
+        charge: {
+          amountCents: number;
+          chargedAt: string | null;
+          createdAt: string;
+          currency: string;
+          id: string;
+          orderAmountCents: number;
+          origin: 'merchant' | 'derived';
+          paymentHint: string | null;
+          position: number;
+          purchaseId: string;
+          role: 'capture' | 'authorization' | 'refund' | 'adjustment';
+          shipmentId: string | null;
+          sourceChargeRef: string | null;
+          updatedAt: string;
+        };
+        link: {
+          amountCents: number;
+          chargeId: string;
+          confidence: number;
+          confirmedAt: string | null;
+          createdAt: string;
+          id: string;
+          linkType: 'exact' | 'split' | 'combined' | 'partial' | 'rule' | 'manual';
+          matchRuleId: string | null;
+          transactionUri: string;
+        };
+      }>;
+      linkedCents: number;
+      purchase: {
+        checksum: string;
+        createdAt: string;
+        currency: string;
+        discountCents: number;
+        id: string;
+        ingestMethod: 'email' | 'export' | 'upload' | 'manual';
+        merchantEntityId: string | null;
+        merchantEntityName: string | null;
+        orderedAt: string;
+        paymentHint: string | null;
+        rawRef: string | null;
+        settlementMode: 'card' | 'cash' | 'unknown';
+        shippingCents: number;
+        source: string;
+        sourceOrderId: string | null;
+        status: 'awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored';
+        subtotalCents: number;
+        surchargeCents: number;
+        taxCents: number;
+        totalCents: number;
+        updatedAt: string;
+      };
+    }>;
+    transactionUri: string;
+  };
+};
+
+export type ReconcileLinksResponse = ReconcileLinksResponses[keyof ReconcileLinksResponses];
 
 export type ReconcileQueueData = {
   body?: never;
@@ -994,6 +1071,7 @@ export type ReconcileQueueResponses = {
         amountCents: number;
         confidence: number;
         linkType: 'exact' | 'split' | 'combined' | 'partial' | 'rule' | 'manual';
+        transactionDescription: string | null;
         transactionUri: string;
       }>;
       purchaseId: string;
@@ -1004,6 +1082,42 @@ export type ReconcileQueueResponses = {
 };
 
 export type ReconcileQueueResponse = ReconcileQueueResponses[keyof ReconcileQueueResponses];
+
+export type ReconcileRejectData = {
+  /**
+   * Body
+   */
+  body?: {
+    chargeId: string;
+    transactionUri: string;
+  };
+  path?: never;
+  query?: never;
+  url: '/reconcile/reject';
+};
+
+export type ReconcileRejectErrors = {
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+  };
+};
+
+export type ReconcileRejectError = ReconcileRejectErrors[keyof ReconcileRejectErrors];
+
+export type ReconcileRejectResponses = {
+  /**
+   * 200
+   */
+  200: {
+    ok: true;
+  };
+};
+
+export type ReconcileRejectResponse = ReconcileRejectResponses[keyof ReconcileRejectResponses];
 
 export type ReconcileSweepData = {
   /**
@@ -1105,8 +1219,8 @@ export type SearchSearchData = {
     };
     query: {
       filters?: Array<{
-        field: string;
-        operator: string;
+        field: 'source' | 'status' | 'orderedAt';
+        operator: 'eq' | 'gte' | 'lte';
         value: string;
       }>;
       text: string;
@@ -1116,6 +1230,18 @@ export type SearchSearchData = {
   query?: never;
   url: '/search';
 };
+
+export type SearchSearchErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+  };
+};
+
+export type SearchSearchError = SearchSearchErrors[keyof SearchSearchErrors];
 
 export type SearchSearchResponses = {
   /**

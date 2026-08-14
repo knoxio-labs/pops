@@ -23,8 +23,8 @@
  * GitHub's macOS runners ship no Docker daemon, so `infra/docker-compose.dev.yml`
  * — the obvious way to get a BFM — cannot run in the job this flow is gated by.
  * The pillar is a Node process and starts in about a second; `pnpm --filter
- * @pops/bfm build` then `node pillars/bfm/dist/api/server.js` is the whole of
- * it.
+ * @pops/bfm... build` then `node pillars/bfm/dist/api/server.js` is the whole
+ * of it.
  *
  * ## Why the port is not 3014
  *
@@ -160,6 +160,21 @@ const PAIRING_CODE_TTL_MS = 30 * 60 * 1000;
  * variable; every real deployment leaves it unset.
  */
 const DISCOVERY_FETCH_TIMEOUT_MS = 20_000;
+
+/**
+ * Raises the reachability probe's per-pillar `GET /openapi` deadline past
+ * `reachability.ts`'s own default of 2s (`DEFAULT_PROBE_TIMEOUT_MS`), for the
+ * same reason `DISCOVERY_FETCH_TIMEOUT_MS` above raises the discovery
+ * deadline: the probe is a second loopback fetch from the same BFM process
+ * to the same `upstream-stub.mjs`, racing the same three-core contention —
+ * and the tighter of the two deadlines, so at least as exposed to it. Unlike
+ * discovery, no CI run has actually missed this one yet; this raises it
+ * anyway, on the same 4x-the-production-default reasoning, rather than wait
+ * for a flake to prove the exposure is real. `resolveProbeTimeoutMs` in
+ * `pillars/bfm/src/api/pillars/env.ts` is the one place production reads this
+ * variable; every real deployment leaves it unset.
+ */
+const PROBE_TIMEOUT_MS = 8_000;
 
 class HarnessError extends Error {}
 
@@ -426,7 +441,12 @@ async function main() {
     teardown.unshift(upstream.close);
     process.stdout.write(`ios-e2e: registry + finance stub on ${upstream.url}\n`);
 
-    await run('pnpm', ['--filter', '@pops/bfm', 'build']);
+    // `@pops/bfm...`, not `@pops/bfm`: the pillar's build script runs its
+    // OpenAPI generator, which imports the compiled `@pops/contract-openapi`.
+    // Nothing else in this job builds the workspace, so the pillar's own
+    // dependencies have to be built here — the same reason the Dockerfiles
+    // build `@pops/bfm^...` before the pillar.
+    await run('pnpm', ['--filter', '@pops/bfm...', 'build']);
 
     const bfm = spawn('node', [join(REPO_ROOT, 'pillars/bfm/dist/api/server.js')], {
       cwd: REPO_ROOT,
@@ -446,6 +466,7 @@ async function main() {
         POPS_INTERNAL_API_KEY: 'ios-e2e-service-account-key',
         POPS_REGISTRY_URL: upstream.url,
         POPS_DISCOVERY_FETCH_TIMEOUT_MS: String(DISCOVERY_FETCH_TIMEOUT_MS),
+        POPS_PROBE_TIMEOUT_MS: String(PROBE_TIMEOUT_MS),
         // Emptied on purpose: with it, the pillar would try to register itself
         // with a registry that is a fixture and has no such route.
         POPS_REGISTRY_ENABLED: '',

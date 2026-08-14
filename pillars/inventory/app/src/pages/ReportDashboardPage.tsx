@@ -1,4 +1,4 @@
-import { FileText } from 'lucide-react';
+import { BarChart3, FileText } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 
@@ -15,7 +15,10 @@ export function ReportDashboardPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title={t('reports')} />
+      <PageHeader
+        title={t('reports')}
+        icon={<BarChart3 className="h-6 w-6 text-muted-foreground" />}
+      />
 
       <DashboardWidgets />
 

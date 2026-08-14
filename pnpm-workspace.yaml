@@ -25,7 +25,17 @@ allowBuilds:
   sharp: true
   msgpackr-extract: false
 
+# `@types/node` is pinned to the Node major the fleet actually runs (24), and
+# the override is what makes that pin hold. Declaring `^24.13.3` in each
+# package.json only binds the workspace's own resolutions; a dozen
+# DefinitelyTyped packages (`@types/express-serve-static-core`, `@types/jsdom`,
+# `@types/papaparse`, ...) depend on `@types/node` at `*`, which pnpm resolves
+# to whatever is newest on the registry. That pulled a second, Node 25 copy
+# back into the tree on a fresh install even with every manifest pinned, and it
+# moves on its own whenever DefinitelyTyped publishes — so the manifests alone
+# make the resolution undeclared, not wrong. Only an override reaches it.
 overrides:
+  '@types/node': ^24.13.3
   cssstyle: 6.0.2
   ioredis: 5.11.0
 

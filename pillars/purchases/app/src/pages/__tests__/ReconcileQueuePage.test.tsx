@@ -24,7 +24,8 @@ vi.mock('../../purchases-api/index.js', () => ({
 
 function buildLink(overrides: Partial<ProposedLink> = {}): ProposedLink {
   return {
-    transactionUri: 'pops:finance/transaction/tx-1',
+    transactionUri: 'pops://finance/transaction/tx-1',
+    transactionDescription: 'WOOLWORTHS 1234 SYDNEY',
     amountCents: 4599,
     linkType: 'exact',
     confidence: 0.95,
@@ -52,7 +53,7 @@ function entryAt(index: number, overrides: Partial<QueueEntry> = {}): QueueEntry
   return buildEntry({
     chargeId: `charge-${index}`,
     purchaseId: `order-${index}`,
-    proposed: [buildLink({ transactionUri: `pops:finance/transaction/tx-${index}` })],
+    proposed: [buildLink({ transactionUri: `pops://finance/transaction/tx-${index}` })],
     ...overrides,
   });
 }
@@ -150,7 +151,9 @@ describe('ReconcileQueuePage — copy', () => {
     const linkTypes: LinkType[] = ['exact', 'split', 'combined', 'partial', 'rule', 'manual'];
     queueReturns(
       linkTypes.map((linkType, index) =>
-        entryAt(index, { proposed: [buildLink({ linkType, transactionUri: `pops:x/y/${index}` })] })
+        entryAt(index, {
+          proposed: [buildLink({ linkType, transactionUri: `pops://x/y/${index}` })],
+        })
       )
     );
     renderQueue();
@@ -232,9 +235,9 @@ describe('ReconcileQueuePage — decisions', () => {
       entryAt(1, {
         amountCents: 10_000,
         proposed: [
-          buildLink({ transactionUri: 'pops:finance/transaction/tx-a', amountCents: 6000 }),
+          buildLink({ transactionUri: 'pops://finance/transaction/tx-a', amountCents: 6000 }),
           buildLink({
-            transactionUri: 'pops:finance/transaction/tx-b',
+            transactionUri: 'pops://finance/transaction/tx-b',
             amountCents: 4000,
             linkType: 'split',
           }),
@@ -248,10 +251,10 @@ describe('ReconcileQueuePage — decisions', () => {
 
     await waitFor(() => expect(reconcileConfirmMock).toHaveBeenCalledTimes(2));
     expect(reconcileConfirmMock).toHaveBeenCalledWith({
-      body: { chargeId: 'charge-1', transactionUri: 'pops:finance/transaction/tx-a' },
+      body: { chargeId: 'charge-1', transactionUri: 'pops://finance/transaction/tx-a' },
     });
     expect(reconcileConfirmMock).toHaveBeenCalledWith({
-      body: { chargeId: 'charge-1', transactionUri: 'pops:finance/transaction/tx-b' },
+      body: { chargeId: 'charge-1', transactionUri: 'pops://finance/transaction/tx-b' },
     });
     expect(reconcileUnlinkMock).not.toHaveBeenCalled();
   });
@@ -267,7 +270,7 @@ describe('ReconcileQueuePage — decisions', () => {
 
     await waitFor(() =>
       expect(reconcileUnlinkMock).toHaveBeenCalledWith({
-        body: { chargeId: 'charge-1', transactionUri: 'pops:finance/transaction/tx-1' },
+        body: { chargeId: 'charge-1', transactionUri: 'pops://finance/transaction/tx-1' },
       })
     );
     expect(reconcileConfirmMock).not.toHaveBeenCalled();

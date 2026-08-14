@@ -18,10 +18,10 @@ interface Props {
 }
 
 const BAND_CLASS: Record<QualityBand, string> = {
-  clean: 'bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200',
-  minor: 'bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200',
-  attention: 'bg-orange-100 text-orange-900 dark:bg-orange-950 dark:text-orange-200',
-  blocked: 'bg-rose-100 text-rose-900 dark:bg-rose-950 dark:text-rose-200',
+  clean: 'bg-success/15 text-success',
+  minor: 'bg-warning/15 text-warning',
+  attention: 'bg-stat-orange/15 text-stat-orange',
+  blocked: 'bg-destructive/15 text-destructive',
 };
 
 export function QualityBandBadge({ band, topSignals, bandLabel }: Props): ReactElement {

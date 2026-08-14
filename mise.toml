@@ -256,8 +256,9 @@ run = "vitest run scripts/"
 
 [tasks."typecheck:scripts"]
 description = "Type-check the root-owned scripts/ test projects (gates CI checks under scripts/)"
-# `scripts/` owns three tsconfig projects (`scripts/__tests__`,
-# `scripts/ci/__tests__`, `scripts/extractability/__tests__`) that neither
+# `scripts/` owns four tsconfig projects (`scripts/__tests__`,
+# `scripts/ci/__tests__`, `scripts/db/__tests__`,
+# `scripts/extractability/__tests__`) that neither
 # `tsc -b tsconfig.build.json` (references only libs/* and pillars/*) nor the
 # `run-all` fan-out (scripts/ has no mise.toml) ever reaches — vitest's esbuild
 # transform runs these tests without type-checking them. This task is the
@@ -267,6 +268,7 @@ description = "Type-check the root-owned scripts/ test projects (gates CI checks
 run = [
   "tsc --noEmit -p scripts/__tests__/tsconfig.json",
   "tsc --noEmit -p scripts/ci/__tests__/tsconfig.json",
+  "tsc --noEmit -p scripts/db/__tests__/tsconfig.json",
   "tsc --noEmit -p scripts/extractability/__tests__/tsconfig.json",
 ]
 
@@ -285,15 +287,77 @@ run = "node scripts/huly-backlog-reconcile.mjs \"$@\""
 # Post-monolith reality: each pillar owns its own SQLite file and applies
 # its committed `pillars/<x>/migrations/` journal at runtime when the DB is
 # opened (drizzle's `migrate()` in each pillar's `open-<x>-db.ts`). There is
-# no drizzle-kit step, no shared `db:init`/`db:clear`, and no cross-domain
-# seeder — those lived in the now-deleted monolith. The food pillar is the
-# only one shipping a dev seeder, kept below.
+# no drizzle-kit step and no cross-domain seeder — those lived in the
+# now-deleted monolith. Seeding and clearing are therefore per pillar, each
+# with an umbrella that fans out.
+#
+# There is no `db:init`: a pillar creates and migrates its own file the first
+# time it opens it, so a "fresh database" is an absent file, not a task.
+#
+# Every task below is development and test only (AGENTS.md "Production").
+# `scripts/db/dev-db-guard.ts` enforces that rather than trusting it — it
+# refuses under `NODE_ENV=production` and refuses any database resolving
+# outside this working tree, which is every deployed one.
 
 [tasks."db:seed:food"]
 description = "Wipe food tables only, then seed PRD-113 phase-1 food fixtures into the food pillar's dev DB"
 dir = "pillars/food"
 env = { SQLITE_PATH = "{{config_root}}/pillars/food/data/food.db" }
 run = "pnpm db:seed:food"
+
+# Umbrella seeder. Register each new `db:seed:<id>` here as it lands; food is
+# the only pillar shipping deterministic fixtures today.
+[tasks."db:seed"]
+description = "Seed every pillar that ships a deterministic dev seeder"
+depends = ["db:seed:food"]
+
+[tasks."db:clear"]
+description = "Truncate every pillar's dev DB (schema + migration journal preserved)"
+run = "tsx scripts/db/db-clear-cli.ts --all"
+
+[tasks."db:clear:ai"]
+description = "Truncate the ai pillar's dev DB (schema + migration journal preserved)"
+run = "tsx scripts/db/db-clear-cli.ts ai"
+
+[tasks."db:clear:bfm"]
+description = "Truncate the bfm pillar's dev DB (schema + migration journal preserved)"
+run = "tsx scripts/db/db-clear-cli.ts bfm"
+
+[tasks."db:clear:cerebrum"]
+description = "Truncate the cerebrum pillar's dev DB (schema + migration journal preserved)"
+run = "tsx scripts/db/db-clear-cli.ts cerebrum"
+
+[tasks."db:clear:contacts"]
+description = "Truncate the contacts pillar's dev DB (schema + migration journal preserved)"
+run = "tsx scripts/db/db-clear-cli.ts contacts"
+
+[tasks."db:clear:finance"]
+description = "Truncate the finance pillar's dev DB (schema + migration journal preserved)"
+run = "tsx scripts/db/db-clear-cli.ts finance"
+
+[tasks."db:clear:food"]
+description = "Truncate the food pillar's dev DB (schema + migration journal preserved)"
+run = "tsx scripts/db/db-clear-cli.ts food"
+
+[tasks."db:clear:inventory"]
+description = "Truncate the inventory pillar's dev DB (schema + migration journal preserved)"
+run = "tsx scripts/db/db-clear-cli.ts inventory"
+
+[tasks."db:clear:lists"]
+description = "Truncate the lists pillar's dev DB (schema + migration journal preserved)"
+run = "tsx scripts/db/db-clear-cli.ts lists"
+
+[tasks."db:clear:media"]
+description = "Truncate the media pillar's dev DB (schema + migration journal preserved)"
+run = "tsx scripts/db/db-clear-cli.ts media"
+
+[tasks."db:clear:purchases"]
+description = "Truncate the purchases pillar's dev DB (schema + migration journal preserved)"
+run = "tsx scripts/db/db-clear-cli.ts purchases"
+
+[tasks."db:clear:registry"]
+description = "Truncate the registry pillar's dev DB (schema + migration journal preserved)"
+run = "tsx scripts/db/db-clear-cli.ts registry"
 
 # ============================================================================
 # Food DSL

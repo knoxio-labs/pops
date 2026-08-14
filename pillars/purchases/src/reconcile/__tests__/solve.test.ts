@@ -33,6 +33,7 @@ function run(input: Partial<SolverInput> = {}): SolverOutput {
     charges: [charge()],
     transactions: [txn()],
     confirmed: [],
+    rejected: [],
     defaultWindowDays: 21,
     ...input,
   });
@@ -46,6 +47,10 @@ describe('stage 1 — exact', () => {
       {
         chargeId: 'chg-1',
         transactionUri: 'pops://finance/transaction/t1',
+        // Carried so a later confirm can key a match rule on it. The solver
+        // itself never matches on this — blocking reads the source's own
+        // pattern.
+        transactionDescription: 'AMAZON MKTPLACE AU',
         amountCents: 4128,
         linkType: 'exact',
         confidence: 0.99,
@@ -378,5 +383,86 @@ describe('an empty world', () => {
     expect(review).toEqual([
       { chargeId: 'chg-1', purchaseId: 'ord-1', reason: 'no-candidate', candidateCount: 0 },
     ]);
+  });
+});
+
+describe('a rejected pairing', () => {
+  it('is never proposed again, however well the arithmetic fits', () => {
+    const { links, review } = run({
+      rejected: [{ chargeId: 'chg-1', transactionUri: 'pops://finance/transaction/t1' }],
+    });
+
+    expect(links).toEqual([]);
+    // Removed at blocking, so the charge reports having had no candidate at
+    // all rather than an ambiguity it never faced.
+    expect(review).toEqual([
+      { chargeId: 'chg-1', purchaseId: 'ord-1', reason: 'no-candidate', candidateCount: 0 },
+    ]);
+  });
+
+  it('binds to the charge it was decided for and no other', () => {
+    // The failure this catches would be silent and total: a rejection read
+    // as global takes the transaction away from every charge, so one click
+    // unmatches an order nobody looked at.
+    const { links } = run({
+      charges: [charge(), charge({ id: 'chg-2', purchaseId: 'ord-2' })],
+      rejected: [{ chargeId: 'chg-1', transactionUri: 'pops://finance/transaction/t1' }],
+    });
+
+    expect(links).toHaveLength(1);
+    expect(links[0]?.chargeId).toBe('chg-2');
+  });
+
+  it('does not spend the transaction it was rejected from', () => {
+    // Blocking removes the candidate without the ladder forming an opinion,
+    // so the transaction stays unclaimed. Consuming it here would leave the
+    // charge that really settles it looking unexplained.
+    const { links } = run({
+      charges: [charge({ amountCents: 4128 }), charge({ id: 'chg-2', purchaseId: 'ord-2' })],
+      transactions: [txn()],
+      rejected: [{ chargeId: 'chg-1', transactionUri: 'pops://finance/transaction/t1' }],
+    });
+
+    expect(links).toEqual([
+      {
+        chargeId: 'chg-2',
+        transactionUri: 'pops://finance/transaction/t1',
+        transactionDescription: 'AMAZON MKTPLACE AU',
+        amountCents: 4128,
+        linkType: 'exact',
+        confidence: 0.99,
+      },
+    ]);
+  });
+
+  it('does not stop a combined settlement it was not part of', () => {
+    const { links } = run({
+      charges: [
+        charge({ id: 'c1', purchaseId: 'o1', amountCents: 1500 }),
+        charge({ id: 'c2', purchaseId: 'o2', amountCents: 2628 }),
+      ],
+      transactions: [txn({ uri: 'combined', amountCents: 4128 })],
+      rejected: [{ chargeId: 'c1', transactionUri: 'pops://finance/transaction/t1' }],
+    });
+
+    expect(links.map((link) => link.chargeId).toSorted()).toEqual(['c1', 'c2']);
+    expect(links.every((link) => link.linkType === 'combined')).toBe(true);
+  });
+
+  it('keeps its charge out of a combined settlement it WAS part of', () => {
+    // The same partition, with the rejection pointing at the transaction
+    // the combined phase would have used. Blocking is compiled per charge
+    // there too, so the charge is simply not eligible.
+    const { links, review } = run({
+      charges: [
+        charge({ id: 'c1', purchaseId: 'o1', amountCents: 1500 }),
+        charge({ id: 'c2', purchaseId: 'o2', amountCents: 2628 }),
+      ],
+      transactions: [txn({ uri: 'combined', amountCents: 4128 })],
+      rejected: [{ chargeId: 'c1', transactionUri: 'combined' }],
+    });
+
+    expect(links).toEqual([]);
+    expect(review.map((entry) => entry.chargeId).toSorted()).toEqual(['c1', 'c2']);
   });
 });

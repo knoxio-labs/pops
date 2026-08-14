@@ -5,15 +5,20 @@ import type { ReactNode } from 'react';
 import type { SearchResultHit, SearchResultSection } from '../SearchResultsPanel';
 import type { SearchHitData } from '../uri-resolver';
 
+/**
+ * Section colour names arrive over the wire as bare hue words. Each maps onto
+ * a distinct design token rather than a raw palette utility, so a section
+ * header answers to the theme in both modes.
+ */
 const COLOR_CLASSES: Record<string, string> = {
-  purple: 'text-purple-600 dark:text-purple-400',
+  purple: 'text-stat-violet',
   green: 'text-success',
   blue: 'text-info',
   red: 'text-destructive',
-  orange: 'text-orange-600 dark:text-orange-400',
+  orange: 'text-stat-orange',
   yellow: 'text-warning',
-  pink: 'text-pink-600 dark:text-pink-400',
-  cyan: 'text-cyan-600 dark:text-cyan-400',
+  pink: 'text-stat-rose',
+  cyan: 'text-stat-sky',
 };
 
 interface SectionHeaderProps {

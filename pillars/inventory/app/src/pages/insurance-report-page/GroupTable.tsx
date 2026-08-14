@@ -4,8 +4,8 @@ import { warrantyStatus } from './warranty';
 
 import type { ReportGroup, ReportItem } from './csv';
 
-const TH_CLASS = 'py-2 pr-3 print:border print:border-gray-300 print:p-1';
-const TD_CLASS = 'py-2 pr-3 print:border print:border-gray-300 print:p-1';
+const TH_CLASS = 'py-2 pr-3 print:border print:border-print-rule print:p-1';
+const TD_CLASS = 'py-2 pr-3 print:border print:border-print-rule print:p-1';
 
 function PhotoCell({ item }: { item: ReportItem }) {
   if (item.photoPath) {
@@ -19,7 +19,7 @@ function PhotoCell({ item }: { item: ReportItem }) {
   }
   return (
     <div
-      className="w-8 h-8 rounded bg-muted print:bg-gray-100"
+      className="w-8 h-8 rounded bg-muted print:bg-print-tint"
       role="img"
       aria-label="No photo available"
     />
@@ -30,14 +30,14 @@ function ItemRow({ item, onOpen }: { item: ReportItem; onOpen: (id: string) => v
   const warranty = warrantyStatus(item.warrantyExpires);
   return (
     <tr
-      className="border-b last:border-0 hover:bg-muted/30 cursor-pointer print:hover:bg-transparent print:cursor-default print:break-inside-avoid print:border-gray-300"
+      className="border-b last:border-0 hover:bg-muted/30 cursor-pointer print:hover:bg-transparent print:cursor-default print:break-inside-avoid print:border-print-rule"
       onClick={() => onOpen(item.id)}
     >
       <td className={TD_CLASS}>
         <PhotoCell item={item} />
       </td>
       <td className={`${TD_CLASS} font-medium print:text-[12pt]`}>{item.itemName}</td>
-      <td className={`${TD_CLASS} [&_span]:print:bg-transparent [&_span]:print:text-black`}>
+      <td className={`${TD_CLASS} [&_span]:print:bg-transparent [&_span]:print:text-print-ink`}>
         {item.assetId ? (
           <AssetIdBadge assetId={item.assetId} />
         ) : (
@@ -45,7 +45,7 @@ function ItemRow({ item, onOpen }: { item: ReportItem; onOpen: (id: string) => v
         )}
       </td>
       <td className={TD_CLASS}>{item.brand ?? '—'}</td>
-      <td className={`${TD_CLASS} [&_span]:print:bg-transparent [&_span]:print:text-black`}>
+      <td className={`${TD_CLASS} [&_span]:print:bg-transparent [&_span]:print:text-print-ink`}>
         {item.condition ? (
           <ConditionBadge condition={item.condition as Condition} />
         ) : (
@@ -55,7 +55,7 @@ function ItemRow({ item, onOpen }: { item: ReportItem; onOpen: (id: string) => v
       <td className={TD_CLASS}>
         <Badge
           variant={warranty.variant}
-          className="print:bg-transparent print:border print:border-gray-400 print:text-black"
+          className="print:bg-transparent print:border print:border-print-rule-strong print:text-print-ink"
         >
           {warranty.label}
         </Badge>
@@ -86,7 +86,7 @@ function GroupHeader({ group }: { group: ReportGroup }) {
 function GroupTableHead() {
   return (
     <thead>
-      <tr className="border-b text-left text-muted-foreground print:border-gray-300">
+      <tr className="border-b text-left text-muted-foreground print:border-print-rule">
         <th className={`${TH_CLASS} w-10`}>Photo</th>
         <th className={TH_CLASS}>Name</th>
         <th className={TH_CLASS}>Asset ID</th>
@@ -127,7 +127,7 @@ export function GroupTable({ group, groupIndex, onOpenItem }: GroupTableProps) {
     <div className={`mb-8 print:mb-4 ${groupIndex > 0 ? 'print:break-before-page' : ''}`}>
       <GroupHeader group={group} />
       <div className="overflow-x-auto">
-        <table className="w-full text-sm print:text-[11pt] print:border-collapse print:border print:border-gray-300">
+        <table className="w-full text-sm print:text-[11pt] print:border-collapse print:border print:border-print-rule">
           <GroupTableHead />
           <tbody>
             {group.items.map((item) => (

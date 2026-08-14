@@ -75,7 +75,7 @@ function FocusNotFoundBanner({ slug, onDismiss }: { slug: string; onDismiss: () 
   return (
     <div
       role="status"
-      className="flex items-center justify-between gap-2 rounded border border-amber-500/40 bg-amber-50 p-2 text-sm"
+      className="flex items-center justify-between gap-2 rounded border border-warning/40 bg-warning/10 p-2 text-sm"
     >
       <span>{t('data.ingredients.focus.notFound', { slug })}</span>
       <Button
