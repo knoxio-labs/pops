@@ -31,7 +31,8 @@
             from page: UIImage,
             budget: ReceiptPageBudget = .standard
         ) -> ReceiptPart? {
-            guard let data = fitted(page, to: budget).jpegData(compressionQuality: budget.compressionQuality),
+            let quality = budget.compressionQuality
+            guard let data = fitted(page, to: budget).jpegData(compressionQuality: quality),
                 !data.isEmpty
             else { return nil }
             return ReceiptPart(mediaType: .jpeg, data: data)

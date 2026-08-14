@@ -37,7 +37,8 @@
 
         @Test("a page becomes a JPEG the media type names")
         func aPageBecomesAJPEG() throws {
-            let part = try #require(ReceiptPageEncoder.part(from: Self.page(.init(width: 40, height: 60))))
+            let page = Self.page(CGSize(width: 40, height: 60))
+            let part = try #require(ReceiptPageEncoder.part(from: page))
 
             #expect(part.mediaType == .jpeg)
             #expect(!part.data.isEmpty)
@@ -60,7 +61,10 @@
             let part = try #require(ReceiptPageEncoder.part(from: Self.page(oversized)))
             let decoded = try #require(Self.decoded(part))
 
-            let longest = max(decoded.size.width * decoded.scale, decoded.size.height * decoded.scale)
+            let pixels = CGSize(
+                width: decoded.size.width * decoded.scale,
+                height: decoded.size.height * decoded.scale)
+            let longest = max(pixels.width, pixels.height)
             #expect(longest <= ReceiptPageBudget.standard.longestEdge)
             #expect(longest > 0)
         }
