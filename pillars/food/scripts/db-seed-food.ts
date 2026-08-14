@@ -1,9 +1,11 @@
 /**
  * Food-only seed runner.
  *
- * Wipes food's tables in the SQLite file at `SQLITE_PATH` and invokes
- * `seedFood`. Run via `mise run db:seed:food` from the repo root, which
- * sets `SQLITE_PATH` to the food pillar's dev DB.
+ * Wipes food's tables and invokes `seedFood`. The file is resolved with the
+ * pillar's own {@link resolveFoodSqlitePath}, not with `SQLITE_PATH` directly:
+ * a deployer who sets only the shared path gets a sibling `food.db`, so a
+ * direct `pnpm --filter @pops/food db:seed:food` cannot wipe the tables of
+ * whatever database that shared path names.
  *
  * It is the fleet's one destructive script, so it is also the one place the
  * shared guard in `@pops/pillar-sdk/db` is wired up: production is refused
@@ -18,6 +20,7 @@ import { drizzle } from 'drizzle-orm/better-sqlite3';
 
 import { assertDestructiveCommandAllowed, type SqliteConnection } from '@pops/pillar-sdk/db';
 
+import { resolveFoodSqlitePath } from '../src/api/food-sqlite-path.js';
 import { compileRecipeVersion } from '../src/dsl/compile.js';
 import { seedFood } from '../src/seed/index.js';
 
@@ -88,7 +91,7 @@ export function assertFoodSeedAllowed(options: {
 }
 
 function main(): void {
-  const dbPath = process.env.SQLITE_PATH ?? './data/pops.db';
+  const dbPath = resolveFoodSqlitePath();
 
   if (!existsSync(dbPath)) {
     console.error(`❌ Database not found at ${dbPath}`);

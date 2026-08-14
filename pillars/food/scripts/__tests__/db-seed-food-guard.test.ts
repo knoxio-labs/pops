@@ -51,7 +51,7 @@ function runScript(env: NodeJS.ProcessEnv): { status: number; output: string } {
   try {
     const stdout = execFileSync('pnpm', ['exec', 'tsx', SCRIPT], {
       cwd: PILLAR_DIR,
-      env: { ...process.env, SQLITE_PATH: dbPath, ...env },
+      env: { ...process.env, FOOD_SQLITE_PATH: undefined, SQLITE_PATH: dbPath, ...env },
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
     });
@@ -124,6 +124,18 @@ describe('the script itself', () => {
     expect(run.output).toContain('FORCE=true');
     const remaining = db.prepare('SELECT count(*) AS n FROM recipes').get() as { n: number };
     expect(remaining.n).toBe(2);
+  });
+
+  it('targets the sibling food.db, not the file a shared SQLITE_PATH names', () => {
+    createFoodTables(2);
+    const shared = join(dir, 'pops.db');
+    new Database(shared).close();
+
+    const run = runScript({ NODE_ENV: 'development', SQLITE_PATH: shared });
+
+    expect(run.status).toBe(1);
+    expect(run.output).toContain(dbPath);
+    expect(run.output).not.toContain(shared);
   });
 
   it('exits non-zero under NODE_ENV=production', () => {
