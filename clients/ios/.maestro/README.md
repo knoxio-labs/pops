@@ -125,11 +125,18 @@ still held the Debug prefill and pairing had dialled a port nothing was
 listening on.
 
 So the pairing preamble lives in `subflows/enter-the-pairing-details.yaml`,
-where every field's value is asserted after it is typed and the typing is
-retried until it lands. Anything else that types into this app should do the
-same. Maestro's `focused` selector looks like the signal to wait on and is not:
-it is mapped from XCUITest's `hasFocus`, the focus engine's notion, which reads
-false on a SwiftUI `TextField` that is holding the keyboard.
+where both fields are typed, then both are asserted, and the whole entry is
+retried until both hold what was meant for them. Asserting each field the
+moment it is typed is not enough, and the reason is the same race one step
+along: the tap that moves focus to the second field can miss too, and the
+erase-and-type behind it then lands on the first field — which by then has
+already been asserted and is never looked at again. Checking both at the end of
+an attempt, and re-typing both on the next one, is what keeps the values that
+reach `Pair` the values that were checked. Anything else that types into this
+app should do the same. Maestro's `focused` selector looks like the signal to
+wait on and is not: it is mapped from XCUITest's `hasFocus`, the focus engine's
+notion, which reads false on a SwiftUI `TextField` that is holding the
+keyboard.
 
 The rows the flows expect come from `scripts/ios-e2e/transactions-fixture.mjs`.
 Changing a description or an account there fails them, which is the point.
