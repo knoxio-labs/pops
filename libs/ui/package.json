@@ -19,7 +19,7 @@
     "build-storybook": "storybook build",
     "test": "vitest run && node scripts/check-storybook-coverage.mjs",
     "test:coverage": "vitest run --coverage && node scripts/check-storybook-coverage.mjs",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit && tsc --noEmit -p scripts/tsconfig.json"
   },
   "dependencies": {
     "@fontsource-variable/plus-jakarta-sans": "^5.3.0",
