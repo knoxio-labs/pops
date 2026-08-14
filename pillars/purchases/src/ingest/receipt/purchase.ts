@@ -33,7 +33,7 @@ import { receiptKey } from './store.js';
 
 import type { CreateItemInput, CreatePurchaseInput } from '../../db/services/purchase-input.js';
 import type { ExtractedReceipt } from './extraction.js';
-import type { GateResult } from './gate.js';
+import type { AdmissibleGate } from './gate.js';
 import type { StoredReceipt } from './store.js';
 
 export const RECEIPT_SOURCE_ID = 'receipt';
@@ -185,9 +185,11 @@ function checksumFor(key: string, purchase: Omit<CreatePurchaseInput, 'checksum'
 /**
  * Shape an admitted reading into a purchase.
  *
- * Throws on anything the gate refused, in every way it can refuse it.
+ * Takes {@link AdmissibleGate} rather than the full {@link GateResult}
+ * union, so a reading the gate refused cannot reach this function at all —
+ * the compiler enforces what a runtime `!gate.admissible` check used to.
  *
- * Otherwise always produces one. A receipt that states no date is dated from its
+ * Always produces one. A receipt that states no date is dated from its
  * upload and tagged `date-uncertain`, rather than refused: the shop
  * happened and the evidence exists, so losing it would be worse than
  * carrying an inferred date — provided the inference is never mistaken for
@@ -199,22 +201,10 @@ function checksumFor(key: string, purchase: Omit<CreatePurchaseInput, 'checksum'
  */
 export function receiptToPurchase(
   extracted: ExtractedReceipt,
-  gate: GateResult,
+  gate: AdmissibleGate,
   stored: readonly StoredReceipt[],
   uploadedAt: string = new Date().toISOString()
 ): ReceiptPurchaseResult {
-  if (!gate.admissible) {
-    // The gate's verdict, not one figure from it: a refused reading can
-    // still state a readable total — a negative line sums correctly, a torn
-    // corner leaves the numbers intact — and shaping one of those writes a
-    // purchase that reconciles and is wrong, which is the whole thing the
-    // gate exists to stop.
-    throw new Error(
-      'receiptToPurchase requires an admissible reading; the gate refused this one: ' +
-        gate.failures.map((failure) => failure.kind).join(', ')
-    );
-  }
-
   const key = receiptKey(stored);
   const [first] = stored;
   if (first === undefined) {
