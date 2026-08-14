@@ -41,13 +41,25 @@ internal struct PrimitiveRenderingTests {
         #expect(light != dark, "\(name) renders identically in light and dark")
     }
 
-    @Test("EmptyStateView")
+    @Test(
+        "EmptyStateView",
+        .disabled(
+            if: !HostToolchainColorSupport.colorsAreCompiled,
+            "this host toolchain build system left Colors.xcassets uncompiled — see HostToolchainColorSupport"
+        )
+    )
     func emptyState() throws {
         try Self.check(
             EmptyStateView(message: "No transactions in this period."), named: "EmptyStateView")
     }
 
-    @Test("ErrorStateView")
+    @Test(
+        "ErrorStateView",
+        .disabled(
+            if: !HostToolchainColorSupport.colorsAreCompiled,
+            "this host toolchain build system left Colors.xcassets uncompiled — see HostToolchainColorSupport"
+        )
+    )
     func errorState() throws {
         try Self.check(
             ErrorStateView(message: "Could not reach the server.") {}, named: "ErrorStateView")
@@ -78,17 +90,35 @@ internal struct PrimitiveRenderingTests {
         #expect(blankRender == stockRender)
     }
 
-    @Test("PopsButton")
+    @Test(
+        "PopsButton",
+        .disabled(
+            if: !HostToolchainColorSupport.colorsAreCompiled,
+            "this host toolchain build system left Colors.xcassets uncompiled — see HostToolchainColorSupport"
+        )
+    )
     func button() throws {
         try Self.check(PopsButton("Pair") {}, named: "PopsButton")
     }
 
-    @Test("PopsRow")
+    @Test(
+        "PopsRow",
+        .disabled(
+            if: !HostToolchainColorSupport.colorsAreCompiled,
+            "this host toolchain build system left Colors.xcassets uncompiled — see HostToolchainColorSupport"
+        )
+    )
     func row() throws {
         try Self.check(PopsRow(title: "Rent", subtitle: "1 August"), named: "PopsRow")
     }
 
-    @Test("PopsCard")
+    @Test(
+        "PopsCard",
+        .disabled(
+            if: !HostToolchainColorSupport.colorsAreCompiled,
+            "this host toolchain build system left Colors.xcassets uncompiled — see HostToolchainColorSupport"
+        )
+    )
     func card() throws {
         try Self.check(
             PopsCard { PopsRow(title: "Groceries", subtitle: "12 transactions") }, named: "PopsCard"

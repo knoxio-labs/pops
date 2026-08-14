@@ -10,7 +10,13 @@ import Testing
 ///
 /// `popsSeparator` is deliberately absent: it draws hairlines, which WCAG
 /// treats as decoration rather than as a graphical object carrying meaning.
-@Suite("Contrast")
+@Suite(
+    "Contrast",
+    .disabled(
+        if: !HostToolchainColorSupport.colorsAreCompiled,
+        "this host toolchain build system left Colors.xcassets uncompiled — see HostToolchainColorSupport"
+    )
+)
 internal struct ContrastTests {
     private static let minimumRatio = 4.5
 
