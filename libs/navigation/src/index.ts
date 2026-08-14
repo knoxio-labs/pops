@@ -37,3 +37,9 @@ export { resolveUri } from './uri-resolver';
 export { MobileSearchOverlay } from './MobileSearchOverlay';
 export { SearchInput } from './SearchInput';
 export { useSearchStore } from './searchStore';
+export {
+  parseSearchResponse,
+  type OrchestratorSearchResponse,
+  type RawHit,
+  type RawSection,
+} from './search-input/useSearchInputData';

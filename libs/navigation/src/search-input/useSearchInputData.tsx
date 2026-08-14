@@ -34,7 +34,7 @@ function domainToLabel(domain: string): string {
     .join(' ');
 }
 
-interface RawHit {
+export interface RawHit {
   uri: string;
   score: number;
   matchField: string;
@@ -42,7 +42,7 @@ interface RawHit {
   data?: unknown;
 }
 
-interface RawSection {
+export interface RawSection {
   domain: string;
   /** PRD-101 US-06: owning module id; absent-module sections are filtered. */
   moduleId: string;
@@ -53,7 +53,7 @@ interface RawSection {
   totalCount: number;
 }
 
-interface OrchestratorSearchResponse {
+export interface OrchestratorSearchResponse {
   sections: RawSection[];
 }
 
@@ -83,7 +83,14 @@ function isRawSection(value: unknown): value is RawSection {
   );
 }
 
-function parseSearchResponse(value: unknown): OrchestratorSearchResponse {
+/**
+ * Parse the orchestrator's `POST /search` response body, throwing when it
+ * does not match the shape this hook renders. Exported so the shell e2e
+ * suite's stub helper (`pillars/shell/e2e/helpers/pillar-rest.ts`) can run a
+ * stubbed response through the same guard the real fetch does, rather than
+ * hand-rolling a second check that only proves it agrees with itself.
+ */
+export function parseSearchResponse(value: unknown): OrchestratorSearchResponse {
   if (typeof value !== 'object' || value === null) {
     throw new Error('orchestrator /search: response is not an object');
   }
