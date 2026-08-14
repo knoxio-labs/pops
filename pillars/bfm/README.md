@@ -417,8 +417,12 @@ registration is a separate mechanism and still goes through the
   credential or not — each has its own adoption ticket. bfm calls only
   `finance` and `purchases`, so both legs of its own grant are enforced. The
   `purchases` leg carries one caveat: that pillar's `requireCredential` is
-  `false`, so an upload would be admitted even if the grant were missing. The
-  scope is listed as if it were already on, because it will be.
+  `false` in production, so an upload would be admitted even if the grant
+  were missing. The scope is listed as if it were already on, because it
+  will be. `src/api/purchases/__tests__/receipt-upload.live-seam.test.ts`
+  proves the grant directly rather than relying on that caveat — it closes
+  purchases' uncredentialled path for the run (see purchases' README) and
+  drives a real upload across the seam.
 
 ## Reaching sibling pillars
 
@@ -474,10 +478,12 @@ a scope to a live account. An account provisioned before a scope was added to
 leg answers `403` naming the missing scope on a producer that enforces (POPS-1990).
 The operator step is the rotation above, with the fuller scope list in the
 create call. Until it runs, the receipt upload still works against today's
-`purchases`, whose `requireCredential` is `false` — which is precisely the
-failure mode worth knowing about, because it means a missing grant is invisible
-until that flag flips. Prove the grant rather than the flag: set
-`requireCredential` to `true` locally and upload once.
+`purchases`, whose `requireCredential` is `false` in production — which is
+precisely the failure mode worth knowing about, because it means a missing
+grant is invisible in production until that flag flips. Prove the grant
+rather than the flag: `src/api/purchases/__tests__/receipt-upload.live-seam.test.ts`
+does exactly that, running against a real purchases process with its gate
+flipped to mandatory. Run it with `pnpm --filter @pops/bfm test:live-seam`.
 
 ## Deployment
 
