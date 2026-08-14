@@ -34,8 +34,13 @@
  *   node scripts/check-title-icon-consistency.mjs              check the real tree
  *   node scripts/check-title-icon-consistency.mjs --self-test   prove the gate reports
  *
- * Exit 0 = every app is consistent. Exit 1 = a violation or a failed
- * self-test. Exit 2 = usage error.
+ * Every run prints the per-app coverage it achieved, and fails if that
+ * coverage collapses — an app that declares nav items but resolves none of
+ * them, or a tree-wide total below the floor, means the gate is inspecting
+ * nothing and must say so rather than print OK (ADR-045).
+ *
+ * Exit 0 = every app is consistent. Exit 1 = a violation, collapsed coverage
+ * or a failed self-test. Exit 2 = usage error.
  */
 
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
@@ -46,11 +51,66 @@ const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..');
 
 /**
+ * Walk `text` from `fromIndex`, yielding only the characters that are real
+ * code: everything inside a `'`/`"`/`` ` `` string literal, a `//` line
+ * comment or a `/* *\/` block comment is consumed and skipped. Comments have
+ * to be skipped BEFORE quotes are honoured, or a lone apostrophe in prose
+ * (`the Ingredients tab's detail panel`) opens a string state that never
+ * closes and desynchronises every caller downstream of it.
+ *
+ * @param {string} text
+ * @param {number} [fromIndex]
+ * @returns {Generator<{ index: number; ch: string }>}
+ */
+function* scanCode(text, fromIndex = 0) {
+  /** @type {string | null} */
+  let quote = null;
+  /** @type {'line' | 'block' | null} */
+  let comment = null;
+  for (let i = fromIndex; i < text.length; i++) {
+    const ch = text[i];
+    if (comment === 'line') {
+      if (ch === '\n') comment = null;
+      continue;
+    }
+    if (comment === 'block') {
+      if (ch === '*' && text[i + 1] === '/') {
+        i++;
+        comment = null;
+      }
+      continue;
+    }
+    if (quote !== null) {
+      if (ch === '\\') {
+        i++;
+        continue;
+      }
+      if (ch === quote) quote = null;
+      continue;
+    }
+    if (ch === '/' && text[i + 1] === '/') {
+      comment = 'line';
+      i++;
+      continue;
+    }
+    if (ch === '/' && text[i + 1] === '*') {
+      comment = 'block';
+      i++;
+      continue;
+    }
+    if (ch === "'" || ch === '"' || ch === '`') {
+      quote = ch;
+      continue;
+    }
+    yield { index: i, ch };
+  }
+}
+
+/**
  * Extract the balanced-bracket span starting at the first `open` character
- * found at or after `fromIndex`, honouring `'`/`"`/`` ` `` string literals so
- * a bracket inside a string never miscounts depth. Returns the substring
- * INCLUDING both delimiters, or undefined if `open` never appears or never
- * balances.
+ * found at or after `fromIndex` that is neither in a string nor in a comment.
+ * Returns the substring INCLUDING both delimiters, or undefined if `open`
+ * never appears or never balances.
  *
  * @param {string} text
  * @param {number} fromIndex
@@ -59,30 +119,38 @@ const repoRoot = resolve(here, '..');
  * @returns {string | undefined}
  */
 function balancedSpan(text, fromIndex, open, close) {
-  const start = text.indexOf(open, fromIndex);
-  if (start === -1) return undefined;
+  let start = -1;
   let depth = 0;
-  /** @type {string | null} */
-  let quote = null;
-  for (let i = start; i < text.length; i++) {
-    const ch = text[i];
-    if (quote) {
-      if (ch === '\\') {
-        i++;
-        continue;
-      }
-      if (ch === quote) quote = null;
-      continue;
-    }
-    if (ch === "'" || ch === '"' || ch === '`') {
-      quote = ch;
-      continue;
+  for (const { index, ch } of scanCode(text, fromIndex)) {
+    if (start === -1) {
+      if (ch !== open) continue;
+      start = index;
     }
     if (ch === open) depth++;
     else if (ch === close) {
       depth--;
-      if (depth === 0) return text.slice(start, i + 1);
+      if (depth === 0) return text.slice(start, index + 1);
     }
+  }
+  return undefined;
+}
+
+/**
+ * The source of a JSX element's OWN opening tag, from `<Tag` at `tagIndex`
+ * through the `>` that closes it — the `>` characters inside a prop
+ * expression (`icon={<X />}`, `onBack={() => go(-1)}`) sit at brace depth > 0
+ * and never terminate it. Returns undefined if the tag never closes.
+ *
+ * @param {string} source
+ * @param {number} tagIndex Index of the tag's `<`.
+ * @returns {string | undefined}
+ */
+function jsxOpeningTag(source, tagIndex) {
+  let braceDepth = 0;
+  for (const { index, ch } of scanCode(source, tagIndex)) {
+    if (ch === '{') braceDepth++;
+    else if (ch === '}') braceDepth--;
+    else if (ch === '>' && braceDepth === 0) return source.slice(tagIndex, index + 1);
   }
   return undefined;
 }
@@ -123,33 +191,20 @@ function topLevelProperties(objectSpan) {
   /** @type {Map<string, string>} */
   const props = new Map();
   let depth = 0;
-  /** @type {string | null} */
-  let quote = null;
   let entryStart = 0;
   const flush = (end) => {
-    const entry = inner.slice(entryStart, end);
+    const entry = inner
+      .slice(entryStart, end)
+      .replace(/^(?:\s*(?:\/\/[^\n]*(?:\n|$)|\/\*[\s\S]*?\*\/))*/, '');
     const keyMatch = /^\s*(\w+)\s*:\s*/.exec(entry);
     if (keyMatch !== null) props.set(keyMatch[1], entry.slice(keyMatch[0].length).trim());
   };
-  for (let i = 0; i < inner.length; i++) {
-    const ch = inner[i];
-    if (quote) {
-      if (ch === '\\') {
-        i++;
-        continue;
-      }
-      if (ch === quote) quote = null;
-      continue;
-    }
-    if (ch === "'" || ch === '"' || ch === '`') {
-      quote = ch;
-      continue;
-    }
+  for (const { index, ch } of scanCode(inner)) {
     if (ch === '{' || ch === '[' || ch === '(') depth++;
     else if (ch === '}' || ch === ']' || ch === ')') depth--;
     else if (ch === ',' && depth === 0) {
-      flush(i);
-      entryStart = i + 1;
+      flush(index);
+      entryStart = index + 1;
     }
   }
   flush(inner.length);
@@ -256,22 +311,28 @@ export function parseLazyImports(source) {
  * @property {string | null} iconTag
  */
 
-/** How many characters after `<PageHeader` we search for its `icon` prop. */
-const PAGE_HEADER_WINDOW = 600;
-
 /**
  * Does this page's (first) `<PageHeader` call pass an `icon`, and if so what
  * JSX tag does the icon expression render?
+ *
+ * The search is bounded by PageHeader's OWN opening tag, never by a character
+ * window: `icon` is a conventional prop on other components too (`EmptyState
+ * icon={...}` is used all over this repo), and a neighbouring element's icon
+ * attributed to PageHeader would fabricate an all-or-none violation on a page
+ * that passes no icon at all. A PageHeader whose opening tag does not close
+ * is reported as absent, so the page is skipped rather than judged.
+ *
  * @param {string} source
  * @returns {PageHeaderUsage}
  */
 export function resolvePageHeaderIconUsage(source) {
   const match = /<PageHeader\b/.exec(source);
   if (match === null) return { hasPageHeader: false, hasIcon: false, iconTag: null };
-  const window = source.slice(match.index, match.index + PAGE_HEADER_WINDOW);
-  const iconMatch = /icon=\{/.exec(window);
+  const openingTag = jsxOpeningTag(source, match.index);
+  if (openingTag === undefined) return { hasPageHeader: false, hasIcon: false, iconTag: null };
+  const iconMatch = /\bicon=\{/.exec(openingTag);
   if (iconMatch === null) return { hasPageHeader: true, hasIcon: false, iconTag: null };
-  const rest = window.slice(iconMatch.index);
+  const rest = openingTag.slice(iconMatch.index);
   // The icon expression's first capitalized JSX tag — a lowercase wrapper
   // (`<div>`) never matches, so this lands on the actual icon component even
   // when it is nested inside one.
@@ -291,15 +352,27 @@ export function resolvePageHeaderIconUsage(source) {
  */
 
 /**
- * Analyze one app's `routes.tsx` source against a page-file reader.
+ * @typedef {object} AppReport
+ * @property {string} app
+ * @property {number} navItems      Entries in the app's `navConfig.items`.
+ * @property {number} resolved      Of those, the ones resolved to a page file.
+ * @property {number} withPageHeader Of the resolved, the ones rendering a PageHeader.
+ * @property {number} withIcon      Of those, the ones passing an icon.
+ * @property {Violation[]} violations
+ */
+
+/**
+ * Analyze one app's `routes.tsx` source against a page-file reader, reporting
+ * both the violations and how much the gate actually saw — a gate that
+ * silently resolves nothing must be able to say so (ADR-045).
  * @param {string} appId
  * @param {string} routesSource
  * @param {(path: string) => string | undefined} readPage Given the page's
  *   import path (as written in the lazy import, e.g. `./pages/X`), returns
  *   that file's source, or undefined if it cannot be read.
- * @returns {Violation[]}
+ * @returns {AppReport}
  */
-export function analyzeApp(appId, routesSource, readPage) {
+export function reportApp(appId, routesSource, readPage) {
   const navItems = parseNavConfigItems(routesSource);
   const routeComponents = parseRouteComponents(routesSource);
   const lazyImports = parseLazyImports(routesSource);
@@ -313,17 +386,27 @@ export function analyzeApp(appId, routesSource, readPage) {
     if (importPath === undefined) continue;
     const pageSource = readPage(importPath);
     if (pageSource === undefined) continue;
-    const usage = resolvePageHeaderIconUsage(pageSource);
-    if (!usage.hasPageHeader) continue;
-    resolved.push({ path: item.path, icon: item.icon, usage });
+    resolved.push({
+      path: item.path,
+      icon: item.icon,
+      usage: resolvePageHeaderIconUsage(pageSource),
+    });
   }
 
-  if (resolved.length === 0) return [];
+  const withPageHeader = resolved.filter((r) => r.usage.hasPageHeader);
+  const withIcon = withPageHeader.filter((r) => r.usage.hasIcon);
+  const withoutIcon = withPageHeader.filter((r) => !r.usage.hasIcon);
+  const counts = {
+    app: appId,
+    navItems: navItems.length,
+    resolved: resolved.length,
+    withPageHeader: withPageHeader.length,
+    withIcon: withIcon.length,
+  };
+  if (withPageHeader.length === 0) return { ...counts, violations: [] };
 
   /** @type {Violation[]} */
   const violations = [];
-  const withIcon = resolved.filter((r) => r.usage.hasIcon);
-  const withoutIcon = resolved.filter((r) => !r.usage.hasIcon);
 
   if (withIcon.length > 0 && withoutIcon.length > 0) {
     violations.push({
@@ -346,18 +429,29 @@ export function analyzeApp(appId, routesSource, readPage) {
     }
   }
 
-  return violations;
+  return { ...counts, violations };
+}
+
+/**
+ * The violations half of {@link reportApp}.
+ * @param {string} appId
+ * @param {string} routesSource
+ * @param {(path: string) => string | undefined} readPage
+ * @returns {Violation[]}
+ */
+export function analyzeApp(appId, routesSource, readPage) {
+  return reportApp(appId, routesSource, readPage).violations;
 }
 
 /**
  * @param {string} appId
  * @param {string} routesFile Absolute path to the app's `routes.tsx`.
- * @returns {Violation[]}
+ * @returns {AppReport}
  */
-function analyzeAppFile(appId, routesFile) {
+function reportAppFile(appId, routesFile) {
   const routesSource = readFileSync(routesFile, 'utf8');
   const appSrcDir = dirname(routesFile);
-  return analyzeApp(appId, routesSource, (importPath) => {
+  return reportApp(appId, routesSource, (importPath) => {
     for (const ext of ['.tsx', '.ts']) {
       const candidate = join(appSrcDir, `${importPath}${ext}`);
       if (existsSync(candidate)) return readFileSync(candidate, 'utf8');
@@ -384,6 +478,29 @@ function discoverRoutesFiles() {
 /** A floor on discovery — this repo has several nav-bearing pillar apps. */
 const MIN_APPS = 5;
 
+/**
+ * A floor on what the gate actually READ. Counting `routes.tsx` files proves
+ * nothing: a parser that resolves none of their nav items still finds every
+ * file and still prints OK. The real tree resolves 46 nav items; 40 leaves
+ * room for a page to stop being a nav destination while still failing loudly
+ * if a whole app's worth of items goes dark.
+ */
+const MIN_RESOLVED_NAV_ITEMS = 40;
+
+/**
+ * Render the per-app coverage the gate saw, so "OK" is always accompanied by
+ * evidence of how much was actually inspected.
+ * @param {AppReport[]} reports
+ */
+function printCoverage(reports) {
+  for (const r of reports) {
+    console.log(
+      `  ${r.app.padEnd(12)} nav ${r.navItems}, resolved ${r.resolved}, ` +
+        `with PageHeader ${r.withPageHeader}, with icon ${r.withIcon}`
+    );
+  }
+}
+
 function run() {
   const routesFiles = discoverRoutesFiles();
   if (routesFiles.length < MIN_APPS) {
@@ -394,11 +511,29 @@ function run() {
     return false;
   }
 
-  /** @type {Violation[]} */
-  const violations = [];
-  for (const { appId, file } of routesFiles) violations.push(...analyzeAppFile(appId, file));
+  const reports = routesFiles.map(({ appId, file }) => reportAppFile(appId, file));
+  const violations = reports.flatMap((r) => r.violations);
 
   console.log(`Checked ${routesFiles.length} pillar app(s) for title-icon consistency.`);
+  printCoverage(reports);
+
+  const totalResolved = reports.reduce((sum, r) => sum + r.resolved, 0);
+  const dark = reports.filter((r) => r.navItems > 0 && r.resolved === 0);
+  if (dark.length > 0) {
+    console.error(
+      `✗ title-icon gate: ${dark.map((r) => r.app).join(', ')} declare nav items but resolved ` +
+        `none of them to a page. The gate is checking nothing there — fix resolution, not this floor.`
+    );
+    return false;
+  }
+  if (totalResolved < MIN_RESOLVED_NAV_ITEMS) {
+    console.error(
+      `✗ title-icon gate: resolved only ${totalResolved} nav item(s), below the floor of ` +
+        `${MIN_RESOLVED_NAV_ITEMS}. Coverage collapsed — the gate is no longer proving anything.`
+    );
+    return false;
+  }
+
   if (violations.length === 0) {
     console.log('OK — every app is all-or-none on PageHeader icons, and every icon matches nav.');
     return true;
@@ -508,6 +643,13 @@ function selfTest() {
     'reports no icon when PageHeader carries none': !resolvePageHeaderIconUsage(
       '<PageHeader title="X" />'
     ).hasIcon,
+    "does not read a neighbouring component's icon as PageHeader's": !resolvePageHeaderIconUsage(
+      '<PageHeader title="X" />\n<EmptyState icon={<FileText className="h-8 w-8" />} />'
+    ).hasIcon,
+    'parses routes whose comments contain an apostrophe':
+      parseRouteComponents(
+        `export const routes = [\n  // the Ingredients tab's detail panel.\n  { index: true, element: <HomePage /> },\n];`
+      ).get('') === 'HomePage',
   };
 
   const routesFiles = discoverRoutesFiles();

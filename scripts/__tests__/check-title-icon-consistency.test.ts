@@ -1,3 +1,7 @@
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -5,8 +9,11 @@ import {
   parseLazyImports,
   parseNavConfigItems,
   parseRouteComponents,
+  reportApp,
   resolvePageHeaderIconUsage,
 } from '../check-title-icon-consistency.mjs';
+
+const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
 const ROUTES_SOURCE = `
   const HomePage = lazy(() => import('./pages/HomePage').then((m) => ({ default: m.HomePage })));
@@ -79,6 +86,48 @@ describe('parseRouteComponents', () => {
   it('does not resolve a nested non-index child as its own path entry', () => {
     expect(parseRouteComponents(ROUTES_SOURCE).has('insurance')).toBe(false);
   });
+
+  it('keeps parsing past an apostrophe inside a // comment', () => {
+    // Regression: an apostrophe in prose is not a string delimiter. Treating
+    // it as one opens a quote state that never closes and silently drops
+    // every route after it — which is how the food app went unchecked.
+    const source = `
+      const HomePage = lazy(() => import('./pages/HomePage'));
+      const TagsPage = lazy(() => import('./pages/TagsPage'));
+
+      export const routes = [
+        { index: true, element: <HomePage /> },
+        // Read-only vocabulary view; the chip editor lives inside
+        // the Ingredients tab's detail panel.
+        { path: 'tags', element: <TagsPage /> },
+      ];
+    `;
+    const components = parseRouteComponents(source);
+    expect(components.get('')).toBe('HomePage');
+    expect(components.get('tags')).toBe('TagsPage');
+  });
+
+  it('keeps parsing past an apostrophe inside a block comment', () => {
+    const source = `
+      export const routes = [
+        { index: true, element: <HomePage /> },
+        /* the tab's panel */
+        { path: 'tags', element: <TagsPage /> },
+      ];
+    `;
+    expect(parseRouteComponents(source).get('tags')).toBe('TagsPage');
+  });
+
+  it("resolves every nav item of the real food app's routes.tsx", () => {
+    // The gate silently checked nothing here: all nine nav items were skipped
+    // as unresolvable. Pinned against the real file, not a fixture, because a
+    // fixture cannot notice the tree drifting back into an unparsed shape.
+    const source = readFileSync(join(repoRoot, 'pillars/food/app/src/routes.tsx'), 'utf8');
+    const navItems = parseNavConfigItems(source);
+    const components = parseRouteComponents(source);
+    expect(navItems).toHaveLength(9);
+    expect(navItems.filter((item) => components.has(item.path))).toHaveLength(9);
+  });
 });
 
 describe('parseLazyImports', () => {
@@ -118,6 +167,52 @@ describe('resolvePageHeaderIconUsage', () => {
       '<PageHeader title="X" icon={<div className="p-2 rounded-xl"><FileText className="h-4 w-4" /></div>} />'
     );
     expect(usage.iconTag).toBe('FileText');
+  });
+
+  it("does not attribute a sibling component's icon prop to PageHeader", () => {
+    // `icon` is a convention on other components too (EmptyState). Reading
+    // one as PageHeader's turns an icon-free page into a fabricated
+    // all-or-none violation for the whole app.
+    const usage = resolvePageHeaderIconUsage(
+      '<PageHeader title={t("reports")} />\n<EmptyState icon={<FileText className="h-8 w-8" />} title="none" />'
+    );
+    expect(usage).toEqual({ hasPageHeader: true, hasIcon: false, iconTag: null });
+  });
+
+  it("does not attribute a child's icon prop to PageHeader", () => {
+    const usage = resolvePageHeaderIconUsage(
+      '<PageHeader title="X">\n  <EmptyState icon={<FileText />} />\n</PageHeader>'
+    );
+    expect(usage.hasIcon).toBe(false);
+  });
+
+  it('still finds an icon that follows an arrow-function prop on the same tag', () => {
+    const usage = resolvePageHeaderIconUsage(
+      '<PageHeader title="X" onBack={() => navigate(-1)} icon={<MapPin className="h-6 w-6" />} />'
+    );
+    expect(usage).toEqual({ hasPageHeader: true, hasIcon: true, iconTag: 'MapPin' });
+  });
+
+  it('finds an icon on a multi-line PageHeader that renders children', () => {
+    const usage = resolvePageHeaderIconUsage(
+      [
+        '<PageHeader',
+        '  title="X"',
+        '  icon={<MapPin className="h-6 w-6" />}',
+        '>',
+        '  <EmptyState icon={<FileText />} />',
+        '</PageHeader>',
+      ].join('\n')
+    );
+    expect(usage).toEqual({ hasPageHeader: true, hasIcon: true, iconTag: 'MapPin' });
+  });
+
+  it('skips a PageHeader whose opening tag never closes rather than judging it', () => {
+    expect(resolvePageHeaderIconUsage('<PageHeader title="X" icon={<MapPin />}')).toEqual({
+      hasPageHeader: false,
+      hasIcon: false,
+      iconTag: null,
+    });
   });
 });
 
@@ -178,5 +273,31 @@ describe('analyzeApp', () => {
 
   it('returns nothing when no nav item resolves to a page at all', () => {
     expect(analyzeApp('demo', ROUTES_SOURCE, () => undefined)).toEqual([]);
+  });
+});
+
+describe('reportApp', () => {
+  const pages: Record<string, string | undefined> = {
+    './pages/HomePage':
+      '<PageHeader title="Home" icon={<LayoutDashboard className="h-6 w-6" />} />',
+    './pages/ListPage': '<PageHeader title="List" icon={<ListChecks className="h-6 w-6" />} />',
+    './pages/ReportsPage': '<div>custom layout</div>',
+  };
+
+  it('reports how much it saw, separating resolution from PageHeader usage', () => {
+    const report = reportApp('demo', ROUTES_SOURCE, (p) => pages[p]);
+    expect(report).toMatchObject({
+      app: 'demo',
+      navItems: 3,
+      resolved: 3,
+      withPageHeader: 2,
+      withIcon: 2,
+      violations: [],
+    });
+  });
+
+  it('reports zero coverage when nothing resolves, instead of looking clean', () => {
+    const report = reportApp('demo', ROUTES_SOURCE, () => undefined);
+    expect(report).toMatchObject({ navItems: 3, resolved: 0, withPageHeader: 0, withIcon: 0 });
   });
 });
