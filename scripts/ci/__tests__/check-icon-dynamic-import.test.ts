@@ -81,6 +81,27 @@ describe('a dynamic import()/require() reaching lucide-react is reported', () =>
     ].join('\n');
     expect(findViolations('a.tsx', source).map((v) => v.line)).toEqual([1, 2]);
   });
+
+  it('reports a call as the first element of an array literal — Promise.all([import(...)])', () => {
+    const hits = findViolations(
+      'a.tsx',
+      "await Promise.all([import('lucide-react'), somethingElse()]);"
+    );
+    expect(hits).toHaveLength(1);
+  });
+
+  it('reports both calls when an array literal holds two of them', () => {
+    const hits = findViolations(
+      'a.tsx',
+      "await Promise.all([import('lucide-react'), import('lucide-react')]);"
+    );
+    expect(hits).toHaveLength(2);
+  });
+
+  it('reports a call immediately after `=>` with no intervening space', () => {
+    const hits = findViolations('a.tsx', "React.lazy(()=>import('lucide-react'));");
+    expect(hits).toHaveLength(1);
+  });
 });
 
 describe('shapes this guard does not attempt — documented, not silent', () => {
@@ -99,7 +120,7 @@ describe('shapes this guard does not attempt — documented, not silent', () => 
     );
   });
 
-  it('does not flag a template literal whose interpolation is appended with no slash — not a reachable specifier', () => {
+  it('does not flag a template literal with no static slash before the interpolation — undecidable (the interpolated value, not the guard, determines reachability), not provably unreachable', () => {
     expect(findViolations('a.tsx', 'const m = import(`lucide-react${suffix}`);')).toHaveLength(0);
   });
 
@@ -115,6 +136,14 @@ describe('shapes this guard does not attempt — documented, not silent', () => 
 
   it('does not flag a commented-out dynamic import', () => {
     expect(findViolations('a.tsx', "// const m = await import('lucide-react');")).toHaveLength(0);
+  });
+
+  it('does not flag `import` used as a property access — foo.import(...) is not a call to the import keyword', () => {
+    expect(findViolations('a.tsx', "const m = foo.import('lucide-react');")).toHaveLength(0);
+  });
+
+  it('does not flag `import`/`require` as a substring of a longer identifier — myimport(...) is a different name', () => {
+    expect(findViolations('a.tsx', "myimport('lucide-react');")).toHaveLength(0);
   });
 });
 
