@@ -99,7 +99,7 @@ Two shared modules sit under Tier B and must never be imported from a Tier A gua
 
 ### Tier A guards that ride in a Tier B job
 
-`agent-review.yml` runs eight guards in one job. Three of them are Tier B, so the job installs, and the other five get an install they do not need:
+`agent-review.yml` runs nine guards in one job. Four of them are Tier B, so the job installs, and the other five get an install they do not need:
 
 `check-lib-no-pillar-import.mjs`, `check-contract-isolation.mjs`, `check-known-pillars-coverage.mjs`, `check-tests-typechecked.mjs`, `check-docs-model.mjs`.
 

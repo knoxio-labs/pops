@@ -22,8 +22,12 @@
  *
  * WHAT IT REFUSES, and why each is a violation rather than a shrug:
  *
- *   - A workflow `uses:` that names `jdx/mise-action` at all. The wrapper is the
- *     only sanctioned call site.
+ *   - A `uses:` that names `jdx/mise-action` at all, in a workflow or in any
+ *     OTHER composite action under `.github/actions`. The wrapper is the only
+ *     sanctioned call site. Composite actions live under `.github/actions`, so a
+ *     guard that read only `.github/workflows` would leave the directory holding
+ *     the wrapper unscanned — which is where the seventh call site is likeliest
+ *     to appear.
  *   - A wrapper pin that is floating (`@v4`) or a branch. `@v4` resolved to the
  *     un-retried v4.2.4 on the day the evictions happened. A major-only pin
  *     cannot express "must carry the retry", so it is not a pin for this
@@ -42,7 +46,9 @@
  * `jdx/mise-action` step, or a wrapper with more than one are each reported as
  * findings. A repo where the wrapper has been deleted and every workflow
  * therefore has nothing to violate is exactly the state this guard exists to
- * catch, and the naive version of it passes.
+ * catch, and the naive version of it passes. The same applies to the composite
+ * actions beside it: YAML under `.github/actions` that does not parse is a
+ * finding, not a file quietly dropped from the sweep.
  *
  * **Tier B guard**: it reads workflow YAML through a real parser, so the job
  * that runs it installs the workspace first. See the tier amendment in
@@ -56,7 +62,7 @@
  */
 
 import { readdirSync, readFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { ConfigParseError, parseYaml, scalarText, walkMappings } from './config-parse.mjs';
@@ -64,6 +70,7 @@ import { ConfigParseError, parseYaml, scalarText, walkMappings } from './config-
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..');
 const WORKFLOWS_DIR = join(repoRoot, '.github', 'workflows');
+const ACTIONS_DIR = join(repoRoot, '.github', 'actions');
 const WRAPPER_PATH = join(repoRoot, '.github', 'actions', 'setup-mise', 'action.yml');
 
 /** How a workflow is expected to name the wrapper. */
@@ -163,6 +170,9 @@ export function atLeast(a, b) {
 /**
  * @typedef {object} Inputs
  * @property {Map<string, string>} workflows  Workflow filename to YAML source.
+ * @property {Map<string, string>} actions    Repo-relative path to YAML source, for every
+ *                                            composite action under `.github/actions` EXCEPT the
+ *                                            wrapper itself.
  * @property {string | null} wrapper          Wrapper action YAML source, or null if absent.
  */
 
@@ -177,7 +187,7 @@ export function atLeast(a, b) {
  * @param {Inputs} inputs
  * @returns {string[]} Findings, in reporting order.
  */
-export function findViolations({ workflows, wrapper }) {
+export function findViolations({ workflows, actions, wrapper }) {
   /** @type {string[]} */
   const findings = [];
 
@@ -188,17 +198,26 @@ export function findViolations({ workflows, wrapper }) {
     );
   }
 
-  let wrapperUsers = 0;
+  /** @type {[string, string][]} */
+  const callers = [];
   for (const [name, source] of [...workflows].toSorted(([a], [b]) => a.localeCompare(b))) {
+    callers.push([`.github/workflows/${name}`, source]);
+  }
+  for (const entry of [...actions].toSorted(([a], [b]) => a.localeCompare(b))) {
+    callers.push(entry);
+  }
+
+  let wrapperUsers = 0;
+  for (const [label, source] of callers) {
     /** @type {string[]} */
     let uses;
     try {
-      uses = usesValues(parseYaml(source, `.github/workflows/${name}`));
+      uses = usesValues(parseYaml(source, label));
     } catch (error) {
       findings.push(
         error instanceof ConfigParseError
           ? error.message
-          : `.github/workflows/${name} could not be read: ${String(error)}`
+          : `${label} could not be read: ${String(error)}`
       );
       continue;
     }
@@ -206,7 +225,7 @@ export function findViolations({ workflows, wrapper }) {
       if (value === WRAPPER_USES) wrapperUsers += 1;
       if (!value.startsWith(`${UPSTREAM}@`) && value !== UPSTREAM) continue;
       findings.push(
-        `.github/workflows/${name} calls \`${value}\` directly. ` +
+        `${label} calls \`${value}\` directly. ` +
           `Use \`${WRAPPER_USES}\` so the pinned version stays in one place.`
       );
     }
@@ -305,6 +324,44 @@ function readWorkflows(dir) {
 }
 
 /**
+ * Read every composite action definition under `.github/actions`, except the
+ * wrapper — which is ruled on separately, and is the one file allowed to name
+ * the upstream action.
+ *
+ * Walked recursively rather than globbed one level deep: `uses: ./.github/
+ * actions/a/b` is a legal reference to a nested definition, so a one-level scan
+ * would sanction a call site the workflows can already reach.
+ *
+ * @param {string} dir       Directory to walk.
+ * @param {string} exclude   Absolute path of the wrapper.
+ * @returns {Map<string, string>} Repo-relative path to source.
+ */
+function readActionDefinitions(dir, exclude) {
+  /** @type {Map<string, string>} */
+  const out = new Map();
+  /** @type {import('node:fs').Dirent[]} */
+  let entries;
+  try {
+    entries = readdirSync(dir, { withFileTypes: true });
+  } catch (error) {
+    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') return out;
+    throw error;
+  }
+  for (const entry of entries.toSorted((a, b) => a.name.localeCompare(b.name))) {
+    const path = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      for (const [nested, source] of readActionDefinitions(path, exclude)) out.set(nested, source);
+      continue;
+    }
+    if (!entry.isFile()) continue;
+    if (entry.name !== 'action.yml' && entry.name !== 'action.yaml') continue;
+    if (path === exclude) continue;
+    out.set(relative(repoRoot, path), readFileSync(path, 'utf8'));
+  }
+  return out;
+}
+
+/**
  * @param {string} path
  * @returns {string | null} Source, or null when the file is absent.
  */
@@ -347,6 +404,7 @@ function selfTest() {
     [
       'clean fixture passes',
       findViolations({
+        actions: new Map(),
         workflows: new Map([['a.yml', CLEAN_WORKFLOW]]),
         wrapper: CLEAN_WRAPPER,
       }).length === 0,
@@ -354,6 +412,7 @@ function selfTest() {
     [
       'catches a workflow calling the action directly',
       findViolations({
+        actions: new Map(),
         workflows: new Map([
           ['a.yml', CLEAN_WORKFLOW],
           ['b.yml', `jobs:\n  x:\n    steps:\n      - uses: ${UPSTREAM}@v4.2.5\n`],
@@ -362,8 +421,35 @@ function selfTest() {
       }).some((f) => f.includes('b.yml') && f.includes('directly')),
     ],
     [
+      'catches another composite action calling the action directly',
+      findViolations({
+        actions: new Map([
+          [
+            '.github/actions/setup-tools/action.yml',
+            `runs:\n  using: composite\n  steps:\n    - uses: ${UPSTREAM}@v4\n`,
+          ],
+        ]),
+        workflows: new Map([['a.yml', CLEAN_WORKFLOW]]),
+        wrapper: CLEAN_WRAPPER,
+      }).some(
+        (f) => f.includes('.github/actions/setup-tools/action.yml') && f.includes('directly')
+      ),
+    ],
+    [
+      'DEGENERATE — unparseable YAML in another composite action is a finding, not a skip',
+      findViolations({
+        actions: new Map([['.github/actions/setup-tools/action.yml', 'runs:\n   - [unbalanced\n']]),
+        workflows: new Map([['a.yml', CLEAN_WORKFLOW]]),
+        wrapper: CLEAN_WRAPPER,
+      }).some(
+        (f) =>
+          f.includes('.github/actions/setup-tools/action.yml') && f.includes('could not be parsed')
+      ),
+    ],
+    [
       'catches a floating wrapper pin',
       findViolations({
+        actions: new Map(),
         workflows: new Map([['a.yml', CLEAN_WORKFLOW]]),
         wrapper: CLEAN_WRAPPER.replace(`@v${RETRY_FLOOR.join('.')}`, '@v4'),
       }).some((f) => f.includes('floating')),
@@ -371,6 +457,7 @@ function selfTest() {
     [
       'catches a SHA wrapper pin',
       findViolations({
+        actions: new Map(),
         workflows: new Map([['a.yml', CLEAN_WORKFLOW]]),
         wrapper: CLEAN_WRAPPER.replace(
           `@v${RETRY_FLOOR.join('.')}`,
@@ -381,6 +468,7 @@ function selfTest() {
     [
       'catches a wrapper pinned below the retry',
       findViolations({
+        actions: new Map(),
         workflows: new Map([['a.yml', CLEAN_WORKFLOW]]),
         wrapper: CLEAN_WRAPPER.replace(`@v${RETRY_FLOOR.join('.')}`, '@v4.2.4'),
       }).some((f) => f.includes('predates the download retry')),
@@ -388,6 +476,7 @@ function selfTest() {
     [
       'DEGENERATE — a missing wrapper is a finding, not silence',
       findViolations({
+        actions: new Map(),
         workflows: new Map([['a.yml', CLEAN_WORKFLOW]]),
         wrapper: null,
       }).some((f) => f.includes('is missing')),
@@ -395,19 +484,21 @@ function selfTest() {
     [
       'DEGENERATE — a wrapper with no upstream step is a finding',
       findViolations({
+        actions: new Map(),
         workflows: new Map([['a.yml', CLEAN_WORKFLOW]]),
         wrapper: 'runs:\n  using: composite\n  steps:\n    - run: echo hi\n',
       }).some((f) => f.includes('expected exactly 1')),
     ],
     [
       'DEGENERATE — discovering no workflows is a finding',
-      findViolations({ workflows: new Map(), wrapper: CLEAN_WRAPPER }).some((f) =>
-        f.includes('discovered no workflow files')
+      findViolations({ workflows: new Map(), actions: new Map(), wrapper: CLEAN_WRAPPER }).some(
+        (f) => f.includes('discovered no workflow files')
       ),
     ],
     [
       'DEGENERATE — a wrapper nothing references is a finding',
       findViolations({
+        actions: new Map(),
         workflows: new Map([['a.yml', 'jobs:\n  x:\n    steps:\n      - run: echo hi\n']]),
         wrapper: CLEAN_WRAPPER,
       }).some((f) => f.includes('pinned and unreferenced')),
@@ -415,6 +506,7 @@ function selfTest() {
     [
       'DEGENERATE — unparseable workflow YAML is a finding, not a skip',
       findViolations({
+        actions: new Map(),
         workflows: new Map([
           ['a.yml', CLEAN_WORKFLOW],
           ['bad.yml', 'jobs:\n  x:\n   - [unbalanced\n'],
@@ -425,6 +517,7 @@ function selfTest() {
     [
       'DEGENERATE — unparseable wrapper YAML is a finding, not a skip',
       findViolations({
+        actions: new Map(),
         workflows: new Map([['a.yml', CLEAN_WORKFLOW]]),
         wrapper: 'runs:\n  steps:\n   - [unbalanced\n',
       }).some((f) => f.includes(WRAPPER_REL) && f.includes('could not be parsed')),
@@ -437,7 +530,8 @@ function selfTest() {
     for (const [label] of failed) console.error(`  ${label}`);
     return false;
   }
-  console.log(`self-test OK — ${cases.length} cases, including 6 degenerate ones.`);
+  const degenerate = cases.filter(([label]) => label.startsWith('DEGENERATE')).length;
+  console.log(`self-test OK — ${cases.length} cases, including ${degenerate} degenerate ones.`);
   return true;
 }
 
@@ -456,13 +550,14 @@ function main() {
   }
 
   const workflows = readWorkflows(WORKFLOWS_DIR);
+  const actions = readActionDefinitions(ACTIONS_DIR, WRAPPER_PATH);
   const wrapper = readOptional(WRAPPER_PATH);
   console.log(
-    `Scanned ${workflows.size} workflow file(s) against ${WRAPPER_REL} ` +
-      `(retry floor v${RETRY_FLOOR.join('.')}).`
+    `Scanned ${workflows.size} workflow file(s) and ${actions.size} other composite action(s) ` +
+      `against ${WRAPPER_REL} (retry floor v${RETRY_FLOOR.join('.')}).`
   );
 
-  const findings = findViolations({ workflows, wrapper });
+  const findings = findViolations({ workflows, actions, wrapper });
   if (findings.length === 0) {
     console.log(`OK — ${UPSTREAM} is named once, and the pin carries the download retry.`);
     process.exit(0);

@@ -26,6 +26,7 @@ on:
       - "pillars/**"
       - "packages/**"
       - ".github/workflows/registry-generated-quality.yml"
+      - ".github/actions/**"
   pull_request:
     paths:
       - "libs/module-registry/**"
@@ -33,6 +34,7 @@ on:
       - "pillars/**"
       - "packages/**"
       - ".github/workflows/registry-generated-quality.yml"
+      - ".github/actions/**"
   # Unfiltered: `paths:` is not a legal filter on a merge group, so the queue
   # lane re-runs this for every entry.
   merge_group:

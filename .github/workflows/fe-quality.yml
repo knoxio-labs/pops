@@ -15,6 +15,7 @@ on:
       - "libs/types/**"
       - "libs/ui/**"
       - ".github/workflows/fe-quality.yml"
+      - ".github/actions/**"
   pull_request:
     paths:
       - "pillars/shell/**"
@@ -25,6 +26,7 @@ on:
       - "libs/types/**"
       - "libs/ui/**"
       - ".github/workflows/fe-quality.yml"
+      - ".github/actions/**"
   # A merge group cannot carry a `paths:` filter, and `dorny/paths-filter` has
   # no diff base on this event either — so the queue lane takes the same
   # unconditional route a push to `main` takes. Every step below therefore keys
@@ -58,6 +60,7 @@ jobs:
               - 'libs/types/**'
               - 'libs/ui/**'
               - '.github/workflows/fe-quality.yml'
+              - '.github/actions/**'
 
   quality:
     name: Quality Checks

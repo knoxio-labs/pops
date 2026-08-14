@@ -58,6 +58,13 @@ runs:
     # happens to ship — a different toolchain reporting green, which is the
     # failure this wrapper would otherwise have introduced while fixing the
     # 503.
+    #
+    # Scoped to "a mise exists", not "the mise this job configured": a composite
+    # action's `run` steps do not inherit the calling job's
+    # `defaults.run.working-directory`, so this executes at the repo root even
+    # when the caller passed `working_directory`. `mise --version` evaluates no
+    # tool config, so the root config it sits next to changes nothing about what
+    # it prints.
     - name: Prove mise is installed
       shell: bash
       run: |

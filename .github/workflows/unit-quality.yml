@@ -40,6 +40,7 @@ on:
       - "Cargo.lock"
       - ".github/workflows/unit-quality.yml"
       - ".github/workflows/_discover-units.yml"
+      - ".github/actions/**"
   push:
     branches: [main]
     paths: ["**"] # main rebuilds via the changed-set

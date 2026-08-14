@@ -373,6 +373,7 @@ describe('parsePathFilterMap', () => {
       'scripts/ios-e2e/**',
       'pnpm-lock.yaml',
       '.github/workflows/ios-quality.yml',
+      '.github/actions/**',
     ]);
     expect(map.Quality).toBeUndefined();
   });
@@ -605,7 +606,7 @@ describe('the guard catches each way the wiring goes inert', () => {
     const root = cloneWorkflows();
     patch(root, 'ci-gate.yml', (s) =>
       s.replace(
-        '"iOS Quality": [\n                "clients/ios/**",\n                "pillars/bfm/**",\n                "scripts/ios-e2e/**",\n                "pnpm-lock.yaml",\n                ".github/workflows/ios-quality.yml"\n              ]',
+        '"iOS Quality": [\n                "clients/ios/**",\n                "pillars/bfm/**",\n                "scripts/ios-e2e/**",\n                "pnpm-lock.yaml",\n                ".github/workflows/ios-quality.yml",\n                ".github/actions/**"\n              ]',
         '"iOS Quality": [\n                "clients/ios/**",\n                ".github/workflows/ios-quality.yml"\n              ]'
       )
     );

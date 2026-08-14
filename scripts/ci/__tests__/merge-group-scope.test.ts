@@ -116,6 +116,7 @@ describe('reading a workflow’s own pull_request.paths', () => {
       'scripts/ios-e2e/**',
       'pnpm-lock.yaml',
       '.github/workflows/ios-quality.yml',
+      '.github/actions/**',
     ]);
   });
 
