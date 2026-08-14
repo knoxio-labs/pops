@@ -301,15 +301,18 @@ internal struct ReceiptCaptureFlowTests {
         _ = renderer.cgImage
 
         // A bounded backstop, not a poll: the success path is the
-        // genuinely-signalled `waitUntilCalled` continuation. This only keeps
-        // a regression that never submits the second receipt from hanging
-        // the suite instead of failing it.
-        await withTaskGroup(of: Void.self) { group in
-            group.addTask { await repository.waitUntilCalled(2) }
-            group.addTask { try? await Task.sleep(for: .seconds(2)) }
-            await group.next()
-            group.cancelAll()
-        }
+        // genuinely-signalled `waitUntilCalled` continuation below. Both
+        // racers are unstructured `Task`s rather than a `TaskGroup`, because
+        // `waitUntilCalled` parks on a plain `withCheckedContinuation` that
+        // cancellation does not resume — a structured group would block at
+        // scope exit waiting for the loser exactly in the regression this
+        // test exists to catch (the second call never arrives). The loser
+        // here is left to finish (or, in the regression case, to leak
+        // harmlessly past the end of the test) rather than awaited.
+        await firstToFinish(
+            { await repository.waitUntilCalled(2) },
+            { try? await Task.sleep(for: .seconds(2)) }
+        )
 
         #expect(
             await repository.callCount == 2,
