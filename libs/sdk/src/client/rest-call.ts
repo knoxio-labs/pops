@@ -179,7 +179,12 @@ async function mapResponse(pillarId: string, response: Response): Promise<CallRe
   }
 
   if (!response.ok) {
-    return mapHttpFailure(pillarId, response.status, parseFailed ? undefined : parsed);
+    return mapHttpFailure(
+      pillarId,
+      response.status,
+      parseFailed ? undefined : parsed,
+      response.headers
+    );
   }
 
   if (parseFailed) {
@@ -194,8 +199,9 @@ async function mapResponse(pillarId: string, response: Response): Promise<CallRe
  *
  * The collapsed pillars return a `{ message, code? }` envelope for the mapped
  * statuses (see `pillars/*\/src/api/rest/error-mapping.ts`): 400 → bad-request,
- * 401 and 403 → unauthorized, 404 → not-found, 409 → conflict. Any other
- * status → `unavailable`.
+ * 401 and 403 → unauthorized, 404 → not-found, 409 → conflict, 429 →
+ * rate-limited. Everything else falls to the default arm, bucketed by
+ * whether the status is a client or a server error — see that arm for why.
  *
  * 403 belongs with 401 rather than in the `unavailable` bucket because it is
  * the answer the inbound service-account gate gives a live key whose grant
@@ -205,7 +211,12 @@ async function mapResponse(pillarId: string, response: Response): Promise<CallRe
  * where the fix is widening a grant, and best-effort callers swallow it
  * entirely.
  */
-function mapHttpFailure(pillarId: string, status: number, body: unknown): CallFailure {
+function mapHttpFailure(
+  pillarId: string,
+  status: number,
+  body: unknown,
+  headers: Headers
+): CallFailure {
   const message = extractErrorMessage(body);
   switch (status) {
     case 400:
@@ -217,19 +228,61 @@ function mapHttpFailure(pillarId: string, status: number, body: unknown): CallFa
       return withMessage({ kind: 'not-found', pillar: pillarId }, message);
     case 409:
       return withMessage({ kind: 'conflict', pillar: pillarId }, message);
+    case 429:
+      return withMessage(
+        {
+          kind: 'rate-limited',
+          pillar: pillarId,
+          retryAfterSeconds: parseRetryAfterSeconds(headers),
+        },
+        message
+      );
     default:
-      return { kind: 'unavailable', pillar: pillarId };
+      // A status this function does not otherwise recognise. The two families
+      // behave oppositely on retry, so folding both into one bucket is wrong
+      // in one direction no matter which bucket is picked — and folding into
+      // `unavailable` (retryable) is the DANGEROUS direction for an unmapped
+      // 4xx: a permanent producer refusal (413 body too large, 422 the
+      // payload's data is bad, 405 the method is wrong, ...) then reads as an
+      // outage, and a caller retries something that will never succeed.
+      // `>= 500` is the only signal this function has for "the producer
+      // itself is in trouble, try again" without hardcoding every 5xx it has
+      // never seen a real one of; unmapped `4xx` is `refused` — permanent,
+      // carrying the real status so a caller that wants finer-grained
+      // handling still can.
+      return status >= 500
+        ? { kind: 'unavailable', pillar: pillarId }
+        : withMessage({ kind: 'refused', pillar: pillarId, status }, message);
   }
 }
 
 type FailureWithMessage = Extract<
   CallFailure,
-  { kind: 'not-found' | 'conflict' | 'bad-request' | 'unauthorized' }
+  { kind: 'not-found' | 'conflict' | 'bad-request' | 'unauthorized' | 'refused' | 'rate-limited' }
 >;
 
-function withMessage(failure: FailureWithMessage, message: string | undefined): FailureWithMessage {
+function withMessage<T extends FailureWithMessage>(failure: T, message: string | undefined): T {
   if (!message) return failure;
   return { ...failure, message };
+}
+
+/**
+ * `Retry-After` is either delta-seconds or an HTTP-date (RFC 9110 §10.2.3).
+ * Both forms are honoured; a header the producer did not send, or one this
+ * parser cannot make sense of, is `undefined` rather than a guessed number —
+ * a caller with no better information should fall back to its own backoff,
+ * not be handed a number that looks authoritative and isn't.
+ */
+function parseRetryAfterSeconds(headers: Headers): number | undefined {
+  const raw = headers.get('retry-after');
+  if (raw === null) return undefined;
+
+  const seconds = Number(raw);
+  if (Number.isFinite(seconds)) return Math.max(0, seconds);
+
+  const whenMs = Date.parse(raw);
+  if (Number.isNaN(whenMs)) return undefined;
+  return Math.max(0, Math.round((whenMs - Date.now()) / 1000));
 }
 
 function extractErrorMessage(body: unknown): string | undefined {

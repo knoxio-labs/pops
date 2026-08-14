@@ -57,7 +57,24 @@ const openapiDocument: unknown = JSON.parse(
  * 413 that reads like a server fault. Matches the limit finance, food,
  * inventory, media and cerebrum already set.
  */
-export const JSON_BODY_LIMIT_BYTES = 20 * 1024 * 1024;
+const DEFAULT_JSON_BODY_LIMIT_BYTES = 20 * 1024 * 1024;
+
+/**
+ * Test-only escape hatch: lets a live-seam test trip a real 413 from
+ * `express.json()` without generating a body genuinely over the production
+ * limit. Read once at module load, same as the default — there is no
+ * production code path that sets this env var.
+ */
+const JSON_BODY_LIMIT_OVERRIDE_ENV = 'PURCHASES_TEST_JSON_BODY_LIMIT_BYTES';
+
+function resolveJsonBodyLimitBytes(): number {
+  const override = process.env[JSON_BODY_LIMIT_OVERRIDE_ENV];
+  if (override === undefined) return DEFAULT_JSON_BODY_LIMIT_BYTES;
+  const parsed = Number(override);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_JSON_BODY_LIMIT_BYTES;
+}
+
+export const JSON_BODY_LIMIT_BYTES = resolveJsonBodyLimitBytes();
 
 export function createPurchasesApiApp(deps: PurchasesApiDeps): Express {
   const app = express();

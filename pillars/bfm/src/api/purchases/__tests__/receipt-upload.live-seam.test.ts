@@ -423,3 +423,137 @@ describe('bfm -> purchases receipt upload live seam', () => {
     });
   });
 });
+
+/**
+ * POPS-2230's own case: purchases answering a real, permanent refusal — not
+ * an outage — and bfm reporting it as such to the phone.
+ *
+ * Purchases' own `express.json()` limit (`JSON_BODY_LIMIT_BYTES`,
+ * `pillars/purchases/src/api/app.ts`) is 20mb, comfortably above bfm's own
+ * `MOBILE_UPLOAD_MAX_BYTES` (12mb) — see that file's header — so a real
+ * phone can never trip this through production limits as they stand today.
+ * This suite uses purchases' test-only `PURCHASES_TEST_JSON_BODY_LIMIT_BYTES`
+ * override (see `app.ts`) to lower purchases' own ceiling below what a
+ * trivially small, real upload needs, so a genuine `express.json()` 413
+ * fires on the real seam without generating a multi-megabyte body.
+ *
+ * No fake vision server here: `express.json()`'s body-parser runs before any
+ * route handler, so a body over the limit never reaches `read-receipt.ts`'s
+ * vision call at all — there is nothing downstream to fake.
+ */
+describe('bfm -> purchases receipt upload live seam — a real 413', () => {
+  let tempDir: string;
+  let registryProcess: SpawnedPillarProcess;
+  let purchasesProcess: SpawnedPillarProcess;
+  let bfmProcess: SpawnedPillarProcess;
+  let deviceToken: string;
+
+  beforeAll(async () => {
+    tempDir = mkdtempSync(join(tmpdir(), 'live-seam-bfm-purchases-413-'));
+
+    const registryPort = await getFreePort();
+    registryProcess = await spawnPillarProcess({
+      label: 'registry',
+      cwd: resolvePillarDir(import.meta.url, 'registry'),
+      port: registryPort,
+      env: {
+        POPS_REGISTRY_ENABLED: 'true',
+        REGISTRY_SQLITE_PATH: join(tempDir, 'registry.db'),
+      },
+    });
+
+    const bfmApiKey = await mintServiceAccount(registryProcess.baseUrl, 'bfm-live-seam-413', [
+      'purchases.receipt',
+    ]);
+
+    const purchasesPort = await getFreePort();
+    purchasesProcess = await spawnPillarProcess({
+      label: 'purchases',
+      cwd: resolvePillarDir(import.meta.url, 'purchases'),
+      port: purchasesPort,
+      env: {
+        POPS_REGISTRY_ENABLED: 'true',
+        POPS_REGISTRY_URL: registryProcess.baseUrl,
+        PURCHASES_SQLITE_PATH: join(tempDir, 'purchases.db'),
+        PURCHASES_SELF_BASE_URL: `http://127.0.0.1:${String(purchasesPort)}`,
+        // No ANTHROPIC_* env: the 413 fires in `express.json()`, before the
+        // handler that would need a vision port ever runs.
+        // Well under what even a single-line receipt's base64-encoded bytes
+        // need, so ANY upload trips it — the point is the seam, not a
+        // genuinely oversized photograph.
+        PURCHASES_TEST_JSON_BODY_LIMIT_BYTES: '32',
+      },
+    });
+
+    await waitForRegistration(registryProcess.baseUrl, PURCHASES_PILLAR_ID);
+
+    const bfmPort = await getFreePort();
+    bfmProcess = await spawnPillarProcess({
+      label: 'bfm',
+      cwd: resolvePillarDir(import.meta.url, 'bfm'),
+      port: bfmPort,
+      env: {
+        POPS_REGISTRY_ENABLED: 'true',
+        POPS_REGISTRY_URL: registryProcess.baseUrl,
+        BFM_SQLITE_PATH: join(tempDir, 'bfm.db'),
+        BFM_SELF_BASE_URL: `http://127.0.0.1:${String(bfmPort)}`,
+        BFM_ACCESS_TOKEN_SECRET,
+        POPS_INTERNAL_API_KEY: bfmApiKey,
+      },
+    });
+
+    const secondBfmHandle = openBfmDb(join(tempDir, 'bfm.db'));
+    const row = deviceRow();
+    secondBfmHandle.db.insert(devices).values(row).run();
+    secondBfmHandle.raw.close();
+    deviceToken = mintAccessToken(
+      row.id,
+      createSecretKey(Buffer.from(BFM_ACCESS_TOKEN_SECRET, 'utf8'))
+    ).token;
+  }, 60_000);
+
+  afterAll(async () => {
+    await bfmProcess?.stop();
+    await purchasesProcess?.stop();
+    await registryProcess?.stop();
+    if (tempDir) rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it('purchases itself answers 413 for a body over ITS OWN (lowered) limit', async () => {
+    // Independent proof the seam is genuinely primed: purchases refuses this
+    // on its own terms before bfm is involved at all.
+    const response = await fetch(`${purchasesProcess.baseUrl}/receipts`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ parts: [{ mediaType: 'text/plain', dataBase64: 'x'.repeat(500) }] }),
+    });
+
+    expect(response.status).toBe(413);
+  });
+
+  it('bfm reports the refusal as non-retryable and distinct from an outage, not as "purchases is unavailable"', async () => {
+    const response = await post(
+      bfmProcess.baseUrl,
+      deviceToken,
+      'a perfectly ordinary receipt, refused only because the wire limit was lowered for this test'
+    );
+
+    // BEFORE this fix: 503, code 'upstream_unavailable', retryable: true —
+    // indistinguishable from purchases' process being dead. AFTER: a
+    // different status, a different code, and retryable: false.
+    expect(response.status).not.toBe(503);
+    const body = (await response.json()) as {
+      code: string;
+      retryable: boolean;
+      pillar: string;
+      message: string;
+    };
+    expect(body.code).not.toBe('upstream_unavailable');
+    expect(body.retryable).toBe(false);
+    expect(body.pillar).toBe('purchases');
+    // The real upstream status is not lost, only not distinguished on the
+    // wire (see `gateway.ts`'s `toGatewayFailure` header) — it still reaches
+    // an operator via the message.
+    expect(body.message).toContain('413');
+  });
+});

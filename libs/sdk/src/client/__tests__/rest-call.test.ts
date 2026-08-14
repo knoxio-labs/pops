@@ -78,10 +78,10 @@ function ctx(
   };
 }
 
-function jsonOk(body: unknown, status = 200): Response {
+function jsonOk(body: unknown, status = 200, extraHeaders: Record<string, string> = {}): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { 'content-type': 'application/json' },
+    headers: { 'content-type': 'application/json', ...extraHeaders },
   });
 }
 
@@ -230,6 +230,72 @@ describe('performRestCall — response / error mapping', () => {
     const { fetchImpl } = recordingRest(() => jsonOk({ message: 'boom' }, 503));
     const result = await performRestCall(ctx(['entities', 'get'], { id: 'ent-1' }, fetchImpl));
     expect(result).toEqual({ kind: 'unavailable', pillar: 'registry' });
+  });
+
+  it('maps 502 and 504 → unavailable, same as 503', async () => {
+    for (const status of [502, 504]) {
+      const { fetchImpl } = recordingRest(() => jsonOk({}, status));
+      const result = await performRestCall(ctx(['entities', 'get'], { id: 'ent-1' }, fetchImpl));
+      expect(result).toEqual({ kind: 'unavailable', pillar: 'registry' });
+    }
+  });
+
+  /**
+   * The regression this ticket exists for: a producer's real, specific
+   * refusal (413 — a body over its own size limit) must NOT read the same
+   * as nobody answering. Before this fix every unmapped status, including
+   * 413, fell to the `default` arm's `unavailable` — a caller then retries
+   * a request that will fail identically forever.
+   */
+  it('maps 413 → refused, carrying the real status, NOT unavailable', async () => {
+    const { fetchImpl } = recordingRest(() =>
+      jsonOk({ message: 'request entity too large', code: 'PAYLOAD_TOO_LARGE' }, 413)
+    );
+    const result = await performRestCall(ctx(['entities', 'get'], { id: 'ent-1' }, fetchImpl));
+    expect(result).toEqual({
+      kind: 'refused',
+      pillar: 'registry',
+      status: 413,
+      message: 'request entity too large',
+    });
+    expect(result.kind).not.toBe('unavailable');
+  });
+
+  it('maps other unmapped 4xx (422, 405, 415) → refused, carrying the real status', async () => {
+    for (const status of [422, 405, 415]) {
+      const { fetchImpl } = recordingRest(() => jsonOk({}, status));
+      const result = await performRestCall(ctx(['entities', 'get'], { id: 'ent-1' }, fetchImpl));
+      expect(result).toEqual({ kind: 'refused', pillar: 'registry', status });
+    }
+  });
+
+  it('maps 429 → rate-limited, retryable in a different sense than unavailable', async () => {
+    const { fetchImpl } = recordingRest(() =>
+      jsonOk({ message: 'slow down' }, 429, { 'retry-after': '30' })
+    );
+    const result = await performRestCall(ctx(['entities', 'get'], { id: 'ent-1' }, fetchImpl));
+    expect(result).toEqual({
+      kind: 'rate-limited',
+      pillar: 'registry',
+      retryAfterSeconds: 30,
+      message: 'slow down',
+    });
+  });
+
+  it('parses a Retry-After HTTP-date into seconds-from-now', async () => {
+    const future = new Date(Date.now() + 45_000).toUTCString();
+    const { fetchImpl } = recordingRest(() => jsonOk({}, 429, { 'retry-after': future }));
+    const result = await performRestCall(ctx(['entities', 'get'], { id: 'ent-1' }, fetchImpl));
+    if (result.kind !== 'rate-limited')
+      throw new Error(`expected rate-limited, got ${result.kind}`);
+    expect(result.retryAfterSeconds).toBeGreaterThanOrEqual(43);
+    expect(result.retryAfterSeconds).toBeLessThanOrEqual(46);
+  });
+
+  it('leaves retryAfterSeconds undefined when the producer sends no Retry-After', async () => {
+    const { fetchImpl } = recordingRest(() => jsonOk({}, 429));
+    const result = await performRestCall(ctx(['entities', 'get'], { id: 'ent-1' }, fetchImpl));
+    expect(result).toEqual({ kind: 'rate-limited', pillar: 'registry' });
   });
 
   it('returns unavailable when fetch rejects (network/abort)', async () => {
