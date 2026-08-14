@@ -13,13 +13,16 @@
  *
  *   1. RAW PALETTE UTILITIES — a Tailwind colour utility whose colour is one of
  *      Tailwind's built-in palette names with a numeric shade (`bg-amber-500`,
- *      `dark:text-emerald-400`, `[&>div]:bg-red-600`, `divide-slate-100`). The
- *      utility may carry any variant chain and any opacity modifier; the guard
- *      looks at the colour, not the decoration around it.
+ *      `dark:text-emerald-400`, `[&>div]:bg-red-600`, `divide-slate-100`,
+ *      `border-t-gray-200`, `ring-offset-sky-500`). The utility may carry any
+ *      variant chain, either spelling of the important modifier (`!bg-red-500`,
+ *      `bg-red-500!`) and any opacity modifier; the guard looks at the colour,
+ *      not the decoration around it.
  *   2. RAW COLOUR LITERALS IN CLASS STRINGS — an arbitrary value whose content
  *      is a literal colour: `from-[oklch(0.7_0.2_150)]`, `text-[#ff0000]`,
- *      `bg-[rgb(0,0,0)]`. `w-[var(--radix-*)]` and other non-colour arbitrary
- *      values are none of this guard's business and are not reported.
+ *      `bg-[rgb(0,0,0)]`, `text-[red]`. `w-[var(--radix-*)]` and other
+ *      non-colour arbitrary values are none of this guard's business and are
+ *      not reported.
  *
  * What it deliberately does NOT report:
  *   - `.stories.tsx` and test files. Storybook demo content is a showcase of
@@ -77,25 +80,70 @@ const PALETTE_HUES = [
   'rose',
 ];
 
-/** Utility prefixes that take a colour. */
+/**
+ * Utility prefixes that take a colour, including the ones Tailwind v4 added
+ * (`inset-ring`, `inset-shadow`, `text-shadow`) and the side-specific border
+ * forms. Longest-first, because `border` and `border-t` share a prefix and the
+ * alternation must be allowed to reach the longer one.
+ */
 const COLOR_PROPERTIES = [
-  'bg',
-  'text',
-  'border',
-  'ring',
+  'inset-shadow',
+  'text-shadow',
+  'ring-offset',
+  'inset-ring',
+  'placeholder',
+  'decoration',
+  'border-t',
+  'border-r',
+  'border-b',
+  'border-l',
+  'border-s',
+  'border-e',
+  'border-x',
+  'border-y',
   'outline',
   'divide',
+  'shadow',
+  'stroke',
+  'accent',
+  'border',
+  'caret',
+  'text',
+  'fill',
+  'ring',
   'from',
   'via',
+  'bg',
   'to',
-  'fill',
-  'stroke',
-  'shadow',
-  'accent',
-  'caret',
-  'decoration',
-  'placeholder',
 ];
+
+/**
+ * Every CSS named colour. `text-[red]` is as raw as `text-[#ff0000]`, and the
+ * palette matcher cannot see it because `red` carries no numeric shade.
+ * `transparent` and `currentColor` are deliberately absent: neither pins a
+ * hue, so both stay legal.
+ */
+const CSS_NAMED_COLORS = (
+  'aliceblue antiquewhite aqua aquamarine azure beige bisque black blanchedalmond blue ' +
+  'blueviolet brown burlywood cadetblue chartreuse chocolate coral cornflowerblue cornsilk ' +
+  'crimson cyan darkblue darkcyan darkgoldenrod darkgray darkgreen darkgrey darkkhaki ' +
+  'darkmagenta darkolivegreen darkorange darkorchid darkred darksalmon darkseagreen ' +
+  'darkslateblue darkslategray darkslategrey darkturquoise darkviolet deeppink deepskyblue ' +
+  'dimgray dimgrey dodgerblue firebrick floralwhite forestgreen fuchsia gainsboro ghostwhite ' +
+  'gold goldenrod gray green greenyellow grey honeydew hotpink indianred indigo ivory khaki ' +
+  'lavender lavenderblush lawngreen lemonchiffon lightblue lightcoral lightcyan ' +
+  'lightgoldenrodyellow lightgray lightgreen lightgrey lightpink lightsalmon lightseagreen ' +
+  'lightskyblue lightslategray lightslategrey lightsteelblue lightyellow lime limegreen linen ' +
+  'magenta maroon mediumaquamarine mediumblue mediumorchid mediumpurple mediumseagreen ' +
+  'mediumslateblue mediumspringgreen mediumturquoise mediumvioletred midnightblue mintcream ' +
+  'mistyrose moccasin navajowhite navy oldlace olive olivedrab orange orangered orchid ' +
+  'palegoldenrod palegreen paleturquoise palevioletred papayawhip peachpuff peru pink plum ' +
+  'powderblue purple rebeccapurple red rosybrown royalblue saddlebrown salmon sandybrown ' +
+  'seagreen seashell sienna silver skyblue slateblue slategray slategrey snow springgreen ' +
+  'steelblue tan teal thistle tomato turquoise violet wheat white whitesmoke yellow yellowgreen'
+)
+  .split(' ')
+  .toSorted((a, b) => b.length - a.length);
 
 /**
  * Zero or more Tailwind variants preceding a utility: `dark:`, `hover:`,
@@ -106,14 +154,47 @@ const COLOR_PROPERTIES = [
 const VARIANT_CHAIN = String.raw`(?:[A-Za-z0-9_\-[\]&>~+*.=#(),/]+:)*`;
 
 /**
- * A raw palette utility anywhere in a line, reported with its variant chain
- * and opacity modifier so the message quotes what the author actually wrote.
- * The leading boundary rejects mid-identifier matches — `--stat-orange-500`
- * is a token name, not a utility.
+ * Tailwind's important modifier. v4 writes it as a suffix (`bg-red-500!`); the
+ * v3 prefix form (`!bg-red-500`, `dark:!bg-red-500`) is still accepted and
+ * still appears in the wild. Both sit in the pattern rather than outside it so
+ * the reported text is the whole utility the author wrote — matching only the
+ * bare `bg-red-500` inside `dark:!bg-red-500` reports a string that is not in
+ * the file, and sends the reader looking for it.
+ */
+const IMPORTANT = String.raw`!?`;
+
+/**
+ * The alpha modifier: a percentage, an arbitrary value, or a custom property.
+ */
+const OPACITY_MODIFIER = String.raw`(?:\/(?:\d{1,3}|\[[^\]\s]*\]|\(--[\w-]+\)))?`;
+
+/**
+ * Neither boundary may be a word character or a hyphen. Leading, so
+ * `--stat-orange-500` is read as a token name rather than a utility; trailing,
+ * so `bg-red-5000` and `bg-red-500-foo` are not read as `bg-red-500`. `\b`
+ * cannot serve as the trailing one — it is satisfied between `!` and `"`, and
+ * unsatisfied between `]` and `"`.
+ */
+const UTILITY_BOUNDARY_AHEAD = String.raw`(?![\w-])`;
+
+/**
+ * A raw palette utility anywhere in a line, reported with its variant chain,
+ * important modifier and opacity modifier so the message quotes what the
+ * author actually wrote.
  */
 const PALETTE_UTILITY_RE = new RegExp(
-  String.raw`(?<![\w-])${VARIANT_CHAIN}(?:${COLOR_PROPERTIES.join('|')})-(?:${PALETTE_HUES.join('|')})-\d{2,3}(?:\/\d{1,3})?\b`,
+  String.raw`(?<![\w-])${VARIANT_CHAIN}${IMPORTANT}(?:${COLOR_PROPERTIES.join('|')})-(?:${PALETTE_HUES.join('|')})-\d{2,3}${OPACITY_MODIFIER}${IMPORTANT}${UTILITY_BOUNDARY_AHEAD}`,
   'g'
+);
+
+/**
+ * A colour utility whose arbitrary value is a CSS named colour: `text-[red]`,
+ * `dark:bg-[tomato]`. Restricted to colour properties, so `w-[tan]` — which is
+ * not a thing, but neither is it a colour — cannot be dragged in.
+ */
+const NAMED_COLOR_ARBITRARY_RE = new RegExp(
+  String.raw`(?<![\w-])${VARIANT_CHAIN}${IMPORTANT}(?:${COLOR_PROPERTIES.join('|')})-\[(?:${CSS_NAMED_COLORS.join('|')})\]${OPACITY_MODIFIER}${IMPORTANT}${UTILITY_BOUNDARY_AHEAD}`,
+  'gi'
 );
 
 /**
@@ -221,8 +302,10 @@ export function findViolations(relPath, source) {
         hint: hue === undefined ? undefined : SUGGESTED_TOKEN[hue],
       });
     }
-    for (const match of line.matchAll(COLOR_LITERAL_ARBITRARY_RE)) {
-      violations.push({ file: relPath, line: index + 1, kind: 'literal', text: match[0] });
+    for (const re of [COLOR_LITERAL_ARBITRARY_RE, NAMED_COLOR_ARBITRARY_RE]) {
+      for (const match of line.matchAll(re)) {
+        violations.push({ file: relPath, line: index + 1, kind: 'literal', text: match[0] });
+      }
     }
   }
   return violations;
@@ -308,8 +391,10 @@ function run() {
 
 /**
  * Synthetic fixtures proving the guard reports a raw palette utility (bare,
- * under a variant, with an opacity modifier, inside an arbitrary variant), a
- * literal colour in an arbitrary value, and the exemptions — and that it stays
+ * under a variant, with an opacity modifier, inside an arbitrary variant, under
+ * either spelling of the important modifier, and on the colour properties that
+ * share a prefix with a non-colour one), a literal colour in an arbitrary value
+ * — hex, oklch, or a CSS named colour — and the exemptions, and that it stays
  * silent on token-only source.
  *
  * @returns {boolean}
@@ -320,12 +405,16 @@ function selfTest() {
     '<div className="dark:text-emerald-400 border-rose-500/20" />',
     '<div className="[&>div]:bg-red-600" />',
     '<h1 className="from-[oklch(0.7_0.2_150)] to-[#ff0000]" />',
+    '<div className="!bg-amber-500 dark:!bg-sky-600 bg-lime-500!" />',
+    '<div className="border-t-gray-200 ring-offset-indigo-500 text-shadow-violet-500" />',
+    '<div className="text-[red]" />',
   ].join('\n');
   const clean = [
     '<div className="bg-warning text-warning-foreground" />',
     '<div className="dark:text-success/80 border-destructive/20" />',
     '<div className="w-[var(--radix-popover-trigger-width)] min-h-[44px]" />',
     'const token = "--stat-orange-foreground";',
+    '<div className="border-t-2 bg-transparent text-[currentColor]" />',
   ].join('\n');
 
   const dirtyHits = findViolations('pillars/x/app/src/A.tsx', dirty);
@@ -343,7 +432,22 @@ function selfTest() {
     ),
     'reports an oklch arbitrary value': dirtyHits.some((v) => v.text.includes('oklch(')),
     'reports a hex arbitrary value': dirtyHits.some((v) => v.text.includes('#ff0000')),
-    'reports every dirty line, not just the first': lines.size === 4,
+    'reports a prefixed important modifier, verbatim': dirtyHits.some(
+      (v) => v.text === '!bg-amber-500'
+    ),
+    'reports an important modifier under a variant, verbatim': dirtyHits.some(
+      (v) => v.text === 'dark:!bg-sky-600'
+    ),
+    'reports a suffixed important modifier, verbatim': dirtyHits.some(
+      (v) => v.text === 'bg-lime-500!'
+    ),
+    'reports a side-specific border colour': dirtyHits.some((v) => v.text === 'border-t-gray-200'),
+    'reports a ring-offset colour': dirtyHits.some((v) => v.text === 'ring-offset-indigo-500'),
+    'reports a text-shadow colour': dirtyHits.some((v) => v.text === 'text-shadow-violet-500'),
+    'reports a CSS named colour in an arbitrary value': dirtyHits.some(
+      (v) => v.text === 'text-[red]'
+    ),
+    'reports every dirty line, not just the first': lines.size === 7,
     'attaches a token suggestion to a palette hit':
       dirtyHits.find((v) => v.text === 'bg-amber-500')?.hint === 'warning',
     'stays silent on token-only source': cleanHits.length === 0,
@@ -352,6 +456,10 @@ function selfTest() {
     ),
     'a token name containing a hue word is not a violation': !cleanHits.some((v) =>
       v.text.includes('stat-orange')
+    ),
+    'a border-side width is not a colour': !cleanHits.some((v) => v.text.includes('border-t')),
+    'transparent and currentColor stay legal': !cleanHits.some((v) =>
+      v.text.includes('currentColor')
     ),
     'a .tsx under an app src is scannable': isScannable('pillars/food/app/src/pages/X.tsx'),
     'globals.css is scannable': isScannable('pillars/shell/src/index.css'),
