@@ -122,7 +122,9 @@ describe('resolvePageHeaderIconUsage', () => {
 });
 
 describe('analyzeApp', () => {
-  const pages: Record<string, string> = {
+  type PageSources = Record<string, string | undefined>;
+
+  const pages: PageSources = {
     './pages/HomePage':
       '<PageHeader title="Home" icon={<LayoutDashboard className="h-6 w-6" />} />',
     './pages/ListPage': '<PageHeader title="List" icon={<ListChecks className="h-6 w-6" />} />',
@@ -135,7 +137,10 @@ describe('analyzeApp', () => {
   });
 
   it('flags a mix of icon and no-icon pages within the same app', () => {
-    const mixed = { ...pages, './pages/ReportsPage': '<PageHeader title="Reports" />' };
+    const mixed: PageSources = {
+      ...pages,
+      './pages/ReportsPage': '<PageHeader title="Reports" />',
+    };
     const violations = analyzeApp('demo', ROUTES_SOURCE, (p) => mixed[p]);
     expect(violations).toContainEqual({
       kind: 'inconsistent',
@@ -146,7 +151,7 @@ describe('analyzeApp', () => {
   });
 
   it('flags an icon that does not match its nav entry', () => {
-    const wrong = {
+    const wrong: PageSources = {
       ...pages,
       './pages/ListPage': '<PageHeader title="List" icon={<Database className="h-6 w-6" />} />',
     };
@@ -161,13 +166,13 @@ describe('analyzeApp', () => {
   });
 
   it('skips a page the reader cannot resolve rather than flagging it', () => {
-    const missing = { ...pages, './pages/ListPage': undefined as unknown as string };
+    const missing: PageSources = { ...pages, './pages/ListPage': undefined };
     const violations = analyzeApp('demo', ROUTES_SOURCE, (p) => missing[p]);
     expect(violations).toEqual([]);
   });
 
   it('skips a page with no PageHeader at all', () => {
-    const noHeader = { ...pages, './pages/ReportsPage': '<div>custom layout</div>' };
+    const noHeader: PageSources = { ...pages, './pages/ReportsPage': '<div>custom layout</div>' };
     expect(analyzeApp('demo', ROUTES_SOURCE, (p) => noHeader[p])).toEqual([]);
   });
 
