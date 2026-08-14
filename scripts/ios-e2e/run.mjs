@@ -23,8 +23,8 @@
  * GitHub's macOS runners ship no Docker daemon, so `infra/docker-compose.dev.yml`
  * — the obvious way to get a BFM — cannot run in the job this flow is gated by.
  * The pillar is a Node process and starts in about a second; `pnpm --filter
- * @pops/bfm build` then `node pillars/bfm/dist/api/server.js` is the whole of
- * it.
+ * @pops/bfm... build` then `node pillars/bfm/dist/api/server.js` is the whole
+ * of it.
  *
  * ## Why the port is not 3014
  *
@@ -441,7 +441,12 @@ async function main() {
     teardown.unshift(upstream.close);
     process.stdout.write(`ios-e2e: registry + finance stub on ${upstream.url}\n`);
 
-    await run('pnpm', ['--filter', '@pops/bfm', 'build']);
+    // `@pops/bfm...`, not `@pops/bfm`: the pillar's build script runs its
+    // OpenAPI generator, which imports the compiled `@pops/contract-openapi`.
+    // Nothing else in this job builds the workspace, so the pillar's own
+    // dependencies have to be built here — the same reason the Dockerfiles
+    // build `@pops/bfm^...` before the pillar.
+    await run('pnpm', ['--filter', '@pops/bfm...', 'build']);
 
     const bfm = spawn('node', [join(REPO_ROOT, 'pillars/bfm/dist/api/server.js')], {
       cwd: REPO_ROOT,

@@ -75,6 +75,31 @@ importers:
         specifier: ^4.1.10
         version: 4.1.10(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.2.1(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.11)(yaml@2.9.0))
 
+  libs/contract-openapi:
+    dependencies:
+      '@ts-rest/core':
+        specifier: 3.53.0-rc.1
+        version: 3.53.0-rc.1(@types/node@24.13.3)
+      '@ts-rest/open-api':
+        specifier: 3.53.0-rc.1
+        version: 3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@24.13.3))(zod@4.4.3)
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
+    devDependencies:
+      '@types/node':
+        specifier: ^24.13.3
+        version: 24.13.3
+      '@vitest/coverage-v8':
+        specifier: ^4.1.10
+        version: 4.1.10(vitest@4.1.10)
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: ^4.1.10
+        version: 4.1.10(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.2.1(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.11)(yaml@2.9.0))
+
   libs/locales: {}
 
   libs/module-registry:
@@ -588,6 +613,9 @@ importers:
         specifier: ^4.4.3
         version: 4.4.3
     devDependencies:
+      '@pops/contract-openapi':
+        specifier: workspace:*
+        version: link:../../libs/contract-openapi
       '@types/better-sqlite3':
         specifier: ^7.6.12
         version: 7.6.13
@@ -743,6 +771,9 @@ importers:
         specifier: ^4.4.3
         version: 4.4.3
     devDependencies:
+      '@pops/contract-openapi':
+        specifier: workspace:*
+        version: link:../../libs/contract-openapi
       '@types/better-sqlite3':
         specifier: ^7.6.12
         version: 7.6.13
@@ -913,6 +944,9 @@ importers:
         specifier: ^4.4.3
         version: 4.4.3
     devDependencies:
+      '@pops/contract-openapi':
+        specifier: workspace:*
+        version: link:../../libs/contract-openapi
       '@types/better-sqlite3':
         specifier: ^7.6.12
         version: 7.6.13
@@ -1074,6 +1108,9 @@ importers:
         specifier: ^4.4.3
         version: 4.4.3
     devDependencies:
+      '@pops/contract-openapi':
+        specifier: workspace:*
+        version: link:../../libs/contract-openapi
       '@types/express':
         specifier: ^5.0.4
         version: 5.0.6
@@ -1144,6 +1181,9 @@ importers:
         specifier: ^4.4.3
         version: 4.4.3
     devDependencies:
+      '@pops/contract-openapi':
+        specifier: workspace:*
+        version: link:../../libs/contract-openapi
       '@types/better-sqlite3':
         specifier: ^7.6.12
         version: 7.6.13
@@ -1362,6 +1402,9 @@ importers:
         specifier: ^4.4.3
         version: 4.4.3
     devDependencies:
+      '@pops/contract-openapi':
+        specifier: workspace:*
+        version: link:../../libs/contract-openapi
       '@types/better-sqlite3':
         specifier: ^7.6.12
         version: 7.6.13
@@ -1577,6 +1620,9 @@ importers:
         specifier: ^4.4.3
         version: 4.4.3
     devDependencies:
+      '@pops/contract-openapi':
+        specifier: workspace:*
+        version: link:../../libs/contract-openapi
       '@types/better-sqlite3':
         specifier: ^7.6.12
         version: 7.6.13
@@ -1756,6 +1802,9 @@ importers:
         specifier: ^4.4.3
         version: 4.4.3
     devDependencies:
+      '@pops/contract-openapi':
+        specifier: workspace:*
+        version: link:../../libs/contract-openapi
       '@types/better-sqlite3':
         specifier: ^7.6.12
         version: 7.6.13
@@ -1936,6 +1985,9 @@ importers:
         specifier: ^4.4.3
         version: 4.4.3
     devDependencies:
+      '@pops/contract-openapi':
+        specifier: workspace:*
+        version: link:../../libs/contract-openapi
       '@types/better-sqlite3':
         specifier: ^7.6.12
         version: 7.6.13
@@ -2143,6 +2195,9 @@ importers:
         specifier: ^4.4.3
         version: 4.4.3
     devDependencies:
+      '@pops/contract-openapi':
+        specifier: workspace:*
+        version: link:../../libs/contract-openapi
       '@types/better-sqlite3':
         specifier: ^7.6.12
         version: 7.6.13
@@ -2289,6 +2344,9 @@ importers:
         specifier: ^4.4.3
         version: 4.4.3
     devDependencies:
+      '@pops/contract-openapi':
+        specifier: workspace:*
+        version: link:../../libs/contract-openapi
       '@types/better-sqlite3':
         specifier: ^7.6.12
         version: 7.6.13

@@ -119,6 +119,13 @@ function workspacePopsDeps(pkg, includeDev) {
  * never run on any unit that depends on a source-only lib (every pillar app
  * depends on `@pops/navigation`/`@pops/ui`).
  *
+ * The build is filtered with `<name>...` rather than `<name>` because a unit's
+ * build can need a workspace dependency's compiled output that the closure walk
+ * below never reaches: a pillar's build runs its OpenAPI generator, which
+ * imports `@pops/contract-openapi` — a devDependency, and devDependencies are
+ * only walked for the root unit. `...` also makes the build order topological
+ * instead of relying on the BFS visiting a lib before its consumer.
+ *
  * @param {string} dir
  */
 function buildUnit(dir) {
@@ -135,7 +142,7 @@ function buildUnit(dir) {
   }
   // stdout is reserved for the manifest JSON; build chatter must go to stderr
   // so the caller can capture stdout cleanly.
-  execFileSync('pnpm', ['--filter', packageNameAt(dir), 'run', 'build'], {
+  execFileSync('pnpm', ['--filter', `${packageNameAt(dir)}...`, 'run', 'build'], {
     stdio: ['ignore', 2, 'inherit'],
   });
 }
