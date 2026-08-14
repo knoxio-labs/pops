@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { generateKeyPairSync, sign } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
@@ -9,11 +10,13 @@ import {
   checkAllCopies,
   checkFixture,
   FIXTURE_COPIES,
+  KNOWN_FIXTURE_COPY_PATHS,
 } from '../check-device-signature-fixture.mjs';
 import { isFileNotFound } from '../fixture-copies.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..', '..');
+const guardPath = resolve(here, '..', 'check-device-signature-fixture.mjs');
 
 type Fixture = Parameters<typeof checkFixture>[0];
 
@@ -100,6 +103,20 @@ describe('the committed fixture', () => {
   it('exists once per consumer, byte-identical', () => {
     expect(FIXTURE_COPIES.length).toBeGreaterThan(1);
     expect(checkAllCopies(readCommitted)).toEqual([]);
+  });
+
+  it('declares exactly the paths KNOWN_FIXTURE_COPY_PATHS pins', () => {
+    // KNOWN_FIXTURE_COPY_PATHS is the guard's own independent pin (see its doc
+    // comment in check-device-signature-fixture.mjs) — a literal the
+    // `--self-test` CLI path checks FIXTURE_COPIES against, typed by hand
+    // rather than derived from FIXTURE_COPIES. Reusing it here rather than
+    // duplicating a second hand-typed array keeps this test and the CLI path
+    // checking the exact same expectation. A copy landing in FIXTURE_COPIES
+    // without a matching update to KNOWN_FIXTURE_COPY_PATHS in the same
+    // commit is the friction ADR-045 asks for.
+    expect(FIXTURE_COPIES.map((copy) => copy.path).toSorted()).toEqual(
+      [...KNOWN_FIXTURE_COPY_PATHS].toSorted()
+    );
   });
 
   it('is vendored inside every consumer rather than read from clients/ — ADR-043', () => {
@@ -270,5 +287,15 @@ describe('checkAllCopies', () => {
 
     expect(failures.some((f) => f.startsWith(`${vendored.path}: `))).toBe(true);
     expect(failures.some((f) => f.startsWith(`${canonical.path}: `))).toBe(false);
+  });
+});
+
+describe('the guard CLI', () => {
+  it('its self-test passes, including the independent copy-set pin', () => {
+    const stdout = execFileSync('node', [guardPath, '--self-test'], { encoding: 'utf8' });
+
+    expect(stdout).toContain(
+      `self-test OK — declares exactly the ${KNOWN_FIXTURE_COPY_PATHS.length} pinned fixture copy path(s).`
+    );
   });
 });

@@ -15,10 +15,57 @@
  * non-empty, statically-known `aria-label`/`aria-labelledby`. A quoted string
  * literal decides either attribute whether it's bare (`size="icon"`) or
  * brace-wrapped (`size={'icon'}`); an empty string or a literal `undefined`
- * does not count as a label. A value this guard can't resolve at all (a
- * variable, a ternary, a template with interpolation) is not statically
- * decidable and is skipped rather than guessed at — false negatives here are
- * safer than false positives on a required check.
+ * does not count as a label.
+ *
+ * `aria-label`/`aria-labelledby` additionally understands a ternary
+ * (`cond ? A : B`), a nullish-coalescing expression (`A ?? B`), a
+ * logical-OR expression (`A || B`), and a logical-AND expression (`A && B`),
+ * each recursively — including nested combinations. The rule for each shape:
+ *   - Ternary: reports when EITHER branch is a decidable empty literal
+ *     (`""` or `undefined`/`null`), in either position — a reversed ternary
+ *     (`cond ? "" : "Close"`) is caught the same as the direct one. Only
+ *     passes clean when BOTH branches are decidably non-empty.
+ *   - `A ?? B`: if `A` is a decidable non-nullish literal, its own value
+ *     decides the whole expression (`?? ` never reaches `B`). If `A` is
+ *     decidably nullish (`undefined`/`null`), `B` decides it. If `A` is not
+ *     statically decidable (the common case — a variable), the expression is
+ *     reported only when `B` is a decidable empty literal, since a nullish
+ *     `A` at runtime would then produce that empty `B`.
+ *   - `A || B`: the mirror of `??`, but falsy rather than nullish is what
+ *     reaches `B` — `A`'s own empty string counts, not just nullish. If `A`
+ *     is a decidable falsy literal (`""`, `undefined`, `null`), `B` decides
+ *     it. If `A` is a decidable non-empty string literal, it short-circuits
+ *     the whole expression to non-empty (`B` is unreachable). If `A` is not
+ *     statically decidable, the expression is reported only when `B` is a
+ *     decidable empty literal, since a falsy `A` at runtime is always
+ *     possible — this is the common `x || ''`/`x || undefined` idiom, and it
+ *     is strictly worse than `x ?? ''` since it also swallows an
+ *     already-non-nullish empty string.
+ *   - `A && B`: unless `A` is a decidable non-empty, non-nullish literal
+ *     (so provably always truthy), the guard reports — `&&` has no path that
+ *     reaches `B` when `A` is falsy, and a plain condition (`cond && 'X'`)
+ *     can always be falsy at runtime, leaving the button unlabelled in that
+ *     branch. This deliberately flags the common `cond && 'Label'` idiom on
+ *     an icon-only button; the same idiom passes silently once given a
+ *     genuinely-always-truthy left side, which realistic code never has.
+ *
+ * A value this guard still can't resolve after that (a bare variable, a
+ * template with interpolation, or — inside a ternary — two branches that are
+ * both unresolvable, e.g. `cond ? labelA : labelB`) is not statically
+ * decidable and is treated as present rather than guessed at: **fail-open**,
+ * deliberately, the same trade-off the guard already makes for a dynamic
+ * `size`. False negatives here are safer than false positives on a required
+ * check — flagging every `aria-label={computedLabel}` call site would either
+ * get this guard disabled or trained-around, and it cannot see runtime
+ * values to do better. A conditional whose two branches are BOTH bare,
+ * unresolvable identifiers falls into exactly this bucket and is not
+ * flagged, on the same reasoning.
+ *
+ * Literal `false`/`0`/`NaN` branches (rather than `""`/`undefined`/`null`)
+ * are not modelled as decidably-empty — they fall into the same "not
+ * statically decidable" bucket as any other non-string-literal expression,
+ * which is the fail-open path above, applied consistently rather than
+ * special-cased.
  *
  * Usage:
  *   node scripts/ci/check-icon-only-buttons.mjs              check the real tree
@@ -112,21 +159,266 @@ function resolveStaticValue(raw) {
 }
 
 /**
+ * @typedef {'empty' | 'nonempty' | 'unknown'} LabelVerdict
+ */
+
+/**
+ * @typedef {'nullish' | 'emptyString' | 'nonEmptyString' | 'unknown'} LeafKind
+ */
+
+/**
+ * Classify one leaf sub-expression: a quoted string literal, the literal
+ * `undefined`/`null`, or anything else this guard doesn't model.
+ *
+ * @param {string} text
+ * @returns {LeafKind}
+ */
+function classifyLeaf(text) {
+  const trimmed = text.trim();
+  if (trimmed === 'undefined' || trimmed === 'null') return 'nullish';
+  const literal = stringLiteralContent(trimmed);
+  if (literal !== null) return literal.trim() === '' ? 'emptyString' : 'nonEmptyString';
+  return 'unknown';
+}
+
+/**
+ * @param {LeafKind} kind
+ * @returns {LabelVerdict}
+ */
+function leafVerdict(kind) {
+  if (kind === 'nullish' || kind === 'emptyString') return 'empty';
+  if (kind === 'nonEmptyString') return 'nonempty';
+  return 'unknown';
+}
+
+/**
+ * Strip matching, fully-enclosing outer parentheses, repeatedly.
+ *
+ * @param {string} text
+ * @returns {string}
+ */
+function unwrapParens(text) {
+  let current = text.trim();
+  while (current.startsWith('(') && current.endsWith(')') && isFullyParenWrapped(current)) {
+    current = current.slice(1, -1).trim();
+  }
+  return current;
+}
+
+/**
+ * Does `text`'s leading `(` close only at its final character — i.e. does
+ * one pair of parens wrap the whole string, rather than just its start?
+ *
+ * @param {string} text
+ * @returns {boolean}
+ */
+function isFullyParenWrapped(text) {
+  let depth = 0;
+  /** @type {"'" | '"' | '`' | null} */
+  let quote = null;
+  for (let i = 0; i < text.length; i += 1) {
+    const ch = text[i];
+    if (quote) {
+      if (ch === '\\') i += 1;
+      else if (ch === quote) quote = null;
+      continue;
+    }
+    if (ch === "'" || ch === '"' || ch === '`') {
+      quote = ch;
+      continue;
+    }
+    if (ch === '(') {
+      depth += 1;
+    } else if (ch === ')') {
+      depth -= 1;
+      if (depth === 0 && i !== text.length - 1) return false;
+    }
+  }
+  return depth === 0;
+}
+
+/**
+ * Find a top-level ternary's `cond`, `then` (after `?`), and `else` (after
+ * the matching `:`) in `text` — outside strings/templates and outside any
+ * `(...)`/`[...]`/`{...}` nesting. Skips `?.` (optional chaining) and `??`
+ * (nullish coalescing) so they never get mistaken for a ternary `?`. Tracks
+ * a ternary-depth counter so `a ? b ? x : y : z` resolves to the outer split
+ * (cond `a`, then `b ? x : y`, else `z`), matching JS's right-associativity.
+ *
+ * @param {string} text
+ * @returns {{ cond: string, whenTrue: string, whenFalse: string } | null}
+ */
+function findTopLevelTernary(text) {
+  let depth = 0;
+  /** @type {"'" | '"' | '`' | null} */
+  let quote = null;
+  let ternaryDepth = 0;
+  let questionIndex = -1;
+  for (let i = 0; i < text.length; i += 1) {
+    const ch = text[i];
+    if (quote) {
+      if (ch === '\\') i += 1;
+      else if (ch === quote) quote = null;
+      continue;
+    }
+    if (ch === "'" || ch === '"' || ch === '`') {
+      quote = ch;
+      continue;
+    }
+    if (ch === '(' || ch === '[' || ch === '{') {
+      depth += 1;
+      continue;
+    }
+    if (ch === ')' || ch === ']' || ch === '}') {
+      depth = Math.max(0, depth - 1);
+      continue;
+    }
+    if (depth !== 0) continue;
+    if (ch === '?') {
+      if (text[i + 1] === '.' || text[i + 1] === '?') {
+        i += 1;
+        continue;
+      }
+      if (questionIndex === -1) questionIndex = i;
+      ternaryDepth += 1;
+      continue;
+    }
+    if (ch === ':' && ternaryDepth > 0) {
+      ternaryDepth -= 1;
+      if (ternaryDepth === 0) {
+        return {
+          cond: text.slice(0, questionIndex),
+          whenTrue: text.slice(questionIndex + 1, i),
+          whenFalse: text.slice(i + 1),
+        };
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * Find the first top-level occurrence of a binary operator (`&&`, `??`, or
+ * `||`) in `text`, outside strings/templates and outside any bracket
+ * nesting.
+ *
+ * @param {string} text
+ * @param {'&&' | '??' | '||'} op
+ * @returns {{ left: string, right: string } | null}
+ */
+function findTopLevelBinary(text, op) {
+  let depth = 0;
+  /** @type {"'" | '"' | '`' | null} */
+  let quote = null;
+  for (let i = 0; i < text.length; i += 1) {
+    const ch = text[i];
+    if (quote) {
+      if (ch === '\\') i += 1;
+      else if (ch === quote) quote = null;
+      continue;
+    }
+    if (ch === "'" || ch === '"' || ch === '`') {
+      quote = ch;
+      continue;
+    }
+    if (ch === '(' || ch === '[' || ch === '{') {
+      depth += 1;
+      continue;
+    }
+    if (ch === ')' || ch === ']' || ch === '}') {
+      depth = Math.max(0, depth - 1);
+      continue;
+    }
+    if (depth !== 0) continue;
+    if (text.startsWith(op, i)) {
+      return { left: text.slice(0, i), right: text.slice(i + op.length) };
+    }
+  }
+  return null;
+}
+
+/**
+ * Resolve a brace-expression's inner text to a {@link LabelVerdict},
+ * recursing through a top-level ternary, `??`, or `&&` per the rules
+ * documented in this file's header comment. Falls back to leaf
+ * classification (a string literal or `undefined`/`null`) when the
+ * expression is none of those shapes.
+ *
+ * @param {string} text
+ * @returns {LabelVerdict}
+ */
+function resolveExpr(text) {
+  const unwrapped = unwrapParens(text);
+
+  const ternary = findTopLevelTernary(unwrapped);
+  if (ternary) {
+    const thenVerdict = resolveExpr(ternary.whenTrue);
+    const elseVerdict = resolveExpr(ternary.whenFalse);
+    if (thenVerdict === 'empty' || elseVerdict === 'empty') return 'empty';
+    if (thenVerdict === 'nonempty' && elseVerdict === 'nonempty') return 'nonempty';
+    return 'unknown';
+  }
+
+  const nullish = findTopLevelBinary(unwrapped, '??');
+  if (nullish) {
+    const leftKind = classifyLeaf(unwrapParens(nullish.left));
+    if (leftKind === 'nullish') return resolveExpr(nullish.right);
+    if (leftKind === 'emptyString') return 'empty';
+    if (leftKind === 'nonEmptyString') return 'nonempty';
+    return resolveExpr(nullish.right) === 'empty' ? 'empty' : 'unknown';
+  }
+
+  // Checked before `&&`: `||` binds looser, so `a && b || c` must split on
+  // `||` first to land on the correct outer operands.
+  const or = findTopLevelBinary(unwrapped, '||');
+  if (or) {
+    const leftKind = classifyLeaf(unwrapParens(or.left));
+    if (leftKind === 'nullish' || leftKind === 'emptyString') return resolveExpr(or.right);
+    if (leftKind === 'nonEmptyString') return 'nonempty';
+    return resolveExpr(or.right) === 'empty' ? 'empty' : 'unknown';
+  }
+
+  const and = findTopLevelBinary(unwrapped, '&&');
+  if (and) {
+    const leftKind = classifyLeaf(unwrapParens(and.left));
+    if (leftKind === 'nullish' || leftKind === 'emptyString') return 'empty';
+    if (leftKind === 'nonEmptyString') return resolveExpr(and.right);
+    return 'empty';
+  }
+
+  return leafVerdict(classifyLeaf(unwrapped));
+}
+
+/**
+ * Resolve one captured `aria-label`/`aria-labelledby` attribute value (the
+ * raw text between `=` and the next attribute) to a {@link LabelVerdict}.
+ *
+ * @param {string} raw
+ * @returns {LabelVerdict}
+ */
+function resolveLabelVerdict(raw) {
+  const trimmed = raw.trim();
+  if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+    return resolveExpr(trimmed.slice(1, -1));
+  }
+  const literal = stringLiteralContent(trimmed);
+  if (literal === null) return 'unknown';
+  return literal.trim() === '' ? 'empty' : 'nonempty';
+}
+
+/**
  * Does this opening tag carry a statically-decidable, non-empty accessible
- * name via `aria-label` or `aria-labelledby`? A value this guard can't
- * statically resolve (a variable, a template literal with interpolation) is
- * treated as present — false negatives here are safer than flagging the many
- * legitimate `aria-label={computedLabel}` call sites, mirroring the same
- * trade-off this guard already makes for a dynamic `size`.
+ * name via `aria-label` or `aria-labelledby`? See this file's header
+ * comment for the ternary/`??`/`&&` rules and the fail-open rule for a value
+ * this guard still can't resolve after applying them.
  *
  * @param {string} tag
  * @returns {boolean}
  */
 function hasAccessibleName(tag) {
   for (const match of tag.matchAll(ARIA_LABEL_ATTR_RE)) {
-    const resolved = resolveStaticValue(match[1]);
-    if (resolved === null) return true;
-    if (resolved.trim() !== '') return true;
+    const verdict = resolveLabelVerdict(match[1]);
+    if (verdict === 'nonempty' || verdict === 'unknown') return true;
   }
   return false;
 }
@@ -310,10 +602,21 @@ function run() {
  * not desync on a `>` inside an attribute expression, and does not treat an
  * empty, whitespace-only, undefined, or decoy (`data-aria-label`) attribute
  * as a real accessible name — while still deciding a brace-wrapped string
- * literal size and accepting a valid `aria-labelledby`.
+ * literal size and accepting a valid `aria-labelledby`. Also proves it
+ * decides a ternary (direct and reversed), `??`, `||`, and `&&` aria-label
+ * per the rules in this file's header — including `||` chained, nested
+ * inside a ternary, and mixed with `??` — and stays fail-open on the one
+ * case that genuinely isn't decidable — a ternary unresolvable on both
+ * branches.
  *
  * @returns {boolean}
  */
+const CLEAN_CONDITIONALS_LABEL =
+  "size={'icon'} with a real aria-label, both aria-labelledby forms, a ternary decidably " +
+  'non-empty on both branches, `?? "Label"` with an unresolvable left, `|| "Label"` with an ' +
+  'unresolvable left, `"Label" || x` with a decidably-truthy left, `"Label" && "Label"` ' +
+  'with a decidably-truthy left, and a ternary unresolvable on both branches are not violations';
+
 function selfTest() {
   const dirty = [
     '<Button size="icon"><Trash2 /></Button>',
@@ -325,6 +628,16 @@ function selfTest() {
     '<Button size="icon" data-aria-label="x"><Trash2 /></Button>',
     "<Button size={'icon'}><Trash2 /></Button>",
     '<Button size="icon" aria-label="   "><Trash2 /></Button>',
+    '<Button size="icon" aria-label={cond ? "Close" : ""}><Trash2 /></Button>',
+    '<Button size="icon" aria-label={cond ? "" : "Close"}><Trash2 /></Button>',
+    '<Button size="icon" aria-label={cond && "Close"}><Trash2 /></Button>',
+    '<Button size="icon" aria-label={x ?? ""}><Trash2 /></Button>',
+    '<Button size="icon" aria-label={cond ? undefined : "Close"}><Trash2 /></Button>',
+    '<Button size="icon" aria-label={x || ""}><Trash2 /></Button>',
+    '<Button size="icon" aria-label={x || undefined}><Trash2 /></Button>',
+    '<Button size="icon" aria-label={cond ? (x || "") : "Save"}><Trash2 /></Button>',
+    '<Button size="icon" aria-label={a || b || ""}><Trash2 /></Button>',
+    '<Button size="icon" aria-label={(x ?? y) || ""}><Trash2 /></Button>',
   ].join('\n');
   const clean = [
     '<Button size="icon" aria-label="Delete item"><Trash2 /></Button>',
@@ -335,6 +648,12 @@ function selfTest() {
     '<Button size={\'icon\'} aria-label="Delete"><Trash2 /></Button>',
     '<Button size="icon" aria-labelledby={headingId}><Trash2 /></Button>',
     '<Button size="icon" aria-labelledby="delete-heading"><Trash2 /></Button>',
+    '<Button size="icon" aria-label={cond ? "Close" : "Delete"}><Trash2 /></Button>',
+    '<Button size="icon" aria-label={labelA ?? "Close"}><Trash2 /></Button>',
+    '<Button size="icon" aria-label={"Close" && "Delete"}><Trash2 /></Button>',
+    '<Button size="icon" aria-label={cond ? labelA : labelB}><Trash2 /></Button>',
+    '<Button size="icon" aria-label={cond || "Close"}><Trash2 /></Button>',
+    '<Button size="icon" aria-label={"Close" || x}><Trash2 /></Button>',
   ].join('\n');
 
   const dirtyHits = findViolations('pillars/x/app/src/A.tsx', dirty);
@@ -357,7 +676,17 @@ function selfTest() {
     'reports data-aria-label as a decoy, not a real aria-label': dirtyLines.has(12),
     "reports size={'icon'} — a brace-wrapped literal is decidable": dirtyLines.has(13),
     'reports a whitespace-only aria-label as no label': dirtyLines.has(14),
-    'reports every dirty line, not just the first': dirtyLines.size === 9,
+    'reports a ternary with an empty-string branch': dirtyLines.has(15),
+    'reports a reversed ternary with an empty-string branch': dirtyLines.has(16),
+    'reports cond && "Label" — no truthy proof on the left': dirtyLines.has(17),
+    'reports x ?? "" — an unresolvable left with an empty-literal right': dirtyLines.has(18),
+    'reports a ternary with an undefined branch': dirtyLines.has(19),
+    'reports x || "" — an unresolvable left with an empty-literal right': dirtyLines.has(20),
+    'reports x || undefined — an unresolvable left with a nullish right': dirtyLines.has(21),
+    'reports a ternary with `||` nested in a branch': dirtyLines.has(22),
+    'reports a chained `a || b || ""`': dirtyLines.has(23),
+    'reports `||` mixed with `??` on its left': dirtyLines.has(24),
+    'reports every dirty line, not just the first': dirtyLines.size === 19,
     'an icon button WITH aria-label is not a violation': !cleanHits.some(
       (v) => v.size === 'icon' && v.component === 'Button'
     ),
@@ -367,8 +696,7 @@ function selfTest() {
     'a prominent icon+text button is not a violation': cleanHits.every((v) => v.size !== undefined),
     'a non-icon size is not a violation': !cleanHits.some((v) => v.size === 'sm'),
     'a dynamic size expression is not guessed at': !cleanHits.some((v) => v.size === 'dynamicSize'),
-    "size={'icon'} with a real aria-label, and both aria-labelledby forms, are not violations":
-      cleanHits.length === 0,
+    [CLEAN_CONDITIONALS_LABEL]: cleanHits.length === 0,
     'a .tsx under an app src is scannable': isScannable('pillars/food/app/src/pages/X.tsx'),
     'a story is exempt': !isScannable('libs/ui/src/primitives/Badge.stories.tsx'),
     'a test is exempt': !isScannable('pillars/food/app/src/pages/X.test.tsx'),

@@ -295,6 +295,14 @@ describe('search — query.filters', () => {
   it('narrows budgets by period, without constraining transactions or wishlist', async () => {
     await client().budgets.create({ category: 'Travel fund', period: 'Monthly' });
     await client().budgets.create({ category: 'Travel savings', period: 'Yearly' });
+    await client().transactions.create({
+      description: 'Travel gear',
+      account: 'a',
+      amount: -10,
+      date: '2026-01-01',
+      type: 'purchase',
+    });
+    await client().wishlist.create({ item: 'Travel backpack' });
 
     const { hits } = await client().search.run({
       query: { text: 'travel', filters: [{ field: 'period', operator: 'eq', value: 'Yearly' }] },
@@ -302,6 +310,8 @@ describe('search — query.filters', () => {
     const budgetHits = hits.filter((h) => h.uri.startsWith('/budgets/'));
     expect(budgetHits).toHaveLength(1);
     expect(firstHit(budgetHits).data).toMatchObject({ category: 'Travel savings' });
+    expect(withScheme(hits, 'pops:finance/transaction/')).toHaveLength(1);
+    expect(hits.filter((h) => h.uri === '/finance/wishlist')).toHaveLength(1);
   });
 
   it('narrows budgets by active', async () => {

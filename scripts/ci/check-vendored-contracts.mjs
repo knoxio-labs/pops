@@ -671,6 +671,70 @@ function selfTestDeclaration() {
   }
 }
 
+/**
+ * The exact vendored legs this repo is known to carry today, as literals —
+ * typed by hand, not derived from `VENDOR_DIRECTORIES` or from
+ * `discoverVendoredContracts` itself. `selfTestDiscovery` above proves the
+ * SHAPE of `VENDOR_DIRECTORIES` is scanned correctly by building fixtures
+ * from that same constant; a `VENDOR_DIRECTORIES` entry that loses a path
+ * segment (`['clients', 'Contracts']` typo'd to `['client', 'Contracts']`)
+ * still scans "correctly" by that definition — it just scans nothing for the
+ * broken entry, which `selfTestDiscovery`'s expected list, itself built from
+ * `VENDOR_DIRECTORIES`, can never notice. A literal pin is the only thing
+ * that can: it stays exactly what it says even when the constant it is
+ * checking loses an entry.
+ *
+ * A third leg landing here without a matching update to this list is exactly
+ * the friction ADR-045 asks for — visible on the commit that adds the leg,
+ * not a silently-widened floor.
+ */
+export const KNOWN_VENDORED_LEGS = [
+  'bfm -> clients/ios/Contracts/bfm.openapi.json',
+  'contacts -> pillars/finance/app/contracts/contacts.openapi.json',
+  'purchases -> pillars/finance/app/contracts/purchases.openapi.json',
+];
+
+/**
+ * Self-test half four: the real repo's discovered legs match
+ * {@link KNOWN_VENDORED_LEGS} exactly.
+ *
+ * Every other half either scans a synthetic fixture built from
+ * `VENDOR_DIRECTORIES` (`selfTestDiscovery`, `selfTestDeclaration`) or
+ * exercises `findDrift`/`findMoved` against hand-built inputs
+ * (`selfTestDrift`) — none of them ever run `discoverVendoredContracts`
+ * against THIS repo and check the result against anything not derived from
+ * the same constant. This half is the one that actually runs against
+ * `repoRoot`, so a `VENDOR_DIRECTORIES` typo that silently drops a real leg
+ * (or a real leg silently renamed) fails this self-test by name, in the same
+ * `--self-test` invocation `quality.yml`'s install-free `vendored-contracts`
+ * job already runs — it does not depend on the separate `vitest run scripts/`
+ * job also catching it.
+ *
+ * @returns {boolean}
+ */
+function selfTestLegSet() {
+  const discovered = discoverVendoredContracts(repoRoot);
+  const legs = discovered.map((c) => `${c.pillarId} -> ${rel(c.copy)}`).toSorted();
+  const expected = [...KNOWN_VENDORED_LEGS].toSorted();
+
+  const missing = expected.filter((leg) => !legs.includes(leg));
+  const extra = legs.filter((leg) => !expected.includes(leg));
+  const ok = missing.length === 0 && extra.length === 0;
+
+  if (!ok) {
+    console.error('SELF-TEST FAILED (leg set): discovered legs do not match the pinned set.');
+    for (const leg of missing) console.error(`  missing (pinned, not discovered): ${leg}`);
+    for (const leg of extra) console.error(`  extra (discovered, not pinned):    ${leg}`);
+    console.error(
+      '  if this is a deliberate addition/removal, update KNOWN_VENDORED_LEGS in the ' +
+        'same commit; if it is not, VENDOR_DIRECTORIES has dropped or mis-typed an entry.'
+    );
+  } else {
+    console.log(`self-test OK — discovers exactly the ${expected.length} pinned vendored leg(s).`);
+  }
+  return ok;
+}
+
 function main() {
   const argv = process.argv.slice(2);
   if (argv.includes('--help') || argv.includes('-h')) {
@@ -678,12 +742,13 @@ function main() {
     process.exit(2);
   }
   if (argv.includes('--self-test')) {
-    // All three halves run even when one fails, so one invocation reports
+    // All four halves run even when one fails, so one invocation reports
     // every problem.
     const discovery = selfTestDiscovery();
     const drift = selfTestDrift();
     const declaration = selfTestDeclaration();
-    process.exit(discovery && drift && declaration ? 0 : 1);
+    const legSet = selfTestLegSet();
+    process.exit(discovery && drift && declaration && legSet ? 0 : 1);
   }
 
   /** @type {VendoredContract[]} */
