@@ -18,17 +18,25 @@
  * an order with nothing hanging off it at all — because those are where a
  * nullable/optional mismatch hides.
  */
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+import { isAppRoute } from '@ts-rest/core';
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { z } from 'zod';
 
 import { MerchantSpendRollupSchema } from '../../contract/rest-analytics.js';
+import { ReceiptOutcomeSchema } from '../../contract/rest-receipts.js';
 import {
   QueueEntrySchema,
   SweepOutcomeSchema,
   TransactionLinksSchema,
 } from '../../contract/rest-reconcile.js';
+import { OkSchema } from '../../contract/rest-schemas.js';
 import { SearchHitSchema } from '../../contract/rest-search.js';
+import { purchasesContract } from '../../contract/rest.js';
 import {
   PurchaseDetailSchema,
   PurchaseSchema,
@@ -38,22 +46,27 @@ import { PurchaseItemDetailSchema, PurchaseItemSchema } from '../../contract/sch
 import { openTempDb, seedAmazonSource } from '../../db/__tests__/helpers.js';
 import { runSweep } from '../../reconcile/sweep.js';
 import { createPurchasesApiApp } from '../app.js';
-import { financeReturning } from '../finance/__tests__/fixtures.js';
+import { FINANCE_UNAVAILABLE, financeReturning } from '../finance/__tests__/fixtures.js';
 import { __resetPillarRegistryCache } from '../pillars/registry.js';
 
+import type { AppRoute, AppRouter } from '@ts-rest/core';
 import type { Express } from 'express';
 
 import type { OpenedPurchasesDb } from '../../db/index.js';
+import type { ReceiptVision } from '../../ingest/receipt/vision.js';
 
 let opened: OpenedPurchasesDb;
 let cleanup: () => void;
 let app: Express;
+let receiptDir: string;
 
 beforeEach(() => {
   ({ opened, cleanup } = openTempDb());
   seedAmazonSource(opened);
   __resetPillarRegistryCache();
   delete process.env['POPS_PILLARS'];
+  receiptDir = mkdtempSync(join(tmpdir(), 'pops-contract-conformance-'));
+  process.env['PURCHASES_RECEIPT_DIR'] = receiptDir;
   app = createPurchasesApiApp({
     vision: null,
     purchasesDb: opened,
@@ -72,8 +85,33 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  rmSync(receiptDir, { recursive: true, force: true });
+  delete process.env['PURCHASES_RECEIPT_DIR'];
   __resetPillarRegistryCache();
 });
+
+/**
+ * Every route the contract declares, in `METHOD /path` form with
+ * `:param` rewritten to `{param}` — the shape the OpenAPI projection uses.
+ *
+ * Walked off {@link purchasesContract} itself rather than restated as a
+ * literal, so a route the contract gains is covered here automatically:
+ * the alternative is exactly the bug this file exists to catch, one level
+ * up — a completeness check that agrees with itself instead of with the
+ * contract.
+ */
+function declaredContractRoutes(router: AppRoute | AppRouter): Set<string> {
+  const routes = new Set<string>();
+  const walk = (node: AppRoute | AppRouter): void => {
+    if (isAppRoute(node)) {
+      routes.add(`${node.method} ${node.path.replace(/:([^/]+)/gu, '{$1}')}`);
+      return;
+    }
+    for (const child of Object.values(node)) walk(child);
+  };
+  walk(router);
+  return routes;
+}
 
 /** Parse and surface zod's own message, which names the offending path. */
 function expectConforms<T extends z.ZodType>(schema: T, value: unknown, label: string): void {
@@ -208,6 +246,19 @@ describe('GET /purchases/:id response', () => {
   });
 });
 
+describe('DELETE /purchases/:id response', () => {
+  it('conforms, and the order is gone after', async () => {
+    const created = await request(app).post('/purchases').send(BARE_ORDER);
+    const purchaseId = String(created.body.purchase.id);
+
+    const res = await request(app).delete(`/purchases/${purchaseId}`);
+    expect(res.status).toBe(200);
+    expectConforms(OkSchema, res.body, 'DELETE /purchases/:id');
+
+    expect((await request(app).get(`/purchases/${purchaseId}`)).status).toBe(404);
+  });
+});
+
 describe('GET /purchases response', () => {
   it('conforms for every row in the index', async () => {
     await request(app).post('/purchases').send(RICH_ORDER);
@@ -275,6 +326,18 @@ describe('source responses', () => {
     for (const [i, source] of (listed.body.items as unknown[]).entries()) {
       expectConforms(PurchaseSourceSchema, source, `GET /sources item ${String(i)}`);
     }
+  });
+});
+
+describe('DELETE /sources/:id response', () => {
+  it('conforms for a source no purchase references', async () => {
+    await request(app)
+      .put('/sources/unlinked')
+      .send({ label: 'Unlinked', descriptorPattern: null });
+
+    const res = await request(app).delete('/sources/unlinked');
+    expect(res.status).toBe(200);
+    expectConforms(OkSchema, res.body, 'DELETE /sources/:id');
   });
 });
 
@@ -353,6 +416,51 @@ describe('reconcile responses', () => {
     const swept = await request(app).post('/reconcile/sweep').send({});
     expect(swept.status).toBe(200);
     expectConforms(SweepOutcomeSchema, swept.body, 'POST /reconcile/sweep (swept)');
+    expect(swept.body.kind).toBe('swept');
+
+    // `skipped` only arises once there is something to sweep — an empty
+    // window returns `swept` with zero counts before finance is ever asked
+    // (see `runSweep`), so a charge has to exist for the unreachable-finance
+    // branch to be the one that fires.
+    await request(app).post('/purchases').send(RICH_ORDER);
+    const unreachableFinanceApp = createPurchasesApiApp({
+      vision: null,
+      purchasesDb: opened,
+      version: '1.2.3',
+      selfBaseUrl: 'http://localhost:3013',
+      sweep: () => runSweep({ db: opened.db, finance: FINANCE_UNAVAILABLE, defaultWindowDays: 21 }),
+    });
+    const skipped = await request(unreachableFinanceApp).post('/reconcile/sweep').send({});
+    expect(skipped.status).toBe(200);
+    expectConforms(SweepOutcomeSchema, skipped.body, 'POST /reconcile/sweep (skipped)');
+    expect(skipped.body.kind).toBe('skipped');
+  });
+
+  it('conform for confirm and unlink', async () => {
+    await request(app).post('/purchases').send(RICH_ORDER);
+    await runSweep({
+      db: opened.db,
+      finance: financeReturning({ id: 'conformance-2', amountCents: 4499, date: '2026-02-03' }),
+      defaultWindowDays: 21,
+    });
+
+    const queued = await request(app).get('/reconcile/queue');
+    const entry = (
+      queued.body.items as { chargeId: string; proposed: { transactionUri: string }[] }[]
+    ).find((one) => one.proposed.length > 0);
+    if (entry === undefined) throw new Error('sweep produced no proposal to confirm');
+    const decision = {
+      chargeId: entry.chargeId,
+      transactionUri: entry.proposed[0]?.transactionUri,
+    };
+
+    const confirmed = await request(app).post('/reconcile/confirm').send(decision);
+    expect(confirmed.status).toBe(200);
+    expectConforms(OkSchema, confirmed.body, 'POST /reconcile/confirm');
+
+    const unlinked = await request(app).post('/reconcile/unlink').send(decision);
+    expect(unlinked.status).toBe(200);
+    expectConforms(OkSchema, unlinked.body, 'POST /reconcile/unlink');
   });
 });
 
@@ -434,6 +542,75 @@ describe('POST /search response', () => {
   });
 });
 
+/** A real JPEG magic number, so the receipt store's own edge check passes. */
+const JPEG_BASE64 = Buffer.concat([
+  Buffer.from([0xff, 0xd8, 0xff, 0xe0]),
+  Buffer.alloc(32, 9),
+]).toString('base64');
+
+const GOOD_READING = JSON.stringify({
+  merchantName: 'Bunnings Warehouse',
+  address: '123 Example St, Sydney NSW 2000',
+  timeZone: 'Australia/Sydney',
+  purchasedOn: '2026-08-01',
+  purchasedAt: '14:32',
+  currency: 'AUD',
+  total: '$27.50',
+  tax: null,
+  discounts: [],
+  lines: [
+    { description: 'Timber Pine DAR 42x19', amount: '$12.50' },
+    { description: 'Screws Bugle 8g 65mm', amount: '$15.00' },
+  ],
+  unreadable: [],
+});
+
+const DISAGREEING_READING = JSON.stringify({
+  ...(JSON.parse(GOOD_READING) as Record<string, unknown>),
+  total: '$99.99',
+});
+
+/** A canned vision model, so `POST /receipts` runs with no network. */
+const saying = (answer: string | null): ReceiptVision => ({ read: async () => answer });
+
+function appWithVision(vision: ReceiptVision): Express {
+  return createPurchasesApiApp({
+    vision,
+    purchasesDb: opened,
+    version: '1.2.3',
+    selfBaseUrl: 'http://localhost:3013',
+    merchant: { resolve: async () => null },
+  });
+}
+
+const uploadReceipt = (visionApp: Express, dataBase64 = JPEG_BASE64) =>
+  request(visionApp)
+    .post('/receipts')
+    .send({ parts: [{ mediaType: 'image/jpeg', dataBase64 }] });
+
+describe('POST /receipts response', () => {
+  it('conforms for a reading the paper agrees with', async () => {
+    const res = await uploadReceipt(appWithVision(saying(GOOD_READING)));
+    expect(res.status).toBe(200);
+    expectConforms(ReceiptOutcomeSchema, res.body, 'POST /receipts (created)');
+    expect(res.body.kind).toBe('created');
+  });
+
+  it('conforms for a reading the paper disagrees with', async () => {
+    const res = await uploadReceipt(appWithVision(saying(DISAGREEING_READING)));
+    expect(res.status).toBe(200);
+    expectConforms(ReceiptOutcomeSchema, res.body, 'POST /receipts (needs-review)');
+    expect(res.body.kind).toBe('needs-review');
+  });
+
+  it('conforms when the model returns nothing usable', async () => {
+    const res = await uploadReceipt(appWithVision(saying(null)));
+    expect(res.status).toBe(200);
+    expectConforms(ReceiptOutcomeSchema, res.body, 'POST /receipts (unreadable)');
+    expect(res.body.kind).toBe('unreadable');
+  });
+});
+
 describe('the accounting identity holds on the wire', () => {
   it('total reconstructs from the three buckets, with refunds outside it', async () => {
     const res = await request(app).post('/purchases').send(RICH_ORDER);
@@ -458,19 +635,7 @@ describe('the OpenAPI projection describes what is actually served', () => {
         Object.keys(methods).map((m) => `${m.toUpperCase()} ${path}`)
       )
     );
-    for (const route of [
-      'GET /purchases',
-      'POST /purchases',
-      'GET /purchases/{id}',
-      'DELETE /purchases/{id}',
-      'GET /items',
-      'GET /sources',
-      'GET /sources/{id}',
-      'PUT /sources/{id}',
-      'DELETE /sources/{id}',
-      'GET /analytics/merchant-spend',
-      'POST /search',
-    ]) {
+    for (const route of declaredContractRoutes(purchasesContract)) {
       expect(declared, route).toContain(route);
     }
   });
