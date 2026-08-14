@@ -14,24 +14,17 @@ name: An expired access token is renewed without the screen noticing
 # The control plane, not the pillar. It forwards everything to the same real
 # BFM — `scripts/ios-e2e/control-plane.mjs` says why the app has to reach the
 # pillar through something the harness can reach into.
-- tapOn:
-    id: 'pairing-server-field'
-- eraseText
-- inputText: ${CONTROL_BASE_URL}
-
-- tapOn:
-    id: 'pairing-code-field'
-- inputText: ${PAIRING_CODE}
-
-- tapOn:
-    id: 'pairing-submit'
+- runFlow:
+    file: subflows/enter-the-pairing-details.yaml
+    env:
+      SERVER_URL: ${CONTROL_BASE_URL}
 
 - assertVisible:
     id: 'transactions-list'
 
 # Everything is healthy at this point, so the banner must not be up. It is also
 # drawn ABOVE the list, and a late arrival would move the row out from under
-# the tap below (POPS-1835).
+# the tap below.
 - assertNotVisible: 'Some of Pops could not be reached, so this may be out of date.'
 
 # From here the next authenticated request carries a token the BFM will refuse

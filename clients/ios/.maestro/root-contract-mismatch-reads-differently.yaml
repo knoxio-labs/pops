@@ -18,17 +18,10 @@ name: A pillar answering something unreadable reads differently from unavailable
 - assertTrue: ${output.mismatch.status == 200}
 - assertTrue: ${output.mismatch.state.financeContractMismatch == true}
 
-- tapOn:
-    id: 'pairing-server-field'
-- eraseText
-- inputText: ${CONTROL_BASE_URL}
-
-- tapOn:
-    id: 'pairing-code-field'
-- inputText: ${PAIRING_CODE}
-
-- tapOn:
-    id: 'pairing-submit'
+- runFlow:
+    file: subflows/enter-the-pairing-details.yaml
+    env:
+      SERVER_URL: ${CONTROL_BASE_URL}
 
 # `RootCopy.nothingAvailable(surface.unavailable)` for a single
 # `contract-mismatch` feature, in full. This is the sentence that must stay
