@@ -20,8 +20,8 @@
  * would have quietly imposed one of those on the other.
  */
 
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { join, relative, sep } from 'node:path';
 
 /**
  * @typedef {object} FixtureCopy
@@ -51,6 +51,125 @@ export function resolveCanonical(copies, canonicalRoot) {
     );
   }
   return found[0];
+}
+
+/** Directory names a discovery walk never descends into. */
+const DISCOVERY_SKIP_DIRS = new Set([
+  'node_modules',
+  '.git',
+  'dist',
+  'build',
+  'coverage',
+  '.turbo',
+]);
+
+/**
+ * Every file under `root/<scanRoot>` (recursively, skipping build/dependency
+ * noise and dot-directories) named exactly `basename` — repo-relative,
+ * POSIX-separated, sorted.
+ *
+ * This is the leg POPS-2206 found missing entirely: `checkCopies` and its
+ * pin both only ever read paths a `FixtureCopy[]` DECLARED, so a copy placed
+ * somewhere nobody declared was invisible to both — the guard reported the
+ * copies it was told to look at, and the pin certified the list of paths it
+ * was told to look at against a second list of paths it was told to look
+ * at. Matching by basename rather than a fixed shape is deliberate:
+ * `pillars/<id>/contracts/` is a real, growing convention (see
+ * `pillars/bfm/contracts/`), and a shape-specific walk would need a new
+ * entry every time another pillar adopted it — exactly the kind of
+ * assumption that produced this gap.
+ *
+ * @param {string} repoRoot Absolute path to the repo root.
+ * @param {readonly string[]} scanRoots Repo-relative directories to walk (e.g. `['pillars', 'libs', 'clients']`).
+ * @param {string} basename Exact filename to match.
+ * @returns {string[]}
+ */
+export function discoverFilesNamed(repoRoot, scanRoots, basename) {
+  /** @type {string[]} */
+  const found = [];
+
+  /** @param {string} dir */
+  const walk = (dir) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (entry.isDirectory()) {
+        if (DISCOVERY_SKIP_DIRS.has(entry.name) || entry.name.startsWith('.')) continue;
+        walk(join(dir, entry.name));
+        continue;
+      }
+      if (entry.isFile() && entry.name === basename) {
+        found.push(relative(repoRoot, join(dir, entry.name)).split(sep).join('/'));
+      }
+    }
+  };
+
+  for (const scanRoot of scanRoots) {
+    const abs = join(repoRoot, scanRoot);
+    if (existsSync(abs)) walk(abs);
+  }
+
+  return found.toSorted();
+}
+
+/**
+ * Every discovered path that is not one of the declared copies.
+ *
+ * The half of the fix that actually closes POPS-2206: a same-named file can
+ * sit on disk, byte-identical or corrupted, and pass every check that only
+ * ever reads `copies` — because `copies` is the thing being checked, not
+ * the ground truth it is supposed to describe. This compares against the
+ * filesystem instead.
+ *
+ * @param {readonly string[]} discovered
+ * @param {readonly FixtureCopy[]} copies
+ * @returns {string[]}
+ */
+export function findUndeclaredCopies(discovered, copies) {
+  const declared = new Set(copies.map((copy) => copy.path));
+  return discovered.filter((path) => !declared.has(path));
+}
+
+/**
+ * Prove {@link findUndeclaredCopies} actually reports, and does not flag the
+ * copies it is handed as ground truth (including the canonical one — it is
+ * one of `copies` like any other, never treated specially here).
+ *
+ * Fabricates its discovered-path list rather than writing to the real tree:
+ * a file planted for real under `pillars/` would be visible to every other
+ * tree-scanning guard's own self-test running concurrently in the same
+ * `vitest run scripts/` invocation, producing a spurious failure unrelated
+ * to this one (see `scripts/ci/__tests__/check-icon-dynamic-import.test.ts`
+ * for the same interaction hit while writing that guard's suite).
+ *
+ * @param {readonly FixtureCopy[]} copies
+ * @returns {boolean}
+ */
+export function selfTestUndeclaredDiscovery(copies) {
+  const declaredPaths = copies.map((copy) => copy.path);
+  let ok = true;
+
+  if (findUndeclaredCopies(declaredPaths, copies).length > 0) {
+    console.error('SELF-TEST FAILED (discovery): a declared copy was reported as undeclared');
+    ok = false;
+  }
+
+  const basename = declaredPaths[0]?.split('/').pop();
+  if (basename === undefined) {
+    console.error('SELF-TEST FAILED (discovery): no declared copy to derive a basename from');
+    return false;
+  }
+  const planted = `pillars/purchases/contracts/${basename}`;
+  const undeclared = findUndeclaredCopies([...declaredPaths, planted], copies);
+  if (undeclared.length !== 1 || undeclared[0] !== planted) {
+    console.error(`SELF-TEST FAILED (discovery): not caught — an undeclared copy at ${planted}`);
+    ok = false;
+  }
+
+  if (ok) {
+    console.log(
+      `self-test OK — reports a same-named file discovered outside the ${String(declaredPaths.length)} declared copies.`
+    );
+  }
+  return ok;
 }
 
 /**
