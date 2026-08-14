@@ -1,5 +1,5 @@
 import { registerResultComponent } from '@pops/navigation';
-import { Badge, highlightMatch, SearchResultItem } from '@pops/ui';
+import { Badge, highlightMatch, SearchResultItem, statusBadgeToneClass } from '@pops/ui';
 
 import type { ResultComponentProps } from '@pops/navigation';
 
@@ -10,11 +10,11 @@ interface EntityHitData extends Record<string, unknown> {
 }
 
 const entityTypeStyles: Record<string, string> = {
-  company: 'bg-info/10 text-info border-info/20 dark:text-info/80',
-  person: 'bg-violet-500/10 text-violet-700 border-violet-500/20 dark:text-violet-400',
-  place: 'bg-amber-500/10 text-amber-700 border-amber-500/20 dark:text-amber-400',
-  brand: 'bg-rose-500/10 text-rose-700 border-rose-500/20 dark:text-rose-400',
-  organisation: 'bg-emerald-500/10 text-emerald-700 border-emerald-500/20 dark:text-emerald-400',
+  company: statusBadgeToneClass.info,
+  person: statusBadgeToneClass['stat-violet'],
+  place: statusBadgeToneClass.warning,
+  brand: statusBadgeToneClass['stat-rose'],
+  organisation: statusBadgeToneClass.success,
 };
 
 export function EntitiesResultComponent({ data, query }: ResultComponentProps<EntityHitData>) {

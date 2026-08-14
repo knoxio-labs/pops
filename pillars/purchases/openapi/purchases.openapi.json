@@ -3803,6 +3803,7 @@
                                   "no-lines",
                                   "negative-line",
                                   "sum-mismatch",
+                                  "ambiguous-tax",
                                   "damaged"
                                 ],
                                 "type": "string"
@@ -3955,12 +3956,16 @@
                 "schema": {
                   "additionalProperties": false,
                   "properties": {
+                    "matchRuleId": {
+                      "nullable": true,
+                      "type": "string"
+                    },
                     "ok": {
                       "enum": [true],
                       "type": "boolean"
                     }
                   },
-                  "required": ["ok"],
+                  "required": ["ok", "matchRuleId"],
                   "type": "object"
                 }
               }
@@ -3988,7 +3993,333 @@
             "description": "404"
           }
         },
-        "summary": "Pin a link so re-derivation never revises it",
+        "summary": "Pin a link and learn the merchant descriptor behind it",
+        "tags": ["reconcile"]
+      }
+    },
+    "/reconcile/links": {
+      "get": {
+        "operationId": "reconcile.links",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "transactionUri",
+            "required": true,
+            "schema": {
+              "pattern": "^pops:\\/\\/finance\\/transaction\\/[^/\\s]+$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "purchases": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "charges": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "charge": {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "amountCents": {
+                                      "maximum": 9007199254740991,
+                                      "minimum": -9007199254740991,
+                                      "type": "integer"
+                                    },
+                                    "chargedAt": {
+                                      "nullable": true,
+                                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                      "type": "string"
+                                    },
+                                    "createdAt": {
+                                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                      "type": "string"
+                                    },
+                                    "currency": {
+                                      "pattern": "^[A-Z]{3}$",
+                                      "type": "string"
+                                    },
+                                    "id": {
+                                      "type": "string"
+                                    },
+                                    "orderAmountCents": {
+                                      "maximum": 9007199254740991,
+                                      "minimum": -9007199254740991,
+                                      "type": "integer"
+                                    },
+                                    "origin": {
+                                      "enum": ["merchant", "derived"],
+                                      "type": "string"
+                                    },
+                                    "paymentHint": {
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
+                                    "position": {
+                                      "maximum": 9007199254740991,
+                                      "minimum": 0,
+                                      "type": "integer"
+                                    },
+                                    "purchaseId": {
+                                      "type": "string"
+                                    },
+                                    "role": {
+                                      "enum": ["capture", "authorization", "refund", "adjustment"],
+                                      "type": "string"
+                                    },
+                                    "shipmentId": {
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
+                                    "sourceChargeRef": {
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
+                                    "updatedAt": {
+                                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "purchaseId",
+                                    "shipmentId",
+                                    "sourceChargeRef",
+                                    "position",
+                                    "amountCents",
+                                    "currency",
+                                    "orderAmountCents",
+                                    "chargedAt",
+                                    "role",
+                                    "paymentHint",
+                                    "origin",
+                                    "createdAt",
+                                    "updatedAt"
+                                  ],
+                                  "type": "object"
+                                },
+                                "link": {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "amountCents": {
+                                      "maximum": 9007199254740991,
+                                      "minimum": -9007199254740991,
+                                      "type": "integer"
+                                    },
+                                    "chargeId": {
+                                      "type": "string"
+                                    },
+                                    "confidence": {
+                                      "maximum": 1,
+                                      "minimum": 0,
+                                      "type": "number"
+                                    },
+                                    "confirmedAt": {
+                                      "nullable": true,
+                                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                      "type": "string"
+                                    },
+                                    "createdAt": {
+                                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                      "type": "string"
+                                    },
+                                    "id": {
+                                      "type": "string"
+                                    },
+                                    "linkType": {
+                                      "enum": [
+                                        "exact",
+                                        "split",
+                                        "combined",
+                                        "partial",
+                                        "rule",
+                                        "manual"
+                                      ],
+                                      "type": "string"
+                                    },
+                                    "matchRuleId": {
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
+                                    "transactionUri": {
+                                      "pattern": "^pops:\\/\\/[a-z0-9-]+\\/[a-z0-9-]+\\/[^/\\s]+$",
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "chargeId",
+                                    "transactionUri",
+                                    "amountCents",
+                                    "linkType",
+                                    "confidence",
+                                    "matchRuleId",
+                                    "createdAt",
+                                    "confirmedAt"
+                                  ],
+                                  "type": "object"
+                                }
+                              },
+                              "required": ["charge", "link"],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "linkedCents": {
+                            "maximum": 9007199254740991,
+                            "minimum": -9007199254740991,
+                            "type": "integer"
+                          },
+                          "purchase": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "checksum": {
+                                "type": "string"
+                              },
+                              "createdAt": {
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                "type": "string"
+                              },
+                              "currency": {
+                                "pattern": "^[A-Z]{3}$",
+                                "type": "string"
+                              },
+                              "discountCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "id": {
+                                "type": "string"
+                              },
+                              "ingestMethod": {
+                                "enum": ["email", "export", "upload", "manual"],
+                                "type": "string"
+                              },
+                              "merchantEntityId": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "merchantEntityName": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "orderedAt": {
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                "type": "string"
+                              },
+                              "paymentHint": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "rawRef": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "settlementMode": {
+                                "enum": ["card", "cash", "unknown"],
+                                "type": "string"
+                              },
+                              "shippingCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "source": {
+                                "type": "string"
+                              },
+                              "sourceOrderId": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "status": {
+                                "enum": [
+                                  "awaiting_settlement",
+                                  "linked",
+                                  "partial",
+                                  "settled_cash",
+                                  "ignored"
+                                ],
+                                "type": "string"
+                              },
+                              "subtotalCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "surchargeCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "taxCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "totalCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "updatedAt": {
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "source",
+                              "sourceOrderId",
+                              "ingestMethod",
+                              "orderedAt",
+                              "currency",
+                              "subtotalCents",
+                              "surchargeCents",
+                              "shippingCents",
+                              "taxCents",
+                              "discountCents",
+                              "totalCents",
+                              "merchantEntityId",
+                              "merchantEntityName",
+                              "settlementMode",
+                              "paymentHint",
+                              "rawRef",
+                              "checksum",
+                              "status",
+                              "createdAt",
+                              "updatedAt"
+                            ],
+                            "type": "object"
+                          }
+                        },
+                        "required": ["purchase", "charges", "linkedCents"],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "transactionUri": {
+                      "pattern": "^pops:\\/\\/finance\\/transaction\\/[^/\\s]+$",
+                      "type": "string"
+                    }
+                  },
+                  "required": ["transactionUri", "purchases"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          }
+        },
+        "summary": "Orders linked to one finance transaction, confirmed or derived",
         "tags": ["reconcile"]
       }
     },
@@ -4098,6 +4429,10 @@
                                   ],
                                   "type": "string"
                                 },
+                                "transactionDescription": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
                                 "transactionUri": {
                                   "pattern": "^pops:\\/\\/[a-z0-9-]+\\/[a-z0-9-]+\\/[^/\\s]+$",
                                   "type": "string"
@@ -4105,6 +4440,7 @@
                               },
                               "required": [
                                 "transactionUri",
+                                "transactionDescription",
                                 "amountCents",
                                 "linkType",
                                 "confidence"
@@ -4150,6 +4486,76 @@
           }
         },
         "summary": "Charges awaiting a decision, newest order first",
+        "tags": ["reconcile"]
+      }
+    },
+    "/reconcile/reject": {
+      "post": {
+        "operationId": "reconcile.reject",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "chargeId": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "transactionUri": {
+                    "pattern": "^pops:\\/\\/[a-z0-9-]+\\/[a-z0-9-]+\\/[^/\\s]+$",
+                    "type": "string"
+                  }
+                },
+                "required": ["chargeId", "transactionUri"],
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "ok": {
+                      "enum": [true],
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["ok"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "404"
+          }
+        },
+        "summary": "Rule a pairing out for good, so no later sweep proposes it again",
         "tags": ["reconcile"]
       }
     },
@@ -4333,7 +4739,7 @@
             "description": "404"
           }
         },
-        "summary": "Remove a link. The next sweep may re-derive it — see POPS-1309",
+        "summary": "Remove a link without recording a decision. A later sweep may re-derive it",
         "tags": ["reconcile"]
       }
     },
@@ -4392,12 +4798,15 @@
                           "additionalProperties": false,
                           "properties": {
                             "field": {
+                              "enum": ["source", "status", "orderedAt"],
                               "type": "string"
                             },
                             "operator": {
+                              "enum": ["eq", "gte", "lte"],
                               "type": "string"
                             },
                             "value": {
+                              "minLength": 1,
                               "type": "string"
                             }
                           },
@@ -4462,6 +4871,26 @@
               }
             },
             "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
           }
         },
         "summary": "Search the purchases pillar's orders and line items for the unified search engine",

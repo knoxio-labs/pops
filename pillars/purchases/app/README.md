@@ -37,23 +37,21 @@ Confirming one and leaving the rest would pin half a partition.
 This is narrower than POPS-241 describes, and the page says so in its own copy
 rather than implying otherwise.
 
-| the view calls it | it calls                  | which does                                                 |
-| ----------------- | ------------------------- | ---------------------------------------------------------- |
-| Accept            | `POST /reconcile/confirm` | sets `confirmedAt`, pinning the link against re-derivation |
-| Reject            | `POST /reconcile/unlink`  | deletes the link, and remembers nothing                    |
+| the view calls it | it calls                  | which does                                                         |
+| ----------------- | ------------------------- | ------------------------------------------------------------------ |
+| Accept            | `POST /reconcile/confirm` | pins the link, and writes the merchant rule the pin was made under |
+| Reject            | `POST /reconcile/unlink`  | deletes the link, and remembers nothing                            |
 
-**No `purchase_match_rule` is written.** Nothing in the pillar writes that
-table — the ticket's "accepting writes a rule, rejecting feeds it negatively"
-is unbuilt on the server, not skipped here, and inventing a client-side stand-in
-would put a second rule model in front of the one POPS-1309 has to read. That
-half is POPS-1898, which blocks POPS-1309.
+**The view has not caught up with the server.** `POST /reconcile/reject` now
+exists and is the durable decision — it records the pairing so no later sweep
+proposes it again — while `unlink` stays deliberately temporary. This page still
+calls `unlink`, so its Reject button is still the un-pin rather than the
+rejection, and `reconcile.action.caveat` still describes that honestly. Moving
+it across, and surfacing the rule a confirm reports back, is POPS-2008.
 
-**There is no reject endpoint**, by an explicit decision in
-`src/contract/rest-reconcile.ts`: a reject the next sweep silently re-derives is
-worse than no reject. `unlink` is honest about being temporary, so a rejected
-charge comes back as unexplained rather than leaving the queue — which is why
-the cursor is keyed by charge id and parks on the successor before the refetch
-lands, instead of counting indexes.
+That is also why the cursor is keyed by charge id and parks on the successor
+before the refetch lands, instead of counting indexes: an unlinked charge comes
+back as unexplained rather than leaving the queue.
 
 An unexplained charge (no proposals) has nothing to confirm or delete, so both
 keys refuse rather than firing a request that would 404. Nothing can link it by
@@ -137,9 +135,54 @@ one. The page reads the code rather than the HTTP status and renders any of
 them as an ordinary outcome. The 409 body carries no purchase, only its id
 inside the message, which is shown as sent.
 
-**There is no purchase to open.** Nothing in this app renders a single
-purchase, so the created panel names that absence instead of offering a link
-to a route that does not exist (POPS-1948).
+**The created panel opens the order it recorded.** The reader's next question
+after "it was read" is always "read as what", and that is the order page.
+
+## One order
+
+`/purchases/:purchaseId` renders `GET /purchases/{id}` whole: the order's
+identity, its accounting split, its lines with their tags, units and notes,
+its charges with their allocations and links, its deliveries, its documents
+and its tags. It is the destination the rest of this app was missing — the
+queue, the drop zone and a global-search hit each produce a purchase id, and
+each was a dead end while nothing rendered one.
+
+**It carries no rail entry.** Every other route in this app is somewhere a
+reader can go from nothing; an order is only reachable from something that
+already holds its id, so a nav item pointing here could not be built.
+
+**A line-item search hit lands here at `?item=<id>`.** A line has no page of
+its own — the pillar reads one only through its order — so the order is the
+page a line has, and the query names which line was asked for. The line is
+marked rather than the page being filtered to it: the reader asked about a
+line and is being shown the order, and hiding the rest would answer a question
+they did not ask. A line the order no longer carries marks nothing and costs
+nothing.
+
+**A missing order is not a failure.** `404` renders as "no such order", with
+no retry button, because the request worked and the answer was that the order
+is gone. Only the other failures get a retry.
+
+**Nothing on this page follows a cross-pillar URI.** A linked transaction, an
+inventory unit and a document are rendered as the `pops://` references they
+are. This app resolves nothing across that seam, and a link that 404s reads as
+a broken page rather than as a reference to something living elsewhere.
+
+**A too-large upload answers the same shape as any other refusal.** The
+pillar's `express.json()` limit rejects an oversized body before the contract
+ever sees it; `jsonBodyErrorHandler`
+(`pillars/purchases/src/api/middleware/json-body-error.ts`) catches that
+rejection and answers `413` with the contract's own `{ message, code }` body
+instead of Express's default HTML error page, which the generated client
+cannot parse into a readable `error`.
+
+**One live region, on the wrapper.** `ReceiptDropZonePage` wraps the whole
+outcome panel in a single `aria-live="polite"` region rather than also
+marking individual outcomes `role="status"`/`role="alert"` — a live region
+nested inside another announces unpredictably in several screen readers. The
+wrapper is the one kept because it is the only mechanism that reaches every
+outcome (`created`, `duplicate`, `needs-review`, `unreadable` never had a
+role of their own; only `uploading` and `refused` did).
 
 ## Layout
 
@@ -149,6 +192,7 @@ src/
   manifest.ts                      ModuleManifest (id='purchases')
   routes.tsx                       route table + navConfig
   money.ts                         cents → currency string, degrading on an unknown code
+  facts.tsx                        one labelled value, saying what its absence means
   purchases-api/                   generated Hey API client (do not hand-edit)
   purchases-api-helpers.ts         unwrap() for the generated {data,error} results
   purchases-api-runtime-config.ts  client baseUrl ('/purchases-api')
@@ -176,6 +220,15 @@ src/
       PeriodPicker.tsx             all time, or a year
       AttributionLegend.tsx        what each grouping badge means and costs
       AbsentDrillDown.tsx          the layers with no route behind them
+    PurchaseDetailPage.tsx         /purchases/:purchaseId — one order, whole
+    purchase-detail/
+      types.ts                     view types aliased off the generated client
+      usePurchaseDetail.ts         GET /purchases/{id}, and the 404 that is not a failure
+      OrderIdentity.tsx            who, when, how it arrived, how it settles
+      AccountingSplit.tsx          total · matched · awaiting · unexplained · refunded · net
+      LineList.tsx                 the lines, their tags, units and notes
+      ChargeList.tsx               charges, their allocations and their transaction links
+      DeliveryList.tsx             deliveries, and the documents behind the order
     ReceiptDropZonePage.tsx        /purchases/receipts — hand a receipt over
     receipts/
       types.ts                     view types aliased off the generated client

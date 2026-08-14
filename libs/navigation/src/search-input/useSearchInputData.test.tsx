@@ -150,7 +150,7 @@ describe('useSearchInputData', () => {
     expect(section?.totalCount).toBe(1);
   });
 
-  it('exposes orderedUris flattened across sorted sections', async () => {
+  it('exposes orderedHits flattened across sorted sections', async () => {
     mockFetchOnceWith([
       makeSection({
         domain: 'movies',
@@ -162,8 +162,35 @@ describe('useSearchInputData', () => {
       wrapper: makeWrapper('/'),
     });
 
-    await waitFor(() => expect(result.current.orderedUris).toHaveLength(2));
-    expect(result.current.orderedUris).toEqual(['m/1', 'm/2']);
+    await waitFor(() => expect(result.current.orderedHits).toHaveLength(2));
+    expect(result.current.orderedHits.map((hit) => hit.uri)).toEqual(['m/1', 'm/2']);
+  });
+
+  // The keyboard selects by index into this list and resolves the hit it finds
+  // there. Carrying only the URI made types that route through their payload
+  // reachable by mouse and not by `enter`.
+  it('keeps each hit whole, so a keyboard selection resolves like a click', async () => {
+    mockFetchOnceWith([
+      makeSection({
+        domain: 'purchases',
+        moduleId: 'purchases',
+        hits: [
+          makeHit({
+            uri: 'pops:purchases/purchase-item/line-1',
+            data: { purchaseId: 'order-7', name: 'Dosing funnel' },
+          }),
+        ],
+      }),
+    ]);
+    const { result } = renderHook(() => useSearchInputData({ query: 'funnel', isOpen: true }), {
+      wrapper: makeWrapper('/'),
+    });
+
+    await waitFor(() => expect(result.current.orderedHits).toHaveLength(1));
+    expect(result.current.orderedHits[0]?.data).toEqual({
+      purchaseId: 'order-7',
+      name: 'Dosing funnel',
+    });
   });
 
   it('does not fetch when the panel is closed', async () => {

@@ -123,9 +123,11 @@ function TreeRowItem(props: RowItemProps) {
         // whether or not the row also happens to be selected, otherwise the
         // 2-second highlight is invisible because `?focus=<slug>` selects the
         // row in the same render.
-        props.isHighlighted ? 'ring-2 ring-amber-500 bg-amber-200/70' : null
+        props.isHighlighted ? 'ring-2 ring-warning bg-warning/30' : null
       )}
-      style={{ paddingLeft: `${0.5 + props.depth * 1}rem` }}
+      style={{
+        paddingLeft: `calc(${props.depth} * var(--tree-picker-step) + var(--tree-indent-base))`,
+      }}
     >
       <ExpandToggle
         hasChildren={props.hasChildren}

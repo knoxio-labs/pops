@@ -69,12 +69,15 @@ export const GateFailureSchema = z.object({
     'no-lines',
     'negative-line',
     'sum-mismatch',
+    'ambiguous-tax',
     'damaged',
   ]),
   detail: z.string(),
   /**
    * How far the receipt's own arithmetic falls from the total it states,
-   * present only on a sum mismatch:
+   * present only on a sum mismatch — never on `ambiguous-tax`, where the
+   * arithmetic agrees under both readings and there is no discrepancy to
+   * state:
    * `Σ lines − discounts + surcharges + shipping (+ tax, when the prices
    * exclude it) − total`, reported under whichever tax convention came
    * closer. Negative means the components fall short of the stated total.

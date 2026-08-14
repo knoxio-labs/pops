@@ -28,8 +28,13 @@ import type {
   ReconcileConfirmData,
   ReconcileConfirmErrors,
   ReconcileConfirmResponses,
+  ReconcileLinksData,
+  ReconcileLinksResponses,
   ReconcileQueueData,
   ReconcileQueueResponses,
+  ReconcileRejectData,
+  ReconcileRejectErrors,
+  ReconcileRejectResponses,
   ReconcileSweepData,
   ReconcileSweepErrors,
   ReconcileSweepResponses,
@@ -37,6 +42,7 @@ import type {
   ReconcileUnlinkErrors,
   ReconcileUnlinkResponses,
   SearchSearchData,
+  SearchSearchErrors,
   SearchSearchResponses,
   SourceDeleteData,
   SourceDeleteErrors,
@@ -178,7 +184,7 @@ export const receiptUpload = <ThrowOnError extends boolean = false>(
   });
 
 /**
- * Pin a link so re-derivation never revises it
+ * Pin a link and learn the merchant descriptor behind it
  */
 export const reconcileConfirm = <ThrowOnError extends boolean = false>(
   options?: Options<ReconcileConfirmData, ThrowOnError>
@@ -195,6 +201,17 @@ export const reconcileConfirm = <ThrowOnError extends boolean = false>(
   );
 
 /**
+ * Orders linked to one finance transaction, confirmed or derived
+ */
+export const reconcileLinks = <ThrowOnError extends boolean = false>(
+  options: Options<ReconcileLinksData, ThrowOnError>
+): RequestResult<ReconcileLinksResponses, unknown, ThrowOnError> =>
+  (options.client ?? client).get<ReconcileLinksResponses, unknown, ThrowOnError>({
+    url: '/reconcile/links',
+    ...options,
+  });
+
+/**
  * Charges awaiting a decision, newest order first
  */
 export const reconcileQueue = <ThrowOnError extends boolean = false>(
@@ -203,6 +220,21 @@ export const reconcileQueue = <ThrowOnError extends boolean = false>(
   (options?.client ?? client).get<ReconcileQueueResponses, unknown, ThrowOnError>({
     url: '/reconcile/queue',
     ...options,
+  });
+
+/**
+ * Rule a pairing out for good, so no later sweep proposes it again
+ */
+export const reconcileReject = <ThrowOnError extends boolean = false>(
+  options?: Options<ReconcileRejectData, ThrowOnError>
+): RequestResult<ReconcileRejectResponses, ReconcileRejectErrors, ThrowOnError> =>
+  (options?.client ?? client).post<ReconcileRejectResponses, ReconcileRejectErrors, ThrowOnError>({
+    url: '/reconcile/reject',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
   });
 
 /**
@@ -221,7 +253,7 @@ export const reconcileSweep = <ThrowOnError extends boolean = false>(
   });
 
 /**
- * Remove a link. The next sweep may re-derive it — see POPS-1309
+ * Remove a link without recording a decision. A later sweep may re-derive it
  */
 export const reconcileUnlink = <ThrowOnError extends boolean = false>(
   options?: Options<ReconcileUnlinkData, ThrowOnError>
@@ -240,8 +272,8 @@ export const reconcileUnlink = <ThrowOnError extends boolean = false>(
  */
 export const searchSearch = <ThrowOnError extends boolean = false>(
   options?: Options<SearchSearchData, ThrowOnError>
-): RequestResult<SearchSearchResponses, unknown, ThrowOnError> =>
-  (options?.client ?? client).post<SearchSearchResponses, unknown, ThrowOnError>({
+): RequestResult<SearchSearchResponses, SearchSearchErrors, ThrowOnError> =>
+  (options?.client ?? client).post<SearchSearchResponses, SearchSearchErrors, ThrowOnError>({
     url: '/search',
     ...options,
     headers: {

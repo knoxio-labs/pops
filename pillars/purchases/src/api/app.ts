@@ -23,7 +23,9 @@ import { createRegistryServiceAccountVerifier } from '@pops/pillar-sdk/server';
 
 import { purchasesContract } from '../contract/rest.js';
 import { makeRequestHandler, type PurchasesApiDeps } from './handlers.js';
+import { jsonBodyErrorHandler } from './middleware/json-body-error.js';
 import { createServiceAccountScopeMiddleware } from './middleware/service-account-scope.js';
+import { createRequestValidationErrorHandler } from './rest/error-mapping.js';
 import { makePurchasesRestHandlers } from './rest/handlers.js';
 
 /**
@@ -55,12 +57,13 @@ const openapiDocument: unknown = JSON.parse(
  * 413 that reads like a server fault. Matches the limit finance, food,
  * inventory, media and cerebrum already set.
  */
-const JSON_BODY_LIMIT = '20mb';
+export const JSON_BODY_LIMIT_BYTES = 20 * 1024 * 1024;
 
 export function createPurchasesApiApp(deps: PurchasesApiDeps): Express {
   const app = express();
   app.disable('x-powered-by');
-  app.use(express.json({ limit: JSON_BODY_LIMIT }));
+  app.use(express.json({ limit: JSON_BODY_LIMIT_BYTES }));
+  app.use(jsonBodyErrorHandler);
 
   const handlers = makeRequestHandler(deps);
 
@@ -85,7 +88,13 @@ export function createPurchasesApiApp(deps: PurchasesApiDeps): Express {
     )
   );
 
-  createExpressEndpoints(purchasesContract, makePurchasesRestHandlers(deps), app);
+  createExpressEndpoints(purchasesContract, makePurchasesRestHandlers(deps), app, {
+    // ts-rest answers a schema mismatch itself, ahead of any handler, with its
+    // own error body. Every route declaring a 400 declares `ErrorBody`, so
+    // without this the document promises one shape and the server sends
+    // another — see `rest/error-mapping.ts`.
+    requestValidationErrorHandler: createRequestValidationErrorHandler(),
+  });
 
   return app;
 }

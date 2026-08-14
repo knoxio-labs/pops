@@ -10,8 +10,14 @@
  *
  * Reading all of them at row level does not throw. It multiplies the
  * subtotal of every multi-item shipment by its line count.
+ *
+ * `Shipping Charge` is stated once per shipment and never allocated by the
+ * export itself, unlike `Total Amount`. So it is split here, pro-rata by
+ * each line's own `lineTotalCents`, via {@link allocateProRata} — the same
+ * basis the export already uses for `Total Amount` and `Total Discounts`.
  */
 
+import { allocateProRata } from '../allocation.js';
 import { SHIPMENT_STATUS_BY_SOURCE_VALUE, type AmazonAnomaly, type Row } from './columns.js';
 import {
   readCarrierAndTracking,
@@ -84,6 +90,19 @@ export function buildShipment(
     anomalies,
   });
 
+  // Matches the shipment row below: a cancelled shipment's "Not Available"
+  // already read as 0 above, and postage can never be a negative charge to
+  // an item.
+  const shipmentShippingCents = Math.max(shippingCents, 0);
+  const shippingShares = allocateProRata(
+    shipmentShippingCents,
+    items.map((item) => item.lineTotalCents)
+  );
+  const itemsWithShipping = items.map((item, index) => ({
+    ...item,
+    allocatedShippingCents: shippingShares[index] ?? 0,
+  }));
+
   return {
     shipment: {
       ref,
@@ -92,9 +111,9 @@ export function buildShipment(
       trackingNumber,
       shippedAt: shipDate.value,
       status: readShipmentStatus(first['Shipment Status']),
-      shippingCents: Math.max(shippingCents, 0),
+      shippingCents: shipmentShippingCents,
     },
-    items,
+    items: itemsWithShipping,
     subtotalCents: statedSubtotal ?? 0,
     taxCents,
     shippingCents,

@@ -31,6 +31,18 @@
  * the job that runs it installs the workspace first. See the tier amendment in
  * [ADR-045](../../docs/architecture/adr-045-guards-must-prove-they-report.md).
  *
+ * Coherence is not coverage. Everything above only compares pins that were
+ * already declared somewhere — a workflow job that runs `node` without
+ * provisioning it at all (no `jdx/mise-action`, no `actions/setup-node`)
+ * contributes no pin, so it never enters the disagreement check and the two
+ * "no workflow/Dockerfile declares a pin" floors are satisfied by any other
+ * workflow in the fleet. `release.yml` shipped exactly that shape — a bare
+ * `node scripts/pack-moltbot-bundle.mjs` with neither step in its job — and
+ * this guard reported clean the whole time. `collectUnprovisionedNodeSteps`
+ * closes that: it walks each job's steps in declaration order and flags the
+ * first `run:` step that invokes `node` before that job has seen a
+ * provisioning step of its own.
+ *
  * Usage:
  *   node scripts/ci/check-node-pin.mjs
  *   node scripts/ci/check-node-pin.mjs --self-test
@@ -52,7 +64,7 @@ import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { parseTomlSection } from './check-mise-tool-overrides.mjs';
-import { formatPath, parseYaml, scalarText, walkMappings } from './config-parse.mjs';
+import { formatPath, isMapping, parseYaml, scalarText, walkMappings } from './config-parse.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..');
@@ -161,6 +173,87 @@ export function collectWorkflowPins(root) {
 }
 
 /**
+ * `uses:` sources that provision a pinned Node onto PATH before any later
+ * step in the same job. Matched by prefix so a version tag bump (`@v8`,
+ * `@v5`) does not need a matching update here.
+ */
+const NODE_PROVISIONING_STEP_PREFIXES = ['jdx/mise-action@', 'actions/setup-node@'];
+
+/** A `run:` script invoking `node` as its own command, not as a substring of
+ * something else (`node_modules`, `nodejs`, a package named `*-node-*`). */
+const NODE_INVOCATION = /(?:^|[\n;]|&&|\|\|)\s*node\b/mu;
+
+/**
+ * Find every job step that runs `node` before that job has provisioned a
+ * pinned Node runtime of its own.
+ *
+ * Coherence-checking declared pins (above) cannot see this failure mode: a
+ * job with no provisioning step declares no pin at all, so it is invisible to
+ * every check that only compares pins it found. This walks `jobs.<id>.steps`
+ * in file order instead, which is the shape that actually decides what Node a
+ * `run:` step resolves at execution time.
+ *
+ * @param {string} root
+ * @returns {string[]} One violation message per offending step.
+ */
+export function collectUnprovisionedNodeSteps(root) {
+  /** @type {string[]} */
+  const violations = [];
+  const workflowsDir = join(root, '.github', 'workflows');
+  if (!existsSync(workflowsDir)) return violations;
+
+  for (const name of readdirSync(workflowsDir).toSorted((a, b) => a.localeCompare(b))) {
+    if (!name.endsWith('.yml') && !name.endsWith('.yaml')) continue;
+    const file = join(workflowsDir, name);
+    const source = relative(root, file);
+    /** @type {unknown} */
+    let doc;
+    try {
+      doc = parseYaml(readFileSync(file, 'utf8'), source);
+    } catch {
+      // Already recorded by collectWorkflowPins for the same file; a second
+      // report here would just duplicate it under a different check.
+      continue;
+    }
+    const jobs = isMapping(doc) ? doc.jobs : undefined;
+    if (!isMapping(jobs)) continue;
+
+    for (const [jobId, job] of Object.entries(jobs)) {
+      if (!isMapping(job)) continue;
+      const steps = job.steps;
+      if (steps === undefined) continue;
+      if (!Array.isArray(steps)) {
+        violations.push(
+          `${source} jobs.${jobId}.steps is not a sequence, so this guard cannot walk its step ` +
+            'order to confirm Node is provisioned before it runs.'
+        );
+        continue;
+      }
+
+      let provisioned = false;
+      for (const [index, step] of steps.entries()) {
+        if (!isMapping(step)) continue;
+        const uses = scalarText(step.uses);
+        if (uses !== undefined && NODE_PROVISIONING_STEP_PREFIXES.some((p) => uses.startsWith(p))) {
+          provisioned = true;
+          continue;
+        }
+        if (provisioned) continue;
+        const run = scalarText(step.run);
+        if (run !== undefined && NODE_INVOCATION.test(run)) {
+          violations.push(
+            `${source} jobs.${jobId}.steps[${index}] runs \`node\` but the job provisions no ` +
+              'pinned Node first (no jdx/mise-action, no actions/setup-node) — it runs on ' +
+              'whatever Node the runner image happens to ship.'
+          );
+        }
+      }
+    }
+  }
+  return violations;
+}
+
+/**
  * Gather every declared Node pin in the repo.
  *
  * @param {string} root
@@ -230,7 +323,7 @@ export function collectPins(root) {
 export function checkNodePin(root) {
   const { pins, problems } = collectPins(root);
   /** @type {string[]} */
-  const violations = [...problems];
+  const violations = [...problems, ...collectUnprovisionedNodeSteps(root)];
 
   for (const pin of pins) {
     if (pin.major === null) {
@@ -347,10 +440,76 @@ function selfTest() {
     // A `[settings]` table that is present but is not a table is a failure only
     // this read sees, so it must not be swallowed as already-reported.
     malformedSettingsIsReported(),
+    // A job that runs `node` without provisioning it is the coherence check's
+    // blind spot: it declares no pin, so it never disagrees with anything.
+    unprovisionedNodeStepIsReported(),
+    // A job that provisions Node before running it — the fleet's own shape —
+    // must not be flagged just for running `node`.
+    provisionedNodeStepIsNotReported(),
+    // A non-sequence `steps` value is a shape this guard cannot walk, not a
+    // job with nothing to say.
+    malformedStepsIsReported(),
   ];
   const ok = checks.every(Boolean);
   if (!ok) console.error(`self-test FAILED: ${JSON.stringify(checks)}`);
   return ok;
+}
+
+/** A minimal, otherwise-coherent fixture tree so a self-test case's only
+ * violation is the one it plants.
+ * @param {string} dir
+ * @param {string} workflow
+ */
+function writeCoherentFixture(dir, workflow) {
+  writeFileSync(
+    join(dir, 'mise.toml'),
+    '[settings]\nactivate_aggressive = true\n\n[tools]\nnode = "24.19.0"\n',
+    'utf8'
+  );
+  writeFileSync(join(dir, 'package.json'), '{"engines":{"node":"24"}}\n', 'utf8');
+  mkdirSync(join(dir, '.github', 'workflows'), { recursive: true });
+  writeFileSync(join(dir, '.github', 'workflows', 'sample.yml'), workflow, 'utf8');
+}
+
+/** @returns {boolean} */
+function unprovisionedNodeStepIsReported() {
+  const dir = mkdtempSync(join(tmpdir(), 'node-pin-unprovisioned-'));
+  try {
+    writeCoherentFixture(
+      dir,
+      'jobs:\n  release:\n    steps:\n      - uses: actions/checkout@v7\n      - run: node scripts/pack.mjs\n'
+    );
+    const violations = collectUnprovisionedNodeSteps(dir);
+    return violations.some((v) => v.includes('provisions no pinned Node'));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+/** @returns {boolean} */
+function provisionedNodeStepIsNotReported() {
+  const dir = mkdtempSync(join(tmpdir(), 'node-pin-provisioned-'));
+  try {
+    writeCoherentFixture(
+      dir,
+      'jobs:\n  release:\n    steps:\n      - uses: actions/checkout@v7\n      - uses: jdx/mise-action@v4\n      - run: node scripts/pack.mjs\n'
+    );
+    return collectUnprovisionedNodeSteps(dir).length === 0;
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+/** @returns {boolean} */
+function malformedStepsIsReported() {
+  const dir = mkdtempSync(join(tmpdir(), 'node-pin-badsteps-'));
+  try {
+    writeCoherentFixture(dir, 'jobs:\n  release:\n    steps: "not a sequence"\n');
+    const violations = collectUnprovisionedNodeSteps(dir);
+    return violations.some((v) => v.includes('is not a sequence'));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 }
 
 /** @returns {boolean} */

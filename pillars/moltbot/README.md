@@ -141,29 +141,51 @@ don't want to fork the image just for that.
 ## Deployment footprint: this directory must exist on the host
 
 The two `moltbot`-profile services are the only ones in the compose stack that
-bind-mount the repo's `pillars/` tree. They take their config and skills from
-this directory rather than from inside an image:
+bind-mount repo content. They take their config and skills from this directory
+rather than from inside an image:
 
-| Host path                                    | Container path                         | Service             |
-| -------------------------------------------- | -------------------------------------- | ------------------- |
-| `pillars/moltbot/config/config.yml`          | `/config/config.yml`                   | `moltbot-validator` |
-| `pillars/moltbot/scripts/validate-config.sh` | `/validate.sh`                         | `moltbot-validator` |
-| `pillars/moltbot/config/config.yml`          | `/home/node/.moltbot/config.yml`       | `moltbot`           |
-| `pillars/moltbot/skills`                     | `/home/node/.moltbot/workspace/skills` | `moltbot`           |
+| Host path                                        | Container path                         | Service             |
+| ------------------------------------------------ | -------------------------------------- | ------------------- |
+| `${POPS_MOLTBOT_DIR}/config/config.yml`          | `/config/config.yml`                   | `moltbot-validator` |
+| `${POPS_MOLTBOT_DIR}/scripts/validate-config.sh` | `/validate.sh`                         | `moltbot-validator` |
+| `${POPS_MOLTBOT_DIR}/config/config.yml`          | `/home/node/.moltbot/config.yml`       | `moltbot`           |
+| `${POPS_MOLTBOT_DIR}/skills`                     | `/home/node/.moltbot/workspace/skills` | `moltbot`           |
 
-All four are read-only. The only other host paths in
-`infra/docker-compose.yml` stay inside `infra/` or are not repo content at all
-— the litestream profile mounts `./litestream/*.yml` siblings of the compose
-file, and watchtower mounts the docker socket. In
-`infra/docker-compose.dev.yml` (`config.dev.yml` in place of `config.yml`)
-these four are the only host bind mounts of any kind.
+All four are read-only. `POPS_MOLTBOT_DIR` defaults to `../pillars/moltbot`,
+resolved from the compose file's own directory — i.e. this directory in a
+source checkout. `infra/docker-compose.dev.yml` mounts `config.dev.yml` in
+place of `config.yml`; otherwise the set is identical, and in both files these
+four are the only host bind mounts of repo content.
 
-The consequence for a deployer: `--profile moltbot` cannot be served by pulling
-images. The host needs this directory laid out so that `../pillars/moltbot`
-resolves from wherever the compose file sits. Nothing in the mounts is
-versioned or tagged, so editing `config.yml` or a skill prompt on the host
-changes what the bot loads on its next restart, with no image rebuild in the
-loop.
+Nothing in the mounts is baked into an image, so editing `config.yml` or a
+skill prompt on the host changes what the bot loads on its next restart, with
+no image rebuild in the loop.
+
+## Running the profile without a source checkout
+
+Every other service in the stack is served by pulling an image. This one is
+served by the release tarball: `release.yml` runs
+`scripts/pack-moltbot-bundle.mjs` and attaches `moltbot-bundle-vX.Y.Z.tar.gz`
+to the GitHub Release, carrying this whole directory plus a `VERSION` stamp.
+
+```bash
+VERSION=v1.2.3
+mkdir -p /opt/pops
+curl -fsSL -o /tmp/moltbot-bundle.tar.gz \
+  "https://github.com/knoxio-labs/pops/releases/download/${VERSION}/moltbot-bundle-${VERSION}.tar.gz"
+tar -xzf /tmp/moltbot-bundle.tar.gz -C /opt/pops     # → /opt/pops/moltbot
+echo 'POPS_MOLTBOT_DIR=/opt/pops/moltbot' >> .env
+docker compose -f docker-compose.yml --profile moltbot up -d
+```
+
+Pin `POPS_MOLTBOT_DIR` to an extracted bundle whose version matches
+`POPS_IMAGE_TAG` — the skills describe the pillars' REST surfaces, so a bundle
+and a fleet from different releases can disagree about a route.
+
+Step 5 of the runbook above still applies: `allowed_user_ids` ships empty and
+the validator refuses to start the bot until the extracted `config/config.yml`
+carries the operator's Telegram user ID. That edit lives on the host, and a
+re-extraction over the top of it will overwrite it.
 
 ## Scope
 

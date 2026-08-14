@@ -3,16 +3,22 @@ import { getResultComponent } from '../result-component-registry';
 import type { ReactNode } from 'react';
 
 import type { SearchResultHit, SearchResultSection } from '../SearchResultsPanel';
+import type { SearchHitData } from '../uri-resolver';
 
+/**
+ * Section colour names arrive over the wire as bare hue words. Each maps onto
+ * a distinct design token rather than a raw palette utility, so a section
+ * header answers to the theme in both modes.
+ */
 const COLOR_CLASSES: Record<string, string> = {
-  purple: 'text-purple-600 dark:text-purple-400',
+  purple: 'text-stat-violet',
   green: 'text-success',
   blue: 'text-info',
   red: 'text-destructive',
-  orange: 'text-orange-600 dark:text-orange-400',
+  orange: 'text-stat-orange',
   yellow: 'text-warning',
-  pink: 'text-pink-600 dark:text-pink-400',
-  cyan: 'text-cyan-600 dark:text-cyan-400',
+  pink: 'text-stat-rose',
+  cyan: 'text-stat-sky',
 };
 
 interface SectionHeaderProps {
@@ -41,7 +47,7 @@ interface ResultButtonProps {
   query: string;
   index: number;
   isSelected: boolean;
-  onResultClick?: (uri: string) => void;
+  onResultClick?: (uri: string, data: SearchHitData) => void;
   ResultComponent: ReturnType<typeof getResultComponent>;
 }
 
@@ -58,7 +64,7 @@ function ResultButton({
       <button
         type="button"
         className={`w-full cursor-pointer rounded-md px-2 py-1.5 text-left hover:bg-accent focus-visible:bg-accent focus-visible:outline-none${isSelected ? ' bg-accent' : ''}`}
-        onClick={() => onResultClick?.(hit.uri)}
+        onClick={() => onResultClick?.(hit.uri, hit.data)}
         data-uri={hit.uri}
         data-result-index={index}
       >
@@ -78,7 +84,7 @@ export interface SectionViewProps {
   query: string;
   startIndex: number;
   selectedIndex: number;
-  onResultClick?: (uri: string) => void;
+  onResultClick?: (uri: string, data: SearchHitData) => void;
   onShowMore?: (domain: string) => void;
 }
 

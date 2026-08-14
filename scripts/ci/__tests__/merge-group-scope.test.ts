@@ -85,24 +85,29 @@ function needsOf(job: Record<string, unknown> | undefined): string[] {
 }
 
 describe('the helper proves itself', () => {
-  it('passes its own --self-test', () => {
-    // The same invocation the `scope` jobs run before they answer. Asserted
-    // here as well so a self-test that has stopped proving anything fails in
-    // `Quality`'s Scripts tests job on the PR, not first inside a merge queue.
-    const output = execFileSync(process.execPath, [helper, '--self-test'], {
-      cwd: repoRoot,
-      encoding: 'utf8',
-      timeout: 120_000,
-    });
-    expect(output).toMatch(/self-test OK/u);
-    expect(output).toMatch(/deselects a non-touching one/u);
-    // Vitest's 5s default is a deadline on a spawned Node process that itself
-    // shells out to git, sharing a machine with 45 other test files. It takes
-    // ~1s of CPU and ~9s of wall clock on a loaded developer machine, which
-    // failed the pre-push hook deterministically rather than flakily. The
-    // budget that actually bounds this test is the `execFileSync` timeout
-    // above; this just stops the outer one firing first.
-  }, 130_000);
+  // The self-test's 19 cases each build and diff a throwaway git repository, so
+  // this one call is ~40 subprocess spawns and lands either side of Vitest's 5s
+  // default depending on what else the machine is doing — and it sits in the
+  // pre-push hook, where a bad draw blocks every push. Match the outer test
+  // budget to the inner subprocess cap so the outer one never cuts off first.
+  const SELF_TEST_TIMEOUT_MS = 120_000;
+
+  it(
+    'passes its own --self-test',
+    () => {
+      // The same invocation the `scope` jobs run before they answer. Asserted
+      // here as well so a self-test that has stopped proving anything fails in
+      // `Quality`'s Scripts tests job on the PR, not first inside a merge queue.
+      const output = execFileSync(process.execPath, [helper, '--self-test'], {
+        cwd: repoRoot,
+        encoding: 'utf8',
+        timeout: SELF_TEST_TIMEOUT_MS,
+      });
+      expect(output).toMatch(/self-test OK/u);
+      expect(output).toMatch(/deselects a non-touching one/u);
+    },
+    SELF_TEST_TIMEOUT_MS
+  );
 });
 
 describe('reading a workflow’s own pull_request.paths', () => {

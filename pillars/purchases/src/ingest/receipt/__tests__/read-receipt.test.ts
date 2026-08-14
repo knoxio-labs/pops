@@ -233,6 +233,21 @@ describe('the prompt', () => {
     expect(shipping).toMatch(/"\$0\.00" is an amount/u);
   });
 
+  it('gives the delivery charge exactly one field to land in', () => {
+    // An emailed order prints "Delivery $9.95" as a row of its own, so a
+    // model told to report it in `shipping` and not told to leave it out of
+    // `lines` can honestly do both — and the added side then overstates by
+    // exactly the fee. `surcharges` has always been ruled out; this is the
+    // third channel, and it is the one the shapes most likely to carry
+    // delivery are printed in.
+    const shipping = PROMPT_FIELDS['shipping'] ?? '';
+    expect(shipping).toMatch(/not in "surcharges"/u);
+    expect(shipping).toMatch(/not\s+as one of the "lines"/u);
+
+    const lines = PROMPT_FIELDS['lines'] ?? '';
+    expect(lines).toMatch(/shipping row belongs in "shipping"/u);
+  });
+
   it('carries the load-bearing instructions into every kind', () => {
     // A model that balances the books on request destroys the only evidence
     // the gate has, and one that silently drops a line it could not read

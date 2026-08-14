@@ -3,7 +3,9 @@
  * can name one without importing `app.ts` — which imports the middleware, and
  * would be a cycle.
  */
+
 import { bfmDeviceContract } from '../contract/rest-device.js';
+import { bfmContract } from '../contract/rest.js';
 
 /**
  * The path prefix every route the phone calls lives under, and therefore the
@@ -14,6 +16,17 @@ import { bfmDeviceContract } from '../contract/rest-device.js';
  * exists and nothing below it can be added ungated by accident.
  */
 export const MOBILE_PATH_PREFIX = '/mobile';
+
+/**
+ * The one mobile route that carries a payload measured in megabytes, and
+ * therefore the only one mounted with a body limit of its own.
+ *
+ * Derived off the contract for the same reason {@link PAIRING_PATH} is: the
+ * mount is what makes the limit apply, so a mount that silently stopped
+ * matching would leave the upload on Express's 100kb default and turn every
+ * real receipt into a refusal.
+ */
+export const MOBILE_RECEIPT_UPLOAD_PATH = bfmContract.mobilePurchases.uploadReceipt.path;
 
 /**
  * The pairing exchange's path, needed as a string because its budget is

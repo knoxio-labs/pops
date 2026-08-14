@@ -19,6 +19,7 @@ import {
   matchExact,
   matchPartial,
   matchSplit,
+  type BlockingContext,
   type MatchOutcome,
 } from './stages.js';
 
@@ -45,15 +46,25 @@ import type {
  *   makes and it consumes a transaction, so running it first would let one
  *   speculative link eat the transaction a clean partition needed.
  *
- * **Stage 4, learned rules, is absent.** `purchase_match_rules` is a
- * descriptor-pattern table mirroring finance's `transaction_corrections`,
- * not a purchase-to-transaction pointer, and what a matched pattern should
- * do here depends on how the review queue writes rules when a user accepts
- * a link (POPS-241). Deferred to POPS-1309 rather than guessed at.
+ * **Stage 4, learned rules, is absent.** `purchase_match_rules` now has a
+ * writer — confirming in the review queue records the descriptor a link was
+ * accepted under — but nothing here reads one back yet. A rule is a
+ * descriptor pattern rather than a purchase-to-transaction pointer, so what
+ * a matched pattern does to the ladder (widen blocking, promote confidence,
+ * license a near-miss amount) is a decision with real failure modes and is
+ * tracked separately rather than guessed at here.
+ *
+ * A rejection, by contrast, is consumed today: it is a claim about two
+ * specific rows rather than about a class of descriptors, so blocking can
+ * honour it without deciding anything about how rules should score.
  */
 export function solve(input: SolverInput): SolverOutput {
   const confirmedCharges = new Set(input.confirmed.map((link) => link.chargeId));
   const claimed = new Set(input.confirmed.map((link) => link.transactionUri));
+  const blocking: BlockingContext = {
+    defaultWindowDays: input.defaultWindowDays,
+    rejected: rejectionsByCharge(input.rejected),
+  };
 
   const charges = orderedCharges(input.charges).filter(
     (charge) => !confirmedCharges.has(charge.id)
@@ -68,7 +79,7 @@ export function solve(input: SolverInput): SolverOutput {
   const deferred: SolvableCharge[] = [];
 
   for (const charge of charges) {
-    const candidates = candidatesFor(charge, input.transactions, claimed, input.defaultWindowDays);
+    const candidates = candidatesFor(charge, input.transactions, claimed, blocking);
     const outcome = matchExact(charge, candidates) ?? matchSplit(charge, candidates);
 
     if (outcome === null) {
@@ -78,7 +89,7 @@ export function solve(input: SolverInput): SolverOutput {
     }
   }
 
-  const combined = matchCombined(deferred, input.transactions, claimed, input.defaultWindowDays);
+  const combined = matchCombined(deferred, input.transactions, claimed, blocking);
   for (const link of combined.links) {
     state.links.push(link);
     state.claimed.add(link.transactionUri);
@@ -87,10 +98,23 @@ export function solve(input: SolverInput): SolverOutput {
 
   for (const charge of deferred) {
     if (state.settled.has(charge.id)) continue;
-    settlePartially(state, charge, input);
+    settlePartially(state, charge, input, blocking);
   }
 
   return { links: state.links, review: state.review };
+}
+
+/** Rejections indexed the way blocking asks for them: per charge. */
+function rejectionsByCharge(
+  rejected: readonly { chargeId: string; transactionUri: string }[]
+): ReadonlyMap<string, ReadonlySet<string>> {
+  const byCharge = new Map<string, Set<string>>();
+  for (const pairing of rejected) {
+    const uris = byCharge.get(pairing.chargeId) ?? new Set<string>();
+    uris.add(pairing.transactionUri);
+    byCharge.set(pairing.chargeId, uris);
+  }
+  return byCharge;
 }
 
 /** The accumulators every phase writes through. */
@@ -104,13 +128,13 @@ interface SolveState {
 }
 
 /** Phase 3 for one charge: partial payment, or the review queue. */
-function settlePartially(state: SolveState, charge: SolvableCharge, input: SolverInput): void {
-  const candidates = candidatesFor(
-    charge,
-    input.transactions,
-    state.claimed,
-    input.defaultWindowDays
-  );
+function settlePartially(
+  state: SolveState,
+  charge: SolvableCharge,
+  input: SolverInput,
+  blocking: BlockingContext
+): void {
+  const candidates = candidatesFor(charge, input.transactions, state.claimed, blocking);
   const outcome = matchPartial(charge, candidates) ?? {
     kind: 'review' as const,
     reason: candidates.length === 0 ? ('no-candidate' as const) : ('ambiguous' as const),

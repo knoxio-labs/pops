@@ -34,7 +34,7 @@ export function ListChoiceRow({ list, selected, wasSentBefore, onSelect }: Props
         </span>
         <span className="text-xs text-muted-foreground">{relativeTime(list.lastUpdatedAt)}</span>
         {wasSentBefore && (
-          <span className="rounded bg-amber-100 px-1 text-xs text-amber-900">
+          <span className="rounded bg-warning/15 px-1 text-xs text-warning">
             {t('recipes.detail.sendToList.picker.alreadySent')}
           </span>
         )}
