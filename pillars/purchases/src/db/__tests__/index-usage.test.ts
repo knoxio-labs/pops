@@ -54,6 +54,19 @@ describe('the cross-order questions each index exists to answer', () => {
     expect(plan).not.toContain('SCAN purchase_items');
   });
 
+  it('searches rather than scans for the orders behind one transaction', () => {
+    // The reverse lookup a finance transaction view arrives with. The only
+    // other index on this table leading with `transaction_uri` is none:
+    // `uq_purchase_charge_links` leads with `charge_id` and cannot serve
+    // this, so dropping the dedicated one turns every such lookup into a
+    // scan of every link ever written.
+    const plan = planFor(
+      `SELECT charge_id FROM purchase_charge_links WHERE transaction_uri = 'pops://finance/transaction/t1'`
+    );
+    expect(plan).toContain('idx_purchase_charge_links_transaction');
+    expect(plan).not.toContain('SCAN purchase_charge_links');
+  });
+
   it('searches rather than scans for every line carrying a tag', () => {
     const plan = planFor(`SELECT item_id FROM purchase_item_tags WHERE tag = 'fruit'`);
     expect(plan).toContain('idx_purchase_item_tags_tag');

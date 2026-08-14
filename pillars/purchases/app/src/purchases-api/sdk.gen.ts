@@ -28,6 +28,8 @@ import type {
   ReconcileConfirmData,
   ReconcileConfirmErrors,
   ReconcileConfirmResponses,
+  ReconcileLinksData,
+  ReconcileLinksResponses,
   ReconcileQueueData,
   ReconcileQueueResponses,
   ReconcileSweepData,
@@ -193,6 +195,17 @@ export const reconcileConfirm = <ThrowOnError extends boolean = false>(
       },
     }
   );
+
+/**
+ * Orders linked to one finance transaction, confirmed or derived
+ */
+export const reconcileLinks = <ThrowOnError extends boolean = false>(
+  options: Options<ReconcileLinksData, ThrowOnError>
+): RequestResult<ReconcileLinksResponses, unknown, ThrowOnError> =>
+  (options.client ?? client).get<ReconcileLinksResponses, unknown, ThrowOnError>({
+    url: '/reconcile/links',
+    ...options,
+  });
 
 /**
  * Charges awaiting a decision, newest order first

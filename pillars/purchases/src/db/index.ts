@@ -85,6 +85,12 @@ export {
 } from './services/reconcile-reads.js';
 
 export {
+  listPurchasesForTransaction,
+  type LinkedCharge,
+  type LinkedPurchase,
+} from './services/reconcile-links.js';
+
+export {
   listReconcileQueue,
   type QueueEntry,
   type QueueFilter,
