@@ -31,15 +31,33 @@
  * tag's own attribute list — never counts.
  *
  * A utility gated behind a bare `sm:`/`md:`/`lg:`/`xl:`/`2xl:` (or
- * `min-[…]:`) variant does NOT count on its own: Tailwind's breakpoints are
- * min-width, so that utility applies only ABOVE the given width — exactly
- * the opposite of the phone-width viewport this gate exists to protect. The
- * base/unprefixed cascade is what a narrow viewport actually renders, so
- * proof must come from there (a breakpoint variant may only ever ADD to an
- * already-sufficient base, never substitute for one). A `max-sm:`/`max-md:`/…
- * variant is the mirror case — it applies only BELOW the given width, i.e.
- * down to and including the phone-width viewport — so it counts the same as
- * unprefixed evidence.
+ * `min-[…]:`, or an arbitrary `[@media(min-width:…)]:`) variant does NOT
+ * count on its own: Tailwind's named breakpoints are min-width, so that
+ * utility applies only ABOVE the given width — exactly the opposite of the
+ * phone-width viewport this gate exists to protect first.
+ *
+ * A `max-sm:`/`max-md:`/… (or `max-[…]:`, or `[@media(max-width:…)]:`)
+ * variant does NOT count either, even though it looks like the mirror case.
+ * It applies only BELOW the given width — but this gate has to protect every
+ * width a touch device can render, not only the narrowest one: an iPad in
+ * portrait is 768 CSS px, landscape 1024, a touch laptop wider still, and
+ * `max-sm:` (or any `max-*`) is absent at every one of those widths. A base
+ * with no unprefixed sizing evidence is exactly as unsized at 768px as it is
+ * at 375px, whatever a `max-*` variant does below 640px.
+ *
+ * The rule this gate actually enforces: evidence must hold at EVERY
+ * viewport, which in practice means an unprefixed utility, or one gated
+ * behind a variant that has nothing to do with viewport width (`hover:`,
+ * `dark:`, `print:`, `data-[…]:`, …). A viewport-width variant — `sm:` or
+ * `max-sm:`, named or arbitrary, either direction — may only ever ADD to an
+ * already-sufficient unprefixed base (grow it further on large screens via
+ * `sm:`, or further still on small ones via `max-sm:`); it can never
+ * substitute for the base itself. Note this scanner does not model CSS
+ * cascade order: it cannot tell whether a `max-*` variant shrinks an
+ * already-sufficient base below 44px at the widths where that variant
+ * applies (`h-11 max-sm:h-6`) — that risk exists whenever `max-*` is used
+ * at all, sized-looking or not, and is out of scope for a text-pattern
+ * heuristic the same way a class built through a variable is.
  * Classes built up through a variable (`cn(baseClasses)`) are invisible to a
  * text scan and are reported as violations — false positives lean toward
  * "flag it", which a baseline absorbs for existing code and a human resolves
@@ -121,40 +139,115 @@ const INSET_RE =
 const PX_PER_STEP = 4;
 const REM_PX = 16;
 
-/** Tailwind's default min-width breakpoint names — bare, they gate a utility ABOVE that width. */
-const MIN_WIDTH_BREAKPOINTS = new Set(['sm', 'md', 'lg', 'xl', '2xl']);
+/** Tailwind's default breakpoint names — used by both `<name>:` (min-width) and `max-<name>:` (max-width) variants. */
+const BREAKPOINT_NAMES = new Set(['sm', 'md', 'lg', 'xl', '2xl']);
 
-/** Characters that can appear inside a Tailwind class token, outside of quotes. */
-const CLASS_TOKEN_CHAR_RE = /[\w:\-.[\]/%]/;
+/**
+ * Does this variant segment — one colon-delimited piece of a class token's
+ * prefix, with any `:` inside `[…]` already protected from the split — gate
+ * its utility to only PART of the viewport-width range? Covers a bare named
+ * breakpoint (`sm`), its max-width mirror (`max-sm`), an arbitrary bound in
+ * either direction (`min-[640px]`, `max-[640px]`), the long-hand arbitrary
+ * media form (`[@media(min-width:640px)]`, `[@media(max-width:640px)]`), and
+ * the `@`-prefixed container-query lookalikes (`@sm`, `@min-[400px]`) — which
+ * are not viewport-width variants at all, but this gate treats them the same
+ * as their un-`@`-prefixed form on the theory that a false negative here
+ * (missing real evidence) is cheaper than a false positive (accepting a
+ * container query as proof of viewport-width sizing).
+ * @param {string} segment
+ * @returns {boolean}
+ */
+function isViewportWidthScopedVariant(segment) {
+  const bare = segment.startsWith('@') ? segment.slice(1) : segment;
+  if (BREAKPOINT_NAMES.has(bare)) return true;
+  if (/^(?:min|max)-\[/.test(bare)) return true;
+  for (const name of BREAKPOINT_NAMES) {
+    if (bare === `max-${name}`) return true;
+  }
+  return /^\[@media\((?:min|max)-width:/.test(segment);
+}
+
+/**
+ * Split a class token's variant prefix — everything before the utility
+ * itself, ending in the `:` that introduces it — into its colon-delimited
+ * variant segments. A colon inside `[…]` is treated as part of an arbitrary
+ * value, not a variant separator, so `[@media(min-width:640px)]:h-11` yields
+ * the single segment `[@media(min-width:640px)]`, not a fragment truncated
+ * at the first colon it happens to contain.
+ * @param {string} prefix
+ * @returns {string[]}
+ */
+function splitVariantSegments(prefix) {
+  /** @type {string[]} */
+  const segments = [];
+  let depth = 0;
+  let segStart = 0;
+  for (let i = 0; i < prefix.length; i++) {
+    const ch = prefix[i];
+    if (ch === '[') depth++;
+    else if (ch === ']') depth = Math.max(0, depth - 1);
+    else if (ch === ':' && depth === 0) {
+      segments.push(prefix.slice(segStart, i));
+      segStart = i + 1;
+    }
+  }
+  return segments.filter(Boolean);
+}
 
 /**
  * Does the class token this match sits in carry a variant that gates it to
- * ONLY the width range above a breakpoint (`sm:`, `md:`, `min-[640px]:`, …)?
- * Such a match proves nothing about the base/phone-width cascade. A bare
- * `max-sm:`/`max-md:`/… variant is the opposite — it applies AT AND BELOW
- * that width — so it is not disqualifying.
+ * only PART of the viewport-width range — a bare, `max-`, or arbitrary
+ * breakpoint variant in either direction? Such a match proves nothing about
+ * a width this gate has to protect: `sm:`/`min-[…]:` skip the phone-width
+ * base entirely, and `max-sm:`/`max-[…]:` skip every width at and above the
+ * breakpoint — tablets and touch laptops included. Only an unprefixed
+ * utility, or one gated behind a variant unrelated to viewport width
+ * (`hover:`, `dark:`, `print:`, `data-[…]:`, …), proves the every-width
+ * cascade this gate exists to check.
+ *
+ * The token-start walk tracks `[`/`]` depth so it does not stop on a `(`, a
+ * `:`, or any other character that is only "special" outside an arbitrary
+ * value — `[@media(min-width:640px)]:h-11` needs its full bracketed prefix
+ * to be seen, not truncated at the first non-word character it contains.
  * @param {string} tagText
  * @param {number} matchIndex
  * @returns {boolean}
  */
-function hasMinWidthOnlyPrefix(tagText, matchIndex) {
+function hasViewportWidthScopedPrefix(tagText, matchIndex) {
   let start = matchIndex;
-  while (start > 0 && CLASS_TOKEN_CHAR_RE.test(tagText[start - 1])) start--;
+  let depth = 0;
+  while (start > 0) {
+    const ch = tagText[start - 1];
+    if (ch === ']') {
+      depth++;
+      start--;
+      continue;
+    }
+    if (ch === '[') {
+      depth = Math.max(0, depth - 1);
+      start--;
+      continue;
+    }
+    if (depth === 0 && /[\s"'`{}]/.test(ch)) break;
+    start--;
+  }
   const prefix = tagText.slice(start, matchIndex);
   if (!prefix) return false;
-  const variants = prefix.split(':').filter(Boolean);
-  return variants.some((v) => MIN_WIDTH_BREAKPOINTS.has(v) || /^min-\[/.test(v));
+  return splitVariantSegments(prefix).some(isViewportWidthScopedVariant);
 }
 
 /**
- * Every regex match against `tagText` that is not gated behind a min-width-only
- * breakpoint variant — the only matches allowed to count as base-viewport proof.
+ * Every regex match against `tagText` that is not gated behind a
+ * viewport-width-scoped variant — the only matches allowed to count as
+ * every-width proof.
  * @param {string} tagText
  * @param {RegExp} re
  * @returns {RegExpMatchArray[]}
  */
 function baseEvidence(tagText, re) {
-  return [...tagText.matchAll(re)].filter((m) => !hasMinWidthOnlyPrefix(tagText, m.index ?? 0));
+  return [...tagText.matchAll(re)].filter(
+    (m) => !hasViewportWidthScopedPrefix(tagText, m.index ?? 0)
+  );
 }
 
 /**
@@ -541,17 +634,26 @@ function selfTest() {
     // A bare min-width breakpoint only sizes the box ABOVE that width — the
     // base/phone-width cascade this element actually renders is unsized.
     '<button className="sm:h-11 sm:w-11" onClick={onClick}>Row</button>',
+    // An undersized base is not laundered clean by a max-sm: variant: at and
+    // above 640px — every tablet and touch laptop width — this renders 36px.
+    '<button className="h-9 w-9 max-sm:h-11 max-sm:w-11" onClick={onClick}>Row</button>',
+    // max-sm: with no unprefixed h/w utility at all proves nothing above 640px.
+    '<button className="max-sm:h-11 max-sm:w-11" onClick={onClick}>Row</button>',
+    // The long-hand arbitrary media form is sm: written out — no unprefixed
+    // evidence, so this is unsized below 640px exactly like sm: alone.
+    '<button className="[@media(min-width:640px)]:h-11 [@media(min-width:640px)]:w-11" onClick={onClick}>Row</button>',
   ].join('\n');
   const clean = [
     '<button className="size-11" onClick={onClick}><XIcon /></button>',
     '<button className="min-h-11 min-w-11 px-3" onClick={onClick}>Row</button>',
     '<a href="/x" className="min-w-[44px] min-h-[44px] flex items-center">link</a>',
     '<button className="relative h-6 w-6 before:absolute before:-inset-2.5 before:content-[\'\']">x</button>',
-    // max-sm: applies AT AND BELOW that width, i.e. down through the phone
-    // viewport — the mirror of sm:, and valid proof for that reason.
-    '<button className="max-sm:h-11 max-sm:w-11" onClick={onClick}>Row</button>',
     // An already-sufficient base may be grown further by a breakpoint variant.
     '<button className="h-11 w-11 sm:h-16 sm:w-16" onClick={onClick}>Row</button>',
+    // max-* may still grow an already-sufficient unprefixed base further on
+    // small screens — the mirror of sm: growing it further on large ones.
+    // The unprefixed h-11/w-11 alone proves the 44px floor holds everywhere.
+    '<button className="h-11 w-11 max-sm:h-16 max-sm:w-16" onClick={onClick}>Row</button>',
   ].join('\n');
 
   const dirtyHits = findViolations('pillars/x/app/src/A.tsx', dirty);
@@ -575,6 +677,14 @@ function selfTest() {
     'reports a button sized only via a bare sm: breakpoint (unsized below 640px)': dirtyHits.some(
       (v) => v.line === 9
     ),
+    'reports a button whose undersized base is laundered by max-sm: (36px at every width >= 640px)':
+      dirtyHits.some((v) => v.line === 10),
+    'reports a button sized only via max-sm: with no unprefixed h/w at all': dirtyHits.some(
+      (v) => v.line === 11
+    ),
+    'reports a button gated only by an arbitrary [@media(min-width:...)] variant': dirtyHits.some(
+      (v) => v.line === 12
+    ),
     'stays silent on a button sized via size-11': cleanHits.every(
       (v) => v.line !== 1 // line 1 of `clean` carries size-11
     ),
@@ -583,11 +693,11 @@ function selfTest() {
     'stays silent on before:-inset expansion sized against its own box': !cleanHits.some(
       (v) => v.line === 4
     ),
-    'stays silent on a button sized only via max-sm: (sized down through the phone viewport)':
-      !cleanHits.some((v) => v.line === 5),
     'stays silent when a sufficient base is further grown by sm:': !cleanHits.some(
-      (v) => v.line === 6
+      (v) => v.line === 5
     ),
+    'stays silent when a sufficient base is further grown by max-sm: (phone-only growth, never shrinks anything)':
+      !cleanHits.some((v) => v.line === 6),
     'a story is exempt': !isScannable('pillars/food/app/src/pages/X.stories.tsx'),
     'a test is exempt': !isScannable('pillars/food/app/src/pages/X.test.tsx'),
     'a __tests__ file is exempt': !isScannable('pillars/food/app/src/__tests__/x.tsx'),
