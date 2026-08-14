@@ -232,7 +232,7 @@ export type MobileBootstrapResponses = {
       name: string;
     };
     features: Array<{
-      id: 'transactions';
+      id: string;
       reachability: 'healthy' | 'degraded' | 'unavailable' | 'contract-mismatch';
     }>;
     pillars: Array<{

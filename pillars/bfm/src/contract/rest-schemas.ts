@@ -454,13 +454,32 @@ export type Reachability = z.infer<typeof ReachabilitySchema>;
 /**
  * The mobile surfaces bfm knows how to serve.
  *
- * An enum rather than a free string: the Swift client is generated from this
- * document, so adding a member here becomes a compile error at the one call
- * site that has to handle it. That is the intended cost.
+ * A plain string on the wire, not a `z.enum`. This field sits inside every
+ * element of the `features` array on `GET /mobile/bootstrap` — the app's
+ * first authenticated call — so a closed enum here is the currency/type
+ * hazard already resolved for `MobileTransactionSchema` (see the wire-shape
+ * test's comment there), except sharper: a build already on a handset
+ * decodes the WHOLE bootstrap payload or none of it, not just the one row
+ * carrying the unrecognised value. The day bfm ships a second feature id,
+ * every installed build that predates it would fail to launch, on hardware
+ * the operator cannot roll forward (ADR-043).
+ *
+ * `MOBILE_FEATURE_IDS` below is where the closed, exhaustive-switch-friendly
+ * list still lives for code written against this pillar today — it is a
+ * compile-time convenience, not a wire contract.
  */
-export const MobileFeatureIdSchema = z.enum(['transactions']);
+export const MobileFeatureIdSchema = z.string();
 
 export type MobileFeatureId = z.infer<typeof MobileFeatureIdSchema>;
+
+/**
+ * The known feature ids, closed, for call sites in this pillar that want
+ * exhaustiveness now. Never used as the wire schema — see
+ * `MobileFeatureIdSchema` for why.
+ */
+export const MOBILE_FEATURE_IDS = ['transactions', 'receipt-capture'] as const;
+
+export type KnownMobileFeatureId = (typeof MOBILE_FEATURE_IDS)[number];
 
 /**
  * Where the pillar list came from — the SDK discovery cache's own vocabulary,
