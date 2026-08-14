@@ -16,8 +16,10 @@
 -- restored as an intra-pillar constraint via a `__new_media_scores` rebuild,
 -- mirroring drizzle's standard ALTER TABLE pattern for SQLite.
 --
--- Existing rows are backfilled into media.db via the ATTACH bridge in
--- `apps/pops-api/src/db/backfill-media-from-shared.ts`.
+-- By the time this migration runs, `media_scores` already lives in
+-- media-db — the monolith and its shared-`pops.db` ATTACH bridge were
+-- removed by the lake migration that collapsed the tRPC monolith into
+-- per-pillar REST services, so there is no separate backfill step here.
 --
 -- `comparison_dimensions` is created empty by this same file, so any
 -- database that already has `media_scores` rows has `dimension_id` values
@@ -29,9 +31,13 @@
 -- for every distinct pre-existing `dimension_id` before that insert runs, so
 -- the FK holds with enforcement on the whole time — the same ordering
 -- discipline `0057_drop_entities_mirror.sql` (finance) uses to rebuild a
--- table correctly instead of relying on the pragma. The real dimension
--- names come from the ATTACH-bridge backfill above; these placeholders only
--- exist to satisfy the FK until that data lands.
+-- table correctly instead of relying on the pragma. There is no real name to
+-- recover for these ids, so the placeholders are inserted inactive
+-- (`active = 0`) with a synthetic `dimension-<id>` name — they exist only to
+-- satisfy the FK on the orphaned score rows and must never be mistaken for
+-- curated dimensions. `seedDefaultDimensions` (pillars/media/src/db/services/
+-- comparisons/dimensions.ts) seeds the five real defaults by name, not by
+-- row count, so an inactive placeholder here can never suppress that seed.
 
 CREATE TABLE `comparison_dimensions` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
@@ -77,7 +83,7 @@ CREATE TABLE `comparison_skip_cooloffs` (
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `idx_comparison_skip_cooloffs_pair` ON `comparison_skip_cooloffs` (`dimension_id`,`media_a_type`,`media_a_id`,`media_b_type`,`media_b_id`);--> statement-breakpoint
-INSERT INTO `comparison_dimensions` (`id`, `name`) SELECT DISTINCT `dimension_id`, 'dimension-' || `dimension_id` FROM `media_scores`;--> statement-breakpoint
+INSERT INTO `comparison_dimensions` (`id`, `name`, `active`) SELECT DISTINCT `dimension_id`, 'dimension-' || `dimension_id`, 0 FROM `media_scores`;--> statement-breakpoint
 CREATE TABLE `__new_media_scores` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`media_type` text NOT NULL,

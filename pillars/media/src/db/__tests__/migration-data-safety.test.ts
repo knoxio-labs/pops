@@ -31,6 +31,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { readMigrationJournal, stageMigrationsThrough } from '@pops/pillar-sdk/db';
 
 import { openMediaDb } from '../open-media-db.js';
+import { listDimensions } from '../services/comparisons/dimensions.js';
 
 import type { OpenedMediaDb } from '../open-media-db.js';
 
@@ -134,13 +135,27 @@ describe('applying the rest of the journal to a populated media database', () =>
     });
   });
 
-  it('backfills a placeholder comparison_dimensions row for the pre-existing dimension_id', () => {
+  it('backfills an inactive placeholder comparison_dimensions row for the pre-existing dimension_id', () => {
     expect(count('comparison_dimensions')).toBe(1);
-    const dimension = single<{ id: number; name: string }>(
-      `SELECT id, name FROM comparison_dimensions WHERE id = 7`
+    const dimension = single<{ id: number; name: string; active: number }>(
+      `SELECT id, name, active FROM comparison_dimensions WHERE id = 7`
     );
-    expect(dimension.id).toBe(7);
-    expect(dimension.name).toBeTruthy();
+    expect(dimension).toEqual({ id: 7, name: 'dimension-7', active: 0 });
+  });
+
+  it('serves the five real default dimensions, not the placeholder, from listDimensions', () => {
+    const listed = listDimensions(opened.db);
+    expect(listed.map((d) => d.name).toSorted()).toEqual(
+      [
+        'Cinematography',
+        'Emotional Impact',
+        'Entertainment',
+        'Rewatchability',
+        'Soundtrack',
+        'dimension-7',
+      ].toSorted()
+    );
+    expect(listed.some((d) => d.name === 'dimension-7' && d.active)).toBe(false);
   });
 
   it('leaves no broken foreign key and no corrupted page', () => {
