@@ -98,6 +98,54 @@ describe('shipment-level columns', () => {
   });
 });
 
+describe('shipping allocation', () => {
+  const SHIPPING_ORDER_ID = '249-0000012-0000012';
+
+  it('allocates a shipment shipping charge across its lines, pro-rata by line value', () => {
+    // $10.00 postage over a 10.00/20.00 split: the even thirds do not land
+    // on whole cents (333.33 / 666.67), so this pins the rounding — the
+    // exact case POPS-1789 asks to be tested directly, and the totals sum
+    // back to the charge exactly.
+    const csv = csvWithRows([
+      rowWith({
+        ASIN: 'B0000000AA',
+        'Order ID': SHIPPING_ORDER_ID,
+        'Product Name': 'Widget Uneven One',
+        'Shipping Charge': '10.00',
+        'Total Amount': '10.00',
+        'Unit Price': '10.00',
+      }),
+      rowWith({
+        ASIN: 'B0000000AB',
+        'Order ID': SHIPPING_ORDER_ID,
+        'Product Name': 'Widget Uneven Two',
+        'Shipping Charge': '10.00',
+        'Total Amount': '20.00',
+        'Unit Price': '20.00',
+      }),
+    ]);
+
+    const { orders: shippingOrders } = parseAmazonOrderHistory(csv);
+    const result = shippingOrders.find(
+      (candidate) => candidate.sourceOrderId === SHIPPING_ORDER_ID
+    );
+    if (result === undefined) throw new Error('fixture order was not parsed');
+
+    expect(result.shippingCents).toBe(1000);
+    const items = result.items ?? [];
+    expect(items.map((item) => item.allocatedShippingCents)).toEqual([333, 667]);
+    expect(items.reduce((sum, item) => sum + (item.allocatedShippingCents ?? 0), 0)).toBe(1000);
+  });
+
+  it('allocates nothing when a shipment carries no postage', () => {
+    // ORDER_TWO_LINES_ONE_SHIPMENT states `Shipping Charge` 0 on both rows.
+    const result = order(ORDER_TWO_LINES_ONE_SHIPMENT);
+    for (const item of result.items ?? []) {
+      expect(item.allocatedShippingCents).toBe(0);
+    }
+  });
+});
+
 describe('money', () => {
   it('reads an apostrophe-wrapped discount as a positive order-level magnitude', () => {
     const result = order(ORDER_APOSTROPHE_DISCOUNT);

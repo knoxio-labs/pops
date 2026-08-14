@@ -57,7 +57,7 @@ export function ShortfallList(props: ShortfallListProps): ReactNode {
   return (
     <section
       aria-labelledby={headingId}
-      className="border border-amber-500/40 rounded-md"
+      className="border border-warning/40 rounded-md"
       data-testid="shortfall-panel"
     >
       <ShortfallHeader
@@ -116,7 +116,7 @@ function ShortfallHeader(props: ShortfallHeaderProps): ReactNode {
       <h3 id={props.headingId} className="text-sm font-medium">
         {props.title}
       </h3>
-      <span className="text-xs text-amber-600">{props.summary}</span>
+      <span className="text-xs text-warning">{props.summary}</span>
     </button>
   );
 }

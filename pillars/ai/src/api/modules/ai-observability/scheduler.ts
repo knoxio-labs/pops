@@ -1,17 +1,13 @@
 /**
- * In-process, env-gated schedulers for the AI observability summary and
- * inference-log retention jobs.
+ * The DEGRADED scheduler for the AI observability summary and inference-log
+ * retention jobs: a self-contained `setInterval` loop calling the idempotent
+ * `runSummary` / `runRetention` service functions directly against the
+ * pillar's own DB handle. OFF unless `AI_OBSERVABILITY_SCHEDULER_ENABLED=true`.
  *
- * A self-contained `setInterval` loop calls the idempotent `runSummary` /
- * `runRetention` service functions directly against the pillar's own DB
- * handle. It is OFF by default and only starts when
- * `AI_OBSERVABILITY_SCHEDULER_ENABLED=true`.
- *
- * The pillar has no durable job runner, so this fires on a relative
- * interval rather than cron at fixed UTC times (e.g. 03:00 summary, 04:00
- * retention); add cron scheduling once one exists.
- *
- * Spec: pillars/ai/docs/prds/ai-observability
+ * With Redis configured the pillar runs these as durable repeatable jobs
+ * instead (`src/api/jobs/runner.ts`), which is what survives a restart. This
+ * loop is what remains when there is no Redis — it fires on a relative
+ * interval from process start, so a deploy resets its clock.
  */
 import { type AiDb } from '../../../db/index.js';
 import { logger } from '../../shared/logger.js';

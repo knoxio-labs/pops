@@ -10,6 +10,10 @@
   "fileUpload.dragMultiple": "Drag files here, or click to browse",
   "fileUpload.accepts": "Accepts {{types}}",
   "fileUpload.remove": "Remove {{name}}",
+  "fileUpload.errors.notAccepted": "{{name}} is not an accepted file type",
+  "fileUpload.errors.tooLarge": "{{name}} exceeds max size of {{size}}",
+  "fileUpload.errors.tooMany_one": "You can upload at most {{count}} file",
+  "fileUpload.errors.tooMany_other": "You can upload at most {{count}} files",
 
   "errorAlert.showDetails": "Show technical details",
 

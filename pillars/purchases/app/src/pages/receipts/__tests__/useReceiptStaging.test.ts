@@ -72,6 +72,40 @@ describe('useReceiptStaging', () => {
     expect(result.current.staging.parts.map((p) => p.name)).toEqual(['first.jpg', 'second.jpg']);
   });
 
+  // The drop zone applies the accept filter itself, so a dragged-in `.heic`
+  // never reaches encodeBatch. Reported one file at a time, and staged as its
+  // own batch, each refusal would erase the one before it.
+  it('gathers the refusals of one gesture into a single complaint', async () => {
+    const { result } = renderHook(() => useReceiptStaging());
+
+    await act(async () => {
+      result.current.refuse('till.heic');
+      result.current.refuse('notes.md');
+      await Promise.resolve();
+    });
+
+    expect(result.current.staging.problems).toEqual([
+      { kind: 'rejected', names: ['till.heic', 'notes.md'] },
+    ]);
+  });
+
+  // The refusals are raised before onFilesSelected, but staging the batch
+  // replaces the problems — so the complaint has to land after it, not before.
+  it('keeps a refusal on screen beside the files of the same gesture', async () => {
+    encodeBatchMock.mockResolvedValueOnce(batch('frame.jpg'));
+
+    const { result } = renderHook(() => useReceiptStaging());
+
+    await act(async () => {
+      result.current.refuse('till.heic');
+      result.current.addFiles([new File(['a'], 'frame.jpg')]);
+      await Promise.resolve();
+    });
+
+    expect(result.current.staging.parts.map((p) => p.name)).toEqual(['frame.jpg']);
+    expect(result.current.staging.problems).toEqual([{ kind: 'rejected', names: ['till.heic'] }]);
+  });
+
   it('drops a stale complaint once the reader edits the list', async () => {
     encodeBatchMock.mockResolvedValueOnce({
       encoded: [part('kept.jpg')],

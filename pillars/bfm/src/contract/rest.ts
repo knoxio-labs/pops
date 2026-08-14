@@ -17,8 +17,10 @@
  *   caller acquires a token and how it replaces one that has lapsed, so
  *   neither can require presenting one. `rest-device.ts` says what stands in
  *   for a gate, per route.
- * - **`mobile` / `mobileFinance`** (`/mobile/*`) — the same bypassed hostname,
- *   behind `requireDevice`. Everything a phone calls once it has paired.
+ * - **`mobile` / `mobileFinance` / `mobilePurchases`** (`/mobile/*`) — the same
+ *   bypassed hostname, behind `requireDevice`. Everything a phone calls once it
+ *   has paired. Reads, plus ingestion of what the handset captured — never a
+ *   mutation of a record a pillar already holds (ADR-046).
  *
  * The two device-facing surfaces are one hostname but not one gate, and the
  * naming keeps them apart on purpose: `/devices/*` is what a caller reaches
@@ -47,6 +49,9 @@ import {
   MobileBootstrapResponseSchema,
   DeviceRevokedErrorSchema,
   MobileInvalidTokenErrorSchema,
+  MobilePayloadTooLargeErrorSchema,
+  MobileReceiptOutcomeSchema,
+  MobileReceiptUploadBodySchema,
   MobileRequestErrorSchema,
   MobileTransactionDetailSchema,
   MobileTransactionsPageSchema,
@@ -142,6 +147,37 @@ const mobileFinanceContract = c.router({
 });
 
 /**
+ * The mobile write surface: content the handset captured, handed to the pillar
+ * that owns it.
+ *
+ * Ingestion only, and that is a rule rather than a description of today's one
+ * route — `PUT`, `PATCH` and `DELETE` are forbidden under `/mobile`
+ * permanently, and `__tests__/mobile-verbs.test.ts` walks this contract to say
+ * so (ADR-046). A phone may hand over what its camera saw; it may not edit a
+ * record a pillar already holds.
+ */
+const mobilePurchasesContract = c.router({
+  uploadReceipt: {
+    method: 'POST',
+    path: '/mobile/purchases/receipts',
+    body: MobileReceiptUploadBodySchema,
+    responses: {
+      // One status for all three outcomes. Each is a receipt bfm successfully
+      // handed over and got an answer about, so none of them is an HTTP
+      // failure — the distinction lives in the body's `kind`, which the app
+      // switches on, rather than in a status code that would also have to mean
+      // "the upload itself went wrong".
+      200: MobileReceiptOutcomeSchema,
+      ...MOBILE_REQUEST_RESPONSES,
+      ...MOBILE_PERIMETER_RESPONSES,
+      413: MobilePayloadTooLargeErrorSchema,
+      ...MOBILE_UPSTREAM_RESPONSES,
+    },
+    summary: 'Hand a photographed, scanned or pasted receipt to the purchases pillar',
+  },
+});
+
+/**
  * The app's first authenticated call. It answers what the phone should render,
  * so it declares no upstream statuses: bootstrap probes pillars but calls
  * none, and a federation that is entirely unreachable is a `200` describing
@@ -171,6 +207,7 @@ export const bfmContract = c.router(
     operator: bfmOperatorContract,
     mobile: mobileContract,
     mobileFinance: mobileFinanceContract,
+    mobilePurchases: mobilePurchasesContract,
   },
   {
     pathPrefix: '',

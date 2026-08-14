@@ -107,28 +107,31 @@ function useHoverHandlers(
   args: UsePointerArgs,
   pickNode: (x: number, y: number) => InternalNode | null
 ) {
-  const setCursor = (style: 'pointer' | 'default') => {
-    const canvas = args.canvasRef.current;
-    if (canvas) canvas.style.cursor = style;
-  };
+  const { canvasRef, onNodeHover } = args;
+  const { hoverRef } = args.state;
+  const setCursor = useCallback(
+    (style: 'pointer' | 'default') => {
+      const canvas = canvasRef.current;
+      if (canvas) canvas.style.cursor = style;
+    },
+    [canvasRef]
+  );
   const updateHoverFromPointer = useCallback(
     (cx: number, cy: number) => {
       const hit = pickNode(cx, cy);
       const nextId = hit?.id ?? null;
-      if (nextId === args.state.hoverRef.current) return;
-      args.state.hoverRef.current = nextId;
-      args.onNodeHover?.(nextId);
+      if (nextId === hoverRef.current) return;
+      hoverRef.current = nextId;
+      onNodeHover?.(nextId);
       setCursor(nextId ? 'pointer' : 'default');
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [args.onNodeHover, pickNode, args.state.hoverRef]
+    [onNodeHover, pickNode, hoverRef, setCursor]
   );
   const clearHover = useCallback(() => {
-    args.state.hoverRef.current = null;
-    args.onNodeHover?.(null);
+    hoverRef.current = null;
+    onNodeHover?.(null);
     setCursor('default');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [args.onNodeHover, args.state.hoverRef]);
+  }, [onNodeHover, hoverRef, setCursor]);
   return { updateHoverFromPointer, clearHover };
 }
 

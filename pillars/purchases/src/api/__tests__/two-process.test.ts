@@ -47,6 +47,15 @@ const TRANSACTION = {
 
 const ORDER_TOTAL_CENTS = 4128;
 
+/**
+ * The service-account key the spawned process is deployed with. A throwaway
+ * literal — never a real one in a fixture.
+ */
+const SERVICE_ACCOUNT_KEY = 'pops_sa_TWOPROC.testsecret_not_a_real_key_00000';
+
+/** `x-api-key` on every `GET /transactions` the spawned process issued. */
+const financeCallKeys: (string | string[] | undefined)[] = [];
+
 async function listen(server: Server): Promise<string> {
   await new Promise<void>((resolve) => {
     server.listen(0, '127.0.0.1', resolve);
@@ -139,6 +148,7 @@ beforeAll(async () => {
     }
 
     if (url.pathname === '/transactions') {
+      financeCallKeys.push(req.headers['x-api-key']);
       res.end(
         JSON.stringify({
           data: [TRANSACTION],
@@ -165,6 +175,9 @@ beforeAll(async () => {
       PURCHASES_SQLITE_PATH: join(dataDir, 'purchases.db'),
       POPS_REGISTRY_URL: registryUrl,
       POPS_REGISTRY_ENABLED: 'false',
+      // The deployment supplies one; without it every outbound leg reports
+      // `no-credential` and the sweep below writes nothing at all.
+      POPS_INTERNAL_API_KEY: SERVICE_ACCOUNT_KEY,
       // Seconds, not minutes: the sweep has to tick inside the test.
       PURCHASES_SWEEP_COALESCE_MS: '500',
       PURCHASES_SWEEP_POLL_MS: '1000',
@@ -277,5 +290,11 @@ describe('reconciliation across a real socket', () => {
     // process against a transaction fetched from another over HTTP.
     expect(accounting?.matchedCents).toBe(ORDER_TOTAL_CENTS);
     expect(accounting?.residualCents).toBe(0);
+
+    // And the fetch that decided it was credentialled. The in-process wire
+    // test asserts the same thing about the client; this asserts it about
+    // the deployed entry point, which is what reads the environment.
+    expect(financeCallKeys.length).toBeGreaterThan(0);
+    expect(new Set(financeCallKeys)).toEqual(new Set([SERVICE_ACCOUNT_KEY]));
   }, 60_000);
 });

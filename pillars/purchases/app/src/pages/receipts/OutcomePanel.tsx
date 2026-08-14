@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router';
 
 import { formatDate } from '@pops/ui';
 
@@ -36,11 +37,7 @@ export function OutcomePanel({
       return null;
 
     case 'uploading':
-      return (
-        <p role="status" className="text-muted-foreground text-sm">
-          {t('receipts.status.uploading')}
-        </p>
-      );
+      return <p className="text-muted-foreground text-sm">{t('receipts.status.uploading')}</p>;
 
     case 'duplicate':
       return (
@@ -54,7 +51,7 @@ export function OutcomePanel({
 
     case 'refused':
       return (
-        <div role="alert" className="border-destructive/50 bg-destructive/10 rounded-md border p-4">
+        <div className="border-destructive/50 bg-destructive/10 rounded-md border p-4">
           <p className="mb-2 text-sm font-medium">{t('receipts.refused.title')}</p>
           <p className="text-muted-foreground text-sm">{submission.failure.message}</p>
         </div>
@@ -97,7 +94,9 @@ function CreatedPanel({ outcome }: { outcome: CreatedOutcome }): ReactElement {
         <p className="text-muted-foreground text-sm">{t('receipts.created.alreadyStored')}</p>
       )}
 
-      <p className="text-muted-foreground text-xs">{t('receipts.created.noDetailView')}</p>
+      <Link to={`/purchases/${purchase.id}`} className="text-sm underline underline-offset-4">
+        {t('receipts.created.open')}
+      </Link>
     </OutcomeSection>
   );
 }

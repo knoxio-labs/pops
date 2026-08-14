@@ -18,6 +18,8 @@ import { resolveSelfBaseUrl } from '@pops/pillar-sdk/pillar-env';
 
 import { openInventoryDb } from '../db/index.js';
 import { createInventoryApiApp } from './app.js';
+import { startCrossPillarReconciliationWorker } from './cron/reconcile-cross-pillar.js';
+import { resolveReconcileIntervalMs } from './cron/reconcile-interval.js';
 import { createDocumentsClient } from './documents/client.js';
 import { resolveInventorySqlitePath } from './inventory-sqlite-path.js';
 import { buildInventoryCapabilityReporter, buildInventoryManifest } from './manifest.js';
@@ -40,6 +42,8 @@ const selfBaseUrl = resolveSelfBaseUrl({
   processLabel: 'inventory-api',
 });
 
+const reconcileIntervalMs = resolveReconcileIntervalMs();
+
 const inventoryDb = openInventoryDb(resolveInventorySqlitePath());
 const app = createInventoryApiApp({
   inventoryDb,
@@ -50,6 +54,32 @@ const app = createInventoryApiApp({
 
 const server = app.listen(port, () => {
   console.warn(`[inventory-api] Listening on port ${port}`);
+});
+
+/**
+ * Soft-URI reconciliation cron: resolves `home_inventory.purchase_transaction_uri`
+ * and `home_inventory.owner_uri` against their owning pillars and stamps the
+ * matching `*_stale_at` column when the owner answers 404.
+ *
+ * Started unconditionally. A tick that cannot reach finance or the registry
+ * writes nothing — only a 404 stamps, everything else is left for the next
+ * tick — whereas gating the worker would leave every `stale_at` permanently
+ * null, which reads as "every reference resolves" and is the exact failure
+ * this cron exists to end. A tick with no URIs to resolve is silent and calls
+ * nobody.
+ */
+const reconcileUriWorker = startCrossPillarReconciliationWorker({
+  db: inventoryDb.db,
+  // Overridable so a smoke test does not wait a day for the second tick.
+  ...(reconcileIntervalMs === undefined ? {} : { intervalMs: reconcileIntervalMs }),
+  logger: {
+    info: (message, context) => {
+      console.warn(`[inventory-api] ${message}`, context ?? {});
+    },
+    warn: (message, context) => {
+      console.error(`[inventory-api] ${message}`, context ?? {});
+    },
+  },
 });
 
 let pillarHandle: PillarBootstrapHandle | undefined;
@@ -66,6 +96,7 @@ function shutdown(signal: NodeJS.Signals): void {
   if (shuttingDown) return;
   shuttingDown = true;
   console.warn(`[inventory-api] Shutting down (${signal})`);
+  reconcileUriWorker.stop();
   void (pillarHandle?.stop() ?? Promise.resolve()).finally(() => {
     server.close(() => {
       inventoryDb.raw.close();

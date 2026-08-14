@@ -7,7 +7,7 @@
  * `pillars/finance/src/db/schema/corrections.ts`.
  */
 import { sql } from 'drizzle-orm';
-import { index, integer, real, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { index, integer, real, sqliteTable, text, unique } from 'drizzle-orm/sqlite-core';
 
 import { MATCH_TYPES, MIN_MATCH_CONFIDENCE } from '../../contract/constants.js';
 
@@ -37,6 +37,14 @@ export const purchaseMatchRules = sqliteTable(
     lastUsedAt: text('last_used_at'),
   },
   (t) => [
+    // What makes a decision idempotent. A pattern means one thing for one
+    // source, so confirming the tenth order from the same merchant finds
+    // this row and counts an application rather than minting a tenth rule
+    // that says what the first already said. SQLite treats NULLs as
+    // distinct, so it constrains nothing for a rule that applies
+    // everywhere — the queue's writer always scopes to the order's source,
+    // and an unscoped rule is a human's deliberate act.
+    unique('uq_purchase_match_rules_pattern_source').on(t.descriptionPattern, t.source),
     index('idx_purchase_match_rules_pattern').on(t.descriptionPattern),
     index('idx_purchase_match_rules_priority').on(t.priority),
     index('idx_purchase_match_rules_confidence').on(t.confidence),

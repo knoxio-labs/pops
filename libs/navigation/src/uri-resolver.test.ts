@@ -36,6 +36,34 @@ describe('resolveUri', () => {
     });
   });
 
+  describe('purchases URIs', () => {
+    it('resolves an order URI to the detail route the app mounts', () => {
+      expect(resolveUri('pops:purchases/purchase/abc')).toBe('/purchases/abc');
+    });
+
+    // ADR-012 keeps the id segment one row's primary key, so a line cannot
+    // carry its order's id in the URI. Its route comes from the hit's data,
+    // where the pillar's item adapter already puts the order id.
+    it('opens a line at the order its hit data names', () => {
+      expect(resolveUri('pops:purchases/purchase-item/line-1', { purchaseId: 'order-7' })).toBe(
+        '/purchases/order-7?item=line-1'
+      );
+    });
+
+    it('refuses a line whose hit carries no order id', () => {
+      expect(resolveUri('pops:purchases/purchase-item/line-1')).toBeNull();
+      expect(resolveUri('pops:purchases/purchase-item/line-1', {})).toBeNull();
+      expect(resolveUri('pops:purchases/purchase-item/line-1', { purchaseId: '' })).toBeNull();
+      expect(resolveUri('pops:purchases/purchase-item/line-1', { purchaseId: 42 })).toBeNull();
+    });
+
+    it('ignores hit data for a type addressed by its own id', () => {
+      expect(resolveUri('pops:purchases/purchase/abc', { purchaseId: 'somewhere-else' })).toBe(
+        '/purchases/abc'
+      );
+    });
+  });
+
   describe('inventory URIs', () => {
     it('resolves item URI', () => {
       expect(resolveUri('pops:inventory/item/99')).toBe('/inventory/items/99');
