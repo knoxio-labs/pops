@@ -70,6 +70,17 @@
  * would need combining the scoped inset against the base box the same way
  * {@link isCompliant} does for the unprefixed case, which is real scope this
  * gate does not cover yet.
+ * The scoped-shrink check is also narrow to a NUMERIC magnitude — a bare
+ * spacing step or an arbitrary `px`/`rem` value. A scoped utility whose value
+ * is not a pixel-comparable number (`sm:h-auto`, `sm:h-px`, `sm:h-1/2`,
+ * `sm:h-[calc(100%-40px)]`) fails open: it proves nothing, in either
+ * direction, so it is silently treated as "not a shrink" rather than flagged.
+ * That is a stated limit, not an oversight — `auto`/a percentage/a `calc()`
+ * expression is genuinely undecidable against a fixed 44px floor without a
+ * layout engine, and this scanner is deliberately a text-only heuristic. It
+ * is the same fail-open direction the base-evidence check already takes for
+ * `w-11/12` and other non-absolute values, so an author relying on one of
+ * these to shrink a control below 44px gets no warning here.
  * Classes built up through a variable (`cn(baseClasses)`) are invisible to a
  * text scan and are reported as violations — false positives lean toward
  * "flag it", which a baseline absorbs for existing code and a human resolves
@@ -139,6 +150,26 @@ function dimensionRe(prop) {
 }
 
 /**
+ * The mirror of {@link dimensionRe}, for the SHRINK direction only: does
+ * `tagText` carry a `max-h`/`max-w`/`max-size` (a ceiling — the primitive
+ * that actually shrinks a rendered box) or a bare `h`/`w`/`size` utility?
+ * `min-h`/`min-w`/`min-size` are deliberately excluded here even though
+ * {@link dimensionRe} accepts them: a `min-` value is a floor, which can
+ * never shrink anything, so `sm:min-w-0` must never read as a scoped shrink
+ * to 0px — it is a no-op relative to whatever the base box already is.
+ * Captures line up with {@link pxOf}/{@link dimensionRe} so both can share
+ * the same magnitude helpers.
+ * @param {'h' | 'w' | 'size'} prop
+ * @returns {RegExp}
+ */
+function shrinkDimensionRe(prop) {
+  return new RegExp(
+    `(?<![\\w-])(?:max-)?${prop}-(?:(\\d+(?:\\.\\d+)?)(?![\\d./])|\\[(\\d+(?:\\.\\d+)?)(px|rem)\\])`,
+    'g'
+  );
+}
+
+/**
  * The `before:-inset-*` invisible-hit-area expansion pattern the primitives
  * use for compact controls: a negative inset on the `::before` pseudo-element
  * pushes its hit area outward by the given amount on every side. Accepts the
@@ -151,21 +182,54 @@ const INSET_RE =
 const PX_PER_STEP = 4;
 const REM_PX = 16;
 
-/** Tailwind's default breakpoint names — used by both `<name>:` (min-width) and `max-<name>:` (max-width) variants. */
-const BREAKPOINT_NAMES = new Set(['sm', 'md', 'lg', 'xl', '2xl']);
+/** Where the repo's actual breakpoint names are defined — the single source of truth this gate must not drift from. */
+const GLOBALS_CSS_PATH = join(repoRoot, 'libs/ui/src/theme/globals.css');
+
+/**
+ * Breakpoint names used by both `<name>:` (min-width) and `max-<name>:`
+ * (max-width) variants, read from the `--breakpoint-*` custom properties in
+ * {@link GLOBALS_CSS_PATH} rather than hardcoded — a hardcoded copy agrees
+ * with that file only until someone adds or renames a breakpoint there, at
+ * which point this gate would silently go blind to the new name in both the
+ * base-evidence and scoped-shrink directions with nothing to notice.
+ * @returns {Set<string>}
+ */
+function loadBreakpointNames() {
+  const css = readFileSync(GLOBALS_CSS_PATH, 'utf8');
+  const names = new Set([...css.matchAll(/--breakpoint-([a-z0-9]+)\s*:/g)].map((m) => m[1]));
+  if (names.size === 0) {
+    throw new Error(`no --breakpoint-* custom properties found in ${GLOBALS_CSS_PATH}`);
+  }
+  return names;
+}
+
+const BREAKPOINT_NAMES = loadBreakpointNames();
 
 /**
  * Does this variant segment — one colon-delimited piece of a class token's
  * prefix, with any `:` inside `[…]` already protected from the split — gate
  * its utility to only PART of the viewport-width range? Covers a bare named
  * breakpoint (`sm`), its max-width mirror (`max-sm`), an arbitrary bound in
- * either direction (`min-[640px]`, `max-[640px]`), the long-hand arbitrary
- * media form (`[@media(min-width:640px)]`, `[@media(max-width:640px)]`), and
+ * either direction (`min-[640px]`, `max-[640px]`), any long-hand arbitrary
+ * `[@media(...)]` variant that constrains `width` — the named-direction form
+ * (`[@media(min-width:640px)]`, `[@media(max-width:640px)]`), CSS range
+ * syntax (`[@media(width<=640px)]`, `[@media(width>=640px)]`,
+ * `[@media(400px<=width<=700px)]`), and the underscore-for-space spelling
+ * Tailwind accepts in arbitrary values (`[@media_(min-width:640px)]`) — and
  * the `@`-prefixed container-query lookalikes (`@sm`, `@min-[400px]`) — which
  * are not viewport-width variants at all, but this gate treats them the same
  * as their un-`@`-prefixed form on the theory that a false negative here
  * (missing real evidence) is cheaper than a false positive (accepting a
  * container query as proof of viewport-width sizing).
+ *
+ * The `[@media(...)]` arm deliberately recognises ANY spelling that
+ * constrains `width`, rather than enumerating every syntax Tailwind/CSS
+ * allows: an arbitrary media variant this gate fails to recognise falls
+ * through to {@link baseEvidence} and is read as unprefixed, every-width
+ * proof — the exact failure this gate exists to prevent (POPS-2174,
+ * POPS-2204). Erring toward "this IS viewport-scoped" for an unrecognised
+ * `[@media(...)]` variant costs, at worst, a false positive a baseline
+ * absorbs; erring the other way ships an unsized control.
  * @param {string} segment
  * @returns {boolean}
  */
@@ -176,7 +240,7 @@ function isViewportWidthScopedVariant(segment) {
   for (const name of BREAKPOINT_NAMES) {
     if (bare === `max-${name}`) return true;
   }
-  return /^\[@media\((?:min|max)-width:/.test(segment);
+  return /^\[@media[_ ]?\(/.test(segment) && /\bwidth\b/i.test(segment);
 }
 
 /**
@@ -328,12 +392,19 @@ function minPx(matches) {
  * a real violation regardless of what the unprefixed base proves. Growth
  * variants (magnitude >= 44) are not flagged — they can never shrink
  * anything.
+ * A scoped `min-h`/`min-w`/`min-size` utility is never shrink evidence, even
+ * though its base-evidence counterpart is: a min- value is a floor, and a
+ * floor cannot shrink anything below what the base box already renders. A
+ * scoped `max-h`/`max-w`/`max-size` utility, on the other hand, IS shrink
+ * evidence — a ceiling is exactly the primitive that caps a box below its
+ * base size — which is why this reads through {@link shrinkDimensionRe}
+ * rather than {@link dimensionRe}.
  * @param {string} tagText
  * @param {'h' | 'w' | 'size'} prop
  * @returns {boolean}
  */
 function hasUndersizedScopedVariant(tagText, prop) {
-  const min = minPx(scopedEvidence(tagText, dimensionRe(prop)));
+  const min = minPx(scopedEvidence(tagText, shrinkDimensionRe(prop)));
   return min !== null && min < 44;
 }
 
@@ -729,6 +800,16 @@ function selfTest() {
     '<button className="h-11 w-11 max-sm:hover:h-6 max-sm:hover:w-6" onClick={onClick}>Row</button>',
     // size-* shrink: one utility, both axes.
     '<button className="h-11 w-11 max-sm:size-6" onClick={onClick}>Row</button>',
+    // CSS range media syntax with no unprefixed base — the sm:/max-sm: hole
+    // reopened through a spelling isViewportWidthScopedVariant didn't know.
+    '<button className="[@media(width<=640px)]:h-11 [@media(width<=640px)]:w-11" onClick={onClick}>Row</button>',
+    // The underscore-for-space arbitrary spelling, same hole.
+    '<button className="[@media_(min-width:640px)]:h-11 [@media_(min-width:640px)]:w-11" onClick={onClick}>Row</button>',
+    // CSS range media syntax shrinking an otherwise-sufficient base.
+    '<button className="h-11 w-11 [@media(width<=600px)]:h-6 [@media(width<=600px)]:w-6" onClick={onClick}>Row</button>',
+    // A scoped max-h/max-w IS a real shrink — a ceiling caps the box below
+    // its base size at the width the variant governs.
+    '<button className="h-11 w-11 sm:max-h-6 sm:max-w-6" onClick={onClick}>Row</button>',
   ].join('\n');
   const clean = [
     '<button className="size-11" onClick={onClick}><XIcon /></button>',
@@ -741,6 +822,10 @@ function selfTest() {
     // small screens — the mirror of sm: growing it further on large ones.
     // The unprefixed h-11/w-11 alone proves the 44px floor holds everywhere.
     '<button className="h-11 w-11 max-sm:h-16 max-sm:w-16" onClick={onClick}>Row</button>',
+    // A scoped min-w-0/min-h-0 is a floor, not a shrink — it is a no-op
+    // against an already-sufficient base.
+    '<button className="h-11 w-11 sm:min-w-0" onClick={onClick}>Row</button>',
+    '<button className="h-11 w-11 max-sm:min-w-0" onClick={onClick}>Row</button>',
   ].join('\n');
 
   const dirtyHits = findViolations('pillars/x/app/src/A.tsx', dirty);
@@ -789,6 +874,15 @@ function selfTest() {
     'reports a sufficient base shrunk by max-sm:size-* (one utility, both axes)': dirtyHits.some(
       (v) => v.line === 18
     ),
+    'reports a button gated only by a CSS range media variant ([@media(width<=640px)]:)':
+      dirtyHits.some((v) => v.line === 19),
+    'reports a button gated only by the underscore-for-space arbitrary media spelling':
+      dirtyHits.some((v) => v.line === 20),
+    'reports a sufficient base shrunk by a CSS range media variant': dirtyHits.some(
+      (v) => v.line === 21
+    ),
+    'reports a sufficient base shrunk by a scoped max-h/max-w (a ceiling, a real shrink)':
+      dirtyHits.some((v) => v.line === 22),
     'stays silent on a button sized via size-11': cleanHits.every(
       (v) => v.line !== 1 // line 1 of `clean` carries size-11
     ),
@@ -802,6 +896,12 @@ function selfTest() {
     ),
     'stays silent when a sufficient base is further grown by max-sm: (phone-only growth, never shrinks anything)':
       !cleanHits.some((v) => v.line === 6),
+    'stays silent on a scoped min-w-0 (sm: direction, a floor, not a shrink)': !cleanHits.some(
+      (v) => v.line === 7
+    ),
+    'stays silent on a scoped min-w-0 (max-sm: direction, a floor, not a shrink)': !cleanHits.some(
+      (v) => v.line === 8
+    ),
     'a story is exempt': !isScannable('pillars/food/app/src/pages/X.stories.tsx'),
     'a test is exempt': !isScannable('pillars/food/app/src/pages/X.test.tsx'),
     'a __tests__ file is exempt': !isScannable('pillars/food/app/src/__tests__/x.tsx'),
