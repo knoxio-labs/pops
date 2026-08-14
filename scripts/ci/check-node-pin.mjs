@@ -184,6 +184,51 @@ const NODE_PROVISIONING_STEP_PREFIXES = ['jdx/mise-action@', 'actions/setup-node
 const NODE_INVOCATION = /(?:^|[\n;]|&&|\|\|)\s*node\b/mu;
 
 /**
+ * Decide whether a `uses:` reference provisions Node, following a local
+ * composite action into its own steps.
+ *
+ * A repo-local wrapper (`./.github/actions/setup-mise`) is how this repo pins
+ * the one mise-action version every lane shares, so a prefix match against the
+ * upstream action names alone would read every call site as unprovisioned. It
+ * is resolved rather than allow-listed by name: a wrapper that stops calling a
+ * provisioning action must go back to failing this guard, which an allow-list
+ * of paths could not express.
+ *
+ * @param {string} root
+ * @param {string} uses
+ * @param {Set<string>} visited  Guards a wrapper cycle, which GitHub rejects at
+ *   run time but which must not hang the guard here.
+ * @returns {boolean}
+ */
+function usesProvisionsNode(root, uses, visited = new Set()) {
+  if (NODE_PROVISIONING_STEP_PREFIXES.some((prefix) => uses.startsWith(prefix))) return true;
+  if (!uses.startsWith('./')) return false;
+
+  const actionDir = join(root, uses.slice(2));
+  const manifest = ['action.yml', 'action.yaml']
+    .map((name) => join(actionDir, name))
+    .find((candidate) => existsSync(candidate));
+  if (manifest === undefined || visited.has(manifest)) return false;
+  visited.add(manifest);
+
+  /** @type {unknown} */
+  let doc;
+  try {
+    doc = parseYaml(readFileSync(manifest, 'utf8'), relative(root, manifest));
+  } catch {
+    return false;
+  }
+  const runs = isMapping(doc) ? doc.runs : undefined;
+  const steps = isMapping(runs) ? runs.steps : undefined;
+  if (!Array.isArray(steps)) return false;
+  return steps.some((step) => {
+    if (!isMapping(step)) return false;
+    const nested = scalarText(step.uses);
+    return nested !== undefined && usesProvisionsNode(root, nested, visited);
+  });
+}
+
+/**
  * Find every job step that runs `node` before that job has provisioned a
  * pinned Node runtime of its own.
  *
@@ -234,7 +279,7 @@ export function collectUnprovisionedNodeSteps(root) {
       for (const [index, step] of steps.entries()) {
         if (!isMapping(step)) continue;
         const uses = scalarText(step.uses);
-        if (uses !== undefined && NODE_PROVISIONING_STEP_PREFIXES.some((p) => uses.startsWith(p))) {
+        if (uses !== undefined && usesProvisionsNode(root, uses)) {
           provisioned = true;
           continue;
         }
@@ -243,7 +288,8 @@ export function collectUnprovisionedNodeSteps(root) {
         if (run !== undefined && NODE_INVOCATION.test(run)) {
           violations.push(
             `${source} jobs.${jobId}.steps[${index}] runs \`node\` but the job provisions no ` +
-              'pinned Node first (no jdx/mise-action, no actions/setup-node) — it runs on ' +
+              'pinned Node first (no jdx/mise-action, no actions/setup-node, and no local ' +
+              'composite action that reaches one) — it runs on ' +
               'whatever Node the runner image happens to ship.'
           );
         }
@@ -449,6 +495,10 @@ function selfTest() {
     // A non-sequence `steps` value is a shape this guard cannot walk, not a
     // job with nothing to say.
     malformedStepsIsReported(),
+    // A repo-local composite wrapper is how this fleet provisions Node, so it
+    // must count — and must stop counting the moment it stops provisioning.
+    wrapperProvisioningIsFollowed(),
+    wrapperWithoutProvisioningIsReported(),
   ];
   const ok = checks.every(Boolean);
   if (!ok) console.error(`self-test FAILED: ${JSON.stringify(checks)}`);
@@ -495,6 +545,47 @@ function provisionedNodeStepIsNotReported() {
       'jobs:\n  release:\n    steps:\n      - uses: actions/checkout@v7\n      - uses: jdx/mise-action@v4\n      - run: node scripts/pack.mjs\n'
     );
     return collectUnprovisionedNodeSteps(dir).length === 0;
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+/**
+ * @param {string} dir
+ * @param {string} nestedUses
+ */
+function writeWrapperAction(dir, nestedUses) {
+  const actionDir = join(dir, '.github', 'actions', 'setup-mise');
+  mkdirSync(actionDir, { recursive: true });
+  writeFileSync(
+    join(actionDir, 'action.yml'),
+    `name: Setup mise\ndescription: wrapper\nruns:\n  using: composite\n  steps:\n    - uses: ${nestedUses}\n`,
+    'utf8'
+  );
+}
+
+const WRAPPER_CALL_WORKFLOW =
+  'jobs:\n  release:\n    steps:\n      - uses: actions/checkout@v7\n      - uses: ./.github/actions/setup-mise\n      - run: node scripts/pack.mjs\n';
+
+/** @returns {boolean} */
+function wrapperProvisioningIsFollowed() {
+  const dir = mkdtempSync(join(tmpdir(), 'node-pin-wrapper-ok-'));
+  try {
+    writeCoherentFixture(dir, WRAPPER_CALL_WORKFLOW);
+    writeWrapperAction(dir, 'jdx/mise-action@v4.2.5');
+    return collectUnprovisionedNodeSteps(dir).length === 0;
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+/** @returns {boolean} */
+function wrapperWithoutProvisioningIsReported() {
+  const dir = mkdtempSync(join(tmpdir(), 'node-pin-wrapper-empty-'));
+  try {
+    writeCoherentFixture(dir, WRAPPER_CALL_WORKFLOW);
+    writeWrapperAction(dir, 'actions/checkout@v7');
+    return collectUnprovisionedNodeSteps(dir).some((v) => v.includes('provisions no pinned Node'));
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

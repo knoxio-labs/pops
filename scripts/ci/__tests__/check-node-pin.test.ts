@@ -54,6 +54,24 @@ function makeFixture(overrides: {
   return root;
 }
 
+const WRAPPER_CALL_WORKFLOW = [
+  'jobs:',
+  '  release:',
+  '    steps:',
+  '      - uses: actions/checkout@v7',
+  '      - uses: ./.github/actions/setup-mise',
+  '      - run: node scripts/pack.mjs',
+].join('\n');
+
+function writeWrapperAction(root: string, nestedUses: string): void {
+  const actionDir = join(root, '.github', 'actions', 'setup-mise');
+  mkdirSync(actionDir, { recursive: true });
+  writeFileSync(
+    join(actionDir, 'action.yml'),
+    `name: Setup mise\ndescription: wrapper\nruns:\n  using: composite\n  steps:\n    - uses: ${nestedUses}\n`
+  );
+}
+
 describe('nodeMajor', () => {
   it('reads a bare major', () => expect(nodeMajor('24')).toBe('24'));
   it('reads an exact version', () => expect(nodeMajor('24.19.0')).toBe('24'));
@@ -309,6 +327,51 @@ describe('collectUnprovisionedNodeSteps', () => {
     });
     try {
       expect(collectUnprovisionedNodeSteps(root)).toEqual([]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('follows a repo-local composite wrapper to the provisioning action it calls', () => {
+    const root = makeFixture({ workflow: WRAPPER_CALL_WORKFLOW });
+    try {
+      writeWrapperAction(root, 'jdx/mise-action@v4.2.5');
+      expect(collectUnprovisionedNodeSteps(root)).toEqual([]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('flags a call site whose local wrapper provisions nothing', () => {
+    const root = makeFixture({ workflow: WRAPPER_CALL_WORKFLOW });
+    try {
+      writeWrapperAction(root, 'actions/checkout@v7');
+      expect(
+        collectUnprovisionedNodeSteps(root).some((v) => v.includes('provisions no pinned Node'))
+      ).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('flags a call site whose local wrapper does not exist at all', () => {
+    const root = makeFixture({ workflow: WRAPPER_CALL_WORKFLOW });
+    try {
+      expect(
+        collectUnprovisionedNodeSteps(root).some((v) => v.includes('provisions no pinned Node'))
+      ).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('does not hang on a wrapper that calls itself', () => {
+    const root = makeFixture({ workflow: WRAPPER_CALL_WORKFLOW });
+    try {
+      writeWrapperAction(root, './.github/actions/setup-mise');
+      expect(
+        collectUnprovisionedNodeSteps(root).some((v) => v.includes('provisions no pinned Node'))
+      ).toBe(true);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
