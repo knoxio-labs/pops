@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { delimiter, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -137,10 +137,32 @@ describe('run-all: clients/* discovery (real mise binary)', () => {
     if (root) rmSync(root, { recursive: true, force: true });
   });
 
+  /**
+   * The caller's environment, plus `root` (and everything the fixture writes
+   * beneath it) named as a trusted config path.
+   *
+   * mise will not read a config file it has not been told to trust, and its
+   * trust store is per-user and keyed on the file's absolute path. `root` is a
+   * fresh `mkdtemp` directory this suite has never asked mise to trust, so
+   * without this, resolving it depends on mise's "safe config" classification
+   * (a `[tasks]`-only file with no templates, today) or on it detecting CI and
+   * skipping the trust check altogether — both mise policy, neither a property
+   * of this repo. `MISE_TRUSTED_CONFIG_PATHS` makes the fixture's trust
+   * explicit instead of borrowed from those defaults.
+   */
+  function miseEnv(extraEnv: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+    const inherited = process.env.MISE_TRUSTED_CONFIG_PATHS;
+    return {
+      ...process.env,
+      ...extraEnv,
+      MISE_TRUSTED_CONFIG_PATHS: inherited === undefined ? root : `${root}${delimiter}${inherited}`,
+    };
+  }
+
   function runAllEcho(extraEnv: NodeJS.ProcessEnv): string[] {
     const outFile = join(root, `out-${Math.random().toString(36).slice(2)}.txt`);
     execFileSync('mise', ['run', '-C', root, 'run-all', 'echo'], {
-      env: { ...process.env, ...extraEnv, OUT_FILE: outFile },
+      env: { ...miseEnv(extraEnv), OUT_FILE: outFile },
       stdio: 'pipe',
     });
     return readFileSync(outFile, 'utf8')
