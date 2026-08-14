@@ -123,6 +123,49 @@ internal struct ReceiptCaptureMappingTests {
             ReceiptPart(mediaType: .jpeg, data: Data([0x01, 0x02])),
             ReceiptPart(mediaType: .png, data: Data([0x03])),
         ]
+
+        let sentParts = try await capturedParts(for: parts)
+
+        #expect(sentParts.count == 2)
+        #expect(sentParts[0]["dataBase64"] as? String == Data([0x01, 0x02]).base64EncodedString())
+        #expect(sentParts[0]["mediaType"] as? String == "image/jpeg")
+        #expect(sentParts[1]["dataBase64"] as? String == Data([0x03]).base64EncodedString())
+        #expect(sentParts[1]["mediaType"] as? String == "image/png")
+    }
+
+    /// Every ``ReceiptMediaType`` case against the wire string
+    /// `purchases`' vision pipeline actually reads (`pillars/bfm/src/api/purchases/client.ts`
+    /// forwards `parts` unchanged, so a wrong pairing here reaches it verbatim).
+    ///
+    /// `expectedWireValue`'s `switch` has no `default`: a `ReceiptMediaType`
+    /// case added without a line here fails the build, not just this test —
+    /// the same guarantee `arguments: ReceiptMediaType.allCases` gives against
+    /// a case that never gets exercised at all.
+    @Test(
+        "every media type maps to the wire value the vision pipeline expects",
+        arguments: ReceiptMediaType.allCases
+    )
+    func everyMediaTypeMapsToItsDocumentedWireValue(mediaType: ReceiptMediaType) async throws {
+        let expectedWireValue: String
+        switch mediaType {
+        case .jpeg: expectedWireValue = "image/jpeg"
+        case .png: expectedWireValue = "image/png"
+        case .webp: expectedWireValue = "image/webp"
+        case .gif: expectedWireValue = "image/gif"
+        case .pdf: expectedWireValue = "application/pdf"
+        case .plainText: expectedWireValue = "text/plain"
+        }
+
+        let sentParts = try await capturedParts(
+            for: [ReceiptPart(mediaType: mediaType, data: Data([0x00]))])
+
+        #expect(sentParts.first?["mediaType"] as? String == expectedWireValue)
+    }
+
+    /// Sends `parts` through a stubbed transport and decodes the JSON body
+    /// that was actually put on the wire, shared by every test that checks
+    /// what got sent rather than what came back.
+    private func capturedParts(for parts: [ReceiptPart]) async throws -> [[String: Any]] {
         let capturedBody = CapturedBody()
         let transport = StubTransport { _, body in
             if let body {
@@ -139,13 +182,7 @@ internal struct ReceiptCaptureMappingTests {
         let sent = try #require(await capturedBody.value)
         let decoded = try #require(
             try JSONSerialization.jsonObject(with: sent) as? [String: Any])
-        let sentParts = try #require(decoded["parts"] as? [[String: Any]])
-
-        #expect(sentParts.count == 2)
-        #expect(sentParts[0]["dataBase64"] as? String == Data([0x01, 0x02]).base64EncodedString())
-        #expect(sentParts[0]["mediaType"] as? String == "image/jpeg")
-        #expect(sentParts[1]["dataBase64"] as? String == Data([0x03]).base64EncodedString())
-        #expect(sentParts[1]["mediaType"] as? String == "image/png")
+        return try #require(decoded["parts"] as? [[String: Any]])
     }
 }
 
