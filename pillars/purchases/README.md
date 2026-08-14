@@ -128,6 +128,8 @@ This is not a weaker gate, and it is no longer untested. The whole mechanism is 
 
 **What would reverse the `false`:** browser traffic, and only browser traffic. The ingest callers were the cheap half of that list and they now carry keys; the two-process test would flip with the flag, since it is a test of this pillar rather than a deployment of it. The browser leg is the whole remaining blocker: the shell's `_pillar-proxy.conf` injects no `X-API-Key`, no pillar SPA in the fleet sends one, and a key injected at the edge would be forgeable by any in-network caller, which ADR-044 rejected outright.
 
+**A test closes the same path anyway, on purpose.** `PURCHASES_REQUIRE_SERVICE_ACCOUNT_CREDENTIAL` (`resolveRequireCredential` in `src/api/middleware/service-account-scope.ts`) flips `requireCredential` to `true` for the duration of a run — the mechanism the browser leg above can never reach in production, because `resolveRequireCredential` also requires `NODE_ENV !== 'production'`, and compose sets `NODE_ENV=production` on every deployed container. `pillars/bfm/src/api/purchases/__tests__/receipt-upload.live-seam.test.ts` sets it so the suite can prove a presented `X-API-Key` is actually checked rather than merely admitted alongside everything else — a live-seam suite that only ever sends a credentialled call cannot otherwise tell "the grant was checked" from "nothing was checked and happened to agree." Never set it anywhere else.
+
 ## Who it calls, and as whom
 
 The mirror of the section above, and the half with a production failure mode. purchases makes four outbound cross-pillar calls, all through `pillar()` from `@pops/pillar-sdk/server`, which attaches the pillar's service-account key as `X-API-Key`:
