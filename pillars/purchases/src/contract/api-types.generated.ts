@@ -1253,6 +1253,7 @@ export interface operations {
                     | 'no-lines'
                     | 'negative-line'
                     | 'sum-mismatch'
+                    | 'ambiguous-tax'
                     | 'damaged';
                 }[];
                 /** @enum {string} */
