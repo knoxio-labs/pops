@@ -57,7 +57,7 @@ It carries no credentials of its own. `init(baseURL:)` reaches only the BFM's un
 
 ## The repositories
 
-`BFMTransactionsRepository` and `BFMBootstrapService` conform to `AppCore`'s `TransactionsRepository` and `BootstrapService`. They are the reason this package depends on `AppCore` at all, and the reason `ModuleBoundaryTests` names it — with `Auth` — as one of the two packages allowed to hold a concrete implementation of a seam.
+`BFMTransactionsRepository`, `BFMReceiptCaptureRepository` and `BFMBootstrapService` conform to `AppCore`'s `TransactionsRepository`, `ReceiptCaptureRepository` and `BootstrapService`. They are the reason this package depends on `AppCore` at all, and the reason `ModuleBoundaryTests` names it — with `Auth` — as one of the two packages allowed to hold a concrete implementation of a seam.
 
 ### Bootstrap
 
@@ -78,6 +78,14 @@ The mapping from wire to domain is the whole of it, and each leg is somewhere a 
 - **Types.** `type` reaches `TransactionType` as a raw value, never through a Swift enum. It is the field the finance pillar is free to add to, and this build is on a phone somebody else owns.
 - **Failures.** `unavailable` and `contractMismatch` do not converge. The BFM separates `upstream_unavailable` from `upstream_contract_mismatch` deliberately — "not answering" against "answered something this build cannot read" — and the list renders a different sentence and a different next action for each.
 - **A stale cursor is not a failure.** `400 invalid_cursor` says the token this app holds is not one this server issued, and the server's own instruction is to start the list again. The repository does that rather than reporting it, which keeps the rows already on screen. It cannot recurse: the restart sends no cursor, and only a cursor that was sent can be rejected.
+
+### Receipt capture
+
+`POST /mobile/purchases/receipts` answers with one of three outcomes, and every one of them is a `200` — the BFM's own contract treats "purchases read this receipt and could not reconcile it" as an answer, not a failure. Only a call that never got that far throws.
+
+`needs-review` and `unreadable` carry less than `AppCore`'s `ReceiptOutcome` can hold. `MobileReceiptOutcomeSchema` in the BFM's contract deliberately drops the full extracted reading and any photo reference from both — reviewing a `needs-review` receipt is a side-by-side comparison against the photograph, which is the operator surface's job on a screen big enough for it, and sending a phone a payload it cannot act on would be paid for on cellular for nothing. `BFMReceiptCaptureRepository` reports `receiptURIs: []` and an all-absent `ExtractedReceipt` for both rather than inventing either; the result screen already treats an empty list and an extraction with nothing to show as "say nothing" rather than as a missing value. That leaves the `needs-review` review screen permanently empty of extracted fields on-device — tracked as POPS-2132 rather than resolved here.
+
+A `needs-review` problem's `code` is an open string on the wire — a gate that grows a seventh reason must not fail every upload to decode on a handset that has not been updated — but `ReceiptGateFailureKind` is the closed set the result screen has copy for. A code outside it fails the whole outcome as `RepositoryError.contractMismatch`, the same call `BFMTransactionsRepository` makes about a row it cannot represent, rather than rendering a label nobody wrote.
 
 ## Where the base URL comes from
 
