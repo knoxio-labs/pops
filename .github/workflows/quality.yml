@@ -456,9 +456,11 @@ jobs:
 
   vendored-contracts:
     name: Vendored contract drift (ADR-033)
-    # A consumer that vendors a producer pillar's OpenAPI snapshot (because the
-    # producer has no npm package to depend on — e.g. the Rust `contacts`
-    # pillar) must keep its copy byte-identical to the canonical source, or the
+    # A consumer that vendors a producer pillar's OpenAPI snapshot — because the
+    # producer has no npm package to depend on (the Rust `contacts` pillar), or
+    # because depending on it would drag the producer's backend runtime graph
+    # into the consumer's install/build closure (`finance/app` -> `purchases`)
+    # — must keep its copy byte-identical to the canonical source, or the
     # generated client silently lags the contract. This guard reads the source
     # tree directly and pulls in no third-party deps, so it skips
     # `pnpm install`. See scripts/ci/check-vendored-contracts.mjs and ADR-033.
@@ -573,12 +575,13 @@ jobs:
     # seam: nothing forces a regenerate when the producer's contract changes,
     # so the committed client can silently outrun it (see ADR-040 and AGENTS.md
     # "Cross-pillar generated FE clients"). This regenerates every such client
-    # from its producer's current `./openapi` export and fails on any diff. The
-    # `contacts` leg additionally vendors its OpenAPI snapshot (ADR-033); that
-    # copy's own drift is covered separately by the `vendored-contracts` job
-    # above — this job only re-runs codegen against whatever is committed. The
-    # `purchases` leg is gated here from the day its client landed, ahead of any
-    # finance page consuming it, so the client cannot rot in the gap.
+    # and fails on any diff — `lists` from its producer's current `./openapi`
+    # export, `contacts` and `purchases` from their vendored snapshot (ADR-033).
+    # A vendored copy's own drift against its producer is covered separately by
+    # the `vendored-contracts` job above — this job only re-runs codegen against
+    # whatever is committed. The `purchases` leg is gated here from the day its
+    # client landed, ahead of any finance page consuming it, so the client
+    # cannot rot in the gap.
     #
     # Every leg is ALSO re-checked, more generally, by app-quality.yml's own
     # per-app `Codegen drift` step (`@pops/app-food` and `@pops/app-finance`
