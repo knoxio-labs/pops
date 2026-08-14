@@ -14,7 +14,7 @@ import {
 } from './DataTableFilters';
 
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import type { ColumnDef, Table } from '@tanstack/react-table';
+import type { ColumnDef } from '@tanstack/react-table';
 
 import type { ColumnFilter } from './DataTableFilters';
 
@@ -78,7 +78,7 @@ function FilterBarDemo({
 
   return (
     <div className="space-y-4">
-      <FilterBar filters={filters} table={table as unknown as Table<unknown>} />
+      <FilterBar filters={filters} table={table} />
       <p className="text-sm text-muted-foreground">
         {matchCount} of {sampleData.length} rows match
       </p>

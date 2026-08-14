@@ -1,113 +1,15 @@
 import { useQuery } from '@tanstack/react-query';
 import { AlertCircle, MapPin, RefreshCw, Tag } from 'lucide-react';
 import { useNavigate } from 'react-router';
-import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
 /**
- * Value breakdown cards — horizontal bar charts showing replacement value
- * grouped by item type or location.
+ * Value breakdown cards — replacement value grouped by item type or location.
  */
 import { Alert, AlertDescription, Button, Card, CardContent, Skeleton } from '@pops/ui';
 
 import { isUnavailableError, unwrap } from '../inventory-api-helpers.js';
 import { reportsValueByLocation, reportsValueByType } from '../inventory-api/index.js';
-import { formatCurrency } from '../lib/utils';
-
-const BAR_COLORS = [
-  'var(--primary)',
-  'color-mix(in oklch, var(--primary) 80%, transparent)',
-  'color-mix(in oklch, var(--primary) 60%, transparent)',
-  'color-mix(in oklch, var(--primary) 45%, transparent)',
-  'color-mix(in oklch, var(--primary) 30%, transparent)',
-];
-
-export interface BreakdownEntry {
-  name: string;
-  totalValue: number;
-  itemCount: number;
-  key?: string | null;
-}
-
-interface BreakdownChartProps {
-  data: BreakdownEntry[];
-  onBarClick?: (entry: BreakdownEntry) => void;
-}
-
-/**
- * Format a value for display in the breakdown chart.
- * Returns '\u2014' when value is 0 (no replacement value set on any item).
- */
-function formatBreakdownValue(value: number): string {
-  return value > 0 ? formatCurrency(value) : '\u2014';
-}
-
-function BreakdownTooltipContent({ payload }: { payload?: Array<{ payload: BreakdownEntry }> }) {
-  if (!payload?.length) return null;
-  const first = payload[0];
-  if (!first) return null;
-  const entry = first.payload;
-  return (
-    <div className="rounded-md border bg-popover px-3 py-2 text-sm shadow-md">
-      <p className="font-medium">{entry.name}</p>
-      <p className="text-muted-foreground">
-        {formatBreakdownValue(entry.totalValue)} ({entry.itemCount} items)
-      </p>
-    </div>
-  );
-}
-
-export function BreakdownChart({ data, onBarClick }: BreakdownChartProps) {
-  const hasAnyValue = data.some((entry) => entry.totalValue > 0);
-
-  if (data.length === 0 || !hasAnyValue) {
-    return (
-      <div className="flex h-32 items-center justify-center text-sm text-muted-foreground">
-        No items with replacement values
-      </div>
-    );
-  }
-
-  const chartHeight = Math.max(120, data.length * 40 + 20);
-
-  return (
-    <ResponsiveContainer width="100%" height={chartHeight}>
-      <BarChart data={data} layout="vertical" margin={{ left: 0, right: 16, top: 4, bottom: 4 }}>
-        <XAxis
-          type="number"
-          tickFormatter={(v: number) => formatCurrency(v)}
-          tick={{ fill: 'var(--muted-foreground)', fontSize: 11 }}
-          axisLine={false}
-          tickLine={false}
-        />
-        <YAxis
-          type="category"
-          dataKey="name"
-          width={100}
-          tick={{ fill: 'var(--foreground)', fontSize: 12 }}
-          axisLine={false}
-          tickLine={false}
-        />
-        <Tooltip
-          content={(props) => <BreakdownTooltipContent payload={props.payload as never} />}
-        />
-        <Bar
-          dataKey="totalValue"
-          radius={[0, 4, 4, 0]}
-          cursor={onBarClick ? 'pointer' : undefined}
-          onClick={(entry) => {
-            if (onBarClick && entry) {
-              onBarClick(entry as unknown as BreakdownEntry);
-            }
-          }}
-        >
-          {data.map((_, idx) => (
-            <Cell key={idx} fill={BAR_COLORS[idx % BAR_COLORS.length]} />
-          ))}
-        </Bar>
-      </BarChart>
-    </ResponsiveContainer>
-  );
-}
+import { BreakdownChart, type BreakdownEntry } from './ValueBreakdown.chart';
 
 export function ValueByTypeCard({ className }: { className?: string }) {
   const navigate = useNavigate();

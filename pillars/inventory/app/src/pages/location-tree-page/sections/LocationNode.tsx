@@ -119,8 +119,8 @@ export function LocationNode(props: LocationNodeProps) {
           setRenaming={setRenaming}
           siblingIndex={props.siblingIndex}
           siblingCount={props.siblingCount}
-          attributes={sortable.attributes as unknown as Record<string, unknown>}
-          listeners={sortable.listeners as unknown as Record<string, unknown> | undefined}
+          attributes={sortable.attributes}
+          listeners={sortable.listeners}
           setActivatorNodeRef={sortable.setActivatorNodeRef}
           onSelect={props.onSelect}
           onAddChild={props.onAddChild}

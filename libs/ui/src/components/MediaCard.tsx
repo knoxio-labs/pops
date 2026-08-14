@@ -5,7 +5,7 @@
  * Designed to be a thin shared base for domain-specific cards (MediaCard,
  * InventoryCard, etc.).
  */
-import { type ComponentType, type MouseEvent, type ReactNode } from 'react';
+import { type ComponentType, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react';
 
 import { cn } from '../lib/utils';
 import { Card } from '../primitives/card';
@@ -27,7 +27,8 @@ export interface MediaCardProps {
   overlayBottomLeft?: ReactNode;
   /** Slot below the image, after title/subtitle. */
   footer?: ReactNode;
-  onClick?: (e: MouseEvent<HTMLDivElement>) => void;
+  /** Fired by pointer click and by the Enter/Space keyboard equivalent. */
+  onClick?: (e: MouseEvent<HTMLDivElement> | KeyboardEvent<HTMLDivElement>) => void;
   className?: string;
   imageClassName?: string;
 }
@@ -95,7 +96,7 @@ export function MediaCard({
         if (!interactive) return;
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
-          onClick?.(e as unknown as MouseEvent<HTMLDivElement>);
+          onClick?.(e);
         }
       }}
       className={cn(

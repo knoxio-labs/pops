@@ -23,7 +23,7 @@ import { type SelectOption } from './Select';
  * DataTableFilters - Filter components for DataTable
  * Supports text, select, multi-select, date range, and number range filters
  */
-import type { Table } from '@tanstack/react-table';
+import type { Column, Table } from '@tanstack/react-table';
 
 export interface ColumnFilter {
   id: string;
@@ -42,13 +42,13 @@ export {
 } from './DataTableFilters.fields';
 export { dateRangeFilter, multiSelectFilter, numberRangeFilter } from './DataTableFilters.fns';
 
-interface FilterBarProps {
+interface FilterBarProps<TData> {
   filters: ColumnFilter[];
-  table: Table<unknown>;
+  table: Table<TData>;
   onClearAll?: () => void;
 }
 
-function FilterGrid({ filters, table }: { filters: ColumnFilter[]; table: Table<unknown> }) {
+function FilterGrid<TData>({ filters, table }: { filters: ColumnFilter[]; table: Table<TData> }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {filters.map((filter) => {
@@ -67,13 +67,7 @@ function FilterGrid({ filters, table }: { filters: ColumnFilter[]; table: Table<
   );
 }
 
-function FilterControl({
-  filter,
-  column,
-}: {
-  filter: ColumnFilter;
-  column: NonNullable<ReturnType<Table<unknown>['getColumn']>>;
-}) {
+function FilterControl<TData>({ filter, column }: { filter: ColumnFilter; column: Column<TData> }) {
   if (filter.type === 'text')
     return <TextFilter column={column} placeholder={filter.placeholder} ariaLabel={filter.label} />;
   if (filter.type === 'select' && filter.options)
@@ -101,7 +95,7 @@ function FilterControl({
   return null;
 }
 
-function countActiveFilters(table: Table<unknown>): number {
+function countActiveFilters<TData>(table: Table<TData>): number {
   return table.getState().columnFilters.filter((f) => {
     const value = f.value;
     if (Array.isArray(value)) return value.some((v) => v !== '' && v !== undefined);
@@ -147,7 +141,7 @@ function FilterBarHeader({
   );
 }
 
-export function FilterBar({ filters, table, onClearAll }: FilterBarProps) {
+export function FilterBar<TData>({ filters, table, onClearAll }: FilterBarProps<TData>) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const activeFiltersCount = countActiveFilters(table);
 

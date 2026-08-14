@@ -5,13 +5,13 @@ import { TextInput } from './TextInput';
 
 import type { Column } from '@tanstack/react-table';
 
-interface TextFilterProps {
-  column: Column<unknown>;
+interface TextFilterProps<TData> {
+  column: Column<TData>;
   placeholder?: string;
   ariaLabel?: string;
 }
 
-export function TextFilter({ column, placeholder, ariaLabel }: TextFilterProps) {
+export function TextFilter<TData>({ column, placeholder, ariaLabel }: TextFilterProps<TData>) {
   return (
     <TextInput
       placeholder={placeholder ?? 'Filter...'}
@@ -25,14 +25,19 @@ export function TextFilter({ column, placeholder, ariaLabel }: TextFilterProps) 
   );
 }
 
-interface SelectFilterProps {
-  column: Column<unknown>;
+interface SelectFilterProps<TData> {
+  column: Column<TData>;
   options: SelectOption[];
   placeholder?: string;
   ariaLabel?: string;
 }
 
-export function SelectFilter({ column, options, placeholder, ariaLabel }: SelectFilterProps) {
+export function SelectFilter<TData>({
+  column,
+  options,
+  placeholder,
+  ariaLabel,
+}: SelectFilterProps<TData>) {
   return (
     <Select
       value={(column.getFilterValue() as string) ?? ''}
@@ -45,19 +50,19 @@ export function SelectFilter({ column, options, placeholder, ariaLabel }: Select
   );
 }
 
-interface MultiSelectFilterProps {
-  column: Column<unknown>;
+interface MultiSelectFilterProps<TData> {
+  column: Column<TData>;
   options: SelectOption[];
   placeholder?: string;
   ariaLabel?: string;
 }
 
-export function MultiSelectFilter({
+export function MultiSelectFilter<TData>({
   column,
   options,
   placeholder,
   ariaLabel,
-}: MultiSelectFilterProps) {
+}: MultiSelectFilterProps<TData>) {
   const filterValue = (column.getFilterValue() as string[]) ?? [];
 
   return (
@@ -75,12 +80,12 @@ export function MultiSelectFilter({
   );
 }
 
-interface DateRangeFilterProps {
-  column: Column<unknown>;
+interface DateRangeFilterProps<TData> {
+  column: Column<TData>;
   ariaLabel?: string;
 }
 
-export function DateRangeFilter({ column, ariaLabel }: DateRangeFilterProps) {
+export function DateRangeFilter<TData>({ column, ariaLabel }: DateRangeFilterProps<TData>) {
   const filterValue = (column.getFilterValue() as [string, string]) ?? ['', ''];
   const fromLabel = ariaLabel ? `${ariaLabel} (from)` : 'From';
   const toLabel = ariaLabel ? `${ariaLabel} (to)` : 'To';
@@ -108,19 +113,19 @@ export function DateRangeFilter({ column, ariaLabel }: DateRangeFilterProps) {
   );
 }
 
-interface NumberRangeFilterProps {
-  column: Column<unknown>;
+interface NumberRangeFilterProps<TData> {
+  column: Column<TData>;
   minPlaceholder?: string;
   maxPlaceholder?: string;
   ariaLabel?: string;
 }
 
-export function NumberRangeFilter({
+export function NumberRangeFilter<TData>({
   column,
   minPlaceholder = 'Min',
   maxPlaceholder = 'Max',
   ariaLabel,
-}: NumberRangeFilterProps) {
+}: NumberRangeFilterProps<TData>) {
   const filterValue = (column.getFilterValue() as [number, number]) ?? [undefined, undefined];
   const minLabel = ariaLabel ? `${ariaLabel} (min)` : minPlaceholder;
   const maxLabel = ariaLabel ? `${ariaLabel} (max)` : maxPlaceholder;

@@ -3,12 +3,36 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { BreakdownChart, type BreakdownEntry } from './ValueBreakdown';
+import {
+  BreakdownChart,
+  BreakdownTooltipContent,
+  type BreakdownEntry,
+} from './ValueBreakdown.chart';
 
 import type {
   ReportsValueByLocationResponses,
   ReportsValueByTypeResponses,
 } from '../inventory-api/types.gen';
+
+/**
+ * What recharts hands `<Bar onClick>`: the data row spread flat over the
+ * geometry it computed, plus a `payload` back-reference to the row itself. The
+ * flat copy is lossy — recharts overwrites `value`, `x`, `y`, `width`, `height`
+ * — so only `payload` is a trustworthy source for the row.
+ */
+const barRectangle = vi.hoisted(() => ({ current: undefined as unknown }));
+
+function rectangleFor(row: unknown, flatOverrides: Record<string, unknown> = {}): unknown {
+  return {
+    ...(typeof row === 'object' && row !== null ? row : {}),
+    x: 0,
+    y: 0,
+    width: 10,
+    height: 10,
+    ...flatOverrides,
+    payload: row,
+  };
+}
 
 // Mock recharts to avoid canvas rendering issues in jsdom
 vi.mock('recharts', async () => {
@@ -33,16 +57,12 @@ vi.mock('recharts', async () => {
       onClick,
       children,
     }: {
-      onClick?: (entry: Record<string, unknown>) => void;
+      onClick?: (entry: unknown) => void;
       children: React.ReactNode;
     }) =>
       React.createElement(
         'div',
-        {
-          'data-testid': 'bar',
-          onClick: () =>
-            onClick?.({ name: 'Electronics', key: 'loc-1', totalValue: 5000, itemCount: 10 }),
-        },
+        { 'data-testid': 'bar', onClick: () => onClick?.(barRectangle.current) },
         children
       ),
     XAxis: () => null,
@@ -121,6 +141,12 @@ beforeEach(() => {
   vi.clearAllMocks();
   mockTypeSuccess([]);
   mockLocationSuccess([]);
+  barRectangle.current = rectangleFor({
+    name: 'Electronics',
+    key: 'loc-1',
+    totalValue: 5000,
+    itemCount: 10,
+  });
 });
 
 function renderWithProviders(ui: React.ReactNode) {
@@ -175,6 +201,59 @@ describe('BreakdownChart', () => {
     renderWithProviders(<BreakdownChart data={data} onBarClick={onClick} />);
     fireEvent.click(screen.getByTestId('bar'));
     expect(onClick).toHaveBeenCalled();
+  });
+
+  it('reads the clicked row from the rectangle payload, not the flattened copy', () => {
+    const row: BreakdownEntry = { name: 'Electronics', totalValue: 5000, itemCount: 10 };
+    barRectangle.current = rectangleFor(row, { name: 'clobbered-by-recharts', totalValue: -1 });
+    const onClick = vi.fn();
+    renderWithProviders(<BreakdownChart data={[row]} onBarClick={onClick} />);
+    fireEvent.click(screen.getByTestId('bar'));
+    expect(onClick).toHaveBeenCalledWith(row);
+  });
+
+  it('ignores a bar click whose payload is not a breakdown entry', () => {
+    barRectangle.current = rectangleFor({ id: 'not-a-breakdown-entry' });
+    const onClick = vi.fn();
+    const data: BreakdownEntry[] = [{ name: 'Electronics', totalValue: 5000, itemCount: 10 }];
+    renderWithProviders(<BreakdownChart data={data} onBarClick={onClick} />);
+    fireEvent.click(screen.getByTestId('bar'));
+    expect(onClick).not.toHaveBeenCalled();
+  });
+
+  it('ignores a bar click carrying no payload at all', () => {
+    barRectangle.current = { x: 0, y: 0, width: 10, height: 10 };
+    const onClick = vi.fn();
+    const data: BreakdownEntry[] = [{ name: 'Electronics', totalValue: 5000, itemCount: 10 }];
+    renderWithProviders(<BreakdownChart data={data} onBarClick={onClick} />);
+    fireEvent.click(screen.getByTestId('bar'));
+    expect(onClick).not.toHaveBeenCalled();
+  });
+});
+
+describe('BreakdownTooltipContent', () => {
+  it('renders the row behind the hovered tooltip item', () => {
+    const row: BreakdownEntry = { name: 'Electronics', totalValue: 5000, itemCount: 10 };
+    render(<BreakdownTooltipContent payload={[{ payload: row }]} />);
+    expect(screen.getByText('Electronics')).toBeInTheDocument();
+    expect(screen.getByText(/\(10 items\)/)).toBeInTheDocument();
+  });
+
+  it('renders an em dash for a row with no replacement value', () => {
+    const row: BreakdownEntry = { name: 'Furniture', totalValue: 0, itemCount: 2 };
+    render(<BreakdownTooltipContent payload={[{ payload: row }]} />);
+    expect(screen.getByText('— (2 items)')).toBeInTheDocument();
+  });
+
+  it.each([
+    ['no payload prop', undefined],
+    ['an empty payload array', [] as Array<{ payload?: unknown }>],
+    ['an item with no row', [{}] as Array<{ payload?: unknown }>],
+    ['a row of the wrong shape', [{ payload: { name: 'Electronics' } }]],
+    ['a non-object row', [{ payload: 'Electronics' }]],
+  ])('renders nothing for %s', (_label, payload) => {
+    const { container } = render(<BreakdownTooltipContent payload={payload} />);
+    expect(container).toBeEmptyDOMElement();
   });
 });
 

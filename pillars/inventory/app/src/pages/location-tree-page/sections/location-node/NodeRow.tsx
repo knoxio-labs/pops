@@ -6,6 +6,8 @@ import { countDescendants, type LocationTreeNode } from '../../utils';
 import { InlineInput } from './InlineInput';
 import { NodeActions } from './NodeActions';
 
+import type { DraggableAttributes, DraggableSyntheticListeners } from '@dnd-kit/core';
+
 interface NodeRowProps {
   node: LocationTreeNode;
   depth: number;
@@ -18,8 +20,8 @@ interface NodeRowProps {
   setRenaming: (v: boolean) => void;
   siblingIndex: number;
   siblingCount: number;
-  attributes: Record<string, unknown>;
-  listeners: Record<string, unknown> | undefined;
+  attributes: DraggableAttributes;
+  listeners: DraggableSyntheticListeners;
   setActivatorNodeRef: (el: HTMLElement | null) => void;
   onSelect: (id: string) => void;
   onAddChild: (parentId: string) => void;
@@ -73,8 +75,8 @@ function DragHandle({
   setActivatorNodeRef,
 }: {
   name: string;
-  attributes: Record<string, unknown>;
-  listeners: Record<string, unknown> | undefined;
+  attributes: DraggableAttributes;
+  listeners: DraggableSyntheticListeners;
   setActivatorNodeRef: (el: HTMLElement | null) => void;
 }) {
   return (
