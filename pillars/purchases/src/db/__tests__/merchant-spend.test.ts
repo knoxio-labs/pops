@@ -56,14 +56,24 @@ function seedSources(target: OpenedPurchasesDb): void {
   });
 }
 
-beforeEach(() => {
-  ({ opened, cleanup } = openTempDb());
-  seedSources(opened);
-});
+/**
+ * Give the enclosing block a private, seeded database per test.
+ *
+ * Called per block rather than declared once at file level because a
+ * file-level `beforeEach` runs for every block in the file, including the
+ * corpus block below, which builds its own database once and would otherwise
+ * pay an open and a seed per test for a database it never reads.
+ */
+function withDatabasePerTest(): void {
+  beforeEach(() => {
+    ({ opened, cleanup } = openTempDb());
+    seedSources(opened);
+  });
 
-afterEach(() => {
-  cleanup();
-});
+  afterEach(() => {
+    cleanup();
+  });
+}
 
 const ZERO: PurchaseAccounting = {
   totalCents: 0,
@@ -176,11 +186,8 @@ describe('the roll-up agrees with the per-order split it summarises', () => {
    * default on a slow runner. Nothing below writes to this database — they
    * read it, fold it and compare — so one copy serves all five.
    *
-   * It is a database of the block's own. The file-level `beforeEach` still
-   * opens one per test here and these five tests ignore it; that is a copy
-   * of an already-migrated file rather than a migration run, so it costs a
-   * couple of milliseconds, and leaving it is cheaper than moving every
-   * other block in the file under a `describe` to avoid it.
+   * This block deliberately does not call `withDatabasePerTest`: the whole
+   * point is that no test here arranges anything of its own.
    */
   let corpus: OpenedPurchasesDb;
   // A no-op until the arrangement opens something, so a build that fails
@@ -313,6 +320,8 @@ describe('the roll-up agrees with the per-order split it summarises', () => {
 });
 
 describe('an order is counted once however many rows hang off it', () => {
+  withDatabasePerTest();
+
   it('does not multiply the total by its charges, or by their links', () => {
     // The fan-out that `SUM(purchases.total_cents)` over a charge join gets
     // wrong: this order appears three times once charges are joined and four
@@ -346,6 +355,8 @@ describe('an order is counted once however many rows hang off it', () => {
 });
 
 describe('the headline figure does not move when bookkeeping catches up', () => {
+  withDatabasePerTest();
+
   it('survives a statement import: net spend is unchanged, only the buckets move', () => {
     // The property net spend was redefined to have. A merchant headline that
     // changed because a cron ran would be reporting import history rather
@@ -404,6 +415,8 @@ describe('the headline figure does not move when bookkeeping catches up', () => 
 });
 
 describe('the unexplained bucket is returned, not left to a consumer', () => {
+  withDatabasePerTest();
+
   it('reports the gift-card remainder as residual rather than folding it away', () => {
     createPurchase(
       opened.db,
@@ -506,6 +519,8 @@ describe('the unexplained bucket is returned, not left to a consumer', () => {
 });
 
 describe('currencies are grouped, never added together', () => {
+  withDatabasePerTest();
+
   it('keeps an AUD order and a USD order in separate groups and separate totals', () => {
     createPurchase(
       opened.db,
@@ -528,6 +543,8 @@ describe('currencies are grouped, never added together', () => {
 });
 
 describe('merchant attribution is reported at the confidence it actually has', () => {
+  withDatabasePerTest();
+
   it('separates a resolved entity, a name-only merchant, and an unattributed order', () => {
     createPurchase(
       opened.db,
@@ -710,6 +727,8 @@ describe('merchant attribution is reported at the confidence it actually has', (
 });
 
 describe('the roll-up covers exactly the orders the index covers', () => {
+  withDatabasePerTest();
+
   function seedAcrossTime(): void {
     const stamps = [
       '2025-12-31T23:59:59Z',
@@ -791,6 +810,8 @@ describe('the roll-up covers exactly the orders the index covers', () => {
 });
 
 describe('ordering is deterministic', () => {
+  withDatabasePerTest();
+
   it('ranks by net spend within a currency, currencies ascending', () => {
     createPurchase(
       opened.db,
