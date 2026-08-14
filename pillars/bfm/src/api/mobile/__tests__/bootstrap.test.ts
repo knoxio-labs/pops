@@ -79,7 +79,10 @@ describe('a federation that is entirely healthy', () => {
       { id: 'finance', reachability: 'healthy' },
       { id: 'food', reachability: 'healthy' },
     ]);
-    expect(payload.features).toEqual([{ id: 'transactions', reachability: 'healthy' }]);
+    expect(payload.features).toEqual([
+      { id: 'transactions', reachability: 'healthy' },
+      { id: 'receipt-capture', reachability: 'unavailable' },
+    ]);
   });
 
   it('leaves bfm out of the list it is answering with', async () => {
@@ -140,7 +143,10 @@ describe('a federation that is half-broken', () => {
       { id: 'finance', reachability: 'healthy' },
       { id: 'food', reachability: 'unavailable' },
     ]);
-    expect(payload.features).toEqual([{ id: 'transactions', reachability: 'healthy' }]);
+    expect(payload.features).toEqual([
+      { id: 'transactions', reachability: 'healthy' },
+      { id: 'receipt-capture', reachability: 'unavailable' },
+    ]);
   });
 
   it('marks the feature unavailable when its own pillar is the one that is down', async () => {
@@ -154,7 +160,46 @@ describe('a federation that is half-broken', () => {
       })
     );
 
-    expect(payload.features).toEqual([{ id: 'transactions', reachability: 'unavailable' }]);
+    expect(payload.features).toEqual([
+      { id: 'transactions', reachability: 'unavailable' },
+      { id: 'receipt-capture', reachability: 'unavailable' },
+    ]);
+  });
+
+  it('marks receipts unavailable independently of transactions when only purchases is down', async () => {
+    const { db, device } = seededDb(deviceRow());
+
+    const payload = await buildMobileBootstrap(
+      device,
+      depsFor(db, {
+        readRegistry: () =>
+          Promise.resolve(
+            registrySnapshot([
+              pillarSnapshot('finance'),
+              pillarSnapshot('purchases', { registered: false }),
+            ])
+          ),
+      })
+    );
+
+    expect(payload.features).toEqual([
+      { id: 'transactions', reachability: 'healthy' },
+      { id: 'receipt-capture', reachability: 'unavailable' },
+    ]);
+  });
+
+  it('marks receipts reachable when purchases answers', async () => {
+    const { db, device } = seededDb(deviceRow());
+
+    const payload = await buildMobileBootstrap(
+      device,
+      depsFor(db, healthyFleet('finance', 'purchases'))
+    );
+
+    expect(payload.features).toEqual([
+      { id: 'transactions', reachability: 'healthy' },
+      { id: 'receipt-capture', reachability: 'healthy' },
+    ]);
   });
 
   it('keeps contract-mismatch distinct from unavailable all the way to the feature', async () => {
@@ -168,7 +213,10 @@ describe('a federation that is half-broken', () => {
     const payload = await buildMobileBootstrap(device, depsFor(db, { probe }));
 
     expect(payload.pillars).toEqual([{ id: 'finance', reachability: 'contract-mismatch' }]);
-    expect(payload.features).toEqual([{ id: 'transactions', reachability: 'contract-mismatch' }]);
+    expect(payload.features).toEqual([
+      { id: 'transactions', reachability: 'contract-mismatch' },
+      { id: 'receipt-capture', reachability: 'unavailable' },
+    ]);
   });
 });
 
@@ -185,7 +233,10 @@ describe('a registry serving something less than the truth', () => {
     );
 
     expect(payload.registry.source).toBe('stale-fallback');
-    expect(payload.features).toEqual([{ id: 'transactions', reachability: 'healthy' }]);
+    expect(payload.features).toEqual([
+      { id: 'transactions', reachability: 'healthy' },
+      { id: 'receipt-capture', reachability: 'unavailable' },
+    ]);
   });
 
   it('degrades rather than throwing when the registry cannot be reached at all', async () => {
@@ -202,7 +253,10 @@ describe('a registry serving something less than the truth', () => {
 
     expect(payload.registry.source).toBe('unavailable');
     expect(payload.pillars).toEqual([]);
-    expect(payload.features).toEqual([{ id: 'transactions', reachability: 'unavailable' }]);
+    expect(payload.features).toEqual([
+      { id: 'transactions', reachability: 'unavailable' },
+      { id: 'receipt-capture', reachability: 'unavailable' },
+    ]);
   });
 
   it('says so in the log, since only an operator can act on it', async () => {

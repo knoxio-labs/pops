@@ -20,6 +20,7 @@ import { requestOn } from './test-http.js';
 
 const LIST_PATH = '/mobile/finance/transactions';
 const DETAIL_PATH = '/mobile/finance/transactions/{id}';
+const BOOTSTRAP_PATH = '/mobile/bootstrap';
 
 interface JsonSchema {
   type?: string;
@@ -155,6 +156,22 @@ describe('the list row', () => {
     const amount = schema.properties?.['data']?.items?.properties?.['amount'];
     expect(amount?.type).toBe('number');
     expect(amount?.nullable).toBeUndefined();
+  });
+});
+
+describe('the bootstrap feature id', () => {
+  it('leaves the feature id an open string, so a second feature still decodes', () => {
+    // Same hazard as currency/type above, sharper here: this field sits
+    // inside every element of `features` on the app's first authenticated
+    // call. An `enum` here becomes a closed Swift enum, and the day bfm adds
+    // a feature besides `transactions`, every build already on a handset
+    // fails to decode the WHOLE bootstrap payload, not just the row carrying
+    // it — a phone that cannot get past its splash screen.
+    const schema = okSchema(BOOTSTRAP_PATH);
+
+    const id = schema.properties?.['features']?.items?.properties?.['id'];
+    expect(id?.type).toBe('string');
+    expect(id?.enum).toBeUndefined();
   });
 });
 
