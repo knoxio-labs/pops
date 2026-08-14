@@ -47,9 +47,9 @@
     "@lezer/generator": "^1.8.0",
     "@pops/lists": "workspace:*",
     "@pops/locales": "workspace:*",
-    "@testing-library/jest-dom": "^7.0.0",
+    "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.2",
-    "@testing-library/user-event": "^14.6.3",
+    "@testing-library/user-event": "^14.6.4",
     "@types/better-sqlite3": "^7.6.12",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",
@@ -58,7 +58,7 @@
     "axe-core": "^4.13.0",
     "better-sqlite3": "^12.10.0",
     "jsdom": "^30.0.1",
-    "tsx": "^4.23.11",
+    "tsx": "^4.23.12",
     "typescript": "^6.0.3",
     "vitest": "^4.1.10"
   }
