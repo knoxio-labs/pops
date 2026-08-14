@@ -31,6 +31,7 @@ let package = Package(
             dependencies: [
                 "FeatureReceiptCapture",
                 "AppCore",
+                .product(name: "AppCoreFakes", package: "AppCore"),
             ],
             swiftSettings: strictSwiftSettings
         ),
