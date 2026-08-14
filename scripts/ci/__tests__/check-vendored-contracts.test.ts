@@ -29,6 +29,8 @@ import {
   discoverVendoredContracts,
   findDrift,
   findMoved,
+  findUnvendoredContracts,
+  isCanonicalContractSource,
   KNOWN_VENDORED_LEGS,
   readOrNull,
   statKind,
@@ -139,6 +141,86 @@ describe('discoverVendoredContracts / deriveExpectedContracts against the real r
   it('leaves every declared expectation present on disk in the real tree', () => {
     const findings = findMoved(deriveExpectedContracts(repoRoot), statKind);
     expect(findings).toEqual([]);
+  });
+
+  it('finds no *.openapi.json anywhere outside a declared VENDOR_DIRECTORIES shape', () => {
+    expect(findUnvendoredContracts(repoRoot)).toEqual([]);
+  });
+});
+
+describe('findUnvendoredContracts', () => {
+  it('reports a vendored-shaped file sitting outside every VENDOR_DIRECTORIES entry', () => {
+    // The exact blind spot this function exists for: `pillars/<id>/contracts/`
+    // (no `app/` segment) is a real directory in this repo —
+    // `pillars/bfm/contracts/` already holds fixture copies — but is outside
+    // every `VENDOR_DIRECTORIES` shape, so `discoverVendoredContracts` alone
+    // never visits it and a copy planted there was previously invisible to
+    // the whole guard, not merely unpaired.
+    const root = fixtureRoot();
+    mkdirSync(join(root, 'pillars', 'producer-x', 'openapi'), { recursive: true });
+    writeFileSync(
+      join(root, 'pillars', 'producer-x', 'openapi', 'producer-x.openapi.json'),
+      '{}\n'
+    );
+    const strayDir = join(root, 'pillars', 'bfm-like', 'contracts');
+    mkdirSync(strayDir, { recursive: true });
+    const strayCopy = join(strayDir, 'producer-x.openapi.json');
+    writeFileSync(strayCopy, '{"drifted":true}\n');
+
+    expect(findUnvendoredContracts(root)).toEqual([strayCopy]);
+  });
+
+  it('does not flag a producer’s own canonical spec', () => {
+    const root = fixtureRoot();
+    mkdirSync(join(root, 'pillars', 'producer-y', 'openapi'), { recursive: true });
+    writeFileSync(
+      join(root, 'pillars', 'producer-y', 'openapi', 'producer-y.openapi.json'),
+      '{}\n'
+    );
+
+    expect(findUnvendoredContracts(root)).toEqual([]);
+  });
+
+  it('does not flag a legitimately vendored copy in a declared shape', () => {
+    const root = fixtureRoot();
+    plantTsPair(root, 'consumer-a', 'producer-a');
+
+    expect(findUnvendoredContracts(root)).toEqual([]);
+  });
+
+  it('does not descend into node_modules or other build/dependency directories', () => {
+    const root = fixtureRoot();
+    const junkDir = join(root, 'pillars', 'noisy-pillar', 'node_modules', 'some-dep');
+    mkdirSync(junkDir, { recursive: true });
+    writeFileSync(join(junkDir, 'unrelated.openapi.json'), '{}\n');
+
+    expect(findUnvendoredContracts(root)).toEqual([]);
+  });
+});
+
+describe('isCanonicalContractSource', () => {
+  it('recognises a producer’s own canonical spec', () => {
+    const root = fixtureRoot();
+    const path = join(root, 'pillars', 'producer-z', 'openapi', 'producer-z.openapi.json');
+    expect(isCanonicalContractSource(path, root)).toBe(true);
+  });
+
+  it('rejects a same-named file one level too deep', () => {
+    const root = fixtureRoot();
+    const path = join(root, 'pillars', 'producer-z', 'app', 'openapi', 'producer-z.openapi.json');
+    expect(isCanonicalContractSource(path, root)).toBe(false);
+  });
+
+  it('rejects a mismatched pillar id / filename pair', () => {
+    const root = fixtureRoot();
+    const path = join(root, 'pillars', 'producer-z', 'openapi', 'someone-else.openapi.json');
+    expect(isCanonicalContractSource(path, root)).toBe(false);
+  });
+
+  it('rejects a path outside pillars/ entirely', () => {
+    const root = fixtureRoot();
+    const path = join(root, 'clients', 'ios', 'Contracts', 'bfm.openapi.json');
+    expect(isCanonicalContractSource(path, root)).toBe(false);
   });
 });
 
@@ -470,5 +552,58 @@ describe('the guard CLI', () => {
     expect(threw).toBe(true);
     expect(stderr).toContain('consumer-moved');
     expect(stderr).toContain('not on disk');
+  });
+
+  it('fails loudly, not with OK, on a vendored-shaped copy outside every declared shape', () => {
+    // The exact blindness this suite exists to close: a `*.openapi.json`
+    // sitting under `pillars/<id>/contracts/` — a real, reachable directory
+    // shape (`pillars/bfm/contracts/`) that no `VENDOR_DIRECTORIES` entry
+    // names — used to be invisible to both the plain guard run and its
+    // `--self-test`. Both must now report it by path.
+    const sandbox = fixtureRoot();
+    cpSync(join(repoRoot, 'scripts', 'ci'), join(sandbox, 'scripts', 'ci'), { recursive: true });
+    plantTsPair(sandbox, 'consumer-intact', 'producer-intact');
+
+    mkdirSync(join(sandbox, 'pillars', 'stray-source', 'openapi'), { recursive: true });
+    writeFileSync(
+      join(sandbox, 'pillars', 'stray-source', 'openapi', 'stray-source.openapi.json'),
+      '{}\n'
+    );
+    const strayDir = join(sandbox, 'pillars', 'bfm-like', 'contracts');
+    mkdirSync(strayDir, { recursive: true });
+    writeFileSync(join(strayDir, 'stray-source.openapi.json'), '{"drifted":true}\n');
+
+    let stderr = '';
+    let threw = false;
+    try {
+      execFileSync('node', [join(sandbox, 'scripts', 'ci', 'check-vendored-contracts.mjs')], {
+        stdio: 'pipe',
+      });
+    } catch (error) {
+      threw = true;
+      stderr = String((error as { stderr?: Buffer }).stderr ?? '');
+    }
+
+    expect(threw).toBe(true);
+    expect(stderr).toContain(join('pillars', 'bfm-like', 'contracts', 'stray-source.openapi.json'));
+    expect(stderr).toContain('outside every VENDOR_DIRECTORIES shape');
+
+    let selfTestStderr = '';
+    let selfTestThrew = false;
+    try {
+      execFileSync(
+        'node',
+        [join(sandbox, 'scripts', 'ci', 'check-vendored-contracts.mjs'), '--self-test'],
+        { stdio: 'pipe' }
+      );
+    } catch (error) {
+      selfTestThrew = true;
+      selfTestStderr = String((error as { stderr?: Buffer }).stderr ?? '');
+    }
+
+    expect(selfTestThrew).toBe(true);
+    expect(selfTestStderr).toContain(
+      join('pillars', 'bfm-like', 'contracts', 'stray-source.openapi.json')
+    );
   });
 });
