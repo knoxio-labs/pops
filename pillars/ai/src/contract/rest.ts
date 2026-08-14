@@ -5,7 +5,8 @@
  * Composes the AI-ops telemetry routers (usage reads, observability, providers,
  * budgets, alerts), the cross-pillar ingest `POST /ai-usage/record`
  * (`aiIngest`), the pricing read `GET /ai-pricing/:p/:m` (`aiPricing`), and the
- * per-pillar `settings.*` RU+reset surface for its own `ai.*` keys.
+ * per-pillar `settings.*` RU+reset surface for its own `ai.*` keys, plus the
+ * shared `jobs.*` management surface over this pillar's own queues.
  */
 import { initContract } from '@ts-rest/core';
 
@@ -15,6 +16,7 @@ import { aiObservabilityContract } from './rest-ai-observability.js';
 import { aiProvidersContract } from './rest-ai-providers.js';
 import { aiUsageContract } from './rest-ai-usage.js';
 import { aiIngestContract } from './rest-ingest.js';
+import { aiJobsContract } from './rest-jobs.js';
 import { aiPricingContract } from './rest-pricing.js';
 import { aiSettingsContract } from './rest-settings.js';
 
@@ -29,6 +31,7 @@ export const aiContract = c.router(
     aiUsage: aiUsageContract,
     aiIngest: aiIngestContract,
     aiPricing: aiPricingContract,
+    jobs: aiJobsContract,
     settings: aiSettingsContract,
   },
   { pathPrefix: '' }

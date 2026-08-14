@@ -44,11 +44,11 @@
   "devDependencies": {
     "@hey-api/openapi-ts": "^0.99.0",
     "@pops/locales": "workspace:*",
-    "@pops/purchases": "workspace:*",
     "@testing-library/jest-dom": "^7.0.0",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.3",
     "@types/crypto-js": "^4.2.2",
+    "@types/node": "^24.13.3",
     "@types/papaparse": "^5.5.2",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",

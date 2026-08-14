@@ -83,6 +83,19 @@ updates:
       interval: weekly
       day: tuesday
     open-pull-requests-limit: 10
+    # `@types/node`'s major tracks the Node RELEASE LINE, not an API contract —
+    # `@types/node@26` describes Node 26's globals and `node:` surface. The fleet
+    # runs Node 24 (mise.toml, mise.ci.toml, every workflow's setup-node, and the
+    # `engines` field), so accepting the major lets `tsc` green-light an API that
+    # does not exist at runtime — a failure that only ever appears in production,
+    # because the type-checker is the very thing that would have caught it. This
+    # is the same reasoning that excludes Node majors from the docker ecosystem
+    # above; the types have to move in the same deliberate step as the runtime.
+    # Minor/patch within the pinned major still flow automatically.
+    ignore:
+      - dependency-name: "@types/node"
+        update-types:
+          - version-update:semver-major
     groups:
       workspace-minor-patch:
         update-types:

@@ -1,16 +1,26 @@
 /**
  * Handlers for the `reconcile.*` ts-rest sub-router.
  */
-import { confirmLink, listReconcileQueue, unlinkCharge } from '../../db/index.js';
+import {
+  confirmLink,
+  listPurchasesForTransaction,
+  listReconcileQueue,
+  rejectLink,
+  unlinkCharge,
+} from '../../db/index.js';
 import { nowIso } from '../../db/services/internal.js';
 
 import type { z } from 'zod';
 
-import type { ReconcileQueueQuerySchema } from '../../contract/rest-reconcile.js';
-import type { PurchasesDb, QueueEntry } from '../../db/index.js';
+import type {
+  ReconcileQueueQuerySchema,
+  TransactionLinksQuerySchema,
+} from '../../contract/rest-reconcile.js';
+import type { LinkedPurchase, PurchasesDb, QueueEntry } from '../../db/index.js';
 import type { SweepOutcome } from '../../reconcile/sweep.js';
 
 type QueueQuery = z.infer<typeof ReconcileQueueQuerySchema>;
+type TransactionLinksQuery = z.infer<typeof TransactionLinksQuerySchema>;
 type Decision = { chargeId: string; transactionUri: string };
 
 /** What the route needs from the runner, without importing its scheduling. */
@@ -35,6 +45,14 @@ function toWireEntries(entries: readonly QueueEntry[]) {
   }));
 }
 
+function toWireLinkedPurchases(entries: readonly LinkedPurchase[]) {
+  return entries.map((entry) => ({
+    purchase: entry.purchase,
+    charges: entry.charges.map((charge) => ({ charge: charge.charge, link: charge.link })),
+    linkedCents: entry.linkedCents,
+  }));
+}
+
 export function makeReconcileHandlers(db: PurchasesDb, sweep?: SweepTrigger) {
   return {
     queue: async ({ query }: { query: QueueQuery }) => ({
@@ -54,18 +72,38 @@ export function makeReconcileHandlers(db: PurchasesDb, sweep?: SweepTrigger) {
       },
     }),
 
+    links: async ({ query }: { query: TransactionLinksQuery }) => ({
+      status: 200 as const,
+      body: {
+        // Echoed back so a response is self-describing once it has been
+        // passed around, cached or logged away from the request that
+        // produced it.
+        transactionUri: query.transactionUri,
+        purchases: toWireLinkedPurchases(listPurchasesForTransaction(db, query.transactionUri)),
+      },
+    }),
+
     confirm: async ({ body }: { body: Decision }) => {
-      const pinned = confirmLink(db, body.chargeId, body.transactionUri, nowIso());
+      const outcome = confirmLink(db, body.chargeId, body.transactionUri, nowIso());
       // 404 rather than a silent success: the link the user was looking at
       // is gone, and telling them it was confirmed would be a lie they only
       // discover when it reappears in the queue.
-      if (!pinned) return missingLink(body);
-      return { status: 200 as const, body: { ok: true as const } };
+      if (!outcome.pinned) return missingLink(body);
+      return {
+        status: 200 as const,
+        body: { ok: true as const, matchRuleId: outcome.matchRuleId },
+      };
     },
 
     unlink: async ({ body }: { body: Decision }) => {
       const removed = unlinkCharge(db, body.chargeId, body.transactionUri);
       if (!removed) return missingLink(body);
+      return { status: 200 as const, body: { ok: true as const } };
+    },
+
+    reject: async ({ body }: { body: Decision }) => {
+      const rejected = rejectLink(db, body.chargeId, body.transactionUri, nowIso());
+      if (!rejected) return missingLink(body);
       return { status: 200 as const, body: { ok: true as const } };
     },
 

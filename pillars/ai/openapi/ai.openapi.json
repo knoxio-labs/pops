@@ -3008,6 +3008,1464 @@
         "tags": ["aiUsage"]
       }
     },
+    "/jobs": {
+      "get": {
+        "operationId": "jobs.list",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "queue",
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "state",
+            "schema": {
+              "enum": ["waiting", "active", "completed", "failed", "delayed", "paused"],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "exclusiveMinimum": true,
+              "maximum": 200,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "jobs": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "attemptsMade": {
+                            "type": "number"
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          },
+                          "data": {},
+                          "failedReason": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "finishedAt": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "id": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "processedAt": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "progress": {},
+                          "queue": {
+                            "type": "string"
+                          },
+                          "stacktrace": {
+                            "items": {
+                              "type": "string"
+                            },
+                            "type": "array"
+                          },
+                          "state": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "queue",
+                          "state",
+                          "attemptsMade",
+                          "data",
+                          "progress",
+                          "failedReason",
+                          "stacktrace",
+                          "createdAt",
+                          "processedAt",
+                          "finishedAt"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "queue": {
+                      "type": "string"
+                    },
+                    "total": {
+                      "type": "number"
+                    }
+                  },
+                  "required": ["queue", "jobs", "total"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "409"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "503"
+          }
+        },
+        "summary": "List jobs on a queue, optionally filtered by state",
+        "tags": ["jobs"]
+      }
+    },
+    "/jobs/dead-letter": {
+      "get": {
+        "operationId": "jobs.listDeadLetter",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "queue",
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "state",
+            "schema": {
+              "enum": ["waiting", "active", "completed", "failed", "delayed", "paused"],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "exclusiveMinimum": true,
+              "maximum": 200,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "jobs": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "attemptsMade": {
+                            "type": "number"
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          },
+                          "data": {},
+                          "failedReason": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "finishedAt": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "id": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "processedAt": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "progress": {},
+                          "queue": {
+                            "type": "string"
+                          },
+                          "stacktrace": {
+                            "items": {
+                              "type": "string"
+                            },
+                            "type": "array"
+                          },
+                          "state": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "queue",
+                          "state",
+                          "attemptsMade",
+                          "data",
+                          "progress",
+                          "failedReason",
+                          "stacktrace",
+                          "createdAt",
+                          "processedAt",
+                          "finishedAt"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "originQueue": {
+                      "type": "string"
+                    },
+                    "queue": {
+                      "type": "string"
+                    },
+                    "total": {
+                      "type": "number"
+                    }
+                  },
+                  "required": ["queue", "jobs", "total", "originQueue"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "409"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "503"
+          }
+        },
+        "summary": "List jobs parked in a queue’s dead-letter sibling",
+        "tags": ["jobs"]
+      }
+    },
+    "/jobs/dead-letter/{id}/replay": {
+      "post": {
+        "operationId": "jobs.replayDeadLetter",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "queue": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "deadLetterJobId": {
+                      "type": "string"
+                    },
+                    "originQueue": {
+                      "type": "string"
+                    },
+                    "replayedJobId": {
+                      "nullable": true,
+                      "type": "string"
+                    }
+                  },
+                  "required": ["deadLetterJobId", "originQueue", "replayedJobId"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "409"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "503"
+          }
+        },
+        "summary": "Re-enqueue a dead-lettered job onto its origin queue",
+        "tags": ["jobs"]
+      }
+    },
+    "/jobs/drain": {
+      "post": {
+        "operationId": "jobs.drain",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "delayed": {
+                    "type": "boolean"
+                  },
+                  "queue": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "queue": {
+                      "type": "string"
+                    },
+                    "removed": {
+                      "type": "number"
+                    }
+                  },
+                  "required": ["queue", "removed"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "409"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "503"
+          }
+        },
+        "summary": "Remove every waiting (and by default delayed) job from a queue",
+        "tags": ["jobs"]
+      }
+    },
+    "/jobs/queues": {
+      "get": {
+        "operationId": "jobs.queues",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "queues": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": ["queues"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "409"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "503"
+          }
+        },
+        "summary": "List the job queues this pillar owns",
+        "tags": ["jobs"]
+      }
+    },
+    "/jobs/stats": {
+      "get": {
+        "operationId": "jobs.stats",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "queues": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "counts": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "active": {
+                                "type": "number"
+                              },
+                              "completed": {
+                                "type": "number"
+                              },
+                              "delayed": {
+                                "type": "number"
+                              },
+                              "failed": {
+                                "type": "number"
+                              },
+                              "paused": {
+                                "type": "number"
+                              },
+                              "waiting": {
+                                "type": "number"
+                              }
+                            },
+                            "required": [
+                              "waiting",
+                              "active",
+                              "completed",
+                              "failed",
+                              "delayed",
+                              "paused"
+                            ],
+                            "type": "object"
+                          },
+                          "deadLetter": {
+                            "additionalProperties": false,
+                            "nullable": true,
+                            "properties": {
+                              "count": {
+                                "type": "number"
+                              },
+                              "queue": {
+                                "type": "string"
+                              }
+                            },
+                            "required": ["queue", "count"],
+                            "type": "object"
+                          },
+                          "queue": {
+                            "type": "string"
+                          }
+                        },
+                        "required": ["queue", "counts", "deadLetter"],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": ["queues"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "409"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "503"
+          }
+        },
+        "summary": "Per-state job counts for every queue, including dead-letter depth",
+        "tags": ["jobs"]
+      }
+    },
+    "/jobs/{id}": {
+      "get": {
+        "operationId": "jobs.get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "queue",
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "attemptsMade": {
+                      "type": "number"
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "data": {},
+                    "failedReason": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "finishedAt": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "id": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "processedAt": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "progress": {},
+                    "queue": {
+                      "type": "string"
+                    },
+                    "stacktrace": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "state": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "queue",
+                    "state",
+                    "attemptsMade",
+                    "data",
+                    "progress",
+                    "failedReason",
+                    "stacktrace",
+                    "createdAt",
+                    "processedAt",
+                    "finishedAt"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "409"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "503"
+          }
+        },
+        "summary": "Read a single job",
+        "tags": ["jobs"]
+      }
+    },
+    "/jobs/{id}/cancel": {
+      "post": {
+        "operationId": "jobs.cancel",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "queue": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "cancelled": {
+                      "enum": [true],
+                      "type": "boolean"
+                    },
+                    "id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["id", "cancelled"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "409"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "503"
+          }
+        },
+        "summary": "Remove a job that is not currently being processed",
+        "tags": ["jobs"]
+      }
+    },
+    "/jobs/{id}/retry": {
+      "post": {
+        "operationId": "jobs.retry",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "queue": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "attemptsMade": {
+                      "type": "number"
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "data": {},
+                    "failedReason": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "finishedAt": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "id": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "processedAt": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "progress": {},
+                    "queue": {
+                      "type": "string"
+                    },
+                    "stacktrace": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "state": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "queue",
+                    "state",
+                    "attemptsMade",
+                    "data",
+                    "progress",
+                    "failedReason",
+                    "stacktrace",
+                    "createdAt",
+                    "processedAt",
+                    "finishedAt"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "409"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "503"
+          }
+        },
+        "summary": "Re-run a finished job",
+        "tags": ["jobs"]
+      }
+    },
     "/settings": {
       "get": {
         "operationId": "settings.list",

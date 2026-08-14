@@ -7,6 +7,7 @@
  * can register its own settings section and mount the renderer. Each
  * field's value is stored under its `id` in the returned values object.
  */
+import { Check } from 'lucide-react';
 import { useMemo } from 'react';
 
 import { cn } from '../lib/utils';
@@ -193,7 +194,7 @@ export function SettingsForm({
       {showFooter ? (
         <footer className="flex justify-end gap-2">
           <Button onClick={handleCommit} loading={saving}>
-            Save
+            <Check className="h-4 w-4 mr-1.5" /> Save
           </Button>
         </footer>
       ) : null}

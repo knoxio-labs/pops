@@ -27,6 +27,8 @@ import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 
+import { withPreMigrationBackup } from '@pops/pillar-sdk/db';
+
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 
 /**
@@ -83,6 +85,13 @@ export interface OpenedBfmDb {
  * crash `openBfmDb`'s own tests reproduce deterministically for the pragma
  * path (see `open-bfm-db.test.ts`), and one the pragma calls sat outside the
  * `try` for long enough to cause it.
+ *
+ * The apply runs behind `withPreMigrationBackup`: a snapshot is taken
+ * first whenever this database has journal entries left to apply AND
+ * already carries a schema of its own, removed once they all land, and
+ * left on disk with its path logged when one throws. A database being
+ * created here — the first-ever mount of the data volume — has nothing
+ * to snapshot and is migrated directly.
  */
 export function openBfmDb(path: string): OpenedBfmDb {
   mkdirSync(dirname(path), { recursive: true });
@@ -92,7 +101,11 @@ export function openBfmDb(path: string): OpenedBfmDb {
     raw.pragma('foreign_keys = ON');
     raw.pragma('busy_timeout = 5000');
     const db = drizzle(raw) as BfmDb;
-    migrate(db, { migrationsFolder: migrationsDir() });
+    const migrations = migrationsDir();
+    withPreMigrationBackup(
+      { connection: raw, databasePath: path, migrationsFolder: migrations },
+      () => migrate(db, { migrationsFolder: migrations })
+    );
     return { db, raw };
   } catch (err) {
     raw.close();

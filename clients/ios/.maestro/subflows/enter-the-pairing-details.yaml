@@ -1,0 +1,75 @@
+appId: com.knoxiolabs.pops
+name: Enter the pairing details and submit them
+---
+# The half of the pairing screen every flow drives identically, in one place so
+# that what it has to get right is got right once.
+#
+# `SERVER_URL` is the caller's, and it is the only thing that differs between
+# them: the recovery flows pair through the control plane, the happy path dials
+# the pillar directly. `PAIRING_CODE` is the harness's, minted per attempt in
+# `clients/ios/mise.toml` and inherited from the calling flow.
+#
+# BOTH FIELDS ARE ASSERTED AND THE WHOLE ENTRY IS RETRIED, and that is the
+# whole reason this is a subflow rather than six copies. `inputText` is not
+# addressed to a field — it types into whatever holds keyboard focus — and
+# `tapOn` returns when the tap has been delivered, not when the tapped field
+# has become first responder. On a loaded machine the keystrokes can arrive
+# before the focus does and iOS drops them on the floor: Maestro reports the
+# tap and the typing COMPLETED, the field keeps whatever it already held, and
+# the flow fails much later somewhere that reads like a different bug entirely
+# — a transactions list that was never going to appear, because pairing was
+# submitted against the Debug prefill and dialled a port nothing was listening
+# on. The field's own text is the signal that the typing landed.
+#
+# THE ASSERTIONS SIT AFTER BOTH FIELDS ARE TYPED, not after each one, because
+# the second tap can miss its field exactly the way the first can — and when it
+# does, the `eraseText` and `inputText` behind it land on the server field the
+# first pass had just got right, replacing a URL with a pairing code. Asserting
+# each field the moment it is typed cannot see that: the server assertion has
+# already passed by then, and what reaches `pairing-submit` is a field nothing
+# looked at again. Asserting both at the end of the attempt is what makes the
+# state that gets submitted the state that was checked.
+#
+# One retry over the pair, rather than one per field, for the same reason: an
+# attempt that mis-focused anywhere re-taps, re-erases and re-types BOTH
+# fields, so a field corrupted by the previous attempt is rewritten rather than
+# inherited. There is no ordering of per-field retries that has that property,
+# because each one leaves the field it is not looking at to whatever the other
+# did to it.
+#
+# `focused` is not the signal to wait on instead, though Maestro offers it as a
+# selector: it is mapped from XCUITest's `hasFocus`, which is the focus
+# engine's notion of focus and reads false on a SwiftUI `TextField` that is
+# holding the keyboard. Checked against the pinned Maestro and the pinned
+# simulator before this was written.
+- retry:
+    maxRetries: 2
+    commands:
+      - tapOn:
+          id: 'pairing-server-field'
+      # The Debug build prefills this with the address in `project.yml`. The
+      # harness serves on a free port instead — `scripts/ios-e2e/run.mjs` says
+      # why — so the prefill is erased and the real one typed, which is also
+      # the path somebody pairing without a QR code takes.
+      - eraseText
+      - inputText: ${SERVER_URL}
+      - tapOn:
+          id: 'pairing-code-field'
+      # Erased first even though the field starts empty on a first attempt,
+      # because a later one does not: it arrives here with however much of the
+      # code — or of the server URL — the previous attempt left in it.
+      - eraseText
+      - inputText: ${PAIRING_CODE}
+      - assertVisible:
+          id: 'pairing-server-field'
+          text: ${SERVER_URL}
+      - assertVisible:
+          id: 'pairing-code-field'
+          text: ${PAIRING_CODE}
+
+# No `hideKeyboard` first: the form is a ScrollView, so SwiftUI insets it for
+# the keyboard and the button stays on screen with the keys up. Maestro cannot
+# dismiss this keyboard anyway — there is no standard dismiss action on a plain
+# SwiftUI TextField, and it says so and fails.
+- tapOn:
+    id: 'pairing-submit'

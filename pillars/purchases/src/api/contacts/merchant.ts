@@ -17,8 +17,13 @@
  * Unknown is therefore a valid outcome and not a failure, exactly as
  * POPS-240 asks: the escape hatch exists for merchants nothing recognises.
  */
-import { isOk, pillar, type CallResult, type PillarHandle } from '@pops/pillar-sdk/client';
+import { isOk, pillar, type CallResult, type PillarHandle } from '@pops/pillar-sdk/server';
 
+import {
+  credentialled,
+  credentialRejectedMessage,
+  UNAUTHORIZED_REASON,
+} from '../pillars/outbound.js';
 import { EntityListResponseSchema, type ContactEntity } from './wire.js';
 
 export const CONTACTS_PILLAR_ID = 'contacts';
@@ -138,14 +143,28 @@ export function chooseMerchant(
  * Every failure answers null. A contacts pillar that is down, slow or
  * unregistered must not stop a receipt being read — the purchase is still
  * real, and the merchant name off the paper is still recorded.
+ *
+ * A *refused credential* answers null too, and is the one failure that says
+ * so out loud: it does not clear on its own, and silently unresolved
+ * merchants are indistinguishable from merchants contacts genuinely does not
+ * know — which is a valid outcome here and therefore no signal at all.
+ *
+ * The handle is resolved per call rather than at construction. This resolver
+ * is built while the Express app is assembled, and `pillar()` from
+ * `@pops/pillar-sdk/server` refuses to build a handle without a
+ * service-account key: constructing eagerly would turn a missing key into a
+ * pillar that will not boot.
  */
 export function createMerchantResolver(handle?: PillarHandle<ContactsRouter>): MerchantResolver {
-  const contacts = handle ?? pillar<ContactsRouter>(CONTACTS_PILLAR_ID);
-
   return {
     async resolve(receiptMerchantName: string): Promise<string | null> {
       const seed = searchSeed(receiptMerchantName);
       if (seed === null) return null;
+
+      const contacts =
+        handle ??
+        credentialled(CONTACTS_PILLAR_ID, () => pillar<ContactsRouter>(CONTACTS_PILLAR_ID));
+      if (contacts === null) return null;
 
       let result: CallResult<unknown>;
       try {
@@ -153,7 +172,12 @@ export function createMerchantResolver(handle?: PillarHandle<ContactsRouter>): M
       } catch {
         return null;
       }
-      if (!isOk(result)) return null;
+      if (!isOk(result)) {
+        if (result.kind === UNAUTHORIZED_REASON) {
+          console.error(credentialRejectedMessage(CONTACTS_PILLAR_ID, 'entities.list'));
+        }
+        return null;
+      }
 
       const parsed = EntityListResponseSchema.safeParse(result.value);
       if (!parsed.success) return null;

@@ -388,10 +388,42 @@ jobs:
       # a barrier; starved of CPU they do not all get there, and it failed with
       # "a request never reached the refresher" on one run in three. A required
       # check that fails one time in three costs far more than three minutes.
-      # Running them concurrently on two SEPARATE runners would get both the
-      # wall clock and the isolation — costed in POPS-1746.
+      #
+      # SERIALISING ALSO COST LESS THAN IT LOOKED LIKE IT WOULD, and the numbers
+      # are here so nobody re-opens this. Run apart, the step splits into
+      # `build:for-testing` 55s, `test` 208s, `lint:analyze` 201s — 464s total.
+      # The analyzer had been measured at 350-369s while running *beside* the
+      # simulator suite, so contention was roughly half its cost, and running it
+      # alone is what removed that half. It is not anomalously slow against a
+      # laptop either: 96s on 14 cores against 201s on the runner's three is
+      # about what a parallelisable compiler-log walk should cost.
+      #
+      # Giving the analyzer its own runner was considered and dropped on those
+      # numbers: 201s of a 1587s job is 12.7%, and a second job pays its own
+      # checkout and compile before it starts, so it would recover maybe 150s.
+      # The UI flow below is 925s — 58% of this job — and is where the wall
+      # clock actually is.
       - name: Test + SwiftLint analyzer rules (one shared compile)
         run: "mise run -j 1 test ::: lint:analyze"
+
+      # THE ONE INVARIANT HERE THAT BUILDING, TESTING AND LINTING DO NOT COVER:
+      # a shipped binary names no BFM host, and is re-pointed by re-pairing
+      # rather than by a rebuild (POPS-1392). Debug builds fine with a host
+      # baked in — that is the state this check exists to distinguish Release
+      # from — so nothing above can see a regression in it.
+      #
+      # It matters more here than the usual gate does because this app is
+      # DISTRIBUTED: a Release that bakes in a hostname is not a bad deploy to
+      # be rolled forward, it is an install on hardware the operator does not
+      # control.
+      #
+      # It is a SECOND FULL COMPILE of the tree, in the Release configuration
+      # and into its own `-derivedDataPath`, sharing nothing above but the
+      # generated xcodeproj. That cost is the reason it sits here rather than
+      # up with `lint`: everything cheaper, and everything more likely to fail,
+      # has already reported by this point.
+      - name: Release carries no BFM host
+        run: mise run verify:release-carries-no-host
 
       # Everything below drives the built app on the simulator the step above
       # just left booted, against a real BFM. `clients/ios/.maestro/README.md`

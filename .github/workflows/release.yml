@@ -1,20 +1,28 @@
 name: Release
 
-# Triggers gated to workflow_dispatch only during the pillar-colocation work
-# so capivara doesn't pick up half-renamed paths via the tag → publish chain.
-# Restore `push: branches: [main]` once the colocation series stabilises.
+# Every push to `main` is considered for a release; `release.sh` decides whether
+# the commits since the last strict `vX.Y.Z` tag actually warrant one and exits
+# without tagging when they don't. `workflow_dispatch` stays for cutting a tag
+# out of band.
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 
-# Only tag pushes and GitHub Release creates; no commits land on main. The repo
-# ruleset forbids direct pushes to main, so the workflow is tag-only by design
-# and the GitHub Release is the canonical changelog.
+# `contents: write` for the tag push, the GitHub Release and its assets — no
+# commits land on main, the repo ruleset forbids direct pushes there, so the
+# workflow is tag-only by design and the GitHub Release is the canonical
+# changelog. `actions: write` is for the publish dispatch below.
 permissions:
   contents: write
+  actions: write
 
 concurrency:
   group: release
   cancel-in-progress: false
+
+env:
+  MISE_ENV: ci
 
 jobs:
   release:
@@ -25,6 +33,8 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: jdx/mise-action@v4
 
       - name: Configure git
         run: |
@@ -37,6 +47,15 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: bash .github/scripts/release.sh
 
+      # The moltbot profile is served from files, not from an image, so the
+      # release is where those files get a version. See
+      # `pillars/moltbot/README.md` for how a deployer consumes the tarball.
+      - name: Pack the moltbot config bundle
+        if: steps.compute.outputs.release == 'true'
+        env:
+          NEW_VERSION: ${{ steps.compute.outputs.version }}
+        run: node scripts/pack-moltbot-bundle.mjs --version "v${NEW_VERSION}" --out dist
+
       - name: Tag and publish release
         if: steps.compute.outputs.release == 'true'
         env:
@@ -47,4 +66,19 @@ jobs:
           git push origin "v${NEW_VERSION}"
           gh release create "v${NEW_VERSION}" \
             --title "v${NEW_VERSION}" \
-            --notes-file release-notes.md
+            --notes-file release-notes.md \
+            "dist/moltbot-bundle-v${NEW_VERSION}.tar.gz"
+
+      # GitHub does not start a workflow run from an event created with
+      # GITHUB_TOKEN, so the `v*` tag pushed above never reaches
+      # `publish-images.yml` on its own — the semver image tags it exists to
+      # produce have never been pushed. `workflow_dispatch` is one of the two
+      # documented exceptions to that rule, so ask for the run explicitly.
+      # Dispatching at the tag ref is what makes `docker/metadata-action`
+      # resolve its `type=semver` patterns.
+      - name: Republish the fleet at the new tag
+        if: steps.compute.outputs.release == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NEW_VERSION: ${{ steps.compute.outputs.version }}
+        run: gh workflow run publish-images.yml --ref "v${NEW_VERSION}"

@@ -464,6 +464,135 @@ export type MobileFinanceGetTransactionResponses = {
 export type MobileFinanceGetTransactionResponse =
   MobileFinanceGetTransactionResponses[keyof MobileFinanceGetTransactionResponses];
 
+export type MobilePurchasesUploadReceiptData = {
+  /**
+   * Body
+   */
+  body?: {
+    parts: Array<{
+      dataBase64: string;
+      mediaType:
+        | 'image/jpeg'
+        | 'image/png'
+        | 'image/webp'
+        | 'image/gif'
+        | 'application/pdf'
+        | 'text/plain';
+    }>;
+  };
+  path?: never;
+  query?: never;
+  url: '/mobile/purchases/receipts';
+};
+
+export type MobilePurchasesUploadReceiptErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code: 'invalid_cursor' | 'invalid_request';
+    message: string;
+  };
+  /**
+   * 401
+   */
+  401: {
+    code: 'invalid_token';
+    message: string;
+  };
+  /**
+   * 403
+   */
+  403: {
+    code: 'device_revoked';
+    message: string;
+  };
+  /**
+   * 413
+   */
+  413: {
+    code: 'payload_too_large';
+    maxBytes: number;
+    message: string;
+  };
+  /**
+   * 429
+   */
+  429: {
+    code: 'rate_limited';
+    message: string;
+    retryAfterSeconds: number;
+  };
+  /**
+   * 502
+   */
+  502: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+  /**
+   * 503
+   */
+  503: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+};
+
+export type MobilePurchasesUploadReceiptError =
+  MobilePurchasesUploadReceiptErrors[keyof MobilePurchasesUploadReceiptErrors];
+
+export type MobilePurchasesUploadReceiptResponses = {
+  /**
+   * 200
+   */
+  200:
+    | {
+        alreadyStored: boolean;
+        kind: 'created';
+        purchase: {
+          currency: string;
+          id: string;
+          itemCount: number;
+          merchantName: string | null;
+          orderedAt: string;
+          totalCents: number;
+        };
+      }
+    | {
+        kind: 'needs-review';
+        problems: Array<{
+          code: string;
+          detail: string;
+        }>;
+      }
+    | {
+        kind: 'unreadable';
+        reason: string;
+      };
+};
+
+export type MobilePurchasesUploadReceiptResponse =
+  MobilePurchasesUploadReceiptResponses[keyof MobilePurchasesUploadReceiptResponses];
+
 export type OperatorListDevicesData = {
   body?: never;
   path?: never;

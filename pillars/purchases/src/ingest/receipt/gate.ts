@@ -9,8 +9,15 @@
  *
  * So this is not a confidence score, and there is no threshold to tune. It
  * is arithmetic against a figure the model also had to read, which is the
- * point: getting the sum to agree by accident requires the model to have
- * misread the total in exactly the way it misread the lines.
+ * point: a reading that is wrong and still agrees has to be wrong about the
+ * total in exactly the way it is wrong about the lines.
+ *
+ * With one exception, and it is a smaller coincidence than that. Stated tax
+ * is tried both ways (see {@link reconcile}), so a single extraction error
+ * of exactly the stated tax satisfies the convention the receipt was not
+ * printed under. Half of that is caught — see {@link duplicatesTheStatedTax}
+ * — and the other half cannot be, because its evidence is a component that
+ * is not there.
  *
  * A failure is never a rejection. The purchase is still real and the photo
  * still exists; it goes to review with the discrepancy stated, because
@@ -37,11 +44,10 @@ export type GateFailure =
   | { readonly kind: 'no-lines'; readonly detail: string }
   | { readonly kind: 'negative-line'; readonly detail: string }
   | { readonly kind: 'sum-mismatch'; readonly detail: string; readonly deltaCents: number }
+  | { readonly kind: 'ambiguous-tax'; readonly detail: string }
   | { readonly kind: 'damaged'; readonly detail: string };
 
-export interface GateResult {
-  /** True only when every line parsed and the arithmetic agrees exactly. */
-  readonly admissible: boolean;
+interface GateFigures {
   readonly totalCents: number | null;
   readonly lineTotalCents: number;
   readonly taxCents: number;
@@ -49,7 +55,7 @@ export interface GateResult {
   /** Fees the merchant added — a card surcharge, a small-order fee. */
   readonly surchargeCents: number;
   /**
-   * Stated delivery, kept apart from {@link GateResult.surchargeCents} so
+   * Stated delivery, kept apart from {@link GateFigures.surchargeCents} so
    * `purchases.shippingCents` can answer what delivery cost.
    *
    * The split is the model's and **this gate cannot check it**. Both terms
@@ -71,23 +77,72 @@ export interface GateResult {
   readonly failures: readonly GateFailure[];
 }
 
-function sumAmounts(
-  amounts: readonly string[],
-  locale: MoneyLocale,
-  onUnreadable: (amount: string) => void
-): number {
-  return amounts.reduce((total, amount) => {
-    const cents = parseAmountCents(amount, locale);
-    if (cents === null) {
-      onUnreadable(amount);
-      return total;
-    }
-    return total + Math.abs(cents);
-  }, 0);
+/**
+ * A reading every check agreed with, so its total is money and its
+ * arithmetic proved itself. The only shape that may be written as fact.
+ */
+export interface AdmissibleGate extends GateFigures {
+  readonly admissible: true;
+  readonly totalCents: number;
 }
 
 /**
- * Total the product lines, recording anything that is not one.
+ * A reading at least one check refused, whatever else it got right.
+ *
+ * Its figures are still here — a review screen needs to show what was read
+ * — and several of them can be perfectly readable while the reading is
+ * refused: a negative line sums correctly against the stated total, and a
+ * torn corner says nothing about the numbers that survived. So a caller
+ * asking "can I use this" must ask `admissible`, never
+ * whether a particular figure happens to be present.
+ */
+export interface InadmissibleGate extends GateFigures {
+  readonly admissible: false;
+}
+
+/**
+ * The verdict, discriminated so the type carries it.
+ *
+ * `admissible` is derived from the failure list rather than enumerated, so
+ * a new {@link GateFailure} kind refuses its readings the day it is added,
+ * with nothing to remember to update.
+ */
+export type GateResult = AdmissibleGate | InadmissibleGate;
+
+/**
+ * Every amount that parsed, kept apart rather than accumulated.
+ *
+ * The sum is what the arithmetic needs; the individual figures are what
+ * {@link duplicatesTheStatedTax} needs, and it cannot recover them from a
+ * total. The sign is normalised for the reason it always has been: a
+ * reduction is printed both ways and means one thing either way.
+ */
+function readAmounts(
+  amounts: readonly string[],
+  locale: MoneyLocale,
+  onUnreadable: (amount: string) => void
+): number[] {
+  const read: number[] = [];
+  for (const amount of amounts) {
+    const cents = parseAmountCents(amount, locale);
+    if (cents === null) {
+      onUnreadable(amount);
+      continue;
+    }
+    read.push(Math.abs(cents));
+  }
+  return read;
+}
+
+function sumOf(amounts: readonly number[]): number {
+  return amounts.reduce((total, cents) => total + cents, 0);
+}
+
+/**
+ * Read the product lines, recording anything that is not one.
+ *
+ * Signs are kept as read, unlike {@link readAmounts}: a negative line is
+ * refused rather than quietly turned into a positive one.
  *
  * A negative amount is readable but misfiled: `discounts` is the channel
  * for a reduction, and it normalises the sign. A negative sitting among the
@@ -95,12 +150,12 @@ function sumAmounts(
  * danger, since nothing else here would object — while the purchase it
  * produces carries an item worth less than nothing.
  */
-function sumLines(
+function readLines(
   lines: ExtractedReceipt['lines'],
   locale: MoneyLocale,
   failures: GateFailure[]
-): number {
-  let total = 0;
+): number[] {
+  const read: number[] = [];
   for (const [index, line] of lines.entries()) {
     const cents = parseAmountCents(line.amount, locale);
     if (cents === null) {
@@ -118,9 +173,9 @@ function sumLines(
           'a discount belongs in `discounts`, not among the lines',
       });
     }
-    total += cents;
+    read.push(cents);
   }
-  return total;
+  return read;
 }
 
 interface Totals {
@@ -130,6 +185,53 @@ interface Totals {
   readonly discountCents: number;
   readonly surchargeCents: number;
   readonly shippingCents: number;
+  /**
+   * Every figure that entered the sum on the added side — each line, each
+   * surcharge, the delivery charge — one entry per figure the model
+   * reported, so an amount stated twice appears twice.
+   */
+  readonly addedCents: readonly number[];
+}
+
+/**
+ * Whether the same amount was added twice and is exactly the stated tax.
+ *
+ * This is the one shape in which a wrong reading can satisfy the wrong tax
+ * convention and still leave evidence. A model that files one fee in two
+ * fields — in `shipping` and in `surcharges`, or in `shipping` and again as
+ * the line it was printed on — overstates the added side by that fee. When
+ * the fee equals the stated tax, the overstatement is exactly what the
+ * exclusive convention would have added, so the components land on the
+ * stated total and the receipt reads as tax-inclusive. Both readings then
+ * produce the same total from the same figures, and nothing on the paper
+ * says which one the receipt is.
+ *
+ * Two occurrences rather than one, and that is the whole precision of it. A
+ * single component equal to the tax is ordinary — a tax-inclusive receipt
+ * states a tax of total/11, and on a long shop some line lands on it by
+ * coincidence — so refusing those would spend a reviewer's attention on
+ * arithmetic that is not in doubt. A *repeated* one is the fingerprint of
+ * the same money filed twice, which is the error nothing else here can see.
+ *
+ * A repeat sitting entirely among the lines counts, and that is a choice. It
+ * is the shape a receipt photographed in overlapping frames produces — the
+ * prompt says a line appearing in two images is one line, and the arithmetic
+ * is the backstop for when it is reported twice anyway. The cost is that two
+ * genuinely identical items priced at exactly the stated tax go to review;
+ * the alternative is being blind to an over-count on the intake most likely
+ * to produce one. Two identical coffees and an overlap artefact are the same
+ * bytes, which is why deduplicating them in code was refused as well — the
+ * ambiguity is real, and review is where a real ambiguity belongs.
+ *
+ * The mirror case is not detectable and does not pretend to be: a model
+ * that drops a component understates the added side, and if what it dropped
+ * equalled the stated tax, the exclusive branch reconciles instead. The
+ * evidence for that is a figure that is absent, which is exactly what a
+ * receipt that never charged it also looks like.
+ */
+function duplicatesTheStatedTax(addedCents: readonly number[], taxCents: number): boolean {
+  if (taxCents <= 0) return false;
+  return addedCents.filter((cents) => cents === taxCents).length >= 2;
 }
 
 /**
@@ -145,6 +247,11 @@ interface Totals {
  * currency or the address: the receipt's own numbers say, and exactly one
  * of the two can reconcile unless the tax is zero, when they are the same
  * sum. So both are tried and the paper decides.
+ *
+ * Trying both is also the one place a wrong reading can reconcile, since an
+ * extraction error of exactly the stated tax satisfies the other
+ * convention. See {@link duplicatesTheStatedTax} for the half of that which
+ * leaves evidence, and for the half which does not.
  */
 function reconcile(totals: Totals): { taxIncluded: boolean; failure: GateFailure | null } {
   const { totalCents, lineTotalCents, taxCents, discountCents } = totals;
@@ -154,7 +261,23 @@ function reconcile(totals: Totals): { taxIncluded: boolean; failure: GateFailure
   const inclusiveDelta = net - totalCents;
   const exclusiveDelta = net + taxCents - totalCents;
 
-  if (Math.abs(inclusiveDelta) <= TOLERANCE_CENTS) return { taxIncluded: true, failure: null };
+  if (Math.abs(inclusiveDelta) <= TOLERANCE_CENTS) {
+    if (!duplicatesTheStatedTax(totals.addedCents, taxCents)) {
+      return { taxIncluded: true, failure: null };
+    }
+    return {
+      taxIncluded: false,
+      failure: {
+        kind: 'ambiguous-tax',
+        detail:
+          `the components add to ${String(net)}c, the stated total, with the stated ` +
+          `${String(taxCents)}c of tax already inside the prices — but ${String(taxCents)}c ` +
+          'is also added twice, so counting it once and adding the tax gives the same ' +
+          `${String(net)}c. Two readings of the same figures, and the receipt does not ` +
+          'say which of them it is',
+      },
+    };
+  }
   if (Math.abs(exclusiveDelta) <= TOLERANCE_CENTS) return { taxIncluded: false, failure: null };
 
   // Report against whichever convention came closer, since that is the one
@@ -177,6 +300,60 @@ function reconcile(totals: Totals): { taxIncluded: boolean; failure: GateFailure
 }
 
 /**
+ * Turn every figure the receipt states into cents, naming each one it could
+ * not.
+ *
+ * Split out because it is the only part of the gate that touches strings.
+ * What it returns is arithmetic, and every decision taken on the far side of
+ * it — reconciling, choosing a tax convention, refusing an ambiguous one —
+ * is arithmetic too.
+ */
+function readTotals(
+  extracted: ExtractedReceipt,
+  locale: MoneyLocale,
+  failures: GateFailure[]
+): Totals {
+  const totalCents = parseAmountCents(extracted.total, locale);
+  if (totalCents === null) {
+    failures.push({
+      kind: 'unreadable-total',
+      detail: `the stated total "${extracted.total}" is not money`,
+    });
+  }
+
+  const lineCents = readLines(extracted.lines, locale, failures);
+
+  const taxCents = sumOf(
+    readAmounts(extracted.tax === null ? [] : [extracted.tax], locale, (amount) =>
+      failures.push({ kind: 'unreadable-line', detail: `stated tax "${amount}" is not money` })
+    )
+  );
+  const discountCents = sumOf(
+    readAmounts(extracted.discounts, locale, (amount) =>
+      failures.push({ kind: 'unreadable-line', detail: `stated discount "${amount}" is not money` })
+    )
+  );
+  const surchargeAmounts = readAmounts(extracted.surcharges, locale, (amount) =>
+    failures.push({ kind: 'unreadable-line', detail: `stated surcharge "${amount}" is not money` })
+  );
+  const shippingAmounts = readAmounts(
+    extracted.shipping === null ? [] : [extracted.shipping],
+    locale,
+    (amount) =>
+      failures.push({ kind: 'unreadable-line', detail: `stated shipping "${amount}" is not money` })
+  );
+  return {
+    totalCents,
+    lineTotalCents: sumOf(lineCents),
+    taxCents,
+    discountCents,
+    surchargeCents: sumOf(surchargeAmounts),
+    shippingCents: sumOf(shippingAmounts),
+    addedCents: [...lineCents, ...surchargeAmounts, ...shippingAmounts],
+  };
+}
+
+/**
  * Decide whether an extraction may be written as fact.
  *
  * Stated tax is tried both ways — see {@link reconcile}. Which convention a
@@ -188,15 +365,7 @@ export function gateExtraction(extracted: ExtractedReceipt): GateResult {
 
   // The receipt's own currency decides `1,495` — see `../money.ts`.
   const locale: MoneyLocale = { currency: extracted.currency };
-  const totalCents = parseAmountCents(extracted.total, locale);
-  if (totalCents === null) {
-    failures.push({
-      kind: 'unreadable-total',
-      detail: `the stated total "${extracted.total}" is not money`,
-    });
-  }
-
-  const lineTotalCents = sumLines(extracted.lines, locale, failures);
+  const totals = readTotals(extracted, locale, failures);
 
   if (extracted.lines.length === 0) {
     failures.push({
@@ -207,45 +376,28 @@ export function gateExtraction(extracted: ExtractedReceipt): GateResult {
     });
   }
 
-  const taxCents = sumAmounts(extracted.tax === null ? [] : [extracted.tax], locale, (amount) =>
-    failures.push({ kind: 'unreadable-line', detail: `stated tax "${amount}" is not money` })
-  );
-  const discountCents = sumAmounts(extracted.discounts, locale, (amount) =>
-    failures.push({ kind: 'unreadable-line', detail: `stated discount "${amount}" is not money` })
-  );
-  const surchargeCents = sumAmounts(extracted.surcharges, locale, (amount) =>
-    failures.push({ kind: 'unreadable-line', detail: `stated surcharge "${amount}" is not money` })
-  );
-  const shippingCents = sumAmounts(
-    extracted.shipping === null ? [] : [extracted.shipping],
-    locale,
-    (amount) =>
-      failures.push({ kind: 'unreadable-line', detail: `stated shipping "${amount}" is not money` })
-  );
-
   for (const note of extracted.unreadable) {
     failures.push({ kind: 'damaged', detail: `the model could not read: ${note}` });
   }
 
-  const reconciliation = reconcile({
-    totalCents,
-    lineTotalCents,
-    taxCents,
-    discountCents,
-    surchargeCents,
-    shippingCents,
-  });
+  const reconciliation = reconcile(totals);
   if (reconciliation.failure !== null) failures.push(reconciliation.failure);
 
-  return {
-    admissible: failures.length === 0,
-    totalCents,
-    lineTotalCents,
-    taxCents,
-    discountCents,
-    surchargeCents,
-    shippingCents,
+  const figures: GateFigures = {
+    totalCents: totals.totalCents,
+    lineTotalCents: totals.lineTotalCents,
+    taxCents: totals.taxCents,
+    discountCents: totals.discountCents,
+    surchargeCents: totals.surchargeCents,
+    shippingCents: totals.shippingCents,
     taxIncluded: reconciliation.taxIncluded,
     failures,
   };
+
+  // An unreadable total is itself a failure, so the second test decides
+  // nothing at runtime — it is what lets the admissible shape promise a
+  // total, and a caller stop asking.
+  return failures.length === 0 && totals.totalCents !== null
+    ? { ...figures, admissible: true, totalCents: totals.totalCents }
+    : { ...figures, admissible: false };
 }

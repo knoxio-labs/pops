@@ -18,6 +18,8 @@ import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 
+import { withPreMigrationBackup } from '@pops/pillar-sdk/db';
+
 import { buildImportDedupKeyFromStoredRow } from '../contract/import-dedup.js';
 
 import type { FinanceDb } from './services/internal.js';
@@ -60,6 +62,13 @@ export interface OpenedFinanceDb {
  * missing folder), the raw handle is closed before the error is
  * re-thrown so the caller can't leak a locked file descriptor.
  *
+ * The apply runs behind `withPreMigrationBackup`: a snapshot is taken
+ * first whenever this database has journal entries left to apply AND
+ * already carries a schema of its own, removed once they all land, and
+ * left on disk with its path logged when one throws. A database being
+ * created here — the first-ever mount of the data volume — has nothing
+ * to snapshot and is migrated directly.
+ *
  * The journal is self-bootstrapping: idx 0
  * `0053_finance_pillar_baseline` CREATEs the tables the later
  * `0025`/`0026`/`0027`/`0052` entries ALTER, so against a fresh
@@ -99,8 +108,12 @@ export function openFinanceDb(path: string): OpenedFinanceDb {
   raw.pragma('busy_timeout = 5000');
   registerFinanceSqlFunctions(raw);
   const db = drizzle(raw) as FinanceDb;
+  const migrations = migrationsDir();
   try {
-    migrate(db, { migrationsFolder: migrationsDir() });
+    withPreMigrationBackup(
+      { connection: raw, databasePath: path, migrationsFolder: migrations },
+      () => migrate(db, { migrationsFolder: migrations })
+    );
   } catch (err) {
     raw.close();
     throw err;

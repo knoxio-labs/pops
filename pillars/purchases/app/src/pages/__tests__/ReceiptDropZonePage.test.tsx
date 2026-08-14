@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import enAUPurchases from '@pops/locales/en-AU/purchases.json';
@@ -24,6 +25,7 @@ import { ReceiptDropZonePage } from '../ReceiptDropZonePage';
 import type {
   CreatedOutcome,
   ExtractedReceipt,
+  GateFailureKind,
   NeedsReviewOutcome,
   PurchaseDetail,
   UnreadableOutcome,
@@ -36,7 +38,9 @@ function renderPage(): ReturnType<typeof userEvent.setup> {
   });
   render(
     <QueryClientProvider client={client}>
-      <ReceiptDropZonePage />
+      <MemoryRouter initialEntries={['/purchases/receipts']}>
+        <ReceiptDropZonePage />
+      </MemoryRouter>
     </QueryClientProvider>
   );
   return user;
@@ -53,8 +57,30 @@ function frame(name: string, bytes: string, type = 'image/jpeg'): File {
   return new File([bytes], name, { type });
 }
 
+/** Dropped from the desktop — the path the input's `accept` cannot filter. */
+function dropOnZone(files: File[]): void {
+  const zone = dropZoneInput().closest('[role="button"]');
+  if (zone === null) throw new Error('the drop zone rendered no drop target');
+  fireEvent.drop(zone, { dataTransfer: { files } });
+}
+
 async function submit(user: ReturnType<typeof userEvent.setup>): Promise<void> {
   await user.click(screen.getByRole('button', { name: enAUPurchases['receipts.action.submit'] }));
+}
+
+const RAW_CATALOG_KEY = /receipts\.[a-zA-Z]/;
+
+/**
+ * `aria-label` values a screen reader reads but `document.body.textContent`
+ * never includes, since an attribute carries no text node of its own. A key
+ * i18next echoes back unresolved (`receipts.parts.moveDown`) is exactly as
+ * wrong here as it is in visible copy, and this is the only query that can
+ * catch it.
+ */
+function leakedAriaLabels(): string[] {
+  return Array.from(document.body.querySelectorAll('[aria-label]'))
+    .map((element) => element.getAttribute('aria-label') ?? '')
+    .filter((label) => RAW_CATALOG_KEY.test(label));
 }
 
 function sentParts(): { mediaType: string; dataBase64: string }[] {
@@ -308,10 +334,12 @@ describe('ReceiptDropZonePage — staging what is sent', () => {
     expect(screen.getByText(enAUPurchases['receipts.parts.empty'])).toBeVisible();
   });
 
+  // Dragged in rather than chosen: the dialog's own accept filter never sees a
+  // dragged file, which is the only way an unaccepted one still gets this far.
   it('names a file the upload cannot read and never puts it on the wire', async () => {
     const user = renderPage();
 
-    await user.upload(dropZoneInput(), [
+    dropOnZone([
       frame('till.heic', 'bytes', 'image/heic'),
       frame('invoice.pdf', 'bytes', 'application/pdf'),
     ]);
@@ -379,9 +407,7 @@ describe('ReceiptDropZonePage — staging what is sent', () => {
     expect(await screen.findByText('till.jpg')).toBeVisible();
     await submit(user);
 
-    expect(await screen.findByRole('status')).toHaveTextContent(
-      enAUPurchases['receipts.status.uploading']
-    );
+    expect(await screen.findByText(enAUPurchases['receipts.status.uploading'])).toBeVisible();
     expect(
       screen.getByRole('button', { name: enAUPurchases['receipts.action.submit'] })
     ).toBeDisabled();
@@ -449,11 +475,16 @@ describe('ReceiptDropZonePage — created', () => {
     expect(screen.queryByText('till.jpg')).toBeNull();
   });
 
-  it('says there is no purchase page to open rather than offering a dead link', async () => {
+  // This panel used to say there was nothing to open, because there was not.
+  // The link is the whole point of the outcome: the reader's next question is
+  // always "what did it read off the paper", and that is the order page.
+  it('opens the order it just recorded', async () => {
     await uploadOne(created());
 
-    expect(await screen.findByText(enAUPurchases['receipts.created.noDetailView'])).toBeVisible();
-    expect(screen.queryByRole('link')).toBeNull();
+    const link = await screen.findByRole('link', {
+      name: enAUPurchases['receipts.created.open'],
+    });
+    expect(link).toHaveAttribute('href', '/purchases/purchase-77');
   });
 });
 
@@ -523,6 +554,51 @@ describe('ReceiptDropZonePage — needs review', () => {
     expect(within(failures).getByText(enAUPurchases['receipts.review.kind.damaged'])).toBeVisible();
     expect(within(failures).getByText('line 4 is obscured by a fold')).toBeVisible();
     expect(within(failures).getByText('the lower third is torn away')).toBeVisible();
+  });
+
+  it('has a headline for every objection the gate can raise', () => {
+    // The panel renders `receipts.review.kind.<kind>` and nothing supplies a
+    // fallback, so a kind the catalogue does not carry reaches the reviewer
+    // as the raw lookup string. The record is typed by the generated union,
+    // so a kind added to the contract fails to compile here before it can
+    // fail on screen.
+    const everyKind: Readonly<Record<GateFailureKind, true>> = {
+      'unreadable-total': true,
+      'unreadable-line': true,
+      'no-lines': true,
+      'negative-line': true,
+      'sum-mismatch': true,
+      'ambiguous-tax': true,
+      damaged: true,
+    };
+
+    for (const kind of Object.keys(everyKind)) {
+      expect(Object.keys(enAUPurchases), kind).toContain(`receipts.review.kind.${kind}`);
+    }
+  });
+
+  it('renders an ambiguous tax reading as an objection like any other', async () => {
+    // It carries no `deltaCents` — the arithmetic agrees under both readings,
+    // so there is no discrepancy to put on screen — and the panel must not
+    // treat that absence as a reason to render nothing.
+    await uploadOne(
+      needsReview({
+        failures: [
+          {
+            kind: 'ambiguous-tax',
+            detail: 'the components add to 4740c, the stated total, but 995c is added twice',
+          },
+        ],
+      })
+    );
+
+    const failures = await screen.findByRole('list', {
+      name: enAUPurchases['receipts.review.failuresLabel'],
+    });
+    expect(
+      within(failures).getByText(enAUPurchases['receipts.review.kind.ambiguous-tax'])
+    ).toBeVisible();
+    expect(within(failures).getByText(/995c is added twice/u)).toBeVisible();
   });
 
   // The whole point of this outcome: a reader compares the reading against
@@ -646,9 +722,8 @@ describe('ReceiptDropZonePage — the other answers', () => {
       },
     });
 
-    const alert = await screen.findByRole('alert');
-    expect(within(alert).getByText(enAUPurchases['receipts.refused.title'])).toBeVisible();
-    expect(within(alert).getByText('The upload is not a valid image/jpeg file')).toBeVisible();
+    expect(await screen.findByText(enAUPurchases['receipts.refused.title'])).toBeVisible();
+    expect(screen.getByText('The upload is not a valid image/jpeg file')).toBeVisible();
     expect(screen.queryByText(enAUPurchases['receipts.duplicate.title'])).toBeNull();
   });
 
@@ -660,9 +735,8 @@ describe('ReceiptDropZonePage — the other answers', () => {
       },
     });
 
-    const alert = await screen.findByRole('alert');
     expect(
-      within(alert).getByText('No vision model is configured; set ANTHROPIC_API_KEY')
+      await screen.findByText('No vision model is configured; set ANTHROPIC_API_KEY')
     ).toBeVisible();
   });
 
@@ -701,6 +775,28 @@ describe('ReceiptDropZonePage — the other answers', () => {
     await submit(user);
 
     expect(await screen.findByText(enAUPurchases[settles])).toBeVisible();
-    expect(document.body.textContent).not.toMatch(/receipts\.[a-zA-Z]/);
+    expect(document.body.textContent).not.toMatch(RAW_CATALOG_KEY);
+    expect(leakedAriaLabels()).toEqual([]);
+  });
+
+  // The staged-parts list carries two catalog keys that name no visible text
+  // — `ariaLabel` on the `<ol>` itself and `moveDown` on the second button —
+  // so `leakedAriaLabels` above is the only guard that would ever catch a
+  // typo in either. Asserted by value here as well, so a rename that breaks
+  // the catalog lookup fails loudly rather than as a silent key echo.
+  it('names the staged-parts list and its move-later control from the catalog', async () => {
+    const user = renderPage();
+
+    await user.upload(dropZoneInput(), [frame('a.jpg', 'first'), frame('b.jpg', 'second')]);
+    expect(await screen.findByText('b.jpg')).toBeVisible();
+
+    expect(
+      screen.getByRole('list', { name: enAUPurchases['receipts.parts.ariaLabel'] })
+    ).toBeVisible();
+    expect(
+      screen.getByRole('button', {
+        name: enAUPurchases['receipts.parts.moveDown'].replace('{{name}}', 'a.jpg'),
+      })
+    ).toBeVisible();
   });
 });

@@ -25,6 +25,10 @@
       "types": "./dist/pillar-env/index.d.ts",
       "default": "./dist/pillar-env/index.js"
     },
+    "./db": {
+      "types": "./dist/db/index.d.ts",
+      "default": "./dist/db/index.js"
+    },
     "./client": {
       "types": "./dist/client/index.d.ts",
       "default": "./dist/client/index.js"
@@ -88,7 +92,7 @@
     "@testing-library/jest-dom": "^7.0.0",
     "@testing-library/react": "^16.3.2",
     "@types/jsonwebtoken": "^9.0.10",
-    "@types/node": "^25.9.3",
+    "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",
     "@vitest/coverage-v8": "^4.1.10",
     "jsdom": "^30.0.1",

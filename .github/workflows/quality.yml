@@ -410,6 +410,47 @@ jobs:
       - name: Every @source glob matches files and every UI file is covered
         run: node scripts/check-tailwind-source-coverage.mjs
 
+  design-tokens:
+    name: Design tokens in frontend source
+    # AGENTS.md "Styling" says colours come from design tokens and nothing
+    # else, and until this job nothing enforced it — so every cleanup grew
+    # back, one `text-amber-600` at a time. This guard reports raw Tailwind
+    # palette utilities (under any variant chain) and literal hex/rgb/oklch
+    # inside arbitrary values, across every frontend source tree. It reads the
+    # source directly and pulls in no third-party deps, so it skips
+    # `pnpm install`. See scripts/ci/check-design-tokens.mjs for what is
+    # deliberately exempt (stories, tests, generated clients, the theme itself).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Gate self-test (proves the guard catches a planted raw colour)
+        run: node scripts/ci/check-design-tokens.mjs --self-test
+      - name: Every colour in frontend source comes from a design token
+        run: node scripts/ci/check-design-tokens.mjs
+
+  icon-only-buttons:
+    name: Icon-only buttons carry aria-label
+    # libs/ui/README.md "Action Icon Standards": a compact (icon-only) action
+    # must carry an aria-label, not just a title — AGENTS.md restates the same
+    # rule. This guard reports any `size="icon"`/"icon-xs"/"icon-sm"/"icon-lg"
+    # `Button`/`ButtonPrimitive` with no `aria-label` on its opening tag. It
+    # reads the source directly and pulls in no third-party deps, so it skips
+    # `pnpm install`. See scripts/ci/check-icon-only-buttons.mjs for what is
+    # deliberately exempt (stories, tests, generated clients).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Gate self-test (proves the guard catches a planted unlabelled icon button)
+        run: node scripts/ci/check-icon-only-buttons.mjs --self-test
+      - name: Every icon-only Button/ButtonPrimitive carries an aria-label
+        run: node scripts/ci/check-icon-only-buttons.mjs
+
   control-characters:
     name: Control characters in committed text
     # A NUL byte once landed inside a template literal, behaved correctly (NUL
@@ -433,11 +474,36 @@ jobs:
       - name: No disallowed control characters in tracked text
         run: node scripts/ci/check-control-characters.mjs
 
+  swift-bounded-yield:
+    name: Bounded-yield polls in Swift tests
+    # Three fixes landed for the same defect in clients/ios/Packages/Auth's
+    # concurrency tests: a `Task.yield()` loop polling a condition is a proxy
+    # for "the task under test got enough scheduling turns to make progress",
+    # unsound under real CPU starvation. A fourth sighting in
+    # clients/ios/Packages/AppCore turned up only because someone grepped for
+    # it by hand while fixing the third. This guard is that grep, made
+    # permanent — it fails the build on any `Task.yield()` call anywhere in
+    # clients/ios Swift source, so the next sighting is caught at the PR that
+    # introduces it. Pure `node:fs`/`node:child_process`, no third-party deps,
+    # so it skips `pnpm install`. See scripts/ci/check-swift-bounded-yield.mjs.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Gate self-test (proves the guard catches a planted Task.yield() call)
+        run: node scripts/ci/check-swift-bounded-yield.mjs --self-test
+      - name: No disallowed Task.yield() polling in clients/ios
+        run: node scripts/ci/check-swift-bounded-yield.mjs
+
   vendored-contracts:
     name: Vendored contract drift (ADR-033)
-    # A consumer that vendors a producer pillar's OpenAPI snapshot (because the
-    # producer has no npm package to depend on — e.g. the Rust `contacts`
-    # pillar) must keep its copy byte-identical to the canonical source, or the
+    # A consumer that vendors a producer pillar's OpenAPI snapshot — because the
+    # producer has no npm package to depend on (the Rust `contacts` pillar), or
+    # because depending on it would drag the producer's backend runtime graph
+    # into the consumer's install/build closure (`finance/app` -> `purchases`)
+    # — must keep its copy byte-identical to the canonical source, or the
     # generated client silently lags the contract. This guard reads the source
     # tree directly and pulls in no third-party deps, so it skips
     # `pnpm install`. See scripts/ci/check-vendored-contracts.mjs and ADR-033.
@@ -552,12 +618,13 @@ jobs:
     # seam: nothing forces a regenerate when the producer's contract changes,
     # so the committed client can silently outrun it (see ADR-040 and AGENTS.md
     # "Cross-pillar generated FE clients"). This regenerates every such client
-    # from its producer's current `./openapi` export and fails on any diff. The
-    # `contacts` leg additionally vendors its OpenAPI snapshot (ADR-033); that
-    # copy's own drift is covered separately by the `vendored-contracts` job
-    # above — this job only re-runs codegen against whatever is committed. The
-    # `purchases` leg is gated here from the day its client landed, ahead of any
-    # finance page consuming it, so the client cannot rot in the gap.
+    # and fails on any diff — `lists` from its producer's current `./openapi`
+    # export, `contacts` and `purchases` from their vendored snapshot (ADR-033).
+    # A vendored copy's own drift against its producer is covered separately by
+    # the `vendored-contracts` job above — this job only re-runs codegen against
+    # whatever is committed. The `purchases` leg is gated here from the day its
+    # client landed, ahead of any finance page consuming it, so the client
+    # cannot rot in the gap.
     #
     # Every leg is ALSO re-checked, more generally, by app-quality.yml's own
     # per-app `Codegen drift` step (`@pops/app-food` and `@pops/app-finance`
@@ -666,3 +733,43 @@ jobs:
         run: node scripts/check-escape-hatches.mjs --self-test
       - name: No new type-safety escape hatches vs baseline
         run: node scripts/check-escape-hatches.mjs
+
+  touch-targets:
+    name: Touch-target ratchet
+    # Raw <button>/<a> elements in pillar apps + the shell without provable
+    # 44px sizing evidence (WCAG 2.5.5) may only ever shrink against the
+    # committed baseline (.touch-target-baseline.json) — a new one fails here.
+    # The primitive system (Button, Checkbox, RadioGroupItem, Switch,
+    # TabsTrigger) already enforces this at the component level; this gate
+    # covers the consumer surfaces that bypass it. It reads the source tree
+    # directly and pulls in no third-party deps, so it skips `pnpm install`.
+    # See scripts/check-touch-targets.mjs.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Gate self-test (proves the guard catches an unsized element)
+        run: node scripts/check-touch-targets.mjs --self-test
+      - name: No new unsized raw interactive elements vs baseline
+        run: node scripts/check-touch-targets.mjs
+
+  title-icon-consistency:
+    name: Title-icon consistency
+    # Within one pillar app, top-level (navConfig) pages must either all pass
+    # an `icon` to PageHeader or none do, and a present icon must match that
+    # page's own nav icon — documented convention only until now. It reads
+    # each app's routes.tsx + page source directly and pulls in no
+    # third-party deps, so it skips `pnpm install`. See
+    # scripts/check-title-icon-consistency.mjs.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Gate self-test (proves the guard catches a mix and a mismatch)
+        run: node scripts/check-title-icon-consistency.mjs --self-test
+      - name: Every app is all-or-none on PageHeader icons, and icons match nav
+        run: node scripts/check-title-icon-consistency.mjs

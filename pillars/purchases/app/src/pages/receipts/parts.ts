@@ -38,6 +38,19 @@ const EXTENSIONS: Readonly<Record<ReceiptMediaType, readonly string[]>> = {
   'text/plain': ['.txt'],
 };
 
+/**
+ * The `accept` attribute for the drop zone's file input, so the OS dialog
+ * offers only what the upload takes.
+ *
+ * Derived from {@link EXTENSIONS} rather than written out, so it cannot drift
+ * from what {@link receiptMediaType} will let through. Both the media types and
+ * the extensions are listed: a file dragged from some sources arrives with an
+ * empty `type`, and the extension is all either side has to go on.
+ */
+export const RECEIPT_ACCEPT: string = Object.entries(EXTENSIONS)
+  .flatMap(([mediaType, extensions]) => [mediaType, ...extensions])
+  .join(',');
+
 function isAcceptedMediaType(candidate: string): candidate is ReceiptMediaType {
   return Object.hasOwn(EXTENSIONS, candidate);
 }

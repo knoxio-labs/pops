@@ -1,6 +1,8 @@
 import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Fact } from '../../facts.js';
+
 import type { ReactElement, ReactNode } from 'react';
 
 /**
@@ -48,15 +50,7 @@ export interface FieldProps {
 /** One labelled reading, saying "not read" rather than rendering a blank. */
 export function Field({ label, value }: FieldProps): ReactElement {
   const { t } = useTranslation('purchases');
-  const missing = value === null || value.trim() === '';
-  return (
-    <div>
-      <dt className="text-muted-foreground text-xs">{label}</dt>
-      <dd className={missing ? 'text-muted-foreground text-sm italic' : 'text-sm'}>
-        {missing ? t('receipts.extracted.missing') : value}
-      </dd>
-    </div>
-  );
+  return <Fact label={label} value={value} missingLabel={t('receipts.extracted.missing')} />;
 }
 
 /**

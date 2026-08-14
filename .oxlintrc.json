@@ -18,6 +18,38 @@
     "max-params": ["error", 4],
     "max-depth": ["error", 3],
     "no-console": ["error", { "allow": ["warn", "error"] }],
+    "no-restricted-imports": [
+      "error",
+      {
+        "paths": [
+          {
+            "name": "lucide-react",
+            "importNames": ["Edit2", "PenLine"],
+            "message": "Banned icon name — use 'Pencil' for edit actions (Action Icon Standards, AGENTS.md)."
+          },
+          {
+            "name": "lucide-react",
+            "importNames": ["Trash"],
+            "message": "Banned icon name — use 'Trash2' for delete/remove actions (Action Icon Standards, AGENTS.md)."
+          },
+          {
+            "name": "lucide-react",
+            "importNames": ["Ellipsis"],
+            "message": "Banned icon name — use 'MoreHorizontal' or 'MoreVertical' for more-actions menus (Action Icon Standards, AGENTS.md)."
+          },
+          {
+            "name": "lucide-react",
+            "importNames": ["Cog", "Gear"],
+            "message": "Banned icon name — use 'Settings' for settings actions (Action Icon Standards, AGENTS.md)."
+          },
+          {
+            "name": "lucide-react",
+            "importNames": ["RefreshCcw"],
+            "message": "Banned icon name — use 'RefreshCw' for refresh actions (Action Icon Standards, AGENTS.md)."
+          }
+        ]
+      }
+    ],
     "no-inline-comments": "off",
     "no-negated-condition": "off",
     "no-await-in-loop": "off",

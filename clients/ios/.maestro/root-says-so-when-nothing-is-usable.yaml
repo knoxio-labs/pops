@@ -21,17 +21,10 @@ name: The root screen says why nothing is usable, and Try again leaves it
 - assertTrue: ${output.outage.status == 200}
 - assertTrue: ${output.outage.state.financeOpenApiUnreachable == true}
 
-- tapOn:
-    id: 'pairing-server-field'
-- eraseText
-- inputText: ${CONTROL_BASE_URL}
-
-- tapOn:
-    id: 'pairing-code-field'
-- inputText: ${PAIRING_CODE}
-
-- tapOn:
-    id: 'pairing-submit'
+- runFlow:
+    file: subflows/enter-the-pairing-details.yaml
+    env:
+      SERVER_URL: ${CONTROL_BASE_URL}
 
 # `RootCopy.nothingAvailable(surface.unavailable)` for a single `unavailable`
 # feature, in full — Maestro matches a text selector as a regex against the

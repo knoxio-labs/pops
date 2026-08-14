@@ -208,6 +208,24 @@ describe('performRestCall — response / error mapping', () => {
     expect(result).toEqual({ kind: 'unauthorized', pillar: 'registry' });
   });
 
+  /**
+   * The scope gate's answer to a live key whose grant is too narrow
+   * (ADR-044). Bucketed with `unavailable` it would read as the producer
+   * being down — a caller then waits out an outage that is really a grant to
+   * widen, and every best-effort call site swallows it silently.
+   */
+  it('maps 403 → unauthorized with the envelope message', async () => {
+    const { fetchImpl } = recordingRest(() =>
+      jsonOk({ message: 'missing scope registry.entities' }, 403)
+    );
+    const result = await performRestCall(ctx(['entities', 'get'], { id: 'ent-1' }, fetchImpl));
+    expect(result).toEqual({
+      kind: 'unauthorized',
+      pillar: 'registry',
+      message: 'missing scope registry.entities',
+    });
+  });
+
   it('maps an unmapped 5xx → unavailable', async () => {
     const { fetchImpl } = recordingRest(() => jsonOk({ message: 'boom' }, 503));
     const result = await performRestCall(ctx(['entities', 'get'], { id: 'ent-1' }, fetchImpl));

@@ -5,7 +5,7 @@
  * `RouterImplementation<typeof aiContract>` that `createExpressEndpoints`
  * consumes in `app.ts`: the moved AI-ops telemetry handlers (usage reads,
  * observability, providers, budgets, alerts) plus this pillar's own ingest,
- * pricing, and settings handlers.
+ * pricing, jobs, and settings handlers.
  */
 import { initServer } from '@ts-rest/express';
 
@@ -17,6 +17,7 @@ import { makeAiObservabilityHandlers } from './ai-observability-handlers.js';
 import { makeAiProvidersHandlers } from './ai-providers-handlers.js';
 import { makeAiUsageHandlers } from './ai-usage-handlers.js';
 import { makeIngestHandler } from './ingest-handlers.js';
+import { makeAiJobsHandlers } from './jobs-handlers.js';
 import { makePricingHandler } from './pricing-handlers.js';
 import { makeAiSettingsHandlers } from './settings-handlers.js';
 
@@ -34,6 +35,7 @@ export function makeAiRestHandlers(deps: {
     aiUsage: makeAiUsageHandlers(db),
     aiIngest: makeIngestHandler(db),
     aiPricing: makePricingHandler(db),
+    jobs: makeAiJobsHandlers(),
     settings: makeAiSettingsHandlers(db),
   });
 }

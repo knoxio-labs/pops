@@ -9,6 +9,7 @@
 import {
   listConfirmedLinks,
   listOrdersNeedingDerivedCharge,
+  listRejectedPairings,
   listSolvableCharges,
   mintDerivedCharge,
   persistProposedLinks,
@@ -101,6 +102,10 @@ export async function runSweep(deps: SweepDeps, scope: ReconcileScope = {}): Pro
       charges,
       transactions: fetched.transactions,
       confirmed,
+      rejected: listRejectedPairings(
+        tx,
+        charges.map((charge) => charge.id)
+      ),
       defaultWindowDays,
     });
 

@@ -34,7 +34,7 @@ import {
   purchaseChargeLinks,
   purchaseCharges,
 } from '../index.js';
-import { openTempDb, seedAmazonSource } from './helpers.js';
+import { ARRANGEMENT_TIMEOUT_MS, openTempDb, seedAmazonSource } from './helpers.js';
 
 import type { SettlementRole } from '../../contract/constants.js';
 import type {
@@ -255,9 +255,15 @@ function everySplit(readings: Readings): readonly PurchaseAccounting[] {
  * every seed costs five inserts and eight reads against a real database, and
  * the suite runs on machines that are already busy. Measured locally, 150
  * seeds build the corpus in ~0.6s and 300 in ~1.3s; under v8 coverage the
- * same builds take ~1.0s and ~1.8s. 150 keeps the whole build an order of
- * magnitude inside vitest's hook budget even when the machine steals most
- * of the CPU, which is the condition this file used to fail under.
+ * same builds take ~1.0s and ~1.8s.
+ *
+ * Keeping the count low is not on its own enough to keep the build inside
+ * vitest's 10s hook default: that default has been seen to fire here under
+ * coverage on a machine running a dozen unrelated builds, where ~1s of work
+ * was descheduled for ten. The hook is bounded explicitly for that reason,
+ * and the bound is the shared one every expensive arrangement in this pillar
+ * uses. Both still matter — the bound catches a hang, the count keeps the
+ * build from being slow enough to need one.
  */
 const CASES = 150;
 const corpus: Readings[] = [];
@@ -266,7 +272,7 @@ beforeAll(() => {
   ({ opened, cleanup } = openTempDb());
   seedAmazonSource(opened);
   for (let seed = 1; seed <= CASES; seed += 1) corpus.push(readOrder(seed));
-});
+}, ARRANGEMENT_TIMEOUT_MS);
 
 afterAll(() => {
   cleanup();

@@ -8,17 +8,10 @@ name: A device revoked mid-use lands back on pairing, and says why
 - assertVisible:
     id: 'pairing-code-field'
 
-- tapOn:
-    id: 'pairing-server-field'
-- eraseText
-- inputText: ${CONTROL_BASE_URL}
-
-- tapOn:
-    id: 'pairing-code-field'
-- inputText: ${PAIRING_CODE}
-
-- tapOn:
-    id: 'pairing-submit'
+- runFlow:
+    file: subflows/enter-the-pairing-details.yaml
+    env:
+      SERVER_URL: ${CONTROL_BASE_URL}
 
 - assertVisible:
     id: 'transactions-list'

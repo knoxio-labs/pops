@@ -38,11 +38,25 @@ internal enum RootCopy {
     ///
     /// The fallback is the point: this build can be told about a feature it has
     /// never heard of, and the raw id is a worse sentence than a translated one
-    /// but a far better one than a blank.
-    private static func name(of feature: MobileFeature) -> String {
+    /// but a far better one than a blank. Shared with the tab bar's labels —
+    /// one name per feature, not one for the empty state and a second for the
+    /// switcher.
+    internal static func name(of feature: MobileFeature) -> String {
         switch feature {
         case .transactions: "Transactions"
+        case .receiptCapture: "Receipts"
         default: feature.rawValue
+        }
+    }
+
+    /// The tab icon for a feature. Falls back to a generic glyph rather than no
+    /// glyph, for the same reason ``name(of:)`` falls back to the raw id — a
+    /// tab this build has never heard of is still a tab a user can tap.
+    internal static func symbol(for feature: MobileFeature) -> String {
+        switch feature {
+        case .transactions: "list.bullet.rectangle"
+        case .receiptCapture: "doc.text.viewfinder"
+        default: "square.grid.2x2"
         }
     }
 }

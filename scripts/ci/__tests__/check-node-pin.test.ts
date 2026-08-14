@@ -10,6 +10,7 @@ import {
   checkNodePin,
   collectDockerfilePins,
   collectPins,
+  collectUnprovisionedNodeSteps,
   collectWorkflowPins,
   nodeMajor,
   REQUIRED_MISE_SETTINGS,
@@ -250,6 +251,113 @@ describe('checkNodePin — fixture tree', () => {
     const root = makeFixture({ ciMise: '[tools]\nnode = "lts/*"\n' });
     try {
       expect(checkNodePin(root).violations.some((v) => v.includes('no readable major'))).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('collectUnprovisionedNodeSteps', () => {
+  it('flags a job that runs node without provisioning it — the release.yml shape', () => {
+    const root = makeFixture({
+      workflow: [
+        'jobs:',
+        '  release:',
+        '    steps:',
+        '      - uses: actions/checkout@v7',
+        '      - run: node scripts/pack.mjs',
+      ].join('\n'),
+    });
+    try {
+      const violations = collectUnprovisionedNodeSteps(root);
+      expect(violations.some((v) => v.includes('provisions no pinned Node'))).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('does not flag a job that provisions Node via jdx/mise-action first', () => {
+    const root = makeFixture({
+      workflow: [
+        'jobs:',
+        '  release:',
+        '    steps:',
+        '      - uses: actions/checkout@v7',
+        '      - uses: jdx/mise-action@v4',
+        '      - run: node scripts/pack.mjs',
+      ].join('\n'),
+    });
+    try {
+      expect(collectUnprovisionedNodeSteps(root)).toEqual([]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('does not flag a job that provisions Node via actions/setup-node first', () => {
+    const root = makeFixture({
+      workflow: [
+        'jobs:',
+        '  release:',
+        '    steps:',
+        '      - uses: actions/checkout@v7',
+        '      - uses: actions/setup-node@v7',
+        '        with:',
+        '          node-version: "24"',
+        '      - run: node scripts/pack.mjs',
+      ].join('\n'),
+    });
+    try {
+      expect(collectUnprovisionedNodeSteps(root)).toEqual([]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('does not flag a step that merely mentions node_modules', () => {
+    const root = makeFixture({
+      workflow: [
+        'jobs:',
+        '  a:',
+        '    steps:',
+        '      - uses: actions/checkout@v7',
+        '      - run: rm -rf node_modules',
+      ].join('\n'),
+    });
+    try {
+      expect(collectUnprovisionedNodeSteps(root)).toEqual([]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('reports a non-sequence steps value rather than skipping the job silently', () => {
+    const root = makeFixture({
+      workflow: 'jobs:\n  release:\n    steps: "not a sequence"\n',
+    });
+    try {
+      expect(collectUnprovisionedNodeSteps(root).some((v) => v.includes('is not a sequence'))).toBe(
+        true
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('feeds checkNodePin, so the fleet-wide guard fails on the unprovisioned shape', () => {
+    const root = makeFixture({
+      workflow: [
+        'jobs:',
+        '  release:',
+        '    steps:',
+        '      - uses: actions/checkout@v7',
+        '      - run: node scripts/pack.mjs',
+      ].join('\n'),
+    });
+    try {
+      expect(
+        checkNodePin(root).violations.some((v) => v.includes('provisions no pinned Node'))
+      ).toBe(true);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

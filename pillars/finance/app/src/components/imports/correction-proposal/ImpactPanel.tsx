@@ -1,4 +1,4 @@
-import { RefreshCcw } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 
 import { Button } from '@pops/ui';
 
@@ -21,8 +21,9 @@ function PanelHeader({ onRerun, disabled }: { onRerun: () => void; disabled: boo
         onClick={onRerun}
         disabled={disabled}
         title="Re-run preview"
+        aria-label="Re-run preview"
       >
-        <RefreshCcw className="h-3.5 w-3.5" />
+        <RefreshCw className="h-3.5 w-3.5" />
       </Button>
     </div>
   );

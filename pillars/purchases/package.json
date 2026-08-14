@@ -58,9 +58,10 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@pops/contract-openapi": "workspace:*",
     "@types/better-sqlite3": "^7.6.12",
     "@types/express": "^5.0.4",
-    "@types/node": "^25.9.3",
+    "@types/node": "^24.13.3",
     "@types/papaparse": "^5.5.2",
     "@types/supertest": "^7.2.1",
     "@vitest/coverage-v8": "^4.1.10",
