@@ -11,12 +11,14 @@ import SwiftUI
 /// module names the id it draws; this decides what "drawing" it means, which is
 /// what stops one feature from having to construct another's views.
 ///
-/// It draws no navigation chrome of its own. A feature that has more than one
-/// screen brings its own `NavigationStack` — `TransactionsFlowView` is the
-/// first — because the routes between those screens belong to that feature and
-/// resolving them here would mean this file naming every screen in the app. A
-/// stack around a stack is also simply broken: the inner one wins and the outer
-/// one silently does nothing.
+/// Between features, this draws exactly one piece of navigation chrome — a tab
+/// bar — and only once there is more than one feature to move between. It
+/// draws none inside a feature: a feature that has more than one screen brings
+/// its own `NavigationStack` — `TransactionsFlowView` is the first — because
+/// the routes between those screens belong to that feature and resolving them
+/// here would mean this file naming every screen in the app. A stack around a
+/// stack is also simply broken: the inner one wins and the outer one silently
+/// does nothing.
 internal struct ContentView: View {
     internal let surface: FeatureSurface
     internal let shell: AppShellModel
@@ -29,16 +31,34 @@ internal struct ContentView: View {
         }
     }
 
-    /// One screen per available feature, in the BFM's order. Today that is one
-    /// feature and a `ForEach` over it would be a tab bar with a single tab, so
-    /// the first one is shown outright — and a second feature arriving is the
-    /// moment to decide what navigation between them looks like, rather than
-    /// now, with nothing to look at.
+    /// Every available feature, in the BFM's order.
+    ///
+    /// Zero gets the explanation below. Exactly one fills the screen outright —
+    /// the shipped single-feature look, unchanged, because a tab bar with one
+    /// tab is chrome nobody asked for. Two or more get a `TabView`, one tab per
+    /// feature: `TabView` with no explicit `selection` binding manages which
+    /// tab is showing on its own, including what happens when a reload changes
+    /// the list out from under it, which is one thing fewer this file has to
+    /// get right.
     @ViewBuilder private var features: some View {
-        if let feature = surface.available.first {
-            screen(for: feature)
-        } else {
+        switch surface.available.count {
+        case 0:
             unavailableExplanation
+        case 1:
+            screen(for: surface.available[0])
+        default:
+            TabView {
+                ForEach(surface.available, id: \.self) { feature in
+                    screen(for: feature)
+                        .tabItem {
+                            Label(
+                                RootCopy.name(of: feature),
+                                systemImage: RootCopy.symbol(for: feature)
+                            )
+                        }
+                        .tag(feature)
+                }
+            }
         }
     }
 
