@@ -76,9 +76,13 @@ Runs immediately after `actions/checkout`. **No third-party import, at any depth
 | `scripts/ci/check-control-characters.mjs`        | `quality.yml` → `control-characters`        | Every tracked file, raw bytes                                 |
 | `scripts/ci/check-design-tokens.mjs`             | `quality.yml` → `design-tokens`             | Frontend TS/TSX/CSS source, class strings                     |
 | `scripts/ci/check-vendored-contracts.mjs`        | `quality.yml` → `vendored-contracts`        | OpenAPI JSON, byte comparison, consumer codegen config source |
+| `scripts/ci/report-contract-consumers.mjs`       | `quality.yml` → `contract-consumers`        | The same, plus `package.json` and a `mise.toml` task name     |
+| `scripts/ci/resolve-report-base.mjs`             | `quality.yml` → `contract-consumers`        | `git merge-base` against a caller-supplied ref name           |
 | `scripts/ci/check-device-signature-fixture.mjs`  | `quality.yml` → `device-signature-fixture`  | JSON fixture, `node:crypto`                                   |
 | `scripts/ci/check-cross-pillar-expectations.mjs` | `quality.yml` → `cross-pillar-expectations` | OpenAPI JSON, TS source                                       |
 | `scripts/ci/check-litestream-sidecar-parity.mjs` | `infra-lint.yml` → `sidecar-parity`         | Litestream filenames, Compose text                            |
+
+`report-contract-consumers.mjs` reads one TOML key with a hand-rolled matcher and stays in Tier A, which is a stated exception rather than an erosion of the rule above. The rule exists because a matcher that stops seeing a declaration makes a gate report `OK` over a repo it can no longer read. Nothing here is a verdict: that read only turns "see the declaring file" into "run this exact task", the matcher returns `null` for every shape it does not model, and the caller prints the vaguer line. Moving a reporting job to Tier B for a cosmetic upgrade would cost it the install-free property for nothing. A future assertion built on that read is the point at which the job moves.
 
 ### Tier B — installs the workspace
 

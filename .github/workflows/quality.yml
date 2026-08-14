@@ -518,6 +518,63 @@ jobs:
       - name: Every vendored contract matches its canonical source
         run: node scripts/ci/check-vendored-contracts.mjs
 
+  contract-consumers:
+    name: Vendored consumers of a changed contract (ADR-033)
+    # The producer-side half of the job above, and a REPORT rather than a gate.
+    # The drift guard already fails a producer's branch when a consumer copy on
+    # THAT branch was left behind; what it cannot do is speak on the run where
+    # the producer got it right, which is exactly the run whose author has no
+    # idea the same contract is vendored on branches this tree cannot see. Those
+    # are the branches a merge-queue eviction lands on, hours later, over work
+    # unrelated to the contract.
+    #
+    # It cannot block and does not try to: the obligation it names may be owed
+    # to a pull request that has not merged yet, and failing the producer until
+    # it does would deadlock the pair. It exits non-zero only when it cannot do
+    # its job — no vendored consumer discovered at all, or a changed-file list
+    # it could not read — so this job being red always means the reporter is
+    # broken, never that a contract changed.
+    #
+    # Its own job rather than a step in `vendored-contracts` above, because it
+    # needs full history to find a merge base and that gate is deliberately a
+    # seconds-scale shallow checkout. Tier A all the same: node builtins only,
+    # no `pnpm install`. See scripts/ci/report-contract-consumers.mjs and the
+    # 2026-08-15 amendment to
+    # docs/architecture/adr-033-cross-language-pillar-contracts.md.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # need a merge base to scope the report to this change
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Self-test (fires for a producer with consumers, silent for one without)
+        run: node scripts/ci/report-contract-consumers.mjs --self-test
+      - name: Self-test (base resolution across pull_request / merge_group / push)
+        run: node scripts/ci/resolve-report-base.mjs --self-test
+      - name: Name the vendored consumers this change obliges
+        env:
+          # `github.base_ref` is a pull-request-only field, same as
+          # `agent-review.yml`'s `BASE_REF`. `github.event.merge_group.base_ref`
+          # is its merge-group equivalent. `main` is the final fallback for
+          # `push`, where neither is set. See resolve-report-base.mjs for what
+          # each of the three resolves to and why.
+          BASE_REF: ${{ github.base_ref || github.event.merge_group.base_ref || 'main' }}
+        run: |
+          set -euo pipefail
+          base=$(node scripts/ci/resolve-report-base.mjs --ref "$BASE_REF")
+          if [ -n "$base" ]; then
+            git diff --name-only "$base" HEAD > "$RUNNER_TEMP/changed-files.txt"
+            node scripts/ci/report-contract-consumers.mjs --changed-from "$RUNNER_TEMP/changed-files.txt"
+          else
+            # No usable base. The script then reports EVERY vendored leg under a
+            # header saying it could not scope itself — the loud outcome, not the
+            # silent one that would be indistinguishable from "nothing changed".
+            echo "No merge base against origin/$BASE_REF — reporting every leg."
+            node scripts/ci/report-contract-consumers.mjs
+          fi
+
   device-signature-fixture:
     name: Device signature encoding (iOS ↔ BFM)
     # The iOS app signs refresh requests with a Secure Enclave P-256 key and the

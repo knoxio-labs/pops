@@ -15,16 +15,17 @@
 import type {
   BootstrapFeature,
   BootstrapPillar,
-  MobileFeatureId,
+  KnownMobileFeatureId,
 } from '../../contract/rest-schemas.js';
 
 interface MobileFeature {
-  readonly id: MobileFeatureId;
+  readonly id: KnownMobileFeatureId;
   readonly pillar: string;
 }
 
 export const MOBILE_FEATURES: readonly MobileFeature[] = [
   { id: 'transactions', pillar: 'finance' },
+  { id: 'receipt-capture', pillar: 'purchases' },
 ];
 
 /**

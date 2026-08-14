@@ -86,7 +86,7 @@ const VENDORED_SUFFIX = '.openapi.json';
  * else is invisible to this guard rather than silently allowed — which is why
  * the consuming unit's own docs point at this list.
  */
-const VENDOR_DIRECTORIES = [
+export const VENDOR_DIRECTORIES = [
   ['pillars', 'app', 'contracts'],
   ['clients', 'Contracts'],
 ];

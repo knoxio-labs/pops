@@ -49,6 +49,30 @@ No per-language SDK is maintained by the POPS project. The [cross-language wire-
 - **Trade-off accepted:** non-TS consumers get a weaker typing experience (OpenAPI-generated types are coarser than the in-tree TS contract's inference). They get language idiomaticity in exchange. This is the right trade for the audience.
 - **Trade-off accepted:** the wire-format spec is a load-bearing artifact. It is the source of truth for cross-language interop, more so than any single TS implementation.
 
+## Amendment — 2026-08-15: a vendored snapshot rots against its producer, and the branch that pays is not the one that caused it
+
+A consumer that vendors a producer's snapshot (`scripts/ci/check-vendored-contracts.mjs` for which legs exist and why) owes a re-vendor every time that producer's contract changes. This amendment records where that obligation is enforced, where it is not, and which half of the gap is being closed.
+
+### What the drift gate already covers, and it is more than it was credited with
+
+A producer PR that changes `pillars/<id>/openapi/**` while a consumer's vendored copy exists **in that branch's tree** fails on the producer's own branch, at PR time, before the queue. That was verified by construction rather than assumed: editing `pillars/purchases/openapi/purchases.openapi.json` on a clean tree makes `check-vendored-contracts.mjs` report `drifted from … — re-vendor and regenerate the client` and exit 1. The in-tree half of "the producer must bring its consumers along" is therefore not a gap and needs no new mechanism.
+
+### What it cannot cover, which is the case that actually evicted a PR
+
+Nothing tree-local can see a consumer that is not in the tree. PR #4092 was the PR **adding** the `finance/app` -> `purchases` leg; while it sat in the merge queue, #4085 merged a purchases contract change. #4085's branch had no finance copy to drift against, so it was correctly green; #4092 was correctly green against the base it was tested on; the merged result was inconsistent, and the queue evicted #4092 with four red checks over work that had nothing to do with the contract. It had already been re-vendored once that session for the same reason.
+
+That shape — a leg being added, or a contract changing, on a branch the other side cannot see — is a semantic merge conflict that git resolves cleanly because the two sides touch different files. Closing it needs the set of open pull requests, not the filesystem.
+
+### Decision
+
+1. **A producer-side signal, implemented** — `scripts/ci/report-contract-consumers.mjs`, run by `quality.yml` → `contract-consumers`. On a change to `pillars/*/openapi/**` it names every vendored consumer that must follow, with the `cp` and the regenerate command for each, derived from the consumer's own declaration rather than a list to keep in sync. It reports; it does not gate. The obligation it names may be owed to a pull request that has not merged, and blocking the producer until it does would deadlock the pair.
+2. **The residual is accepted, not solved.** A vendored leg's holder re-vendors immediately before enqueueing, and a queue eviction from a producer that merged mid-flight is an expected cost of vendoring — not a defect in the evicted PR and not a reason to re-review it. Re-vendor, re-enqueue.
+3. **Automated re-vendor PRs (the Dependabot shape) are declined for now.** They would close the residual properly, and they are a bigger change than the exposure justifies while three legs exist and a leg is bootstrapped roughly once per consumer. The trigger to revisit is the leg count growing or the same eviction recurring after the signal is in place.
+
+### The `ALLGREEN` blast radius
+
+The merge queue groups entries and an eviction takes the whole group with it, so one stale snapshot can eject PRs that never touched a contract. That is accepted as it stands. The alternative — grouping of one — would multiply queue time by the entry count, and a merge-group run cannot be path-filtered (`.github/workflows/quality.yml` header), so every entry already pays the full pipeline including the ~29-minute iOS leg. Paying that per PR to contain a failure mode that has fired twice is the worse trade. What makes it tolerable is that the eviction is recoverable and the evicted PR is not wrong; what would change it is evictions arriving faster than the queue drains.
+
 ## Related
 
 - [ADR-030](adr-030-contract-packages-semver.md) — contract package semver discipline becomes load-bearing here

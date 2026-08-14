@@ -60,61 +60,53 @@ const GOOD = {
 /**
  * One reading per kind, each refused for that kind and nothing else.
  *
- * Typed on the union member rather than on `string`, so deleting or
- * renaming a kind breaks this list rather than silently shrinking what is
- * covered.
+ * Keyed by the union rather than a plain array of literals, so the compiler
+ * refuses this file the day a kind is added without a case here — a plain
+ * array only checks that each literal present is valid, not that every
+ * member of the union is.
  */
-const REFUSALS: readonly { kind: GateFailure['kind']; reading: Record<string, unknown> }[] = [
-  { kind: 'unreadable-total', reading: { ...GOOD, total: 'illegible' } },
-  {
-    kind: 'unreadable-line',
-    reading: {
-      ...GOOD,
-      // The readable line alone accounts for the total, so the sum has
-      // nothing to say and the unreadable one is the only complaint.
-      total: '$12.50',
-      lines: [
-        { description: 'Timber Pine DAR 42x19', amount: '$12.50' },
-        { description: 'Screws Bugle 8g 65mm', amount: 'sm?dged' },
-      ],
-    },
+const REFUSALS: Record<GateFailure['kind'], Record<string, unknown>> = {
+  'unreadable-total': { ...GOOD, total: 'illegible' },
+  'unreadable-line': {
+    ...GOOD,
+    // The readable line alone accounts for the total, so the sum has
+    // nothing to say and the unreadable one is the only complaint.
+    total: '$12.50',
+    lines: [
+      { description: 'Timber Pine DAR 42x19', amount: '$12.50' },
+      { description: 'Screws Bugle 8g 65mm', amount: 'sm?dged' },
+    ],
   },
   // Nothing to add up, and zero is what nothing adds to — so the arithmetic
   // agrees and `no-lines` is left holding the objection on its own.
-  { kind: 'no-lines', reading: { ...GOOD, total: '$0.00', lines: [] } },
-  {
-    kind: 'negative-line',
+  'no-lines': { ...GOOD, total: '$0.00', lines: [] },
+  'negative-line': {
     // Sums correctly against the stated total. That is the point: nothing
     // but this check objects to an item worth less than nothing.
-    reading: {
-      ...GOOD,
-      total: '$7.50',
-      lines: [
-        { description: 'Timber Pine DAR 42x19', amount: '$12.50' },
-        { description: 'Loyalty adjustment', amount: '-$5.00' },
-      ],
-    },
+    ...GOOD,
+    total: '$7.50',
+    lines: [
+      { description: 'Timber Pine DAR 42x19', amount: '$12.50' },
+      { description: 'Loyalty adjustment', amount: '-$5.00' },
+    ],
   },
-  { kind: 'sum-mismatch', reading: { ...GOOD, total: '$30.00' } },
-  {
-    kind: 'ambiguous-tax',
+  'sum-mismatch': { ...GOOD, total: '$30.00' },
+  'ambiguous-tax': {
     // Two components equal to the stated tax: counting it once and adding
     // the tax gives the same total as counting it twice with the tax
     // already inside. The receipt does not say which reading it is.
-    reading: {
-      ...GOOD,
-      total: '$17.50',
-      tax: '$2.50',
-      lines: [
-        { description: 'Timber Pine DAR 42x19', amount: '$12.50' },
-        { description: 'Bag levy', amount: '$2.50' },
-        { description: 'Container deposit', amount: '$2.50' },
-      ],
-    },
+    ...GOOD,
+    total: '$17.50',
+    tax: '$2.50',
+    lines: [
+      { description: 'Timber Pine DAR 42x19', amount: '$12.50' },
+      { description: 'Bag levy', amount: '$2.50' },
+      { description: 'Container deposit', amount: '$2.50' },
+    ],
   },
   // A torn corner leaves the numbers intact, so every other check passes.
-  { kind: 'damaged', reading: { ...GOOD, unreadable: ['the bottom third is torn away'] } },
-];
+  damaged: { ...GOOD, unreadable: ['the bottom third is torn away'] },
+};
 
 const saying = (answer: string): ReceiptVision => ({ read: async () => answer });
 
@@ -162,7 +154,7 @@ describe('the upload route, against every kind the gate can raise', () => {
     expect(response.body.kind).toBe('created');
   });
 
-  for (const { kind, reading } of REFUSALS) {
+  for (const [kind, reading] of Object.entries(REFUSALS)) {
     it(`sends ${kind} to review and writes no purchase`, async () => {
       const app = appWith(saying(JSON.stringify(reading)));
       const response = await upload(app);

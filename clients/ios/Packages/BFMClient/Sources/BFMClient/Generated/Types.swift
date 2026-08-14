@@ -1990,11 +1990,7 @@ internal enum Operations {
                         /// - Remark: Generated from `#/paths/mobile/bootstrap/GET/responses/200/content/json/FeaturesPayload`.
                         internal struct FeaturesPayloadPayload: Codable, Hashable, Sendable {
                             /// - Remark: Generated from `#/paths/mobile/bootstrap/GET/responses/200/content/json/FeaturesPayload/id`.
-                            internal enum IdPayload: String, Codable, Hashable, Sendable, CaseIterable {
-                                case transactions = "transactions"
-                            }
-                            /// - Remark: Generated from `#/paths/mobile/bootstrap/GET/responses/200/content/json/FeaturesPayload/id`.
-                            internal var id: Operations.Mobile_bootstrap.Output.Ok.Body.JsonPayload.FeaturesPayloadPayload.IdPayload
+                            internal var id: Swift.String
                             /// - Remark: Generated from `#/paths/mobile/bootstrap/GET/responses/200/content/json/FeaturesPayload/reachability`.
                             internal enum ReachabilityPayload: String, Codable, Hashable, Sendable, CaseIterable {
                                 case healthy = "healthy"
@@ -2010,7 +2006,7 @@ internal enum Operations {
                             ///   - id:
                             ///   - reachability:
                             internal init(
-                                id: Operations.Mobile_bootstrap.Output.Ok.Body.JsonPayload.FeaturesPayloadPayload.IdPayload,
+                                id: Swift.String,
                                 reachability: Operations.Mobile_bootstrap.Output.Ok.Body.JsonPayload.FeaturesPayloadPayload.ReachabilityPayload
                             ) {
                                 self.id = id
@@ -2023,7 +2019,7 @@ internal enum Operations {
                             internal init(from decoder: any Swift.Decoder) throws {
                                 let container = try decoder.container(keyedBy: CodingKeys.self)
                                 self.id = try container.decode(
-                                    Operations.Mobile_bootstrap.Output.Ok.Body.JsonPayload.FeaturesPayloadPayload.IdPayload.self,
+                                    Swift.String.self,
                                     forKey: .id
                                 )
                                 self.reachability = try container.decode(

@@ -257,7 +257,10 @@ describe('the federation half-broken, seen from the phone', () => {
     expect(res.status).toBe(200);
     expect(res.body.registry.source).toBe('unavailable');
     expect(res.body.pillars).toEqual([]);
-    expect(res.body.features).toEqual([{ id: 'transactions', reachability: 'unavailable' }]);
+    expect(res.body.features).toEqual([
+      { id: 'transactions', reachability: 'unavailable' },
+      { id: 'receipt-capture', reachability: 'unavailable' },
+    ]);
   });
 
   it('still records the check-in when the registry is gone', async () => {
