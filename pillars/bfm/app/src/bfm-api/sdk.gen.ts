@@ -24,6 +24,9 @@ import type {
   MobileFinanceListTransactionsData,
   MobileFinanceListTransactionsErrors,
   MobileFinanceListTransactionsResponses,
+  MobilePurchasesUploadReceiptData,
+  MobilePurchasesUploadReceiptErrors,
+  MobilePurchasesUploadReceiptResponses,
   OperatorIssuePairingCodeData,
   OperatorIssuePairingCodeErrors,
   OperatorIssuePairingCodeResponses,
@@ -151,6 +154,29 @@ export const mobileFinanceGetTransaction = <ThrowOnError extends boolean = false
     MobileFinanceGetTransactionErrors,
     ThrowOnError
   >({ url: '/mobile/finance/transactions/{id}', ...options });
+
+/**
+ * Hand a photographed, scanned or pasted receipt to the purchases pillar
+ */
+export const mobilePurchasesUploadReceipt = <ThrowOnError extends boolean = false>(
+  options?: Options<MobilePurchasesUploadReceiptData, ThrowOnError>
+): RequestResult<
+  MobilePurchasesUploadReceiptResponses,
+  MobilePurchasesUploadReceiptErrors,
+  ThrowOnError
+> =>
+  (options?.client ?? client).post<
+    MobilePurchasesUploadReceiptResponses,
+    MobilePurchasesUploadReceiptErrors,
+    ThrowOnError
+  >({
+    url: '/mobile/purchases/receipts',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  });
 
 /**
  * List paired devices, revoked ones included. Never returns a token or a key

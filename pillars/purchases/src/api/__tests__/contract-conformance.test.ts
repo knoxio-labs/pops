@@ -29,7 +29,11 @@ import { z } from 'zod';
 
 import { MerchantSpendRollupSchema } from '../../contract/rest-analytics.js';
 import { ReceiptOutcomeSchema } from '../../contract/rest-receipts.js';
-import { QueueEntrySchema, SweepOutcomeSchema } from '../../contract/rest-reconcile.js';
+import {
+  QueueEntrySchema,
+  SweepOutcomeSchema,
+  TransactionLinksSchema,
+} from '../../contract/rest-reconcile.js';
 import { OkSchema } from '../../contract/rest-schemas.js';
 import { SearchHitSchema } from '../../contract/rest-search.js';
 import { purchasesContract } from '../../contract/rest.js';
@@ -363,6 +367,49 @@ describe('reconcile responses', () => {
     for (const [i, entry] of items.entries()) {
       expectConforms(QueueEntrySchema, entry, `GET /reconcile/queue item ${String(i)}`);
     }
+  });
+
+  it('conform for the reverse lookup, in both link states at once', async () => {
+    // The response nests three schemas that nothing else here parses
+    // together — an order, a charge, and the link between the charge and
+    // the transaction. A confirmed link and a derived one travel through
+    // the same shape, so both are exercised: `confirmedAt` is the field a
+    // consumer decides how to render on, and a nullable/optional mismatch
+    // there is invisible to every other assertion in this file.
+    await request(app).post('/purchases').send(RICH_ORDER);
+    await runSweep({
+      db: opened.db,
+      finance: financeReturning(
+        { id: 'conformance-1', amountCents: 4499, date: '2026-02-03' },
+        { id: 'conformance-2', amountCents: 1179, date: '2026-02-03' }
+      ),
+      defaultWindowDays: 21,
+    });
+
+    const derivedUri = 'pops://finance/transaction/conformance-1';
+    const derived = await request(app)
+      .get(`/reconcile/links?transactionUri=${encodeURIComponent(derivedUri)}`)
+      .expect(200);
+    expectConforms(TransactionLinksSchema, derived.body, 'GET /reconcile/links (derived)');
+    const linked = derived.body.purchases as { charges: { charge: { id: string } }[] }[];
+    expect(linked.length).toBeGreaterThan(0);
+
+    const chargeId = linked[0]?.charges[0]?.charge.id;
+    await request(app)
+      .post('/reconcile/confirm')
+      .send({ chargeId, transactionUri: derivedUri })
+      .expect(200);
+
+    const confirmed = await request(app)
+      .get(`/reconcile/links?transactionUri=${encodeURIComponent(derivedUri)}`)
+      .expect(200);
+    expectConforms(TransactionLinksSchema, confirmed.body, 'GET /reconcile/links (confirmed)');
+
+    const empty = await request(app)
+      .get('/reconcile/links?transactionUri=pops%3A%2F%2Ffinance%2Ftransaction%2Fnothing')
+      .expect(200);
+    expectConforms(TransactionLinksSchema, empty.body, 'GET /reconcile/links (empty)');
+    expect(empty.body.purchases).toEqual([]);
   });
 
   it('conform for both sweep outcomes', async () => {
