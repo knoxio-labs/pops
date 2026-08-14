@@ -444,6 +444,7 @@ Every PR follows these. If a convention is wrong, change this section first — 
 - **App accent** — `bg-app-accent` / `text-app-accent`, never `bg-indigo-600` / `bg-emerald-500`. The shell sets `--app-accent` per active app.
 - **No arbitrary values** — no `w-[180px]` or `text-[10px]`. Use Tailwind scale values; if none fits, add a token to `@theme` in `globals.css`. **Exception:** `w-[var(--radix-*)]` bindings (runtime-computed) are permitted.
 - **JS colour constants** — canvas/chart code imports from `@pops/ui/theme` token objects, not hardcoded hex strings.
+- **Enforced, not aspirational** — `scripts/ci/check-design-tokens.mjs` fails the build on a raw Tailwind palette utility (under any variant chain) or a hex/rgb/oklch literal in a class string, anywhere in frontend source. Stories, tests, generated clients and the theme itself are exempt; run it with `--help` for the exact scope. Shared tone strings live in `statusBadgeToneClass` (`@pops/ui`) — reach for those before writing your own.
 
 ### Frontend feature apps
 

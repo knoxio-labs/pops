@@ -14,10 +14,7 @@ interface Props {
 export function MissingCurrentVersionBanner({ slug }: Props): ReactElement {
   const { t } = useTranslation('food');
   return (
-    <div
-      role="status"
-      className="rounded-md border border-amber-500/40 bg-amber-500/10 p-4 text-sm"
-    >
+    <div role="status" className="rounded-md border border-warning/40 bg-warning/10 p-4 text-sm">
       <p className="font-medium">{t('recipes.detail.noCurrent.title')}</p>
       <p className="mt-1 text-muted-foreground">{t('recipes.detail.noCurrent.body')}</p>
       <Link

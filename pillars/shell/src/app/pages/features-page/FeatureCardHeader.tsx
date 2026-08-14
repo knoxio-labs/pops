@@ -9,13 +9,13 @@ export function FeatureCardHeader({ feature }: { feature: FeatureStatus }) {
         <h3 className="font-semibold text-sm">{feature.label}</h3>
         <FeatureStatePill state={feature.state} />
         {feature.preview && (
-          <span className="text-[11px] uppercase tracking-wide text-violet-500">Preview</span>
+          <span className="text-[11px] uppercase tracking-wide text-stat-violet">Preview</span>
         )}
         {feature.deprecated && (
-          <span className="text-[11px] uppercase tracking-wide text-amber-500">Deprecated</span>
+          <span className="text-[11px] uppercase tracking-wide text-warning">Deprecated</span>
         )}
         {feature.scope === 'user' && feature.userOverride && (
-          <span className="text-[11px] uppercase tracking-wide text-sky-500">Custom</span>
+          <span className="text-[11px] uppercase tracking-wide text-info">Custom</span>
         )}
       </div>
       {feature.description && (

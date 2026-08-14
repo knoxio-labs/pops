@@ -5,7 +5,7 @@ export type Tier = (typeof TIERS)[number];
 
 export const TIER_COLORS: Record<Tier, string> = {
   S: 'bg-destructive/20 border-destructive/40 text-destructive',
-  A: 'bg-orange-500/20 border-orange-500/40 text-orange-500',
+  A: 'bg-stat-orange/20 border-stat-orange/40 text-stat-orange',
   B: 'bg-warning/20 border-warning/40 text-warning',
   C: 'bg-success/20 border-success/40 text-success',
   D: 'bg-info/20 border-info/40 text-info',
@@ -13,7 +13,7 @@ export const TIER_COLORS: Record<Tier, string> = {
 
 export const TIER_LABEL_COLORS: Record<Tier, string> = {
   S: 'bg-destructive text-destructive-foreground',
-  A: 'bg-orange-500 text-white',
+  A: 'bg-stat-orange text-stat-orange-foreground',
   B: 'bg-warning text-warning-foreground',
   C: 'bg-success text-success-foreground',
   D: 'bg-info text-info-foreground',
