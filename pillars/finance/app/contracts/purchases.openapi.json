@@ -3956,12 +3956,16 @@
                 "schema": {
                   "additionalProperties": false,
                   "properties": {
+                    "matchRuleId": {
+                      "nullable": true,
+                      "type": "string"
+                    },
                     "ok": {
                       "enum": [true],
                       "type": "boolean"
                     }
                   },
-                  "required": ["ok"],
+                  "required": ["ok", "matchRuleId"],
                   "type": "object"
                 }
               }
@@ -3989,7 +3993,7 @@
             "description": "404"
           }
         },
-        "summary": "Pin a link so re-derivation never revises it",
+        "summary": "Pin a link and learn the merchant descriptor behind it",
         "tags": ["reconcile"]
       }
     },
@@ -4425,6 +4429,10 @@
                                   ],
                                   "type": "string"
                                 },
+                                "transactionDescription": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
                                 "transactionUri": {
                                   "pattern": "^pops:\\/\\/[a-z0-9-]+\\/[a-z0-9-]+\\/[^/\\s]+$",
                                   "type": "string"
@@ -4432,6 +4440,7 @@
                               },
                               "required": [
                                 "transactionUri",
+                                "transactionDescription",
                                 "amountCents",
                                 "linkType",
                                 "confidence"
@@ -4477,6 +4486,76 @@
           }
         },
         "summary": "Charges awaiting a decision, newest order first",
+        "tags": ["reconcile"]
+      }
+    },
+    "/reconcile/reject": {
+      "post": {
+        "operationId": "reconcile.reject",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "chargeId": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "transactionUri": {
+                    "pattern": "^pops:\\/\\/[a-z0-9-]+\\/[a-z0-9-]+\\/[^/\\s]+$",
+                    "type": "string"
+                  }
+                },
+                "required": ["chargeId", "transactionUri"],
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "ok": {
+                      "enum": [true],
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["ok"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "404"
+          }
+        },
+        "summary": "Rule a pairing out for good, so no later sweep proposes it again",
         "tags": ["reconcile"]
       }
     },
@@ -4660,7 +4739,7 @@
             "description": "404"
           }
         },
-        "summary": "Remove a link. The next sweep may re-derive it — see POPS-1309",
+        "summary": "Remove a link without recording a decision. A later sweep may re-derive it",
         "tags": ["reconcile"]
       }
     },
