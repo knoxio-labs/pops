@@ -196,6 +196,51 @@ describe('an icon-only button with no aria-label is reported', () => {
       findViolations('a.tsx', '<Button size="icon" aria-label={(x ?? y) || ""}><Trash2 /></Button>')
     ).toHaveLength(1);
   });
+
+  it('reports a ternary branch that is a template literal with interpolation', () => {
+    expect(
+      findViolations(
+        'a.tsx',
+        '<Button size="icon" aria-label={cond ? `${x}` : ""}><Trash2 /></Button>'
+      )
+    ).toHaveLength(1);
+  });
+
+  it('reports a ternary branch that is a template literal without interpolation', () => {
+    expect(
+      findViolations(
+        'a.tsx',
+        '<Button size="icon" aria-label={cond ? `static text` : ""}><Trash2 /></Button>'
+      )
+    ).toHaveLength(1);
+  });
+
+  it("reports a ternary branch that is a template nested inside another template's interpolation", () => {
+    expect(
+      findViolations(
+        'a.tsx',
+        '<Button size="icon" aria-label={cond ? `${`${y}`}` : ""}><Trash2 /></Button>'
+      )
+    ).toHaveLength(1);
+  });
+
+  it('reports a ternary branch that is a string literal containing a brace', () => {
+    expect(
+      findViolations(
+        'a.tsx',
+        '<Button size="icon" aria-label={cond ? "{}" : ""}><Trash2 /></Button>'
+      )
+    ).toHaveLength(1);
+  });
+
+  it('reports a ternary branch that is a call with an object-literal argument', () => {
+    expect(
+      findViolations(
+        'a.tsx',
+        "<Button size=\"icon\" aria-label={cond ? t({ key: 'x' }) : ''}><Trash2 /></Button>"
+      )
+    ).toHaveLength(1);
+  });
 });
 
 describe('a labelled or non-icon button is not reported', () => {
@@ -309,6 +354,33 @@ describe('a labelled or non-icon button is not reported', () => {
   it('`"Close" || x` is clean — a decidably-truthy left short-circuits the whole expression', () => {
     expect(
       findViolations('a.tsx', '<Button size="icon" aria-label={"Close" || x}><Trash2 /></Button>')
+    ).toHaveLength(0);
+  });
+
+  it('a ternary with a template-literal-with-interpolation branch and a real other branch is clean', () => {
+    expect(
+      findViolations(
+        'a.tsx',
+        '<Button size="icon" aria-label={cond ? `${x}` : "Close"}><Trash2 /></Button>'
+      )
+    ).toHaveLength(0);
+  });
+
+  it('a ternary with a brace-containing string literal branch and a real other branch is clean', () => {
+    expect(
+      findViolations(
+        'a.tsx',
+        '<Button size="icon" aria-label={cond ? "{}" : "Close"}><Trash2 /></Button>'
+      )
+    ).toHaveLength(0);
+  });
+
+  it('an object-literal call argument as an aria-label value (unresolvable, fail-open) is clean', () => {
+    expect(
+      findViolations(
+        'a.tsx',
+        '<Button size="icon" aria-label={t({ key: \'x\' })}><Trash2 /></Button>'
+      )
     ).toHaveLength(0);
   });
 });
