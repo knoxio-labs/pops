@@ -10,6 +10,7 @@ on:
       - "pnpm-workspace.yaml"
       - "tsconfig.base.json"
       - ".github/workflows/docker-build.yml"
+      - ".github/actions/**"
       - "scripts/ci/smoke-image.mjs"
   push:
     branches: [main]
@@ -21,6 +22,7 @@ on:
       - "pnpm-workspace.yaml"
       - "tsconfig.base.json"
       - ".github/workflows/docker-build.yml"
+      - ".github/actions/**"
       - "scripts/ci/smoke-image.mjs"
   # A merge group cannot carry a `paths:` filter, and `dorny/paths-filter` has
   # no diff base on this event either. The `scope` job below is that filter:
@@ -88,6 +90,7 @@ jobs:
               - 'pnpm-workspace.yaml'
               - 'tsconfig.base.json'
               - '.github/workflows/docker-build.yml'
+              - '.github/actions/**'
               - 'scripts/ci/smoke-image.mjs'
             compose:
               - 'infra/docker-compose*.yml'

@@ -2,8 +2,17 @@ version: 2
 
 updates:
   # ── GitHub Actions ──────────────────────────────────────────────────────────
+  # `directory: /` covers `.github/workflows` and a repo-ROOT `action.yml` only,
+  # so the local composite actions under `.github/actions/*` were invisible to
+  # it. That matters now that one of them owns the exact-patch `jdx/mise-action`
+  # pin the whole fleet's mise setup goes through: a pin nothing bumps is a pin
+  # that rots, and this is the ecosystem that would have caught the release
+  # carrying the download retry weeks earlier. `directories` (plural) is the
+  # only one of the two keys that accepts a glob.
   - package-ecosystem: github-actions
-    directory: /
+    directories:
+      - /
+      - /.github/actions/*
     schedule:
       interval: weekly
       day: monday

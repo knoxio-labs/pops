@@ -210,7 +210,8 @@ jobs:
                 "Cargo.toml",
                 "Cargo.lock",
                 ".github/workflows/unit-quality.yml",
-                ".github/workflows/_discover-units.yml"
+                ".github/workflows/_discover-units.yml",
+                ".github/actions/**"
               ],
               "FE Quality": [
                 "pillars/shell/**",
@@ -220,7 +221,8 @@ jobs:
                 "libs/sdk/**",
                 "libs/types/**",
                 "libs/ui/**",
-                ".github/workflows/fe-quality.yml"
+                ".github/workflows/fe-quality.yml",
+                ".github/actions/**"
               ],
               "Rust Quality": [
                 "Cargo.toml",
@@ -245,21 +247,24 @@ jobs:
                 "tsconfig.build.json",
                 "mise.toml",
                 "mise.ci.toml",
-                ".github/workflows/app-quality.yml"
+                ".github/workflows/app-quality.yml",
+                ".github/actions/**"
               ],
               "Registry Generated Quality": [
                 "libs/module-registry/**",
                 "libs/types/**",
                 "pillars/**",
                 "packages/**",
-                ".github/workflows/registry-generated-quality.yml"
+                ".github/workflows/registry-generated-quality.yml",
+                ".github/actions/**"
               ],
               "iOS Quality": [
                 "clients/ios/**",
                 "pillars/bfm/**",
                 "scripts/ios-e2e/**",
                 "pnpm-lock.yaml",
-                ".github/workflows/ios-quality.yml"
+                ".github/workflows/ios-quality.yml",
+                ".github/actions/**"
               ],
               "Docker Build": [
                 "infra/docker*/**",
@@ -269,6 +274,7 @@ jobs:
                 "pnpm-workspace.yaml",
                 "tsconfig.base.json",
                 ".github/workflows/docker-build.yml",
+                ".github/actions/**",
                 "scripts/ci/smoke-image.mjs"
               ],
               "E2E Tests": [

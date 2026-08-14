@@ -7,14 +7,15 @@ name: Agent Review
 # an unreachable model can never gate a PR.
 #
 # The guards live here rather than in `quality.yml` because each is a Node
-# script reading the source tree — one job, one checkout, eight invariants.
+# script reading the source tree — one job, one checkout, nine invariants.
 # Every guard runs its own `--self-test` first, so one that has quietly stopped
 # catching anything fails the job instead of passing.
 #
-# THIS JOB IS TIER B and therefore installs the workspace. Three of the eight
+# THIS JOB IS TIER B and therefore installs the workspace. Four of the nine
 # guards read structured config through a real parser — `check-mise-tool-
 # overrides` and `check-node-pin` (TOML), `check-homelab-service-isolation`
-# (compose YAML) — and a parser needs `node_modules` on disk. The other five
+# (compose YAML), `check-mise-setup-single-source` (workflow YAML) — and a
+# parser needs `node_modules` on disk. The other five
 # read JSON, TypeScript source or Markdown and would run fine without the
 # install; they ride along because the tier is a property of the JOB, not of
 # each guard, and splitting the job would split the required `agent-review`
@@ -92,6 +93,7 @@ jobs:
           node scripts/ci/check-homelab-service-isolation.mjs --self-test
           node scripts/ci/check-docs-model.mjs --self-test
           node scripts/ci/check-tests-typechecked.mjs --self-test
+          node scripts/ci/check-mise-setup-single-source.mjs --self-test
           # Not a guard over the source tree like the eight above — it is the
           # gate that decides whether the merge queue's macOS compile happens.
           # It self-tests in its own job too, immediately before it answers;
@@ -120,6 +122,8 @@ jobs:
         run: node scripts/ci/check-docs-model.mjs
       - name: Test-typecheck guard (a unit's tsconfig.json may not hide its own tests from tsc)
         run: node scripts/ci/check-tests-typechecked.mjs
+      - name: Mise setup single-source guard (one pinned jdx/mise-action, and the pin retries its download)
+        run: node scripts/ci/check-mise-setup-single-source.mjs
       # The one step a draft should not reach: it posts review comments and
       # spends tokens on a PR whose author has not asked for either yet. Skipped
       # at STEP level, which leaves the job — and therefore the required check —

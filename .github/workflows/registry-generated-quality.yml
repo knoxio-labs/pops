@@ -26,6 +26,7 @@ on:
       - "pillars/**"
       - "packages/**"
       - ".github/workflows/registry-generated-quality.yml"
+      - ".github/actions/**"
   pull_request:
     paths:
       - "libs/module-registry/**"
@@ -33,6 +34,7 @@ on:
       - "pillars/**"
       - "packages/**"
       - ".github/workflows/registry-generated-quality.yml"
+      - ".github/actions/**"
   # Unfiltered: `paths:` is not a legal filter on a merge group, so the queue
   # lane re-runs this for every entry.
   merge_group:
@@ -57,7 +59,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: jdx/mise-action@v4
+      - uses: ./.github/actions/setup-mise
       - name: Install
         run: pnpm install --frozen-lockfile
       - name: Regenerate registry (build contract deps first)

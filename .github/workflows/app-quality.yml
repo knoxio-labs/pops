@@ -52,6 +52,7 @@ on:
       - "mise.toml"
       - "mise.ci.toml"
       - ".github/workflows/app-quality.yml"
+      - ".github/actions/**"
   pull_request:
     paths:
       - "pillars/*/app/**"
@@ -67,6 +68,7 @@ on:
       - "mise.toml"
       - "mise.ci.toml"
       - ".github/workflows/app-quality.yml"
+      - ".github/actions/**"
   # Unfiltered: `paths:` is not a legal filter on a merge group, so the queue
   # lane re-runs this for every entry.
   merge_group:
@@ -131,7 +133,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: jdx/mise-action@v4
+      - uses: ./.github/actions/setup-mise
 
       - name: Expose bundled node-gyp on PATH
         # `better-sqlite3` (a transitive dep of every app's pillar closure) has
