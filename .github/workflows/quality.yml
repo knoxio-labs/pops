@@ -814,6 +814,44 @@ jobs:
       - name: Regenerate and verify every generated api-types module
         run: node scripts/ci/check-api-types-drift.mjs
 
+  openapi-drift:
+    name: Committed OpenAPI spec drift
+    # Eleven pillars declare `generate:openapi`, projecting their ts-rest
+    # contract source into a committed `pillars/<id>/openapi/<id>.openapi.json`
+    # via the shared `@pops/contract-openapi` library. Every downstream gate —
+    # `api-types-drift` above, `generated-clients`/`cross-pillar-clients`
+    # (ADR-040), `vendored-contracts` (ADR-033), and mcp's finance.search
+    # vocabulary pin — verifies agreement WITH that committed spec. None of
+    # them verify the spec itself still agrees with the contract source it
+    # claims to project, so a contract change not followed by a manual
+    # `generate:openapi` makes every one of those gates pass on a spec that
+    # is already wrong. This job is that missing check. See
+    # scripts/ci/check-openapi-drift.mjs.
+    #
+    # Unlike its Tier A siblings above, `generate-openapi.ts` imports
+    # `@pops/contract-openapi` (and, transitively, half a dozen more shared
+    # packages) from `dist/`, which a bare `pnpm install` does not produce —
+    # only workspace symlinks. This job pays for a full `pnpm build`
+    # (`tsc -b tsconfig.build.json`, the same whole-graph build `exports`
+    # already runs on push to `main`) before regenerating, measured at ~25s
+    # cold in this repo — cheap enough that a dedicated job beats working out
+    # and maintaining eleven separate minimal per-pillar build closures.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Gate self-test (proves it catches drift and a generator error, including against the real repo tree)
+        run: node scripts/ci/check-openapi-drift.mjs --self-test
+      - name: Build the compiled TS graph (generate-openapi.ts needs dist/, not just workspace symlinks)
+        run: pnpm build
+      - name: Regenerate and verify every committed OpenAPI spec
+        run: node scripts/ci/check-openapi-drift.mjs
+
   escape-hatches:
     name: Escape-hatch ratchet
     # Type-safety escape hatches (`as any`, `as unknown as`, `as never`,
