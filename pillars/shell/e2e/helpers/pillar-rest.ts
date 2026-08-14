@@ -154,6 +154,44 @@ export interface SearchSection {
   readonly hits: readonly SearchHit[];
 }
 
+/** The query text `CROSS_MODULE_SEARCH_SECTIONS` is written to answer. */
+export const SEARCH_QUERY = 'matrix';
+
+/**
+ * One hit owned by `media` and one owned by `finance`, in the orchestrator's
+ * wire shape.
+ *
+ * Shared rather than copied because the comparison between two specs is the
+ * claim: the all-modules run asserts both sections reach the panel, and the
+ * `POPS_APPS=finance,core` run asserts the same payload arrives with the media
+ * section dropped. Two copies that drift are no longer the same payload, and
+ * both specs go on passing while the thing they jointly proved quietly stops
+ * being true.
+ */
+export const CROSS_MODULE_SEARCH_SECTIONS: readonly SearchSection[] = [
+  {
+    domain: 'movies',
+    moduleId: 'media',
+    hits: [{ uri: 'pops://media/movie/1', data: { title: 'The Matrix', year: 1999 } }],
+  },
+  {
+    domain: 'transactions',
+    moduleId: 'finance',
+    hits: [
+      {
+        uri: 'pops://finance/transaction/1',
+        data: {
+          description: 'MATRIX CINEMA',
+          amount: -24.5,
+          date: '2026-02-13',
+          entityName: 'Event Cinemas',
+          type: 'purchase',
+        },
+      },
+    ],
+  },
+];
+
 /**
  * Answer `POST /orchestrator-api/search` with `sections`, regardless of query
  * text. The shell's own install-set filter still runs over the result, which

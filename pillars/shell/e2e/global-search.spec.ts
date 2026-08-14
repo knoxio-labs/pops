@@ -10,33 +10,12 @@
  */
 import { expect, test, type Page } from '@playwright/test';
 
-import { stubOrchestratorSearch, stubShellBoot } from './helpers/pillar-rest';
-
-const QUERY = 'matrix';
-
-const SECTIONS = [
-  {
-    domain: 'movies',
-    moduleId: 'media',
-    hits: [{ uri: 'pops://media/movie/1', data: { title: 'The Matrix', year: 1999 } }],
-  },
-  {
-    domain: 'transactions',
-    moduleId: 'finance',
-    hits: [
-      {
-        uri: 'pops://finance/transaction/1',
-        data: {
-          description: 'MATRIX CINEMA',
-          amount: -24.5,
-          date: '2026-02-13',
-          entityName: 'Event Cinemas',
-          type: 'purchase',
-        },
-      },
-    ],
-  },
-] as const;
+import {
+  CROSS_MODULE_SEARCH_SECTIONS,
+  SEARCH_QUERY,
+  stubOrchestratorSearch,
+  stubShellBoot,
+} from './helpers/pillar-rest';
 
 function searchBox(page: Page) {
   return page.getByRole('textbox', { name: 'Search POPS' });
@@ -54,7 +33,7 @@ test.describe('Shell — federated search', () => {
   });
 
   test('typing posts the query to the orchestrator and renders its sections', async ({ page }) => {
-    await stubOrchestratorSearch(page, SECTIONS);
+    await stubOrchestratorSearch(page, CROSS_MODULE_SEARCH_SECTIONS);
 
     // Captured from the wire rather than asserted on the stub's arguments:
     // the point of the test is that the shell sends the orchestrator's
@@ -63,10 +42,10 @@ test.describe('Shell — federated search', () => {
       (request) => request.url().includes('/orchestrator-api/search') && request.method() === 'POST'
     );
 
-    await searchBox(page).fill(QUERY);
+    await searchBox(page).fill(SEARCH_QUERY);
 
     const body: unknown = (await posted).postDataJSON();
-    expect(body).toMatchObject({ query: { text: QUERY } });
+    expect(body).toMatchObject({ query: { text: SEARCH_QUERY } });
 
     const panel = page.getByTestId('search-results-panel');
     await expect(panel).toBeVisible();
@@ -77,7 +56,7 @@ test.describe('Shell — federated search', () => {
 
   test('a section for an unmounted module is dropped', async ({ page }) => {
     await stubOrchestratorSearch(page, [
-      ...SECTIONS,
+      ...CROSS_MODULE_SEARCH_SECTIONS,
       {
         domain: 'sightings',
         moduleId: 'not-a-pillar',
@@ -85,7 +64,7 @@ test.describe('Shell — federated search', () => {
       },
     ]);
 
-    await searchBox(page).fill(QUERY);
+    await searchBox(page).fill(SEARCH_QUERY);
 
     const panel = page.getByTestId('search-results-panel');
     await expect(panel.getByTestId('section-movies')).toBeVisible();
@@ -96,9 +75,9 @@ test.describe('Shell — federated search', () => {
   test('an orchestrator outage leaves the shell usable', async ({ page }) => {
     await page.route(/\/orchestrator-api\/search$/, (route) => route.abort('failed'));
 
-    await searchBox(page).fill(QUERY);
+    await searchBox(page).fill(SEARCH_QUERY);
 
-    await expect(searchBox(page)).toHaveValue(QUERY);
+    await expect(searchBox(page)).toHaveValue(SEARCH_QUERY);
     await expect(page.getByRole('button', { name: 'Finance' })).toBeVisible();
   });
 });

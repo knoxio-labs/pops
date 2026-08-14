@@ -20,7 +20,13 @@
  */
 import { expect, test } from '@playwright/test';
 
-import { failRegistry, stubOrchestratorSearch, stubPillarHealth } from './helpers/pillar-rest';
+import {
+  CROSS_MODULE_SEARCH_SECTIONS,
+  failRegistry,
+  SEARCH_QUERY,
+  stubOrchestratorSearch,
+  stubPillarHealth,
+} from './helpers/pillar-rest';
 
 test.describe('Shell — POPS_APPS=finance,core install set', () => {
   test.afterEach(async ({ page }) => {
@@ -55,34 +61,15 @@ test.describe('Shell — POPS_APPS=finance,core install set', () => {
   test('search drops results owned by an excluded module', async ({ page }) => {
     await failRegistry(page);
     await stubPillarHealth(page, ['finance']);
-    await stubOrchestratorSearch(page, [
-      {
-        domain: 'movies',
-        moduleId: 'media',
-        hits: [{ uri: 'pops://media/movie/1', data: { title: 'The Matrix', year: 1999 } }],
-      },
-      {
-        domain: 'transactions',
-        moduleId: 'finance',
-        hits: [
-          {
-            uri: 'pops://finance/transaction/1',
-            data: {
-              description: 'MATRIX CINEMA',
-              amount: -24.5,
-              date: '2026-02-13',
-              entityName: 'Event Cinemas',
-              type: 'purchase',
-            },
-          },
-        ],
-      },
-    ]);
+    // The same payload `global-search.spec.ts` asserts arrives whole against
+    // the all-modules shell. Shared so that the two runs cannot drift apart:
+    // this test's claim is the difference between them.
+    await stubOrchestratorSearch(page, CROSS_MODULE_SEARCH_SECTIONS);
 
     await page.goto('/finance');
     const searchBox = page.getByRole('textbox', { name: 'Search POPS' });
     await expect(searchBox).toBeVisible();
-    await searchBox.fill('matrix');
+    await searchBox.fill(SEARCH_QUERY);
 
     const panel = page.getByTestId('search-results-panel');
     // The finance section arriving is what makes the media section's absence
