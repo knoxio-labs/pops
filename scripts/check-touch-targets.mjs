@@ -53,11 +53,23 @@
  * already-sufficient unprefixed base (grow it further on large screens via
  * `sm:`, or further still on small ones via `max-sm:`); it can never
  * substitute for the base itself. Note this scanner does not model CSS
- * cascade order: it cannot tell whether a `max-*` variant shrinks an
- * already-sufficient base below 44px at the widths where that variant
- * applies (`h-11 max-sm:h-6`) — that risk exists whenever `max-*` is used
- * at all, sized-looking or not, and is out of scope for a text-pattern
- * heuristic the same way a class built through a variable is.
+ * cascade order in general — it cannot tell whether a scoped variant applies
+ * a class through cn() or another indirection the way a base evidence class
+ * built through a variable can hide from it. It DOES catch the one cascade
+ * fact cheap enough to check without simulating specificity: a same-axis
+ * sizing utility gated behind a viewport-width variant (either direction —
+ * `max-sm:h-6` shrinks below 640px, `sm:h-6` shrinks at and above 640px)
+ * whose OWN magnitude is below the 44px floor is flagged even when the
+ * unprefixed base alone would pass, because at the widths that variant
+ * governs its value — not the base's — is what actually renders. A variant
+ * whose magnitude only grows the base further (`max-sm:h-16` on an
+ * `h-11` base) is untouched: growth can never bring an axis under the floor.
+ * This check is deliberately narrow to `h`/`w`/`size` — it does NOT extend
+ * to a scoped variant shrinking a `before:-inset-*` expansion below what its
+ * own box needs (`h-6 w-6 before:-inset-9 max-sm:before:-inset-0`); that
+ * would need combining the scoped inset against the base box the same way
+ * {@link isCompliant} does for the unprefixed case, which is real scope this
+ * gate does not cover yet.
  * Classes built up through a variable (`cn(baseClasses)`) are invisible to a
  * text scan and are reported as violations — false positives lean toward
  * "flag it", which a baseline absorbs for existing code and a human resolves
@@ -251,25 +263,78 @@ function baseEvidence(tagText, re) {
 }
 
 /**
- * The largest pixel magnitude a `dimensionRe`/`INSET_RE` match set proves,
- * or `null` if the tag carries no evidence for that property at all.
+ * Every regex match against `tagText` that IS gated behind a viewport-width-
+ * scoped variant — the mirror of {@link baseEvidence}, used to check whether
+ * one of those variants sets a magnitude the floor at the width it governs.
+ * @param {string} tagText
+ * @param {RegExp} re
+ * @returns {RegExpMatchArray[]}
+ */
+function scopedEvidence(tagText, re) {
+  return [...tagText.matchAll(re)].filter((m) =>
+    hasViewportWidthScopedPrefix(tagText, m.index ?? 0)
+  );
+}
+
+/**
+ * The pixel magnitude one `dimensionRe`/`INSET_RE` match proves.
+ * @param {RegExpMatchArray} m
+ * @returns {number}
+ */
+function pxOf(m) {
+  if (m[1] !== undefined) return Number(m[1]) * PX_PER_STEP;
+  if (m[3] === 'rem') return Number(m[2]) * REM_PX;
+  return Number(m[2]);
+}
+
+/**
+ * The largest pixel magnitude a match set proves, or `null` if the tag
+ * carries no evidence for that property at all.
  * @param {RegExpMatchArray[]} matches
  * @returns {number | null}
  */
 function maxPx(matches) {
   let best = null;
   for (const m of matches) {
-    let px;
-    if (m[1] !== undefined) {
-      px = Number(m[1]) * PX_PER_STEP;
-    } else if (m[3] === 'rem') {
-      px = Number(m[2]) * REM_PX;
-    } else {
-      px = Number(m[2]);
-    }
+    const px = pxOf(m);
     if (best === null || px > best) best = px;
   }
   return best;
+}
+
+/**
+ * The smallest pixel magnitude a match set proves, or `null` if empty. Used
+ * against scoped evidence: the smallest magnitude a viewport-width variant
+ * sets is the one that matters for "does this shrink below the floor",
+ * unlike base evidence where the largest is the strongest proof.
+ * @param {RegExpMatchArray[]} matches
+ * @returns {number | null}
+ */
+function minPx(matches) {
+  let best = null;
+  for (const m of matches) {
+    const px = pxOf(m);
+    if (best === null || px < best) best = px;
+  }
+  return best;
+}
+
+/**
+ * Does `tagText` carry a viewport-width-scoped variant on `prop` (`h`, `w`,
+ * or `size`) whose own magnitude is below the 44px floor? This is the
+ * narrow cascade fact this gate checks without modelling specificity in
+ * general: a same-axis scoped utility can only ever be the value that
+ * renders at the widths it governs, so a magnitude below the floor there is
+ * a real violation regardless of what the unprefixed base proves. Growth
+ * variants (magnitude >= 44) are not flagged — they can never shrink
+ * anything.
+ * @param {string} tagText
+ * @param {'h' | 'w' | 'size'} prop
+ * @returns {boolean}
+ */
+function hasUndersizedScopedVariant(tagText, prop) {
+  const min = minPx(scopedEvidence(tagText, dimensionRe(prop)));
+  return min !== null && min < 44;
 }
 
 /**
@@ -294,7 +359,9 @@ function combineWithSize(axis, size) {
  * an inset for the box it is paired with, proves nothing. A single axis of
  * evidence (only `w`, only `h`) is never sufficient on its own: a wide link
  * can still be a ~20px-tall line of text, and a tall control with no width
- * evidence can be a single narrow glyph.
+ * evidence can be a single narrow glyph. Once the base clears the floor, a
+ * same-axis viewport-width-scoped variant that itself sets a magnitude below
+ * the floor still fails the element — see {@link hasUndersizedScopedVariant}.
  * @param {string} tagText
  * @returns {boolean}
  */
@@ -309,7 +376,13 @@ function isCompliant(tagText) {
   if (hBase === null || wBase === null) return false;
 
   const expansion = inset === null ? 0 : inset * 2;
-  return hBase + expansion >= 44 && wBase + expansion >= 44;
+  if (hBase + expansion < 44 || wBase + expansion < 44) return false;
+
+  return (
+    !hasUndersizedScopedVariant(tagText, 'h') &&
+    !hasUndersizedScopedVariant(tagText, 'w') &&
+    !hasUndersizedScopedVariant(tagText, 'size')
+  );
 }
 
 /**
@@ -642,6 +715,20 @@ function selfTest() {
     // The long-hand arbitrary media form is sm: written out — no unprefixed
     // evidence, so this is unsized below 640px exactly like sm: alone.
     '<button className="[@media(min-width:640px)]:h-11 [@media(min-width:640px)]:w-11" onClick={onClick}>Row</button>',
+    // The gap this ticket closes: an otherwise-sufficient base shrunk below
+    // 640px by a same-axis max-sm: variant — renders 24px at phone width.
+    '<button className="h-11 w-11 max-sm:h-6 max-sm:w-6" onClick={onClick}>Row</button>',
+    // The mirror: a sufficient base shrunk AT AND ABOVE 640px by sm: — a
+    // touch laptop or landscape iPad renders 24px, not 44.
+    '<button className="h-11 w-11 sm:h-6 sm:w-6" onClick={onClick}>Row</button>',
+    // Arbitrary max-[…]: bound, same shrink shape.
+    '<button className="h-11 w-11 max-[600px]:h-6 max-[600px]:w-6" onClick={onClick}>Row</button>',
+    // Long-hand arbitrary max-width media form, same shrink shape.
+    '<button className="h-11 w-11 [@media(max-width:600px)]:h-6 [@media(max-width:600px)]:w-6" onClick={onClick}>Row</button>',
+    // Stacked variants: max-sm: composed with hover: still shrinks below 640px.
+    '<button className="h-11 w-11 max-sm:hover:h-6 max-sm:hover:w-6" onClick={onClick}>Row</button>',
+    // size-* shrink: one utility, both axes.
+    '<button className="h-11 w-11 max-sm:size-6" onClick={onClick}>Row</button>',
   ].join('\n');
   const clean = [
     '<button className="size-11" onClick={onClick}><XIcon /></button>',
@@ -684,6 +771,23 @@ function selfTest() {
     ),
     'reports a button gated only by an arbitrary [@media(min-width:...)] variant': dirtyHits.some(
       (v) => v.line === 12
+    ),
+    'reports a sufficient base shrunk below 640px by same-axis max-sm:': dirtyHits.some(
+      (v) => v.line === 13
+    ),
+    'reports a sufficient base shrunk at/above 640px by same-axis sm: (the mirror)': dirtyHits.some(
+      (v) => v.line === 14
+    ),
+    'reports a sufficient base shrunk by an arbitrary max-[…]: bound': dirtyHits.some(
+      (v) => v.line === 15
+    ),
+    'reports a sufficient base shrunk by the long-hand [@media(max-width:...)] form':
+      dirtyHits.some((v) => v.line === 16),
+    'reports a sufficient base shrunk by a stacked max-sm:hover: variant': dirtyHits.some(
+      (v) => v.line === 17
+    ),
+    'reports a sufficient base shrunk by max-sm:size-* (one utility, both axes)': dirtyHits.some(
+      (v) => v.line === 18
     ),
     'stays silent on a button sized via size-11': cleanHits.every(
       (v) => v.line !== 1 // line 1 of `clean` carries size-11

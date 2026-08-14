@@ -1,3 +1,4 @@
+import DesignSystemTestSupport
 import SwiftUI
 import Testing
 
@@ -7,7 +8,7 @@ import Testing
 /// colorset still renders, it just renders the same colour in both schemes.
 /// Resolving each token under both colour schemes is therefore the only thing
 /// that distinguishes "wired up" from "silently broken".
-@Suite("Colour tokens")
+@Suite("Colour tokens", .requiresCompiledColorCatalog)
 internal struct ColorTokenTests {
     private static let tokens: [(name: String, color: Color)] = [
         ("popsBackground", .popsBackground),

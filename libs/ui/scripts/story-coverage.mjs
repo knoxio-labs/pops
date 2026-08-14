@@ -4,10 +4,12 @@
  * component to the pillars) must be imported by at least one `*.stories.tsx`
  * file, or carry an entry in `storybook-coverage-allowlist.mjs`. `.ts` counts
  * too — a component built with `React.createElement` instead of JSX needs no
- * `.tsx` extension and would otherwise never enter the subject set
- * (POPS-2178). Whether a given `.ts` export is *actually* a component is a
- * PascalCase-name heuristic, the same one `.tsx` discovery already runs on;
- * it is not exact for either extension.
+ * `.tsx` extension and would otherwise never enter the subject set. Whether a
+ * given `.ts` export is *actually* a component is a PascalCase-name
+ * heuristic, the same one `.tsx` discovery already runs on; it is not exact
+ * for either extension. A module whose only PascalCase exports are forwards
+ * of another module's names — `export { X } from './y'` — is a barrel, not a
+ * subject, at any depth: see `isBarrelModule`.
  *
  * "Imported by a story" is the rule rather than "is the `component:` of a
  * story meta" because the compound primitives (Accordion, Tabs, Table…) are
@@ -124,10 +126,21 @@ export function readReexportSpecifiers(source) {
  * @param {string} source
  * @returns {string[]}
  */
-export function readComponentExports(source) {
-  const isComponentName = (/** @type {string} */ name) =>
-    /^[A-Z]/.test(name) && !/^[A-Z0-9_]+$/.test(name);
+function isComponentName(/** @type {string} */ name) {
+  return /^[A-Z]/.test(name) && !/^[A-Z0-9_]+$/.test(name);
+}
 
+/**
+ * PascalCase names declared directly in a module: `export function Foo`,
+ * `export const Foo = …`, `export class Foo`, `export default Foo;`.
+ * Excludes names that only ever appear inside `export { … }` clauses, since
+ * those clauses need their own `from`-clause check to tell a local export
+ * apart from a forward — see {@link readBraceExportOrigins}.
+ *
+ * @param {string} source
+ * @returns {Set<string>}
+ */
+function readDeclaredComponentNames(source) {
   /** @type {Set<string>} */
   const names = new Set();
   const declarations = [
@@ -141,20 +154,89 @@ export function readComponentExports(source) {
       if (isComponentName(match[1])) names.add(match[1]);
     }
   }
-  for (const match of source.matchAll(/export\s+\{([^}]*)\}/gs)) {
+  return names;
+}
+
+/**
+ * PascalCase names carried by `export { … }` clauses, split by whether the
+ * clause forwards from another module (`export { X } from './y'`) or merely
+ * re-exports an already-local declaration (`export { X };`). The two read
+ * identically to {@link readComponentExports}, which does not care where a
+ * name came from — but barrel detection does: a name that only exists
+ * because this file forwards it is not this file publishing a component.
+ *
+ * @param {string} source
+ * @returns {{ local: Set<string>, forwarded: Set<string> }}
+ */
+function readBraceExportOrigins(source) {
+  /** @type {Set<string>} */
+  const local = new Set();
+  /** @type {Set<string>} */
+  const forwarded = new Set();
+  const pattern = /export\s+\{([^}]*)\}(?:\s*from\s*(['"])([^'"]+)\2)?/gs;
+  for (const match of source.matchAll(pattern)) {
+    const isForward = match[3] !== undefined;
     for (const clause of match[1].split(',')) {
       const trimmed = clause.trim();
       if (!trimmed || trimmed.startsWith('type ')) continue;
-      const [local, alias] = trimmed.includes(' as ')
+      const [clauseLocal, alias] = trimmed.includes(' as ')
         ? trimmed.split(' as ').map((part) => part.trim())
         : [trimmed, trimmed];
       // `export { Foo as default }` forwards `Foo` — `default` itself is
       // never PascalCase, so the aliased-to name is the one worth checking.
-      const exported = alias === 'default' ? local : alias;
-      if (isComponentName(exported)) names.add(exported);
+      const exported = alias === 'default' ? clauseLocal : alias;
+      if (!isComponentName(exported)) continue;
+      (isForward ? forwarded : local).add(exported);
     }
   }
-  return [...names];
+  return { local, forwarded };
+}
+
+/**
+ * PascalCase value exports of a module — the components it publishes.
+ * SCREAMING_SNAKE constants and `export type` are excluded; both are exported
+ * from component modules and neither is renderable.
+ *
+ * A default export is named by whatever identifier it forwards — `export
+ * default function Foo`, `export default Foo;` (referencing an earlier
+ * declaration) and `export { Foo as default }` all count as publishing `Foo`.
+ * A default export with no recoverable identifier (an anonymous
+ * `export default () => null;` or `export default function () {}`) is not a
+ * shape this repo's components use today; it is not detected here.
+ *
+ * @param {string} source
+ * @returns {string[]}
+ */
+export function readComponentExports(source) {
+  const declared = readDeclaredComponentNames(source);
+  const { local, forwarded } = readBraceExportOrigins(source);
+  return [...new Set([...declared, ...local, ...forwarded])];
+}
+
+/**
+ * A module is a barrel — never a story subject itself, whatever depth it is
+ * reached at — when every PascalCase name it exports is a forward
+ * (`export { X } from './y'` or `export * from './y'`) and it declares none
+ * of them itself. This is a structural property of the module's own source,
+ * not a fact about its position in the tree: `src/index.ts` qualifies for
+ * exactly the same reason a nested `components/widgets/index.ts` does, so
+ * neither needs a special case for "am I the root".
+ *
+ * A module that forwards a name *and* declares one of its own — e.g.
+ * `ScrollShelf.tsx` re-exporting `LazyScrollShelf` alongside its own
+ * `ScrollShelf` component — is not a barrel by this rule: it has a real
+ * rendering surface of its own, and the forwarded name is still followed to
+ * its defining module separately.
+ *
+ * @param {string} source
+ * @returns {boolean}
+ */
+function isBarrelModule(source) {
+  const declared = readDeclaredComponentNames(source);
+  if (declared.size > 0) return false;
+  const { local, forwarded } = readBraceExportOrigins(source);
+  if (local.size > 0) return false;
+  return forwarded.size > 0;
 }
 
 /**
@@ -168,35 +250,33 @@ export function readComponentExports(source) {
  * set the moment someone grouped it.
  *
  * `.ts` is included, not just `.tsx`, because a component can be declared
- * with `React.createElement` and never need JSX syntax at all — POPS-2178.
- * The heuristic is the same PascalCase-export test `readComponentExports`
- * already applies to `.tsx`; it is not an "is this actually a component"
- * check and cannot be — it will treat a PascalCase-named non-component `.ts`
- * export (an enum, a class that is not a component, a constant object) as a
- * subject the same way it already would if that export lived in a `.tsx`
- * file. `isRoot` exists to keep that heuristic from firing on the crawl's
- * own entry point: `src/index.ts` legitimately re-exports dozens of
- * PascalCase names via `export { X, Y } from './somewhere'`, and without this
- * guard the barrel itself would be flagged as an unstoried "component
- * module" purely for aggregating other modules' exports. A barrel reached by
- * recursion (a nested `components/widgets/index.ts`) is not exempted the
- * same way — same as an intermediate `.tsx` forwarder, it becomes a subject
- * in its own right if it re-exports a PascalCase name directly.
+ * with `React.createElement` and never need JSX syntax at all. The heuristic
+ * is the same PascalCase-export test `readComponentExports` already applies
+ * to `.tsx`; it is not an "is this actually a component" check and cannot
+ * be — it will treat a PascalCase-named non-component `.ts` export (an enum,
+ * a class that is not a component, a constant object) as a subject the same
+ * way it already would if that export lived in a `.tsx` file.
+ *
+ * A module is skipped as a subject when {@link isBarrelModule} says every
+ * PascalCase name it exports is forwarded rather than declared — this is
+ * what keeps `src/index.ts` and any barrel reached by recursion
+ * (`components/widgets/index.ts`) out of the subject set without needing to
+ * know it is the crawl's entry point: the rule looks at the file's own
+ * exports, not its position in the tree.
  *
  * @param {string} file — absolute path
  * @param {Set<string>} visited — absolute paths already walked, mutated
  * @param {Set<string>} modules — absolute paths of discovered component
  *   modules, mutated
- * @param {boolean} [isRoot] — true only for the initial `src/index.ts` call
  * @returns {void}
  */
-function collectComponentModules(file, visited, modules, isRoot = false) {
+function collectComponentModules(file, visited, modules) {
   if (visited.has(file)) return;
   visited.add(file);
 
   const source = readFileSync(file, 'utf8');
   const isComponentFile = file.endsWith('.tsx') || file.endsWith('.ts');
-  if (!isRoot && isComponentFile && readComponentExports(source).length > 0) {
+  if (isComponentFile && readComponentExports(source).length > 0 && !isBarrelModule(source)) {
     modules.add(file);
   }
 
@@ -224,7 +304,7 @@ export function listExportedComponentModules(srcDir) {
   }
   /** @type {Set<string>} */
   const modules = new Set();
-  collectComponentModules(barrel, new Set(), modules, true);
+  collectComponentModules(barrel, new Set(), modules);
   return [...modules].toSorted();
 }
 

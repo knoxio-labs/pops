@@ -1,4 +1,5 @@
 import AppCore
+import DesignSystemTestSupport
 import Foundation
 import SwiftUI
 import Testing
@@ -68,7 +69,7 @@ internal struct TransactionRowRenderingTests {
     /// Every colour on this row is a token, and every token diverges between the
     /// two schemes. A row that rendered identically in both would be one whose
     /// colours are coming from somewhere other than the catalogue.
-    @Test("a row renders differently in light and dark")
+    @Test("a row renders differently in light and dark", .requiresCompiledColorCatalog)
     func rowFollowsTheColourScheme() throws {
         let light = try #require(Self.render(Self.row(Self.transaction()), in: .light))
         let dark = try #require(Self.render(Self.row(Self.transaction()), in: .dark))
@@ -78,7 +79,7 @@ internal struct TransactionRowRenderingTests {
 
     /// Money arriving is the one thing this list colours. If these rendered
     /// alike, the credit token would not be reaching the amount.
-    @Test("a credit does not look like a debit")
+    @Test("a credit does not look like a debit", .requiresCompiledColorCatalog)
     func creditsAreDistinguishable() throws {
         let credit = try #require(Self.render(Self.row(Self.transaction(minorUnits: 540))))
         let debit = try #require(Self.render(Self.row(Self.transaction(minorUnits: -540))))

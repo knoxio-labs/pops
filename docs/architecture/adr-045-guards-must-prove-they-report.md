@@ -73,12 +73,19 @@ Runs immediately after `actions/checkout`. **No third-party import, at any depth
 | `scripts/check-bundle-map-coverage.mjs`          | `quality.yml` → `bundle-map-coverage`       | TSX source, `package.json`                                    |
 | `scripts/check-tailwind-source-coverage.mjs`     | `quality.yml` → `tailwind-source-coverage`  | CSS `@source` globs, source file paths                        |
 | `scripts/check-escape-hatches.mjs`               | `quality.yml` → `escape-hatches`            | TS/TSX source, JSON baseline                                  |
+| `scripts/check-touch-targets.mjs`                | `quality.yml` → `touch-targets`             | TS/TSX source, JSON baseline                                  |
+| `scripts/check-title-icon-consistency.mjs`       | `quality.yml` → `title-icon-consistency`    | Per-app `routes.tsx`, page source                             |
 | `scripts/ci/check-control-characters.mjs`        | `quality.yml` → `control-characters`        | Every tracked file, raw bytes                                 |
 | `scripts/ci/check-design-tokens.mjs`             | `quality.yml` → `design-tokens`             | Frontend TS/TSX/CSS source, class strings                     |
+| `scripts/ci/check-icon-only-buttons.mjs`         | `quality.yml` → `icon-only-buttons`         | TSX source                                                    |
+| `scripts/ci/check-icon-dynamic-import.mjs`       | `quality.yml` → `icon-dynamic-import`       | TS/TSX source, dynamic `import()`/`require()` call sites      |
+| `scripts/ci/check-composite-references.mjs`      | `quality.yml` → `composite-references`      | `tsconfig.build.json`, pillar source via `import-scan.mjs`    |
+| `scripts/ci/check-swift-bounded-yield.mjs`       | `quality.yml` → `swift-bounded-yield`       | `clients/ios` Swift source                                    |
 | `scripts/ci/check-vendored-contracts.mjs`        | `quality.yml` → `vendored-contracts`        | OpenAPI JSON, byte comparison, consumer codegen config source |
 | `scripts/ci/report-contract-consumers.mjs`       | `quality.yml` → `contract-consumers`        | The same, plus `package.json` and a `mise.toml` task name     |
 | `scripts/ci/resolve-report-base.mjs`             | `quality.yml` → `contract-consumers`        | `git merge-base` against a caller-supplied ref name           |
 | `scripts/ci/check-device-signature-fixture.mjs`  | `quality.yml` → `device-signature-fixture`  | JSON fixture, `node:crypto`                                   |
+| `scripts/ci/check-refresh-message-fixture.mjs`   | `quality.yml` → `refresh-message-fixture`   | JSON fixture, `node:crypto`, shared `fixture-copies.mjs`      |
 | `scripts/ci/check-cross-pillar-expectations.mjs` | `quality.yml` → `cross-pillar-expectations` | OpenAPI JSON, TS source                                       |
 | `scripts/ci/check-litestream-sidecar-parity.mjs` | `infra-lint.yml` → `sidecar-parity`         | Litestream filenames, Compose text                            |
 | `scripts/ci/check-migration-fk-pragma.mjs`       | `quality.yml` → `migration-fk-pragma`       | `pillars/<id>/migrations/*.sql` source                        |
@@ -87,15 +94,22 @@ Runs immediately after `actions/checkout`. **No third-party import, at any depth
 
 ### Tier B — installs the workspace
 
-| Guard                                            | Job                                                       | Reads                                          | Parser                 |
-| ------------------------------------------------ | --------------------------------------------------------- | ---------------------------------------------- | ---------------------- |
-| `scripts/ci/check-mise-tool-overrides.mjs`       | `agent-review.yml` → `agent-review`                       | `mise.toml` `[tools]`                          | `smol-toml`            |
-| `scripts/ci/check-node-pin.mjs`                  | `agent-review.yml` → `agent-review`                       | `mise*.toml`, workflow YAML, JSON, Dockerfile  | `smol-toml`, `js-yaml` |
-| `scripts/ci/check-homelab-service-isolation.mjs` | `agent-review.yml` → `agent-review`                       | Compose + Litestream YAML                      | `js-yaml`              |
-| `scripts/extractability/check-cargo-deps.mjs`    | `rust-quality.yml` → `quality`                            | Workspace + member `Cargo.toml`                | `smol-toml`            |
-| `scripts/ci/smoke-image.mjs`                     | `docker-build.yml` → `docker-build`                       | `infra/docker-compose.yml`                     | `js-yaml`, `zod`       |
-| `scripts/ci/check-ci-gate-wiring.mjs`            | `quality.yml` → `Scripts tests`                           | Every workflow's YAML                          | `js-yaml`              |
-| `scripts/ci/merge-group-scope.mjs`               | `ios-quality.yml` → `scope`, `docker-build.yml` → `scope` | The calling workflow's `on.pull_request.paths` | `js-yaml`              |
+| Guard                                            | Job                                                                                  | Reads                                                                      | Parser                                                                          |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `scripts/ci/check-mise-tool-overrides.mjs`       | `agent-review.yml` → `agent-review`                                                  | `mise.toml` `[tools]`                                                      | `smol-toml`                                                                     |
+| `scripts/ci/check-node-pin.mjs`                  | `agent-review.yml` → `agent-review`                                                  | `mise*.toml`, workflow YAML, JSON, Dockerfile                              | `smol-toml`, `js-yaml`                                                          |
+| `scripts/ci/check-homelab-service-isolation.mjs` | `agent-review.yml` → `agent-review`                                                  | Compose + Litestream YAML                                                  | `js-yaml`                                                                       |
+| `scripts/ci/check-mise-setup-single-source.mjs`  | `agent-review.yml` → `agent-review`                                                  | Workflow YAML (`jdx/mise-action` call sites)                               | `js-yaml`                                                                       |
+| `scripts/extractability/check-cargo-deps.mjs`    | `rust-quality.yml` → `quality`                                                       | Workspace + member `Cargo.toml`                                            | `smol-toml`                                                                     |
+| `scripts/ci/smoke-image.mjs`                     | `docker-build.yml` → `docker-build`                                                  | `infra/docker-compose.yml`                                                 | `js-yaml`, `zod`                                                                |
+| `scripts/ci/check-ci-gate-wiring.mjs`            | `quality.yml` → `Scripts tests`                                                      | Every workflow's YAML                                                      | `js-yaml`                                                                       |
+| `scripts/ci/merge-group-scope.mjs`               | `ios-quality.yml` → `scope`, `docker-build.yml` → `scope`                            | The calling workflow's `on.pull_request.paths`                             | `js-yaml`                                                                       |
+| `scripts/check-exports.mjs`                      | `quality.yml` → `exports`                                                            | `tsconfig.build.json`, compiled `dist/` manifests                          | none — installs to run `tsc -b`                                                 |
+| `scripts/ci/check-generated-clients.mjs`         | `app-quality.yml` → `app`, `quality.yml` → `generated-clients`                       | Per-package `generate:*-client` scripts, generated client output           | none — installs to run the `openapi-ts` codegen `pnpm` scripts                  |
+| `scripts/ci/check-api-types-drift.mjs`           | `quality.yml` → `api-types-drift`                                                    | Each pillar's `generate-api-types.ts` output                               | none — installs to run the pillar's `openapi-typescript` codegen script         |
+| `scripts/check-pillar-schema-coverage.mjs`       | `pillar-schema-coverage.yml` → `coverage`, `pillar-schema-coverage.yml` → `selftest` | Built pillar `dist/db/index.js` opener, migrations journal, live SQLite DB | none — installs to `pnpm build` the pillar before importing its compiled opener |
+
+Not every Tier B job installs for a YAML/TOML parser. `check-exports.mjs`, `check-generated-clients.mjs`, `check-api-types-drift.mjs`, and `check-pillar-schema-coverage.mjs` read no structured config at all — their jobs install because the guard itself needs the workspace: `tsc -b` against compiled `dist/`, a `generate:*-client`/`generate-api-types.ts` codegen script, or a pillar's own `pnpm build` before its compiled SQLite opener can be imported. The Parser column says `none` for these; they are Tier B for the same underlying reason as the rest — the job installs, so it is not install-free — not because a parser justifies it.
 
 `check-ci-gate-wiring.mjs` has no workflow step of its own — it runs through its Vitest suite, in a job that already installs. It was already effectively Tier B and needed no workflow change.
 
@@ -119,9 +133,27 @@ Splitting them into a second job was considered and rejected: `agent-review` is 
 
 That is the mechanism that answers the question this amendment exists for — "which guards import a parser and which do not" — without anybody having to keep a list correct.
 
+The same test also derives the job/script pairs directly from the workflow files and checks the two tables above against that derivation — a guard job missing from its tier's table, or a table row naming a workflow job that no longer runs that script, fails `scripts-tests` rather than waiting for the next hand audit. See "Amendment — audit closes the gaps found in POPS-2197" below for what that caught the first time it ran.
+
 ### Consequences
 
-- **The `agent-review` gate is no longer seconds-scale.** It now pays a cached `pnpm install`. That is the price of the split and it was accepted knowingly; the six install-free jobs in `quality.yml` keep the fast path.
+- **The `agent-review` gate is no longer seconds-scale.** It now pays a cached `pnpm install`. That is the price of the split and it was accepted knowingly; the install-free jobs in `quality.yml` (sixteen as of the POPS-2197 audit) keep the fast path.
 - **A Tier A job is one `import` away from a broken required check**, and that break lands on every subsequent PR rather than on the one that caused it. The derived test is what makes that a red build on the PR that caused it instead.
 - **`scripts/ci/yaml-text.mjs` is deleted.** It existed only because a parser was unreachable; both of its consumers are Tier B now. `scripts/ci/config-parse.mjs` replaces it and owns the two rules that survive the migration: a document that does not parse is a violation, and a key is found by walking the parsed document rather than by matching a line.
 - **"Report a shape you cannot model" still applies**, and now bites in a different place. The matchers could not model a flow mapping; a parser can. What a parser cannot do is read a document that is not valid YAML or TOML, so that is the case each Tier B guard reports — and each one's `--self-test` covers it.
+
+## Amendment — 2026-08-15: audit closes the gaps found in POPS-2197
+
+POPS-2191 noticed `check-refresh-message-fixture.mjs` sitting next to its documented sibling `check-device-signature-fixture.mjs` in Tier A with no row of its own, and separately that `check-swift-bounded-yield.mjs` was missing too — a targeted finding, not a sweep. This amendment is that sweep: every `node scripts/….mjs` invocation in every `.github/workflows/*.yml` job, checked against both tables above.
+
+The audit ran in only one direction. The Tier A table was missing six guards: `check-composite-references.mjs`, `check-icon-only-buttons.mjs`, `check-swift-bounded-yield.mjs`, `check-refresh-message-fixture.mjs`, `check-touch-targets.mjs`, and `check-title-icon-consistency.mjs` — all genuinely install-free `quality.yml` jobs, none of them exotic. The Tier B table was missing five more:
+
+- `check-mise-setup-single-source.mjs`, riding along in `agent-review.yml` → `agent-review` as the fourth parser-reading guard the job's own comment already counted ("Four of them are Tier B") but the table only ever listed three.
+- `check-exports.mjs` (`quality.yml` → `exports`), `check-generated-clients.mjs` (`app-quality.yml` → `app` and `quality.yml` → `generated-clients`), and `check-api-types-drift.mjs` (`quality.yml` → `api-types-drift`) — Tier B for a reason this ADR had not named: the job installs to run a build or a codegen script, not to reach a YAML/TOML parser.
+- `check-pillar-schema-coverage.mjs`, in `pillar-schema-coverage.yml` — a whole workflow this ADR never mentioned, because it predates the amendment and nobody added it after.
+
+Three more guards were in flight when this audit ran. `check-icon-dynamic-import.mjs` merged first and joins Tier A here (`quality.yml` → `icon-dynamic-import`, install-free — a pure source-tree scan with no third-party import). `check-openapi-drift.mjs` and `check-migration-fk-pragma.mjs` had not landed as of this amendment, so this ADR does not yet name them: the rule this audit exists to establish is that a PR adding a guard job adds its own ADR row in the same PR, and the derived test fails that PR's own merge-group check if it does not. Documenting a not-yet-landed guard's row here ahead of its PR would be the same drift this amendment closes, just introduced from the other direction.
+
+No row in either table named a guard or a job that no longer exists; every discrepancy ran in the missing-from-the-table direction, not the stale-row direction. That asymmetry is itself informative: rows get forgotten when a guard lands, not invalidated when one is removed, because removing a guard means deleting its workflow step and its ADR row in the same PR, while adding one only requires the workflow step to go green.
+
+`scripts/ci/__tests__/guard-job-tiers.test.ts` now parses both tables out of this file and asserts them against the same job/script derivation the tier split itself already used, so a guard landing without a table row — or a table surviving its guard's removal — fails `scripts-tests` on the PR that causes it, the same property ADR-045 already gives the Tier A/Tier B split.

@@ -10,8 +10,10 @@
 -- ATTACH-ed databases. Once the comparisons cluster migrates into media-db
 -- a follow-up baseline can promote the soft pointer back to a hard FK.
 --
--- The existing rows are backfilled into media.db via the ATTACH bridge in
--- `apps/pops-api/src/db/backfill-media-from-shared.ts`.
+-- By the time this migration runs, `media_scores` already lives in
+-- media-db — the monolith and its shared-`pops.db` ATTACH bridge were
+-- removed by the lake migration that collapsed the tRPC monolith into
+-- per-pillar REST services, so there is no separate backfill step here.
 
 CREATE TABLE `media_scores` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,

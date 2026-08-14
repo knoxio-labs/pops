@@ -44,9 +44,11 @@
  *   node scripts/ci/check-vendored-contracts.mjs
  *   node scripts/ci/check-vendored-contracts.mjs --self-test
  *
- * Exit 0 = every vendored copy matches its source and every declared
- * expectation is on disk as a regular file. Exit 1 = drift / orphan / moved /
- * not-a-file / unreadable, or total discovery loss.
+ * Exit 0 = every vendored copy matches its source, every declared expectation
+ * is on disk as a regular file, and no `*.openapi.json` exists outside a
+ * declared VENDOR_DIRECTORIES shape or a producer's own canonical spec. Exit
+ * 1 = drift / orphan / moved / not-a-file / unreadable / unvendored, or total
+ * discovery loss.
  */
 
 import {
@@ -60,7 +62,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { isFileNotFound } from './fixture-copies.mjs';
@@ -82,9 +84,21 @@ const VENDORED_SUFFIX = '.openapi.json';
  * `Contracts/` directory for the artefacts it and the BFM agree on byte for
  * byte, and the OpenAPI snapshot is one of those.
  *
- * A directory NOT listed here is not scanned, so a copy that lands somewhere
- * else is invisible to this guard rather than silently allowed — which is why
- * the consuming unit's own docs point at this list.
+ * A directory NOT listed here is not scanned for a *paired* vendored copy —
+ * `discoverVendoredContracts` walks only these shapes, so it cannot pair a
+ * file elsewhere with its producer spec. That used to mean a copy outside
+ * this list was invisible to the whole guard, not merely to the pairing:
+ * `pillars/<id>/contracts/` (no `app/` segment — already a real directory,
+ * see `pillars/bfm/contracts/`) sat outside every entry here, so a vendored
+ * `*.openapi.json` planted there was discovered by nothing and reported by
+ * nothing. `findUnvendoredContracts` below closes that: it asks the
+ * filesystem what `*.openapi.json` files exist anywhere under `pillars/` and
+ * `clients/`, independent of this list, and fails on any that is neither a
+ * producer's own canonical spec nor one of the shapes named here. A location
+ * not listed here therefore still fails loudly — it just fails as "found
+ * outside every declared shape" rather than as a silent absence — which is
+ * why the consuming unit's own docs point at this list as the only place a
+ * new vendoring convention gets to land.
  */
 export const VENDOR_DIRECTORIES = [
   ['pillars', 'app', 'contracts'],
@@ -196,6 +210,102 @@ export function discoverVendoredContracts(root) {
     }
   }
   return found.toSorted((a, b) => a.copy.localeCompare(b.copy));
+}
+
+/**
+ * Directory names this guard never descends into while hunting for stray
+ * `*.openapi.json` files: build output and dependency trees this repo does
+ * not commit (see `.gitignore`), so walking into them would either find
+ * nothing real or find a copy `pnpm install`/a build put there, which is not
+ * a vendoring decision anyone made.
+ */
+const UNVENDORED_SCAN_IGNORED_DIRS = new Set([
+  'node_modules',
+  '.git',
+  'dist',
+  'dist-scripts',
+  '.turbo',
+  'target',
+  '.build',
+  'DerivedData',
+  '.swiftpm',
+  '.derived-data',
+  'coverage',
+]);
+
+/**
+ * Recursively collect every `*.openapi.json` file under `dir`.
+ *
+ * @param {string} dir
+ * @param {string[]} out
+ * @returns {string[]}
+ */
+function findOpenapiJsonFiles(dir, out = []) {
+  /** @type {import('node:fs').Dirent[]} */
+  let entries;
+  try {
+    entries = readdirSync(dir, { withFileTypes: true });
+  } catch (error) {
+    if (isFileNotFound(error)) return out;
+    throw error;
+  }
+  for (const entry of entries) {
+    if (entry.isDirectory()) {
+      if (UNVENDORED_SCAN_IGNORED_DIRS.has(entry.name)) continue;
+      findOpenapiJsonFiles(join(dir, entry.name), out);
+    } else if (entry.isFile() && entry.name.endsWith(VENDORED_SUFFIX)) {
+      out.push(join(dir, entry.name));
+    }
+  }
+  return out;
+}
+
+/**
+ * Whether `path` is a producer's OWN canonical spec —
+ * `pillars/<id>/openapi/<id>.openapi.json` — rather than a vendored copy of
+ * someone else's. A producer publishing its own contract is the source; only
+ * a copy of ANOTHER pillar's contract, kept inside a consumer's own unit
+ * boundary, is "vendored" in the sense this guard polices.
+ *
+ * @param {string} path Absolute path.
+ * @param {string} root Repo root.
+ * @returns {boolean}
+ */
+export function isCanonicalContractSource(path, root) {
+  const rel = relative(join(root, 'pillars'), path);
+  if (rel.startsWith('..') || rel === '') return false;
+  const parts = rel.split(sep);
+  if (parts.length !== 3) return false;
+  const [pillarId, dir, filename] = parts;
+  return dir === 'openapi' && filename === `${pillarId}${VENDORED_SUFFIX}`;
+}
+
+/**
+ * Every `*.openapi.json` file that exists somewhere under `pillars/` or
+ * `clients/` but is neither a producer's own canonical spec
+ * (`isCanonicalContractSource`) nor a vendored copy `discoverVendoredContracts`
+ * can pair with one, because it sits outside every `VENDOR_DIRECTORIES` shape.
+ *
+ * This is the leg `discoverVendoredContracts` structurally cannot provide: a
+ * directory walk restricted to a fixed list of shapes can prove those shapes
+ * are clean, but says nothing about a file sitting anywhere else. This
+ * function asks the filesystem directly, with no shape restriction, and
+ * reconciles the answer against the declared shapes and the canonical-source
+ * rule — so a vendored copy in an undeclared location is reported by name
+ * instead of read as "discovery found nothing, so there is nothing".
+ *
+ * @param {string} root Repo root to scan.
+ * @returns {string[]} Absolute paths, sorted.
+ */
+export function findUnvendoredContracts(root) {
+  const discoveredCopies = new Set(discoverVendoredContracts(root).map((c) => c.copy));
+  const candidates = [
+    ...findOpenapiJsonFiles(join(root, 'pillars')),
+    ...findOpenapiJsonFiles(join(root, 'clients')),
+  ];
+  return candidates
+    .filter((path) => !discoveredCopies.has(path) && !isCanonicalContractSource(path, root))
+    .toSorted();
 }
 
 /**
@@ -672,6 +782,88 @@ function selfTestDeclaration() {
 }
 
 /**
+ * Self-test half five: `findUnvendoredContracts` is the leg the other four
+ * halves cannot exercise, because every one of them either builds fixtures
+ * FROM `VENDOR_DIRECTORIES` (so they can never construct a shape outside it)
+ * or feeds hand-built inputs straight to `findDrift`/`findMoved` (so they
+ * never touch the filesystem walk at all). This proves three things a
+ * directory-scan-restricted-to-known-shapes guard structurally cannot:
+ *
+ *   1. A producer's own canonical spec (`pillars/<id>/openapi/<id>.openapi.json`)
+ *      is never mistaken for a vendored copy.
+ *   2. A legitimate vendored copy, sitting exactly where `VENDOR_DIRECTORIES`
+ *      says it may, is never flagged.
+ *   3. A `*.openapi.json` sitting ANYWHERE else under `pillars/`/`clients/` —
+ *      this fixture uses `pillars/<id>/contracts/`, the exact directory
+ *      shape `pillars/bfm/contracts/` shows is real and reachable in this
+ *      repo, not contrived — is reported by path, not silently absent from
+ *      an empty scan.
+ *
+ * @returns {boolean}
+ */
+function selfTestUnvendoredLocation() {
+  const root = mkdtempSync(join(tmpdir(), 'vendored-unvendored-'));
+  try {
+    // 1. A producer's own canonical spec must never read as vendored.
+    mkdirSync(join(root, 'pillars', 'producer-a', 'openapi'), { recursive: true });
+    writeFileSync(
+      join(root, 'pillars', 'producer-a', 'openapi', 'producer-a.openapi.json'),
+      '{}\n'
+    );
+
+    // 2. A legitimate vendored copy, in a declared VENDOR_DIRECTORIES shape.
+    mkdirSync(join(root, 'pillars', 'producer-b', 'openapi'), { recursive: true });
+    writeFileSync(
+      join(root, 'pillars', 'producer-b', 'openapi', 'producer-b.openapi.json'),
+      '{}\n'
+    );
+    const legitCopyDir = join(root, 'pillars', 'consumer-legit', 'app', 'contracts');
+    mkdirSync(legitCopyDir, { recursive: true });
+    writeFileSync(join(legitCopyDir, 'producer-b.openapi.json'), '{}\n');
+
+    // 3. A vendored-shaped copy OUTSIDE every declared shape — the
+    // `pillars/<id>/contracts/` case POPS-2207 found undiscovered.
+    mkdirSync(join(root, 'pillars', 'producer-c', 'openapi'), { recursive: true });
+    writeFileSync(
+      join(root, 'pillars', 'producer-c', 'openapi', 'producer-c.openapi.json'),
+      '{}\n'
+    );
+    const strayDir = join(root, 'pillars', 'bfm-like', 'contracts');
+    mkdirSync(strayDir, { recursive: true });
+    const strayCopy = join(strayDir, 'producer-c.openapi.json');
+    writeFileSync(strayCopy, '{}\n');
+
+    const unvendored = findUnvendoredContracts(root);
+
+    const canonicalIgnored = !unvendored.includes(
+      join(root, 'pillars', 'producer-a', 'openapi', 'producer-a.openapi.json')
+    );
+    const legitIgnored = !unvendored.includes(join(legitCopyDir, 'producer-b.openapi.json'));
+    const strayCaught = unvendored.includes(strayCopy);
+    const noExtras = unvendored.length === 1;
+
+    const ok = canonicalIgnored && legitIgnored && strayCaught && noExtras;
+    if (!ok) {
+      console.error('SELF-TEST FAILED (unvendored location):');
+      console.error(`  ignored a producer's own canonical spec: ${canonicalIgnored}`);
+      console.error(`  ignored a legitimately vendored copy:     ${legitIgnored}`);
+      console.error(`  caught the copy outside every shape:      ${strayCaught}`);
+      console.error(
+        `  exactly one finding:                      ${noExtras} (got ${unvendored.length})`
+      );
+    } else {
+      console.log(
+        'self-test OK — a *.openapi.json outside every declared VENDOR_DIRECTORIES shape is ' +
+          'caught, a producer’s own canonical spec and a legitimately vendored copy are not.'
+      );
+    }
+    return ok;
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+}
+
+/**
  * The exact vendored legs this repo is known to carry today, as literals —
  * typed by hand, not derived from `VENDOR_DIRECTORIES` or from
  * `discoverVendoredContracts` itself. `selfTestDiscovery` above proves the
@@ -710,6 +902,21 @@ export const KNOWN_VENDORED_LEGS = [
  * job already runs — it does not depend on the separate `vitest run scripts/`
  * job also catching it.
  *
+ * SCOPE: this half pins what `discoverVendoredContracts` FINDS inside the
+ * `VENDOR_DIRECTORIES` shapes it is told to look at — it says nothing about
+ * whether a vendored copy exists somewhere those shapes don't cover.
+ * `KNOWN_VENDORED_LEGS` staying in sync with a shrunken or mis-typed
+ * `VENDOR_DIRECTORIES` entry is exactly the case this half catches; a
+ * `*.openapi.json` sitting in a directory no `VENDOR_DIRECTORIES` entry
+ * names at all is invisible to `discoverVendoredContracts` and therefore to
+ * this pin too — `findUnvendoredContracts` is the leg that closes that gap,
+ * independently of what discovery finds. This half also runs
+ * `findUnvendoredContracts` against `repoRoot` itself (`selfTestUnvendoredLocation`
+ * only proves the mechanism against a synthetic fixture), so a stray
+ * `*.openapi.json` actually present in THIS repo, in a location no
+ * `VENDOR_DIRECTORIES` entry names, fails this self-test by path — not just
+ * the plain guard invocation.
+ *
  * @returns {boolean}
  */
 function selfTestLegSet() {
@@ -719,15 +926,20 @@ function selfTestLegSet() {
 
   const missing = expected.filter((leg) => !legs.includes(leg));
   const extra = legs.filter((leg) => !expected.includes(leg));
-  const ok = missing.length === 0 && extra.length === 0;
+  const unvendored = findUnvendoredContracts(repoRoot);
+  const ok = missing.length === 0 && extra.length === 0 && unvendored.length === 0;
 
   if (!ok) {
     console.error('SELF-TEST FAILED (leg set): discovered legs do not match the pinned set.');
     for (const leg of missing) console.error(`  missing (pinned, not discovered): ${leg}`);
     for (const leg of extra) console.error(`  extra (discovered, not pinned):    ${leg}`);
+    for (const path of unvendored) {
+      console.error(`  unvendored (on disk, outside every declared shape): ${rel(path)}`);
+    }
     console.error(
       '  if this is a deliberate addition/removal, update KNOWN_VENDORED_LEGS in the ' +
-        'same commit; if it is not, VENDOR_DIRECTORIES has dropped or mis-typed an entry.'
+        'same commit; if it is not, VENDOR_DIRECTORIES has dropped or mis-typed an entry, or ' +
+        'an unvendored *.openapi.json needs to be removed or newly declared.'
     );
   } else {
     console.log(`self-test OK — discovers exactly the ${expected.length} pinned vendored leg(s).`);
@@ -742,13 +954,14 @@ function main() {
     process.exit(2);
   }
   if (argv.includes('--self-test')) {
-    // All four halves run even when one fails, so one invocation reports
+    // All five halves run even when one fails, so one invocation reports
     // every problem.
     const discovery = selfTestDiscovery();
     const drift = selfTestDrift();
     const declaration = selfTestDeclaration();
+    const unvendoredLocation = selfTestUnvendoredLocation();
     const legSet = selfTestLegSet();
-    process.exit(discovery && drift && declaration && legSet ? 0 : 1);
+    process.exit(discovery && drift && declaration && unvendoredLocation && legSet ? 0 : 1);
   }
 
   /** @type {VendoredContract[]} */
@@ -779,14 +992,30 @@ function main() {
     process.exit(1);
   }
 
+  /** @type {string[]} */
+  let unvendored;
+  try {
+    unvendored = findUnvendoredContracts(repoRoot);
+  } catch (error) {
+    console.error(
+      `FAIL — could not scan the tree for unvendored contract locations: ${String(error)}`
+    );
+    process.exit(1);
+  }
+
   const driftFindings = findDrift(discovered, readOrNull);
   const movedFindings = findMoved(expected, statKind);
-  const findings = [...driftFindings, ...movedFindings];
+  const unvendoredFindings = unvendored.map((copy) => ({
+    kind: /** @type {const} */ ('unvendored'),
+    copy,
+  }));
+  const findings = [...driftFindings, ...movedFindings, ...unvendoredFindings];
 
   if (findings.length === 0) {
     console.log(
       `OK — ${discovered.length} vendored contract(s) match their canonical source, ` +
-        `${expected.length} config-declared expectation(s) all present on disk.`
+        `${expected.length} config-declared expectation(s) all present on disk, and no ` +
+        `*.openapi.json exists outside those declared shapes.`
     );
     process.exit(0);
   }
@@ -807,6 +1036,13 @@ function main() {
       console.error(
         `  ${rel(f.copy)}\n      declared by ${rel(f.declaredBy)} but is not a regular file — ` +
           'a directory (or a symlink to one) sits at that path instead of the vendored copy'
+      );
+    } else if (f.kind === 'unvendored') {
+      console.error(
+        `  ${rel(f.copy)}\n      *.openapi.json found outside every VENDOR_DIRECTORIES shape and ` +
+          "is not a producer's own canonical spec — delete it, or if this is a new legitimate " +
+          'vendoring location, add it to VENDOR_DIRECTORIES, VENDOR_DECLARATIONS and ' +
+          'KNOWN_VENDORED_LEGS in the same commit'
       );
     } else {
       console.error(

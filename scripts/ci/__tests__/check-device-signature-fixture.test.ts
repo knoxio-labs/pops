@@ -12,7 +12,7 @@ import {
   FIXTURE_COPIES,
   KNOWN_FIXTURE_COPY_PATHS,
 } from '../check-device-signature-fixture.mjs';
-import { isFileNotFound } from '../fixture-copies.mjs';
+import { discoverFilesNamed, isFileNotFound } from '../fixture-copies.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..', '..');
@@ -62,6 +62,9 @@ function requireCommitted(repoRelativePath: string) {
 
 const committed: Fixture = JSON.parse(requireCommitted(canonical.path));
 
+/** The set `checkAllCopies` is handed in production when nothing undeclared exists. */
+const declaredOnly = FIXTURE_COPIES.map((copy) => copy.path);
+
 /**
  * Build a fresh, internally consistent fixture with `node:crypto` alone.
  *
@@ -102,7 +105,19 @@ describe('the committed fixture', () => {
 
   it('exists once per consumer, byte-identical', () => {
     expect(FIXTURE_COPIES.length).toBeGreaterThan(1);
-    expect(checkAllCopies(readCommitted)).toEqual([]);
+    expect(checkAllCopies(readCommitted, declaredOnly)).toEqual([]);
+  });
+
+  it('has no undeclared same-named copy anywhere under pillars/, libs/ or clients/', () => {
+    // The leg POPS-2206 found missing: every check above only ever reads
+    // paths FIXTURE_COPIES names. This asks the real tree what exists.
+    const discovered = discoverFilesNamed(
+      repoRoot,
+      ['pillars', 'libs', 'clients'],
+      'device-signature-v1.json'
+    );
+
+    expect(discovered).toEqual([...declaredOnly].toSorted());
   });
 
   it('declares exactly the paths KNOWN_FIXTURE_COPY_PATHS pins', () => {
@@ -240,13 +255,15 @@ describe('checkAllCopies', () => {
   };
 
   it('passes when every copy is byte-identical', () => {
-    expect(checkAllCopies(readerOver(identical))).toEqual([]);
+    expect(checkAllCopies(readerOver(identical), declaredOnly)).toEqual([]);
   });
 
   it('catches a vendored copy edited on its own', () => {
     const drifted = JSON.stringify({ ...committed, version: 2 });
 
-    expect(checkAllCopies(withVendored(drifted)).join('\n')).toContain('drifted from');
+    expect(checkAllCopies(withVendored(drifted), declaredOnly).join('\n')).toContain(
+      'drifted from'
+    );
   });
 
   it('catches a canonical copy edited on its own', () => {
@@ -255,23 +272,23 @@ describe('checkAllCopies', () => {
       JSON.stringify({ ...committed, version: 2 })
     );
 
-    expect(checkAllCopies(readerOver(files)).join('\n')).toContain('drifted from');
+    expect(checkAllCopies(readerOver(files), declaredOnly).join('\n')).toContain('drifted from');
   });
 
   it('catches a copy that is only reformatted, not semantically changed', () => {
     // Byte-equality is the point: `oxfmt` runs over both copies at commit time,
     // so a copy that survived a different formatter is exactly how they part.
-    expect(checkAllCopies(withVendored(JSON.stringify(committed, null, 4))).join('\n')).toContain(
-      'drifted from'
-    );
+    expect(
+      checkAllCopies(withVendored(JSON.stringify(committed, null, 4)), declaredOnly).join('\n')
+    ).toContain('drifted from');
   });
 
   it('catches a missing copy rather than silently checking one', () => {
-    expect(checkAllCopies(withVendored(null)).join('\n')).toContain('missing');
+    expect(checkAllCopies(withVendored(null), declaredOnly).join('\n')).toContain('missing');
   });
 
   it('reports unparseable JSON against the copy it came from', () => {
-    const failures = checkAllCopies(withVendored('{ not json'));
+    const failures = checkAllCopies(withVendored('{ not json'), declaredOnly);
 
     expect(failures.join('\n')).toContain(vendored.path);
     expect(failures.join('\n')).toContain('not parseable as JSON');
@@ -283,19 +300,47 @@ describe('checkAllCopies', () => {
       signatureDerBase64: committed.signatureRawBase64,
     });
 
-    const failures = checkAllCopies(withVendored(broken));
+    const failures = checkAllCopies(withVendored(broken), declaredOnly);
 
     expect(failures.some((f) => f.startsWith(`${vendored.path}: `))).toBe(true);
     expect(failures.some((f) => f.startsWith(`${canonical.path}: `))).toBe(false);
   });
+
+  it('reports a same-named file discovered outside FIXTURE_COPIES, by name, without touching disk', () => {
+    // Fabricated discovered list, per the same concurrency note as
+    // check-icon-dynamic-import.test.ts: a file planted for real under
+    // pillars/ would be visible to every other tree-scanning guard's own
+    // self-test running concurrently in this same `vitest run scripts/`.
+    const planted = 'pillars/purchases/contracts/device-signature-v1.json';
+
+    const failures = checkAllCopies(readerOver(identical), [...declaredOnly, planted]);
+
+    expect(failures.join('\n')).toContain(planted);
+    expect(failures.join('\n')).toContain('undeclared copy');
+  });
+
+  it('does not flag the canonical copy as undeclared', () => {
+    expect(checkAllCopies(readerOver(identical), [canonical.path])).toEqual([]);
+  });
 });
 
 describe('the guard CLI', () => {
-  it('its self-test passes, including the independent copy-set pin', () => {
+  it('its self-test passes, including the independent copy-set pin and the discovery leg', () => {
     const stdout = execFileSync('node', [guardPath, '--self-test'], { encoding: 'utf8' });
 
     expect(stdout).toContain(
       `self-test OK — declares exactly the ${KNOWN_FIXTURE_COPY_PATHS.length} pinned fixture copy path(s).`
     );
+    expect(stdout).toMatch(/self-test OK — reports a same-named file discovered outside/u);
   });
+
+  // A test that plants an undeclared copy for real and re-runs the CLI
+  // against the actual repo tree is deliberately NOT here — it would be
+  // visible to every other tree-scanning guard's own suite running
+  // concurrently in `vitest run scripts/`, producing a spurious failure
+  // unrelated to this one. That path was proven manually instead: guard run
+  // clean, a corrupted copy planted at
+  // pillars/purchases/contracts/device-signature-v1.json, guard and
+  // --self-test re-run and shown to exit 1 naming the planted file, plant
+  // removed, guard re-run clean again.
 });

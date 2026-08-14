@@ -37,6 +37,7 @@ let package = Package(
                 "FeatureTransactions",
                 "AppCore",
                 .product(name: "AppCoreFakes", package: "AppCore"),
+                .product(name: "DesignSystemTestSupport", package: "DesignSystem"),
             ],
             swiftSettings: strictSwiftSettings
         ),
