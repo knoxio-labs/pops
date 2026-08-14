@@ -1,3 +1,4 @@
+import DesignSystemTestSupport
 import Foundation
 import SwiftUI
 import Testing
@@ -41,13 +42,13 @@ internal struct PrimitiveRenderingTests {
         #expect(light != dark, "\(name) renders identically in light and dark")
     }
 
-    @Test("EmptyStateView")
+    @Test("EmptyStateView", .requiresCompiledColorCatalog)
     func emptyState() throws {
         try Self.check(
             EmptyStateView(message: "No transactions in this period."), named: "EmptyStateView")
     }
 
-    @Test("ErrorStateView")
+    @Test("ErrorStateView", .requiresCompiledColorCatalog)
     func errorState() throws {
         try Self.check(
             ErrorStateView(message: "Could not reach the server.") {}, named: "ErrorStateView")
@@ -78,17 +79,17 @@ internal struct PrimitiveRenderingTests {
         #expect(blankRender == stockRender)
     }
 
-    @Test("PopsButton")
+    @Test("PopsButton", .requiresCompiledColorCatalog)
     func button() throws {
         try Self.check(PopsButton("Pair") {}, named: "PopsButton")
     }
 
-    @Test("PopsRow")
+    @Test("PopsRow", .requiresCompiledColorCatalog)
     func row() throws {
         try Self.check(PopsRow(title: "Rent", subtitle: "1 August"), named: "PopsRow")
     }
 
-    @Test("PopsCard")
+    @Test("PopsCard", .requiresCompiledColorCatalog)
     func card() throws {
         try Self.check(
             PopsCard { PopsRow(title: "Groceries", subtitle: "12 transactions") }, named: "PopsCard"

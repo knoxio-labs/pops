@@ -26,27 +26,39 @@ const DEFAULT_DIMENSIONS = [
   { name: 'Soundtrack', description: 'Music, score, and sound design quality', sortOrder: 4 },
 ];
 
-/** Seed default dimensions if none exist. Returns true if seeded. */
+/**
+ * Seed the five default dimensions, by name, whichever are missing.
+ *
+ * Keyed on the unique `name` index rather than on row count: a migration can
+ * leave the table non-empty (FK-placeholder rows backfilled for orphaned
+ * `media_scores`, see `0032_comparisons_baseline.sql`) without those rows
+ * counting as "already seeded". Idempotent — safe to call on every read.
+ * Returns true if any default was newly inserted.
+ */
 export function seedDefaultDimensions(db: MediaDb): boolean {
-  const existing = db.select({ id: comparisonDimensions.id }).from(comparisonDimensions).get();
-  if (existing) return false;
-
+  let seededAny = false;
   for (const dim of DEFAULT_DIMENSIONS) {
-    db.insert(comparisonDimensions)
+    const result = db
+      .insert(comparisonDimensions)
       .values({ name: dim.name, description: dim.description, active: 1, sortOrder: dim.sortOrder })
+      .onConflictDoNothing({ target: comparisonDimensions.name })
       .run();
+    if (result.changes > 0) seededAny = true;
   }
-  return true;
+  return seededAny;
 }
 
-/** List dimensions ordered by sort order. Seeds defaults on first read. */
+/** List dimensions ordered by sort order. Seeds any missing defaults first. */
 export function listDimensions(db: MediaDb): ComparisonDimensionRow[] {
   const rows = db
     .select()
     .from(comparisonDimensions)
     .orderBy(asc(comparisonDimensions.sortOrder))
     .all();
-  if (rows.length === 0) {
+  const hasAllDefaults = DEFAULT_DIMENSIONS.every((dim) =>
+    rows.some((row) => row.name === dim.name)
+  );
+  if (!hasAllDefaults) {
     seedDefaultDimensions(db);
     return db
       .select()

@@ -30,10 +30,16 @@
  *     (`` import(`lucide-react/${iconFile}`) ``) — resolved and flagged: this is
  *     the "interpolated banned-name-shaped path" case named in the ticket.
  *     A leading quasi of exactly `lucide-react` with no slash before the
- *     interpolation (`` import(`lucide-react${x}`) ``) is NOT flagged: Node's
- *     module resolution has no such specifier shape (a subpath needs the
- *     slash), so it can never actually reach the package — flagging it would
- *     be a false positive, not caution.
+ *     interpolation (`` import(`lucide-react${x}`) ``) is NOT flagged, but not
+ *     because it is unreachable — it is not: if the interpolated value itself
+ *     starts with `/` (e.g. `` `lucide-react${'/dist/esm/icons/pen-line'}` ``),
+ *     the resulting specifier reaches straight into the package. What makes
+ *     this shape unresolvable is that its reachability depends entirely on a
+ *     value this guard cannot see without evaluating the interpolation — the
+ *     same undecidability as string concatenation (`'lucide-react' + x`),
+ *     just spelled with a template literal. It is grouped with the other
+ *     genuinely undecidable cases below and gets the same fail-open
+ *     treatment, not a claim that the specifier can never resolve.
  *   - A same-file, single-hop variable trace: `const spec = 'lucide-react';`
  *     followed later by `import(spec)` in the same file. This is a bounded,
  *     literal-only, one-hop lookup — no cross-file constants, no
@@ -42,6 +48,9 @@
  *   Genuinely UNDECIDABLE, and NOT flagged (fails OPEN, not closed):
  *     - a computed specifier (`import(getModuleName())`, a ternary, string
  *       concatenation, a member expression);
+ *     - a template literal whose leading quasi is `lucide-react` with no
+ *       static slash before the interpolation (`` import(`lucide-react${x}`) ``)
+ *       — whether it reaches the package depends on `x`;
  *     - a variable whose value comes from another file, a function
  *       parameter, or more than one hop of local assignment;
  *     - `require()` reached through a wrapper function rather than written
@@ -108,16 +117,37 @@ const SKIP_DIRS = new Set([
 const SOURCE_EXT = new Set(['.ts', '.tsx', '.mts', '.cts', '.js', '.jsx', '.mjs', '.cjs']);
 
 /**
+ * Asserts `import`/`require` is not itself the tail of a longer identifier —
+ * `foo.import(`, `myimport(`, `reimport(` must not match. This replaced an
+ * enumerated leading-character class (`[\s;(,=:!&|?{}\n]`) that had to list
+ * every punctuation mark that can legally precede a call expression and, by
+ * construction, always missed one — that omission (no `[`, no bare `=>`, no
+ * `+ - * / % < > ~ ^` , no backtick) is exactly what let
+ * `Promise.all([import('lucide-react')])` and `()=>import('lucide-react')`
+ * through. A call expression can be preceded by almost any punctuation, a
+ * keyword (`return`, `yield`, `await`, `typeof`), or nothing (start of
+ * file/expression) — the one thing that must NOT precede it is another
+ * identifier character or `.`, because that would make `import`/`require`
+ * part of a longer name or a property access rather than the call itself.
+ * Asserting the negative is both shorter and exhaustive by construction.
+ */
+const NOT_PRECEDED_BY_IDENTIFIER = String.raw`(?<![\w$.])`;
+
+/**
  * A dynamic `import()`/`require()` call whose sole argument is a plain
  * string literal or a template literal. Deliberately does NOT match a static
  * `import … from`/`export … from` declaration — see file header.
  */
-const DYNAMIC_CALL_RE =
-  /(?:^|[\s;(,=:!&|?{}\n])(?:await\s+)?(import|require)\s*\(\s*(?:['"]([^'"]*)['"]|`([^`]*)`)\s*\)/gm;
+const DYNAMIC_CALL_RE = new RegExp(
+  `${NOT_PRECEDED_BY_IDENTIFIER}(?:await\\s+)?(import|require)\\s*\\(\\s*(?:['"]([^'"]*)['"]|\`([^\`]*)\`)\\s*\\)`,
+  'gm'
+);
 
 /** A dynamic call whose sole argument is a bare identifier. */
-const DYNAMIC_IDENT_CALL_RE =
-  /(?:^|[\s;(,=:!&|?{}\n])(?:await\s+)?(import|require)\s*\(\s*([A-Za-z_$][\w$]*)\s*\)/gm;
+const DYNAMIC_IDENT_CALL_RE = new RegExp(
+  `${NOT_PRECEDED_BY_IDENTIFIER}(?:await\\s+)?(import|require)\\s*\\(\\s*([A-Za-z_$][\\w$]*)\\s*\\)`,
+  'gm'
+);
 
 /** `const IDENT = '...'` / `` const IDENT = `...` `` (no interpolation). */
 const CONST_STRING_RE =
@@ -307,9 +337,11 @@ function run() {
 /**
  * Synthetic fixtures proving the guard reports every resolvable dynamic form
  * (string literal, template literal without interpolation, template literal
- * with an interpolated subpath tail, require(), and a same-file single-hop
- * variable trace), stays silent on the shapes documented as undecidable, and
- * stays silent on a static import/dynamic import of an unrelated package.
+ * with an interpolated subpath tail, require(), a same-file single-hop
+ * variable trace, a call as the first element of an array literal, and a
+ * call immediately after `=>` with no space), stays silent on the shapes
+ * documented as undecidable, and stays silent on a static import/dynamic
+ * import of an unrelated package.
  *
  * @returns {boolean}
  */
@@ -322,6 +354,8 @@ function selfTest() {
     'const d = import(`lucide-react/${iconFile}`);',
     "const spec = 'lucide-react';",
     'const e = await import(spec);',
+    "Promise.all([import('lucide-react')]);",
+    "const j = () =>import('lucide-react');",
   ].join('\n');
 
   const clean = [
@@ -334,6 +368,8 @@ function selfTest() {
     "const other = 'not-lucide-react';",
     'const i = await import(other);',
     "// const commented = await import('lucide-react');",
+    "const k = foo.import('lucide-react');",
+    "myimport('lucide-react');",
   ].join('\n');
 
   const dirtyHits = findViolations('pillars/x/app/src/A.tsx', dirty);
@@ -346,19 +382,26 @@ function selfTest() {
     'reports a no-interpolation template-literal import': dirtyLines.has(3),
     'reports an interpolated-subpath template-literal import': dirtyLines.has(5),
     'reports a same-file single-hop variable-traced import': dirtyLines.has(7),
-    'reports every dirty line, not just the first': dirtyHits.length === 5,
+    'reports a call as the first element of an array literal': dirtyLines.has(8),
+    'reports a call immediately after `=>` with no space': dirtyLines.has(9),
+    'reports every dirty line, not just the first': dirtyHits.length === 7,
     "does not flag a static named import (oxlint's job)": !cleanHits.some((v) => v.line === 1),
     'does not flag a static export-from re-export': !cleanHits.some(
       (v) => v.line === 2 || v.line === 3
     ),
     'does not flag a dynamic import of an unrelated package': !cleanHits.some((v) => v.line === 4),
-    'does not flag a template literal with no slash before the interpolation (unreachable specifier)':
+    'does not flag a template literal with no static slash before the interpolation (undecidable — depends on the interpolated value, not provably unreachable)':
       !cleanHits.some((v) => v.line === 5),
     'does not flag a computed/undecidable specifier (fails open)': !cleanHits.some(
       (v) => v.line === 6
     ),
     'does not flag an unrelated variable-traced import': !cleanHits.some((v) => v.line === 8),
     'does not flag a commented-out dynamic import': !cleanHits.some((v) => v.line === 9),
+    'does not flag `import` as a property access (foo.import(...))': !cleanHits.some(
+      (v) => v.line === 10
+    ),
+    'does not flag `import`/`require` as a substring of a longer identifier (myimport(...))':
+      !cleanHits.some((v) => v.line === 11),
     'clean fixture reports nothing at all': cleanHits.length === 0,
   };
 

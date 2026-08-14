@@ -244,3 +244,235 @@ describe('the shared Tier B modules are libraries, not checks', () => {
     }
   );
 });
+
+/**
+ * POPS-2197: the ADR-045 tables drifted from the workflows twice — once by
+ * omission (two guards never got a Tier A row) and once by undercount (the
+ * prose said "four" parser guards in `agent-review` while the table only
+ * ever listed three). Both mistakes were found by a human rereading the
+ * workflows against the tables. This derives the same comparison so the next
+ * one fails `scripts-tests` instead of waiting for a rereading.
+ *
+ * A script "owns" a job here if it runs there WITHOUT `--self-test` on that
+ * line — a guard that only self-tests inside `agent-review` as a preflight
+ * (`merge-group-scope.mjs`) does not newly "belong" to that job the way its
+ * real job does, and documenting every self-test site as a fresh ownership
+ * claim would make the tables list jobs a guard is merely proven inside, not
+ * jobs it gates. `agent-review.mjs` is excluded outright: ADR-045 itself
+ * draws the line between the guards, which decide whether a change may
+ * merge, and the LLM step, which only comments — it is never a table row.
+ */
+describe('ADR-045 tables agree with the derived tiers', () => {
+  const SELF_TEST_FLAG = '--self-test';
+  const NOT_A_GUARD = new Set([
+    // The advisory LLM reviewer. ADR-045's decision section is explicit that
+    // the guards gate and the reviewer only comments, so it is never subject
+    // to the guard tier split this file derives.
+    'scripts/ci/agent-review.mjs',
+    // Packs a release artifact; it fails loud on a missing mount but does
+    // not gate a PR the way ADR-045's guards do, and carries no `--self-test`
+    // to prove it — release.yml is a `push`-tag workflow, not a guard job.
+    'scripts/pack-moltbot-bundle.mjs',
+  ]);
+
+  function ownedGuardJobs(): GuardJob[] {
+    const owned: GuardJob[] = [];
+    for (const file of workflowFiles()) {
+      const doc = parseYaml(readFileSync(join(workflowsDir, file), 'utf8'), file);
+      if (!isMapping(doc) || !isMapping(doc.jobs)) continue;
+      for (const [name, job] of Object.entries(doc.jobs)) {
+        if (!isMapping(job) || !Array.isArray(job.steps)) continue;
+        let installs = false;
+        const scripts = new Set<string>();
+        for (const entry of walkMappings(job.steps)) {
+          if (entry.key !== 'run') continue;
+          const run = scalarText(entry.value);
+          if (run === undefined) continue;
+          if (INSTALLS.test(run)) installs = true;
+          for (const line of run.split('\n')) {
+            if (line.includes(SELF_TEST_FLAG)) continue;
+            for (const [, script] of line.matchAll(NODE_INVOCATION)) {
+              if (script !== undefined && !NOT_A_GUARD.has(script)) scripts.add(script);
+            }
+          }
+        }
+        if (scripts.size > 0)
+          owned.push({ workflow: file, job: name, installs, scripts: [...scripts] });
+      }
+    }
+    return owned;
+  }
+
+  interface AdrRow {
+    guard: string;
+    workflow: string;
+    job: string;
+  }
+
+  const adrPath = join(
+    repoRoot,
+    'docs',
+    'architecture',
+    'adr-045-guards-must-prove-they-report.md'
+  );
+  const adrText = readFileSync(adrPath, 'utf8');
+
+  /**
+   * Pulls `(guard, workflow, job)` triples out of one of the ADR's two
+   * pipe-tables. A Job cell may name more than one workflow/job pair
+   * (`merge-group-scope.mjs` runs in two), so every backtick-quoted token in
+   * that cell is read in `(workflow, job)` pairs rather than assuming one.
+   */
+  function parseAdrTable(sectionHeading: string): AdrRow[] {
+    const sectionStart = adrText.indexOf(sectionHeading);
+    if (sectionStart < 0) return [];
+    const section = adrText.slice(sectionStart);
+    const tableStart = section.indexOf('\n| Guard');
+    if (tableStart < 0) return [];
+    const rows: AdrRow[] = [];
+    for (const line of section.slice(tableStart + 1).split('\n')) {
+      if (!line.startsWith('|')) break;
+      const cells = line
+        .split('|')
+        .slice(1, -1)
+        .map((c) => c.trim());
+      const guardCell = cells[0];
+      const jobCell = cells[1];
+      if (cells.length < 2 || guardCell === undefined || jobCell === undefined) continue;
+      if (guardCell === 'Guard' || guardCell.startsWith('---')) continue;
+      const guardMatch = /`([^`]+)`/u.exec(guardCell);
+      if (!guardMatch) continue;
+      const tokens = [...jobCell.matchAll(/`([^`]+)`/gu)].map((m) => m[1]!);
+      for (let i = 0; i + 1 < tokens.length; i += 2) {
+        rows.push({ guard: guardMatch[1]!, workflow: tokens[i]!, job: tokens[i + 1]! });
+      }
+    }
+    return rows;
+  }
+
+  /** The "Tier A guards that ride in a Tier B job" prose list, not a table. */
+  function parseRideAlongGuards(): string[] {
+    const heading = '### Tier A guards that ride in a Tier B job';
+    const sectionStart = adrText.indexOf(heading);
+    if (sectionStart < 0) return [];
+    const nextHeading = adrText.indexOf('\n### ', sectionStart + heading.length);
+    const section = adrText.slice(sectionStart, nextHeading < 0 ? undefined : nextHeading);
+    const listLine = section.split('\n').find((l) => l.startsWith('`check-'));
+    if (!listLine) return [];
+    return [...listLine.matchAll(/`(check-[\w-]+\.mjs)`/gu)].map((m) => `scripts/ci/${m[1]}`);
+  }
+
+  const adrTierARows = parseAdrTable('### Tier A — install-free');
+  const adrTierBRows = parseAdrTable('### Tier B — installs the workspace');
+  const rideAlongGuards = parseRideAlongGuards();
+
+  // A guard documented only as "rides along" belongs to agent-review.yml's
+  // agent-review job — that is the only job the prose describes, and the
+  // only one with Tier-B-installing siblings a Tier A guard could ride with.
+  const rideAlongRows: AdrRow[] = rideAlongGuards.map((guard) => ({
+    guard,
+    workflow: 'agent-review.yml',
+    job: 'agent-review',
+  }));
+
+  const owned = ownedGuardJobs();
+  const ownedTierA = owned.filter((j) => !j.installs);
+  const ownedTierB = owned.filter((j) => j.installs);
+
+  // Table discovery is only as good as its own regexes: fail loud if either
+  // parse comes back empty, rather than letting every assertion below pass
+  // vacuously over zero rows.
+  it('finds rows in both ADR tables and the ride-along list', () => {
+    expect(adrTierARows.length).toBeGreaterThan(5);
+    expect(adrTierBRows.length).toBeGreaterThan(3);
+    expect(rideAlongGuards.length).toBeGreaterThan(0);
+  });
+
+  it.each(
+    ownedTierA.flatMap((j) =>
+      j.scripts.map((script) => [`${script} @ ${j.workflow} → ${j.job}`, j, script] as const)
+    )
+  )('%s is documented in the ADR-045 Tier A table', (_label, job, script) => {
+    const documented = adrTierARows.some(
+      (r) => r.guard === script && r.workflow === job.workflow && r.job === job.job
+    );
+    expect(
+      documented,
+      `${job.workflow} job "${job.job}" runs ${script} install-free, but ADR-045's Tier A table has ` +
+        `no row for it. Add one to docs/architecture/adr-045-guards-must-prove-they-report.md.`
+    ).toBe(true);
+  });
+
+  it.each(
+    ownedTierB.flatMap((j) =>
+      j.scripts.map((script) => [`${script} @ ${j.workflow} → ${j.job}`, j, script] as const)
+    )
+  )(
+    '%s is documented in the ADR-045 Tier B table or the ride-along list',
+    (_label, job, script) => {
+      const documented = [...adrTierBRows, ...rideAlongRows].some(
+        (r) => r.guard === script && r.workflow === job.workflow && r.job === job.job
+      );
+      expect(
+        documented,
+        `${job.workflow} job "${job.job}" runs ${script} in an installing job, but ADR-045's Tier B ` +
+          `table (and the "rides in a Tier B job" list) have no row for it. Add one to ` +
+          `docs/architecture/adr-045-guards-must-prove-they-report.md.`
+      ).toBe(true);
+    }
+  );
+
+  // The reverse direction: a table row naming a guard/job pair that no
+  // longer runs that way is exactly as stale as a missing row, and nothing
+  // above would catch it — both loops above only ever add evidence FOR a
+  // documented pair, never against an undocumented one.
+  it.each(adrTierARows.map((r) => [`${r.guard} @ ${r.workflow} → ${r.job}`, r] as const))(
+    'Tier A row %s names a guard job that still runs install-free',
+    (_label, row) => {
+      const match = ownedTierA.find(
+        (j) => j.workflow === row.workflow && j.job === row.job && j.scripts.includes(row.guard)
+      );
+      expect(
+        match,
+        `ADR-045 Tier A table row "${row.guard}" @ ${row.workflow} → ${row.job} does not match any ` +
+          'install-free guard job found in the workflows. Fix or remove the row.'
+      ).toBeDefined();
+    }
+  );
+
+  it.each(adrTierBRows.map((r) => [`${r.guard} @ ${r.workflow} → ${r.job}`, r] as const))(
+    'Tier B row %s names a guard job that still installs',
+    (_label, row) => {
+      if (row.job === 'Scripts tests') {
+        // check-ci-gate-wiring.mjs runs through its own Vitest suite, not a
+        // `node scripts/….mjs` step — the ADR says so, and it is the one
+        // documented pair `ownedGuardJobs` structurally cannot see.
+        expect(row.guard).toBe('scripts/ci/check-ci-gate-wiring.mjs');
+        expect(existsSync(join(repoRoot, row.guard))).toBe(true);
+        return;
+      }
+      const match = ownedTierB.find(
+        (j) => j.workflow === row.workflow && j.job === row.job && j.scripts.includes(row.guard)
+      );
+      expect(
+        match,
+        `ADR-045 Tier B table row "${row.guard}" @ ${row.workflow} → ${row.job} does not match any ` +
+          'installing guard job found in the workflows. Fix or remove the row.'
+      ).toBeDefined();
+    }
+  );
+
+  it.each(rideAlongRows.map((r) => [`${r.guard} @ ${r.workflow} → ${r.job}`, r] as const))(
+    'ride-along guard %s still runs, install-free in itself, inside its Tier B job',
+    (_label, row) => {
+      const match = owned.find(
+        (j) => j.workflow === row.workflow && j.job === row.job && j.scripts.includes(row.guard)
+      );
+      expect(
+        match,
+        `ADR-045's "rides in a Tier B job" list names "${row.guard}" @ ${row.workflow} → ${row.job}, ` +
+          'which no longer matches a guard job found in the workflows. Fix or remove it from the list.'
+      ).toBeDefined();
+    }
+  );
+});

@@ -10,8 +10,10 @@
 -- non-media reader. The 5 consumers all live in
 -- `apps/pops-api/src/modules/media/plex/scheduler-sync-logs.ts`.
 --
--- Existing rows are backfilled into media.db via the ATTACH bridge in
--- `apps/pops-api/src/db/backfill-media-from-shared.ts`.
+-- By the time this migration runs, `sync_logs` already lives in media-db —
+-- the monolith and its shared-`pops.db` ATTACH bridge were removed by the
+-- lake migration that collapsed the tRPC monolith into per-pillar REST
+-- services, so there is no separate backfill step here.
 
 CREATE TABLE `sync_logs` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
