@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
 import { MAX_RECEIPT_PARTS, nextPartId, type StagedPart } from '../parts';
-import { encodeBatch, EMPTY_STAGING, stage, type EncodedBatch, type Staging } from '../staging';
+import {
+  encodeBatch,
+  EMPTY_STAGING,
+  stage,
+  withRefused,
+  type EncodedBatch,
+  type Staging,
+} from '../staging';
 
 function part(name: string): StagedPart {
   return {
@@ -87,6 +94,42 @@ describe('stage', () => {
     const current = staged('one');
     stage(current, batch({ encoded: [part('two')] }));
     expect(names(current)).toEqual(['one']);
+  });
+});
+
+describe('withRefused', () => {
+  it('reports a file the drop zone turned away before it reached staging', () => {
+    const next = withRefused(staged('frame'), ['till.heic']);
+
+    expect(next.problems).toEqual([{ kind: 'rejected', names: ['till.heic'] }]);
+    expect(names(next)).toEqual(['frame']);
+  });
+
+  // One gesture that mixes both reads as one mistake, not two — and
+  // StagingProblems renders one row per kind, so a second 'rejected' would
+  // collide with the first.
+  it('merges into the batch own rejection instead of sitting beside it', () => {
+    const complained = stage(EMPTY_STAGING, batch({ rejected: ['notes.md'] }));
+
+    const next = withRefused(complained, ['till.heic']);
+
+    expect(next.problems).toEqual([{ kind: 'rejected', names: ['notes.md', 'till.heic'] }]);
+  });
+
+  it('leaves the other complaints of the batch standing', () => {
+    const complained = stage(EMPTY_STAGING, batch({ unreadable: ['locked.pdf'] }));
+
+    const next = withRefused(complained, ['till.heic']);
+
+    expect(next.problems).toEqual([
+      { kind: 'rejected', names: ['till.heic'] },
+      { kind: 'unreadable', names: ['locked.pdf'] },
+    ]);
+  });
+
+  it('is a no-op when nothing was refused', () => {
+    const current = staged('one');
+    expect(withRefused(current, [])).toBe(current);
   });
 });
 

@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -52,6 +52,13 @@ function dropZoneInput(): HTMLInputElement {
 
 function frame(name: string, bytes: string, type = 'image/jpeg'): File {
   return new File([bytes], name, { type });
+}
+
+/** Dropped from the desktop — the path the input's `accept` cannot filter. */
+function dropOnZone(files: File[]): void {
+  const zone = dropZoneInput().closest('[role="button"]');
+  if (zone === null) throw new Error('the drop zone rendered no drop target');
+  fireEvent.drop(zone, { dataTransfer: { files } });
 }
 
 async function submit(user: ReturnType<typeof userEvent.setup>): Promise<void> {
@@ -324,10 +331,12 @@ describe('ReceiptDropZonePage — staging what is sent', () => {
     expect(screen.getByText(enAUPurchases['receipts.parts.empty'])).toBeVisible();
   });
 
+  // Dragged in rather than chosen: the dialog's own accept filter never sees a
+  // dragged file, which is the only way an unaccepted one still gets this far.
   it('names a file the upload cannot read and never puts it on the wire', async () => {
     const user = renderPage();
 
-    await user.upload(dropZoneInput(), [
+    dropOnZone([
       frame('till.heic', 'bytes', 'image/heic'),
       frame('invoice.pdf', 'bytes', 'application/pdf'),
     ]);

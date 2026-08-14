@@ -15,15 +15,27 @@ export interface DropZoneProps {
   multiple: boolean;
   accept?: string;
   prompt?: ReactNode;
+  acceptHint?: ReactNode;
   onDrop: (e: DragEvent<HTMLDivElement>) => void;
   onChange: (e: ChangeEvent<HTMLInputElement>) => void;
 }
 
 export function DropZone(props: DropZoneProps) {
-  const { inputRef, inputId, isDragging, setIsDragging, disabled, multiple, accept, prompt } =
-    props;
+  const {
+    inputRef,
+    inputId,
+    isDragging,
+    setIsDragging,
+    disabled,
+    multiple,
+    accept,
+    prompt,
+    acceptHint,
+  } = props;
   const { t } = useTranslation('ui');
   const defaultPrompt = multiple ? t('fileUpload.dragMultiple') : t('fileUpload.dragSingle');
+  const defaultHint = accept === undefined ? null : t('fileUpload.accepts', { types: accept });
+  const hint = acceptHint === undefined ? defaultHint : acceptHint;
   return (
     <div
       role="button"
@@ -50,11 +62,7 @@ export function DropZone(props: DropZoneProps) {
     >
       <Upload className="h-8 w-8 text-muted-foreground" aria-hidden />
       <div className="text-sm font-medium">{prompt ?? defaultPrompt}</div>
-      {accept ? (
-        <div className="text-xs text-muted-foreground">
-          {t('fileUpload.accepts', { types: accept })}
-        </div>
-      ) : null}
+      {hint === null ? null : <div className="text-xs text-muted-foreground">{hint}</div>}
       <input
         ref={inputRef}
         id={inputId}
@@ -75,6 +83,7 @@ export interface FileListProps {
 }
 
 export function FileList({ files, onRemoveFile }: FileListProps) {
+  const { t } = useTranslation('ui');
   return (
     <ul className="flex flex-col gap-1.5 text-sm">
       {files.map((file, i) => (
@@ -92,7 +101,7 @@ export function FileList({ files, onRemoveFile }: FileListProps) {
               size="icon-sm"
               variant="ghost"
               onClick={() => onRemoveFile(i)}
-              aria-label={`Remove ${file.name}`}
+              aria-label={t('fileUpload.remove', { name: file.name })}
             >
               <X />
             </Button>
