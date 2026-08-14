@@ -126,6 +126,71 @@ describe('readComponentExports', () => {
     );
     expect(readComponentExports(source)).toEqual(['Aliased']);
   });
+
+  describe('requireTsComponentShape — the narrowed .ts rule', () => {
+    it('excludes a PascalCase zod schema even in a file with a react import elsewhere, since the schema itself is a call expression, not a function', () => {
+      const source = [
+        "import { createElement } from 'react';",
+        "import { z } from 'zod';",
+        'export const ReceiptSchema = z.object({ total: z.number() });',
+        "export const Icon = () => createElement('svg');",
+      ].join('\n');
+      expect(readComponentExports(source, { requireTsComponentShape: true })).toEqual(['Icon']);
+    });
+
+    it('excludes a PascalCase token map (plain object literal)', () => {
+      const source = [
+        "import { createElement } from 'react';",
+        "export const ThemeTokens = { bg: '#fff' };",
+        "export const Icon = () => createElement('svg');",
+      ].join('\n');
+      expect(readComponentExports(source, { requireTsComponentShape: true })).toEqual(['Icon']);
+    });
+
+    it('excludes a plain PascalCase class with no base class', () => {
+      const source = [
+        "import { createElement } from 'react';",
+        'export class ApiClient {}',
+        "export const Icon = () => createElement('svg');",
+      ].join('\n');
+      expect(readComponentExports(source, { requireTsComponentShape: true })).toEqual(['Icon']);
+    });
+
+    it('excludes every PascalCase export, including a real function shape, when the file never shows a createElement signal — .ts has no other way to build an element', () => {
+      const source = [
+        "export const Foo = () => 'not an element';",
+        'export function Bar() {}',
+      ].join('\n');
+      expect(readComponentExports(source, { requireTsComponentShape: true })).toEqual([]);
+    });
+
+    it('keeps a function-declared, arrow-declared and extends-shaped export once the file shows a createElement signal', () => {
+      const source = [
+        "import { createElement, Component } from 'react';",
+        "export function FnComponent() { return createElement('div'); }",
+        "export const ArrowComponent = () => createElement('span');",
+        'export class ClassComponent extends Component {}',
+      ].join('\n');
+      expect(readComponentExports(source, { requireTsComponentShape: true }).toSorted()).toEqual(
+        ['ArrowComponent', 'ClassComponent', 'FnComponent'].toSorted()
+      );
+    });
+
+    it('does not filter forwarded names — a forward is checked at the module that actually declares it, not here', () => {
+      const source = [
+        'export const ReceiptSchema = z.object({});',
+        "export { RealThing } from './real-thing';",
+      ].join('\n');
+      expect(readComponentExports(source, { requireTsComponentShape: true })).toEqual([
+        'RealThing',
+      ]);
+    });
+
+    it('leaves .tsx-style discovery unchanged: without the option, a schema-shaped export is still treated as a subject — the same false-positive risk name-only discovery has always carried', () => {
+      const source = 'export const ReceiptSchema = z.object({ total: z.number() });';
+      expect(readComponentExports(source)).toEqual(['ReceiptSchema']);
+    });
+  });
 });
 
 describe('resolveRelativeImport', () => {
@@ -232,6 +297,46 @@ describe('listExportedComponentModules', () => {
       ].join('\n'),
     });
     expect(listExportedComponentModules(root)).toEqual([resolve(root, 'components/button.ts')]);
+  });
+
+  it('does not treat a barrel-exported .ts zod schema as a subject — a PascalCase name whose declaration is a call expression, not a function/arrow/class', () => {
+    const root = makeTree({
+      'index.ts': "export * from './lib/ReceiptSchema';",
+      'lib/ReceiptSchema.ts': [
+        "import { z } from 'zod';",
+        'export const ReceiptSchema = z.object({ total: z.number() });',
+      ].join('\n'),
+    });
+    expect(listExportedComponentModules(root)).toEqual([]);
+  });
+
+  it('does not treat a barrel-exported .ts plain class as a subject — no base class, so no rendering surface', () => {
+    const root = makeTree({
+      'index.ts': "export * from './lib/ApiClient';",
+      'lib/ApiClient.ts': 'export class ApiClient {\n  constructor(private url: string) {}\n}',
+    });
+    expect(listExportedComponentModules(root)).toEqual([]);
+  });
+
+  it('does not treat a barrel-exported .ts token map as a subject — a plain object literal, not a function', () => {
+    const root = makeTree({
+      'index.ts': "export * from './lib/ThemeTokens';",
+      'lib/ThemeTokens.ts': "export const ThemeTokens = { bg: '#fff' };",
+    });
+    expect(listExportedComponentModules(root)).toEqual([]);
+  });
+
+  it('still discovers a real .ts component sitting alongside a non-component export in the same file — the shape check is per-name, not per-file', () => {
+    const root = makeTree({
+      'index.ts': "export * from './lib/mixed';",
+      'lib/mixed.ts': [
+        "import { createElement } from 'react';",
+        "import { z } from 'zod';",
+        'export const ReceiptSchema = z.object({ total: z.number() });',
+        "export const ReceiptIcon = () => createElement('svg');",
+      ].join('\n'),
+    });
+    expect(listExportedComponentModules(root)).toEqual([resolve(root, 'lib/mixed.ts')]);
   });
 
   it('throws instead of reporting an empty set when the barrel is missing', () => {
@@ -393,6 +498,55 @@ describe('end-to-end: a .ts-declared component with no story (POPS-2178)', () =>
       'components/Chip.stories.tsx': "import { Chip } from './Chip';",
     });
     expect(pipeline(root)).toEqual([]);
+  });
+});
+
+describe('end-to-end: a .ts non-component export does not demand a story', () => {
+  function pipeline(root: string) {
+    const componentModules = listExportedComponentModules(root);
+    const storyFiles = listStoryFiles(root);
+    return checkStoryCoverage({ srcDir: root, componentModules, storyFiles, allowlist: {} });
+  }
+
+  it('passes with a barrel-exported zod schema and a plain class, neither storied, alongside a real storied .tsx component', () => {
+    const root = makeTree({
+      'index.ts': [
+        "export * from './lib/ReceiptSchema';",
+        "export * from './lib/ApiClient';",
+        "export * from './components/Chip';",
+      ].join('\n'),
+      'lib/ReceiptSchema.ts': [
+        "import { z } from 'zod';",
+        'export const ReceiptSchema = z.object({ total: z.number() });',
+      ].join('\n'),
+      'lib/ApiClient.ts': 'export class ApiClient {\n  constructor(private url: string) {}\n}',
+      'components/Chip.tsx': 'export const Chip = () => null;',
+      'components/Chip.stories.tsx': "import { Chip } from './Chip';",
+    });
+    expect(pipeline(root)).toEqual([]);
+  });
+
+  it('still fails, naming the .ts component and not the schema, when a real .ts component sits unstoried next to a schema in the same barrel', () => {
+    const root = makeTree({
+      'index.ts': [
+        "export * from './lib/ReceiptSchema';",
+        "export * from './components/TsOnly';",
+        "export * from './components/Chip';",
+      ].join('\n'),
+      'lib/ReceiptSchema.ts': [
+        "import { z } from 'zod';",
+        'export const ReceiptSchema = z.object({ total: z.number() });',
+      ].join('\n'),
+      'components/TsOnly.ts': [
+        "import { createElement } from 'react';",
+        "export const TsOnly = () => createElement('div');",
+      ].join('\n'),
+      'components/Chip.tsx': 'export const Chip = () => null;',
+      'components/Chip.stories.tsx': "import { Chip } from './Chip';",
+    });
+    expect(pipeline(root)).toEqual([
+      'components/TsOnly.ts: exports a component but no story imports it.',
+    ]);
   });
 });
 
