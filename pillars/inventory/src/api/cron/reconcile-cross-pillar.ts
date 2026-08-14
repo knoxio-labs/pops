@@ -129,15 +129,24 @@ export async function runReconciliation(options: {
   const now = options.now ?? Date.now;
   const stampIso = new Date(now()).toISOString();
   const counters: ReconcileCounters = { ok: 0, notFound: 0, unavailable: 0, badUri: 0 };
+  const db = options.db;
+
+  const purchaseTransactionUris = crossPillarUrisService.listDistinctPurchaseTransactionUris(db);
+  const ownerUris = crossPillarUrisService.listDistinctOwnerUris(db);
+  // Nothing to resolve means nothing to say. A nightly "complete" line over two
+  // empty work sets is indistinguishable from one over two healthy ones, and
+  // constructing the proxies would demand a service-account key for a tick that
+  // is not going to make a call.
+  if (purchaseTransactionUris.length === 0 && ownerUris.length === 0) return counters;
+
   const finance = options.proxies?.finance ?? serverPillar<FinanceRouter>('finance');
   const registry = options.proxies?.registry ?? serverPillar<RegistryRouter>('registry');
-  const db = options.db;
 
   await reconcileUriBatch({
     db,
     logger: options.logger,
     counters,
-    uris: crossPillarUrisService.listDistinctPurchaseTransactionUris(db),
+    uris: purchaseTransactionUris,
     expectedPillar: 'finance',
     expectedType: 'transaction',
     parse: parseSoftUri,
@@ -151,7 +160,7 @@ export async function runReconciliation(options: {
     db,
     logger: options.logger,
     counters,
-    uris: crossPillarUrisService.listDistinctOwnerUris(db),
+    uris: ownerUris,
     // The owner URI namespace stays `pops://core/user/...` even though the
     // pillar directory/id renamed to `registry`. The registry pillar's `/users`
     // handler still resolves `pops://core/...` URIs, and the rows persisted on
@@ -165,7 +174,14 @@ export async function runReconciliation(options: {
     onNotFound: (uri) => crossPillarUrisService.markOwnerUriStale(db, uri, stampIso),
   });
 
-  options.logger?.info?.('inventory cross-pillar reconciliation complete', { ...counters });
+  // Per-leg work-set sizes travel with the counters: aggregated totals alone
+  // cannot tell "the finance leg checked nothing" from "it checked ten and all
+  // resolved".
+  options.logger?.info?.('inventory cross-pillar reconciliation complete', {
+    ...counters,
+    purchaseTransactionUris: purchaseTransactionUris.length,
+    ownerUris: ownerUris.length,
+  });
   return counters;
 }
 

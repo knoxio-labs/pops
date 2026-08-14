@@ -51,7 +51,7 @@ Two behaviours are deliberate and should not be softened without revisiting the 
 - **`orchestrator`** — `/discovery` + `/server` for federated search; the root `buildToolList` for `GET /ai/tools`.
 - **Cross-pillar reads** — `/client`: `finance` → contacts (`api/contacts/client.ts`), `finance` → registry (`api/cron/pillar-lookup.ts`), `inventory` → documents (`api/documents/client.ts`), `ai` nudge dispatch (`api/modules/ai-alerts/dispatchers/nudge.ts`). `/server`: `inventory`'s nightly URI reconciler (`api/cron/reconcile-cross-pillar.ts`) and `pillars/finance/scripts/migrate-core-entities.ts`. `inventory` therefore straddles both surfaces.
 - **`food`, `ai`** — `/server` for `authenticateInternal` on their internal-only routes. They are its only call sites.
-- **Every pillar that owns a SQLite file** — `/db`: `withPreMigrationBackup` in each `open-<id>-db.ts`, and `assertDestructiveCommandAllowed` in `pillars/food/scripts/db-seed-food.ts`, the fleet's one destructive script.
+- **Every pillar that owns a SQLite file** — `/db`: `withPreMigrationBackup` in each `open-<id>-db.ts`, and `assertDestructiveCommandAllowed` in `pillars/food/scripts/db-seed-food.ts`, the one destructive script that wipes rather than truncates.
 - **`finance`, `purchases`** — `/server` for the service-account scope gate over their whole contract surfaces (`api/middleware/service-account-scope.ts` in each), bound to Express by `@pops/pillar-express`. Both hold `requireCredential: false`. The remaining producers adopt under their own Huly issues.
 - **`libs/navigation`** — the `PillarId` type only.
 

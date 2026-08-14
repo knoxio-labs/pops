@@ -2,11 +2,17 @@
  * The check a script runs before it wipes, reseeds or resets a pillar's
  * database.
  *
- * There is no fleet-wide `db:clear` any more — every destructive command is
- * pillar-scoped and lives beside the pillar it damages, which is exactly the
- * shape in which "the seeder refuses in production" gets re-implemented once
- * per pillar and drifts in the copy nobody is reading. It lives here so each
+ * Every destructive command is pillar-scoped — `db:clear:<id>` truncates one
+ * pillar, food's seeder wipes one pillar's tables — which is exactly the shape
+ * in which "the seeder refuses in production" gets re-implemented once per
+ * pillar and drifts in the copy nobody is reading. It lives here so each
  * script states its own key tables and inherits identical behaviour.
+ *
+ * It is not the only refusal such a script needs. This one asks what the
+ * database *contains*; a containment guard on the path (`scripts/db/
+ * dev-db-guard.ts`, `pillars/food/scripts/dev-seed-guard.ts`) asks where the
+ * database *is*, which is what catches a deployed volume the environment
+ * never labelled production. They compose; neither subsumes the other.
  *
  * Two independent refusals, and only one of them can be waived:
  *

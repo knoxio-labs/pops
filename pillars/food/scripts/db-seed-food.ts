@@ -5,15 +5,23 @@
  * pillar's own {@link resolveFoodSqlitePath}, not with `SQLITE_PATH` directly:
  * a deployer who sets only the shared path gets a sibling `food.db`, so a
  * direct `pnpm --filter @pops/food db:seed:food` cannot wipe the tables of
- * whatever database that shared path names.
+ * whatever database that shared path names. The default is resolved against
+ * the package root rather than the caller's cwd, so running it from anywhere
+ * still names food's own file.
  *
- * It is the fleet's one destructive script, so it is also the one place the
- * shared guard in `@pops/pillar-sdk/db` is wired up: production is refused
- * outright, and a database that already holds food records is refused unless
- * the operator states the intent with `FORCE=true` (or `--force`).
+ * It is the one destructive script that wipes rather than truncates, so it
+ * carries both guards, and they refuse on different grounds:
+ *
+ *   - {@link assertSeedTargetIsDev} refuses a target that is not a
+ *     development database — `NODE_ENV=production`, or a path resolving
+ *     outside the food package, which is what a deployed volume looks like.
+ *   - {@link assertFoodSeedAllowed} refuses a database that already holds
+ *     food records, unless the operator states the intent with `FORCE=true`
+ *     (or `--force`).
  */
 import { existsSync } from 'node:fs';
-import { pathToFileURL } from 'node:url';
+import { resolve } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import BetterSqlite3 from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
@@ -23,6 +31,9 @@ import { assertDestructiveCommandAllowed, type SqliteConnection } from '@pops/pi
 import { resolveFoodSqlitePath } from '../src/api/food-sqlite-path.js';
 import { compileRecipeVersion } from '../src/dsl/compile.js';
 import { seedFood } from '../src/seed/index.js';
+import { assertSeedTargetIsDev, SeedTargetRefusedError } from './dev-seed-guard.js';
+
+const PACKAGE_ROOT = fileURLToPath(new URL('..', import.meta.url));
 
 // Wipe only food tables. Children first; `foreign_keys = OFF` makes the
 // order purely defensive. The conversion tables (unit_conversions,
@@ -90,12 +101,28 @@ export function assertFoodSeedAllowed(options: {
   });
 }
 
+/** The file to seed, or exit non-zero when it is not a development database. */
+function seedTargetOrExit(): string {
+  try {
+    return assertSeedTargetIsDev({
+      dbPath: resolve(PACKAGE_ROOT, resolveFoodSqlitePath()),
+      packageRoot: PACKAGE_ROOT,
+    });
+  } catch (err) {
+    if (!(err instanceof SeedTargetRefusedError)) throw err;
+    console.error(`❌ ${err.message}`);
+    process.exit(1);
+  }
+}
+
 function main(): void {
-  const dbPath = resolveFoodSqlitePath();
+  const dbPath = seedTargetOrExit();
 
   if (!existsSync(dbPath)) {
     console.error(`❌ Database not found at ${dbPath}`);
-    console.warn('💡 Start the food pillar once — it creates and migrates its own database');
+    console.warn(
+      '💡 Start the food pillar once — it creates and migrates its own database on boot'
+    );
     process.exit(1);
   }
 

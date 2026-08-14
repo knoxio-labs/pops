@@ -8,8 +8,7 @@
  * twenty-one tables the moment it gets past this point.
  */
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -22,6 +21,10 @@ import { assertFoodSeedAllowed, FOOD_SEED_GUARDED_TABLES } from '../db-seed-food
 
 const PILLAR_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const SCRIPT = join(PILLAR_DIR, 'scripts', 'db-seed-food.ts');
+// Inside the package, because `assertSeedTargetIsDev` refuses a target that
+// resolves outside it — a temp dir under the OS tmpdir never reaches the
+// refusals these tests are about. `pillars/food/data/` is gitignored.
+const SCRATCH_ROOT = join(PILLAR_DIR, 'data');
 
 let dir: string;
 let dbPath: string;
@@ -67,7 +70,8 @@ function runScript(env: NodeJS.ProcessEnv): { status: number; output: string } {
 
 beforeEach(() => {
   logged.length = 0;
-  dir = mkdtempSync(join(tmpdir(), 'food-seed-guard-'));
+  mkdirSync(SCRATCH_ROOT, { recursive: true });
+  dir = mkdtempSync(join(SCRATCH_ROOT, 'food-seed-guard-'));
   dbPath = join(dir, 'food.db');
   db = new Database(dbPath);
 });
@@ -138,11 +142,15 @@ describe('the script itself', () => {
     expect(run.output).not.toContain(shared);
   });
 
-  it('exits non-zero under NODE_ENV=production', () => {
-    createFoodTables(0);
+  it('exits non-zero under NODE_ENV=production, wiping nothing', () => {
+    createFoodTables(2);
     const run = runScript({ NODE_ENV: 'production' });
 
     expect(run.status).toBe(1);
-    expect(run.output).toContain("NODE_ENV is 'production'");
+    // The dev-target guard reaches production first, so this asserts the
+    // script refuses at all rather than pinning which of the two refused.
+    expect(run.output).toMatch(/production/u);
+    const remaining = db.prepare('SELECT count(*) AS n FROM recipes').get() as { n: number };
+    expect(remaining.n).toBe(2);
   });
 }, 60_000);

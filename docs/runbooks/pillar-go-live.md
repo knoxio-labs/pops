@@ -102,16 +102,17 @@ The API container must be stopped first — restoring under a live writer produc
 
 ## Safe vs destructive, per pillar
 
-| Command                                               | Safe?           | Notes                                                                      |
-| ----------------------------------------------------- | --------------- | -------------------------------------------------------------------------- |
-| `docker compose … up -d <id>-api`                     | safe            | Applies pending migrations behind a snapshot                               |
-| `docker compose … restart <id>-api`                   | safe            | No pending entries means no writes at all                                  |
-| `pnpm --filter @pops/<id> test`                       | safe            | Every pillar test runs against a temp or in-memory database                |
-| `litestream restore -o …`                             | safe            | With the API stopped. Overwrites the file, which is the point              |
-| `POPS_IMAGE_TAG=sha-… up -d`                          | safe            | Rolling back the image does NOT roll back an applied migration             |
-| `pnpm --filter @pops/food db:seed:food`               | **destructive** | Wipes twenty-one tables. Refuses on production and on a populated database |
-| `FORCE=true pnpm --filter @pops/food db:seed:food`    | **destructive** | The same wipe, with the populated-database refusal waived by hand          |
-| Any `sqlite3 <id>.db` session that is not `-readonly` | **destructive** | Bypasses every validation the pillar's write path applies                  |
-| `docker volume rm pops-<id>-data`                     | **destructive** | The whole pillar, gone. Recovery is step 7's second half                   |
+| Command                                               | Safe?           | Notes                                                                                                 |
+| ----------------------------------------------------- | --------------- | ----------------------------------------------------------------------------------------------------- |
+| `docker compose … up -d <id>-api`                     | safe            | Applies pending migrations behind a snapshot                                                          |
+| `docker compose … restart <id>-api`                   | safe            | No pending entries means no writes at all                                                             |
+| `pnpm --filter @pops/<id> test`                       | safe            | Every pillar test runs against a temp or in-memory database                                           |
+| `litestream restore -o …`                             | safe            | With the API stopped. Overwrites the file, which is the point                                         |
+| `POPS_IMAGE_TAG=sha-… up -d`                          | safe            | Rolling back the image does NOT roll back an applied migration                                        |
+| `pnpm --filter @pops/food db:seed:food`               | **destructive** | Wipes twenty-one tables. Refuses on production and on a populated database                            |
+| `FORCE=true pnpm --filter @pops/food db:seed:food`    | **destructive** | The same wipe, with the populated-database refusal waived by hand                                     |
+| `mise run db:clear:<id>`                              | **destructive** | Truncates that pillar, keeping schema and journal. Refuses on production and outside the working tree |
+| Any `sqlite3 <id>.db` session that is not `-readonly` | **destructive** | Bypasses every validation the pillar's write path applies                                             |
+| `docker volume rm pops-<id>-data`                     | **destructive** | The whole pillar, gone. Recovery is step 7's second half                                              |
 
 `NODE_ENV=production` is refused by every guarded script and cannot be waived by anything, including `FORCE=true`. That is a deliberate asymmetry: an environment variable that could turn off the production refusal would be set by exactly the automation the refusal exists to stop.
