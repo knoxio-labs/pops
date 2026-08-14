@@ -86,6 +86,48 @@ describe('findViolations', () => {
     const hits = findViolations('a.sql', source);
     expect(hits.map((v) => v.line)).toEqual([1, 3]);
   });
+
+  it.each(['main', 'temp'])('reports a %s.-schema-qualified pragma', (schema) => {
+    const hits = findViolations('a.sql', `PRAGMA ${schema}.foreign_keys=OFF;`);
+    expect(hits).toHaveLength(1);
+  });
+
+  it('reports a pragma split across two lines', () => {
+    const source = ['PRAGMA', '  foreign_keys=OFF;'].join('\n');
+    const hits = findViolations('a.sql', source);
+    expect(hits).toHaveLength(1);
+    expect(hits[0]?.line).toBe(1);
+  });
+
+  it('does not flag a trailing (non-leading) -- comment', () => {
+    const hits = findViolations('a.sql', 'DROP TABLE x; -- never use PRAGMA foreign_keys=OFF');
+    expect(hits).toHaveLength(0);
+  });
+
+  it('does not flag a pragma inside a /* */ block comment', () => {
+    const source = ['/*', ' PRAGMA foreign_keys=OFF;', '*/', 'SELECT 1;'].join('\n');
+    expect(findViolations('a.sql', source)).toHaveLength(0);
+  });
+
+  it('does not flag a pragma spelled out inside a string literal', () => {
+    const hits = findViolations('a.sql', "INSERT INTO t VALUES ('PRAGMA foreign_keys=OFF');");
+    expect(hits).toHaveLength(0);
+  });
+
+  it('still reports a real pragma on the line after a string literal that mentions one', () => {
+    const source = [
+      "INSERT INTO t VALUES ('PRAGMA foreign_keys=OFF');",
+      'PRAGMA foreign_keys=OFF;',
+    ].join('\n');
+    const hits = findViolations('a.sql', source);
+    expect(hits).toHaveLength(1);
+    expect(hits[0]?.line).toBe(2);
+  });
+
+  it('does not require SELECT * FROM pragma_foreign_keys detection (out of scope, documented)', () => {
+    const hits = findViolations('a.sql', 'SELECT * FROM pragma_foreign_keys;');
+    expect(hits).toHaveLength(0);
+  });
 });
 
 describe('discoverMigrationFiles against the real repo', () => {

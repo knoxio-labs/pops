@@ -22,6 +22,13 @@
  * disk — nothing hardcodes the pillar list, so a new pillar's migrations are
  * covered without touching this file.
  *
+ * Coverage: catches `PRAGMA foreign_keys` bare, with any `=OFF/ON/0/1`
+ * argument, schema-qualified (`PRAGMA main.foreign_keys`, `PRAGMA
+ * temp.foreign_keys`), and split across lines. Ignores `--` line comments
+ * (leading or trailing), `/* *\/` block comments, and string literals. Does
+ * NOT catch `SELECT * FROM pragma_foreign_keys` (the table-valued-function
+ * spelling) — see the comment on `PRAGMA_FK_RE`.
+ *
  * Usage:
  *   node scripts/ci/check-migration-fk-pragma.mjs              check the real tree
  *   node scripts/ci/check-migration-fk-pragma.mjs --self-test  prove the guard reports
@@ -38,17 +45,110 @@ import { fileURLToPath } from 'node:url';
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..');
 
-/** Matches `PRAGMA foreign_keys` in any form — `=OFF`, `=ON`, `=0`, `=1`, or bare. */
-const PRAGMA_FK_RE = /PRAGMA\s+foreign_keys\b/iu;
+/**
+ * Matches `PRAGMA foreign_keys` in any form — `=OFF`, `=ON`, `=0`, `=1`, or
+ * bare — including the schema-qualified spellings SQLite also accepts
+ * (`PRAGMA main.foreign_keys`, `PRAGMA temp.foreign_keys`). `\s+` already
+ * spans newlines, so a pragma split across lines (`PRAGMA\n  foreign_keys`)
+ * matches too, as long as this runs against the whole file rather than one
+ * line at a time — see `maskSource`/`findViolations` below.
+ *
+ * NOT covered, deliberately: `SELECT * FROM pragma_foreign_keys` (the
+ * table-valued-function spelling — no `PRAGMA` keyword appears, so no
+ * regex anchored on it can catch this without a real SQL parser). Flagged
+ * as out of scope in POPS-2218; nothing in this repo uses that form today.
+ */
+const PRAGMA_FK_RE = /PRAGMA\s+(?:[A-Za-z_][A-Za-z0-9_]*\s*\.\s*)?foreign_keys\b/giu;
 
-/** A SQL line comment — skipped so a comment merely discussing the pragma isn't flagged. */
-const LINE_COMMENT_RE = /^\s*--/u;
+/**
+ * Replace every `-- ...` line comment, `/* ... *\/` block comment, and
+ * `'...'` string literal in `source` with spaces, preserving length and every
+ * newline. Matching runs against this masked text so:
+ *   - a pragma mentioned only in a comment (leading OR trailing) is not a
+ *     violation — it is exactly the documentation this guard wants to push
+ *     authors toward writing;
+ *   - a pragma spelled out inside a string literal is not a violation;
+ *   - line numbers computed from the masked text still line up with the
+ *     original source, because every character that isn't masked out is
+ *     copied through unchanged and every newline survives.
+ *
+ * This is a small hand-rolled scanner, not a SQL tokenizer: it does not
+ * understand `$$`-style quoting, nested comments, or dialects other than
+ * SQLite's `'...'` / `''`-escaped strings and `--` / `\/* *\/` comments. That
+ * is the whole grammar these migration files use.
+ *
+ * @param {string} source
+ * @returns {string}
+ */
+function maskSource(source) {
+  const out = Array.from({ length: source.length });
+  /** @type {'normal' | 'string' | 'line-comment' | 'block-comment'} */
+  let state = 'normal';
+  let i = 0;
+  while (i < source.length) {
+    const c = source[i];
+    const c2 = source[i + 1];
+    if (state === 'normal') {
+      if (c === "'") {
+        state = 'string';
+        out[i] = ' ';
+        i += 1;
+      } else if (c === '-' && c2 === '-') {
+        state = 'line-comment';
+        out[i] = ' ';
+        out[i + 1] = ' ';
+        i += 2;
+      } else if (c === '/' && c2 === '*') {
+        state = 'block-comment';
+        out[i] = ' ';
+        out[i + 1] = ' ';
+        i += 2;
+      } else {
+        out[i] = c;
+        i += 1;
+      }
+    } else if (state === 'string') {
+      if (c === "'" && c2 === "'") {
+        out[i] = ' ';
+        out[i + 1] = ' ';
+        i += 2;
+      } else if (c === "'") {
+        state = 'normal';
+        out[i] = ' ';
+        i += 1;
+      } else {
+        out[i] = c === '\n' ? '\n' : ' ';
+        i += 1;
+      }
+    } else if (state === 'line-comment') {
+      if (c === '\n') {
+        state = 'normal';
+        out[i] = '\n';
+        i += 1;
+      } else {
+        out[i] = ' ';
+        i += 1;
+      }
+    } else {
+      if (c === '*' && c2 === '/') {
+        state = 'normal';
+        out[i] = ' ';
+        out[i + 1] = ' ';
+        i += 2;
+      } else {
+        out[i] = c === '\n' ? '\n' : ' ';
+        i += 1;
+      }
+    }
+  }
+  return out.join('');
+}
 
 /**
  * @typedef {object} Violation
  * @property {string} file  Repo-relative path.
- * @property {number} line  1-indexed line the pragma appears on.
- * @property {string} text  The offending line, trimmed.
+ * @property {number} line  1-indexed line the pragma starts on.
+ * @property {string} text  The offending source line, trimmed.
  */
 
 /**
@@ -61,15 +161,13 @@ const LINE_COMMENT_RE = /^\s*--/u;
  * @returns {Violation[]}
  */
 export function findViolations(relPath, source) {
+  const masked = maskSource(source);
+  const sourceLines = source.split('\n');
   /** @type {Violation[]} */
   const violations = [];
-  const lines = source.split('\n');
-  for (let i = 0; i < lines.length; i += 1) {
-    const line = lines[i] ?? '';
-    if (LINE_COMMENT_RE.test(line)) continue;
-    if (PRAGMA_FK_RE.test(line)) {
-      violations.push({ file: relPath, line: i + 1, text: line.trim() });
-    }
+  for (const match of masked.matchAll(PRAGMA_FK_RE)) {
+    const line = masked.slice(0, match.index).split('\n').length;
+    violations.push({ file: relPath, line, text: (sourceLines[line - 1] ?? '').trim() });
   }
   return violations;
 }
@@ -147,11 +245,12 @@ function run() {
 }
 
 /**
- * Synthetic fixtures proving the guard reports `PRAGMA foreign_keys` in
- * every form (`=OFF`, `=ON`, `=0`, `=1`, bare, mixed case, no trailing
- * semicolon), stays silent on migration text that never mentions the
- * pragma, and does not flag a SQL comment merely discussing foreign keys
- * (the `0057`-style ordering pattern this guard pushes authors toward).
+ * Synthetic fixtures proving the guard's actual, documented coverage — see
+ * the `Coverage:` note in the file header. Every claim this self-test makes
+ * in its success message has a check below backing it; POPS-2218 found the
+ * previous version of this guard claiming "every form" while missing
+ * schema-qualified and multi-line pragmas, and flagging trailing comments,
+ * block comments, and string literals that were never the ban's target.
  *
  * @returns {boolean}
  */
@@ -173,6 +272,16 @@ function selfTest() {
     ');',
     'DROP TABLE `entities`;',
   ].join('\n');
+  const schemaQualified = 'PRAGMA main.foreign_keys=OFF;';
+  const schemaQualifiedTemp = 'PRAGMA temp.foreign_keys=OFF;';
+  const multiLine = ['PRAGMA', '  foreign_keys=OFF;'].join('\n');
+  const trailingComment = 'DROP TABLE x; -- never use PRAGMA foreign_keys=OFF';
+  const blockComment = ['/*', ' PRAGMA foreign_keys=OFF;', '*/', 'SELECT 1;'].join('\n');
+  const stringLiteral = "INSERT INTO t VALUES ('PRAGMA foreign_keys=OFF');";
+  const stringLiteralThenReal = [
+    "INSERT INTO t VALUES ('PRAGMA foreign_keys=OFF');",
+    'PRAGMA foreign_keys=OFF;',
+  ].join('\n');
 
   const dirtyHits = findViolations('pillars/x/migrations/0001_x.sql', dirty);
   const cleanHits = findViolations('pillars/x/migrations/0002_x.sql', clean);
@@ -191,13 +300,30 @@ function selfTest() {
     'does not flag ordinary migration SQL with no pragma': !cleanHits.some((v) =>
       v.text.includes('CREATE TABLE')
     ),
+    'reports a main.-qualified pragma': findViolations('a.sql', schemaQualified).length === 1,
+    'reports a temp.-qualified pragma': findViolations('a.sql', schemaQualifiedTemp).length === 1,
+    'reports a pragma split across two lines': findViolations('a.sql', multiLine).length === 1,
+    'does not flag a trailing (non-leading) -- comment': (() => {
+      const hits = findViolations('a.sql', trailingComment);
+      return hits.length === 0;
+    })(),
+    'does not flag a pragma inside a /* */ block comment':
+      findViolations('a.sql', blockComment).length === 0,
+    'does not flag a pragma spelled out inside a string literal':
+      findViolations('a.sql', stringLiteral).length === 0,
+    'still reports a real pragma on the line after a string literal that mentions one': (() => {
+      const hits = findViolations('a.sql', stringLiteralThenReal);
+      return hits.length === 1 && hits[0]?.line === 2;
+    })(),
   };
 
   const ok = Object.values(checks).every(Boolean);
   if (ok) {
     console.log(
-      'self-test OK — guard reports PRAGMA foreign_keys in every form and stays silent on ' +
-        'migration text that never uses it.'
+      'self-test OK — guard reports PRAGMA foreign_keys bare, with any =OFF/ON/0/1 argument, ' +
+        'schema-qualified, and split across lines; stays silent on plain migration SQL, and on ' +
+        'the pragma mentioned only in a -- comment (leading or trailing), a /* */ block comment, ' +
+        'or a string literal. Does not attempt to catch `SELECT * FROM pragma_foreign_keys`.'
     );
   } else {
     console.error('SELF-TEST FAILED — guard did not behave as expected:');
