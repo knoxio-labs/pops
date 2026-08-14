@@ -39,9 +39,7 @@ export type GateFailure =
   | { readonly kind: 'sum-mismatch'; readonly detail: string; readonly deltaCents: number }
   | { readonly kind: 'damaged'; readonly detail: string };
 
-export interface GateResult {
-  /** True only when every line parsed and the arithmetic agrees exactly. */
-  readonly admissible: boolean;
+interface GateFigures {
   readonly totalCents: number | null;
   readonly lineTotalCents: number;
   readonly taxCents: number;
@@ -49,7 +47,7 @@ export interface GateResult {
   /** Fees the merchant added — a card surcharge, a small-order fee. */
   readonly surchargeCents: number;
   /**
-   * Stated delivery, kept apart from {@link GateResult.surchargeCents} so
+   * Stated delivery, kept apart from {@link GateFigures.surchargeCents} so
    * `purchases.shippingCents` can answer what delivery cost.
    *
    * The split is the model's and **this gate cannot check it**. Both terms
@@ -70,6 +68,38 @@ export interface GateResult {
   /** Everything wrong with it, not just the first thing. */
   readonly failures: readonly GateFailure[];
 }
+
+/**
+ * A reading every check agreed with, so its total is money and its
+ * arithmetic proved itself. The only shape that may be written as fact.
+ */
+export interface AdmissibleGate extends GateFigures {
+  readonly admissible: true;
+  readonly totalCents: number;
+}
+
+/**
+ * A reading at least one check refused, whatever else it got right.
+ *
+ * Its figures are still here — a review screen needs to show what was read
+ * — and several of them can be perfectly readable while the reading is
+ * refused: a negative line sums correctly against the stated total, and a
+ * torn corner says nothing about the numbers that survived. So a caller
+ * asking "can I use this" must ask `admissible`, never
+ * whether a particular figure happens to be present.
+ */
+export interface InadmissibleGate extends GateFigures {
+  readonly admissible: false;
+}
+
+/**
+ * The verdict, discriminated so the type carries it.
+ *
+ * `admissible` is derived from the failure list rather than enumerated, so
+ * a new {@link GateFailure} kind refuses its readings the day it is added,
+ * with nothing to remember to update.
+ */
+export type GateResult = AdmissibleGate | InadmissibleGate;
 
 function sumAmounts(
   amounts: readonly string[],
@@ -237,8 +267,7 @@ export function gateExtraction(extracted: ExtractedReceipt): GateResult {
   });
   if (reconciliation.failure !== null) failures.push(reconciliation.failure);
 
-  return {
-    admissible: failures.length === 0,
+  const figures: GateFigures = {
     totalCents,
     lineTotalCents,
     taxCents,
@@ -248,4 +277,11 @@ export function gateExtraction(extracted: ExtractedReceipt): GateResult {
     taxIncluded: reconciliation.taxIncluded,
     failures,
   };
+
+  // An unreadable total is itself a failure, so the second test decides
+  // nothing at runtime — it is what lets the admissible shape promise a
+  // total, and a caller stop asking.
+  return failures.length === 0 && totalCents !== null
+    ? { ...figures, admissible: true, totalCents }
+    : { ...figures, admissible: false };
 }

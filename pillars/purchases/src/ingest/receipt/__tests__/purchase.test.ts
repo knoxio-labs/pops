@@ -6,6 +6,7 @@ import { receiptToPurchase, RECEIPT_SOURCE_ID } from '../purchase.js';
 import { receiptUri } from '../store.js';
 
 import type { ExtractedReceipt } from '../extraction.js';
+import type { GateFailure } from '../gate.js';
 import type { StoredReceipt } from '../store.js';
 
 const SHA = 'a'.repeat(64);
@@ -56,15 +57,49 @@ describe('receiptToPurchase invariants', () => {
     );
   });
 
-  it('refuses a gate result whose total could not be read as money', () => {
-    // Guards the caller's own contract: only an admissible gate should ever
-    // reach this function, and an admissible gate always has a totalCents —
-    // this asserts that invariant is enforced here rather than assumed.
-    const extracted = receipt({ total: 'unreadable smudge' });
+  // Keyed by failure kind, so the compiler refuses this file the day a new
+  // one is added: every way the gate can refuse a reading needs a reading
+  // here proving this function refuses it too.
+  const refusedReadings: Record<GateFailure['kind'], ExtractedReceipt> = {
+    'unreadable-total': receipt({ total: 'unreadable smudge' }),
+    'unreadable-line': receipt({
+      lines: [{ description: 'Timber Pine DAR 42x19', amount: 'a smear of ink' }],
+    }),
+    'no-lines': receipt({ total: '$0.00', lines: [] }),
+    // The arithmetic agrees — 30.00 less 2.50 is the stated 27.50 — and the
+    // total is money. Nothing but the verdict objects to this one.
+    'negative-line': receipt({
+      lines: [
+        { description: 'Timber Pine DAR 42x19', amount: '$30.00' },
+        { description: 'Member discount', amount: '-$2.50' },
+      ],
+    }),
+    'sum-mismatch': receipt({ total: '$99.00' }),
+    // Every figure read and reconciled; the model simply could not see part
+    // of the paper, so what it did not read may be a line that was there.
+    damaged: receipt({ unreadable: ['the bottom third is torn away'] }),
+  };
+
+  for (const [kind, extracted] of Object.entries(refusedReadings)) {
+    it(`refuses a reading the gate failed for ${kind}`, () => {
+      const gate = gateExtraction(extracted);
+      expect(gate.admissible).toBe(false);
+      expect(gate.failures.map((failure) => failure.kind)).toContain(kind);
+      expect(() => receiptToPurchase(extracted, gate, [STORED], UPLOADED_AT)).toThrow(
+        /requires an admissible reading/
+      );
+    });
+  }
+
+  it('refuses a reading whose figures are readable and whose verdict is not', () => {
+    // The reason this keys on the verdict rather than on a figure: this
+    // reading states a total, sums to it exactly, and is still refused.
+    const extracted = refusedReadings['negative-line'];
     const gate = gateExtraction(extracted);
-    expect(gate.totalCents).toBeNull();
+    expect(gate.totalCents).toBe(2750);
+    expect(gate.failures.map((failure) => failure.kind)).toEqual(['negative-line']);
     expect(() => receiptToPurchase(extracted, gate, [STORED], UPLOADED_AT)).toThrow(
-      'receiptToPurchase requires a gated reading with a readable total'
+      'receiptToPurchase requires an admissible reading; the gate refused this one: negative-line'
     );
   });
 });

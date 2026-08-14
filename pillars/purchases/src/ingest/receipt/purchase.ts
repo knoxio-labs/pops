@@ -185,7 +185,9 @@ function checksumFor(key: string, purchase: Omit<CreatePurchaseInput, 'checksum'
 /**
  * Shape an admitted reading into a purchase.
  *
- * Always produces one. A receipt that states no date is dated from its
+ * Throws on anything the gate refused, in every way it can refuse it.
+ *
+ * Otherwise always produces one. A receipt that states no date is dated from its
  * upload and tagged `date-uncertain`, rather than refused: the shop
  * happened and the evidence exists, so losing it would be worse than
  * carrying an inferred date — provided the inference is never mistaken for
@@ -201,6 +203,18 @@ export function receiptToPurchase(
   stored: readonly StoredReceipt[],
   uploadedAt: string = new Date().toISOString()
 ): ReceiptPurchaseResult {
+  if (!gate.admissible) {
+    // The gate's verdict, not one figure from it: a refused reading can
+    // still state a readable total — a negative line sums correctly, a torn
+    // corner leaves the numbers intact — and shaping one of those writes a
+    // purchase that reconciles and is wrong, which is the whole thing the
+    // gate exists to stop.
+    throw new Error(
+      'receiptToPurchase requires an admissible reading; the gate refused this one: ' +
+        gate.failures.map((failure) => failure.kind).join(', ')
+    );
+  }
+
   const key = receiptKey(stored);
   const [first] = stored;
   if (first === undefined) {
@@ -219,12 +233,6 @@ export function receiptToPurchase(
   const readItems = extracted.lines
     .map((line) => toItem(line, locale))
     .filter((item): item is CreateItemInput => item !== null);
-  if (gate.totalCents === null) {
-    // Only reachable by calling this with a reading the gate refused. A
-    // silent zero would write a real shop as costing nothing, which is
-    // exactly the kind of wrong that reconciles and looks ordinary.
-    throw new Error('receiptToPurchase requires a gated reading with a readable total');
-  }
   const totalCents = gate.totalCents;
   const items = withAllocatedShipping(readItems, gate.shippingCents);
 
