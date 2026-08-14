@@ -2,18 +2,13 @@ import SwiftUI
 import Testing
 
 @testable import DesignSystem
+import DesignSystemTestSupport
 
 /// Asset-catalogue lookup is by string and fails soft: a misspelled or missing
 /// colorset still renders, it just renders the same colour in both schemes.
 /// Resolving each token under both colour schemes is therefore the only thing
 /// that distinguishes "wired up" from "silently broken".
-@Suite(
-    "Colour tokens",
-    .disabled(
-        if: !HostToolchainColorSupport.colorsAreCompiled,
-        "this host toolchain build system left Colors.xcassets uncompiled — see HostToolchainColorSupport"
-    )
-)
+@Suite("Colour tokens", .requiresCompiledColorCatalog)
 internal struct ColorTokenTests {
     private static let tokens: [(name: String, color: Color)] = [
         ("popsBackground", .popsBackground),

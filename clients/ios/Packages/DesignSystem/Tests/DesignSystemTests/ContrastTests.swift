@@ -2,6 +2,7 @@ import SwiftUI
 import Testing
 
 @testable import DesignSystem
+import DesignSystemTestSupport
 
 /// A palette is only plain-looking until someone cannot read it. Every
 /// foreground token is checked against every surface it is allowed to sit on,
@@ -10,13 +11,7 @@ import Testing
 ///
 /// `popsSeparator` is deliberately absent: it draws hairlines, which WCAG
 /// treats as decoration rather than as a graphical object carrying meaning.
-@Suite(
-    "Contrast",
-    .disabled(
-        if: !HostToolchainColorSupport.colorsAreCompiled,
-        "this host toolchain build system left Colors.xcassets uncompiled — see HostToolchainColorSupport"
-    )
-)
+@Suite("Contrast", .requiresCompiledColorCatalog)
 internal struct ContrastTests {
     private static let minimumRatio = 4.5
 

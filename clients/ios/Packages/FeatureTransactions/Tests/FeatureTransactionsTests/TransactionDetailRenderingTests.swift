@@ -5,6 +5,7 @@ import SwiftUI
 import Testing
 
 @testable import FeatureTransactions
+import DesignSystemTestSupport
 
 /// The detail screen actually draws, and draws differently when the things it
 /// is supposed to distinguish differ.
@@ -87,7 +88,7 @@ internal struct TransactionDetailRenderingTests {
     /// changing the last field drawn must each move the image; if a field added
     /// later pushes the record past the canvas again, this fails and says so
     /// rather than quietly making its neighbours vacuous.
-    @Test("the canvas is not cropping either end of the record")
+    @Test("the canvas is not cropping either end of the record", .requiresCompiledColorCatalog)
     func theCanvasFitsTheWholeRecord() throws {
         let stock = try #require(Self.render(Self.card(TransactionDetail.fake())))
         let retitled = try #require(
@@ -105,7 +106,7 @@ internal struct TransactionDetailRenderingTests {
     /// Every colour here is a token, and every token diverges between the two
     /// schemes. Rendering identically in both would mean the colours are coming
     /// from somewhere other than the catalogue.
-    @Test("the record renders differently in light and dark")
+    @Test("the record renders differently in light and dark", .requiresCompiledColorCatalog)
     func followsTheColourScheme() throws {
         let light = try #require(Self.render(Self.card(TransactionDetail.fake()), in: .light))
         let dark = try #require(Self.render(Self.card(TransactionDetail.fake()), in: .dark))
@@ -115,7 +116,7 @@ internal struct TransactionDetailRenderingTests {
 
     /// Money arriving is the one thing this app colours. If these rendered
     /// alike the credit token would not be reaching the amount.
-    @Test("a credit does not look like a debit")
+    @Test("a credit does not look like a debit", .requiresCompiledColorCatalog)
     func creditsAreDistinguishable() throws {
         let credit = MoneyAmount(minorUnits: 540, currencyCode: "AUD")
         let debit = MoneyAmount(minorUnits: -540, currencyCode: "AUD")
@@ -129,7 +130,7 @@ internal struct TransactionDetailRenderingTests {
     /// The seeded shape and the filled-in one are the same layout with more
     /// lines in it. If they rendered alike, the fields that only the record
     /// carries would not be reaching the screen at all.
-    @Test("a seeded row does not look like the full record")
+    @Test("a seeded row does not look like the full record", .requiresCompiledColorCatalog)
     func seededDiffersFromLoaded() throws {
         let seeded = TransactionDetailCard(
             content: Self.presentation.content(Transaction.fake(entityName: "Sample", tags: ["a"])))
