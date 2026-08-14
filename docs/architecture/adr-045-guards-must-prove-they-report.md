@@ -78,6 +78,7 @@ Runs immediately after `actions/checkout`. **No third-party import, at any depth
 | `scripts/ci/check-control-characters.mjs`        | `quality.yml` → `control-characters`        | Every tracked file, raw bytes                                 |
 | `scripts/ci/check-design-tokens.mjs`             | `quality.yml` → `design-tokens`             | Frontend TS/TSX/CSS source, class strings                     |
 | `scripts/ci/check-icon-only-buttons.mjs`         | `quality.yml` → `icon-only-buttons`         | TSX source                                                    |
+| `scripts/ci/check-icon-dynamic-import.mjs`       | `quality.yml` → `icon-dynamic-import`       | TS/TSX source, dynamic `import()`/`require()` call sites      |
 | `scripts/ci/check-composite-references.mjs`      | `quality.yml` → `composite-references`      | `tsconfig.build.json`, pillar source via `import-scan.mjs`    |
 | `scripts/ci/check-swift-bounded-yield.mjs`       | `quality.yml` → `swift-bounded-yield`       | `clients/ios` Swift source                                    |
 | `scripts/ci/check-vendored-contracts.mjs`        | `quality.yml` → `vendored-contracts`        | OpenAPI JSON, byte comparison, consumer codegen config source |
@@ -135,7 +136,7 @@ The same test also derives the job/script pairs directly from the workflow files
 
 ### Consequences
 
-- **The `agent-review` gate is no longer seconds-scale.** It now pays a cached `pnpm install`. That is the price of the split and it was accepted knowingly; the install-free jobs in `quality.yml` (fifteen as of the POPS-2197 audit) keep the fast path.
+- **The `agent-review` gate is no longer seconds-scale.** It now pays a cached `pnpm install`. That is the price of the split and it was accepted knowingly; the install-free jobs in `quality.yml` (sixteen as of the POPS-2197 audit) keep the fast path.
 - **A Tier A job is one `import` away from a broken required check**, and that break lands on every subsequent PR rather than on the one that caused it. The derived test is what makes that a red build on the PR that caused it instead.
 - **`scripts/ci/yaml-text.mjs` is deleted.** It existed only because a parser was unreachable; both of its consumers are Tier B now. `scripts/ci/config-parse.mjs` replaces it and owns the two rules that survive the migration: a document that does not parse is a violation, and a key is found by walking the parsed document rather than by matching a line.
 - **"Report a shape you cannot model" still applies**, and now bites in a different place. The matchers could not model a flow mapping; a parser can. What a parser cannot do is read a document that is not valid YAML or TOML, so that is the case each Tier B guard reports — and each one's `--self-test` covers it.
@@ -149,6 +150,8 @@ The audit ran in only one direction. The Tier A table was missing six guards: `c
 - `check-mise-setup-single-source.mjs`, riding along in `agent-review.yml` → `agent-review` as the fourth parser-reading guard the job's own comment already counted ("Four of them are Tier B") but the table only ever listed three.
 - `check-exports.mjs` (`quality.yml` → `exports`), `check-generated-clients.mjs` (`app-quality.yml` → `app` and `quality.yml` → `generated-clients`), and `check-api-types-drift.mjs` (`quality.yml` → `api-types-drift`) — Tier B for a reason this ADR had not named: the job installs to run a build or a codegen script, not to reach a YAML/TOML parser.
 - `check-pillar-schema-coverage.mjs`, in `pillar-schema-coverage.yml` — a whole workflow this ADR never mentioned, because it predates the amendment and nobody added it after.
+
+Three more guards were in flight when this audit ran. `check-icon-dynamic-import.mjs` merged first and joins Tier A here (`quality.yml` → `icon-dynamic-import`, install-free — a pure source-tree scan with no third-party import). `check-openapi-drift.mjs` and `check-migration-fk-pragma.mjs` had not landed as of this amendment, so this ADR does not yet name them: the rule this audit exists to establish is that a PR adding a guard job adds its own ADR row in the same PR, and the derived test fails that PR's own merge-group check if it does not. Documenting a not-yet-landed guard's row here ahead of its PR would be the same drift this amendment closes, just introduced from the other direction.
 
 No row in either table named a guard or a job that no longer exists; every discrepancy ran in the missing-from-the-table direction, not the stale-row direction. That asymmetry is itself informative: rows get forgotten when a guard lands, not invalidated when one is removed, because removing a guard means deleting its workflow step and its ADR row in the same PR, while adding one only requires the workflow step to go green.
 
