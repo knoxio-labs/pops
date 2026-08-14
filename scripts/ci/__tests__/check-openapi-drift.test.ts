@@ -152,10 +152,34 @@ describe('classifyOutcome', () => {
   });
 });
 
+function fakeBackup(): {
+  restore: () => void;
+  discard: () => void;
+  restored: boolean;
+  discarded: boolean;
+} {
+  const state = { restored: false, discarded: false };
+  return {
+    restore: () => {
+      state.restored = true;
+    },
+    discard: () => {
+      state.discarded = true;
+    },
+    get restored() {
+      return state.restored;
+    },
+    get discarded() {
+      return state.discarded;
+    },
+  };
+}
+
 describe('runTarget — reports rather than silently passing on a degenerate run', () => {
   it('reports a generator that errors without ever touching the filesystem or git', () => {
     let touched = false;
     const result = runTarget(baseTarget, '/repo', {
+      clearOutput: fakeBackup,
       generate: () => 1,
       outputExists: () => {
         touched = true;
@@ -172,6 +196,7 @@ describe('runTarget — reports rather than silently passing on a degenerate run
 
   it('reports output that never landed, without crashing on the missing file', () => {
     const result = runTarget(baseTarget, '/repo', {
+      clearOutput: fakeBackup,
       generate: () => 0,
       outputExists: () => false,
       gitDiff: () => {
@@ -183,6 +208,7 @@ describe('runTarget — reports rather than silently passing on a degenerate run
 
   it('reports drift when the regenerated output differs from HEAD', () => {
     const result = runTarget(baseTarget, '/repo', {
+      clearOutput: fakeBackup,
       generate: () => 0,
       outputExists: () => true,
       gitDiff: () => '--- a/x\n+++ b/x\n',
@@ -192,11 +218,85 @@ describe('runTarget — reports rather than silently passing on a degenerate run
 
   it('passes a clean regeneration', () => {
     const result = runTarget(baseTarget, '/repo', {
+      clearOutput: fakeBackup,
       generate: () => 0,
       outputExists: () => true,
       gitDiff: () => '',
     });
     expect(result).toBeNull();
+  });
+
+  it('restores the backup on a generator error, instead of leaving the output cleared', () => {
+    const backup = fakeBackup();
+    runTarget(baseTarget, '/repo', {
+      clearOutput: () => backup,
+      generate: () => 1,
+      outputExists: () => false,
+      gitDiff: () => '',
+    });
+    expect(backup.restored).toBe(true);
+    expect(backup.discarded).toBe(false);
+  });
+
+  it('restores the backup when output never landed', () => {
+    const backup = fakeBackup();
+    runTarget(baseTarget, '/repo', {
+      clearOutput: () => backup,
+      generate: () => 0,
+      outputExists: () => false,
+      gitDiff: () => '',
+    });
+    expect(backup.restored).toBe(true);
+  });
+
+  it('discards, rather than restores, the backup on a clean regeneration', () => {
+    const backup = fakeBackup();
+    runTarget(baseTarget, '/repo', {
+      clearOutput: () => backup,
+      generate: () => 0,
+      outputExists: () => true,
+      gitDiff: () => '',
+    });
+    expect(backup.discarded).toBe(true);
+    expect(backup.restored).toBe(false);
+  });
+
+  it('restores the backup and rethrows when the runner throws mid-run', () => {
+    const backup = fakeBackup();
+    expect(() =>
+      runTarget(baseTarget, '/repo', {
+        clearOutput: () => backup,
+        generate: () => {
+          throw new Error('simulated crash mid-run');
+        },
+        outputExists: () => false,
+        gitDiff: () => '',
+      })
+    ).toThrow('simulated crash mid-run');
+    expect(backup.restored).toBe(true);
+  });
+});
+
+describe('POPS-2216 — a filter that matches nothing must not pass vacuously', () => {
+  it('pnpm --filter <bogus> --fail-if-no-match exits non-zero against the real pnpm binary', () => {
+    expect(() =>
+      execFileSync(
+        'pnpm',
+        [
+          '--filter',
+          '@pops/does-not-exist-openapi-drift-vitest',
+          '--fail-if-no-match',
+          'generate:openapi',
+        ],
+        { cwd: repoRoot, stdio: 'pipe' }
+      )
+    ).toThrow();
+  });
+
+  it('the guard self-test includes the fail-if-no-match and real-runner clearOutput checks', () => {
+    const stdout = execFileSync('node', [guardPath, '--self-test'], { encoding: 'utf8' });
+    expect(stdout).toContain('fail-if-no-match exits');
+    expect(stdout).toContain('realRunner.clearOutput clears the committed file');
   });
 });
 

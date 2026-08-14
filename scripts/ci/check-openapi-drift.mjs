@@ -56,10 +56,38 @@
  * Exit 0 = every discovered pillar's committed OpenAPI spec matches its
  * contract source, no drift. Exit 1 = a violation, or discovery/filtering
  * matched nothing. Exit 2 = usage error.
+ *
+ * Regeneration is proven to have happened, not inferred from a quiet diff
+ * (POPS-2216). Two independent defences, not one:
+ *
+ * 1. `pnpm --filter <pkg> --fail-if-no-match generate:openapi` — plain
+ *    `--filter` exits 0 when the filter matches no workspace project at all
+ *    (`No projects matched the filters`), so a broken/renamed workspace glob
+ *    would make every pillar silently no-op and this guard report success.
+ *    `--fail-if-no-match` turns that into exit 1.
+ * 2. The committed output file is moved aside before every regeneration
+ *    attempt (`realRunner.clearOutput`), not left in place. Without this, a
+ *    generator that matches, runs, and exits 0 but writes nothing (a bug
+ *    distinct from the pnpm-filter case above) would still pass: the old
+ *    committed file is still sitting there, `outputExists` sees it, and
+ *    `gitDiff` sees no change because nothing touched it. Clearing the file
+ *    first makes the existing `no-output` classification (`exists !==
+ *    true`) reachable for a real run, not only for injected test doubles —
+ *    which is what `selfTestOutcomes` below already covered and
+ *    `selfTestRealRunnerNoMatch` extends against the actual pnpm binary.
+ *    The backup is restored (not just left deleted) whenever the target
+ *    does not end in a clean regeneration, including on a thrown error, so
+ *    a run that dies mid-flight does not leave a spec missing from the
+ *    working tree. The residual risk — a hard kill between the delete and
+ *    the restore — is small and cheap to recover from regardless, because
+ *    the output file is git-tracked: `git checkout -- <path>` restores it
+ *    exactly, the same recovery a corrupted in-place overwrite from the
+ *    generator itself would have always needed.
  */
 
 import { execFileSync, spawnSync } from 'node:child_process';
 import {
+  copyFileSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -258,19 +286,48 @@ export function classifyOutcome(target, { exitCode, exists, gitDiff }) {
 }
 
 /**
+ * @typedef {object} OutputBackup
+ * @property {() => void} restore Put the pre-existing committed file back exactly as it was.
+ * @property {() => void} discard Drop the backup — the target ended in a clean regeneration.
+ */
+
+/**
  * @typedef {object} Runner
+ * @property {(target: OpenApiTarget, repoRoot: string) => OutputBackup} clearOutput
  * @property {(target: OpenApiTarget, repoRoot: string) => number} generate
  * @property {(target: OpenApiTarget, repoRoot: string) => boolean} outputExists
  * @property {(target: OpenApiTarget, repoRoot: string) => string} gitDiff
  */
 
+const NOOP_BACKUP = { restore() {}, discard() {} };
+
 /** @type {Runner} */
 export const realRunner = {
+  clearOutput(target, root) {
+    const outputAbsPath = join(root, target.pkgDir, target.outputPath);
+    if (!existsSync(outputAbsPath)) return NOOP_BACKUP;
+
+    const backupDir = mkdtempSync(join(tmpdir(), 'openapi-drift-backup-'));
+    const backupPath = join(backupDir, 'backup.json');
+    copyFileSync(outputAbsPath, backupPath);
+    rmSync(outputAbsPath);
+
+    return {
+      restore() {
+        copyFileSync(backupPath, outputAbsPath);
+        rmSync(backupDir, { recursive: true, force: true });
+      },
+      discard() {
+        rmSync(backupDir, { recursive: true, force: true });
+      },
+    };
+  },
   generate(target, root) {
-    const result = spawnSync('pnpm', ['--filter', target.pkgName, SCRIPT_NAME], {
-      cwd: root,
-      stdio: 'inherit',
-    });
+    const result = spawnSync(
+      'pnpm',
+      ['--filter', target.pkgName, '--fail-if-no-match', SCRIPT_NAME],
+      { cwd: root, stdio: 'inherit' }
+    );
     return result.status ?? 1;
   },
   outputExists(target, root) {
@@ -288,16 +345,30 @@ export const realRunner = {
  * injectable `Runner`, so tests can simulate a generator that errors or
  * writes nothing without a real pnpm/git toolchain.
  *
+ * The committed output is cleared before generation and restored afterward
+ * unless the run ended clean, so `no-output` genuinely means "regeneration
+ * did not produce a file this time" rather than "there happened to already
+ * be one from before this guard ran" (POPS-2216).
+ *
  * @param {OpenApiTarget} target
  * @param {string} root
  * @param {Runner} runner
  * @returns {Violation | null}
  */
 export function runTarget(target, root, runner) {
-  const exitCode = runner.generate(target, root);
-  const exists = exitCode === 0 ? runner.outputExists(target, root) : false;
-  const gitDiff = exitCode === 0 && exists ? runner.gitDiff(target, root) : null;
-  return classifyOutcome(target, { exitCode, exists, gitDiff });
+  const backup = runner.clearOutput(target, root);
+  try {
+    const exitCode = runner.generate(target, root);
+    const exists = exitCode === 0 ? runner.outputExists(target, root) : false;
+    const gitDiff = exitCode === 0 && exists ? runner.gitDiff(target, root) : null;
+    const violation = classifyOutcome(target, { exitCode, exists, gitDiff });
+    if (violation === null) backup.discard();
+    else backup.restore();
+    return violation;
+  } catch (error) {
+    backup.restore();
+    throw error;
+  }
 }
 
 /** @returns {boolean} */
@@ -381,9 +452,21 @@ function selfTestOutcomes() {
     outputPath: 'openapi/widgets.openapi.json',
   };
 
+  let restored = false;
+  let discarded = false;
+  const backup = () => ({
+    restore: () => {
+      restored = true;
+    },
+    discard: () => {
+      discarded = true;
+    },
+  });
+
   const scenarios = {
     'catches a generator that errors': () =>
       runTarget(target, '/repo', {
+        clearOutput: backup,
         generate: () => 1,
         outputExists: () => {
           throw new Error('must not be called when the generator already failed');
@@ -394,6 +477,7 @@ function selfTestOutcomes() {
       })?.kind === 'generator-error',
     'catches output that never landed': () =>
       runTarget(target, '/repo', {
+        clearOutput: backup,
         generate: () => 0,
         outputExists: () => false,
         gitDiff: () => {
@@ -402,16 +486,65 @@ function selfTestOutcomes() {
       })?.kind === 'no-output',
     'catches drift against the committed spec': () =>
       runTarget(target, '/repo', {
+        clearOutput: backup,
         generate: () => 0,
         outputExists: () => true,
         gitDiff: () => '--- a/x\n+++ b/x\n',
       })?.kind === 'drift',
     'passes a clean regeneration': () =>
       runTarget(target, '/repo', {
+        clearOutput: backup,
         generate: () => 0,
         outputExists: () => true,
         gitDiff: () => '',
       }) === null,
+    'restores the backup on a generator error': () => {
+      restored = false;
+      runTarget(target, '/repo', {
+        clearOutput: backup,
+        generate: () => 1,
+        outputExists: () => false,
+        gitDiff: () => '',
+      });
+      return restored;
+    },
+    'restores the backup when output never landed': () => {
+      restored = false;
+      runTarget(target, '/repo', {
+        clearOutput: backup,
+        generate: () => 0,
+        outputExists: () => false,
+        gitDiff: () => '',
+      });
+      return restored;
+    },
+    'discards the backup on a clean regeneration, without restoring it': () => {
+      restored = false;
+      discarded = false;
+      runTarget(target, '/repo', {
+        clearOutput: backup,
+        generate: () => 0,
+        outputExists: () => true,
+        gitDiff: () => '',
+      });
+      return discarded && !restored;
+    },
+    'restores the backup when the runner throws': () => {
+      restored = false;
+      try {
+        runTarget(target, '/repo', {
+          clearOutput: backup,
+          generate: () => {
+            throw new Error('simulated crash mid-run');
+          },
+          outputExists: () => false,
+          gitDiff: () => '',
+        });
+      } catch {
+        // expected — the throw is what we're proving triggers a restore.
+      }
+      return restored;
+    },
   };
 
   const results = Object.fromEntries(Object.entries(scenarios).map(([name, run]) => [name, run()]));
@@ -420,9 +553,109 @@ function selfTestOutcomes() {
     console.error('SELF-TEST FAILED (outcomes):');
     for (const [name, pass] of Object.entries(results)) console.error(`  ${name}: ${pass}`);
   } else {
-    console.log('self-test OK — reports generator-error/no-output/drift, passes a clean run.');
+    console.log(
+      'self-test OK — reports generator-error/no-output/drift, passes a clean run, restores the ' +
+        'backup on every non-clean outcome (including a thrown error) and discards it on a clean one.'
+    );
   }
   return ok;
+}
+
+/**
+ * Proves the actual defence against POPS-2216 against the real pnpm binary,
+ * not an injected double: `pnpm --filter <bogus> --fail-if-no-match
+ * generate:openapi` must exit non-zero. This is what stands between the
+ * guard and the exact vacuous pass the reviewer demonstrated — every filter
+ * missing due to a broken workspace glob, reporting `OK` with zero
+ * generators run. Independent of `EXPECTED_TARGETS` and of `classifyOutcome`:
+ * it shells out to pnpm itself, the same call `realRunner.generate` makes.
+ *
+ * @returns {boolean}
+ */
+function selfTestFailIfNoMatch() {
+  const result = spawnSync(
+    'pnpm',
+    ['--filter', '@pops/does-not-exist-openapi-drift-selftest', '--fail-if-no-match', SCRIPT_NAME],
+    { cwd: repoRoot, stdio: 'pipe' }
+  );
+  const exitCode = result.status ?? 1;
+  const ok = exitCode !== 0;
+  if (!ok) {
+    console.error(
+      'SELF-TEST FAILED (fail-if-no-match): pnpm --filter <bogus> --fail-if-no-match exited 0 — ' +
+        'a workspace glob change that makes every filter miss would once again report OK with ' +
+        'zero generators run (POPS-2216).'
+    );
+  } else {
+    console.log(
+      `self-test OK — pnpm --filter <bogus> --fail-if-no-match exits ${exitCode}, not 0: a ` +
+        'filter that matches nothing fails the guard instead of passing it vacuously.'
+    );
+  }
+  return ok;
+}
+
+/**
+ * Proves `realRunner.clearOutput` actually clears the committed file (making
+ * the `no-output` branch reachable for a real generator that runs and writes
+ * nothing) and restores it byte-for-byte afterward. Runs against the real
+ * filesystem, not injected fakes — `selfTestOutcomes` above only proves
+ * `runTarget` calls `restore`/`discard` correctly; this proves what they
+ * actually do.
+ *
+ * @returns {boolean}
+ */
+function selfTestRealRunnerClearOutput() {
+  const root = mkdtempSync(join(tmpdir(), 'openapi-drift-clear-output-'));
+  try {
+    /** @type {OpenApiTarget} */
+    const target = {
+      pkgName: '@pops/widgets',
+      pkgDir: 'pillars/widgets',
+      pillarId: 'widgets',
+      command: GENERATOR_COMMAND,
+      outputPath: 'openapi/widgets.openapi.json',
+    };
+    const outputAbsPath = join(root, target.pkgDir, target.outputPath);
+    mkdirSync(dirname(outputAbsPath), { recursive: true });
+    const originalContent = '{"committed":true}';
+    writeFileSync(outputAbsPath, originalContent);
+
+    const clearedBackup = realRunner.clearOutput(target, root);
+    const clearedTheFile = !existsSync(outputAbsPath);
+    clearedBackup.restore();
+    const restoredExactly =
+      existsSync(outputAbsPath) && readFileSync(outputAbsPath, 'utf8') === originalContent;
+
+    writeFileSync(outputAbsPath, originalContent);
+    const discardedBackup = realRunner.clearOutput(target, root);
+    discardedBackup.discard();
+    const staysGoneAfterDiscard = !existsSync(outputAbsPath);
+
+    const missingFileBackup = realRunner.clearOutput(target, root);
+    const noopForMissingFile = missingFileBackup === NOOP_BACKUP;
+
+    const checks = {
+      'clears the committed file before regeneration': clearedTheFile,
+      'restores it byte-for-byte': restoredExactly,
+      'discard leaves the file cleared (a clean regeneration already wrote a new one)':
+        staysGoneAfterDiscard,
+      'is a no-op when there was nothing committed yet': noopForMissingFile,
+    };
+    const ok = Object.values(checks).every(Boolean);
+    if (!ok) {
+      console.error('SELF-TEST FAILED (real runner clearOutput):');
+      for (const [name, pass] of Object.entries(checks)) console.error(`  ${name}: ${pass}`);
+    } else {
+      console.log(
+        'self-test OK — realRunner.clearOutput clears the committed file, restores it exactly, ' +
+          'and is a no-op when nothing was committed.'
+      );
+    }
+    return ok;
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 }
 
 /** @param {string} pkgName @returns {OpenApiTarget} */
@@ -526,7 +759,11 @@ function selfTest() {
   const outcomes = selfTestOutcomes();
   const expectedTargetSet = selfTestExpectedTargetSet();
   const realRepo = selfTestRealRepo();
-  return discovery && outcomes && expectedTargetSet && realRepo;
+  const failIfNoMatch = selfTestFailIfNoMatch();
+  const realRunnerClearOutput = selfTestRealRunnerClearOutput();
+  return (
+    discovery && outcomes && expectedTargetSet && realRepo && failIfNoMatch && realRunnerClearOutput
+  );
 }
 
 function main() {
