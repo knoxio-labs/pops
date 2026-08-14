@@ -20,6 +20,10 @@ import {
   makeMobileFinanceHandlers,
   type MobileFinanceHandlerDeps,
 } from './mobile-finance-handlers.js';
+import {
+  makeMobilePurchasesHandlers,
+  type MobilePurchasesHandlerDeps,
+} from './mobile-purchases-handlers.js';
 import { makeOperatorHandlers } from './operator-handlers.js';
 
 import type { KeyObject } from 'node:crypto';
@@ -32,7 +36,7 @@ import type { MobileBootstrapDeps } from '../mobile/bootstrap.js';
 
 const server: ReturnType<typeof initServer> = initServer();
 
-export interface BfmRestHandlerDeps extends MobileFinanceHandlerDeps {
+export interface BfmRestHandlerDeps extends MobileFinanceHandlerDeps, MobilePurchasesHandlerDeps {
   /** Build version, surfaced on the health response. */
   version: string;
   /** Open handle to `bfm.db`. */
@@ -81,6 +85,12 @@ export interface BfmRestHandlerDeps extends MobileFinanceHandlerDeps {
    */
   internalBaseUrls?: Readonly<Record<string, string>>;
   /**
+   * Per-pillar deadline for the bootstrap route's reachability probe, as
+   * resolved once at boot by `resolveProbeTimeoutMs`. Undefined means the
+   * probe's own default (`DEFAULT_PROBE_TIMEOUT_MS`) stands.
+   */
+  probeTimeoutMs?: number;
+  /**
    * Seams for the bootstrap route's registry read, per-pillar probe and clock.
    * Production omits it; tests supply fakes so no probe leaves the process.
    */
@@ -95,7 +105,7 @@ export function makeBfmRestHandlers(
     createRateLimiter({ limit: PAIRING_CODE_RATE_LIMIT, windowMs: PAIRING_CODE_RATE_WINDOW_MS });
 
   const bootstrapDeps: MobileBootstrapDeps = {
-    ...defaultMobileBootstrapDeps(deps.db, deps.internalBaseUrls ?? {}),
+    ...defaultMobileBootstrapDeps(deps.db, deps.internalBaseUrls ?? {}, deps.probeTimeoutMs),
     ...deps.bootstrap,
   };
 
@@ -134,5 +144,6 @@ export function makeBfmRestHandlers(
       }),
     },
     mobileFinance: makeMobileFinanceHandlers(deps),
+    mobilePurchases: makeMobilePurchasesHandlers(deps),
   });
 }

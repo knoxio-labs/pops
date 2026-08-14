@@ -61,10 +61,7 @@ export function DraftRow({ row, now, t }: Props): ReactElement {
           </div>
           <SubLine row={row} t={t} />
           {row.partialReason !== undefined && (
-            <p
-              className="mt-1 rounded-sm bg-amber-50 px-2 py-1 text-xs text-amber-900 dark:bg-amber-950 dark:text-amber-200"
-              role="note"
-            >
+            <p className="mt-1 rounded-sm bg-warning/15 px-2 py-1 text-xs text-warning" role="note">
               {t(`inbox.drafts.partialReason.${row.partialReason}`)}
             </p>
           )}

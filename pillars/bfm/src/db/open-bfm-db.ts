@@ -74,9 +74,17 @@ export interface OpenedBfmDb {
  *   - Every migration in the journal is applied (idempotent — re-running
  *     against the same DB short-circuits on drizzle's hash check).
  *
- * If the migration apply throws — corrupt DB, malformed migration, missing
- * folder — the raw handle is closed before the error is re-thrown, so a
- * failed boot cannot leak a locked file descriptor.
+ * If setting a pragma or the migration apply throws — a file that is not a
+ * database, a corrupt one, a malformed migration, a missing folder — the raw
+ * handle is closed before the error is re-thrown. A handle that escapes this
+ * function unclosed is not just a locked file descriptor: `better-sqlite3`
+ * finalises it natively when V8 garbage-collects it, and a GC pass that lands
+ * after the process's environment cleanup hooks have already run aborts the
+ * whole process (`Assertion failed: (env) != nullptr` in
+ * `node::RemoveEnvironmentCleanupHook`) rather than merely leaking — the exact
+ * crash `openBfmDb`'s own tests reproduce deterministically for the pragma
+ * path (see `open-bfm-db.test.ts`), and one the pragma calls sat outside the
+ * `try` for long enough to cause it.
  *
  * The apply runs behind `withPreMigrationBackup`: a snapshot is taken
  * first whenever this database has journal entries left to apply AND
@@ -88,19 +96,19 @@ export interface OpenedBfmDb {
 export function openBfmDb(path: string): OpenedBfmDb {
   mkdirSync(dirname(path), { recursive: true });
   const raw = new Database(path);
-  raw.pragma('journal_mode = WAL');
-  raw.pragma('foreign_keys = ON');
-  raw.pragma('busy_timeout = 5000');
-  const db = drizzle(raw) as BfmDb;
-  const migrations = migrationsDir();
   try {
+    raw.pragma('journal_mode = WAL');
+    raw.pragma('foreign_keys = ON');
+    raw.pragma('busy_timeout = 5000');
+    const db = drizzle(raw) as BfmDb;
+    const migrations = migrationsDir();
     withPreMigrationBackup(
       { connection: raw, databasePath: path, migrationsFolder: migrations },
       () => migrate(db, { migrationsFolder: migrations })
     );
+    return { db, raw };
   } catch (err) {
     raw.close();
     throw err;
   }
-  return { db, raw };
 }

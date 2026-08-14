@@ -25,19 +25,30 @@ export const BFM_SERVICE_ACCOUNT_NAME = 'bfm';
 /**
  * What the account is granted, and nothing more.
  *
- * One entry, because bfm makes one sibling call: the mobile transactions
- * screen reads finance's `transactions.*`. Every later mobile surface widens
- * this list in its own ticket, so it stays a readable record of what bfm
- * actually calls rather than a wildcard nobody can audit. Scopes match by dot
- * prefix, so `finance.transactions` authorises `finance.transactions.list`
- * but not `finance.budgets.list`.
+ * One entry per sibling module bfm actually calls: the mobile transactions
+ * screens read finance's `transactions.*`, and the receipt upload writes to
+ * purchases' `receipt.*`. Every later mobile surface widens this list in its
+ * own ticket, so it stays a readable record of what bfm calls rather than a
+ * wildcard nobody can audit. Scopes match by dot prefix, so
+ * `finance.transactions` authorises `finance.transactions.list` but not
+ * `finance.budgets.list`, and `purchases.receipt` authorises the upload but
+ * nothing under `purchases.purchase`.
  *
- * finance enforces this: it resolves the presented key against the registry and
- * refuses anything the grant does not cover, so a mobile surface that reaches a
- * second finance module has to widen the list here in the same change or get a
- * 403.
+ * Both producers enforce this (ADR-044): each resolves the presented key
+ * against the registry and refuses an operation the grant does not cover, so a
+ * mobile surface reaching a second module of either has to widen the list here
+ * in the same change or get a 403. A write scope is never inherited from a read
+ * one (ADR-046) — `purchases.receipt` is listed because bfm posts receipts, and
+ * it grants nothing else in that pillar.
+ *
+ * The grant itself is a row in the registry DB rather than anything this repo
+ * can set. Provisioning it is an operator step — the runbook is in the pillar
+ * README under "Provisioning the service account".
  */
-export const BFM_SERVICE_ACCOUNT_SCOPES: readonly string[] = ['finance.transactions'];
+export const BFM_SERVICE_ACCOUNT_SCOPES: readonly string[] = [
+  'finance.transactions',
+  'purchases.receipt',
+];
 
 /** Local-dev source: the key inline in the environment. */
 export const SERVICE_ACCOUNT_KEY_ENV = 'POPS_INTERNAL_API_KEY';

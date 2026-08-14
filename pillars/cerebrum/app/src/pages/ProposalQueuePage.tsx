@@ -132,10 +132,10 @@ function ProposalCard({ action, note, onNoteChange, onDecide, isPending }: Propo
 
 function TypeBadge({ type }: { type: string }) {
   const colors: Record<string, string> = {
-    prune: 'bg-amber-500/10 text-amber-400',
-    consolidate: 'bg-sky-500/10 text-sky-400',
-    link: 'bg-emerald-500/10 text-emerald-400',
-    audit: 'bg-violet-500/10 text-violet-400',
+    prune: 'bg-warning/10 text-warning',
+    consolidate: 'bg-info/10 text-info',
+    link: 'bg-success/10 text-success',
+    audit: 'bg-stat-violet/10 text-stat-violet',
   };
   return <span className={`text-xs px-2 py-0.5 rounded-full ${colors[type] ?? ''}`}>{type}</span>;
 }

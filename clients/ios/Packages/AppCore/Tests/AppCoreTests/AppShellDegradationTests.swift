@@ -166,14 +166,14 @@ internal struct AppShellDegradationTests {
     /// landing mid-flight and a re-pair to the same device is a reachable way
     /// to strand the surface on this build's guess for the rest of the launch.
     @Test("a cancelled ask is not remembered as having been asked")
-    func cancellationDoesNotBlockALaterAsk() async {
+    func cancellationDoesNotBlockALaterAsk() async throws {
         let bootstrap = FakeBootstrapService()
         await bootstrap.suspendUntilReleased()
         let fixture = AppShellFixture(restored: .paired(device), bootstrap: bootstrap)
         await fixture.model.restoreSession()
 
         let abandoned = Task { await fixture.model.loadBootstrap() }
-        await bootstrap.waitUntilCalled()
+        try await bootstrap.waitUntilCalled()
         abandoned.cancel()
         await bootstrap.release()
         await abandoned.value

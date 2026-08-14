@@ -19,7 +19,7 @@ export function AutoCreatedBanner({ slugs }: Props): ReactElement | null {
   return (
     <div
       role="status"
-      className="flex items-start justify-between gap-3 rounded-md border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm"
+      className="flex items-start justify-between gap-3 rounded-md border border-success/40 bg-success/10 p-3 text-sm"
     >
       <div className="space-y-1">
         <p className="font-medium">
