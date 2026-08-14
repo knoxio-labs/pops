@@ -119,10 +119,11 @@ rather than the pillar. A process holding no key at all reports
 reads), and never issues the call.
 
 **As of this writing finance has no service account provisioned** — no
-`infra/secrets.example/finance/` and no `POPS_INTERNAL_API_KEY_FILE` in
-`infra/docker-compose.yml`'s `finance-api` service, unlike `purchases`
-(POPS-1967). Since neither producer enforces yet, this costs nothing today;
-provisioning is tracked separately as an operator step.
+finance entry under `infra/secrets.example/` (compare `purchases`'s, which
+exists) and no `POPS_INTERNAL_API_KEY_FILE` in `infra/docker-compose.yml`'s
+`finance-api` service, unlike `purchases` (POPS-1967). Since neither producer
+enforces yet, this costs nothing today; provisioning is tracked separately as
+an operator step.
 
 ## Domains
 
