@@ -220,6 +220,12 @@ describe('resolveRequireCredential', () => {
   it(`opts in only on the exact string "true" — a live-seam suite's own opt-in, never production`, () => {
     expect(resolveRequireCredential({ [REQUIRE_CREDENTIAL_ENV]: 'true' })).toBe(true);
   });
+
+  it('stays closed in production even if the flag is left set to "true"', () => {
+    expect(
+      resolveRequireCredential({ [REQUIRE_CREDENTIAL_ENV]: 'true', NODE_ENV: 'production' })
+    ).toBe(false);
+  });
 });
 
 describe('paths outside the contract', () => {

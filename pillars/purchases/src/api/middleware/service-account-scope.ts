@@ -56,9 +56,17 @@ export const REQUIRE_CREDENTIAL_ENV = 'PURCHASES_REQUIRE_SERVICE_ACCOUNT_CREDENT
  * Exported so the resolution rule itself is unit-testable without re-loading
  * this module under a different `process.env` — the gate below only ever
  * calls it once, at import time, which is otherwise untestable in isolation.
+ *
+ * Gated on `NODE_ENV !== 'production'` as well as the flag itself: compose
+ * sets `NODE_ENV=production` for every deployed container, so a stray `true`
+ * left on that env var in production can never flip the gate to mandatory.
+ * `resolveContractScope` covers the whole contract surface, so a mandatory
+ * gate 401s the shell's browser traffic outright while `/health`, `/pillars`
+ * and `/openapi` — outside the contract — stay green, masking the outage from
+ * both the compose healthcheck and the image smoke probe.
  */
 export function resolveRequireCredential(env: NodeJS.ProcessEnv = process.env): boolean {
-  return env[REQUIRE_CREDENTIAL_ENV] === 'true';
+  return env[REQUIRE_CREDENTIAL_ENV] === 'true' && env['NODE_ENV'] !== 'production';
 }
 
 const gate = createServiceAccountScopeGate({

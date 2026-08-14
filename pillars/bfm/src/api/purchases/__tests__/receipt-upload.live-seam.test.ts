@@ -119,6 +119,8 @@ interface FakeVisionServer {
   readonly baseUrl: string;
   /** Consumed FIFO, one entry per `POST /v1/messages` the fake receives. */
   enqueue(text: string): void;
+  /** Every request body the fake received, verbatim, in arrival order. */
+  readonly receivedBodies: string[];
   stop(): Promise<void>;
 }
 
@@ -127,9 +129,14 @@ interface FakeVisionServer {
  * Anthropic SDK itself honours `ANTHROPIC_BASE_URL` — see this file's header.
  * Answers whatever `enqueue` queued, shaped like a real Messages API
  * response; `anthropic-vision.ts` reads only `content` and `usage` off it.
+ *
+ * Also records each request body it receives, so a test can assert the
+ * uploaded receipt bytes actually reached this end of the seam — bfm's
+ * upload traversing purchases' vision port intact, not just a 200 back.
  */
 async function startFakeVisionServer(): Promise<FakeVisionServer> {
   const queue: string[] = [];
+  const receivedBodies: string[] = [];
 
   const server: Server = createServer((req, res) => {
     if (req.method !== 'POST' || req.url !== '/v1/messages') {
@@ -139,6 +146,7 @@ async function startFakeVisionServer(): Promise<FakeVisionServer> {
     const chunks: Buffer[] = [];
     req.on('data', (chunk: Buffer) => chunks.push(chunk));
     req.on('end', () => {
+      receivedBodies.push(Buffer.concat(chunks).toString('utf8'));
       const text = queue.shift();
       if (text === undefined) {
         res.writeHead(500, { 'content-type': 'application/json' });
@@ -177,6 +185,7 @@ async function startFakeVisionServer(): Promise<FakeVisionServer> {
   return {
     baseUrl: `http://127.0.0.1:${String(port)}`,
     enqueue: (text: string) => queue.push(text),
+    receivedBodies,
     stop: () =>
       new Promise((resolve, reject) => server.close((err) => (err ? reject(err) : resolve()))),
   };
@@ -356,6 +365,14 @@ describe('bfm -> purchases receipt upload live seam', () => {
     expect(uploadCalls[0]?.method).toBe('POST');
     expect(uploadCalls[0]?.status).toBe(200);
     expect(uploadCalls[0]?.bodySnippet).toContain('"kind":"created"');
+
+    // Independent verification of the other end: the bytes bfm uploaded
+    // reached purchases' vision port intact, not just that purchases
+    // answered 200. Proves the seam carries the payload, not merely a
+    // successful round trip.
+    expect(vision.receivedBodies.at(-1)).toContain(
+      'Live Seam Cafe\\nFlat White  $4.50\\nTotal       $4.50'
+    );
   });
 
   it('a needs-review refusal crosses the seam intact, reshaped to the mobile contract', async () => {
