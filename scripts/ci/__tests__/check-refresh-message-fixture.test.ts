@@ -309,7 +309,7 @@ describe('the guard CLI', () => {
     );
     expect(stdout).toMatch(/self-test OK — reports a same-named file discovered outside/u);
     expect(stdout).toMatch(
-      /self-test OK — no undeclared copy of refresh-message-v1\.json is on disk/u
+      /self-test OK — discovers exactly the 2 declared copy path\(s\) of refresh-message-v1\.json/u
     );
   });
 

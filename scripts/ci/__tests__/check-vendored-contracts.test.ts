@@ -16,10 +16,11 @@ import {
   mkdtempSync,
   realpathSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { afterEach, describe, expect, it } from 'vitest';
@@ -195,6 +196,54 @@ describe('findUnvendoredContracts', () => {
     writeFileSync(join(junkDir, 'unrelated.openapi.json'), '{}\n');
 
     expect(findUnvendoredContracts(root)).toEqual([]);
+  });
+});
+
+describe('discoverVendoredContracts', () => {
+  // POPS-2257: this walk used `entry.isFile()` alone, so a symlinked vendored
+  // copy sitting at a perfectly legal VENDOR_DIRECTORIES shape was invisible
+  // here (never paired with its producer spec, absent from `discoveredCopies`)
+  // while `findUnvendoredContracts` still saw it through the unrestricted
+  // `findOpenapiJsonFiles` walk and reported the legitimate location as a
+  // stray one — a message asserting the opposite of the truth.
+  it('discovers a symlinked vendored copy at a declared VENDOR_DIRECTORIES shape', () => {
+    const root = fixtureRoot();
+    mkdirSync(join(root, 'pillars', 'producer-z', 'openapi'), { recursive: true });
+    const target = join(root, 'pillars', 'producer-z', 'openapi', 'producer-z.openapi.json');
+    writeFileSync(target, '{}\n');
+
+    const contractsDir = join(root, 'pillars', 'consumer-z', 'app', 'contracts');
+    mkdirSync(contractsDir, { recursive: true });
+    const symlinkCopy = join(contractsDir, 'producer-z.openapi.json');
+    symlinkSync(relative(contractsDir, target), symlinkCopy);
+
+    const discovered = discoverVendoredContracts(root);
+    expect(discovered).toHaveLength(1);
+    expect(first(discovered).copy).toBe(symlinkCopy);
+    expect(first(discovered).source).toBe(target);
+
+    // Discovered means drift-checked: this closes the other half of
+    // POPS-2257, that a symlinked legitimate copy is not merely found but
+    // actually compared against its canonical source.
+    expect(findDrift(discovered, readOrNull)).toEqual([]);
+
+    // And, discovered, it must not also read as a stray file outside every
+    // declared shape — the inverted-message half of POPS-2257.
+    expect(findUnvendoredContracts(root)).toEqual([]);
+  });
+
+  it('does not follow a symlink that resolves outside the repo', () => {
+    const root = fixtureRoot();
+    const outside = mkdtempSync(join(tmpdir(), 'vendored-contracts-outside-'));
+    created.push(outside);
+    const outsideTarget = join(outside, 'producer-z.openapi.json');
+    writeFileSync(outsideTarget, '{}\n');
+
+    const contractsDir = join(root, 'pillars', 'consumer-z', 'app', 'contracts');
+    mkdirSync(contractsDir, { recursive: true });
+    symlinkSync(outsideTarget, join(contractsDir, 'producer-z.openapi.json'));
+
+    expect(discoverVendoredContracts(root)).toEqual([]);
   });
 });
 

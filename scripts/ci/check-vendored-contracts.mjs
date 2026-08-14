@@ -183,6 +183,14 @@ if (VENDOR_DECLARATIONS.length !== VENDOR_DIRECTORIES.length) {
  * Discover every vendored contract under one of ``VENDOR_DIRECTORIES`` and pair
  * each with the canonical producer spec it must mirror.
  *
+ * A symlink named `*.openapi.json` counts too, provided it resolves to a
+ * regular file inside the repo (see `symlinkResolvesToFileInRepo`) — the same
+ * rule `findOpenapiJsonFiles` applies. Without it, a symlinked copy sitting in
+ * a declared `VENDOR_DIRECTORIES` shape is invisible here (never drift-checked,
+ * absent from `discoveredCopies`) while `findUnvendoredContracts` still sees it
+ * and reports it as outside every declared shape — a legitimate location
+ * misreported as a stray one.
+ *
  * @param {string} root Repo root to scan.
  * @returns {VendoredContract[]}
  */
@@ -200,10 +208,15 @@ export function discoverVendoredContracts(root) {
       const contractsDir = join(unitKindDir, consumer.name, ...withinUnit);
       if (!existsSync(contractsDir)) continue;
       for (const entry of readdirSync(contractsDir, { withFileTypes: true })) {
-        if (!entry.isFile() || !entry.name.endsWith(VENDORED_SUFFIX)) continue;
+        if (!entry.name.endsWith(VENDORED_SUFFIX)) continue;
+        const entryPath = join(contractsDir, entry.name);
+        const isEligible =
+          entry.isFile() ||
+          (entry.isSymbolicLink() && symlinkResolvesToFileInRepo(root, entryPath));
+        if (!isEligible) continue;
         const pillarId = entry.name.slice(0, -VENDORED_SUFFIX.length);
         found.push({
-          copy: join(contractsDir, entry.name),
+          copy: entryPath,
           source: join(pillarsDir, pillarId, 'openapi', entry.name),
           pillarId,
         });
@@ -830,6 +843,15 @@ function selfTestDeclaration() {
  *   5. A symlink standing in for a vendored-shaped file, inside a directory
  *      the walk visits, is caught the same as a regular file would be
  *      (POPS-2236) — `entry.isFile()` alone would miss it.
+ *   6. A LEGITIMATE vendored copy, planted as a symlink instead of a regular
+ *      file at the identical `VENDOR_DIRECTORIES` shape, is discovered and
+ *      drift-checked by `discoverVendoredContracts` and therefore never
+ *      flagged by `findUnvendoredContracts` (POPS-2257) — case 2 above only
+ *      ever planted the legitimate copy as a regular file, so it could not
+ *      catch `discoverVendoredContracts` applying `entry.isFile()` alone: a
+ *      symlinked legitimate copy would fall out of `discoveredCopies` while
+ *      still being found by the unrestricted `findOpenapiJsonFiles` walk, and
+ *      get reported as stray in a location that is in fact declared.
  *
  * @returns {boolean}
  */
@@ -881,6 +903,23 @@ function selfTestUnvendoredLocation() {
     const symlinkStrayCopy = join(symlinkStrayDir, 'symlinked.openapi.json');
     symlinkSync(relative(symlinkStrayDir, symlinkTarget), symlinkStrayCopy);
 
+    // 6. A legitimate vendored copy, in a declared VENDOR_DIRECTORIES shape,
+    // planted as a symlink rather than a regular file — POPS-2257.
+    mkdirSync(join(root, 'pillars', 'producer-e', 'openapi'), { recursive: true });
+    const legitSymlinkTarget = join(
+      root,
+      'pillars',
+      'producer-e',
+      'openapi',
+      'producer-e.openapi.json'
+    );
+    writeFileSync(legitSymlinkTarget, '{}\n');
+    const legitSymlinkCopyDir = join(root, 'pillars', 'consumer-legit-symlink', 'app', 'contracts');
+    mkdirSync(legitSymlinkCopyDir, { recursive: true });
+    const legitSymlinkCopy = join(legitSymlinkCopyDir, 'producer-e.openapi.json');
+    symlinkSync(relative(legitSymlinkCopyDir, legitSymlinkTarget), legitSymlinkCopy);
+
+    const discoveredForSymlink = discoverVendoredContracts(root);
     const unvendored = findUnvendoredContracts(root);
 
     const canonicalIgnored = !unvendored.includes(
@@ -890,6 +929,8 @@ function selfTestUnvendoredLocation() {
     const strayCaught = unvendored.includes(strayCopy);
     const libsStrayCaught = unvendored.includes(libsStrayCopy);
     const symlinkCaught = unvendored.includes(symlinkStrayCopy);
+    const legitSymlinkDiscovered = discoveredForSymlink.some((c) => c.copy === legitSymlinkCopy);
+    const legitSymlinkIgnored = !unvendored.includes(legitSymlinkCopy);
     const noExtras = unvendored.length === 3;
 
     const ok =
@@ -898,6 +939,8 @@ function selfTestUnvendoredLocation() {
       strayCaught &&
       libsStrayCaught &&
       symlinkCaught &&
+      legitSymlinkDiscovered &&
+      legitSymlinkIgnored &&
       noExtras;
     if (!ok) {
       console.error('SELF-TEST FAILED (unvendored location):');
@@ -906,6 +949,8 @@ function selfTestUnvendoredLocation() {
       console.error(`  caught the copy outside every shape:      ${strayCaught}`);
       console.error(`  caught the same, under libs/:             ${libsStrayCaught}`);
       console.error(`  caught a symlinked copy:                  ${symlinkCaught}`);
+      console.error(`  discovered a symlinked LEGITIMATE copy:   ${legitSymlinkDiscovered}`);
+      console.error(`  ignored a symlinked LEGITIMATE copy:      ${legitSymlinkIgnored}`);
       console.error(
         `  exactly three findings:                   ${noExtras} (got ${unvendored.length})`
       );
