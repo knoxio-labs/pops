@@ -11,6 +11,7 @@ import {
   listExportedComponentModules,
   listStoryFiles,
   readComponentExports,
+  readReexportSpecifiers,
   readValueImportSpecifiers,
   resolveRelativeImport,
 } from '../story-coverage.mjs';
@@ -22,7 +23,7 @@ import { STORY_COVERAGE_ALLOWLIST } from '../storybook-coverage-allowlist.mjs';
  * with every run green. Pinning the size makes taking debt on a visible edit
  * here: lower it when an entry earns a story, raise it only deliberately.
  */
-const ALLOWLIST_PINNED_SIZE = 32;
+const ALLOWLIST_PINNED_SIZE = 35;
 
 const tempRoots: string[] = [];
 
@@ -66,6 +67,26 @@ describe('readValueImportSpecifiers', () => {
     ].join('\n');
     expect(readValueImportSpecifiers(source)).toEqual(['./Chip']);
   });
+
+  it('matches double-quoted specifiers too — oxfmt enforces single quotes today, but that is a formatter setting, not a contract this scan should depend on', () => {
+    const source = 'import { Chip } from "./Chip";';
+    expect(readValueImportSpecifiers(source)).toEqual(['./Chip']);
+  });
+});
+
+describe('readReexportSpecifiers', () => {
+  it('collects only `export ... from` specifiers, not plain `import` statements', () => {
+    const source = [
+      "import { Helper } from './Helper';",
+      "export { Chip } from './Chip';",
+      "export * from './Badge';",
+      "export * as widgets from './widgets';",
+      "export type { Density } from './types';",
+    ].join('\n');
+    expect(readReexportSpecifiers(source).toSorted()).toEqual(
+      ['./Badge', './Chip', './widgets'].toSorted()
+    );
+  });
 });
 
 describe('readComponentExports', () => {
@@ -92,6 +113,18 @@ describe('readComponentExports', () => {
       'export { type DateStyle };',
     ].join('\n');
     expect(readComponentExports(source)).toEqual([]);
+  });
+
+  it('finds a default export that forwards a previously declared identifier — `const X = …; export default X;` — not only `export default function X`', () => {
+    const source = ['const DefaultOnly = () => null;', 'export default DefaultOnly;'].join('\n');
+    expect(readComponentExports(source)).toEqual(['DefaultOnly']);
+  });
+
+  it('finds `export { X as default }`, crediting the original name rather than the non-PascalCase "default"', () => {
+    const source = ['function Aliased() { return null; }', 'export { Aliased as default };'].join(
+      '\n'
+    );
+    expect(readComponentExports(source)).toEqual(['Aliased']);
   });
 });
 
@@ -182,6 +215,68 @@ describe('listExportedComponentModules', () => {
   it('throws instead of reporting an empty set when the barrel is missing', () => {
     const root = makeTree({ 'components/Chip.tsx': 'export const Chip = () => null;' });
     expect(() => listExportedComponentModules(root)).toThrow(/barrel not found/);
+  });
+
+  it('discovers a default-export-only module — the barrel forwards it via `export { default as X }` and the module itself only has `export default X;`', () => {
+    const root = makeTree({
+      'index.ts': "export { default as DefaultOnly } from './components/DefaultOnly';",
+      'components/DefaultOnly.tsx': [
+        'const DefaultOnly = () => null;',
+        'export default DefaultOnly;',
+      ].join('\n'),
+    });
+    expect(listExportedComponentModules(root)).toEqual([
+      resolve(root, 'components/DefaultOnly.tsx'),
+    ]);
+  });
+
+  it('recurses into a nested directory barrel instead of stopping at the non-.tsx target', () => {
+    const root = makeTree({
+      'index.ts': "export * from './components/widgets';",
+      'components/widgets/index.ts': "export * from './Gadget';",
+      'components/widgets/Gadget.tsx': 'export const Gadget = () => null;',
+    });
+    expect(listExportedComponentModules(root)).toEqual([
+      resolve(root, 'components/widgets/Gadget.tsx'),
+    ]);
+  });
+
+  it('follows a re-export chain two levels deep to the file that actually declares the component, in addition to the forwarding file itself', () => {
+    const root = makeTree({
+      'index.ts': "export * from './components/Parent';",
+      'components/Parent.tsx': "export { Child } from './Parent.child';",
+      'components/Parent.child.tsx': 'export const Child = () => null;',
+    });
+    // Parent.tsx forwards `Child` in its own `export { … } from` clause, so it is
+    // itself a (trivial) component-exporting module — same as the real
+    // ScrollShelf.tsx/ScrollShelf.lazy.tsx pair this case models. Both the
+    // forwarder and the file that declares the component are subjects.
+    expect(listExportedComponentModules(root).toSorted()).toEqual(
+      [
+        resolve(root, 'components/Parent.tsx'),
+        resolve(root, 'components/Parent.child.tsx'),
+      ].toSorted()
+    );
+  });
+
+  it('does not follow a plain `import` a component file uses to compose its own render tree — only `export ... from` publishes a module as its own subject', () => {
+    const root = makeTree({
+      'index.ts': "export * from './components/Parent';",
+      'components/Parent.tsx': [
+        "import { Helper } from './Parent.helper';",
+        'export const Parent = () => Helper();',
+      ].join('\n'),
+      'components/Parent.helper.tsx': 'export const Helper = () => null;',
+    });
+    expect(listExportedComponentModules(root)).toEqual([resolve(root, 'components/Parent.tsx')]);
+  });
+
+  it('does not lose a module behind an `export * as ns from` namespace re-export', () => {
+    const root = makeTree({
+      'index.ts': "export * as widgets from './components/widgets';",
+      'components/widgets.tsx': 'export const Widget = () => null;',
+    });
+    expect(listExportedComponentModules(root)).toEqual([resolve(root, 'components/widgets.tsx')]);
   });
 });
 
@@ -294,6 +389,23 @@ describe('checkStoryCoverage', () => {
     expect(errors).toEqual([
       'no exported component module was discovered at all — the src/index.ts barrel scan is broken.',
     ]);
+  });
+
+  it('scopes coverage to the module, not the individual export — documented tradeoff (see the file header): appending a new component to an already-storied file is accepted, not flagged', () => {
+    const root = makeTree({
+      'components/Chip.tsx': [
+        'export const Chip = () => null;',
+        'export const SneakyNewThing = () => null;',
+      ].join('\n'),
+      'components/Chip.stories.tsx': "import { Chip } from './Chip';",
+    });
+    const errors = checkStoryCoverage({
+      srcDir: root,
+      componentModules: [resolve(root, 'components/Chip.tsx')],
+      storyFiles: listStoryFiles(root),
+      allowlist: {},
+    });
+    expect(errors).toEqual([]);
   });
 
   it('treats discovering zero story files as a violation, not a clean run', () => {
