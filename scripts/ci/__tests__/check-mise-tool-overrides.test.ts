@@ -1,7 +1,7 @@
-import { execFileSync, spawnSync } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { delimiter, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -1041,15 +1041,93 @@ describe('WORKFLOWS_DIR', () => {
   });
 });
 
+/** Thrown when mise declines to read a config because it is untrusted. */
+class MiseRefusedUntrustedConfig extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'MiseRefusedUntrustedConfig';
+  }
+}
+
+/**
+ * The environment a `mise` child process gets from this suite: the caller's,
+ * plus the config roots under test named as trusted.
+ *
+ * mise will not read a config file it has not been told to trust, and its trust
+ * store is per-user and keyed on the file's absolute path. Every committed
+ * `mise.toml` in this repo needs it — the root one declares `[env]` with
+ * `{{config_root}}` templates, and no unit config is reachable except through
+ * that root — so a checkout in which nobody has run `mise trust` resolves
+ * nothing at all. That is every fresh clone and every linked worktree, each one
+ * a distinct absolute path; `.husky/pre-push` runs this suite, so the refusal
+ * arrives as a blocked `git push` with no relation to what is being pushed,
+ * which is how a habit of `--no-verify` gets started.
+ *
+ * `MISE_TRUSTED_CONFIG_PATHS` covers a root and everything beneath it, and it
+ * dies with the child process. `mise trust` was the other candidate and is
+ * worse: it writes the developer's global, machine-wide trust store as a side
+ * effect of running a test, once per worktree, forever. Naming these files
+ * trusted is not a judgement the suite is unqualified to make — they are
+ * committed and reviewed, and every other test in this file already reads them
+ * straight off disk.
+ */
+function miseEnv(...trustedRoots: readonly string[]): NodeJS.ProcessEnv {
+  const inherited = process.env.MISE_TRUSTED_CONFIG_PATHS;
+  return {
+    ...process.env,
+    MISE_TRUSTED_CONFIG_PATHS: [
+      ...trustedRoots,
+      ...(inherited === undefined ? [] : [inherited]),
+    ].join(delimiter),
+  };
+}
+
+function miseCurrent(trustedRoot: string, dir: string, tool: string): string {
+  const result = spawnSync('mise', ['current', '-C', dir, tool], {
+    encoding: 'utf8',
+    env: miseEnv(trustedRoot),
+  });
+  if (result.error !== undefined) throw result.error;
+  if (result.status !== 0) {
+    const output = `${result.stderr}${result.stdout}`.trim();
+    if (output.includes('not trusted')) {
+      throw new MiseRefusedUntrustedConfig(
+        `mise refused untrusted config while resolving ${tool} in ${dir}, even with ` +
+          `MISE_TRUSTED_CONFIG_PATHS=${trustedRoot}. Output: ${output}`
+      );
+    }
+    throw new Error(
+      `mise current -C ${dir} ${tool} exited ${result.status ?? 'on a signal'}: ${output}`
+    );
+  }
+  return result.stdout.trim();
+}
+
 describe('mise actually resolves the merge (real mise binary)', () => {
-  let miseAvailable = true;
+  /**
+   * Why a *named* skip rather than the bare `return` this used to be: a test
+   * that returns early reports as a pass, so a machine with no usable mise read
+   * as proof the merge resolves correctly. The reason now reaches the reporter.
+   *
+   * Skipping is still a hole, so it is refused where it would matter: CI
+   * installs mise before this suite (`.github/actions/setup-mise`), so an
+   * unusable one there is a broken lane rather than a local gap, and this fails
+   * instead.
+   */
+  let miseUnusable: string | null = null;
   beforeAll(() => {
-    try {
-      execFileSync('mise', ['--version'], { stdio: 'ignore' });
-    } catch {
-      miseAvailable = false;
+    const probe = spawnSync('mise', ['--version'], { encoding: 'utf8' });
+    if (probe.error !== undefined) {
+      miseUnusable = `mise is not runnable on this machine: ${probe.error.message}`;
+    } else if (probe.status !== 0) {
+      miseUnusable = `\`mise --version\` exited ${probe.status ?? 'on a signal'}: ${probe.stderr.trim()}`;
     }
   });
+
+  function refuseToSkipInCi(reason: string): void {
+    if (process.env.CI === undefined) return;
+    throw new Error(`${reason}\nThis is a skip everywhere else, and a failure in CI.`);
+  }
 
   // Spawns a real `mise current` subprocess per unit per tool across every
   // pillar, lib, and client — dozens of processes, comfortably under vitest's
@@ -1060,16 +1138,26 @@ describe('mise actually resolves the merge (real mise binary)', () => {
 
   it(
     'every existing pillar/lib still resolves node/pnpm from the root pin',
-    () => {
-      if (!miseAvailable) return;
+    (ctx) => {
+      if (miseUnusable !== null) {
+        refuseToSkipInCi(miseUnusable);
+        ctx.skip(miseUnusable);
+        return;
+      }
       const rootTools = parseToolsTable(readFileSync(join(repoRoot, 'mise.toml'), 'utf8'));
       for (const { dir, file } of discoverUnitMiseDirs(repoRoot)) {
         const unitTools = parseToolsTable(readFileSync(join(repoRoot, file), 'utf8'));
         for (const tool of ['node', 'pnpm'] as const) {
           if (tool in unitTools) continue; // this unit overrides it — nothing to assert here
-          const resolved = execFileSync('mise', ['current', '-C', join(repoRoot, dir), tool], {
-            encoding: 'utf8',
-          }).trim();
+          let resolved: string;
+          try {
+            resolved = miseCurrent(repoRoot, join(repoRoot, dir), tool);
+          } catch (error) {
+            if (!(error instanceof MiseRefusedUntrustedConfig)) throw error;
+            refuseToSkipInCi(error.message);
+            ctx.skip(error.message);
+            return;
+          }
           expect(resolved, `${dir} should inherit root's ${tool} pin`).toBe(rootTools[tool]);
         }
       }
@@ -1077,27 +1165,62 @@ describe('mise actually resolves the merge (real mise binary)', () => {
     RESOLVE_ALL_UNITS_TIMEOUT_MS
   );
 
-  it('a unit-level [tools] override wins, and un-overridden tools still inherit', () => {
-    if (!miseAvailable) return;
+  it('a unit-level [tools] override wins, and un-overridden tools still inherit', (ctx) => {
+    if (miseUnusable !== null) {
+      refuseToSkipInCi(miseUnusable);
+      ctx.skip(miseUnusable);
+      return;
+    }
     const fixtureRoot = mkdtempSync(join(tmpdir(), 'mise-merge-fixture-'));
     try {
       writeFileSync(join(fixtureRoot, 'mise.toml'), '[tools]\nnode = "24.5.0"\npnpm = "10.32.1"\n');
       mkdirSync(join(fixtureRoot, 'unit'), { recursive: true });
       writeFileSync(join(fixtureRoot, 'unit', 'mise.toml'), '[tools]\nnode = "22.14.0"\n');
 
-      const overriddenNode = execFileSync(
-        'mise',
-        ['current', '-C', join(fixtureRoot, 'unit'), 'node'],
-        { encoding: 'utf8' }
-      ).trim();
-      expect(overriddenNode).toBe('22.14.0');
+      const unitDir = join(fixtureRoot, 'unit');
+      expect(miseCurrent(fixtureRoot, unitDir, 'node')).toBe('22.14.0');
+      expect(miseCurrent(fixtureRoot, unitDir, 'pnpm')).toBe('10.32.1');
+    } finally {
+      rmSync(fixtureRoot, { recursive: true, force: true });
+    }
+  });
 
-      const inheritedPnpm = execFileSync(
-        'mise',
-        ['current', '-C', join(fixtureRoot, 'unit'), 'pnpm'],
-        { encoding: 'utf8' }
-      ).trim();
-      expect(inheritedPnpm).toBe('10.32.1');
+  it('resolves a unit whose config mise would refuse to read untrusted', (ctx) => {
+    if (miseUnusable !== null) {
+      refuseToSkipInCi(miseUnusable);
+      ctx.skip(miseUnusable);
+      return;
+    }
+    // The shape that made this suite fail on every fresh worktree: a unit
+    // config carrying `[env]` and a template, which mise classes as unsafe and
+    // declines to parse until its absolute path is trusted. A fixture rather
+    // than a name from this repo, so the case survives clients/ios losing its
+    // `[env]` — and so this states what is being relied on, which is that the
+    // environment above makes an untrusted-by-construction config readable.
+    const fixtureRoot = mkdtempSync(join(tmpdir(), 'mise-untrusted-fixture-'));
+    try {
+      writeFileSync(
+        join(fixtureRoot, 'mise.toml'),
+        '[tools]\nnode = "24.5.0"\npnpm = "10.32.1"\n\n[env]\n_.path = ["{{config_root}}/bin"]\n'
+      );
+      mkdirSync(join(fixtureRoot, 'unit'), { recursive: true });
+      writeFileSync(
+        join(fixtureRoot, 'unit', 'mise.toml'),
+        '[env]\nPOPS_FIXTURE_ROOT = "{{config_root}}"\n'
+      );
+
+      const unitDir = join(fixtureRoot, 'unit');
+      // Deliberately without the environment `miseCurrent` supplies, and with
+      // any the caller happened to export stripped, so the refusal below is a
+      // property of the fixture rather than of whoever ran the suite.
+      const untrusted = { ...process.env };
+      delete untrusted.MISE_TRUSTED_CONFIG_PATHS;
+      expect(
+        spawnSync('mise', ['current', '-C', unitDir, 'node'], { encoding: 'utf8', env: untrusted })
+          .status,
+        'this fixture is meant to be one mise refuses without the trust environment'
+      ).not.toBe(0);
+      expect(miseCurrent(fixtureRoot, unitDir, 'node')).toBe('24.5.0');
     } finally {
       rmSync(fixtureRoot, { recursive: true, force: true });
     }
