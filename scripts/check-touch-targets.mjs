@@ -22,8 +22,9 @@
  * opening tag, the scanner reads a bounded window of source starting at that
  * line and looks for evidence the tappable area reaches 44px: a Tailwind
  * sizing utility (`h-`/`w-`/`size-`/`min-h-`/`min-w-`) at spacing-scale step
- * 11 or higher (11 * 4px = 44px), an arbitrary pixel value >= 44px, or the
- * `before:-inset-*` invisible-hit-area pattern the primitives already use.
+ * 11 or higher (11 * 4px = 44px), the same properties carrying an arbitrary
+ * pixel value >= 44px, or the `before:-inset-*` invisible-hit-area pattern
+ * the primitives already use.
  * Classes built up through a variable (`cn(baseClasses)`) are invisible to a
  * text scan and are reported as violations — false positives lean toward
  * "flag it", which a baseline absorbs for existing code and a human resolves
@@ -75,13 +76,21 @@ const RAW_ELEMENT_RE = /<(button|a)(?=[\s/>])/g;
 const WINDOW_LINES = 12;
 
 /**
- * Evidence the element's tappable area reaches 44px: a Tailwind spacing-scale
- * utility at step 11+ (11 * 4px = 44px) on height/width/size, an arbitrary
- * pixel value of 44 or more, or the `before:-inset-*` expansion pattern the
- * primitives already use for compact controls.
+ * Evidence the element's tappable area reaches 44px, on a property that
+ * actually sizes the box: `h`, `w`, `size` or their `min-` forms, carrying
+ * either a Tailwind spacing-scale step of 11+ (11 * 4px = 44px) or an
+ * arbitrary pixel value of 44 or more. Plus the `before:-inset-*` expansion
+ * pattern the primitives use for compact controls.
+ *
+ * The leading `(?<![\w-])` is what keeps the property honest: without it,
+ * `max-w-24` reads as `w-24` and a width CAP passes as a size. The trailing
+ * `(?![\d/])` rejects the fraction forms (`w-11/12`), which are a proportion
+ * of the parent, not 44px. And the arbitrary-value branch is anchored to the
+ * same properties, so an unrelated `mt-[80px]` or `top-[44px]` no longer
+ * launders a 24px button into compliance.
  */
 const COMPLIANT_RE =
-  /\b(?:min-)?(?:h|w|size)-(?:1[1-9]|[2-9]\d)\b|-\[(?:4[4-9]|[5-9]\d|\d{3,})px\]|before:-inset-/;
+  /(?<![\w-])(?:min-)?(?:h|w|size)-(?:(?:1[1-9]|[2-9]\d|\d{3,})(?![\d/])|\[(?:4[4-9]|[5-9]\d|\d{3,})px\])|before:-inset-/;
 
 /**
  * @typedef {object} Violation

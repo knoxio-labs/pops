@@ -112,7 +112,8 @@
     "button": 1
   },
   "pillars/food/app/src/pages/inbox/inspector/ProvenancePane.tsx": {
-    "a": 2
+    "a": 2,
+    "button": 1
   },
   "pillars/food/app/src/pages/recipes/AutoCreatedBanner.tsx": {
     "button": 1
@@ -137,6 +138,9 @@
   },
   "pillars/inventory/app/src/components/DocumentList.tsx": {
     "a": 1
+  },
+  "pillars/inventory/app/src/components/PhotoGallery.tsx": {
+    "button": 1
   },
   "pillars/inventory/app/src/components/SortablePhotoGrid.tsx": {
     "button": 1

@@ -44,6 +44,27 @@ describe('findViolations', () => {
     ]);
   });
 
+  it.each([
+    ['a margin that happens to be >=44px', 'h-6 w-6 mt-[80px]'],
+    ['a position offset that happens to be >=44px', 'h-6 w-6 top-[44px]'],
+    ['a width CAP, which bounds the box rather than sizing it', 'h-6 w-6 max-w-24'],
+    ['a fraction width, which is a proportion of the parent', 'h-6 w-11/12'],
+  ])('does not accept %s as sizing evidence', (_label, className) => {
+    const src = `<button className="${className}"><XIcon /></button>`;
+    expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([
+      { file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'button' },
+    ]);
+  });
+
+  it.each([
+    ['a variant-prefixed sizing utility', 'sm:h-11 w-6'],
+    ['an arbitrary sizing value on the min- form', 'min-h-[44px]'],
+    ['a three-digit spacing step', 'size-100'],
+  ])('still accepts %s', (_label, className) => {
+    const src = `<button className="${className}"><XIcon /></button>`;
+    expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([]);
+  });
+
   it('does not mistake a component tag for a raw element (case-sensitive)', () => {
     const src = [
       '<ButtonPrimitive onClick={onClick}>Save</ButtonPrimitive>',
