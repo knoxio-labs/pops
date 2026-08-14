@@ -102,6 +102,19 @@ describe('a dynamic import()/require() reaching lucide-react is reported', () =>
     const hits = findViolations('a.tsx', "React.lazy(()=>import('lucide-react'));");
     expect(hits).toHaveLength(1);
   });
+
+  it('reports a call with a second argument — import attributes/options do not shield the specifier', () => {
+    const hits = findViolations(
+      'a.tsx',
+      "const m = await import('lucide-react', { with: { type: 'json' } });"
+    );
+    expect(hits).toHaveLength(1);
+  });
+
+  it('reports a call with a bare trailing comma and no second argument', () => {
+    const hits = findViolations('a.tsx', "const m = await import('lucide-react',);");
+    expect(hits).toHaveLength(1);
+  });
 });
 
 describe('shapes this guard does not attempt — documented, not silent', () => {
@@ -116,6 +129,21 @@ describe('shapes this guard does not attempt — documented, not silent', () => 
 
   it('does not flag a dynamic import of an unrelated package', () => {
     expect(findViolations('a.tsx', "const m = await import('some-other-package');")).toHaveLength(
+      0
+    );
+  });
+
+  it('does not flag an unrelated package that also has a second argument', () => {
+    expect(
+      findViolations(
+        'a.tsx',
+        "const m = await import('some-other-package', { with: { type: 'json' } });"
+      )
+    ).toHaveLength(0);
+  });
+
+  it('does not flag an unrelated package that also has a bare trailing comma', () => {
+    expect(findViolations('a.tsx', "const m = await import('some-other-package',);")).toHaveLength(
       0
     );
   });

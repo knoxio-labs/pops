@@ -23,7 +23,15 @@ const PillarRegistryEntrySchema = z
     return { ...entry, lastSeenAt: resolved };
   });
 
-const RegistrySnapshotPayloadSchema = z
+/**
+ * The registry discovery snapshot's wire shape — `{ pillars, fetchedAt? }`,
+ * each entry validated by {@link PillarRegistryEntrySchema} (which nests
+ * {@link ManifestPayloadSchema}). Exported so callers that only need to
+ * validate a candidate body — rather than parse it into the tRPC-envelope-
+ * aware {@link RegistrySnapshotPayload} — can run it through the same schema
+ * `parseRegistrySnapshotResponse` uses, instead of hand-rolling a second one.
+ */
+export const RegistrySnapshotPayloadSchema = z
   .object({
     pillars: z.array(PillarRegistryEntrySchema),
     fetchedAt: z.string().optional(),

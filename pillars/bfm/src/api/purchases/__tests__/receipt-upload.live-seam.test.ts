@@ -38,6 +38,45 @@
  * real model. A test that paid for a model call per run is a test nobody
  * runs.
  *
+ * **The 413 purchases' own 20mb ceiling can answer with is proven here too —
+ * and it exposes a real gap, not one this file fixes.** `bfm`'s own mount
+ * refuses an oversized upload before it ever reaches purchases
+ * (`MOBILE_UPLOAD_MAX_BYTES`, 12mb, strictly under purchases' 20mb — see
+ * `pillars/bfm/README.md`'s "The mobile write"), so a real phone can never
+ * make purchases answer 413 through this route: bfm is always the one that
+ * refuses first, by design. Reaching purchases' own ceiling at this seam
+ * needs `PURCHASES_TEST_JSON_BODY_LIMIT_BYTES` — the same kind of test-only
+ * knob `PURCHASES_REQUIRE_CREDENTIAL_ENV` is above, gated the same way
+ * (`resolveJsonBodyLimitBytes`, `pillars/purchases/src/api/app.ts`) — set well
+ * under bfm's own cap so a small, fast body clears bfm's front door and still
+ * trips purchases' real `express.json()` limit. What it proves is not flattering:
+ * `libs/sdk/src/client/rest-call.ts`'s `mapHttpFailure` has no case for 413 (it
+ * maps 400/401/403/404/409 and folds everything else, including 413, into
+ * `unavailable`), so bfm reports a real, specific, non-retryable refusal from
+ * purchases as `503 upstream_unavailable, retryable: true` — the same shape a
+ * dead purchases process would produce. It is the same "a real answer misread
+ * as an outage" confusion the BFM client README describes for the handset's own
+ * undecodable-response case, but a different defect in a different layer: this
+ * one is bfm-server's OUTBOUND cross-pillar mapping (`mapHttpFailure`, shared by
+ * every producer call in the repo, not just this route), not the handset's
+ * inbound decoding, so it is tracked separately rather than folded into that
+ * gap. The test below asserts today's actual behaviour so it fails the moment
+ * that mapping changes in either direction — for better (413 gets its own kind)
+ * or for worse (the fallthrough starts throwing).
+ *
+ * **The contract-mismatch direction is deliberately NOT driven at this seam.**
+ * `toGatewayFailure`'s `contract-mismatch` arm is already unit-tested directly
+ * against the failure value (`pillars/bfm/src/api/pillars/__tests__/gateway.test.ts`),
+ * and the SDK's own resolution of an operationId that fails to match — the part
+ * a live process could add — is a pure function of the OpenAPI document
+ * `performRestCall` is handed (`libs/sdk/src/client/rest-call.ts`), not of
+ * anything the network carries. Reproducing it live would mean either
+ * deliberately serving purchases a broken OpenAPI document (scaffolding this
+ * suite does not otherwise need, for a code path this file's happy-path case
+ * already proves resolves correctly) or asserting a stubbed call, which
+ * `client.test.ts` already does. Nothing here would be caught only by a live
+ * process.
+ *
  * Excluded from the default `pnpm test` run (see `vitest.config.ts`'s
  * `live-seam` exclusion) — it spawns three real processes plus a fake
  * Anthropic server and is an order of magnitude slower than this pillar's
@@ -77,6 +116,23 @@ import type { MobileReceiptOutcome } from '../../../contract/rest-schemas.js';
  * one just to name an env var.
  */
 const PURCHASES_REQUIRE_CREDENTIAL_ENV = 'PURCHASES_REQUIRE_SERVICE_ACCOUNT_CREDENTIAL';
+
+/**
+ * Purchases' other test-only escape hatch (`api/app.ts`'s
+ * `resolveJsonBodyLimitBytes`), named here for the same reason
+ * {@link PURCHASES_REQUIRE_CREDENTIAL_ENV} is. Set well under bfm's own
+ * `MOBILE_UPLOAD_MAX_BYTES` mount (12mb) so a body that clears bfm's front
+ * door still trips purchases' real `express.json()` limit — see this file's
+ * header for why that is the only way to reach purchases' own ceiling here.
+ */
+const PURCHASES_TEST_JSON_BODY_LIMIT_BYTES_ENV = 'PURCHASES_TEST_JSON_BODY_LIMIT_BYTES';
+
+/**
+ * Small enough that every other test's body in this file (well under 1kb)
+ * clears it easily, and small enough that the oversized test's own body stays
+ * a few kilobytes rather than needing anything close to a real receipt photo.
+ */
+const PURCHASES_TEST_JSON_BODY_LIMIT_BYTES = 4096;
 
 /** Well above `MIN_ACCESS_TOKEN_SECRET_LENGTH`; the value itself is arbitrary. */
 const BFM_ACCESS_TOKEN_SECRET = 'live-seam-bfm-purchases-access-token-signing-secret-32plus';
@@ -290,6 +346,7 @@ describe('bfm -> purchases receipt upload live seam', () => {
         ANTHROPIC_API_KEY: 'live-seam-fake-anthropic-key',
         ANTHROPIC_BASE_URL: vision.baseUrl,
         [PURCHASES_REQUIRE_CREDENTIAL_ENV]: 'true',
+        [PURCHASES_TEST_JSON_BODY_LIMIT_BYTES_ENV]: String(PURCHASES_TEST_JSON_BODY_LIMIT_BYTES),
       },
     });
 
@@ -399,6 +456,41 @@ describe('bfm -> purchases receipt upload live seam', () => {
     const thisCall = uploadCalls.at(-1);
     expect(thisCall?.status).toBe(200);
     expect(thisCall?.bodySnippet).toContain('"kind":"needs-review"');
+  });
+
+  describe('a body purchases refuses at its own ceiling', () => {
+    it('reaches purchases, gets a real 413, and bfm reports it as an unavailable upstream — not a receipt outcome', async () => {
+      // Comfortably under bfm's own 12mb mount, so this clears bfm's front
+      // door untouched; comfortably over PURCHASES_TEST_JSON_BODY_LIMIT_BYTES
+      // (4096), so purchases' own `express.json()` is what refuses it — see
+      // this file's header for why an oversized body cannot otherwise reach
+      // purchases' ceiling through this route.
+      const oversizedText = 'A'.repeat(6_000);
+
+      const response = await post(bfmProcess.baseUrl, deviceToken, oversizedText);
+
+      // Not one of the three receipt outcomes — those are all 200s (see this
+      // file's header, "The mobile write" in `pillars/bfm/README.md`) — and
+      // not the `payload_too_large` shape bfm's OWN front door answers with
+      // either, because bfm never got the chance to refuse this one itself.
+      expect(response.status).toBe(503);
+      const body: unknown = await response.json();
+      expect(body).toEqual({
+        code: 'upstream_unavailable',
+        pillar: 'purchases',
+        retryable: true,
+        message: expect.any(String),
+      });
+
+      // Independent verification: purchases itself answered 413, not
+      // whatever bfm made of it — the recording proxy sees the real wire
+      // response purchases sent, before bfm's own mapping touches it.
+      const uploadCalls = purchasesProxy.requests.filter((entry) =>
+        entry.url.endsWith('/receipts')
+      );
+      const thisCall = uploadCalls.at(-1);
+      expect(thisCall?.status).toBe(413);
+    });
   });
 
   describe('the credential purchases now requires', () => {

@@ -8,12 +8,14 @@
  * given export is *actually* a component is a heuristic for both extensions,
  * and neither is exact. `.tsx` discovery is a plain PascalCase-name test.
  * `.ts` discovery is narrower — a PascalCase name only counts when its own
- * declaration is function/arrow/class-extends shaped *and* the file shows a
- * `createElement` signal — because a `.ts` file is exactly where a zod
- * schema, a token map, or a plain class is likely to sit under a
+ * declaration is function/arrow/class-extends shaped, or is a single call to
+ * a known component wrapper (`memo`, `forwardRef`) around such a shape, *and*
+ * the file shows a `createElement` signal — because a `.ts` file is exactly
+ * where a zod schema, a token map, or a plain class is likely to sit under a
  * PascalCase name with no rendering intent at all; see
- * `readComponentExports`'s `requireTsComponentShape` for the exact rule and
- * what it cannot decide. A module whose only PascalCase exports are forwards
+ * `readComponentExports`'s `requireTsComponentShape` for the exact rule,
+ * `KNOWN_COMPONENT_WRAPPERS` for the wrapper set, and what it all still
+ * cannot decide. A module whose only PascalCase exports are forwards
  * of another module's names — `export { X } from './y'` — is a barrel, not a
  * subject, at any depth: see `isBarrelModule`.
  *
@@ -227,6 +229,92 @@ function isFunctionOrClassShaped(source, name) {
 }
 
 /**
+ * The React exports this repo actually wraps components in. `forwardRef` is
+ * in production use today — `grep -rln forwardRef libs/ui/src` finds it in
+ * ten files (`Button.tsx`, `TextInput.tsx`, `RadioInput.tsx`, `Select.tsx`,
+ * `CheckboxInput.tsx`, `Chip.tsx`, `ChipInput.tsx`, `DateTimeInput.tsx`,
+ * `NumberInput.tsx`, `primitives/label.tsx`), always as `export const Foo =
+ * forwardRef<Ref, Props>((props, ref) => …)`. `memo` has zero hits anywhere
+ * in this repo as of writing (`grep -rn '\bmemo(' .` across the whole tree
+ * matches nothing but a test mock's unrelated `React.forwardRef`) — it is
+ * listed anyway because it is React's other canonical wrapper and the
+ * ticket that opened this gap names it explicitly; the day someone writes
+ * one, this list should not need editing again for it to be seen. No third
+ * wrapper turned up in the same sweep (no `observer(`, `connect(`,
+ * `withRouter(`, or `styled(` in this codebase) — a wrapper genuinely not on
+ * this list still reads as non-component-shaped, same false-negative-fails-
+ * closed trade-off `isFunctionOrClassShaped` already accepts.
+ */
+const KNOWN_COMPONENT_WRAPPERS = ['memo', 'forwardRef'];
+
+/**
+ * Whether `wrapperName` (one of {@link KNOWN_COMPONENT_WRAPPERS}) is
+ * imported from `react` in `source` — either named (`import { forwardRef }
+ * from 'react'`) or reached through a `React` namespace/default import
+ * (`import * as React from 'react'`/`import React from 'react'`, covering
+ * `React.forwardRef(...)`). This exists so a same-named export from some
+ * other package (`import { memo } from 'a-memoization-lib'`) does not get
+ * mistaken for React's wrapper — without it, {@link isWrappedComponentShaped}
+ * would match on identifier text alone and turn a same-name collision into a
+ * false *positive*, the direction `requireTsComponentShape` is built to
+ * avoid. It does not verify `wrapperName` specifically appears inside an
+ * `import * as React` clause's usage (that would need real scope analysis) —
+ * only that some React-namespace import exists in the file — so it can still
+ * be fooled by a second, differently-sourced `React` identifier shadowing
+ * the real one; that is the same "not a scoped AST lookup" caveat
+ * {@link isFunctionOrClassShaped} already carries.
+ *
+ * @param {string} source
+ * @param {string} wrapperName
+ * @returns {boolean}
+ */
+function isReactWrapperImported(source, wrapperName) {
+  const patterns = [
+    new RegExp(`import\\s*\\{[^}]*\\b${wrapperName}\\b[^}]*\\}\\s*from\\s*(['"])react\\1`),
+    /import\s+(?:\*\s+as\s+React|React)\b[^;]*from\s*(['"])react\1/,
+  ];
+  return patterns.some((pattern) => pattern.test(source));
+}
+
+/**
+ * Whether `name`'s own declaration in `source` assigns the result of calling
+ * exactly one known component wrapper (see {@link KNOWN_COMPONENT_WRAPPERS})
+ * whose own argument is itself an arrow function or a named/anonymous
+ * function expression: `export const Foo = memo(() => …)`, `export const Bar
+ * = forwardRef<Ref, Props>((props, ref) => …)`. Bare and `React.`-qualified
+ * callees both match, and a generic argument list between the wrapper name
+ * and its call parens is tolerated. The matched wrapper additionally has to
+ * be imported from `react` (see {@link isReactWrapperImported}) — a same-
+ * named export from an unrelated package does not count.
+ *
+ * Only a single call is unwrapped — `memo(forwardRef(...))` does not match,
+ * the same one-hop-only choice `isFunctionOrClassShaped` makes for the
+ * unwrapped case. Nor does an aliased import — `import { forwardRef as fr }
+ * from 'react'; export const Foo = fr(...)` — since the callee text `fr` is
+ * not in {@link KNOWN_COMPONENT_WRAPPERS}. Both are false negatives, which
+ * fail closed the same way the rest of this narrowing does.
+ *
+ * This function does not look at what the inner function *returns*: `memo(()
+ * => ({ not: 'an element' }))` matches exactly as happily as `memo(() =>
+ * createElement('div'))`. Telling those apart is left entirely to the
+ * file-level `createElement` signal in {@link hasCreateElementSignal} — the
+ * second gate `readComponentExports` already requires. A non-component
+ * wrapped in `memo` inside a file that also contains a genuine
+ * `createElement`-built component elsewhere would still be misread as a
+ * subject; that residual gap is not closed here.
+ *
+ * @param {string} source
+ * @param {string} name
+ * @returns {boolean}
+ */
+function isWrappedComponentShaped(source, name) {
+  const match = new RegExp(
+    `(?:const|let|var)\\s+${name}\\s*(?::[^=]+)?=\\s*(React\\.)?(${KNOWN_COMPONENT_WRAPPERS.join('|')})\\s*(?:<[\\s\\S]*?>)?\\s*\\(\\s*(?:(?:\\([^)]*\\)|[A-Za-z_$][\\w$]*)\\s*=>|function\\b)`
+  ).exec(source);
+  return match ? isReactWrapperImported(source, match[2]) : false;
+}
+
+/**
  * Whether `source` shows any sign of building React elements imperatively —
  * the only way a `.ts` file can be a component, since that extension does not
  * permit JSX syntax at all. Requires both a `react` import and a call that
@@ -257,15 +345,19 @@ function hasCreateElementSignal(source) {
  * `requireTsComponentShape` narrows the PascalCase-name heuristic for `.ts`
  * files: a locally declared or locally re-exported name is only kept when its
  * own declaration is function/arrow/class-extends shaped (see
- * {@link isFunctionOrClassShaped}) AND the file shows a `createElement`
+ * {@link isFunctionOrClassShaped}) OR is a single call to a known component
+ * wrapper around such a shape (`memo`, `forwardRef` — see
+ * {@link isWrappedComponentShaped}), AND the file shows a `createElement`
  * signal (see {@link hasCreateElementSignal}). This is still a heuristic, not
- * a type check — it cannot see through a component wrapped in a call
- * expression (`export const Foo = memo(() => createElement('div'))` reads as
- * a call, not an arrow, so it is excluded — a false negative, which fails
- * closed: the module quietly does not demand a story rather than wrongly
- * flagging it). It never applies to a *forwarded* name (`export { X } from
- * './y'`) — the module that actually declares `X` is checked on its own
- * terms when the walk reaches it.
+ * a type check: it cannot see through a wrapper two deep
+ * (`memo(forwardRef(...))`), a wrapper reached through an aliased import
+ * (`import { forwardRef as fr } from 'react'`), or a wrapper from a
+ * non-React library — all three read as a plain call expression and are
+ * excluded, a false negative that fails closed the same way the unwrapped
+ * case always has (the module quietly does not demand a story rather than
+ * wrongly flagging one). It never applies to a *forwarded* name (`export {
+ * X } from './y'`) — the module that actually declares `X` is checked on its
+ * own terms when the walk reaches it.
  *
  * `.tsx` discovery is untouched: it keeps the plain PascalCase-name
  * heuristic, with the same false-positive risk this narrowing exists to
@@ -282,12 +374,10 @@ export function readComponentExports(source, options = {}) {
   const declared = readDeclaredComponentNames(source);
   const { local, forwarded } = readBraceExportOrigins(source);
   let ownNames = new Set([...declared, ...local]);
-  if (requireTsComponentShape) {
-    const hasReactSignal = hasCreateElementSignal(source);
-    ownNames = new Set(
-      [...ownNames].filter((name) => hasReactSignal && isFunctionOrClassShaped(source, name))
-    );
-  }
+  const isShaped = (name) =>
+    hasCreateElementSignal(source) &&
+    (isFunctionOrClassShaped(source, name) || isWrappedComponentShaped(source, name));
+  if (requireTsComponentShape) ownNames = new Set([...ownNames].filter(isShaped));
   return [...new Set([...ownNames, ...forwarded])];
 }
 
@@ -329,15 +419,17 @@ function isBarrelModule(source) {
  *
  * `.ts` is included, not just `.tsx`, because a component can be declared
  * with `React.createElement` and never need JSX syntax at all. A `.ts`
- * export additionally has to look function/class-shaped and the file has to
- * show a `createElement` signal (see {@link readComponentExports}'s
- * `requireTsComponentShape`) — narrower than the plain PascalCase-name test
- * `.tsx` still runs. It remains a heuristic, not an "is this actually a
- * component" check: it can still be fooled (a component hidden behind a
- * wrapping call expression reads as non-function-shaped and is silently
- * excluded — a false negative, not a false positive), and `.tsx` files keep
- * the original, looser PascalCase-only test with the same false-positive
- * risk that test has always carried.
+ * export additionally has to look function/class-shaped, or be a single call
+ * to a known component wrapper (`memo`, `forwardRef`) around such a shape,
+ * and the file has to show a `createElement` signal (see
+ * {@link readComponentExports}'s `requireTsComponentShape`) — narrower than
+ * the plain PascalCase-name test `.tsx` still runs. It remains a heuristic,
+ * not an "is this actually a component" check: it can still be fooled (a
+ * wrapper nested two deep, a wrapper reached through an aliased import, or a
+ * wrapper from a library other than React all read as a plain call
+ * expression and are silently excluded — a false negative, not a false
+ * positive), and `.tsx` files keep the original, looser PascalCase-only test
+ * with the same false-positive risk that test has always carried.
  *
  * A module is skipped as a subject when {@link isBarrelModule} says every
  * PascalCase name it exports is forwarded rather than declared — this is

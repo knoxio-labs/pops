@@ -64,14 +64,16 @@ import {
   repoCopyReader,
   resolveCanonical,
   selfTestCopyHandling,
+  selfTestRealTreeDiscovery,
   selfTestUndeclaredDiscovery,
+  UNIT_KIND_ROOTS,
 } from './fixture-copies.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..');
 
 /** Directories a discovered-copy walk covers — every unit kind that can vendor this fixture. */
-const SCAN_ROOTS = ['pillars', 'libs', 'clients'];
+const SCAN_ROOTS = UNIT_KIND_ROOTS;
 
 /** The filename a copy of this vector is always named, wherever it lives. */
 const BASENAME = 'refresh-message-v1.json';
@@ -399,9 +401,16 @@ function main() {
   const read = repoCopyReader(repoRoot, bail);
 
   if (argv.includes('--self-test')) {
-    // Both halves run even when one fails, so one invocation reports every
-    // problem. The copy-set half needs no fixture at all, so it runs first.
+    // All halves run even when one fails, so one invocation reports every
+    // problem. The copy-set and real-tree-discovery halves need no fixture
+    // at all, so they run first.
     const copySet = selfTestCopySet();
+    const realTreeDiscovery = selfTestRealTreeDiscovery(
+      repoRoot,
+      SCAN_ROOTS,
+      BASENAME,
+      FIXTURE_COPIES
+    );
 
     // The self-test needs a fixture it can corrupt, and the canonical copy is
     // the only source of one. Both failure modes are reported rather than
@@ -416,7 +425,7 @@ function main() {
     } catch (error) {
       bail(`FAIL — ${CANONICAL.path} is not parseable as JSON: ${String(error)}`);
     }
-    process.exit(selfTest(valid) && copySet ? 0 : 1);
+    process.exit(selfTest(valid) && copySet && realTreeDiscovery ? 0 : 1);
   }
 
   const discovered = discoverFilesNamed(repoRoot, SCAN_ROOTS, BASENAME);

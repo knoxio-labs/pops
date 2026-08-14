@@ -76,10 +76,34 @@ function resolveJsonBodyLimitBytes(): number {
 
 export const JSON_BODY_LIMIT_BYTES = resolveJsonBodyLimitBytes();
 
+/**
+ * Test-only override for {@link JSON_BODY_LIMIT_BYTES}, scoped the same way
+ * `service-account-scope.ts`'s `REQUIRE_CREDENTIAL_ENV` is: it only takes
+ * effect outside production, so a stray value left on this env var in a
+ * real deployment cannot shrink the ceiling every legitimate order relies
+ * on. Exists so a live-seam suite can exercise this pillar's own body-limit
+ * enforcement — the real `express.json()` middleware refusing a real body —
+ * without generating something actually large enough to cross the 20mb
+ * default.
+ */
+export const TEST_JSON_BODY_LIMIT_BYTES_ENV = 'PURCHASES_TEST_JSON_BODY_LIMIT_BYTES';
+
+/**
+ * Exported so the resolution rule is unit-testable without re-loading this
+ * module under a different `process.env`, matching `resolveRequireCredential`.
+ */
+export function resolveJsonBodyLimitBytes(env: NodeJS.ProcessEnv = process.env): number {
+  if (env['NODE_ENV'] === 'production') return JSON_BODY_LIMIT_BYTES;
+  const raw = env[TEST_JSON_BODY_LIMIT_BYTES_ENV];
+  if (raw === undefined || raw === '') return JSON_BODY_LIMIT_BYTES;
+  const parsed = Number(raw);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : JSON_BODY_LIMIT_BYTES;
+}
+
 export function createPurchasesApiApp(deps: PurchasesApiDeps): Express {
   const app = express();
   app.disable('x-powered-by');
-  app.use(express.json({ limit: JSON_BODY_LIMIT_BYTES }));
+  app.use(express.json({ limit: resolveJsonBodyLimitBytes() }));
   app.use(jsonBodyErrorHandler);
 
   const handlers = makeRequestHandler(deps);
