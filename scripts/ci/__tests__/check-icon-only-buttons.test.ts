@@ -163,6 +163,39 @@ describe('an icon-only button with no aria-label is reported', () => {
     expect(hits).toHaveLength(1);
     expect(hits[0]?.size).toBe('icon');
   });
+
+  it('reports `x || ""` — the fallback is a decidable empty literal', () => {
+    expect(
+      findViolations('a.tsx', '<Button size="icon" aria-label={x || ""}><Trash2 /></Button>')
+    ).toHaveLength(1);
+  });
+
+  it('reports `x || undefined` — the "omit the attribute when falsy" idiom', () => {
+    expect(
+      findViolations('a.tsx', '<Button size="icon" aria-label={x || undefined}><Trash2 /></Button>')
+    ).toHaveLength(1);
+  });
+
+  it('reports a ternary branch that is itself `x || ""`', () => {
+    expect(
+      findViolations(
+        'a.tsx',
+        '<Button size="icon" aria-label={cond ? (x || "") : "Save"}><Trash2 /></Button>'
+      )
+    ).toHaveLength(1);
+  });
+
+  it('reports a chained `a || b || ""`', () => {
+    expect(
+      findViolations('a.tsx', '<Button size="icon" aria-label={a || b || ""}><Trash2 /></Button>')
+    ).toHaveLength(1);
+  });
+
+  it('reports `||` whose left is a parenthesised `??` expression', () => {
+    expect(
+      findViolations('a.tsx', '<Button size="icon" aria-label={(x ?? y) || ""}><Trash2 /></Button>')
+    ).toHaveLength(1);
+  });
 });
 
 describe('a labelled or non-icon button is not reported', () => {
@@ -261,6 +294,21 @@ describe('a labelled or non-icon button is not reported', () => {
   it('a plain native <button> is out of scope for this guard', () => {
     expect(
       findViolations('a.tsx', '<button className="icon-button"><Trash2 /></button>')
+    ).toHaveLength(0);
+  });
+
+  it('`cond || "Close"` is clean — the fallback genuinely labels the button', () => {
+    expect(
+      findViolations(
+        'a.tsx',
+        '<Button size="icon" aria-label={cond || "Close"}><Trash2 /></Button>'
+      )
+    ).toHaveLength(0);
+  });
+
+  it('`"Close" || x` is clean — a decidably-truthy left short-circuits the whole expression', () => {
+    expect(
+      findViolations('a.tsx', '<Button size="icon" aria-label={"Close" || x}><Trash2 /></Button>')
     ).toHaveLength(0);
   });
 });
