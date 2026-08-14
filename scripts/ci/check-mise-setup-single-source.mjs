@@ -13,12 +13,11 @@
  * locally, because a composite action's steps reject `continue-on-error` and so
  * cannot attempt a nested `uses:` and recover.
  *
- * That makes the version the only lever, and a version pinned in six hand-copied
- * `uses:` lines is a lever with six handles. The wrapper collapses them to one;
- * this guard is what keeps the seventh workflow from growing its own. Both
- * halves matter — a repo where five workflows use the wrapper and one still
- * calls the action directly has the bug back on that one, silently, because the
- * other five are green.
+ * That makes the version the only lever, and a version hand-copied into every
+ * lane's `uses:` line is a lever with one handle per lane. The wrapper collapses
+ * them to one; this guard is what keeps the next lane from growing its own. Both
+ * halves matter — a repo where every lane but one uses the wrapper has the bug
+ * back on that one, silently, because the rest are green.
  *
  * WHAT IT REFUSES, and why each is a violation rather than a shrug:
  *

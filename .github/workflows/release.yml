@@ -34,7 +34,7 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - uses: jdx/mise-action@v4
+      - uses: ./.github/actions/setup-mise
 
       - name: Configure git
         run: |
