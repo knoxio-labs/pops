@@ -635,6 +635,7 @@ describe('the body-limit override, wired through the real middleware', () => {
       vision: null,
       purchasesDb: opened,
       version: '0.0.1-test',
+      selfBaseUrl: 'http://localhost:3013',
     });
 
     const res = await request(overridden)
