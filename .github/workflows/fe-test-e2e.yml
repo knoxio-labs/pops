@@ -10,19 +10,25 @@ name: E2E Tests
 # first, which discovers every pillar's `./manifest` export by importing its
 # built `dist/contract/manifest.js`. A pillar the shell does not depend on
 # still has to be built, or that server never starts and BOTH projects fail.
+#
+# The filter below is that same closure, not the shell's. Narrowing it to the
+# shell and the app bundles leaves every non-app pillar file — a manifest under
+# `pillars/<id>/src/`, anything its `build` script reads — able to break both
+# webServers while this workflow reports nothing at all, and the failure then
+# surfaces in the merge queue where it ejects the whole batch. `pillars/**` and
+# `libs/**` are the two roots the build step's `--filter` expressions resolve
+# to; the root configs are what `tsc -b` reads underneath them.
 on:
   push:
     branches: [main]
   pull_request:
     paths:
-      - "pillars/shell/**"
-      - "pillars/*/app/**"
-      - "libs/navigation/**"
-      - "libs/module-registry/**"
-      - "libs/sdk/**"
-      - "libs/types/**"
-      - "libs/ui/**"
+      - "pillars/**"
+      - "libs/**"
       - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "tsconfig.base.json"
+      - "tsconfig.build.json"
       - ".github/workflows/fe-test-e2e.yml"
   merge_group:
   workflow_dispatch:

@@ -272,14 +272,12 @@ jobs:
                 "scripts/ci/smoke-image.mjs"
               ],
               "E2E Tests": [
-                "pillars/shell/**",
-                "pillars/*/app/**",
-                "libs/navigation/**",
-                "libs/module-registry/**",
-                "libs/sdk/**",
-                "libs/types/**",
-                "libs/ui/**",
+                "pillars/**",
+                "libs/**",
                 "pnpm-lock.yaml",
+                "pnpm-workspace.yaml",
+                "tsconfig.base.json",
+                "tsconfig.build.json",
                 ".github/workflows/fe-test-e2e.yml"
               ]
             };
