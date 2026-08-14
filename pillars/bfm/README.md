@@ -7,8 +7,9 @@ It listens on port **3014**.
 
 It owns a database — the device allow-list, described under
 [Persistence](#persistence) below — which makes it a data pillar by kind
-(ADR-035). Its first mobile surface is the transaction list and detail under
-`/mobile/finance/*`, behind the perimeter that guards it — and the whole path a
+(ADR-035). Its mobile surfaces are the transaction list and detail under
+`/mobile/finance/*` and the receipt upload under `/mobile/purchases/*`, behind
+the perimeter that guards them — and the whole path a
 phone takes to get behind that perimeter is here too: the operator surface that
 mints a pairing code, and the exchange that spends it for a device identity.
 See
@@ -22,20 +23,21 @@ It also holds a service-account credential and one way to spend it — see
 [Reaching sibling pillars](#reaching-sibling-pillars) and
 [`src/api/pillars/README.md`](src/api/pillars/README.md).
 
-| Surface                                | What it does                                                                        |
-| -------------------------------------- | ----------------------------------------------------------------------------------- |
-| `GET /health`                          | Liveness shape. Served from the ts-rest contract, so it cannot drift from the doc.  |
-| `GET /openapi`                         | The committed contract projection, served verbatim so peers build a route map.      |
-| `POST /devices/pair`                   | Spends a pairing code for a device identity. Unauthenticated by definition.         |
-| `POST /devices/challenge`              | Mints a single-use nonce for a refresh. Carries no credential and needs none.       |
-| `POST /devices/refresh`                | Rotates a refresh token against a Secure Enclave signature. Detects reuse.          |
-| `POST /operator/pairing/codes`         | Mints a single-use pairing code. The plaintext is returned once and never again.    |
-| `GET /operator/devices`                | Paired handsets, revoked ones included. Never returns a token or a key.             |
-| `DELETE /operator/devices/:id`         | Soft-revokes, and kills the device's refresh-token family in the same transaction.  |
-| `GET /mobile/bootstrap`                | What the app should render, and who bfm says it is talking to. See below.           |
-| `GET /mobile/finance/transactions`     | One cursor-paginated page of list rows — see [The mobile shape](#the-mobile-shape). |
-| `GET /mobile/finance/transactions/:id` | The fuller record behind one row, for the detail screen.                            |
-| `/mobile/*`                            | Everything the phone calls, gated by `requireDevice`.                               |
+| Surface                                | What it does                                                                         |
+| -------------------------------------- | ------------------------------------------------------------------------------------ |
+| `GET /health`                          | Liveness shape. Served from the ts-rest contract, so it cannot drift from the doc.   |
+| `GET /openapi`                         | The committed contract projection, served verbatim so peers build a route map.       |
+| `POST /devices/pair`                   | Spends a pairing code for a device identity. Unauthenticated by definition.          |
+| `POST /devices/challenge`              | Mints a single-use nonce for a refresh. Carries no credential and needs none.        |
+| `POST /devices/refresh`                | Rotates a refresh token against a Secure Enclave signature. Detects reuse.           |
+| `POST /operator/pairing/codes`         | Mints a single-use pairing code. The plaintext is returned once and never again.     |
+| `GET /operator/devices`                | Paired handsets, revoked ones included. Never returns a token or a key.              |
+| `DELETE /operator/devices/:id`         | Soft-revokes, and kills the device's refresh-token family in the same transaction.   |
+| `GET /mobile/bootstrap`                | What the app should render, and who bfm says it is talking to. See below.            |
+| `GET /mobile/finance/transactions`     | One cursor-paginated page of list rows — see [The mobile shape](#the-mobile-shape).  |
+| `GET /mobile/finance/transactions/:id` | The fuller record behind one row, for the detail screen.                             |
+| `POST /mobile/purchases/receipts`      | Hands a captured receipt to `purchases` — see [The mobile write](#the-mobile-write). |
+| `/mobile/*`                            | Everything the phone calls, gated by `requireDevice`.                                |
 
 `/health` answers without a database round-trip, which is why an unreachable
 `bfm.db` still reads as live.
@@ -267,6 +269,36 @@ bfm asks finance for one row more than the page. That extra row's existence is
 what proves another page exists — asking for a total instead would be a second
 count query per scroll tick, and a total that is stale the moment it is read.
 
+## The mobile write
+
+`POST /mobile/purchases/receipts` is the only verb on this pillar that is not a
+read on the phone's behalf, and what it may be is fixed by
+[ADR-046](../../docs/architecture/adr-046-mobile-write-surface-is-ingestion-only.md):
+the mobile surface accepts **ingestion** — content the handset captured — and
+never a mutation of a record a pillar already holds. Four properties follow,
+and each is asserted in `src/api/__tests__/mobile-receipts.test.ts` or
+`src/contract/__tests__/mobile-verbs.test.ts`:
+
+- **The bytes travel unchanged.** `purchases` content-addresses them, which is
+  what makes a retry idempotent, so bfm mints no idempotency key and re-encodes
+  nothing. A second dedup rule here would be two purchases for one receipt the
+  first time the two disagreed.
+- **All three producer outcomes are a `200`.** `created`, `needs-review` and
+  `unreadable` are told apart by the body's `kind`, because all three are
+  purchases having read the upload and answered. Only a failure to get an
+  answer at all is a non-200, through the same upstream mapping the read routes
+  use. The mobile `needs-review` deliberately carries the problems and not the
+  full extracted reading: reviewing one is a side-by-side against the
+  photograph, which is the operator surface's job.
+- **The size ceiling is bfm's own.** `MOBILE_UPLOAD_MAX_BYTES` (12mb) is
+  mounted on that one path — every other route keeps Express's 100kb default —
+  and an oversized body is refused here, in the shape the contract declares,
+  rather than buffered across the internal network for `purchases` to refuse at
+  20mb.
+- **The grant is a write grant.** `purchases.receipt` was added to
+  `BFM_SERVICE_ACCOUNT_SCOPES` for this and authorises nothing else in that
+  pillar. See [Provisioning the service account](#provisioning-the-service-account).
+
 ## Persistence
 
 `bfm.db` is the fleet's answer to "which phones may reach it". Three tables in
@@ -362,21 +394,31 @@ registration is a separate mechanism and still goes through the
 
 ## What deliberately does not live here
 
-- **Writes.** The mobile surface is read-only; mutations are tracked
-  separately. Nothing under `/mobile` uses a verb other than `GET`.
+- **Mutations of anything a pillar already holds.** The mobile surface accepts
+  writes, and only ingestion: content the handset captured, handed to the
+  pillar that owns it. `PUT`, `PATCH` and `DELETE` are forbidden under
+  `/mobile` permanently, which is
+  [ADR-046](../../docs/architecture/adr-046-mobile-write-surface-is-ingestion-only.md)
+  and is enforced on the contract by
+  `src/contract/__tests__/mobile-verbs.test.ts` rather than by this sentence. A
+  phone that needs to edit a record is asking for the operator surface, which
+  is behind Cloudflare Access for a reason.
 - **The bootstrap route and the nginx route.** `GET /mobile/bootstrap`
   (POPS-1378) and the nginx route plus the compiled pillar roster (POPS-1386)
   are each their own ticket. Revocation here sets `devices.revokedAt`, which is
   the column `requireDevice` already reads — so "a revoked phone fails its very
   next request" is live for every route under `/mobile/*`, including the two
   that exist.
-- **Enforcement of the grant anywhere except `registry` and `finance`.** Those
-  two check the presented `X-API-Key` against the account behind it and refuse
-  an operation the grant does not cover. `inventory`, `media`, `lists`,
-  `cerebrum`, `purchases`, `ai`, `food`, `orchestrator`, `documents` and the
-  Rust `contacts` pillar still serve any in-network caller, credential or not —
-  each has its own adoption ticket. bfm calls only `finance`, so its own grant
-  is enforced end to end today.
+- **Enforcement of the grant anywhere except `registry`, `finance` and
+  `purchases`.** Those three check the presented `X-API-Key` against the
+  account behind it and refuse an operation the grant does not cover.
+  `inventory`, `media`, `lists`, `cerebrum`, `ai`, `food`, `orchestrator`,
+  `documents` and the Rust `contacts` pillar still serve any in-network caller,
+  credential or not — each has its own adoption ticket. bfm calls only
+  `finance` and `purchases`, so both legs of its own grant are enforced. The
+  `purchases` leg carries one caveat: that pillar's `requireCredential` is
+  `false`, so an upload would be admitted even if the grant were missing. The
+  scope is listed as if it were already on, because it will be.
 
 ## Reaching sibling pillars
 
@@ -399,7 +441,7 @@ and send it in that header, against the registry's admin surface reachable
 externally through the shell proxy:
 
 ```bash
-curl -sS -X POST https://pops.local/registry-api/service-accounts -H 'Content-Type: application/json' -H "cf-access-jwt-assertion: $ACCESS_JWT" -d '{"name":"bfm","scopes":["finance.transactions"]}'
+curl -sS -X POST https://pops.local/registry-api/service-accounts -H 'Content-Type: application/json' -H "cf-access-jwt-assertion: $ACCESS_JWT" -d '{"name":"bfm","scopes":["finance.transactions","purchases.receipt"]}'
 ```
 
 Two deployment shapes let a bare `curl` through, which is why this can work on
@@ -424,6 +466,18 @@ a single process.
 Rotate by minting a replacement, swapping the file, restarting, and only then
 revoking the old id (`POST /service-accounts/:id/revoke`) — in that order,
 since revocation takes effect on the next request.
+
+**Widening the grant is a rotation, not an edit.** The registry's admin surface
+has exactly three operations — list, create, revoke — so there is no way to add
+a scope to a live account. An account provisioned before a scope was added to
+`BFM_SERVICE_ACCOUNT_SCOPES` keeps the grant it was minted with, and the new
+leg answers `403` naming the missing scope on a producer that enforces (POPS-1990).
+The operator step is the rotation above, with the fuller scope list in the
+create call. Until it runs, the receipt upload still works against today's
+`purchases`, whose `requireCredential` is `false` — which is precisely the
+failure mode worth knowing about, because it means a missing grant is invisible
+until that flag flips. Prove the grant rather than the flag: set
+`requireCredential` to `true` locally and upload once.
 
 ## Deployment
 
@@ -500,8 +554,10 @@ pillars/bfm/
         ├── middleware/identity.ts the operator principal, and the two legs it drops
         ├── pillars/               calling siblings — has its own README
         ├── finance/               the finance leg: paging, wire validation, cursor
+        ├── purchases/             the purchases leg: the receipt upload and its wire
         ├── shared/errors.ts       HTTP-shaped domain errors
         └── rest/                  ts-rest handler composers
+            ├── payload-too-large.ts the body cap's refusal, in the declared shape
             └── upstream-error.ts  gateway failure → the status the phone sees
 ```
 

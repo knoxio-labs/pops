@@ -19,6 +19,7 @@ public struct MobileFeature: RawRepresentable, Hashable, Sendable {
     }
 
     public static let transactions = MobileFeature(rawValue: "transactions")
+    public static let receiptCapture = MobileFeature(rawValue: "receipt-capture")
 }
 
 /// How reachable the BFM found the pillar behind a feature.

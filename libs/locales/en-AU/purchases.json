@@ -118,6 +118,7 @@
   "receipts.review.kind.no-lines": "No lines were read at all",
   "receipts.review.kind.negative-line": "A line came back negative",
   "receipts.review.kind.sum-mismatch": "The parts do not sum to the stated total",
+  "receipts.review.kind.ambiguous-tax": "The parts add up two different ways",
   "receipts.review.kind.damaged": "The receipt is damaged or obscured",
   "receipts.extracted.heading": "What the model read",
   "receipts.extracted.merchant": "Merchant",

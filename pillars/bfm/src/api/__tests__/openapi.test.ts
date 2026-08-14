@@ -131,6 +131,7 @@ describe('GET /openapi', () => {
       '/mobile/bootstrap',
       '/mobile/finance/transactions',
       '/mobile/finance/transactions/{id}',
+      '/mobile/purchases/receipts',
     ]);
   });
 
@@ -140,6 +141,9 @@ describe('GET /openapi', () => {
     expect(body.paths?.['/mobile/bootstrap']?.['get']?.operationId).toBe('mobile.bootstrap');
     expect(body.paths?.['/mobile/finance/transactions']?.['get']?.operationId).toBe(
       'mobileFinance.listTransactions'
+    );
+    expect(body.paths?.['/mobile/purchases/receipts']?.['post']?.operationId).toBe(
+      'mobilePurchases.uploadReceipt'
     );
   });
 });

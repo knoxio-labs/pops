@@ -40,11 +40,45 @@ describe('raw palette utilities are reported', () => {
       'data-[state=open]:bg-rose-500',
     ],
     ['an opacity modifier', "const c = 'border-violet-500/20';", 'border-violet-500/20'],
+    ['an arbitrary opacity modifier', '<p className="bg-red-500/[0.35]" />', 'bg-red-500/[0.35]'],
     ['a divide utility', '<ul className="divide-slate-100" />', 'divide-slate-100'],
     ['a gradient stop', '<h1 className="from-indigo-500" />', 'from-indigo-500'],
     ['a print variant', '<td className="print:border-gray-300" />', 'print:border-gray-300'],
+    // The important modifier is the bypass this suite exists to keep closed.
+    // Tailwind v4 writes it as a suffix and still accepts the v3 prefix, and
+    // the expected text is the WHOLE utility: a matcher that reported the bare
+    // `bg-amber-500` out of `dark:!bg-amber-500` would quote a string that is
+    // not in the file, so `toContain` on the bare form is not the assertion.
+    ['a prefixed important modifier', '<p className="!bg-amber-500" />', '!bg-amber-500'],
+    ['a suffixed important modifier', '<p className="bg-amber-500!" />', 'bg-amber-500!'],
+    [
+      'an important modifier under a variant',
+      '<p className="dark:!text-emerald-400" />',
+      'dark:!text-emerald-400',
+    ],
+    [
+      'an important modifier with an opacity modifier',
+      '<p className="hover:!bg-amber-500/50" />',
+      'hover:!bg-amber-500/50',
+    ],
+    // Colour properties that share a prefix with a non-colour utility, or that
+    // Tailwind v4 added. Each was invisible to the matcher before.
+    ['a side-specific border', '<p className="border-t-gray-200" />', 'border-t-gray-200'],
+    ['a border axis', '<p className="border-x-red-500" />', 'border-x-red-500'],
+    ['a logical border side', '<p className="border-s-rose-400" />', 'border-s-rose-400'],
+    ['a ring offset', '<p className="ring-offset-indigo-500" />', 'ring-offset-indigo-500'],
+    ['a v4 text shadow', '<p className="text-shadow-violet-500" />', 'text-shadow-violet-500'],
+    ['a v4 inset shadow', '<p className="inset-shadow-sky-500" />', 'inset-shadow-sky-500'],
+    ['a v4 inset ring', '<p className="inset-ring-lime-500" />', 'inset-ring-lime-500'],
   ])('%s', (_label, source, expected) => {
     expect(texts(source)).toContain(expected);
+  });
+
+  it('reports a shared-prefix property once, not twice', () => {
+    expect(texts('<p className="text-shadow-violet-500 ring-offset-indigo-500" />')).toEqual([
+      'text-shadow-violet-500',
+      'ring-offset-indigo-500',
+    ]);
   });
 
   it('reports every occurrence on a line, not just the first', () => {
@@ -73,6 +107,9 @@ describe('literal colours inside arbitrary values are reported', () => {
     ['hex', '<h1 className="text-[#ff0000]" />'],
     ['rgb', '<h1 className="bg-[rgb(0,0,0)]" />'],
     ['hsl', '<h1 className="bg-[hsl(220,70%,55%)]" />'],
+    ['a CSS named colour', '<h1 className="text-[red]" />'],
+    ['a CSS named colour under a variant', '<h1 className="dark:bg-[tomato]" />'],
+    ['a CSS named colour with an important modifier', '<h1 className="!fill-[rebeccapurple]" />'],
   ])('%s', (_label, source) => {
     expect(findViolations('a.tsx', source).filter((v) => v.kind === 'literal')).toHaveLength(1);
   });
@@ -87,6 +124,14 @@ describe('token-only source is silent', () => {
     'grid-cols-[auto_1fr] transition-[color,box-shadow]',
     '--stat-orange-foreground: oklch(0.2 0.04 50);',
     'shadow-[0_0_20px_-12px_color-mix(in_oklch,var(--warning)_40%,transparent)]',
+    // The widened matcher must not start reporting things that are not colours:
+    // border sides also take a width, `transparent` and `currentColor` pin no
+    // hue, and a shade is exactly two or three digits with nothing after it.
+    'border-t-2 border-x-0 border-b border-s-4',
+    'bg-transparent text-[currentColor] fill-current ring-offset-2',
+    'text-[length:14px] shadow-[inset_0_1px_0_var(--border)]',
+    'bg-red-5000 bg-red-500-foo',
+    '--brand-red-500: oklch(0.6 0.2 25);',
   ])('%s', (source) => {
     expect(findViolations('a.tsx', source)).toEqual([]);
   });
