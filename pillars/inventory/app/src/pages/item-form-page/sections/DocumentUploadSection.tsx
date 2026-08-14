@@ -1,4 +1,4 @@
-import { FileText } from 'lucide-react';
+import { FileText, Trash2 } from 'lucide-react';
 
 import { Button } from '@pops/ui';
 
@@ -64,7 +64,7 @@ export function DocumentUploadSection({
             loading={isDeleting}
             loadingText="Deleting..."
           >
-            Delete
+            <Trash2 className="h-3.5 w-3.5 mr-1.5" /> Delete
           </Button>
         </div>
       )}

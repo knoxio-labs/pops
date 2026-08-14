@@ -15,6 +15,7 @@
  *     │    └─ purchase_item_notes       verbatim merchant prose, ordered
  *     ├─ purchase_charges               every charge, matched or not
  *     │    ├─ purchase_charge_links     charge → finance transaction
+ *     │    ├─ purchase_link_rejections  pairings a human ruled out
  *     │    └─ purchase_item_allocations which charge paid for which line
  *     └─ purchase_documents             evidence → documents
  *
@@ -36,6 +37,7 @@ import type {
   purchaseCharges as purchaseChargesTable,
   purchaseChargeLinks as purchaseChargeLinksTable,
   purchaseItemAllocations as purchaseItemAllocationsTable,
+  purchaseLinkRejections as purchaseLinkRejectionsTable,
 } from './schema/charges.js';
 import type { purchaseDocuments as purchaseDocumentsTable } from './schema/documents.js';
 import type {
@@ -52,7 +54,12 @@ import type {
 import type { purchaseMatchRules as purchaseMatchRulesTable } from './schema/rules.js';
 import type { purchaseSources as purchaseSourcesTable } from './schema/sources.js';
 
-export { purchaseChargeLinks, purchaseCharges, purchaseItemAllocations } from './schema/charges.js';
+export {
+  purchaseChargeLinks,
+  purchaseCharges,
+  purchaseItemAllocations,
+  purchaseLinkRejections,
+} from './schema/charges.js';
 export { purchaseDocuments } from './schema/documents.js';
 export {
   purchaseItemNotes,
@@ -81,6 +88,8 @@ export type PurchaseChargeLinkRow = InferSelectModel<typeof purchaseChargeLinksT
 export type PurchaseChargeLinkInsert = InferInsertModel<typeof purchaseChargeLinksTable>;
 export type PurchaseItemAllocationRow = InferSelectModel<typeof purchaseItemAllocationsTable>;
 export type PurchaseItemAllocationInsert = InferInsertModel<typeof purchaseItemAllocationsTable>;
+export type PurchaseLinkRejectionRow = InferSelectModel<typeof purchaseLinkRejectionsTable>;
+export type PurchaseLinkRejectionInsert = InferInsertModel<typeof purchaseLinkRejectionsTable>;
 export type PurchaseMatchRuleRow = InferSelectModel<typeof purchaseMatchRulesTable>;
 export type PurchaseMatchRuleInsert = InferInsertModel<typeof purchaseMatchRulesTable>;
 export type PurchaseDocumentRow = InferSelectModel<typeof purchaseDocumentsTable>;

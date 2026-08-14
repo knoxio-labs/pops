@@ -1,4 +1,5 @@
 import AppCore
+import FeatureReceiptCapture
 import FeatureTransactions
 
 /// The features this binary can draw, and the order to fall back to before the
@@ -17,6 +18,14 @@ import FeatureTransactions
 ///   older build meets a newer federation and shows what it knows how to show.
 /// - A feature present here that the BFM does not name is not shown. A newer
 ///   build meets a pillar that has gone away and says so.
+///
+/// `FeatureReceiptCapture` is listed ahead of the BFM ever naming it: nothing
+/// in this build can decide a feature is available on its own, so listing it
+/// here early is inert until `POST /mobile/receipts` exists and the BFM
+/// starts saying so.
 internal enum RootFeature {
-    internal static let renderable: [MobileFeature] = [FeatureTransactions.feature]
+    internal static let renderable: [MobileFeature] = [
+        FeatureTransactions.feature,
+        FeatureReceiptCapture.feature,
+    ]
 }

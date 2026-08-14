@@ -7,7 +7,7 @@ interface ReportSummaryProps {
 
 export function ReportSummary({ totalItems, totalValue }: ReportSummaryProps) {
   return (
-    <div className="grid grid-cols-2 gap-6 mb-8 p-6 rounded-2xl bg-app-accent/10 border-2 border-app-accent/10 print:bg-transparent print:border print:border-gray-300 print:rounded-none">
+    <div className="grid grid-cols-2 gap-6 mb-8 p-6 rounded-2xl bg-app-accent/10 border-2 border-app-accent/10 print:bg-transparent print:border print:border-print-rule print:rounded-none">
       <div>
         <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1">
           Total Items

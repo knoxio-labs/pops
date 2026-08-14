@@ -6,7 +6,7 @@ That is the entire point of it. The real visual design is being produced elsewhe
 
 ## The two rules
 
-Both apply to every module under `Packages/`, not just to this one.
+Both apply to every module under `Packages/` and to `App/`, not just to this one.
 
 **A feature may not name a colour, a type size or a gap.** Not `Color.red`, not `#0B5FD0`, not `.padding(16)`, not `.font(.system(size: 17))`. If a token is missing, add it here and use it there. Inlining it at the call site is the specific failure this package exists to prevent, because it survives review, compiles, looks right, and is invisible until the redesign misses it.
 
@@ -20,7 +20,9 @@ The check lives in this package's test target and still reaches the others becau
 
 Generated sources are the one exclusion. A generator makes none of these choices, and an OpenAPI enum case named `secondary` reaches its own call sites as `.secondary`, which no text rule can tell from a colour — in the one place a violation cannot be fixed at the call site. Hand-written code cannot hide there: `scripts/swift-sources.sh check` fails on any unmarked file inside a `Generated` directory.
 
-The scan stops at `Packages/`. `App/` (POPS-1542) and `Tools/` (POPS-1515) are outside it.
+`App/` is scanned too, and is named explicitly rather than discovered: it is an Xcode target, not a SwiftPM package, so there is no `Package.swift` for the discovery above to find. It gets the same non-empty guard the module roots get — `App/` yielding no Swift means it moved, not that it is clean. It is in scope because it is the composition root, which makes it the likeliest place for a stray `.padding(16)` to land unnoticed.
+
+`Tools/` remains outside the scan (POPS-1515). It is a separate tree with a separate gap and is not folded in here.
 
 ## Copy
 

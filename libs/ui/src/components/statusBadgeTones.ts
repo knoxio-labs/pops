@@ -3,9 +3,9 @@
  *
  * These map semantic intents (success, warning, info, etc.) onto the design
  * tokens defined in `theme/globals.css`. Components like `ConditionBadge`,
- * `WarrantyBadge`, and `TypeBadge` use these instead of hardcoded Tailwind
- * colour utilities (e.g. `bg-emerald-500/10`) so palette changes propagate
- * through the token layer and dark mode is handled uniformly.
+ * `WarrantyBadge`, and `TypeBadge` use these instead of raw Tailwind palette
+ * utilities so palette changes propagate through the token layer and dark
+ * mode is handled uniformly.
  *
  * Pattern matches the established usage in this folder:
  *   `bg-<tone>/10 text-<tone> border-<tone>/20 dark:text-<tone>/80`

@@ -14,9 +14,14 @@
  * satisfy every zod rule and still be rejected on INSERT.
  */
 import request from 'supertest';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { openTempDb, seedAmazonSource } from '../../db/__tests__/helpers.js';
+import {
+  ARRANGEMENT_TIMEOUT_MS,
+  openTempDb,
+  seedAmazonSource,
+  snapshotTempDb,
+} from '../../db/__tests__/helpers.js';
 import { ORDER_HISTORY_CSV } from '../../ingest/amazon/__tests__/__fixtures__/order-history.js';
 import { parseAmazonOrderHistory } from '../../ingest/amazon/order-history.js';
 import { runSweep } from '../../reconcile/sweep.js';
@@ -26,55 +31,109 @@ import { __resetPillarRegistryCache } from '../pillars/registry.js';
 
 import type { Express } from 'express';
 
+import type { TempDb, TempDbTemplate } from '../../db/__tests__/helpers.js';
 import type { OpenedPurchasesDb } from '../../db/index.js';
 
 let opened: OpenedPurchasesDb;
 let cleanup: () => void;
 let app: Express;
 
-beforeEach(() => {
-  const temp = openTempDb();
-  opened = temp.opened;
-  cleanup = temp.cleanup;
-  seedAmazonSource(opened);
-  __resetPillarRegistryCache();
-  app = createPurchasesApiApp({
+function appOver(db: OpenedPurchasesDb): Express {
+  return createPurchasesApiApp({
     vision: null,
-    purchasesDb: opened,
+    purchasesDb: db,
     version: '1.2.3',
     selfBaseUrl: 'http://localhost:3013',
   });
-});
+}
 
-afterEach(() => {
-  cleanup();
-  __resetPillarRegistryCache();
-});
+/**
+ * Give every test in the enclosing block its own database and app.
+ *
+ * The registry cache is process-wide, so it is reset around each test
+ * whichever database the test starts from.
+ */
+function useDb(makeDb: () => TempDb): void {
+  beforeEach(() => {
+    const temp = makeDb();
+    opened = temp.opened;
+    cleanup = temp.cleanup;
+    __resetPillarRegistryCache();
+    app = appOver(opened);
+  });
+
+  afterEach(() => {
+    cleanup();
+    __resetPillarRegistryCache();
+  });
+}
+
+/** An empty database with only the Amazon source registered. */
+function useEmptyDb(): void {
+  useDb(() => {
+    const temp = openTempDb();
+    seedAmazonSource(temp.opened);
+    return temp;
+  });
+}
+
+/** A private copy of the database the whole export was POSTed into. */
+function useBackfilledDb(): void {
+  useDb(() => backfilled.open());
+}
 
 const { orders } = parseAmazonOrderHistory(ORDER_HISTORY_CSV);
 
-/** POST every parsed order, returning each status code in order. */
-async function postAll(): Promise<number[]> {
+/** POST every parsed order through `target`, returning each status in order. */
+async function postAll(target: Express): Promise<number[]> {
   const statuses: number[] = [];
   for (const order of orders) {
-    const response = await request(app).post('/purchases').send(order);
+    const response = await request(target).post('/purchases').send(order);
     statuses.push(response.status);
   }
   return statuses;
 }
 
+/**
+ * The backfill itself, run once for the file.
+ *
+ * Six of the tests below need an already-backfilled database and each used
+ * to POST the whole export again to get one, which is the same HTTP work
+ * repeated six times over — contention that showed up as unrelated tests in
+ * this file missing vitest's default timeout under load. Copying the
+ * finished database instead costs a file copy, and each copy is private, so
+ * the two tests that sweep still cannot see each other's writes.
+ */
+let backfilled: TempDbTemplate;
+let backfillStatuses: number[];
+
+beforeAll(async () => {
+  const temp = openTempDb();
+  try {
+    seedAmazonSource(temp.opened);
+    __resetPillarRegistryCache();
+    backfillStatuses = await postAll(appOver(temp.opened));
+    backfilled = snapshotTempDb(temp.opened);
+  } finally {
+    // An arrangement that throws half way must not leave a database handle
+    // and a primed registry cache behind for the tests that follow to trip
+    // over — a leak here would read as a flake in whatever ran next.
+    temp.cleanup();
+    __resetPillarRegistryCache();
+  }
+}, ARRANGEMENT_TIMEOUT_MS);
+
 describe('the parser output is acceptable to the real API', () => {
-  it('creates every parsed order', async () => {
+  useBackfilledDb();
+
+  it('creates every parsed order', () => {
     // Zod-validating a payload is not the same as inserting it: NOT NULL,
     // the purchase_sources foreign key, the unique constraints and the
     // CHECKs all sit downstream of the schema.
-    const statuses = await postAll();
-    expect(statuses).toEqual(orders.map(() => 201));
+    expect(backfillStatuses).toEqual(orders.map(() => 201));
   });
 
   it('round-trips each order through GET with its lines and deliveries intact', async () => {
-    await postAll();
-
     const list = await request(app).get('/purchases').expect(200);
     expect(list.body.items).toHaveLength(orders.length);
 
@@ -90,9 +149,9 @@ describe('the parser output is acceptable to the real API', () => {
 
   it('reports a re-run as a conflict rather than duplicating the backfill', async () => {
     // The DSAR bundle is downloaded repeatedly over time, so a second run
-    // over the same file is the normal case, not an error.
-    await postAll();
-    const second = await postAll();
+    // over the same file is the normal case, not an error. This one really
+    // does re-POST the export: the second run is the thing under test.
+    const second = await postAll(app);
 
     expect(second).toEqual(orders.map(() => 409));
     const list = await request(app).get('/purchases').expect(200);
@@ -101,15 +160,21 @@ describe('the parser output is acceptable to the real API', () => {
 });
 
 describe('the ingest trigger', () => {
-  it('fires once per successful create', async () => {
-    const fired = vi.fn();
-    const triggered = createPurchasesApiApp({
+  useEmptyDb();
+
+  function appNotifying(onIngest: () => void): Express {
+    return createPurchasesApiApp({
       vision: null,
       purchasesDb: opened,
       version: '1.2.3',
       selfBaseUrl: 'http://localhost:3013',
-      onIngest: fired,
+      onIngest,
     });
+  }
+
+  it('fires once per successful create', async () => {
+    const fired = vi.fn();
+    const triggered = appNotifying(fired);
 
     const [order] = orders;
     if (order === undefined) throw new Error('fixture has no orders');
@@ -123,13 +188,7 @@ describe('the ingest trigger', () => {
     // re-run of a 748-order backfill would otherwise request 748 sweeps
     // for work that did not happen.
     const fired = vi.fn();
-    const triggered = createPurchasesApiApp({
-      vision: null,
-      purchasesDb: opened,
-      version: '1.2.3',
-      selfBaseUrl: 'http://localhost:3013',
-      onIngest: fired,
-    });
+    const triggered = appNotifying(fired);
 
     const [order] = orders;
     if (order === undefined) throw new Error('fixture has no orders');
@@ -142,14 +201,8 @@ describe('the ingest trigger', () => {
   it('does not fail the request when the trigger throws', async () => {
     // Reconciliation must never be the reason an ingest fails. The order is
     // already written by the time this runs.
-    const triggered = createPurchasesApiApp({
-      vision: null,
-      purchasesDb: opened,
-      version: '1.2.3',
-      selfBaseUrl: 'http://localhost:3013',
-      onIngest: () => {
-        throw new Error('sweep scheduling blew up');
-      },
+    const triggered = appNotifying(() => {
+      throw new Error('sweep scheduling blew up');
     });
 
     const [order] = orders;
@@ -162,9 +215,9 @@ describe('the ingest trigger', () => {
 });
 
 describe('a backfilled order reconciles', () => {
-  it('starts fully unexplained, because the export states no charges', async () => {
-    await postAll();
+  useBackfilledDb();
 
+  it('starts fully unexplained, because the export states no charges', async () => {
     const list = await request(app).get('/purchases').expect(200);
     const first = list.body.items[0];
     const detail = await request(app).get(`/purchases/${first.id}`).expect(200);
@@ -176,8 +229,6 @@ describe('a backfilled order reconciles', () => {
   });
 
   it('moves an order from unexplained to matched once its transaction exists', async () => {
-    await postAll();
-
     const list = await request(app).get('/purchases').expect(200);
     const target = list.body.items.find((p: { totalCents: number }) => p.totalCents > 0);
     expect(target).toBeDefined();
@@ -208,7 +259,6 @@ describe('a backfilled order reconciles', () => {
   });
 
   it('leaves every other order untouched by that one match', async () => {
-    await postAll();
     const list = await request(app).get('/purchases').expect(200);
     const target = list.body.items.find((p: { totalCents: number }) => p.totalCents > 0);
 

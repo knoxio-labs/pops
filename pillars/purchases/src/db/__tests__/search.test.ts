@@ -8,7 +8,8 @@
  */
 import { beforeEach, afterEach, describe, expect, it } from 'vitest';
 
-import { createPurchase, searchPurchases } from '../index.js';
+import { buildPurchasesManifest } from '../../api/manifest.js';
+import { createPurchase, searchPurchases, setPurchaseStatus, upsertSource } from '../index.js';
 import { amazonOrder, openTempDb, seedAmazonSource } from './helpers.js';
 
 import type { OpenedPurchasesDb } from '../index.js';
@@ -132,6 +133,47 @@ describe('the line-item adapter', () => {
   });
 });
 
+/**
+ * A hit is only useful if something can act on the URI it carries, and two
+ * separate declarations stand between an emitted URI and a shell that opens
+ * it: the manifest's `uri.types`, and `URI_ROUTE_MAP` in `libs/navigation`.
+ * This pins the first — the second is pinned in `pillars/purchases/app`, which
+ * is the package that can see the routes.
+ */
+describe('the URI every hit carries', () => {
+  function typesEmittedFor(text: string): string[] {
+    const types = searchPurchases(opened.db, text).map((hit) => {
+      const [, path = ''] = hit.uri.split('pops:');
+      const segments = path.split('/');
+      return `${segments[0] ?? ''}/${segments[1] ?? ''}`;
+    });
+    return [...new Set(types)].toSorted();
+  }
+
+  it('names a type the manifest declares, for every adapter', () => {
+    orderWithItems('a', 'Amazon', [{ name: 'Amazon Basics cable' }]);
+
+    const emitted = typesEmittedFor('amazon');
+
+    expect(emitted).toEqual(['purchases/purchase', 'purchases/purchase-item']);
+    for (const type of emitted) {
+      expect(buildPurchasesManifest('0.1.0').uri.types).toContain(type);
+    }
+  });
+
+  // ADR-012's id segment is one row's primary key, so a line's URI addresses
+  // the line. The order it opens travels in `data`, asserted above.
+  it('addresses the line itself, not the order it hangs off', () => {
+    const purchaseId = orderWithItems('a', 'Amazon', [{ name: 'Dosing funnel' }]);
+
+    const itemHit = searchPurchases(opened.db, 'dosing').find((hit) =>
+      hit.uri.includes('/purchase-item/')
+    );
+
+    expect(itemHit?.uri).not.toContain(purchaseId);
+  });
+});
+
 describe('both adapters together', () => {
   it('ranks across both adapters, not one adapter after the other', () => {
     // The order matches as a prefix; the line matches exactly.
@@ -241,5 +283,139 @@ describe('which matches survive to the response', () => {
     expect(dates).toHaveLength(25);
     expect(dates[0]).toBe('2026-01-01T00:40:00Z');
     expect(dates.at(-1)).toBe('2026-01-01T00:16:00Z');
+  });
+});
+
+/**
+ * What a scope excludes.
+ *
+ * A scope that was never applied answers with a superset, and a superset is
+ * exactly what a filter matching broadly looks like — so every assertion
+ * here names the rows that must NOT come back, not a count. Each seeds at
+ * least one order the scope excludes and one it keeps, both matching the
+ * text, so an ignored scope fails rather than passing by luck.
+ */
+describe('the orders a scope narrows to', () => {
+  beforeEach(() => {
+    upsertSource(opened.db, { id: 'woolworths', label: 'Woolworths' });
+  });
+
+  function orderFrom(
+    source: string,
+    checksum: string,
+    itemName: string,
+    orderedAt = '2026-02-02T01:41:21Z'
+  ): string {
+    return createPurchase(
+      opened.db,
+      amazonOrder({
+        source,
+        checksum,
+        sourceOrderId: checksum,
+        merchantEntityName: 'Vevor reseller',
+        orderedAt,
+        items: [
+          { ref: 'i0', name: itemName, sku: null, unitPriceCents: 1000, lineTotalCents: 1000 },
+        ],
+      })
+    );
+  }
+
+  function uris(hits: readonly { uri: string }[]): string[] {
+    return hits.map((hit) => hit.uri);
+  }
+
+  it('drops the orders outside the requested source', () => {
+    const amazon = orderFrom('amazon', 'a', 'Vevor grinder');
+    const woolworths = orderFrom('woolworths', 'w', 'Vevor grinder');
+
+    const hits = searchPurchases(opened.db, 'vevor', { sources: ['woolworths'] });
+
+    expect(uris(hits)).toContain(`pops:purchases/purchase/${woolworths}`);
+    expect(uris(hits)).not.toContain(`pops:purchases/purchase/${amazon}`);
+  });
+
+  it('scopes a line by the order it was bought on, since a line carries no source', () => {
+    // The item adapter is the half a scope applied to the order query alone
+    // would leave wide open, and a line carries no source of its own.
+    const amazon = orderFrom('amazon', 'a', 'Vevor grinder');
+    orderFrom('woolworths', 'w', 'Vevor grinder');
+
+    const hits = searchPurchases(opened.db, 'vevor grinder', { sources: ['woolworths'] });
+    const itemHits = hits.filter((hit) => hit.uri.includes('/purchase-item/'));
+
+    expect(itemHits).toHaveLength(1);
+    expect(itemHits[0]?.data['purchaseId']).not.toBe(amazon);
+  });
+
+  it('widens to every requested source rather than intersecting them', () => {
+    const amazon = orderFrom('amazon', 'a', 'Vevor grinder');
+    const woolworths = orderFrom('woolworths', 'w', 'Vevor grinder');
+
+    const hits = searchPurchases(opened.db, 'vevor', { sources: ['amazon', 'woolworths'] });
+
+    expect(uris(hits)).toContain(`pops:purchases/purchase/${amazon}`);
+    expect(uris(hits)).toContain(`pops:purchases/purchase/${woolworths}`);
+  });
+
+  it('narrows before the ranking, so the hit asked for is not crowded out by the ones excluded', () => {
+    // Every one of these scores the same, so the cap falls inside the tied
+    // run and recency decides it. The wanted order is the oldest, which puts
+    // it past the cap unless the scope has already removed the rest — a
+    // scope applied to the ranked list instead would answer with nothing.
+    const wanted = orderFrom('woolworths', 'w', 'Vevor grinder', '2026-01-01T00:00:00Z');
+    for (let index = 0; index < 30; index += 1) {
+      const minute = String(index + 1).padStart(2, '0');
+      orderFrom('amazon', `a-${String(index)}`, 'Vevor grinder', `2026-02-01T00:${minute}:00Z`);
+    }
+
+    const unfiltered = searchPurchases(opened.db, 'vevor');
+    const filtered = searchPurchases(opened.db, 'vevor', { sources: ['woolworths'] });
+
+    expect(uris(unfiltered)).not.toContain(`pops:purchases/purchase/${wanted}`);
+    expect(uris(filtered)).toContain(`pops:purchases/purchase/${wanted}`);
+  });
+
+  it('drops the orders outside the requested statuses', () => {
+    const awaiting = orderFrom('amazon', 'a', 'Vevor grinder');
+    const linked = orderFrom('amazon', 'b', 'Vevor grinder');
+    setPurchaseStatus(opened.db, linked, 'linked');
+
+    const hits = searchPurchases(opened.db, 'vevor', { statuses: ['linked'] });
+
+    expect(uris(hits)).toContain(`pops:purchases/purchase/${linked}`);
+    expect(uris(hits)).not.toContain(`pops:purchases/purchase/${awaiting}`);
+  });
+
+  it('bounds the window inclusively at both ends', () => {
+    const before = orderFrom('amazon', 'a', 'Vevor grinder', '2025-12-31T23:59:59Z');
+    const onFrom = orderFrom('amazon', 'b', 'Vevor grinder', '2026-01-01T00:00:00Z');
+    const onTo = orderFrom('amazon', 'c', 'Vevor grinder', '2026-01-31T00:00:00Z');
+    const after = orderFrom('amazon', 'd', 'Vevor grinder', '2026-02-01T00:00:01Z');
+
+    const hits = uris(
+      searchPurchases(opened.db, 'vevor', {
+        from: '2026-01-01T00:00:00Z',
+        to: '2026-01-31T00:00:00Z',
+      })
+    );
+
+    expect(hits).toContain(`pops:purchases/purchase/${onFrom}`);
+    expect(hits).toContain(`pops:purchases/purchase/${onTo}`);
+    expect(hits).not.toContain(`pops:purchases/purchase/${before}`);
+    expect(hits).not.toContain(`pops:purchases/purchase/${after}`);
+  });
+
+  it('leaves the answer alone when the scope is empty', () => {
+    orderFrom('amazon', 'a', 'Vevor grinder');
+    orderFrom('woolworths', 'w', 'Vevor grinder');
+
+    expect(searchPurchases(opened.db, 'vevor', {})).toEqual(searchPurchases(opened.db, 'vevor'));
+  });
+
+  it('answers nothing rather than everything when the scope excludes every match', () => {
+    orderFrom('amazon', 'a', 'Vevor grinder');
+
+    expect(searchPurchases(opened.db, 'vevor', { sources: ['woolworths'] })).toEqual([]);
   });
 });

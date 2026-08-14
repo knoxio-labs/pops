@@ -1,3 +1,5 @@
+import { Trash2 } from 'lucide-react';
+
 import {
   Button,
   Dialog,
@@ -54,7 +56,7 @@ export function DeleteDialog({ deleteConfirm, onConfirm, onCancel, isPending }: 
             onClick={onConfirm}
             disabled={isPending}
           >
-            Delete
+            <Trash2 className="h-4 w-4 mr-1.5" /> Delete
           </Button>
         </DialogFooter>
       </DialogContent>

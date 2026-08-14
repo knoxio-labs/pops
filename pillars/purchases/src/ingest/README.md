@@ -85,3 +85,20 @@ a wall clock to an instant. Both exist because two adapters needed them and
 the second one found the first one's bugs — a decimal comma that made every
 European receipt unreadable, and a currency symbol stripped by position that
 refused `-$4.95`. Add to them rather than reimplementing per source.
+
+## Shipping is allocated to lines, not just totalled at the order
+
+`purchase_items.allocatedShippingCents` feeds `landedCostCents()` — what a
+line actually cost to get into the house, not its sticker price. An adapter
+with an order- or shipment-level shipping figure and no per-line one (amazon,
+receipt) splits it across its lines with `allocation.ts`'s `allocateProRata`,
+pro-rata by each line's own `lineTotalCents`. Value, not unit count: a $400
+monitor and a $2 cable in the same box did not cost the same to ship, and
+value is the basis amazon's own `Total Amount` already uses for its other
+per-line allocations (tax, discounts).
+
+The allocation always sums back to the shipping figure it split, to the
+cent — `allocateProRata` uses the largest-remainder method in `BigInt` so
+the rounding residue lands deterministically rather than being dropped or
+invented. `woolworths` never sets this: its shipping is always zero
+(`woolworths/receipt.ts`), so there is nothing to allocate.

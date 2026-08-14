@@ -5,7 +5,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from '@tanstack/react-table';
-import { useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import type {
   ColumnDef,
@@ -58,12 +58,13 @@ export function useDataTable<TData, TValue>({
     filterFns,
   });
 
-  useMemo(() => {
-    if (onSelectionChange && enableRowSelection) {
-      const selectedRows = table.getFilteredSelectedRowModel().rows.map((row) => row.original);
-      onSelectionChange(selectedRows);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // Notifying after commit, not during render: `useMemo` ran this in the
+  // render pass, so a parent that stored the selection was updated while the
+  // table was still rendering.
+  useEffect(() => {
+    if (!onSelectionChange || !enableRowSelection) return;
+    const selectedRows = table.getFilteredSelectedRowModel().rows.map((row) => row.original);
+    onSelectionChange(selectedRows);
   }, [rowSelection, onSelectionChange, enableRowSelection, table]);
 
   return table;

@@ -5,6 +5,7 @@
  *
  * Spec: pillars/food/docs/prds/plan-entry-model
  */
+import { ArrowDown, ArrowUp, Pencil, Trash2 } from 'lucide-react';
 import { useState, type ReactElement } from 'react';
 
 import { Button } from '@pops/ui';
@@ -89,19 +90,21 @@ function SlotActions(props: {
     <>
       <Button
         variant="ghost"
-        size="sm"
+        size="icon"
         onClick={props.onEdit}
         data-testid={`slot-rename-btn-${props.slot.slug}`}
+        aria-label={`Rename ${props.slot.name}`}
       >
-        Rename
+        <Pencil className="h-3.5 w-3.5" />
       </Button>
       <Button
         variant="ghost"
-        size="sm"
+        size="icon"
         onClick={props.onDelete}
         data-testid={`slot-delete-${props.slot.slug}`}
+        aria-label={`Delete ${props.slot.name}`}
       >
-        Delete
+        <Trash2 className="h-3.5 w-3.5" />
       </Button>
     </>
   );
@@ -115,21 +118,21 @@ function ReorderButtons(props: {
     <>
       <Button
         variant="ghost"
-        size="sm"
+        size="icon"
         onClick={() => props.onReorder(Math.max(0, props.slot.displayOrder - 10))}
         data-testid={`slot-up-${props.slot.slug}`}
         aria-label={`Move ${props.slot.name} up`}
       >
-        ↑
+        <ArrowUp className="h-3.5 w-3.5" />
       </Button>
       <Button
         variant="ghost"
-        size="sm"
+        size="icon"
         onClick={() => props.onReorder(props.slot.displayOrder + 10)}
         data-testid={`slot-down-${props.slot.slug}`}
         aria-label={`Move ${props.slot.name} down`}
       >
-        ↓
+        <ArrowDown className="h-3.5 w-3.5" />
       </Button>
     </>
   );

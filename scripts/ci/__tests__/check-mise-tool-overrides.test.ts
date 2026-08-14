@@ -8,6 +8,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import {
   ALLOWED_UNIT_OVERRIDE_TOOLS,
+  ALLOWED_UNIT_OVERRIDE_TOOLS_BY_BASE,
   checkOverrides,
   COMMITTED_MISE_CONFIG_FILENAMES,
   discoverMiseEnvValues,
@@ -17,11 +18,32 @@ import {
   GITIGNORED_MISE_CONFIG_FILENAMES,
   parseToolsTable,
   REQUIRED_ROOT_TOOLS,
+  UNIT_BASES,
   WORKFLOWS_DIR,
 } from '../check-mise-tool-overrides.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..', '..');
+
+/**
+ * `git check-ignore` against {@link repoRoot}, run with the caller's git
+ * environment removed.
+ *
+ * Git exports `GIT_DIR` to its hooks as a path relative to the repository it
+ * resolved — inside a linked worktree that is `.git/worktrees/<name>`, which
+ * means nothing from this checkout's directory. A child that inherits it dies
+ * with `fatal: not a git repository` (exit 128), so this suite failed for
+ * every `scripts/`-touching push made from a worktree while passing when run
+ * directly. Nothing here wants the caller's git context: the repository under
+ * test is `repoRoot`.
+ */
+function checkIgnore(relPath: string): number | null {
+  const env = { ...process.env };
+  for (const key of Object.keys(env)) {
+    if (key.startsWith('GIT_')) delete env[key];
+  }
+  return spawnSync('git', ['check-ignore', '-q', relPath], { cwd: repoRoot, env }).status;
+}
 
 describe('parseToolsTable', () => {
   it('reads a plain [tools] table', () => {
@@ -175,8 +197,12 @@ describe('checkOverrides — degenerate tree (ADR-045)', () => {
       );
       const { violations, unitOverrides } = checkOverrides(root);
       expect(unitOverrides).toEqual([]);
-      expect(violations.some((v) => v.startsWith('pillars/'))).toBe(true);
-      expect(violations.some((v) => v.startsWith('libs/'))).toBe(true);
+      for (const base of UNIT_BASES) {
+        expect(
+          violations.some((v) => v.startsWith(`${base}/`)),
+          `missing ${base}/ violation`
+        ).toBe(true);
+      }
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -385,14 +411,12 @@ describe('COMMITTED_MISE_CONFIG_FILENAMES / GITIGNORED_MISE_CONFIG_FILENAMES', (
       // would be exactly the invisible-override gap this filename widening
       // exists to close. `check-ignore` works on the pattern alone, so the
       // path need not exist.
-      const result = spawnSync('git', ['check-ignore', '-q', relPath], { cwd: repoRoot });
-      expect(result.status, `expected ${relPath} to be gitignored — see .gitignore`).toBe(0);
+      expect(checkIgnore(relPath), `expected ${relPath} to be gitignored — see .gitignore`).toBe(0);
     }
   );
 
   it('mise.toml itself is not gitignored, as a sanity check on the check above', () => {
-    const result = spawnSync('git', ['check-ignore', '-q', 'mise.toml'], { cwd: repoRoot });
-    expect(result.status).toBe(1);
+    expect(checkIgnore('mise.toml')).toBe(1);
   });
 
   it.each(GITIGNORED_MISE_CONFIG_FILENAMES)(
@@ -403,8 +427,10 @@ describe('COMMITTED_MISE_CONFIG_FILENAMES / GITIGNORED_MISE_CONFIG_FILENAMES', (
       // pattern gitignored at the repo root (the case above) does not prove
       // it also matches the same filename nested under pillars/<id>/.
       const nestedPath = join('pillars', 'finance', relPath);
-      const result = spawnSync('git', ['check-ignore', '-q', nestedPath], { cwd: repoRoot });
-      expect(result.status, `expected ${nestedPath} to be gitignored — see .gitignore`).toBe(0);
+      expect(
+        checkIgnore(nestedPath),
+        `expected ${nestedPath} to be gitignored — see .gitignore`
+      ).toBe(0);
     }
   );
 });
@@ -422,8 +448,7 @@ describe('GITIGNORED_ENV_LOCAL_MISE_CONFIG_EXAMPLES', () => {
       // Same reasoning as GITIGNORED_MISE_CONFIG_FILENAMES above, one axis
       // wider: an env-suffixed local path this repo had not actually
       // gitignored is exactly the blind spot this list exists to close.
-      const result = spawnSync('git', ['check-ignore', '-q', relPath], { cwd: repoRoot });
-      expect(result.status, `expected ${relPath} to be gitignored — see .gitignore`).toBe(0);
+      expect(checkIgnore(relPath), `expected ${relPath} to be gitignored — see .gitignore`).toBe(0);
     }
   );
 
@@ -431,8 +456,7 @@ describe('GITIGNORED_ENV_LOCAL_MISE_CONFIG_EXAMPLES', () => {
     // Proves the .gitignore wildcard on the environment segment only ever
     // matches the *.local.toml shape, not the committed mise.ci.toml this
     // guard is supposed to keep reading.
-    const result = spawnSync('git', ['check-ignore', '-q', 'mise.ci.toml'], { cwd: repoRoot });
-    expect(result.status).toBe(1);
+    expect(checkIgnore('mise.ci.toml')).toBe(1);
   });
 
   it.each(GITIGNORED_ENV_LOCAL_MISE_CONFIG_EXAMPLES)(
@@ -442,11 +466,17 @@ describe('GITIGNORED_ENV_LOCAL_MISE_CONFIG_EXAMPLES', () => {
       // env-suffixed spellings — they inherit the identical slash-anchoring
       // behavior from the base six.
       const nestedPath = join('pillars', 'finance', relPath);
-      const result = spawnSync('git', ['check-ignore', '-q', nestedPath], { cwd: repoRoot });
-      expect(result.status, `expected ${nestedPath} to be gitignored — see .gitignore`).toBe(0);
+      expect(
+        checkIgnore(nestedPath),
+        `expected ${nestedPath} to be gitignored — see .gitignore`
+      ).toBe(0);
     }
   );
 });
+
+function isUnitKindBase(value: string): value is keyof typeof ALLOWED_UNIT_OVERRIDE_TOOLS_BY_BASE {
+  return value in ALLOWED_UNIT_OVERRIDE_TOOLS_BY_BASE;
+}
 
 describe('against the live repo', () => {
   it('root mise.toml still declares the full toolchain baseline', () => {
@@ -457,11 +487,22 @@ describe('against the live repo', () => {
     expect(checkOverrides(repoRoot).violations).toEqual([]);
   });
 
-  it('every existing unit override stays within the allowed tool set', () => {
+  it('every existing unit override that shares a key with the root pin stays within its unit-kind allow list', () => {
+    // A key the root pin does not declare at all (clients/ios/mise.toml's
+    // `xcodegen`) is not an override of anything and is exempt from this —
+    // see the `clients/ unit kind` describe block below for that half.
+    const rootTools = parseToolsTable(readFileSync(join(repoRoot, 'mise.toml'), 'utf8'));
     const { unitOverrides } = checkOverrides(repoRoot);
     for (const { dir, overrides } of unitOverrides) {
+      const [base = dir] = dir.split('/');
+      expect(isUnitKindBase(base), `${dir} has an unrecognized unit-kind base "${base}"`).toBe(
+        true
+      );
+      if (!isUnitKindBase(base)) continue;
+      const allowed = ALLOWED_UNIT_OVERRIDE_TOOLS_BY_BASE[base];
       for (const key of Object.keys(overrides)) {
-        expect(ALLOWED_UNIT_OVERRIDE_TOOLS, `${dir} overrides "${key}"`).toContain(key);
+        if (!(key in rootTools)) continue;
+        expect(allowed, `${dir} overrides "${key}"`).toContain(key);
       }
     }
   });
@@ -472,6 +513,137 @@ describe('against the live repo', () => {
     // workflow edit that drops MISE_ENV (or changes its value) fails this
     // test rather than silently reopening the POPS-1794 gap.
     expect(discoverMiseEnvValues(repoRoot)).toEqual({ values: ['ci'], violations: [] });
+  });
+
+  it('discovers clients/ios/mise.toml — the exact gap this guard used to have', () => {
+    // Before this guard learned about clients/, it scanned only pillars/ and
+    // libs/, so clients/ios/mise.toml's [tools] table (xcodegen) was
+    // invisible to it — the directory was absent from every discovery loop,
+    // not merely compliant.
+    expect(discoverUnitMiseDirs(repoRoot)).toContainEqual({
+      dir: 'clients/ios',
+      file: 'clients/ios/mise.toml',
+    });
+  });
+});
+
+describe('checkOverrides — clients/ unit kind', () => {
+  function fixtureRoot() {
+    const root = mkdtempSync(join(tmpdir(), 'mise-overrides-clients-'));
+    writeFileSync(
+      join(root, 'mise.toml'),
+      '[tools]\nnode = "24.5.0"\npnpm = "10.32.1"\nrust = "stable"\n'
+    );
+    mkdirSync(join(root, 'pillars'), { recursive: true });
+    mkdirSync(join(root, 'libs'), { recursive: true });
+    return root;
+  }
+
+  it('discovers a client with its own mise.toml', () => {
+    const root = fixtureRoot();
+    try {
+      mkdirSync(join(root, 'clients', 'ios'), { recursive: true });
+      writeFileSync(join(root, 'clients', 'ios', 'mise.toml'), '[tools]\nxcodegen = "2.46.0"\n');
+
+      expect(discoverUnitMiseDirs(root)).toContainEqual({
+        dir: 'clients/ios',
+        file: 'clients/ios/mise.toml',
+      });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('allows a client to declare a tool the root pin does not cover at all', () => {
+    const root = fixtureRoot();
+    try {
+      mkdirSync(join(root, 'clients', 'ios'), { recursive: true });
+      writeFileSync(join(root, 'clients', 'ios', 'mise.toml'), '[tools]\nxcodegen = "2.46.0"\n');
+
+      const { violations, unitOverrides } = checkOverrides(root);
+      expect(violations).toEqual([]);
+      expect(unitOverrides).toContainEqual({
+        dir: 'clients/ios',
+        file: 'clients/ios/mise.toml',
+        overrides: { xcodegen: '2.46.0' },
+      });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('flags a client overriding pnpm — the exact failure this guard exists to prevent', () => {
+    const root = fixtureRoot();
+    try {
+      mkdirSync(join(root, 'clients', 'ios'), { recursive: true });
+      writeFileSync(join(root, 'clients', 'ios', 'mise.toml'), '[tools]\npnpm = "9.0.0"\n');
+
+      const { violations } = checkOverrides(root);
+      expect(
+        violations.some((v) => v.includes('clients/ios/mise.toml') && v.includes('pnpm'))
+      ).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('flags a client overriding node — unlike pillars/libs, clients get no node/rust exception', () => {
+    // pillars/ and libs/ are TS (or Cargo) packages that share the root's
+    // node/rust toolchain, so overriding one of those two is the documented
+    // escape hatch for them. clients/ shares neither — ADR-043 keeps a
+    // client out of both the pnpm and Cargo workspaces entirely — so it has
+    // no legitimate reason to override node (or rust) either.
+    const root = fixtureRoot();
+    try {
+      mkdirSync(join(root, 'clients', 'ios'), { recursive: true });
+      writeFileSync(join(root, 'clients', 'ios', 'mise.toml'), '[tools]\nnode = "22"\n');
+
+      const { violations } = checkOverrides(root);
+      expect(
+        violations.some((v) => v.includes('clients/ios/mise.toml') && v.includes('node'))
+      ).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('gives clients/ an empty override allow list, unlike pillars/ and libs/', () => {
+    expect(ALLOWED_UNIT_OVERRIDE_TOOLS_BY_BASE.clients).toEqual([]);
+    expect(ALLOWED_UNIT_OVERRIDE_TOOLS_BY_BASE.pillars).toEqual(ALLOWED_UNIT_OVERRIDE_TOOLS);
+    expect(ALLOWED_UNIT_OVERRIDE_TOOLS_BY_BASE.libs).toEqual(ALLOWED_UNIT_OVERRIDE_TOOLS);
+  });
+
+  it('reads as an explicit sentence when the allow list is empty, not a placeholder', () => {
+    // clients/ has an empty allow list, so the naive `only ${list.join(', ')}`
+    // phrasing degrades to `only (none for this unit kind) may be
+    // overridden` — a placeholder standing in for a tool name. The message
+    // must instead say plainly that nothing may be overridden.
+    const root = fixtureRoot();
+    try {
+      mkdirSync(join(root, 'clients', 'ios'), { recursive: true });
+      writeFileSync(join(root, 'clients', 'ios', 'mise.toml'), '[tools]\npnpm = "9.0.0"\n');
+
+      const { violations } = checkOverrides(root);
+      const violation = violations.find((v) => v.includes('clients/ios/mise.toml'));
+      expect(violation).toContain('no root-pinned tool may be overridden by a clients/ unit');
+      expect(violation).not.toContain('none for this unit kind');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('still names the allowed tools when the allow list is non-empty', () => {
+    const root = fixtureRoot();
+    try {
+      mkdirSync(join(root, 'pillars', 'rogue'), { recursive: true });
+      writeFileSync(join(root, 'pillars', 'rogue', 'mise.toml'), '[tools]\npnpm = "9.0.0"\n');
+
+      const { violations } = checkOverrides(root);
+      const violation = violations.find((v) => v.includes('pillars/rogue/mise.toml'));
+      expect(violation).toContain('only node, rust may be overridden by a pillars/ unit');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });
 
@@ -879,20 +1051,31 @@ describe('mise actually resolves the merge (real mise binary)', () => {
     }
   });
 
-  it('every existing pillar/lib still resolves node/pnpm from the root pin', () => {
-    if (!miseAvailable) return;
-    const rootTools = parseToolsTable(readFileSync(join(repoRoot, 'mise.toml'), 'utf8'));
-    for (const { dir, file } of discoverUnitMiseDirs(repoRoot)) {
-      const unitTools = parseToolsTable(readFileSync(join(repoRoot, file), 'utf8'));
-      for (const tool of ['node', 'pnpm'] as const) {
-        if (tool in unitTools) continue; // this unit overrides it — nothing to assert here
-        const resolved = execFileSync('mise', ['current', '-C', join(repoRoot, dir), tool], {
-          encoding: 'utf8',
-        }).trim();
-        expect(resolved, `${dir} should inherit root's ${tool} pin`).toBe(rootTools[tool]);
+  // Spawns a real `mise current` subprocess per unit per tool across every
+  // pillar, lib, and client — dozens of processes, comfortably under vitest's
+  // 5s default on an idle machine but not under concurrent load from sibling
+  // CI jobs or parallel worktrees. The bound is on the machine's load, not on
+  // anything this asserts, so it matches the 120s the sibling scripts suites use.
+  const RESOLVE_ALL_UNITS_TIMEOUT_MS = 120_000;
+
+  it(
+    'every existing pillar/lib still resolves node/pnpm from the root pin',
+    () => {
+      if (!miseAvailable) return;
+      const rootTools = parseToolsTable(readFileSync(join(repoRoot, 'mise.toml'), 'utf8'));
+      for (const { dir, file } of discoverUnitMiseDirs(repoRoot)) {
+        const unitTools = parseToolsTable(readFileSync(join(repoRoot, file), 'utf8'));
+        for (const tool of ['node', 'pnpm'] as const) {
+          if (tool in unitTools) continue; // this unit overrides it — nothing to assert here
+          const resolved = execFileSync('mise', ['current', '-C', join(repoRoot, dir), tool], {
+            encoding: 'utf8',
+          }).trim();
+          expect(resolved, `${dir} should inherit root's ${tool} pin`).toBe(rootTools[tool]);
+        }
       }
-    }
-  });
+    },
+    RESOLVE_ALL_UNITS_TIMEOUT_MS
+  );
 
   it('a unit-level [tools] override wins, and un-overridden tools still inherit', () => {
     if (!miseAvailable) return;

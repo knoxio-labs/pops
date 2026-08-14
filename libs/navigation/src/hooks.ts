@@ -7,6 +7,7 @@ import { resolveUri } from './uri-resolver.js';
 import type { PillarId } from '@pops/pillar-sdk';
 
 import type { AppContext, AppContextEntity } from './types.js';
+import type { SearchHitData } from './uri-resolver.js';
 
 /**
  * Returns the current AppContext.
@@ -65,17 +66,18 @@ export function useCurrentEntity(): AppContextEntity | null {
  * Returns a navigateTo callback that resolves a POPS URI and navigates to
  * the corresponding frontend route.
  *
- * @returns `navigateTo(uri)` — returns true if navigation succeeded, false if
- * the URI could not be resolved.
+ * @returns `navigateTo(uri, data)` — returns true if navigation succeeded,
+ * false if the URI could not be resolved. `data` is the hit's payload, which
+ * types whose route is not addressed by their own id resolve through.
  */
 export function useSearchResultNavigation(): {
-  navigateTo: (uri: string) => boolean;
+  navigateTo: (uri: string, data?: SearchHitData) => boolean;
 } {
   const navigate = useNavigate();
 
   const navigateTo = useCallback(
-    (uri: string): boolean => {
-      const route = resolveUri(uri);
+    (uri: string, data: SearchHitData = {}): boolean => {
+      const route = resolveUri(uri, data);
       if (!route) return false;
       void navigate(route);
       return true;

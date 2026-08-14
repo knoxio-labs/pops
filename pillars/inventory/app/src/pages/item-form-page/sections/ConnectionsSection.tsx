@@ -39,6 +39,7 @@ function PendingBadges({
             size="icon"
             className="rounded-full hover:bg-app-accent/20"
             onClick={() => onRemove(conn.id)}
+            aria-label={`Remove connection to ${conn.itemName}`}
           >
             <X className="h-3 w-3" />
           </Button>

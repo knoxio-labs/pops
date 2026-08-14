@@ -34,9 +34,8 @@ settings:
     # `generic/platform=iOS Simulator` Xcode overrides this back to NO, because a
     # generic destination has no active architecture to be; `-showBuildSettings`
     # reports `ONLY_ACTIVE_ARCH = NO, ARCHS = arm64 x86_64` even with this set.
-    # That is why `build:for-testing` in mise.toml names the simulator it is
-    # about to test on, and why `build` — which deliberately keeps the generic
-    # destination — still compiles both and is left that way.
+    # That is why both `build` and `build:for-testing` in mise.toml name the
+    # simulator rather than taking the generic destination.
     #
     # Release is untouched: a shipped binary is not built for the architecture
     # that happened to compile it.
@@ -54,6 +53,8 @@ packages:
     path: Packages/DesignSystem
   FeaturePairing:
     path: Packages/FeaturePairing
+  FeatureReceiptCapture:
+    path: Packages/FeatureReceiptCapture
   FeatureTransactions:
     path: Packages/FeatureTransactions
 
@@ -69,6 +70,7 @@ targets:
       - package: BFMClient
       - package: DesignSystem
       - package: FeaturePairing
+      - package: FeatureReceiptCapture
       - package: FeatureTransactions
     # A shared scheme, so `xcodebuild -scheme Pops` resolves on a clean checkout
     # rather than relying on Xcode autocreating one into xcuserdata. This list is
@@ -99,6 +101,7 @@ targets:
         - package: BFMClient/BFMClientTests
         - package: DesignSystem/DesignSystemTests
         - package: FeaturePairing/FeaturePairingTests
+        - package: FeatureReceiptCapture/FeatureReceiptCaptureTests
         - package: FeatureTransactions/FeatureTransactionsTests
     # The team lives outside the repo; see Config/Signing.xcconfig. Nothing here
     # may set DEVELOPMENT_TEAM — target build settings outrank a target xcconfig,

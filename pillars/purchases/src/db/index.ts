@@ -50,6 +50,12 @@ export {
   type SearchMatchType,
 } from './services/search.js';
 
+export {
+  searchFilterScope,
+  type SearchFilter,
+  type SearchScopeResult,
+} from './services/search-filters.js';
+
 export { type PurchaseChargeDetail } from './services/purchase-read-charges.js';
 
 export {
@@ -80,9 +86,16 @@ export {
 export {
   listConfirmedLinks,
   listOrdersNeedingDerivedCharge,
+  listRejectedPairings,
   listSolvableCharges,
   type ReconcileScope,
 } from './services/reconcile-reads.js';
+
+export {
+  listPurchasesForTransaction,
+  type LinkedCharge,
+  type LinkedPurchase,
+} from './services/reconcile-links.js';
 
 export {
   listReconcileQueue,
@@ -94,11 +107,15 @@ export {
 export {
   chargeIdsForPurchases,
   confirmLink,
+  rejectLink,
   unlinkCharge,
   mintDerivedCharge,
   persistProposedLinks,
   tearDownUnconfirmedLinks,
+  type ConfirmOutcome,
 } from './services/reconcile-writes.js';
+
+export { recordMatchRule, type MatchRuleEvidence } from './services/match-rules.js';
 
 export {
   clearDocumentUriStale,

@@ -2,11 +2,12 @@ import { useCallback, useRef, useState } from 'react';
 
 import { encodeText } from './encode.js';
 import { movePart, nextPartId, removePartAt } from './parts.js';
-import { encodeBatch, EMPTY_STAGING, stage, type Staging } from './staging.js';
+import { encodeBatch, EMPTY_STAGING, stage, withRefused, type Staging } from './staging.js';
 
 export interface ReceiptStaging {
   readonly staging: Staging;
   addFiles: (chosen: File[]) => void;
+  refuse: (name: string) => void;
   addText: (text: string) => void;
   remove: (index: number) => void;
   move: (index: number, offset: -1 | 1) => void;
@@ -37,6 +38,27 @@ export function useReceiptStaging(): ReceiptStaging {
       const batch = await encoding;
       setStaging((current) => stage(current, batch));
     });
+  }, []);
+
+  /**
+   * A file the drop zone turned away on its own accept filter, before anything
+   * here saw it.
+   *
+   * They arrive one at a time and are folded together on the next microtask:
+   * staging replaces its problems per batch, so a refusal reported on its own
+   * would be wiped by the staging of whatever else the same gesture carried.
+   */
+  const refused = useRef<string[]>([]);
+  const refuse = useCallback((name: string): void => {
+    if (refused.current.length === 0) {
+      queueMicrotask(() => {
+        const names = refused.current.splice(0);
+        staged.current = staged.current.then(() => {
+          setStaging((current) => withRefused(current, names));
+        });
+      });
+    }
+    refused.current.push(name);
   }, []);
 
   const addText = useCallback((text: string): void => {
@@ -72,5 +94,5 @@ export function useReceiptStaging(): ReceiptStaging {
     setStaging(EMPTY_STAGING);
   }, []);
 
-  return { staging, addFiles, addText, remove, move, clear };
+  return { staging, addFiles, refuse, addText, remove, move, clear };
 }

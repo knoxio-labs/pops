@@ -5,11 +5,17 @@
  * queries here decide what it can possibly see — a filter applied wrongly
  * is indistinguishable, from the solver's side, from the data not existing.
  */
-import { and, eq, gte, isNotNull, isNull, lte, ne } from 'drizzle-orm';
+import { and, eq, gte, inArray, isNotNull, isNull, lte, ne } from 'drizzle-orm';
 
-import { purchaseChargeLinks, purchaseCharges, purchases, purchaseSources } from '../schema.js';
+import {
+  purchaseChargeLinks,
+  purchaseCharges,
+  purchaseLinkRejections,
+  purchases,
+  purchaseSources,
+} from '../schema.js';
 
-import type { ConfirmedLink, SolvableCharge } from '../../reconcile/types.js';
+import type { ConfirmedLink, RejectedPairing, SolvableCharge } from '../../reconcile/types.js';
 import type { PurchasesDb } from './internal.js';
 
 export interface ReconcileScope {
@@ -157,5 +163,30 @@ export function listConfirmedLinks(db: PurchasesDb): ConfirmedLink[] {
     })
     .from(purchaseChargeLinks)
     .where(isNotNull(purchaseChargeLinks.confirmedAt))
+    .all();
+}
+
+/**
+ * Pairings a human ruled out, for the charges about to be solved.
+ *
+ * Scoped to the charges rather than read fleet-wide, which is the opposite
+ * of {@link listConfirmedLinks} and for a reason that does not apply here.
+ * A confirmed link outside the window still OWNS its transaction, so a
+ * sweep blind to it would re-link that transaction elsewhere. A rejection
+ * owns nothing — it only says two rows are not a pair — so one for a charge
+ * outside the window cannot affect anything inside it.
+ */
+export function listRejectedPairings(
+  db: PurchasesDb,
+  chargeIds: readonly string[]
+): RejectedPairing[] {
+  if (chargeIds.length === 0) return [];
+  return db
+    .select({
+      chargeId: purchaseLinkRejections.chargeId,
+      transactionUri: purchaseLinkRejections.transactionUri,
+    })
+    .from(purchaseLinkRejections)
+    .where(inArray(purchaseLinkRejections.chargeId, [...chargeIds]))
     .all();
 }

@@ -26,6 +26,7 @@ import { createDocumentLookup, createInventoryItemLookup } from './cron/pillar-l
 import { startReconcileCrossPillarWorker } from './cron/reconcile-cross-pillar.js';
 import { createFinanceClient } from './finance/client.js';
 import { buildPurchasesManifest } from './manifest.js';
+import { configurePurchasesServerSdk } from './pillars/sdk-config.js';
 import { resolvePurchasesSqlitePath } from './purchases-sqlite-path.js';
 
 function resolvePort(): number {
@@ -48,6 +49,11 @@ const selfBaseUrl = resolveSelfBaseUrl({
 });
 
 const purchasesDb = openPurchasesDb(resolvePurchasesSqlitePath());
+
+// Before anything that can call out. Reports rather than throws when no key
+// is available: this pillar's own contract surface needs none, and the legs
+// that do each say `no-credential` instead of degrading into `unavailable`.
+configurePurchasesServerSdk();
 
 /**
  * The reconciliation triggers.

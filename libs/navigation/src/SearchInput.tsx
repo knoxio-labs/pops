@@ -18,16 +18,17 @@ export function SearchInput() {
   const [isFocused, setIsFocused] = useState(false);
   const { queries } = useRecentSearches();
 
-  const { sections, orderedUris, handleShowMore } = useSearchInputData({ query, isOpen });
+  const { sections, orderedHits, handleShowMore } = useSearchInputData({ query, isOpen });
   const { handleResultClick, handleClose, handleChange, handleClear } = useSearchInputHandlers({
     inputRef,
   });
 
   const { selectedIndex } = useSearchKeyboardNav({
     containerRef,
-    resultCount: orderedUris.length,
+    resultCount: orderedHits.length,
     onSelect: (index) => {
-      handleResultClick(orderedUris[index] ?? '');
+      const hit = orderedHits[index];
+      if (hit !== undefined) handleResultClick(hit.uri, hit.data);
     },
     onClose: handleClose,
   });

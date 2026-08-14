@@ -33,6 +33,7 @@ function run(input: Partial<SolverInput> = {}): SolverOutput {
     charges: [],
     transactions: [],
     confirmed: [],
+    rejected: [],
     defaultWindowDays: 21,
     ...input,
   });

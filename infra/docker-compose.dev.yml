@@ -327,6 +327,9 @@ services:
       PORT: '3008'
       AI_SQLITE_PATH: /data/sqlite/ai.db
       AI_SELF_BASE_URL: http://ai-api:3008
+      # Durable repeatable schedules + the /jobs management surface; without it
+      # the pillar falls back to in-process interval loops. See the prod compose.
+      REDIS_URL: redis://pops-redis:6379
       # Verifies a per-caller `x-pops-internal-credential` on `POST /ai-usage/record`
       # (ADR-039 E22). The reporting pillars (finance/food/cerebrum) each present
       # their own credential.
@@ -336,6 +339,8 @@ services:
     depends_on:
       registry-api:
         condition: service_started
+      pops-redis:
+        condition: service_healthy
     healthcheck:
       test:
         [
@@ -727,8 +732,8 @@ services:
     profiles:
       - moltbot
     volumes:
-      - ../pillars/moltbot/config/config.dev.yml:/config/config.yml:ro
-      - ../pillars/moltbot/scripts/validate-config.sh:/validate.sh:ro
+      - ${POPS_MOLTBOT_DIR:-../pillars/moltbot}/config/config.dev.yml:/config/config.yml:ro
+      - ${POPS_MOLTBOT_DIR:-../pillars/moltbot}/scripts/validate-config.sh:/validate.sh:ro
     secrets:
       - telegram_bot_token_dev
       - claude_api_key
@@ -747,17 +752,16 @@ services:
     networks:
       - backend
     volumes:
-      - ../pillars/moltbot/config/config.dev.yml:/home/node/.moltbot/config.yml:ro
-      - ../pillars/moltbot/skills:/home/node/.moltbot/workspace/skills:ro
+      - ${POPS_MOLTBOT_DIR:-../pillars/moltbot}/config/config.dev.yml:/home/node/.moltbot/config.yml:ro
+      - ${POPS_MOLTBOT_DIR:-../pillars/moltbot}/skills:/home/node/.moltbot/workspace/skills:ro
     secrets:
       - telegram_bot_token_dev
       - claude_api_key
       - pops_api_key
     environment:
       TELEGRAM_BOT_TOKEN_FILE: /run/secrets/telegram_bot_token_dev
-      # Skill prompts still describe monolith paths; repointing hosts is
-      # necessary but not sufficient (cerebrum/finance skills need REST-path
-      # rewrites) — tracked as a follow-up gap.
+      # One host var per pillar a skill talks to; `POPS_API_URL` is the
+      # cerebrum skill's, the name predates the split.
       POPS_API_URL: http://cerebrum-api:3007
       POPS_API_KEY_FILE: /run/secrets/pops_api_key
       FINANCE_API_URL: http://finance-api:3004

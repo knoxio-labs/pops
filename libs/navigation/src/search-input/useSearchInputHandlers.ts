@@ -4,6 +4,8 @@ import { useSearchResultNavigation } from '../hooks';
 import { useRecentSearches } from '../recent-searches';
 import { useSearchStore } from '../searchStore';
 
+import type { SearchHitData } from '../uri-resolver';
+
 const DEBOUNCE_MS = 300;
 
 interface UseSearchInputHandlersArgs {
@@ -11,7 +13,7 @@ interface UseSearchInputHandlersArgs {
 }
 
 export interface SearchInputHandlers {
-  handleResultClick: (uri: string) => void;
+  handleResultClick: (uri: string, data?: SearchHitData) => void;
   handleClose: () => void;
   handleChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleClear: () => void;
@@ -39,11 +41,11 @@ export function useSearchInputHandlers({
   useEffect(() => () => cancelDebounce(), [cancelDebounce]);
 
   const handleResultClick = useCallback(
-    (uri: string) => {
+    (uri: string, data: SearchHitData = {}) => {
       cancelDebounce();
       if (query) addQuery(query);
       if (inputRef.current) inputRef.current.value = '';
-      navigateTo(uri);
+      navigateTo(uri, data);
       clear();
     },
     [cancelDebounce, query, addQuery, inputRef, navigateTo, clear]

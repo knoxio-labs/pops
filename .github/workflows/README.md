@@ -199,6 +199,31 @@ now decides between them takes 32 seconds, of which its self-test and its answer
 are one second and the rest is checkout plus a warm-cache `pnpm install`. Half a
 minute to decide whether to spend twenty.
 
+**The queue groups entries, and that is the other half of the cost.** With
+`min_entries_to_merge: 1` the queue formed a group per entry, so each PR bought
+its own run of everything. Measured on the 15 merges after the `scope` job
+landed, the queue leg — first merge-group run created to merged — split cleanly
+in two: a median of **2.9 minutes** for the entries `scope` deselected iOS on,
+against **85.8 minutes** for the entries it selected. The spread is not the
+queue. `ios-quality.yml` averages 18.8 minutes there and has peaked at 52; every
+other lane sits at or under 2.6.
+
+The gap between 18.8 and 85.8 is re-queues. **Five of those 15 PRs needed more
+than one attempt** — #4047 took six, #4052 and #4049 five — and every eviction
+re-paid the whole iOS lane. None of them was a semantic conflict: classifying
+each red merge-group run in that window found only flakes, so the queue was
+mostly re-running expensive checks against its own instability. Grouping is the
+lever that helps here, because a flake costs one group's run rather than one run
+per PR: `min_entries_to_merge` is 3, and `min_entries_to_merge_wait_minutes` is
+deliberately left at 5 so a lone PR on the fast path — the 2.9-minute case —
+cannot be made to wait longer than the run it is waiting for.
+
+`check_response_timeout_minutes` is 75, raised from 60. A check that does not
+report inside that window evicts its entry, and the worst in-queue
+`ios-quality.yml` run observed was 52 minutes end to end — which at 60 left
+eight minutes of margin, less than a cold macOS runner acquisition can spend
+before the job even starts. At 75 that margin is 23.
+
 Two consequences worth stating, because both look like bugs from the outside:
 
 - **A step condition spelled `github.event_name == 'push'` is a trap here.** The
@@ -272,13 +297,13 @@ caller's decision; this file only knows how to sandbox whatever `units` names.
 | `fe-quality.yml`                 | PR/push on `pillars/shell/**`, apps, openapi, FE libs; every merge group | the shell's `Quality Checks` job                                                                                     |
 | `rust-quality.yml`               | PR/push on Cargo files, `deny.toml`, `pillars/contacts/**`, `libs/pops-*`, `scripts/extractability/**`; every merge group | `fmt + clippy + build + test`                                       |
 | `registry-generated-quality.yml` | PR/push on `libs/module-registry/**`, `libs/types/**`; every merge group | `generated.ts` drift                                                                                                |
-| `ios-quality.yml`                | PR/push on `clients/ios/**`, `pillars/bfm/**`, `scripts/ios-e2e/**`, `pnpm-lock.yaml`; every merge group, **scoped by a `scope` job to that same filter** | `macos-latest`; selects the Xcode pinned in `clients/ios/mise.toml`, then `mise run lint` and `mise run -j 1 test ::: lint:analyze` — one step, because both share a single compile. Caches no derived data, deliberately; the header says why |
+| `ios-quality.yml`                | PR/push on `clients/ios/**`, `pillars/bfm/**`, `scripts/ios-e2e/**`, `pnpm-lock.yaml`; every merge group, **scoped by a `scope` job to that same filter** | `macos-latest`; selects the Xcode pinned in `clients/ios/mise.toml`, then `mise run lint` and `mise run -j 1 test ::: lint:analyze` — one step, because both share a single compile — then `mise run verify:release-carries-no-host`, a second full compile in the Release configuration, and the Maestro UI flow against a real BFM. Caches no derived data, deliberately; the header says why |
 | `agent-review.yml`               | every PR, drafts included; every merge group                  | eight guard scripts under `scripts/ci/`, each `--self-test`ed first, then an advisory LLM review (that last step alone is skipped on drafts) |
 | `docker-build.yml`               | PR/push on Dockerfiles, `infra/docker*`, lockfile; every merge group, **scoped by a `scope` job to that same filter** | the FULL image of every `pillars/*/Dockerfile`, each then started on fresh volumes and probed by `scripts/ci/smoke-image.mjs`; `docker compose config --quiet` on both compose files after stubbing 12 secret files |
 | `pillar-quality.yml`             | push to `main` only                                           | full image (`push: false`) per `pillars/<x>` that has a `package.json`                                               |
 | `pillar-schema-coverage.yml`     | PR/push on `pillars/*/src/db/**`, migrations                  | per-pillar coverage, an injected-table self-test, and a static `Pillar schema coverage` aggregator job               |
 | `publish-images.yml`             | push to `main`, `v*` tags, dispatch (`only` input)            | four static app images plus every `pops-<x>` discovered from the prod compose's `image:` refs                        |
-| `release.yml`                    | `workflow_dispatch`                                           | `.github/scripts/release.sh`, then annotated tag + `gh release create`                                               |
+| `release.yml`                    | push to `main`, dispatch                                      | `.github/scripts/release.sh` decides whether to cut at all, then the moltbot bundle, an annotated tag, `gh release create`, and a `workflow_dispatch` of `publish-images.yml` at that tag — the tag push itself cannot trigger it, being a `GITHUB_TOKEN` event |
 | `infra-lint.yml`                 | PR/push on `infra/litestream/**`, `infra/backup/**`           | YAML lint                                                                                                           |
 | `extractability-sandbox.yml`     | nightly cron + `workflow_dispatch` (optional single-`unit` input) — **not** PR/push, **not** in `ci-gate.yml`'s gated list | EX-2 via `_extractability-sandbox-matrix.yml` over every unit `_discover-units.yml` discovers (or just the dispatched one) — the true zero-workspace extraction proof, too heavy for a per-push gate |
 | `extractability-sandbox-push.yml` | push to `main` on a unit's `package.json`/`tsconfig*.json`/`Cargo.toml`/`Cargo.lock`/`pnpm-lock.yaml` — **not** PR, **not** in `ci-gate.yml`'s gated list | EX-2 via `_extractability-sandbox-matrix.yml`, scoped to ONLY `_discover-units.yml`'s `changed` set for that push — fast feedback on an exports/dep-shape change instead of waiting for the nightly sweep |
