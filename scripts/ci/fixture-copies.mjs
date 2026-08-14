@@ -274,6 +274,16 @@ export function selfTestUndeclaredDiscovery(copies) {
  * that risk is specific to a self-test PLANTING a file for real, not to
  * reading the tree as it already stands.
  *
+ * `undeclared.length === 0` on its own is satisfied identically by a healthy
+ * walk and by a dead one — a `discoverFilesNamed` that always returns `[]`
+ * leaves nothing undeclared and passes forever. So this also pins the
+ * POSITIVE result: every path `copies` declares must actually be among
+ * `discovered`, the same floor `check-vendored-contracts.mjs`'s
+ * `selfTestLegSet` pins for its own real-tree leg (`self-test OK — discovers
+ * exactly the N pinned vendored leg(s)`). A walk that goes dead, or narrows to
+ * miss a real copy, now fails this self-test by name instead of reading as
+ * "nothing undeclared, so OK".
+ *
  * @param {string} repoRoot Absolute path to the repo root.
  * @param {readonly string[]} scanRoots Repo-relative directories to walk.
  * @param {string} basename Exact filename to match.
@@ -283,16 +293,22 @@ export function selfTestUndeclaredDiscovery(copies) {
 export function selfTestRealTreeDiscovery(repoRoot, scanRoots, basename, copies) {
   const discovered = discoverFilesNamed(repoRoot, scanRoots, basename);
   const undeclared = findUndeclaredCopies(discovered, copies);
-  const ok = undeclared.length === 0;
+  const declaredPaths = copies.map((copy) => copy.path).toSorted();
+  const missing = declaredPaths.filter((path) => !discovered.includes(path));
+  const ok = undeclared.length === 0 && missing.length === 0;
 
   if (!ok) {
     console.error(
-      `SELF-TEST FAILED (real-tree discovery): an undeclared copy of ${basename} is on disk.`
+      `SELF-TEST FAILED (real-tree discovery): expected to discover exactly the ` +
+        `${String(declaredPaths.length)} declared copy path(s) of ${basename}, found ` +
+        `${String(discovered.length)}.`
     );
-    for (const path of undeclared) console.error(`  undeclared: ${path}`);
+    for (const path of undeclared) console.error(`  undeclared (found, not declared): ${path}`);
+    for (const path of missing) console.error(`  missing (declared, not found):     ${path}`);
   } else {
     console.log(
-      `self-test OK — no undeclared copy of ${basename} is on disk under ${scanRoots.join(', ')}.`
+      `self-test OK — discovers exactly the ${String(declaredPaths.length)} declared copy ` +
+        `path(s) of ${basename} on disk under ${scanRoots.join(', ')}, no more and no fewer.`
     );
   }
   return ok;
