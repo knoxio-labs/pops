@@ -105,24 +105,91 @@ const GENERATED_CLIENT_RE = /\/src\/[a-z-]+-api\//;
 const ICON_SIZE_RE = /^icon(?:-(?:xs|sm|lg))?$/;
 
 /**
- * Matches a `size=` or `aria-label=`/`aria-labelledby=` attribute, anchored
- * so a prefixed lookalike (`data-aria-label`, `iconSize`) never matches: the
- * lookbehind rejects an attribute name preceded by a word character or a
- * hyphen. Captures the raw value text — a quoted string or a `{…}`
- * expression — for the caller to interpret.
+ * Matches an attribute's `name=` prefix only, up to and including the `=`
+ * and any surrounding whitespace — not its value. Anchored so a prefixed
+ * lookalike (`data-aria-label`, `iconSize`) never matches: the lookbehind
+ * rejects an attribute name preceded by a word character or a hyphen. The
+ * value itself is extracted separately by {@link extractAttrValueText},
+ * since a regex can't balance nested braces.
  *
  * @param {string} attrName
  * @returns {RegExp}
  */
-function attrValueRe(attrName) {
-  return new RegExp(
-    `(?<![\\w-])${attrName}\\s*=\\s*("(?:[^"\\\\]|\\\\.)*"|'(?:[^'\\\\]|\\\\.)*'|\\{[^}]*\\})`,
-    'g'
-  );
+function attrPrefixRe(attrName) {
+  return new RegExp(`(?<![\\w-])${attrName}\\s*=\\s*`, 'g');
 }
 
-const SIZE_ATTR_RE = attrValueRe('size');
-const ARIA_LABEL_ATTR_RE = attrValueRe('aria-label(?:ledby)?');
+/**
+ * Extract one attribute's raw value text from `text`, starting at `start` —
+ * the index of its opening quote or `{`. Balances nested `{}` and tracks
+ * quote / template-literal state, including a template's own `${…}`
+ * interpolations, so a brace or quote nested inside the value (an object
+ * literal, a call with an object argument, a template with interpolation, a
+ * brace inside a plain string literal) never ends the capture early — only
+ * the value's own matching closer does. Returns `null` when `start` isn't
+ * positioned on a quote or `{` (a malformed or unquoted attribute value).
+ *
+ * @param {string} text
+ * @param {number} start
+ * @returns {string | null}
+ */
+function extractAttrValueText(text, start) {
+  const opener = text[start];
+  if (opener !== '"' && opener !== "'" && opener !== '{') return null;
+  /** @type {Array<'"' | "'" | '`' | '}'>} */
+  const stack = [opener === '{' ? '}' : opener];
+  let i = start + 1;
+  while (i < text.length && stack.length > 0) {
+    const ch = text[i];
+    const top = stack[stack.length - 1];
+    if (top === '"' || top === "'" || top === '`') {
+      if (ch === '\\') {
+        i += 2;
+        continue;
+      }
+      if (ch === top) {
+        stack.pop();
+        i += 1;
+        continue;
+      }
+      if (top === '`' && ch === '$' && text[i + 1] === '{') {
+        stack.push('}');
+        i += 2;
+        continue;
+      }
+      i += 1;
+      continue;
+    }
+    if (ch === '"' || ch === "'" || ch === '`') {
+      stack.push(ch);
+    } else if (ch === '{') {
+      stack.push('}');
+    } else if (ch === '}') {
+      stack.pop();
+    }
+    i += 1;
+  }
+  return text.slice(start, i);
+}
+
+/**
+ * Every occurrence of `attrName`'s raw value text within `tag`, in source
+ * order — a quoted string or a balanced `{…}` expression.
+ *
+ * @param {string} tag
+ * @param {string} attrName
+ * @returns {string[]}
+ */
+function attrValues(tag, attrName) {
+  /** @type {string[]} */
+  const values = [];
+  for (const match of tag.matchAll(attrPrefixRe(attrName))) {
+    const valueStart = match.index + match[0].length;
+    const raw = extractAttrValueText(tag, valueStart);
+    if (raw !== null) values.push(raw);
+  }
+  return values;
+}
 
 /**
  * A quoted string literal's content, or `null` if `text` isn't one. Used
@@ -416,8 +483,8 @@ function resolveLabelVerdict(raw) {
  * @returns {boolean}
  */
 function hasAccessibleName(tag) {
-  for (const match of tag.matchAll(ARIA_LABEL_ATTR_RE)) {
-    const verdict = resolveLabelVerdict(match[1]);
+  for (const raw of attrValues(tag, 'aria-label(?:ledby)?')) {
+    const verdict = resolveLabelVerdict(raw);
     if (verdict === 'nonempty' || verdict === 'unknown') return true;
   }
   return false;
@@ -503,10 +570,9 @@ export function findViolations(relPath, source) {
   const tagStartRe = new RegExp(`<(${BUTTON_COMPONENTS.join('|')})\\b`, 'g');
   for (const match of source.matchAll(tagStartRe)) {
     const tag = extractOpeningTag(source, match.index);
-    SIZE_ATTR_RE.lastIndex = 0;
-    const sizeAttrMatch = SIZE_ATTR_RE.exec(tag);
-    if (!sizeAttrMatch) continue;
-    const size = resolveStaticValue(sizeAttrMatch[1]);
+    const sizeValues = attrValues(tag, 'size');
+    if (sizeValues.length === 0) continue;
+    const size = resolveStaticValue(sizeValues[0]);
     if (size === null || !ICON_SIZE_RE.test(size)) continue;
     if (hasAccessibleName(tag)) continue;
     violations.push({
@@ -607,7 +673,13 @@ function run() {
  * per the rules in this file's header — including `||` chained, nested
  * inside a ternary, and mixed with `??` — and stays fail-open on the one
  * case that genuinely isn't decidable — a ternary unresolvable on both
- * branches.
+ * branches. Also proves the attribute-value capture balances nested braces
+ * rather than stopping at the first one: a ternary branch that is a template
+ * literal (with and without interpolation, including a template nested
+ * inside another template's `${…}`), a call with an object-literal argument,
+ * and a string literal that itself contains a `{`/`}` all reach the same
+ * ternary decision logic instead of resolving to `unknown` on a truncated
+ * fragment.
  *
  * @returns {boolean}
  */
@@ -615,7 +687,9 @@ const CLEAN_CONDITIONALS_LABEL =
   "size={'icon'} with a real aria-label, both aria-labelledby forms, a ternary decidably " +
   'non-empty on both branches, `?? "Label"` with an unresolvable left, `|| "Label"` with an ' +
   'unresolvable left, `"Label" || x` with a decidably-truthy left, `"Label" && "Label"` ' +
-  'with a decidably-truthy left, and a ternary unresolvable on both branches are not violations';
+  'with a decidably-truthy left, a ternary unresolvable on both branches, a ternary branch ' +
+  'that is a template literal with interpolation, and a ternary branch that is a string ' +
+  'literal containing a brace — all with a genuine non-empty other branch — are not violations';
 
 function selfTest() {
   const dirty = [
@@ -638,6 +712,11 @@ function selfTest() {
     '<Button size="icon" aria-label={cond ? (x || "") : "Save"}><Trash2 /></Button>',
     '<Button size="icon" aria-label={a || b || ""}><Trash2 /></Button>',
     '<Button size="icon" aria-label={(x ?? y) || ""}><Trash2 /></Button>',
+    '<Button size="icon" aria-label={cond ? `${x}` : ""}><Trash2 /></Button>',
+    '<Button size="icon" aria-label={cond ? `static text` : ""}><Trash2 /></Button>',
+    '<Button size="icon" aria-label={cond ? `${`${y}`}` : ""}><Trash2 /></Button>',
+    '<Button size="icon" aria-label={cond ? "{}" : ""}><Trash2 /></Button>',
+    "<Button size=\"icon\" aria-label={cond ? t({ key: 'x' }) : ''}><Trash2 /></Button>",
   ].join('\n');
   const clean = [
     '<Button size="icon" aria-label="Delete item"><Trash2 /></Button>',
@@ -654,6 +733,8 @@ function selfTest() {
     '<Button size="icon" aria-label={cond ? labelA : labelB}><Trash2 /></Button>',
     '<Button size="icon" aria-label={cond || "Close"}><Trash2 /></Button>',
     '<Button size="icon" aria-label={"Close" || x}><Trash2 /></Button>',
+    '<Button size="icon" aria-label={cond ? `${x}` : "Close"}><Trash2 /></Button>',
+    '<Button size="icon" aria-label={cond ? "{}" : "Close"}><Trash2 /></Button>',
   ].join('\n');
 
   const dirtyHits = findViolations('pillars/x/app/src/A.tsx', dirty);
@@ -686,7 +767,13 @@ function selfTest() {
     'reports a ternary with `||` nested in a branch': dirtyLines.has(22),
     'reports a chained `a || b || ""`': dirtyLines.has(23),
     'reports `||` mixed with `??` on its left': dirtyLines.has(24),
-    'reports every dirty line, not just the first': dirtyLines.size === 19,
+    'reports a ternary branch that is a template literal with interpolation': dirtyLines.has(25),
+    'reports a ternary branch that is a template literal without interpolation': dirtyLines.has(26),
+    'reports a ternary branch that is a template with nested `${}` interpolation':
+      dirtyLines.has(27),
+    'reports a ternary branch that is a string literal containing a brace': dirtyLines.has(28),
+    'reports a ternary branch that is a call with an object-literal argument': dirtyLines.has(29),
+    'reports every dirty line, not just the first': dirtyLines.size === 24,
     'an icon button WITH aria-label is not a violation': !cleanHits.some(
       (v) => v.size === 'icon' && v.component === 'Button'
     ),
