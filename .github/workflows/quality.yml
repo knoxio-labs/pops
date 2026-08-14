@@ -519,6 +519,29 @@ jobs:
       - name: No disallowed Task.yield() polling in clients/ios
         run: node scripts/ci/check-swift-bounded-yield.mjs
 
+  migration-fk-pragma:
+    name: PRAGMA foreign_keys in migration SQL
+    # SQLite documents PRAGMA foreign_keys as a no-op while a transaction is
+    # open, and drizzle's sqlite migrator wraps every pending migration in one
+    # BEGIN/COMMIT — so PRAGMA foreign_keys=OFF (or =ON) inside a migration
+    # .sql file never does what its author intends. It was found twice
+    # (pillars/media/migrations/0032, pillars/finance/migrations/0052) before
+    # anything caught it. This guard reports the pragma, in any form, in any
+    # pillars/<id>/migrations/*.sql file — nothing hardcodes the pillar list,
+    # so a new pillar's migrations are covered without touching this file. It
+    # reads the source tree directly and pulls in no third-party deps, so it
+    # skips `pnpm install`. See scripts/ci/check-migration-fk-pragma.mjs.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Gate self-test (proves the guard's stated coverage — see the file header)
+        run: node scripts/ci/check-migration-fk-pragma.mjs --self-test
+      - name: No migration file relies on PRAGMA foreign_keys
+        run: node scripts/ci/check-migration-fk-pragma.mjs
+
   vendored-contracts:
     name: Vendored contract drift (ADR-033)
     # A consumer that vendors a producer pillar's OpenAPI snapshot — because the
