@@ -1101,6 +1101,580 @@ export type AiUsageGetStatsResponses = {
 
 export type AiUsageGetStatsResponse = AiUsageGetStatsResponses[keyof AiUsageGetStatsResponses];
 
+export type JobsListData = {
+  body?: never;
+  path?: never;
+  query?: {
+    queue?: string;
+    state?: 'waiting' | 'active' | 'completed' | 'failed' | 'delayed' | 'paused';
+    limit?: number;
+    offset?: number;
+  };
+  url: '/jobs';
+};
+
+export type JobsListErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+  };
+  /**
+   * 503
+   */
+  503: {
+    code?: string;
+    message: string;
+  };
+};
+
+export type JobsListError = JobsListErrors[keyof JobsListErrors];
+
+export type JobsListResponses = {
+  /**
+   * 200
+   */
+  200: {
+    jobs: Array<{
+      attemptsMade: number;
+      createdAt: string;
+      data: unknown;
+      failedReason: string | null;
+      finishedAt: string | null;
+      id: string | null;
+      name: string;
+      processedAt: string | null;
+      progress: unknown;
+      queue: string;
+      stacktrace: Array<string>;
+      state: string;
+    }>;
+    queue: string;
+    total: number;
+  };
+};
+
+export type JobsListResponse = JobsListResponses[keyof JobsListResponses];
+
+export type JobsListDeadLetterData = {
+  body?: never;
+  path?: never;
+  query?: {
+    queue?: string;
+    state?: 'waiting' | 'active' | 'completed' | 'failed' | 'delayed' | 'paused';
+    limit?: number;
+    offset?: number;
+  };
+  url: '/jobs/dead-letter';
+};
+
+export type JobsListDeadLetterErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+  };
+  /**
+   * 503
+   */
+  503: {
+    code?: string;
+    message: string;
+  };
+};
+
+export type JobsListDeadLetterError = JobsListDeadLetterErrors[keyof JobsListDeadLetterErrors];
+
+export type JobsListDeadLetterResponses = {
+  /**
+   * 200
+   */
+  200: {
+    jobs: Array<{
+      attemptsMade: number;
+      createdAt: string;
+      data: unknown;
+      failedReason: string | null;
+      finishedAt: string | null;
+      id: string | null;
+      name: string;
+      processedAt: string | null;
+      progress: unknown;
+      queue: string;
+      stacktrace: Array<string>;
+      state: string;
+    }>;
+    originQueue: string;
+    queue: string;
+    total: number;
+  };
+};
+
+export type JobsListDeadLetterResponse =
+  JobsListDeadLetterResponses[keyof JobsListDeadLetterResponses];
+
+export type JobsReplayDeadLetterData = {
+  /**
+   * Body
+   */
+  body?: {
+    queue?: string;
+  };
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/jobs/dead-letter/{id}/replay';
+};
+
+export type JobsReplayDeadLetterErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+  };
+  /**
+   * 503
+   */
+  503: {
+    code?: string;
+    message: string;
+  };
+};
+
+export type JobsReplayDeadLetterError =
+  JobsReplayDeadLetterErrors[keyof JobsReplayDeadLetterErrors];
+
+export type JobsReplayDeadLetterResponses = {
+  /**
+   * 200
+   */
+  200: {
+    deadLetterJobId: string;
+    originQueue: string;
+    replayedJobId: string | null;
+  };
+};
+
+export type JobsReplayDeadLetterResponse =
+  JobsReplayDeadLetterResponses[keyof JobsReplayDeadLetterResponses];
+
+export type JobsDrainData = {
+  /**
+   * Body
+   */
+  body?: {
+    delayed?: boolean;
+    queue?: string;
+  };
+  path?: never;
+  query?: never;
+  url: '/jobs/drain';
+};
+
+export type JobsDrainErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+  };
+  /**
+   * 503
+   */
+  503: {
+    code?: string;
+    message: string;
+  };
+};
+
+export type JobsDrainError = JobsDrainErrors[keyof JobsDrainErrors];
+
+export type JobsDrainResponses = {
+  /**
+   * 200
+   */
+  200: {
+    queue: string;
+    removed: number;
+  };
+};
+
+export type JobsDrainResponse = JobsDrainResponses[keyof JobsDrainResponses];
+
+export type JobsQueuesData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/jobs/queues';
+};
+
+export type JobsQueuesErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+  };
+  /**
+   * 503
+   */
+  503: {
+    code?: string;
+    message: string;
+  };
+};
+
+export type JobsQueuesError = JobsQueuesErrors[keyof JobsQueuesErrors];
+
+export type JobsQueuesResponses = {
+  /**
+   * 200
+   */
+  200: {
+    queues: Array<string>;
+  };
+};
+
+export type JobsQueuesResponse = JobsQueuesResponses[keyof JobsQueuesResponses];
+
+export type JobsStatsData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/jobs/stats';
+};
+
+export type JobsStatsErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+  };
+  /**
+   * 503
+   */
+  503: {
+    code?: string;
+    message: string;
+  };
+};
+
+export type JobsStatsError = JobsStatsErrors[keyof JobsStatsErrors];
+
+export type JobsStatsResponses = {
+  /**
+   * 200
+   */
+  200: {
+    queues: Array<{
+      counts: {
+        active: number;
+        completed: number;
+        delayed: number;
+        failed: number;
+        paused: number;
+        waiting: number;
+      };
+      deadLetter: {
+        count: number;
+        queue: string;
+      } | null;
+      queue: string;
+    }>;
+  };
+};
+
+export type JobsStatsResponse = JobsStatsResponses[keyof JobsStatsResponses];
+
+export type JobsGetData = {
+  body?: never;
+  path: {
+    id: string;
+  };
+  query?: {
+    queue?: string;
+  };
+  url: '/jobs/{id}';
+};
+
+export type JobsGetErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+  };
+  /**
+   * 503
+   */
+  503: {
+    code?: string;
+    message: string;
+  };
+};
+
+export type JobsGetError = JobsGetErrors[keyof JobsGetErrors];
+
+export type JobsGetResponses = {
+  /**
+   * 200
+   */
+  200: {
+    attemptsMade: number;
+    createdAt: string;
+    data: unknown;
+    failedReason: string | null;
+    finishedAt: string | null;
+    id: string | null;
+    name: string;
+    processedAt: string | null;
+    progress: unknown;
+    queue: string;
+    stacktrace: Array<string>;
+    state: string;
+  };
+};
+
+export type JobsGetResponse = JobsGetResponses[keyof JobsGetResponses];
+
+export type JobsCancelData = {
+  /**
+   * Body
+   */
+  body?: {
+    queue?: string;
+  };
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/jobs/{id}/cancel';
+};
+
+export type JobsCancelErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+  };
+  /**
+   * 503
+   */
+  503: {
+    code?: string;
+    message: string;
+  };
+};
+
+export type JobsCancelError = JobsCancelErrors[keyof JobsCancelErrors];
+
+export type JobsCancelResponses = {
+  /**
+   * 200
+   */
+  200: {
+    cancelled: true;
+    id: string;
+  };
+};
+
+export type JobsCancelResponse = JobsCancelResponses[keyof JobsCancelResponses];
+
+export type JobsRetryData = {
+  /**
+   * Body
+   */
+  body?: {
+    queue?: string;
+  };
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/jobs/{id}/retry';
+};
+
+export type JobsRetryErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+  };
+  /**
+   * 503
+   */
+  503: {
+    code?: string;
+    message: string;
+  };
+};
+
+export type JobsRetryError = JobsRetryErrors[keyof JobsRetryErrors];
+
+export type JobsRetryResponses = {
+  /**
+   * 200
+   */
+  200: {
+    attemptsMade: number;
+    createdAt: string;
+    data: unknown;
+    failedReason: string | null;
+    finishedAt: string | null;
+    id: string | null;
+    name: string;
+    processedAt: string | null;
+    progress: unknown;
+    queue: string;
+    stacktrace: Array<string>;
+    state: string;
+  };
+};
+
+export type JobsRetryResponse = JobsRetryResponses[keyof JobsRetryResponses];
+
 export type SettingsListData = {
   body?: never;
   path?: never;

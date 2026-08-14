@@ -30,11 +30,11 @@
   "dependencies": {
     "@ts-rest/core": "3.53.0-rc.1",
     "bullmq": "^6.0.9",
-    "ioredis": "^5.11.1",
+    "ioredis": "^5.11.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@types/node": "^25.9.3",
+    "@types/node": "^24.13.3",
     "@vitest/coverage-v8": "^4.1.10",
     "typescript": "^6.0.3",
     "vitest": "^4.1.10"
