@@ -301,20 +301,28 @@ describe('checkAllCopies', () => {
 });
 
 describe('the guard CLI', () => {
-  it('its self-test passes, including the independent copy-set pin and the discovery leg', () => {
+  it('its self-test passes, including the independent copy-set pin, the fabricated discovery leg and the real-tree discovery leg', () => {
     const stdout = execFileSync('node', [guardPath, '--self-test'], { encoding: 'utf8' });
 
     expect(stdout).toContain(
       `self-test OK — declares exactly the ${KNOWN_FIXTURE_COPY_PATHS.length} pinned fixture copy path(s).`
     );
     expect(stdout).toMatch(/self-test OK — reports a same-named file discovered outside/u);
+    expect(stdout).toMatch(
+      /self-test OK — no undeclared copy of refresh-message-v1\.json is on disk/u
+    );
   });
 
-  // A test that plants an undeclared copy for real and re-runs the CLI
-  // against the actual repo tree is deliberately NOT here — see the same
-  // note in check-device-signature-fixture.test.ts. That path was proven
-  // manually: guard run clean, a corrupted copy planted at
-  // pillars/purchases/contracts/refresh-message-v1.json, guard and
-  // --self-test re-run and shown to exit 1 naming the planted file, plant
-  // removed, guard re-run clean again.
+  // `--self-test` now runs `selfTestRealTreeDiscovery` (fixture-copies.mjs)
+  // against the actual repo tree, the same leg check-vendored-contracts.mjs's
+  // `selfTestLegSet` runs via `findUnvendoredContracts(repoRoot)` — see the
+  // same note in check-device-signature-fixture.test.ts. A test that PLANTS
+  // an undeclared copy for real and re-runs the CLI against the actual repo
+  // tree is still deliberately not here — it would be visible to every other
+  // tree-scanning guard's own suite running concurrently in
+  // `vitest run scripts/`, producing a spurious failure unrelated to this
+  // one. That path was proven manually instead: guard run clean, a copy
+  // planted at pillars/purchases/contracts/refresh-message-v1.json, guard
+  // AND --self-test re-run and both shown to exit 1 naming the planted file,
+  // plant removed by filename, guard re-run clean again.
 });
