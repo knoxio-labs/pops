@@ -1,3 +1,4 @@
+import DesignSystemTestSupport
 import SwiftUI
 import Testing
 
@@ -10,7 +11,7 @@ import Testing
 ///
 /// `popsSeparator` is deliberately absent: it draws hairlines, which WCAG
 /// treats as decoration rather than as a graphical object carrying meaning.
-@Suite("Contrast")
+@Suite("Contrast", .requiresCompiledColorCatalog)
 internal struct ContrastTests {
     private static let minimumRatio = 4.5
 

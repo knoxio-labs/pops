@@ -1,4 +1,5 @@
 import AppCore
+import DesignSystemTestSupport
 import Foundation
 import SwiftUI
 import Testing
@@ -52,7 +53,7 @@ internal struct ReceiptResultRenderingTests {
     /// The three outcomes must look distinct from one another, not merely say
     /// different words — a screen reader relies on the copy, but a sighted
     /// reader relies on this.
-    @Test("the three outcomes do not look alike")
+    @Test("the three outcomes do not look alike", .requiresCompiledColorCatalog)
     func theThreeOutcomesAreVisuallyDistinct() throws {
         let created = try #require(
             Self.render(Self.card(.created(purchaseId: "purchase-1", alreadyStored: false))))
@@ -70,7 +71,7 @@ internal struct ReceiptResultRenderingTests {
 
     /// A re-upload of the same bytes reads differently from a fresh write —
     /// the pair the copy layer is built to keep apart.
-    @Test("a fresh write does not look like a re-upload")
+    @Test("a fresh write does not look like a re-upload", .requiresCompiledColorCatalog)
     func createdDistinguishesAlreadyStored() throws {
         let fresh = try #require(
             Self.render(Self.card(.created(purchaseId: "purchase-1", alreadyStored: false))))
@@ -82,7 +83,7 @@ internal struct ReceiptResultRenderingTests {
 
     /// Every colour here is a token, and every token diverges between the two
     /// schemes.
-    @Test("a card renders differently in light and dark")
+    @Test("a card renders differently in light and dark", .requiresCompiledColorCatalog)
     func followsTheColourScheme() throws {
         let outcome = ReceiptOutcome.unreadable(receiptURIs: ["uri-1"], reason: "blank image")
         let light = try #require(Self.render(Self.card(outcome), in: .light))
@@ -94,7 +95,7 @@ internal struct ReceiptResultRenderingTests {
     /// The gate-failure table and the extracted-fields table both have to
     /// reach the canvas. If a `needsReview` card with failures rendered
     /// identically to one without, the failure table would not be drawing.
-    @Test("the gate failures reach the needs-review card")
+    @Test("the gate failures reach the needs-review card", .requiresCompiledColorCatalog)
     func gateFailuresReachTheCanvas() throws {
         let withFailures = try #require(
             Self.render(
