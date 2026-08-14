@@ -9,12 +9,16 @@
  * rather than a spot check on the first one, and cover the failure the whole
  * change exists to prevent: an absent key must stop the run, not anonymise it.
  */
+import { dirname, join, relative } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   createIngestClient,
   DEFAULT_BASE_URL,
   INGEST_API_KEY_ENV,
+  isCliEntrypoint,
   postPurchases,
   runCli,
   upsertSource,
@@ -216,6 +220,40 @@ describe('runCli', () => {
     expect(process.exitCode).toBe(1);
     expect(errorSpy).toHaveBeenCalledWith('boom');
     errorSpy.mockRestore();
+  });
+});
+
+describe('the CLI entrypoint guard', () => {
+  const here = fileURLToPath(import.meta.url);
+
+  it('recognises the entry path the process was actually started with', () => {
+    expect(isCliEntrypoint(import.meta.url, here)).toBe(true);
+  });
+
+  it('recognises an entry path given relative to the working directory', () => {
+    expect(isCliEntrypoint(import.meta.url, relative(process.cwd(), here))).toBe(true);
+  });
+
+  it('recognises an entry path that a file URL has to percent-encode', () => {
+    const entryPath = join('/srv', 'My Projects', 'pops', 'scripts', 'ingest-amazon.ts');
+    const moduleUrl = pathToFileURL(entryPath).href;
+
+    expect(moduleUrl).toContain('My%20Projects');
+    // The form this replaced: an unencoded path against an encoded URL, which
+    // never matches and leaves the CLI doing nothing at all.
+    expect(moduleUrl === `file://${entryPath}`).toBe(false);
+    expect(isCliEntrypoint(moduleUrl, entryPath)).toBe(true);
+  });
+
+  it('stays false when the module is imported by some other entry point', () => {
+    expect(isCliEntrypoint(import.meta.url, join(dirname(here), 'ingest-woolworths.ts'))).toBe(
+      false
+    );
+  });
+
+  it('stays false when there is no entry path at all', () => {
+    expect(isCliEntrypoint(import.meta.url, undefined)).toBe(false);
+    expect(isCliEntrypoint(import.meta.url, '')).toBe(false);
   });
 });
 

@@ -25,6 +25,7 @@ import {
 } from '../src/ingest/amazon/index.js';
 import {
   createIngestClient,
+  isCliEntrypoint,
   postPurchases,
   reportOutcome,
   runCli,
@@ -112,7 +113,6 @@ export async function main(argv: readonly string[] = process.argv.slice(2)): Pro
   reportOutcome(await postPurchases(client, orders));
 }
 
-// Guarded so importing `main` for tests does not also run the CLI.
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isCliEntrypoint(import.meta.url)) {
   await runCli(main);
 }
