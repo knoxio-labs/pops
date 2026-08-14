@@ -28,6 +28,8 @@ import type {
   ReconcileConfirmData,
   ReconcileConfirmErrors,
   ReconcileConfirmResponses,
+  ReconcileLinksData,
+  ReconcileLinksResponses,
   ReconcileQueueData,
   ReconcileQueueResponses,
   ReconcileRejectData,
@@ -40,6 +42,7 @@ import type {
   ReconcileUnlinkErrors,
   ReconcileUnlinkResponses,
   SearchSearchData,
+  SearchSearchErrors,
   SearchSearchResponses,
   SourceDeleteData,
   SourceDeleteErrors,
@@ -198,6 +201,17 @@ export const reconcileConfirm = <ThrowOnError extends boolean = false>(
   );
 
 /**
+ * Orders linked to one finance transaction, confirmed or derived
+ */
+export const reconcileLinks = <ThrowOnError extends boolean = false>(
+  options: Options<ReconcileLinksData, ThrowOnError>
+): RequestResult<ReconcileLinksResponses, unknown, ThrowOnError> =>
+  (options.client ?? client).get<ReconcileLinksResponses, unknown, ThrowOnError>({
+    url: '/reconcile/links',
+    ...options,
+  });
+
+/**
  * Charges awaiting a decision, newest order first
  */
 export const reconcileQueue = <ThrowOnError extends boolean = false>(
@@ -258,8 +272,8 @@ export const reconcileUnlink = <ThrowOnError extends boolean = false>(
  */
 export const searchSearch = <ThrowOnError extends boolean = false>(
   options?: Options<SearchSearchData, ThrowOnError>
-): RequestResult<SearchSearchResponses, unknown, ThrowOnError> =>
-  (options?.client ?? client).post<SearchSearchResponses, unknown, ThrowOnError>({
+): RequestResult<SearchSearchResponses, SearchSearchErrors, ThrowOnError> =>
+  (options?.client ?? client).post<SearchSearchResponses, SearchSearchErrors, ThrowOnError>({
     url: '/search',
     ...options,
     headers: {

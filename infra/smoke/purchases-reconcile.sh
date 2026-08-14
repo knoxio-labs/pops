@@ -24,6 +24,13 @@
 # would be admitted — purchases still serves an anonymous caller — which is
 # exactly the hole this script must not sit in.
 #
+# That key is this script's own inbound credential and is separate from the
+# one purchases-api itself sends outbound: the compose service mounts
+# `secrets/pops_purchases_api_key` for that (provisioning:
+# infra/secrets.example/purchases/README.md). Compose refuses to start a
+# service whose secret file is absent, so the `up` below is where a host that
+# has never provisioned it finds out.
+#
 # Exit 0 = purchases reconciled a real order against a real finance
 # transaction across the network. Exit 1 = it did not, with the reason.
 
@@ -141,6 +148,8 @@ log "Registering the smoke source and ingesting an order"
 # presented to finance is held to a grant it does not have.
 in_purchases node -e "
   const base = 'http://localhost:3013';
+  // Header name is literal by necessity (inline shell script, no import). The
+  // canonical spelling lives in SERVICE_ACCOUNT_HEADER, libs/sdk/src/server/service-account-auth.ts.
   const headers = {
     'content-type': 'application/json',
     'x-api-key': process.env.POPS_INTERNAL_API_KEY,

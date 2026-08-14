@@ -19,7 +19,7 @@ export function ExcludedButton({ tmdbId, variant, mutation }: StatusBtnProps) {
       <Button
         size="icon"
         variant="ghost"
-        className="h-7 w-7 text-amber-500 hover:bg-amber-500/20"
+        className="h-7 w-7 text-warning hover:bg-warning/20"
         onClick={() => mutation.mutate({ tmdbId })}
         disabled={mutation.isPending}
         title="Excluded — click to un-exclude"
@@ -37,7 +37,7 @@ export function ExcludedButton({ tmdbId, variant, mutation }: StatusBtnProps) {
     <Button
       variant="outline"
       size="sm"
-      className="text-amber-500 border-amber-500/50"
+      className="text-warning border-warning/50"
       onClick={() => mutation.mutate({ tmdbId })}
       disabled={mutation.isPending}
     >

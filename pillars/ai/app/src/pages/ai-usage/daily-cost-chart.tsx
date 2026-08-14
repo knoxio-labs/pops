@@ -19,7 +19,7 @@ function CostTooltipBody({
   return (
     <div className="rounded-lg border bg-background p-2 shadow-md text-sm">
       <p className="font-medium">{item.date}</p>
-      <p className="text-amber-600">Cost: ${item.cost.toFixed(4)}</p>
+      <p className="text-chart-1">Cost: ${item.cost.toFixed(4)}</p>
       <p className="text-muted-foreground">{item.calls} calls</p>
     </div>
   );

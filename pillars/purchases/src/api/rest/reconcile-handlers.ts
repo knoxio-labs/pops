@@ -1,16 +1,26 @@
 /**
  * Handlers for the `reconcile.*` ts-rest sub-router.
  */
-import { confirmLink, listReconcileQueue, rejectLink, unlinkCharge } from '../../db/index.js';
+import {
+  confirmLink,
+  listPurchasesForTransaction,
+  listReconcileQueue,
+  rejectLink,
+  unlinkCharge,
+} from '../../db/index.js';
 import { nowIso } from '../../db/services/internal.js';
 
 import type { z } from 'zod';
 
-import type { ReconcileQueueQuerySchema } from '../../contract/rest-reconcile.js';
-import type { PurchasesDb, QueueEntry } from '../../db/index.js';
+import type {
+  ReconcileQueueQuerySchema,
+  TransactionLinksQuerySchema,
+} from '../../contract/rest-reconcile.js';
+import type { LinkedPurchase, PurchasesDb, QueueEntry } from '../../db/index.js';
 import type { SweepOutcome } from '../../reconcile/sweep.js';
 
 type QueueQuery = z.infer<typeof ReconcileQueueQuerySchema>;
+type TransactionLinksQuery = z.infer<typeof TransactionLinksQuerySchema>;
 type Decision = { chargeId: string; transactionUri: string };
 
 /** What the route needs from the runner, without importing its scheduling. */
@@ -35,6 +45,14 @@ function toWireEntries(entries: readonly QueueEntry[]) {
   }));
 }
 
+function toWireLinkedPurchases(entries: readonly LinkedPurchase[]) {
+  return entries.map((entry) => ({
+    purchase: entry.purchase,
+    charges: entry.charges.map((charge) => ({ charge: charge.charge, link: charge.link })),
+    linkedCents: entry.linkedCents,
+  }));
+}
+
 export function makeReconcileHandlers(db: PurchasesDb, sweep?: SweepTrigger) {
   return {
     queue: async ({ query }: { query: QueueQuery }) => ({
@@ -51,6 +69,17 @@ export function makeReconcileHandlers(db: PurchasesDb, sweep?: SweepTrigger) {
             ...(query.offset === undefined ? {} : { offset: query.offset }),
           })
         ),
+      },
+    }),
+
+    links: async ({ query }: { query: TransactionLinksQuery }) => ({
+      status: 200 as const,
+      body: {
+        // Echoed back so a response is self-describing once it has been
+        // passed around, cached or logged away from the request that
+        // produced it.
+        transactionUri: query.transactionUri,
+        purchases: toWireLinkedPurchases(listPurchasesForTransaction(db, query.transactionUri)),
       },
     }),
 

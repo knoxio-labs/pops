@@ -3,6 +3,8 @@
  * unrecognised is re-thrown so Express's error pipeline (and the test
  * suite) sees the underlying stack rather than a swallowed 500.
  */
+import { RequestValidationError } from '@ts-rest/express';
+
 import {
   DuplicatePurchaseError,
   InvalidIngestPayloadError,
@@ -15,9 +17,48 @@ import {
   isUniqueConstraintError,
 } from '../shared/sqlite-errors.js';
 
+import type { NextFunction, Response } from 'express';
+
 export interface ErrorBody {
   message: string;
   code?: string;
+}
+
+/**
+ * What a route declaring a 400 promises the body looks like when the request
+ * never reached a handler. Same shape a handler-mapped 400 produces, so the
+ * two ways to be rejected are indistinguishable on the wire.
+ */
+const VALIDATION_ERROR_BODY: ErrorBody = {
+  message: 'Request does not match the contract schema',
+  code: 'VALIDATION_ERROR',
+};
+
+/**
+ * ts-rest rejects a request that does not match a route's `body`, `query` or
+ * `params` schema **before** any handler runs, and answers with a body of its
+ * own — `{ name: 'ValidationError', issues: [...] }`. Every route here that
+ * declares a 400 declares {@link ErrorBody}, so without this the OpenAPI
+ * document promises one shape and the server sends another, and a client
+ * generated from that document cannot decode the rejection it is most likely
+ * to see.
+ *
+ * Ordinary input reaches it: a search filter naming a field outside the closed
+ * vocabulary, a `limit` that is not a number, an `orderedAt` that is not a
+ * timestamp. Mirrors `pillars/finance/src/api/rest/error-mapping.ts`.
+ *
+ * The issues are dropped rather than forwarded: they name this server's
+ * internal schema fields, and a caller that needs to know which filter was
+ * refused gets that from the handler's own 400, which names it.
+ */
+export function createRequestValidationErrorHandler() {
+  return (error: unknown, _req: unknown, res: Response, next: NextFunction): void => {
+    if (!(error instanceof RequestValidationError)) {
+      next(error);
+      return;
+    }
+    res.status(400).json(VALIDATION_ERROR_BODY);
+  };
 }
 
 export interface MappedHttpError {

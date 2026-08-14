@@ -26,6 +26,9 @@ import {
   IsoTimestampSchema,
   LinkTypeSchema,
   PopsUriSchema,
+  PurchaseChargeLinkSchema,
+  PurchaseChargeSchema,
+  PurchaseSchema,
 } from './schemas/purchase.js';
 
 const c = initContract();
@@ -77,6 +80,62 @@ export const ReconcileQueueQuerySchema = z.object({
   offset: z.coerce.number().int().min(0).optional(),
 });
 
+/**
+ * A `pops://finance/transaction/<id>` reference specifically.
+ *
+ * Narrower than {@link PopsUriSchema}, and deliberately narrower than the
+ * stored column, which stays generic. It exists for the one place a URI is
+ * an INPUT: a lookup keyed on a well-formed URI from another pillar matches
+ * no link and returns an empty list, which reads as "no order bought this"
+ * rather than "you asked the wrong question".
+ */
+const FinanceTransactionUriSchema = z
+  .string()
+  .regex(
+    /^pops:\/\/finance\/transaction\/[^/\s]+$/u,
+    'expected a finance transaction URI, e.g. pops://finance/transaction/<id>'
+  );
+
+export const TransactionLinksQuerySchema = z.object({
+  transactionUri: FinanceTransactionUriSchema,
+});
+
+/** One charge and the link attaching it to the transaction being asked about. */
+export const LinkedChargeSchema = z.object({
+  charge: PurchaseChargeSchema,
+  /**
+   * Carries `confirmedAt`, which is the only thing separating a human
+   * decision from the engine's current belief. A consumer that renders a
+   * derived link as a settled fact is reporting a guess.
+   */
+  link: PurchaseChargeLinkSchema,
+});
+
+export const LinkedPurchaseSchema = z.object({
+  purchase: PurchaseSchema,
+  /** Ordered by the charge's own `position`, ascending, so rendering is stable. */
+  charges: z.array(LinkedChargeSchema),
+  /**
+   * `Σ charges[].link.amountCents` — how much of the transaction this order
+   * accounts for. Pre-summed because a combined settlement is the case that
+   * makes it non-obvious: several orders share one transaction, and each
+   * claims only part of it.
+   */
+  linkedCents: CentsSchema,
+});
+
+/**
+ * The reverse of the order detail's `charges[].links`.
+ *
+ * An empty `purchases` array is a 200, not a 404. "No order explains this
+ * transaction" is the normal answer for most of a statement, and an error
+ * status would make a consumer treat the ordinary case as a fault.
+ */
+export const TransactionLinksSchema = z.object({
+  transactionUri: FinanceTransactionUriSchema,
+  purchases: z.array(LinkedPurchaseSchema),
+});
+
 const LinkDecisionBodySchema = z.object({
   chargeId: z.string().trim().min(1),
   transactionUri: PopsUriSchema,
@@ -116,6 +175,24 @@ export const purchasesReconcileContract = c.router({
     query: ReconcileQueueQuerySchema,
     responses: { 200: z.object({ items: z.array(QueueEntrySchema) }) },
     summary: 'Charges awaiting a decision, newest order first',
+  },
+  /**
+   * The direction a person actually arrives from: a finance transaction in
+   * hand, wanting to know what it bought (ADR-042).
+   *
+   * Deliberately NOT served by {@link purchasesReconcileContract.queue}.
+   * That route answers "what still wants a decision", so it returns nothing
+   * for a confirmed link and nothing at all for an auto-link source — which
+   * is every one of the charges a finance view most wants to explain. This
+   * one indexes the link table itself, so it sees every established link
+   * whatever its state, and reports that state rather than filtering on it.
+   */
+  links: {
+    method: 'GET',
+    path: '/reconcile/links',
+    query: TransactionLinksQuerySchema,
+    responses: { 200: TransactionLinksSchema },
+    summary: 'Orders linked to one finance transaction, confirmed or derived',
   },
   confirm: {
     method: 'POST',

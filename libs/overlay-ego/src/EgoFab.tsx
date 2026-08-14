@@ -19,7 +19,7 @@ export function EgoFab({ open, onToggle }: EgoFabProps) {
       shape="circle"
       className={cn(
         'fixed bottom-6 right-6 z-50 h-14 w-14 shadow-lg',
-        'bg-sky-600 hover:bg-sky-500 text-white',
+        'bg-info hover:bg-info/90 text-info-foreground',
         'transition-transform duration-200',
         open && 'scale-90'
       )}

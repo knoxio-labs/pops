@@ -50,6 +50,12 @@ export {
   type SearchMatchType,
 } from './services/search.js';
 
+export {
+  searchFilterScope,
+  type SearchFilter,
+  type SearchScopeResult,
+} from './services/search-filters.js';
+
 export { type PurchaseChargeDetail } from './services/purchase-read-charges.js';
 
 export {
@@ -84,6 +90,12 @@ export {
   listSolvableCharges,
   type ReconcileScope,
 } from './services/reconcile-reads.js';
+
+export {
+  listPurchasesForTransaction,
+  type LinkedCharge,
+  type LinkedPurchase,
+} from './services/reconcile-links.js';
 
 export {
   listReconcileQueue,

@@ -14,7 +14,12 @@ import { RegistryUnreachableError } from '@pops/pillar-sdk/discovery';
 
 import { deviceRow, openTempDb, requireRow } from '../../../db/__tests__/helpers.js';
 import { devices } from '../../../db/index.js';
-import { buildMobileBootstrap, type MobileBootstrapDeps } from '../bootstrap.js';
+import {
+  buildMobileBootstrap,
+  defaultMobileBootstrapDeps,
+  type MobileBootstrapDeps,
+} from '../bootstrap.js';
+import { DEFAULT_PROBE_TIMEOUT_MS } from '../reachability.js';
 import { contractResponse, fakeFetch, pillarSnapshot, registrySnapshot } from './fixtures.js';
 
 import type { BfmDb, DeviceInsert, DeviceRow } from '../../../db/index.js';
@@ -292,5 +297,31 @@ describe('recording the check-in', () => {
     await buildMobileBootstrap(device, depsFor(db, {}, '2027-05-05T05:05:05.005Z'));
 
     expect(lastSeen(db, other.id)).toBe(otherBefore);
+  });
+});
+
+describe('defaultMobileBootstrapDeps', () => {
+  it("leaves the probe's own default timeout in place when none is given", () => {
+    const { db } = seededDb(deviceRow());
+
+    const deps = defaultMobileBootstrapDeps(db, {});
+
+    expect(deps.probe.timeoutMs).toBe(DEFAULT_PROBE_TIMEOUT_MS);
+  });
+
+  it('passes a caller-supplied probe timeout straight through', () => {
+    const { db } = seededDb(deviceRow());
+
+    const deps = defaultMobileBootstrapDeps(db, {}, 8_000);
+
+    expect(deps.probe.timeoutMs).toBe(8_000);
+  });
+
+  it('carries the base-URL overrides onto the probe', () => {
+    const { db } = seededDb(deviceRow());
+
+    const deps = defaultMobileBootstrapDeps(db, { finance: 'http://localhost:3010' });
+
+    expect(deps.probe.baseUrlOverrides).toEqual({ finance: 'http://localhost:3010' });
   });
 });

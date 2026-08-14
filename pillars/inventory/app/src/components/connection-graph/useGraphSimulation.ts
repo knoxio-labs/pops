@@ -103,6 +103,5 @@ export function useGraphSimulation({
     return () => {
       sim.stop();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rawData, itemId]);
+  }, [rawData, itemId, canvasRef, containerRef, nodesRef, linksRef, transformRef]);
 }

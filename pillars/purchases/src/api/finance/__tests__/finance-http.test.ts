@@ -22,9 +22,17 @@ import { createServer, type Server } from 'node:http';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { pillar } from '@pops/pillar-sdk/client';
+import {
+  __resetServerPillarCache,
+  __resetServerSdkConfig,
+  configureServerSdk,
+  pillar,
+} from '@pops/pillar-sdk/server';
 
 import { createFinanceClient, type FinanceRouter } from '../client.js';
+
+/** Throwaway literal. The wire assertion about it lives elsewhere. */
+const SERVICE_ACCOUNT_KEY = 'pops_sa_HTTPTEST.testsecret_not_a_real_key_0000';
 
 /**
  * A minimal OpenAPI document declaring exactly the operation this leg
@@ -131,9 +139,15 @@ beforeEach(async () => {
   const address = server.address();
   if (address === null || typeof address === 'string') throw new Error('no port');
   baseUrl = `http://127.0.0.1:${String(address.port)}`;
+
+  __resetServerSdkConfig();
+  __resetServerPillarCache();
+  configureServerSdk({ apiKey: SERVICE_ACCOUNT_KEY, registry: { registryUrl: baseUrl } });
 });
 
 afterEach(async () => {
+  __resetServerSdkConfig();
+  __resetServerPillarCache();
   await new Promise<void>((resolve, reject) => {
     server.close((err) => {
       if (err) reject(err);
@@ -142,15 +156,18 @@ afterEach(async () => {
   });
 });
 
-/** A client wired to the test server through the real SDK proxy. */
+/**
+ * A client wired to the test server through the real SDK proxy — the
+ * credentialled `/server` one production uses, so the paging and money
+ * assertions below run over the transport that actually ships. That the key
+ * reaches the wire is `api/pillars/__tests__/outbound-credential.test.ts`'s
+ * assertion, not this file's.
+ */
 function liveClient() {
   return createFinanceClient(() =>
-    pillar<FinanceRouter>('finance', {
-      registry: { registryUrl: baseUrl },
-      // Zero TTL so each test resolves against its own server rather than a
-      // snapshot cached by a previous one.
-      cacheTtlMs: 0,
-    })
+    // Zero TTL so each test resolves against its own server rather than a
+    // snapshot cached by a previous one.
+    pillar<FinanceRouter>('finance', { cacheTtlMs: 0 })
   );
 }
 
