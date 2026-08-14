@@ -140,3 +140,24 @@ export const CustomPrompt: Story = {
     onFilesSelected: () => {},
   },
 };
+
+/**
+ * The hint under the prompt is the raw `accept` attribute by default, which
+ * reads as machine text beside a page that already names the types in words.
+ */
+export const ConsumerOwnedAcceptHint: Story = {
+  args: {
+    accept: 'image/jpeg,image/png,application/pdf',
+    acceptHint: 'Photos or a PDF — one receipt at a time.',
+    onFilesSelected: () => {},
+  },
+};
+
+/** `null` drops the hint entirely, without giving up the dialog filter. */
+export const NoAcceptHint: Story = {
+  args: {
+    accept: 'image/jpeg,image/png,application/pdf',
+    acceptHint: null,
+    onFilesSelected: () => {},
+  },
+};

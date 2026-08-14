@@ -44,6 +44,13 @@ export interface FileUploadProps {
   onRemoveFile?: (index: number) => void;
   captureSlot?: ReactNode;
   prompt?: ReactNode;
+  /**
+   * The line under the prompt naming what may be dropped. Left out, it is the
+   * `ui` catalog's `Accepts <the raw accept attribute>` — readable enough for a
+   * generic drop zone, redundant beside a page that already spells the same
+   * list out in words. Pass `null` to drop it, or a node to phrase it.
+   */
+  acceptHint?: ReactNode;
   disabled?: boolean;
   className?: string;
 }
@@ -110,6 +117,7 @@ export function FileUpload(props: FileUploadProps) {
     onRemoveFile,
     captureSlot,
     prompt,
+    acceptHint,
     disabled,
     className,
     maxSize,
@@ -140,6 +148,7 @@ export function FileUpload(props: FileUploadProps) {
         multiple={multiple}
         accept={accept}
         prompt={prompt}
+        acceptHint={acceptHint}
         onDrop={handleDrop}
         onChange={handleChange}
       />

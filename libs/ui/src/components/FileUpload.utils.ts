@@ -10,6 +10,11 @@ import type { TFunction } from 'i18next';
 export type FileValidationErrorReason =
   | { readonly type: 'not-accepted'; readonly file: File; readonly accept: string }
   | { readonly type: 'too-large'; readonly file: File; readonly maxSize: number }
+  /**
+   * `attempted` counts every file of the gesture, including any this same pass
+   * refused for type or size — it is what the user tried to add, so copy of the
+   * shape "you added {{attempted}} but can send {{maxFiles}}" adds up.
+   */
   | { readonly type: 'too-many'; readonly maxFiles: number; readonly attempted: number };
 
 /** A validation refusal, with a localized default message alongside its reason. */
@@ -44,7 +49,7 @@ export function validateFiles({ list, accept, maxSize, maxFiles, onError }: Vali
     : [];
   const out: File[] = [];
   for (const file of list) {
-    if (accept && !fileMatches(file, patterns)) {
+    if (accept !== undefined && !fileMatches(file, patterns)) {
       onError?.({ type: 'not-accepted', file, accept });
       continue;
     }
@@ -55,7 +60,7 @@ export function validateFiles({ list, accept, maxSize, maxFiles, onError }: Vali
     out.push(file);
   }
   if (typeof maxFiles === 'number' && out.length > maxFiles) {
-    onError?.({ type: 'too-many', maxFiles, attempted: out.length });
+    onError?.({ type: 'too-many', maxFiles, attempted: list.length });
     return out.slice(0, maxFiles);
   }
   return out;

@@ -1,6 +1,9 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { getI18n } from 'react-i18next';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+
+import ptBRUi from '@pops/locales/pt-BR/ui.json';
 
 import { FileUpload, type FileValidationError } from './FileUpload';
 
@@ -103,6 +106,30 @@ describe('FileUpload — default copy (no override)', () => {
     expect(error.attempted).toBe(2);
     expect(error.message).toBe('You can upload at most 1 file');
   });
+
+  // `attempted` is what the user tried to add, not what survived the earlier
+  // rules — a consumer phrasing "you added {{attempted}} but can send
+  // {{maxFiles}}" from the post-filter survivor count would understate it.
+  it('counts every file of the gesture as attempted, not just the eligible ones', () => {
+    const seen: FileValidationError[] = [];
+    render(
+      <FileUpload
+        multiple
+        accept="image/jpeg"
+        maxFiles={2}
+        onFilesSelected={vi.fn()}
+        onError={(error) => seen.push(error)}
+      />
+    );
+
+    dropFiles([jpg('a.jpg'), jpg('b.jpg'), jpg('c.jpg'), pdf('d.pdf'), pdf('e.pdf')]);
+
+    expect(seen.filter((error) => error.type === 'not-accepted')).toHaveLength(2);
+    const tooMany = seen.find((error) => error.type === 'too-many');
+    if (tooMany?.type !== 'too-many') throw new Error('no "too-many" error was reported');
+    expect(tooMany.attempted).toBe(5);
+    expect(tooMany.maxFiles).toBe(2);
+  });
 });
 
 describe('FileUpload — a consumer fully replacing the copy', () => {
@@ -144,6 +171,19 @@ describe('FileUpload — a consumer fully replacing the copy', () => {
 });
 
 describe('FileUpload — file list', () => {
+  // Under en-AU the catalog's "Remove {{name}}" is byte-identical to the
+  // hardcoded `Remove ${file.name}` this replaced, so only a second language
+  // can tell whether the catalog is consulted at all.
+  beforeAll(async () => {
+    const i18n = getI18n();
+    i18n.addResourceBundle('pt-BR', 'ui', ptBRUi);
+    await i18n.changeLanguage('pt-BR');
+  });
+
+  afterAll(async () => {
+    await getI18n().changeLanguage('en-AU');
+  });
+
   it('labels the remove button from the translated catalog, not a raw template', async () => {
     const onRemoveFile = vi.fn();
     render(
@@ -154,9 +194,43 @@ describe('FileUpload — file list', () => {
       />
     );
 
-    const remove = screen.getByRole('button', { name: 'Remove receipt.jpg' });
+    expect(screen.queryByRole('button', { name: 'Remove receipt.jpg' })).not.toBeInTheDocument();
+    const remove = screen.getByRole('button', { name: 'Remover receipt.jpg' });
     await userEvent.click(remove);
 
     expect(onRemoveFile).toHaveBeenCalledExactlyOnceWith(0);
+  });
+});
+
+describe('FileUpload — the accept hint', () => {
+  it('names the accepted types by default, from the catalog', () => {
+    render(<FileUpload accept="image/jpeg,.pdf" onFilesSelected={vi.fn()} />);
+
+    expect(screen.getByText('Accepts image/jpeg,.pdf')).toBeInTheDocument();
+  });
+
+  // A page that already spells the accepted types out in words below the drop
+  // zone would otherwise show the raw attribute string saying the same thing.
+  it('drops the hint entirely when the consumer passes null, keeping the filter', () => {
+    render(<FileUpload accept="image/jpeg,.pdf" acceptHint={null} onFilesSelected={vi.fn()} />);
+
+    expect(screen.queryByText('Accepts image/jpeg,.pdf')).not.toBeInTheDocument();
+    expect(document.querySelector('input[type="file"]')).toHaveAttribute(
+      'accept',
+      'image/jpeg,.pdf'
+    );
+  });
+
+  it('renders a consumer-supplied hint in place of the default', () => {
+    render(
+      <FileUpload
+        accept="image/jpeg,.pdf"
+        acceptHint="Photos and PDFs only"
+        onFilesSelected={vi.fn()}
+      />
+    );
+
+    expect(screen.queryByText('Accepts image/jpeg,.pdf')).not.toBeInTheDocument();
+    expect(screen.getByText('Photos and PDFs only')).toBeInTheDocument();
   });
 });

@@ -51,6 +51,28 @@ export function stage(current: Staging, batch: EncodedBatch): Staging {
 }
 
 /**
+ * Fold files refused before they ever reached {@link encodeBatch} — the drop
+ * zone applies the same accept filter itself, so a dragged-in `.heic` is turned
+ * away there — into the current problems.
+ *
+ * They merge into the batch's own rejection rather than sitting beside it: one
+ * gesture that mixes both produced one list of names for the reader, and two
+ * separate complaints would read as two separate mistakes.
+ */
+export function withRefused(current: Staging, names: readonly string[]): Staging {
+  if (names.length === 0) return current;
+  const rejected = current.problems.filter((problem) => problem.kind === 'rejected');
+  const merged: StagingProblem = {
+    kind: 'rejected',
+    names: [...rejected.flatMap((problem) => problem.names), ...names],
+  };
+  return {
+    parts: current.parts,
+    problems: [merged, ...current.problems.filter((problem) => problem.kind !== 'rejected')],
+  };
+}
+
+/**
  * Read every chosen file into a part, one at a time so the staged order is the
  * order they were chosen in rather than the order they happened to finish in.
  */
