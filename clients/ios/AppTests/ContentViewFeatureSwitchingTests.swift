@@ -4,8 +4,36 @@ import FeatureReceiptCapture
 import Foundation
 import SwiftUI
 import Testing
+import UIKit
 
 @testable import Pops
+
+/// A `ContentView` built the way the app builds it, from a `FeatureSurface`
+/// naming what the BFM offered.
+///
+/// Its own Keychain service and defaults suite, so a run cannot disturb a
+/// genuinely paired app on the same device — same reasoning as
+/// `CompositionRootTests`.
+@MainActor
+internal enum ContentViewFixture {
+    private static let namespace = "com.knoxiolabs.pops.tests.content-view-switching"
+
+    internal static func view(available: [MobileFeature]) -> ContentView {
+        let bound = AppComposition(
+            credentialStore: DeviceCredentialStore(
+                keyStore: SecureEnclaveKeyStore(),
+                tokenStore: KeychainTokenStore(service: namespace),
+                pairedDeviceStore: UserDefaultsPairedDeviceStore(suiteName: namespace)
+            )
+        )
+        return ContentView(
+            surface: FeatureSurface(
+                available: available, unavailable: [], bootstrap: .answered(.fresh)),
+            shell: bound.shell,
+            composition: bound
+        )
+    }
+}
 
 /// The bug this covers only exists when the BFM names more than one feature,
 /// and today it never does — so a test that only ever built a
@@ -29,14 +57,13 @@ import Testing
 /// production screen with no task and no observable model, so what it proves
 /// about `ContentView`'s single-feature path generalises.
 ///
-/// ## Why two-or-more features are not rendered at all
+/// ## Why two-or-more features are not rendered here
 ///
 /// Measured, not assumed, the same way: an `ImageRenderer` asked to flatten
 /// the `TabView` branch logs `Unable to render flattened version of
 /// PlatformViewControllerRepresentableAdaptor<UIKitAdaptableTabView>` and
-/// produces nothing a byte comparison could tell apart. See
-/// ``ContentViewFeatureSwitchingWiringTests`` for how that case is covered
-/// instead.
+/// produces nothing a byte comparison could tell apart. That branch is mounted
+/// in a real window instead — see ``ContentViewTabSwitcherTests``.
 @Suite("ContentView feature switching")
 @MainActor
 internal struct ContentViewFeatureSwitchingTests {
@@ -56,32 +83,8 @@ internal struct ContentViewFeatureSwitchingTests {
         return pixels as Data
     }
 
-    /// Its own Keychain service and defaults suite, so a run cannot disturb a
-    /// genuinely paired app on the same device — same reasoning as
-    /// `CompositionRootTests`.
-    private static let namespace = "com.knoxiolabs.pops.tests.content-view-switching"
-
-    private func composition() -> AppComposition {
-        AppComposition(
-            credentialStore: DeviceCredentialStore(
-                keyStore: SecureEnclaveKeyStore(),
-                tokenStore: KeychainTokenStore(service: Self.namespace),
-                pairedDeviceStore: UserDefaultsPairedDeviceStore(suiteName: Self.namespace)
-            )
-        )
-    }
-
-    private func surface(available: [MobileFeature]) -> FeatureSurface {
-        FeatureSurface(available: available, unavailable: [], bootstrap: .answered(.fresh))
-    }
-
     private func contentView(available: [MobileFeature]) -> ContentView {
-        let bound = composition()
-        return ContentView(
-            surface: surface(available: available),
-            shell: bound.shell,
-            composition: bound
-        )
+        ContentViewFixture.view(available: available)
     }
 
     @Test("zero available features renders, and renders real content rather than a blank screen")
@@ -117,13 +120,93 @@ internal struct ContentViewFeatureSwitchingTests {
     }
 }
 
-/// The half of `ContentView`'s feature-count switch a type checker cannot
-/// hold: that the single-feature branch draws that feature outright with no
-/// extra chrome, and that the multi-feature branch visits every element of
-/// `surface.available`, not just the first. Same technique
-/// `TransactionsScreenBoundaryTests` uses for its own routing table, and for
-/// the same reason a rendered proof does not exist for the multi-feature half
-/// — see ``ContentViewFeatureSwitchingTests``'s doc comment for why.
+/// The multi-feature branch, mounted rather than read.
+///
+/// `ImageRenderer` refuses this branch, so it is proved from the other end:
+/// hosted in a window, `TabView` is built by UIKit into a `UITabBarController`,
+/// and the tab bar it produces is the list of features a person holding the
+/// phone can actually reach. Asserting on that list is what distinguishes
+/// "iterates the whole surface" from "draws the first one and stops", which is
+/// the whole of the bug — and it is a distinction no assertion about the shape
+/// of `ContentView.swift`'s source can make.
+///
+/// The features are deliberately ones this build has never heard of, bar one:
+/// an unknown id maps to no screen, which keeps the whole `TransactionsFlowView`
+/// problem described in ``ContentViewFeatureSwitchingTests`` out of a suite that
+/// mounts views for real and lets their tasks run.
+@Suite("ContentView tab switcher")
+@MainActor
+internal struct ContentViewTabSwitcherTests {
+    private static let canvas = CGSize(width: 390, height: 844)
+
+    /// The titles a person would see along the bottom of the screen.
+    private func offeredTabTitles(available: [MobileFeature]) throws -> [String] {
+        let scene = try #require(
+            UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first,
+            "the test host is not showing a window scene, so nothing can be mounted in one"
+        )
+        let window = UIWindow(windowScene: scene)
+        window.frame = CGRect(origin: .zero, size: Self.canvas)
+        window.rootViewController = UIHostingController(
+            rootView: ContentViewFixture.view(available: available))
+        window.makeKeyAndVisible()
+        window.layoutIfNeeded()
+        defer { window.isHidden = true }
+
+        let switcher = try #require(
+            Self.tabBarController(in: window.rootViewController),
+            "more than one feature is available and no tab bar was built for them"
+        )
+        return switcher.tabBar.items?.compactMap(\.title) ?? []
+    }
+
+    private static func tabBarController(in controller: UIViewController?) -> UITabBarController? {
+        guard let controller else { return nil }
+        if let switcher = controller as? UITabBarController { return switcher }
+        for child in controller.children {
+            if let found = tabBarController(in: child) { return found }
+        }
+        return nil
+    }
+
+    @Test("every available feature is offered, in the BFM's order")
+    func everyFeatureGetsATab() throws {
+        let available: [MobileFeature] = [
+            .receiptCapture,
+            MobileFeature(rawValue: "budgets"),
+            MobileFeature(rawValue: "wishlist"),
+        ]
+
+        let offered = try offeredTabTitles(available: available)
+
+        #expect(
+            offered == available.map(RootCopy.name(of:)),
+            Comment(
+                rawValue: "the features the BFM said are available are not the features on offer "
+                    + "— a feature the app cannot reach is a feature that may as well not exist"
+            )
+        )
+    }
+
+    @Test("a fourth feature is a fourth tab, not the same tabs again")
+    func theTabCountFollowsTheSurface() throws {
+        let two = try offeredTabTitles(available: [
+            MobileFeature(rawValue: "budgets"), MobileFeature(rawValue: "wishlist"),
+        ])
+        let four = try offeredTabTitles(available: [
+            MobileFeature(rawValue: "budgets"), MobileFeature(rawValue: "wishlist"),
+            MobileFeature(rawValue: "goals"), MobileFeature(rawValue: "receipts"),
+        ])
+
+        #expect(two.count == 2)
+        #expect(four.count == 4, "the switcher is offering a fixed number of features")
+    }
+}
+
+/// The half of `ContentView`'s feature-count switch neither a type checker nor
+/// the mounted tab bar can hold: that every tab's content comes from the one
+/// id-to-screen table rather than from a second one grown beside it. Same
+/// technique `TransactionsScreenBoundaryTests` uses for its own routing table.
 @Suite("ContentView feature switching wiring")
 internal struct ContentViewFeatureSwitchingWiringTests {
     /// `.../AppTests/ContentViewFeatureSwitchingTests.swift`
@@ -142,33 +225,13 @@ internal struct ContentViewFeatureSwitchingWiringTests {
         #expect(!Self.contentViewSource.isEmpty, "App/ContentView.swift is empty or missing")
     }
 
-    @Test("exactly one feature draws it directly, with no tab chrome")
-    func oneFeatureHasNoWrapper() {
-        #expect(
-            Self.contentViewSource.contains("screen(for: surface.available[0])"),
-            "the single-feature branch no longer draws that feature outright"
-        )
-    }
-
-    @Test("two or more features are drawn by iterating the whole list, not the first one")
-    func multipleFeaturesIterateTheWholeList() {
-        #expect(
-            Self.contentViewSource.contains("ForEach(surface.available"),
-            "the multi-feature branch no longer iterates surface.available"
-        )
-        #expect(
-            !Self.contentViewSource.contains("surface.available.first"),
-            "surface.available.first is back — this is the exact regression POPS-1985 fixed"
-        )
-    }
-
     @Test("every screen in the switcher still goes through screen(for:)")
     func theSwitcherStillNamesTheOneScreenTable() {
         // `screen(for:)` is the one place a feature id becomes a view. A
-        // switcher that built a view another way would draw *something* for a
-        // second feature — this repo's whole point — while quietly forking the
-        // id-to-screen mapping this file's own doc comment says lives in one
-        // place.
+        // switcher that built a view another way would still title its tabs
+        // correctly — so the mounted suite above would pass — while quietly
+        // forking the id-to-screen mapping this file's own doc comment says
+        // lives in one place.
         #expect(Self.contentViewSource.contains("screen(for: feature)"))
     }
 }
