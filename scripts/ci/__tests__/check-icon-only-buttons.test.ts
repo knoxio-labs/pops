@@ -82,6 +82,36 @@ describe('an icon-only button with no aria-label is reported', () => {
     ].join('\n');
     expect(findViolations('a.tsx', source).map((v) => v.line)).toEqual([1, 2]);
   });
+
+  it('reports an empty aria-label — presence is not a label', () => {
+    expect(
+      findViolations('a.tsx', '<Button size="icon" aria-label=""><Trash2 /></Button>')
+    ).toHaveLength(1);
+  });
+
+  it('reports a whitespace-only aria-label', () => {
+    expect(
+      findViolations('a.tsx', '<Button size="icon" aria-label="   "><Trash2 /></Button>')
+    ).toHaveLength(1);
+  });
+
+  it('reports aria-label={undefined} — it renders with no attribute at all', () => {
+    expect(
+      findViolations('a.tsx', '<Button size="icon" aria-label={undefined}><Trash2 /></Button>')
+    ).toHaveLength(1);
+  });
+
+  it('reports data-aria-label as a decoy, not a real aria-label', () => {
+    expect(
+      findViolations('a.tsx', '<Button size="icon" data-aria-label="x"><Trash2 /></Button>')
+    ).toHaveLength(1);
+  });
+
+  it("reports size={'icon'} — a brace-wrapped string literal is statically decidable", () => {
+    const hits = findViolations('a.tsx', "<Button size={'icon'}><Trash2 /></Button>");
+    expect(hits).toHaveLength(1);
+    expect(hits[0]?.size).toBe('icon');
+  });
 });
 
 describe('a labelled or non-icon button is not reported', () => {
@@ -112,6 +142,33 @@ describe('a labelled or non-icon button is not reported', () => {
     expect(findViolations('a.tsx', '<Button size={dynamicSize}><Trash2 /></Button>')).toHaveLength(
       0
     );
+  });
+
+  it("size={'icon'} with a real aria-label is not a violation", () => {
+    expect(
+      findViolations('a.tsx', '<Button size={\'icon\'} aria-label="Delete"><Trash2 /></Button>')
+    ).toHaveLength(0);
+  });
+
+  it('aria-labelledby with a static value satisfies the guard', () => {
+    expect(
+      findViolations(
+        'a.tsx',
+        '<Button size="icon" aria-labelledby="delete-heading"><Trash2 /></Button>'
+      )
+    ).toHaveLength(0);
+  });
+
+  it('aria-labelledby with a dynamic value satisfies the guard', () => {
+    expect(
+      findViolations('a.tsx', '<Button size="icon" aria-labelledby={headingId}><Trash2 /></Button>')
+    ).toHaveLength(0);
+  });
+
+  it('a dynamic aria-label expression is treated as present, not guessed at', () => {
+    expect(
+      findViolations('a.tsx', '<Button size="icon" aria-label={computedLabel}><Trash2 /></Button>')
+    ).toHaveLength(0);
   });
 
   it('a plain native <button> is out of scope for this guard', () => {

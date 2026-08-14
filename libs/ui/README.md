@@ -70,7 +70,7 @@ One icon per action, no aliases. Destructive actions use `variant="ghost"` with 
 
 - Icon-only buttons **must** have an `aria-label` (not just `title`); `title` may be added alongside for sighted hover tooltips. Enforced by `scripts/ci/check-icon-only-buttons.mjs` (the "Icon-only buttons carry aria-label" CI job) — it reports any icon-sized `Button`/`ButtonPrimitive` whose opening tag has no `aria-label`.
 - Navigation icons are registered in the shared shell registry `pillars/shell/src/app/nav/icon-map.ts`; all nav uses Lucide icons from there.
-- The banned-alternatives column is enforced by the `no-restricted-imports` entries for `lucide-react` in the root `.oxlintrc.json` — importing a banned name fails lint with the canonical replacement in the message. Adding a banned name here without a matching lint entry (or vice versa) lets the table and the gate drift.
+- The banned-alternatives column is enforced by the `no-restricted-imports` entries for `lucide-react` in the root `.oxlintrc.json` — importing a banned name, including via a deep subpath (`lucide-react/dist/esm/icons/...`), fails lint with the canonical replacement in the message. `scripts/ci/check-icon-vocabulary-drift.mjs` asserts this table, `.oxlintrc.json`, and `scripts/ci/__tests__/icon-vocabulary-lint.test.ts` all name the same set of banned icons, so a name added here without a matching lint entry (or vice versa) fails CI instead of drifting silently.
 
 ## Constraints
 
