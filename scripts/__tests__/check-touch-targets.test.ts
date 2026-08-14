@@ -293,6 +293,64 @@ describe('findViolations', () => {
     });
   });
 
+  describe('two overlapping viewport-width regimes at once, not just one regime plus the base (POPS-2263)', () => {
+    it('flags md borrowing the unprefixed base instead of the wider sm regime for the box it does not set itself', () => {
+      // At >= 768px, sm (24px box) is still live alongside md (0px inset).
+      // Combining md's own inset with sm's own box gives a real 24px control;
+      // combining it with the unprefixed base's 44px box would wrongly pass.
+      const src =
+        '<button className="h-11 w-11 sm:h-6 sm:w-6 sm:before:-inset-9 md:before:-inset-0"><XIcon /></button>';
+      expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([
+        { file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'button' },
+      ]);
+    });
+
+    it('flags the inset-side mirror: md sets its own box but must borrow its inset from sm, not the unprefixed one', () => {
+      const src =
+        '<button className="h-6 w-6 before:-inset-9 sm:h-11 sm:w-11 sm:before:-inset-0 md:h-6 md:w-6"><XIcon /></button>';
+      expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([
+        { file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'button' },
+      ]);
+    });
+
+    it('flags the max-width mirror: max-sm must borrow its box from max-md (the nearest wider max-width regime)', () => {
+      const src =
+        '<button className="h-11 w-11 max-md:h-6 max-md:w-6 max-md:before:-inset-9 max-sm:before:-inset-0"><XIcon /></button>';
+      expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([
+        { file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'button' },
+      ]);
+    });
+
+    it('fails closed on an unorderable two-sided arbitrary range overlapping a named min-width regime', () => {
+      // [@media(400px<=width<=700px)] cannot be cheaply proven a superset or
+      // subset of sm — sm sets the box, so the range's own box is unresolved
+      // and must flag rather than silently trust the unprefixed base.
+      const src =
+        '<button className="h-11 w-11 sm:h-6 sm:w-6 sm:before:-inset-9 [@media(400px<=width<=700px)]:before:-inset-0"><XIcon /></button>';
+      expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([
+        { file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'button' },
+      ]);
+    });
+
+    it('does not flag two min-width regimes that only ever grow the box further', () => {
+      const src =
+        '<button className="h-11 w-11 sm:h-16 sm:w-16 md:h-20 md:w-20"><XIcon /></button>';
+      expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([]);
+    });
+
+    it('does not flag when the cascade genuinely rescues compliance: md borrows a real 44px box from sm', () => {
+      const src =
+        '<button className="h-6 w-6 before:-inset-9 sm:h-11 sm:w-11 sm:before:-inset-0 md:before:-inset-0"><XIcon /></button>';
+      expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([]);
+    });
+
+    it('does not flag the max-width mirror of the cascade rescue', () => {
+      const src =
+        '<button className="h-11 w-11 max-md:h-6 max-md:w-6 max-md:before:-inset-9 max-sm:before:-inset-9"><XIcon /></button>';
+      expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([]);
+    });
+  });
+
   describe('a scoped before:-inset-x-*/-inset-y-* per-axis variant (POPS-2256)', () => {
     it('flags a scoped before:-inset-x-* collapsing only the WIDTH expansion below a breakpoint', () => {
       const src =
@@ -353,6 +411,34 @@ describe('findViolations', () => {
     it('does not flag a scoped max- utility whose magnitude is still >= 44px', () => {
       const src = '<button className="h-11 w-11 sm:max-h-16 sm:max-w-16"><XIcon /></button>';
       expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([]);
+    });
+  });
+
+  describe('an unprefixed base max-h-*/max-w-* ceiling is a real shrink too, not just the scoped form (POPS-2265)', () => {
+    it('flags a base max-h/max-w ceiling below 44 with no variant at all', () => {
+      const src = '<button className="h-11 w-11 max-h-6 max-w-6"><XIcon /></button>';
+      expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([
+        { file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'button' },
+      ]);
+    });
+
+    it('flags a base max-size ceiling below 44 capping both axes at once', () => {
+      const src = '<button className="h-11 w-11 max-size-6"><XIcon /></button>';
+      expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([
+        { file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'button' },
+      ]);
+    });
+
+    it('does not flag a base max-h/max-w ceiling whose magnitude is still >= 44px', () => {
+      const src = '<button className="h-11 w-11 max-h-16 max-w-16"><XIcon /></button>';
+      expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([]);
+    });
+
+    it('does not let a base max-h/max-w ceiling with no underlying h/w evidence stand in as a box on its own', () => {
+      const src = '<button className="max-h-16 max-w-16"><XIcon /></button>';
+      expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([
+        { file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'button' },
+      ]);
     });
   });
 
@@ -615,6 +701,46 @@ describe('BREAKPOINT_NAMES: Tailwind v4 defaults union with globals.css (POPS-22
         '<button className="sm:h-11 sm:w-11"><XIcon /></button>'
       );
       expect(hits).toEqual([{ file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'button' }]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('BREAKPOINT_NAMES: a hyphenated custom breakpoint name is captured whole (POPS-2264)', () => {
+  /**
+   * Same sandboxed-module reasoning as the POPS-2254 suite above: the name
+   * capture must span the hyphen in `--breakpoint-tablet-lg`, not stop at
+   * `tablet` and miss the `:` that would have proven it a real declaration.
+   */
+  it('flags tablet-lg: (min-width) with no unprefixed base, and max-tablet-lg: shrinking a sufficient base', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'touch-target-hyphenated-breakpoint-'));
+    try {
+      mkdirSync(join(root, 'scripts'), { recursive: true });
+      mkdirSync(join(root, 'libs/ui/src/theme'), { recursive: true });
+      copyFileSync(
+        join(here, '../check-touch-targets.mjs'),
+        join(root, 'scripts/check-touch-targets.mjs')
+      );
+      writeFileSync(
+        join(root, 'libs/ui/src/theme/globals.css'),
+        '@theme {\n  --breakpoint-tablet-lg: 900px;\n}\n'
+      );
+
+      const mod = await import(
+        `${pathToFileURL(join(root, 'scripts/check-touch-targets.mjs')).href}?hyphen=${Date.now()}`
+      );
+      const minHits = mod.findViolations(
+        'pillars/x/app/src/A.tsx',
+        '<button className="tablet-lg:h-11 tablet-lg:w-11"><XIcon /></button>'
+      );
+      expect(minHits).toEqual([{ file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'button' }]);
+
+      const maxHits = mod.findViolations(
+        'pillars/x/app/src/A.tsx',
+        '<button className="h-11 w-11 max-tablet-lg:h-6 max-tablet-lg:w-6"><XIcon /></button>'
+      );
+      expect(maxHits).toEqual([{ file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'button' }]);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
