@@ -137,6 +137,16 @@ describe('findViolations', () => {
         'the long-hand arbitrary max-width media form',
         '[@media(max-width:640px)]:h-11 [@media(max-width:640px)]:w-11',
       ],
+      ['CSS range syntax, <=', '[@media(width<=640px)]:h-11 [@media(width<=640px)]:w-11'],
+      ['CSS range syntax, >=', '[@media(width>=640px)]:h-11 [@media(width>=640px)]:w-11'],
+      [
+        'CSS two-sided range syntax',
+        '[@media(400px<=width<=700px)]:h-11 [@media(400px<=width<=700px)]:w-11',
+      ],
+      [
+        'the underscore-for-space arbitrary spelling',
+        '[@media_(min-width:640px)]:h-11 [@media_(min-width:640px)]:w-11',
+      ],
     ])(
       'flags %s as a violation — it is a breakpoint variant written out, not evidence',
       (_label, className) => {
@@ -146,6 +156,14 @@ describe('findViolations', () => {
         ]);
       }
     );
+
+    it('flags a same-axis shrink hidden behind a CSS range media variant, not just base evidence', () => {
+      const src =
+        '<button className="h-11 w-11 [@media(width<=600px)]:h-6 [@media(width<=600px)]:w-6"><XIcon /></button>';
+      expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([
+        { file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'button' },
+      ]);
+    });
 
     it('accepts a sufficient unprefixed base grown further by a min-width breakpoint variant', () => {
       const src = '<button className="h-11 w-11 sm:h-16 sm:w-16"><XIcon /></button>';
@@ -201,6 +219,45 @@ describe('findViolations', () => {
 
     it('does not flag a scoped variant that only grows the base further', () => {
       const src = '<button className="h-11 w-11 max-sm:h-16 max-sm:w-16"><XIcon /></button>';
+      expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([]);
+    });
+  });
+
+  describe('scoped min-/max- direction (a min- floor cannot shrink; a max- ceiling can)', () => {
+    it.each([
+      ['sm: direction', 'h-11 w-11 sm:min-w-0'],
+      ['max-sm: direction', 'h-11 w-11 max-sm:min-w-0'],
+      ['min-h on the other axis', 'h-11 w-11 sm:min-h-0'],
+    ])(
+      'does not flag a scoped min- utility as a shrink (%s) — it is a floor, a no-op',
+      (_label, className) => {
+        const src = `<button className="${className}"><XIcon /></button>`;
+        expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([]);
+      }
+    );
+
+    it('still flags an unscoped min-w-0 with no other width evidence (control)', () => {
+      const src = '<button className="h-11 min-w-0"><XIcon /></button>';
+      expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([
+        { file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'button' },
+      ]);
+    });
+
+    it.each([
+      ['sm: direction', 'h-11 w-11 sm:max-h-6 sm:max-w-6'],
+      ['max-sm: direction', 'h-11 w-11 max-sm:max-h-6 max-sm:max-w-6'],
+    ])(
+      'flags a scoped max- utility as a real shrink (%s) — a ceiling caps the rendered box',
+      (_label, className) => {
+        const src = `<button className="${className}"><XIcon /></button>`;
+        expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([
+          { file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'button' },
+        ]);
+      }
+    );
+
+    it('does not flag a scoped max- utility whose magnitude is still >= 44px', () => {
+      const src = '<button className="h-11 w-11 sm:max-h-16 sm:max-w-16"><XIcon /></button>';
       expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([]);
     });
   });
