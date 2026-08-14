@@ -29,10 +29,10 @@ export function FromPlanSection({
       data-section-tag={section.sectionTag ?? ''}
       className="border rounded mb-3"
     >
-      <summary className="cursor-pointer px-3 py-2 bg-slate-50 dark:bg-slate-900 font-medium select-none">
+      <summary className="cursor-pointer px-3 py-2 bg-muted/50 font-medium select-none">
         {label} <span className="text-muted-foreground">({section.items.length})</span>
       </summary>
-      <ul className="px-3 pb-2 divide-y divide-slate-100 dark:divide-slate-800">
+      <ul className="px-3 pb-2 divide-y divide-border">
         {section.items.map((item) => (
           <FromPlanItem
             key={`${String(item.ingredientId)}-${String(item.variantId ?? 0)}-${item.canonicalUnit}`}

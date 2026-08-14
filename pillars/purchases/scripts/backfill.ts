@@ -17,6 +17,8 @@
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
+import { SERVICE_ACCOUNT_HEADER } from '@pops/pillar-sdk/server';
+
 import type { CreatePurchaseInput } from '../src/db/services/purchase-input.js';
 
 export const DEFAULT_BASE_URL = 'http://localhost:3013';
@@ -67,7 +69,7 @@ function ingestFetch(
 ): Promise<Response> {
   return fetch(`${client.baseUrl}${path}`, {
     method,
-    headers: { 'content-type': 'application/json', 'x-api-key': client.apiKey },
+    headers: { 'content-type': 'application/json', [SERVICE_ACCOUNT_HEADER]: client.apiKey },
     body: JSON.stringify(body),
   });
 }

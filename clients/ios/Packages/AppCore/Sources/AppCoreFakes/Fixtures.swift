@@ -1,6 +1,62 @@
 import AppCore
 import Foundation
 
+extension ReceiptPart {
+    public static func fake(
+        mediaType: ReceiptMediaType = .jpeg,
+        data: Data = Data("fake-receipt".utf8)
+    ) -> ReceiptPart {
+        ReceiptPart(mediaType: mediaType, data: data)
+    }
+}
+
+extension ExtractedReceiptLine {
+    public static func fake(
+        description: String = "Fake item",
+        amount: String = "10.00",
+        quantity: Int? = nil,
+        unitNote: String? = nil
+    ) -> ExtractedReceiptLine {
+        ExtractedReceiptLine(
+            description: description, amount: amount, quantity: quantity, unitNote: unitNote)
+    }
+}
+
+extension ExtractedReceipt {
+    /// Every field overridable, so a test names only the one it is about.
+    public static func fake(
+        merchantName: String? = "Fake Store",
+        address: String? = nil,
+        timeZone: String? = nil,
+        purchasedOn: String? = "2026-01-01",
+        purchasedAt: String? = nil,
+        currency: String? = "AUD",
+        total: String = "10.00",
+        tax: String? = nil,
+        discounts: [String] = [],
+        surcharges: [String] = [],
+        shipping: String? = nil,
+        lines: [ExtractedReceiptLine] = [ExtractedReceiptLine.fake()],
+        unreadableNotes: [String] = []
+    ) -> ExtractedReceipt {
+        ExtractedReceipt(
+            merchantName: merchantName,
+            address: address,
+            timeZone: timeZone,
+            purchasedOn: purchasedOn,
+            purchasedAt: purchasedAt,
+            currency: currency,
+            total: total,
+            tax: tax,
+            discounts: discounts,
+            surcharges: surcharges,
+            shipping: shipping,
+            lines: lines,
+            unreadableNotes: unreadableNotes
+        )
+    }
+}
+
 extension URL {
     /// `.invalid` is reserved by RFC 6761, so nothing here can accidentally
     /// reach a real host.

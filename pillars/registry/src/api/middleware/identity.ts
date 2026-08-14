@@ -20,6 +20,7 @@
  * `@ts-rest/express`'s `AppRouteImplementation`, which passes `{ req, res }`).
  */
 import { verifyCloudflareAccessJwt } from '@pops/pillar-sdk/access';
+import { SERVICE_ACCOUNT_HEADER } from '@pops/pillar-sdk/server';
 
 import {
   type AuthenticatedServiceAccount,
@@ -63,7 +64,7 @@ export interface IdentityLocals {
 type RequestHeaders = Pick<Request, 'headers'>;
 
 function readApiKeyHeader(req: RequestHeaders): string | null {
-  const raw = req.headers['x-api-key'];
+  const raw = req.headers[SERVICE_ACCOUNT_HEADER];
   if (Array.isArray(raw)) return raw[0] ?? null;
   if (typeof raw === 'string' && raw.length > 0) return raw;
   return null;

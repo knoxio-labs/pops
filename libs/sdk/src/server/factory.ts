@@ -7,6 +7,7 @@ import {
 } from '../client/index.js';
 import { getServerSdkConfig, resolveApiKey, SERVER_SDK_API_KEY_ENV } from './config.js';
 import { PillarServerSdkError } from './errors.js';
+import { SERVICE_ACCOUNT_HEADER } from './service-account-auth.js';
 import { InternalBaseUrlTransport } from './transport.js';
 
 /**
@@ -95,7 +96,7 @@ function buildClientOptions(
           `service-account auth required for server-side SDK call: set ${SERVER_SDK_API_KEY_ENV} or call configureServerSdk({ apiKey }).`
         );
       }
-      return { 'x-api-key': current };
+      return { [SERVICE_ACCOUNT_HEADER]: current };
     },
   };
   const fetchImpl = options.fetchImpl ?? config.fetchImpl;

@@ -104,6 +104,10 @@ export * from './components/PageHeader';
 export * from './components/SearchResultItem';
 export * from './components/ViewToggleGroup';
 
+// Status tone vocabulary — the token-backed class strings badges and pills
+// across the pillars share instead of raw Tailwind palette utilities.
+export * from './components/statusBadgeTones';
+
 // Inventory composites
 export * from './components/AssetIdBadge';
 export * from './components/ConditionBadge';

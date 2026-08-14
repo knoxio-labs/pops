@@ -343,7 +343,7 @@ describe('InsuranceReportPage', () => {
     const tables = document.querySelectorAll('table');
     tables.forEach((table) => {
       expect(table.className).toContain('print:border');
-      expect(table.className).toContain('print:border-gray-300');
+      expect(table.className).toContain('print:border-print-rule');
     });
   });
 
@@ -357,7 +357,7 @@ describe('InsuranceReportPage', () => {
     expect(warrantyBadges.length).toBe(3);
     warrantyBadges.forEach((badge) => {
       expect(badge.className).toContain('print:border');
-      expect(badge.className).toContain('print:text-black');
+      expect(badge.className).toContain('print:text-print-ink');
     });
   });
 

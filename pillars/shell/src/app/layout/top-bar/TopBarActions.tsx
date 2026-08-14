@@ -41,9 +41,9 @@ export function TopBarActions({ onOpenMobileSearch }: TopBarActionsProps) {
         aria-label={t('toggleTheme')}
       >
         {theme === 'dark' ? (
-          <Sun className="h-5 w-5 text-amber-400 group-hover:text-amber-300 transition-colors" />
+          <Sun className="h-5 w-5 text-warning group-hover:text-warning/80 transition-colors" />
         ) : (
-          <Moon className="h-5 w-5 text-indigo-600 group-hover:text-indigo-500 transition-colors" />
+          <Moon className="h-5 w-5 text-info group-hover:text-info/80 transition-colors" />
         )}
       </Button>
     </div>
