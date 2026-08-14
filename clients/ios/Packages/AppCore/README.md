@@ -2,7 +2,11 @@
 
 ## The dependency direction
 
-Every capability a feature needs from outside itself is a `protocol` declared here. The transactions feature depends on `TransactionsRepository`; it does not depend on `BFMClient`. A module under `Packages/` that can name a concrete implementation has its dependencies pointing the wrong way, and the cost lands on whoever next tries to run that feature without a live BFM.
+Every capability a feature needs from outside itself is a `protocol` declared here. The transactions feature depends on `TransactionsRepository`; the receipt-capture feature depends on `ReceiptCaptureRepository`; neither depends on `BFMClient`. A module under `Packages/` that can name a concrete implementation has its dependencies pointing the wrong way, and the cost lands on whoever next tries to run that feature without a live BFM.
+
+A capability more than one feature needs also lives here, for the same reason a seam does: `CameraAuthorizing` started in `FeaturePairing` and moved once `FeatureReceiptCapture` needed the same permission decision, because "no feature imports another feature" is one of `ModuleBoundaryTests`' rules, not a suggestion.
+
+`RepositoryError` is shared across every repository seam rather than given a per-feature copy — the failure modes a screen renders around (the pillar is down, the session is gone, the response does not match this build) do not change shape with the domain behind the call.
 
 Fakes ship beside the protocols, as a separate `AppCoreFakes` product, so a feature's tests never stub a URL protocol and a shipping target cannot link them by accident. `Auth` follows the same split with `AuthTestSupport`; `ModuleBoundaryTests` discovers every such module by name rather than listing them, so the next one is guarded on arrival.
 

@@ -52,6 +52,16 @@ export function ReceiptDropZonePage(): ReactElement {
         onSubmit={() => submit(toRequestParts(intake.staging.parts))}
       />
 
+      {/*
+        The one live region on this surface. `OutcomePanel` used to also mark
+        its `uploading` and `refused` children `role="status"`/`role="alert"`,
+        which are themselves implicit live regions — nested inside this one,
+        several screen readers announce the pair unpredictably rather than
+        cleanly. This wrapper is kept over those inner roles because it is the
+        only mechanism that reaches every outcome (`created`, `duplicate`,
+        `needs-review`, `unreadable` never had one of their own), not just the
+        two that did.
+      */}
       <div aria-live="polite">
         <OutcomePanel submission={submission} />
       </div>

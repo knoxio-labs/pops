@@ -35,6 +35,8 @@ So `unavailable` and an empty `ok` are different values, and a sweep receiving `
 
 The same reasoning makes truncation a failure rather than a short read: a partial window looks complete to the solver, which then produces confident wrong answers. Both the paging safety cap and a mid-sweep outage therefore return `unavailable`, discarding the rows already collected.
 
+**`reason` is where a credential problem is named.** Writing nothing is the right answer whether finance is down or refusing this pillar's key, but the two want different actions from whoever reads the sweep's `skipped` line, so a refusal carries `unauthorized` and a process with no key at all carries `no-credential` — never a bare outage. Both also log a line naming the service account. The credential itself comes from `pillar()` on `@pops/pillar-sdk/server`; the pillar README's "Who it calls, and as whom" has the grant.
+
 ## What finance can and cannot filter
 
 `GET /transactions` accepts `search`, `account`, `startDate`, `endDate`, `tag`, `entityId`, `type`, `limit` (**capped at 500**) and `offset`, returning `{ data, pagination }`.

@@ -31,7 +31,7 @@ export {
   resolveContractScope,
 } from './service-account-scope.js';
 export type { ContractScopeMap, ContractScopeRoute } from './service-account-scope.js';
-export { authorizeServiceAccountRequest } from './service-account-auth.js';
+export { authorizeServiceAccountRequest, SERVICE_ACCOUNT_HEADER } from './service-account-auth.js';
 export type {
   ServiceAccountAuthReason,
   ServiceAccountAuthRequest,

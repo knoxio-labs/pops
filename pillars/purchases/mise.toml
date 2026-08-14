@@ -17,7 +17,7 @@ depends = ["build"]
 run = "vitest run"
 
 [tasks.lint]
-run = "oxlint src && oxfmt --check ."
+run = "oxlint src scripts && oxfmt --check ."
 
 [tasks.dev]
 run = "tsx watch --clear-screen=false src/api/server.ts"

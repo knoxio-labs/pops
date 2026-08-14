@@ -8,7 +8,13 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { probeFederation, probePillar, type ReachabilityProbeDeps } from '../reachability.js';
+import {
+  DEFAULT_PROBE_TIMEOUT_MS,
+  defaultProbeDeps,
+  probeFederation,
+  probePillar,
+  type ReachabilityProbeDeps,
+} from '../reachability.js';
 import { contractResponse, fakeFetch, pillarSnapshot } from './fixtures.js';
 
 function deps(overrides: Partial<ReachabilityProbeDeps> = {}): ReachabilityProbeDeps {
@@ -252,5 +258,27 @@ describe('the fan-out across the federation', () => {
 
   it('answers with an empty list for an empty federation', async () => {
     expect(await probeFederation([], deps())).toEqual([]);
+  });
+});
+
+describe('defaultProbeDeps', () => {
+  it('defaults to DEFAULT_PROBE_TIMEOUT_MS and no overrides when called bare', () => {
+    const probeDeps = defaultProbeDeps();
+
+    expect(probeDeps.timeoutMs).toBe(DEFAULT_PROBE_TIMEOUT_MS);
+    expect(probeDeps.baseUrlOverrides).toEqual({});
+    expect(probeDeps.fetchImpl).toBe(fetch);
+  });
+
+  it('carries the base-URL overrides handed to it', () => {
+    const probeDeps = defaultProbeDeps({ finance: 'http://localhost:3010' });
+
+    expect(probeDeps.baseUrlOverrides).toEqual({ finance: 'http://localhost:3010' });
+  });
+
+  it('uses a caller-supplied timeout instead of the default', () => {
+    const probeDeps = defaultProbeDeps({}, 8_000);
+
+    expect(probeDeps.timeoutMs).toBe(8_000);
   });
 });

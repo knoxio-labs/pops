@@ -56,9 +56,10 @@ export interface ReachabilityProbeDeps {
 }
 
 export function defaultProbeDeps(
-  baseUrlOverrides: Readonly<Record<string, string>> = {}
+  baseUrlOverrides: Readonly<Record<string, string>> = {},
+  timeoutMs: number = DEFAULT_PROBE_TIMEOUT_MS
 ): ReachabilityProbeDeps {
-  return { fetchImpl: fetch, timeoutMs: DEFAULT_PROBE_TIMEOUT_MS, baseUrlOverrides };
+  return { fetchImpl: fetch, timeoutMs, baseUrlOverrides };
 }
 
 /**

@@ -4,7 +4,8 @@
  *   POPS_INTERNAL_API_KEY=<key> pnpm ingest:woolworths -- \
  *     ~/Downloads/everyday-receipts-2026-08-07.json [--dry-run]
  *
- * The key is required for a real run and unused by `--dry-run`, which parses
+ * The key is required for a real run and checked before the export is
+ * parsed, so a missing one fails fast. `--dry-run` needs no key; it parses
  * and prints without making a request.
  *
  * The file comes from the Chrome extension in `extension/`; Woolworths
@@ -17,8 +18,10 @@ import { readFileSync } from 'node:fs';
 import { parseWoolworthsExport, WOOLWORTHS_SOURCE_ID } from '../src/ingest/woolworths/index.js';
 import {
   createIngestClient,
+  isCliEntrypoint,
   postPurchases,
   reportOutcome,
+  runCli,
   summariseAnomalies,
   upsertSource,
 } from './backfill.js';
@@ -31,9 +34,13 @@ function readExportPath(argv: readonly string[]): string {
   return path;
 }
 
-async function main(): Promise<void> {
-  const argv = process.argv.slice(2);
+export async function main(argv: readonly string[] = process.argv.slice(2)): Promise<void> {
   const exportPath = readExportPath(argv);
+  const dryRun = argv.includes('--dry-run');
+
+  // Resolved before the export is read, so a missing key fails immediately
+  // rather than after the parse.
+  const client = dryRun ? undefined : createIngestClient();
 
   const { capturedAt, purchases, anomalies } = parseWoolworthsExport(
     JSON.parse(readFileSync(exportPath, 'utf8'))
@@ -47,12 +54,11 @@ async function main(): Promise<void> {
   );
   if (anomalies.length > 0) console.warn(`anomalies: ${summariseAnomalies(anomalies)}`);
 
-  if (argv.includes('--dry-run')) {
+  if (client === undefined) {
     console.warn('--dry-run: nothing was written');
     return;
   }
 
-  const client = createIngestClient();
   await upsertSource(client, {
     id: WOOLWORTHS_SOURCE_ID,
     label: 'Woolworths',
@@ -72,4 +78,6 @@ async function main(): Promise<void> {
   reportOutcome(await postPurchases(client, purchases));
 }
 
-await main();
+if (isCliEntrypoint(import.meta.url)) {
+  await runCli(main);
+}

@@ -10,13 +10,19 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 
-import type { CallResult } from '@pops/pillar-sdk/client';
+import type { CallResult } from '@pops/pillar-sdk/server';
 
 const itemsGet = vi.fn<(input: { id: string }) => Promise<CallResult<unknown>>>();
 const paperlessGet = vi.fn<(input: { id: string }) => Promise<CallResult<unknown>>>();
 
-vi.mock('@pops/pillar-sdk/client', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@pops/pillar-sdk/client')>();
+/**
+ * `/server`, not `/client`. Mocking the wrong subpath here would leave the
+ * adapters calling the real, unauthenticated proxy and this file would still
+ * pass — which is exactly the substitution the credential work exists to
+ * prevent.
+ */
+vi.mock('@pops/pillar-sdk/server', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@pops/pillar-sdk/server')>();
   return {
     ...actual,
     pillar: (id: string): unknown =>
@@ -47,7 +53,9 @@ const CASES: readonly [string, CallResult<unknown>, unknown][] = [
   [
     'unauthorized',
     { kind: 'unauthorized', pillar: 'p' },
-    { kind: 'unavailable', reason: 'unauthorized' },
+    // NOT `unavailable`. The callee answered; it refused this pillar's
+    // credential, which no amount of waiting resolves.
+    { kind: 'unauthorized', reason: 'unauthorized' },
   ],
   ['conflict', { kind: 'conflict', pillar: 'p' }, { kind: 'unavailable', reason: 'conflict' }],
   [
