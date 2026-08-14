@@ -1,15 +1,20 @@
 /**
  * Reconciliation surface — `reconcile.*` sub-router.
  *
- * The queue the review UI renders (POPS-241), plus the two decisions a
- * human can make about a link and an explicit sweep trigger.
+ * The queue the review UI renders, the decisions a human can make about a
+ * link, and an explicit sweep trigger.
  *
- * **There is no `reject`.** Rejecting a proposal so that it *stays*
- * rejected needs somewhere to remember the decision, and that is
- * `purchase_match_rules` (POPS-1309). Without it, a reject would delete a
- * link that the very next sweep re-derives — a button that appears to work
- * and silently undoes itself, which is worse than its absence. `unlink`
- * exists and is honest about being temporary.
+ * **`reject` and `unlink` are not the same decision** and both are kept.
+ * `unlink` removes a link and remembers nothing, so the next sweep is free
+ * to re-derive it — the right answer for a pin made in error. `reject`
+ * records the pairing as ruled out, which the solver's blocking stage
+ * consults, so it survives every later sweep.
+ *
+ * `confirm` writes the other half: a `purchase_match_rules` row keyed on
+ * the descriptor the accepted transaction carried, scoped to the order's
+ * source. That is why its response names a rule id rather than a bare
+ * acknowledgement — a caller can tell a decision that taught the matcher
+ * something from one that could not.
  */
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
@@ -31,6 +36,12 @@ const c = initContract();
 /** Mirrors `PurchaseChargeLinkSchema` field-for-field where they overlap. */
 export const QueuedLinkSchema = z.object({
   transactionUri: PopsUriSchema,
+  /**
+   * The transaction's descriptor as the sweep read it, which is what a
+   * confirm turns into a match rule. Null only for a link proposed before
+   * the pillar recorded descriptors.
+   */
+  transactionDescription: z.string().nullable(),
   amountCents: CentsSchema,
   linkType: LinkTypeSchema,
   confidence: z.number().min(0).max(1),
@@ -130,6 +141,20 @@ const LinkDecisionBodySchema = z.object({
   transactionUri: PopsUriSchema,
 });
 
+/**
+ * What a confirm did beyond pinning.
+ *
+ * Null `matchRuleId` is a normal outcome, not a failure: the transaction's
+ * descriptor may carry no pattern a rule could key on, and a link proposed
+ * before descriptors were recorded carries none at all. The pin stands
+ * either way, and saying so is what stops a caller reporting a successful
+ * decision as a broken one.
+ */
+export const ConfirmResultSchema = z.object({
+  ok: z.literal(true),
+  matchRuleId: z.string().nullable(),
+});
+
 export const SweepOutcomeSchema = z.discriminatedUnion('kind', [
   z.object({
     kind: z.literal('swept'),
@@ -173,15 +198,22 @@ export const purchasesReconcileContract = c.router({
     method: 'POST',
     path: '/reconcile/confirm',
     body: LinkDecisionBodySchema,
-    responses: { 200: OkSchema, 404: ErrorBodySchema },
-    summary: 'Pin a link so re-derivation never revises it',
+    responses: { 200: ConfirmResultSchema, 404: ErrorBodySchema },
+    summary: 'Pin a link and learn the merchant descriptor behind it',
   },
   unlink: {
     method: 'POST',
     path: '/reconcile/unlink',
     body: LinkDecisionBodySchema,
     responses: { 200: OkSchema, 404: ErrorBodySchema },
-    summary: 'Remove a link. The next sweep may re-derive it — see POPS-1309',
+    summary: 'Remove a link without recording a decision. A later sweep may re-derive it',
+  },
+  reject: {
+    method: 'POST',
+    path: '/reconcile/reject',
+    body: LinkDecisionBodySchema,
+    responses: { 200: OkSchema, 404: ErrorBodySchema },
+    summary: 'Rule a pairing out for good, so no later sweep proposes it again',
   },
   sweep: {
     method: 'POST',
