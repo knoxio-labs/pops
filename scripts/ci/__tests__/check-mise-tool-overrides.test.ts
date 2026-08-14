@@ -592,6 +592,39 @@ describe('checkOverrides — clients/ unit kind', () => {
     expect(ALLOWED_UNIT_OVERRIDE_TOOLS_BY_BASE.pillars).toEqual(ALLOWED_UNIT_OVERRIDE_TOOLS);
     expect(ALLOWED_UNIT_OVERRIDE_TOOLS_BY_BASE.libs).toEqual(ALLOWED_UNIT_OVERRIDE_TOOLS);
   });
+
+  it('reads as an explicit sentence when the allow list is empty, not a placeholder', () => {
+    // clients/ has an empty allow list, so the naive `only ${list.join(', ')}`
+    // phrasing degrades to `only (none for this unit kind) may be
+    // overridden` — a placeholder standing in for a tool name. The message
+    // must instead say plainly that nothing may be overridden.
+    const root = fixtureRoot();
+    try {
+      mkdirSync(join(root, 'clients', 'ios'), { recursive: true });
+      writeFileSync(join(root, 'clients', 'ios', 'mise.toml'), '[tools]\npnpm = "9.0.0"\n');
+
+      const { violations } = checkOverrides(root);
+      const violation = violations.find((v) => v.includes('clients/ios/mise.toml'));
+      expect(violation).toContain('no root-pinned tool may be overridden by a clients/ unit');
+      expect(violation).not.toContain('none for this unit kind');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('still names the allowed tools when the allow list is non-empty', () => {
+    const root = fixtureRoot();
+    try {
+      mkdirSync(join(root, 'pillars', 'rogue'), { recursive: true });
+      writeFileSync(join(root, 'pillars', 'rogue', 'mise.toml'), '[tools]\npnpm = "9.0.0"\n');
+
+      const { violations } = checkOverrides(root);
+      const violation = violations.find((v) => v.includes('pillars/rogue/mise.toml'));
+      expect(violation).toContain('only node, rust may be overridden by a pillars/ unit');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
 });
 
 describe('envConfigFilename', () => {

@@ -607,10 +607,12 @@ export function checkOverrides(root) {
       // is always allowed, regardless of unit kind.
       if (!(key in rootTools)) continue;
       if (!allowedOverrides.includes(key)) {
-        const allowedText =
-          allowedOverrides.length > 0 ? allowedOverrides.join(', ') : '(none for this unit kind)';
+        const reason =
+          allowedOverrides.length > 0
+            ? `only ${allowedOverrides.join(', ')} may be overridden by a ${base}/ unit`
+            : `no root-pinned tool may be overridden by a ${base}/ unit`;
         violations.push(
-          `${file} overrides "${key}" — only ${allowedText} may be overridden by a ${base}/ unit ` +
+          `${file} overrides "${key}" — ${reason} ` +
             '(pnpm manages one workspace lockfile; see AGENTS.md "Toolchain pin").'
         );
       }
@@ -840,6 +842,57 @@ function clientRootToolOverrideIsReported() {
 }
 
 /**
+ * A `clients/` unit's violation message must read as a sentence even though
+ * its allow list is empty — not `only (none for this unit kind) may be
+ * overridden`, which forced the reader to parse a placeholder as a tool name.
+ *
+ * @returns {boolean}
+ */
+function emptyAllowListViolationMessageIsExplicit() {
+  const dir = mkdtempSync(join(tmpdir(), 'mise-overrides-emptylist-msg-'));
+  try {
+    writeFileSync(
+      join(dir, 'mise.toml'),
+      '[tools]\nnode = "24"\npnpm = "10"\nrust = "stable"\n',
+      'utf8'
+    );
+    mkdirSync(join(dir, 'clients', 'ios'), { recursive: true });
+    writeFileSync(join(dir, 'clients', 'ios', 'mise.toml'), '[tools]\npnpm = "9.0.0"\n', 'utf8');
+    const { violations } = checkOverrides(dir);
+    return (
+      violations.some((v) => v.includes('no root-pinned tool may be overridden')) &&
+      !violations.some((v) => v.includes('none for this unit kind'))
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+/**
+ * A `pillars/`/`libs/` unit's violation message, by contrast, must still name
+ * the tools that ARE allowed — the fix for the empty-list case must not
+ * regress the non-empty phrasing.
+ *
+ * @returns {boolean}
+ */
+function nonEmptyAllowListViolationMessageListsTools() {
+  const dir = mkdtempSync(join(tmpdir(), 'mise-overrides-nonemptylist-msg-'));
+  try {
+    writeFileSync(
+      join(dir, 'mise.toml'),
+      '[tools]\nnode = "24"\npnpm = "10"\nrust = "stable"\n',
+      'utf8'
+    );
+    mkdirSync(join(dir, 'pillars', 'rogue'), { recursive: true });
+    writeFileSync(join(dir, 'pillars', 'rogue', 'mise.toml'), '[tools]\npnpm = "9.0.0"\n', 'utf8');
+    const { violations } = checkOverrides(dir);
+    return violations.some((v) => v.includes('only node, rust may be overridden'));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+/**
  * A workflow YAML this guard cannot parse must be reported, not treated as a
  * workflow that simply sets no `MISE_ENV`.
  *
@@ -907,6 +960,10 @@ function selfTest() {
       clientRootToolOverrideIsReported(),
     'an unparseable workflow YAML is a violation, not a skipped MISE_ENV source':
       unparseableWorkflowIsReported(),
+    'an empty-allow-list violation reads as a sentence, not a placeholder':
+      emptyAllowListViolationMessageIsExplicit(),
+    'a non-empty-allow-list violation still lists the allowed tools':
+      nonEmptyAllowListViolationMessageListsTools(),
   };
 
   const failed = Object.entries(checks).filter(([, ok]) => !ok);
