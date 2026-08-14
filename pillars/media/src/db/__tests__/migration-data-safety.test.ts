@@ -5,7 +5,7 @@
  * Every other test in this pillar opens a database that was empty when the
  * migrations ran, so a rebuild that adds a foreign key the existing rows
  * can't satisfy passes all of them and is only discovered against the live
- * file (see POPS-2182). `0032` rebuilds `media_scores` to attach
+ * file. `0032` rebuilds `media_scores` to attach
  * `FOREIGN KEY (dimension_id) REFERENCES comparison_dimensions(id)`, and
  * `comparison_dimensions` is a brand-new, empty table created earlier in
  * the same file — so the rebuild has to backfill placeholder dimension rows
