@@ -1,8 +1,14 @@
-/// What reading data can fail with, in terms a screen can act on.
+/// What a repository call can fail with, in terms a screen can act on.
+///
+/// Shared across every repository seam in ``AppCore`` rather than one enum
+/// per feature — the failure modes a screen has to render around (the pillar
+/// is down, the session is gone, the response does not match this build) do
+/// not change shape with the domain behind the call, so a second copy would
+/// only be a second set of cases to keep in step with this one.
 public enum RepositoryError: Error, Hashable, Sendable {
-    /// The pillar behind this data is down and said so. Distinct from an empty
-    /// page, which means there is genuinely nothing — rendering "you have no
-    /// transactions" because finance is unreachable is a lie.
+    /// The pillar behind this call is down and said so. Distinct from an
+    /// empty result, which means there is genuinely nothing — rendering "you
+    /// have no transactions" because finance is unreachable is a lie.
     case unavailable
     /// Credentials were rejected. The session is on its way to `revoked`.
     case unauthorized

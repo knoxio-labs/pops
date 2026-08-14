@@ -24,6 +24,7 @@ import { ReceiptDropZonePage } from '../ReceiptDropZonePage';
 import type {
   CreatedOutcome,
   ExtractedReceipt,
+  GateFailureKind,
   NeedsReviewOutcome,
   PurchaseDetail,
   UnreadableOutcome,
@@ -523,6 +524,51 @@ describe('ReceiptDropZonePage — needs review', () => {
     expect(within(failures).getByText(enAUPurchases['receipts.review.kind.damaged'])).toBeVisible();
     expect(within(failures).getByText('line 4 is obscured by a fold')).toBeVisible();
     expect(within(failures).getByText('the lower third is torn away')).toBeVisible();
+  });
+
+  it('has a headline for every objection the gate can raise', () => {
+    // The panel renders `receipts.review.kind.<kind>` and nothing supplies a
+    // fallback, so a kind the catalogue does not carry reaches the reviewer
+    // as the raw lookup string. The record is typed by the generated union,
+    // so a kind added to the contract fails to compile here before it can
+    // fail on screen.
+    const everyKind: Readonly<Record<GateFailureKind, true>> = {
+      'unreadable-total': true,
+      'unreadable-line': true,
+      'no-lines': true,
+      'negative-line': true,
+      'sum-mismatch': true,
+      'ambiguous-tax': true,
+      damaged: true,
+    };
+
+    for (const kind of Object.keys(everyKind)) {
+      expect(Object.keys(enAUPurchases), kind).toContain(`receipts.review.kind.${kind}`);
+    }
+  });
+
+  it('renders an ambiguous tax reading as an objection like any other', async () => {
+    // It carries no `deltaCents` — the arithmetic agrees under both readings,
+    // so there is no discrepancy to put on screen — and the panel must not
+    // treat that absence as a reason to render nothing.
+    await uploadOne(
+      needsReview({
+        failures: [
+          {
+            kind: 'ambiguous-tax',
+            detail: 'the components add to 4740c, the stated total, but 995c is added twice',
+          },
+        ],
+      })
+    );
+
+    const failures = await screen.findByRole('list', {
+      name: enAUPurchases['receipts.review.failuresLabel'],
+    });
+    expect(
+      within(failures).getByText(enAUPurchases['receipts.review.kind.ambiguous-tax'])
+    ).toBeVisible();
+    expect(within(failures).getByText(/995c is added twice/u)).toBeVisible();
   });
 
   // The whole point of this outcome: a reader compares the reading against
