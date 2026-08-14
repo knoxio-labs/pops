@@ -23,7 +23,8 @@ const PILLAR_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const SCRIPT = join(PILLAR_DIR, 'scripts', 'db-seed-food.ts');
 // Inside the package, because `assertSeedTargetIsDev` refuses a target that
 // resolves outside it — a temp dir under the OS tmpdir never reaches the
-// refusals these tests are about. `pillars/food/data/` is gitignored.
+// refusals these tests are about. The package's own data directory is
+// gitignored and created on demand, so nothing here is committed.
 const SCRATCH_ROOT = join(PILLAR_DIR, 'data');
 
 let dir: string;
