@@ -69,6 +69,28 @@ name: Live Seam
 # handler/contract shape, which bfm's unit-quality.yml suite already catches
 # before this workflow would ever get a chance to.
 #
+# THAT "ACCEPT" ABOVE WAS CHECKED, NOT ASSUMED, for food and cerebrum's own
+# route-wiring glue (food's `api/rest/send-to-list-handlers.ts` +
+# `api/rest/handlers.ts` + `api/app.ts`; cerebrum's `api/rest/index-
+# handlers.ts` + `api/rest/handlers.ts` + `api/app.ts`) — none of it sits
+# under the filtered consumer-module paths above, and each pillar's own
+# unit-quality.yml suite drives that exact glue over real HTTP through a
+# real Express app: food's `src/api/__tests__/send-to-list.test.ts` and
+# cerebrum's `src/api/__tests__/index.test.ts` both call `create*ApiApp()`
+# with an injected stub client and assert on what the wiring produces.
+# Confirmed by deliberately breaking the composition at each wiring site
+# (swapping in a client that always rejects, hardcoding an empty peer map)
+# and watching the corresponding unit test fail every time — the stub
+# client exercises the routing/composition path identically to a real one,
+# so a wiring break can't stay green in `unit-quality` and reach this
+# workflow undetected. What the stub genuinely can't stand in for is the
+# wire itself — a real credential, a real network round-trip to the
+# producer — and that surface is exactly `lists-client.ts` /
+# `peer-clients.ts`, both already inside the filtered paths above. So this
+# glue is not a live-seam gap: it is bfm's `contract/rest.ts` /
+# `mobile-purchases-handlers.ts` / `app.ts` situation again, independently
+# confirmed rather than inferred from the same shape.
+#
 # `pillars/finance/**` and `pillars/purchases/**` are each still whole-tree,
 # and that is a decision, not an oversight, made the same way for both:
 #
