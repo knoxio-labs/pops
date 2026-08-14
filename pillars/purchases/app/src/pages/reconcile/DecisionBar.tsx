@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router';
 
 import { Button } from '@pops/ui';
 
@@ -19,7 +20,9 @@ interface DecisionBarProps {
  *
  * The buttons act on the row under the cursor rather than living inside it:
  * a `role="option"` may not contain interactive children, and a per-row button
- * would be a tab stop per row in a list that can run to hundreds.
+ * would be a tab stop per row in a list that can run to hundreds. The link to
+ * the order behind the cursor is here for exactly the same reason — the row is
+ * where a reader would reach for it, and the row is the one place it cannot go.
  */
 export function DecisionBar({
   activeEntry,
@@ -48,6 +51,14 @@ export function DecisionBar({
         >
           {t('reconcile.action.reject')}
         </Button>
+        {activeEntry !== undefined && (
+          <Link
+            to={`/purchases/${activeEntry.purchaseId}`}
+            className="text-sm underline underline-offset-4"
+          >
+            {t('reconcile.action.openOrder')}
+          </Link>
+        )}
         <p className="text-muted-foreground text-xs">{t('reconcile.keys.hint')}</p>
       </div>
 

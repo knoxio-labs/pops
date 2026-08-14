@@ -5,13 +5,15 @@ import { RecentSearches } from '../RecentSearches';
 import { SearchResultsPanel, type SearchResultSection } from '../SearchResultsPanel';
 import { useSearchStore } from '../searchStore';
 
+import type { SearchHitData } from '../uri-resolver';
+
 interface SearchInputDropdownProps {
   inputRef: RefObject<HTMLInputElement | null>;
   query: string;
   sections: SearchResultSection[];
   selectedIndex: number;
   onClose: () => void;
-  onResultClick: (uri: string) => void;
+  onResultClick: (uri: string, data: SearchHitData) => void;
   onShowMore: (domain: string) => Promise<void> | void;
 }
 

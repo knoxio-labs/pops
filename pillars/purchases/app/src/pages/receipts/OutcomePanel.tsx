@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router';
 
 import { formatDate } from '@pops/ui';
 
@@ -93,7 +94,9 @@ function CreatedPanel({ outcome }: { outcome: CreatedOutcome }): ReactElement {
         <p className="text-muted-foreground text-sm">{t('receipts.created.alreadyStored')}</p>
       )}
 
-      <p className="text-muted-foreground text-xs">{t('receipts.created.noDetailView')}</p>
+      <Link to={`/purchases/${purchase.id}`} className="text-sm underline underline-offset-4">
+        {t('receipts.created.open')}
+      </Link>
     </OutcomeSection>
   );
 }

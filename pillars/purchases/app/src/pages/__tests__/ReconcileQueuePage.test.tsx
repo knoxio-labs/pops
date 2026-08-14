@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import enAUPurchases from '@pops/locales/en-AU/purchases.json';
@@ -78,7 +79,9 @@ function renderQueue(): ReturnType<typeof render> {
   });
   const ui: ReactElement = (
     <QueryClientProvider client={client}>
-      <ReconcileQueuePage />
+      <MemoryRouter initialEntries={['/purchases']}>
+        <ReconcileQueuePage />
+      </MemoryRouter>
     </QueryClientProvider>
   );
   return render(ui);

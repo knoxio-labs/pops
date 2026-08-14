@@ -5,6 +5,8 @@ import { sortSections, usePanelDismiss } from './search-results/usePanelDismiss'
 
 import type { ReactNode } from 'react';
 
+import type { SearchHitData } from './uri-resolver';
+
 /** A single search hit within a section. */
 export interface SearchResultHit {
   uri: string;
@@ -29,7 +31,7 @@ export interface SearchResultsPanelProps {
   sections: SearchResultSection[];
   query: string;
   onClose: () => void;
-  onResultClick?: (uri: string) => void;
+  onResultClick?: (uri: string, data: SearchHitData) => void;
   onShowMore?: (domain: string) => void;
   /** Index of the currently keyboard-selected result (flat, across all sections). -1 = none. */
   selectedIndex?: number;

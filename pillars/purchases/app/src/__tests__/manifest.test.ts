@@ -18,6 +18,11 @@ function navPathOf(route: RouteObject): string {
   return path === '' ? '' : `/${path}`;
 }
 
+/** False for a route addressed by an id the rail has no way to supply. */
+function isReachableFromTheRail(navPath: string): boolean {
+  return !navPath.includes(':');
+}
+
 describe('app-purchases module manifest', () => {
   it('declares id="purchases"', () => {
     expect(manifest.id).toBe('purchases');
@@ -51,10 +56,24 @@ describe('app-purchases module manifest', () => {
   // pillar manifest was kept empty to avoid. Matching the paths rather than
   // counting them is what makes this hold as the surface grows: two nav items
   // and two routes can still be a pair of dead links.
-  it('has a route behind every nav item, and no route without one', () => {
-    const routePaths = routes.map(navPathOf).toSorted();
+  //
+  // Parameterised routes are exempt in one direction only. A rail entry cannot
+  // point at `/purchases/:purchaseId` — the rail has no id to put in it — so
+  // such a route may have no nav item, while a nav item with no route remains
+  // the dead link this asserts against.
+  it('has a route behind every nav item, and no static route without one', () => {
+    const routePaths = routes.map(navPathOf).filter(isReachableFromTheRail).toSorted();
     const navPaths = navConfig.items.map((item) => item.path).toSorted();
     expect(routePaths).toEqual(navPaths);
+  });
+
+  // The order detail route is what makes a purchase id worth carrying: the
+  // reconcile queue, the receipt drop zone and a global-search hit all produce
+  // one, and each was a dead end while nothing rendered an order.
+  it('mounts a route for one order, taking its id from the path', () => {
+    const detail = routes.find((route) => route.path === ':purchaseId');
+    expect(detail).toBeDefined();
+    expect(detail?.index).not.toBe(true);
   });
 
   it('serves the reconcile queue from the index route', () => {

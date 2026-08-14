@@ -74,6 +74,15 @@ describe('buildPurchasesManifest', () => {
     }
   });
 
+  // Empty here meant "a hit has an identity nothing can navigate to". The app
+  // mounts an order detail route now, so both emitted types are claimed —
+  // including the line, which resolves to its order through the hit's data.
+  it('claims a URI type for every entity its adapters address', () => {
+    const manifest = buildPurchasesManifest('0.1.0');
+    expect(manifest.uri.types).toEqual(['purchases/purchase', 'purchases/purchase-item']);
+    expect(manifest.uri.types).toHaveLength(manifest.search.adapters.length);
+  });
+
   it('declares no AI tools — the pillar reaches the assistant through MCP instead', () => {
     // `ai.tools` hosts tool definitions for the orchestrator's tool-router.
     // Purchases' assistant surface is `pillars/mcp/src/tools/purchases.ts`,

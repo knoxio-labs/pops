@@ -140,7 +140,9 @@ describe('SearchResultsPanel', () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
-  it('calls onResultClick when a result is clicked', () => {
+  // The hit's payload rides along because some types resolve through it — a
+  // purchase line opens the order named in its data, not its own id.
+  it('calls onResultClick with the clicked hit, payload and all', () => {
     const onResultClick = vi.fn();
     render(
       <SearchResultsPanel
@@ -152,7 +154,7 @@ describe('SearchResultsPanel', () => {
     );
     const button = screen.getByRole('button');
     fireEvent.click(button);
-    expect(onResultClick).toHaveBeenCalledWith('pops:media/movie/1');
+    expect(onResultClick).toHaveBeenCalledWith('pops:media/movie/1', { title: 'The Matrix' });
   });
 
   it('uses registered ResultComponent for domain', () => {

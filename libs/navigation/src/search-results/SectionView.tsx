@@ -3,6 +3,7 @@ import { getResultComponent } from '../result-component-registry';
 import type { ReactNode } from 'react';
 
 import type { SearchResultHit, SearchResultSection } from '../SearchResultsPanel';
+import type { SearchHitData } from '../uri-resolver';
 
 /**
  * Section colour names arrive over the wire as bare hue words. Each maps onto
@@ -46,7 +47,7 @@ interface ResultButtonProps {
   query: string;
   index: number;
   isSelected: boolean;
-  onResultClick?: (uri: string) => void;
+  onResultClick?: (uri: string, data: SearchHitData) => void;
   ResultComponent: ReturnType<typeof getResultComponent>;
 }
 
@@ -63,7 +64,7 @@ function ResultButton({
       <button
         type="button"
         className={`w-full cursor-pointer rounded-md px-2 py-1.5 text-left hover:bg-accent focus-visible:bg-accent focus-visible:outline-none${isSelected ? ' bg-accent' : ''}`}
-        onClick={() => onResultClick?.(hit.uri)}
+        onClick={() => onResultClick?.(hit.uri, hit.data)}
         data-uri={hit.uri}
         data-result-index={index}
       >
@@ -83,7 +84,7 @@ export interface SectionViewProps {
   query: string;
   startIndex: number;
   selectedIndex: number;
-  onResultClick?: (uri: string) => void;
+  onResultClick?: (uri: string, data: SearchHitData) => void;
   onShowMore?: (domain: string) => void;
 }
 

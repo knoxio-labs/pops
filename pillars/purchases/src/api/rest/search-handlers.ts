@@ -15,8 +15,8 @@
  * is not one — is refused with a 400 that names it.
  *
  * `context` arrives in the envelope and is deliberately unread. Other pillars
- * narrow on it; purchases' app mounts one index route and no entity page, so
- * there is no `context.page` or `context.entity` worth narrowing by yet, and
+ * narrow on it; nothing in this pillar's ranking answers differently for a
+ * caller sitting on an order than for one searching from anywhere else, so
  * honouring it in name only would be a claim the pillar cannot back.
  */
 import { searchFilterScope, searchPurchases } from '../../db/index.js';
