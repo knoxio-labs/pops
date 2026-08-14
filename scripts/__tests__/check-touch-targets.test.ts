@@ -110,16 +110,50 @@ describe('findViolations', () => {
     it.each([
       ['a bare max-sm: on both axes', 'max-sm:h-11 max-sm:w-11'],
       ['a bare max-md: on both axes', 'max-md:h-11 max-md:w-11'],
+      ['an arbitrary max-width variant on both axes', 'max-[640px]:h-11 max-[640px]:w-11'],
     ])(
-      'accepts %s — it applies AT AND BELOW that width, through the phone viewport',
+      'flags %s as a violation — it applies only BELOW that width, so every width at and above it (tablets, touch laptops) is unsized',
       (_label, className) => {
         const src = `<button className="${className}"><XIcon /></button>`;
-        expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([]);
+        expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([
+          { file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'button' },
+        ]);
       }
     );
 
-    it('accepts a sufficient unprefixed base grown further by a breakpoint variant', () => {
+    it('flags an undersized unprefixed base laundered by a max-sm: variant (36px at every width >= 640px)', () => {
+      const src = '<button className="h-9 w-9 max-sm:h-11 max-sm:w-11"><XIcon /></button>';
+      expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([
+        { file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'button' },
+      ]);
+    });
+
+    it.each([
+      [
+        'the long-hand arbitrary min-width media form',
+        '[@media(min-width:640px)]:h-11 [@media(min-width:640px)]:w-11',
+      ],
+      [
+        'the long-hand arbitrary max-width media form',
+        '[@media(max-width:640px)]:h-11 [@media(max-width:640px)]:w-11',
+      ],
+    ])(
+      'flags %s as a violation — it is a breakpoint variant written out, not evidence',
+      (_label, className) => {
+        const src = `<button className="${className}"><XIcon /></button>`;
+        expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([
+          { file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'button' },
+        ]);
+      }
+    );
+
+    it('accepts a sufficient unprefixed base grown further by a min-width breakpoint variant', () => {
       const src = '<button className="h-11 w-11 sm:h-16 sm:w-16"><XIcon /></button>';
+      expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([]);
+    });
+
+    it('accepts a sufficient unprefixed base grown further by a max-width breakpoint variant', () => {
+      const src = '<button className="h-11 w-11 max-sm:h-16 max-sm:w-16"><XIcon /></button>';
       expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([]);
     });
 
@@ -130,10 +164,48 @@ describe('findViolations', () => {
       ]);
     });
 
-    it('accepts a before:-inset-* expansion gated by max-sm:, sized against its own base box', () => {
+    it('does not let a max-sm:-gated before:-inset-* expansion launder an undersized base either', () => {
       const src =
         '<button className="relative h-6 w-6 max-sm:before:absolute max-sm:before:-inset-9">x</button>';
+      expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([
+        { file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'button' },
+      ]);
+    });
+  });
+
+  describe('container-query and other non-viewport-width variants', () => {
+    it.each([
+      ['@sm:', '@sm:h-11 @sm:w-11'],
+      ['@md:', '@md:h-11 @md:w-11'],
+      ['@min-[400px]:', '@min-[400px]:h-11 @min-[400px]:w-11'],
+    ])('flags %s as a violation, same as its non-container form', (_label, className) => {
+      const src = `<button className="${className}"><XIcon /></button>`;
+      expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([
+        { file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'button' },
+      ]);
+    });
+
+    it.each([
+      ['dark:', 'dark:h-11 dark:w-11'],
+      ['hover:', 'hover:h-11 hover:w-11'],
+      ['print:', 'print:h-11 print:w-11'],
+      ['landscape:', 'landscape:h-11 landscape:w-11'],
+      ['data-[k=v]:', 'data-[k=v]:h-11 data-[k=v]:w-11'],
+    ])('accepts %s as evidence — it is not viewport-width scoped', (_label, className) => {
+      const src = `<button className="${className}"><XIcon /></button>`;
       expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([]);
+    });
+
+    it.each([
+      ['sm:hover:', 'sm:hover:h-11 sm:hover:w-11'],
+      ['hover:sm:', 'hover:sm:h-11 hover:sm:w-11'],
+      ['sm:max-md:', 'sm:max-md:h-11 sm:max-md:w-11'],
+      ['min-[600px]:', 'min-[600px]:h-11 min-[600px]:w-11'],
+    ])('flags stacked/arbitrary variant %s as a violation', (_label, className) => {
+      const src = `<button className="${className}"><XIcon /></button>`;
+      expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([
+        { file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'button' },
+      ]);
     });
   });
 
