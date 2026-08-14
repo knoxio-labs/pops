@@ -22,6 +22,9 @@
  * state check returns `'unknown'`, and the handler short-circuits with
  * `errorCode='Cancelled'`.
  */
+import { resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
+
 import { Worker } from 'bullmq';
 import pino from 'pino';
 
@@ -192,7 +195,9 @@ async function main(): Promise<void> {
   process.on('SIGINT', onSignal);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+const entryPath = process.argv[1];
+
+if (entryPath !== undefined && import.meta.url === pathToFileURL(resolve(entryPath)).href) {
   main().catch((err: unknown) => {
     logger.error({ err }, 'worker bootstrap failed');
     process.exit(1);

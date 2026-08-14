@@ -2,6 +2,7 @@
   "files": [],
   "references": [
     { "path": "libs/types/tsconfig.build.json" },
+    { "path": "libs/contract-openapi/tsconfig.build.json" },
     { "path": "libs/sdk/tsconfig.build.json" },
     { "path": "libs/settings/tsconfig.build.json" },
     { "path": "libs/jobs/tsconfig.build.json" },

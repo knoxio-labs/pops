@@ -141,6 +141,22 @@ inside the message, which is shown as sent.
 purchase, so the created panel names that absence instead of offering a link
 to a route that does not exist (POPS-1948).
 
+**A too-large upload answers the same shape as any other refusal.** The
+pillar's `express.json()` limit rejects an oversized body before the contract
+ever sees it; `jsonBodyErrorHandler`
+(`pillars/purchases/src/api/middleware/json-body-error.ts`) catches that
+rejection and answers `413` with the contract's own `{ message, code }` body
+instead of Express's default HTML error page, which the generated client
+cannot parse into a readable `error`.
+
+**One live region, on the wrapper.** `ReceiptDropZonePage` wraps the whole
+outcome panel in a single `aria-live="polite"` region rather than also
+marking individual outcomes `role="status"`/`role="alert"` — a live region
+nested inside another announces unpredictably in several screen readers. The
+wrapper is the one kept because it is the only mechanism that reaches every
+outcome (`created`, `duplicate`, `needs-review`, `unreadable` never had a
+role of their own; only `uploading` and `refused` did).
+
 ## Layout
 
 ```

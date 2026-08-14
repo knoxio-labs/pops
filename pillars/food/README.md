@@ -96,7 +96,8 @@ pnpm --filter @pops/food test          # vitest against a real temp SQLite DB
 pnpm --filter @pops/food build         # verify-manifest → tsc → openapi → api-types
 pnpm --filter @pops/food dev:api       # tsx watch on the HTTP server
 pnpm --filter @pops/food dev:worker    # tsx watch on the BullMQ ingest daemon
-pnpm --filter @pops/food db:seed:food  # seed a local food DB
+mise run db:seed:food                  # wipe + seed the local food DB (dev/test only)
+mise run db:clear:food                 # truncate the local food DB, keep schema
 pnpm --filter @pops/food generate:openapi
 pnpm --filter @pops/food generate:api-types
 docker build -f pillars/food/Dockerfile .

@@ -79,6 +79,24 @@ from `@pops/pillar-sdk`, which POSTs the manifest to the `registry` pillar
 per-request auth: the pillar trusts the docker network and the gateway in front
 authenticates.
 
+## Cross-pillar reconciliation
+
+`home_inventory` carries soft references to rows other pillars own
+(`purchase_transaction_uri` → finance, `owner_uri` → registry) alongside a
+nullable `*_stale_at` for each. The server starts a worker on boot that walks
+the distinct URIs and asks the owning pillar whether each still resolves: a 404
+stamps `*_stale_at`, an `ok` clears it, and anything else (unreachable pillar,
+malformed URI) leaves the row untouched for the next tick. The row itself is
+never deleted — existence is best-effort, staleness is a flag.
+
+It ticks daily; `INVENTORY_RECONCILE_URI_INTERVAL_MS` overrides that for smoke
+tests. A tick with no URIs on either leg returns silently without calling
+anyone, so the log line only appears when there was work, and it carries each
+leg's work-set size — an aggregate of zero cannot otherwise be told apart from
+a leg that checked nothing. Probes go out through the server SDK, which
+authenticates with the `POPS_INTERNAL_API_KEY` service-account key; without one
+the probes fail to authenticate and nothing is stamped.
+
 ## Commands
 
 ```bash

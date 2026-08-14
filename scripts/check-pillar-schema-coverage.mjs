@@ -453,7 +453,7 @@ async function openPillarInMemory(pillar) {
   if (!existsSync(distEntry)) {
     throw new Error(
       `[${pillar.name}] dist/db/index.js not found at ${distEntry}. ` +
-        `Run \`pnpm --filter @pops/${pillar.name} build\` first.`
+        `Run \`pnpm --filter @pops/${pillar.name}... build\` first.`
     );
   }
   const mod = await import(distEntry);

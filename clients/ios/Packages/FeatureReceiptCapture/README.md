@@ -4,26 +4,27 @@ Photograph or paste a receipt and let the purchases pillar's model turn it into 
 
 ## What is here and what is not
 
-Today this package is a scaffold: one placeholder screen, reachable from the shell, and nothing else. It holds no networking and it names neither `Auth` nor `BFMClient` — it will read `AppCore`'s `ReceiptCaptureRepository` and will not know that the thing behind it attaches a device token and speaks HTTP.
+`ReceiptCaptureView` is still the POPS-1959 placeholder — this package does not yet build the photograph-and-review flow that produces a receipt to submit. What it does have is the other end of that flow: `ReceiptResultView` and `ReceiptResultViewModel`, which take a receipt's parts and `AppDependencies`, call `AppCore`'s `ReceiptCaptureRepository`, and render whichever of the three outcomes — or gateway failure — came back. Neither names `Auth` nor `BFMClient`; both read the repository seam and have no idea a device token or HTTP call sits behind it.
 
 That boundary is asserted, not merely intended: `ModuleBoundaryTests` in `AppCore` fails if any package outside `Auth` and `BFMClient` imports either.
 
-| Concern                                   | Lives in                                                 |
-| ----------------------------------------- | -------------------------------------------------------- |
-| The screen                                | here                                                     |
-| Capturing a photograph, the review UI     | not built yet — POPS-1959, POPS-1961                     |
-| Camera permission                         | `AppCore` — `CameraAuthorizing`                          |
-| `created` / `needs-review` / `unreadable` | `AppCore` — `ReceiptCaptureRepository`, `ReceiptOutcome` |
-| `POST /mobile/receipts` and its outcomes  | not built yet — `BFMClient` conformance, POPS-1958       |
-| An end-to-end Maestro flow                | not built yet — POPS-1963                                |
+| Concern                                                                              | Lives in                                                 |
+| ------------------------------------------------------------------------------------ | -------------------------------------------------------- |
+| The capture screen                                                                   | here — still the POPS-1959 placeholder                   |
+| The result screen (`created` / `needs-review` / `unreadable`, plus gateway failures) | here — `ReceiptResultView`, `ReceiptResultViewModel`     |
+| Capturing a photograph, wiring the two screens together                              | not built yet — POPS-1959                                |
+| Camera permission                                                                    | `AppCore` — `CameraAuthorizing`                          |
+| `created` / `needs-review` / `unreadable`                                            | `AppCore` — `ReceiptCaptureRepository`, `ReceiptOutcome` |
+| `POST /mobile/receipts` and its outcomes                                             | not built yet — `BFMClient` conformance, POPS-1958       |
+| An end-to-end Maestro flow                                                           | not built yet — POPS-1963                                |
 
-## Why the placeholder has no dependencies
+## Why the result screen is not wired into the app yet
 
-`ReceiptCaptureView` takes no `AppCore` seam because there is nothing for it to read yet — wiring `ReceiptCaptureRepository` into a screen that draws nothing with it would be a parameter nobody exercises. The composition root binds it once the capture flow (POPS-1959) gives the screen something to call it with.
+`ReceiptResultView` takes a `ReceiptResultViewModel`, constructed from the parts a capture produced and `AppDependencies`. Nothing in the app today produces those parts — that is POPS-1959's job — so nothing yet constructs the view outside a preview or a test. `AppDependencies.receiptCapture` is bound to `AppDependencies.unbound.receiptCapture` at both of `AppComposition`'s construction sites for the same reason: `BFMClient` has no `POST /mobile/receipts` conformance yet (POPS-1958), so there is nothing real to point it at.
 
 ## Reachable, not yet real
 
-`FeatureReceiptCapture.feature` is registered in `RootFeature.renderable` and `ContentView` maps it to `ReceiptCaptureView`, matching how `FeatureTransactions` is wired — the app can draw this screen the moment the BFM says the feature is available. Nothing yet makes the BFM say that: `POST /mobile/receipts` does not exist until POPS-1958 lands, so in practice this screen is unreachable outside a build that binds the feature list directly, which is the point of a scaffold landing ahead of the feature it scaffolds.
+`FeatureReceiptCapture.feature` is registered in `RootFeature.renderable` and `ContentView` maps it to `ReceiptCaptureView`, matching how `FeatureTransactions` is wired — the app can draw the capture placeholder the moment the BFM says the feature is available. Nothing yet makes the BFM say that: `POST /mobile/receipts` does not exist until POPS-1958 lands, so in practice this screen is unreachable outside a build that binds the feature list directly, which is the point of a scaffold landing ahead of the feature it scaffolds.
 
 ## The host build
 
