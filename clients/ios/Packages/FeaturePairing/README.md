@@ -10,10 +10,13 @@ That boundary is asserted, not merely intended: `ModuleBoundaryTests` in `AppCor
 
 | Concern                                     | Lives in                                 |
 | ------------------------------------------- | ---------------------------------------- |
-| The screen, the form, the camera            | here                                     |
+| The screen and the form                     | here                                     |
+| The camera permission decision              | `AppCore` — `CameraAuthorizing`          |
 | Key generation, token storage, the exchange | `Auth` — `BFMDevicePairingService`       |
 | `POST /devices/pair` and its four outcomes  | `BFMClient` — `BFMHTTPClient.pairDevice` |
 | The error vocabulary both sides speak       | `AppCore` — `PairingError`               |
+
+`CameraAuthorizing` lives in `AppCore` rather than here because `FeatureReceiptCapture` needs the same permission decision, and features may not import one another — `ModuleBoundaryTests`' "no feature imports another feature" rule is what would fail if it stayed put and a second feature reached for it.
 
 ## The manual path is not a fallback screen
 

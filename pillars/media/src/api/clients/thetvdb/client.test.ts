@@ -22,7 +22,7 @@ function mockResponse(body: unknown, status = 200, statusText = 'OK'): Response 
     body: null,
     bodyUsed: false,
     arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
-    blob: () => Promise.resolve(new Blob()),
+    blob: () => Promise.resolve(new Blob([])),
     formData: () => Promise.resolve(new FormData()),
     text: () => Promise.resolve(JSON.stringify(body)),
     bytes: () => Promise.resolve(new Uint8Array()),

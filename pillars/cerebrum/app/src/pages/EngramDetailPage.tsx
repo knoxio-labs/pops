@@ -35,7 +35,7 @@ function DraftBanner({ model }: { model: Model }) {
   return (
     <div
       data-testid="draft-restored-banner"
-      className="rounded-md border border-amber-500/40 bg-amber-500/5 px-3 py-2 text-xs flex items-center justify-between"
+      className="rounded-md border border-warning/40 bg-warning/5 px-3 py-2 text-xs flex items-center justify-between"
     >
       <span>{t('engrams.edit.draftRestored')}</span>
       <Button variant="ghost" size="sm" onClick={() => model.discardDraft()}>

@@ -124,6 +124,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/reconcile/links': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Orders linked to one finance transaction, confirmed or derived */
+    get: operations['reconcile.links'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/reconcile/queue': {
     parameters: {
       query?: never;
@@ -1236,6 +1253,7 @@ export interface operations {
                     | 'no-lines'
                     | 'negative-line'
                     | 'sum-mismatch'
+                    | 'ambiguous-tax'
                     | 'damaged';
                 }[];
                 /** @enum {string} */
@@ -1326,6 +1344,91 @@ export interface operations {
           'application/json': {
             code?: string;
             message: string;
+          };
+        };
+      };
+    };
+  };
+  'reconcile.links': {
+    parameters: {
+      query: {
+        transactionUri: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            purchases: {
+              charges: {
+                charge: {
+                  amountCents: number;
+                  chargedAt: string | null;
+                  createdAt: string;
+                  currency: string;
+                  id: string;
+                  orderAmountCents: number;
+                  /** @enum {string} */
+                  origin: 'merchant' | 'derived';
+                  paymentHint: string | null;
+                  position: number;
+                  purchaseId: string;
+                  /** @enum {string} */
+                  role: 'capture' | 'authorization' | 'refund' | 'adjustment';
+                  shipmentId: string | null;
+                  sourceChargeRef: string | null;
+                  updatedAt: string;
+                };
+                link: {
+                  amountCents: number;
+                  chargeId: string;
+                  confidence: number;
+                  confirmedAt: string | null;
+                  createdAt: string;
+                  id: string;
+                  /** @enum {string} */
+                  linkType: 'exact' | 'split' | 'combined' | 'partial' | 'rule' | 'manual';
+                  matchRuleId: string | null;
+                  transactionUri: string;
+                };
+              }[];
+              linkedCents: number;
+              purchase: {
+                checksum: string;
+                createdAt: string;
+                currency: string;
+                discountCents: number;
+                id: string;
+                /** @enum {string} */
+                ingestMethod: 'email' | 'export' | 'upload' | 'manual';
+                merchantEntityId: string | null;
+                merchantEntityName: string | null;
+                orderedAt: string;
+                paymentHint: string | null;
+                rawRef: string | null;
+                /** @enum {string} */
+                settlementMode: 'card' | 'cash' | 'unknown';
+                shippingCents: number;
+                source: string;
+                sourceOrderId: string | null;
+                /** @enum {string} */
+                status: 'awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored';
+                subtotalCents: number;
+                surchargeCents: number;
+                taxCents: number;
+                totalCents: number;
+                updatedAt: string;
+              };
+            }[];
+            transactionUri: string;
           };
         };
       };
@@ -1497,8 +1600,10 @@ export interface operations {
           };
           query: {
             filters?: {
-              field: string;
-              operator: string;
+              /** @enum {string} */
+              field: 'source' | 'status' | 'orderedAt';
+              /** @enum {string} */
+              operator: 'eq' | 'gte' | 'lte';
               value: string;
             }[];
             text: string;
@@ -1524,6 +1629,18 @@ export interface operations {
               score: number;
               uri: string;
             }[];
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
           };
         };
       };

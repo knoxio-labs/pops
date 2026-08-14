@@ -8,14 +8,8 @@
   "libs/ui/src/components/DataTable.tsx": {
     "as unknown as": 1
   },
-  "libs/ui/src/components/ForceGraph.pointer.ts": {
-    "eslint-disable": 2
-  },
   "libs/ui/src/components/MediaCard.tsx": {
     "as unknown as": 1
-  },
-  "libs/ui/src/components/NumberInput.hooks.ts": {
-    "eslint-disable": 1
   },
   "pillars/food/app/src/components/useDslEditorView.ts": {
     "eslint-disable": 1
@@ -32,9 +26,6 @@
   "pillars/inventory/app/src/components/ValueBreakdown.tsx": {
     "as never": 1,
     "as unknown as": 1
-  },
-  "pillars/inventory/app/src/components/connection-graph/useGraphSimulation.ts": {
-    "eslint-disable": 1
   },
   "pillars/inventory/app/src/pages/location-tree-page/sections/LocationNode.tsx": {
     "as unknown as": 2

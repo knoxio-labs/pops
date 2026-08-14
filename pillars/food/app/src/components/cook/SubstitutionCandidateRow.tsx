@@ -88,7 +88,7 @@ function SubMeta(props: SubMetaProps): ReactNode {
       </span>
       {props.prepMismatch ? (
         <span
-          className="text-amber-600"
+          className="text-warning"
           data-testid={`sub-row-${props.candidate.substitutionId}-prep-warning`}
         >
           {t('cook.subPicker.row.prepMismatch')}
