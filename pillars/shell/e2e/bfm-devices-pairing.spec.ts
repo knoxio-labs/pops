@@ -9,7 +9,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { z } from 'zod';
 
-import { assertMatchesContract, fulfilWith, json, stubShellBoot } from './helpers/pillar-rest';
+import { assertMatchesContract, json, stubShellBoot } from './helpers/pillar-rest';
 
 const PAIRING_CODE = '7QK4-9M2X-P3ND';
 const PAIRING_URL = `https://bfm.example.test/devices/pair?code=${PAIRING_CODE}`;
@@ -75,19 +75,23 @@ async function stubOperatorApi(
   const ttlSeconds = options.ttlSeconds ?? 300;
   let revokedAt: string | null = null;
 
-  await page.route(
-    '**/bfm-api/operator/pairing/codes',
-    fulfilWith(
-      201,
-      IssuedPairingCodeResponseSchema,
-      {
-        code: PAIRING_CODE,
-        pairingUrl: PAIRING_URL,
-        expiresAt: new Date(Date.now() + ttlSeconds * 1000).toISOString(),
-      },
-      'operator.issuePairingCode'
-    )
-  );
+  await page.route('**/bfm-api/operator/pairing/codes', (route) => {
+    // `expiresAt` is computed here, inside the handler, not up front like
+    // `fulfilWith`'s other callers: it has to reflect "now" when bfm would
+    // actually mint the code (the POST firing, after navigation and the
+    // click), not "now" when this stub was registered. `fulfilWith` computes
+    // its body eagerly, before the route is ever hit — fine for a static
+    // body, but for a short TTL the gap between registration and the request
+    // (a cold Vite transform on first navigation) can exceed `ttlSeconds` by
+    // itself, expiring the code before the test ever sees it minted.
+    const body = {
+      code: PAIRING_CODE,
+      pairingUrl: PAIRING_URL,
+      expiresAt: new Date(Date.now() + ttlSeconds * 1000).toISOString(),
+    };
+    assertMatchesContract(IssuedPairingCodeResponseSchema, body, 'operator.issuePairingCode');
+    return json(route, 201, body);
+  });
 
   await page.route('**/bfm-api/operator/devices', (route) => {
     // Body depends on `revokedAt`, mutated after this route is registered —
