@@ -707,6 +707,185 @@ describe('BREAKPOINT_NAMES: Tailwind v4 defaults union with globals.css (POPS-22
   });
 });
 
+describe('not-*/min-<name> viewport-width variants (POPS-2273)', () => {
+  it.each([
+    ['not-sm:', 'not-sm:h-11 not-sm:w-11'],
+    ['not-max-sm:', 'not-max-sm:h-11 not-max-sm:w-11'],
+    ['not-min-[640px]:', 'not-min-[640px]:h-11 not-min-[640px]:w-11'],
+    ['min-sm:', 'min-sm:h-11 min-sm:w-11'],
+  ])(
+    'flags %s with no unprefixed base — it is a real viewport-width variant',
+    (_label, className) => {
+      const src = `<button className="${className}"><XIcon /></button>`;
+      expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([
+        { file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'button' },
+      ]);
+    }
+  );
+
+  it.each([
+    ['not-sm:', 'h-11 w-11 not-sm:h-6 not-sm:w-6'],
+    ['not-max-sm:', 'h-11 w-11 not-max-sm:h-6 not-max-sm:w-6'],
+    ['min-sm:', 'h-11 w-11 min-sm:h-6 min-sm:w-6'],
+  ])('flags a sufficient base shrunk by %s', (_label, className) => {
+    const src = `<button className="${className}"><XIcon /></button>`;
+    expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([
+      { file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'button' },
+    ]);
+  });
+
+  it.each([
+    ['not-sm:', 'h-6 w-6 before:-inset-9 not-sm:before:-inset-0'],
+    ['min-sm:', 'h-6 w-6 before:-inset-9 min-sm:before:-inset-0'],
+  ])('flags a sufficient before:-inset-* expansion collapsed by %s', (_label, className) => {
+    const src = `<button className="${className}"><XIcon /></button>`;
+    expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([
+      { file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'button' },
+    ]);
+  });
+});
+
+describe('regimeOrdering does not compare cross-family same-direction regimes by threshold (POPS-2274)', () => {
+  it('fails closed when an arbitrary min-[…] regime sorts ahead of a named min-width regime it looks like a subset of', () => {
+    // Compiled order: min-[700px] emits BEFORE sm, so sm:before:-inset-0
+    // (emitted after) wins at any width >= 700px against min-[700px]'s own
+    // 24px box — a real 24x24 control, not the 44px the base alone proves.
+    const src =
+      '<button className="h-11 w-11 min-[700px]:h-6 min-[700px]:w-6 min-[700px]:before:-inset-9 sm:before:-inset-0"><XIcon /></button>';
+    expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([
+      { file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'button' },
+    ]);
+  });
+
+  it('fails closed when a [@media…] regime sorts after a named min-width regime it looks like a superset of', () => {
+    const src =
+      '<button className="h-11 w-11 md:h-6 md:w-6 md:before:-inset-9 [@media(min-width:720px)]:before:-inset-0"><XIcon /></button>';
+    expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([
+      { file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'button' },
+    ]);
+  });
+
+  it('fails closed on the max-width mirror: an arbitrary max-[…] regime sorts ahead of a named max-width regime', () => {
+    const src =
+      '<button className="h-11 w-11 max-[600px]:h-6 max-[600px]:w-6 max-[600px]:before:-inset-9 max-sm:before:-inset-0"><XIcon /></button>';
+    expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([
+      { file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'button' },
+    ]);
+  });
+
+  it('still resolves the cascade correctly between two regimes of the SAME family (named vs named, control)', () => {
+    const src =
+      '<button className="h-11 w-11 sm:h-6 sm:w-6 sm:before:-inset-9 md:before:-inset-0"><XIcon /></button>';
+    expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([
+      { file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'button' },
+    ]);
+  });
+});
+
+describe('loadBreakpoints: an em-valued --breakpoint-* resolves the same as rem, not as px (POPS-2274)', () => {
+  it('treats --breakpoint-tablet: 48em as a 768px threshold, not 48px', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'touch-target-em-breakpoint-'));
+    try {
+      mkdirSync(join(root, 'scripts'), { recursive: true });
+      mkdirSync(join(root, 'libs/ui/src/theme'), { recursive: true });
+      copyFileSync(
+        join(here, '../check-touch-targets.mjs'),
+        join(root, 'scripts/check-touch-targets.mjs')
+      );
+      writeFileSync(
+        join(root, 'libs/ui/src/theme/globals.css'),
+        '@theme {\n  --breakpoint-tablet: 48em;\n}\n'
+      );
+
+      const mod = await import(
+        `${pathToFileURL(join(root, 'scripts/check-touch-targets.mjs')).href}?em=${Date.now()}`
+      );
+      // `tablet` (48em) and `md` (768px default) are the SAME real threshold,
+      // so md is a proven same-family min-width superset of tablet and
+      // rescues tablet's missing box with its own real 44px one — clean. If
+      // 48em were misread as 48px, md(768) would no longer be a superset of
+      // tablet(48) (768 <= 48 is false), the cascade would fall through to
+      // the unprefixed 24px base instead, and this would wrongly flag.
+      const hits = mod.findViolations(
+        'pillars/x/app/src/A.tsx',
+        '<button className="h-6 w-6 before:-inset-9 md:h-11 md:w-11 md:before:-inset-0 tablet:before:-inset-0"><XIcon /></button>'
+      );
+      expect(hits).toEqual([]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('records no px entry (fails closed) for a --breakpoint-* declared in an unrecognised unit', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'touch-target-unknown-unit-breakpoint-'));
+    try {
+      mkdirSync(join(root, 'scripts'), { recursive: true });
+      mkdirSync(join(root, 'libs/ui/src/theme'), { recursive: true });
+      copyFileSync(
+        join(here, '../check-touch-targets.mjs'),
+        join(root, 'scripts/check-touch-targets.mjs')
+      );
+      writeFileSync(
+        join(root, 'libs/ui/src/theme/globals.css'),
+        '@theme {\n  --breakpoint-viewport: 60vw;\n}\n'
+      );
+
+      const mod = await import(
+        `${pathToFileURL(join(root, 'scripts/check-touch-targets.mjs')).href}?unknownunit=${Date.now()}`
+      );
+      // `viewport` carries no px entry, so it can never be proven a superset
+      // of `sm` — its own inset-only evidence must fail closed (interference)
+      // rather than silently misreading 60 as a 60px threshold and either
+      // wrongly borrowing sm's box or wrongly skipping it as a subset.
+      const hits = mod.findViolations(
+        'pillars/x/app/src/A.tsx',
+        '<button className="h-11 w-11 sm:h-6 sm:w-6 sm:before:-inset-9 viewport:before:-inset-0"><XIcon /></button>'
+      );
+      expect(hits).toEqual([{ file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'button' }]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('scoped max-h-*/max-w-* ceiling is a real shrink in a regime, not an alternative reading (POPS-2275)', () => {
+  it('flags a scoped ceiling alone (no bare reading in that regime) — the pre-existing correct case', () => {
+    const src = '<button className="h-11 w-11 sm:max-h-6 sm:max-w-6"><XIcon /></button>';
+    expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([
+      { file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'button' },
+    ]);
+  });
+
+  it('flags a scoped bare reading capped by a scoped ceiling in the SAME regime (sm:)', () => {
+    const src =
+      '<button className="h-11 w-11 sm:h-11 sm:w-11 sm:max-h-6 sm:max-w-6"><XIcon /></button>';
+    expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([
+      { file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'button' },
+    ]);
+  });
+
+  it('flags a scoped size-* reading capped by a scoped max-h/max-w ceiling', () => {
+    const src = '<button className="h-11 w-11 sm:size-11 sm:max-h-8 sm:max-w-8"><XIcon /></button>';
+    expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([
+      { file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'button' },
+    ]);
+  });
+
+  it('flags the max-sm: (phone-width) mirror of a scoped reading capped by a scoped ceiling', () => {
+    const src =
+      '<button className="h-11 w-11 max-sm:size-11 max-sm:max-h-6 max-sm:max-w-6"><XIcon /></button>';
+    expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([
+      { file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'button' },
+    ]);
+  });
+
+  it('does not flag a scoped ceiling that is still >= 44px', () => {
+    const src =
+      '<button className="h-11 w-11 sm:h-11 sm:w-11 sm:max-h-16 sm:max-w-16"><XIcon /></button>';
+    expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([]);
+  });
+});
+
 describe('BREAKPOINT_NAMES: a hyphenated custom breakpoint name is captured whole (POPS-2264)', () => {
   /**
    * Same sandboxed-module reasoning as the POPS-2254 suite above: the name
