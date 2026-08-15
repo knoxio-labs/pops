@@ -48,7 +48,16 @@
  *   - A same-file, single-hop variable trace: `const spec = 'lucide-react';`
  *     followed later by `import(spec)` in the same file. This is a bounded,
  *     literal-only, one-hop lookup — no cross-file constants, no
- *     reassignment tracking, no destructuring, no shadowing awareness.
+ *     reassignment tracking, no destructuring, no shadowing awareness. An
+ *     optional TypeScript type annotation between the identifier and `=` is
+ *     tolerated (`const spec: string = 'lucide-react';`) — matched as the
+ *     general shape (anything between `:` and the assignment `=` that is not
+ *     itself a `=`, `;`, or newline), not as an enumerated list of annotation
+ *     spellings. A union, a generic, an import type, or a template-literal
+ *     type all satisfy that shape without naming any of them individually;
+ *     only an annotation containing a bare `=` (a default type parameter, a
+ *     function type) falls outside it, and such an annotation on a
+ *     string-literal-initialised const does not occur in this tree.
  *
  *   Genuinely UNDECIDABLE, and NOT flagged (fails OPEN, not closed):
  *     - a computed specifier (`import(getModuleName())`, a ternary, string
@@ -172,9 +181,17 @@ const DYNAMIC_IDENT_CALL_RE = new RegExp(
   'gm'
 );
 
-/** `const IDENT = '...'` / `` const IDENT = `...` `` (no interpolation). */
+/**
+ * `const IDENT = '...'` / `` const IDENT = `...` `` (no interpolation), with
+ * an optional TypeScript type annotation between the identifier and `=` —
+ * `const IDENT: TYPE = '...'`. `TYPE` is matched as the general shape
+ * (anything up to the assignment `=` that is not itself a `=`, `;`, or
+ * newline) rather than an enumerated list of annotation spellings, so a
+ * union, a generic, an import type, or a template-literal type are all
+ * covered without naming any of them.
+ */
 const CONST_STRING_RE =
-  /(?:^|[\s;])(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:['"]([^'"]*)['"]|`([^`]*)`)\s*[;\n]/gm;
+  /(?:^|[\s;])(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*(?::\s*[^=;\n]+)?\s*=\s*(?:['"]([^'"]*)['"]|`([^`]*)`)\s*[;\n]/gm;
 
 /**
  * True if a resolved specifier string reaches `lucide-react` — the bare
@@ -361,13 +378,14 @@ function run() {
  * Synthetic fixtures proving the guard reports every resolvable dynamic form
  * (string literal, template literal without interpolation, template literal
  * with an interpolated subpath tail, require(), a same-file single-hop
- * variable trace, a call as the first element of an array literal, a call
- * immediately after `=>` with no space, a call with a second argument such
- * as import attributes, and a call with a bare trailing comma), stays silent
- * on the shapes documented as undecidable, and stays silent on a static
- * import/dynamic import of an unrelated package — including the same
- * second-argument and trailing-comma shapes, so a resolved-but-unrelated
- * specifier is still correctly ignored.
+ * variable trace, the same trace through a type-annotated const, a call as
+ * the first element of an array literal, a call immediately after `=>` with
+ * no space, a call with a second argument such as import attributes, and a
+ * call with a bare trailing comma), stays silent on the shapes documented as
+ * undecidable, and stays silent on a static import/dynamic import of an
+ * unrelated package — including the same second-argument, trailing-comma,
+ * and type-annotated-const shapes, so a resolved-but-unrelated specifier is
+ * still correctly ignored.
  *
  * @returns {boolean}
  */
@@ -384,6 +402,8 @@ function selfTest() {
     "const j = () =>import('lucide-react');",
     "const l = await import('lucide-react', { with: { type: 'json' } });",
     "const m = await import('lucide-react',);",
+    "const specTyped: string = 'lucide-react';",
+    'const eTyped = await import(specTyped);',
   ].join('\n');
 
   const clean = [
@@ -400,6 +420,8 @@ function selfTest() {
     "myimport('lucide-react');",
     "const n = await import('some-other-package', { with: { type: 'json' } });",
     "const o = await import('some-other-package',);",
+    "const otherTyped: string = 'not-lucide-react';",
+    'const pTyped = await import(otherTyped);',
   ].join('\n');
 
   const dirtyHits = findViolations('pillars/x/app/src/A.tsx', dirty);
@@ -416,7 +438,9 @@ function selfTest() {
     'reports a call immediately after `=>` with no space': dirtyLines.has(9),
     'reports a call with a second argument (import attributes)': dirtyLines.has(10),
     'reports a call with a bare trailing comma and no second argument': dirtyLines.has(11),
-    'reports every dirty line, not just the first': dirtyHits.length === 9,
+    'reports a same-file single-hop variable trace through a type-annotated const':
+      dirtyLines.has(13),
+    'reports every dirty line, not just the first': dirtyHits.length === 10,
     "does not flag a static named import (oxlint's job)": !cleanHits.some((v) => v.line === 1),
     'does not flag a static export-from re-export': !cleanHits.some(
       (v) => v.line === 2 || v.line === 3
@@ -438,6 +462,9 @@ function selfTest() {
       (v) => v.line === 12
     ),
     'does not flag a trailing comma on an unrelated package': !cleanHits.some((v) => v.line === 13),
+    'does not flag a type-annotated const holding an unrelated package': !cleanHits.some(
+      (v) => v.line === 15
+    ),
     'clean fixture reports nothing at all': cleanHits.length === 0,
   };
 
