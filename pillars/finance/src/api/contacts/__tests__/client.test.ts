@@ -135,6 +135,7 @@ describe('createContactsClient.createOrFetchByName — TRANSIENT vs PERMANENT cr
   it.each([
     ['unavailable', { kind: 'unavailable', pillar: 'contacts' }],
     ['degraded', { kind: 'degraded', pillar: 'contacts', reason: 'reconciling' }],
+    ['rate-limited', { kind: 'rate-limited', pillar: 'contacts', retryAfterSeconds: 30 }],
   ] satisfies [string, CallResult<{ data: ContactEntity; message: string }>][])(
     'throws ContactsUnavailableError (TRANSIENT) for a %s create result',
     async (_label, result) => {
@@ -153,6 +154,7 @@ describe('createContactsClient.createOrFetchByName — TRANSIENT vs PERMANENT cr
       'contract-mismatch',
       { kind: 'contract-mismatch', pillar: 'contacts', expected: 'Entity', actual: 'unknown' },
     ],
+    ['refused', { kind: 'refused', pillar: 'contacts', status: 413, message: 'payload too large' }],
   ] satisfies [string, CallResult<{ data: ContactEntity; message: string }>][])(
     'throws ContactsPermanentError for a %s create result',
     async (_label, result) => {

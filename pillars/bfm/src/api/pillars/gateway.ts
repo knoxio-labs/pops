@@ -22,6 +22,25 @@
  * through its generated Hey API client, which the SDK never sees, and each
  * consumer keeps its own `isUnavailableError` against its own error class.
  * Nothing in this file applies to that half.
+ *
+ * `refused` and `rate-limited` (the SDK's buckets for a producer 4xx it does
+ * not otherwise recognise, and for 429 respectively — see
+ * `@pops/pillar-sdk/client`'s `errors.ts`) are DELIBERATELY the two SDK
+ * failure kinds that do NOT get their own `GatewayFailure` kind here, unlike
+ * every other kind this file maps. `refused` folds onto the same outcome as
+ * `bad-request`; `rate-limited` folds onto `unavailable`. Giving either its
+ * own kind would need its own `MobileUpstreamError.code` too
+ * (`upstream-error.ts`'s `classify` has no default arm on purpose), which is
+ * a wire-contract change — the OpenAPI document this pillar publishes, and
+ * therefore the generated Swift client `clients/ios` vendors from it
+ * (`mise run generate:bfm-client`, gated by the iOS Quality workflow). That
+ * is real, valuable follow-up work (finer-grained codes let the app tell a
+ * 413 from a 422 from bfm's own bad-request-forwarding bug) but it is a
+ * separate, cross-repo change, not this fix. The property that DOES matter
+ * for POPS-2230 survives the fold without it: a `refused` producer answer is
+ * `retryable: false` and distinct in status from a genuine `unavailable`,
+ * and a `rate-limited` one stays `retryable: true` with its `Retry-After`
+ * preserved in `detail` rather than silently dropped.
  */
 import { pillar } from '@pops/pillar-sdk/server';
 
@@ -118,6 +137,30 @@ export function toGatewayFailure(failure: CallFailure): GatewayFailure {
       return { kind: 'conflict', pillar: target, status: 409, detail: failure.message };
     case 'bad-request':
       return { kind: 'invalid-request', pillar: target, status: 400, detail: failure.message };
+    case 'refused':
+      // A permanent 4xx the SDK did not otherwise recognise (413 body too
+      // large, 422 unprocessable, ...) — see `toGatewayFailure`'s header for
+      // why this folds onto the SAME outcome as `bad-request` rather than
+      // getting its own `GatewayFailure` kind. The real upstream status
+      // survives in `detail` so it is not lost, only not distinguished on
+      // the wire.
+      return {
+        kind: 'invalid-request',
+        pillar: target,
+        status: 400,
+        detail: withUpstreamStatus(failure.status, failure.message),
+      };
+    case 'rate-limited':
+      // Retryable, same as `unavailable` — but NOT the same fact: this
+      // producer answered and said "later", not "nobody answered". See
+      // `toGatewayFailure`'s header. `retryAfterSeconds`, when the producer
+      // sent one, survives in `detail`.
+      return {
+        kind: 'unavailable',
+        pillar: target,
+        status: 503,
+        detail: withRetryAfter(failure.retryAfterSeconds, failure.message),
+      };
     case 'unauthorized':
       // A sibling rejected THIS pillar's service-account key. Deliberately not
       // a 401: the phone's own credential is fine, and saying otherwise sends
@@ -134,4 +177,20 @@ export function toGatewayFailure(failure: CallFailure): GatewayFailure {
 function describeMismatch(failure: Extract<CallFailure, { kind: 'contract-mismatch' }>): string {
   if (failure.message !== undefined) return failure.message;
   return `expected ${failure.expected ?? 'unknown'}, got ${failure.actual ?? 'unknown'}`;
+}
+
+function withUpstreamStatus(status: number, message: string | undefined): string {
+  const base = `upstream answered ${String(status)}`;
+  return message === undefined ? base : `${base}: ${message}`;
+}
+
+function withRetryAfter(
+  retryAfterSeconds: number | undefined,
+  message: string | undefined
+): string {
+  const base =
+    retryAfterSeconds === undefined
+      ? 'rate limited'
+      : `rate limited, retry after ${String(retryAfterSeconds)}s`;
+  return message === undefined ? base : `${base}: ${message}`;
 }

@@ -156,6 +156,42 @@ describe('a collection route', () => {
   });
 });
 
+/**
+ * The end-to-end regression for POPS-2230: what the phone actually sees for
+ * a producer's real, permanent refusal (bfm's `GatewayFailure` for the SDK's
+ * `refused` kind — see `gateway.ts`'s `toGatewayFailure`) versus a genuine
+ * outage. Before the fix both answered `503 upstream_unavailable,
+ * retryable: true`; a caller could not tell "purchases said no, permanently"
+ * from "nobody answered".
+ */
+describe('a producer refusal reaching the phone', () => {
+  it('is retryable:false and a different status than a genuine outage', () => {
+    const refused = toUpstreamErrorResponse({
+      kind: 'invalid-request',
+      pillar: 'purchases',
+      status: 400,
+      detail: 'upstream answered 413: request entity too large',
+    });
+    const down = toUpstreamErrorResponse({ kind: 'unavailable', pillar: 'purchases', status: 503 });
+
+    expect(refused.status).not.toBe(down.status);
+    expect(refused.body.retryable).toBe(false);
+    expect(down.body.retryable).toBe(true);
+  });
+
+  it('the real upstream status and message reach the phone through the detail', () => {
+    const refused = toUpstreamErrorResponse({
+      kind: 'invalid-request',
+      pillar: 'purchases',
+      status: 400,
+      detail: 'upstream answered 413: request entity too large',
+    });
+
+    expect(refused.body.message).toContain('413');
+    expect(refused.body.message).toContain('request entity too large');
+  });
+});
+
 describe('the operator detail', () => {
   it('is appended when the gateway carries one', () => {
     const mapped = toUpstreamErrorResponse({

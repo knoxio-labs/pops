@@ -6,6 +6,16 @@
  * through to something plausible. The point of the gateway keeping seven kinds
  * apart is lost the moment one of them is quietly folded into another on the
  * way out.
+ *
+ * Two SDK-level failures never reach this switch as their own kind: the
+ * pillar SDK's `refused` (a producer 4xx this SDK does not otherwise
+ * recognise — 413, 422, ...) and `rate-limited` (429) both fold onto an
+ * existing `GatewayFailure` kind one step earlier, in `gateway.ts`'s
+ * `toGatewayFailure` — see that function's header for why a seventh and
+ * eighth kind is not the fix here. What this file still guarantees for both:
+ * `refused` answers `retryable: false` on a status that is not 503, and
+ * `rate-limited` answers `retryable: true` with the producer's `Retry-After`
+ * (when it sent one) preserved in the message rather than dropped.
  */
 import type { MobileUpstreamError } from '../../contract/rest-schemas.js';
 import type { GatewayFailure } from '../pillars/gateway.js';

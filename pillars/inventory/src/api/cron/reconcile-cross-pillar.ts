@@ -97,7 +97,9 @@ function classifyResult(value: unknown): ReconcileOutcome {
   if (isCallResult(value)) {
     if (value.kind === 'ok') return 'ok';
     if (value.kind === 'not-found') return 'not-found';
-    if (value.kind === 'bad-request') return 'bad-request';
+    // `refused` (e.g. a producer's own 413/422) is the same "the request as
+    // sent will never succeed" fact `bad-request` already reports here.
+    if (value.kind === 'bad-request' || value.kind === 'refused') return 'bad-request';
     return 'unavailable';
   }
   return 'ok';
@@ -106,7 +108,7 @@ function classifyResult(value: unknown): ReconcileOutcome {
 function classifyError(err: unknown): ReconcileOutcome {
   if (err instanceof PillarCallError) {
     if (err.result.kind === 'not-found') return 'not-found';
-    if (err.result.kind === 'bad-request') return 'bad-request';
+    if (err.result.kind === 'bad-request' || err.result.kind === 'refused') return 'bad-request';
     return 'unavailable';
   }
   return 'unavailable';
