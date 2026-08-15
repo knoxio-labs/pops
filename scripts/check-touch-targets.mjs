@@ -72,15 +72,22 @@
  * classified into a spelling family by {@link regimeFamily}) whose domain is a
  * proven SUPERSET of the regime being evaluated is a valid source — mirroring
  * how Tailwind's own compiled stylesheet orders same-direction breakpoints
- * WITHIN a family (`min-` ascending, `max-` descending — confirmed against
- * the pinned `tailwindcss@4.3.3`), so the nearest such superset is the real
- * cascade winner. That threshold ordering does NOT hold ACROSS families:
- * arbitrary `min-[…]`/`max-[…]` sort ahead of every named breakpoint
- * regardless of threshold, and `[@media…]` sorts after all of them (POPS-2274)
- * — `min-[700px]:h-6` is emitted, and therefore wins, ahead of `sm:h-6` even
- * though 700 > 640, the opposite of what a single px-axis comparison would
- * conclude. A same-direction sibling from a DIFFERENT family is therefore
- * never treated as a provable superset, no matter how its threshold compares.
+ * WITHIN a family, and for the `named` family within one declared UNIT
+ * (`min-` ascending, `max-` descending — confirmed against the pinned
+ * `tailwindcss@4.3.3`), so the nearest such superset is the real cascade
+ * winner. That threshold ordering does NOT hold ACROSS families, nor across
+ * units within the `named` family: arbitrary `min-[…]`/`max-[…]` sort ahead
+ * of every named breakpoint regardless of threshold, and `[@media…]` sorts
+ * after all of them (POPS-2274) — `min-[700px]:h-6` is emitted, and therefore
+ * wins, ahead of `sm:h-6` even though 700 > 640, the opposite of what a
+ * single px-axis comparison would conclude. Named breakpoints in different
+ * units are bucketed alphabetically by unit STRING ahead of being ordered by
+ * threshold at all (`ch` < `em` < `px` < `rem` < `vw`, confirmed empirically
+ * against the pinned `tailwindcss@4.3.3`), so a `900ch` breakpoint emits
+ * ahead of a `300px` one regardless of 900 > 300 (POPS-2280). A same-direction
+ * sibling from a DIFFERENT family, OR a different unit within the `named`
+ * family, is therefore never treated as a provable superset, no matter how
+ * its threshold compares.
  * A sibling that sets the property but ISN'T a provable same-direction,
  * same-family superset — different direction, a different spelling family, an
  * unresolved custom breakpoint, or a two-sided
@@ -238,6 +245,46 @@ function ceilingRe(prop) {
 }
 
 /**
+ * The BARE form ONLY — unlike {@link dimensionRe}, this never matches the
+ * `min-` form. Used for a SCOPED regime's own reading ({@link
+ * scopedBoxReading}), where a `min-` value must be read as a floor via
+ * {@link floorDimensionRe}/{@link scopedBoxFloor} instead of as an
+ * alternative reading (POPS-2282) — mirroring why {@link ceilingRe} excludes
+ * the bare form for the opposite reason. The BASE reading ({@link
+ * baseBoxReading}) keeps using {@link dimensionRe} (bare + `min-`) directly:
+ * there is no cascade at the base for a `min-` reading to wrongly
+ * short-circuit. Captures line up with {@link pxOf} the same way
+ * {@link dimensionRe} does.
+ * @param {'h' | 'w' | 'size'} prop
+ * @returns {RegExp}
+ */
+function bareDimensionRe(prop) {
+  return new RegExp(
+    `(?<![\\w-])${prop}-(?:(\\d+(?:\\.\\d+)?)(?![\\d./])|\\[(\\d+(?:\\.\\d+)?)(px|rem)\\])`,
+    'g'
+  );
+}
+
+/**
+ * A `min-h`/`min-w`/`min-size` FLOOR ONLY — the mirror of {@link ceilingRe}
+ * for the floor direction (POPS-2282): unlike {@link dimensionRe}, this never
+ * matches the bare form, because it exists to be combined (via `Math.max`)
+ * with a SEPARATE resolved box reading, not to stand in as one on its own —
+ * a scoped `min-w-0` with no other width evidence anywhere still proves
+ * nothing on its own; it only ever raises whatever the cascade otherwise
+ * resolves. Captures line up with {@link pxOf} the same way {@link
+ * dimensionRe}/{@link ceilingRe} do.
+ * @param {'h' | 'w' | 'size'} prop
+ * @returns {RegExp}
+ */
+function floorDimensionRe(prop) {
+  return new RegExp(
+    `(?<![\\w-])min-${prop}-(?:(\\d+(?:\\.\\d+)?)(?![\\d./])|\\[(\\d+(?:\\.\\d+)?)(px|rem)\\])`,
+    'g'
+  );
+}
+
+/**
  * The `before:-inset-*` invisible-hit-area expansion pattern the primitives
  * use for compact controls: a negative inset on the `::before` pseudo-element
  * pushes its hit area outward by the given amount on every side. Accepts the
@@ -305,6 +352,26 @@ const TAILWIND_DEFAULT_BREAKPOINT_PX = new Map([
 ]);
 
 /**
+ * The UNIT each of {@link TAILWIND_DEFAULT_BREAKPOINTS} is declared in by
+ * Tailwind v4's shipped default theme — `rem` (`40rem`/`48rem`/`64rem`/
+ * `80rem`/`96rem`), never `px`, even though {@link TAILWIND_DEFAULT_BREAKPOINT_PX}
+ * records their px-equivalent threshold for ordering. {@link regimeFamily}
+ * needs this alongside the px threshold: Tailwind's compiled stylesheet
+ * buckets same-direction breakpoints by declared unit STRING, alphabetically
+ * (`ch` < `em` < `px` < `rem` < `vw`, confirmed against the pinned
+ * `tailwindcss@4.3.3` across five units), not by resolved px — see
+ * {@link regimeFamily}'s docstring for why that makes two same-px-equivalent
+ * breakpoints in different units NOT interchangeable cascade sources
+ * (POPS-2280). A name whose default `rem` declaration is left alone (not
+ * redeclared in `globals.css`) keeps the `rem` bucket, the same
+ * additive-default reasoning {@link TAILWIND_DEFAULT_BREAKPOINT_PX} already
+ * uses for its threshold.
+ */
+const TAILWIND_DEFAULT_BREAKPOINT_UNIT = new Map(
+  [...TAILWIND_DEFAULT_BREAKPOINT_PX.keys()].map((name) => [name, 'rem'])
+);
+
+/**
  * Breakpoint names (usable by both `<name>:` (min-width) and `max-<name>:`
  * (max-width) variants) and their pixel thresholds, read from
  * {@link GLOBALS_CSS_PATH}. The name capture accepts the full charset a
@@ -326,39 +393,58 @@ const TAILWIND_DEFAULT_BREAKPOINT_PX = new Map([
  * redeclaration is deleted from `globals.css`. Pixel thresholds start from
  * {@link TAILWIND_DEFAULT_BREAKPOINT_PX} and are OVERRIDDEN by any matching
  * `globals.css` declaration, so a redeclared default's custom value is
- * honoured rather than silently ignored.
- * @returns {{ names: Set<string>, px: Map<string, number> }}
+ * honoured rather than silently ignored. The declared UNIT is tracked
+ * alongside the threshold, seeded from {@link TAILWIND_DEFAULT_BREAKPOINT_UNIT}
+ * and overridden the same way — {@link regimeFamily} needs it to keep two
+ * same-named-family breakpoints in DIFFERENT units from being compared by
+ * threshold (POPS-2280): Tailwind's compiled stylesheet orders same-direction
+ * breakpoints by threshold only WITHIN one declared unit, never across units.
+ * @returns {{ names: Set<string>, px: Map<string, number>, unit: Map<string, string> }}
  */
 function loadBreakpoints() {
   const css = readFileSync(GLOBALS_CSS_PATH, 'utf8');
   const names = new Set();
   const px = new Map(TAILWIND_DEFAULT_BREAKPOINT_PX);
+  const unit = new Map(TAILWIND_DEFAULT_BREAKPOINT_UNIT);
   for (const m of css.matchAll(
     /--breakpoint-([a-z0-9][a-z0-9-]*)\s*:\s*(\d+(?:\.\d+)?)?([a-z%]*)/g
   )) {
-    const [, name, num, unit] = m;
+    const [, name, num, rawUnit] = m;
     names.add(name);
     if (num === undefined) continue;
-    // `em` is resolved the same as `rem`: a media-query length is relative to
-    // the root font-size (16px), so `48em` and `48rem` are equivalent bounds
-    // — confirmed against the pinned tailwindcss@4.3.3, which compiles
+    // `em` is resolved to the same PX THRESHOLD as `rem` for ordering
+    // purposes — a media-query length is relative to the root font-size
+    // (16px), so `48em` and `48rem` are equivalent bounds — confirmed
+    // against the pinned tailwindcss@4.3.3, which compiles
     // `--breakpoint-tablet: 48em` to `@media (width >= 48em)`, the same
-    // 768px-equivalent threshold as a `rem` declaration. Any OTHER unit
-    // (`vw`, `%`, …) or a non-literal value (`theme()`, `calc()`) records no
-    // px entry at all — {@link regimeOrdering} already treats a name with no
-    // px entry as unorderable, which is the correct fail-closed behaviour
-    // rather than silently misreading the unit as px.
-    if (unit === 'rem' || unit === 'em') px.set(name, Number(num) * REM_PX);
-    else if (unit === 'px' || unit === '') px.set(name, Number(num));
+    // 768px-equivalent threshold as a `rem` declaration. That equivalence is
+    // ONLY about the threshold, not the unit BUCKET: `em` and `rem` are
+    // still different entries in {@link TAILWIND_DEFAULT_BREAKPOINT_UNIT}'s
+    // alphabetical ordering (`ch` < `em` < `px` < `rem` < `vw`), so an
+    // `em`-declared name and a `rem`-declared name at the identical
+    // px-equivalent threshold are still NOT a provable cascade superset of
+    // each other (POPS-2280) — {@link regimeFamily} is what enforces that.
+    // Any OTHER unit (`vw`, `%`, …) or a non-literal value (`theme()`,
+    // `calc()`) records no px/unit entry at all — {@link regimeOrdering}
+    // already treats a name with no px entry as unorderable, which is the
+    // correct fail-closed behaviour rather than silently misreading the unit
+    // as px.
+    if (rawUnit === 'rem' || rawUnit === 'em') {
+      px.set(name, Number(num) * REM_PX);
+      unit.set(name, rawUnit);
+    } else if (rawUnit === 'px' || rawUnit === '') {
+      px.set(name, Number(num));
+      unit.set(name, 'px');
+    }
   }
   if (names.size === 0) {
     throw new Error(`no --breakpoint-* custom properties found in ${GLOBALS_CSS_PATH}`);
   }
   for (const name of TAILWIND_DEFAULT_BREAKPOINTS) names.add(name);
-  return { names, px };
+  return { names, px, unit };
 }
 
-const { names: BREAKPOINT_NAMES, px: BREAKPOINT_PX } = loadBreakpoints();
+const { names: BREAKPOINT_NAMES, px: BREAKPOINT_PX, unit: BREAKPOINT_UNIT } = loadBreakpoints();
 
 /**
  * Does this variant segment — one colon-delimited piece of a class token's
@@ -510,19 +596,59 @@ function hasViewportWidthScopedPrefix(tagText, matchIndex) {
 }
 
 /**
- * The single viewport-width-scoped variant segment (`sm`, `max-sm`,
+ * Joins the viewport-width-scoped segments of a BANDED regime key (see
+ * {@link viewportVariantFor}) — a two-colon run {@link splitVariantSegments}
+ * can never produce from real class text (it would require an EMPTY segment
+ * between two colons, which {@link splitVariantSegments} already filters
+ * out), so a banded key can never collide with, or be mistaken for, a
+ * single-segment regime name.
+ */
+const REGIME_BAND_JOIN = '::';
+
+/**
+ * Does `regime` carry MORE THAN ONE viewport-width segment — a banded token
+ * like `sm:max-md:h-11`, whose real domain is the INTERSECTION of both
+ * segments (`[640px, 768px)`), not the wider single-sided domain either
+ * segment alone would have (POPS-2281)? Such a regime has no cheap `{kind,
+ * px}` ordering — a two-sided domain is not a one-sided bound — so
+ * {@link regimeOrdering} fails closed on it the same way it already does for
+ * a two-sided `[@media(400px<=width<=700px)]` range.
+ * @param {string} regime
+ * @returns {boolean}
+ */
+function isBandedRegime(regime) {
+  return regime.includes(REGIME_BAND_JOIN);
+}
+
+/**
+ * The viewport-width-scoped variant segment(s) (`sm`, `max-sm`,
  * `[@media(min-width:640px)]`, …) gating this match, or `null` if the match
  * carries none — i.e. it is base evidence, per {@link hasViewportWidthScopedPrefix}.
  * Used to group a scoped `h`/`w`/`size`/inset match with the OTHER scoped
  * matches on the same tag that render at the same width regime, rather than
  * combining it with the unprefixed base regardless of whether that same
  * regime also resizes the box (POPS-2255).
+ *
+ * A token may carry MORE than one viewport-width segment — `sm:max-md:h-11`
+ * is a valid Tailwind v4 band whose real domain is the INTERSECTION
+ * `[640px, 768px)`, narrower than either segment's own domain
+ * (POPS-2281). Keeping only the FIRST segment (an earlier version of this
+ * function used `.find()`) filed the utility under `sm`'s full
+ * `[640px, ∞)` domain and proved it compliant at widths — 768px and up —
+ * where the band's `max-md` half makes the utility absent. ALL
+ * viewport-width segments the token carries are therefore joined (via
+ * {@link REGIME_BAND_JOIN}) into one regime key distinct from any of its
+ * segments alone, so `sm:max-md:h-11` is evaluated as its OWN regime, never
+ * conflated with a plain `sm:h-11` — see {@link isBandedRegime} for how
+ * {@link regimeOrdering} refuses to treat that key as a orderable one-sided
+ * domain.
  * @param {string} tagText
  * @param {number} matchIndex
  * @returns {string | null}
  */
 function viewportVariantFor(tagText, matchIndex) {
-  return variantSegmentsFor(tagText, matchIndex).find(isViewportWidthScopedVariant) ?? null;
+  const segments = variantSegmentsFor(tagText, matchIndex).filter(isViewportWidthScopedVariant);
+  return segments.length === 0 ? null : segments.join(REGIME_BAND_JOIN);
 }
 
 /**
@@ -578,13 +704,17 @@ function parseMediaRegimeOrdering(segment) {
  * `not-max-sm` (`@media not (width < 40rem)`) is `min`-shaped at 640, both
  * confirmed against the pinned `tailwindcss@4.3.3` (POPS-2273). Returns
  * `null` when no cheap comparison is possible — an unresolved custom
- * breakpoint name, or a two-sided `[@media(400px<=width<=700px)]` range —
- * which {@link resolveWithCascade} treats as unorderable against every other
+ * breakpoint name, a two-sided `[@media(400px<=width<=700px)]` range, or a
+ * BANDED regime carrying more than one viewport-width segment (`sm:max-md`,
+ * see {@link isBandedRegime}) — a two-sided intersection is not a one-sided
+ * bound any more than an explicit range is (POPS-2281) — which
+ * {@link resolveWithCascade} treats as unorderable against every other
  * regime, itself included.
  * @param {string} regime
  * @returns {RegimeOrdering | null}
  */
 function regimeOrdering(regime) {
+  if (isBandedRegime(regime)) return null;
   if (regime.startsWith('not-')) {
     const inner = regimeOrdering(regime.slice(4));
     return inner === null ? null : { kind: inner.kind === 'min' ? 'max' : 'min', px: inner.px };
@@ -617,7 +747,11 @@ function regimeOrdering(regime) {
 }
 
 /**
- * @typedef {'named' | 'not-named' | 'arbitrary' | 'not-arbitrary' | 'media' | 'not-media' | 'unknown'} RegimeFamily
+ * @typedef {string} RegimeFamily
+ * A `'named:<unit>'` family (e.g. `'named:px'`, `'named:rem'`, `'named:em'`)
+ * for a named breakpoint, `'arbitrary'` for `min-[…]`/`max-[…]`, `'media'` for
+ * `[@media…]`, `'unknown'` for anything unresolvable, or any of those
+ * `not-`-prefixed.
  */
 
 /**
@@ -628,31 +762,55 @@ function regimeOrdering(regime) {
  * does NOT emit same-direction regimes on that one axis: confirmed against
  * the pinned `tailwindcss@4.3.3`, `min-width` emission order is arbitrary
  * `min-[…]` FIRST (regardless of threshold), then named breakpoints ascending
- * by threshold, then `[@media…]` LAST — `max-width` mirrors it (arbitrary
- * `max-[…]` first, named descending, `[@media…]` last). A same-direction
- * threshold comparison is therefore only PROVEN safe between two regimes of
- * the same family — the reasoning `resolveWithCascade`'s docstring already
- * states is correct is only correct for named-vs-named. Two regimes of
- * DIFFERENT families are always treated as unorderable (`interference`) here,
- * never compared by threshold, even when both resolve a `{kind, px}` pair —
- * fail-closed, the same direction as an unresolved custom breakpoint or a
- * two-sided range.
+ * by threshold WITHIN ONE DECLARED UNIT, then `[@media…]` LAST — `max-width`
+ * mirrors it (arbitrary `max-[…]` first, named descending within one unit,
+ * `[@media…]` last). Named breakpoints across DIFFERENT units are not
+ * ordered by threshold at all: Tailwind buckets same-direction breakpoints
+ * alphabetically by declared unit STRING first (`ch` < `em` < `px` < `rem` <
+ * `vw`, confirmed empirically against the pinned `tailwindcss@4.3.3` across
+ * five units scrambled in magnitude) and only orders by threshold within a
+ * bucket — so a `900ch` breakpoint sorts ahead of a `300px` one regardless of
+ * 900 > 300, and a `100em` breakpoint sorts ahead of a `20rem` one even
+ * though 100em (1600px) is a much larger threshold than 20rem (320px)
+ * (POPS-2280). A same-direction threshold comparison is therefore only
+ * PROVEN safe between two regimes of the same family AND, for the `named`
+ * family, the same declared unit — see {@link TAILWIND_DEFAULT_BREAKPOINT_UNIT}
+ * / {@link loadBreakpoints}'s `unit` map. Two regimes of different families,
+ * or two named regimes in different units, are always treated as unorderable
+ * (`interference`) here, never compared by threshold, even when both resolve
+ * a `{kind, px}` pair — fail-closed, the same direction as an unresolved
+ * custom breakpoint or a two-sided range.
  * @param {string} regime
  * @returns {RegimeFamily}
  */
 function regimeFamily(regime) {
   if (regime.startsWith('not-')) {
     const inner = regimeFamily(regime.slice(4));
-    return inner === 'unknown' ? 'unknown' : /** @type {RegimeFamily} */ (`not-${inner}`);
+    return inner === 'unknown' ? 'unknown' : `not-${inner}`;
   }
   const bare = regime.startsWith('@') ? regime.slice(1) : regime;
-  if (BREAKPOINT_NAMES.has(bare)) return 'named';
+  if (BREAKPOINT_NAMES.has(bare)) return namedRegimeFamily(bare);
   for (const name of BREAKPOINT_NAMES) {
-    if (bare === `max-${name}` || bare === `min-${name}`) return 'named';
+    if (bare === `max-${name}` || bare === `min-${name}`) return namedRegimeFamily(name);
   }
   if (/^(?:min|max)-\[/.test(bare)) return 'arbitrary';
   if (/^\[@media/.test(regime)) return 'media';
   return 'unknown';
+}
+
+/**
+ * The `named` family for one breakpoint NAME, sub-divided by
+ * {@link BREAKPOINT_UNIT}'s declared unit (POPS-2280) — `'named:unknown'`
+ * when the name has no resolved unit (an unrecognised `--breakpoint-*` unit),
+ * which never equals any other family and so always falls to `interference`
+ * in {@link resolveWithCascade}, the same fail-closed direction
+ * {@link regimeOrdering} already takes for a name with no px entry.
+ * @param {string} name
+ * @returns {RegimeFamily}
+ */
+function namedRegimeFamily(name) {
+  const unit = BREAKPOINT_UNIT.get(name);
+  return unit === undefined ? 'named:unknown' : `named:${unit}`;
 }
 
 /**
@@ -809,10 +967,12 @@ function baseBoxReading(tagText, prop) {
 /**
  * `regime`'s own `max-h`/`max-w`/`max-size` ceiling for `prop` — the scoped
  * mirror of {@link baseBoxCeiling} (POPS-2275). A scoped ceiling with no
- * scoped reading to cap proves nothing on its own, same reasoning as the
- * base: this is only ever combined with {@link scopedBoxReading}'s reading
- * via `Math.min`, never used by itself. `size`'s own ceiling caps BOTH axes,
- * same as `size-*` itself.
+ * reading anywhere to cap proves nothing on its own, same reasoning as the
+ * base: this is only ever combined via `Math.min` with the CASCADED box
+ * {@link resolveWithCascade} resolves for `regime` — see
+ * {@link clampScopedBox} (POPS-2279) — never used by itself and never
+ * combined with {@link scopedBoxReading}'s un-cascaded own-reading directly.
+ * `size`'s own ceiling caps BOTH axes, same as `size-*` itself.
  * @param {string} tagText
  * @param {'h' | 'w'} prop
  * @param {string} regime
@@ -827,50 +987,69 @@ function scopedBoxCeiling(tagText, prop, regime) {
 }
 
 /**
- * `prop`'s (`h`/`w`) OWN box reading at `regime` — this regime's scoped
- * `h`/`size` reading (bare or `min-`, per {@link dimensionRe} — deliberately
- * NOT {@link shrinkDimensionRe}, whose `max-` arm exists for a DIFFERENT
- * purpose, see below) combined via {@link combineWithSize}, capped by
- * {@link scopedBoxCeiling} when this regime carries one of its own
- * (POPS-2275: `sm:h-11 sm:max-h-6` renders 24px at `sm:`, not 44 — a scoped
- * ceiling caps a scoped reading exactly as a base ceiling caps a base
- * reading, {@link baseBoxReading}'s treatment applied to the scoped path
- * instead of stopping at the base). Using {@link shrinkDimensionRe} here
- * would match `max-h-6` as an ALTERNATIVE reading rather than a ceiling —
- * `maxPx` then picks whichever of the two is LARGER, so a real `h-11` reading
- * always beats, and therefore launders, a `max-h-6` cap in the same regime;
- * {@link dimensionRe} excludes `max-` entirely, so the ceiling can only ever
- * be read through {@link scopedBoxCeiling} and applied via `Math.min`, never
- * mixed into the reading as a competing alternative.
+ * `prop`'s (`h`/`w`) OWN box reading at `regime` — this regime's scoped bare
+ * or arbitrary-pixel `h`/`size` reading, per {@link bareDimensionRe} —
+ * deliberately NOT {@link dimensionRe} (whose `min-` arm is a FLOOR, not a
+ * reading, see {@link scopedBoxFloor}) and NOT {@link shrinkDimensionRe}
+ * (whose `max-` arm is a CEILING, see {@link scopedBoxCeiling}) — combined
+ * via {@link combineWithSize}.
  *
- * Unlike the base path, a scoped regime with a ceiling and NO reading of its
- * own still counts as this regime's own shrink evidence, its value being the
- * ceiling itself: `sm:max-h-6 sm:max-w-6` alone (no `sm:h-*`) is a provable
- * 24px cap on whatever the cascade would otherwise resolve `h`/`w` to at
- * `sm:`, so `scopedBoxReading` returns 24, not `null`. Returning `null` here
- * (mirroring the base's "a ceiling alone proves nothing without evidence to
- * cap" rule) would instead let {@link resolveWithCascade} treat this regime
- * as setting NOTHING for `prop` and fall through to the unprefixed base's own
- * reading — reintroducing exactly the false pass this fixes (POPS-2275): a
- * `sm:` regime whose ONLY evidence is a 24px ceiling must never be read as
- * "unset, defer to the 44px base" when the base and the ceiling both apply
- * live at `sm:` widths simultaneously. No fallback beyond this regime's own
- * scope otherwise: only when there is NEITHER a reading NOR a ceiling of its
- * own does this return `null`, which {@link resolveWithCascade} is what
- * resolves further.
+ * A ceiling or a floor is deliberately NOT applied here (POPS-2279, reversing
+ * PR #4166's POPS-2275 fix): this function is the value
+ * {@link resolveWithCascade}'s step 2 short-circuits on — "if `regime` sets
+ * the property itself, that wins" — so anything this function returns
+ * BYPASSES the cascade entirely, including the fallback to the unprefixed
+ * base or a wider same-family sibling. A `max-h`/`max-w`/`max-size` ceiling
+ * caps whatever the cascade resolves the reading to; it is not an
+ * alternative reading a regime can "set" on its own with no box evidence
+ * behind it — `sm:max-h-96 sm:max-w-96` with only an unprefixed `h-6 w-6`
+ * behind it renders the CASCADED 24px base box capped at 384px (still 24px,
+ * still a failure), never 384px substituted in as `sm`'s own box: returning
+ * the ceiling here (PR #4166's mistake) would have skipped the cascade
+ * lookup that finds the real 24px reading, overstating the box. See
+ * {@link isCompliantAtRegime}, which applies both {@link scopedBoxCeiling}
+ * (via `Math.min`) and {@link scopedBoxFloor} (via `Math.max`) to the value
+ * {@link resolveWithCascade} resolves for this function, not to this
+ * function's own return value directly — a wider sibling's real reading, or
+ * the unprefixed base's, must still be discoverable before either the
+ * ceiling or the floor decorate it.
  * @param {string} tagText
  * @param {'h' | 'w'} prop
  * @param {string} regime
  * @returns {number | null}
  */
 function scopedBoxReading(tagText, prop, regime) {
-  const reading = combineWithSize(
-    maxPx(matchesForRegime(tagText, dimensionRe(prop), regime)),
-    maxPx(matchesForRegime(tagText, dimensionRe('size'), regime))
+  return combineWithSize(
+    maxPx(matchesForRegime(tagText, bareDimensionRe(prop), regime)),
+    maxPx(matchesForRegime(tagText, bareDimensionRe('size'), regime))
   );
-  const ceiling = scopedBoxCeiling(tagText, prop, regime);
-  if (reading === null) return ceiling;
-  return ceiling === null ? reading : Math.min(reading, ceiling);
+}
+
+/**
+ * `regime`'s own scoped `min-h`/`min-w`/`min-size` FLOOR for `prop`
+ * (POPS-2282) — the scoped mirror of {@link scopedBoxCeiling}, read through
+ * {@link floorDimensionRe} and combined via {@link combineWithSize} the same
+ * way. Applied to the box {@link resolveWithCascade} resolves via
+ * `Math.max`, never substituted as an alternative reading: a `min-` value is
+ * a floor a box can never fall below, not a shrink, so `sm:min-w-0` must
+ * never lower a 44px box the cascade otherwise resolves — the exact false
+ * positive this fixes (a scoped `min-w-0` alongside `sm:h-16` used to read as
+ * `sm`'s own 0px width via {@link dimensionRe}, short-circuiting
+ * {@link resolveWithCascade} at a value `sm` never actually rendered). The
+ * BASE reading intentionally keeps `min-` as ordinary evidence via
+ * {@link dimensionRe} in {@link baseBoxReading} — there is no cascade at the
+ * base to short-circuit, so a bare `min-h-11` really is the box the base
+ * renders.
+ * @param {string} tagText
+ * @param {'h' | 'w'} prop
+ * @param {string} regime
+ * @returns {number | null}
+ */
+function scopedBoxFloor(tagText, prop, regime) {
+  return combineWithSize(
+    maxPx(matchesForRegime(tagText, floorDimensionRe(prop), regime)),
+    maxPx(matchesForRegime(tagText, floorDimensionRe('size'), regime))
+  );
 }
 
 /**
@@ -983,6 +1162,36 @@ function resolveWithCascade(regime, allRegimes, getOwn) {
 }
 
 /**
+ * Apply `regime`'s own ceiling (via `Math.min`) and floor (via `Math.max`) to
+ * a box value {@link resolveWithCascade} already resolved — the fix for
+ * POPS-2279/POPS-2282: a ceiling or floor CAPS/RAISES whatever the cascade
+ * resolves the reading to, it never substitutes for that reading, and it
+ * never rescues a box that resolved to `null` (no reading exists anywhere for
+ * the cascade to have found — a bare ceiling or floor proves nothing to
+ * cap/raise on its own, mirroring {@link baseBoxReading}'s "a cap alone
+ * proves nothing" rule). `regime === null` (the unprefixed base) is
+ * untouched here: {@link baseBoxReading} already applies {@link
+ * baseBoxCeiling} itself, and the base has no `min-` floor to apply since
+ * {@link baseBoxReading} reads `min-` as ordinary evidence via
+ * {@link dimensionRe} directly. Order matters when a ceiling and a floor both
+ * apply and conflict (a floor above the ceiling): the ceiling is applied
+ * first, the floor last, so the floor wins on conflict — the same
+ * used-value order real CSS resolves `min-height`/`max-height` in.
+ * @param {string} tagText
+ * @param {'h' | 'w'} prop
+ * @param {string | null} regime
+ * @param {number | null} box
+ * @returns {number | null}
+ */
+function clampScopedBox(tagText, prop, regime, box) {
+  if (regime === null || box === null) return box;
+  const ceiling = scopedBoxCeiling(tagText, prop, regime);
+  const capped = ceiling === null ? box : Math.min(box, ceiling);
+  const floor = scopedBoxFloor(tagText, prop, regime);
+  return floor === null ? capped : Math.max(capped, floor);
+}
+
+/**
  * Does the box this element renders at `regime` (or, for `regime === null`,
  * at the unprefixed base) clear 44px on both axes, once `size-*` is combined
  * in and the `before:-inset-*` expansion is added? Both the box and the inset
@@ -996,18 +1205,31 @@ function resolveWithCascade(regime, allRegimes, getOwn) {
  * inset shrink from being evaluated against two different boxes (POPS-2255):
  * `h-6 w-6 before:-inset-9 sm:h-11 sm:w-11 sm:before:-inset-0` evaluates the
  * `sm` regime's own `h-11`/`w-11` combined with `sm`'s own `-inset-0`, not
- * `sm`'s inset against the unprefixed `h-6`/`w-6`.
+ * `sm`'s inset against the unprefixed `h-6`/`w-6`. `regime`'s own ceiling and
+ * floor (see {@link clampScopedBox}) are applied to the CASCADED box, after
+ * {@link resolveWithCascade} resolves it — never to a candidate reading
+ * before the cascade sees it (POPS-2279/POPS-2282).
  * @param {string} tagText
  * @param {string | null} regime
  * @param {Set<string>} allRegimes
  * @returns {boolean}
  */
 function isCompliantAtRegime(tagText, regime, allRegimes) {
-  const hBox = resolveWithCascade(regime, allRegimes, (r) =>
-    r === null ? baseBoxReading(tagText, 'h') : scopedBoxReading(tagText, 'h', r)
+  const hBox = clampScopedBox(
+    tagText,
+    'h',
+    regime,
+    resolveWithCascade(regime, allRegimes, (r) =>
+      r === null ? baseBoxReading(tagText, 'h') : scopedBoxReading(tagText, 'h', r)
+    )
   );
-  const wBox = resolveWithCascade(regime, allRegimes, (r) =>
-    r === null ? baseBoxReading(tagText, 'w') : scopedBoxReading(tagText, 'w', r)
+  const wBox = clampScopedBox(
+    tagText,
+    'w',
+    regime,
+    resolveWithCascade(regime, allRegimes, (r) =>
+      r === null ? baseBoxReading(tagText, 'w') : scopedBoxReading(tagText, 'w', r)
+    )
   );
   if (hBox === null || wBox === null) return false;
 
@@ -1464,6 +1686,34 @@ function selfTest() {
     '<button className="h-11 w-11 sm:size-11 sm:max-h-8 sm:max-w-8" onClick={onClick}>Row</button>',
     // POPS-2275: the max-sm: (phone-width) mirror of the same shape.
     '<button className="h-11 w-11 max-sm:size-11 max-sm:max-h-6 max-sm:max-w-6" onClick={onClick}>Row</button>',
+    // POPS-2279: a scoped ceiling with no reading of its own must CAP the
+    // cascaded 24px base box, not substitute a 384px reading in its place —
+    // renders 24x24 at every width >= 640px.
+    '<button className="h-6 w-6 before:-inset-9 sm:max-h-96 sm:max-w-96 sm:before:-inset-0" onClick={onClick}><XIcon /></button>',
+    // POPS-2279: the max-sm: (phone-width) mirror of the same ceiling-vs-cap bug.
+    '<button className="h-6 w-6 before:-inset-9 max-sm:max-h-96 max-sm:max-w-96 max-sm:before:-inset-0" onClick={onClick}><XIcon /></button>',
+    // POPS-2279: an arbitrary pixel ceiling reproduces the same bug.
+    '<button className="h-6 w-6 before:-inset-9 sm:max-h-[48px] sm:max-w-[48px] sm:before:-inset-0" onClick={onClick}><XIcon /></button>',
+    // POPS-2279: a per-axis inset collapse alongside a ceiling on only ONE axis.
+    '<button className="h-6 w-6 before:-inset-9 sm:max-w-96 sm:before:-inset-x-0" onClick={onClick}><XIcon /></button>',
+    // POPS-2281: a banded sm:max-md: token's real domain is the intersection
+    // [640px, 768px) — at and above 768px it is absent, so the box falls
+    // back to the unprefixed 24px base while sm:before:-inset-0 still zeroes
+    // the expansion. Filing this under sm's full [640px, infinity) domain
+    // (an earlier `.find()`-based implementation's bug) wrongly proved it
+    // compliant at 768px+.
+    '<button className="h-6 w-6 before:-inset-9 sm:max-md:h-11 sm:max-md:w-11 sm:before:-inset-0" onClick={onClick}><XIcon /></button>',
+    // POPS-2281: the reversed segment order of the same band.
+    '<button className="h-6 w-6 before:-inset-9 max-md:sm:h-11 max-md:sm:w-11 sm:before:-inset-0" onClick={onClick}><XIcon /></button>',
+    // POPS-2281: a not-*-wrapped band is still a two-sided-equivalent domain
+    // this scanner cannot cheaply order — must fail closed the same way.
+    '<button className="h-6 w-6 before:-inset-9 not-sm:max-md:h-11 not-sm:max-md:w-11 sm:before:-inset-0" onClick={onClick}><XIcon /></button>',
+    // POPS-2282 (regression control): a scoped min- utility must still be
+    // read as a floor, not a competing reading, once the SAME regime also
+    // carries a real bare reading that would otherwise be shrunk if min-
+    // were misread as 0 and combined the wrong way — an unrelated axis
+    // shrunk by a real max-sm: utility must still be caught.
+    '<button className="h-11 w-11 max-sm:h-6 max-sm:w-6 max-sm:min-w-0" onClick={onClick}>Row</button>',
   ].join('\n');
   const clean = [
     '<button className="size-11" onClick={onClick}><XIcon /></button>',
@@ -1477,9 +1727,22 @@ function selfTest() {
     // The unprefixed h-11/w-11 alone proves the 44px floor holds everywhere.
     '<button className="h-11 w-11 max-sm:h-16 max-sm:w-16" onClick={onClick}>Row</button>',
     // A scoped min-w-0/min-h-0 is a floor, not a shrink — it is a no-op
-    // against an already-sufficient base.
+    // against an already-sufficient base. These two do NOT independently
+    // register sm/max-sm as a regime at all (shrinkDimensionRe excludes
+    // min-), so they exercise nothing on their own (POPS-2282) — kept only
+    // as a "does not crash / stays silent regardless" control; the pair
+    // below is what actually proves the invariant.
     '<button className="h-11 w-11 sm:min-w-0" onClick={onClick}>Row</button>',
     '<button className="h-11 w-11 max-sm:min-w-0" onClick={onClick}>Row</button>',
+    // POPS-2282: the regime-independently-registered version of the same
+    // invariant — sm IS registered here (by sm:h-16), so scopedBoxReading
+    // must still treat sm:min-w-0 as a FLOOR applied to the cascaded
+    // width (44, borrowed from the base since sm sets no bare w reading of
+    // its own), not as an alternative 0px reading that would short-circuit
+    // the cascade and wrongly flag a compliant control.
+    '<button className="h-11 w-11 sm:h-16 sm:min-w-0" onClick={onClick}>Row</button>',
+    // POPS-2282: the max-sm: mirror, floor on the OTHER axis.
+    '<button className="h-11 w-11 max-sm:w-16 max-sm:min-h-0" onClick={onClick}>Row</button>',
     // A scoped before:-inset-* whose magnitude shrinks relative to the
     // unprefixed one but combined with the box still clears the floor.
     '<button className="h-6 w-6 before:-inset-9 max-sm:before:-inset-4" onClick={onClick}><XIcon /></button>',
@@ -1510,6 +1773,9 @@ function selfTest() {
     '<button className="h-11 w-11 min-sm:h-16 min-sm:w-16" onClick={onClick}>Row</button>',
     // POPS-2275: a scoped ceiling whose magnitude is still >= 44px is not a shrink.
     '<button className="h-11 w-11 sm:h-11 sm:w-11 sm:max-h-16 sm:max-w-16" onClick={onClick}>Row</button>',
+    // POPS-2279: a scoped ceiling still >= 44px applied to a cascaded
+    // reading (not a substituted one) does not shrink anything.
+    '<button className="h-11 w-11 sm:max-h-96 sm:max-w-96" onClick={onClick}>Row</button>',
   ].join('\n');
 
   const dirtyHits = findViolations('pillars/x/app/src/A.tsx', dirty);
@@ -1622,6 +1888,25 @@ function selfTest() {
       dirtyHits.some((v) => v.line === 46),
     'reports the max-sm: mirror of a scoped reading capped by a scoped ceiling (POPS-2275)':
       dirtyHits.some((v) => v.line === 47),
+    'reports a scoped ceiling with no reading of its own CAPPING the cascaded base reading, not substituting for it (POPS-2279)':
+      dirtyHits.some((v) => v.line === 48),
+    'reports the max-sm: mirror of the ceiling-caps-not-substitutes fix (POPS-2279)':
+      dirtyHits.some((v) => v.line === 49),
+    'reports an arbitrary pixel ceiling with the same ceiling-caps-not-substitutes bug (POPS-2279)':
+      dirtyHits.some((v) => v.line === 50),
+    'reports a per-axis ceiling-caps-not-substitutes shrink (POPS-2279)': dirtyHits.some(
+      (v) => v.line === 51
+    ),
+    'reports a banded sm:max-md: token evaluated against its real intersection domain, not filed under sm alone (POPS-2281)':
+      dirtyHits.some((v) => v.line === 52),
+    'reports the reversed segment order of the same band (POPS-2281)': dirtyHits.some(
+      (v) => v.line === 53
+    ),
+    'reports a not-*-wrapped band failing closed the same way (POPS-2281)': dirtyHits.some(
+      (v) => v.line === 54
+    ),
+    'reports a real max-sm: shrink even alongside an unrelated scoped min-w-0 floor in the same regime (POPS-2282 regression control)':
+      dirtyHits.some((v) => v.line === 55),
     'stays silent on a button sized via size-11': cleanHits.every(
       (v) => v.line !== 1 // line 1 of `clean` carries size-11
     ),
@@ -1641,27 +1926,34 @@ function selfTest() {
     'stays silent on a scoped min-w-0 (max-sm: direction, a floor, not a shrink)': !cleanHits.some(
       (v) => v.line === 8
     ),
-    'stays silent when a scoped before:-inset-* shrinks the magnitude but the expansion still clears the floor':
+    'stays silent on a scoped min-w-0 that DOES independently register its regime (POPS-2282: the non-vacuous version — sm:h-16 registers sm, sm:min-w-0 must still act as a floor on the cascaded width, not a competing 0px reading)':
       !cleanHits.some((v) => v.line === 9),
-    'stays silent when a scoped before:-inset-* only grows the expansion further': !cleanHits.some(
+    'stays silent on the max-sm: mirror of the non-vacuous min- floor (POPS-2282)': !cleanHits.some(
       (v) => v.line === 10
     ),
-    'stays silent on the canonical fix idiom: compact box + inset below 640px, a real box with no inset needed at/above it (sm regime combines with its OWN box, not the unprefixed one)':
+    'stays silent when a scoped before:-inset-* shrinks the magnitude but the expansion still clears the floor':
       !cleanHits.some((v) => v.line === 11),
-    'stays silent on the max-sm: mirror of the same idiom': !cleanHits.some((v) => v.line === 12),
-    'stays silent on two min-width regimes that only ever grow further (POPS-2263)':
+    'stays silent when a scoped before:-inset-* only grows the expansion further': !cleanHits.some(
+      (v) => v.line === 12
+    ),
+    'stays silent on the canonical fix idiom: compact box + inset below 640px, a real box with no inset needed at/above it (sm regime combines with its OWN box, not the unprefixed one)':
       !cleanHits.some((v) => v.line === 13),
+    'stays silent on the max-sm: mirror of the same idiom': !cleanHits.some((v) => v.line === 14),
+    'stays silent on two min-width regimes that only ever grow further (POPS-2263)':
+      !cleanHits.some((v) => v.line === 15),
     'stays silent when the cascade genuinely rescues compliance: md borrows sm real 44px box (POPS-2263)':
-      !cleanHits.some((v) => v.line === 14),
+      !cleanHits.some((v) => v.line === 16),
     'stays silent on the max-width mirror of the cascade rescue (POPS-2263)': !cleanHits.some(
-      (v) => v.line === 15
+      (v) => v.line === 17
     ),
     'stays silent when not-sm: only ever grows an already-sufficient base further (POPS-2273)':
-      !cleanHits.some((v) => v.line === 16),
-    'stays silent when min-sm: only ever grows an already-sufficient base further (POPS-2273)':
-      !cleanHits.some((v) => v.line === 17),
-    'stays silent on a scoped ceiling whose magnitude is still >= 44px (POPS-2275)':
       !cleanHits.some((v) => v.line === 18),
+    'stays silent when min-sm: only ever grows an already-sufficient base further (POPS-2273)':
+      !cleanHits.some((v) => v.line === 19),
+    'stays silent on a scoped ceiling whose magnitude is still >= 44px (POPS-2275)':
+      !cleanHits.some((v) => v.line === 20),
+    'stays silent on a scoped ceiling applied to a CASCADED reading (not substituted for it) that is still >= 44px (POPS-2279)':
+      !cleanHits.some((v) => v.line === 21),
     'a story is exempt': !isScannable('pillars/food/app/src/pages/X.stories.tsx'),
     'a test is exempt': !isScannable('pillars/food/app/src/pages/X.test.tsx'),
     'a __tests__ file is exempt': !isScannable('pillars/food/app/src/__tests__/x.tsx'),
