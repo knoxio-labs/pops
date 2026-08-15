@@ -42,6 +42,24 @@ describe('preCreatePendingContacts — a rate-limited (429) create degrades like
     expect(result.entitiesCreated).toBe(0);
   });
 
+  it('queues an outbox candidate for a 408 (unavailable) create, same as 429, instead of aborting', async () => {
+    const list = vi.fn(async () => page([], false));
+    const create = vi.fn(
+      async (): Promise<CallResult<{ data: ContactEntity; message: string }>> => ({
+        kind: 'unavailable',
+        pillar: 'contacts',
+      })
+    );
+    const client = createContactsClient(() => stubHandle({ list, create }));
+
+    const result = await preCreatePendingContacts(client, payloadFor('Acme'));
+
+    expect(result.outboxCandidates).toEqual([
+      { placeholderId: expect.stringMatching(/^pending:contact:/), name: 'Acme', type: 'company' },
+    ]);
+    expect(result.entitiesCreated).toBe(0);
+  });
+
   it('still aborts (propagates) for a PERMANENT failure like refused (413), unlike rate-limited', async () => {
     const list = vi.fn(async () => page([], false));
     const create = vi.fn(

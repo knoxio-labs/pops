@@ -317,6 +317,65 @@ describe('performRestCall — response / error mapping', () => {
     expect(result.retryAfterSeconds).toBeUndefined();
   });
 
+  /**
+   * `/^\d+$/` rejects these as delta-seconds, and before this fix they fell
+   * through to `Date.parse`, which V8 resolves to dates in 2001 — in the
+   * past, which `Math.max(0, …)` then clamped to `retryAfterSeconds: 0`, the
+   * "retry immediately" guess the digit guard exists to prevent. None of
+   * these look like an HTTP-date either, so the shape gate must reject them
+   * before `Date.parse` ever sees them.
+   */
+  it.each(['+10', '-5', '12.5', '10,20'])(
+    'leaves retryAfterSeconds undefined for a near-miss delta-seconds Retry-After (%j), not 0',
+    async (raw) => {
+      const { fetchImpl } = recordingRest(() => jsonOk({}, 429, { 'retry-after': raw }));
+      const result = await performRestCall(ctx(['entities', 'get'], { id: 'ent-1' }, fetchImpl));
+      if (result.kind !== 'rate-limited')
+        throw new Error(`expected rate-limited, got ${result.kind}`);
+      expect(result.retryAfterSeconds).toBeUndefined();
+    }
+  );
+
+  it('parses an RFC 850 Retry-After date into seconds-from-now', async () => {
+    const future = new Date(Date.now() + 45_000);
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const monthNames = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    const dd = String(future.getUTCDate()).padStart(2, '0');
+    const yy = String(future.getUTCFullYear()).slice(-2);
+    const hh = String(future.getUTCHours()).padStart(2, '0');
+    const mi = String(future.getUTCMinutes()).padStart(2, '0');
+    const ss = String(future.getUTCSeconds()).padStart(2, '0');
+    const rfc850 = `${dayNames[future.getUTCDay()]}, ${dd}-${monthNames[future.getUTCMonth()]}-${yy} ${hh}:${mi}:${ss} GMT`;
+
+    const { fetchImpl } = recordingRest(() => jsonOk({}, 429, { 'retry-after': rfc850 }));
+    const result = await performRestCall(ctx(['entities', 'get'], { id: 'ent-1' }, fetchImpl));
+    if (result.kind !== 'rate-limited')
+      throw new Error(`expected rate-limited, got ${result.kind}`);
+    expect(result.retryAfterSeconds).toBeGreaterThanOrEqual(43);
+    expect(result.retryAfterSeconds).toBeLessThanOrEqual(46);
+  });
+
+  it('parses an asctime Retry-After date in the past as 0, not undefined', async () => {
+    const { fetchImpl } = recordingRest(() =>
+      jsonOk({}, 429, { 'retry-after': 'Sun Nov  6 08:49:37 1994' })
+    );
+    const result = await performRestCall(ctx(['entities', 'get'], { id: 'ent-1' }, fetchImpl));
+    expect(result).toEqual({ kind: 'rate-limited', pillar: 'registry', retryAfterSeconds: 0 });
+  });
+
   it('returns unavailable when fetch rejects (network/abort)', async () => {
     const fetchImpl = fakeFetch(() => {
       throw new Error('network down');
@@ -340,5 +399,18 @@ describe('performRestCall — response / error mapping', () => {
     const fetchImpl = fakeFetch(() => new Response('not json', { status: 200 }));
     const result = await performRestCall(ctx(['entities', 'get'], { id: 'ent-1' }, fetchImpl));
     expect(result).toEqual({ kind: 'unavailable', pillar: 'registry' });
+  });
+
+  /**
+   * 408 Request Timeout (RFC 9110 §15.5.9) and 425 Too Early (RFC 8470
+   * §5.2) are both definitionally retryable — the opposite of `refused`,
+   * which the default arm gave them before this fix (same bug as the 413
+   * regression above, reached through a different status).
+   */
+  it.each([408, 425])('maps %i → unavailable (retryable), NOT refused', async (status) => {
+    const { fetchImpl } = recordingRest(() => jsonOk({ message: 'nope' }, status));
+    const result = await performRestCall(ctx(['entities', 'get'], { id: 'ent-1' }, fetchImpl));
+    expect(result).toEqual({ kind: 'unavailable', pillar: 'registry' });
+    expect(result.kind).not.toBe('refused');
   });
 });
