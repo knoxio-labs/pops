@@ -807,7 +807,7 @@
                           "type": "string"
                         },
                         "kind": {
-                          "enum": ["consumable", "durable", "digital", "service"],
+                          "enum": ["consumable", "durable", "digital", "service", null],
                           "nullable": true,
                           "type": "string"
                         },
@@ -2606,7 +2606,7 @@
                 "additionalProperties": false,
                 "properties": {
                   "kind": {
-                    "enum": ["consumable", "durable", "digital", "service"],
+                    "enum": ["consumable", "durable", "digital", "service", null],
                     "nullable": true,
                     "type": "string"
                   },

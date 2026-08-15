@@ -201,7 +201,7 @@ export type PurchaseCreateData = {
       allocatedShippingCents?: number;
       gstApplicable?: boolean | null;
       imageUrl?: string | null;
-      kind?: 'consumable' | 'durable' | 'digital' | 'service';
+      kind?: 'consumable' | 'durable' | 'digital' | 'service' | null;
       lineTotalCents: number;
       merchantCategory?: string | null;
       merchantCondition?: string | null;
@@ -615,7 +615,7 @@ export type PurchasePatchItemData = {
    * Body
    */
   body?: {
-    kind?: 'consumable' | 'durable' | 'digital' | 'service';
+    kind?: 'consumable' | 'durable' | 'digital' | 'service' | null;
     tags?: Array<string>;
   };
   path: {

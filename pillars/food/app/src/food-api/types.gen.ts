@@ -1519,7 +1519,8 @@ export type InboxListResponses = {
         | 'sauce'
         | 'dressing'
         | 'drink'
-        | 'condiment';
+        | 'condiment'
+        | null;
       sourceId: number;
       sourceUrl: string | null;
       title: string | null;
@@ -1719,7 +1720,7 @@ export type InboxGetForReviewResponses = {
                 startLine: number;
               };
               slug: string;
-              suggestedKind: 'ingredient' | 'recipe' | 'prep_state';
+              suggestedKind: 'ingredient' | 'recipe' | 'prep_state' | null;
             }>;
             quality: {
               band: 'clean' | 'minor' | 'attention' | 'blocked';
@@ -3404,7 +3405,7 @@ export type RecipesListProposedSlugsResponses = {
         startLine: number;
       };
       slug: string;
-      suggestedKind: 'ingredient' | 'recipe' | 'prep_state';
+      suggestedKind: 'ingredient' | 'recipe' | 'prep_state' | null;
     }>;
   };
 };
@@ -3791,7 +3792,7 @@ export type RecipesGetForRenderingResponses = {
       id: number;
       position: number;
       recipeVersionId: number;
-      temperatureUnit: 'c' | 'f' | 'gas';
+      temperatureUnit: 'c' | 'f' | 'gas' | null;
       temperatureValue: number | null;
     }>;
     tags: Array<string>;
@@ -4175,7 +4176,8 @@ export type SolverCanICookResponses = {
         | 'sauce'
         | 'dressing'
         | 'drink'
-        | 'condiment';
+        | 'condiment'
+        | null;
       subs: Array<{
         candidateSubName: string;
         fromIngredientName: string;

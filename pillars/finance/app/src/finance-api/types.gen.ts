@@ -53,7 +53,7 @@ export type BudgetsCreateData = {
     amount?: number | null;
     category: string;
     notes?: string | null;
-    period?: 'Monthly' | 'Yearly';
+    period?: 'Monthly' | 'Yearly' | null;
   };
   path?: never;
   query?: never;
@@ -233,7 +233,7 @@ export type BudgetsUpdateData = {
     amount?: number | null;
     category?: string;
     notes?: string | null;
-    period?: 'Monthly' | 'Yearly';
+    period?: 'Monthly' | 'Yearly' | null;
   };
   path: {
     id: string;
@@ -361,7 +361,8 @@ export type CorrectionsListResponses = {
         | 'reversal'
         | 'loan'
         | 'rebate'
-        | 'tax';
+        | 'tax'
+        | null;
     }>;
     pagination: {
       hasMore: boolean;
@@ -394,7 +395,8 @@ export type CorrectionsCreateOrUpdateData = {
       | 'reversal'
       | 'loan'
       | 'rebate'
-      | 'tax';
+      | 'tax'
+      | null;
   };
   path?: never;
   query?: never;
@@ -458,7 +460,8 @@ export type CorrectionsCreateOrUpdateResponses = {
         | 'reversal'
         | 'loan'
         | 'rebate'
-        | 'tax';
+        | 'tax'
+        | null;
     };
     message: string;
   };
@@ -553,7 +556,8 @@ export type CorrectionsApplyChangeSetData = {
                 | 'reversal'
                 | 'loan'
                 | 'rebate'
-                | 'tax';
+                | 'tax'
+                | null;
             };
             op: 'add';
           }
@@ -576,7 +580,8 @@ export type CorrectionsApplyChangeSetData = {
                 | 'reversal'
                 | 'loan'
                 | 'rebate'
-                | 'tax';
+                | 'tax'
+                | null;
             };
             id: string;
             op: 'edit';
@@ -656,7 +661,8 @@ export type CorrectionsApplyChangeSetResponses = {
         | 'reversal'
         | 'loan'
         | 'rebate'
-        | 'tax';
+        | 'tax'
+        | null;
     }>;
     message: string;
   };
@@ -735,9 +741,10 @@ export type CorrectionsFindMatchResponses = {
         | 'reversal'
         | 'loan'
         | 'rebate'
-        | 'tax';
+        | 'tax'
+        | null;
     } | null;
-    status: 'matched' | 'uncertain';
+    status: 'matched' | 'uncertain' | null;
   };
 };
 
@@ -838,7 +845,8 @@ export type CorrectionsListMergedData = {
                   | 'reversal'
                   | 'loan'
                   | 'rebate'
-                  | 'tax';
+                  | 'tax'
+                  | null;
               };
               op: 'add';
             }
@@ -861,7 +869,8 @@ export type CorrectionsListMergedData = {
                   | 'reversal'
                   | 'loan'
                   | 'rebate'
-                  | 'tax';
+                  | 'tax'
+                  | null;
               };
               id: string;
               op: 'edit';
@@ -942,7 +951,8 @@ export type CorrectionsListMergedResponses = {
         | 'reversal'
         | 'loan'
         | 'rebate'
-        | 'tax';
+        | 'tax'
+        | null;
     }>;
     pagination: {
       hasMore: boolean;
@@ -982,7 +992,8 @@ export type CorrectionsPreviewChangeSetData = {
                 | 'reversal'
                 | 'loan'
                 | 'rebate'
-                | 'tax';
+                | 'tax'
+                | null;
             };
             op: 'add';
           }
@@ -1005,7 +1016,8 @@ export type CorrectionsPreviewChangeSetData = {
                 | 'reversal'
                 | 'loan'
                 | 'rebate'
-                | 'tax';
+                | 'tax'
+                | null;
             };
             id: string;
             op: 'edit';
@@ -1045,7 +1057,8 @@ export type CorrectionsPreviewChangeSetData = {
                   | 'reversal'
                   | 'loan'
                   | 'rebate'
-                  | 'tax';
+                  | 'tax'
+                  | null;
               };
               op: 'add';
             }
@@ -1068,7 +1081,8 @@ export type CorrectionsPreviewChangeSetData = {
                   | 'reversal'
                   | 'loan'
                   | 'rebate'
-                  | 'tax';
+                  | 'tax'
+                  | null;
               };
               id: string;
               op: 'edit';
@@ -1136,13 +1150,13 @@ export type CorrectionsPreviewChangeSetResponses = {
         confidence: number | null;
         matched: boolean;
         ruleId: string | null;
-        status: 'matched' | 'uncertain';
+        status: 'matched' | 'uncertain' | null;
       };
       before: {
         confidence: number | null;
         matched: boolean;
         ruleId: string | null;
-        status: 'matched' | 'uncertain';
+        status: 'matched' | 'uncertain' | null;
       };
       changed: boolean;
       checksum?: string;
@@ -1252,7 +1266,8 @@ export type CorrectionsProposeChangeSetData = {
         | 'reversal'
         | 'loan'
         | 'rebate'
-        | 'tax';
+        | 'tax'
+        | null;
     };
   };
   path?: never;
@@ -1316,7 +1331,8 @@ export type CorrectionsProposeChangeSetResponses = {
                 | 'reversal'
                 | 'loan'
                 | 'rebate'
-                | 'tax';
+                | 'tax'
+                | null;
             };
             op: 'add';
           }
@@ -1339,7 +1355,8 @@ export type CorrectionsProposeChangeSetResponses = {
                 | 'reversal'
                 | 'loan'
                 | 'rebate'
-                | 'tax';
+                | 'tax'
+                | null;
             };
             id: string;
             op: 'edit';
@@ -1372,7 +1389,8 @@ export type CorrectionsProposeChangeSetResponses = {
             | 'reversal'
             | 'loan'
             | 'rebate'
-            | 'tax';
+            | 'tax'
+            | null;
         };
         before: {
           entityId: string | null;
@@ -1388,7 +1406,8 @@ export type CorrectionsProposeChangeSetResponses = {
             | 'reversal'
             | 'loan'
             | 'rebate'
-            | 'tax';
+            | 'tax'
+            | null;
         };
         description: string;
         transactionId: string;
@@ -1425,7 +1444,8 @@ export type CorrectionsProposeChangeSetResponses = {
           | 'reversal'
           | 'loan'
           | 'rebate'
-          | 'tax';
+          | 'tax'
+          | null;
       };
     };
   };
@@ -1460,7 +1480,8 @@ export type CorrectionsRejectChangeSetData = {
                 | 'reversal'
                 | 'loan'
                 | 'rebate'
-                | 'tax';
+                | 'tax'
+                | null;
             };
             op: 'add';
           }
@@ -1483,7 +1504,8 @@ export type CorrectionsRejectChangeSetData = {
                 | 'reversal'
                 | 'loan'
                 | 'rebate'
-                | 'tax';
+                | 'tax'
+                | null;
             };
             id: string;
             op: 'edit';
@@ -1523,7 +1545,8 @@ export type CorrectionsRejectChangeSetData = {
         | 'reversal'
         | 'loan'
         | 'rebate'
-        | 'tax';
+        | 'tax'
+        | null;
     };
   };
   path?: never;
@@ -1599,7 +1622,8 @@ export type CorrectionsReviseChangeSetData = {
                 | 'reversal'
                 | 'loan'
                 | 'rebate'
-                | 'tax';
+                | 'tax'
+                | null;
             };
             op: 'add';
           }
@@ -1622,7 +1646,8 @@ export type CorrectionsReviseChangeSetData = {
                 | 'reversal'
                 | 'loan'
                 | 'rebate'
-                | 'tax';
+                | 'tax'
+                | null;
             };
             id: string;
             op: 'edit';
@@ -1655,7 +1680,8 @@ export type CorrectionsReviseChangeSetData = {
         | 'reversal'
         | 'loan'
         | 'rebate'
-        | 'tax';
+        | 'tax'
+        | null;
     };
     triggeringTransactions: Array<{
       checksum?: string;
@@ -1723,7 +1749,8 @@ export type CorrectionsReviseChangeSetResponses = {
                 | 'reversal'
                 | 'loan'
                 | 'rebate'
-                | 'tax';
+                | 'tax'
+                | null;
             };
             op: 'add';
           }
@@ -1746,7 +1773,8 @@ export type CorrectionsReviseChangeSetResponses = {
                 | 'reversal'
                 | 'loan'
                 | 'rebate'
-                | 'tax';
+                | 'tax'
+                | null;
             };
             id: string;
             op: 'edit';
@@ -1787,7 +1815,8 @@ export type CorrectionsReviseChangeSetResponses = {
           | 'reversal'
           | 'loan'
           | 'rebate'
-          | 'tax';
+          | 'tax'
+          | null;
       };
     };
   };
@@ -1984,7 +2013,8 @@ export type CorrectionsGetResponses = {
         | 'reversal'
         | 'loan'
         | 'rebate'
-        | 'tax';
+        | 'tax'
+        | null;
     };
   };
 };
@@ -2013,7 +2043,8 @@ export type CorrectionsUpdateData = {
       | 'reversal'
       | 'loan'
       | 'rebate'
-      | 'tax';
+      | 'tax'
+      | null;
   };
   path: {
     id: string;
@@ -2078,7 +2109,8 @@ export type CorrectionsUpdateResponses = {
         | 'reversal'
         | 'loan'
         | 'rebate'
-        | 'tax';
+        | 'tax'
+        | null;
     };
     message: string;
   };
@@ -2301,7 +2333,8 @@ export type ImportsApplyChangeSetAndReevaluateData = {
                 | 'reversal'
                 | 'loan'
                 | 'rebate'
-                | 'tax';
+                | 'tax'
+                | null;
             };
             op: 'add';
           }
@@ -2324,7 +2357,8 @@ export type ImportsApplyChangeSetAndReevaluateData = {
                 | 'reversal'
                 | 'loan'
                 | 'rebate'
-                | 'tax';
+                | 'tax'
+                | null;
             };
             id: string;
             op: 'edit';
@@ -2669,7 +2703,8 @@ export type ImportsCommitImportData = {
                 | 'reversal'
                 | 'loan'
                 | 'rebate'
-                | 'tax';
+                | 'tax'
+                | null;
             };
             op: 'add';
           }
@@ -2692,7 +2727,8 @@ export type ImportsCommitImportData = {
                 | 'reversal'
                 | 'loan'
                 | 'rebate'
-                | 'tax';
+                | 'tax'
+                | null;
             };
             id: string;
             op: 'edit';
@@ -3300,7 +3336,8 @@ export type ImportsReevaluateWithPendingRulesData = {
                   | 'reversal'
                   | 'loan'
                   | 'rebate'
-                  | 'tax';
+                  | 'tax'
+                  | null;
               };
               op: 'add';
             }
@@ -3323,7 +3360,8 @@ export type ImportsReevaluateWithPendingRulesData = {
                   | 'reversal'
                   | 'loan'
                   | 'rebate'
-                  | 'tax';
+                  | 'tax'
+                  | null;
               };
               id: string;
               op: 'edit';
@@ -5373,7 +5411,16 @@ export type TransactionsRestoreData = {
     location: string | null;
     matchConfidence: number | null;
     matchRuleId: string | null;
-    matchType: 'alias' | 'exact' | 'prefix' | 'contains' | 'ai' | 'learned' | 'manual' | 'none';
+    matchType:
+      | 'alias'
+      | 'exact'
+      | 'prefix'
+      | 'contains'
+      | 'ai'
+      | 'learned'
+      | 'manual'
+      | 'none'
+      | null;
     notes: string | null;
     notionId: string | null;
     rawRow: string | null;
@@ -5528,7 +5575,16 @@ export type TransactionsDeleteResponses = {
       location: string | null;
       matchConfidence: number | null;
       matchRuleId: string | null;
-      matchType: 'alias' | 'exact' | 'prefix' | 'contains' | 'ai' | 'learned' | 'manual' | 'none';
+      matchType:
+        | 'alias'
+        | 'exact'
+        | 'prefix'
+        | 'contains'
+        | 'ai'
+        | 'learned'
+        | 'manual'
+        | 'none'
+        | null;
       notes: string | null;
       notionId: string | null;
       rawRow: string | null;
@@ -5806,7 +5862,7 @@ export type WishlistCreateData = {
   body?: {
     item: string;
     notes?: string | null;
-    priority?: 'Needing' | 'Soon' | 'One Day' | 'Dreaming';
+    priority?: 'Needing' | 'Soon' | 'One Day' | 'Dreaming' | null;
     saved?: number | null;
     targetAmount?: number | null;
     url?: string | null;
@@ -5987,7 +6043,7 @@ export type WishlistUpdateData = {
   body?: {
     item?: string;
     notes?: string | null;
-    priority?: 'Needing' | 'Soon' | 'One Day' | 'Dreaming';
+    priority?: 'Needing' | 'Soon' | 'One Day' | 'Dreaming' | null;
     saved?: number | null;
     targetAmount?: number | null;
     url?: string | null;

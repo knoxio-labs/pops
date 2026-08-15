@@ -1986,12 +1986,12 @@ export type ComparisonsRecordData = {
    */
   body?: {
     dimensionId: number;
-    drawTier?: 'high' | 'mid' | 'low';
+    drawTier?: 'high' | 'mid' | 'low' | null;
     mediaAId: number;
     mediaAType: 'movie' | 'tv_show';
     mediaBId: number;
     mediaBType: 'movie' | 'tv_show';
-    source?: 'arena' | 'tier_list';
+    source?: 'arena' | 'tier_list' | null;
     winnerId: number;
     winnerType: 'movie' | 'tv_show';
   };
@@ -2062,7 +2062,7 @@ export type ComparisonsBatchRecordComparisonsData = {
    */
   body?: {
     comparisons: Array<{
-      drawTier?: 'high' | 'mid' | 'low';
+      drawTier?: 'high' | 'mid' | 'low' | null;
       mediaAId: number;
       mediaAType: 'movie' | 'tv_show';
       mediaBId: number;
@@ -2405,7 +2405,7 @@ export type ComparisonsGetSmartPairResponses = {
         title: string;
       };
     } | null;
-    reason: 'insufficient_watched_movies';
+    reason: 'insufficient_watched_movies' | null;
   };
 };
 
@@ -3377,7 +3377,7 @@ export type LibraryAddMovieResponses = {
       releaseDate: string | null;
       revenue: number | null;
       rotationExpiresAt: string | null;
-      rotationStatus: 'leaving' | 'protected';
+      rotationStatus: 'leaving' | 'protected' | null;
       runtime: number | null;
       status: string | null;
       tagline: string | null;
@@ -3460,7 +3460,7 @@ export type LibraryRefreshMovieResponses = {
       releaseDate: string | null;
       revenue: number | null;
       rotationExpiresAt: string | null;
-      rotationStatus: 'leaving' | 'protected';
+      rotationStatus: 'leaving' | 'protected' | null;
       runtime: number | null;
       status: string | null;
       tagline: string | null;
@@ -3510,7 +3510,7 @@ export type LibraryQuickPickResponses = {
       releaseDate: string | null;
       revenue: number | null;
       rotationExpiresAt: string | null;
-      rotationStatus: 'leaving' | 'protected';
+      rotationStatus: 'leaving' | 'protected' | null;
       runtime: number | null;
       status: string | null;
       tagline: string | null;
@@ -3759,7 +3759,7 @@ export type MoviesListResponses = {
       releaseDate: string | null;
       revenue: number | null;
       rotationExpiresAt: string | null;
-      rotationStatus: 'leaving' | 'protected';
+      rotationStatus: 'leaving' | 'protected' | null;
       runtime: number | null;
       status: string | null;
       tagline: string | null;
@@ -3863,7 +3863,7 @@ export type MoviesCreateResponses = {
       releaseDate: string | null;
       revenue: number | null;
       rotationExpiresAt: string | null;
-      rotationStatus: 'leaving' | 'protected';
+      rotationStatus: 'leaving' | 'protected' | null;
       runtime: number | null;
       status: string | null;
       tagline: string | null;
@@ -3995,7 +3995,7 @@ export type MoviesGetResponses = {
       releaseDate: string | null;
       revenue: number | null;
       rotationExpiresAt: string | null;
-      rotationStatus: 'leaving' | 'protected';
+      rotationStatus: 'leaving' | 'protected' | null;
       runtime: number | null;
       status: string | null;
       tagline: string | null;
@@ -4095,7 +4095,7 @@ export type MoviesUpdateResponses = {
       releaseDate: string | null;
       revenue: number | null;
       rotationExpiresAt: string | null;
-      rotationStatus: 'leaving' | 'protected';
+      rotationStatus: 'leaving' | 'protected' | null;
       runtime: number | null;
       status: string | null;
       tagline: string | null;
