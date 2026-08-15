@@ -66,6 +66,15 @@ describe('a dynamic import()/require() reaching lucide-react is reported', () =>
     expect(hits[0]?.line).toBe(2);
   });
 
+  it('reports a same-file, single-hop variable trace through a type-annotated const', () => {
+    const hits = findViolations(
+      'a.tsx',
+      "const spec: string = 'lucide-react';\nconst m = await import(spec);"
+    );
+    expect(hits).toHaveLength(1);
+    expect(hits[0]?.line).toBe(2);
+  });
+
   it('reports a same-file variable trace through a subpath template literal', () => {
     const hits = findViolations(
       'a.tsx',
@@ -159,6 +168,15 @@ describe('shapes this guard does not attempt — documented, not silent', () => 
   it('does not flag a variable whose value is not a same-file string/template literal', () => {
     expect(
       findViolations('a.tsx', 'const spec = computeSpecifier();\nconst m = import(spec);')
+    ).toHaveLength(0);
+  });
+
+  it('does not flag a type-annotated const holding an unrelated package', () => {
+    expect(
+      findViolations(
+        'a.tsx',
+        "const spec: string = 'some-other-package';\nconst m = await import(spec);"
+      )
     ).toHaveLength(0);
   });
 
