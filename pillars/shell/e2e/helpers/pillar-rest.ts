@@ -89,8 +89,14 @@ export function json(route: Route, status: number, body: unknown): Promise<void>
  * has. Typing this against the schema's output would force every literal
  * body to fabricate those derived fields just to satisfy `tsc`, rather than
  * writing the wire shape the endpoint actually serves.
+ *
+ * Exported alongside `fulfilWith` for a per-spec stub whose body is built
+ * inside the `page.route` handler rather than once at stub-construction time
+ * — state mutated across requests (e.g. a revocation flipping a device's
+ * `revokedAt` between polls) can't be validated up front the way `fulfilWith`
+ * does, only as each response is produced. See `bfm-devices-pairing.spec.ts`.
  */
-function assertMatchesContract(schema: z.ZodTypeAny, body: unknown, label: string): void {
+export function assertMatchesContract(schema: z.ZodTypeAny, body: unknown, label: string): void {
   const result = schema.safeParse(body);
   if (result.success) return;
   const issues = result.error.issues
@@ -104,8 +110,21 @@ function assertMatchesContract(schema: z.ZodTypeAny, body: unknown, label: strin
  * serves it. Validation runs immediately (not inside the returned handler),
  * so a drifted stub fails the moment the spec sets it up rather than when —
  * or if — the route is actually hit.
+ *
+ * Exported so a per-spec stub (a pillar's own routes, mocked directly in the
+ * spec that exercises that pillar rather than here) can validate the same
+ * way this file validates the shell's boot path — see
+ * `bfm-devices-pairing.spec.ts` and `import-wizard-happy-path.spec.ts` for
+ * the pattern. Unlike the schemas below, a per-spec stub cannot import its
+ * pillar's real schema: `shell-no-cross-internal` (`.dependency-cruiser.cjs`)
+ * lets the shell reach another pillar only through that pillar's
+ * `@pops/app-<id>` UI package via its `index.ts` entrypoint, not through that
+ * pillar's own `@pops/<id>` contract package or its generated Hey API
+ * client — both out of reach even for a type-only import. A per-spec schema
+ * is therefore hand-mirrored from the owning pillar's real schema (named in
+ * a comment for traceability) rather than imported.
  */
-function fulfilWith(status: number, schema: z.ZodTypeAny, body: unknown, label: string) {
+export function fulfilWith(status: number, schema: z.ZodTypeAny, body: unknown, label: string) {
   assertMatchesContract(schema, body, label);
   return (route: Route) => json(route, status, body);
 }
