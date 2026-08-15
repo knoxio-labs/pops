@@ -39,8 +39,231 @@
  * errors) so every test in this suite verifies no uncaught JS error occurs.
  */
 import { expect, test, type Page } from '@playwright/test';
+import { z } from 'zod';
 
-import { stubShellBoot } from './helpers/pillar-rest';
+import { assertMatchesContract, json, fulfilWith, stubShellBoot } from './helpers/pillar-rest';
+
+// ---------------------------------------------------------------------------
+// Contract schemas — hand-mirrored from the media pillar's own zod schemas
+// rather than imported. `shell-no-cross-internal` (`.dependency-cruiser.cjs`)
+// lets the shell import another pillar's `@pops/app-<id>` UI package via its
+// `index.ts` entrypoint only — not that pillar's own `@pops/<id>` contract
+// package or its generated Hey API client, so neither `@pops/media` nor
+// `pillars/media/app/src/media-api/types.gen.ts` is reachable from here.
+//
+// `rotationStatus` below is typed nullable, matching the media pillar's own
+// `MovieSchema` (`pillars/media/src/contract/rest-movies.ts`) and the
+// committed OpenAPI source (`pillars/media/openapi/media.openapi.json`,
+// `/library/movies` POST 200, `data.rotationStatus`:
+// `{ enum: ['leaving','protected'], nullable: true }`) — DELIBERATELY NOT
+// matching the generated Hey API client
+// (`pillars/media/app/src/media-api/types.gen.ts`,
+// `LibraryAddMovieResponses[200].data.rotationStatus: 'leaving' | 'protected'`,
+// no `null`). The generated type has drifted stricter than the real
+// contract: a freshly-added movie has no rotation status yet, so a real 200
+// here legitimately carries `rotationStatus: null`, which the generated
+// client's own type system would reject. The FE code that reads this field
+// trusts the generated type, not this stub, so the drift is real and
+// unaffected by this file — it is tracked separately, not fixed here.
+// ---------------------------------------------------------------------------
+
+/** Mirrors `MovieSearchResultSchema` (`pillars/media/src/contract/rest-search.ts`). */
+const TmdbSearchResultSchema = z
+  .object({
+    tmdbId: z.number(),
+    title: z.string(),
+    originalTitle: z.string(),
+    overview: z.string(),
+    releaseDate: z.string(),
+    posterPath: z.string().nullable(),
+    backdropPath: z.string().nullable(),
+    voteAverage: z.number(),
+    voteCount: z.number(),
+    genreIds: z.array(z.number()),
+    originalLanguage: z.string(),
+    popularity: z.number(),
+  })
+  .strict();
+
+/** `GET /search/movies` 200 — `mediaSearchContract.movies` (`rest-search.ts`). */
+const TmdbSearchResponseSchema = z
+  .object({
+    results: z.array(TmdbSearchResultSchema),
+    totalResults: z.number(),
+    totalPages: z.number(),
+    page: z.number(),
+  })
+  .strict();
+
+/** Mirrors `TvShowSearchResultSchema` (`pillars/media/src/contract/rest-search.ts`). */
+const TvShowSearchResultSchema = z
+  .object({
+    tvdbId: z.number(),
+    name: z.string(),
+    originalName: z.string().nullable(),
+    overview: z.string().nullable(),
+    firstAirDate: z.string().nullable(),
+    status: z.string().nullable(),
+    posterPath: z.string().nullable(),
+    genres: z.array(z.string()),
+    originalLanguage: z.string().nullable(),
+    year: z.string().nullable(),
+  })
+  .strict();
+
+/** `GET /search/tv-shows` 200 — `mediaSearchContract.tvShows` (`rest-search.ts`). */
+const TvShowSearchResponseSchema = z
+  .object({ results: z.array(TvShowSearchResultSchema) })
+  .strict();
+
+/**
+ * Mirrors `MovieSchema` (`pillars/media/src/contract/rest-movies.ts`). See
+ * the `rotationStatus` note above for why it is nullable here.
+ */
+const MovieSchema = z
+  .object({
+    id: z.number(),
+    tmdbId: z.number(),
+    imdbId: z.string().nullable(),
+    title: z.string(),
+    originalTitle: z.string().nullable(),
+    overview: z.string().nullable(),
+    tagline: z.string().nullable(),
+    releaseDate: z.string().nullable(),
+    runtime: z.number().nullable(),
+    status: z.string().nullable(),
+    originalLanguage: z.string().nullable(),
+    budget: z.number().nullable(),
+    revenue: z.number().nullable(),
+    posterPath: z.string().nullable(),
+    posterUrl: z.string().nullable(),
+    backdropPath: z.string().nullable(),
+    backdropUrl: z.string().nullable(),
+    logoPath: z.string().nullable(),
+    logoUrl: z.string().nullable(),
+    posterOverridePath: z.string().nullable(),
+    voteAverage: z.number().nullable(),
+    voteCount: z.number().nullable(),
+    genres: z.array(z.string()),
+    createdAt: z.string(),
+    updatedAt: z.string(),
+    rotationStatus: z.enum(['leaving', 'protected']).nullable(),
+    rotationExpiresAt: z.string().nullable(),
+  })
+  .strict();
+
+/** `POST /library/movies` 200 — `mediaLibraryContract.addMovie` (`rest-library.ts`). */
+const AddMovieResponseSchema = z
+  .object({ data: MovieSchema, created: z.boolean(), message: z.string() })
+  .strict();
+
+/** `PaginationMetaSchema` (`pillars/media/src/contract/rest-schemas.ts`). */
+const PaginationMetaSchema = z
+  .object({
+    total: z.number(),
+    limit: z.number(),
+    offset: z.number(),
+    hasMore: z.boolean(),
+  })
+  .strict();
+
+/** `GET /movies` 200 — `mediaMoviesContract.list` (`rest-movies.ts`). */
+const MovieListResponseSchema = z
+  .object({ data: z.array(MovieSchema), pagination: PaginationMetaSchema })
+  .strict();
+
+/** Mirrors `TvShowSchema` (`pillars/media/src/contract/rest-tv-shows-schemas.ts`). */
+const TvShowSchema = z
+  .object({
+    id: z.number(),
+    tvdbId: z.number(),
+    name: z.string(),
+    originalName: z.string().nullable(),
+    overview: z.string().nullable(),
+    firstAirDate: z.string().nullable(),
+    lastAirDate: z.string().nullable(),
+    status: z.string().nullable(),
+    originalLanguage: z.string().nullable(),
+    numberOfSeasons: z.number().nullable(),
+    numberOfEpisodes: z.number().nullable(),
+    episodeRunTime: z.number().nullable(),
+    posterPath: z.string().nullable(),
+    posterUrl: z.string().nullable(),
+    backdropPath: z.string().nullable(),
+    backdropUrl: z.string().nullable(),
+    logoPath: z.string().nullable(),
+    logoUrl: z.string().nullable(),
+    posterOverridePath: z.string().nullable(),
+    voteAverage: z.number().nullable(),
+    voteCount: z.number().nullable(),
+    genres: z.array(z.string()),
+    networks: z.array(z.string()),
+    createdAt: z.string(),
+    updatedAt: z.string(),
+  })
+  .strict();
+
+/** `GET /tv-shows` 200 — `mediaTvShowsContract.list` (`rest-tv-shows.ts`). */
+const TvShowListResponseSchema = z
+  .object({ data: z.array(TvShowSchema), pagination: PaginationMetaSchema })
+  .strict();
+
+/** Mirrors `LibraryItemSchema` (`pillars/media/src/contract/rest-library.ts`). */
+const LibraryItemSchema = z
+  .object({
+    id: z.number(),
+    type: z.enum(['movie', 'tv']),
+    title: z.string(),
+    year: z.number().nullable(),
+    posterUrl: z.string().nullable(),
+    cdnPosterUrl: z.string().nullable(),
+    genres: z.array(z.string()),
+    voteAverage: z.number().nullable(),
+    createdAt: z.string(),
+    releaseDate: z.string().nullable(),
+  })
+  .strict();
+
+/** `GET /library` 200 — `mediaLibraryContract.list` (`rest-library.ts`); page-based pagination. */
+const LibraryListResponseSchema = z
+  .object({
+    data: z.array(LibraryItemSchema),
+    pagination: z
+      .object({
+        page: z.number(),
+        pageSize: z.number(),
+        total: z.number(),
+        totalPages: z.number(),
+        hasMore: z.boolean(),
+      })
+      .strict(),
+  })
+  .strict();
+
+/** `GET /library/genres` 200 — `mediaLibraryContract.genres` (`rest-library.ts`). */
+const GenresResponseSchema = z.object({ data: z.array(z.string()) }).strict();
+
+/** Mirrors `ArrConfigSchema` (`pillars/media/src/contract/rest-arr-schemas.ts`). */
+const ArrConfigResponseSchema = z
+  .object({
+    data: z.object({ radarrConfigured: z.boolean(), sonarrConfigured: z.boolean() }).strict(),
+  })
+  .strict();
+
+/** Mirrors `LeavingMovieSchema` (`pillars/media/src/contract/rest-rotation-scheduler.ts`). */
+const LeavingMovieSchema = z
+  .object({
+    id: z.number(),
+    tmdbId: z.number(),
+    title: z.string(),
+    posterPath: z.string().nullable(),
+    rotationExpiresAt: z.string().nullable(),
+    rotationMarkedAt: z.string().nullable(),
+  })
+  .strict();
+
+/** `GET /rotation/scheduler/leaving` 200 — `rotationSchedulerRoutes.schedulerLeavingMovies`. */
+const RotationLeavingResponseSchema = z.object({ data: z.array(LeavingMovieSchema) }).strict();
 
 // ---------------------------------------------------------------------------
 // Fixture — a movie NOT in the mocked library. Inception (tmdbId 27205)
@@ -58,76 +281,7 @@ const SEARCH_QUERY = 'inception';
 const LOCAL_MOVIE_ID = 999_001;
 const NOW_ISO = '2026-04-24T00:00:00.000Z';
 
-// ---------------------------------------------------------------------------
-// Mock payloads
-// ---------------------------------------------------------------------------
-
-interface TmdbSearchResult {
-  tmdbId: number;
-  title: string;
-  originalTitle: string;
-  overview: string;
-  releaseDate: string;
-  posterPath: string | null;
-  backdropPath: string | null;
-  voteAverage: number;
-  voteCount: number;
-  genreIds: number[];
-  originalLanguage: string;
-  popularity: number;
-}
-
-interface TmdbSearchResponse {
-  results: TmdbSearchResult[];
-  totalResults: number;
-  totalPages: number;
-  page: number;
-}
-
-interface Movie {
-  id: number;
-  tmdbId: number;
-  imdbId: string | null;
-  title: string;
-  originalTitle: string | null;
-  overview: string | null;
-  tagline: string | null;
-  releaseDate: string | null;
-  runtime: number | null;
-  status: string | null;
-  originalLanguage: string | null;
-  budget: number | null;
-  revenue: number | null;
-  posterPath: string | null;
-  posterUrl: string | null;
-  backdropPath: string | null;
-  backdropUrl: string | null;
-  logoPath: string | null;
-  logoUrl: string | null;
-  posterOverridePath: string | null;
-  voteAverage: number | null;
-  voteCount: number | null;
-  genres: string[];
-  createdAt: string;
-  updatedAt: string;
-  rotationStatus: 'leaving' | 'protected' | null;
-  rotationExpiresAt: string | null;
-}
-
-interface LibraryListItem {
-  id: number;
-  type: 'movie' | 'tv';
-  title: string;
-  year: number | null;
-  posterUrl: string | null;
-  cdnPosterUrl: string | null;
-  genres: string[];
-  voteAverage: number | null;
-  createdAt: string;
-  releaseDate: string | null;
-}
-
-function buildSearchResult(): TmdbSearchResult {
+function buildSearchResult(): z.infer<typeof TmdbSearchResultSchema> {
   return {
     tmdbId: MOVIE_TMDB_ID,
     title: MOVIE_TITLE,
@@ -144,7 +298,7 @@ function buildSearchResult(): TmdbSearchResult {
   };
 }
 
-function buildSearchResponse(): TmdbSearchResponse {
+function buildSearchResponse(): z.infer<typeof TmdbSearchResponseSchema> {
   return {
     results: [buildSearchResult()],
     totalResults: 1,
@@ -153,7 +307,7 @@ function buildSearchResponse(): TmdbSearchResponse {
   };
 }
 
-function buildAddedMovie(): Movie {
+function buildAddedMovie(): z.infer<typeof MovieSchema> {
   return {
     id: LOCAL_MOVIE_ID,
     tmdbId: MOVIE_TMDB_ID,
@@ -185,7 +339,7 @@ function buildAddedMovie(): Movie {
   };
 }
 
-function buildLibraryItem(): LibraryListItem {
+function buildLibraryItem(): z.infer<typeof LibraryItemSchema> {
   return {
     id: LOCAL_MOVIE_ID,
     type: 'movie',
@@ -202,7 +356,9 @@ function buildLibraryItem(): LibraryListItem {
 
 const EMPTY_PAGINATION = { total: 0, limit: 1000, offset: 0, hasMore: false };
 
-function buildLibraryListBody(items: LibraryListItem[]) {
+function buildLibraryListBody(
+  items: z.infer<typeof LibraryItemSchema>[]
+): z.infer<typeof LibraryListResponseSchema> {
   return {
     data: items,
     pagination: {
@@ -231,91 +387,87 @@ async function installMediaMocks(page: Page): Promise<MockState> {
   // prefix. Playwright matches the most-recently-added route first, so the
   // bare list route is registered FIRST and the more specific sub-paths LAST
   // so they take precedence for their URLs.
-  await page.route('**/media-api/library?**', async (route) => {
-    const items: LibraryListItem[] = state.movieAdded ? [buildLibraryItem()] : [];
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify(buildLibraryListBody(items)),
-    });
+  await page.route('**/media-api/library?**', (route) => {
+    // Body depends on `state.movieAdded`, mutated by the add mutation below —
+    // validated per request, not once at setup, so a run where the add fires
+    // after the list route was registered is checked against the contract too.
+    const items = state.movieAdded ? [buildLibraryItem()] : [];
+    const body = buildLibraryListBody(items);
+    assertMatchesContract(LibraryListResponseSchema, body, 'library.list');
+    return json(route, 200, body);
   });
 
-  await page.route('**/media-api/library/genres', async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ data: ['Action', 'Science Fiction', 'Drama'] }),
-    });
-  });
+  await page.route(
+    '**/media-api/library/genres',
+    fulfilWith(
+      200,
+      GenresResponseSchema,
+      { data: ['Action', 'Science Fiction', 'Drama'] },
+      'library.genres'
+    )
+  );
 
-  await page.route('**/media-api/library/movies', async (route) => {
-    if (route.request().method() !== 'POST') {
-      await route.fallback();
-      return;
-    }
+  await page.route('**/media-api/library/movies', (route) => {
+    if (route.request().method() !== 'POST') return route.fallback();
+    // Sets `state.movieAdded`, which the list route above reads — the two
+    // routes are coupled through mutable state, so this one stays a handler
+    // (validated per request) rather than a pre-serialised `fulfilWith` body,
+    // even though the body itself never varies.
     state.movieAdded = true;
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        data: buildAddedMovie(),
-        created: true,
-        message: 'Movie added to library',
-      }),
-    });
+    const body = { data: buildAddedMovie(), created: true, message: 'Movie added to library' };
+    assertMatchesContract(AddMovieResponseSchema, body, 'library.addMovie');
+    return json(route, 200, body);
   });
 
   // arr/config reports nothing configured so the polling arr/queue never fires.
-  await page.route('**/media-api/arr/config', async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ data: { radarrConfigured: false, sonarrConfigured: false } }),
-    });
-  });
+  await page.route(
+    '**/media-api/arr/config',
+    fulfilWith(
+      200,
+      ArrConfigResponseSchema,
+      { data: { radarrConfigured: false, sonarrConfigured: false } },
+      'arr.config'
+    )
+  );
 
-  await page.route('**/media-api/rotation/scheduler/leaving', async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ data: [] }),
-    });
-  });
+  await page.route(
+    '**/media-api/rotation/scheduler/leaving',
+    fulfilWith(200, RotationLeavingResponseSchema, { data: [] }, 'rotation.schedulerLeavingMovies')
+  );
 
   // In-library lookup lists (search page) and watchlist maps. Empty so the
   // searched movie starts in the "Add to Library" state.
-  await page.route('**/media-api/movies?**', async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ data: [], pagination: EMPTY_PAGINATION }),
-    });
-  });
+  await page.route(
+    '**/media-api/movies?**',
+    fulfilWith(
+      200,
+      MovieListResponseSchema,
+      { data: [], pagination: EMPTY_PAGINATION },
+      'movies.list'
+    )
+  );
 
-  await page.route('**/media-api/tv-shows?**', async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ data: [], pagination: EMPTY_PAGINATION }),
-    });
-  });
+  await page.route(
+    '**/media-api/tv-shows?**',
+    fulfilWith(
+      200,
+      TvShowListResponseSchema,
+      { data: [], pagination: EMPTY_PAGINATION },
+      'tvShows.list'
+    )
+  );
 
-  // TMDB search — bare top-level `results` (NOT wrapped in `data`).
-  await page.route('**/media-api/search/movies?**', async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify(buildSearchResponse()),
-    });
-  });
+  // TMDB search — bare top-level `results` (NOT wrapped in `data`). The body
+  // ignores the typed query text entirely, so it is genuinely static.
+  await page.route(
+    '**/media-api/search/movies?**',
+    fulfilWith(200, TmdbSearchResponseSchema, buildSearchResponse(), 'search.movies')
+  );
 
-  await page.route('**/media-api/search/tv-shows?**', async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ results: [] }),
-    });
-  });
+  await page.route(
+    '**/media-api/search/tv-shows?**',
+    fulfilWith(200, TvShowSearchResponseSchema, { results: [] }, 'search.tvShows')
+  );
 
   return state;
 }
