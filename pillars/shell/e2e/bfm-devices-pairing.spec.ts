@@ -7,8 +7,9 @@
  * off only after the operator confirms.
  */
 import { expect, test, type Page } from '@playwright/test';
+import { z } from 'zod';
 
-import { json, stubShellBoot } from './helpers/pillar-rest';
+import { assertMatchesContract, fulfilWith, json, stubShellBoot } from './helpers/pillar-rest';
 
 const PAIRING_CODE = '7QK4-9M2X-P3ND';
 const PAIRING_URL = `https://bfm.example.test/devices/pair?code=${PAIRING_CODE}`;
@@ -21,6 +22,44 @@ const TRUSTED_DEVICE = {
   lastSeenAt: '2026-08-08T09:00:00.000Z',
   revokedAt: null,
 };
+
+/**
+ * The three operator routes' 2xx bodies, hand-mirrored from bfm's own zod
+ * schemas (`pillars/bfm/src/contract/rest-operator-schemas.ts`:
+ * `IssuedPairingCodeSchema`, `DeviceListSchema`, `RevokedDeviceSchema`) rather
+ * than imported. `shell-no-cross-internal` (`.dependency-cruiser.cjs`) lets
+ * the shell import another pillar's `@pops/app-<id>` UI package via its
+ * `index.ts` entrypoint only — not that pillar's own `@pops/<id>` contract
+ * package, so `@pops/bfm` is not reachable from an e2e spec either.
+ */
+const IssuedPairingCodeResponseSchema = z
+  .object({
+    code: z.string(),
+    pairingUrl: z.url(),
+    expiresAt: z.iso.datetime(),
+  })
+  .strict();
+
+const DeviceSchema = z
+  .object({
+    id: z.string(),
+    name: z.string(),
+    model: z.string(),
+    createdAt: z.iso.datetime(),
+    lastSeenAt: z.iso.datetime(),
+    revokedAt: z.iso.datetime().nullable(),
+  })
+  .strict();
+
+const DeviceListResponseSchema = z.object({ devices: z.array(DeviceSchema) }).strict();
+
+const RevokedDeviceResponseSchema = z
+  .object({
+    id: z.string(),
+    revokedAt: z.iso.datetime(),
+    alreadyRevoked: z.boolean(),
+  })
+  .strict();
 
 /**
  * Stand in for bfm's operator surface.
@@ -36,24 +75,41 @@ async function stubOperatorApi(
   const ttlSeconds = options.ttlSeconds ?? 300;
   let revokedAt: string | null = null;
 
-  await page.route('**/bfm-api/operator/pairing/codes', (route) =>
-    json(route, 201, {
-      code: PAIRING_CODE,
-      pairingUrl: PAIRING_URL,
-      expiresAt: new Date(Date.now() + ttlSeconds * 1000).toISOString(),
-    })
+  await page.route(
+    '**/bfm-api/operator/pairing/codes',
+    fulfilWith(
+      201,
+      IssuedPairingCodeResponseSchema,
+      {
+        code: PAIRING_CODE,
+        pairingUrl: PAIRING_URL,
+        expiresAt: new Date(Date.now() + ttlSeconds * 1000).toISOString(),
+      },
+      'operator.issuePairingCode'
+    )
   );
 
-  await page.route('**/bfm-api/operator/devices', (route) =>
-    json(route, 200, { devices: [{ ...TRUSTED_DEVICE, revokedAt }] })
-  );
+  await page.route('**/bfm-api/operator/devices', (route) => {
+    // Body depends on `revokedAt`, mutated after this route is registered —
+    // validated per-call rather than once at setup, unlike the other two
+    // routes here, so a later revocation is checked against the contract too.
+    const body = { devices: [{ ...TRUSTED_DEVICE, revokedAt }] };
+    assertMatchesContract(DeviceListResponseSchema, body, 'operator.listDevices');
+    return json(route, 200, body);
+  });
 
   await page.route(`**/bfm-api/operator/devices/${TRUSTED_DEVICE.id}`, (route) => {
     if (options.revokeStatus !== undefined) {
+      // Not a documented bfm error shape (bfm's own `OperatorRevokeDeviceErrors`
+      // covers only 401/404) — this exercises the shell's resilience to an
+      // upstream outage, not a real bfm response, so it is intentionally
+      // unvalidated.
       return json(route, options.revokeStatus, { code: 'ServiceUnavailable', message: 'bfm down' });
     }
     revokedAt = new Date().toISOString();
-    return json(route, 200, { id: TRUSTED_DEVICE.id, revokedAt, alreadyRevoked: false });
+    const body = { id: TRUSTED_DEVICE.id, revokedAt, alreadyRevoked: false };
+    assertMatchesContract(RevokedDeviceResponseSchema, body, 'operator.revokeDevice');
+    return json(route, 200, body);
   });
 }
 
@@ -188,11 +244,13 @@ test.describe('bfm — Devices', () => {
     await page.route(`**/bfm-api/operator/devices/${TRUSTED_DEVICE.id}`, async (route) => {
       announceReached();
       await revokeHeld;
-      return json(route, 200, {
+      const body = {
         id: TRUSTED_DEVICE.id,
         revokedAt: '2026-08-08T12:00:00.000Z',
         alreadyRevoked: false,
-      });
+      };
+      assertMatchesContract(RevokedDeviceResponseSchema, body, 'operator.revokeDevice');
+      return json(route, 200, body);
     });
 
     await openDevices(page);
@@ -233,6 +291,9 @@ test.describe('bfm — Devices', () => {
   test('says the pillar is unavailable when the device list cannot be fetched', async ({
     page,
   }) => {
+    // Not a documented bfm error shape (`OperatorListDevicesErrors` covers only
+    // 401) — this exercises the shell's own "pillar unavailable" fallback, not
+    // a real bfm response, so it is intentionally unvalidated.
     await page.route('**/bfm-api/operator/devices', (route) =>
       json(route, 503, { code: 'ServiceUnavailable', message: 'bfm down' })
     );
