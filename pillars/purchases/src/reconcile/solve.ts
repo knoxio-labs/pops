@@ -140,6 +140,12 @@ interface SolveState {
  * review as though the rule were not there. A stale rule costs a link that
  * was never available; a stale rule allowed to bend the arithmetic would
  * cost the wrong link, silently reconciling money to the wrong order.
+ *
+ * Silence is not the only outcome, and the exception is worth stating
+ * plainly: several rule-admitted candidates for exactly the charge amount
+ * SETTLE it, into review as ambiguous, so it never reaches partial. That is
+ * a charge the ladder would otherwise have part-paid from a smaller
+ * transaction, and declining to is the point — see {@link matchLearnedRule}.
  */
 function settleByLearnedRule(
   state: SolveState,

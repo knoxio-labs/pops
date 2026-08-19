@@ -173,6 +173,7 @@ function report(logger: SweepRunnerLogger | undefined, outcome: SweepOutcome): v
     derivedChargesMinted: outcome.derivedChargesMinted,
     linksTornDown: outcome.linksTornDown,
     linksWritten: outcome.linksWritten,
+    ruleLinksProposed: outcome.ruleLinksProposed,
     review: outcome.review.length,
   });
 }

@@ -276,12 +276,21 @@ export function ruleCandidatesFor(
  * it as evidence about an amount would let a stale rule reconcile money to
  * the wrong order, which is strictly worse than leaving the order in the
  * queue. A rule whose merchant has nothing at the right amount in the
- * window therefore contributes no candidate and the charge falls through to
- * partial and review exactly as it did before the rule existed.
+ * window therefore admits no candidate at all, and the charge falls through
+ * to partial and review exactly as it did before the rule existed.
  *
  * Two rule-admitted candidates at the charge amount go to review for the
  * same reason stage 1's do: a human accepted this merchant, not this
  * transaction, so the rule cannot break the tie it just created.
+ *
+ * **That tie settles the charge**, which is the one way the presence of a
+ * rule changes an outcome it cannot itself reach: the charge stops here
+ * rather than falling through to partial. Deliberate, and the safer of the
+ * two. Two transactions from a merchant a human has accepted, each for
+ * exactly this charge, is evidence that one of them settled it — so the
+ * remaining choice is between asking and part-paying the charge from some
+ * smaller unrelated transaction, and the ladder does not invent a residual
+ * to avoid a question. Stage 1 declines the same shape the same way.
  */
 export function matchLearnedRule(
   charge: SolvableCharge,
@@ -302,8 +311,7 @@ export function matchLearnedRule(
         ...linkOf(charge, only.transaction, only.transaction.amountCents, 'rule'),
         // The rule's own confidence, inherited from the link that taught
         // it, capped by the stage. A rule learned from a part-payment is
-        // weaker evidence than one learned from an exact match, and the
-        // queue sorts on this.
+        // weaker evidence than one learned from an exact match.
         confidence: Math.min(only.rule.confidence, STAGE_CONFIDENCE.rule),
         matchRuleId: only.rule.id,
       },

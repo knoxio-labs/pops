@@ -221,8 +221,7 @@ export const STAGE_CONFIDENCE: Readonly<Record<LinkType, number>> = {
    * The ceiling a stage-4 link may reach, not the value it takes: a rule
    * carries its own confidence, inherited from the link that taught it, and
    * the lower of the two wins. A rule learned from a part-payment is
-   * weaker evidence than one learned from an exact match, and the review
-   * queue sorts on this.
+   * weaker evidence than one learned from an exact match.
    *
    * Below `exact` and below a partition, because the amount agreeing is the
    * same arithmetic either way — what is weaker here is the descriptor,

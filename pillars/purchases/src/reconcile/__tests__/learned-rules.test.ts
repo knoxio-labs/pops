@@ -211,16 +211,75 @@ describe('where the stage sits in the ladder', () => {
     expect(links.map((l) => [l.transactionUri, l.linkType])).toEqual([['exact', 'rule']]);
   });
 
+  // Both answers available for the SAME charge: the partition closes
+  // exactly, and the rule admits a transaction for that charge's own
+  // amount. A world where the rule admits nothing is green whichever order
+  // the phases run in — and green with the stage deleted — so it would
+  // guard nothing at all.
+  const halfOfAPartition = blockedCharge({ amountCents: 2000 });
+  const theOtherHalf = blockedCharge({
+    id: 'chg-2',
+    purchaseId: 'ord-2',
+    position: 1,
+    amountCents: 2128,
+  });
+  const partition = txn({ uri: 'partition', description: 'AMAZON AU', amountCents: 4128 });
+  const ruleAdmits = learnedTxn({ uri: 'learned', amountCents: 2000 });
+
+  it('lets the rule settle that charge when no partition competes for it', () => {
+    // What the ordering test below is choosing against. Without it that
+    // test cannot tell "combined won" from "the rule never fired".
+    const { links } = run({
+      charges: [halfOfAPartition],
+      transactions: [ruleAdmits],
+      rules: [rule()],
+    });
+    expect(links.map((l) => [l.transactionUri, l.linkType])).toEqual([['learned', 'rule']]);
+  });
+
   it('runs after combined, so a partition that closes exactly still wins', () => {
-    const combinedWorld = {
-      charges: [
-        blockedCharge({ id: 'chg-1', amountCents: 2000 }),
-        blockedCharge({ id: 'chg-2', purchaseId: 'ord-2', position: 1, amountCents: 2128 }),
-      ],
-      transactions: [txn({ uri: 'one', description: 'AMAZON AU', amountCents: 4128 })],
-    };
-    const { links } = run({ ...combinedWorld, rules: [rule()] });
-    expect(links.map((l) => l.linkType)).toEqual(['combined', 'combined']);
+    // Rules first would link the 2000 charge to `learned` and strand the
+    // other half, spending a human's descriptor on a charge that already
+    // had a certain answer.
+    const { links } = run({
+      charges: [halfOfAPartition, theOtherHalf],
+      transactions: [partition, ruleAdmits],
+      rules: [rule()],
+    });
+    expect(links.map((l) => [l.transactionUri, l.linkType])).toEqual([
+      ['partition', 'combined'],
+      ['partition', 'combined'],
+    ]);
+  });
+});
+
+describe('an ambiguity a rule creates', () => {
+  // The one case where the presence of a rule changes an outcome the rule
+  // cannot itself reach, so it is pinned rather than left to be discovered.
+  const world = {
+    charges: [blockedCharge({ amountCents: 4128 })],
+    transactions: [
+      txn({ uri: 'smaller', description: 'AMAZON AU', amountCents: 3000 }),
+      learnedTxn({ uri: 'a', amountCents: 4128 }),
+      learnedTxn({ uri: 'b', date: '2026-03-07', amountCents: 4128 }),
+    ],
+  };
+
+  it('part-pays the charge when there is no rule', () => {
+    const { links } = run(world);
+    expect(links.map((l) => [l.transactionUri, l.linkType])).toEqual([['smaller', 'partial']]);
+  });
+
+  it('sends the charge to review instead of letting partial guess', () => {
+    // Two transactions from an accepted merchant, each for exactly this
+    // charge: one of them settled it. Part-paying it from an unrelated
+    // smaller transaction would reconcile the money to the wrong place and
+    // stop asking, so the charge stops here.
+    const { links, review } = run({ ...world, rules: [rule()] });
+    expect(links).toEqual([]);
+    expect(review).toEqual([
+      { chargeId: 'chg-1', purchaseId: 'ord-1', reason: 'ambiguous', candidateCount: 2 },
+    ]);
   });
 });
 
