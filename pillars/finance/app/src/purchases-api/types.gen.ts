@@ -94,12 +94,29 @@ export type AnalyticsProductLeaderboardData = {
   query?: {
     sources?: Array<string>;
     statuses?: Array<'awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored'>;
+    currency?: string;
+    merchantEntityId?: string;
+    merchantEntityName?: string;
+    merchantUnattributed?: boolean;
     from?: string;
     to?: string;
     minOrderCount?: number;
   };
   url: '/analytics/product-leaderboard';
 };
+
+export type AnalyticsProductLeaderboardErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+  };
+};
+
+export type AnalyticsProductLeaderboardError =
+  AnalyticsProductLeaderboardErrors[keyof AnalyticsProductLeaderboardErrors];
 
 export type AnalyticsProductLeaderboardResponses = {
   /**

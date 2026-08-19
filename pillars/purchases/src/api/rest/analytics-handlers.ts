@@ -39,14 +39,11 @@ export function makeAnalyticsHandlers(db: PurchasesDb) {
     },
 
     productLeaderboard: async ({ query }: { query: ProductLeaderboardQuery }) => {
+      const scope = resolvePurchaseScope(query);
+      if (!scope.ok) return { status: 400 as const, body: scope.body };
+
       const minOrderCount = query.minOrderCount ?? 1;
-      const leaderboard = rankProductPurchases(db, {
-        sources: query.sources,
-        statuses: query.statuses,
-        from: query.from,
-        to: query.to,
-        minOrderCount,
-      });
+      const leaderboard = rankProductPurchases(db, { ...scope.scope, minOrderCount });
 
       return {
         status: 200 as const,

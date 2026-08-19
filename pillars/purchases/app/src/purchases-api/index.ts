@@ -30,6 +30,8 @@ export type {
   AnalyticsMerchantSpendResponse,
   AnalyticsMerchantSpendResponses,
   AnalyticsProductLeaderboardData,
+  AnalyticsProductLeaderboardError,
+  AnalyticsProductLeaderboardErrors,
   AnalyticsProductLeaderboardResponse,
   AnalyticsProductLeaderboardResponses,
   ClientOptions,

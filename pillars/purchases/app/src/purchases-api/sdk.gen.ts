@@ -8,6 +8,7 @@ import type {
   AnalyticsMerchantSpendErrors,
   AnalyticsMerchantSpendResponses,
   AnalyticsProductLeaderboardData,
+  AnalyticsProductLeaderboardErrors,
   AnalyticsProductLeaderboardResponses,
   PurchaseCreateData,
   PurchaseCreateErrors,
@@ -96,11 +97,16 @@ export const analyticsMerchantSpend = <ThrowOnError extends boolean = false>(
  */
 export const analyticsProductLeaderboard = <ThrowOnError extends boolean = false>(
   options?: Options<AnalyticsProductLeaderboardData, ThrowOnError>
-): RequestResult<AnalyticsProductLeaderboardResponses, unknown, ThrowOnError> =>
-  (options?.client ?? client).get<AnalyticsProductLeaderboardResponses, unknown, ThrowOnError>({
-    url: '/analytics/product-leaderboard',
-    ...options,
-  });
+): RequestResult<
+  AnalyticsProductLeaderboardResponses,
+  AnalyticsProductLeaderboardErrors,
+  ThrowOnError
+> =>
+  (options?.client ?? client).get<
+    AnalyticsProductLeaderboardResponses,
+    AnalyticsProductLeaderboardErrors,
+    ThrowOnError
+  >({ url: '/analytics/product-leaderboard', ...options });
 
 /**
  * Every line carrying an item tag, across every order

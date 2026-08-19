@@ -813,6 +813,56 @@ describe('purchase handler edge paths', () => {
     it('rejects a currency that is not an ISO code rather than matching nothing', async () => {
       expect((await request(app).get('/purchases?currency=dollars')).status).toBe(400);
     });
+
+    // The leaderboard takes the roll-up's whole scope vocabulary, so a
+    // parameter it advertises and ignores would answer a narrowed question
+    // with the unnarrowed figure. `amazon` keys chain-wide, so both orders
+    // land in one group and an ignored filter shows up as orderCount 2.
+    async function seedSameSkuAtTwoMerchants(): Promise<void> {
+      const merchants = ['Woolworths', 'Coles'];
+      for (const [index, merchantEntityName] of merchants.entries()) {
+        await request(app)
+          .post('/purchases')
+          .send({
+            ...minimalOrder,
+            merchantEntityName,
+            checksum: `leaderboard-${String(index)}`,
+            sourceOrderId: `leaderboard-${String(index)}`,
+            items: [
+              {
+                ref: 'pods',
+                name: 'Coffee Pods',
+                sku: 'B0POD',
+                unitPriceCents: 1200,
+                lineTotalCents: 1200,
+              },
+            ],
+          });
+      }
+    }
+
+    it('scopes the leaderboard to one merchant rather than counting both', async () => {
+      await seedSameSkuAtTwoMerchants();
+      const scoped = await request(app).get(
+        '/analytics/product-leaderboard?merchantEntityName=Woolworths'
+      );
+      const unscoped = await request(app).get('/analytics/product-leaderboard');
+
+      expect(unscoped.body.products).toHaveLength(1);
+      expect(unscoped.body.products[0].orderCount).toBe(2);
+      expect(scoped.body.products).toHaveLength(1);
+      expect(scoped.body.products[0].orderCount).toBe(1);
+    });
+
+    it('refuses two merchant parameters on the leaderboard as well', async () => {
+      await seedSameSkuAtTwoMerchants();
+      const res = await request(app).get(
+        '/analytics/product-leaderboard?merchantEntityId=ent-woolies&merchantEntityName=Woolworths'
+      );
+
+      expect(res.status).toBe(400);
+      expect(res.body.code).toBe('MERCHANT_FILTER_CONFLICT');
+    });
   });
 
   it('rejects a malformed pops:// document uri', async () => {

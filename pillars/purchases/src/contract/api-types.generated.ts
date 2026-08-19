@@ -388,6 +388,10 @@ export interface operations {
       query?: {
         sources?: string[];
         statuses?: ('awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored')[];
+        currency?: string;
+        merchantEntityId?: string;
+        merchantEntityName?: string;
+        merchantUnattributed?: boolean;
         from?: string;
         to?: string;
         minOrderCount?: number;
@@ -476,6 +480,18 @@ export interface operations {
               refundedCents: number;
               unitCount: number;
             }[];
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
           };
         };
       };

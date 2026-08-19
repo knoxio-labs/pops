@@ -295,7 +295,12 @@ export const purchasesAnalyticsContract = c.router({
     method: 'GET',
     path: '/analytics/product-leaderboard',
     query: ProductLeaderboardQuerySchema,
-    responses: { 200: ProductLeaderboardSchema },
+    responses: {
+      200: ProductLeaderboardSchema,
+      // Inherited with the scope vocabulary: the same two-merchant-parameter
+      // refusal, because this reads the scope the same way.
+      400: ErrorBodySchema,
+    },
     summary:
       'Repeat purchases per product, each group carrying the identity basis it was formed on',
   },
