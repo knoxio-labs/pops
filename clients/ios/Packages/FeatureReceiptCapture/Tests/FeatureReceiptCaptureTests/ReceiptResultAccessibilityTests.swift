@@ -12,10 +12,10 @@ import Testing
 /// A declared-but-unattached identifier is worse than no identifier at all —
 /// it reads as coverage a Maestro flow could lean on, and fails silently the
 /// first time it does. So this does not read `ReceiptResultCard` or
-/// `ReceiptResultView`'s source; it mounts the real view in a real window,
-/// the same technique `ContentViewTabSwitcherTests` uses to prove a tab bar
-/// is or is not built, and walks the accessibility tree UIKit actually
-/// produces from it.
+/// `ReceiptResultView`'s source; it mounts the real view in a
+/// `UIHostingController`, the same starting point `ContentViewTabSwitcherTests`
+/// uses to prove a tab bar is or is not built, and walks the accessibility
+/// tree UIKit actually produces from it.
 ///
 /// iOS only: `UIHostingController` and the whole `UIAccessibilityContainer`
 /// walk need UIKit, which the host-toolchain macOS build of this package
@@ -36,18 +36,21 @@ import Testing
         /// `UIHostingController`, not `view.subviews` — SwiftUI text and
         /// buttons are not distinct `UIView`s, so a subview-only walk would
         /// see none of them.
-        private static func identifiers(mounting view: some View) throws -> Set<String> {
-            let scene = try #require(
-                UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first,
-                "the test host is not showing a window scene, so nothing can be mounted in one")
-            let window = UIWindow(windowScene: scene)
-            window.frame = CGRect(origin: .zero, size: canvas)
+        ///
+        /// No `UIWindow`: this suite runs as a SwiftPM package test bundle,
+        /// which `xcodebuild test` hosts in a bare XCTest runner rather than
+        /// the actual `Pops` app — measured, `UIApplication.shared.connectedScenes`
+        /// is empty there, so there is no scene for a `UIWindow(windowScene:)`
+        /// to attach to, and the pre-iOS-26 `UIWindow(frame:)` is deprecated.
+        /// Sizing and laying out the hosting controller's own view directly is
+        /// enough: `accessibilityElementCount()`/`accessibilityElement(at:)`
+        /// are answered by the view tree itself, not by screen presence.
+        private static func identifiers(mounting view: some View) -> Set<String> {
             let hosting = UIHostingController(
                 rootView: view.frame(width: canvas.width, height: canvas.height))
-            window.rootViewController = hosting
-            window.makeKeyAndVisible()
-            window.layoutIfNeeded()
-            defer { window.isHidden = true }
+            hosting.view.frame = CGRect(origin: .zero, size: canvas)
+            hosting.view.setNeedsLayout()
+            hosting.view.layoutIfNeeded()
 
             var found = Set<String>()
             collect(from: hosting.view, into: &found)
@@ -80,8 +83,8 @@ import Testing
         }
 
         @Test("the created outcome carries its identifier, and only its own")
-        func createdCarriesItsIdentifier() throws {
-            let found = try Self.identifiers(
+        func createdCarriesItsIdentifier() {
+            let found = Self.identifiers(
                 mounting: Self.card(
                     .created(purchase: .fake(id: "purchase-1"), alreadyStored: false)))
 
@@ -91,8 +94,8 @@ import Testing
         }
 
         @Test("the needs-review outcome carries its identifier, and only its own")
-        func needsReviewCarriesItsIdentifier() throws {
-            let found = try Self.identifiers(
+        func needsReviewCarriesItsIdentifier() {
+            let found = Self.identifiers(
                 mounting: Self.card(
                     .needsReview(receiptCount: 1, failures: [.fake()], extracted: .fake())))
 
@@ -102,8 +105,8 @@ import Testing
         }
 
         @Test("the unreadable outcome carries its identifier, and only its own")
-        func unreadableCarriesItsIdentifier() throws {
-            let found = try Self.identifiers(
+        func unreadableCarriesItsIdentifier() {
+            let found = Self.identifiers(
                 mounting: Self.card(.unreadable(receiptCount: 1, reason: "blank image")))
 
             #expect(found.contains(ReceiptResultAccessibility.unreadable))
@@ -116,12 +119,12 @@ import Testing
         /// `.submitting` without it. Going through `body` here would mean
         /// mounting a real async call this test has no way to hold open.
         @Test("the submitting state carries its identifier")
-        func submittingCarriesItsIdentifier() throws {
+        func submittingCarriesItsIdentifier() {
             let model = ReceiptResultViewModel(parts: Self.parts, dependencies: .unbound)
             let view = ReceiptResultView(model: model)
 
             #expect(model.state == .submitting)
-            let found = try Self.identifiers(mounting: view.content)
+            let found = Self.identifiers(mounting: view.content)
             #expect(found.contains(ReceiptResultAccessibility.submitting))
         }
 
@@ -129,14 +132,14 @@ import Testing
         /// nothing here depends on `.task` firing or on racing a real retry —
         /// `content` reads whatever state the model already holds.
         @Test("the failed state's retry control carries its identifier")
-        func failedRetryCarriesItsIdentifier() async throws {
+        func failedRetryCarriesItsIdentifier() async {
             let model = ReceiptResultViewModel(parts: Self.parts, dependencies: .unbound)
             await model.submit()
             #expect(model.state == .failed(.dependencyNotBound))
 
             let view = ReceiptResultView(model: model)
 
-            let found = try Self.identifiers(mounting: view.content)
+            let found = Self.identifiers(mounting: view.content)
             #expect(found.contains(ReceiptResultAccessibility.retryButton))
         }
     }
