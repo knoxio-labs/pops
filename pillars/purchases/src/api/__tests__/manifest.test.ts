@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { buildPurchasesManifest, PURCHASES_PILLAR_ID } from '../manifest.js';
@@ -38,10 +41,100 @@ describe('buildPurchasesManifest', () => {
   it('declares one page descriptor per nav item', () => {
     const manifest = buildPurchasesManifest('0.1.0');
     expect(manifest.pages).toHaveLength(manifest.nav?.items.length ?? 0);
-    expect(manifest.pages?.[0]).toEqual({
-      path: '',
-      index: true,
-      bundleSlot: 'purchases-reconcile',
+    expect(manifest.pages).toEqual([
+      { path: '', index: true, bundleSlot: 'purchases-reconcile' },
+      { path: 'merchants', bundleSlot: 'purchases-merchants' },
+      { path: 'receipts', bundleSlot: 'purchases-receipts' },
+    ]);
+  });
+
+  // The wire nav has drifted from the app before (POPS-1968): one entry
+  // declared against three the app actually mounted, with a comment still
+  // claiming they matched. Nothing else in the repo compares them — the
+  // in-repo shell rail is built from `@pops/app-purchases`'s own exported
+  // `navConfig`, never from this manifest — so this reads the app's route
+  // source directly rather than restating it a third time, the same way the
+  // literal wire values above would restate it a second time.
+  describe('nav + pages mirror the app (no silent drift)', () => {
+    const appRoutesPath = fileURLToPath(new URL('../../../app/src/routes.tsx', import.meta.url));
+    const appRoutesSource = readFileSync(appRoutesPath, 'utf8');
+
+    function sliceBalanced(source: string, openIndex: number, open: string, close: string): string {
+      let depth = 0;
+      for (let i = openIndex; i < source.length; i++) {
+        if (source[i] === open) depth++;
+        else if (source[i] === close) {
+          depth -= 1;
+          if (depth === 0) return source.slice(openIndex, i + 1);
+        }
+      }
+      throw new Error(
+        `unbalanced "${open}${close}" starting at index ${openIndex} in ${appRoutesPath}`
+      );
+    }
+
+    function extractAssignedBracket(
+      source: string,
+      declaration: string,
+      bracket: '{' | '['
+    ): string {
+      const declStart = source.indexOf(declaration);
+      if (declStart === -1) {
+        throw new Error(`could not find "${declaration}" in ${appRoutesPath}`);
+      }
+      const eqIndex = source.indexOf('=', declStart);
+      const openIndex = source.indexOf(bracket, eqIndex);
+      const close = bracket === '{' ? '}' : ']';
+      return sliceBalanced(source, openIndex, bracket, close);
+    }
+
+    function navItemsBlock(source: string): string {
+      const navConfigObject = extractAssignedBracket(source, 'export const navConfig', '{');
+      const itemsIndex = navConfigObject.indexOf('items:');
+      return sliceBalanced(navConfigObject, navConfigObject.indexOf('[', itemsIndex), '[', ']');
+    }
+
+    // Rooted nav-item paths, as `navConfig.items` declares them.
+    function navItemPaths(block: string): string[] {
+      return [...block.matchAll(/path:\s*'([^']*)'/g)].map((m) => m[1] ?? '');
+    }
+
+    // Rooted paths for every route the rail can reach — an index route is
+    // `''` and a dynamic segment (`:purchaseId`) is excluded, because a rail
+    // entry has no id to put in its path. Mirrors
+    // `pillars/purchases/app/src/__tests__/manifest.test.ts`'s `navPathOf` /
+    // `isReachableFromTheRail`, which already prove this set equals
+    // `navConfig.items` inside the app package itself.
+    function reachableRoutePaths(block: string): string[] {
+      return [...block.matchAll(/\{\s*(?:index:\s*true|path:\s*'([^']*)')/g)]
+        .map((m) => (m[1] === undefined ? '' : `/${m[1]}`))
+        .filter((path) => !path.includes(':'));
+    }
+
+    it('declares one wire nav item per rail-reachable app route', () => {
+      const routesBlock = extractAssignedBracket(appRoutesSource, 'export const routes', '[');
+      const appNavPaths = navItemPaths(navItemsBlock(appRoutesSource)).toSorted();
+      const appRoutePaths = reachableRoutePaths(routesBlock).toSorted();
+
+      // Guards the extraction itself: the app's own suite already proves
+      // `navConfig.items` and `routes` agree, so if this disagrees the
+      // regexes above have drifted from the file's shape, not the file from
+      // itself.
+      expect(appNavPaths).toEqual(appRoutePaths);
+
+      const wireNavPaths = (buildPurchasesManifest('0.1.0').nav?.items ?? [])
+        .map((item) => item.path)
+        .toSorted();
+      expect(wireNavPaths).toEqual(appNavPaths);
+    });
+
+    it('declares one wire page descriptor per wire nav item, path-for-path', () => {
+      const manifest = buildPurchasesManifest('0.1.0');
+      const pagePaths = (manifest.pages ?? [])
+        .map((page) => (page.index === true ? '' : `/${page.path}`))
+        .toSorted();
+      const navPaths = (manifest.nav?.items ?? []).map((item) => item.path).toSorted();
+      expect(pagePaths).toEqual(navPaths);
     });
   });
 

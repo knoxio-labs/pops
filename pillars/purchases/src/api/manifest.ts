@@ -27,17 +27,27 @@ const PURCHASES_NAV: NavConfigDescriptor = {
   color: 'rose',
   basePath: '/purchases',
   order: 15,
-  items: [{ path: '', label: 'Reconcile', labelKey: 'purchases.reconcile', icon: 'receipt' }],
+  items: [
+    { path: '', label: 'Reconcile', labelKey: 'purchases.reconcile', icon: 'receipt' },
+    { path: '/merchants', label: 'Merchants', labelKey: 'purchases.merchants', icon: 'building-2' },
+    { path: '/receipts', label: 'Receipts', labelKey: 'purchases.receipts', icon: 'file-text' },
+  ],
 };
 
 /**
  * Wire-format pages contribution for the purchases pillar.
  *
  * One descriptor per route declared in the app's `routes` array
- * (`pillars/purchases/app/src/routes.tsx`).
+ * (`pillars/purchases/app/src/routes.tsx`) that the rail can reach — the
+ * order-detail route takes a `:purchaseId` no rail entry can supply, so it
+ * has no nav item and no page descriptor here, the same reasoning
+ * `pillars/purchases/app/src/routes.tsx` documents for leaving it off
+ * `navConfig`.
  */
 const PURCHASES_PAGES: readonly PageDescriptor[] = [
   { path: '', index: true, bundleSlot: 'purchases-reconcile' },
+  { path: 'merchants', bundleSlot: 'purchases-merchants' },
+  { path: 'receipts', bundleSlot: 'purchases-receipts' },
 ];
 
 /**
@@ -103,8 +113,8 @@ const PURCHASES_URI_TYPES: readonly string[] = PURCHASES_SEARCH_ADAPTERS.map(
  * `nav` and `pages` were empty until this pillar had a frontend, because a
  * rail entry pointing at a bundle slot that does not exist is a dead link.
  * `pillars/purchases/app` is that slot, so both dimensions are declared now
- * — one nav item and one page descriptor, matching the one route the app
- * actually mounts.
+ * — one nav item and one page descriptor per rail-reachable route the app
+ * mounts (`pillars/purchases/app/src/routes.tsx`).
  *
  * `search.adapters` was never held back on that reasoning, though it used to
  * be justified by it. A search adapter is a backend seam — the orchestrator
