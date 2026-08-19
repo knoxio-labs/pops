@@ -88,7 +88,9 @@ i18n.on('languageChanged', syncHtmlLang);
 void i18n.use(initReactI18next).init({
   lng: getStoredLocale(),
   fallbackLng: DEFAULT_LOCALE,
-  ns: NAMESPACES,
+  // Copied: i18next stores this array by reference and pushes onto it from
+  // `loadNamespaces`, which would mutate the exported const.
+  ns: [...NAMESPACES],
   defaultNS: 'common',
   interpolation: { escapeValue: false },
   resources: {
