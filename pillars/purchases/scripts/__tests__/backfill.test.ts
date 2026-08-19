@@ -259,6 +259,63 @@ describe('postPurchases', () => {
     expect(error.outcome.failures).toEqual(['bad -> 422 nope']);
     expect(error.message).toContain('2 were already present');
   });
+
+  it('runs the before-request hook ahead of the request it belongs to', async () => {
+    // A purchase can name a file the request does not carry, and those bytes
+    // have to be on the volume before the row that points at them exists.
+    const events: string[] = [];
+    calls = [];
+    vi.stubGlobal('fetch', (url: string, init: RequestInit) => {
+      calls.push({ url, init });
+      events.push('request');
+      return Promise.resolve(new Response('{}', { status: 201 }));
+    });
+
+    await postPurchases(CLIENT, [purchase('order-1')], {
+      beforeRequest: () => events.push('before'),
+      afterCreated: () => events.push('created'),
+    });
+
+    expect(events).toEqual(['before', 'request', 'created']);
+  });
+
+  it('does not report an order as created when it already existed', async () => {
+    stubFetch(409);
+    const created: string[] = [];
+
+    await postPurchases(CLIENT, [purchase('already-there')], {
+      afterCreated: ({ sourceOrderId }) => created.push(sourceOrderId ?? ''),
+    });
+
+    expect(created).toEqual([]);
+  });
+
+  it('does not report an order as created when the write failed', async () => {
+    stubFetch(422);
+    const created: string[] = [];
+
+    await postPurchases(CLIENT, [purchase('bad')], {
+      afterCreated: ({ sourceOrderId }) => created.push(sourceOrderId ?? ''),
+    });
+
+    expect(created).toEqual([]);
+  });
+
+  it('leaves the purchases after an auth stop with neither hook called', async () => {
+    stubFetchSequence([201, 403]);
+    const before: string[] = [];
+    const created: string[] = [];
+
+    await expect(
+      postPurchases(CLIENT, [purchase('order-1'), purchase('order-2'), purchase('order-3')], {
+        beforeRequest: ({ sourceOrderId }) => before.push(sourceOrderId ?? ''),
+        afterCreated: ({ sourceOrderId }) => created.push(sourceOrderId ?? ''),
+      })
+    ).rejects.toThrow(AuthFailureError);
+
+    expect(before).toEqual(['order-1', 'order-2']);
+    expect(created).toEqual(['order-1']);
+  });
 });
 
 describe('runCli', () => {

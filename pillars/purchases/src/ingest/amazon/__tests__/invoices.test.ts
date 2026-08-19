@@ -26,6 +26,8 @@ const RETAIL = '503-1631401-2789435';
 const OTHER_RETAIL = '249-4494679-2017412';
 const DIGITAL = 'D01-9651602-7705054';
 const DOCUMENT = '12484342-INV-AU-2021-26473870';
+const DOCUMENT_A = '12484342-INV-AU-2021-00000001';
+const DOCUMENT_B = '12484342-INV-AU-2021-00000002';
 
 function scan(path: string, pdf: Buffer): ScannedInvoicePdf {
   return { path, bytes: pdf, read: readAmazonInvoice(pdf) };
@@ -98,10 +100,10 @@ describe('matching', () => {
   });
 
   it('keeps both when one order has two genuinely different invoices', () => {
-    // Sixteen orders in the reference bundle have more than one shipment
-    // invoiced separately. Deduping on the order alone would lose them.
+    // An order whose shipments were invoiced separately carries several, and
+    // deduping on the order alone would lose all but the first.
     const { matched } = matchAmazonInvoices(
-      [invoice('a.pdf', RETAIL, 'INV-1'), invoice('b.pdf', RETAIL, 'INV-2')],
+      [invoice('a.pdf', RETAIL, DOCUMENT_A), invoice('b.pdf', RETAIL, DOCUMENT_B)],
       new Set([RETAIL])
     );
     expect(matched).toHaveLength(2);
@@ -197,10 +199,10 @@ describe('reading the bundle', () => {
   it('reads invoices from every one of the sibling directories', () => {
     const root = bundleWith({
       'Retail.TransactionalInvoicing.1/Retail.TransactionalInvoicing.pdf': pdfWithRuns(
-        legacyInvoice(RETAIL, 'INV-1')
+        legacyInvoice(RETAIL, DOCUMENT_A)
       ),
       'Retail.TransactionalInvoicing.3.1/Retail.TransactionalInvoicing.1.pdf': pdfWithRuns(
-        modernInvoice(OTHER_RETAIL, 'INV-2')
+        modernInvoice(OTHER_RETAIL, DOCUMENT_B)
       ),
     });
     const scanned = readAmazonInvoiceBundle(root);
@@ -214,10 +216,10 @@ describe('reading the bundle', () => {
     // on the filename collapses them into one.
     const root = bundleWith({
       'Retail.TransactionalInvoicing.3.1/Retail.TransactionalInvoicing.1.pdf': pdfWithRuns(
-        legacyInvoice(RETAIL, 'INV-1')
+        legacyInvoice(RETAIL, DOCUMENT_A)
       ),
       'Retail.TransactionalInvoicing.3.2/Retail.TransactionalInvoicing.1.pdf': pdfWithRuns(
-        legacyInvoice(OTHER_RETAIL, 'INV-2')
+        legacyInvoice(OTHER_RETAIL, DOCUMENT_B)
       ),
     });
 
@@ -232,10 +234,10 @@ describe('reading the bundle', () => {
   it('reads them in a stable order, so which duplicate wins never moves', () => {
     const files = {
       'Retail.TransactionalInvoicing.3.2/Retail.TransactionalInvoicing.1.pdf': pdfWithRuns(
-        legacyInvoice(RETAIL, 'INV-2')
+        legacyInvoice(RETAIL, DOCUMENT_B)
       ),
       'Retail.TransactionalInvoicing.3.1/Retail.TransactionalInvoicing.2.pdf': pdfWithRuns(
-        legacyInvoice(RETAIL, 'INV-1')
+        legacyInvoice(RETAIL, DOCUMENT_A)
       ),
     };
     expect(readAmazonInvoiceBundle(bundleWith(files)).map((one) => one.path)).toEqual([
@@ -255,12 +257,30 @@ describe('reading the bundle', () => {
   it('ignores the bundle files that are not invoices', () => {
     const root = bundleWith({
       'Retail.TransactionalInvoicing.3.1/Retail.TransactionalInvoicing.1.pdf': pdfWithRuns(
-        legacyInvoice(RETAIL, 'INV-1')
+        legacyInvoice(RETAIL, DOCUMENT_A)
       ),
       'Retail.TransactionalInvoicing.3.1/README.txt': Buffer.from('not an invoice'),
       'Sustainability.Value.Metrics.3/Sustainability.Value.Metrics.3.csv': Buffer.from('a,b\n1,2'),
     });
     expect(readAmazonInvoiceBundle(root)).toHaveLength(1);
+  });
+
+  it('reads an invoice whose extension the bundle spelled in capitals', () => {
+    const root = bundleWith({
+      'Retail.TransactionalInvoicing.3.1/Retail.TransactionalInvoicing.1.PDF': pdfWithRuns(
+        legacyInvoice(RETAIL, DOCUMENT_A)
+      ),
+    });
+    // Skipping it would be the one silent drop in a walk whose whole point is
+    // that nothing goes missing without being named.
+    expect(readAmazonInvoiceBundle(root)).toHaveLength(1);
+  });
+
+  it('treats an "Additional Data" that is a file as holding no invoices', () => {
+    const root = mkdtempSync(join(tmpdir(), 'amazon-bundle-'));
+    writeFileSync(join(root, INVOICE_BUNDLE_DIRECTORY), 'not a directory');
+
+    expect(readAmazonInvoiceBundle(root)).toEqual([]);
   });
 
   it('treats a bundle with no invoices as empty rather than failing', () => {

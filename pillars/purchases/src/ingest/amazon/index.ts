@@ -7,7 +7,6 @@ export {
 } from './order-history.js';
 export { type SourceRefund } from './refund-charges.js';
 export {
-  extractPdfText,
   readAmazonInvoice,
   type AmazonInvoiceFields,
   type AmazonInvoiceRead,

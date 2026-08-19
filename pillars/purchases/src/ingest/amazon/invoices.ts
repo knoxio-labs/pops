@@ -72,30 +72,38 @@ export interface AmazonInvoiceMatch {
 
 /**
  * Digital orders carry a `D01-` id and live in `Digital Content Orders.csv`,
- * which this adapter does not read. In the reference bundle all 90 of them are
- * in that file and none appear in `Order History.csv`, so their invoices can
- * never match — separating them keeps a genuinely dropped retail order visible
- * instead of buried in a pile of expected misses.
+ * which this adapter does not read. `Order History.csv` carries none of them,
+ * so their invoices can never match — separating them keeps a genuinely
+ * dropped retail order visible instead of buried in a pile of expected misses.
  */
 const DIGITAL_ORDER_PREFIX = 'D01-';
 
 /**
- * Read every invoice PDF in the bundle.
+ * Nothing to list, as opposed to something that cannot be listed.
  *
- * A bundle from an account with no invoices simply has no such directory, so
- * a missing one is an empty result rather than a failure — the same treatment
- * `Refund Details.csv` gets.
+ * A bundle from an account with no invoices simply has no such directory, and
+ * a bundle that files something else under the name has one that is not a
+ * directory at all. Both mean the same thing here — no invoices — the same
+ * way a missing `Refund Details.csv` means no refunds. Anything else (a
+ * permission, an I/O error) is a real failure and is raised.
  */
-export function readAmazonInvoiceBundle(bundlePath: string): readonly ScannedInvoicePdf[] {
-  const root = join(bundlePath, INVOICE_BUNDLE_DIRECTORY);
-
-  let entries: readonly string[];
+function listDirectory(path: string): readonly string[] {
   try {
-    entries = readdirSync(root);
+    return readdirSync(path);
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+    const { code } = error as NodeJS.ErrnoException;
+    if (code !== 'ENOENT' && code !== 'ENOTDIR') throw error;
     return [];
   }
+}
+
+/** A PDF whatever case the bundle spelled the extension in. */
+const PDF_FILE = /\.pdf$/iu;
+
+/** Read every invoice PDF in the bundle. */
+export function readAmazonInvoiceBundle(bundlePath: string): readonly ScannedInvoicePdf[] {
+  const root = join(bundlePath, INVOICE_BUNDLE_DIRECTORY);
+  const entries = listDirectory(root);
 
   const scanned: ScannedInvoicePdf[] = [];
   const directories = entries
@@ -104,14 +112,8 @@ export function readAmazonInvoiceBundle(bundlePath: string): readonly ScannedInv
 
   for (const directory of directories) {
     const absolute = join(root, directory);
-    let files: readonly string[];
-    try {
-      files = readdirSync(absolute);
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOTDIR') throw error;
-      continue;
-    }
-    for (const file of files.filter((name) => name.endsWith('.pdf')).toSorted(compare)) {
+    const files = listDirectory(absolute);
+    for (const file of files.filter((name) => PDF_FILE.test(name)).toSorted(compare)) {
       const bytes = readFileSync(join(absolute, file));
       scanned.push({
         path: join(INVOICE_BUNDLE_DIRECTORY, directory, file),

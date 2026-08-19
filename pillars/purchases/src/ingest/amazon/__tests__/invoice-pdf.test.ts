@@ -116,7 +116,9 @@ describe('field reading', () => {
   });
 
   it('reads the notification template, which labels it "Order #"', () => {
-    const fields = fieldsOf(pdfWithRuns(['Notification', 'Order # ', ORDER, 'Document # ', 'AU1']));
+    const fields = fieldsOf(
+      pdfWithRuns(['Notification', 'Order # ', ORDER, 'Document # ', 'AU61BN8BZACSI'])
+    );
     expect(fields.sourceOrderId).toBe(ORDER);
     // Not a tax invoice, so it is not filed as one.
     expect(fields.kind).toBe('other');
@@ -135,18 +137,19 @@ describe('field reading', () => {
     expect(fields.documentNumber).toBe('12484342-CN-AU-2025-3210487');
   });
 
-  it('takes the heading from the first run, not from anywhere it appears', () => {
-    // The legacy layout draws the GST footnote immediately after the heading,
-    // and it contains the word "invoice".
+  it('takes the kind from the heading, not from the document the note adjusts', () => {
+    // A credit note names the invoice it unwinds, in those words. A kind read
+    // from the whole page files the note as the invoice it reverses.
     const fields = fieldsOf(
       pdfWithRuns([
-        'TAX ADJUSTMENT NOTE',
-        '*Amazon Commercial Services Pty Ltd is raising this invoice pursuant to',
+        'Tax Adjustment Note',
         'Order no.',
         ORDER,
+        'This adjusts TAX INVOICE 12484342-INV-AU-2021-26473870',
       ])
     );
     expect(fields.kind).toBe('other');
+    expect(fields.documentType).toBe('Tax Adjustment Note');
   });
 
   it('reports a PDF with no text layer rather than reading it as empty', () => {
@@ -186,5 +189,22 @@ describe('field reading', () => {
 
   it('leaves the document number null when the template states none', () => {
     expect(fieldsOf(pdfWithRuns(['TAX INVOICE', 'Order no.', ORDER])).documentNumber).toBeNull();
+  });
+
+  it('refuses to read a document number out of a label printed with no value', () => {
+    // This capture is what decides two invoices on one order are the same
+    // document, and drops the second. Taking whatever word follows the label
+    // would make two unrelated invoices collide on it.
+    expect(
+      fieldsOf(pdfWithRuns(['TAX INVOICE', 'Order no.', ORDER, 'Invoice Number: ', 'Page 1 of 2']))
+        .documentNumber
+    ).toBeNull();
+  });
+
+  it('refuses a token too short to be a document number', () => {
+    expect(
+      fieldsOf(pdfWithRuns(['TAX INVOICE', 'Order no.', ORDER, 'Document # ', 'AU1']))
+        .documentNumber
+    ).toBeNull();
   });
 });

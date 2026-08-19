@@ -57,6 +57,18 @@ export function receiptUri(sha256: string): string {
 }
 
 /**
+ * The name these bytes would be stored under, without touching the disk.
+ *
+ * A caller that has to name a file before it knows whether to keep it — a
+ * backfill that mints a `pops://` URI for a request that may be refused —
+ * needs the address and the write to come from one recipe, or the URI it
+ * published and the path it later writes can drift apart.
+ */
+export function receiptSha256(bytes: Buffer): string {
+  return createHash('sha256').update(bytes).digest('hex');
+}
+
+/**
  * Write, then move into place.
  *
  * `writeFileSync` straight to the final path is not atomic: a crash or a
@@ -77,14 +89,14 @@ function writeAtomically(path: string, bytes: Buffer): void {
  * directory is survivable and a few hundred thousand is not, and the shape
  * of the tree is not something worth migrating later.
  */
-export function storeReceiptPart(
-  part: ReceiptPart,
+export function storeReceiptBytes(
+  bytes: Buffer,
+  mediaType: ReceiptMediaType,
   root = resolveReceiptStoreRoot()
 ): StoredReceipt {
-  const bytes = Buffer.from(part.dataBase64, 'base64');
-  const sha256 = createHash('sha256').update(bytes).digest('hex');
+  const sha256 = receiptSha256(bytes);
   const directory = join(root, sha256.slice(0, 2));
-  const path = join(directory, `${sha256}.${EXTENSIONS[part.mediaType]}`);
+  const path = join(directory, `${sha256}.${EXTENSIONS[mediaType]}`);
 
   // Existing *and* the right length. `existsSync` alone lets a half-written
   // file win permanently: the name is the hash, so every later upload of
@@ -104,6 +116,14 @@ export function storeReceiptPart(
   mkdirSync(directory, { recursive: true });
   writeAtomically(path, bytes);
   return { sha256, path, uri: receiptUri(sha256), bytes: bytes.length, alreadyPresent: false };
+}
+
+/** {@link storeReceiptBytes} for an upload, which arrives base64-encoded. */
+export function storeReceiptPart(
+  part: ReceiptPart,
+  root = resolveReceiptStoreRoot()
+): StoredReceipt {
+  return storeReceiptBytes(Buffer.from(part.dataBase64, 'base64'), part.mediaType, root);
 }
 
 /**

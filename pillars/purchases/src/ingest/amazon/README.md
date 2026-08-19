@@ -77,7 +77,7 @@ Both are anomalies, never silent: an unrecorded refund leaves the order reportin
 
 ## Tax invoices
 
-The bundle ships 325 PDFs under `Additional Data/`, and ADR-042 calls a tax invoice the arbiter whenever the CSV's own arithmetic is ambiguous. Twelve shipments here are exactly that — the component identity misses by one to four dollars — and eight of the twelve now carry the document that settles it.
+The bundle ships 325 PDFs under `Additional Data/`, and ADR-042 calls a tax invoice the arbiter whenever the CSV's own arithmetic is ambiguous. Twelve shipments here are exactly that — the component identity misses by one to four dollars — and the bundle carries an invoice naming eight of those twelve orders.
 
 **Reading one is a parse, not an inference.** Every invoice in the bundle carries a real text layer: the order number is a string literal in a Flate-compressed content stream. So `invoice-pdf.ts` is fifty lines of `node:zlib` rather than a model call per file, and the answer for a given PDF is the same every time it is asked. There is no PDF library in the fleet and this did not add one.
 
@@ -89,21 +89,23 @@ Three things about the bundle make the walk non-obvious, and all three are silen
 
 With all three handled, **325 of 325 yield exactly one labelled order number** and none names two.
 
-## What the invoices attach to, and what they do not
+## What the invoices match, and what they do not
 
-Attachment is an exact membership test against the orders this parser built. An order id is a fixed seventeen-character shape, so a misread lands on nothing rather than on a different real order, and nothing is attached on a resemblance.
+Matching is an exact membership test against the orders this parser built. An order id is a fixed seventeen-character shape, so a misread lands on nothing rather than on a different real order, and nothing is matched on a resemblance.
 
-| outcome              | PDFs | why                                                             |
-| -------------------- | ---- | --------------------------------------------------------------- |
-| attached             | 263  | to 250 orders. 11 orders get more than one, at most 4           |
-| `digital-order`      | 56   | a `D01-` id, which `Order History.csv` does not carry at all    |
-| `duplicate-document` | 6    | a second rendering of a document already attached to that order |
+| outcome              | PDFs | why                                                                |
+| -------------------- | ---- | ------------------------------------------------------------------ |
+| matched              | 263  | naming 250 orders. 11 orders are named by more than one, at most 4 |
+| `digital-order`      | 56   | a `D01-` id, which `Order History.csv` does not carry at all       |
+| `duplicate-document` | 6    | a second rendering of a document already matched to that order     |
 
 Nothing else. There is no `unknown-order`, no `no-order-id` and no `ambiguous-order-id` in this bundle — every non-digital id resolved.
 
 The 56 digital ones are a known gap rather than a misread: all 55 distinct `D01-` ids appear in `Digital Content Orders.csv`, which this adapter does not read, and **none** appears in `Order History.csv`. They get their own rejection kind for that reason — a retail id that fails to resolve means an order was dropped, which is a bug, and burying it among 56 expected misses would hide it.
 
 The 6 duplicates are the one case content addressing cannot handle. Two files carrying the same invoice number for the same order have _different bytes_, so they hash to different paths and `uq_purchase_documents` sees two distinct URIs. The second is dropped here, or the order would show one invoice twice. Two invoices with genuinely different numbers on one order are kept — 11 orders have those.
+
+**Matched is not attached.** A matched invoice travels in the create request for the order it names, and reaches the database only if that request creates the order. There is no route that attaches a document to an order that already exists, so a run against a database this bundle has already been ingested into attaches nothing at all and says so (POPS-2311).
 
 A credit note (`Tax Adjustment Note`, 10 in the bundle) is filed as `other`, not `tax_invoice`: it unwinds an invoice rather than being one, and `DOCUMENT_KINDS` has no entry for it.
 
@@ -115,7 +117,7 @@ In this pillar's own content-addressed store, under `pops://purchases/receipt/<s
 
 **The store is a local directory** — beside this pillar's SQLite file, or `PURCHASES_RECEIPT_DIR`. Running the CLI against a remote `PURCHASES_BASE_URL` from a machine that cannot see the server's volume writes the URIs into the database and the bytes onto the wrong host. Run it where the volume is mounted.
 
-Invoices attach **when the order is created**, because `POST /purchases` is the only write path this pillar has and it is create-only. Re-running against a database that already holds the orders skips them at the checksum, documents and all.
+The bytes go down **before** the request that names them, because a row pointing at a file that is not there cannot be repaired: `POST /purchases` is create-only, so a re-run is a 409 and the reference stays broken. What that ordering writes for an order the server then refuses is removed again at the end of the run, so a run that creates nothing leaves nothing behind.
 
 ## What this adapter does not produce
 

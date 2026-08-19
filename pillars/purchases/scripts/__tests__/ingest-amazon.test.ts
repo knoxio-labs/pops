@@ -1,6 +1,11 @@
 /**
- * The key-before-parse ordering: a missing key must fail before the bundle
- * is read, not after.
+ * What the CLI does with a bundle, from both ends.
+ *
+ * The key-before-parse ordering is one half: a missing key must fail before
+ * the bundle is read, not after. The other is what reaches the wire and the
+ * volume — the invoices are attached by a single expression, and every test
+ * that stops at `--dry-run` stays green when that expression posts the orders
+ * unattached.
  *
  * Nothing here mocks `node:fs`. The bundles are real directories in a temp
  * dir, so the invoice walk, the content-addressed store and the ordering
@@ -27,7 +32,7 @@ vi.mock('../../src/ingest/amazon/index.js', async (importOriginal) => ({
 }));
 
 const { parseAmazonOrderHistory } = await import('../../src/ingest/amazon/index.js');
-const { main, storeInvoices } = await import('../ingest-amazon.js');
+const { main, planInvoiceDocuments } = await import('../ingest-amazon.js');
 
 const parseMock = vi.mocked(parseAmazonOrderHistory);
 
@@ -74,8 +79,36 @@ function warnings(): string {
   return vi.mocked(console.warn).mock.calls.flat().join('\n');
 }
 
+/** Every stored file under a store root, whichever shard it landed in. */
+function storedFiles(root: string): string[] {
+  return readdirSync(root, { recursive: true })
+    .map(String)
+    .filter((entry) => entry.endsWith('.pdf'));
+}
+
+let requests: { url: string; body: unknown }[];
+
+/**
+ * A fetch that answers every purchase with `status` and every other call with
+ * a 200, so the source registration succeeds whatever the orders do.
+ */
+function stubFetch(status: number): void {
+  requests = [];
+  vi.stubGlobal('fetch', (url: string, init: RequestInit) => {
+    requests.push({ url, body: init.body });
+    const purchase = url.endsWith('/purchases');
+    return Promise.resolve(new Response('{}', { status: purchase ? status : 200 }));
+  });
+}
+
+/** The bodies of the `POST /purchases` requests, in order. */
+function purchaseRequests(): unknown[] {
+  return requests.filter(({ url }) => url.endsWith('/purchases')).map(({ body }) => body);
+}
+
 beforeEach(() => {
   vi.unstubAllEnvs();
+  requests = [];
   parseMock.mockReset();
   parseMock.mockReturnValue({ orders: [], anomalies: [] });
   vi.spyOn(console, 'warn').mockImplementation(() => undefined);
@@ -83,7 +116,9 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
   vi.restoreAllMocks();
+  process.exitCode = undefined;
 });
 
 describe('main', () => {
@@ -129,7 +164,7 @@ describe('invoice reporting', () => {
 
     await main([bundleWith({ '1.pdf': invoiceFor(KNOWN_ORDER) }), '--dry-run']);
 
-    expect(warnings()).toContain('found 1 invoice PDF(s), attaching 1 to 1 order(s)');
+    expect(warnings()).toContain('found 1 invoice PDF(s); 1 name 1 of the parsed order(s)');
   });
 
   it('names every invoice it could not attach rather than dropping it quietly', async () => {
@@ -155,59 +190,124 @@ describe('invoice reporting', () => {
   });
 });
 
-describe('storing what matched', () => {
-  it('writes each invoice once and hands back its URI', () => {
+describe('planning what to store', () => {
+  function matchedInvoice(path: string, sourceOrderId: string, bytes = invoiceFor(sourceOrderId)) {
+    return { path, sourceOrderId, bytes, documentKind: 'tax_invoice' as const };
+  }
+
+  it('names each invoice without writing a byte', () => {
+    // The URI is a function of the bytes, so it can be minted before anyone
+    // knows whether the order it belongs to will be created.
     const receipts = temporaryDirectory('amazon-receipts-');
     vi.stubEnv('PURCHASES_RECEIPT_DIR', receipts);
 
-    const stored = storeInvoices([
-      {
-        path: 'a.pdf',
-        sourceOrderId: KNOWN_ORDER,
-        bytes: invoiceFor(KNOWN_ORDER),
-        documentKind: 'tax_invoice',
-      },
-    ]);
+    const planned = planInvoiceDocuments([matchedInvoice('a.pdf', KNOWN_ORDER)]).get(KNOWN_ORDER);
 
-    const documents = stored.get(KNOWN_ORDER) ?? [];
-    expect(documents).toHaveLength(1);
-    expect(documents[0]?.documentUri).toMatch(/^pops:\/\/purchases\/receipt\/[0-9a-f]{64}$/u);
-    expect(documents[0]?.kind).toBe('tax_invoice');
-    expect(readdirSync(receipts)).toHaveLength(1);
+    expect(planned).toHaveLength(1);
+    expect(planned?.[0]?.document.documentUri).toMatch(
+      /^pops:\/\/purchases\/receipt\/[0-9a-f]{64}$/u
+    );
+    expect(planned?.[0]?.document.kind).toBe('tax_invoice');
+    expect(storedFiles(receipts)).toEqual([]);
   });
 
-  it('adds a URI once per order when two files hold identical bytes', () => {
+  it('names a URI once per order when two files hold identical bytes', () => {
     // Content addressing gives both the same path and therefore the same URI.
     // `uq_purchase_documents` would reject the whole order for the repeat
     // rather than ignore it, so the second has to be dropped here.
-    vi.stubEnv('PURCHASES_RECEIPT_DIR', temporaryDirectory('amazon-receipts-'));
     const bytes = invoiceFor(KNOWN_ORDER);
 
-    const stored = storeInvoices([
-      { path: 'a.pdf', sourceOrderId: KNOWN_ORDER, bytes, documentKind: 'tax_invoice' },
-      {
-        path: 'b.pdf',
-        sourceOrderId: KNOWN_ORDER,
-        bytes: Buffer.from(bytes),
-        documentKind: 'tax_invoice',
-      },
+    const plan = planInvoiceDocuments([
+      matchedInvoice('a.pdf', KNOWN_ORDER, bytes),
+      matchedInvoice('b.pdf', KNOWN_ORDER, Buffer.from(bytes)),
     ]);
 
-    expect(stored.get(KNOWN_ORDER)).toHaveLength(1);
+    expect(plan.get(KNOWN_ORDER)).toHaveLength(1);
   });
 
   it('keeps the same bytes on two different orders', () => {
     // The constraint is per order, so one document shared by two orders is
     // not a repeat and dropping it would lose evidence from the second.
-    vi.stubEnv('PURCHASES_RECEIPT_DIR', temporaryDirectory('amazon-receipts-'));
     const bytes = invoiceFor(KNOWN_ORDER);
 
-    const stored = storeInvoices([
-      { path: 'a.pdf', sourceOrderId: KNOWN_ORDER, bytes, documentKind: 'tax_invoice' },
-      { path: 'b.pdf', sourceOrderId: UNKNOWN_ORDER, bytes, documentKind: 'other' },
+    const plan = planInvoiceDocuments([
+      matchedInvoice('a.pdf', KNOWN_ORDER, bytes),
+      matchedInvoice('b.pdf', UNKNOWN_ORDER, bytes),
     ]);
 
-    expect(stored.get(KNOWN_ORDER)).toHaveLength(1);
-    expect(stored.get(UNKNOWN_ORDER)).toHaveLength(1);
+    expect(plan.get(KNOWN_ORDER)).toHaveLength(1);
+    expect(plan.get(UNKNOWN_ORDER)).toHaveLength(1);
+  });
+});
+
+describe('the write path', () => {
+  let receipts: string;
+
+  beforeEach(() => {
+    receipts = temporaryDirectory('amazon-receipts-');
+    vi.stubEnv('PURCHASES_RECEIPT_DIR', receipts);
+    vi.stubEnv(INGEST_API_KEY_ENV, 'pops_sa_test.secret');
+    parseMock.mockReturnValue({ orders: [orderNamed(KNOWN_ORDER)], anomalies: [] });
+  });
+
+  it('sends the invoice on the order it belongs to', async () => {
+    // The one line that makes an invoice reach the database. Posting the
+    // orders as the parser built them would leave every assertion about the
+    // reader intact and the evidence in the bundle.
+    stubFetch(201);
+
+    await main([bundleWith({ '1.pdf': invoiceFor(KNOWN_ORDER) })]);
+
+    expect(JSON.parse(String(purchaseRequests()[0]))).toMatchObject({
+      sourceOrderId: KNOWN_ORDER,
+      documents: [
+        {
+          documentUri: expect.stringMatching(/^pops:\/\/purchases\/receipt\/[0-9a-f]{64}$/u),
+          kind: 'tax_invoice',
+        },
+      ],
+    });
+  });
+
+  it('leaves the bytes on the volume under the name the created row points at', async () => {
+    // The URI is in the database now, so the file it names has to be there —
+    // under that name, not merely somewhere in the store.
+    stubFetch(201);
+
+    await main([bundleWith({ '1.pdf': invoiceFor(KNOWN_ORDER) })]);
+
+    const posted = String(purchaseRequests()[0]);
+    const sha256 = /pops:\/\/purchases\/receipt\/([0-9a-f]{64})/u.exec(posted)?.[1] ?? '';
+    expect(sha256).not.toBe('');
+    expect(storedFiles(receipts)).toEqual([join(sha256.slice(0, 2), `${sha256}.pdf`)]);
+    expect(warnings()).toContain('attached 1 invoice(s)');
+  });
+
+  it('leaves nothing on the volume for an order that already existed', async () => {
+    // A 409 writes no row, so the bytes reference nothing and there is no
+    // route that would ever collect them.
+    stubFetch(409);
+
+    await main([bundleWith({ '1.pdf': invoiceFor(KNOWN_ORDER) })]);
+
+    expect(storedFiles(receipts)).toEqual([]);
+  });
+
+  it('leaves nothing on the volume for an order the write refused', async () => {
+    stubFetch(422);
+
+    await main([bundleWith({ '1.pdf': invoiceFor(KNOWN_ORDER) })]);
+
+    expect(storedFiles(receipts)).toEqual([]);
+  });
+
+  it('says the invoices went nowhere rather than letting the match count read as one', async () => {
+    stubFetch(409);
+
+    await main([bundleWith({ '1.pdf': invoiceFor(KNOWN_ORDER) })]);
+
+    const output = warnings();
+    expect(output).toContain('attached 0 invoice(s)');
+    expect(output).toContain('none of the 1 matched invoice(s) were attached');
   });
 });

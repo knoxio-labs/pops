@@ -36,8 +36,25 @@ const ORDER_ID = String.raw`[A-Z0-9]{3}-\d{7}-\d{7}`;
  */
 const ORDER_ID_FIELD = new RegExp(String.raw`Order (?:Number:|no\.|#)\s*(${ORDER_ID})`, 'gu');
 
-/** The invoice's own identifier, under the two names the template gives it. */
-const DOCUMENT_NUMBER_FIELD = /(?:Invoice Number:|Document #)\s*([A-Za-z0-9-]+)/u;
+/**
+ * The invoice's own identifier: eight or more upper-case alphanumerics and
+ * hyphens, at least one of them a digit. Both live forms satisfy it —
+ * `12484342-INV-AU-2021-26473870` and `AU61BN8BZACSI`.
+ *
+ * The shape is load-bearing rather than decorative, because this capture is
+ * the key that decides two invoices on one order are the same document and
+ * drops the second. Any token would do for that if the pattern allowed one,
+ * so a label printed with no value, or a revision that puts a word after it,
+ * would silently cost an order its second invoice. Refusing to read a number
+ * costs nothing by comparison: both invoices are then kept.
+ */
+const DOCUMENT_NUMBER = String.raw`(?=[A-Z0-9-]*\d)[A-Z0-9][A-Z0-9-]{7,}`;
+
+/** The two names the template gives that field. */
+const DOCUMENT_NUMBER_FIELD = new RegExp(
+  String.raw`(?:Invoice Number:|Document #)\s*(${DOCUMENT_NUMBER})`,
+  'u'
+);
 
 /** Only a stream holding a text-showing operator is a page's content. */
 const SHOWS_TEXT = /[)>\]\s]T[jJ](?![A-Za-z])/u;
@@ -128,9 +145,10 @@ function literalsIn(content: string): string[] {
 /**
  * Every text run a PDF draws, in drawing order.
  *
- * Streams that do not decompress (the embedded JPEG logo) and streams with no
- * text-showing operator (font programs) are skipped, so a font's binary
- * cannot inject bytes between a label and its value.
+ * Streams that do not decompress (the embedded JPEG logo) are skipped, and so
+ * are streams in which no text-showing operator appears, which is what keeps a
+ * font program's literals out of the runs. The second test is a heuristic on
+ * the decompressed bytes, not a proof about them.
  */
 export function extractPdfRuns(pdf: Buffer): readonly string[] {
   const raw = pdf.toString('latin1');
@@ -187,10 +205,7 @@ export type AmazonInvoiceRead =
  * change, not here.
  */
 function documentKind(heading: string): DocumentKind {
-  const upper = heading.toUpperCase();
-  if (upper.includes('ADJUSTMENT NOTE')) return 'other';
-  if (upper.includes('TAX INVOICE')) return 'tax_invoice';
-  return 'other';
+  return heading.toUpperCase().includes('TAX INVOICE') ? 'tax_invoice' : 'other';
 }
 
 /**
@@ -221,8 +236,9 @@ export function readAmazonInvoice(pdf: Buffer): AmazonInvoiceRead {
     };
   }
 
-  // The first run is the heading the template prints at the top of the page,
-  // which is the only place the document states what kind of document it is.
+  // Only the first run is consulted. The template prints the document's own
+  // name there, and a credit note's body goes on to name the invoice it
+  // adjusts — so a kind read from the whole text files it as that invoice.
   const [heading = ''] = runs;
   return {
     ok: true,
