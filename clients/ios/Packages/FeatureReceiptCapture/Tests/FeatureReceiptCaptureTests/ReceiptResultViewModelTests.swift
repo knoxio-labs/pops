@@ -33,7 +33,8 @@ internal struct ReceiptResultViewModelTests {
 
     @Test("a created outcome reaches the screen")
     func createdReachesTheScreen() async {
-        let outcome = ReceiptOutcome.created(purchaseId: "purchase-1", alreadyStored: false)
+        let outcome = ReceiptOutcome.created(
+            purchase: .fake(id: "purchase-1"), alreadyStored: false)
         let repository = InMemoryReceiptCaptureRepository(defaultOutcome: outcome)
         let model = model(repository)
 
@@ -45,7 +46,7 @@ internal struct ReceiptResultViewModelTests {
     @Test("a needs-review outcome reaches the screen with everything it carries")
     func needsReviewReachesTheScreen() async {
         let outcome = ReceiptOutcome.needsReview(
-            receiptURIs: ["uri-1"], failures: [.fake()], extracted: .fake())
+            receiptCount: 1, failures: [.fake()], extracted: .fake())
         let repository = InMemoryReceiptCaptureRepository(defaultOutcome: outcome)
         let model = model(repository)
 
@@ -56,7 +57,7 @@ internal struct ReceiptResultViewModelTests {
 
     @Test("an unreadable outcome reaches the screen")
     func unreadableReachesTheScreen() async {
-        let outcome = ReceiptOutcome.unreadable(receiptURIs: ["uri-1"], reason: "blank image")
+        let outcome = ReceiptOutcome.unreadable(receiptCount: 1, reason: "blank image")
         let repository = InMemoryReceiptCaptureRepository(defaultOutcome: outcome)
         let model = model(repository)
 
@@ -88,7 +89,8 @@ internal struct ReceiptResultViewModelTests {
         await model.submit()
         #expect(model.state == .failed(.unavailable))
 
-        let outcome = ReceiptOutcome.created(purchaseId: "purchase-1", alreadyStored: false)
+        let outcome = ReceiptOutcome.created(
+            purchase: .fake(id: "purchase-1"), alreadyStored: false)
         await repository.respond(onCall: 2, with: outcome)
         await model.submit()
 
@@ -102,7 +104,7 @@ internal struct ReceiptResultViewModelTests {
     @Test("an outcome that has landed is not resubmitted")
     func doesNotResubmitAnOutcome() async {
         let repository = InMemoryReceiptCaptureRepository(
-            defaultOutcome: .unreadable(receiptURIs: [], reason: "blank"))
+            defaultOutcome: .unreadable(receiptCount: 0, reason: "blank"))
         let model = model(repository)
 
         await model.submit()
@@ -117,7 +119,7 @@ internal struct ReceiptResultViewModelTests {
     @Test("two submissions racing produce one request")
     func submitIsNotReentrant() async {
         let repository = ScriptedReceiptCaptureRepository(
-            script: [.outcome(.unreadable(receiptURIs: [], reason: "blank"))],
+            script: [.outcome(.unreadable(receiptCount: 0, reason: "blank"))],
             gating: [1]
         )
         let model = model(repository)

@@ -105,10 +105,14 @@ describe('a receipt purchases created', () => {
 });
 
 describe('the other two outcomes', () => {
-  it('narrows needs-review to the problems, dropping the extracted reading', async () => {
+  it('publishes the gate’s objections and the reading they are about', async () => {
     const { client } = clientAnswering(
       purchasesNeedsReview([
-        { kind: 'sum-mismatch', detail: 'lines fall 240c short of the stated total' },
+        {
+          kind: 'sum-mismatch',
+          detail: 'lines fall 240c short of the stated total',
+          deltaCents: -240,
+        },
         { kind: 'unreadable-line', detail: 'line 7 is illegible' },
       ])
     );
@@ -119,12 +123,96 @@ describe('the other two outcomes', () => {
       kind: 'ok',
       value: {
         kind: 'needs-review',
+        receiptCount: 1,
         problems: [
-          { code: 'sum-mismatch', detail: 'lines fall 240c short of the stated total' },
-          { code: 'unreadable-line', detail: 'line 7 is illegible' },
+          {
+            code: 'sum-mismatch',
+            detail: 'lines fall 240c short of the stated total',
+            deltaCents: -240,
+          },
+          { code: 'unreadable-line', detail: 'line 7 is illegible', deltaCents: null },
         ],
+        extracted: {
+          merchantName: 'Woolworths',
+          address: '12 Example St',
+          purchasedOn: '2026-08-13',
+          purchasedAt: '14:05',
+          currency: 'AUD',
+          total: '$84.20',
+          tax: '$7.65',
+          discounts: ['$2.00'],
+          surcharges: ['$0.50'],
+          shipping: null,
+          lines: [{ description: 'MILK 2L', amount: '$3.10', quantity: 2, unitNote: '2 @ $1.55' }],
+          unreadableNotes: ['line 7 is smudged'],
+        },
       },
     });
+  });
+
+  it('drops the producer’s inferred timeZone, which no screen has a label for', async () => {
+    const { client } = clientAnswering(
+      purchasesNeedsReview([{ kind: 'no-lines', detail: 'none' }])
+    );
+
+    const outcome = await client.uploadReceipt(PARTS);
+
+    expect(isGatewayOk(outcome) && outcome.value.kind === 'needs-review').toBe(true);
+    if (!isGatewayOk(outcome) || outcome.value.kind !== 'needs-review') return;
+    expect(Object.keys(outcome.value.extracted)).not.toContain('timeZone');
+  });
+
+  it('turns the producer’s omitted defaults into explicit absences', async () => {
+    // `purchases` defaults address, shipping, discounts, surcharges and the
+    // unreadable notes rather than requiring them, so a model that omitted one
+    // produced a perfectly good reading. The phone gets one shape to decode.
+    const { client } = clientAnswering(
+      purchasesNeedsReview([{ kind: 'no-lines', detail: 'nothing legible' }], {
+        extracted: {
+          merchantName: null,
+          purchasedOn: null,
+          purchasedAt: null,
+          currency: null,
+          total: '$0.00',
+          tax: null,
+          lines: [{ description: 'ONE THING', amount: '$1.00' }],
+        },
+      })
+    );
+
+    const outcome = await client.uploadReceipt(PARTS);
+
+    expect(isGatewayOk(outcome) && outcome.value.kind === 'needs-review').toBe(true);
+    if (!isGatewayOk(outcome) || outcome.value.kind !== 'needs-review') return;
+    expect(outcome.value.extracted).toEqual({
+      merchantName: null,
+      address: null,
+      purchasedOn: null,
+      purchasedAt: null,
+      currency: null,
+      total: '$0.00',
+      tax: null,
+      discounts: [],
+      surcharges: [],
+      shipping: null,
+      lines: [{ description: 'ONE THING', amount: '$1.00', quantity: null, unitNote: null }],
+      unreadableNotes: [],
+    });
+  });
+
+  it('counts the stored parts rather than publishing pointers the phone cannot follow', async () => {
+    const { client } = clientAnswering(
+      purchasesNeedsReview([{ kind: 'no-lines', detail: 'none' }], {
+        receiptUris: ['pops://purchases/receipt/a', 'pops://purchases/receipt/b'],
+      })
+    );
+
+    const outcome = await client.uploadReceipt(PARTS);
+
+    expect(isGatewayOk(outcome) && outcome.value.kind === 'needs-review').toBe(true);
+    if (!isGatewayOk(outcome) || outcome.value.kind !== 'needs-review') return;
+    expect(outcome.value.receiptCount).toBe(2);
+    expect(JSON.stringify(outcome.value)).not.toContain('pops://');
   });
 
   it('accepts a failure kind this build has never heard of', async () => {
@@ -140,8 +228,26 @@ describe('the other two outcomes', () => {
     expect(isGatewayOk(outcome) && outcome.value.kind === 'needs-review').toBe(true);
     if (!isGatewayOk(outcome) || outcome.value.kind !== 'needs-review') return;
     expect(outcome.value.problems).toEqual([
-      { code: 'a-reason-invented-later', detail: 'whatever it is' },
+      { code: 'a-reason-invented-later', detail: 'whatever it is', deltaCents: null },
     ]);
+  });
+
+  it('refuses a needs-review the producer sent no reading with', async () => {
+    // The whole point of the arm. An outcome saying "these numbers disagree"
+    // with nothing to compare against is a screen that cannot be acted on, and
+    // that is a contract fault rather than something to render half of.
+    const { client } = clientAnswering({
+      kind: 'ok',
+      value: {
+        kind: 'needs-review',
+        receiptUris: ['pops://purchases/receipt/abc'],
+        failures: [{ kind: 'no-lines', detail: 'none' }],
+      },
+    });
+
+    const outcome = await client.uploadReceipt(PARTS);
+
+    expect(outcome.kind).toBe('contract-mismatch');
   });
 
   it('carries the unreadable reason through unchanged', async () => {
@@ -151,7 +257,7 @@ describe('the other two outcomes', () => {
 
     expect(outcome).toEqual({
       kind: 'ok',
-      value: { kind: 'unreadable', reason: 'no text was found in the image' },
+      value: { kind: 'unreadable', receiptCount: 1, reason: 'no text was found in the image' },
     });
   });
 });

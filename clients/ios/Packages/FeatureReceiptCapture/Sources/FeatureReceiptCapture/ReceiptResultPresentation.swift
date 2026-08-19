@@ -14,19 +14,19 @@ import Foundation
 internal struct ReceiptResultPresentation: Sendable {
     internal func content(_ outcome: ReceiptOutcome) -> ReceiptResultContent {
         switch outcome {
-        case .created(let purchaseId, let alreadyStored):
-            return .created(created(purchaseId: purchaseId, alreadyStored: alreadyStored))
-        case .needsReview(let receiptURIs, let failures, let extracted):
+        case .created(let purchase, let alreadyStored):
+            return .created(created(purchase: purchase, alreadyStored: alreadyStored))
+        case .needsReview(let receiptCount, let failures, let extracted):
             return .needsReview(
-                needsReview(receiptURIs: receiptURIs, failures: failures, extracted: extracted))
-        case .unreadable(let receiptURIs, let reason):
-            return .unreadable(unreadable(receiptURIs: receiptURIs, reason: reason))
+                needsReview(receiptCount: receiptCount, failures: failures, extracted: extracted))
+        case .unreadable(let receiptCount, let reason):
+            return .unreadable(unreadable(receiptCount: receiptCount, reason: reason))
         }
     }
 }
 
 extension ReceiptResultPresentation {
-    private func created(purchaseId: String, alreadyStored: Bool)
+    private func created(purchase: ReceiptPurchase, alreadyStored: Bool)
         -> ReceiptResultContent
         .CreatedContent
     {
@@ -34,24 +34,43 @@ extension ReceiptResultPresentation {
             heading: ReceiptResultCopy.createdHeading,
             message: alreadyStored
                 ? ReceiptResultCopy.createdAlreadyStoredMessage : ReceiptResultCopy.createdMessage,
-            reference: ReceiptResultCopy.purchaseReference(purchaseId),
+            summary: ReceiptResultCopy.purchaseSummary(
+                merchantName: purchase.merchantName,
+                itemCount: purchase.itemCount,
+                total: purchase.total.formatted()
+            ),
+            purchasedOn: purchasedOn(purchase.orderedAt),
+            reference: ReceiptResultCopy.purchaseReference(purchase.id),
             noDestinationNote: ReceiptResultCopy.createdNoDestination
         )
     }
 
+    /// The date half of the purchase's timestamp, in the reader's own locale.
+    ///
+    /// Unlike the receipt's transcribed `purchasedOn`, this one IS parsed —
+    /// it is a machine timestamp the purchases pillar computed, not a string
+    /// somebody read off paper, so rendering it as `2026-08-13T02:15:00.000Z`
+    /// would be showing the wire rather than the date. A value that will not
+    /// parse is dropped rather than shown raw: this screen has already said
+    /// what was recorded, and a malformed date adds nothing a reader can use.
+    private func purchasedOn(_ orderedAt: String) -> String? {
+        guard let date = ReceiptTimestamp.date(from: orderedAt) else { return nil }
+        return ReceiptResultCopy.purchasedOn(date.formatted(date: .abbreviated, time: .omitted))
+    }
+
     private func needsReview(
-        receiptURIs: [String], failures: [ReceiptGateFailure], extracted: ExtractedReceipt
+        receiptCount: Int, failures: [ReceiptGateFailure], extracted: ExtractedReceipt
     ) -> ReceiptResultContent.NeedsReviewContent {
         ReceiptResultContent.NeedsReviewContent(
             heading: ReceiptResultCopy.needsReviewHeading,
             message: ReceiptResultCopy.needsReviewMessage,
-            photoCount: photoCount(receiptURIs),
+            photoCount: photoCount(receiptCount),
             extractedFields: fields(extracted),
             failureLines: failureLines(failures)
         )
     }
 
-    private func unreadable(receiptURIs: [String], reason: String)
+    private func unreadable(receiptCount: Int, reason: String)
         -> ReceiptResultContent
         .UnreadableContent
     {
@@ -59,12 +78,12 @@ extension ReceiptResultPresentation {
             heading: ReceiptResultCopy.unreadableHeading,
             message: ReceiptResultCopy.unreadableMessage,
             reason: ReceiptResultCopy.unreadableReason(reason),
-            photoCount: photoCount(receiptURIs)
+            photoCount: photoCount(receiptCount)
         )
     }
 
-    private func photoCount(_ receiptURIs: [String]) -> String? {
-        receiptURIs.isEmpty ? nil : ReceiptResultCopy.photoCount(receiptURIs.count)
+    private func photoCount(_ receiptCount: Int) -> String? {
+        receiptCount <= 0 ? nil : ReceiptResultCopy.photoCount(receiptCount)
     }
 
     /// Every field the extraction can fill in, in receipt order — merchant
@@ -155,5 +174,32 @@ extension String {
     fileprivate var ifNotEmpty: String? {
         let trimmed = trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? nil : trimmed
+    }
+}
+
+/// Reading the purchase timestamp the way the producer is allowed to write it.
+///
+/// Two formatters rather than one, because `ISO8601DateFormatter` treats
+/// `.withFractionalSeconds` as a requirement rather than a permission: the one
+/// that accepts `…:00.000Z` rejects `…:00Z`, and the purchases pillar's own
+/// pattern admits both. Trying the strict one first and falling back is the
+/// whole of it.
+internal enum ReceiptTimestamp {
+    /// Built per call rather than cached in a `static let`, because
+    /// `ISO8601DateFormatter` is a mutable class and not `Sendable` — a shared
+    /// instance is a data race the language refuses under strict concurrency.
+    /// One confirmation screen reads one timestamp, so there is no scrolling
+    /// list paying for it here.
+    internal static func date(from value: String) -> Date? {
+        formatter(fractionalSeconds: true).date(from: value)
+            ?? formatter(fractionalSeconds: false).date(from: value)
+    }
+
+    private static func formatter(fractionalSeconds: Bool) -> ISO8601DateFormatter {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions =
+            fractionalSeconds
+            ? [.withInternetDateTime, .withFractionalSeconds] : [.withInternetDateTime]
+        return formatter
     }
 }

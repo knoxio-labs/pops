@@ -43,7 +43,8 @@ internal struct ReceiptResultRenderingTests {
 
     @Test("every card renders, and renders the same way twice")
     func rendersDeterministically() throws {
-        let outcome = ReceiptOutcome.created(purchaseId: "purchase-1", alreadyStored: false)
+        let outcome = ReceiptOutcome.created(
+            purchase: .fake(id: "purchase-1"), alreadyStored: false)
         let once = try #require(Self.render(Self.card(outcome)))
         let again = try #require(Self.render(Self.card(outcome)))
 
@@ -56,13 +57,14 @@ internal struct ReceiptResultRenderingTests {
     @Test("the three outcomes do not look alike", .requiresCompiledColorCatalog)
     func theThreeOutcomesAreVisuallyDistinct() throws {
         let created = try #require(
-            Self.render(Self.card(.created(purchaseId: "purchase-1", alreadyStored: false))))
+            Self.render(
+                Self.card(.created(purchase: .fake(id: "purchase-1"), alreadyStored: false))))
         let needsReview = try #require(
             Self.render(
                 Self.card(
-                    .needsReview(receiptURIs: ["uri-1"], failures: [.fake()], extracted: .fake()))))
+                    .needsReview(receiptCount: 1, failures: [.fake()], extracted: .fake()))))
         let unreadable = try #require(
-            Self.render(Self.card(.unreadable(receiptURIs: ["uri-1"], reason: "blank image"))))
+            Self.render(Self.card(.unreadable(receiptCount: 1, reason: "blank image"))))
 
         #expect(created != needsReview)
         #expect(created != unreadable)
@@ -74,9 +76,11 @@ internal struct ReceiptResultRenderingTests {
     @Test("a fresh write does not look like a re-upload", .requiresCompiledColorCatalog)
     func createdDistinguishesAlreadyStored() throws {
         let fresh = try #require(
-            Self.render(Self.card(.created(purchaseId: "purchase-1", alreadyStored: false))))
+            Self.render(
+                Self.card(.created(purchase: .fake(id: "purchase-1"), alreadyStored: false))))
         let repeated = try #require(
-            Self.render(Self.card(.created(purchaseId: "purchase-1", alreadyStored: true))))
+            Self.render(
+                Self.card(.created(purchase: .fake(id: "purchase-1"), alreadyStored: true))))
 
         #expect(fresh != repeated)
     }
@@ -85,7 +89,7 @@ internal struct ReceiptResultRenderingTests {
     /// schemes.
     @Test("a card renders differently in light and dark", .requiresCompiledColorCatalog)
     func followsTheColourScheme() throws {
-        let outcome = ReceiptOutcome.unreadable(receiptURIs: ["uri-1"], reason: "blank image")
+        let outcome = ReceiptOutcome.unreadable(receiptCount: 1, reason: "blank image")
         let light = try #require(Self.render(Self.card(outcome), in: .light))
         let dark = try #require(Self.render(Self.card(outcome), in: .dark))
 
@@ -101,13 +105,13 @@ internal struct ReceiptResultRenderingTests {
             Self.render(
                 Self.card(
                     .needsReview(
-                        receiptURIs: [], failures: [.fake()],
+                        receiptCount: 0, failures: [.fake()],
                         extracted: .fake(lines: [], unreadableNotes: [])))))
         let withoutFailures = try #require(
             Self.render(
                 Self.card(
                     .needsReview(
-                        receiptURIs: [], failures: [],
+                        receiptCount: 0, failures: [],
                         extracted: .fake(lines: [], unreadableNotes: [])))))
 
         #expect(withFailures != withoutFailures)
@@ -119,7 +123,7 @@ internal struct ReceiptResultRenderingTests {
         @Test("a needs-review card still renders at the largest accessibility text size")
         func survivesAccessibilityTextSizes() throws {
             let outcome = ReceiptOutcome.needsReview(
-                receiptURIs: ["uri-1"], failures: [.fake()], extracted: .fake())
+                receiptCount: 1, failures: [.fake()], extracted: .fake())
             let stock = try #require(Self.render(Self.card(outcome)))
             let huge = try #require(
                 Self.render(Self.card(outcome).dynamicTypeSize(.accessibility5)))

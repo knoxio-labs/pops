@@ -5,9 +5,9 @@ import OpenAPIRuntime
 /// Handing a photographed receipt to the purchases pillar through the BFM.
 ///
 /// The screen behind this knows only ``ReceiptCaptureRepository``. What the
-/// BFM's three-outcome contract looks like on the wire, and what it means
-/// that `needs-review` and `unreadable` carry far less than
-/// ``ExtractedReceipt`` can hold, are decided here, once.
+/// BFM's three-outcome contract looks like on the wire — which arm carries
+/// what, and which of the producer's fields never reach a handset at all — is
+/// decided here, once.
 ///
 /// Carries no credential of its own, matching ``BFMTransactionsRepository``:
 /// `POST /mobile/purchases/receipts` is a device-authenticated write, and the
@@ -70,47 +70,90 @@ extension BFMReceiptCaptureRepository {
 
     /// The wire's `oneOf` into ``ReceiptOutcome``.
     ///
-    /// `needs-review` and `unreadable` do not carry a photo reference on the
-    /// wire — `MobileReceiptOutcomeSchema` in the BFM's own contract states
-    /// that deliberately, to keep a payload the phone cannot act on off
-    /// cellular. ``ReceiptOutcome`` still declares `receiptURIs` on both, so
-    /// this reports none rather than inventing one; the result screen already
-    /// treats an empty list as "say nothing about the photo count" rather
-    /// than as a missing value.
+    /// Neither review arm carries a photo reference, and that is deliberate on
+    /// the BFM's side: the parts are addressed by `pops://` URIs into the
+    /// purchases pillar's own store, and no mobile route serves those bytes,
+    /// so the count is published instead of a pointer this app could only
+    /// ignore.
     private static func outcome(from payload: UploadReceipt.Output.Ok.Body.JsonPayload) throws
         -> ReceiptOutcome
     {
         switch payload {
         case .case1(let created):
-            return .created(purchaseId: created.purchase.id, alreadyStored: created.alreadyStored)
+            return .created(
+                purchase: purchase(from: created.purchase),
+                alreadyStored: created.alreadyStored
+            )
         case .case2(let needsReview):
             return .needsReview(
-                receiptURIs: [],
-                failures: try needsReview.problems.map(failure(from:)),
-                extracted: .empty
+                receiptCount: needsReview.receiptCount,
+                failures: needsReview.problems.map(failure(from:)),
+                extracted: extracted(from: needsReview.extracted)
             )
         case .case3(let unreadable):
-            return .unreadable(receiptURIs: [], reason: unreadable.reason)
+            return .unreadable(receiptCount: unreadable.receiptCount, reason: unreadable.reason)
         }
+    }
+
+    /// The wire's purchase into the one the confirmation screen draws.
+    ///
+    /// The cents and the currency code become a ``MoneyAmount`` here rather
+    /// than on the screen, matching ``BFMTransactionsRepository``: how many
+    /// minor units a currency has is one question, answered in one place.
+    private static func purchase(from wire: CreatedPurchase) -> ReceiptPurchase {
+        ReceiptPurchase(
+            id: wire.id,
+            merchantName: wire.merchantName,
+            total: MoneyAmount(minorUnits: wire.totalCents, currencyCode: wire.currency),
+            orderedAt: wire.orderedAt,
+            itemCount: wire.itemCount
+        )
     }
 
     /// One wire problem into ``ReceiptGateFailure``.
     ///
-    /// The BFM's own contract keeps `code` an open string on purpose — a gate
-    /// that grows a seventh reason must not fail every needs-review upload to
-    /// decode on a handset that has not been updated — but
-    /// ``ReceiptGateFailureKind`` is the closed set the result screen already
-    /// has copy for. A code outside it fails the whole outcome rather than
-    /// being rendered as a label nobody wrote, the same call
-    /// ``BFMTransactionsRepository`` makes about a row it cannot represent.
-    ///
-    /// `deltaCents` has nothing to read from: `MobileReceiptProblemSchema`
-    /// carries only `code` and `detail`.
-    private static func failure(from wire: NeedsReviewProblem) throws -> ReceiptGateFailure {
-        guard let kind = ReceiptGateFailureKind(rawValue: wire.code) else {
-            throw RepositoryError.contractMismatch
-        }
-        return ReceiptGateFailure(kind: kind, detail: wire.detail, deltaCents: nil)
+    /// A code this build has no copy for becomes
+    /// ``AppCore/ReceiptGateFailureKind/unrecognised(_:)`` rather than sinking
+    /// the outcome. The BFM keeps `code` open precisely so a gate that grows a
+    /// reason does not break an installed build, and refusing the answer here
+    /// would spend that guarantee on nothing — the producer's own `detail` is
+    /// the sentence a reviewer reads either way.
+    private static func failure(from wire: NeedsReviewProblem) -> ReceiptGateFailure {
+        ReceiptGateFailure(
+            kind: ReceiptGateFailureKind(wireCode: wire.code),
+            detail: wire.detail,
+            deltaCents: wire.deltaCents
+        )
+    }
+
+    /// The reading, field for field. Nothing is parsed: every money value is
+    /// the string the model transcribed off the paper, and turning one into a
+    /// number here would be this app asserting a figure the producer's own
+    /// gate has just refused to believe.
+    private static func extracted(from wire: NeedsReviewExtracted) -> ExtractedReceipt {
+        ExtractedReceipt(
+            merchantName: wire.merchantName,
+            address: wire.address,
+            purchasedOn: wire.purchasedOn,
+            purchasedAt: wire.purchasedAt,
+            currency: wire.currency,
+            total: wire.total,
+            tax: wire.tax,
+            discounts: wire.discounts,
+            surcharges: wire.surcharges,
+            shipping: wire.shipping,
+            lines: wire.lines.map(line(from:)),
+            unreadableNotes: wire.unreadableNotes
+        )
+    }
+
+    private static func line(from wire: NeedsReviewExtractedLine) -> ExtractedReceiptLine {
+        ExtractedReceiptLine(
+            description: wire.description,
+            amount: wire.amount,
+            quantity: wire.quantity,
+            unitNote: wire.unitNote
+        )
     }
 
     /// One ``ReceiptPart`` into the wire's shape. `Data` becomes base64
@@ -136,29 +179,6 @@ extension BFMReceiptCaptureRepository {
     }
 }
 
-extension ExtractedReceipt {
-    /// Every field absent. What a `needs-review` outcome maps to today: the
-    /// BFM's mobile contract does not send an extracted reading, so there is
-    /// nothing to fill this with. ``ReceiptResultPresentation`` drops a field
-    /// with nothing to show rather than rendering a dash, so this renders as
-    /// no extracted-fields section at all rather than one padded with blanks.
-    fileprivate static let empty = ExtractedReceipt(
-        merchantName: nil,
-        address: nil,
-        timeZone: nil,
-        purchasedOn: nil,
-        purchasedAt: nil,
-        currency: nil,
-        total: "",
-        tax: nil,
-        discounts: [],
-        surcharges: [],
-        shipping: nil,
-        lines: [],
-        unreadableNotes: []
-    )
-}
-
 /// The generated names, shortened. Written out in full they pass 120 columns
 /// in every signature above, and the type they abbreviate is `internal` to
 /// this module — nothing here widens what a caller can name.
@@ -167,5 +187,11 @@ private typealias UploadReceiptPart =
     UploadReceipt.Input.Body.JsonPayload.PartsPayloadPayload
 private typealias UploadReceiptMediaType =
     UploadReceipt.Input.Body.JsonPayload.PartsPayloadPayload.MediaTypePayload
+private typealias CreatedPurchase =
+    UploadReceipt.Output.Ok.Body.JsonPayload.Case1Payload.PurchasePayload
 private typealias NeedsReviewProblem =
     UploadReceipt.Output.Ok.Body.JsonPayload.Case2Payload.ProblemsPayloadPayload
+private typealias NeedsReviewExtracted =
+    UploadReceipt.Output.Ok.Body.JsonPayload.Case2Payload.ExtractedPayload
+private typealias NeedsReviewExtractedLine =
+    UploadReceipt.Output.Ok.Body.JsonPayload.Case2Payload.ExtractedPayload.LinesPayloadPayload

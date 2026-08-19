@@ -25,20 +25,20 @@ public struct ExtractedReceiptLine: Hashable, Sendable {
 
 /// What a vision model read off a receipt that did not reconcile with the
 /// total the receipt itself states — the payload behind
-/// ``ReceiptOutcome/needsReview(receiptURIs:failures:extracted:)``.
+/// ``ReceiptOutcome/needsReview(receiptCount:failures:extracted:)``.
 ///
 /// A reviewer's whole job is comparing this against the photograph, so every
 /// field the purchases pillar's gate can fail on is carried here typed,
 /// rather than folded into one opaque string the reviewer cannot check
 /// anything against.
+///
+/// That is also the boundary. The producer infers an IANA timezone from the
+/// shop's address to place the purchase in time; it is not transcription, so
+/// there is nothing on the paper to check it against, and it is not carried.
 public struct ExtractedReceipt: Hashable, Sendable {
     /// As printed at the top. `nil` is a valid outcome, not a failure.
     public let merchantName: String?
     public let address: String?
-    /// IANA zone the shop is in, inferred rather than printed. Carried
-    /// alongside ``address`` so the inference can be checked against what was
-    /// actually on the paper.
-    public let timeZone: String?
     /// `YYYY-MM-DD`, as the receipt's own date format resolves to.
     public let purchasedOn: String?
     /// `HH:MM`, 24-hour, when the receipt prints one.
@@ -68,7 +68,6 @@ public struct ExtractedReceipt: Hashable, Sendable {
     public init(
         merchantName: String?,
         address: String?,
-        timeZone: String?,
         purchasedOn: String?,
         purchasedAt: String?,
         currency: String?,
@@ -82,7 +81,6 @@ public struct ExtractedReceipt: Hashable, Sendable {
     ) {
         self.merchantName = merchantName
         self.address = address
-        self.timeZone = timeZone
         self.purchasedOn = purchasedOn
         self.purchasedAt = purchasedAt
         self.currency = currency

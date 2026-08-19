@@ -287,9 +287,12 @@ and each is asserted in `src/api/__tests__/mobile-receipts.test.ts` or
   `unreadable` are told apart by the body's `kind`, because all three are
   purchases having read the upload and answered. Only a failure to get an
   answer at all is a non-200, through the same upstream mapping the read routes
-  use. The mobile `needs-review` deliberately carries the problems and not the
-  full extracted reading: reviewing one is a side-by-side against the
-  photograph, which is the operator surface's job.
+  use. Each arm carries what its screen draws: `created` the purchase summary,
+  `needs-review` the gate's objections **and** the reading they are about,
+  because an objection without the reading names a discrepancy the reader has
+  nothing to check it against. What no arm carries is the stored parts'
+  `pops://` URIs — no mobile route serves those bytes, so `receiptCount` is
+  published instead of a pointer the handset cannot follow.
 - **The size ceiling is bfm's own.** `MOBILE_UPLOAD_MAX_BYTES` (12mb) is
   mounted on that one path — every other route keeps Express's 100kb default —
   and an oversized body is refused here, in the shape the contract declares,
