@@ -39,8 +39,30 @@ screen. It exists for the residual: listing the orders and stopping would turn
 "$11.28 of this charge is unexplained" into a view that looks complete. Like
 the merchant lens's unexplained bucket it is never clamped — negative means the
 links claim more than the transaction is worth, which is a real defect worth
-seeing. The two sides are compared as magnitudes, since finance publishes
-decimal dollars and purchases counts signed integer cents.
+seeing. Each side is summed with its own signs and only the two totals are
+compared as magnitudes, since finance publishes decimal dollars and purchases
+counts signed integer cents.
+
+It also refuses to add across currencies, for the reason the merchant lens
+groups by them: a charge's currency is the producer's _settlement_ currency,
+which it defaults from the order and does not promise matches the card's, so a
+set of charges naming more than one is reported as mixed rather than totalled
+under whichever code came first. The per-order shares stay visible either way,
+each in the currency it settled in.
+
+## What "unavailable" means here
+
+The failure notice draws a pillar that is down differently from a request that
+was refused, because only the second says anything about the transaction on
+screen. That split is made on how the answer failed, not on its status code:
+this client is pinned to a same-origin proxy path, and an unrouted proxy
+answers `200` with the SPA's own `index.html`, which reaches the SDK as a
+parser error under a success status. `purchases-api-helpers.ts` calls anything
+that did not arrive as the pillar's own JSON body a transport failure, and
+drops its wording rather than re-throwing it — the shell installs a global
+query-cache handler that pattern-matches fetch's phrasing into a "check your
+connection" toast across the whole app, which a sibling pillar's outage has not
+earned.
 
 ## What this does not do
 

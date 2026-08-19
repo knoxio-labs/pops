@@ -31,9 +31,16 @@ export interface PurchasesForTransaction {
  * `skipToken` while no transaction is selected, so mounting the transactions
  * page costs no cross-pillar traffic and no request is ever built around a
  * placeholder id.
+ *
+ * `retry: false`, as everywhere else this app calls a service: the shell's
+ * client leaves react-query's three retries in place, which would replay a
+ * deterministic refusal at another pillar three times and hold the skeleton up
+ * for seconds before an outage is admitted. The notice offers the retry
+ * instead, at a moment the reader chose.
  */
 export function usePurchasesForTransaction(transactionId: string | null): PurchasesForTransaction {
   const query = useQuery({
+    retry: false,
     queryKey: ['purchases', 'reconcile', 'links', transactionId],
     queryFn:
       transactionId === null

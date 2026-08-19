@@ -39,6 +39,8 @@
   "transactions.purchaseDetail.fullyAccounted": "Every cent of this transaction is accounted for.",
   "transactions.purchaseDetail.unaccounted": "{{amount}} of this transaction is not accounted for by any order.",
   "transactions.purchaseDetail.overAccounted": "Orders claim {{amount}} more than this transaction is worth.",
+  "transactions.purchaseDetail.mixedCurrency": "These orders settled in more than one currency ({{currencies}}), so they do not add up to one total.",
+  "transactions.purchaseDetail.mixedCurrencyResidual": "How much of this transaction is left unaccounted for cannot be stated across currencies. Each order’s share is shown below in the currency it settled in.",
   "transactions.purchaseDetail.combined": "Combined settlement — {{count}} orders",
   "transactions.purchaseDetail.merchantUnnamed": "Merchant not named",
   "transactions.purchaseDetail.orderedAt": "Ordered {{date}}",

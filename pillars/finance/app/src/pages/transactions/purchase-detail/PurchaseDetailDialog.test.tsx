@@ -38,6 +38,7 @@ function charge(overrides: {
   id?: string;
   amountCents?: number;
   linkCents?: number;
+  currency?: string;
   confirmedAt?: string | null;
   linkType?: LinkedCharge['link']['linkType'];
 }): LinkedCharge {
@@ -47,7 +48,7 @@ function charge(overrides: {
       amountCents,
       chargedAt: '2026-03-05T00:00:00.000Z',
       createdAt: '2026-03-05T00:00:00.000Z',
-      currency: 'AUD',
+      currency: overrides.currency ?? 'AUD',
       id: overrides.id ?? 'chg-1',
       orderAmountCents: amountCents,
       origin: 'merchant',
@@ -110,8 +111,13 @@ function answers(purchases: LinkedPurchase[]) {
   };
 }
 
+/**
+ * Deliberately not `retry: false`: react-query's default of three retries is
+ * what the shell's client actually gives this hook, so overriding it here
+ * would test a policy the app does not run.
+ */
 function Wrapper({ children }: { children: ReactNode }) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const client = new QueryClient();
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
 }
 
@@ -199,6 +205,41 @@ describe('PurchaseDetailDialog', () => {
     ).toBeInTheDocument();
   });
 
+  it('says so out loud when the orders explain the whole transaction', async () => {
+    reconcileLinksMock.mockResolvedValue(answers([entry('order-1', [charge({})])]));
+    renderDialog();
+
+    const summary = await screen.findByTestId('settlement-summary');
+    expect(
+      within(summary).getByText('Every cent of this transaction is accounted for.')
+    ).toBeInTheDocument();
+  });
+
+  it('says the orders claim more than the transaction is worth', async () => {
+    reconcileLinksMock.mockResolvedValue(
+      answers([entry('order-1', [charge({ amountCents: 5000 })])])
+    );
+    renderDialog();
+
+    const summary = await screen.findByTestId('settlement-summary');
+    expect(within(summary).getByText(/Orders claim \$8\.72 more/u)).toBeInTheDocument();
+  });
+
+  it('states no total when the orders settled in different currencies', async () => {
+    reconcileLinksMock.mockResolvedValue(
+      answers([
+        entry('order-1', [charge({ id: 'chg-1', amountCents: 4128, currency: 'AUD' })]),
+        entry('order-2', [charge({ id: 'chg-2', amountCents: 1872, currency: 'USD' })]),
+      ])
+    );
+    renderDialog();
+
+    const summary = await screen.findByTestId('settlement-summary');
+    expect(within(summary).getByText(/more than one currency \(AUD, USD\)/u)).toBeInTheDocument();
+    expect(within(summary).queryByText(/Orders account for/u)).not.toBeInTheDocument();
+    expect(within(summary).queryByText(/not accounted for by any order/u)).not.toBeInTheDocument();
+  });
+
   it('tells a confirmed link apart from one the matcher merely believes', async () => {
     reconcileLinksMock.mockResolvedValue(
       answers([
@@ -216,7 +257,22 @@ describe('PurchaseDetailDialog', () => {
     expect(screen.getByText(/a later sweep may withdraw it/u)).toBeInTheDocument();
   });
 
-  it('marks the order card when any of its links is unconfirmed', async () => {
+  it('marks the order card when any one of its links is unconfirmed', async () => {
+    reconcileLinksMock.mockResolvedValue(
+      answers([
+        entry('order-1', [
+          charge({ id: 'chg-1', amountCents: 3000, confirmedAt: '2026-03-07T00:00:00.000Z' }),
+          charge({ id: 'chg-2', amountCents: 1128, confirmedAt: null }),
+        ]),
+      ])
+    );
+    renderDialog();
+
+    await screen.findByText('Amazon');
+    expect(orderCard('order-1')).toHaveAttribute('data-unconfirmed', 'true');
+  });
+
+  it('leaves the order card unmarked when every link was confirmed', async () => {
     reconcileLinksMock.mockResolvedValue(
       answers([
         entry('order-1', [charge({ id: 'chg-1', confirmedAt: '2026-03-07T00:00:00.000Z' })]),
@@ -260,6 +316,43 @@ describe('PurchaseDetailDialog', () => {
     renderDialog();
 
     expect(await screen.findByText('Could not load purchase detail')).toBeInTheDocument();
+    expect(screen.getByText('transactionUri is required')).toBeInTheDocument();
     expect(screen.queryByText(/could not be reached/u)).not.toBeInTheDocument();
+  });
+
+  it('does not replay a refusal at the other pillar', async () => {
+    reconcileLinksMock.mockResolvedValue({
+      data: undefined,
+      error: { message: 'transactionUri is required' },
+      response: { status: 400 } as Response,
+    });
+    renderDialog();
+
+    await screen.findByText('Could not load purchase detail');
+    expect(reconcileLinksMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('treats a proxy answering 200 with the SPA shell as the outage it is', async () => {
+    reconcileLinksMock.mockResolvedValue({
+      data: undefined,
+      error: new SyntaxError('Unexpected token < in JSON at position 0'),
+      response: { status: 200 } as Response,
+    });
+    renderDialog();
+
+    expect(await screen.findByText(/purchases pillar could not be reached/u)).toBeInTheDocument();
+    expect(screen.queryByText('Could not load purchase detail')).not.toBeInTheDocument();
+  });
+
+  it('keeps a transport failure’s own wording off the screen', async () => {
+    reconcileLinksMock.mockResolvedValue({
+      data: undefined,
+      error: new TypeError('Failed to fetch'),
+      response: undefined,
+    });
+    renderDialog();
+
+    await screen.findByText(/purchases pillar could not be reached/u);
+    expect(screen.queryByText(/Failed to fetch/u)).not.toBeInTheDocument();
   });
 });

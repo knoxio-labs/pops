@@ -105,6 +105,11 @@ function Body({
  * and only one of them says anything about this transaction. Reporting an
  * unreachable purchases as a failure of the transaction on screen would send
  * a reader looking for a problem in their own data.
+ *
+ * The upstream detail line is shown only for a refusal, where it is the
+ * pillar's own sentence about what it would not do. An outage has no such
+ * sentence — only a transport message no reader can act on, in whatever
+ * language the layer that produced it happened to be written in.
  */
 function FailureNotice({ state }: { state: ReturnType<typeof usePurchasesForTransaction> }) {
   const { t } = useTranslation('finance');
@@ -116,7 +121,9 @@ function FailureNotice({ state }: { state: ReturnType<typeof usePurchasesForTran
           ? t('transactions.purchaseDetail.unavailable')
           : t('transactions.purchaseDetail.failed')}
       </p>
-      {state.error !== null && <p className="text-sm">{state.error.message}</p>}
+      {!state.isUnavailable && state.error !== null && (
+        <p className="text-sm">{state.error.message}</p>
+      )}
       <Button variant="link" size="sm" onClick={state.refetch} className="mt-2 px-0">
         {t('common:tryAgain')}
       </Button>
@@ -138,20 +145,25 @@ function residualLine(t: TFunction<'finance'>, unaccountedCents: number, currenc
  * Always rendered, including when it balances, for the reason the merchant
  * lens states: a view that shows the residual only when it is inconvenient
  * teaches a reader that its absence means zero, when it can equally mean
- * nobody computed it.
+ * nobody computed it. Where the charges settled in more than one currency
+ * there is no residual to render — saying so is the same commitment, since
+ * the alternative is a total that reads as authoritative and means nothing.
  */
 function SettlementLine({ summary }: { summary: SettlementSummary }) {
   const { t } = useTranslation('finance');
-  const { currency, unaccountedCents } = summary;
 
   return (
     <div className="rounded-md border p-3 space-y-1" data-testid="settlement-summary">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm">
-          {t('transactions.purchaseDetail.accountedFor', {
-            linked: formatCents(summary.linkedCents, currency),
-            total: formatCents(summary.transactionCents, currency),
-          })}
+          {summary.kind === 'settled'
+            ? t('transactions.purchaseDetail.accountedFor', {
+                linked: formatCents(summary.linkedCents, summary.currency),
+                total: formatCents(summary.transactionCents, summary.currency),
+              })
+            : t('transactions.purchaseDetail.mixedCurrency', {
+                currencies: summary.currencies.join(', '),
+              })}
         </p>
         {summary.orderCount > 1 && (
           <Badge variant="outline">
@@ -159,9 +171,15 @@ function SettlementLine({ summary }: { summary: SettlementSummary }) {
           </Badge>
         )}
       </div>
-      <p className="text-muted-foreground text-xs" data-unaccounted={unaccountedCents}>
-        {residualLine(t, unaccountedCents, currency)}
-      </p>
+      {summary.kind === 'settled' ? (
+        <p className="text-muted-foreground text-xs" data-unaccounted={summary.unaccountedCents}>
+          {residualLine(t, summary.unaccountedCents, summary.currency)}
+        </p>
+      ) : (
+        <p className="text-muted-foreground text-xs" data-unaccounted="mixed-currency">
+          {t('transactions.purchaseDetail.mixedCurrencyResidual')}
+        </p>
+      )}
     </div>
   );
 }

@@ -82,6 +82,7 @@ describe('summariseSettlement', () => {
     const summary = summariseSettlement([entry('order-1', [charge({})])], -41.28);
 
     expect(summary).toEqual({
+      kind: 'settled',
       currency: 'AUD',
       linkedCents: 4128,
       orderCount: 1,
@@ -96,8 +97,7 @@ describe('summariseSettlement', () => {
       -41.28
     );
 
-    expect(summary?.linkedCents).toBe(3000);
-    expect(summary?.unaccountedCents).toBe(1128);
+    expect(summary).toMatchObject({ linkedCents: 3000, unaccountedCents: 1128 });
   });
 
   it('sums every order of a combined settlement rather than reporting the first', () => {
@@ -109,9 +109,7 @@ describe('summariseSettlement', () => {
       -60
     );
 
-    expect(summary?.orderCount).toBe(2);
-    expect(summary?.linkedCents).toBe(6000);
-    expect(summary?.unaccountedCents).toBe(0);
+    expect(summary).toMatchObject({ orderCount: 2, linkedCents: 6000, unaccountedCents: 0 });
   });
 
   it('leaves an over-claimed transaction negative instead of clamping it to zero', () => {
@@ -120,15 +118,15 @@ describe('summariseSettlement', () => {
       -41.28
     );
 
-    expect(summary?.unaccountedCents).toBe(-872);
+    expect(summary).toMatchObject({ unaccountedCents: -872 });
   });
 
   it('compares magnitudes, so the two sides signing an expense differently cannot invent a residual', () => {
     const positive = summariseSettlement([entry('order-1', [charge({})])], 41.28);
     const negative = summariseSettlement([entry('order-1', [charge({})])], -41.28);
 
-    expect(positive?.unaccountedCents).toBe(0);
-    expect(negative?.unaccountedCents).toBe(0);
+    expect(positive).toMatchObject({ unaccountedCents: 0 });
+    expect(negative).toMatchObject({ unaccountedCents: 0 });
   });
 
   it('rounds the dollar amount rather than truncating it, so no phantom cent appears', () => {
@@ -137,14 +135,57 @@ describe('summariseSettlement', () => {
       -19.99
     );
 
-    expect(summary?.transactionCents).toBe(1999);
-    expect(summary?.unaccountedCents).toBe(0);
+    expect(summary).toMatchObject({ transactionCents: 1999, unaccountedCents: 0 });
   });
 
   it('names the currency the charges settled in, not the order currency', () => {
     const usdOrder = entry('order-1', [charge({ currency: 'AUD' })], 'USD');
+    const summary = summariseSettlement([usdOrder], -41.28);
 
-    expect(summariseSettlement([usdOrder], -41.28)?.currency).toBe('AUD');
+    expect(summary?.kind).toBe('settled');
+    expect(summary).toMatchObject({ currency: 'AUD' });
+  });
+
+  it('refuses to add charges that settled in different currencies', () => {
+    const summary = summariseSettlement(
+      [
+        entry('order-1', [charge({ id: 'chg-1', amountCents: 4128, currency: 'AUD' })]),
+        entry('order-2', [charge({ id: 'chg-2', amountCents: 1872, currency: 'USD' })]),
+      ],
+      -60
+    );
+
+    expect(summary).toEqual({
+      kind: 'mixed-currency',
+      orderCount: 2,
+      currencies: ['AUD', 'USD'],
+    });
+  });
+
+  it('refuses a mixed-currency sum within a single order too', () => {
+    const summary = summariseSettlement(
+      [
+        entry('order-1', [
+          charge({ id: 'chg-1', amountCents: 3000, currency: 'AUD' }),
+          charge({ id: 'chg-2', amountCents: 1128, currency: 'NZD' }),
+        ]),
+      ],
+      -41.28
+    );
+
+    expect(summary?.kind).toBe('mixed-currency');
+  });
+
+  it('cancels a refund against a capture instead of adding their magnitudes', () => {
+    const summary = summariseSettlement(
+      [
+        entry('order-1', [charge({ id: 'chg-1', amountCents: 5000 })]),
+        entry('order-2', [charge({ id: 'chg-2', amountCents: -872 })]),
+      ],
+      -41.28
+    );
+
+    expect(summary).toMatchObject({ linkedCents: 4128, unaccountedCents: 0 });
   });
 });
 

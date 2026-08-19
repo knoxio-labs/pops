@@ -39,6 +39,8 @@
   "transactions.purchaseDetail.fullyAccounted": "Cada centavo desta transação está explicado.",
   "transactions.purchaseDetail.unaccounted": "{{amount}} desta transação não é explicado por nenhum pedido.",
   "transactions.purchaseDetail.overAccounted": "Os pedidos reivindicam {{amount}} a mais do que esta transação vale.",
+  "transactions.purchaseDetail.mixedCurrency": "Estes pedidos foram liquidados em mais de uma moeda ({{currencies}}), portanto não somam um total único.",
+  "transactions.purchaseDetail.mixedCurrencyResidual": "Quanto desta transação permanece sem explicação não pode ser afirmado entre moedas. A parcela de cada pedido aparece abaixo na moeda em que foi liquidada.",
   "transactions.purchaseDetail.combined": "Liquidação combinada — {{count}} pedidos",
   "transactions.purchaseDetail.merchantUnnamed": "Comerciante não informado",
   "transactions.purchaseDetail.orderedAt": "Pedido em {{date}}",
