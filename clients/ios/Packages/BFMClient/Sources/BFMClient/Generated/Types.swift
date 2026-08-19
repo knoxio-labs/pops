@@ -4522,6 +4522,95 @@ internal enum Operations {
             internal enum Body: Sendable, Hashable {
                 /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json`.
                 internal struct JsonPayload: Codable, Hashable, Sendable {
+                    /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/capture`.
+                    internal struct CapturePayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/capture/capturedAt`.
+                        internal var capturedAt: Foundation.Date?
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/capture/location`.
+                        internal struct LocationPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/capture/location/latitude`.
+                            internal var latitude: Swift.Double
+                            /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/capture/location/longitude`.
+                            internal var longitude: Swift.Double
+                            /// Creates a new `LocationPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - latitude:
+                            ///   - longitude:
+                            internal init(
+                                latitude: Swift.Double,
+                                longitude: Swift.Double
+                            ) {
+                                self.latitude = latitude
+                                self.longitude = longitude
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case latitude
+                                case longitude
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.latitude = try container.decode(
+                                    Swift.Double.self,
+                                    forKey: .latitude
+                                )
+                                self.longitude = try container.decode(
+                                    Swift.Double.self,
+                                    forKey: .longitude
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "latitude",
+                                    "longitude"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/capture/location`.
+                        internal var location: Operations.MobilePurchases_uploadReceipt.Input.Body.JsonPayload.CapturePayload.LocationPayload?
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/capture/timeZone`.
+                        internal var timeZone: Swift.String?
+                        /// Creates a new `CapturePayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - capturedAt:
+                        ///   - location:
+                        ///   - timeZone:
+                        internal init(
+                            capturedAt: Foundation.Date? = nil,
+                            location: Operations.MobilePurchases_uploadReceipt.Input.Body.JsonPayload.CapturePayload.LocationPayload? = nil,
+                            timeZone: Swift.String? = nil
+                        ) {
+                            self.capturedAt = capturedAt
+                            self.location = location
+                            self.timeZone = timeZone
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case capturedAt
+                            case location
+                            case timeZone
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.capturedAt = try container.decodeIfPresent(
+                                Foundation.Date.self,
+                                forKey: .capturedAt
+                            )
+                            self.location = try container.decodeIfPresent(
+                                Operations.MobilePurchases_uploadReceipt.Input.Body.JsonPayload.CapturePayload.LocationPayload.self,
+                                forKey: .location
+                            )
+                            self.timeZone = try container.decodeIfPresent(
+                                Swift.String.self,
+                                forKey: .timeZone
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "capturedAt",
+                                "location",
+                                "timeZone"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/capture`.
+                    internal var capture: Operations.MobilePurchases_uploadReceipt.Input.Body.JsonPayload.CapturePayload?
                     /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/PartsPayload`.
                     internal struct PartsPayloadPayload: Codable, Hashable, Sendable {
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/PartsPayload/dataBase64`.
@@ -4576,20 +4665,31 @@ internal enum Operations {
                     /// Creates a new `JsonPayload`.
                     ///
                     /// - Parameters:
+                    ///   - capture:
                     ///   - parts:
-                    internal init(parts: Operations.MobilePurchases_uploadReceipt.Input.Body.JsonPayload.PartsPayload) {
+                    internal init(
+                        capture: Operations.MobilePurchases_uploadReceipt.Input.Body.JsonPayload.CapturePayload? = nil,
+                        parts: Operations.MobilePurchases_uploadReceipt.Input.Body.JsonPayload.PartsPayload
+                    ) {
+                        self.capture = capture
                         self.parts = parts
                     }
                     internal enum CodingKeys: String, CodingKey {
+                        case capture
                         case parts
                     }
                     internal init(from decoder: any Swift.Decoder) throws {
                         let container = try decoder.container(keyedBy: CodingKeys.self)
+                        self.capture = try container.decodeIfPresent(
+                            Operations.MobilePurchases_uploadReceipt.Input.Body.JsonPayload.CapturePayload.self,
+                            forKey: .capture
+                        )
                         self.parts = try container.decode(
                             Operations.MobilePurchases_uploadReceipt.Input.Body.JsonPayload.PartsPayload.self,
                             forKey: .parts
                         )
                         try decoder.ensureNoAdditionalProperties(knownKeys: [
+                            "capture",
                             "parts"
                         ])
                     }

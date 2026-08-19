@@ -8,6 +8,11 @@
  * the drop-zone inferred a timezone from a printed address and dated an
  * undated receipt from its upload.
  *
+ * Storing the location was a decision rather than a by-product of reading
+ * the file, and it is recorded as one in
+ * [ADR-047](../../../../../docs/architecture/adr-047-purchases-stores-capture-location.md).
+ * Read that before widening what this table holds or what may join it.
+ *
  * **Its own table rather than columns on `purchases`.** The coordinates are
  * the most sensitive thing this pillar stores, and a column on the order row
  * is a column every `SELECT` over an order carries into every serializer,

@@ -209,6 +209,118 @@ describe('the three outcomes', () => {
   });
 });
 
+describe('what the handset knew that the paper cannot state', () => {
+  const CAPTURE = {
+    capturedAt: '2026-08-13T14:05:00+10:00',
+    timeZone: 'Australia/Sydney',
+    location: { latitude: -33.87, longitude: 151.21 },
+  };
+
+  it('carries the capture block through the perimeter unchanged', async () => {
+    const { app, token, fake } = openWith(purchasesCreated());
+
+    const res = await post(app, token, { parts: ONE_PART, capture: CAPTURE });
+
+    expect(res.status).toBe(200);
+    expect(fake.uploads).toEqual([{ parts: ONE_PART, capture: CAPTURE }]);
+  });
+
+  it('accepts an upload that states none, exactly as before', async () => {
+    // The compatibility guarantee that matters most here: the app is
+    // distributed rather than deployed, so a build predating this field keeps
+    // calling the route from hardware nobody can roll forward (ADR-043).
+    const { app, token, fake } = openWith(purchasesCreated());
+
+    const res = await post(app, token, { parts: ONE_PART });
+
+    expect(res.status).toBe(200);
+    expect(fake.uploads).toEqual([{ parts: ONE_PART }]);
+  });
+
+  it('accepts a capture block stating only some of what it could', async () => {
+    const { app, token, fake } = openWith(purchasesCreated());
+
+    const res = await post(app, token, { parts: ONE_PART, capture: { timeZone: 'Europe/Paris' } });
+
+    expect(res.status).toBe(200);
+    expect(fake.uploads).toEqual([{ parts: ONE_PART, capture: { timeZone: 'Europe/Paris' } }]);
+  });
+
+  it('refuses a capture time with no offset here rather than upstream', async () => {
+    // The producer requires the offset, so a naive local timestamp is a 400
+    // either way. Answering it at the perimeter makes it a fixable client
+    // mistake instead of an upstream error the phone cannot act on.
+    const { app, token, fake } = openWith(purchasesCreated());
+
+    const res = await post(app, token, {
+      parts: ONE_PART,
+      capture: { capturedAt: '2026-08-13T14:05:00' },
+    });
+
+    expect(res.status).toBe(400);
+    expect(fake.uploads).toEqual([]);
+  });
+
+  it('refuses a coordinate that is not a point on the globe', async () => {
+    const { app, token, fake } = openWith(purchasesCreated());
+
+    const res = await post(app, token, {
+      parts: ONE_PART,
+      capture: { location: { latitude: 200, longitude: 10 } },
+    });
+
+    expect(res.status).toBe(400);
+    expect(fake.uploads).toEqual([]);
+  });
+
+  it('refuses half a coordinate, which is not a place', async () => {
+    const { app, token, fake } = openWith(purchasesCreated());
+
+    const res = await post(app, token, {
+      parts: ONE_PART,
+      capture: { location: { latitude: -33.87 } },
+    });
+
+    expect(res.status).toBe(400);
+    expect(fake.uploads).toEqual([]);
+  });
+
+  it('never echoes a coordinate back in the refusal', async () => {
+    // A location is the most sensitive thing this route carries, and a
+    // validation error that quotes the offending value is the ordinary way
+    // one ends up in a log or on a screen it was never meant to reach.
+    const { app, token } = openWith(purchasesCreated());
+
+    const res = await post(app, token, {
+      parts: ONE_PART,
+      capture: { location: { latitude: 123.456, longitude: 151.21 } },
+    });
+
+    expect(res.status).toBe(400);
+    const body = JSON.stringify(res.body);
+    expect(body).not.toContain('151.21');
+    expect(body).not.toContain('123.456');
+    expect(body).not.toContain('latitude');
+    expect(body).not.toContain('longitude');
+  });
+
+  it('forwards a capture time bfm would have no way to check', async () => {
+    // 2041 is the producer's to discard: it owns the upload instant this has
+    // to be compared against. A second opinion here is a second rule.
+    const { app, token, fake } = openWith(purchasesCreated());
+
+    const res = await post(app, token, {
+      parts: ONE_PART,
+      capture: { capturedAt: '2041-03-02T09:00:00Z' },
+    });
+
+    expect(res.status).toBe(200);
+    expect(fake.uploads).toEqual([
+      { parts: ONE_PART, capture: { capturedAt: '2041-03-02T09:00:00Z' } },
+    ]);
+  });
+});
+
 describe('the request the app can get wrong', () => {
   it('refuses an empty parts list as a 400 the client has a case for', async () => {
     const { app, token, fake } = openWith(purchasesCreated());

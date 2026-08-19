@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { MobileCaptureMetadataSchema } from './capture.js';
+
 /**
  * Liveness shape every pillar's `/health` returns. `pillar` is pinned to the
  * literal `bfm` rather than a free string so a misrouted proxy — a request
@@ -336,6 +338,21 @@ export type MobileReceiptPart = z.infer<typeof MobileReceiptPartSchema>;
  */
 export const MobileReceiptUploadBodySchema = z.object({
   parts: z.array(MobileReceiptPartSchema).min(1).max(MOBILE_RECEIPT_MAX_PARTS),
+  /**
+   * What the handset knew that the paper cannot state — see `capture.ts`,
+   * which is also where the reason a location is accepted at all lives.
+   *
+   * One object for the whole submission rather than one per part: several
+   * photographs of one long receipt are one capture event, and a client that
+   * could say something different about frame three of the same till slip
+   * would be describing a different shop.
+   *
+   * Forwarded verbatim and judged nowhere, for the same reason bfm mints no
+   * idempotency key: the pillar that owns the record owns the judgement, and
+   * it is the one holding the upload instant a capture time is measured
+   * against (ADR-046, ADR-047).
+   */
+  capture: MobileCaptureMetadataSchema.optional(),
 });
 
 export type MobileReceiptUploadBody = z.infer<typeof MobileReceiptUploadBodySchema>;

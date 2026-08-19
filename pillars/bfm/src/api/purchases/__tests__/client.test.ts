@@ -281,6 +281,59 @@ describe('what reaches the producer', () => {
 
     expect(Object.keys(fake.uploads[0] as Record<string, unknown>)).toEqual(['parts']);
   });
+
+  it('forwards the whole capture block verbatim', async () => {
+    // Field for field, including the location. bfm is a proxy of what the
+    // handset observed; reshaping any of it here would put this pillar's
+    // opinion between a device and the pillar that owns the judgement.
+    const { client, fake } = clientAnswering(purchasesCreated());
+    const capture = {
+      capturedAt: '2026-08-13T14:05:00+10:00',
+      timeZone: 'Australia/Sydney',
+      location: { latitude: -33.87, longitude: 151.21 },
+    };
+
+    await client.uploadReceipt(PARTS, capture);
+
+    expect(fake.uploads).toEqual([{ parts: PARTS, capture }]);
+  });
+
+  it('sends no capture key at all when the handset supplied none', async () => {
+    // Absent, not `capture: undefined`. The producer's body schema tells the
+    // two apart, and relying on JSON dropping the key would be relying on a
+    // coincidence rather than on the contract.
+    const { client, fake } = clientAnswering(purchasesCreated());
+
+    await client.uploadReceipt(PARTS);
+
+    expect(Object.keys(fake.uploads[0] as Record<string, unknown>)).toEqual(['parts']);
+  });
+
+  it('forwards a partial capture block without filling the gaps', async () => {
+    // A handset with location permission denied still knows its clock. bfm
+    // inventing a zone from the timestamp's offset would be manufacturing
+    // evidence the device declined to give.
+    const { client, fake } = clientAnswering(purchasesCreated());
+
+    await client.uploadReceipt(PARTS, { capturedAt: '2026-08-13T14:05:00+10:00' });
+
+    expect(fake.uploads).toEqual([
+      { parts: PARTS, capture: { capturedAt: '2026-08-13T14:05:00+10:00' } },
+    ]);
+  });
+
+  it('does not judge a capture time bfm has no business judging', async () => {
+    // A 2041 clock is the producer's to discard — it owns the upload instant
+    // this has to be compared against. bfm deciding it too would be a second
+    // rule, the same mistake as a second dedup key.
+    const { client, fake } = clientAnswering(purchasesCreated());
+
+    await client.uploadReceipt(PARTS, { capturedAt: '2041-03-02T09:00:00Z' });
+
+    expect(fake.uploads).toEqual([
+      { parts: PARTS, capture: { capturedAt: '2041-03-02T09:00:00Z' } },
+    ]);
+  });
 });
 
 describe('when the answer is not one bfm can use', () => {
