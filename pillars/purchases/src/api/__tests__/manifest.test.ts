@@ -48,18 +48,32 @@ describe('buildPurchasesManifest', () => {
     ]);
   });
 
-  // The wire nav has drifted from the app before (POPS-1968): one entry
-  // declared against three the app actually mounted, with a comment still
-  // claiming they matched. Nothing else in the repo compares them — the
-  // in-repo shell rail is built from `@pops/app-purchases`'s own exported
-  // `navConfig`, never from this manifest — so this reads the app's route
-  // source directly rather than restating it a third time, the same way the
-  // literal wire values above would restate it a second time.
+  // The wire nav has drifted from the app before: one entry declared against
+  // three the app actually mounted, with a comment still claiming they
+  // matched. Nothing else in the repo compares them — the in-repo shell rail
+  // is built from `@pops/app-purchases`'s own exported `navConfig`, never
+  // from this manifest — so this reads the app's route source directly rather
+  // than restating it a third time, the same way the literal wire values
+  // above would restate it a second time.
+  //
+  // Reading the file as TEXT instead of importing `navConfig`/`routes` from
+  // `@pops/app-purchases` is deliberate, and the import is not the available
+  // simplification it looks like. `pillars/purchases/Dockerfile` hand-curates
+  // the `COPY <pkg>/package.json` list it builds from and then runs
+  // `pnpm install --frozen-lockfile --filter "@pops/purchases..."`, which
+  // resolves devDependencies as well as dependencies. Naming the app package
+  // in either block of `pillars/purchases/package.json` therefore fails the
+  // image build on a workspace package that was never copied into the build
+  // context — and nothing local catches it, only the Docker Build job does.
+  // Reading the source keeps the app out of this package's dependency graph.
   describe('nav + pages mirror the app (no silent drift)', () => {
     const appRoutesPath = fileURLToPath(new URL('../../../app/src/routes.tsx', import.meta.url));
     const appRoutesSource = readFileSync(appRoutesPath, 'utf8');
 
     function sliceBalanced(source: string, openIndex: number, open: string, close: string): string {
+      if (source[openIndex] !== open) {
+        throw new Error(`expected "${open}" at index ${openIndex} in ${appRoutesPath}`);
+      }
       let depth = 0;
       for (let i = openIndex; i < source.length; i++) {
         if (source[i] === open) depth++;
@@ -82,7 +96,13 @@ describe('buildPurchasesManifest', () => {
       if (declStart === -1) {
         throw new Error(`could not find "${declaration}" in ${appRoutesPath}`);
       }
+      // A -1 here cannot be passed on: `indexOf` clamps a negative
+      // `fromIndex` to 0, so the next search would silently restart at the
+      // top of the file and return a plausible block from the wrong place.
       const eqIndex = source.indexOf('=', declStart);
+      if (eqIndex === -1) {
+        throw new Error(`"${declaration}" in ${appRoutesPath} is not an assignment`);
+      }
       const openIndex = source.indexOf(bracket, eqIndex);
       const close = bracket === '{' ? '}' : ']';
       return sliceBalanced(source, openIndex, bracket, close);
@@ -91,50 +111,116 @@ describe('buildPurchasesManifest', () => {
     function navItemsBlock(source: string): string {
       const navConfigObject = extractAssignedBracket(source, 'export const navConfig', '{');
       const itemsIndex = navConfigObject.indexOf('items:');
+      if (itemsIndex === -1) {
+        throw new Error(`navConfig in ${appRoutesPath} declares no "items:"`);
+      }
       return sliceBalanced(navConfigObject, navConfigObject.indexOf('[', itemsIndex), '[', ']');
+    }
+
+    // A discovery floor, per ADR-045: an extractor that matched nothing has
+    // stopped seeing the file, and saying so is the finding. Left silent it
+    // would surface one assertion later as "the wire declares three nav items
+    // and the app declares none", which points at drift that does not exist.
+    function requireFound(paths: string[], what: string): string[] {
+      if (paths.length === 0) {
+        throw new Error(`extracted no ${what} from ${appRoutesPath}`);
+      }
+      return paths;
     }
 
     // Rooted nav-item paths, as `navConfig.items` declares them.
     function navItemPaths(block: string): string[] {
-      return [...block.matchAll(/path:\s*'([^']*)'/g)].map((m) => m[1] ?? '');
+      const paths = [...block.matchAll(/path:\s*'([^']*)'/g)].map((m) => m[1] ?? '');
+      return requireFound(paths, 'nav-item paths');
     }
 
-    // Rooted paths for every route the rail can reach — an index route is
-    // `''` and a dynamic segment (`:purchaseId`) is excluded, because a rail
-    // entry has no id to put in its path. Mirrors
+    // Rooted paths for every route the rail can reach — the index route is
+    // `''`, whether it is spelled `index: true` or `path: ''`, and a dynamic
+    // segment (`:purchaseId`) is excluded because a rail entry has no id to
+    // put in its path. Mirrors
     // `pillars/purchases/app/src/__tests__/manifest.test.ts`'s `navPathOf` /
-    // `isReachableFromTheRail`, which already prove this set equals
-    // `navConfig.items` inside the app package itself.
+    // `isReachableFromTheRail`, which prove this set equals `navConfig.items`
+    // over the real exported objects inside the app package.
     function reachableRoutePaths(block: string): string[] {
-      return [...block.matchAll(/\{\s*(?:index:\s*true|path:\s*'([^']*)')/g)]
-        .map((m) => (m[1] === undefined ? '' : `/${m[1]}`))
+      const paths = [...block.matchAll(/\{\s*(?:index:\s*true|path:\s*'([^']*)')/g)]
+        .map((m) => (m[1] === undefined || m[1] === '' ? '' : `/${m[1]}`))
         .filter((path) => !path.includes(':'));
+      return requireFound(paths, 'rail-reachable route paths');
     }
 
-    it('declares one wire nav item per rail-reachable app route', () => {
+    it('declares one wire nav item per rail-reachable app route, in rail order', () => {
       const routesBlock = extractAssignedBracket(appRoutesSource, 'export const routes', '[');
-      const appNavPaths = navItemPaths(navItemsBlock(appRoutesSource)).toSorted();
-      const appRoutePaths = reachableRoutePaths(routesBlock).toSorted();
+      const appNavPaths = navItemPaths(navItemsBlock(appRoutesSource));
+      const appRoutePaths = reachableRoutePaths(routesBlock);
 
-      // Guards the extraction itself: the app's own suite already proves
-      // `navConfig.items` and `routes` agree, so if this disagrees the
-      // regexes above have drifted from the file's shape, not the file from
-      // itself.
-      expect(appNavPaths).toEqual(appRoutePaths);
+      // Guards the extraction rather than the manifest: if these two
+      // disagree, the regexes above have drifted from the file's shape rather
+      // than the file from itself. Sorted, because nothing requires the app
+      // to declare its nav items in the order it mounts its routes. The app
+      // package's own suite asserts the same equality over the real exported
+      // objects, but it runs in a different unit — `app/**` is excluded from
+      // this vitest project — so it cannot stand in for this check here.
+      expect(appNavPaths.toSorted()).toEqual(appRoutePaths.toSorted());
 
-      const wireNavPaths = (buildPurchasesManifest('0.1.0').nav?.items ?? [])
-        .map((item) => item.path)
-        .toSorted();
+      // Unsorted: rail order is what the reader sees, and a wire nav shuffled
+      // against the app's is drift that a set comparison would wave through.
+      const wireNavPaths = (buildPurchasesManifest('0.1.0').nav?.items ?? []).map(
+        (item) => item.path
+      );
       expect(wireNavPaths).toEqual(appNavPaths);
     });
 
     it('declares one wire page descriptor per wire nav item, path-for-path', () => {
       const manifest = buildPurchasesManifest('0.1.0');
-      const pagePaths = (manifest.pages ?? [])
-        .map((page) => (page.index === true ? '' : `/${page.path}`))
-        .toSorted();
-      const navPaths = (manifest.nav?.items ?? []).map((item) => item.path).toSorted();
+      const pagePaths = (manifest.pages ?? []).map((page) =>
+        page.index === true ? '' : `/${page.path}`
+      );
+      const navPaths = (manifest.nav?.items ?? []).map((item) => item.path);
       expect(pagePaths).toEqual(navPaths);
+    });
+
+    // The indices these guard are the ones that fail quietly rather than
+    // loudly: `indexOf` clamps a negative `fromIndex` to 0, so an unguarded
+    // -1 restarts the search at the top of the file and hands back a
+    // well-formed block from the wrong place, and `sliceBalanced` from -1
+    // slices backwards to the empty string. A parser that reports the wrong
+    // answer confidently is worse than one that refuses.
+    it('throws rather than returning a wrong block when the source stops matching', () => {
+      expect(() =>
+        extractAssignedBracket('const other = [1];', 'export const routes', '[')
+      ).toThrow(/could not find/);
+
+      expect(() =>
+        extractAssignedBracket(
+          'const other = [1];\nexport const routes',
+          'export const routes',
+          '['
+        )
+      ).toThrow(/is not an assignment/);
+
+      expect(() =>
+        extractAssignedBracket(
+          'const other = [1];\nexport const routes = undefined;',
+          'export const routes',
+          '['
+        )
+      ).toThrow(/expected "\["/);
+
+      expect(() =>
+        navItemsBlock("export const navConfig = { entries: [{ path: '/x' }] };")
+      ).toThrow(/declares no "items:"/);
+
+      // The discovery floor: a block the regexes no longer recognise reports
+      // that, rather than reporting an app with no nav.
+      expect(() => navItemPaths('[]')).toThrow(/extracted no nav-item paths/);
+      expect(() => reachableRoutePaths('[]')).toThrow(/extracted no rail-reachable route paths/);
+    });
+
+    // `{ path: '' }` is a legal spelling of the index route. Reading it as
+    // `/` would report drift against a nav item that in fact matches.
+    it('reads an empty route path as the index route, however it is spelled', () => {
+      expect(reachableRoutePaths('[{ index: true, element: <A /> }]')).toEqual(['']);
+      expect(reachableRoutePaths("[{ path: '', element: <A /> }]")).toEqual(['']);
     });
   });
 

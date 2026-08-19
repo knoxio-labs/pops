@@ -9,9 +9,15 @@ export const PURCHASES_PILLAR_ID = 'purchases' as const;
 /**
  * Wire-format nav contribution for the purchases pillar.
  *
- * Mirrors the app's `navConfig` (`pillars/purchases/app/src/routes.tsx`)
- * field-for-field; Lucide icon names are kebab-case identifiers per the wire
- * schema.
+ * Carries one item per entry in the app's `navConfig`
+ * (`pillars/purchases/app/src/routes.tsx`), in the same order and with the
+ * same paths and label keys. Two fields have no counterpart there rather than
+ * a matching one: `order`, which the app's config does not carry at all
+ * (in-repo the shell reads it from its own `navOrder` literal in
+ * `pillars/shell/src/app/bundle-map.tsx`, and only a registry-discovered
+ * consumer takes it from here), and `icon`, which names the same Lucide
+ * glyphs in the kebab-case the wire schema requires rather than the
+ * PascalCase the app spells them in.
  *
  * `order` sits between finance (10) and media (20) rather than at the end of
  * the rail. Purchases exists to reconcile against finance transactions and
