@@ -1,14 +1,13 @@
 /**
- * Proposing inventory assets from durable line items, and recording what a
- * human decided about each proposal.
+ * Proposing inventory assets from durable line items.
  *
  * **Propose, never create.** Nothing here writes into `inventory`. A
  * proposal is a projection of rows purchases already holds, shaped in
  * inventory's own field names so the caller that accepts one can hand it
  * straight to `POST /items` on that pillar; the write into inventory
  * belongs to whoever is holding the human's consent, and purchases learns
- * about it afterwards through {@link decideInventoryProposal}. Fanning out
- * automatically fills inventory with cables, batteries and light globes
+ * about it afterwards through `inventory-proposal-decisions.ts`. Fanning
+ * out automatically fills inventory with cables, batteries and light globes
  * inside a month, after which the user stops trusting it — which is why
  * `ITEM_KINDS` calls both fan-out directions proposals.
  *
@@ -28,15 +27,14 @@
 import { and, asc, eq, inArray, isNotNull } from 'drizzle-orm';
 
 import { allocateProRata } from '../../ingest/allocation.js';
-import { InventoryProposalConflictError } from '../errors.js';
 import { purchaseChargeLinks, purchaseCharges } from '../schema/charges.js';
 import { purchaseItems, purchaseItemUnits } from '../schema/items.js';
 import { purchases, purchaseShipments } from '../schema/purchases.js';
 import { landedCostCents } from './accounting.js';
-import { nowIso, type PurchasesDb } from './internal.js';
 
 import type { ShipmentStatus } from '../../contract/constants.js';
 import type { PurchaseItemUnitRow } from '../schema.js';
+import type { PurchasesDb } from './internal.js';
 
 /**
  * Shipment states in which the goods were never received. A line on one of
@@ -104,16 +102,6 @@ export interface InventoryProposal {
    */
   readonly kindConfirmed: boolean;
 }
-
-/** A human's answer to one proposal. */
-export type InventoryProposalDecision =
-  | {
-      readonly decision: 'accepted';
-      /** Where the asset now lives: `pops://inventory/item/<id>`. */
-      readonly inventoryItemUri: string;
-      readonly unitId?: string;
-    }
-  | { readonly decision: 'declined'; readonly unitId?: string };
 
 interface ProposableLine {
   readonly id: string;
@@ -203,8 +191,12 @@ function unitsByItem(
   return grouped;
 }
 
-/** A unit nobody has answered for. See this file's header. */
-function isUndecided(unit: PurchaseItemUnitRow): boolean {
+/**
+ * A unit nobody has answered for — neither in inventory nor declined. The
+ * definition of *decided* this file's header turns on, exported so the
+ * write half cannot drift into a second one.
+ */
+export function isUndecided(unit: PurchaseItemUnitRow): boolean {
   return unit.inventoryItemUri === null && unit.inventoryDeclinedAt === null;
 }
 
@@ -275,93 +267,4 @@ export function listInventoryProposals(db: PurchasesDb, purchaseId: string): Inv
     }
   }
   return proposals;
-}
-
-function findUndecidedUnit(
-  db: PurchasesDb,
-  itemId: string,
-  unitId: string | undefined
-): PurchaseItemUnitRow | undefined {
-  const rows = db
-    .select()
-    .from(purchaseItemUnits)
-    .where(eq(purchaseItemUnits.itemId, itemId))
-    .orderBy(asc(purchaseItemUnits.createdAt), asc(purchaseItemUnits.id))
-    .all();
-  if (unitId === undefined) return rows.find(isUndecided);
-  const named = rows.find((row) => row.id === unitId);
-  if (named === undefined) return undefined;
-  if (!isUndecided(named)) {
-    throw new InventoryProposalConflictError(
-      `Unit ${unitId} has already been accepted or declined; purchases has no way to retract an inventory decision`
-    );
-  }
-  return named;
-}
-
-/**
- * Record what a human decided about one of the line's proposals.
- *
- * Returns undefined when the line does not exist on that order. The
- * two-part key is the same guard `confirmItemClassification` carries: ids
- * are random UUIDs, so a caller holding a line id but not its order is
- * guessing, and answering the guess would let a mistyped order id decide
- * for someone else's line.
- *
- * With no `unitId` the decision lands on the line's oldest undecided unit
- * row, and mints one when there is none — which is how a slot that never
- * needed identity gets it. A line whose units are all decided has nothing
- * left to answer for, so a further decision is a conflict rather than a
- * silent extra unit: that is what stops a double-submitted accept putting
- * two assets in inventory for one physical thing.
- */
-export function decideInventoryProposal(
-  db: PurchasesDb,
-  purchaseId: string,
-  itemId: string,
-  input: InventoryProposalDecision
-): PurchaseItemUnitRow | undefined {
-  return db.transaction((tx) => {
-    const line = tx
-      .select({ id: purchaseItems.id, quantity: purchaseItems.quantity })
-      .from(purchaseItems)
-      .where(and(eq(purchaseItems.id, itemId), eq(purchaseItems.purchaseId, purchaseId)))
-      .limit(1)
-      .get();
-    if (line === undefined) return undefined;
-
-    const target = findUndecidedUnit(tx, itemId, input.unitId);
-    if (target === undefined && input.unitId !== undefined) return undefined;
-
-    const now = nowIso();
-    const values =
-      input.decision === 'accepted'
-        ? { inventoryItemUri: input.inventoryItemUri, inventoryDeclinedAt: null }
-        : { inventoryItemUri: null, inventoryDeclinedAt: now };
-
-    if (target !== undefined) {
-      return tx
-        .update(purchaseItemUnits)
-        .set(values)
-        .where(eq(purchaseItemUnits.id, target.id))
-        .returning()
-        .get();
-    }
-
-    const existing = tx
-      .select({ id: purchaseItemUnits.id })
-      .from(purchaseItemUnits)
-      .where(eq(purchaseItemUnits.itemId, itemId))
-      .all();
-    if (existing.length >= line.quantity) {
-      throw new InventoryProposalConflictError(
-        `Every unit of item ${itemId} has already been accepted or declined`
-      );
-    }
-    return tx
-      .insert(purchaseItemUnits)
-      .values({ itemId, ...values })
-      .returning()
-      .get();
-  });
 }
