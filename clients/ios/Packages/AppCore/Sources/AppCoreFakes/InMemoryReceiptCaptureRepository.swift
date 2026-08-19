@@ -23,7 +23,7 @@ public actor InMemoryReceiptCaptureRepository: ReceiptCaptureRepository {
     ///   - outcomes: canned answers by call number (1-based).
     public init(
         defaultOutcome: ReceiptOutcome = .unreadable(
-            receiptURIs: ["fake://receipt"], reason: "no fixture configured"),
+            receiptCount: 1, reason: "no fixture configured"),
         outcomes: [Int: ReceiptOutcome] = [:]
     ) {
         self.defaultOutcome = defaultOutcome

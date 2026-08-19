@@ -41,13 +41,22 @@ internal enum ReceiptResultContent: Hashable, Sendable {
     internal struct CreatedContent: Hashable, Sendable {
         internal let heading: String
         internal let message: String
+        /// What was recorded, in one line — "Woolworths · 12 items · $84.20".
+        /// The confirmation a reader checks against the receipt still in their
+        /// hand; the reference below identifies it, but identifies nothing
+        /// they can recognise.
+        internal let summary: String
+        /// The receipt's own date, when the purchase carries one.
+        internal let purchasedOn: String?
         internal let reference: String
         /// There is nowhere in the app yet to view the purchase this
         /// reference points at. Said outright rather than left for the
         /// reader to discover by tapping a reference that goes nowhere.
         internal let noDestinationNote: String
         internal var accessibilityLabel: String {
-            "\(heading). \(message) \(reference) \(noDestinationNote)"
+            [heading + ".", message, summary, purchasedOn, reference, noDestinationNote]
+                .compactMap { $0 }
+                .joined(separator: " ")
         }
     }
 

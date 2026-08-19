@@ -10,45 +10,12 @@ import Testing
 /// repository sends to get there.
 @Suite("BFMReceiptCaptureRepository mapping")
 internal struct ReceiptCaptureMappingTests {
-    private static let onePart = [ReceiptPart(mediaType: .jpeg, data: Data([0xFF, 0xD8]))]
-
-    private func capture(
-        _ status: HTTPResponse.Status = .ok,
-        json: String,
-        parts: [ReceiptPart] = onePart
-    ) async throws -> ReceiptOutcome {
-        try await BFMReceiptCaptureRepository
-            .stubbed(StubTransport(status: status, json: json))
-            .capture(parts)
-    }
-
-    @Test("a created purchase carries its id and whether these bytes were already on file")
-    func createdOutcome() async throws {
-        let outcome = try await capture(
-            json: ReceiptCaptureWire.created(id: "purchase-42", alreadyStored: true))
-
-        #expect(outcome == .created(purchaseId: "purchase-42", alreadyStored: true))
-    }
-
-    /// The one field a fresh upload and a re-upload of the same bytes must
-    /// still disagree on — a duplicate purchase silently created twice is the
-    /// failure this field exists to prevent.
-    @Test("a first-time upload is not mistaken for a re-upload")
-    func createdNotAlreadyStored() async throws {
-        let outcome = try await capture(json: ReceiptCaptureWire.created(alreadyStored: false))
-
-        guard case .created(_, let alreadyStored) = outcome else {
-            Issue.record("expected .created, got \(outcome)")
-            return
-        }
-        #expect(alreadyStored == false)
-    }
-
-    @Test("a needs-review problem's code becomes the app's closed failure kind")
+    @Test("a needs-review problem carries its kind, its detail and how far off it was")
     func needsReviewProblemKind() async throws {
-        let outcome = try await capture(
+        let outcome = try await captureReceipt(
             json: ReceiptCaptureWire.needsReview(
-                problems: ReceiptCaptureWire.problem(code: "sum-mismatch", detail: "off by $2.10")
+                problems: ReceiptCaptureWire.problem(
+                    code: "sum-mismatch", detail: "off by $2.10", deltaCents: "-210")
             )
         )
 
@@ -57,7 +24,7 @@ internal struct ReceiptCaptureMappingTests {
             return
         }
         let expected = ReceiptGateFailure(
-            kind: .sumMismatch, detail: "off by $2.10", deltaCents: nil)
+            kind: .sumMismatch, detail: "off by $2.10", deltaCents: -210)
         #expect(failures == [expected])
     }
 
@@ -69,11 +36,12 @@ internal struct ReceiptCaptureMappingTests {
             ("no-lines", .noLines),
             ("negative-line", .negativeLine),
             ("sum-mismatch", .sumMismatch),
+            ("ambiguous-tax", .ambiguousTax),
             ("damaged", .damaged),
         ]
     )
     func everyGateFailureKind(wire: String, expected: ReceiptGateFailureKind) async throws {
-        let outcome = try await capture(
+        let outcome = try await captureReceipt(
             json: ReceiptCaptureWire.needsReview(problems: ReceiptCaptureWire.problem(code: wire))
         )
 
@@ -84,33 +52,88 @@ internal struct ReceiptCaptureMappingTests {
         #expect(failures.map(\.kind) == [expected])
     }
 
-    /// The BFM's own contract deliberately does not send an extracted reading
-    /// for `needs-review` — `MobileReceiptOutcomeSchema`'s comment states why.
-    /// This is the one place that is asserted rather than merely known: a
-    /// producer that started sending one would have this test still pass
-    /// while the fields it added went unread.
-    @Test("needs-review carries no extracted reading, because the wire sends none")
-    func needsReviewCarriesNoExtraction() async throws {
-        let outcome = try await capture(
+    /// The BFM keeps the wire's `code` open so a gate that grows a reason does
+    /// not break a build already on somebody's phone. Refusing the outcome
+    /// here would spend that guarantee: a receipt that genuinely needs review
+    /// would reach its owner as "update the app".
+    @Test("a gate reason invented after this build shipped still renders")
+    func unrecognisedGateFailureKind() async throws {
+        let outcome = try await captureReceipt(
             json: ReceiptCaptureWire.needsReview(
-                problems: ReceiptCaptureWire.problem(code: "damaged"))
+                problems: ReceiptCaptureWire.problem(
+                    code: "negative-shipping", detail: "shipping read as -$4.00"))
         )
 
-        guard case .needsReview(let receiptURIs, _, let extracted) = outcome else {
+        guard case .needsReview(_, let failures, _) = outcome else {
             Issue.record("expected .needsReview, got \(outcome)")
             return
         }
-        #expect(receiptURIs.isEmpty)
+        #expect(failures.map(\.kind) == [.unrecognised("negative-shipping")])
+        #expect(failures.map(\.detail) == ["shipping read as -$4.00"])
+    }
+
+    /// The reading is what the gate's objections are about, so every field of
+    /// it has to survive the boundary — a screen comparing this against the
+    /// photograph is the whole reason the outcome exists.
+    @Test("needs-review carries the reading, field for field")
+    func needsReviewCarriesTheReading() async throws {
+        let outcome = try await captureReceipt(
+            json: ReceiptCaptureWire.needsReview(
+                receiptCount: 3,
+                problems: ReceiptCaptureWire.problem(code: "damaged"))
+        )
+
+        guard case .needsReview(let receiptCount, _, let extracted) = outcome else {
+            Issue.record("expected .needsReview, got \(outcome)")
+            return
+        }
+        #expect(receiptCount == 3)
+        #expect(extracted.merchantName == "Woolworths")
+        #expect(extracted.address == "12 Example St")
+        #expect(extracted.purchasedOn == "2026-03-05")
+        #expect(extracted.purchasedAt == "14:05")
+        #expect(extracted.currency == "AUD")
+        #expect(extracted.total == "$84.20")
+        #expect(extracted.tax == "$7.65")
+        #expect(extracted.discounts == ["$2.00"])
+        #expect(extracted.surcharges == ["$0.50"])
+        #expect(extracted.shipping == nil)
+        #expect(extracted.unreadableNotes == ["line 7 is smudged"])
+        #expect(
+            extracted.lines
+                == [
+                    ExtractedReceiptLine(
+                        description: "MILK 2L", amount: "$3.10", quantity: 2,
+                        unitNote: "2 @ $1.55")
+                ]
+        )
+    }
+
+    @Test("a receipt the model read nothing off still decodes, as an empty reading")
+    func needsReviewWithNothingRead() async throws {
+        let outcome = try await captureReceipt(
+            json: ReceiptCaptureWire.needsReview(
+                extracted: ReceiptCaptureWire.extracted(
+                    merchantName: "null", address: "null", purchasedOn: "null",
+                    purchasedAt: "null", currency: "null", tax: "null", discounts: "[]",
+                    surcharges: "[]", lines: "[]", unreadableNotes: "[]"),
+                problems: ReceiptCaptureWire.problem(code: "no-lines"))
+        )
+
+        guard case .needsReview(_, _, let extracted) = outcome else {
+            Issue.record("expected .needsReview, got \(outcome)")
+            return
+        }
         #expect(extracted.merchantName == nil)
         #expect(extracted.lines.isEmpty)
     }
 
     @Test("an unreadable receipt carries the pillar's own reason")
     func unreadableOutcome() async throws {
-        let outcome = try await capture(
-            json: ReceiptCaptureWire.unreadable(reason: "the image is blank"))
+        let outcome = try await captureReceipt(
+            json: ReceiptCaptureWire.unreadable(reason: "the image is blank", receiptCount: 2))
 
-        #expect(outcome == .unreadable(receiptURIs: [], reason: "the image is blank"))
+        #expect(outcome == .unreadable(receiptCount: 2, reason: "the image is blank"))
     }
 
     /// The request this repository actually sends, not just the response it

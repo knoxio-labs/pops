@@ -31,6 +31,31 @@ internal enum ReceiptResultCopy {
     internal static func purchaseReference(_ purchaseId: String) -> String {
         "Reference \(purchaseId)"
     }
+    /// What was recorded, as a reader checks it against the paper still in
+    /// their hand: merchant, how many items, what it cost. A merchant the
+    /// pillar could not resolve is left out rather than filled with a
+    /// placeholder — the item count and the total are still checkable, and a
+    /// "Unknown merchant" line is a claim about the receipt that nobody made.
+    internal static func purchaseSummary(
+        merchantName: String?, itemCount: Int, total: String
+    ) -> String {
+        [merchantName, itemCountLabel(itemCount), total]
+            .compactMap { $0 }
+            .joined(separator: " · ")
+    }
+    /// Omitted entirely at zero: "0 items" beside a total reads as a receipt
+    /// that recorded nothing, when what happened is that the reading found no
+    /// separate lines.
+    private static func itemCountLabel(_ itemCount: Int) -> String? {
+        switch itemCount {
+        case ..<1: nil
+        case 1: "1 item"
+        default: "\(itemCount) items"
+        }
+    }
+    internal static func purchasedOn(_ formattedDate: String) -> String {
+        "Dated \(formattedDate)"
+    }
     /// The navigation target POPS-1949 names as a known gap: there is
     /// nowhere in the app yet that shows a purchase once it exists.
     internal static let createdNoDestination =
@@ -79,8 +104,13 @@ internal enum ReceiptResultCopy {
 
     // MARK: gate failures
 
-    /// One line per ``ReceiptGateFailureKind``, in the receipt's own terms —
-    /// mirroring the closed list the purchases pillar's gate can fail on.
+    /// One line per ``ReceiptGateFailureKind``, in the receipt's own terms.
+    ///
+    /// ``ReceiptGateFailureKind/unrecognised(_:)`` gets a generic sentence
+    /// rather than the raw wire code: the gate's own `detail` is drawn beside
+    /// this and says what actually happened, and showing a reader
+    /// `negative-shipping` teaches them the producer's vocabulary instead of
+    /// telling them about their receipt.
     internal static func gateFailureLabel(_ kind: ReceiptGateFailureKind) -> String {
         switch kind {
         case .unreadableTotal:
@@ -93,8 +123,12 @@ internal enum ReceiptResultCopy {
             return "A line item read as a negative amount."
         case .sumMismatch:
             return "The line items don't add up to the printed total."
+        case .ambiguousTax:
+            return "It's unclear whether the prices include tax."
         case .damaged:
             return "The receipt looks damaged or unclear."
+        case .unrecognised:
+            return "Something on this receipt didn't check out."
         }
     }
 
