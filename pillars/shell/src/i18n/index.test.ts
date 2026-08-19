@@ -7,60 +7,82 @@
  * - All namespaces are loaded for both locales
  * - Translation keys exist in both en-AU and pt-BR (no missing translations)
  * - Interpolation works (e.g. shell.appPages with {{app}})
+ *
+ * The namespace set under test is discovered from `libs/locales/en-AU/*.json`
+ * via `import.meta.glob` rather than hand-listed, so a namespace added to the
+ * catalog is covered here with no edit to this file.
  */
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import enAUAi from '@pops/locales/en-AU/ai.json';
-import enAUCerebrum from '@pops/locales/en-AU/cerebrum.json';
-import enAUCommon from '@pops/locales/en-AU/common.json';
-import enAUFinance from '@pops/locales/en-AU/finance.json';
-import enAUInventory from '@pops/locales/en-AU/inventory.json';
-import enAUMedia from '@pops/locales/en-AU/media.json';
-import enAUNavigation from '@pops/locales/en-AU/navigation.json';
-import enAUShell from '@pops/locales/en-AU/shell.json';
-import enAUUi from '@pops/locales/en-AU/ui.json';
-import ptBRAi from '@pops/locales/pt-BR/ai.json';
-import ptBRCerebrum from '@pops/locales/pt-BR/cerebrum.json';
-import ptBRCommon from '@pops/locales/pt-BR/common.json';
-import ptBRFinance from '@pops/locales/pt-BR/finance.json';
-import ptBRInventory from '@pops/locales/pt-BR/inventory.json';
-import ptBRMedia from '@pops/locales/pt-BR/media.json';
-import ptBRNavigation from '@pops/locales/pt-BR/navigation.json';
-import ptBRShell from '@pops/locales/pt-BR/shell.json';
-import ptBRUi from '@pops/locales/pt-BR/ui.json';
-
-import i18n, { DEFAULT_LOCALE, LOCALE_STORAGE_KEY, SUPPORTED_LOCALES } from '.';
+import i18n, { DEFAULT_LOCALE, LOCALE_STORAGE_KEY, NAMESPACES, SUPPORTED_LOCALES } from '.';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** All key sets grouped by namespace for comparison. */
-const EN_AU_BUNDLES = {
-  common: enAUCommon,
-  shell: enAUShell,
-  navigation: enAUNavigation,
-  inventory: enAUInventory,
-  cerebrum: enAUCerebrum,
-  finance: enAUFinance,
-  ai: enAUAi,
-  media: enAUMedia,
-  ui: enAUUi,
-};
-const PT_BR_BUNDLES = {
-  common: ptBRCommon,
-  shell: ptBRShell,
-  navigation: ptBRNavigation,
-  inventory: ptBRInventory,
-  cerebrum: ptBRCerebrum,
-  finance: ptBRFinance,
-  ai: ptBRAi,
-  media: ptBRMedia,
-  ui: ptBRUi,
-};
+interface LocaleBundle {
+  [key: string]: string | LocaleBundle;
+}
 
-function sortedKeys(obj: Record<string, string>): string[] {
-  return Object.keys(obj).toSorted();
+const EN_AU_MODULES = import.meta.glob<LocaleBundle>('../../../../libs/locales/en-AU/*.json', {
+  eager: true,
+  import: 'default',
+});
+const PT_BR_MODULES = import.meta.glob<LocaleBundle>('../../../../libs/locales/pt-BR/*.json', {
+  eager: true,
+  import: 'default',
+});
+
+function namespaceFromPath(path: string): string {
+  const fileName = path.split('/').at(-1);
+  if (!fileName) {
+    throw new Error(`Could not derive a namespace name from locale path "${path}"`);
+  }
+  return fileName.replace(/\.json$/, '');
+}
+
+function bundlesByNamespace(modules: Record<string, LocaleBundle>): Record<string, LocaleBundle> {
+  const byNamespace: Record<string, LocaleBundle> = {};
+  for (const [path, bundle] of Object.entries(modules)) {
+    byNamespace[namespaceFromPath(path)] = bundle;
+  }
+  return byNamespace;
+}
+
+const EN_AU_BUNDLES = bundlesByNamespace(EN_AU_MODULES);
+const PT_BR_BUNDLES = bundlesByNamespace(PT_BR_MODULES);
+
+/**
+ * Every namespace with an en-AU locale file on disk. Used to drive the
+ * translation-completeness suite below — this is the set that "cannot
+ * drift" the way a hand-maintained literal can.
+ */
+const ALL_NS = Object.keys(EN_AU_BUNDLES).toSorted();
+
+function requireBundle(bundles: Record<string, LocaleBundle>, ns: string): LocaleBundle {
+  const bundle = bundles[ns];
+  if (!bundle) {
+    throw new Error(`No locale bundle found for namespace "${ns}"`);
+  }
+  return bundle;
+}
+
+/** Flattens a (possibly nested) locale bundle into dotted-path -> string entries. */
+function flattenBundle(bundle: LocaleBundle, prefix = ''): Record<string, string> {
+  const flat: Record<string, string> = {};
+  for (const [key, value] of Object.entries(bundle)) {
+    const path = prefix ? `${prefix}.${key}` : key;
+    if (typeof value === 'string') {
+      flat[path] = value;
+    } else {
+      Object.assign(flat, flattenBundle(value, path));
+    }
+  }
+  return flat;
+}
+
+function sortedKeys(bundle: LocaleBundle): string[] {
+  return Object.keys(flattenBundle(bundle)).toSorted();
 }
 
 // ---------------------------------------------------------------------------
@@ -94,16 +116,7 @@ describe('i18n initialization', () => {
   });
 
   it('registers all namespaces', () => {
-    const ns = i18n.options.ns;
-    expect(ns).toContain('common');
-    expect(ns).toContain('shell');
-    expect(ns).toContain('navigation');
-    expect(ns).toContain('inventory');
-    expect(ns).toContain('cerebrum');
-    expect(ns).toContain('finance');
-    expect(ns).toContain('ai');
-    expect(ns).toContain('media');
-    expect(ns).toContain('ui');
+    expect(i18n.options.ns).toEqual(NAMESPACES);
   });
 
   it('uses common as the default namespace', () => {
@@ -170,33 +183,31 @@ describe('locale persistence', () => {
 // ---------------------------------------------------------------------------
 
 describe('translation completeness', () => {
-  const ALL_NS = [
-    'common',
-    'shell',
-    'navigation',
-    'inventory',
-    'cerebrum',
-    'finance',
-    'ai',
-    'media',
-    'ui',
-  ] as const;
+  it('discovers more than a handful of namespaces on disk', () => {
+    // Guards against the glob pattern silently matching nothing (e.g. after
+    // a directory move) and the suite below passing vacuously.
+    expect(ALL_NS.length).toBeGreaterThan(10);
+  });
+
+  it('en-AU and pt-BR ship the same set of namespace files', () => {
+    expect(Object.keys(PT_BR_BUNDLES).toSorted()).toEqual(ALL_NS);
+  });
 
   for (const ns of ALL_NS) {
     it(`${ns}: en-AU and pt-BR have identical key sets`, () => {
-      const enKeys = sortedKeys(EN_AU_BUNDLES[ns]);
-      const ptKeys = sortedKeys(PT_BR_BUNDLES[ns]);
+      const enKeys = sortedKeys(requireBundle(EN_AU_BUNDLES, ns));
+      const ptKeys = sortedKeys(requireBundle(PT_BR_BUNDLES, ns));
       expect(enKeys).toEqual(ptKeys);
     });
 
     it(`${ns}: no empty values in en-AU`, () => {
-      for (const [key, value] of Object.entries(EN_AU_BUNDLES[ns])) {
+      for (const [key, value] of Object.entries(flattenBundle(requireBundle(EN_AU_BUNDLES, ns)))) {
         expect(value.trim().length, `en-AU ${ns}.${key} is empty`).toBeGreaterThan(0);
       }
     });
 
     it(`${ns}: no empty values in pt-BR`, () => {
-      for (const [key, value] of Object.entries(PT_BR_BUNDLES[ns])) {
+      for (const [key, value] of Object.entries(flattenBundle(requireBundle(PT_BR_BUNDLES, ns)))) {
         expect(value.trim().length, `pt-BR ${ns}.${key} is empty`).toBeGreaterThan(0);
       }
     });
