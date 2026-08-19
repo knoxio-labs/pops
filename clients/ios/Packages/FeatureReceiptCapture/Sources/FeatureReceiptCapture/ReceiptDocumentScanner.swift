@@ -16,7 +16,7 @@
     ///
     /// ## Presented modally, and never inside a navigation stack
     ///
-    /// It is presented from a `.sheet`, as a freshly-created instance that is
+    /// It is presented from a `.fullScreenCover`, as a freshly-created instance that is
     /// its own delegate, and nothing in this feature puts a `NavigationStack`
     /// around it. That is not a style preference. There is an open UIKit defect
     /// where this controller's own navigation bar throws

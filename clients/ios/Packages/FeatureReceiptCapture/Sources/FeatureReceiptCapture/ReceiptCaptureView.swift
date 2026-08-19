@@ -48,7 +48,30 @@ public struct ReceiptCaptureView: View {
                 AccessibilityNotification.Announcement(ReceiptCaptureCopy.message(for: problem))
                     .post()
             }
-            .sheet(isPresented: $bindable.isCameraPresented) { scanner }
+            // `.fullScreenCover`, not `.sheet`: a page sheet on iPhone is
+            // interactively dismissible by a downward swipe, and
+            // `VNDocumentCameraViewControllerDelegate` is never told about
+            // that dismissal — `documentCameraViewControllerDidCancel(_:)`
+            // fires for the Cancel button only. A swipe mid-scan would
+            // discard however many pages had been photographed with nothing
+            // reported, no confirmation, and the model none the wiser. A
+            // full-screen cover has no swipe-to-dismiss gesture, so the only
+            // way out is the scanner's own Cancel button or a finished scan —
+            // both of which already report through the delegate. It also
+            // matches how the system document camera is meant to be shown:
+            // undecorated and full-screen, not inset with a grabber.
+            //
+            // `#if os(iOS)`: `fullScreenCover` is unavailable on macOS, which
+            // this package also targets so `swift test` runs on the host
+            // toolchain (see `Package.swift`). Nothing macOS renders reaches
+            // this branch — the scanner itself is `#if canImport(VisionKit)
+            // && canImport(UIKit)` below — so `.sheet` here is unreachable at
+            // runtime and exists only to keep the host build compiling.
+            #if os(iOS)
+                .fullScreenCover(isPresented: $bindable.isCameraPresented) { scanner }
+            #else
+                .sheet(isPresented: $bindable.isCameraPresented) { scanner }
+            #endif
     }
 
     @ViewBuilder private var content: some View {
