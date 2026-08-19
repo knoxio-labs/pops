@@ -105,12 +105,6 @@ The rule is `identifyProduct` in `src/db/services/product-identity.ts`, shared w
 
 **What POPS-244 still needs on top of these**, none of which these routes provide:
 
-<<<<<<< HEAD
-||||||| parent of 3f1ecd901 (docs(purchases): say two Amazon exports state an identity, not one of three)
-- a repeat-purchase leaderboard at the product grain (POPS-1849). What it can group on today is a merchant-stated identity, and exactly one shipped adapter states one: Amazon, as an ASIN. Woolworths and the receipt drop-zone state no identifier at all, so a leaderboard over `sku` is an Amazon leaderboard and the surface has to say so rather than presenting a partial answer as complete. Grouping the other two means minting an identity from a printed name (POPS-243), which is a POPS judgement rather than a merchant's word;
-=======
-- a repeat-purchase leaderboard at the product grain (POPS-1849). What it can group on today is a merchant-stated identity, and the only shipped adapters that state one are the two Amazon exports — physical and digital — both as an ASIN. Woolworths and the receipt drop-zone state no identifier at all, so a leaderboard over `sku` is an Amazon leaderboard and the surface has to say so rather than presenting a partial answer as complete. Grouping the other two means minting an identity from a printed name (POPS-243), which is a POPS judgement rather than a merchant's word;
->>>>>>> 3f1ecd901 (docs(purchases): say two Amazon exports state an identity, not one of three)
 - the consumable-vs-durable kind split (POPS-1850). Its substrate now exists — `kind` and `kindConfirmedAt` — so it must be **three** numbers, confirmed-consumable, confirmed-durable and unreviewed, mirroring `matched` / `awaitingImport` / `residual`. A two-way percentage would report a classification pass's proposal as a finding;
 - tag counterfactuals such as "cut all `snack` line items" (POPS-1851). Item tags now carry their own `confirmedAt`, so the same three-way rule applies — but they are still drawn from whatever a classification pass proposed rather than being guaranteed finance `tag_vocabulary` slugs, and a counterfactual is only as meaningful as the vocabulary it groups on.
 

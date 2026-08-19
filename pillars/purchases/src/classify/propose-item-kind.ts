@@ -28,7 +28,6 @@
 import { and, asc, desc, eq, isNull, sql } from 'drizzle-orm';
 
 import { purchaseItems, purchases } from '../db/schema.js';
-import { productIdentityOf } from '../db/services/stored-product-identity.js';
 import { intoBatches, toCandidates, type ProposalCandidate } from './batch.js';
 import { readKindProposals } from './kind-proposal.js';
 
@@ -88,7 +87,7 @@ const DEFAULT_BATCH_SIZE = 40;
  * a thing cost.
  */
 function unclassifiedItems(db: PurchasesDb): readonly BatchableItem[] {
-  const rows = db
+  return db
     .select({
       id: purchaseItems.id,
       source: purchases.source,
@@ -108,13 +107,6 @@ function unclassifiedItems(db: PurchasesDb): readonly BatchableItem[] {
       asc(purchaseItems.id)
     )
     .all();
-
-  return rows.map((row) => ({
-    id: row.id,
-    source: row.source,
-    sku: productIdentityOf(row),
-    name: row.name,
-  }));
 }
 
 export async function proposeItemKinds(

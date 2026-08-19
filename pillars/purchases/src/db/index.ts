@@ -10,7 +10,10 @@ export * from './schema.js';
 
 export type { PurchasesDb } from './services/internal.js';
 
-export { productIdentityOf, type StoredProductIdentity } from './services/stored-product-identity.js';
+export {
+  productIdentityOf,
+  type StoredProductIdentity,
+} from './services/stored-product-identity.js';
 
 export {
   computeAccounting,

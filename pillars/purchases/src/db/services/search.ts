@@ -53,9 +53,9 @@
 import { and, eq, like, or, sql } from 'drizzle-orm';
 
 import { purchaseItems, purchases } from '../schema.js';
-import { productIdentityOf } from './stored-product-identity.js';
 import { purchaseFilterConditions } from './purchase-reads.js';
 import { bestMatch, byScoreDescending, rank } from './search-ranking.js';
+import { productIdentityOf } from './stored-product-identity.js';
 
 import type { SQL } from 'drizzle-orm';
 import type { AnySQLiteColumn } from 'drizzle-orm/sqlite-core';

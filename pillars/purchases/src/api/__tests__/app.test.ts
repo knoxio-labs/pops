@@ -834,7 +834,7 @@ describe('purchase handler edge paths', () => {
               {
                 ref: 'pods',
                 name: 'Coffee Pods',
-                sku: 'B0POD',
+                sku: { value: 'B0POD', scheme: 'merchant' },
                 unitPriceCents: 1200,
                 lineTotalCents: 1200,
               },

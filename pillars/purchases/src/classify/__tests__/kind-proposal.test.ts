@@ -46,15 +46,6 @@ describe('the prompt', () => {
     expect(listed).toEqual(['1. (amazon) Bananas']);
   });
 
-  it('names no merchant for a candidate whose lines came from several', () => {
-    // A cross-source ASIN group has no merchant, and the prompt says so by
-    // saying nothing rather than by quoting whichever line was read first.
-    const listed = kindPrompt([candidate({ source: null, name: 'Robot vacuum' })])
-      .split('\n')
-      .filter((row) => row.startsWith('1. '));
-    expect(listed).toEqual(['1. Robot vacuum [asin B0ROBOTVAC]']);
-  });
-
   it('offers unknown and tells the model when to use it', () => {
     // Without this the model always picks one of four, and the column's
     // designed-for state — NULL — becomes unreachable.

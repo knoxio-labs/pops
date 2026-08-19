@@ -196,9 +196,9 @@ describe('closed vocabularies', () => {
 
 describe('ProductIdentitySchema — the identity a source stated', () => {
   it('accepts an ASIN in the namespace that issues it', () => {
-    expect(StatedProductIdentitySchema.safeParse({ value: 'B0DSVZQ8P5', scheme: 'asin' }).success).toBe(
-      true
-    );
+    expect(
+      StatedProductIdentitySchema.safeParse({ value: 'B0DSVZQ8P5', scheme: 'asin' }).success
+    ).toBe(true);
   });
 
   it('refuses to let an article number claim the namespace that merges across sources', () => {
@@ -210,13 +210,15 @@ describe('ProductIdentitySchema — the identity a source stated', () => {
   });
 
   it('accepts that same number as what it is', () => {
-    expect(StatedProductIdentitySchema.safeParse({ value: '4471', scheme: 'merchant' }).success).toBe(
-      true
-    );
+    expect(
+      StatedProductIdentitySchema.safeParse({ value: '4471', scheme: 'merchant' }).success
+    ).toBe(true);
   });
 
   it.each(['', '   ', '\t'])('rejects %p, which identifies nothing in any namespace', (value) => {
-    expect(StatedProductIdentitySchema.safeParse({ value, scheme: 'merchant' }).success).toBe(false);
+    expect(StatedProductIdentitySchema.safeParse({ value, scheme: 'merchant' }).success).toBe(
+      false
+    );
   });
 
   it('rejects an identifier with no namespace, and a namespace with no identifier', () => {

@@ -53,18 +53,12 @@ export class KindProposalShapeError extends Error {}
  * store — and the product identifier because an ASIN is sometimes
  * recognisable. Its scheme goes with it: `asin B07XYZ1234` tells the model
  * what kind of string it is looking at, where a bare one is noise.
- *
- * A candidate whose lines came from more than one merchant is listed with
- * no merchant at all. Printing the first line's would be evidence about one
- * line offered as evidence about the product, and the prompt is the place
- * that costs most: the model is being asked to generalise from it.
  */
 export function kindPrompt(candidates: readonly ProposalCandidate[]): string {
   const listed = candidates
     .map((candidate, index) => {
       const sku = candidate.sku === null ? '' : ` [${candidate.sku.scheme} ${candidate.sku.value}]`;
-      const merchant = candidate.source === null ? '' : `(${candidate.source}) `;
-      return `${String(index + 1)}. ${merchant}${candidate.name}${sku}`;
+      return `${String(index + 1)}. (${candidate.source}) ${candidate.name}${sku}`;
     })
     .join('\n');
 

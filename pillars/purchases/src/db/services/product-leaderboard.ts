@@ -223,6 +223,7 @@ export function rankProductPurchases(
       id: line.itemId,
       source: line.source,
       sku: line.sku,
+      skuScheme: line.skuScheme,
       name: line.name,
       merchantEntityId: line.merchantEntityId,
       merchantEntityName: line.merchantEntityName,

@@ -12,31 +12,15 @@
  * key falls back the way it does.
  */
 import { identifyProduct, normalisedName } from '../db/services/product-identity.js';
+import { productIdentityOf } from '../db/services/stored-product-identity.js';
 
+import type { ProductIdentity } from '../contract/types/purchase.js';
 import type { ProductLine } from '../db/services/product-identity.js';
 
 export { normalisedName };
 
 /** What the pass needs to know about a line to decide how to batch it. */
-<<<<<<< HEAD
 export type BatchableItem = ProductLine;
-||||||| parent of 3f1ecd901 (docs(purchases): say two Amazon exports state an identity, not one of three)
-export interface BatchableItem {
-  readonly id: string;
-  readonly source: string;
-  /** Null for every source that states none, which is every one but `amazon`. */
-  readonly sku: ProductIdentity | null;
-  readonly name: string;
-}
-=======
-export interface BatchableItem {
-  readonly id: string;
-  readonly source: string;
-  /** Null for every source that states none, which is every one but the Amazon exports. */
-  readonly sku: ProductIdentity | null;
-  readonly name: string;
-}
->>>>>>> 3f1ecd901 (docs(purchases): say two Amazon exports state an identity, not one of three)
 
 /** The batching key for one line. */
 export function batchingKey(item: BatchableItem): string {
@@ -46,19 +30,15 @@ export function batchingKey(item: BatchableItem): string {
 /** One product: every line that shares a batching key. */
 export interface ProposalCandidate {
   readonly key: string;
-  /**
-   * The merchant every line in this group came from, or null when they came
-   * from more than one.
-   *
-   * Only a cross-source scheme can produce a group spanning merchants, and
-   * for such a group there is no merchant to name: naming the first line's
-   * would hand a consumer — the classification prompt above all — a fact
-   * that is true of one line and asserted about all of them.
-   */
-  readonly source: string | null;
+  readonly source: string;
   /** The first line's name, which is what the model is shown. */
   readonly name: string;
-  readonly sku: string | null;
+  /**
+   * The identifier the merchant stated, with the namespace it stated it in.
+   * Never the bare string: the prompt is a consumer like any other, and
+   * `4471` alone tells a reader nothing about what it identifies.
+   */
+  readonly sku: ProductIdentity | null;
   /** Every line this one decision will be written to. */
   readonly itemIds: readonly string[];
 }
@@ -71,35 +51,27 @@ export interface ProposalCandidate {
  * spent its budget on the lines worth deciding.
  */
 export function toCandidates(items: readonly BatchableItem[]): readonly ProposalCandidate[] {
-  interface Group {
-    readonly key: string;
-    source: string | null;
-    readonly name: string;
-    readonly sku: ProductIdentity | null;
-    readonly itemIds: string[];
-  }
-
-  const byKey = new Map<string, Group>();
+  const byKey = new Map<string, { candidate: ProposalCandidate; itemIds: string[] }>();
   for (const item of items) {
     const key = batchingKey(item);
     const existing = byKey.get(key);
     if (existing === undefined) {
+      const itemIds = [item.id];
       byKey.set(key, {
-        key,
-        source: item.source,
-        name: item.name,
-        sku: item.sku,
-        itemIds: [item.id],
+        candidate: {
+          key,
+          source: item.source,
+          name: item.name,
+          sku: productIdentityOf(item),
+          itemIds,
+        },
+        itemIds,
       });
-      continue;
+    } else {
+      existing.itemIds.push(item.id);
     }
-    existing.itemIds.push(item.id);
-    // An ASIN group can span merchants, and then no single merchant is a
-    // fact about the group. Dropping the first line's is what stops it from
-    // being reported as one.
-    if (existing.source !== item.source) existing.source = null;
   }
-  return [...byKey.values()];
+  return [...byKey.values()].map((entry) => entry.candidate);
 }
 
 /** Split candidates into fixed-size batches, in order. */
