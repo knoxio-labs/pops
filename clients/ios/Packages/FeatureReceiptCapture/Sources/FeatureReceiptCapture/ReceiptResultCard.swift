@@ -47,14 +47,12 @@ internal struct ReceiptResultCard: View {
                     Text(content.reference)
                         .font(.popsCaption)
                         .foregroundStyle(Color.popsMutedForeground)
-                    Text(content.noDestinationNote)
-                        .font(.popsCaption)
-                        .foregroundStyle(Color.popsMutedForeground)
                 }
             }
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(content.accessibilityLabel)
         }
+        .accessibilityIdentifier(ReceiptResultAccessibility.created)
     }
 
     private func needsReviewCard(_ content: ReceiptResultContent.NeedsReviewContent) -> some View {
@@ -70,6 +68,7 @@ internal struct ReceiptResultCard: View {
             fieldsCard(
                 title: ReceiptResultCopy.needsReviewWhatWeRead, fields: content.extractedFields)
         }
+        .accessibilityIdentifier(ReceiptResultAccessibility.needsReview)
     }
 
     private func unreadableCard(_ content: ReceiptResultContent.UnreadableContent) -> some View {
@@ -85,6 +84,7 @@ internal struct ReceiptResultCard: View {
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(content.accessibilityLabel)
+        .accessibilityIdentifier(ReceiptResultAccessibility.unreadable)
     }
 
     private func heading(title: String, message: String, caption: String?, tone: Color) -> some View

@@ -25,14 +25,20 @@ public struct ReceiptResultView: View {
             .task { await model.submit() }
     }
 
-    @ViewBuilder private var content: some View {
+    /// `internal` rather than `private` so a test can render one state at a
+    /// time without going through `body`'s `.task` — the same reason
+    /// `ReceiptCapturePrompt` was split out as its own type instead of a
+    /// private computed property.
+    @ViewBuilder internal var content: some View {
         switch model.state {
         case .submitting:
             LoadingStateView(message: ReceiptResultCopy.submitting)
+                .accessibilityIdentifier(ReceiptResultAccessibility.submitting)
         case .failed(let error):
             ErrorStateView(
                 message: ReceiptResultCopy.message(for: error),
-                retryTitle: ReceiptResultCopy.retry
+                retryTitle: ReceiptResultCopy.retry,
+                retryAccessibilityIdentifier: ReceiptResultAccessibility.retryButton
             ) {
                 Task { await model.submit() }
             }
