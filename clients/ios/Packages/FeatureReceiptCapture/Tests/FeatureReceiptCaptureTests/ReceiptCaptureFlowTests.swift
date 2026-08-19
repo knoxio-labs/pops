@@ -281,8 +281,8 @@ internal struct ReceiptCaptureFlowTests {
     func aSecondReceiptResubmitsThroughTheView() async {
         let repository = ScriptedReceiptCaptureRepository(
             script: [
-                .outcome(.unreadable(receiptURIs: [], reason: "first")),
-                .outcome(.unreadable(receiptURIs: [], reason: "second")),
+                .outcome(.unreadable(receiptCount: 0, reason: "first")),
+                .outcome(.unreadable(receiptCount: 0, reason: "second")),
             ])
         let model = ReceiptCaptureViewModel(
             dependencies: .fake(receiptCapture: repository),
