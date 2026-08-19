@@ -1993,6 +1993,11 @@
                                 "id": {
                                   "type": "string"
                                 },
+                                "inventoryDeclinedAt": {
+                                  "nullable": true,
+                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                  "type": "string"
+                                },
                                 "inventoryItemStaleAt": {
                                   "nullable": true,
                                   "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
@@ -2017,6 +2022,7 @@
                                 "serialNumber",
                                 "inventoryItemUri",
                                 "inventoryItemStaleAt",
+                                "inventoryDeclinedAt",
                                 "createdAt"
                               ],
                               "type": "object"
@@ -2837,6 +2843,11 @@
                                 "id": {
                                   "type": "string"
                                 },
+                                "inventoryDeclinedAt": {
+                                  "nullable": true,
+                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                  "type": "string"
+                                },
                                 "inventoryItemStaleAt": {
                                   "nullable": true,
                                   "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
@@ -2861,6 +2872,7 @@
                                 "serialNumber",
                                 "inventoryItemUri",
                                 "inventoryItemStaleAt",
+                                "inventoryDeclinedAt",
                                 "createdAt"
                               ],
                               "type": "object"
@@ -3115,6 +3127,104 @@
         "tags": ["purchase"]
       }
     },
+    "/purchases/{id}/inventory-proposals": {
+      "get": {
+        "operationId": "purchase.listInventoryProposals",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "proposals": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "itemId": {
+                            "type": "string"
+                          },
+                          "itemName": {
+                            "type": "string"
+                          },
+                          "kindConfirmed": {
+                            "type": "boolean"
+                          },
+                          "purchaseDate": {
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                            "type": "string"
+                          },
+                          "purchaseId": {
+                            "type": "string"
+                          },
+                          "purchasePriceCents": {
+                            "maximum": 9007199254740991,
+                            "minimum": -9007199254740991,
+                            "type": "integer"
+                          },
+                          "purchaseTransactionUri": {
+                            "nullable": true,
+                            "pattern": "^pops:\\/\\/[a-z0-9-]+\\/[a-z0-9-]+\\/[^/\\s]+$",
+                            "type": "string"
+                          },
+                          "purchasedFromName": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "serialNumber": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "slot": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "unitId": {
+                            "nullable": true,
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "purchaseId",
+                          "itemId",
+                          "unitId",
+                          "slot",
+                          "itemName",
+                          "serialNumber",
+                          "purchaseDate",
+                          "purchasePriceCents",
+                          "purchasedFromName",
+                          "purchaseTransactionUri",
+                          "kindConfirmed"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": ["proposals"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          }
+        },
+        "summary": "Unanswered inventory offers derived from an order's durable lines",
+        "tags": ["purchase"]
+      }
+    },
     "/purchases/{id}/items/{itemId}": {
       "patch": {
         "operationId": "purchase.patchItem",
@@ -3346,6 +3456,11 @@
                           "id": {
                             "type": "string"
                           },
+                          "inventoryDeclinedAt": {
+                            "nullable": true,
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                            "type": "string"
+                          },
                           "inventoryItemStaleAt": {
                             "nullable": true,
                             "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
@@ -3370,6 +3485,7 @@
                           "serialNumber",
                           "inventoryItemUri",
                           "inventoryItemStaleAt",
+                          "inventoryDeclinedAt",
                           "createdAt"
                         ],
                         "type": "object"
@@ -3426,6 +3542,194 @@
           }
         },
         "summary": "Confirm a line's kind and item tags",
+        "tags": ["purchase"]
+      }
+    },
+    "/purchases/{id}/items/{itemId}/inventory-proposal": {
+      "post": {
+        "operationId": "purchase.decideInventoryProposal",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "itemId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "additionalProperties": false,
+                    "properties": {
+                      "decision": {
+                        "enum": ["accepted"],
+                        "type": "string"
+                      },
+                      "inventoryItemUri": {
+                        "pattern": "^pops:\\/\\/[a-z0-9-]+\\/[a-z0-9-]+\\/[^/\\s]+$",
+                        "type": "string"
+                      },
+                      "unitId": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["decision", "inventoryItemUri"],
+                    "type": "object"
+                  },
+                  {
+                    "additionalProperties": false,
+                    "properties": {
+                      "decision": {
+                        "enum": ["declined"],
+                        "type": "string"
+                      },
+                      "unitId": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["decision"],
+                    "type": "object"
+                  }
+                ]
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "unit": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "createdAt": {
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                          "type": "string"
+                        },
+                        "id": {
+                          "type": "string"
+                        },
+                        "inventoryDeclinedAt": {
+                          "nullable": true,
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                          "type": "string"
+                        },
+                        "inventoryItemStaleAt": {
+                          "nullable": true,
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                          "type": "string"
+                        },
+                        "inventoryItemUri": {
+                          "nullable": true,
+                          "pattern": "^pops:\\/\\/[a-z0-9-]+\\/[a-z0-9-]+\\/[^/\\s]+$",
+                          "type": "string"
+                        },
+                        "itemId": {
+                          "type": "string"
+                        },
+                        "serialNumber": {
+                          "nullable": true,
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "itemId",
+                        "serialNumber",
+                        "inventoryItemUri",
+                        "inventoryItemStaleAt",
+                        "inventoryDeclinedAt",
+                        "createdAt"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": ["unit"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "409"
+          }
+        },
+        "summary": "Accept or decline one inventory proposal on a line",
         "tags": ["purchase"]
       }
     },
@@ -3996,6 +4300,11 @@
                                         "id": {
                                           "type": "string"
                                         },
+                                        "inventoryDeclinedAt": {
+                                          "nullable": true,
+                                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                          "type": "string"
+                                        },
                                         "inventoryItemStaleAt": {
                                           "nullable": true,
                                           "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
@@ -4020,6 +4329,7 @@
                                         "serialNumber",
                                         "inventoryItemUri",
                                         "inventoryItemStaleAt",
+                                        "inventoryDeclinedAt",
                                         "createdAt"
                                       ],
                                       "type": "object"

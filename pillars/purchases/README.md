@@ -138,6 +138,24 @@ An order with **no charge and no link** (`awaiting_settlement`) is normal and pe
 
 A **cash** order (`settlementMode='cash'`) is terminal on arrival — `createPurchase` writes it straight to `settled_cash`. No transaction will ever exist for it, so it must never enter the reconcile queue, while still counting in every spend figure.
 
+## The inventory fan-out
+
+A durable line suggests an asset. `GET /purchases/:id/inventory-proposals` is that suggestion and nothing more: **purchases writes nothing into `inventory` and this route does not create anything**. Unattended fan-out fills that pillar with cables, batteries and light globes inside a month, at which point the user stops trusting it — which is why `ITEM_KINDS` calls both fan-out directions proposals.
+
+**What makes a proposal** is a unit slot, not a line. `purchase_items.kind = 'durable'` is the substrate and nothing here re-derives durability from a name; a quantity-3 durable line is up to three assets with three warranties, so it yields three offers answered one at a time. Two exclusions beyond the kind are load-bearing rather than fussy: a line on a `cancelled` or `returned` delivery is goods that never arrived, and a fully refunded line is goods that went back. A _partial_ refund is a price change and still proposes.
+
+The payload carries inventory's own field names — `itemName`, `purchaseDate`, `purchasedFromName`, `purchaseTransactionUri` — so the surface holding the human's consent hands it to that pillar's `POST /items` unchanged. Money is the one deliberate departure: inventory's `purchasePrice` is a float dollar amount and this pillar mints no float anywhere, so the offer carries `purchasePriceCents` and dividing is the accepting caller's step. It is the unit's share of **landed cost**, apportioned by `allocateProRata` so a line's shares sum to what was actually paid — the sticker price of a thing is not what it cost to get it into the house.
+
+`purchaseTransactionUri` is filled only when exactly one **confirmed** link names one, and both halves matter. An unconfirmed link is the matcher's current guess, which the next sweep is free to tear down; an order settled across two transactions has no single one to name, and inventory's column holds one URI, so guessing would file the asset against half its own payment. Two other fields the ticket asked for are deliberately absent rather than null: purchases holds no `brand` and no `model` — no column, no source that states one — and splitting them out of a line name is guessing where a wrong answer is invisible afterwards (POPS-2355).
+
+**Who accepts is a human, per item, and the accept is not this pillar's write.** `POST /purchases/:id/items/:itemId/inventory-proposal` records the answer: `accepted` carries the `pops://inventory/item/<id>` URI of a row the caller **has already created** on the inventory pillar, and `declined` records the refusal. Recording an accept before the inventory row exists would store a reference to nothing, which the nightly cron would then dutifully mark stale. That leaves the create itself — and the review UI that collects the opt-in — outside this pillar (POPS-2356, POPS-2357).
+
+**What stops a line proposing twice** is that a decided slot is not offered. `purchase_item_units.inventory_item_uri` says the unit is in inventory; `inventory_declined_at` says it was offered and turned down; a CHECK holds them mutually exclusive so no reader has to invent a precedence rule. A decision on a line with no undecided slot left is a `409`, not a silent extra unit — that is what stops a double-submitted accept putting two assets in inventory for one physical thing. There is no way to retract a decision (POPS-2358).
+
+A stale link is **not** a re-opened proposal. `inventory_item_stale_at` means the nightly cron got a genuine 404 from inventory for that URI; it is evidence to show a human, and re-offering an asset they deleted on purpose would fight them.
+
+Accepting is also what finally populates the inventory leg of the nightly soft-URI cron. Until now the only writer of `inventory_item_uri` was an ingest payload that supplied one, which no shipped adapter does.
+
 ## Who may call it
 
 An inbound service-account gate covers the whole contract surface ([ADR-044](../../docs/architecture/adr-044-inbound-service-account-scope-enforcement.md)). It is derived from `purchasesContract` rather than a hand-kept path list, so a new route is gated the moment it exists. `/health`, `/pillars` and `/openapi` are outside the contract and stay ungated — the compose healthcheck and the image smoke probe need no credential.

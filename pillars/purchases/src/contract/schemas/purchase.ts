@@ -188,6 +188,13 @@ export const PurchaseItemUnitSchema = z.object({
   serialNumber: z.string().nullable(),
   inventoryItemUri: PopsUriSchema.nullable(),
   inventoryItemStaleAt: IsoTimestampSchema.nullable(),
+  /**
+   * Set when this unit was offered to inventory and turned down. Mutually
+   * exclusive with {@link inventoryItemUri}: a unit is undecided, in
+   * inventory, or declined, and only an undecided one is ever proposed
+   * again.
+   */
+  inventoryDeclinedAt: IsoTimestampSchema.nullable(),
   createdAt: IsoTimestampSchema,
 });
 

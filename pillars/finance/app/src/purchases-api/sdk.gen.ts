@@ -13,6 +13,9 @@ import type {
   PurchaseCreateData,
   PurchaseCreateErrors,
   PurchaseCreateResponses,
+  PurchaseDecideInventoryProposalData,
+  PurchaseDecideInventoryProposalErrors,
+  PurchaseDecideInventoryProposalResponses,
   PurchaseDeleteData,
   PurchaseDeleteErrors,
   PurchaseDeleteResponses,
@@ -23,6 +26,8 @@ import type {
   PurchaseItemsByTagResponses,
   PurchaseListData,
   PurchaseListErrors,
+  PurchaseListInventoryProposalsData,
+  PurchaseListInventoryProposalsResponses,
   PurchaseListResponses,
   PurchasePatchItemData,
   PurchasePatchItemErrors,
@@ -172,6 +177,17 @@ export const purchaseGet = <ThrowOnError extends boolean = false>(
   });
 
 /**
+ * Unanswered inventory offers derived from an order's durable lines
+ */
+export const purchaseListInventoryProposals = <ThrowOnError extends boolean = false>(
+  options: Options<PurchaseListInventoryProposalsData, ThrowOnError>
+): RequestResult<PurchaseListInventoryProposalsResponses, unknown, ThrowOnError> =>
+  (options.client ?? client).get<PurchaseListInventoryProposalsResponses, unknown, ThrowOnError>({
+    url: '/purchases/{id}/inventory-proposals',
+    ...options,
+  });
+
+/**
  * Confirm a line's kind and item tags
  */
 export const purchasePatchItem = <ThrowOnError extends boolean = false>(
@@ -183,6 +199,29 @@ export const purchasePatchItem = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     url: '/purchases/{id}/items/{itemId}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Accept or decline one inventory proposal on a line
+ */
+export const purchaseDecideInventoryProposal = <ThrowOnError extends boolean = false>(
+  options: Options<PurchaseDecideInventoryProposalData, ThrowOnError>
+): RequestResult<
+  PurchaseDecideInventoryProposalResponses,
+  PurchaseDecideInventoryProposalErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).post<
+    PurchaseDecideInventoryProposalResponses,
+    PurchaseDecideInventoryProposalErrors,
+    ThrowOnError
+  >({
+    url: '/purchases/{id}/items/{itemId}/inventory-proposal',
     ...options,
     headers: {
       'Content-Type': 'application/json',

@@ -90,6 +90,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/purchases/{id}/inventory-proposals': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Unanswered inventory offers derived from an order's durable lines */
+    get: operations['purchase.listInventoryProposals'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/purchases/{id}/items/{itemId}': {
     parameters: {
       query?: never;
@@ -105,6 +122,23 @@ export interface paths {
     head?: never;
     /** Confirm a line's kind and item tags */
     patch: operations['purchase.patchItem'];
+    trace?: never;
+  };
+  '/purchases/{id}/items/{itemId}/inventory-proposal': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Accept or decline one inventory proposal on a line */
+    post: operations['purchase.decideInventoryProposal'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
     trace?: never;
   };
   '/receipts': {
@@ -826,6 +860,7 @@ export interface operations {
               units: {
                 createdAt: string;
                 id: string;
+                inventoryDeclinedAt: string | null;
                 inventoryItemStaleAt: string | null;
                 inventoryItemUri: string | null;
                 itemId: string;
@@ -1018,6 +1053,7 @@ export interface operations {
               units: {
                 createdAt: string;
                 id: string;
+                inventoryDeclinedAt: string | null;
                 inventoryItemStaleAt: string | null;
                 inventoryItemUri: string | null;
                 itemId: string;
@@ -1125,6 +1161,42 @@ export interface operations {
       };
     };
   };
+  'purchase.listInventoryProposals': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            proposals: {
+              itemId: string;
+              itemName: string;
+              kindConfirmed: boolean;
+              purchaseDate: string;
+              purchaseId: string;
+              purchasePriceCents: number;
+              purchaseTransactionUri: string | null;
+              purchasedFromName: string | null;
+              serialNumber: string | null;
+              slot: number;
+              unitId: string | null;
+            }[];
+          };
+        };
+      };
+    };
+  };
   'purchase.patchItem': {
     parameters: {
       query?: never;
@@ -1192,6 +1264,7 @@ export interface operations {
             units: {
               createdAt: string;
               id: string;
+              inventoryDeclinedAt: string | null;
               inventoryItemStaleAt: string | null;
               inventoryItemUri: string | null;
               itemId: string;
@@ -1214,6 +1287,91 @@ export interface operations {
       };
       /** @description 404 */
       404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+          };
+        };
+      };
+    };
+  };
+  'purchase.decideInventoryProposal': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+        itemId: string;
+      };
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json':
+          | {
+              /** @enum {string} */
+              decision: 'accepted';
+              inventoryItemUri: string;
+              unitId?: string;
+            }
+          | {
+              /** @enum {string} */
+              decision: 'declined';
+              unitId?: string;
+            };
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            unit: {
+              createdAt: string;
+              id: string;
+              inventoryDeclinedAt: string | null;
+              inventoryItemStaleAt: string | null;
+              inventoryItemUri: string | null;
+              itemId: string;
+              serialNumber: string | null;
+            };
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
         headers: {
           [name: string]: unknown;
         };
@@ -1375,6 +1533,7 @@ export interface operations {
                     units: {
                       createdAt: string;
                       id: string;
+                      inventoryDeclinedAt: string | null;
                       inventoryItemStaleAt: string | null;
                       inventoryItemUri: string | null;
                       itemId: string;

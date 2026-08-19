@@ -44,6 +44,13 @@ export {
 export { type MerchantIdentity } from './services/merchant-identity.js';
 
 export {
+  decideInventoryProposal,
+  listInventoryProposals,
+  type InventoryProposal,
+  type InventoryProposalDecision,
+} from './services/inventory-proposals.js';
+
+export {
   rollUpMerchantSpend,
   type CurrencySpend,
   type MerchantSpend,

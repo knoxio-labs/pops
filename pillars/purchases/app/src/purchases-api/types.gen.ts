@@ -505,6 +505,7 @@ export type PurchaseCreateResponses = {
       units: Array<{
         createdAt: string;
         id: string;
+        inventoryDeclinedAt: string | null;
         inventoryItemStaleAt: string | null;
         inventoryItemUri: string | null;
         itemId: string;
@@ -708,6 +709,7 @@ export type PurchaseGetResponses = {
       units: Array<{
         createdAt: string;
         id: string;
+        inventoryDeclinedAt: string | null;
         inventoryItemStaleAt: string | null;
         inventoryItemUri: string | null;
         itemId: string;
@@ -756,6 +758,39 @@ export type PurchaseGetResponses = {
 };
 
 export type PurchaseGetResponse = PurchaseGetResponses[keyof PurchaseGetResponses];
+
+export type PurchaseListInventoryProposalsData = {
+  body?: never;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/purchases/{id}/inventory-proposals';
+};
+
+export type PurchaseListInventoryProposalsResponses = {
+  /**
+   * 200
+   */
+  200: {
+    proposals: Array<{
+      itemId: string;
+      itemName: string;
+      kindConfirmed: boolean;
+      purchaseDate: string;
+      purchaseId: string;
+      purchasePriceCents: number;
+      purchaseTransactionUri: string | null;
+      purchasedFromName: string | null;
+      serialNumber: string | null;
+      slot: number;
+      unitId: string | null;
+    }>;
+  };
+};
+
+export type PurchaseListInventoryProposalsResponse =
+  PurchaseListInventoryProposalsResponses[keyof PurchaseListInventoryProposalsResponses];
 
 export type PurchasePatchItemData = {
   /**
@@ -834,6 +869,7 @@ export type PurchasePatchItemResponses = {
     units: Array<{
       createdAt: string;
       id: string;
+      inventoryDeclinedAt: string | null;
       inventoryItemStaleAt: string | null;
       inventoryItemUri: string | null;
       itemId: string;
@@ -844,6 +880,75 @@ export type PurchasePatchItemResponses = {
 
 export type PurchasePatchItemResponse =
   PurchasePatchItemResponses[keyof PurchasePatchItemResponses];
+
+export type PurchaseDecideInventoryProposalData = {
+  /**
+   * Body
+   */
+  body?:
+    | {
+        decision: 'accepted';
+        inventoryItemUri: string;
+        unitId?: string;
+      }
+    | {
+        decision: 'declined';
+        unitId?: string;
+      };
+  path: {
+    id: string;
+    itemId: string;
+  };
+  query?: never;
+  url: '/purchases/{id}/items/{itemId}/inventory-proposal';
+};
+
+export type PurchaseDecideInventoryProposalErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+  };
+};
+
+export type PurchaseDecideInventoryProposalError =
+  PurchaseDecideInventoryProposalErrors[keyof PurchaseDecideInventoryProposalErrors];
+
+export type PurchaseDecideInventoryProposalResponses = {
+  /**
+   * 200
+   */
+  200: {
+    unit: {
+      createdAt: string;
+      id: string;
+      inventoryDeclinedAt: string | null;
+      inventoryItemStaleAt: string | null;
+      inventoryItemUri: string | null;
+      itemId: string;
+      serialNumber: string | null;
+    };
+  };
+};
+
+export type PurchaseDecideInventoryProposalResponse =
+  PurchaseDecideInventoryProposalResponses[keyof PurchaseDecideInventoryProposalResponses];
 
 export type ReceiptUploadData = {
   /**
@@ -1000,6 +1105,7 @@ export type ReceiptUploadResponses = {
             units: Array<{
               createdAt: string;
               id: string;
+              inventoryDeclinedAt: string | null;
               inventoryItemStaleAt: string | null;
               inventoryItemUri: string | null;
               itemId: string;

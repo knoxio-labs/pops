@@ -209,6 +209,7 @@ describe('PurchaseDetailPage', () => {
               {
                 createdAt: '2026-08-12T10:00:00.000Z',
                 id: 'unit-1',
+                inventoryDeclinedAt: null,
                 inventoryItemStaleAt: null,
                 inventoryItemUri: 'pops://inventory/item/inv-9',
                 itemId: 'line-1',

@@ -76,3 +76,22 @@ export class InvalidIngestPayloadError extends Error {
     this.detail = detail;
   }
 }
+
+/**
+ * An inventory proposal was answered that had already been answered — the
+ * named unit is accepted or declined, or every unit of the line is.
+ *
+ * A conflict rather than a bad request, because the payload is fine and the
+ * state is what refuses it. A double-submitted accept lands here instead of
+ * putting a second asset in inventory for one physical thing, which is the
+ * failure this state exists to prevent.
+ */
+export class InventoryProposalConflictError extends Error {
+  readonly detail: string;
+
+  constructor(detail: string) {
+    super(detail);
+    this.name = 'InventoryProposalConflictError';
+    this.detail = detail;
+  }
+}
