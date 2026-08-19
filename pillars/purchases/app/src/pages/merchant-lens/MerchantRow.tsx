@@ -1,9 +1,8 @@
 import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Badge, Button } from '@pops/ui';
+import { Badge, Button, formatCents } from '@pops/ui';
 
-import { formatCents } from '../../money.js';
 import { explainedSplit } from './explained-split.js';
 import { ExplainedSplit } from './ExplainedSplit.js';
 import { merchantLabel } from './merchant-label.js';

@@ -1,9 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 
-import { formatDate } from '@pops/ui';
+import { formatCents, formatDate } from '@pops/ui';
 
-import { formatCents } from '../../money.js';
 import { ExtractedReading } from './ExtractedReading.js';
 import { Field, OutcomeSection, StoredParts } from './OutcomeParts.js';
 

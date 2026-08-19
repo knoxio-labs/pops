@@ -3,9 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { Link, useParams, useSearchParams } from 'react-router';
 
 import { useSetPageContext } from '@pops/navigation';
-import { Button, PageHeader } from '@pops/ui';
+import { Button, formatCents, PageHeader } from '@pops/ui';
 
-import { formatCents } from '../money.js';
 import { AccountingSplit } from './purchase-detail/AccountingSplit.js';
 import { ChargeList } from './purchase-detail/ChargeList.js';
 import { DocumentList, ShipmentList } from './purchase-detail/DeliveryList.js';

@@ -223,7 +223,6 @@ src/
   index.ts                         entrypoint — re-exports manifest, navConfig, routes
   manifest.ts                      ModuleManifest (id='purchases')
   routes.tsx                       route table + navConfig
-  money.ts                         cents → currency string, degrading on an unknown code
   facts.tsx                        one labelled value, saying what its absence means
   purchases-api/                   generated Hey API client (do not hand-edit)
   purchases-api-helpers.ts         unwrap() for the generated {data,error} results
