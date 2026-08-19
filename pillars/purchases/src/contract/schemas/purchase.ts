@@ -92,6 +92,18 @@ export const PurchaseSchema = z.object({
   merchantEntityName: z.string().nullable(),
   settlementMode: SettlementModeSchema,
   paymentHint: z.string().nullable(),
+  /**
+   * Where the receipt was PHOTOGRAPHED, in signed decimal degrees, when the
+   * image carried a fix (ADR-047).
+   *
+   * Not where the shop is, and not to be relabelled as such: a receipt
+   * photographed at home a week after the shop carries home's coordinate.
+   * Null on every purchase that did not arrive as a photograph, and on most
+   * that did — phones strip EXIF on share, and a device with no lock writes
+   * zeros the reader refuses.
+   */
+  captureLatitude: z.number().min(-90).max(90).nullable(),
+  captureLongitude: z.number().min(-180).max(180).nullable(),
   rawRef: z.string().nullable(),
   checksum: z.string(),
   status: PurchaseStatusSchema,

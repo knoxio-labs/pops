@@ -527,6 +527,18 @@
                       "items": {
                         "additionalProperties": false,
                         "properties": {
+                          "captureLatitude": {
+                            "maximum": 90,
+                            "minimum": -90,
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "captureLongitude": {
+                            "maximum": 180,
+                            "minimum": -180,
+                            "nullable": true,
+                            "type": "number"
+                          },
                           "checksum": {
                             "type": "string"
                           },
@@ -638,6 +650,8 @@
                           "merchantEntityName",
                           "settlementMode",
                           "paymentHint",
+                          "captureLatitude",
+                          "captureLongitude",
                           "rawRef",
                           "checksum",
                           "status",
@@ -1507,6 +1521,18 @@
                     "purchase": {
                       "additionalProperties": false,
                       "properties": {
+                        "captureLatitude": {
+                          "maximum": 90,
+                          "minimum": -90,
+                          "nullable": true,
+                          "type": "number"
+                        },
+                        "captureLongitude": {
+                          "maximum": 180,
+                          "minimum": -180,
+                          "nullable": true,
+                          "type": "number"
+                        },
                         "checksum": {
                           "type": "string"
                         },
@@ -1618,6 +1644,8 @@
                         "merchantEntityName",
                         "settlementMode",
                         "paymentHint",
+                        "captureLatitude",
+                        "captureLongitude",
                         "rawRef",
                         "checksum",
                         "status",
@@ -2339,6 +2367,18 @@
                     "purchase": {
                       "additionalProperties": false,
                       "properties": {
+                        "captureLatitude": {
+                          "maximum": 90,
+                          "minimum": -90,
+                          "nullable": true,
+                          "type": "number"
+                        },
+                        "captureLongitude": {
+                          "maximum": 180,
+                          "minimum": -180,
+                          "nullable": true,
+                          "type": "number"
+                        },
                         "checksum": {
                           "type": "string"
                         },
@@ -2450,6 +2490,8 @@
                         "merchantEntityName",
                         "settlementMode",
                         "paymentHint",
+                        "captureLatitude",
+                        "captureLongitude",
                         "rawRef",
                         "checksum",
                         "status",
@@ -2890,6 +2932,10 @@
               "schema": {
                 "additionalProperties": false,
                 "properties": {
+                  "capturedAt": {
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                    "type": "string"
+                  },
                   "parts": {
                     "items": {
                       "additionalProperties": false,
@@ -2916,6 +2962,11 @@
                     "maxItems": 8,
                     "minItems": 1,
                     "type": "array"
+                  },
+                  "timeZone": {
+                    "maxLength": 64,
+                    "minLength": 1,
+                    "type": "string"
                   }
                 },
                 "required": ["parts"],
@@ -3441,6 +3492,18 @@
                             "purchase": {
                               "additionalProperties": false,
                               "properties": {
+                                "captureLatitude": {
+                                  "maximum": 90,
+                                  "minimum": -90,
+                                  "nullable": true,
+                                  "type": "number"
+                                },
+                                "captureLongitude": {
+                                  "maximum": 180,
+                                  "minimum": -180,
+                                  "nullable": true,
+                                  "type": "number"
+                                },
                                 "checksum": {
                                   "type": "string"
                                 },
@@ -3552,6 +3615,8 @@
                                 "merchantEntityName",
                                 "settlementMode",
                                 "paymentHint",
+                                "captureLatitude",
+                                "captureLongitude",
                                 "rawRef",
                                 "checksum",
                                 "status",
@@ -4181,6 +4246,18 @@
                           "purchase": {
                             "additionalProperties": false,
                             "properties": {
+                              "captureLatitude": {
+                                "maximum": 90,
+                                "minimum": -90,
+                                "nullable": true,
+                                "type": "number"
+                              },
+                              "captureLongitude": {
+                                "maximum": 180,
+                                "minimum": -180,
+                                "nullable": true,
+                                "type": "number"
+                              },
                               "checksum": {
                                 "type": "string"
                               },
@@ -4292,6 +4369,8 @@
                               "merchantEntityName",
                               "settlementMode",
                               "paymentHint",
+                              "captureLatitude",
+                              "captureLongitude",
                               "rawRef",
                               "checksum",
                               "status",

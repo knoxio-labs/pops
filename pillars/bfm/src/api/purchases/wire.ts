@@ -25,6 +25,8 @@
  */
 import { z } from 'zod';
 
+import { IsoTimestampSchema } from '../../contract/iso-timestamp.js';
+
 import type { MobileExtractedReceipt, MobileReceiptOutcome } from '../../contract/rest-schemas.js';
 
 /** The purchase fields the mobile confirmation is built from. */
@@ -34,20 +36,10 @@ const PurchasesPurchaseSchema = z.object({
   totalCents: z.number().int(),
   currency: z.string(),
   /**
-   * ISO-8601 with an explicit timezone, enforced rather than accepted as a
-   * bare string. It is the date a confirmation screen shows, and a value the
-   * phone cannot parse renders as a blank or as today — neither of which is
-   * distinguishable from a receipt that stated no date, which purchases
-   * signals a completely different way. The pattern mirrors purchases'
-   * `IsoTimestampSchema` exactly, offsets included, so bfm rejects what that
-   * pillar rejects and nothing more.
+   * Enforced rather than accepted as a bare string — see
+   * `../../contract/iso-timestamp.ts` for why, in both directions.
    */
-  orderedAt: z
-    .string()
-    .regex(
-      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,9})?(Z|[+-]\d{2}:\d{2})$/u,
-      'expected an ISO-8601 timestamp with a timezone'
-    ),
+  orderedAt: IsoTimestampSchema,
 });
 
 const PurchasesPurchaseDetailSchema = z.object({

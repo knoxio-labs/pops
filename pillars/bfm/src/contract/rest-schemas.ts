@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { IsoTimestampSchema } from './iso-timestamp.js';
+
 /**
  * Liveness shape every pillar's `/health` returns. `pillar` is pinned to the
  * literal `bfm` rather than a free string so a misrouted proxy — a request
@@ -336,6 +338,35 @@ export type MobileReceiptPart = z.infer<typeof MobileReceiptPartSchema>;
  */
 export const MobileReceiptUploadBodySchema = z.object({
   parts: z.array(MobileReceiptPartSchema).min(1).max(MOBILE_RECEIPT_MAX_PARTS),
+  /**
+   * When the shutter fired, by the handset's own clock.
+   *
+   * Optional, and forwarded verbatim. `purchases` decides what to do with it
+   * — it replaces the upload instant for a receipt whose paper states no
+   * date, and is discarded outright if it names a moment that could not have
+   * happened. None of that judgement is bfm's, for the same reason the
+   * dedup rule is not: two pillars deciding the same question is two answers
+   * the first time they disagree.
+   *
+   * The pattern is `purchases`' own `IsoTimestampSchema`, offsets included,
+   * so a value bfm accepts is not one the producer will refuse — the cheaper
+   * refusal is the one that never leaves the handset.
+   */
+  capturedAt: IsoTimestampSchema.optional(),
+  /**
+   * The IANA zone the handset was in, e.g. `Australia/Sydney`.
+   *
+   * Not validated against the runtime here. bfm's clock and the producer's
+   * are different processes on different images, so a zone this one happens
+   * not to know is a refusal the user cannot act on; `purchases` checks it
+   * against its own runtime and falls back when it does not resolve.
+   *
+   * A zone, not coordinates. Nothing on this surface accepts a location: the
+   * producer reads one off the photograph's own EXIF where there is one
+   * (ADR-047), and a device that stripped its EXIF contributes none
+   * (POPS-2326).
+   */
+  timeZone: z.string().min(1).max(64).optional(),
 });
 
 export type MobileReceiptUploadBody = z.infer<typeof MobileReceiptUploadBodySchema>;

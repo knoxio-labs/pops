@@ -281,6 +281,70 @@ describe('what reaches the producer', () => {
 
     expect(Object.keys(fake.uploads[0] as Record<string, unknown>)).toEqual(['parts']);
   });
+
+  it('forwards the capture metadata the handset supplied, verbatim', async () => {
+    const { client, fake } = clientAnswering(purchasesCreated());
+
+    await client.uploadReceipt(PARTS, {
+      capturedAt: '2026-08-13T14:05:00+10:00',
+      timeZone: 'Australia/Sydney',
+    });
+
+    expect(fake.uploads).toEqual([
+      {
+        parts: PARTS,
+        capturedAt: '2026-08-13T14:05:00+10:00',
+        timeZone: 'Australia/Sydney',
+      },
+    ]);
+  });
+
+  it('sends no capture keys at all when the handset supplied none', async () => {
+    // Not `capturedAt: undefined`. The producer treats an absent field and a
+    // present-but-empty one identically today, and relying on that would be
+    // relying on a coincidence rather than on the contract.
+    const { client, fake } = clientAnswering(purchasesCreated());
+
+    await client.uploadReceipt(PARTS, {});
+
+    expect(Object.keys(fake.uploads[0] as Record<string, unknown>)).toEqual(['parts']);
+  });
+
+  it('forwards a capture time on its own, without inventing a zone', async () => {
+    const { client, fake } = clientAnswering(purchasesCreated());
+
+    await client.uploadReceipt(PARTS, { capturedAt: '2026-08-13T14:05:00+10:00' });
+
+    expect(fake.uploads).toEqual([{ parts: PARTS, capturedAt: '2026-08-13T14:05:00+10:00' }]);
+  });
+
+  it('does not judge a capture time bfm has no business judging', async () => {
+    // A 2041 clock is the producer's to discard — it owns the upload instant
+    // this has to be compared against. bfm deciding it too would be a second
+    // rule, the same mistake as a second dedup key.
+    const { client, fake } = clientAnswering(purchasesCreated());
+
+    await client.uploadReceipt(PARTS, { capturedAt: '2041-03-02T09:00:00Z' });
+
+    expect(fake.uploads).toEqual([{ parts: PARTS, capturedAt: '2041-03-02T09:00:00Z' }]);
+  });
+
+  it('sends no location, because the surface accepts none', async () => {
+    // The producer reads a coordinate off the photograph's own EXIF and
+    // nowhere else (ADR-047). A field here would be a second source with no
+    // ranking against the first.
+    const { client, fake } = clientAnswering(purchasesCreated());
+
+    await client.uploadReceipt(PARTS, {
+      capturedAt: '2026-08-13T14:05:00+10:00',
+      timeZone: 'Australia/Sydney',
+    });
+
+    const sent = JSON.stringify(fake.uploads[0]);
+    expect(sent).not.toContain('latitude');
+    expect(sent).not.toContain('longitude');
+    expect(sent).not.toContain('location');
+  });
 });
 
 describe('when the answer is not one bfm can use', () => {

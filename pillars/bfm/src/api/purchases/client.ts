@@ -36,24 +36,52 @@ export const PURCHASES_PILLAR_ID = 'purchases';
  */
 export type PurchasesReceiptRouter = {
   receipt: {
-    upload: (input: { parts: readonly MobileReceiptPart[] }) => Promise<unknown>;
+    upload: (input: {
+      parts: readonly MobileReceiptPart[];
+      capturedAt?: string;
+      timeZone?: string;
+    }) => Promise<unknown>;
   };
 };
 
+/**
+ * What the handset knew about the capture, carried through untouched.
+ *
+ * bfm neither validates these against a clock nor fills them in. They are
+ * the device's claim about itself, and `purchases` is the only place that
+ * decides whether to believe it.
+ */
+export interface MobileReceiptCapture {
+  readonly capturedAt?: string;
+  readonly timeZone?: string;
+}
+
 export interface MobilePurchasesClient {
-  uploadReceipt(parts: readonly MobileReceiptPart[]): Promise<GatewayOutcome<MobileReceiptOutcome>>;
+  uploadReceipt(
+    parts: readonly MobileReceiptPart[],
+    capture?: MobileReceiptCapture
+  ): Promise<GatewayOutcome<MobileReceiptOutcome>>;
 }
 
 export function createMobilePurchasesClient(gateway: PillarGateway): MobilePurchasesClient {
   return {
-    async uploadReceipt(parts: readonly MobileReceiptPart[]) {
+    async uploadReceipt(parts: readonly MobileReceiptPart[], capture: MobileReceiptCapture = {}) {
       // The parts travel unchanged. Re-encoding them here would be a second
       // representation of bytes the producer content-addresses, so a byte-level
       // difference would break its dedup and turn a retry into a second
       // purchase.
       const outcome = await gateway.call<PurchasesReceiptRouter, unknown>(
         PURCHASES_PILLAR_ID,
-        (handle) => handle.receipt.upload({ parts })
+        (handle) =>
+          handle.receipt.upload({
+            parts,
+            // Spread rather than passed as `undefined`: the producer's body
+            // schema makes both optional, and sending an explicit `undefined`
+            // through JSON would serialise the key away anyway — being
+            // explicit here keeps the two readings the same.
+            ...(capture.capturedAt === undefined ? {} : { capturedAt: capture.capturedAt }),
+            ...(capture.timeZone === undefined ? {} : { timeZone: capture.timeZone }),
+          })
       );
 
       const answered = parseOrMismatch(

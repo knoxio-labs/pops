@@ -119,6 +119,13 @@ export interface CreatePurchaseInput {
   readonly merchantEntityName?: string | null;
   readonly settlementMode?: SettlementMode;
   readonly paymentHint?: string | null;
+  /**
+   * Where the receipt was PHOTOGRAPHED, in signed decimal degrees, when the
+   * image said (ADR-047). Not where the shop is — see `schema/purchases.ts`.
+   * Both or neither; a half-coordinate is not a place.
+   */
+  readonly captureLatitude?: number | null;
+  readonly captureLongitude?: number | null;
   readonly rawRef?: string | null;
   readonly checksum: string;
   readonly shipments?: readonly CreateShipmentInput[];

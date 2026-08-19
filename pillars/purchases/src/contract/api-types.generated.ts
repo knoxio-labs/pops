@@ -427,6 +427,8 @@ export interface operations {
         content: {
           'application/json': {
             items: {
+              captureLatitude: number | null;
+              captureLongitude: number | null;
               checksum: string;
               createdAt: string;
               currency: string;
@@ -657,6 +659,8 @@ export interface operations {
               }[];
             }[];
             purchase: {
+              captureLatitude: number | null;
+              captureLongitude: number | null;
               checksum: string;
               createdAt: string;
               currency: string;
@@ -845,6 +849,8 @@ export interface operations {
               }[];
             }[];
             purchase: {
+              captureLatitude: number | null;
+              captureLongitude: number | null;
               checksum: string;
               createdAt: string;
               currency: string;
@@ -1053,6 +1059,7 @@ export interface operations {
     requestBody?: {
       content: {
         'application/json': {
+          capturedAt?: string;
           parts: {
             dataBase64: string;
             /** @enum {string} */
@@ -1064,6 +1071,7 @@ export interface operations {
               | 'application/pdf'
               | 'text/plain';
           }[];
+          timeZone?: string;
         };
       };
     };
@@ -1185,6 +1193,8 @@ export interface operations {
                     }[];
                   }[];
                   purchase: {
+                    captureLatitude: number | null;
+                    captureLongitude: number | null;
                     checksum: string;
                     createdAt: string;
                     currency: string;
@@ -1420,6 +1430,8 @@ export interface operations {
               }[];
               linkedCents: number;
               purchase: {
+                captureLatitude: number | null;
+                captureLongitude: number | null;
                 checksum: string;
                 createdAt: string;
                 currency: string;

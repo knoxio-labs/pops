@@ -21,7 +21,15 @@
  * Finance carries the same invariant on `transaction_corrections`.
  */
 import { sql } from 'drizzle-orm';
-import { index, integer, primaryKey, sqliteTable, text, unique } from 'drizzle-orm/sqlite-core';
+import {
+  index,
+  integer,
+  primaryKey,
+  real,
+  sqliteTable,
+  text,
+  unique,
+} from 'drizzle-orm/sqlite-core';
 
 import {
   INGEST_METHODS,
@@ -81,6 +89,23 @@ export const purchases = sqliteTable(
 
     merchantEntityId: text('merchant_entity_id'),
     merchantEntityName: text('merchant_entity_name'),
+
+    /**
+     * Where the photograph of the receipt was taken, in signed decimal
+     * degrees, when the photograph said (ADR-047).
+     *
+     * About the CAPTURE, not about the shop — a receipt photographed at
+     * home a week later carries home's coordinate — which is why the
+     * columns are named for it. Null is the ordinary case: only a
+     * photographed receipt can carry a fix at all, phones strip EXIF on
+     * share, and a device with no lock writes zeros this pillar refuses.
+     *
+     * REAL rather than integer microdegrees. The integer-only rule above is
+     * about money, where subset-sum has to be exact; a coordinate is never
+     * summed.
+     */
+    captureLatitude: real('capture_latitude'),
+    captureLongitude: real('capture_longitude'),
 
     settlementMode: text('settlement_mode', { enum: SETTLEMENT_MODES })
       .notNull()

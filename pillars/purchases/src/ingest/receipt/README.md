@@ -351,6 +351,61 @@ A contacts outage costs a link, never the purchase, and that guarantee sits
 in the handler rather than in the resolver — a resolver that forgets to
 catch must not be able to lose a receipt.
 
+## When and where the photograph was taken
+
+A receipt states its own date, and when it does that date wins over every
+clock — a slip photographed at the till and the same slip photographed at
+home a week later are one purchase on one day, and only the paper knows
+which. What this section is about is the case where the paper says nothing.
+
+`capture.ts` ranks three sources for that fallback, best first:
+
+1. `capturedAt` on the upload body — the uploading device's own clock at the
+   moment of capture. A phone at the till knows directly.
+2. `DateTimeOriginal` from the photograph's EXIF (`exif.ts`), made absolute
+   with `OffsetTimeOriginal` where the camera wrote one and placed with the
+   receipt's resolved zone where it did not.
+3. the upload instant, which is a fact about the server rather than about
+   the shop.
+
+All three carry `date-uncertain`. A capture time is a better guess in the
+same slot, not a date the receipt stated, and a reviewer has to be able to
+tell which they are looking at.
+
+**A device clock is checked before it is believed.** A handset back from a
+flat battery, or a camera whose date was never set, produces a confident
+timestamp wrong by decades, and a purchase dated 2041 sits outside every
+reconciliation window forever. Anything before 2000 or more than a day past
+the upload is discarded and the next source takes the slot — discarded
+rather than refused, because the bytes are the evidence and a wrong clock is
+not something retrying fixes.
+
+`timeZone` on the body outranks the zone the model infers from the printed
+address, which outranks the configured default. EXIF is deliberately not a
+rung on that ladder: `OffsetTimeOriginal` is an offset at one instant, not a
+zone, so applying it to a wall clock the receipt printed on some other date
+carries the wrong DST rule and is confidently an hour out for half the year.
+
+**Where** comes only from the photograph. `exif.ts` resolves the GPS IFD and
+the purchase carries `captureLatitude` / `captureLongitude` — a decision,
+recorded in
+[ADR-047](../../../../../docs/architecture/adr-047-purchases-stores-capture-location.md),
+which also states the five constraints on it. Three are worth repeating
+here because they are what the code in this directory is shaped by: the
+fields are named for the _capture_ and not for the purchase, because a
+receipt photographed at home carries home's coordinate; nothing that is not
+a place is stored, which includes an out-of-range angle, a zero denominator
+and Null Island; and **no coordinate reaches a model prompt**, which is the
+same line account and card numbers sit on. The reading is resolved after
+`readReceipt` returns and handed only to the mapper, and
+`../../api/__tests__/receipt-capture.test.ts` asserts it, because the way
+this leaks is somebody widening the struct the prompt is built from.
+
+Absence is the ordinary case for all of it. Only a JPEG can carry EXIF at
+all, phones strip it on share, screenshots have none, and the fleet's own
+web upload path re-encodes through a canvas — so a null capture time and a
+null location are what most uploads produce, and neither is a failure.
+
 ## Keeping the evidence
 
 The uploaded file is not a by-product. When the gate refuses a reading, the

@@ -26,7 +26,7 @@ import { z } from 'zod';
 import { ExtractedReceiptSchema } from '../ingest/receipt/extraction.js';
 import { MEDIA_TYPES } from '../ingest/receipt/vision.js';
 import { ErrorBodySchema } from './rest-schemas.js';
-import { PopsUriSchema, PurchaseDetailSchema } from './schemas/purchase.js';
+import { IsoTimestampSchema, PopsUriSchema, PurchaseDetailSchema } from './schemas/purchase.js';
 
 const c = initContract();
 
@@ -59,6 +59,44 @@ export const UploadReceiptBodySchema = z.object({
    * receipt needing more than eight frames is a scanner's job.
    */
   parts: z.array(ReceiptPartSchema).min(1).max(MAX_RECEIPT_PARTS),
+  /**
+   * When the shutter fired, by the uploading device's own clock.
+   *
+   * Optional, and the plain upload path is unchanged without it: a `curl` of
+   * a scanned PDF knows nothing about a capture, and a browser drop-zone
+   * re-encodes the image before sending it, which drops the EXIF that would
+   * otherwise have said. A phone photographing a receipt at the till knows
+   * directly, and directly beats both inference and the moment the file
+   * happened to reach the server.
+   *
+   * It does not override the date the receipt itself prints — a slip
+   * photographed at the till and the same slip photographed at home a week
+   * later are one purchase on one date, and only the paper knows which. What
+   * it replaces is the *upload* instant in the undated fallback, which still
+   * carries `date-uncertain` because it is still not something the receipt
+   * said.
+   *
+   * A value outside the window it could plausibly have happened in — a dead
+   * battery's epoch, a clock set years forward — is discarded rather than
+   * refused, and the upload proceeds as though none had been sent. The bytes
+   * are the evidence; a handset with a wrong clock cannot fix it by retrying.
+   */
+  capturedAt: IsoTimestampSchema.optional(),
+  /**
+   * The IANA zone the uploading device was in, e.g. `Australia/Sydney`.
+   *
+   * Outranks the zone the model infers from the printed address, which is the
+   * only field the extraction schema asks it to guess. A zone the runtime
+   * does not know is dropped, not trusted.
+   *
+   * A zone, not coordinates. This route accepts no location and the pillar
+   * stores none: an IANA identifier is what a date needs to be unambiguous,
+   * and it is the coarsest thing that answers that question. Where a purchase
+   * physically happened is a separate decision nobody has taken, and reading
+   * it off a photograph without taking it is the one thing not to do — see
+   * `src/ingest/receipt/exif.ts`.
+   */
+  timeZone: z.string().min(1).max(64).optional(),
 });
 
 /** One thing the gate objected to, in the receipt's own terms. */

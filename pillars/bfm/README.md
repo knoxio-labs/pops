@@ -275,8 +275,9 @@ count query per scroll tick, and a total that is stale the moment it is read.
 read on the phone's behalf, and what it may be is fixed by
 [ADR-046](../../docs/architecture/adr-046-mobile-write-surface-is-ingestion-only.md):
 the mobile surface accepts **ingestion** — content the handset captured — and
-never a mutation of a record a pillar already holds. Four properties follow,
-and each is asserted in `src/api/__tests__/mobile-receipts.test.ts` or
+never a mutation of a record a pillar already holds. Five properties follow,
+and each is asserted in `src/api/__tests__/mobile-receipts.test.ts`,
+`src/api/purchases/__tests__/client.test.ts` or
 `src/contract/__tests__/mobile-verbs.test.ts`:
 
 - **The bytes travel unchanged.** `purchases` content-addresses them, which is
@@ -310,6 +311,18 @@ and each is asserted in `src/api/__tests__/mobile-receipts.test.ts` or
   purchases refuses at its own ceiling") rather than fixed here, since the
   mapping it exposes is shared by every cross-pillar call in the repo, not
   specific to receipts.
+- **Capture metadata is forwarded, never judged.** The body may carry
+  `capturedAt` (the handset's own clock at the shutter) and `timeZone` (the
+  IANA zone it was in). Both are optional and both go through verbatim.
+  `purchases` decides what they are worth: `capturedAt` replaces the upload
+  instant for a receipt whose paper states no date, and is discarded outright
+  if it names a moment that could not have happened. bfm checking either would
+  be a second rule against the producer's, the same mistake as a second dedup
+  key — and bfm does not hold the upload instant a capture time has to be
+  compared against. Nothing on this surface accepts a **location**: the
+  producer reads one off the photograph's own EXIF where there is one
+  ([ADR-047](../../docs/architecture/adr-047-purchases-stores-capture-location.md)),
+  and a handset that stripped its EXIF contributes none (POPS-2326).
 - **The grant is a write grant.** `purchases.receipt` was added to
   `BFM_SERVICE_ACCOUNT_SCOPES` for this and authorises nothing else in that
   pillar. See [Provisioning the service account](#provisioning-the-service-account).

@@ -34,6 +34,7 @@ import {
 import { kindOf } from '../../ingest/receipt/vision.js';
 import { createMerchantResolver, type MerchantResolver } from '../contacts/merchant.js';
 import { tryMapServiceError } from './error-mapping.js';
+import { captureOf } from './receipt-capture.js';
 import { toPurchaseDetailBody } from './serializers.js';
 
 import type { z } from 'zod';
@@ -295,7 +296,10 @@ export function makeReceiptHandlers(
       // upload and tagged, rather than refused. The shop happened and the
       // evidence exists, so losing it would be worse than carrying an
       // inferred date the tag stops anyone mistaking for a stated one.
-      const shaped = receiptToPurchase(outcome.extracted, outcome.gate, stored, uploadedAt);
+      const shaped = receiptToPurchase(outcome.extracted, outcome.gate, stored, {
+        uploadedAt,
+        capture: captureOf(body, parts),
+      });
 
       const alreadyHave = sameShopAlreadyRecorded(db, shaped.purchase);
       if (alreadyHave !== undefined) {

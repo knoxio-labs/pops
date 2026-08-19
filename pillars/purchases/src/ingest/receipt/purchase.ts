@@ -29,9 +29,11 @@ import { createHash } from 'node:crypto';
 import { allocateProRata } from '../allocation.js';
 import { instantFromLocalParts, isKnownTimeZone, storeTimeZone } from '../local-time.js';
 import { parseAmountCents } from '../money.js';
+import { NO_CAPTURE, captureInstant, captureLocation } from './capture.js';
 import { receiptKey } from './store.js';
 
 import type { CreateItemInput, CreatePurchaseInput } from '../../db/services/purchase-input.js';
+import type { ReceiptCapture } from './capture.js';
 import type { ExtractedReceipt } from './extraction.js';
 import type { AdmissibleGate } from './gate.js';
 import type { StoredReceipt } from './store.js';
@@ -115,15 +117,65 @@ function withAllocatedShipping(
 /**
  * Where the shop is, and how sure we are.
  *
- * The model infers a zone from the printed address, so it can name one that
- * does not exist. A rejected guess falls back to the configured default and
- * says so, rather than throwing inside a date calculation or silently
- * placing a Paris receipt in Sydney.
+ * Three sources, best first.
+ *
+ * The client's own zone wins: a phone at the till reports the zone it is
+ * actually in, which is a fact, where everything below it is read off paper
+ * or guessed. Anything it names that the runtime does not know is dropped
+ * rather than trusted, the same way the model's guess is.
+ *
+ * Then the model, which infers a zone from the printed address — about the
+ * shop rather than about the photographer, so it beats anything derived from
+ * the photograph.
+ *
+ * Then the configured default, said out loud. A rejected guess falls back
+ * there rather than throwing inside a date calculation or silently placing a
+ * Paris receipt in Sydney.
+ *
+ * EXIF is deliberately not a fourth rung. `OffsetTimeOriginal` is an offset
+ * at one instant, not a zone: applying it to a wall clock the receipt printed
+ * on some other date would carry that day's DST rule onto a date it does not
+ * govern, and be confidently an hour out for half the year. It places the
+ * photograph, which is the one job it can do correctly (see `capture.ts`).
  */
-function resolveZone(extracted: ExtractedReceipt): { zone: string; certain: boolean } {
+function resolveZone(
+  extracted: ExtractedReceipt,
+  capture: ReceiptCapture
+): { zone: string; certain: boolean } {
+  if (isKnownTimeZone(capture.timeZone)) return { zone: capture.timeZone, certain: true };
   return isKnownTimeZone(extracted.timeZone)
     ? { zone: extracted.timeZone, certain: true }
     : { zone: storeTimeZone(), certain: false };
+}
+
+/** Everything about an upload that is not the file or the reading. */
+export interface ReceiptContext {
+  /** Defaults to now. Stamped before the model call, never after. */
+  readonly uploadedAt?: string;
+  readonly capture?: ReceiptCapture;
+}
+
+/**
+ * When the shop happened, and what is uncertain about that answer.
+ *
+ * The paper first, then the shutter, then the server. The tags mark
+ * everything that is not the first of those, so a reviewer never has to work
+ * out which source produced the date they are looking at.
+ */
+function datePlacement(
+  extracted: ExtractedReceipt,
+  capture: ReceiptCapture,
+  uploadedAt: string
+): { orderedAt: string; tags: string[] } {
+  const { zone, certain: zoneCertain } = resolveZone(extracted, capture);
+  const stated = occurredAt(extracted, zone);
+  return {
+    orderedAt: stated ?? captureInstant(capture, zone, uploadedAt) ?? uploadedAt,
+    tags: [
+      ...(stated === null ? [DATE_UNCERTAIN] : []),
+      ...(zoneCertain ? [] : [TIMEZONE_UNCERTAIN]),
+    ],
+  };
 }
 
 /**
@@ -195,29 +247,31 @@ function checksumFor(key: string, purchase: Omit<CreatePurchaseInput, 'checksum'
  * carrying an inferred date — provided the inference is never mistaken for
  * something the receipt said, which is what the tag is for.
  *
- * The upload instant, not midnight on the upload day: it is a guess either
- * way, and pretending to a precision the guess does not have would make it
- * harder to spot. A reviewer setting the real date replaces it wholesale.
+ * The instant, not midnight on the day: it is a guess either way, and
+ * pretending to a precision the guess does not have would make it harder to
+ * spot. A reviewer setting the real date replaces it wholesale.
+ *
+ * Which instant depends on what the upload knew. A capture time — the
+ * client's own, or the photograph's EXIF — is closer to the shop than the
+ * moment the file reached the server, so it takes that slot when it is
+ * believable. See `capture.ts` for the ranking and for why a device clock is
+ * checked before it is used.
  */
 export function receiptToPurchase(
   extracted: ExtractedReceipt,
   gate: AdmissibleGate,
   stored: readonly StoredReceipt[],
-  uploadedAt: string = new Date().toISOString()
+  context: ReceiptContext = {}
 ): ReceiptPurchaseResult {
+  const uploadedAt = context.uploadedAt ?? new Date().toISOString();
+  const capture = context.capture ?? NO_CAPTURE;
   const key = receiptKey(stored);
   const [first] = stored;
   if (first === undefined) {
     throw new Error('receiptToPurchase needs at least one stored part');
   }
-  const { zone, certain: zoneCertain } = resolveZone(extracted);
-  const stated = occurredAt(extracted, zone);
-  const orderedAt = stated ?? uploadedAt;
-
-  const tags = [
-    ...(stated === null ? [DATE_UNCERTAIN] : []),
-    ...(zoneCertain ? [] : [TIMEZONE_UNCERTAIN]),
-  ];
+  const location = captureLocation(capture);
+  const { orderedAt, tags } = datePlacement(extracted, capture, uploadedAt);
 
   const locale = { currency: extracted.currency };
   const readItems = extracted.lines
@@ -250,6 +304,12 @@ export function receiptToPurchase(
     // Unknown is a valid outcome, not a failure — the escape hatch exists
     // precisely for merchants nothing else recognises.
     merchantEntityName: extracted.merchantName,
+    // Where the shutter fired, not where the shop is (ADR-047). Outside the
+    // checksum below on purpose: the coordinate is a fact about the file,
+    // and re-reading the same upload with a better model must not look like
+    // a different reading because the camera's fix has not moved.
+    captureLatitude: location?.latitude ?? null,
+    captureLongitude: location?.longitude ?? null,
     // The paper does not say how it was paid for often enough to guess, and
     // `cash` is terminal — a real card shop marked that way is excluded
     // from reconciliation forever. The reviewer sets it (ADR-042).

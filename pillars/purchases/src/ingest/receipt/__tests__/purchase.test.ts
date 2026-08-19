@@ -43,7 +43,7 @@ const map = (over: Partial<ExtractedReceipt> = {}, stored: StoredReceipt[] = [ST
   const extracted = receipt(over);
   const gate = gateExtraction(extracted);
   if (!gate.admissible) throw new Error('test fixture stopped reconciling');
-  return receiptToPurchase(extracted, gate, stored, UPLOADED_AT);
+  return receiptToPurchase(extracted, gate, stored, { uploadedAt: UPLOADED_AT });
 };
 
 const mapped = (over: Partial<ExtractedReceipt> = {}) => map(over).purchase;
@@ -56,7 +56,7 @@ describe('receiptToPurchase invariants', () => {
     const extracted = receipt();
     const gate = gateExtraction(extracted);
     if (!gate.admissible) throw new Error('test fixture stopped reconciling');
-    expect(() => receiptToPurchase(extracted, gate, [], UPLOADED_AT)).toThrow(
+    expect(() => receiptToPurchase(extracted, gate, [], { uploadedAt: UPLOADED_AT })).toThrow(
       'receiptKey needs at least one stored part'
     );
   });

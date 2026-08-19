@@ -27,7 +27,10 @@ export interface MobilePurchasesHandlerDeps {
 export function makeMobilePurchasesHandlers(deps: MobilePurchasesHandlerDeps) {
   return {
     uploadReceipt: async ({ body }: Req['uploadReceipt']) => {
-      const outcome = await deps.purchases.uploadReceipt(body.parts);
+      const outcome = await deps.purchases.uploadReceipt(body.parts, {
+        capturedAt: body.capturedAt,
+        timeZone: body.timeZone,
+      });
 
       // The collection variant: this route declares no 404, and a 404 from
       // purchases means bfm asked for a path that pillar does not serve — a

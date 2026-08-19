@@ -4522,6 +4522,8 @@ internal enum Operations {
             internal enum Body: Sendable, Hashable {
                 /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json`.
                 internal struct JsonPayload: Codable, Hashable, Sendable {
+                    /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/capturedAt`.
+                    internal var capturedAt: Swift.String?
                     /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/PartsPayload`.
                     internal struct PartsPayloadPayload: Codable, Hashable, Sendable {
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/PartsPayload/dataBase64`.
@@ -4573,24 +4575,46 @@ internal enum Operations {
                     internal typealias PartsPayload = [Operations.MobilePurchases_uploadReceipt.Input.Body.JsonPayload.PartsPayloadPayload]
                     /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/parts`.
                     internal var parts: Operations.MobilePurchases_uploadReceipt.Input.Body.JsonPayload.PartsPayload
+                    /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/timeZone`.
+                    internal var timeZone: Swift.String?
                     /// Creates a new `JsonPayload`.
                     ///
                     /// - Parameters:
+                    ///   - capturedAt:
                     ///   - parts:
-                    internal init(parts: Operations.MobilePurchases_uploadReceipt.Input.Body.JsonPayload.PartsPayload) {
+                    ///   - timeZone:
+                    internal init(
+                        capturedAt: Swift.String? = nil,
+                        parts: Operations.MobilePurchases_uploadReceipt.Input.Body.JsonPayload.PartsPayload,
+                        timeZone: Swift.String? = nil
+                    ) {
+                        self.capturedAt = capturedAt
                         self.parts = parts
+                        self.timeZone = timeZone
                     }
                     internal enum CodingKeys: String, CodingKey {
+                        case capturedAt
                         case parts
+                        case timeZone
                     }
                     internal init(from decoder: any Swift.Decoder) throws {
                         let container = try decoder.container(keyedBy: CodingKeys.self)
+                        self.capturedAt = try container.decodeIfPresent(
+                            Swift.String.self,
+                            forKey: .capturedAt
+                        )
                         self.parts = try container.decode(
                             Operations.MobilePurchases_uploadReceipt.Input.Body.JsonPayload.PartsPayload.self,
                             forKey: .parts
                         )
+                        self.timeZone = try container.decodeIfPresent(
+                            Swift.String.self,
+                            forKey: .timeZone
+                        )
                         try decoder.ensureNoAdditionalProperties(knownKeys: [
-                            "parts"
+                            "capturedAt",
+                            "parts",
+                            "timeZone"
                         ])
                     }
                 }

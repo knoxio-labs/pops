@@ -136,6 +136,8 @@ function insertOrder(tx: PurchasesDb, input: CreatePurchaseInput, now: string): 
       merchantEntityName: input.merchantEntityName ?? null,
       settlementMode: input.settlementMode ?? 'unknown',
       paymentHint: input.paymentHint ?? null,
+      captureLatitude: input.captureLatitude ?? null,
+      captureLongitude: input.captureLongitude ?? null,
       rawRef: input.rawRef ?? null,
       checksum: input.checksum,
       // Cash is terminal on arrival: no transaction will ever settle it, so

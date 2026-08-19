@@ -76,6 +76,48 @@ export interface LocalParts {
 }
 
 /**
+ * The wall clock read as though it were UTC, or null when it names no real
+ * moment.
+ *
+ * `Date.UTC` normalises rather than rejects: month 13 becomes January of the
+ * next year, 31 February becomes 3 March, hour 25 becomes tomorrow. A
+ * garbled reading would yield a confident, wrong date. Refusing anything the
+ * round-trip does not reproduce catches all of it, including 31 February,
+ * without a table of month lengths.
+ */
+function naiveUtc(parts: LocalParts): number | null {
+  const naive = Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute);
+  const roundTrip = new Date(naive);
+  if (
+    roundTrip.getUTCFullYear() !== parts.year ||
+    roundTrip.getUTCMonth() !== parts.month - 1 ||
+    roundTrip.getUTCDate() !== parts.day ||
+    roundTrip.getUTCHours() !== parts.hour ||
+    roundTrip.getUTCMinutes() !== parts.minute
+  ) {
+    return null;
+  }
+  return naive;
+}
+
+/**
+ * A wall clock plus the offset it was already known to be at → an instant.
+ *
+ * Distinct from {@link instantFromLocalParts}, which has to derive the offset
+ * from a zone. A camera's `OffsetTimeOriginal` states the offset outright, so
+ * there is no zone to consult and no DST rule to apply — the arithmetic is
+ * settled by the reading itself.
+ */
+export function instantFromLocalPartsAtOffset(
+  parts: LocalParts,
+  offsetMinutes: number
+): string | null {
+  const naive = naiveUtc(parts);
+  if (naive === null) return null;
+  return new Date(naive - offsetMinutes * 60_000).toISOString();
+}
+
+/**
  * Resolve a local wall-clock reading to an ISO-8601 instant, or null when
  * the reading is not a real moment.
  *
@@ -88,23 +130,9 @@ export function instantFromLocalParts(
   parts: LocalParts,
   timeZone = storeTimeZone()
 ): string | null {
-  const naive = Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute);
-
-  // `Date.UTC` normalises rather than rejects: month 13 becomes January of
-  // the next year, 31 February becomes 3 March, hour 25 becomes tomorrow.
-  // A garbled reading would yield a confident, wrong date. Refusing
-  // anything the round-trip does not reproduce catches all of it, including
-  // 31 February, without a table of month lengths.
+  const naive = naiveUtc(parts);
+  if (naive === null) return null;
   const roundTrip = new Date(naive);
-  if (
-    roundTrip.getUTCFullYear() !== parts.year ||
-    roundTrip.getUTCMonth() !== parts.month - 1 ||
-    roundTrip.getUTCDate() !== parts.day ||
-    roundTrip.getUTCHours() !== parts.hour ||
-    roundTrip.getUTCMinutes() !== parts.minute
-  ) {
-    return null;
-  }
 
   const firstGuess = zoneOffsetMinutes(roundTrip, timeZone);
   if (firstGuess === null) return null;

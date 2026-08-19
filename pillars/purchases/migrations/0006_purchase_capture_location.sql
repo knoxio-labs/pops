@@ -1,0 +1,22 @@
+-- Where the photograph of a receipt was taken, when the photograph said.
+--
+-- Read out of the image's own EXIF GPS tags at upload. Stored deliberately
+-- rather than as a by-product of parsing: see ADR-047 for the decision and
+-- what it does and does not license.
+--
+-- Named for the CAPTURE, not for the purchase. A receipt photographed at
+-- home a week after the shop carries home's coordinate, so a column called
+-- `purchase_latitude` would assert something the data cannot support.
+--
+-- REAL rather than integer microdegrees. The pillar's integer-only rule is
+-- about money, where subset-sum in the reconciliation ladder has to be
+-- exact; a coordinate is never summed and never compared for equality, and
+-- a float degree is what every consumer of one expects.
+--
+-- The CHECKs are per column because SQLite does not extend a table-level
+-- constraint to a column added later. They are the same bounds the reader
+-- enforces, restated where the database can see them: a latitude of 200 is
+-- not a place, and a row holding one would outlive whatever wrote it.
+ALTER TABLE `purchases` ADD `capture_latitude` real CHECK (`capture_latitude` BETWEEN -90 AND 90);
+--> statement-breakpoint
+ALTER TABLE `purchases` ADD `capture_longitude` real CHECK (`capture_longitude` BETWEEN -180 AND 180);
