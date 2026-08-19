@@ -69,6 +69,54 @@ export const ITEM_KINDS = ['consumable', 'durable', 'digital', 'service'] as con
 export type ItemKind = (typeof ITEM_KINDS)[number];
 
 /**
+ * Which namespace a line's product identifier lives in.
+ *
+ * A bare identifier is not an identity. `B07XYZ1234` and a hardware store's
+ * article number `4471` are both strings in one column, and joining lines on
+ * that column alone merges two products that share a string by accident.
+ * The scheme is what says how far the identifier's meaning reaches.
+ *
+ * - `asin` — Amazon's catalogue id. Its meaning is the same wherever it
+ *   appears, so two lines carrying one ASIN are the same product even when
+ *   they arrived through different sources.
+ * - `merchant` — an identifier only the issuing merchant defines. Two lines
+ *   carrying one of these are the same product only if they also came from
+ *   the same source.
+ *
+ * **What each shipped adapter can actually state**, which is the measurement
+ * this vocabulary exists to record:
+ *
+ * | adapter      | states                                              |
+ * | ------------ | --------------------------------------------------- |
+ * | `amazon`     | an ASIN per line, from the DSAR export's own column  |
+ * | `woolworths` | nothing — a row is `{prefixChar, description, amount}` |
+ * | `receipt`    | nothing, deliberately: `ingest/receipt/extraction.ts` refuses to let a vision model infer a merchant id, because an inference cannot be checked against the paper |
+ *
+ * So one source of three states a product identity, and no source states one
+ * a second source could match. A line with no `skuScheme` has no
+ * merchant-stated identity at all — not a missing transcription — and any
+ * grouping of such lines has to be minted from the printed name and carry
+ * its own provenance. `src/ingest/README.md` ("Naming a product") is where
+ * that consequence is written down.
+ */
+export const SKU_SCHEMES = ['asin', 'merchant'] as const;
+export type SkuScheme = (typeof SKU_SCHEMES)[number];
+
+/** Schemes whose identifiers mean the same thing at every merchant. */
+const CROSS_SOURCE_SKU_SCHEMES: readonly SkuScheme[] = ['asin'];
+
+/**
+ * True when two lines from *different* sources sharing this scheme's
+ * identifier are the same product.
+ *
+ * The negative case is the load-bearing one: a `merchant` identifier has to
+ * be qualified by the source that issued it before anything may group on it.
+ */
+export function isCrossSourceSkuScheme(scheme: SkuScheme): boolean {
+  return CROSS_SOURCE_SKU_SCHEMES.includes(scheme);
+}
+
+/**
  * The shape of a POPS item tag — purchases' own product-grained vocabulary
  * (`fruit`, `healthy`, `single-origin`), not finance's transaction-grained
  * `tag_vocabulary`.

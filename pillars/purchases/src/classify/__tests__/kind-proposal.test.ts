@@ -13,18 +13,20 @@ import { KindProposalShapeError, kindPrompt, readKindProposals } from '../kind-p
 
 import type { ProposalCandidate } from '../batch.js';
 
+const asin = (value: string) => ({ value, scheme: 'asin' }) as const;
+
 const candidate = (over: Partial<ProposalCandidate> = {}): ProposalCandidate => ({
   key: 'k1',
   source: 'amazon',
   name: 'Robot vacuum',
-  sku: 'B0ROBOT',
+  sku: asin('B0ROBOT'),
   itemIds: ['i1'],
   ...over,
 });
 
 const BATCH: readonly ProposalCandidate[] = [
-  candidate({ key: 'k1', name: 'Robot vacuum', sku: 'B0ROBOT' }),
-  candidate({ key: 'k2', name: 'AA batteries 24pk', sku: 'B0AA' }),
+  candidate({ key: 'k1', name: 'Robot vacuum', sku: asin('B0ROBOT') }),
+  candidate({ key: 'k2', name: 'AA batteries 24pk', sku: asin('B0AA') }),
   candidate({ key: 'k3', source: 'woolworths', name: 'Bananas', sku: null }),
 ];
 
@@ -33,7 +35,7 @@ const reply = (proposals: unknown): string => JSON.stringify({ proposals });
 describe('the prompt', () => {
   it('lists every candidate under a one-based number', () => {
     const prompt = kindPrompt(BATCH);
-    expect(prompt).toContain('1. (amazon) Robot vacuum [B0ROBOT]');
+    expect(prompt).toContain('1. (amazon) Robot vacuum [asin B0ROBOT]');
     expect(prompt).toContain('3. (woolworths) Bananas');
   });
 

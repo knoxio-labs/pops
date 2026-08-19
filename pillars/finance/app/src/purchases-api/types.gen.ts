@@ -227,7 +227,10 @@ export type PurchaseItemsByTagResponses = {
         quantity: number;
         refundedCents: number;
         shipmentId: string | null;
-        sku: string | null;
+        sku: {
+          scheme: 'asin' | 'merchant';
+          value: string;
+        } | null;
         unitPriceCents: number;
         url: string | null;
       };
@@ -345,7 +348,10 @@ export type PurchaseCreateData = {
       quantity?: number;
       ref?: string;
       shipmentRef?: string | null;
-      sku?: string | null;
+      sku?: {
+        scheme: 'asin' | 'merchant';
+        value: string;
+      } | null;
       tags?: Array<string>;
       unitPriceCents: number;
       units?: Array<{
@@ -483,7 +489,10 @@ export type PurchaseCreateResponses = {
         quantity: number;
         refundedCents: number;
         shipmentId: string | null;
-        sku: string | null;
+        sku: {
+          scheme: 'asin' | 'merchant';
+          value: string;
+        } | null;
         unitPriceCents: number;
         url: string | null;
       };
@@ -683,7 +692,10 @@ export type PurchaseGetResponses = {
         quantity: number;
         refundedCents: number;
         shipmentId: string | null;
-        sku: string | null;
+        sku: {
+          scheme: 'asin' | 'merchant';
+          value: string;
+        } | null;
         unitPriceCents: number;
         url: string | null;
       };
@@ -806,7 +818,10 @@ export type PurchasePatchItemResponses = {
       quantity: number;
       refundedCents: number;
       shipmentId: string | null;
-      sku: string | null;
+      sku: {
+        scheme: 'asin' | 'merchant';
+        value: string;
+      } | null;
       unitPriceCents: number;
       url: string | null;
     };
@@ -969,7 +984,10 @@ export type ReceiptUploadResponses = {
               quantity: number;
               refundedCents: number;
               shipmentId: string | null;
-              sku: string | null;
+              sku: {
+                scheme: 'asin' | 'merchant';
+                value: string;
+              } | null;
               unitPriceCents: number;
               url: string | null;
             };

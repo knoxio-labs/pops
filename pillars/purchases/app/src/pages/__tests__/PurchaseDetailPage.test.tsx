@@ -41,7 +41,7 @@ function line(overrides: Partial<PurchaseLine['item']> = {}): PurchaseLine {
       quantity: 1,
       refundedCents: 0,
       shipmentId: null,
-      sku: 'B07XYZ1234',
+      sku: { value: 'B07XYZ1234', scheme: 'asin' },
       unitPriceCents: 4995,
       url: null,
       ...overrides,

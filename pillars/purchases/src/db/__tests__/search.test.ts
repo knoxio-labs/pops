@@ -42,7 +42,8 @@ function orderWithItems(
       items: items.map((item, index) => ({
         ref: `i${String(index)}`,
         name: item.name,
-        sku: item.sku ?? null,
+        sku:
+          item.sku === undefined || item.sku === null ? null : { value: item.sku, scheme: 'asin' },
         unitPriceCents: 1000,
         lineTotalCents: 1000,
       })),

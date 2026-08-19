@@ -9,9 +9,11 @@
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { toPurchaseDetailBody } from '../../api/rest/serializers.js';
 import {
   createPurchase,
   DuplicatePurchaseError,
+  getPurchase,
   InvalidIngestPayloadError,
   listPurchases,
   purchaseCapture,
@@ -222,6 +224,49 @@ describe('item constraints', () => {
     expect(() =>
       opened.raw.prepare(`UPDATE purchase_items SET kind = NULL WHERE purchase_id = ?`).run(id)
     ).toThrow(/CHECK constraint failed/i);
+  });
+
+  it('rejects a scheme with no identifier under it', () => {
+    // A namespace naming nothing says nothing, and it is the half of the
+    // pair SQLite could still be given on a table that already exists.
+    const id = createPurchase(opened.db, coffeeOrder());
+    expect(() =>
+      opened.raw.prepare(`UPDATE purchase_items SET sku = NULL WHERE purchase_id = ?`).run(id)
+    ).toThrow(/CHECK constraint failed/i);
+  });
+
+  it('rejects a scheme outside the closed vocabulary', () => {
+    const id = createPurchase(opened.db, coffeeOrder());
+    expect(() =>
+      opened.raw
+        .prepare(`UPDATE purchase_items SET sku_scheme = 'barcode' WHERE purchase_id = ?`)
+        .run(id)
+    ).toThrow(/CHECK constraint failed/i);
+  });
+
+  it('stores the identifier and its namespace together, or neither', () => {
+    createPurchase(opened.db, coffeeOrder());
+    const rows = opened.raw
+      .prepare(`SELECT sku, sku_scheme AS scheme FROM purchase_items`)
+      .all() as { sku: string | null; scheme: string | null }[];
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) {
+      expect(row.sku === null).toBe(row.scheme === null);
+    }
+    expect(rows.some((row) => row.scheme === 'asin')).toBe(true);
+  });
+
+  it('refuses to serve an identifier whose namespace was stripped behind the write path', () => {
+    // The converse CHECK cannot be added to an existing table without a
+    // rebuild that would cascade every tag, note and unit off its lines, so
+    // the read projection is what refuses the state — rather than handing a
+    // consumer a bare string it would be free to group two products on.
+    const id = createPurchase(opened.db, coffeeOrder());
+    opened.raw.prepare(`UPDATE purchase_items SET sku_scheme = NULL WHERE purchase_id = ?`).run(id);
+    expect(() => getPurchase(opened.db, id)).not.toThrow();
+    const detail = getPurchase(opened.db, id);
+    if (detail === undefined) throw new Error('the seeded order vanished');
+    expect(() => toPurchaseDetailBody(detail)).toThrow(/with no scheme/i);
   });
 
   it('rejects a receipt-character boolean that is neither stated value', () => {

@@ -21,7 +21,7 @@
 import { sql } from 'drizzle-orm';
 import { index, integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
-import { ITEM_KINDS } from '../../contract/constants.js';
+import { ITEM_KINDS, SKU_SCHEMES } from '../../contract/constants.js';
 import { purchases, purchaseShipments } from './purchases.js';
 
 export const purchaseItems = sqliteTable(
@@ -55,8 +55,36 @@ export const purchaseItems = sqliteTable(
      */
     position: integer('position').notNull().default(0),
     name: text('name').notNull(),
-    /** Merchant's product identifier — ASIN, article number, barcode. */
+    /**
+     * The product identifier the merchant stated, verbatim, and never
+     * without {@link skuScheme} — see that column for why a bare one is not
+     * an identity.
+     *
+     * NULL is the ordinary case and means the source stated none, which is
+     * every shipped adapter but `amazon`. It does not mean a transcription
+     * was skipped, and nothing downstream may treat two NULLs as a match:
+     * SQL `GROUP BY` folds them into one group, which is how ~490 grocery
+     * lines become a single decision.
+     */
     sku: text('sku'),
+    /**
+     * Which namespace {@link sku} lives in, so its reach is stated rather
+     * than assumed. `ITEM_KINDS`' arrangement: the vocabulary is declared
+     * contract-side in {@link SKU_SCHEMES} and enforced by a CHECK.
+     *
+     * The pair is total, but only one direction of it is a CHECK: a
+     * namespace with nothing in it is rejected by the database, while an
+     * identifier with no namespace is prevented one layer up, by
+     * `CreateItemInput` carrying both halves as a single value that the
+     * insert splits at one site. SQLite cannot add the second CHECK to a
+     * table that already exists without a rebuild, and rebuilding this one
+     * would cascade every tag, note, unit and allocation off its lines.
+     *
+     * The wire fuses the two back into one object for the reason
+     * `Classified<T>` gives: a consumer must not be able to reach the value
+     * without the qualifier that says how far it means anything.
+     */
+    skuScheme: text('sku_scheme', { enum: SKU_SCHEMES }),
     url: text('url'),
     imageUrl: text('image_url'),
 
@@ -138,7 +166,10 @@ export const purchaseItems = sqliteTable(
   (t) => [
     index('idx_purchase_items_purchase').on(t.purchaseId, t.position),
     index('idx_purchase_items_shipment').on(t.shipmentId),
-    index('idx_purchase_items_sku').on(t.sku),
+    // Scheme first: "every line carrying this ASIN" is the repeat-purchase
+    // question, and it is only well posed within one namespace. A lookup on
+    // the identifier alone is the merge this pair exists to prevent.
+    index('idx_purchase_items_sku').on(t.skuScheme, t.sku),
     // Composite because both hot predicates read the pair: the proposal
     // pass wants unclassified lines, and a consumer wants confirmed ones.
     index('idx_purchase_items_kind').on(t.kind, t.kindConfirmedAt),

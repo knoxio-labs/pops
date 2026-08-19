@@ -45,7 +45,10 @@ function itemRow(ctx: IngestContext, input: CreateItemInput, position: number): 
     shipmentId: shipmentIdFor(ctx, input.shipmentRef),
     position,
     name: input.name,
-    sku: input.sku ?? null,
+    // Split at exactly one site, from one value, so no caller can name an
+    // identifier without the namespace that says how far it means anything.
+    sku: input.sku?.value ?? null,
+    skuScheme: input.sku?.scheme ?? null,
     url: input.url ?? null,
     imageUrl: input.imageUrl ?? null,
     quantity: input.quantity ?? 1,

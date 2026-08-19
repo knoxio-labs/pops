@@ -70,7 +70,7 @@ function LineRow({ line, currency, isHighlighted }: LineRowProps): ReactElement 
       </div>
 
       <p className="text-muted-foreground text-xs">
-        {item.sku ?? t('purchase.items.noSku')} ·{' '}
+        {item.sku === null ? t('purchase.items.noSku') : `${item.sku.value} (${item.sku.scheme})`} ·{' '}
         {t('purchase.items.quantity', { count: item.quantity })} ·{' '}
         {t('purchase.items.unitPrice', { amount: formatCents(item.unitPriceCents, currency) })}
       </p>

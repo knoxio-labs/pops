@@ -9,6 +9,7 @@
  */
 import { z } from 'zod';
 
+import { ProductIdentitySchema } from './schemas/product-identity.js';
 import {
   AutoLinkPolicySchema,
   CentsSchema,
@@ -101,7 +102,16 @@ export const CreateItemBodySchema = z.object({
   ref: RefSchema.optional(),
   shipmentRef: RefSchema.nullable().optional(),
   name: z.string().trim().min(1),
-  sku: z.string().nullable().optional(),
+  /**
+   * The identifier the source stated, and the namespace it stated it in.
+   * Both or neither — an adapter that cannot say which namespace an
+   * identifier belongs to has not read one, and a bare string here is what
+   * let a single column mean a different thing per adapter.
+   *
+   * Omit it for every source that states none, which today is every one but
+   * the Amazon export.
+   */
+  sku: ProductIdentitySchema.nullable().optional(),
   url: z.string().nullable().optional(),
   imageUrl: z.string().nullable().optional(),
   quantity: z.int().min(1).optional(),

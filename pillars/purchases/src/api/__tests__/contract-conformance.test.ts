@@ -166,7 +166,7 @@ const RICH_ORDER = {
       ref: 'tamper',
       shipmentRef: 'box1',
       name: 'Espresso Tamping Station',
-      sku: 'B0DSVZQ8P5',
+      sku: { value: 'B0DSVZQ8P5', scheme: 'asin' },
       url: 'https://example.invalid/p/1',
       imageUrl: 'https://example.invalid/i/1.jpg',
       quantity: 2,

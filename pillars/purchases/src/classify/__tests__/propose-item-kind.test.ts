@@ -69,7 +69,8 @@ function seedLines(
     amazonOrder({
       items: items.map((item) => ({
         name: item.name,
-        sku: item.sku ?? null,
+        sku:
+          item.sku === undefined || item.sku === null ? null : { value: item.sku, scheme: 'asin' },
         unitPriceCents: item.cents ?? 1000,
         lineTotalCents: item.cents ?? 1000,
       })),

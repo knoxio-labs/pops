@@ -40,7 +40,12 @@ function seedLine(overrides: Parameters<typeof amazonOrder>[0] = {}): {
     opened.db,
     amazonOrder({
       items: [
-        { name: 'Robot vacuum', sku: 'B0ROBOT', unitPriceCents: 79900, lineTotalCents: 79900 },
+        {
+          name: 'Robot vacuum',
+          sku: { value: 'B0ROBOT', scheme: 'asin' },
+          unitPriceCents: 79900,
+          lineTotalCents: 79900,
+        },
       ],
       ...overrides,
     })

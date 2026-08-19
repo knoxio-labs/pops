@@ -12,6 +12,7 @@ import { describe, expect, it } from 'vitest';
 
 import { batchingKey, intoBatches, normalisedName, toCandidates } from '../batch.js';
 
+import type { ProductIdentity } from '../../contract/types/purchase.js';
 import type { BatchableItem } from '../batch.js';
 
 const line = (over: Partial<BatchableItem> = {}): BatchableItem => ({
@@ -23,6 +24,12 @@ const line = (over: Partial<BatchableItem> = {}): BatchableItem => ({
   merchantEntityName: 'Woolworths',
   ...over,
 });
+
+/** Amazon's catalogue id: the same product wherever it turns up. */
+const asin = (value: string): ProductIdentity => ({ value, scheme: 'asin' });
+
+/** An identifier only the issuing merchant defines. */
+const article = (value: string): ProductIdentity => ({ value, scheme: 'merchant' });
 
 /** The real Everyday Rewards export: mostly food, two things that are not. */
 const GROCERY_SHOP: readonly BatchableItem[] = [
@@ -95,10 +102,20 @@ describe('a source that states no sku', () => {
 describe('a source that states a sku', () => {
   it('groups repeat purchases of one ASIN into a single decision', () => {
     const candidates = toCandidates([
-      line({ id: 'a', source: 'amazon', sku: 'B0DSVZQ8P5', name: 'Espresso Tamping Station' }),
+      line({
+        id: 'a',
+        source: 'amazon',
+        sku: asin('B0DSVZQ8P5'),
+        name: 'Espresso Tamping Station',
+      }),
       // The same ASIN listed under a slightly different title, which Amazon
-      // does. The sku is what identifies it.
-      line({ id: 'b', source: 'amazon', sku: 'B0DSVZQ8P5', name: 'Espresso Tamper Station 58mm' }),
+      // does. The identifier is what identifies it.
+      line({
+        id: 'b',
+        source: 'amazon',
+        sku: asin('B0DSVZQ8P5'),
+        name: 'Espresso Tamper Station 58mm',
+      }),
     ]);
     expect(candidates).toHaveLength(1);
     expect(candidates[0]?.itemIds).toEqual(['a', 'b']);
@@ -109,18 +126,46 @@ describe('a source that states a sku', () => {
     // products if it gave them different identifiers.
     expect(
       toCandidates([
-        line({ id: 'a', source: 'amazon', sku: 'B01', name: 'Cable' }),
-        line({ id: 'b', source: 'amazon', sku: 'B02', name: 'Cable' }),
+        line({ id: 'a', source: 'amazon', sku: asin('B01'), name: 'Cable' }),
+        line({ id: 'b', source: 'amazon', sku: asin('B02'), name: 'Cable' }),
       ])
     ).toHaveLength(2);
   });
 
   it('treats a blank sku as no sku rather than as a shared one', () => {
     const candidates = toCandidates([
-      line({ id: 'a', source: 'amazon', sku: '   ', name: 'Air fryer' }),
-      line({ id: 'b', source: 'amazon', sku: '', name: 'Bread maker' }),
+      line({ id: 'a', source: 'amazon', sku: asin('   '), name: 'Air fryer' }),
+      line({ id: 'b', source: 'amazon', sku: asin(''), name: 'Bread maker' }),
     ]);
     expect(candidates).toHaveLength(2);
+  });
+});
+
+describe('how far an identifier reaches', () => {
+  it('groups one ASIN across two sources, because that is what an ASIN means', () => {
+    // The DSAR export and an emailed Amazon confirmation are two sources
+    // quoting one catalogue. Splitting them would ask the model the same
+    // question twice and let it answer differently.
+    const candidates = toCandidates([
+      line({ id: 'a', source: 'amazon', sku: asin('B0DSVZQ8P5'), name: 'Tamping Station' }),
+      line({ id: 'b', source: 'amazon-email', sku: asin('B0DSVZQ8P5'), name: 'Tamping Station' }),
+    ]);
+    expect(candidates).toHaveLength(1);
+    expect(candidates[0]?.itemIds).toEqual(['a', 'b']);
+  });
+
+  it('never groups a merchant-local identifier across two sources', () => {
+    // `4471` at a hardware store and `4471` at a grocer are two products
+    // that share a string, and nothing but the scheme says so.
+    expect(batchingKey(line({ source: 'woolworths', sku: article('4471') }))).not.toBe(
+      batchingKey(line({ source: 'bunnings', sku: article('4471') }))
+    );
+  });
+
+  it('does not let a merchant-local identifier collide with a cross-source one', () => {
+    expect(batchingKey(line({ source: 'amazon', sku: article('B0DSVZQ8P5') }))).not.toBe(
+      batchingKey(line({ source: 'amazon', sku: asin('B0DSVZQ8P5') }))
+    );
   });
 });
 
@@ -128,8 +173,8 @@ describe('across sources', () => {
   it('never shares a decision between two merchants', () => {
     // An article number at one merchant means nothing at another, and a
     // product name can genuinely collide.
-    expect(batchingKey(line({ source: 'woolworths', sku: '6015322' }))).not.toBe(
-      batchingKey(line({ source: 'amazon', sku: '6015322' }))
+    expect(batchingKey(line({ source: 'woolworths', sku: article('6015322') }))).not.toBe(
+      batchingKey(line({ source: 'amazon', sku: article('6015322') }))
     );
 
     expect(batchingKey(line({ source: 'woolworths', name: 'Milk' }))).not.toBe(
@@ -167,8 +212,8 @@ describe('across sources', () => {
 
   it('cannot be collided by a sku that looks like another key', () => {
     // Joining the parts on a delimiter is not injective, and a merchant is
-    // free to print that delimiter inside a sku.
-    expect(batchingKey(line({ source: 'amazon', sku: 'name x' }))).not.toBe(
+    // free to print that delimiter inside an identifier.
+    expect(batchingKey(line({ source: 'amazon', sku: article('name x') }))).not.toBe(
       batchingKey(line({ source: 'amazon', sku: null, name: 'x' }))
     );
   });

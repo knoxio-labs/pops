@@ -1,3 +1,13 @@
+import type {
+  CaptureSource,
+  ChargeOrigin,
+  DocumentKind,
+  IngestMethod,
+  ItemKind,
+  SettlementMode,
+  SettlementRole,
+  ShipmentStatus,
+} from '../../contract/constants.js';
 /**
  * The ingest payload shape.
  *
@@ -9,16 +19,7 @@
  * Split from `purchase-writes.ts` so the write path stays readable; these
  * are types only, with no behaviour.
  */
-import type {
-  CaptureSource,
-  ChargeOrigin,
-  DocumentKind,
-  IngestMethod,
-  ItemKind,
-  SettlementMode,
-  SettlementRole,
-  ShipmentStatus,
-} from '../../contract/constants.js';
+import type { ProductIdentity } from '../../contract/types/purchase.js';
 
 export interface CreateShipmentInput {
   /** Adapter-local wiring handle. Never persisted. */
@@ -44,7 +45,16 @@ export interface CreateItemInput {
   /** Adapter-local {@link CreateShipmentInput.ref} of the delivery that brought it. */
   readonly shipmentRef?: string | null;
   readonly name: string;
-  readonly sku?: string | null;
+  /**
+   * The merchant's product identifier and the namespace it lives in, as one
+   * value. Undefined for every source that states none.
+   *
+   * One value rather than two fields is what holds the pair total: the
+   * column CHECK can reject a namespace with nothing in it, but SQLite
+   * cannot be given the converse on a table that already exists, so this
+   * type is where "an identifier with no namespace" stops being expressible.
+   */
+  readonly sku?: ProductIdentity | null;
   readonly url?: string | null;
   readonly imageUrl?: string | null;
   readonly quantity?: number;
