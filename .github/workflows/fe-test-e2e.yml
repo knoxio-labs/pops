@@ -74,15 +74,29 @@ jobs:
 
       - name: Install Playwright browsers
         if: steps.playwright-cache.outputs.cache-hit != 'true'
+        timeout-minutes: 15
         run: |
           cd pillars/shell
-          npx playwright install --with-deps
+          for attempt in 1 2 3; do
+            if timeout 300 npx playwright install --with-deps; then exit 0; fi
+            echo "::warning::playwright install --with-deps attempt ${attempt} failed or stalled; retrying"
+            sleep 15
+          done
+          echo "::error::playwright install --with-deps failed after 3 bounded attempts; a stalled apt mirror is the usual cause"
+          exit 1
 
       - name: Install Playwright system dependencies
         if: steps.playwright-cache.outputs.cache-hit == 'true'
+        timeout-minutes: 15
         run: |
           cd pillars/shell
-          npx playwright install-deps
+          for attempt in 1 2 3; do
+            if timeout 300 npx playwright install-deps; then exit 0; fi
+            echo "::warning::playwright install-deps attempt ${attempt} failed or stalled; retrying"
+            sleep 15
+          done
+          echo "::error::playwright install-deps failed after 3 bounded attempts; a stalled apt mirror is the usual cause"
+          exit 1
 
       - name: Run Playwright tests
         run: |
