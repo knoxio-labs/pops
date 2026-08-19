@@ -362,9 +362,8 @@ export const MobileReceiptUploadBodySchema = z.object({
    * against its own runtime and falls back when it does not resolve.
    *
    * A zone, not coordinates. Nothing on this surface accepts a location: the
-   * producer reads one off the photograph's own EXIF where there is one
-   * (ADR-047), and a device that stripped its EXIF contributes none
-   * (POPS-2326).
+   * producer reads one off the photograph's own EXIF where there is one, and
+   * a device that stripped its EXIF therefore contributes none (ADR-047).
    */
   timeZone: z.string().min(1).max(64).optional(),
 });
