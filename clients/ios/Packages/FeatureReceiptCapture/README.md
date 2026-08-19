@@ -4,27 +4,41 @@ Photograph or paste a receipt and let the purchases pillar's model turn it into 
 
 ## What is here and what is not
 
-`ReceiptCaptureView` is still the POPS-1959 placeholder — this package does not yet build the photograph-and-review flow that produces a receipt to submit. What it does have is the other end of that flow: `ReceiptResultView` and `ReceiptResultViewModel`, which take a receipt's parts and `AppDependencies`, call `AppCore`'s `ReceiptCaptureRepository`, and render whichever of the three outcomes — or gateway failure — came back. Neither names `Auth` nor `BFMClient`; both read the repository seam and have no idea a device token or HTTP call sits behind it.
+Both ends of the flow. `ReceiptCaptureView` photographs a receipt through VisionKit's document camera and hands what it produced to `ReceiptResultView`, which calls `AppCore`'s `ReceiptCaptureRepository` and renders whichever of the three outcomes — or gateway failure — came back. Neither names `Auth` nor `BFMClient`; both read the repository seam and have no idea a device token or HTTP call sits behind it.
 
 That boundary is asserted, not merely intended: `ModuleBoundaryTests` in `AppCore` fails if any package outside `Auth` and `BFMClient` imports either.
 
 | Concern                                                                              | Lives in                                                 |
 | ------------------------------------------------------------------------------------ | -------------------------------------------------------- |
-| The capture screen                                                                   | here — still the POPS-1959 placeholder                   |
+| The capture screen and the camera-refusal states                                     | here — `ReceiptCaptureView`, `ReceiptCaptureViewModel`   |
+| The document camera itself, and pages becoming bytes                                 | here — `ReceiptDocumentScanner`, `ReceiptPageEncoder`    |
 | The result screen (`created` / `needs-review` / `unreadable`, plus gateway failures) | here — `ReceiptResultView`, `ReceiptResultViewModel`     |
-| Capturing a photograph, wiring the two screens together                              | not built yet — POPS-1959                                |
-| Camera permission                                                                    | `AppCore` — `CameraAuthorizing`                          |
+| Camera permission, and the Settings deep link                                        | `AppCore` — `CameraAuthorizing`, `SystemSettings`        |
 | `created` / `needs-review` / `unreadable`                                            | `AppCore` — `ReceiptCaptureRepository`, `ReceiptOutcome` |
-| `POST /mobile/receipts` and its outcomes                                             | not built yet — `BFMClient` conformance, POPS-1958       |
+| `POST /mobile/purchases/receipts` and its outcomes                                   | `BFMClient` — `BFMReceiptCaptureRepository`              |
 | An end-to-end Maestro flow                                                           | not built yet — POPS-1963                                |
 
-## Why the result screen is not wired into the app yet
+## What a multi-page receipt is
 
-`ReceiptResultView` takes a `ReceiptResultViewModel`, constructed from the parts a capture produced and `AppDependencies`. Nothing in the app today produces those parts — that is POPS-1959's job — so nothing yet constructs the view outside a preview or a test. `AppDependencies.receiptCapture` is bound to `AppDependencies.unbound.receiptCapture` at both of `AppComposition`'s construction sites for the same reason: `BFMClient` has no `POST /mobile/receipts` conformance yet (POPS-1958), so there is nothing real to point it at.
+One scan is one receipt and one call. `VNDocumentCameraViewController` collects several pages into a single `VNDocumentCameraScan`; every page of that scan becomes an ordered `ReceiptPart`, and the whole set goes to `ReceiptCaptureRepository.capture(_:)` once. Several photographs of one piece of paper are never several receipts — `ReceiptPart`'s own documentation says so, and the BFM's upload body says the same thing from the other side.
 
-## Reachable, not yet real
+Three consequences follow, and each is enforced on the handset rather than discovered from a rejection:
 
-`FeatureReceiptCapture.feature` is registered in `RootFeature.renderable` and `ContentView` maps it to `ReceiptCaptureView`, matching how `FeatureTransactions` is wired — the app can draw the capture placeholder the moment the BFM says the feature is available. Nothing yet makes the BFM say that: `POST /mobile/receipts` does not exist until POPS-1958 lands, so in practice this screen is unreachable outside a build that binds the feature list directly, which is the point of a scaffold landing ahead of the feature it scaffolds.
+- **At most `ReceiptPart.maxPerReceipt` pages.** The BFM refuses more. A longer scan is refused here, with the count, before any bytes are sent.
+- **All of it or none of it.** If a page cannot be encoded, the whole scan is refused. A receipt short a page still adds up to _a_ total, just not the printed one, so a short upload would come back as a confident wrong reading.
+- **Pages are bounded before they are sent.** `ReceiptPageBudget` caps a page's longest edge and its JPEG quality, so eight full-resolution photographs are not what somebody standing in a shop tries to upload.
+
+## Why the camera is presented modally and never inside a navigation stack
+
+There is an open UIKit defect — reproduced by others on iOS 26, not fixed as of the POPS-1960 spike — where `VNDocumentCameraViewController`'s own navigation bar throws `NSInternalInconsistencyException` immediately after a capture when it is nested inside another navigation controller. So this feature has no `NavigationStack` at all: its two screens replace each other, and the scanner is a freshly-created instance presented from a `.sheet`, acting as its own delegate.
+
+`VNDocumentCameraViewController.isSupported` is deliberately not used as the "is there a camera" gate. It returns `true` in the Simulator, where the document camera cannot configure a capture input at all. The gate is `CameraAuthorizing` instead, which reports `.unavailable` there — asserted against the real implementation by `AppCore`'s Simulator-only camera suite — so the Simulator lands on the drawn "no camera on this device" state rather than a black screen. That state carries an accessibility identifier for the same reason: it is the one a UI flow hosted on a Simulator will actually meet.
+
+## Reachable, end to end
+
+`FeatureReceiptCapture.feature` is registered in `RootFeature.renderable`, the BFM's bootstrap advertises it, and `ContentView` maps it to `ReceiptCaptureView`. A paired device's `AppDependencies.receiptCapture` is a `BFMReceiptCaptureRepository` pointed at that device's own BFM, so a capture submitted from the screen reaches the purchases pillar.
+
+`AppComposition`'s other construction site — the pairing screen's dependencies — leaves the seam unbound on purpose, alongside `transactions`: the base URL arrives with the pairing code, so before pairing there is no BFM to point a client at, and a capture attempted from there would fail with `dependencyNotBound`. Nothing can reach this screen from there; `CompositionRootTests` asserts both halves.
 
 ## The host build
 

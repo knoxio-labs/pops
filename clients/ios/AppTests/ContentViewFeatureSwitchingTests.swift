@@ -33,6 +33,14 @@ internal enum ContentViewFixture {
             composition: bound
         )
     }
+
+    /// The receipt-capture screen as `ContentView` builds it for an unpaired
+    /// composition. What it draws does not depend on the repository behind it —
+    /// nothing is submitted until a receipt has been photographed — so the
+    /// unbound dependencies are the honest ones to render against here.
+    internal static func receiptCapture() -> ReceiptCaptureView {
+        ReceiptCaptureView(model: ReceiptCaptureViewModel(dependencies: .unbound))
+    }
 }
 
 /// The bug this covers only exists when the BFM names more than one feature,
@@ -53,9 +61,11 @@ internal enum ContentViewFixture {
 /// SwiftUI transaction `ImageRenderer` never opens. That is the same
 /// limitation `TransactionDetailRenderingTests` documents and works around by
 /// rendering `TransactionDetailCard` rather than the screen it sits in;
-/// `ReceiptCaptureView` is this suite's equivalent safe substitute — a real
-/// production screen with no task and no observable model, so what it proves
-/// about `ContentView`'s single-feature path generalises.
+/// `ReceiptCaptureView` is this suite's equivalent safe substitute. It carries
+/// an observable model, but no `.task` and nothing that starts async work to
+/// draw itself — its opening state is a camera prompt — so it rasterises the
+/// way `PairingView` does, and what it proves about `ContentView`'s
+/// single-feature path generalises.
 ///
 /// ## Why two-or-more features are not rendered here
 ///
@@ -95,11 +105,25 @@ internal struct ContentViewFeatureSwitchingTests {
         #expect(light != dark, "the explanation renders identically in both colour schemes")
     }
 
+    /// What this can and cannot see, since half of it changed under it.
+    ///
+    /// `ReceiptCaptureView`'s content now sits inside a `ScrollView`, and
+    /// `ImageRenderer` lays a scroll view out without rasterising anything in
+    /// it — measured, and recorded in `ReceiptCaptureRenderingTests`. So the
+    /// pixels compared here are the chrome *around* the feature's screen, not
+    /// its interior, and that is precisely the comparison this test is about:
+    /// a tab bar, a banner or padding appearing for a single feature all show
+    /// up, and a tab bar in particular makes `ImageRenderer` produce nothing at
+    /// all, failing the `#require` above the comparison.
+    ///
+    /// The interior is covered where it can be seen — the feature's own suite —
+    /// and the no-tab-bar claim is made from the other end, mounted, in
+    /// ``ContentViewTabSwitcherTests``.
     @Test("exactly one feature fills the screen, matching the shipped single-feature look")
     func oneFeatureMatchesTheBareScreen() throws {
         let throughContentView = try #require(
             Self.render(contentView(available: [.receiptCapture])))
-        let bareScreen = try #require(Self.render(ReceiptCaptureView()))
+        let bareScreen = try #require(Self.render(ContentViewFixture.receiptCapture()))
 
         #expect(
             throughContentView == bareScreen,
@@ -141,6 +165,16 @@ internal struct ContentViewTabSwitcherTests {
 
     /// The titles a person would see along the bottom of the screen.
     private func offeredTabTitles(available: [MobileFeature]) throws -> [String] {
+        let switcher = try #require(
+            try mountedTabBar(available: available),
+            "more than one feature is available and no tab bar was built for them"
+        )
+        return switcher.tabBar.items?.compactMap(\.title) ?? []
+    }
+
+    /// The tab bar the app would actually build for this surface, or `nil` when
+    /// it builds none.
+    private func mountedTabBar(available: [MobileFeature]) throws -> UITabBarController? {
         let scene = try #require(
             UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first,
             "the test host is not showing a window scene, so nothing can be mounted in one"
@@ -153,11 +187,25 @@ internal struct ContentViewTabSwitcherTests {
         window.layoutIfNeeded()
         defer { window.isHidden = true }
 
-        let switcher = try #require(
-            Self.tabBarController(in: window.rootViewController),
-            "more than one feature is available and no tab bar was built for them"
+        return Self.tabBarController(in: window.rootViewController)
+    }
+
+    /// The named regression, from the end that can see it.
+    ///
+    /// Its sibling suite proves this by comparing pixels, and can no longer see
+    /// inside the feature's own screen — a scroll view does not rasterise. A
+    /// tab bar is not inside that screen: it is UIKit chrome around it, and
+    /// mounting is what makes its absence a fact rather than an inference from
+    /// two canvases that matched.
+    @Test("one available feature is offered no tab bar at all")
+    func oneFeatureBuildsNoTabBar() throws {
+        #expect(
+            try mountedTabBar(available: [.receiptCapture]) == nil,
+            Comment(
+                rawValue: "a tab bar was built for a single feature — one tab is chrome nobody "
+                    + "asked for, and it is the regression this suite is named after"
+            )
         )
-        return switcher.tabBar.items?.compactMap(\.title) ?? []
     }
 
     private static func tabBarController(in controller: UIViewController?) -> UITabBarController? {

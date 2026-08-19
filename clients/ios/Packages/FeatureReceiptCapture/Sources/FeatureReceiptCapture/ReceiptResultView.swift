@@ -7,8 +7,8 @@ import SwiftUI
 /// landed, whether the call ever got far enough to answer with one — is
 /// ``ReceiptResultViewModel``'s. Same split as `TransactionDetailView`.
 ///
-/// The screen draws no navigation chrome of its own: whoever embeds it (the
-/// capture flow POPS-1959 builds) owns where it sits and what the bar says.
+/// The screen draws no navigation chrome of its own: whoever embeds it — the
+/// capture flow — owns where it sits and what the bar says.
 public struct ReceiptResultView: View {
     @State private var model: ReceiptResultViewModel
 

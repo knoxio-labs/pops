@@ -37,6 +37,7 @@ import type { Express } from 'express';
 import type { CallResult } from '@pops/pillar-sdk/server';
 
 import type { MobileReceiptPart } from '../../contract/rest-schemas.js';
+import type { ReceiptRateLimitOptions } from '../auth/receipt-rate-limit.js';
 import type { PurchasesFake } from './purchases-fake.js';
 
 const UPLOAD_PATH = '/mobile/purchases/receipts';
@@ -52,14 +53,19 @@ afterEach(() => {
 });
 
 /** An app whose purchases answers `result`, plus a token for a paired device. */
-function openWith(result: CallResult<unknown>): {
+function openWith(
+  result: CallResult<unknown>,
+  receiptRateLimit?: ReceiptRateLimitOptions
+): {
   app: Express;
   token: string;
   fake: PurchasesFake;
+  created: TestApp;
 } {
   const fake = createPurchasesFake(result);
   const created = createTestApp({
     purchases: createMobilePurchasesClient(createPillarGateway(fake.factory)),
+    ...(receiptRateLimit === undefined ? {} : { receiptRateLimit }),
   });
   apps.push(created);
 
@@ -67,7 +73,7 @@ function openWith(result: CallResult<unknown>): {
   created.db.insert(devices).values(row).run();
   const { token } = mintAccessToken(row.id, created.accessTokenSigningKey);
 
-  return { app: created.app, token: token, fake };
+  return { app: created.app, token: token, fake, created };
 }
 
 function post(app: Express, token: string | null, body: object) {
@@ -442,5 +448,112 @@ describe('when purchases cannot answer', () => {
 
     expect(res.status).toBe(502);
     expect(res.body.code).toBe('upstream_contract_mismatch');
+  });
+});
+
+describe('the receipt budget', () => {
+  function overBudget(perClientLimit: number): ReceiptRateLimitOptions {
+    return { perClientLimit, globalLimit: 1_000 };
+  }
+
+  it('allows exactly the configured budget, then answers 429 with Retry-After', async () => {
+    const { app, token, fake } = openWith(purchasesCreated(), overBudget(2));
+
+    const first = await post(app, token, { parts: ONE_PART });
+    const second = await post(app, token, { parts: ONE_PART });
+    const third = await post(app, token, { parts: ONE_PART });
+
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
+    expect(third.status).toBe(429);
+    expect(third.body.code).toBe('rate_limited');
+    expect(Number(third.headers['retry-after'])).toBeGreaterThan(0);
+    // The two admitted requests, and no more — the budget actually spent
+    // purchases' quota rather than merely reporting one.
+    expect(fake.uploads).toHaveLength(2);
+  });
+
+  it('refuses before calling purchases, so a flood cannot burn a vision call', async () => {
+    // If the limiter ran after the handler, an over-budget request would
+    // still have paid for the exact thing the budget exists to bound.
+    const { app, token, fake } = openWith(purchasesCreated(), overBudget(1));
+
+    await post(app, token, { parts: ONE_PART });
+    const refused = await post(app, token, { parts: ONE_PART });
+
+    expect(refused.status).toBe(429);
+    expect(fake.uploads).toHaveLength(1);
+  });
+
+  it('caps the whole route regardless of the address a caller claims', async () => {
+    const { app, token } = openWith(purchasesCreated(), { perClientLimit: 100, globalLimit: 2 });
+
+    const statuses: number[] = [];
+    for (const ip of ['203.0.113.1', '203.0.113.2', '203.0.113.3']) {
+      const res = await requestOn(app, (r) =>
+        r
+          .post(UPLOAD_PATH)
+          .set('Authorization', `Bearer ${token}`)
+          .set('CF-Connecting-IP', ip)
+          .send({ parts: ONE_PART })
+      );
+      statuses.push(res.status);
+    }
+
+    expect(statuses[2]).toBe(429);
+  });
+
+  it('charges a budget separate from the /mobile perimeter', async () => {
+    // One counter for both would let a burst of list-page reads spend the
+    // receipt budget, or a run of receipts lock a handset out of its own
+    // transaction list.
+    const { app, token } = openWith(purchasesCreated(), overBudget(1));
+
+    await post(app, token, { parts: ONE_PART });
+    expect((await post(app, token, { parts: ONE_PART })).status).toBe(429);
+
+    const mobile = await requestOn(app, (r) =>
+      r.get('/mobile/anything').set('Authorization', `Bearer ${token}`)
+    );
+    expect(mobile.status).not.toBe(429);
+  });
+
+  it('is unaffected by traffic against the general /mobile perimeter', async () => {
+    // The other direction of the previous case: spending the wide, cheap
+    // budget on reads must not eat into the narrow, expensive one.
+    const { app, token, fake } = openWith(purchasesCreated(), {
+      perClientLimit: 5,
+      globalLimit: 5,
+    });
+
+    for (let i = 0; i < 30; i += 1) {
+      await requestOn(app, (r) =>
+        r.get('/mobile/anything').set('Authorization', `Bearer ${token}`)
+      );
+    }
+
+    const res = await post(app, token, { parts: ONE_PART });
+
+    expect(res.status).toBe(200);
+    expect(fake.uploads).toHaveLength(1);
+  });
+
+  it('spends the budget the same whether the upload carries one part or the max', async () => {
+    // The module deliberately charges a flat cost per request rather than one
+    // weighted by part count — purchases reads a whole receipt in one vision
+    // call regardless of how many images it was sent as, so a per-part weight
+    // would track a number that does not track the actual cost. This pins
+    // that a maximal upload spends exactly as much budget as a minimal one,
+    // not more.
+    const eightParts = Array.from({ length: 8 }, () => ONE_PART[0]);
+    const { app, token, fake } = openWith(purchasesCreated(), overBudget(1));
+
+    const heavy = await post(app, token, { parts: eightParts });
+    expect(heavy.status).toBe(200);
+
+    const light = await post(app, token, { parts: ONE_PART });
+    expect(light.status).toBe(429);
+
+    expect(fake.uploads).toHaveLength(1);
   });
 });
