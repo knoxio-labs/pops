@@ -86,14 +86,15 @@ export type ItemKind = (typeof ITEM_KINDS)[number];
  * **What each shipped adapter can actually state**, which is the measurement
  * this vocabulary exists to record:
  *
- * | adapter      | states                                              |
- * | ------------ | --------------------------------------------------- |
- * | `amazon`     | an ASIN per line, from the DSAR export's own column  |
- * | `woolworths` | nothing — a row is `{prefixChar, description, amount}` |
- * | `receipt`    | nothing, deliberately: `ingest/receipt/extraction.ts` refuses to let a vision model infer a merchant id, because an inference cannot be checked against the paper |
+ * | adapter          | states                                          |
+ * | ---------------- | ----------------------------------------------- |
+ * | `amazon`         | an ASIN per line, from the DSAR export's own column |
+ * | `amazon-digital` | the same, from the same column                  |
+ * | `woolworths`     | nothing — a row is `{prefixChar, description, amount}` |
+ * | `receipt`        | nothing, deliberately: `ingest/receipt/extraction.ts` refuses to let a vision model infer a merchant id, because an inference cannot be checked against the paper |
  *
- * So one source of three states a product identity, and no source states one
- * a second source could match. A line with no `skuScheme` has no
+ * So only Amazon states a product identity, and no source states one a
+ * source outside Amazon could match. A line with no `skuScheme` has no
  * merchant-stated identity at all — not a missing transcription — and any
  * grouping of such lines has to be minted from the printed name and carry
  * its own provenance. `src/ingest/README.md` ("Naming a product") is where

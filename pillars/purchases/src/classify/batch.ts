@@ -18,7 +18,25 @@ import type { ProductLine } from '../db/services/product-identity.js';
 export { normalisedName };
 
 /** What the pass needs to know about a line to decide how to batch it. */
+<<<<<<< HEAD
 export type BatchableItem = ProductLine;
+||||||| parent of 3f1ecd901 (docs(purchases): say two Amazon exports state an identity, not one of three)
+export interface BatchableItem {
+  readonly id: string;
+  readonly source: string;
+  /** Null for every source that states none, which is every one but `amazon`. */
+  readonly sku: ProductIdentity | null;
+  readonly name: string;
+}
+=======
+export interface BatchableItem {
+  readonly id: string;
+  readonly source: string;
+  /** Null for every source that states none, which is every one but the Amazon exports. */
+  readonly sku: ProductIdentity | null;
+  readonly name: string;
+}
+>>>>>>> 3f1ecd901 (docs(purchases): say two Amazon exports state an identity, not one of three)
 
 /** The batching key for one line. */
 export function batchingKey(item: BatchableItem): string {

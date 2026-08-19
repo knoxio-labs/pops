@@ -37,7 +37,7 @@ const STATED_SCHEME: Readonly<Record<string, string | null>> = {
 
 describe.each(ADAPTERS)('the %s adapter', (name, items) => {
   it('produces lines to assert on at all', () => {
-    // The assertions below are about absence for two of three adapters, so
+    // The assertions below are about absence for two of the four adapters, so
     // without this they pass vacuously the day a fixture stops parsing.
     expect(items().length, name).toBeGreaterThan(0);
   });

@@ -42,7 +42,7 @@ export type PurchaseItemDetailBody = z.infer<typeof PurchaseItemDetailSchema>;
  * `kind: null` means unclassified. Anything else carries `confirmedAt`,
  * which is null while a proposal pass owns the value and set once it has
  * been asserted. `sku: null` means the source stated no identifier — every
- * shipped adapter but `amazon` — and anything else carries the namespace it
+ * shipped adapter but the Amazon exports — and anything else carries the namespace it
  * belongs to. There is deliberately no way to serialise either half alone.
  *
  * Both fusions are one call each — `productIdentityOf` for the identifier,

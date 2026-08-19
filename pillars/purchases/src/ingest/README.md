@@ -62,15 +62,18 @@ second copy.
 
 ## Naming a product
 
-**One source of three states a product identity, and it states it in its own
-catalogue's namespace.** That is a measurement, and it is the substrate every
-repeat-purchase question stands on.
+**Only the two Amazon exports state a product identity, and they state it in
+Amazon's catalogue namespace.** That is a measurement, and it is the substrate
+every repeat-purchase question stands on. `ingest/__tests__/product-identity.test.ts`
+is where it is pinned; a new adapter is added to that file's `ADAPTERS` list
+or it goes unmeasured.
 
-| adapter      | states                                                                                                                                                      |
-| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `amazon`     | an ASIN per line, from the export's own column                                                                                                              |
-| `woolworths` | nothing — an item row is `{prefixChar, description, amount}`, no identifier                                                                                 |
-| `receipt`    | nothing, and by design: `receipt/extraction.ts` refuses to let a vision model infer an identifier, because an inference cannot be checked against the paper |
+| adapter          | states                                                                                                                                                      |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `amazon`         | an ASIN per line, from the export's own column                                                                                                              |
+| `amazon-digital` | the same, read from the same column by the same reader (`amazon/fields.ts`)                                                                                 |
+| `woolworths`     | nothing — an item row is `{prefixChar, description, amount}`, no identifier                                                                                 |
+| `receipt`        | nothing, and by design: `receipt/extraction.ts` refuses to let a vision model infer an identifier, because an inference cannot be checked against the paper |
 
 So an identifier is stored as a **pair** — `sku` and `sku_scheme` — never as
 a bare string. The scheme says how far the identifier's meaning reaches:

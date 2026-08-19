@@ -121,7 +121,7 @@ export interface PurchaseItem {
    * What the merchant called the product, in the namespace it named it in.
    *
    * Null means the source stated no identifier, which is every shipped
-   * adapter but `amazon`. It does not mean one was dropped in transcription,
+   * adapter but the Amazon exports. It does not mean one was dropped in transcription,
    * and two nulls are not a match.
    */
   sku: ProductIdentity | null;

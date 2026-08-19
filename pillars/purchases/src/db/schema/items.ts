@@ -61,7 +61,7 @@ export const purchaseItems = sqliteTable(
      * an identity.
      *
      * NULL is the ordinary case and means the source stated none, which is
-     * every shipped adapter but `amazon`. It does not mean a transcription
+     * every shipped adapter but the Amazon exports. It does not mean a transcription
      * was skipped, and nothing downstream may treat two NULLs as a match:
      * SQL `GROUP BY` folds them into one group, which is how ~490 grocery
      * lines become a single decision.

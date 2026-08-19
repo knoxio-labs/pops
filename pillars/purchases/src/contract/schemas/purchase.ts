@@ -163,7 +163,7 @@ export const PurchaseItemSchema = z.object({
   shipmentId: z.string().nullable(),
   position: z.int().min(0),
   name: z.string(),
-  /** Null when the source states no identifier — every shipped adapter but `amazon`. */
+  /** Null when the source states no identifier — every shipped adapter but the Amazon exports. */
   sku: ProductIdentitySchema.nullable(),
   url: z.string().nullable(),
   imageUrl: z.string().nullable(),
