@@ -118,6 +118,7 @@ export function persistProposedLinks(db: PurchasesDb, links: readonly ProposedLi
         amountCents: link.amountCents,
         linkType: link.linkType,
         confidence: link.confidence,
+        matchRuleId: link.matchRuleId,
       })
       .onConflictDoNothing()
       .run().changes;

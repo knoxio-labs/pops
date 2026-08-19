@@ -88,6 +88,8 @@ interface LinkRow {
   chargeId: string;
   uri: string;
   description: string | null;
+  linkType: string;
+  confidence: number;
   confirmedAt: string | null;
   matchRuleId: string | null;
 }
@@ -96,8 +98,8 @@ function linkRows(): LinkRow[] {
   return opened.raw
     .prepare(
       `SELECT charge_id as chargeId, transaction_uri as uri,
-              transaction_description as description, confirmed_at as confirmedAt,
-              match_rule_id as matchRuleId
+              transaction_description as description, link_type as linkType,
+              confidence, confirmed_at as confirmedAt, match_rule_id as matchRuleId
        FROM purchase_charge_links ORDER BY transaction_uri`
     )
     .all() as LinkRow[];
@@ -427,5 +429,101 @@ describe('rejecting survives the next sweep', () => {
 
     expect(linkRows()).toHaveLength(1);
     expect(rejectionRows()).toHaveLength(0);
+  });
+});
+
+describe('what the rule then does on a later sweep', () => {
+  // The case digit-stripping exists for. A source registers ONE descriptor
+  // pattern by hand; a merchant bills under a store number that varies, so
+  // charges settled under any other store are blocked forever and the queue
+  // asks nothing about them. The rule a confirm writes is the merchant with
+  // its digits removed, which is the only thing in the system that knows
+  // the two stores are one shop.
+  const STORE_ONE = 'AMAZON MKTPLACE AU 4128';
+  const STORE_TWO = 'AMAZON MKTPLACE AU 5567';
+
+  /** Registered from one statement line, as an operator reading one does. */
+  function sourcePatternFromOneStore(): void {
+    upsertSource(db, {
+      id: 'amazon',
+      label: 'Amazon',
+      descriptorPattern: `${STORE_ONE}%`,
+      settlementWindowDays: 21,
+      autoLinkPolicy: 'review',
+      ingestAdapter: 'amazon-export',
+    });
+  }
+
+  const bothStores = (): FinanceClient =>
+    financeReturning(
+      { id: 't1', description: STORE_ONE, amountCents: 4128 },
+      { id: 't2', description: STORE_TWO, amountCents: 2200 }
+    );
+
+  function twoOrders(): void {
+    sourcePatternFromOneStore();
+    anOrder({ checksum: 'a' });
+    anOrder({ checksum: 'b', sourceOrderId: 'b', totalCents: 2200 });
+  }
+
+  it('leaves the second store unmatched while nothing has been decided', async () => {
+    twoOrders();
+
+    await runSweep(deps(bothStores()));
+
+    // Only the store the pattern was written from. Without this the test
+    // below would prove nothing — the link could have come from blocking.
+    expect(linkRows().map((link) => link.description)).toEqual([STORE_ONE]);
+  });
+
+  it('matches the second store once the first has been confirmed', async () => {
+    twoOrders();
+    const finance = bothStores();
+    await runSweep(deps(finance));
+    const proposed = onlyLink();
+    const { matchRuleId } = confirmLink(db, proposed.chargeId, proposed.uri, NOW);
+
+    await runSweep(deps(finance));
+
+    const learned = linkRows().find((link) => link.description === STORE_TWO);
+    expect(learned).toMatchObject({
+      linkType: 'rule',
+      // The rule's own confidence — inherited from the exact link that
+      // taught it — capped by the stage.
+      confidence: 0.8,
+      matchRuleId,
+    });
+    // Proposed, not pinned: a stage-4 link is re-derived like any other.
+    expect(learned?.confirmedAt).toBeNull();
+  });
+
+  it('counts the attribution only when the operator agrees with it', async () => {
+    // `timesApplied` is a history of decisions, and a sweep re-derives
+    // every unconfirmed link on a timer — so counting an auto-link would
+    // add one every fifteen minutes for a link that never changed.
+    twoOrders();
+    const finance = bothStores();
+    await runSweep(deps(finance));
+    const proposed = onlyLink();
+    confirmLink(db, proposed.chargeId, proposed.uri, NOW);
+
+    await runSweep(deps(finance));
+    await runSweep(deps(finance));
+
+    expect(ruleRows()).toMatchObject([{ timesApplied: 1 }]);
+  });
+
+  it('stops proposing it once the rule is deactivated', async () => {
+    twoOrders();
+    const finance = bothStores();
+    await runSweep(deps(finance));
+    const proposed = onlyLink();
+    confirmLink(db, proposed.chargeId, proposed.uri, NOW);
+    await runSweep(deps(finance));
+    opened.raw.prepare('UPDATE purchase_match_rules SET is_active = 0').run();
+
+    await runSweep(deps(finance));
+
+    expect(linkRows().map((link) => link.description)).toEqual([STORE_ONE]);
   });
 });

@@ -17,8 +17,10 @@ import { matchCombined } from './combined.js';
 import {
   candidatesFor,
   matchExact,
+  matchLearnedRule,
   matchPartial,
   matchSplit,
+  ruleCandidatesFor,
   type BlockingContext,
   type MatchOutcome,
 } from './stages.js';
@@ -45,18 +47,13 @@ import type {
  * - **combined before partial** — partial is the weakest guess the ladder
  *   makes and it consumes a transaction, so running it first would let one
  *   speculative link eat the transaction a clean partition needed.
- *
- * **Stage 4, learned rules, is absent.** `purchase_match_rules` now has a
- * writer — confirming in the review queue records the descriptor a link was
- * accepted under — but nothing here reads one back yet. A rule is a
- * descriptor pattern rather than a purchase-to-transaction pointer, so what
- * a matched pattern does to the ladder (widen blocking, promote confidence,
- * license a near-miss amount) is a decision with real failure modes and is
- * tracked separately rather than guessed at here.
- *
- * A rejection, by contrast, is consumed today: it is a claim about two
- * specific rows rather than about a class of descriptors, so blocking can
- * honour it without deciding anything about how rules should score.
+ * - **learned rules between the two** — a rule is a decision a human
+ *   already made, so it outranks the ladder's weakest guess; and because
+ *   partial CONSUMES a transaction, running partial first could claim the
+ *   very transaction the rule was written about, silently disabling the
+ *   correction. It sits after combined because a rule is weaker evidence
+ *   than a partition that closes exactly: it widens which descriptors count
+ *   for a merchant, and the arithmetic it then has to satisfy is stage 1's.
  */
 export function solve(input: SolverInput): SolverOutput {
   const confirmedCharges = new Set(input.confirmed.map((link) => link.chargeId));
@@ -64,6 +61,7 @@ export function solve(input: SolverInput): SolverOutput {
   const blocking: BlockingContext = {
     defaultWindowDays: input.defaultWindowDays,
     rejected: rejectionsByCharge(input.rejected),
+    rules: input.rules,
   };
 
   const charges = orderedCharges(input.charges).filter(
@@ -98,6 +96,11 @@ export function solve(input: SolverInput): SolverOutput {
 
   for (const charge of deferred) {
     if (state.settled.has(charge.id)) continue;
+    settleByLearnedRule(state, charge, input, blocking);
+  }
+
+  for (const charge of deferred) {
+    if (state.settled.has(charge.id)) continue;
     settlePartially(state, charge, input, blocking);
   }
 
@@ -125,6 +128,29 @@ interface SolveState {
   readonly claimed: Set<string>;
   /** Charges that reached an outcome, so later phases skip them. */
   readonly settled: Set<string>;
+}
+
+/**
+ * Stage 4 for one charge: a merchant descriptor a human already accepted.
+ *
+ * Silence is the normal outcome and the important one. A charge whose rules
+ * admit nothing at the right amount — a rule for a merchant that has since
+ * changed its descriptor, one whose transaction is already spent — is left
+ * exactly as this phase found it, so the ladder continues to partial and
+ * review as though the rule were not there. A stale rule costs a link that
+ * was never available; a stale rule allowed to bend the arithmetic would
+ * cost the wrong link, silently reconciling money to the wrong order.
+ */
+function settleByLearnedRule(
+  state: SolveState,
+  charge: SolvableCharge,
+  input: SolverInput,
+  blocking: BlockingContext
+): void {
+  const candidates = ruleCandidatesFor(charge, input.transactions, state.claimed, blocking);
+  const outcome = matchLearnedRule(charge, candidates);
+  if (outcome === null) return;
+  apply(state, charge, outcome, candidates.length);
 }
 
 /** Phase 3 for one charge: partial payment, or the review queue. */

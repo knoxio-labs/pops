@@ -8,6 +8,7 @@ function charge(overrides: Partial<SolvableCharge> = {}): SolvableCharge {
   return {
     id: 'chg-1',
     purchaseId: 'ord-1',
+    source: 'amazon',
     position: 0,
     amountCents: 2000,
     role: 'capture',
@@ -34,6 +35,7 @@ function run(input: Partial<SolverInput> = {}): SolverOutput {
     transactions: [],
     confirmed: [],
     rejected: [],
+    rules: [],
     defaultWindowDays: 21,
     ...input,
   });

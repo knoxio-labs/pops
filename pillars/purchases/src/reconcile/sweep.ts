@@ -7,6 +7,7 @@
  * from a timer and from an ingest hook at once.
  */
 import {
+  listActiveMatchRules,
   listConfirmedLinks,
   listOrdersNeedingDerivedCharge,
   listRejectedPairings,
@@ -106,6 +107,7 @@ export async function runSweep(deps: SweepDeps, scope: ReconcileScope = {}): Pro
         tx,
         charges.map((charge) => charge.id)
       ),
+      rules: listActiveMatchRules(tx),
       defaultWindowDays,
     });
 
