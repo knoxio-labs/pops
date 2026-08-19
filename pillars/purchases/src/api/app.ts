@@ -121,9 +121,8 @@ export function createPurchasesApiApp(deps: PurchasesApiDeps): Express {
     requestValidationErrorHandler: createRequestValidationErrorHandler(),
   });
 
-  // After the raw probes and the whole contract surface: anything still
-  // unmatched here is a genuine 404, logged rather than left to Express's
-  // silent default. See `middleware/unmatched-route.ts`.
+  // Mounted after the raw probes and the whole contract surface, so what
+  // reaches it is a method and path nothing else claimed.
   app.use(unmatchedRouteHandler);
 
   return app;

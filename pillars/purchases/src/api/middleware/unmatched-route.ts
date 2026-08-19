@@ -1,27 +1,31 @@
 /**
- * The last handler in the stack: anything that reaches here matched no raw
- * probe route and no route in `purchasesContract`.
+ * Terminal handler for a request whose method and path matched no raw probe
+ * route and no route in `purchasesContract`.
  *
- * Express's own fallback for this is a `text/html` page and, critically, no
- * server-side log line — a 404 that was never supposed to happen (a create
- * on `/purchases`, say) would leave nothing to look at afterwards beyond
- * whatever the caller printed. POPS-1312 found exactly one such 404, with an
- * empty body, once in 1,496 real backfill POSTs, and could not reproduce it
- * outside `supertest`'s per-request ephemeral listener. Unexplained is not
- * the same as safe to ignore, so a recurrence must not be silent again: this
- * logs the method and path server-side and answers with the same
- * `{ message, code }` shape every other rejection in this pillar uses,
- * rather than Express's unparseable HTML.
+ * Express's own fallback for that is a `text/html` page and, critically, no
+ * server-side log line — a 404 that was never supposed to happen leaves
+ * nothing to look at afterwards beyond whatever the caller printed. This logs
+ * the method and path and answers the same `{ message, code }` shape every
+ * other rejection in this pillar uses. It does not cover 404s a handler
+ * produces itself; those still log nothing.
+ *
+ * `OPTIONS` is passed through: Express builds its automatic `Allow` response
+ * in the router's out callback, which is reached only when every layer —
+ * including this one, which matches every method — declines.
  */
 import type { NextFunction, Request, Response } from 'express';
 
-export function unmatchedRouteHandler(req: Request, res: Response, _next: NextFunction): void {
+export function unmatchedRouteHandler(req: Request, res: Response, next: NextFunction): void {
+  if (req.method === 'OPTIONS' || res.headersSent) {
+    next();
+    return;
+  }
   console.error('[purchases-api] no route matched', {
     method: req.method,
-    path: req.originalUrl,
+    path: req.path,
   });
   res.status(404).json({
-    message: `No route matches ${req.method} ${req.originalUrl}`,
+    message: `No route matches ${req.method} ${req.path}`,
     code: 'NOT_FOUND',
   });
 }

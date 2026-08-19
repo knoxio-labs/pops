@@ -1,19 +1,16 @@
 /**
- * POPS-1312: a 404 from this pillar must be loud, not silent.
- *
- * A real backfill saw one `POST /purchases` in 748 answer 404 with an
- * empty body, never reproduced and most likely a `supertest`
- * ephemeral-listener artefact rather than a defect in the write path (see
- * the ticket). Whatever the cause, the pillar had nothing to show for it
- * afterwards — this closes that gap: any unmatched route now logs
- * server-side and answers a body a caller (and `scripts/backfill.ts`,
- * which prints `response.text()` on a non-201/409) can actually read.
+ * A request that reaches no route must answer a body a caller can read and
+ * leave a server-side trace, and mounting a handler that matches every method
+ * last must not change what a real route does — including the automatic
+ * `OPTIONS`/`Allow` response Express builds only when every layer declines.
  */
+import express from 'express';
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { openTempDb } from '../../db/__tests__/helpers.js';
+import { amazonOrder, openTempDb, seedAmazonSource } from '../../db/__tests__/helpers.js';
 import { createPurchasesApiApp } from '../app.js';
+import { unmatchedRouteHandler } from '../middleware/unmatched-route.js';
 import { __resetPillarRegistryCache } from '../pillars/registry.js';
 
 import type { Express } from 'express';
@@ -23,10 +20,13 @@ import type { OpenedPurchasesDb } from '../../db/index.js';
 let opened: OpenedPurchasesDb;
 let cleanup: () => void;
 let app: Express;
+let errorSpy: ReturnType<typeof vi.spyOn>;
 
 beforeEach(() => {
   ({ opened, cleanup } = openTempDb());
+  seedAmazonSource(opened);
   __resetPillarRegistryCache();
+  errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
   app = createPurchasesApiApp({
     vision: null,
     purchasesDb: opened,
@@ -36,6 +36,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.restoreAllMocks();
   cleanup();
   __resetPillarRegistryCache();
 });
@@ -52,19 +53,55 @@ describe('a request that matches no route', () => {
   });
 
   it('logs the method and path server-side', async () => {
-    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-
     await request(app).get('/no-such-route');
 
     expect(errorSpy).toHaveBeenCalledWith(
       '[purchases-api] no route matched',
       expect.objectContaining({ method: 'GET', path: '/no-such-route' })
     );
-    errorSpy.mockRestore();
   });
 
+  it('logs the path without the query string it was called with', async () => {
+    await request(app).get('/no-such-route?q=coffee%20grinder&token=hunter2');
+
+    expect(errorSpy).toHaveBeenCalledWith(
+      '[purchases-api] no route matched',
+      expect.objectContaining({ path: '/no-such-route' })
+    );
+    expect(JSON.stringify(errorSpy.mock.calls)).not.toContain('hunter2');
+  });
+});
+
+describe('mounting it last', () => {
   it('does not shadow a real route', async () => {
     await request(app).get('/health').expect(200);
     await request(app).get('/purchases').expect(200);
+    await request(app).post('/purchases').send(amazonOrder()).expect(201);
+
+    expect(errorSpy).not.toHaveBeenCalled();
+  });
+
+  it('leaves the automatic OPTIONS response on a real route intact', async () => {
+    const res = await request(app).options('/purchases');
+
+    expect(res.status).toBe(200);
+    expect(res.headers['allow']).toContain('GET');
+    expect(res.headers['allow']).toContain('POST');
+    expect(errorSpy).not.toHaveBeenCalled();
+  });
+
+  it('declines rather than answering twice when an earlier layer already responded', async () => {
+    const responded = express();
+    responded.use((_req, res, next) => {
+      res.status(202).json({ code: 'ALREADY_ANSWERED' });
+      next();
+    });
+    responded.use(unmatchedRouteHandler);
+
+    const res = await request(responded).get('/anything');
+
+    expect(res.status).toBe(202);
+    expect(res.body).toMatchObject({ code: 'ALREADY_ANSWERED' });
+    expect(errorSpy).not.toHaveBeenCalled();
   });
 });
