@@ -62,8 +62,11 @@ extension BFMBootstrapService {
 
     /// Every enum the generator closed is reopened here, as a raw value.
     ///
-    /// The contract's feature ids and reachability states are closed today, so
-    /// the generator emits Swift enums for them — and a build compiled against
+    /// The feature id is already an open string on the wire — a build already
+    /// on a handset must decode a feature id it has never heard of rather than
+    /// fail the whole payload, so the contract never closes that field into an
+    /// enum in the first place. Reachability states are closed today, so the
+    /// generator emits a Swift enum for them, and a build compiled against
     /// today's contract is on a phone that will still be running it after the
     /// BFM has added a third state. `MobileFeature` and `FeatureReachability`
     /// are raw-value wrappers so an unrecognised value arrives intact and is
@@ -84,7 +87,7 @@ extension BFMBootstrapService {
             registrySource: RegistrySource(rawValue: payload.registry.source.rawValue),
             features: payload.features.map {
                 FeatureAvailability(
-                    id: MobileFeature(rawValue: $0.id.rawValue),
+                    id: MobileFeature(rawValue: $0.id),
                     reachability: FeatureReachability(rawValue: $0.reachability.rawValue)
                 )
             }

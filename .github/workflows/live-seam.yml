@@ -1,6 +1,6 @@
 name: Live Seam
 
-# Runs the two "live seam" integration suites — the ones each pillar's
+# Runs the three "live seam" integration suites — the ones each pillar's
 # `vitest.config.ts` excludes from the default `pnpm test` (the
 # `**/*.live-seam.test.ts` pattern) because they boot 2-3 real pillar
 # processes over loopback HTTP via `@pops/pillar-sdk/testing`
@@ -11,36 +11,121 @@ name: Live Seam
 #   - pillars/cerebrum/src/api/modules/retrieval/__tests__/peer-clients.live-seam.test.ts
 #     boots registry + finance + cerebrum and drives cerebrum's real
 #     `POST /index/reindex-sources`.
+#   - pillars/bfm/src/api/purchases/__tests__/receipt-upload.live-seam.test.ts
+#     boots registry + purchases + bfm and drives bfm's real
+#     `POST /mobile/purchases/receipts`, with purchases' vision model
+#     replaced by a fixture-driven fake HTTP server (no real model call) and
+#     its service-account gate flipped to mandatory for the run, so the
+#     `X-API-Key` grant is actually proved rather than assumed.
 # Each is normally run by hand via that pillar's `pnpm test:live-seam`.
 #
-# ADVISORY, NOT REQUIRED — deliberately, for a bake-in period. Neither job
-# below is in ci-gate.yml's `gated` array, and neither job name is in the
-# branch ruleset, so a failure here reports on the PR (and blocks nothing) —
-# the only way to make a job genuinely advisory, since a job inside a GATED
-# workflow can't opt out with `continue-on-error` (quality.yml's header, and
-# scripts/ci/check-ci-gate-wiring.mjs, explain why). These suites spawn real
-# OS processes rather than running in-process like the rest of the test
-# suite, which is a different flake surface — process startup timing, health-
-# check polling, ephemeral-port allocation — that nothing else in CI exercises
-# yet. Promoting this workflow into ci-gate.yml's `gated` array (and the
-# ruleset) once it has proven stable under real CI load is tracked in Huly,
-# not here — see this workflow's introducing PR for the issue key.
+# ADVISORY, NOT REQUIRED — deliberately, for a bake-in period. None of the
+# three jobs below is in ci-gate.yml's `gated` array, and none of their names
+# is in the branch ruleset, so a failure here reports on the PR (and blocks
+# nothing) — the only way to make a job genuinely advisory, since a job
+# inside a GATED workflow can't opt out with `continue-on-error`
+# (quality.yml's header, and scripts/ci/check-ci-gate-wiring.mjs, explain
+# why). These suites spawn real OS processes rather than running in-process
+# like the rest of the test suite, which is a different flake surface —
+# process startup timing, health-check polling, ephemeral-port allocation —
+# that nothing else in CI exercises yet. Promoting this workflow into
+# ci-gate.yml's `gated` array (and the ruleset) once it has proven stable
+# under real CI load is tracked in Huly, not here — see this workflow's
+# introducing PR for the issue key.
 #
-# PATH-FILTERED to what can actually reach the seam: the SDK harness both
-# suites depend on, each suite's own consumer/producer module pair, and
-# registry — both suites boot a real registry process for discovery, so a
-# registry change that breaks self-registration or resolution in a way its
+# TWO LAYERS OF PATH FILTERING, because a `paths:` block is workflow-level —
+# it decides whether the workflow runs at all, not which of its three jobs
+# do. Below that, the `changes` job gives each job its OWN filter via
+# `dorny/paths-filter`, so a bfm-only PR no longer pays for food-lists and
+# cerebrum-finance, and a food-only PR no longer pays for the other two.
+# Measured over the last 100 commits to main: the workflow-level filter alone
+# (below) selects 38%, down from the 47% the unnarrowed bfm/purchases entries
+# selected before this file's own history; layering the per-job `changes`
+# gate on top means most of that 38% now runs exactly one job instead of all
+# three — of the 38 selecting commits, 22 touch only one seam's own scope
+# (6 cerebrum-only, 16 bfm-only) and would previously have paid for two
+# unrelated jobs apiece.
+#
+# EACH JOB'S FILTER LISTS WHAT CAN ACTUALLY REACH ITS SEAM: the SDK harness
+# every suite depends on, that suite's own consumer/producer module pair, and
+# registry — all three suites boot a real registry process for discovery, so
+# a registry change that breaks self-registration or resolution in a way its
 # own unit suite and docker-build.yml's /health-only smoke probe can't see
 # (neither drives a real cross-pillar `pillar()` call) is exactly the kind of
-# regression this workflow exists to catch. Not the whole pillars/food or
-# pillars/cerebrum tree, which already has its own unit-quality.yml coverage
-# for everything outside these seams.
+# regression this workflow exists to catch.
+#
+# NOT the whole pillars/food or pillars/cerebrum tree — narrowed to the
+# consumer module each suite actually calls through
+# (`recipes/send-to-list`, `retrieval` + `thalamus`), which already has its
+# own unit-quality.yml coverage for everything outside these seams. The
+# bfm entry follows the same shape: narrowed to `pillars/bfm/src/api/purchases/**`
+# (the consumer leg the suite calls through) rather than the whole pillar —
+# it was the whole tree until this comment, which is what let 16 of the last
+# 100 commits (bfm work with no bearing on the purchases leg — auth, mobile
+# finance, device pairing) select this workflow. The route-wiring glue this
+# narrower filter does NOT cover (contract/rest.ts, api/rest/mobile-purchases-
+# handlers.ts, app.ts, auth/access-token.ts) is the same gap the food and
+# cerebrum entries already accept: a break there is a break in bfm's own
+# handler/contract shape, which bfm's unit-quality.yml suite already catches
+# before this workflow would ever get a chance to.
+#
+# THAT "ACCEPT" ABOVE WAS CHECKED, NOT ASSUMED, for food and cerebrum's own
+# route-wiring glue (food's `api/rest/send-to-list-handlers.ts` +
+# `api/rest/handlers.ts` + `api/app.ts`; cerebrum's `api/rest/index-
+# handlers.ts` + `api/rest/handlers.ts` + `api/app.ts`) — none of it sits
+# under the filtered consumer-module paths above, and each pillar's own
+# unit-quality.yml suite drives that exact glue over real HTTP through a
+# real Express app: food's `src/api/__tests__/send-to-list.test.ts` and
+# cerebrum's `src/api/__tests__/index.test.ts` both call `create*ApiApp()`
+# with an injected stub client and assert on what the wiring produces.
+# Confirmed by deliberately breaking the composition at each wiring site
+# (swapping in a client that always rejects, hardcoding an empty peer map)
+# and watching the corresponding unit test fail every time — the stub
+# client exercises the routing/composition path identically to a real one,
+# so a wiring break can't stay green in `unit-quality` and reach this
+# workflow undetected. What the stub genuinely can't stand in for is the
+# wire itself — a real credential, a real network round-trip to the
+# producer — and that surface is exactly `lists-client.ts` /
+# `peer-clients.ts`, both already inside the filtered paths above. So this
+# glue is not a live-seam gap: it is bfm's `contract/rest.ts` /
+# `mobile-purchases-handlers.ts` / `app.ts` situation again, independently
+# confirmed rather than inferred from the same shape.
+#
+# `pillars/finance/**` and `pillars/purchases/**` are each still whole-tree,
+# and that is a decision, not an oversight, made the same way for both:
+#
+# `pillars/finance/**` — pre-existing, kept as-is. The cerebrum -> finance
+# seam drives cerebrum's real `/index/reindex-sources`, which walks finance
+# for anything indexable; narrowing to a specific finance module would be
+# guessing which one, and finance has no `modules/` subdivision to narrow to.
+#
+# `pillars/purchases/**` — the receipt path this suite drives runs through
+# `src/contract/`, `src/api/`, `src/ingest/receipt/` and `src/db/` (a shared
+# sqlite file and schema, not narrowable to one route), so a directory-level
+# narrowing inside `src/` risks missing a real break for a saving that isn't
+# there — of the 29 commits touching `pillars/purchases/**` in the last 100,
+# 20 already touch one of those four directories. What IS excluded below is
+# provably inert instead: `app/` and `extension/` are separate pnpm workspace
+# members (`@pops/app-purchases` has its own `package.json`; `extension/` has
+# none and is a standalone browser extension) that `pnpm --filter
+# "@pops/purchases..." build` does not build and `pnpm --filter @pops/bfm
+# test:live-seam` does not import — both already have their own coverage
+# elsewhere (app-quality.yml / fe-quality.yml for the former, its own
+# `extension/tests/` for the latter, run outside this workflow). `README.md`
+# is prose nothing in the job parses, `Dockerfile` is read only by
+# docker-build.yml's image build, and `mise.toml` only pins local dev tool
+# versions — none of the three changes what `pnpm --filter
+# "@pops/purchases..." build` produces or what the spawned process runs.
+# Excluding that quintet is what took the last-100-commits purchases-touching
+# count from 29 down to 20.
 #
 # No `merge_group` trigger: that trigger exists so a workflow behind a
 # REQUIRED context reports on the merge queue's ref instead of stranding the
 # queue entry (.github/workflows/README.md, "The merge queue" section). An
 # advisory workflow that never reports there blocks nothing and evicts
-# nothing, so it has no need of one.
+# nothing, so it has no need of one — and `scripts/ci/merge-group-scope.mjs`
+# is not wired to this file for the same reason (it exists to scope the
+# merge-queue lane of a workflow that HAS one).
 
 on:
   pull_request:
@@ -54,6 +139,14 @@ on:
       - "pillars/cerebrum/src/api/modules/thalamus/**"
       - "pillars/cerebrum/vitest.live-seam.config.ts"
       - "pillars/finance/**"
+      - "pillars/bfm/src/api/purchases/**"
+      - "pillars/bfm/vitest.live-seam.config.ts"
+      - "pillars/purchases/**"
+      - "!pillars/purchases/app/**"
+      - "!pillars/purchases/extension/**"
+      - "!pillars/purchases/README.md"
+      - "!pillars/purchases/Dockerfile"
+      - "!pillars/purchases/mise.toml"
       - ".github/workflows/live-seam.yml"
   push:
     branches: [main]
@@ -67,11 +160,62 @@ on:
       - "pillars/cerebrum/src/api/modules/thalamus/**"
       - "pillars/cerebrum/vitest.live-seam.config.ts"
       - "pillars/finance/**"
+      - "pillars/bfm/src/api/purchases/**"
+      - "pillars/bfm/vitest.live-seam.config.ts"
+      - "pillars/purchases/**"
+      - "!pillars/purchases/app/**"
+      - "!pillars/purchases/extension/**"
+      - "!pillars/purchases/README.md"
+      - "!pillars/purchases/Dockerfile"
+      - "!pillars/purchases/mise.toml"
       - ".github/workflows/live-seam.yml"
 
 jobs:
+  changes:
+    name: Detect which seam(s) changed
+    runs-on: ubuntu-latest
+    outputs:
+      food: ${{ steps.filter.outputs.food }}
+      cerebrum: ${{ steps.filter.outputs.cerebrum }}
+      bfm: ${{ steps.filter.outputs.bfm }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dorny/paths-filter@v4
+        id: filter
+        with:
+          filters: |
+            food:
+              - "libs/sdk/**"
+              - "pillars/registry/**"
+              - "pillars/food/src/api/modules/recipes/send-to-list/**"
+              - "pillars/food/vitest.live-seam.config.ts"
+              - "pillars/lists/**"
+              - ".github/workflows/live-seam.yml"
+            cerebrum:
+              - "libs/sdk/**"
+              - "pillars/registry/**"
+              - "pillars/cerebrum/src/api/modules/retrieval/**"
+              - "pillars/cerebrum/src/api/modules/thalamus/**"
+              - "pillars/cerebrum/vitest.live-seam.config.ts"
+              - "pillars/finance/**"
+              - ".github/workflows/live-seam.yml"
+            bfm:
+              - "libs/sdk/**"
+              - "pillars/registry/**"
+              - "pillars/bfm/src/api/purchases/**"
+              - "pillars/bfm/vitest.live-seam.config.ts"
+              - "pillars/purchases/**"
+              - "!pillars/purchases/app/**"
+              - "!pillars/purchases/extension/**"
+              - "!pillars/purchases/README.md"
+              - "!pillars/purchases/Dockerfile"
+              - "!pillars/purchases/mise.toml"
+              - ".github/workflows/live-seam.yml"
+
   food-lists:
     name: food -> lists live seam
+    needs: [changes]
+    if: needs.changes.outputs.food == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -96,6 +240,8 @@ jobs:
 
   cerebrum-finance:
     name: cerebrum -> finance live seam
+    needs: [changes]
+    if: needs.changes.outputs.cerebrum == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -109,3 +255,21 @@ jobs:
         run: pnpm --filter "@pops/registry..." --filter "@pops/finance..." --filter "@pops/cerebrum..." build
       - name: Run cerebrum's live-seam suite
         run: pnpm --filter @pops/cerebrum test:live-seam
+
+  bfm-purchases:
+    name: bfm -> purchases live seam
+    needs: [changes]
+    if: needs.changes.outputs.bfm == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build the pillars this suite spawns (registry, purchases, bfm)
+        run: pnpm --filter "@pops/registry..." --filter "@pops/purchases..." --filter "@pops/bfm..." build
+      - name: Run bfm's live-seam suite
+        run: pnpm --filter @pops/bfm test:live-seam

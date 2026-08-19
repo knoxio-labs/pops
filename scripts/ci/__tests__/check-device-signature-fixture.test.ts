@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { generateKeyPairSync, sign } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
@@ -9,11 +10,13 @@ import {
   checkAllCopies,
   checkFixture,
   FIXTURE_COPIES,
+  KNOWN_FIXTURE_COPY_PATHS,
 } from '../check-device-signature-fixture.mjs';
-import { isFileNotFound } from '../fixture-copies.mjs';
+import { discoverFilesNamed, isFileNotFound } from '../fixture-copies.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..', '..');
+const guardPath = resolve(here, '..', 'check-device-signature-fixture.mjs');
 
 type Fixture = Parameters<typeof checkFixture>[0];
 
@@ -59,6 +62,9 @@ function requireCommitted(repoRelativePath: string) {
 
 const committed: Fixture = JSON.parse(requireCommitted(canonical.path));
 
+/** The set `checkAllCopies` is handed in production when nothing undeclared exists. */
+const declaredOnly = FIXTURE_COPIES.map((copy) => copy.path);
+
 /**
  * Build a fresh, internally consistent fixture with `node:crypto` alone.
  *
@@ -99,7 +105,33 @@ describe('the committed fixture', () => {
 
   it('exists once per consumer, byte-identical', () => {
     expect(FIXTURE_COPIES.length).toBeGreaterThan(1);
-    expect(checkAllCopies(readCommitted)).toEqual([]);
+    expect(checkAllCopies(readCommitted, declaredOnly)).toEqual([]);
+  });
+
+  it('has no undeclared same-named copy anywhere under pillars/, libs/ or clients/', () => {
+    // The leg POPS-2206 found missing: every check above only ever reads
+    // paths FIXTURE_COPIES names. This asks the real tree what exists.
+    const discovered = discoverFilesNamed(
+      repoRoot,
+      ['pillars', 'libs', 'clients'],
+      'device-signature-v1.json'
+    );
+
+    expect(discovered).toEqual([...declaredOnly].toSorted());
+  });
+
+  it('declares exactly the paths KNOWN_FIXTURE_COPY_PATHS pins', () => {
+    // KNOWN_FIXTURE_COPY_PATHS is the guard's own independent pin (see its doc
+    // comment in check-device-signature-fixture.mjs) — a literal the
+    // `--self-test` CLI path checks FIXTURE_COPIES against, typed by hand
+    // rather than derived from FIXTURE_COPIES. Reusing it here rather than
+    // duplicating a second hand-typed array keeps this test and the CLI path
+    // checking the exact same expectation. A copy landing in FIXTURE_COPIES
+    // without a matching update to KNOWN_FIXTURE_COPY_PATHS in the same
+    // commit is the friction ADR-045 asks for.
+    expect(FIXTURE_COPIES.map((copy) => copy.path).toSorted()).toEqual(
+      [...KNOWN_FIXTURE_COPY_PATHS].toSorted()
+    );
   });
 
   it('is vendored inside every consumer rather than read from clients/ — ADR-043', () => {
@@ -223,13 +255,15 @@ describe('checkAllCopies', () => {
   };
 
   it('passes when every copy is byte-identical', () => {
-    expect(checkAllCopies(readerOver(identical))).toEqual([]);
+    expect(checkAllCopies(readerOver(identical), declaredOnly)).toEqual([]);
   });
 
   it('catches a vendored copy edited on its own', () => {
     const drifted = JSON.stringify({ ...committed, version: 2 });
 
-    expect(checkAllCopies(withVendored(drifted)).join('\n')).toContain('drifted from');
+    expect(checkAllCopies(withVendored(drifted), declaredOnly).join('\n')).toContain(
+      'drifted from'
+    );
   });
 
   it('catches a canonical copy edited on its own', () => {
@@ -238,23 +272,23 @@ describe('checkAllCopies', () => {
       JSON.stringify({ ...committed, version: 2 })
     );
 
-    expect(checkAllCopies(readerOver(files)).join('\n')).toContain('drifted from');
+    expect(checkAllCopies(readerOver(files), declaredOnly).join('\n')).toContain('drifted from');
   });
 
   it('catches a copy that is only reformatted, not semantically changed', () => {
     // Byte-equality is the point: `oxfmt` runs over both copies at commit time,
     // so a copy that survived a different formatter is exactly how they part.
-    expect(checkAllCopies(withVendored(JSON.stringify(committed, null, 4))).join('\n')).toContain(
-      'drifted from'
-    );
+    expect(
+      checkAllCopies(withVendored(JSON.stringify(committed, null, 4)), declaredOnly).join('\n')
+    ).toContain('drifted from');
   });
 
   it('catches a missing copy rather than silently checking one', () => {
-    expect(checkAllCopies(withVendored(null)).join('\n')).toContain('missing');
+    expect(checkAllCopies(withVendored(null), declaredOnly).join('\n')).toContain('missing');
   });
 
   it('reports unparseable JSON against the copy it came from', () => {
-    const failures = checkAllCopies(withVendored('{ not json'));
+    const failures = checkAllCopies(withVendored('{ not json'), declaredOnly);
 
     expect(failures.join('\n')).toContain(vendored.path);
     expect(failures.join('\n')).toContain('not parseable as JSON');
@@ -266,9 +300,53 @@ describe('checkAllCopies', () => {
       signatureDerBase64: committed.signatureRawBase64,
     });
 
-    const failures = checkAllCopies(withVendored(broken));
+    const failures = checkAllCopies(withVendored(broken), declaredOnly);
 
     expect(failures.some((f) => f.startsWith(`${vendored.path}: `))).toBe(true);
     expect(failures.some((f) => f.startsWith(`${canonical.path}: `))).toBe(false);
   });
+
+  it('reports a same-named file discovered outside FIXTURE_COPIES, by name, without touching disk', () => {
+    // Fabricated discovered list, per the same concurrency note as
+    // check-icon-dynamic-import.test.ts: a file planted for real under
+    // pillars/ would be visible to every other tree-scanning guard's own
+    // self-test running concurrently in this same `vitest run scripts/`.
+    const planted = 'pillars/purchases/contracts/device-signature-v1.json';
+
+    const failures = checkAllCopies(readerOver(identical), [...declaredOnly, planted]);
+
+    expect(failures.join('\n')).toContain(planted);
+    expect(failures.join('\n')).toContain('undeclared copy');
+  });
+
+  it('does not flag the canonical copy as undeclared', () => {
+    expect(checkAllCopies(readerOver(identical), [canonical.path])).toEqual([]);
+  });
+});
+
+describe('the guard CLI', () => {
+  it('its self-test passes, including the independent copy-set pin, the fabricated discovery leg and the real-tree discovery leg', () => {
+    const stdout = execFileSync('node', [guardPath, '--self-test'], { encoding: 'utf8' });
+
+    expect(stdout).toContain(
+      `self-test OK — declares exactly the ${KNOWN_FIXTURE_COPY_PATHS.length} pinned fixture copy path(s).`
+    );
+    expect(stdout).toMatch(/self-test OK — reports a same-named file discovered outside/u);
+    expect(stdout).toMatch(
+      /self-test OK — discovers exactly the 2 declared copy path\(s\) of device-signature-v1\.json/u
+    );
+  });
+
+  // `--self-test` now runs `selfTestRealTreeDiscovery` (fixture-copies.mjs)
+  // against the actual repo tree, the same leg check-vendored-contracts.mjs's
+  // `selfTestLegSet` runs via `findUnvendoredContracts(repoRoot)` — so a real
+  // undeclared copy fails `--self-test` too, not just the plain guard above.
+  // A test that PLANTS a copy for real and re-runs the CLI is still
+  // deliberately not here: the plant would be visible to every other
+  // tree-scanning guard's own suite running concurrently in
+  // `vitest run scripts/`, producing a spurious failure unrelated to this
+  // one. That path was proven manually instead: guard run clean, a copy
+  // planted at pillars/purchases/contracts/device-signature-v1.json, guard
+  // AND --self-test re-run and both shown to exit 1 naming the planted file,
+  // plant removed by filename, guard re-run clean again.
 });

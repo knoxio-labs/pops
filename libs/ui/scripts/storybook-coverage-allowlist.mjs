@@ -18,6 +18,8 @@ export const STORY_COVERAGE_ALLOWLIST = {
   'components/ActionButtonWithDetailPicker.tsx': 'Predates the story-coverage gate.',
   'components/BreakdownChart.tsx': 'Predates the story-coverage gate.',
   'components/ContainerPanel.tsx': 'Predates the story-coverage gate.',
+  'components/DataTableFilters.fields.tsx':
+    'Rendered via DataTableFilters.tsx (FilterBar) in DataTableFilters.stories.tsx; the story imports the composing parent, not this leaf directly.',
   'components/DurationFieldInput.tsx': 'Predates the story-coverage gate.',
   'components/EmptyState.tsx': 'Predates the story-coverage gate.',
   'components/ErrorBoundary.tsx': 'Predates the story-coverage gate.',
@@ -27,10 +29,14 @@ export const STORY_COVERAGE_ALLOWLIST = {
   'components/RadarChart.tsx': 'Predates the story-coverage gate.',
   'components/RelatedItemsList.tsx': 'Predates the story-coverage gate.',
   'components/ResponsiveCardGrid.tsx': 'Predates the story-coverage gate.',
+  'components/ScrollShelf.lazy.tsx':
+    'Sibling export of the already-allowlisted ScrollShelf.tsx (predates the story-coverage gate); only became visible to this gate once it started following two-hop re-export chains.',
   'components/ScrollShelf.tsx': 'Predates the story-coverage gate.',
   'components/SearchPickerDialog.tsx': 'Predates the story-coverage gate.',
   'components/SettingsForm.tsx': 'Predates the story-coverage gate.',
   'components/SortableGrid.tsx': 'Predates the story-coverage gate.',
+  'components/TierListBoard.row.tsx':
+    'Sibling export of the already-allowlisted TierListBoard.tsx (predates the story-coverage gate); only became visible to this gate once it started following two-hop re-export chains.',
   'components/TierListBoard.tsx': 'Predates the story-coverage gate.',
   'components/TreePicker.tsx': 'Predates the story-coverage gate.',
   'components/TreeView.tsx': 'Predates the story-coverage gate.',

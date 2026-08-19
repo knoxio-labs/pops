@@ -16,10 +16,11 @@ import {
   mkdtempSync,
   realpathSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { afterEach, describe, expect, it } from 'vitest';
@@ -29,6 +30,9 @@ import {
   discoverVendoredContracts,
   findDrift,
   findMoved,
+  findUnvendoredContracts,
+  isCanonicalContractSource,
+  KNOWN_VENDORED_LEGS,
   readOrNull,
   statKind,
 } from '../check-vendored-contracts.mjs';
@@ -106,26 +110,28 @@ function declareTsPairWithoutCopy(root: string, consumer: string, pillarId: stri
 }
 
 describe('discoverVendoredContracts / deriveExpectedContracts against the real repo', () => {
-  it('agree on exactly the three known vendored contracts today', () => {
-    // Pinned rather than left as a floor: the repo's own doc comments name
-    // exactly these three ("pillars/finance/app/contracts/contacts.openapi.json",
-    // "pillars/finance/app/contracts/purchases.openapi.json", and
-    // "clients/ios/Contracts/bfm.openapi.json"). A fourth legitimate one
-    // means updating this pin in the same commit; that friction is the point
-    // — it is what makes a change to this convention visible instead of a
-    // floor silently swallowing it.
+  it('agree on exactly the legs KNOWN_VENDORED_LEGS pins', () => {
+    // KNOWN_VENDORED_LEGS is the guard's own independent pin (see its doc
+    // comment in check-vendored-contracts.mjs) — a literal the self-test
+    // checks the real tree against, typed by hand rather than derived from
+    // VENDOR_DIRECTORIES. Reusing it here rather than duplicating a second
+    // hand-typed array keeps this test and the `--self-test` CLI path
+    // checking the exact same expectation instead of two lists that could
+    // drift from each other. A new leg landing here without updating
+    // KNOWN_VENDORED_LEGS in the same commit is the friction ADR-045 asks
+    // for — visible on the commit that adds it, not a silently-widened floor.
     const discovered = discoverVendoredContracts(repoRoot);
     const expected = deriveExpectedContracts(repoRoot);
 
-    const discoveredPaths = discovered.map((c) => c.copy.slice(repoRoot.length + 1)).toSorted();
+    const discoveredLegs = discovered
+      .map((c) => `${c.pillarId} -> ${c.copy.slice(repoRoot.length + 1)}`)
+      .toSorted();
     const expectedPaths = expected.map((c) => c.copy.slice(repoRoot.length + 1)).toSorted();
 
-    expect(discoveredPaths).toEqual([
-      'clients/ios/Contracts/bfm.openapi.json',
-      'pillars/finance/app/contracts/contacts.openapi.json',
-      'pillars/finance/app/contracts/purchases.openapi.json',
-    ]);
-    expect(expectedPaths).toEqual(discoveredPaths);
+    expect(discoveredLegs).toEqual([...KNOWN_VENDORED_LEGS].toSorted());
+    expect(expectedPaths).toEqual(
+      discovered.map((c) => c.copy.slice(repoRoot.length + 1)).toSorted()
+    );
   });
 
   it('leaves every discovered copy free of drift or orphaning against the real tree', () => {
@@ -136,6 +142,134 @@ describe('discoverVendoredContracts / deriveExpectedContracts against the real r
   it('leaves every declared expectation present on disk in the real tree', () => {
     const findings = findMoved(deriveExpectedContracts(repoRoot), statKind);
     expect(findings).toEqual([]);
+  });
+
+  it('finds no *.openapi.json anywhere outside a declared VENDOR_DIRECTORIES shape', () => {
+    expect(findUnvendoredContracts(repoRoot)).toEqual([]);
+  });
+});
+
+describe('findUnvendoredContracts', () => {
+  it('reports a vendored-shaped file sitting outside every VENDOR_DIRECTORIES entry', () => {
+    // The exact blind spot this function exists for: `pillars/<id>/contracts/`
+    // (no `app/` segment) is a real directory in this repo —
+    // `pillars/bfm/contracts/` already holds fixture copies — but is outside
+    // every `VENDOR_DIRECTORIES` shape, so `discoverVendoredContracts` alone
+    // never visits it and a copy planted there was previously invisible to
+    // the whole guard, not merely unpaired.
+    const root = fixtureRoot();
+    mkdirSync(join(root, 'pillars', 'producer-x', 'openapi'), { recursive: true });
+    writeFileSync(
+      join(root, 'pillars', 'producer-x', 'openapi', 'producer-x.openapi.json'),
+      '{}\n'
+    );
+    const strayDir = join(root, 'pillars', 'bfm-like', 'contracts');
+    mkdirSync(strayDir, { recursive: true });
+    const strayCopy = join(strayDir, 'producer-x.openapi.json');
+    writeFileSync(strayCopy, '{"drifted":true}\n');
+
+    expect(findUnvendoredContracts(root)).toEqual([strayCopy]);
+  });
+
+  it('does not flag a producer’s own canonical spec', () => {
+    const root = fixtureRoot();
+    mkdirSync(join(root, 'pillars', 'producer-y', 'openapi'), { recursive: true });
+    writeFileSync(
+      join(root, 'pillars', 'producer-y', 'openapi', 'producer-y.openapi.json'),
+      '{}\n'
+    );
+
+    expect(findUnvendoredContracts(root)).toEqual([]);
+  });
+
+  it('does not flag a legitimately vendored copy in a declared shape', () => {
+    const root = fixtureRoot();
+    plantTsPair(root, 'consumer-a', 'producer-a');
+
+    expect(findUnvendoredContracts(root)).toEqual([]);
+  });
+
+  it('does not descend into node_modules or other build/dependency directories', () => {
+    const root = fixtureRoot();
+    const junkDir = join(root, 'pillars', 'noisy-pillar', 'node_modules', 'some-dep');
+    mkdirSync(junkDir, { recursive: true });
+    writeFileSync(join(junkDir, 'unrelated.openapi.json'), '{}\n');
+
+    expect(findUnvendoredContracts(root)).toEqual([]);
+  });
+});
+
+describe('discoverVendoredContracts', () => {
+  // POPS-2257: this walk used `entry.isFile()` alone, so a symlinked vendored
+  // copy sitting at a perfectly legal VENDOR_DIRECTORIES shape was invisible
+  // here (never paired with its producer spec, absent from `discoveredCopies`)
+  // while `findUnvendoredContracts` still saw it through the unrestricted
+  // `findOpenapiJsonFiles` walk and reported the legitimate location as a
+  // stray one — a message asserting the opposite of the truth.
+  it('discovers a symlinked vendored copy at a declared VENDOR_DIRECTORIES shape', () => {
+    const root = fixtureRoot();
+    mkdirSync(join(root, 'pillars', 'producer-z', 'openapi'), { recursive: true });
+    const target = join(root, 'pillars', 'producer-z', 'openapi', 'producer-z.openapi.json');
+    writeFileSync(target, '{}\n');
+
+    const contractsDir = join(root, 'pillars', 'consumer-z', 'app', 'contracts');
+    mkdirSync(contractsDir, { recursive: true });
+    const symlinkCopy = join(contractsDir, 'producer-z.openapi.json');
+    symlinkSync(relative(contractsDir, target), symlinkCopy);
+
+    const discovered = discoverVendoredContracts(root);
+    expect(discovered).toHaveLength(1);
+    expect(first(discovered).copy).toBe(symlinkCopy);
+    expect(first(discovered).source).toBe(target);
+
+    // Discovered means drift-checked: this closes the other half of
+    // POPS-2257, that a symlinked legitimate copy is not merely found but
+    // actually compared against its canonical source.
+    expect(findDrift(discovered, readOrNull)).toEqual([]);
+
+    // And, discovered, it must not also read as a stray file outside every
+    // declared shape — the inverted-message half of POPS-2257.
+    expect(findUnvendoredContracts(root)).toEqual([]);
+  });
+
+  it('does not follow a symlink that resolves outside the repo', () => {
+    const root = fixtureRoot();
+    const outside = mkdtempSync(join(tmpdir(), 'vendored-contracts-outside-'));
+    created.push(outside);
+    const outsideTarget = join(outside, 'producer-z.openapi.json');
+    writeFileSync(outsideTarget, '{}\n');
+
+    const contractsDir = join(root, 'pillars', 'consumer-z', 'app', 'contracts');
+    mkdirSync(contractsDir, { recursive: true });
+    symlinkSync(outsideTarget, join(contractsDir, 'producer-z.openapi.json'));
+
+    expect(discoverVendoredContracts(root)).toEqual([]);
+  });
+});
+
+describe('isCanonicalContractSource', () => {
+  it('recognises a producer’s own canonical spec', () => {
+    const root = fixtureRoot();
+    const path = join(root, 'pillars', 'producer-z', 'openapi', 'producer-z.openapi.json');
+    expect(isCanonicalContractSource(path, root)).toBe(true);
+  });
+
+  it('rejects a same-named file one level too deep', () => {
+    const root = fixtureRoot();
+    const path = join(root, 'pillars', 'producer-z', 'app', 'openapi', 'producer-z.openapi.json');
+    expect(isCanonicalContractSource(path, root)).toBe(false);
+  });
+
+  it('rejects a mismatched pillar id / filename pair', () => {
+    const root = fixtureRoot();
+    const path = join(root, 'pillars', 'producer-z', 'openapi', 'someone-else.openapi.json');
+    expect(isCanonicalContractSource(path, root)).toBe(false);
+  });
+
+  it('rejects a path outside pillars/ entirely', () => {
+    const root = fixtureRoot();
+    const path = join(root, 'clients', 'ios', 'Contracts', 'bfm.openapi.json');
+    expect(isCanonicalContractSource(path, root)).toBe(false);
   });
 });
 
@@ -411,8 +545,11 @@ describe('the guard CLI', () => {
     expect(stdout).toContain('3 config-declared expectation(s)');
   });
 
-  it('its self-test passes', () => {
-    expect(() => execFileSync('node', [guardPath, '--self-test'], { stdio: 'pipe' })).not.toThrow();
+  it('its self-test passes, including the independent leg-set pin', () => {
+    const stdout = execFileSync('node', [guardPath, '--self-test'], { encoding: 'utf8' });
+    expect(stdout).toContain(
+      `self-test OK — discovers exactly the ${KNOWN_VENDORED_LEGS.length} pinned vendored leg(s).`
+    );
   });
 
   it('fails loudly, not with OK, when discovery finds zero vendored contracts', () => {
@@ -464,5 +601,58 @@ describe('the guard CLI', () => {
     expect(threw).toBe(true);
     expect(stderr).toContain('consumer-moved');
     expect(stderr).toContain('not on disk');
+  });
+
+  it('fails loudly, not with OK, on a vendored-shaped copy outside every declared shape', () => {
+    // The exact blindness this suite exists to close: a `*.openapi.json`
+    // sitting under `pillars/<id>/contracts/` — a real, reachable directory
+    // shape (`pillars/bfm/contracts/`) that no `VENDOR_DIRECTORIES` entry
+    // names — used to be invisible to both the plain guard run and its
+    // `--self-test`. Both must now report it by path.
+    const sandbox = fixtureRoot();
+    cpSync(join(repoRoot, 'scripts', 'ci'), join(sandbox, 'scripts', 'ci'), { recursive: true });
+    plantTsPair(sandbox, 'consumer-intact', 'producer-intact');
+
+    mkdirSync(join(sandbox, 'pillars', 'stray-source', 'openapi'), { recursive: true });
+    writeFileSync(
+      join(sandbox, 'pillars', 'stray-source', 'openapi', 'stray-source.openapi.json'),
+      '{}\n'
+    );
+    const strayDir = join(sandbox, 'pillars', 'bfm-like', 'contracts');
+    mkdirSync(strayDir, { recursive: true });
+    writeFileSync(join(strayDir, 'stray-source.openapi.json'), '{"drifted":true}\n');
+
+    let stderr = '';
+    let threw = false;
+    try {
+      execFileSync('node', [join(sandbox, 'scripts', 'ci', 'check-vendored-contracts.mjs')], {
+        stdio: 'pipe',
+      });
+    } catch (error) {
+      threw = true;
+      stderr = String((error as { stderr?: Buffer }).stderr ?? '');
+    }
+
+    expect(threw).toBe(true);
+    expect(stderr).toContain(join('pillars', 'bfm-like', 'contracts', 'stray-source.openapi.json'));
+    expect(stderr).toContain('outside every VENDOR_DIRECTORIES shape');
+
+    let selfTestStderr = '';
+    let selfTestThrew = false;
+    try {
+      execFileSync(
+        'node',
+        [join(sandbox, 'scripts', 'ci', 'check-vendored-contracts.mjs'), '--self-test'],
+        { stdio: 'pipe' }
+      );
+    } catch (error) {
+      selfTestThrew = true;
+      selfTestStderr = String((error as { stderr?: Buffer }).stderr ?? '');
+    }
+
+    expect(selfTestThrew).toBe(true);
+    expect(selfTestStderr).toContain(
+      join('pillars', 'bfm-like', 'contracts', 'stray-source.openapi.json')
+    );
   });
 });

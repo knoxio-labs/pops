@@ -3,7 +3,7 @@ import Foundation
 /// What the purchases pillar's drop-zone will read, mirroring its own closed
 /// list (`MEDIA_TYPES` in `ingest/receipt/vision.ts`) — a phone photo, a PDF
 /// invoice, or a pasted body.
-public enum ReceiptMediaType: String, Hashable, Sendable {
+public enum ReceiptMediaType: String, Hashable, Sendable, CaseIterable {
     case jpeg = "image/jpeg"
     case png = "image/png"
     case webp = "image/webp"

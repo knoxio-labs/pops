@@ -64,13 +64,24 @@ import { fileURLToPath } from 'node:url';
 
 import {
   checkCopies,
+  discoverFilesNamed,
+  findUndeclaredCopies,
   repoCopyReader,
   resolveCanonical,
   selfTestCopyHandling,
+  selfTestRealTreeDiscovery,
+  selfTestUndeclaredDiscovery,
+  UNIT_KIND_ROOTS,
 } from './fixture-copies.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..');
+
+/** Directories a discovered-copy walk covers — every unit kind that can vendor this fixture. */
+const SCAN_ROOTS = UNIT_KIND_ROOTS;
+
+/** The filename a copy of this fixture is always named, wherever it lives. */
+const BASENAME = 'device-signature-v1.json';
 
 /**
  * Every copy of the fixture. Repo-relative so the failure messages, the
@@ -94,6 +105,62 @@ export const FIXTURE_COPIES = Object.freeze([
 const CANONICAL_ROOT = 'clients/';
 
 const CANONICAL = resolveCanonical(FIXTURE_COPIES, CANONICAL_ROOT);
+
+/**
+ * The exact paths `FIXTURE_COPIES` is known to carry today, as literals —
+ * typed by hand, not derived from `FIXTURE_COPIES` itself. `FIXTURE_COPIES`
+ * is what every content check above walks, so an entry silently dropped from
+ * it (a copy quietly stops being checked) or silently added to it (an
+ * unreviewed copy starts being trusted) changes what those checks cover
+ * without changing anything a test derived from `FIXTURE_COPIES` could ever
+ * notice — that test would just walk the new, wrong list. A literal pin is
+ * the only thing that can catch DRIFT WITHIN THE DECLARED LIST. It cannot
+ * see a copy that was never declared in the first place — closing that is
+ * `discoverFilesNamed`'s job below, which asks the filesystem instead of
+ * `FIXTURE_COPIES`.
+ *
+ * A change to this set landing without a matching update here is the
+ * friction ADR-045 asks for — visible on the commit that makes it, not a
+ * silently-widened or -narrowed floor.
+ */
+export const KNOWN_FIXTURE_COPY_PATHS = [
+  'clients/ios/Contracts/device-signature-v1.json',
+  'pillars/bfm/contracts/device-signature-v1.json',
+];
+
+/**
+ * Self-test: `FIXTURE_COPIES` still declares exactly {@link KNOWN_FIXTURE_COPY_PATHS}.
+ *
+ * Every other self-test half exercises what a copy's CONTENTS must hold; none
+ * of them can see a copy dropped from — or added to — the list they all walk,
+ * because they all walk that same list. This is the one check in the file
+ * that compares `FIXTURE_COPIES` against something not derived from itself.
+ *
+ * @returns {boolean}
+ */
+function selfTestCopySet() {
+  const declared = FIXTURE_COPIES.map((copy) => copy.path).toSorted();
+  const expected = [...KNOWN_FIXTURE_COPY_PATHS].toSorted();
+
+  const missing = expected.filter((path) => !declared.includes(path));
+  const extra = declared.filter((path) => !expected.includes(path));
+  const ok = missing.length === 0 && extra.length === 0;
+
+  if (!ok) {
+    console.error('SELF-TEST FAILED (copy set): FIXTURE_COPIES does not match the pinned set.');
+    for (const path of missing) console.error(`  missing (pinned, not declared): ${path}`);
+    for (const path of extra) console.error(`  extra (declared, not pinned):    ${path}`);
+    console.error(
+      '  if this is a deliberate addition/removal, update KNOWN_FIXTURE_COPY_PATHS in the ' +
+        'same commit; if it is not, FIXTURE_COPIES has drifted unexpectedly.'
+    );
+  } else {
+    console.log(
+      `self-test OK — declares exactly the ${expected.length} pinned fixture copy path(s).`
+    );
+  }
+  return ok;
+}
 
 /** The encoding contract, restated here so the fixture cannot redefine itself. */
 const CONTRACT = Object.freeze({
@@ -229,13 +296,27 @@ export function checkFixture(fixture) {
 
 /**
  * Check every copy of the fixture: each one present, each one byte-identical
- * to the canonical copy, and each one passing {@link checkFixture} on its own.
+ * to the canonical copy, each one passing {@link checkFixture} on its own,
+ * and no OTHER file named `device-signature-v1.json` sitting undeclared
+ * under {@link SCAN_ROOTS}.
+ *
+ * That last leg is what POPS-2206 found missing: every check above only
+ * ever reads paths `FIXTURE_COPIES` names, so a copy nobody declared was
+ * checked by nothing. `discovered` is threaded in rather than read from disk
+ * here so the self-test can drive this with a fabricated list.
  *
  * @param {(repoRelativePath: string) => string | null} read Reads a copy, or null if absent.
- * @returns {string[]} One message per failure; empty means every copy holds.
+ * @param {readonly string[]} discovered Every file named {@link BASENAME} found under {@link SCAN_ROOTS}.
+ * @returns {string[]} One message per failure; empty means every copy holds and none are undeclared.
  */
-export function checkAllCopies(read) {
-  return checkCopies(FIXTURE_COPIES, CANONICAL.path, read, checkFixture);
+export function checkAllCopies(read, discovered) {
+  const contentFailures = checkCopies(FIXTURE_COPIES, CANONICAL.path, read, checkFixture);
+  const undeclaredFailures = findUndeclaredCopies(discovered, FIXTURE_COPIES).map(
+    (path) =>
+      `${path}: an undeclared copy of ${BASENAME} — every copy must be named in FIXTURE_COPIES ` +
+      '(and KNOWN_FIXTURE_COPY_PATHS) or it is not being checked by anything'
+  );
+  return [...contentFailures, ...undeclaredFailures];
 }
 
 /**
@@ -277,6 +358,7 @@ function selfTest(valid) {
   }
 
   if (!selfTestCopyHandling(FIXTURE_COPIES, CANONICAL.path, valid, checkFixture)) ok = false;
+  if (!selfTestUndeclaredDiscovery(FIXTURE_COPIES)) ok = false;
 
   if (ok) {
     console.log(
@@ -301,6 +383,17 @@ function main() {
   const read = repoCopyReader(repoRoot, bail);
 
   if (argv.includes('--self-test')) {
+    // All halves run even when one fails, so one invocation reports every
+    // problem. The copy-set and real-tree-discovery halves need no fixture
+    // at all, so they run first.
+    const copySet = selfTestCopySet();
+    const realTreeDiscovery = selfTestRealTreeDiscovery(
+      repoRoot,
+      SCAN_ROOTS,
+      BASENAME,
+      FIXTURE_COPIES
+    );
+
     // The self-test needs a fixture it can corrupt, and the canonical copy is
     // the only source of one. Both failure modes are reported rather than
     // thrown: this runs as the FIRST step of its CI job, so an unhandled
@@ -314,10 +407,11 @@ function main() {
     } catch (error) {
       bail(`FAIL — ${CANONICAL.path} is not parseable as JSON: ${String(error)}`);
     }
-    process.exit(selfTest(valid) ? 0 : 1);
+    process.exit(selfTest(valid) && copySet && realTreeDiscovery ? 0 : 1);
   }
 
-  const failures = checkAllCopies(read);
+  const discovered = discoverFilesNamed(repoRoot, SCAN_ROOTS, BASENAME);
+  const failures = checkAllCopies(read, discovered);
   if (failures.length === 0) {
     console.log(
       `OK — ${String(FIXTURE_COPIES.length)} identical copies of the device-signature fixture, ` +

@@ -294,7 +294,19 @@ and each is asserted in `src/api/__tests__/mobile-receipts.test.ts` or
   mounted on that one path — every other route keeps Express's 100kb default —
   and an oversized body is refused here, in the shape the contract declares,
   rather than buffered across the internal network for `purchases` to refuse at
-  20mb.
+  20mb. Because bfm's own ceiling sits strictly under purchases', a real phone
+  can never actually make purchases answer with its own `413` through this
+  route — bfm is always the one that refuses first. If purchases' `413` is
+  reachable at all today, it is not modeled as its own outcome: the SDK's
+  cross-pillar mapping (`libs/sdk/src/client/rest-call.ts`) has no case for it,
+  so it folds into the same `unavailable` a dead `purchases` process produces —
+  `503 upstream_unavailable, retryable: true` on the mobile surface — which is
+  wrong in the same direction as retrying a request that will never fit. That
+  gap is pinned by a live-seam test
+  (`src/api/purchases/__tests__/receipt-upload.live-seam.test.ts`, "a body
+  purchases refuses at its own ceiling") rather than fixed here, since the
+  mapping it exposes is shared by every cross-pillar call in the repo, not
+  specific to receipts.
 - **The grant is a write grant.** `purchases.receipt` was added to
   `BFM_SERVICE_ACCOUNT_SCOPES` for this and authorises nothing else in that
   pillar. See [Provisioning the service account](#provisioning-the-service-account).
@@ -417,8 +429,12 @@ registration is a separate mechanism and still goes through the
   credential or not — each has its own adoption ticket. bfm calls only
   `finance` and `purchases`, so both legs of its own grant are enforced. The
   `purchases` leg carries one caveat: that pillar's `requireCredential` is
-  `false`, so an upload would be admitted even if the grant were missing. The
-  scope is listed as if it were already on, because it will be.
+  `false` in production, so an upload would be admitted even if the grant
+  were missing. The scope is listed as if it were already on, because it
+  will be. `src/api/purchases/__tests__/receipt-upload.live-seam.test.ts`
+  proves the grant directly rather than relying on that caveat — it closes
+  purchases' uncredentialled path for the run (see purchases' README) and
+  drives a real upload across the seam.
 
 ## Reaching sibling pillars
 
@@ -474,10 +490,12 @@ a scope to a live account. An account provisioned before a scope was added to
 leg answers `403` naming the missing scope on a producer that enforces (POPS-1990).
 The operator step is the rotation above, with the fuller scope list in the
 create call. Until it runs, the receipt upload still works against today's
-`purchases`, whose `requireCredential` is `false` — which is precisely the
-failure mode worth knowing about, because it means a missing grant is invisible
-until that flag flips. Prove the grant rather than the flag: set
-`requireCredential` to `true` locally and upload once.
+`purchases`, whose `requireCredential` is `false` in production — which is
+precisely the failure mode worth knowing about, because it means a missing
+grant is invisible in production until that flag flips. Prove the grant
+rather than the flag: `src/api/purchases/__tests__/receipt-upload.live-seam.test.ts`
+does exactly that, running against a real purchases process with its gate
+flipped to mandatory. Run it with `pnpm --filter @pops/bfm test:live-seam`.
 
 ## Deployment
 

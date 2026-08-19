@@ -23,11 +23,15 @@ name: A pillar answering something unreadable reads differently from unavailable
     env:
       SERVER_URL: ${CONTROL_BASE_URL}
 
-# `RootCopy.nothingAvailable(surface.unavailable)` for a single
-# `contract-mismatch` feature, in full. This is the sentence that must stay
-# distinct from the `unavailable` one below — "answered something this build
-# cannot read" is a reason to update the app, not to wait.
-- assertVisible: 'Transactions needs a newer version of this app.'
+# `RootCopy.nothingAvailable(surface.unavailable)` in full: finance is
+# `contract-mismatch`, and receipt-capture is `unavailable` too, because this
+# harness's registry stub never registers `purchases` (only `finance` —
+# `scripts/ios-e2e/upstream-stub.mjs`). Both reasons land in the same
+# sentence, in `RootFeature.renderable` order. The first clause is the one
+# that must stay distinct from the `unavailable` one below — "answered
+# something this build cannot read" is a reason to update the app, not to
+# wait.
+- assertVisible: 'Transactions needs a newer version of this app. Receipts is not available right now.'
 
 # AFTER the assertion above — `root-says-so-when-nothing-is-usable.yaml`
 # explains why the order matters: the surface is optimistic before the first

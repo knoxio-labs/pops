@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
@@ -10,11 +11,13 @@ import {
   checkAllCopies,
   checkFixture,
   FIXTURE_COPIES,
+  KNOWN_FIXTURE_COPY_PATHS,
 } from '../check-refresh-message-fixture.mjs';
-import { isFileNotFound } from '../fixture-copies.mjs';
+import { discoverFilesNamed, isFileNotFound } from '../fixture-copies.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..', '..');
+const guardPath = resolve(here, '..', 'check-refresh-message-fixture.mjs');
 
 type Fixture = Parameters<typeof checkFixture>[0];
 
@@ -48,6 +51,9 @@ const vendored = (() => {
   return found;
 })();
 
+/** The set `checkAllCopies` is handed in production when nothing undeclared exists. */
+const declaredOnly = FIXTURE_COPIES.map((copy) => copy.path);
+
 /** The message the format defines, rebuilt from a fixture's own parts. */
 function messageOf(fixture: Fixture): string {
   return `${fixture.domain}\n${fixture.nonce}\n${fixture.refreshTokenSha256Hex}`;
@@ -78,7 +84,31 @@ describe('the committed vector', () => {
 
   it('exists once per consumer, byte-identical', () => {
     expect(FIXTURE_COPIES.length).toBeGreaterThan(1);
-    expect(checkAllCopies(readCommitted)).toEqual([]);
+    expect(checkAllCopies(readCommitted, declaredOnly)).toEqual([]);
+  });
+
+  it('has no undeclared same-named copy anywhere under pillars/, libs/ or clients/', () => {
+    const discovered = discoverFilesNamed(
+      repoRoot,
+      ['pillars', 'libs', 'clients'],
+      'refresh-message-v1.json'
+    );
+
+    expect(discovered).toEqual([...declaredOnly].toSorted());
+  });
+
+  it('declares exactly the paths KNOWN_FIXTURE_COPY_PATHS pins', () => {
+    // KNOWN_FIXTURE_COPY_PATHS is the guard's own independent pin (see its doc
+    // comment in check-refresh-message-fixture.mjs) — a literal the
+    // `--self-test` CLI path checks FIXTURE_COPIES against, typed by hand
+    // rather than derived from FIXTURE_COPIES. Reusing it here rather than
+    // duplicating a second hand-typed array keeps this test and the CLI path
+    // checking the exact same expectation. A copy landing in FIXTURE_COPIES
+    // without a matching update to KNOWN_FIXTURE_COPY_PATHS in the same
+    // commit is the friction ADR-045 asks for.
+    expect(FIXTURE_COPIES.map((copy) => copy.path).toSorted()).toEqual(
+      [...KNOWN_FIXTURE_COPY_PATHS].toSorted()
+    );
   });
 
   it('is canonical in the pillar that defines the format, vendored in the client', () => {
@@ -210,12 +240,14 @@ describe('checkAllCopies', () => {
   };
 
   it('passes when every copy is byte-identical', () => {
-    expect(checkAllCopies(readerOver(identical))).toEqual([]);
+    expect(checkAllCopies(readerOver(identical), declaredOnly)).toEqual([]);
   });
 
   it('catches a vendored copy edited on its own', () => {
     expect(
-      checkAllCopies(withVendored(JSON.stringify({ ...committed, version: 2 }))).join('\n')
+      checkAllCopies(withVendored(JSON.stringify({ ...committed, version: 2 })), declaredOnly).join(
+        '\n'
+      )
     ).toContain('drifted from');
   });
 
@@ -225,21 +257,21 @@ describe('checkAllCopies', () => {
       JSON.stringify({ ...committed, version: 2 })
     );
 
-    expect(checkAllCopies(readerOver(files)).join('\n')).toContain('drifted from');
+    expect(checkAllCopies(readerOver(files), declaredOnly).join('\n')).toContain('drifted from');
   });
 
   it('catches a copy that is only reformatted, not semantically changed', () => {
-    expect(checkAllCopies(withVendored(JSON.stringify(committed, null, 4))).join('\n')).toContain(
-      'drifted from'
-    );
+    expect(
+      checkAllCopies(withVendored(JSON.stringify(committed, null, 4)), declaredOnly).join('\n')
+    ).toContain('drifted from');
   });
 
   it('catches a missing copy rather than silently checking one', () => {
-    expect(checkAllCopies(withVendored(null)).join('\n')).toContain('missing');
+    expect(checkAllCopies(withVendored(null), declaredOnly).join('\n')).toContain('missing');
   });
 
   it('reports unparseable JSON against the copy it came from', () => {
-    const failures = checkAllCopies(withVendored('{ not json')).join('\n');
+    const failures = checkAllCopies(withVendored('{ not json'), declaredOnly).join('\n');
 
     expect(failures).toContain(vendored.path);
     expect(failures).toContain('not parseable as JSON');
@@ -248,9 +280,49 @@ describe('checkAllCopies', () => {
   it('attributes a format failure to the copy that carries it', () => {
     const broken = JSON.stringify(withMessage(committed, `${messageOf(committed)}\n`));
 
-    const failures = checkAllCopies(withVendored(broken));
+    const failures = checkAllCopies(withVendored(broken), declaredOnly);
 
     expect(failures.some((f) => f.startsWith(`${vendored.path}: `))).toBe(true);
     expect(failures.some((f) => f.startsWith(`${CANONICAL.path}: `))).toBe(false);
   });
+
+  it('reports a same-named file discovered outside FIXTURE_COPIES, by name, without touching disk', () => {
+    const planted = 'pillars/purchases/contracts/refresh-message-v1.json';
+
+    const failures = checkAllCopies(readerOver(identical), [...declaredOnly, planted]);
+
+    expect(failures.join('\n')).toContain(planted);
+    expect(failures.join('\n')).toContain('undeclared copy');
+  });
+
+  it('does not flag the canonical copy as undeclared', () => {
+    expect(checkAllCopies(readerOver(identical), [CANONICAL.path])).toEqual([]);
+  });
+});
+
+describe('the guard CLI', () => {
+  it('its self-test passes, including the independent copy-set pin, the fabricated discovery leg and the real-tree discovery leg', () => {
+    const stdout = execFileSync('node', [guardPath, '--self-test'], { encoding: 'utf8' });
+
+    expect(stdout).toContain(
+      `self-test OK — declares exactly the ${KNOWN_FIXTURE_COPY_PATHS.length} pinned fixture copy path(s).`
+    );
+    expect(stdout).toMatch(/self-test OK — reports a same-named file discovered outside/u);
+    expect(stdout).toMatch(
+      /self-test OK — discovers exactly the 2 declared copy path\(s\) of refresh-message-v1\.json/u
+    );
+  });
+
+  // `--self-test` now runs `selfTestRealTreeDiscovery` (fixture-copies.mjs)
+  // against the actual repo tree, the same leg check-vendored-contracts.mjs's
+  // `selfTestLegSet` runs via `findUnvendoredContracts(repoRoot)` — see the
+  // same note in check-device-signature-fixture.test.ts. A test that PLANTS
+  // an undeclared copy for real and re-runs the CLI against the actual repo
+  // tree is still deliberately not here — it would be visible to every other
+  // tree-scanning guard's own suite running concurrently in
+  // `vitest run scripts/`, producing a spurious failure unrelated to this
+  // one. That path was proven manually instead: guard run clean, a copy
+  // planted at pillars/purchases/contracts/refresh-message-v1.json, guard
+  // AND --self-test re-run and both shown to exit 1 naming the planted file,
+  // plant removed by filename, guard re-run clean again.
 });

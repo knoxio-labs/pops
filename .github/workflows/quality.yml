@@ -451,6 +451,28 @@ jobs:
       - name: Every icon-only Button/ButtonPrimitive carries an aria-label
         run: node scripts/ci/check-icon-only-buttons.mjs
 
+  icon-dynamic-import:
+    name: No dynamic import of lucide-react
+    # .oxlintrc.json's no-restricted-imports only inspects static `import`/
+    # `export … from` declarations, so `await import('lucide-react')` and
+    # `require('lucide-react')` bypass the banned-icon-name gate entirely.
+    # This guard bans the dynamic-call shape outright (whole package or any
+    # subpath, regardless of which name is later destructured off the
+    # result) — see scripts/ci/check-icon-dynamic-import.mjs for exactly
+    # which specifier forms it resolves statically and which it deliberately
+    # leaves undecidable. It reads the source directly and pulls in no
+    # third-party deps, so it skips `pnpm install`.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Gate self-test (proves the guard catches a planted dynamic import)
+        run: node scripts/ci/check-icon-dynamic-import.mjs --self-test
+      - name: No dynamic import()/require() call reaches lucide-react
+        run: node scripts/ci/check-icon-dynamic-import.mjs
+
   control-characters:
     name: Control characters in committed text
     # A NUL byte once landed inside a template literal, behaved correctly (NUL
@@ -497,6 +519,29 @@ jobs:
       - name: No disallowed Task.yield() polling in clients/ios
         run: node scripts/ci/check-swift-bounded-yield.mjs
 
+  migration-fk-pragma:
+    name: PRAGMA foreign_keys in migration SQL
+    # SQLite documents PRAGMA foreign_keys as a no-op while a transaction is
+    # open, and drizzle's sqlite migrator wraps every pending migration in one
+    # BEGIN/COMMIT — so PRAGMA foreign_keys=OFF (or =ON) inside a migration
+    # .sql file never does what its author intends. It was found twice
+    # (pillars/media/migrations/0032, pillars/finance/migrations/0052) before
+    # anything caught it. This guard reports the pragma, in any form, in any
+    # pillars/<id>/migrations/*.sql file — nothing hardcodes the pillar list,
+    # so a new pillar's migrations are covered without touching this file. It
+    # reads the source tree directly and pulls in no third-party deps, so it
+    # skips `pnpm install`. See scripts/ci/check-migration-fk-pragma.mjs.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Gate self-test (proves the guard's stated coverage — see the file header)
+        run: node scripts/ci/check-migration-fk-pragma.mjs --self-test
+      - name: No migration file relies on PRAGMA foreign_keys
+        run: node scripts/ci/check-migration-fk-pragma.mjs
+
   vendored-contracts:
     name: Vendored contract drift (ADR-033)
     # A consumer that vendors a producer pillar's OpenAPI snapshot — because the
@@ -517,6 +562,63 @@ jobs:
         run: node scripts/ci/check-vendored-contracts.mjs --self-test
       - name: Every vendored contract matches its canonical source
         run: node scripts/ci/check-vendored-contracts.mjs
+
+  contract-consumers:
+    name: Vendored consumers of a changed contract (ADR-033)
+    # The producer-side half of the job above, and a REPORT rather than a gate.
+    # The drift guard already fails a producer's branch when a consumer copy on
+    # THAT branch was left behind; what it cannot do is speak on the run where
+    # the producer got it right, which is exactly the run whose author has no
+    # idea the same contract is vendored on branches this tree cannot see. Those
+    # are the branches a merge-queue eviction lands on, hours later, over work
+    # unrelated to the contract.
+    #
+    # It cannot block and does not try to: the obligation it names may be owed
+    # to a pull request that has not merged yet, and failing the producer until
+    # it does would deadlock the pair. It exits non-zero only when it cannot do
+    # its job — no vendored consumer discovered at all, or a changed-file list
+    # it could not read — so this job being red always means the reporter is
+    # broken, never that a contract changed.
+    #
+    # Its own job rather than a step in `vendored-contracts` above, because it
+    # needs full history to find a merge base and that gate is deliberately a
+    # seconds-scale shallow checkout. Tier A all the same: node builtins only,
+    # no `pnpm install`. See scripts/ci/report-contract-consumers.mjs and the
+    # 2026-08-15 amendment to
+    # docs/architecture/adr-033-cross-language-pillar-contracts.md.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # need a merge base to scope the report to this change
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Self-test (fires for a producer with consumers, silent for one without)
+        run: node scripts/ci/report-contract-consumers.mjs --self-test
+      - name: Self-test (base resolution across pull_request / merge_group / push)
+        run: node scripts/ci/resolve-report-base.mjs --self-test
+      - name: Name the vendored consumers this change obliges
+        env:
+          # `github.base_ref` is a pull-request-only field, same as
+          # `agent-review.yml`'s `BASE_REF`. `github.event.merge_group.base_ref`
+          # is its merge-group equivalent. `main` is the final fallback for
+          # `push`, where neither is set. See resolve-report-base.mjs for what
+          # each of the three resolves to and why.
+          BASE_REF: ${{ github.base_ref || github.event.merge_group.base_ref || 'main' }}
+        run: |
+          set -euo pipefail
+          base=$(node scripts/ci/resolve-report-base.mjs --ref "$BASE_REF")
+          if [ -n "$base" ]; then
+            git diff --name-only "$base" HEAD > "$RUNNER_TEMP/changed-files.txt"
+            node scripts/ci/report-contract-consumers.mjs --changed-from "$RUNNER_TEMP/changed-files.txt"
+          else
+            # No usable base. The script then reports EVERY vendored leg under a
+            # header saying it could not scope itself — the loud outcome, not the
+            # silent one that would be indistinguishable from "nothing changed".
+            echo "No merge base against origin/$BASE_REF — reporting every leg."
+            node scripts/ci/report-contract-consumers.mjs
+          fi
 
   device-signature-fixture:
     name: Device signature encoding (iOS ↔ BFM)
@@ -711,6 +813,44 @@ jobs:
         run: node scripts/ci/check-api-types-drift.mjs --self-test
       - name: Regenerate and verify every generated api-types module
         run: node scripts/ci/check-api-types-drift.mjs
+
+  openapi-drift:
+    name: Committed OpenAPI spec drift
+    # Eleven pillars declare `generate:openapi`, projecting their ts-rest
+    # contract source into a committed `pillars/<id>/openapi/<id>.openapi.json`
+    # via the shared `@pops/contract-openapi` library. Every downstream gate —
+    # `api-types-drift` above, `generated-clients`/`cross-pillar-clients`
+    # (ADR-040), `vendored-contracts` (ADR-033), and mcp's finance.search
+    # vocabulary pin — verifies agreement WITH that committed spec. None of
+    # them verify the spec itself still agrees with the contract source it
+    # claims to project, so a contract change not followed by a manual
+    # `generate:openapi` makes every one of those gates pass on a spec that
+    # is already wrong. This job is that missing check. See
+    # scripts/ci/check-openapi-drift.mjs.
+    #
+    # Unlike its Tier A siblings above, `generate-openapi.ts` imports
+    # `@pops/contract-openapi` (and, transitively, half a dozen more shared
+    # packages) from `dist/`, which a bare `pnpm install` does not produce —
+    # only workspace symlinks. This job pays for a full `pnpm build`
+    # (`tsc -b tsconfig.build.json`, the same whole-graph build `exports`
+    # already runs on push to `main`) before regenerating, measured at ~25s
+    # cold in this repo — cheap enough that a dedicated job beats working out
+    # and maintaining eleven separate minimal per-pillar build closures.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Gate self-test (proves it catches drift and a generator error, including against the real repo tree)
+        run: node scripts/ci/check-openapi-drift.mjs --self-test
+      - name: Build the compiled TS graph (generate-openapi.ts needs dist/, not just workspace symlinks)
+        run: pnpm build
+      - name: Regenerate and verify every committed OpenAPI spec
+        run: node scripts/ci/check-openapi-drift.mjs
 
   escape-hatches:
     name: Escape-hatch ratchet

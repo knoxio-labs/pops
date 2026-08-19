@@ -41,7 +41,9 @@ const UPLOADED_AT = '2026-08-06T23:11:00.000Z';
 
 const map = (over: Partial<ExtractedReceipt> = {}, stored: StoredReceipt[] = [STORED]) => {
   const extracted = receipt(over);
-  return receiptToPurchase(extracted, gateExtraction(extracted), stored, UPLOADED_AT);
+  const gate = gateExtraction(extracted);
+  if (!gate.admissible) throw new Error('test fixture stopped reconciling');
+  return receiptToPurchase(extracted, gate, stored, UPLOADED_AT);
 };
 
 const mapped = (over: Partial<ExtractedReceipt> = {}) => map(over).purchase;
@@ -52,14 +54,19 @@ describe('receiptToPurchase invariants', () => {
     // the same "at least one part" invariant with its own message — so this
     // is where the empty-evidence case actually surfaces from.
     const extracted = receipt();
-    expect(() => receiptToPurchase(extracted, gateExtraction(extracted), [], UPLOADED_AT)).toThrow(
+    const gate = gateExtraction(extracted);
+    if (!gate.admissible) throw new Error('test fixture stopped reconciling');
+    expect(() => receiptToPurchase(extracted, gate, [], UPLOADED_AT)).toThrow(
       'receiptKey needs at least one stored part'
     );
   });
 
   // Keyed by failure kind, so the compiler refuses this file the day a new
-  // one is added: every way the gate can refuse a reading needs a reading
-  // here proving this function refuses it too.
+  // one is added: every way the gate can refuse a reading needs a fixture
+  // here proving it actually does. `receiptToPurchase` no longer accepts a
+  // reading the gate refused — `AdmissibleGate` makes that unrepresentable
+  // — so what this documents is `gateExtraction`'s coverage, not a runtime
+  // guard on the mapper.
   const refusedReadings: Record<GateFailure['kind'], ExtractedReceipt> = {
     'unreadable-total': receipt({ total: 'unreadable smudge' }),
     'unreadable-line': receipt({
@@ -91,27 +98,12 @@ describe('receiptToPurchase invariants', () => {
   };
 
   for (const [kind, extracted] of Object.entries(refusedReadings)) {
-    it(`refuses a reading the gate failed for ${kind}`, () => {
+    it(`gateExtraction refuses a reading for ${kind}`, () => {
       const gate = gateExtraction(extracted);
       expect(gate.admissible).toBe(false);
       expect(gate.failures.map((failure) => failure.kind)).toContain(kind);
-      expect(() => receiptToPurchase(extracted, gate, [STORED], UPLOADED_AT)).toThrow(
-        /requires an admissible reading/
-      );
     });
   }
-
-  it('refuses a reading whose figures are readable and whose verdict is not', () => {
-    // The reason this keys on the verdict rather than on a figure: this
-    // reading states a total, sums to it exactly, and is still refused.
-    const extracted = refusedReadings['negative-line'];
-    const gate = gateExtraction(extracted);
-    expect(gate.totalCents).toBe(2750);
-    expect(gate.failures.map((failure) => failure.kind)).toEqual(['negative-line']);
-    expect(() => receiptToPurchase(extracted, gate, [STORED], UPLOADED_AT)).toThrow(
-      'receiptToPurchase requires an admissible reading; the gate refused this one: negative-line'
-    );
-  });
 });
 
 describe('an admitted reading', () => {

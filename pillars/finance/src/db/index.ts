@@ -121,3 +121,14 @@ export type {
 } from './services/entity-orphans.js';
 
 export * as importCommitsService from './services/import-commits.js';
+
+export { searchFilterScope } from './services/search-filters.js';
+
+export type {
+  SearchFilter,
+  FinanceSearchScope,
+  TransactionsSearchScope,
+  BudgetsSearchScope,
+  WishlistSearchScope,
+  SearchScopeResult,
+} from './services/search-filters.js';

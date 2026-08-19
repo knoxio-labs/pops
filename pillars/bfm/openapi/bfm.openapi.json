@@ -476,7 +476,6 @@
                         "additionalProperties": false,
                         "properties": {
                           "id": {
-                            "enum": ["transactions"],
                             "type": "string"
                           },
                           "reachability": {

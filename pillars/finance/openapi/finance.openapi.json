@@ -10740,12 +10740,15 @@
                           "additionalProperties": false,
                           "properties": {
                             "field": {
+                              "enum": ["type", "entityId", "date", "period", "active", "priority"],
                               "type": "string"
                             },
                             "operator": {
+                              "enum": ["eq", "gte", "lte"],
                               "type": "string"
                             },
                             "value": {
+                              "minLength": 1,
                               "type": "string"
                             }
                           },
@@ -10810,6 +10813,29 @@
               }
             },
             "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
           }
         },
         "summary": "Search the finance pillar's domains (transactions, budgets, wishlist) for the unified search engine",

@@ -912,6 +912,15 @@ if [ -z "$flows" ]; then
 fi
 echo "e2e: driving $(echo "$flows" | wc -l | tr -d ' ') flow(s)."
 
+# Flows that exhaust their retry (or fail outright) go here, by path, instead
+# of aborting the loop, so one bad flow no longer costs the signal
+# from the other five. The pairing-code mint above still exits the task
+# immediately on failure — that is a harness precondition every flow shares,
+# so failing once there and calling it "environmental" is correct; a Maestro
+# assertion failure is specific to its own flow and does not tell us anything
+# about the others, so it must not stop them from running.
+failed_flows=""
+
 for flow in $flows; do
   attempt=1
   # One retry, so two attempts total — bounded on purpose. See the retry
@@ -990,7 +999,9 @@ for flow in $flows; do
     # being retried into a false green.
     if [ "$attempt" -ge "$max_attempts" ] || ! grep -q 'IOSDriverTimeoutException' "$maestro_log"; then
       rm -f "$maestro_log"
-      exit "$status"
+      echo "::error title=iOS e2e flow failed::$flow failed (exit $status) (e2e-flow-failed)"
+      failed_flows="$failed_flows $flow"
+      break
     fi
     echo "::notice title=iOS e2e driver retry fired::$flow hit an IOSDriverTimeoutException on attempt $attempt (e2e-driver-retry-fired)"
     echo "e2e: $flow — the iOS XCUITest driver did not attach before its startup ceiling" >&2
@@ -1000,6 +1011,12 @@ for flow in $flows; do
     attempt=$((attempt + 1))
   done
 done
+
+if [ -n "$failed_flows" ]; then
+  echo "e2e: FAILED —$failed_flows" >&2
+  exit 1
+fi
+echo "e2e: all flows passed."
 '''
 
 [tasks."fixture:device-signature:generate"]

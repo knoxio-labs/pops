@@ -38,7 +38,38 @@ export type WishlistListInput = {
   offset?: number;
 };
 
-export type StructuredFilter = { field: string; operator: string; value: string };
+/**
+ * The closed field vocabulary `POST /search` enforces, mirrored from
+ * `SEARCH_FILTER_FIELDS` in `pillars/finance/src/contract/rest-search.ts` —
+ * the finance pillar's real enforcement, which a filter naming any other
+ * field is rejected against with a 400. Kept in step by
+ * `finance-search.test.ts`, which diffs this array against the field
+ * `enum` the finance pillar's committed OpenAPI spec advertises for the
+ * same endpoint.
+ */
+export const SEARCH_FILTER_FIELDS = [
+  'type',
+  'entityId',
+  'date',
+  'period',
+  'active',
+  'priority',
+] as const;
+export type SearchFilterField = (typeof SEARCH_FILTER_FIELDS)[number];
+
+/**
+ * The closed operator vocabulary `POST /search` enforces, mirrored from
+ * `SEARCH_FILTER_OPERATORS` in the same contract file. Kept in step by the
+ * same drift test as `SEARCH_FILTER_FIELDS`.
+ */
+export const SEARCH_FILTER_OPERATORS = ['eq', 'gte', 'lte'] as const;
+export type SearchFilterOperator = (typeof SEARCH_FILTER_OPERATORS)[number];
+
+export type StructuredFilter = {
+  field: SearchFilterField;
+  operator: SearchFilterOperator;
+  value: string;
+};
 
 export type FinanceSearchInput = {
   query: { text: string; filters?: StructuredFilter[] };

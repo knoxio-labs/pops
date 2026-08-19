@@ -37,12 +37,226 @@
  * verifies the wizard doesn't throw uncaught errors during the full flow.
  */
 import { expect, test } from '@playwright/test';
+import { z } from 'zod';
 
-import { stubShellBoot } from './helpers/pillar-rest';
+import { fulfilWith, stubShellBoot } from './helpers/pillar-rest';
 
-import type { Page, Route } from '@playwright/test';
+import type { Page } from '@playwright/test';
 
 const PROCESS_SESSION_ID = 'e2e-process-session';
+
+/**
+ * `/finance-api/imports/*` and `/finance-api/transactions/available-tags`
+ * response shapes, hand-mirrored from the finance pillar's own zod schemas
+ * (`src/contract/rest-imports-schemas.ts`: `SessionIdSchema`,
+ * `ImportProgressSchema`, `CommitResultSchema`) rather than imported.
+ * `shell-no-cross-internal` (`.dependency-cruiser.cjs`) lets the shell import
+ * only another pillar's `@pops/app-<id>` UI package via its `index.ts`
+ * entrypoint — not that pillar's own `@pops/<id>` contract package, so
+ * `@pops/finance`'s exported types (`CommitResult`, `SessionId`, …) are not
+ * reachable from here either. There is no generated-Hey-API-client shortcut
+ * available for these types like `pillar-rest.ts` uses for the shell's own
+ * `registry-api`, because that client lives in `@pops/app-finance`'s
+ * `app/src`, past the entrypoint the same rule forbids.
+ */
+const ProcessSessionResponseSchema = z.object({ sessionId: z.string() }).strict();
+
+const TRANSACTION_MATCH_TYPES = [
+  'alias',
+  'exact',
+  'prefix',
+  'contains',
+  'ai',
+  'learned',
+  'manual',
+  'none',
+] as const;
+
+const EntityMatchSchema = z
+  .object({
+    entityId: z.string().optional(),
+    entityName: z.string().optional(),
+    matchType: z.enum(TRANSACTION_MATCH_TYPES),
+    confidence: z.number().min(0).max(1).optional(),
+  })
+  .strict();
+
+const ParsedTransactionSchema = z
+  .object({
+    date: z.string(),
+    description: z.string(),
+    amount: z.number(),
+    account: z.string(),
+    location: z.string().optional(),
+    rawRow: z.string(),
+    checksum: z.string(),
+  })
+  .strict();
+
+const TRANSACTION_TYPES = [
+  'purchase',
+  'transfer',
+  'income',
+  'refund',
+  'reversal',
+  'loan',
+  'rebate',
+  'tax',
+] as const;
+
+const ProcessedTransactionSchema = ParsedTransactionSchema.extend({
+  entity: EntityMatchSchema,
+  status: z.enum(['matched', 'uncertain', 'failed', 'skipped']),
+  skipReason: z.string().optional(),
+  error: z.string().optional(),
+  transactionType: z.enum(TRANSACTION_TYPES).optional(),
+  suggestedTags: z
+    .array(
+      z
+        .object({
+          tag: z.string(),
+          source: z.enum(['ai', 'rule', 'entity']),
+          pattern: z.string().optional(),
+          isNew: z.boolean().optional(),
+        })
+        .strict()
+    )
+    .optional(),
+  ruleProvenance: z
+    .object({
+      source: z.literal('correction'),
+      ruleId: z.string().min(1),
+      pattern: z.string().min(1),
+      matchType: z.enum(['exact', 'contains', 'regex']),
+      confidence: z.number().min(0).max(1),
+    })
+    .strict()
+    .optional(),
+  matchedRules: z
+    .array(
+      z
+        .object({
+          ruleId: z.string().min(1),
+          pattern: z.string().min(1),
+          matchType: z.enum(['exact', 'contains', 'regex']),
+          confidence: z.number().min(0).max(1),
+          priority: z.number(),
+          entityId: z.string().nullable().optional(),
+          entityName: z.string().nullable().optional(),
+        })
+        .strict()
+    )
+    .optional(),
+}).strict();
+
+const ProcessImportOutputSchema = z
+  .object({
+    matched: z.array(ProcessedTransactionSchema),
+    uncertain: z.array(ProcessedTransactionSchema),
+    failed: z.array(ProcessedTransactionSchema),
+    skipped: z.array(ProcessedTransactionSchema),
+    warnings: z
+      .array(
+        z
+          .object({
+            type: z.enum(['AI_CATEGORIZATION_UNAVAILABLE', 'AI_API_ERROR']),
+            message: z.string(),
+            affectedCount: z.number().optional(),
+            details: z.string().optional(),
+          })
+          .strict()
+      )
+      .optional(),
+    aiUsage: z
+      .object({
+        apiCalls: z.number(),
+        cacheHits: z.number(),
+        totalInputTokens: z.number(),
+        totalOutputTokens: z.number(),
+        totalCostUsd: z.number(),
+        avgCostPerCall: z.number(),
+      })
+      .strict()
+      .optional(),
+  })
+  .strict();
+
+const ImportProgressResponseSchema = z
+  .object({
+    sessionId: z.string(),
+    status: z.enum(['processing', 'completed', 'failed']),
+    currentStep: z.enum(['deduplicating', 'matching']),
+    totalTransactions: z.number(),
+    processedCount: z.number(),
+    currentBatch: z.array(
+      z
+        .object({
+          description: z.string(),
+          status: z.enum(['processing', 'success', 'failed']),
+          error: z.string().optional(),
+        })
+        .strict()
+    ),
+    errors: z.array(z.object({ description: z.string(), error: z.string() }).strict()),
+    startedAt: z.string(),
+    result: ProcessImportOutputSchema.optional(),
+  })
+  .strict();
+
+const CommitResponseSchema = z
+  .object({
+    data: z
+      .object({
+        entitiesCreated: z.number().int().nonnegative(),
+        rulesApplied: z
+          .object({
+            add: z.number().int().nonnegative(),
+            edit: z.number().int().nonnegative(),
+            disable: z.number().int().nonnegative(),
+            remove: z.number().int().nonnegative(),
+          })
+          .strict(),
+        tagRulesApplied: z.number().int().nonnegative(),
+        transactionsImported: z.number().int().nonnegative(),
+        transactionsFailed: z.number().int().nonnegative(),
+        failedDetails: z.array(
+          z.object({ checksum: z.string().nullable(), error: z.string() }).strict()
+        ),
+        retroactiveReclassifications: z.number().int().nonnegative(),
+      })
+      .strict(),
+    message: z.string(),
+  })
+  .strict();
+
+/**
+ * `GET /finance-api/transactions/available-tags` — the finance router
+ * (`rest-transactions.ts`, `availableTags`) validates the same
+ * `z.object({ tags: z.array(z.string()) })` inline; not a named export, so
+ * hand-defined here rather than pinned to an imported type.
+ */
+const AvailableTagsResponseSchema = z.object({ tags: z.array(z.string()) }).strict();
+
+/**
+ * `GET /contacts-api/entities` — contacts is a separate (Rust) pillar with no
+ * TS contract package; hand-defined from its committed OpenAPI
+ * (`pillars/contacts/openapi/contacts.openapi.json`, `Entity` /
+ * `PaginationMeta` schemas) rather than pinned to a generated type, the same
+ * way `pillar-rest.ts` hand-defines `/pillars` and `/pillars/health`.
+ */
+const EntitiesListResponseSchema = z
+  .object({
+    data: z.array(z.record(z.string(), z.unknown())),
+    pagination: z
+      .object({
+        total: z.number(),
+        limit: z.number(),
+        offset: z.number(),
+        hasMore: z.boolean(),
+      })
+      .strict(),
+  })
+  .strict();
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -88,7 +302,7 @@ const processedOutput = {
   warnings: [],
 };
 
-function progressBody(result: unknown) {
+function progressBody(result: z.infer<typeof ProcessImportOutputSchema>) {
   return {
     sessionId: PROCESS_SESSION_ID,
     status: 'completed' as const,
@@ -120,25 +334,31 @@ const emptyEntitiesBody = {
   pagination: { total: 0, limit: 50, offset: 0, hasMore: false },
 };
 
-async function fulfillJson(route: Route, body: unknown): Promise<void> {
-  await route.fulfill({
-    status: 200,
-    contentType: 'application/json',
-    body: JSON.stringify(body),
-  });
-}
-
 async function setupMocks(page: Page): Promise<void> {
-  await page.route('**/finance-api/imports/process', (route) =>
-    fulfillJson(route, { sessionId: PROCESS_SESSION_ID })
+  await page.route(
+    '**/finance-api/imports/process',
+    fulfilWith(
+      200,
+      ProcessSessionResponseSchema,
+      { sessionId: PROCESS_SESSION_ID },
+      'imports.process'
+    )
   );
-  await page.route('**/finance-api/imports/progress?**', (route) =>
-    fulfillJson(route, progressBody(processedOutput))
+  await page.route(
+    '**/finance-api/imports/progress?**',
+    fulfilWith(200, ImportProgressResponseSchema, progressBody(processedOutput), 'imports.progress')
   );
-  await page.route('**/finance-api/imports/commit', (route) => fulfillJson(route, commitBody));
-  await page.route('**/contacts-api/entities?**', (route) => fulfillJson(route, emptyEntitiesBody));
-  await page.route('**/finance-api/transactions/available-tags', (route) =>
-    fulfillJson(route, { tags: [] })
+  await page.route(
+    '**/finance-api/imports/commit',
+    fulfilWith(200, CommitResponseSchema, commitBody, 'imports.commit')
+  );
+  await page.route(
+    '**/contacts-api/entities?**',
+    fulfilWith(200, EntitiesListResponseSchema, emptyEntitiesBody, 'contacts.entities')
+  );
+  await page.route(
+    '**/finance-api/transactions/available-tags',
+    fulfilWith(200, AvailableTagsResponseSchema, { tags: [] }, 'transactions.availableTags')
   );
 }
 

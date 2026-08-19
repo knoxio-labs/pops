@@ -23,12 +23,31 @@
  * name uniqueness case-INSENSITIVELY (`WHERE name COLLATE NOCASE = ?`), so the
  * 409 fallback is the backstop for a genuine concurrent insert. A `create`
  * failure that ISN'T a 409 is split into two error kinds so a caller can react
- * differently: `unavailable`/`degraded` throw {@link ContactsUnavailableError}
- * (TRANSIENT — retry later), while `bad-request`/`unauthorized`/
- * `contract-mismatch`/`not-found` throw {@link ContactsPermanentError}
+ * differently: `unavailable`/`degraded`/`rate-limited` throw
+ * {@link ContactsUnavailableError} (TRANSIENT — retry later, `rate-limited` on
+ * the producer's own schedule), while `bad-request`/`unauthorized`/
+ * `contract-mismatch`/`not-found`/`refused` throw {@link ContactsPermanentError}
  * (PERMANENT — retrying the same input never helps).
+ *
+ * `/server`, not `/client` (POPS-2021). The handle is built through
+ * {@link credentialled} from `../pillars/outbound.js`, which attaches this
+ * pillar's service-account key as `X-API-Key` and answers `null` instead of
+ * throwing when this process holds none — every read then degrades exactly
+ * as it does against an unreachable contacts, and `createOrFetchByName`
+ * throws the same TRANSIENT {@link ContactsUnavailableError} a real outage
+ * would. A callee-refused credential (`kind === 'unauthorized'`) is logged
+ * distinctly via {@link credentialRejectedMessage} rather than folded into
+ * the generic "degraded" warning, because it will not clear on retry the way
+ * an outage does.
  */
-import { isOk, pillar, type CallResult, type PillarHandle } from '@pops/pillar-sdk/client';
+import { isOk, pillar, type CallResult, type PillarHandle } from '@pops/pillar-sdk/server';
+
+import {
+  credentialled,
+  credentialRejectedMessage,
+  NO_CREDENTIAL_REASON,
+  UNAUTHORIZED_REASON,
+} from '../pillars/outbound.js';
 
 /** The contacts pillar id, as registered with the registry. */
 export const CONTACTS_PILLAR_ID = 'contacts';
@@ -105,9 +124,10 @@ export interface ContactsClient {
    * (case-insensitive) name FIRST, creates when none matches, and tolerates a
    * 409 from a racing concurrent create by re-fetching. `created` reports
    * whether THIS call inserted a new contact. Never resolves silently on
-   * failure: a TRANSIENT failure (contacts unreachable / mid-recovery) throws
-   * {@link ContactsUnavailableError}; a PERMANENT one (malformed request, auth,
-   * contract mismatch) throws {@link ContactsPermanentError}. `commitImport`
+   * failure: a TRANSIENT failure (contacts unreachable / mid-recovery /
+   * rate-limited) throws {@link ContactsUnavailableError}; a PERMANENT one
+   * (malformed request, auth, contract mismatch, an unrecognised refusal)
+   * throws {@link ContactsPermanentError}. `commitImport`
    * (issue #3683) is the one caller that catches `ContactsUnavailableError`
    * specifically and degrades to a `pending:contact:{uuid}` placeholder + an
    * outbox row instead of aborting; `ContactsPermanentError` and every other
@@ -118,9 +138,10 @@ export interface ContactsClient {
 
 /**
  * Thrown when a contact pre-create fails for a reason expected to clear on
- * retry — contacts unreachable, or mid-recovery (`degraded`). The ONE failure
- * mode `commitImport` degrades to an outbox row instead of aborting; retrying
- * the same `{ name, type }` later is expected to eventually succeed.
+ * retry — contacts unreachable, mid-recovery (`degraded`), or rate-limited
+ * (`rate-limited`, 429). The ONE failure mode `commitImport` degrades to an
+ * outbox row instead of aborting; retrying the same `{ name, type }` later is
+ * expected to eventually succeed.
  */
 export class ContactsUnavailableError extends Error {
   override readonly name = 'ContactsUnavailableError';
@@ -144,19 +165,33 @@ export class ContactsPermanentError extends Error {
   }
 }
 
-/**
- * The `create` result kinds retrying can never resolve. Everything else
- * non-ok/non-conflict (`unavailable`, `degraded`) is treated as transient.
- */
-type PermanentCreateFailureKind = Exclude<
-  CallResult<unknown>['kind'],
-  'ok' | 'conflict' | 'unavailable' | 'degraded'
->;
+/** The non-ok, non-conflict `create` result kinds this classifier sorts. */
+type CreateFailureKind = Exclude<CallResult<unknown>['kind'], 'ok' | 'conflict'>;
 
-function isPermanentCreateFailureKind(
-  kind: Exclude<CallResult<unknown>['kind'], 'ok' | 'conflict'>
-): kind is PermanentCreateFailureKind {
-  return kind !== 'unavailable' && kind !== 'degraded';
+/**
+ * TRANSIENT vs PERMANENT for every non-ok/non-conflict `create` result kind.
+ *
+ * A total switch with no default arm, matching `toGatewayFailure` and
+ * `upstream-error.ts`'s `classify`: a kind added to {@link CallResult} that
+ * is not listed in one of these two arms fails the build here rather than
+ * being silently absorbed by a catch-all negation. `rate-limited` (429) is
+ * TRANSIENT — the producer is asking for a retry on its own schedule, not
+ * refusing the request — so it degrades to the outbox exactly like
+ * `unavailable`/`degraded` rather than aborting the commit.
+ */
+function classifyCreateFailureKind(kind: CreateFailureKind): 'transient' | 'permanent' {
+  switch (kind) {
+    case 'unavailable':
+    case 'degraded':
+    case 'rate-limited':
+      return 'transient';
+    case 'not-found':
+    case 'contract-mismatch':
+    case 'bad-request':
+    case 'unauthorized':
+    case 'refused':
+      return 'permanent';
+  }
 }
 
 /** Per-page size for the bulk list sweep — matches the contacts list `MAX_LIMIT`. */
@@ -172,16 +207,24 @@ const MAX_PAGES = 5000;
 
 function warnDegraded(operation: string, result: CallResult<unknown>): void {
   if (isOk(result)) return;
+  if (result.kind === UNAUTHORIZED_REASON) {
+    console.error(credentialRejectedMessage(CONTACTS_PILLAR_ID, operation));
+    return;
+  }
   console.warn(
     `[contacts] ${operation} degraded (kind=${result.kind}); substituting empty contact set`
   );
 }
 
 async function pageThroughEntities(
-  handle: PillarHandle<ContactsRouter>,
+  handle: PillarHandle<ContactsRouter> | null,
   query: { search?: string; type?: string },
   maxPages: number
 ): Promise<ContactEntity[]> {
+  // `credentialled()` already logged the no-key case once for this
+  // process; nothing else to say here beyond substituting the same empty
+  // set a real outage would.
+  if (handle === null) return [];
   const all: ContactEntity[] = [];
   for (let page = 0; page < maxPages; page++) {
     const result = await handle.entities.list({
@@ -213,12 +256,16 @@ export interface ContactsClientOptions {
 
 /**
  * Build the default contacts client over the pillar SDK. `handleFactory` is
- * injectable purely so unit tests can supply a stub router; production passes
- * the real `pillar('contacts')`.
+ * injectable purely so unit tests can supply a stub router; production
+ * passes the real, credentialled `pillar('contacts')` — built fresh per
+ * call, not once at construction, because `pillar()` from
+ * `@pops/pillar-sdk/server` refuses to build a handle without a
+ * service-account key and constructing eagerly would move a missing key
+ * from a degraded client to a pillar that will not boot.
  */
 export function createContactsClient(
-  handleFactory: () => PillarHandle<ContactsRouter> = () =>
-    pillar<ContactsRouter>(CONTACTS_PILLAR_ID),
+  handleFactory: () => PillarHandle<ContactsRouter> | null = () =>
+    credentialled(CONTACTS_PILLAR_ID, () => pillar<ContactsRouter>(CONTACTS_PILLAR_ID)),
   options: ContactsClientOptions = {}
 ): ContactsClient {
   const maxPages = options.maxPages ?? MAX_PAGES;
@@ -228,7 +275,9 @@ export function createContactsClient(
     },
 
     async fetchEntityDefaultTags(entityId: string): Promise<string[]> {
-      const result = await handleFactory().entities.get({ id: entityId });
+      const handle = handleFactory();
+      if (handle === null) return [];
+      const result = await handle.entities.get({ id: entityId });
       if (!isOk(result)) {
         if (result.kind !== 'not-found') warnDegraded('entities.get', result);
         return [];
@@ -238,6 +287,9 @@ export function createContactsClient(
 
     async createOrFetchByName(name: string, type: string): Promise<CreateOrFetchResult> {
       const handle = handleFactory();
+      if (handle === null) {
+        throw new ContactsUnavailableError(NO_CREDENTIAL_REASON);
+      }
       const preexisting = await fetchByExactName(handle, name, maxPages);
       if (preexisting) return { id: preexisting.id, name: preexisting.name, created: false };
 
@@ -250,7 +302,10 @@ export function createContactsClient(
         if (raced) return { id: raced.id, name: raced.name, created: false };
         throw new ContactsUnavailableError(`409 for "${name}" but no existing contact found`);
       }
-      if (isPermanentCreateFailureKind(created.kind)) {
+      if (classifyCreateFailureKind(created.kind) === 'permanent') {
+        if (created.kind === UNAUTHORIZED_REASON) {
+          console.error(credentialRejectedMessage(CONTACTS_PILLAR_ID, 'entities.create'));
+        }
         throw new ContactsPermanentError(created.kind);
       }
       throw new ContactsUnavailableError(created.kind);

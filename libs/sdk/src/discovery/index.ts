@@ -17,6 +17,12 @@ export {
   type RegistrySnapshot,
 } from './types.js';
 export {
+  parseRegistrySnapshotResponse,
+  RegistrySnapshotPayloadSchema,
+  type RegistrySnapshotPayload,
+  type PillarRegistryEntryPayload,
+} from './snapshot-schema.js';
+export {
   computeBackoffDelay,
   startReconnectingSubscription,
   RECONNECT_INITIAL_DELAY_MS,

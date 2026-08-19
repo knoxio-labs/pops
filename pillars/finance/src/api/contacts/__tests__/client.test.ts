@@ -13,10 +13,11 @@ import { describe, expect, it, vi } from 'vitest';
  *    case-variant must be deduped client-side by the fetch-FIRST step, and a
  *    genuine 409 race must re-fetch the existing id.
  */
-import { type CallResult } from '@pops/pillar-sdk/client';
+import { type CallResult } from '@pops/pillar-sdk/server';
 
 import {
   ContactsPermanentError,
+  ContactsUnavailableError,
   createContactsClient,
   type ContactEntity,
   type ListResponse,
@@ -134,6 +135,7 @@ describe('createContactsClient.createOrFetchByName — TRANSIENT vs PERMANENT cr
   it.each([
     ['unavailable', { kind: 'unavailable', pillar: 'contacts' }],
     ['degraded', { kind: 'degraded', pillar: 'contacts', reason: 'reconciling' }],
+    ['rate-limited', { kind: 'rate-limited', pillar: 'contacts', retryAfterSeconds: 30 }],
   ] satisfies [string, CallResult<{ data: ContactEntity; message: string }>][])(
     'throws ContactsUnavailableError (TRANSIENT) for a %s create result',
     async (_label, result) => {
@@ -152,14 +154,74 @@ describe('createContactsClient.createOrFetchByName — TRANSIENT vs PERMANENT cr
       'contract-mismatch',
       { kind: 'contract-mismatch', pillar: 'contacts', expected: 'Entity', actual: 'unknown' },
     ],
+    ['refused', { kind: 'refused', pillar: 'contacts', status: 413, message: 'payload too large' }],
   ] satisfies [string, CallResult<{ data: ContactEntity; message: string }>][])(
     'throws ContactsPermanentError for a %s create result',
     async (_label, result) => {
+      const errorLog = vi.spyOn(console, 'error').mockImplementation(() => undefined);
       const client = createFailing(result);
 
       await expect(client.createOrFetchByName('Anything', 'company')).rejects.toThrow(
         ContactsPermanentError
       );
+      errorLog.mockRestore();
     }
   );
+
+  it('logs a credential-refusal line, not a generic one, for an unauthorized create', async () => {
+    const errorLog = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const client = createFailing({ kind: 'unauthorized', pillar: 'contacts' });
+
+    await expect(client.createOrFetchByName('Anything', 'company')).rejects.toThrow(
+      ContactsPermanentError
+    );
+
+    expect(errorLog).toHaveBeenCalledWith(
+      expect.stringContaining("rejected this pillar's service-account credential")
+    );
+    errorLog.mockRestore();
+  });
+});
+
+describe('createContactsClient — no service-account key (POPS-2021)', () => {
+  it('fetchAllEntities degrades to empty without calling the handle', async () => {
+    const client = createContactsClient(() => null);
+
+    await expect(client.fetchAllEntities()).resolves.toEqual([]);
+  });
+
+  it('fetchEntityDefaultTags degrades to empty without calling the handle', async () => {
+    const client = createContactsClient(() => null);
+
+    await expect(client.fetchEntityDefaultTags('entity-1')).resolves.toEqual([]);
+  });
+
+  it('createOrFetchByName throws the TRANSIENT error, not a silent success', async () => {
+    const client = createContactsClient(() => null);
+
+    await expect(client.createOrFetchByName('Anything', 'company')).rejects.toThrow(
+      ContactsUnavailableError
+    );
+  });
+});
+
+describe('createContactsClient — a callee that refuses the credential on a read (POPS-2021)', () => {
+  it('logs a credential-refusal line, not the generic "degraded" warning, on entities.list', async () => {
+    const errorLog = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const list = vi.fn(async (): Promise<CallResult<ListResponse>> => ({
+      kind: 'unauthorized',
+      pillar: 'contacts',
+    }));
+    const client = createContactsClient(() => stubHandle({ list }));
+
+    await expect(client.fetchAllEntities()).resolves.toEqual([]);
+
+    expect(errorLog).toHaveBeenCalledWith(
+      expect.stringContaining("rejected this pillar's service-account credential")
+    );
+    expect(warn).not.toHaveBeenCalledWith(expect.stringContaining('degraded'));
+    errorLog.mockRestore();
+    warn.mockRestore();
+  });
 });

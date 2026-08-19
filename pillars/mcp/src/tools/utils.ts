@@ -20,13 +20,16 @@ export function mapCallResult<T>(result: CallResult<T>): CallToolResult {
   return toolError(formatFailureReason(result));
 }
 
-const MESSAGE_FALLBACK: Record<'not-found' | 'conflict' | 'bad-request' | 'unauthorized', string> =
-  {
-    'not-found': 'returned not-found for this request',
-    conflict: 'returned conflict for this request',
-    'bad-request': 'returned bad-request for this request',
-    unauthorized: 'rejected this request (unauthorized)',
-  };
+const MESSAGE_FALLBACK: Record<
+  'not-found' | 'conflict' | 'bad-request' | 'unauthorized' | 'refused',
+  string
+> = {
+  'not-found': 'returned not-found for this request',
+  conflict: 'returned conflict for this request',
+  'bad-request': 'returned bad-request for this request',
+  unauthorized: 'rejected this request (unauthorized)',
+  refused: 'refused this request and will refuse it again unchanged',
+};
 
 function formatFailureReason(failure: Exclude<CallResult<unknown>, { kind: 'ok' }>): string {
   switch (failure.kind) {
@@ -36,12 +39,30 @@ function formatFailureReason(failure: Exclude<CallResult<unknown>, { kind: 'ok' 
       return `Pillar '${failure.pillar}' is reconciling (${failure.reason}). Try again shortly.`;
     case 'contract-mismatch':
       return `Pillar '${failure.pillar}' contract mismatch — expected ${failure.expected ?? 'unknown'}, got ${failure.actual ?? 'unknown'}.`;
-    case 'not-found':
-    case 'conflict':
-    case 'bad-request':
-    case 'unauthorized':
-      return failure.message ?? `Pillar '${failure.pillar}' ${MESSAGE_FALLBACK[failure.kind]}.`;
+    case 'rate-limited':
+      return formatRateLimited(failure);
+    default:
+      return formatSimpleFailure(failure);
   }
+}
+
+function formatRateLimited(
+  failure: Extract<CallResult<unknown>, { kind: 'rate-limited' }>
+): string {
+  if (failure.retryAfterSeconds === undefined) {
+    return `Pillar '${failure.pillar}' is rate-limiting this request. Try again shortly.`;
+  }
+  return `Pillar '${failure.pillar}' is rate-limiting this request. Try again in ${String(failure.retryAfterSeconds)}s.`;
+}
+
+/** The failure kinds that only ever need the message-or-fallback treatment. */
+function formatSimpleFailure(
+  failure: Extract<
+    CallResult<unknown>,
+    { kind: 'not-found' | 'conflict' | 'bad-request' | 'unauthorized' | 'refused' }
+  >
+): string {
+  return failure.message ?? `Pillar '${failure.pillar}' ${MESSAGE_FALLBACK[failure.kind]}.`;
 }
 
 export function reqStr(args: Record<string, unknown>, key: string): string | null {

@@ -72,6 +72,14 @@ describe('banned icon imports are reported', () => {
     expect(diagnostics).toHaveLength(1);
     expect(diagnostics[0]?.message).toContain('PenLine');
   });
+
+  it('flags any deep lucide-react subpath import, not just the top-level package', () => {
+    const diagnostics = restrictedImportDiagnostics(
+      "import PenLine from 'lucide-react/dist/esm/icons/pen-line';\nexport const icon = PenLine;\n"
+    );
+    expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0]?.message).toContain('lucide-react/dist/esm/icons/pen-line');
+  });
 });
 
 describe('canonical icon imports are not reported', () => {

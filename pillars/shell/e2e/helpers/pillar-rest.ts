@@ -24,8 +24,47 @@
  * to the most recently registered match. That silently served the boot
  * resolver the wrong body and left every install-set assertion reading the
  * static floor instead.
+ *
+ * Every body below is run through the real consumer's parser or schema
+ * before it is ever handed to `page.route`, not just written to look right:
+ *
+ *   - the manifest and the registry snapshot through `ManifestPayloadSchema` /
+ *     `RegistrySnapshotPayloadSchema` (`@pops/pillar-sdk`) — the same zod
+ *     schemas `normaliseSnapshotEntry` (`src/lib/registry-snapshot-fetch.ts`)
+ *     validates a live snapshot against;
+ *   - the shell manifest through a schema typed against the generated
+ *     `ShellManifestResponses` (`src/registry-api/types.gen.ts`), which is
+ *     itself regenerated from `@pops/registry`'s OpenAPI spec and diffed in
+ *     CI (`generated-clients`, ADR-040) — a producer-side shape change is a
+ *     compile error here before it is ever a runtime one;
+ *   - the orchestrator search response through `parseSearchResponse`
+ *     (`@pops/navigation`) — the literal function the search bar's own fetch
+ *     runs the real response through.
+ *
+ * `/pillars` and `/pillars/health` carry no OpenAPI contract — they are the
+ * informal boot projection `pillar-registry-client.ts` documents, not part of
+ * any pillar's generated spec — so there is no existing schema to import.
+ * Their validators below are hand-defined and pinned at the type level to the
+ * same `PillarRegistryEntry` (`@pops/types`) and `PillarHealthStatus`
+ * (`src/app/pillars/types.ts`) shapes that file's own parsers target, so a
+ * change to either fails `tsc` here even though the runtime shape is
+ * duplicated rather than imported.
+ *
+ * A stub that fails validation throws when the stub is set up (`stubX(page,
+ * ...)`), before any route is registered or any request made — a spec sees a
+ * synchronous, attributed error rather than a fallback-path pass or a hang
+ * waiting on a route that never fulfils.
  */
+import { z } from 'zod';
+
+import { parseSearchResponse } from '@pops/navigation';
+import { ManifestPayloadSchema, RegistrySnapshotPayloadSchema } from '@pops/pillar-sdk';
+
 import type { Page, Route } from '@playwright/test';
+
+import type { PillarRegistryEntry } from '@pops/types';
+
+import type { ShellManifestResponses } from '../../src/registry-api/types.gen';
 
 /** `<origin>/pillars` and nothing deeper — see the anchoring note above. */
 const PILLAR_BOOT_URL = /^https?:\/\/[^/]+\/pillars$/;
@@ -38,6 +77,85 @@ const ORCHESTRATOR_SEARCH_URL = /\/orchestrator-api\/search$/;
 export function json(route: Route, status: number, body: unknown): Promise<void> {
   return route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
 }
+
+/**
+ * Parse `body` against `schema` and throw a message naming the stub and
+ * every mismatched field when it does not match — never silently serve a
+ * body the real client would reject.
+ *
+ * `schema` is untyped (`ZodTypeAny`) deliberately: several of the schemas
+ * used below apply a `.transform()` (`RegistrySnapshotPayloadSchema`), whose
+ * *output* type carries derived fields (`lastSeenAt`) the wire body never
+ * has. Typing this against the schema's output would force every literal
+ * body to fabricate those derived fields just to satisfy `tsc`, rather than
+ * writing the wire shape the endpoint actually serves.
+ *
+ * Exported alongside `fulfilWith` for a per-spec stub whose body is built
+ * inside the `page.route` handler rather than once at stub-construction time
+ * — state mutated across requests (e.g. a revocation flipping a device's
+ * `revokedAt` between polls) can't be validated up front the way `fulfilWith`
+ * does, only as each response is produced. See `bfm-devices-pairing.spec.ts`.
+ */
+export function assertMatchesContract(schema: z.ZodTypeAny, body: unknown, label: string): void {
+  const result = schema.safeParse(body);
+  if (result.success) return;
+  const issues = result.error.issues
+    .map((issue) => `  ${issue.path.join('.') || '(root)'}: ${issue.message}`)
+    .join('\n');
+  throw new Error(`${label} stub no longer matches its contract:\n${issues}`);
+}
+
+/**
+ * Validate `body` against `schema`, then return a `page.route` handler that
+ * serves it. Validation runs immediately (not inside the returned handler),
+ * so a drifted stub fails the moment the spec sets it up rather than when —
+ * or if — the route is actually hit.
+ *
+ * Exported so a per-spec stub (a pillar's own routes, mocked directly in the
+ * spec that exercises that pillar rather than here) can validate the same
+ * way this file validates the shell's boot path — see
+ * `bfm-devices-pairing.spec.ts` and `import-wizard-happy-path.spec.ts` for
+ * the pattern. Unlike the schemas below, a per-spec stub cannot import its
+ * pillar's real schema: `shell-no-cross-internal` (`.dependency-cruiser.cjs`)
+ * lets the shell reach another pillar only through that pillar's
+ * `@pops/app-<id>` UI package via its `index.ts` entrypoint, not through that
+ * pillar's own `@pops/<id>` contract package or its generated Hey API
+ * client — both out of reach even for a type-only import. A per-spec schema
+ * is therefore hand-mirrored from the owning pillar's real schema (named in
+ * a comment for traceability) rather than imported.
+ */
+export function fulfilWith(status: number, schema: z.ZodTypeAny, body: unknown, label: string) {
+  assertMatchesContract(schema, body, label);
+  return (route: Route) => json(route, status, body);
+}
+
+/**
+ * `/pillars` and `/pillars/health` shapes — see the file header for why
+ * these are hand-defined rather than imported.
+ */
+const PillarBootEntrySchema: z.ZodType<PillarRegistryEntry> = z
+  .object({
+    id: z.string().min(1),
+    baseUrl: z.string().min(1),
+  })
+  .strict();
+
+const PillarBootResponseSchema = z.object({ pillars: z.array(PillarBootEntrySchema) }).strict();
+
+/** Mirrors `PillarHealthStatus` (`src/app/pillars/types.ts`). */
+const PillarHealthResponseSchema = z
+  .object({
+    health: z.record(z.string(), z.enum(['healthy', 'unavailable', 'unknown'])),
+  })
+  .strict();
+
+/** The `/registry-api/shell/manifest` response — `ManifestSchema` in `@pops/registry`'s ts-rest contract. */
+const ShellManifestResponseSchema: z.ZodType<ShellManifestResponses[200]> = z
+  .object({
+    apps: z.array(z.string()),
+    overlays: z.array(z.string()),
+  })
+  .strict();
 
 /**
  * The smallest manifest `ManifestPayloadSchema` accepts. A snapshot entry
@@ -74,16 +192,27 @@ function minimalManifest(pillarId: string): Record<string, unknown> {
  * degrades to the static bundle-map floor rather than an app-less shell.
  */
 export async function stubRegistry(page: Page, pillarIds: readonly string[]): Promise<void> {
-  const pillars = pillarIds.map((pillarId) => ({
-    pillarId,
-    baseUrl: `http://${pillarId}-api:3000`,
-    manifest: minimalManifest(pillarId),
-    capabilities: {},
-    lastHeartbeatAt: new Date().toISOString(),
-  }));
-  await page.route(REGISTRY_SNAPSHOT_URL, (route) => json(route, 200, { pillars }));
-  await page.route(SHELL_MANIFEST_URL, (route) =>
-    json(route, 200, { apps: [...pillarIds], overlays: [] })
+  const pillars = pillarIds.map((pillarId) => {
+    const manifest = minimalManifest(pillarId);
+    assertMatchesContract(ManifestPayloadSchema, manifest, `manifest (${pillarId})`);
+    return {
+      pillarId,
+      baseUrl: `http://${pillarId}-api:3000`,
+      manifest,
+      capabilities: {},
+      lastHeartbeatAt: new Date().toISOString(),
+    };
+  });
+  const snapshotBody = { pillars };
+  await page.route(
+    REGISTRY_SNAPSHOT_URL,
+    fulfilWith(200, RegistrySnapshotPayloadSchema, snapshotBody, 'registry snapshot')
+  );
+
+  const manifestBody = { apps: [...pillarIds], overlays: [] };
+  await page.route(
+    SHELL_MANIFEST_URL,
+    fulfilWith(200, ShellManifestResponseSchema, manifestBody, 'shell manifest')
   );
 }
 
@@ -102,13 +231,16 @@ export async function failRegistry(page: Page): Promise<void> {
 
 /** Report every pillar in `pillarIds` healthy to `PillarGuard`. */
 export async function stubPillarHealth(page: Page, pillarIds: readonly string[]): Promise<void> {
-  await page.route(PILLAR_BOOT_URL, (route) =>
-    json(route, 200, {
-      pillars: pillarIds.map((id) => ({ id, baseUrl: `http://${id}-api:3000` })),
-    })
+  const bootBody = { pillars: pillarIds.map((id) => ({ id, baseUrl: `http://${id}-api:3000` })) };
+  await page.route(
+    PILLAR_BOOT_URL,
+    fulfilWith(200, PillarBootResponseSchema, bootBody, 'pillar boot')
   );
-  await page.route(PILLAR_HEALTH_URL, (route) =>
-    json(route, 200, { health: Object.fromEntries(pillarIds.map((id) => [id, 'healthy'])) })
+
+  const healthBody = { health: Object.fromEntries(pillarIds.map((id) => [id, 'healthy'])) };
+  await page.route(
+    PILLAR_HEALTH_URL,
+    fulfilWith(200, PillarHealthResponseSchema, healthBody, 'pillar health')
   );
 }
 
@@ -201,23 +333,27 @@ export async function stubOrchestratorSearch(
   page: Page,
   sections: readonly SearchSection[]
 ): Promise<void> {
-  await page.route(ORCHESTRATOR_SEARCH_URL, (route) =>
-    json(route, 200, {
-      sections: sections.map((section) => ({
-        domain: section.domain,
-        moduleId: section.moduleId,
-        icon: 'Search',
-        color: 'emerald',
-        isContextSection: false,
-        totalCount: section.hits.length,
-        hits: section.hits.map((hit, index) => ({
-          uri: hit.uri,
-          score: 1 - index / 100,
-          matchField: 'title',
-          matchType: 'exact',
-          data: hit.data,
-        })),
+  const body = {
+    sections: sections.map((section) => ({
+      domain: section.domain,
+      moduleId: section.moduleId,
+      icon: 'Search',
+      color: 'emerald',
+      isContextSection: false,
+      totalCount: section.hits.length,
+      hits: section.hits.map((hit, index) => ({
+        uri: hit.uri,
+        score: 1 - index / 100,
+        matchField: 'title',
+        matchType: 'exact',
+        data: hit.data,
       })),
-    })
-  );
+    })),
+  };
+  // `parseSearchResponse` is the literal function the search bar's own fetch
+  // runs the real response through (`useSearchInputData.tsx`) — reused rather
+  // than mirrored, so this stub is exercised by the same guard, not a second
+  // one that only proves it agrees with itself. It throws on mismatch.
+  parseSearchResponse(body);
+  await page.route(ORCHESTRATOR_SEARCH_URL, (route) => json(route, 200, body));
 }

@@ -15,16 +15,29 @@ let strictSwiftSettings: [SwiftSetting] = [
 let package = Package(
     name: "DesignSystem",
     platforms: [.iOS("26.0"), .macOS("15.0")],
-    products: [.library(name: "DesignSystem", targets: ["DesignSystem"])],
+    products: [
+        .library(name: "DesignSystem", targets: ["DesignSystem"]),
+        .library(name: "DesignSystemTestSupport", targets: ["DesignSystemTestSupport"]),
+    ],
     targets: [
         .target(
             name: "DesignSystem",
             resources: [.process("Resources/Colors.xcassets")],
             swiftSettings: strictSwiftSettings
         ),
+        // A diagnostic every consumer's colour-scheme-dependent rendering
+        // assertions need, not just this package's own — split out like
+        // `../AppCore/Package.swift` splits `AppCoreFakes` from `AppCore`,
+        // so a package that only wants the design system does not also link
+        // this.
+        .target(
+            name: "DesignSystemTestSupport",
+            dependencies: ["DesignSystem"],
+            swiftSettings: strictSwiftSettings
+        ),
         .testTarget(
             name: "DesignSystemTests",
-            dependencies: ["DesignSystem"],
+            dependencies: ["DesignSystem", "DesignSystemTestSupport"],
             swiftSettings: strictSwiftSettings
         ),
     ]

@@ -8,13 +8,32 @@
  *   - wishlist
  * Hits from all three are concatenated into one response.
  *
+ * `query.filters` is read into a per-adapter scope by `searchFilterScope` and
+ * narrows the SQL each adapter scans, before the text match/ranking runs —
+ * the same order purchases narrows in — so an excluded row cannot occupy a
+ * slot in a capped adapter (`BUDGETS_DEFAULT_LIMIT`) that a caller asked not
+ * to see. An unreadable filter refuses the whole request (`ValidationError`
+ * → 400) rather than dropping it: a silently dropped filter looks identical
+ * to a filter that matched everything, which is the defect this exists to
+ * fix.
+ *
  * `uri` shapes are a cross-pillar contract: the search orchestrator dispatches
  * on them and caches client links keyed by them, so they must stay stable.
  */
-import { and, like, sql } from 'drizzle-orm';
+import { and, eq, gte, like, lte, sql } from 'drizzle-orm';
 
-import { budgets, type FinanceDb, transactions, wishList } from '../../db/index.js';
+import {
+  budgets,
+  type BudgetsSearchScope,
+  type FinanceDb,
+  searchFilterScope,
+  transactions,
+  type TransactionsSearchScope,
+  wishList,
+  type WishlistSearchScope,
+} from '../../db/index.js';
 import { centsToDollars, centsToDollarsNullable } from '../../money.js';
+import { ValidationError } from '../shared/errors.js';
 import { runHttp } from './error-mapping.js';
 
 import type { ServerInferRequest } from '@ts-rest/core';
@@ -48,7 +67,17 @@ function classify(
   return null;
 }
 
-function searchTransactions(db: FinanceDb, text: string): SearchHit[] {
+function searchTransactions(
+  db: FinanceDb,
+  text: string,
+  scope: TransactionsSearchScope
+): SearchHit[] {
+  const conditions = [like(sql`lower(${transactions.description})`, `%${text.toLowerCase()}%`)];
+  if (scope.type !== undefined) conditions.push(eq(transactions.type, scope.type));
+  if (scope.entityId !== undefined) conditions.push(eq(transactions.entityId, scope.entityId));
+  if (scope.startDate !== undefined) conditions.push(gte(transactions.date, scope.startDate));
+  if (scope.endDate !== undefined) conditions.push(lte(transactions.date, scope.endDate));
+
   const rows = db
     .select({
       id: transactions.id,
@@ -59,7 +88,7 @@ function searchTransactions(db: FinanceDb, text: string): SearchHit[] {
       type: transactions.type,
     })
     .from(transactions)
-    .where(like(sql`lower(${transactions.description})`, `%${text.toLowerCase()}%`))
+    .where(and(...conditions))
     .all();
 
   const hits: SearchHit[] = [];
@@ -86,11 +115,15 @@ function searchTransactions(db: FinanceDb, text: string): SearchHit[] {
   return hits;
 }
 
-function searchBudgets(db: FinanceDb, text: string): SearchHit[] {
+function searchBudgets(db: FinanceDb, text: string, scope: BudgetsSearchScope): SearchHit[] {
+  const conditions = [like(budgets.category, `%${text}%`)];
+  if (scope.period !== undefined) conditions.push(eq(budgets.period, scope.period));
+  if (scope.active !== undefined) conditions.push(eq(budgets.active, scope.active ? 1 : 0));
+
   const rows = db
     .select()
     .from(budgets)
-    .where(like(budgets.category, `%${text}%`))
+    .where(and(...conditions))
     .limit(BUDGETS_DEFAULT_LIMIT)
     .all();
 
@@ -115,22 +148,23 @@ function searchBudgets(db: FinanceDb, text: string): SearchHit[] {
   return hits.toSorted((a, b) => b.score - a.score);
 }
 
-function searchWishlist(db: FinanceDb, text: string): SearchHit[] {
+function searchWishlist(db: FinanceDb, text: string, scope: WishlistSearchScope): SearchHit[] {
   const lowerText = text.toLowerCase();
 
   // Exclude already-purchased items (saved >= target_amount). Items with no
   // target_amount stay searchable since there is no completion threshold to
   // compare against. NULL `saved` is treated as 0 via COALESCE so a row with
   // a target but no recorded savings still counts as not-yet-purchased.
+  const conditions = [
+    like(sql`lower(${wishList.item})`, `%${lowerText}%`),
+    sql`(${wishList.targetAmountCents} IS NULL OR coalesce(${wishList.savedCents}, 0) < ${wishList.targetAmountCents})`,
+  ];
+  if (scope.priority !== undefined) conditions.push(eq(wishList.priority, scope.priority));
+
   const rows = db
     .select()
     .from(wishList)
-    .where(
-      and(
-        like(sql`lower(${wishList.item})`, `%${lowerText}%`),
-        sql`(${wishList.targetAmountCents} IS NULL OR coalesce(${wishList.savedCents}, 0) < ${wishList.targetAmountCents})`
-      )
-    )
+    .where(and(...conditions))
     .all();
 
   const hits: SearchHit[] = [];
@@ -159,13 +193,19 @@ export function makeSearchHandlers(db: FinanceDb) {
   return {
     search: ({ body }: Req['search']) =>
       runHttp(() => {
+        const filterResult = searchFilterScope(body.query.filters ?? []);
+        if (!filterResult.ok) {
+          throw new ValidationError({ filters: body.query.filters }, filterResult.message);
+        }
+        const { scope } = filterResult;
+
         const text = body.query.text.trim();
         if (!text) return { status: 200 as const, body: { hits: [] } };
 
         const hits: SearchHit[] = [
-          ...searchTransactions(db, text),
-          ...searchBudgets(db, text),
-          ...searchWishlist(db, text),
+          ...searchTransactions(db, text, scope.transactions),
+          ...searchBudgets(db, text, scope.budgets),
+          ...searchWishlist(db, text, scope.wishlist),
         ];
         return { status: 200 as const, body: { hits } };
       }),

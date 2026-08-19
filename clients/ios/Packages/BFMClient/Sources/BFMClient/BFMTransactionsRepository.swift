@@ -124,10 +124,10 @@ extension BFMTransactionsRepository {
         case .tooManyRequests:
             throw RepositoryError.transport("\(ListTransactions.id): rate limited")
         case .badGateway(let upstream):
-            throw Self.upstreamFailure(
+            throw BFMRepositoryFailure.upstreamFailure(
                 try upstream.body.json.code.rawValue, operation: ListTransactions.id)
         case .serviceUnavailable(let upstream):
-            throw Self.upstreamFailure(
+            throw BFMRepositoryFailure.upstreamFailure(
                 try upstream.body.json.code.rawValue, operation: ListTransactions.id)
         case .undocumented(let statusCode, _):
             throw RepositoryError.transport(
@@ -136,57 +136,12 @@ extension BFMTransactionsRepository {
         }
     }
 
-    /// The BFM's upstream vocabulary, collapsed onto what a screen can do about
-    /// it — but not past the one distinction that matters.
-    ///
-    /// `upstream_unavailable` and `upstream_contract_mismatch` must not
-    /// converge. The first is "finance is not answering", which is worth
-    /// retrying; the second is "finance answered something this build cannot
-    /// read", which is not, and which the list renders as a different sentence
-    /// with a different next action.
-    ///
-    /// `upstream_misconfigured` joins the unavailable side rather than the
-    /// mismatch one: a pillar whose configuration is wrong is not serving, and
-    /// nothing about the phone's build is implicated. Matched on the raw string
-    /// because the generator emits one closed enum per status and the two are
-    /// distinct types carrying identical cases.
-    private static func upstreamFailure(_ code: String, operation: String) -> RepositoryError {
-        switch code {
-        case "upstream_unavailable", "upstream_degraded", "upstream_misconfigured":
-            return .unavailable
-        case "upstream_contract_mismatch":
-            return .contractMismatch
-        default:
-            return .transport("\(operation): upstream \(code)")
-        }
-    }
-
-    /// What a call that did not complete — or completed with a body this build
-    /// could not decode — means.
-    ///
-    /// The status is the actionable half and it survives even when the body
-    /// does not, which is the case an intermediary in front of this BFM
-    /// produces: an HTML error page on a documented status never reaches the
-    /// switch above. `502`/`503` resolve to `unavailable` rather than to the
-    /// mismatch they might have carried, because "not answering" is the reading
-    /// that costs least when it is wrong. A `400` cannot be resolved at all —
-    /// `invalid_cursor` and `invalid_request` differ only in the body — so it
-    /// stays a transport failure rather than triggering a restart this app
-    /// cannot justify.
+    /// A `400` cannot be resolved through ``BFMRepositoryFailure``'s shared
+    /// reading — `invalid_cursor` and `invalid_request` differ only in the
+    /// body — so it stays a transport failure rather than triggering a
+    /// restart this app cannot justify.
     private static func failure(_ error: ClientError, operation: String) -> RepositoryError {
-        switch error.response?.status.code {
-        case 401, 403:
-            return .unauthorized
-        case 502, 503:
-            return .unavailable
-        default:
-            // Through `BFMClientError` for its sanitiser and not around it: a
-            // `ClientError`'s own description renders the operation's typed
-            // input and every request header, `Authorization` included.
-            return .transport(
-                BFMClientError.transportFailure(error, operation: operation).description
-            )
-        }
+        BFMRepositoryFailure.failure(error, operation: operation)
     }
 }
 
@@ -288,10 +243,10 @@ extension BFMTransactionsRepository {
         case .tooManyRequests:
             throw RepositoryError.transport("\(GetTransaction.id): rate limited")
         case .badGateway(let upstream):
-            throw Self.upstreamFailure(
+            throw BFMRepositoryFailure.upstreamFailure(
                 try upstream.body.json.code.rawValue, operation: GetTransaction.id)
         case .serviceUnavailable(let upstream):
-            throw Self.upstreamFailure(
+            throw BFMRepositoryFailure.upstreamFailure(
                 try upstream.body.json.code.rawValue, operation: GetTransaction.id)
         case .undocumented(let statusCode, _):
             throw RepositoryError.transport(
