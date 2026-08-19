@@ -54,6 +54,23 @@ function getStoredLocale(): SupportedLocale {
   return DEFAULT_LOCALE;
 }
 
+/** Namespaces registered with i18next, in resource-loading order. */
+export const NAMESPACES = [
+  'common',
+  'shell',
+  'navigation',
+  'inventory',
+  'cerebrum',
+  'finance',
+  'food',
+  'lists',
+  'ai',
+  'media',
+  'bfm',
+  'purchases',
+  'ui',
+] as const;
+
 const i18n = createInstance();
 
 /**
@@ -71,21 +88,9 @@ i18n.on('languageChanged', syncHtmlLang);
 void i18n.use(initReactI18next).init({
   lng: getStoredLocale(),
   fallbackLng: DEFAULT_LOCALE,
-  ns: [
-    'common',
-    'shell',
-    'navigation',
-    'inventory',
-    'cerebrum',
-    'finance',
-    'food',
-    'lists',
-    'ai',
-    'media',
-    'bfm',
-    'purchases',
-    'ui',
-  ],
+  // Copied: i18next stores this array by reference and pushes onto it from
+  // `loadNamespaces`, which would mutate the exported const.
+  ns: [...NAMESPACES],
   defaultNS: 'common',
   interpolation: { escapeValue: false },
   resources: {

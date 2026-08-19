@@ -14,11 +14,13 @@ Pillar frontends do not import these files in application code — they call `us
 
 ## A file here is not live until the shell registers it
 
-Adding `<locale>/<namespace>.json` does nothing by itself. The shell's i18n module must import it, list the namespace in `ns[]`, and add it under `resources`. `errors.json` is the standing example: 47 keys in both locales, mirroring backend error codes, registered nowhere and imported by nothing.
+Adding `<locale>/<namespace>.json` does nothing by itself. The shell's i18n module must import it, list the namespace in `NAMESPACES`, and add it under `resources`. `errors.json` is the standing example: 47 keys in both locales, mirroring backend error codes, registered nowhere and imported by nothing.
 
-## Parity and dead keys are unguarded
+Forgetting that registration now fails `pillars/shell/src/i18n/index.test.ts`, which compares the files on disk against `NAMESPACES` and against the `resources` map for both locales. `errors` is named in that test's allowlist of deliberately-unregistered catalogues; nothing else is.
 
-Nothing generates `pt-BR` from `en-AU`, and no build step fails on a missing translation. The only check is a test in `pillars/shell/src/i18n/index.test.ts` that compares key sets between the two locales — and it covers nine namespaces, not `food`, `lists` or `errors`. A gap surfaces at runtime as English text inside a Portuguese UI, via the `en-AU` fallback, never as an error.
+## Parity is guarded, dead keys are not
+
+Nothing generates `pt-BR` from `en-AU`, and no build step fails on a missing translation. The only check is a test in `pillars/shell/src/i18n/index.test.ts` that compares key sets between the two locales — but it discovers its namespace list from `libs/locales/en-AU/*.json` on disk via `import.meta.glob`, so it covers every file in this directory, registered or not (`errors.json` included). A namespace added here without its `en-AU`/`pt-BR` pair in sync now fails that test instead of surfacing at runtime as English text inside a Portuguese UI via the `en-AU` fallback. Values must be strings or nested objects of strings — a number, boolean or `null` leaf fails the same test rather than being skipped.
 
 There is no dead-key detection either. Several `ui.json` entries name components that hardcode their English strings instead of calling `t()`.
 
