@@ -72,24 +72,30 @@ export default defineConfig({
        * instead, because it stopped being untested — see the note on that
        * exclusion above.
        *
-       * `branches` sits below the other three because no CI lane ran this
-       * gate for long enough that it rotted unnoticed: three modules
-       * (`src/ingest/receipt/anthropic-vision.ts`, `src/api/ai-telemetry-deps.ts`,
-       * `src/api/anthropic-key.ts`) had drifted to 0%, which is what actually
-       * failed `statements`/`functions`/`lines` too. Covering those three,
-       * plus targeted edge-case tests across a dozen adjacent modules, put
+       * `branches` sat below the other three for a while because no CI lane
+       * ran this gate for long enough that it rotted unnoticed: three
+       * modules (`src/ingest/receipt/anthropic-vision.ts`,
+       * `src/api/ai-telemetry-deps.ts`, `src/api/anthropic-key.ts`) had
+       * drifted to 0%, which is what actually failed `statements`/
+       * `functions`/`lines` too. Covering those three, plus targeted
+       * edge-case tests across a dozen adjacent modules, put
        * `statements`/`functions`/`lines` back above their original marks
-       * (`functions` far enough clear to be raised) but left `branches` at
-       * ~89%, short of the 91% this threshold used to claim. The remaining
-       * gap is real edge-case branches (locale/timezone parsing,
-       * reconciliation error paths, ingest adapters) spread thin across the
-       * ~35 files that still have an uncovered branch rather than
-       * concentrated in a coverable few; closing it is tracked separately
-       * rather than done here as a drive-by.
+       * but left `branches` at ~89%, short of the 91% this threshold used
+       * to claim. Closing that gap meant a dedicated read for
+       * `db/services/reconcile-reads.ts` (the solver's whole view — every
+       * scope filter, every eligibility predicate — had no direct test at
+       * all), one for `reconcile-links.ts`'s combined-settlement grouping,
+       * a unit test for `chargeIdsForPurchases` (exported, never called or
+       * tested), the two branches of both error-mapping middlewares, and a
+       * currency/name tie-break case in `merchant-spend.ts`. What is left
+       * uncovered past that is the genuinely thin edge cases the earlier
+       * note describes, plus a handful the ticket that raised this back to
+       * 91 flagged as likely unreachable through the public API — those are
+       * tracked, not silently accepted.
        */
       thresholds: {
         statements: 95,
-        branches: 88,
+        branches: 91,
         functions: 93,
         lines: 96,
       },

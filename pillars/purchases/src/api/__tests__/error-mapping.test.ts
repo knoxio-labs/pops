@@ -7,6 +7,9 @@
  * — but it means the SQLite-side branches need a unit test, or they are
  * only exercised the day the two descriptions drift apart.
  */
+import { RequestValidationError } from '@ts-rest/express';
+import express from 'express';
+import request from 'supertest';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -14,7 +17,7 @@ import {
   PurchaseNotFoundError,
   PurchaseSourceNotFoundError,
 } from '../../db/index.js';
-import { tryMapServiceError } from '../rest/error-mapping.js';
+import { createRequestValidationErrorHandler, tryMapServiceError } from '../rest/error-mapping.js';
 import {
   isCheckConstraintError,
   isForeignKeyConstraintError,
@@ -69,6 +72,44 @@ describe('tryMapServiceError', () => {
     expect(tryMapServiceError('a string')).toBeNull();
     expect(tryMapServiceError(null)).toBeNull();
     expect(tryMapServiceError({ code: 42 })).toBeNull();
+  });
+});
+
+describe('createRequestValidationErrorHandler', () => {
+  it('answers a RequestValidationError with the contract-shaped 400, dropping the issues', async () => {
+    const app = express();
+    app.get('/boom', (_req, _res, next) => {
+      next(new RequestValidationError(null, null, null, null));
+    });
+    app.use(createRequestValidationErrorHandler());
+
+    const res = await request(app).get('/boom');
+
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({
+      message: 'Request does not match the contract schema',
+      code: 'VALIDATION_ERROR',
+    });
+  });
+
+  it('forwards anything else to the next handler unmapped', async () => {
+    const app = express();
+    app.get('/boom', (_req, _res, next) => {
+      next(new Error('unrelated failure'));
+    });
+    app.use(createRequestValidationErrorHandler());
+    // Proves the handler declined the error rather than swallowing it:
+    // this only runs if it called `next(err)`.
+    app.use(
+      (err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+        res.status(599).json({ passedThrough: err instanceof Error ? err.message : String(err) });
+      }
+    );
+
+    const res = await request(app).get('/boom');
+
+    expect(res.status).toBe(599);
+    expect(res.body).toEqual({ passedThrough: 'unrelated failure' });
   });
 });
 

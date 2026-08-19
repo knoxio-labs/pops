@@ -830,6 +830,20 @@ describe('ordering is deterministic', () => {
     expect(rollup.merchants.map((m) => m.merchant.name)).toEqual(['Big', 'Small', 'Dollarshop']);
   });
 
+  it('breaks a tie on net spend by name, in both directions', () => {
+    createPurchase(
+      opened.db,
+      order({ checksum: 'zorro', merchantEntityName: 'Zorro', totalCents: 500 })
+    );
+    createPurchase(
+      opened.db,
+      order({ checksum: 'alpha', merchantEntityName: 'Alpha', totalCents: 500 })
+    );
+
+    const rollup = rollUpMerchantSpend(opened.db);
+    expect(rollup.merchants.map((m) => m.merchant.name)).toEqual(['Alpha', 'Zorro']);
+  });
+
   it('produces the same serialisation on a repeated call', () => {
     for (let i = 0; i < 12; i += 1) {
       createPurchase(
