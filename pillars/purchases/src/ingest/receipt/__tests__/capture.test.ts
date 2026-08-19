@@ -124,6 +124,53 @@ describe('when the shutter fired', () => {
     expect(resolved.utcOffsetMinutes).toBeNull();
     expect(resolved.timeReference.kind).toBe('zone');
   });
+
+  it('reads no offset out of -00:00 either, which states that it is unknown', () => {
+    const resolved = resolveCapture({ capturedAt: '2026-08-01T04:32:07-00:00' }, null, null);
+    expect(resolved.utcOffsetMinutes).toBeNull();
+    expect(resolved.capturedAt).toBe('2026-08-01T04:32:07.000Z');
+  });
+});
+
+describe('an offset the contract allows and the earth does not', () => {
+  // `+20:00` matches the contract's date-time pattern and no zone has ever
+  // been on it. Kept as evidence it would be stored, and the column that
+  // holds it refuses anything past +/-14:00 — which costs the upload, the
+  // purchase and the paid reading, not just the offset.
+  const OVER_THE_LIMIT = '2026-08-01T14:32:07+20:00';
+
+  it('keeps the instant, which is a real one', () => {
+    expect(resolveCapture({ capturedAt: OVER_THE_LIMIT }, null, null).capturedAt).toBe(
+      '2026-07-31T18:32:07.000Z'
+    );
+  });
+
+  it('states no offset, so nothing outside the storable range is stored', () => {
+    expect(resolveCapture({ capturedAt: OVER_THE_LIMIT }, null, null).utcOffsetMinutes).toBeNull();
+  });
+
+  it('does not let it place the receipt, and falls through to the next evidence', () => {
+    const resolved = resolveCapture({ capturedAt: OVER_THE_LIMIT }, null, 'Australia/Sydney');
+    expect(resolved.timeReference).toEqual({ kind: 'zone', zone: 'Australia/Sydney' });
+  });
+
+  it('treats the same figure from a camera the same way', () => {
+    const resolved = resolveCapture(undefined, { ...PERTH_PHOTO, utcOffsetMinutes: 1200 }, null);
+    expect(resolved.utcOffsetMinutes).toBeNull();
+    expect(resolved.timeReference.kind).toBe('zone');
+  });
+
+  it("still places the camera's wall clock, against the evidence that is left", () => {
+    // The reading is not thrown away with the offset: the zone the receipt
+    // established answers instead, which is the same fallback a camera that
+    // wrote no offset at all already gets.
+    const resolved = resolveCapture(
+      undefined,
+      { ...PERTH_PHOTO, utcOffsetMinutes: 1200 },
+      'Australia/Sydney'
+    );
+    expect(resolved.capturedAt).toBe('2026-08-01T04:32:07.000Z');
+  });
 });
 
 describe('where it was taken', () => {

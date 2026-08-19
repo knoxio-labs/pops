@@ -83,6 +83,10 @@ describe('what a photograph states about itself', () => {
     const fromJpeg = readPhotoCapture(jpegWithExif(spec), 'image/jpeg');
 
     expect(readPhotoCapture(pngWithExif(spec), 'image/png')).toEqual(fromJpeg);
+    // The chunk is legal on either side of the pixels.
+    expect(readPhotoCapture(pngWithExif(spec, { afterImageData: true }), 'image/png')).toEqual(
+      fromJpeg
+    );
     expect(readPhotoCapture(webpWithExif(spec), 'image/webp')).toEqual(fromJpeg);
     expect(readPhotoCapture(webpWithExif(spec, { preamble: true }), 'image/webp')).toEqual(
       fromJpeg
@@ -120,7 +124,7 @@ describe('absent metadata is the ordinary case, not a failure', () => {
   });
 });
 
-describe('a malformed file costs a reading, never an upload', () => {
+describe('a malformed file yields no reading, and never an exception', () => {
   it('refuses half a coordinate rather than reporting a point on the equator', () => {
     for (const omit of ['latitude', 'longitude', 'latitudeRef', 'longitudeRef'] as const) {
       const capture = readPhotoCapture(
@@ -177,6 +181,18 @@ describe('a malformed file costs a reading, never an upload', () => {
         'image/jpeg'
       )?.utcOffsetMinutes
     ).toBeNull();
+  });
+
+  it('refuses a well-formed offset no zone has ever been on', () => {
+    // Well-formed and outside +/-14:00, so it is a garbled field rather
+    // than a place -- and the column that would have stored it refuses the
+    // figure, which would cost the upload rather than the reading.
+    const capture = readPhotoCapture(
+      jpegWithExif({ dateTimeOriginal: '2026:08:01 14:32:07', offsetTimeOriginal: '+20:00' }),
+      'image/jpeg'
+    );
+    expect(capture?.utcOffsetMinutes ?? null).toBeNull();
+    expect(capture?.localTime?.hour).toBe(14);
   });
 
   it('survives every truncation of a file that did have metadata', () => {

@@ -41,6 +41,8 @@ import {
   instantFromLocalParts,
   instantFromLocalPartsAtOffset,
   isKnownTimeZone,
+  isPlausibleUtcOffsetMinutes,
+  parseUtcOffsetMinutes,
   storeTimeZone,
 } from '../local-time.js';
 import { readPhotoCapture } from './exif.js';
@@ -87,7 +89,11 @@ export interface ResolvedCapture {
   /** Sensitive. Stored, never logged, never in a URL, never in an error. */
   readonly location: CaptureLocation | null;
   readonly locationSource: CaptureSource | null;
-  /** Minutes ahead of UTC at capture, from whichever claimant stated one. */
+  /**
+   * Minutes ahead of UTC at capture, from whichever claimant stated one and
+   * within the range a zone could have been on — the range the stored
+   * column CHECKs. A claimant outside it stated no offset.
+   */
   readonly utcOffsetMinutes: number | null;
   /** The IANA zone the client declared, when it declared a usable one. */
   readonly declaredTimeZone: string | null;
@@ -110,7 +116,10 @@ export function firstPhotoCapture(parts: readonly ReceiptPart[]): PhotoCapture |
   return null;
 }
 
-const OFFSET_SUFFIX_RE = /([+-])(\d{2}):(\d{2})$/u;
+const OFFSET_SUFFIX_RE = /[+-]\d{2}:\d{2}$/u;
+
+/** RFC 3339's spelling of "this instant is right and I cannot say where". */
+const OFFSET_UNKNOWN = '-00:00';
 
 /**
  * The offset the client actually wrote, or null.
@@ -119,14 +128,19 @@ const OFFSET_SUFFIX_RE = /([+-])(\d{2}):(\d{2})$/u;
  * client sends after calling `toISOString()`, so treating it as evidence of
  * place would put every normalised upload in Greenwich — and a device that
  * really was on UTC loses nothing, because the instant is correct either
- * way and the zone falls through to better evidence.
+ * way and the zone falls through to better evidence. `-00:00` says the same
+ * thing in the form of an offset, which is why it is read as none: RFC 3339
+ * gives it exactly the meaning `+00:00` does not.
+ *
+ * The bound is `local-time.ts`'s, and the contract's is wider — `+20:00` is
+ * a well-formed instant that no zone has ever been on. That token places
+ * the moment and says nothing about where the device stood.
  */
 function declaredOffsetMinutes(capturedAt: string | undefined): number | null {
   if (capturedAt === undefined) return null;
   const match = OFFSET_SUFFIX_RE.exec(capturedAt);
-  if (match === null) return null;
-  const minutes = Number(match[2]) * 60 + Number(match[3]);
-  return match[1] === '-' ? -minutes : minutes;
+  if (match === null || match[0] === OFFSET_UNKNOWN) return null;
+  return parseUtcOffsetMinutes(match[0]);
 }
 
 /**
@@ -152,11 +166,11 @@ function clientInstant(capturedAt: string | undefined): string | null {
  */
 function exifInstant(
   localTime: CaptureLocalTime,
-  photo: PhotoCapture,
+  cameraOffset: number | null,
   reference: TimeReference
 ): string | null {
-  if (photo.utcOffsetMinutes !== null) {
-    return instantFromLocalPartsAtOffset(localTime, photo.utcOffsetMinutes);
+  if (cameraOffset !== null) {
+    return instantFromLocalPartsAtOffset(localTime, cameraOffset);
   }
   return reference.kind === 'offset'
     ? instantFromLocalPartsAtOffset(localTime, reference.offsetMinutes)
@@ -212,7 +226,7 @@ export function resolveCapture(
   modelTimeZone: string | null
 ): ResolvedCapture {
   const said = clientSignals(client);
-  const exifOffset = photo?.utcOffsetMinutes ?? null;
+  const exifOffset = storableOffset(photo?.utcOffsetMinutes ?? null);
   const timeReference = resolveTimeReference(
     said.declaredZone,
     modelTimeZone,
@@ -220,7 +234,7 @@ export function resolveCapture(
     exifOffset
   );
 
-  const instant = claim(said.instant, photoInstant(photo, timeReference));
+  const instant = claim(said.instant, photoInstant(photo, exifOffset, timeReference));
   const place = claim(said.location, photo?.location ?? null);
 
   return {
@@ -235,7 +249,23 @@ export function resolveCapture(
   };
 }
 
-function photoInstant(photo: PhotoCapture | null, reference: TimeReference): string | null {
+function photoInstant(
+  photo: PhotoCapture | null,
+  cameraOffset: number | null,
+  reference: TimeReference
+): string | null {
   if (photo === null || photo.localTime === null) return null;
-  return exifInstant(photo.localTime, photo, reference);
+  return exifInstant(photo.localTime, cameraOffset, reference);
+}
+
+/**
+ * An offset only if it is one a zone could have been on.
+ *
+ * The reader already refuses a wider figure, and this holds the same line
+ * for a `PhotoCapture` built by anything else: the number leaves here for a
+ * column that CHECKs the range, and a row refused there takes the whole
+ * ingest transaction — purchase, items, charges and documents — with it.
+ */
+function storableOffset(minutes: number | null): number | null {
+  return minutes !== null && isPlausibleUtcOffsetMinutes(minutes) ? minutes : null;
 }

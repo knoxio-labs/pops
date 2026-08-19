@@ -139,6 +139,39 @@ describe('what the client sends', () => {
     expect(response.body.purchase.tags).toContain('date-uncertain');
   });
 
+  it('keeps the receipt when the device states an offset the earth does not have', async () => {
+    // `+20:00` satisfies the contract's date-time pattern, and the column
+    // that would hold it refuses anything past +/-14:00. Storing it anyway
+    // aborts the one transaction that writes the purchase, its items, its
+    // charges and its documents — so the shop is lost, after the reading
+    // has already been paid for.
+    const response = await post(appWith(), {
+      parts: [{ mediaType: 'image/jpeg', dataBase64: PLAIN_JPEG }],
+      capture: { capturedAt: '2026-08-01T14:32:07+20:00' },
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.kind).toBe('created');
+    const [row] = captureRows();
+    expect(row?.capturedAt).toBe('2026-07-31T18:32:07.000Z');
+    expect(row?.utcOffsetMinutes).toBeNull();
+  });
+
+  it('keeps the receipt when the camera wrote one', async () => {
+    const photographed = jpegWithExif({
+      dateTimeOriginal: '2026:08:01 14:32:07',
+      offsetTimeOriginal: '+20:00',
+    }).toString('base64');
+
+    const response = await post(appWith(), {
+      parts: [{ mediaType: 'image/jpeg', dataBase64: photographed }],
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.kind).toBe('created');
+    expect(captureRows()[0]?.utcOffsetMinutes).toBeNull();
+  });
+
   it('changes nothing for an upload that sends no capture block', async () => {
     const response = await post(appWith(), {
       parts: [{ mediaType: 'image/jpeg', dataBase64: PLAIN_JPEG }],

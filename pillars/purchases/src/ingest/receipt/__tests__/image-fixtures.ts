@@ -48,11 +48,17 @@ function pngChunk(type: string, data: Buffer): Buffer {
   return Buffer.concat([length, Buffer.from(type, 'ascii'), data, Buffer.alloc(4)]);
 }
 
-export function pngWithExif(spec: ExifSpec): Buffer {
+/**
+ * `afterImageData` puts the `eXIf` chunk behind the pixels, where the
+ * format also permits it and some encoders put it.
+ */
+export function pngWithExif(spec: ExifSpec, options: { afterImageData?: boolean } = {}): Buffer {
+  const exif = pngChunk('eXIf', tiffBlock(spec));
+  const idat = pngChunk('IDAT', Buffer.alloc(8));
   return Buffer.concat([
     PNG_SIGNATURE,
     pngChunk('IHDR', Buffer.alloc(13)),
-    pngChunk('eXIf', tiffBlock(spec)),
+    ...(options.afterImageData === true ? [idat, exif] : [exif, idat]),
     pngChunk('IEND', Buffer.alloc(0)),
   ]);
 }

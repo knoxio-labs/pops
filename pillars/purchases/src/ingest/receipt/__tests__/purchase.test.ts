@@ -379,12 +379,25 @@ describe('what the device and the photograph said', () => {
     });
   });
 
-  it('leaves the checksum alone, because it describes the reading', () => {
+  it('leaves the checksum alone for a fact the reading does not contain', () => {
     // A client that starts sending coordinates for uploads it already sent
     // has corrected nothing the recipe describes.
     expect(withCapture({}, { location: { latitude: 1, longitude: 2 } }).checksum).toBe(
       mapped().checksum
     );
+  });
+
+  it('moves the checksum when the capture time changes the date it settled on', () => {
+    // `orderedAt` IS in the recipe, so an undated receipt that is dated from
+    // the shutter hashes differently from the same receipt dated from its
+    // upload. That is the recipe working: the two readings disagree about
+    // when the shop happened, which is the difference the hash exists to
+    // show. An undated receipt never had a stable checksum anyway — upload
+    // time differs between two uploads of the same paper.
+    const fromShutter = withCapture({ purchasedOn: null }, { capturedAt: '2026-08-01T14:32:07Z' });
+    const fromUpload = map({ purchasedOn: null }).purchase;
+    expect(fromShutter.orderedAt).not.toBe(fromUpload.orderedAt);
+    expect(fromShutter.checksum).not.toBe(fromUpload.checksum);
   });
 });
 

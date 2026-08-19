@@ -116,8 +116,32 @@ function naiveUtcOf(parts: LocalParts): number | null {
  */
 const MAX_UTC_OFFSET_MINUTES = 14 * 60;
 
-function isPlausibleUtcOffsetMinutes(minutes: number): boolean {
+/** Whole minutes, and within the widest offset any zone has ever used. */
+export function isPlausibleUtcOffsetMinutes(minutes: number): boolean {
   return Number.isInteger(minutes) && Math.abs(minutes) <= MAX_UTC_OFFSET_MINUTES;
+}
+
+const UTC_OFFSET_RE = /^([+-])(\d{2}):(\d{2})$/u;
+
+/**
+ * `+11:00` → 660, or null when the token is not an offset a zone could have
+ * been on.
+ *
+ * One parser for both claimants: a camera writes `OffsetTimeOriginal` and a
+ * device writes the same token at the end of its `capturedAt`. One bound
+ * too — the ±14:00 above, which is the bound the stored column carries as a
+ * CHECK. A wider figure is a garbled field rather than a place, so it is no
+ * evidence at all and whatever spoke next answers instead. Parsing it and
+ * storing it anyway would fail the CHECK and lose the whole upload with it.
+ */
+export function parseUtcOffsetMinutes(token: string): number | null {
+  const match = UTC_OFFSET_RE.exec(token);
+  if (match === null) return null;
+  const minutes = Number(match[3]);
+  if (minutes > 59) return null;
+  const total = Number(match[2]) * 60 + minutes;
+  const signed = match[1] === '-' ? -total : total;
+  return isPlausibleUtcOffsetMinutes(signed) ? signed : null;
 }
 
 /**

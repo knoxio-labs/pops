@@ -21,10 +21,11 @@
  *
  * No dependency. Four tags are needed and the containers that carry them
  * are a few dozen lines each, where an EXIF library is a large parser
- * running over bytes an untrusted client uploaded. Everything here is
- * bounds-checked and returns `null` rather than throwing, so a truncated,
- * malformed or hostile file costs a reading and never an upload.
+ * running over bytes an untrusted client uploaded. Every accessor is
+ * bounds-checked and answers `null` rather than throwing, so a truncated,
+ * malformed or hostile file yields no reading rather than an exception.
  */
+import { parseUtcOffsetMinutes } from '../local-time.js';
 import { tiffBlockOf } from './exif-containers.js';
 import {
   asciiOf,
@@ -118,18 +119,15 @@ function plausibleDateTime(parts: CaptureLocalTime): boolean {
   );
 }
 
-const OFFSET_RE = /^([+-])(\d{2}):(\d{2})$/u;
-
-/** `+11:00` → 660. The EXIF field has no other legal form. */
+/**
+ * `+11:00` → 660. The EXIF field has no other legal form.
+ *
+ * The bound is `local-time.ts`'s, so a camera writing a figure no zone has
+ * ever been on states no offset here rather than one the rest of the pillar
+ * would have to refuse later.
+ */
 function parseExifOffset(value: string | null): number | null {
-  if (value === null) return null;
-  const match = OFFSET_RE.exec(value);
-  if (match === null) return null;
-  const hours = Number(match[2]);
-  const minutes = Number(match[3]);
-  if (hours > 23 || minutes > 59) return null;
-  const total = hours * 60 + minutes;
-  return match[1] === '-' ? -total : total;
+  return value === null ? null : parseUtcOffsetMinutes(value);
 }
 
 function coordinate(

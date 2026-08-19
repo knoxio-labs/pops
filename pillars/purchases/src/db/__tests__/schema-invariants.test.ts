@@ -609,46 +609,64 @@ describe('unknown refs', () => {
   });
 });
 
+type CaptureColumns = typeof purchaseCapture.$inferInsert;
+
 describe('purchase_capture constraints', () => {
-  const insertCaptureRaw = (values: Record<string, unknown>): void => {
+  const capturedOrder = (): string => {
     counter += 1;
-    const purchaseId = createPurchase(
+    return createPurchase(
       opened.db,
       coffeeOrder({
         checksum: `capture-${String(counter)}`,
         sourceOrderId: `capture-order-${String(counter)}`,
       })
     );
+  };
+
+  const insertCapture = (values: Omit<CaptureColumns, 'purchaseId'>): void => {
     opened.db
       .insert(purchaseCapture)
-      .values({ purchaseId, ...values } as never)
+      .values({ purchaseId: capturedOrder(), ...values })
       .run();
+  };
+
+  /**
+   * The provenance columns are the one case the typed insert cannot state:
+   * the enum is what is under test, so the value has to arrive as SQL.
+   */
+  const insertProvenanceRaw = (column: 'captured_at_source' | 'location_source'): void => {
+    opened.raw
+      .prepare(
+        `INSERT INTO purchase_capture (purchase_id, latitude, longitude, ${column}) ` +
+          'VALUES (?, ?, ?, ?)'
+      )
+      .run(capturedOrder(), 1, 2, 'vibes');
   };
 
   it('rejects a provenance outside the closed vocabulary', () => {
     expect(() => {
-      insertCaptureRaw({ capturedAt: '2026-08-01T04:32:07.000Z', capturedAtSource: 'vibes' });
+      insertProvenanceRaw('captured_at_source');
     }).toThrow(/CHECK constraint failed/i);
     expect(() => {
-      insertCaptureRaw({ latitude: 1, longitude: 2, locationSource: 'vibes' });
+      insertProvenanceRaw('location_source');
     }).toThrow(/CHECK constraint failed/i);
   });
 
   it('rejects a coordinate that is not on the globe', () => {
     expect(() => {
-      insertCaptureRaw({ latitude: 91, longitude: 2 });
+      insertCapture({ latitude: 91, longitude: 2 });
     }).toThrow(/CHECK constraint failed/i);
     expect(() => {
-      insertCaptureRaw({ latitude: 1, longitude: -181 });
+      insertCapture({ latitude: 1, longitude: -181 });
     }).toThrow(/CHECK constraint failed/i);
   });
 
   it('rejects half a coordinate, which is not a place', () => {
     expect(() => {
-      insertCaptureRaw({ latitude: 1 });
+      insertCapture({ latitude: 1 });
     }).toThrow(/CHECK constraint failed/i);
     expect(() => {
-      insertCaptureRaw({ longitude: 2 });
+      insertCapture({ longitude: 2 });
     }).toThrow(/CHECK constraint failed/i);
   });
 
@@ -656,13 +674,13 @@ describe('purchase_capture constraints', () => {
     // Wider than +/-14:00 is a garbled EXIF field or a client sending
     // nonsense, and applying it moves a purchase across a day boundary.
     expect(() => {
-      insertCaptureRaw({ utcOffsetMinutes: 900 });
+      insertCapture({ utcOffsetMinutes: 900 });
     }).toThrow(/CHECK constraint failed/i);
   });
 
   it('accepts the ordinary row, where most of it is unknown', () => {
     expect(() => {
-      insertCaptureRaw({ capturedAt: '2026-08-01T04:32:07.000Z', capturedAtSource: 'exif' });
+      insertCapture({ capturedAt: '2026-08-01T04:32:07.000Z', capturedAtSource: 'exif' });
     }).not.toThrow();
   });
 

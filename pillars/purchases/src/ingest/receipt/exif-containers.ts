@@ -48,7 +48,15 @@ function jpegTiff(bytes: Buffer): Buffer | null {
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 const PNG_CHUNK_OVERHEAD = 12;
 
-/** The `eXIf` chunk of a PNG carries the same raw TIFF block a JPEG does. */
+/**
+ * The `eXIf` chunk of a PNG carries the same raw TIFF block a JPEG does.
+ *
+ * Walked to `IEND` rather than to the first `IDAT`: the chunk is legal on
+ * either side of the image data, and encoders do append it, so stopping at
+ * the pixels would silently drop metadata that is plainly there. Skipping
+ * image data costs one read per chunk, since every chunk declares its own
+ * length.
+ */
 function pngTiff(bytes: Buffer): Buffer | null {
   if (!bytes.subarray(0, 8).equals(PNG_SIGNATURE)) return null;
   let at = 8;
@@ -58,7 +66,7 @@ function pngTiff(bytes: Buffer): Buffer | null {
     const dataAt = at + 8;
     if (dataAt + length > bytes.length) return null;
     if (type === 'eXIf') return bytes.subarray(dataAt, dataAt + length);
-    if (type === 'IDAT' || type === 'IEND') return null;
+    if (type === 'IEND') return null;
     at = dataAt + length + 4;
   }
   return null;

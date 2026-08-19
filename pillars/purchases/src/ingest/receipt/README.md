@@ -364,6 +364,15 @@ neither — so ranks 3 and 4 resolve through a fixed offset and keep the
 `timezone-uncertain` tag. The tag has not changed meaning: it still says the
 zone was established neither by the receipt nor by the client.
 
+Both offsets are read through one parser (`local-time.ts`) with one bound,
+±14:00 — the widest any zone has ever been on, and the bound the stored
+column carries as a CHECK. The contract is wider than that on purpose,
+because `+20:00` is a well-formed instant: it is accepted, it places the
+moment, and it states nothing about where the device stood. Reading it as a
+place instead would put a figure into a column that refuses it, and the row
+is written in the transaction that writes the purchase — so a garbled
+offset would cost the whole receipt rather than the offset.
+
 **Where it helps most is the undated receipt.** One that states no date is
 still created and still tagged `date-uncertain`, but it is now dated from
 the shutter rather than from the upload — closer to the shop by an unbounded
