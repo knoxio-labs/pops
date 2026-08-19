@@ -1,8 +1,6 @@
 import Foundation
 import Testing
 
-@testable import FeatureReceiptCapture
-
 /// Proof that every identifier `ReceiptResultAccessibility` declares is
 /// actually attached to a view, not merely a string sitting beside the
 /// screen that draws it.
