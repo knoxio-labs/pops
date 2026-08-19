@@ -66,7 +66,9 @@ Folding `awaitingImport` into the residual would flag every recent order as brok
 
 ## The aggregate surface
 
-`GET /analytics/merchant-spend` is the pillar's only aggregate route. Everything else is a row reader, and a merchant headline cannot be assembled from row readers: `GET /purchases` pages at 500 and returns no charge-link state, and `GET /items` cannot enumerate without a `tag`.
+Two routes, at two grains. Everything else is a row reader, and neither headline can be assembled from row readers: `GET /purchases` pages at 500 and returns no charge-link state, and `GET /items` cannot enumerate without a `tag`.
+
+### `GET /analytics/merchant-spend` — the order grain
 
 It answers one question — what was spent per merchant over a period, and how much of it is explained — and returns the same six figures the per-order split does, summed. `residualCents` is in the response rather than derived by the caller: a consumer that has to compute the unexplained bucket is a consumer that can forget to, and a view which drops it turns a known unknown into a false certainty.
 
@@ -83,9 +85,24 @@ The three are exclusive, and `name` is the one that has to be spelled carefully.
 
 The fold reuses `computeAccounting` per order rather than restating the split as `SUM()` in SQL, so the residual keeps exactly one implementation. That is also why the arithmetic happens after the rows are re-grouped and not in the database: an order with three charges appears three times in a charge join and six times once links are joined, and a database-side `SUM(total_cents)` would report six times what was spent.
 
-**What POPS-244 still needs on top of this**, none of which this route provides:
+### `GET /analytics/product-leaderboard` — the product grain
 
-- a repeat-purchase leaderboard at the product grain (POPS-1849), which needs the line-item identity normalisation of POPS-243 to group on anything better than `sku`;
+The same thing bought across N orders: per product, how many distinct orders hold it, how many lines and units, first and last purchase, summed landed cost, and every merchant it was bought from. Landed cost reuses `landedCostCents` per line rather than restating `lineTotal + allocatedShipping + allocatedAdjustment` in SQL, on the same single-implementation rule the residual follows. Nothing here joins charges or links, which is what makes "how many orders" a count of distinct order ids rather than a figure that multiplies by however many charges settled them.
+
+**Grouping is the hard part and it is only partly solved.** A group is formed on one of three bases, and which one travels with the group:
+
+- `sku` — the merchant's own identifier. The only basis a source asserts, and exactly one shipped adapter writes one (`sku: readText(row['ASIN'])` in the Amazon mapper). Within Amazon, repeats group perfectly.
+- `name` — printed names that normalise alike, within one source. A **proposal**: it merges two products a till abbreviates the same way, and splits one product printed two ways. Every Woolworths and receipt line lands here.
+- `unidentified` — no sku and no name that normalises to anything. Groups with nothing, one line per row, because a bucket every nameless line falls into would report a whole shop as one product.
+
+The rule is `identifyProduct` in `src/db/services/product-identity.ts`, shared with the classification pass so a decision the pass made about a product and a row this route shows for it describe the same lines. Minting a durable, confirmable product identity for the sources that state none is POPS-243, and until it lands this route's answer is strong for Amazon and provisional everywhere else.
+
+`coverage` says exactly that per request — lines in scope split across the three bases, plus the product count — so a consumer can see how much of the answer rests on printed names before it renders a row. It is computed over the whole scope, before any withholding.
+
+`minOrderCount` is the N. It is not a page cap: it selects on the answer's own defining property, is stated by the caller, and is echoed in the response, so a group that is absent is absent for a reason the payload names. There is still no `limit`, for the reason the merchant roll-up has none. Currency is part of the grouping key here too.
+
+**What POPS-244 still needs on top of these**, none of which these routes provide:
+
 - the consumable-vs-durable kind split (POPS-1850). Its substrate now exists — `kind` and `kindConfirmedAt` — so it must be **three** numbers, confirmed-consumable, confirmed-durable and unreviewed, mirroring `matched` / `awaitingImport` / `residual`. A two-way percentage would report a classification pass's proposal as a finding;
 - tag counterfactuals such as "cut all `snack` line items" (POPS-1851). Item tags now carry their own `confirmedAt`, so the same three-way rule applies — but they are still drawn from whatever a classification pass proposed rather than being guaranteed finance `tag_vocabulary` slugs, and a counterfactual is only as meaningful as the vocabulary it groups on.
 

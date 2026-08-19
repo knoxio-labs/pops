@@ -7,6 +7,8 @@ import type {
   AnalyticsMerchantSpendData,
   AnalyticsMerchantSpendErrors,
   AnalyticsMerchantSpendResponses,
+  AnalyticsProductLeaderboardData,
+  AnalyticsProductLeaderboardResponses,
   PurchaseCreateData,
   PurchaseCreateErrors,
   PurchaseCreateResponses,
@@ -88,6 +90,17 @@ export const analyticsMerchantSpend = <ThrowOnError extends boolean = false>(
     AnalyticsMerchantSpendErrors,
     ThrowOnError
   >({ url: '/analytics/merchant-spend', ...options });
+
+/**
+ * Repeat purchases per product, each group carrying the identity basis it was formed on
+ */
+export const analyticsProductLeaderboard = <ThrowOnError extends boolean = false>(
+  options?: Options<AnalyticsProductLeaderboardData, ThrowOnError>
+): RequestResult<AnalyticsProductLeaderboardResponses, unknown, ThrowOnError> =>
+  (options?.client ?? client).get<AnalyticsProductLeaderboardResponses, unknown, ThrowOnError>({
+    url: '/analytics/product-leaderboard',
+    ...options,
+  });
 
 /**
  * Every line carrying an item tag, across every order

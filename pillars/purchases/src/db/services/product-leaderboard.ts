@@ -218,7 +218,10 @@ function noteMerchant(bucket: ProductBucket, line: ScopedLine): void {
     labelRank: merchantLabelRank(line.orderedAt, line.purchaseId),
   };
   const existing = bucket.merchants.get(key);
-  bucket.merchants.set(key, existing === undefined ? candidate : withNewerLabel(existing, candidate));
+  bucket.merchants.set(
+    key,
+    existing === undefined ? candidate : withNewerLabel(existing, candidate)
+  );
 }
 
 /**

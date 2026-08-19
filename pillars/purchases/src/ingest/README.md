@@ -75,6 +75,12 @@ against is over-eager merging: two genuinely different products collapsing
 into one corrupts spend attribution in a way that is very hard to notice
 afterwards. Leaving items ungrouped is the safer wrong answer.
 
+`GET /analytics/product-leaderboard` groups on what a source does state —
+the sku, else the normalised printed name, else nothing — and labels every
+group with which of the three it used, rather than waiting for this to be
+solved or pretending it is. The rule is `identifyProduct` in
+`src/db/services/product-identity.ts`.
+
 ## Checksums are not keys
 
 `checksum` detects **change**; `sourceOrderId` detects **identity**. They

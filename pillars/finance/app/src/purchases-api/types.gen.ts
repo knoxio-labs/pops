@@ -88,6 +88,90 @@ export type AnalyticsMerchantSpendResponses = {
 export type AnalyticsMerchantSpendResponse =
   AnalyticsMerchantSpendResponses[keyof AnalyticsMerchantSpendResponses];
 
+export type AnalyticsProductLeaderboardData = {
+  body?: never;
+  path?: never;
+  query?: {
+    sources?: Array<string>;
+    statuses?: Array<'awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored'>;
+    from?: string;
+    to?: string;
+    minOrderCount?: number;
+  };
+  url: '/analytics/product-leaderboard';
+};
+
+export type AnalyticsProductLeaderboardResponses = {
+  /**
+   * 200
+   */
+  200: {
+    coverage: {
+      lineCount: number;
+      nameKeyedLines: number;
+      productCount: number;
+      skuKeyedLines: number;
+      unidentifiedLines: number;
+    };
+    minOrderCount: number;
+    period: {
+      from: string | null;
+      to: string | null;
+    };
+    products: Array<{
+      currency: string;
+      firstPurchasedAt: string;
+      landedCostCents: number;
+      lastPurchasedAt: string;
+      lineCount: number;
+      merchants: Array<
+        | {
+            entityId: string;
+            name: string | null;
+            resolution: 'entity';
+          }
+        | {
+            entityId: null;
+            name: string;
+            resolution: 'name';
+          }
+        | {
+            entityId: null;
+            name: null;
+            resolution: 'unattributed';
+          }
+      >;
+      orderCount: number;
+      product:
+        | {
+            basis: 'sku';
+            name: string;
+            sku: string;
+            source: string;
+          }
+        | {
+            basis: 'name';
+            name: string;
+            normalisedName: string;
+            sku: null;
+            source: string;
+          }
+        | {
+            basis: 'unidentified';
+            itemId: string;
+            name: string;
+            sku: null;
+            source: string;
+          };
+      refundedCents: number;
+      unitCount: number;
+    }>;
+  };
+};
+
+export type AnalyticsProductLeaderboardResponse =
+  AnalyticsProductLeaderboardResponses[keyof AnalyticsProductLeaderboardResponses];
+
 export type PurchaseItemsByTagData = {
   body?: never;
   path?: never;

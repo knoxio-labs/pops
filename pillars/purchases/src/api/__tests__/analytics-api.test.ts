@@ -297,7 +297,12 @@ describe('GET /analytics/product-leaderboard', () => {
         order({
           checksum: `n-${String(i)}`,
           items: [
-            { name: `Thing ${String(i)}`, sku: `SKU-${String(i)}`, unitPriceCents: 100, lineTotalCents: 100 },
+            {
+              name: `Thing ${String(i)}`,
+              sku: `SKU-${String(i)}`,
+              unitPriceCents: 100,
+              lineTotalCents: 100,
+            },
           ],
         })
       );
