@@ -103,3 +103,39 @@ extension Result where Success == ReceiptOutcome, Failure == any Error {
 /// Something a repository could plausibly throw that this app has never heard
 /// of — a decoding failure, a URL error, anything from a layer below.
 internal struct UnrecognisedRepositoryFailure: Error {}
+
+/// Races several async closures to a single resume, without the caller
+/// having to await whichever one loses.
+///
+/// `Task.select`/`race` do not exist in the standard library, and a
+/// `TaskGroup` awaits every child at scope exit — even a cancelled one, if
+/// that child never checks for cancellation. That makes a `TaskGroup` the
+/// wrong tool for racing a bounded timeout against
+/// `ScriptedReceiptCaptureRepository.waitUntilCalled`, which parks on a
+/// plain `withCheckedContinuation` that cancellation does not resume: a
+/// group would hang at scope exit on exactly the regression a timeout race
+/// exists to catch. The losing racer here is left to finish on its own, or,
+/// in that regression case, to leak harmlessly past the end of the test.
+internal func firstToFinish(
+    _ racers: @Sendable () async -> Void...
+) async {
+    let resumed = ResumeOnce()
+    await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+        for racer in racers {
+            Task {
+                await racer()
+                if await resumed.claim() { continuation.resume() }
+            }
+        }
+    }
+}
+
+/// Lets exactly one of several racing tasks resume a continuation.
+private actor ResumeOnce {
+    private var claimed = false
+
+    func claim() -> Bool {
+        defer { claimed = true }
+        return !claimed
+    }
+}
