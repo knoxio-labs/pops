@@ -17,9 +17,11 @@ vi.mock('../../src/ingest/amazon-digital/index.js', () => ({
 }));
 
 const { readFileSync } = await import('node:fs');
+const { parseAmazonDigitalOrders } = await import('../../src/ingest/amazon-digital/index.js');
 const { main } = await import('../ingest-amazon-digital.js');
 
 const readFileSyncMock = vi.mocked(readFileSync);
+const parseAmazonDigitalOrdersMock = vi.mocked(parseAmazonDigitalOrders);
 
 function absentReturnsFile(path: Parameters<typeof readFileSync>[0]): string {
   if (String(path).endsWith('Digital Returns.csv')) {
@@ -34,6 +36,7 @@ beforeEach(() => {
   vi.unstubAllEnvs();
   readFileSyncMock.mockReset();
   readFileSyncMock.mockImplementation(absentReturnsFile);
+  parseAmazonDigitalOrdersMock.mockClear();
 });
 
 afterEach(() => {
@@ -63,10 +66,15 @@ describe('main', () => {
     expect(readFileSyncMock).toHaveBeenCalled();
   });
 
-  it('tolerates a bundle carrying no digital returns at all', async () => {
+  it('parses with no returns at all rather than inventing an empty file', async () => {
+    // A bundle from an account that never returned a digital purchase
+    // carries no returns file. Handing the parser `''` instead of
+    // `undefined` would put it through the shape check and throw.
     vi.stubEnv(INGEST_API_KEY_ENV, '');
 
     await expect(main(['/some/bundle', '--dry-run'])).resolves.toBeUndefined();
+
+    expect(parseAmazonDigitalOrdersMock).toHaveBeenCalledWith(expect.any(String), undefined);
   });
 
   it('refuses a returns file that exists and cannot be read', async () => {

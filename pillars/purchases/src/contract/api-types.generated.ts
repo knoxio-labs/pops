@@ -544,6 +544,7 @@ export interface operations {
           sourceOrderId?: string | null;
           subtotalCents?: number;
           surchargeCents?: number;
+          tags?: string[];
           taxCents?: number;
           totalCents: number;
         };

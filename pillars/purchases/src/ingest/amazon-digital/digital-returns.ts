@@ -15,6 +15,7 @@
  */
 import { parseBundleRows } from '../amazon/csv.js';
 import { readCents, readText, readTimestamp } from '../amazon/fields.js';
+import { type SourceRefund } from '../amazon/refund-charges.js';
 import {
   COMPLETED_RETURN_STATUS,
   DIGITAL_RETURNS_FILENAME,
@@ -24,20 +25,9 @@ import { netComponents, readComponents } from './components.js';
 
 import type { AmazonAnomaly, Row } from '../amazon/columns.js';
 
-/** One reversal, netted across the component rows that describe it. */
-export interface DigitalRefund {
-  readonly sourceOrderId: string;
-  /** Magnitude in {@link currency}. Positive — the charge that carries it is negated. */
-  readonly amountCents: number;
-  /** ISO 4217 as the file states it, upper-cased. */
-  readonly currency: string;
-  /** When the return completed, which is what a transaction would settle against. */
-  readonly refundedAt: string;
-}
-
 export interface DigitalRefundParseResult {
   /** Keyed by `Order ID`, preserving file order within each order. */
-  readonly refundsByOrderId: ReadonlyMap<string, readonly DigitalRefund[]>;
+  readonly refundsByOrderId: ReadonlyMap<string, readonly SourceRefund[]>;
   readonly anomalies: readonly AmazonAnomaly[];
 }
 
@@ -54,7 +44,7 @@ const UNKNOWN_ORDER_ID = '(no order id)';
  */
 export function parseAmazonDigitalReturns(csvText: string): DigitalRefundParseResult {
   const anomalies: AmazonAnomaly[] = [];
-  const refundsByOrderId = new Map<string, DigitalRefund[]>();
+  const refundsByOrderId = new Map<string, SourceRefund[]>();
 
   const rows = parseBundleRows(csvText, DIGITAL_RETURNS_FILENAME, DIGITAL_RETURNS_REQUIRED_COLUMNS);
 
@@ -133,7 +123,7 @@ function agreesWithStatedTotal(
  *   second, independent statement of the same figure, and where two
  *   readings disagree nothing in the file says which is right.
  */
-function readRefund(rows: readonly Row[], anomalies: AmazonAnomaly[]): DigitalRefund | null {
+function readRefund(rows: readonly Row[], anomalies: AmazonAnomaly[]): SourceRefund | null {
   const first = rows[0];
   if (first === undefined) return null;
 

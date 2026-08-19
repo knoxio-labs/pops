@@ -5,10 +5,10 @@ export {
   parseAmazonOrderHistory,
   type AmazonParseResult,
 } from './order-history.js';
+export { type SourceRefund } from './refund-charges.js';
 export {
   REFUND_DETAILS_BUNDLE_PATH,
   REFUND_DETAILS_FILENAME,
   parseAmazonRefundDetails,
-  type AmazonRefund,
   type AmazonRefundParseResult,
 } from './refunds.js';

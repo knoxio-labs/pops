@@ -18,8 +18,8 @@ import {
 } from './columns.js';
 import { parseBundleRows } from './csv.js';
 import { readText, readTimestamp } from './fields.js';
-import { buildRefundCharges, reportOrphanRefunds } from './refund-charges.js';
-import { parseAmazonRefundDetails, type AmazonRefund } from './refunds.js';
+import { buildRefundCharges, reportOrphanRefunds, type SourceRefund } from './refund-charges.js';
+import { parseAmazonRefundDetails } from './refunds.js';
 
 import type { CreateChargeInput, CreatePurchaseInput } from '../../db/services/purchase-input.js';
 
@@ -59,7 +59,7 @@ export function parseAmazonOrderHistory(
 
   const refunds =
     refundDetailsCsv === undefined
-      ? { refundsByOrderId: new Map<string, readonly AmazonRefund[]>(), anomalies: [] }
+      ? { refundsByOrderId: new Map<string, readonly SourceRefund[]>(), anomalies: [] }
       : parseAmazonRefundDetails(refundDetailsCsv);
   anomalies.push(...refunds.anomalies);
 
@@ -100,7 +100,7 @@ export function parseAmazonOrderHistory(
 function buildOrder(
   sourceOrderId: string,
   rows: readonly Row[],
-  refunds: readonly AmazonRefund[],
+  refunds: readonly SourceRefund[],
   anomalies: AmazonAnomaly[]
 ): CreatePurchaseInput | null {
   const firstRow = rows[0];

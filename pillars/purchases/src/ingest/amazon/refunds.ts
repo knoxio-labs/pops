@@ -15,6 +15,7 @@
 import { type AmazonAnomaly, type Row } from './columns.js';
 import { parseBundleRows } from './csv.js';
 import { readCents, readText, readTimestamp } from './fields.js';
+import { type SourceRefund } from './refund-charges.js';
 
 export const REFUND_DETAILS_FILENAME = 'Refund Details.csv';
 
@@ -48,20 +49,9 @@ export const REFUND_REQUIRED_COLUMNS = [
  */
 const COMPLETED_REVERSAL_STATUS = 'completed';
 
-/** One refund, as the disbursement feed states it. */
-export interface AmazonRefund {
-  readonly sourceOrderId: string;
-  /** Magnitude in {@link currency}. Positive — the charge that carries it is negated. */
-  readonly amountCents: number;
-  /** ISO 4217, as the file states it. Not necessarily the order's currency. */
-  readonly currency: string;
-  /** When the money was disbursed, which is what a transaction would settle against. */
-  readonly refundedAt: string;
-}
-
 export interface AmazonRefundParseResult {
   /** Keyed by `Order ID`, preserving file order within each order. */
-  readonly refundsByOrderId: ReadonlyMap<string, readonly AmazonRefund[]>;
+  readonly refundsByOrderId: ReadonlyMap<string, readonly SourceRefund[]>;
   readonly anomalies: readonly AmazonAnomaly[];
 }
 
@@ -78,7 +68,7 @@ const UNKNOWN_ORDER_ID = '(no order id)';
  */
 export function parseAmazonRefundDetails(csvText: string): AmazonRefundParseResult {
   const anomalies: AmazonAnomaly[] = [];
-  const refundsByOrderId = new Map<string, AmazonRefund[]>();
+  const refundsByOrderId = new Map<string, SourceRefund[]>();
 
   for (const row of parseBundleRows(csvText, REFUND_DETAILS_FILENAME, REFUND_REQUIRED_COLUMNS)) {
     const refund = readRefund(row, anomalies);
@@ -92,7 +82,7 @@ export function parseAmazonRefundDetails(csvText: string): AmazonRefundParseResu
   return { refundsByOrderId, anomalies };
 }
 
-function readRefund(row: Row, anomalies: AmazonAnomaly[]): AmazonRefund | null {
+function readRefund(row: Row, anomalies: AmazonAnomaly[]): SourceRefund | null {
   const sourceOrderId = readText(row['Order ID']) ?? UNKNOWN_ORDER_ID;
   const drop = (detail: string): null => {
     anomalies.push({ kind: 'dropped-refund', sourceOrderId, detail });

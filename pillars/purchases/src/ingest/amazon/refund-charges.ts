@@ -14,14 +14,19 @@ import type { CreateChargeInput } from '../../db/services/purchase-input.js';
  * been resolved: an order, a positive magnitude, a currency and the instant
  * the money moved.
  *
- * Declared here rather than imported from either parser so the physical and
- * digital adapters share one set of shaping rules — the decisions below are
- * about what a refund charge may claim, and those do not differ by file.
+ * The one refund type, not a shape the two parsers happen to agree on:
+ * `refunds.ts` reads one stated amount per row and `digital-returns.ts`
+ * nets a reversal's component rows, and both return this. The shaping rules
+ * below are about what a refund charge may claim, and those do not differ
+ * by file.
  */
 export interface SourceRefund {
   readonly sourceOrderId: string;
+  /** Magnitude in {@link currency}. Positive — the charge that carries it is negated. */
   readonly amountCents: number;
+  /** ISO 4217 as the file states it, upper-cased. Not necessarily the order's currency. */
   readonly currency: string;
+  /** When the money moved, which is what a transaction would settle against. */
   readonly refundedAt: string;
 }
 

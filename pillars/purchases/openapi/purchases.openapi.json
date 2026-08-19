@@ -989,6 +989,13 @@
                     "minimum": 0,
                     "type": "integer"
                   },
+                  "tags": {
+                    "items": {
+                      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
                   "taxCents": {
                     "maximum": 9007199254740991,
                     "minimum": 0,

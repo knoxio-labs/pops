@@ -4,9 +4,13 @@
  */
 import { describe, expect, it } from 'vitest';
 
+import { CreatePurchaseBodySchema } from '../../../contract/rest-schemas.js';
 import { AmazonBundleShapeError } from '../../amazon/columns.js';
-import { AMAZON_DIGITAL_SOURCE_ID, PROMOTION_OFFSET_TAG } from '../digital-orders.js';
-import { parseAmazonDigitalOrders } from '../digital-orders.js';
+import {
+  AMAZON_DIGITAL_SOURCE_ID,
+  PROMOTION_OFFSET_TAG,
+  parseAmazonDigitalOrders,
+} from '../digital-orders.js';
 import {
   DIGITAL_ORDERS_CSV,
   DIGITAL_ORDERS_CSV_WRONG_SHAPE,
@@ -14,8 +18,12 @@ import {
   ORDER_FAILED,
   ORDER_FOREIGN,
   ORDER_FREE,
+  ORDER_ID_SENTINEL,
+  ORDER_IDS_IN_FIXTURE,
+  ORDER_NET_NEGATIVE,
   ORDER_PAID,
   ORDER_PROMOTION_OFFSET,
+  ORDER_TWO_ITEMS,
   ORDER_UNDATED,
   ORDER_UNKNOWN_COMPONENT,
   ORDER_UNPARSEABLE,
@@ -42,19 +50,40 @@ function anomalyKinds(sourceOrderId: string): string[] {
 
 describe('grain', () => {
   it('groups the file’s component rows into one order each', () => {
-    // Seventeen rows in, six orders out: four rows describe one
-    // promotion-offset order and the rest are two apiece or refused.
+    // Twenty-three rows in, six orders out, in the order the file states
+    // them: the rest are refused and named in an anomaly.
     expect(orders.map((order) => order.sourceOrderId)).toEqual([
       ORDER_PAID,
       ORDER_PROMOTION_OFFSET,
       ORDER_FREE,
       ORDER_FOREIGN,
       ORDER_COLLIDES_WITH_PHYSICAL,
+      ORDER_TWO_ITEMS,
     ]);
   });
 
-  it('gives every order exactly one line, which is what a redemption is', () => {
-    for (const order of orders) expect(order.items).toHaveLength(1);
+  it('splits an order on Digital Order Item ID rather than assuming one line', () => {
+    // A digital order is one redemption on 90 of 90 in the reference
+    // bundle, but nothing in the file's shape forbids two. Reading them as
+    // one would name the line after the first product and hand it both
+    // products' money, with no anomaly to say so.
+    expect(orderFor(ORDER_TWO_ITEMS).items).toEqual([
+      expect.objectContaining({ name: 'The First Of Two', sku: 'B000000010', lineTotalCents: 400 }),
+      expect.objectContaining({
+        name: 'The Second Of Two',
+        sku: 'B000000011',
+        lineTotalCents: 600,
+      }),
+    ]);
+  });
+
+  it('still totals a multi-item order across every one of its components', () => {
+    expect(orderFor(ORDER_TWO_ITEMS)).toMatchObject({
+      subtotalCents: 1000,
+      taxCents: 100,
+      discountCents: 0,
+      totalCents: 1100,
+    });
   });
 
   it('creates no shipments: nothing is delivered', () => {
@@ -90,14 +119,27 @@ describe('money', () => {
     });
   });
 
-  it('keeps subtotal + tax - discount == total on every order it lands', () => {
-    // Holds on 90 of 90 orders in the reference bundle, unlike the physical
-    // export where the identity is advisory.
-    for (const order of orders) {
-      expect((order.subtotalCents ?? 0) + (order.taxCents ?? 0) - (order.discountCents ?? 0)).toBe(
-        order.totalCents
-      );
-    }
+  it('lands the money every order in the file adds up to', () => {
+    // The whole table rather than a spot check, and literal figures rather
+    // than the parser's own arithmetic restated: the identity
+    // `subtotal + tax - discount == total` holds by construction in
+    // `totalComponents`, so asserting it proves nothing about the reading.
+    expect(
+      orders.map((order) => [
+        order.sourceOrderId,
+        order.subtotalCents,
+        order.taxCents,
+        order.discountCents,
+        order.totalCents,
+      ])
+    ).toEqual([
+      [ORDER_PAID, 635, 64, 0, 699],
+      [ORDER_PROMOTION_OFFSET, 1359, 136, 1495, 0],
+      [ORDER_FREE, 0, 0, 0, 0],
+      [ORDER_FOREIGN, 1923, 0, 0, 1923],
+      [ORDER_COLLIDES_WITH_PHYSICAL, 499, 50, 0, 549],
+      [ORDER_TWO_ITEMS, 1000, 100, 0, 1100],
+    ]);
   });
 
   it('separates a promotion-cancelled price from a thing that was free', () => {
@@ -167,31 +209,74 @@ describe('rows it refuses to turn into spend', () => {
     expect(anomalyKinds(ORDER_UNDATED)).toEqual(['dropped-order']);
   });
 
+  it('drops an order whose components net below zero', () => {
+    // Not a promotion cancelling a price — that lands at exactly zero.
+    // Nothing in the file says what a merchant paying the account means,
+    // and landing it would put negative spend into the merchant total.
+    expect(orders.some((order) => order.sourceOrderId === ORDER_NET_NEGATIVE)).toBe(false);
+    expect(anomalyKinds(ORDER_NET_NEGATIVE)).toEqual(['dropped-order']);
+  });
+
   it('reports a row that names no order at all', () => {
     expect(anomalyKinds('(no order id)')).toEqual(['dropped-line']);
   });
 
   it('never returns an order it did not also account for', () => {
-    // Every input order id is either parsed or named in an anomaly. A row
-    // vanishing between the two is the failure this whole report exists to
+    // Every input order id is either parsed or named in an anomaly, read
+    // off the fixture's own rows rather than restated here — a case added
+    // to the file is covered by this the moment it is added. A row
+    // vanishing between the two is the failure the report exists to
     // prevent.
     const accounted = new Set([
       ...orders.map((order) => order.sourceOrderId),
       ...anomalies.map((anomaly) => anomaly.sourceOrderId),
     ]);
-    for (const expected of [
-      ORDER_PAID,
-      ORDER_PROMOTION_OFFSET,
-      ORDER_FREE,
-      ORDER_FOREIGN,
-      ORDER_FAILED,
-      ORDER_UNKNOWN_COMPONENT,
-      ORDER_UNPARSEABLE,
-      ORDER_UNDATED,
-      ORDER_COLLIDES_WITH_PHYSICAL,
-    ]) {
-      expect(accounted).toContain(expected);
+
+    for (const stated of ORDER_IDS_IN_FIXTURE) {
+      expect(accounted).toContain(stated === ORDER_ID_SENTINEL ? '(no order id)' : stated);
     }
+  });
+});
+
+describe('the checksum', () => {
+  it('separates two orders the file states identically', () => {
+    // `purchases.checksum` is unique GLOBALLY. Two subscription renewals of
+    // the same product at the same price differ in nothing but their order
+    // id, so a recipe that did not hash it would make the second one a
+    // duplicate of the first and lose it inside a run that reported
+    // success.
+    const twins = parseAmazonDigitalOrders(
+      digitalCsvWithRows([
+        digitalRowWith({ 'Order ID': 'D01-0000000-0000021' }),
+        digitalRowWith({ 'Order ID': 'D01-0000000-0000022' }),
+      ])
+    );
+
+    expect(twins.orders).toHaveLength(2);
+    expect(twins.orders[0]?.checksum).not.toBe(twins.orders[1]?.checksum);
+  });
+});
+
+describe('contract conformance', () => {
+  it('emits a body the create endpoint accepts, for every order', () => {
+    // The adapter writes through POST /purchases, so a payload the contract
+    // rejects is a runtime failure on the 90th order of a backfill rather
+    // than a type error here.
+    for (const order of orders) {
+      const parsed = CreatePurchaseBodySchema.safeParse(order);
+      expect(parsed.error?.message ?? 'ok').toBe('ok');
+    }
+  });
+
+  it('carries the promotion-offset tag through the wire contract', () => {
+    // Not covered by the safeParse above: zod strips unknown keys without
+    // erroring, so a create body with no `tags` field would accept the
+    // order and silently discard the one column that tells a $0 redemption
+    // from a giveaway.
+    expect(CreatePurchaseBodySchema.parse(orderFor(ORDER_PROMOTION_OFFSET)).tags).toEqual([
+      PROMOTION_OFFSET_TAG,
+    ]);
+    expect(CreatePurchaseBodySchema.parse(orderFor(ORDER_FREE)).tags).toBeUndefined();
   });
 });
 

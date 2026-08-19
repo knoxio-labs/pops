@@ -11,8 +11,11 @@
  * had it" and prints as a skip. A whole digital order would go missing and
  * the run would report success.
  *
- * Both halves of the guard are asserted here, end to end: the two orders
- * hash differently, and the database accepts them both.
+ * Asserted against a real migrated database rather than against the two
+ * parsers' output, because that is the only place the constraint lives: the
+ * two parsers hash disjoint column sets, so comparing their checksums would
+ * pass whatever the recipe did. What the recipe buys is tested in
+ * `digital-orders.test.ts`, over two orders the file states identically.
  */
 import { describe, expect, it } from 'vitest';
 
@@ -91,14 +94,6 @@ describe('an order id shared across the two namespaces', () => {
     expect(digitalOrder().source).toBe(AMAZON_DIGITAL_SOURCE_ID);
     expect(physicalOrder().source).toBe(AMAZON_SOURCE_ID);
     expect(digitalOrder().sourceOrderId).toBe(physicalOrder().sourceOrderId);
-  });
-
-  it('hashes to two different checksums', () => {
-    // `purchases.checksum` is unique GLOBALLY, not per source, so a shared
-    // recipe here would make the second import a duplicate of an order it
-    // has nothing to do with. The source id is hashed first for exactly
-    // this reason.
-    expect(digitalOrder().checksum).not.toBe(physicalOrder().checksum);
   });
 
   it('is written twice rather than deduplicated', () => {

@@ -32,10 +32,11 @@ export function parseBundleRows(
   const parsed = Papa.parse<Row>(csvText, {
     header: true,
     skipEmptyLines: true,
-    // Amazon writes a UTF-8 BOM on some files in the bundle, which lands on
-    // the first header name and makes an exact-match column check miss a
-    // column that is right there.
-    transformHeader: (header) => header.replace(/^﻿/u, '').trim(),
+    // Load-bearing for more than whitespace: Amazon writes a UTF-8 BOM on
+    // some files in the bundle, it lands on the first header name, and
+    // U+FEFF is ECMAScript WhiteSpace — so `.trim()` is what keeps an
+    // exact-match column check from missing a column that is right there.
+    transformHeader: (header) => header.trim(),
   });
 
   const [firstError] = parsed.errors;

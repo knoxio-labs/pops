@@ -39,9 +39,10 @@ const DIGITAL_RETURNS_PATH = join(...DIGITAL_RETURNS_BUNDLE_PATH);
  * A digital purchase is authorised and fulfilled in the same minute —
  * `Order Date` equals `Fulfilled Date` on all 90 orders of the reference
  * bundle — so it settles 1:1 rather than as the shipment splits days apart
- * that the pillar's 21-day default exists to absorb. A week either side is
- * wide enough for a statement's own posting lag and narrow enough to keep
- * two same-priced subscription renewals in different months apart.
+ * that the pillar's 21-day default exists to absorb. `settlementWindowFor`
+ * reads this symmetrically, so it buys ±3 days: wide enough for a
+ * statement's own posting lag and narrow enough to keep two same-priced
+ * subscription renewals in different months apart.
  */
 const DIGITAL_SETTLEMENT_WINDOW_DAYS = 3;
 

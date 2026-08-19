@@ -13,7 +13,7 @@ import { PRICE_COMPONENT, TAX_COMPONENT } from './columns.js';
 import type { AmazonAnomaly, Row } from '../amazon/columns.js';
 
 /** One row's contribution, once its type has been recognised. */
-interface Component {
+export interface Component {
   readonly type: typeof PRICE_COMPONENT | typeof TAX_COMPONENT;
   readonly cents: number;
 }

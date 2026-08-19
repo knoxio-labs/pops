@@ -13,14 +13,18 @@ import { createHash } from 'node:crypto';
 
 import { parseBundleRows } from '../amazon/csv.js';
 import { readQuantity, readText, readTimestamp } from '../amazon/fields.js';
-import { buildRefundCharges, reportOrphanRefunds } from '../amazon/refund-charges.js';
+import {
+  buildRefundCharges,
+  reportOrphanRefunds,
+  type SourceRefund,
+} from '../amazon/refund-charges.js';
 import {
   DIGITAL_ORDERS_FILENAME,
   DIGITAL_REQUIRED_COLUMNS,
   SUCCESSFUL_ORDER_STATUS,
 } from './columns.js';
 import { readComponents, totalComponents } from './components.js';
-import { parseAmazonDigitalReturns, type DigitalRefund } from './digital-returns.js';
+import { parseAmazonDigitalReturns } from './digital-returns.js';
 
 import type {
   CreateChargeInput,
@@ -28,7 +32,7 @@ import type {
   CreatePurchaseInput,
 } from '../../db/services/purchase-input.js';
 import type { AmazonAnomaly, Row } from '../amazon/columns.js';
-import type { ComponentTotals } from './components.js';
+import type { Component, ComponentTotals } from './components.js';
 
 /**
  * `purchase_sources.id` this adapter writes under.
@@ -77,7 +81,7 @@ export function parseAmazonDigitalOrders(
 
   const returns =
     digitalReturnsCsv === undefined
-      ? { refundsByOrderId: new Map<string, readonly DigitalRefund[]>(), anomalies: [] }
+      ? { refundsByOrderId: new Map<string, readonly SourceRefund[]>(), anomalies: [] }
       : parseAmazonDigitalReturns(digitalReturnsCsv);
   anomalies.push(...returns.anomalies);
 
@@ -129,7 +133,7 @@ function groupByOrderId(rows: readonly Row[], anomalies: AmazonAnomaly[]): Map<s
 function buildOrder(
   sourceOrderId: string,
   rows: readonly Row[],
-  refunds: readonly DigitalRefund[],
+  refunds: readonly SourceRefund[],
   anomalies: AmazonAnomaly[]
 ): CreatePurchaseInput | null {
   const first = rows[0];
@@ -138,20 +142,25 @@ function buildOrder(
   const header = readOrderHeader(first, sourceOrderId, anomalies);
   if (header === null) return null;
 
-  // Dropped rather than landed at zero: zero is a real total here, so an
-  // order silently landed at one would be indistinguishable from a
-  // promotion that cancelled the price.
-  const components = readComponents(rows, 'Transaction Amount', 'Component Type', (anomaly) => {
-    anomalies.push({
-      ...anomaly,
-      sourceOrderId,
-      detail: `${anomaly.detail}; the order was not ingested`,
-    });
-  });
-  if (components === null) return null;
+  const lines = readLines(rows, sourceOrderId, anomalies);
+  if (lines === null) return null;
 
-  const money = totalComponents(components);
-  const item = buildItem(first, money, sourceOrderId, anomalies);
+  const money = totalComponents(lines.flatMap((line) => line.components));
+  if (money.totalCents < 0) {
+    anomalies.push({
+      kind: 'dropped-order',
+      sourceOrderId,
+      detail:
+        `the order's components net to ${String(money.totalCents)}c, which would land as ` +
+        'negative spend; nothing in the file says what a merchant paying the account means',
+    });
+    return null;
+  }
+
+  const items = lines.flatMap((line) => {
+    const item = buildItem(line.row, totalComponents(line.components), sourceOrderId, anomalies);
+    return item === null ? [] : [item];
+  });
   const charges = buildRefundCharges(sourceOrderId, header.currency, refunds, anomalies);
 
   return {
@@ -171,12 +180,72 @@ function buildOrder(
     settlementMode: 'unknown',
     rawRef: `${DIGITAL_ORDERS_FILENAME}#${sourceOrderId}`,
     checksum: checksumFor(sourceOrderId, rows, charges),
-    ...(item === null ? {} : { items: [item] }),
+    ...(items.length > 0 ? { items } : {}),
     ...(charges.length > 0 ? { charges } : {}),
     // A price fully cancelled by a promotion, rather than a thing that was
     // free. The two are the same $0 in every column but this one.
     ...(money.totalCents === 0 && money.subtotalCents > 0 ? { tags: [PROMOTION_OFFSET_TAG] } : {}),
   };
+}
+
+/** One order item, with the component rows that state its money. */
+interface DigitalLine {
+  readonly row: Row;
+  readonly components: readonly Component[];
+}
+
+/**
+ * Split an order's rows into its items and read each one's components, or
+ * give up on the whole order.
+ *
+ * Grouped on `Digital Order Item ID` rather than assumed to be one item.
+ * The reference bundle has one item on 90 of 90 orders, but nothing in the
+ * file's shape forbids two — the returns file next door groups on the same
+ * pair for the same reason — and reading two items as one would name the
+ * line after the first product while giving it both products' money, with
+ * nothing to say it had happened.
+ *
+ * Giving up on the whole order rather than on the unreadable item is the
+ * same call the component reader makes: zero is a real total here, so an
+ * order landed short of a line would be indistinguishable from a promotion
+ * that cancelled the price.
+ */
+function readLines(
+  rows: readonly Row[],
+  sourceOrderId: string,
+  anomalies: AmazonAnomaly[]
+): DigitalLine[] | null {
+  const rowsByItemId = new Map<string, Row[]>();
+  for (const row of rows) {
+    const itemId = readText(row['Digital Order Item ID']) ?? '';
+    const existing = rowsByItemId.get(itemId);
+    if (existing === undefined) rowsByItemId.set(itemId, [row]);
+    else existing.push(row);
+  }
+
+  const lines: DigitalLine[] = [];
+  for (const itemRows of rowsByItemId.values()) {
+    const first = itemRows[0];
+    if (first === undefined) continue;
+
+    const components = readComponents(
+      itemRows,
+      'Transaction Amount',
+      'Component Type',
+      (anomaly) => {
+        anomalies.push({
+          ...anomaly,
+          sourceOrderId,
+          detail: `${anomaly.detail}; the order was not ingested`,
+        });
+      }
+    );
+    if (components === null) return null;
+
+    lines.push({ row: first, components });
+  }
+
+  return lines;
 }
 
 /**
@@ -217,11 +286,11 @@ function readOrderHeader(
 }
 
 /**
- * The single line every digital order has.
+ * One line, from the first of the component rows that describe it.
  *
- * One item per order on 90 of 90 orders in the reference bundle — a digital
- * order is one redemption — so `Product Name` and `ASIN` are read from the
- * first row and the components carry the money. `kind` is `digital`
+ * `Product Name`, `ASIN`, `Quantity Ordered` and `Marketplace` are stated
+ * per component row and repeat within an item, so the first row states them
+ * all; `money` is that item's own components, netted. `kind` is `digital`
  * outright: the file is what a digital purchase IS, so this is transcribing
  * the merchant rather than proposing a classification, and it persists
  * asserted.
@@ -277,11 +346,10 @@ function buildItem(
 /**
  * Content hash over everything the bundle says about the order.
  *
- * The source id is hashed first, and it is what keeps the two namespaces
- * apart under the GLOBAL uniqueness of `purchases.checksum`: a digital and
- * a physical order sharing an id would otherwise be free to hash alike, and
- * the second one imported would be rejected as a duplicate of an order it
- * has nothing to do with.
+ * `purchases.checksum` is unique GLOBALLY rather than per source, so the
+ * order id and the source id are both hashed: two renewals of one
+ * subscription differ in nothing else, and an order that hashed alike would
+ * be rejected as a duplicate of an order it has nothing to do with.
  */
 function checksumFor(
   sourceOrderId: string,

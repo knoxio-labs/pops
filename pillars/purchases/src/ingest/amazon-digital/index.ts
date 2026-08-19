@@ -11,8 +11,4 @@ export {
   parseAmazonDigitalOrders,
   type AmazonDigitalParseResult,
 } from './digital-orders.js';
-export {
-  parseAmazonDigitalReturns,
-  type DigitalRefund,
-  type DigitalRefundParseResult,
-} from './digital-returns.js';
+export { parseAmazonDigitalReturns, type DigitalRefundParseResult } from './digital-returns.js';

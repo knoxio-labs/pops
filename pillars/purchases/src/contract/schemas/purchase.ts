@@ -127,6 +127,19 @@ export const ItemTagSchema = z
   .regex(ITEM_TAG_PATTERN, 'expected a lower-case slug, e.g. fruit or single-origin');
 
 /**
+ * An order tag: a fact about how the whole order was read, not about a
+ * product. `date-uncertain`, `promotion-offset`.
+ *
+ * Same slug rule as {@link ItemTagSchema} and a separate schema anyway,
+ * because the two vocabularies are separate — an order tag records a
+ * reading, an item tag classifies a thing — and one of them growing a value
+ * must not be able to widen the other.
+ */
+export const PurchaseTagSchema = z
+  .string()
+  .regex(ITEM_TAG_PATTERN, 'expected a lower-case slug, e.g. date-uncertain');
+
+/**
  * A classification bound to the marker that says whether to trust it.
  *
  * The whole point of the object is that a consumer cannot obtain
