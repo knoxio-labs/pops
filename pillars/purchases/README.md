@@ -194,6 +194,8 @@ Coverage carries a threshold ratchet in `vitest.config.ts`.
 
 **Chasing a flake.** This suite has produced three intermittent-failure reports (POPS-1349, POPS-1430, POPS-1567) that all evaporated because nobody kept the output of the run that actually went red. From the repo root, `node scripts/flake-hunt.mjs --filter @pops/purchases [--coverage]` runs the suite in a loop and keeps a red run's full JSON report, stdout/stderr, failing test name(s), loop iteration, wall clock, and load average at start and end — deleting everything from the green runs so an unattended soak doesn't fill the disk. See its `--help` for the full option set; it works for any unit, not only this one.
 
+**A 404 is never silent.** A real backfill once saw one `POST /purchases` in 748 answer 404 with an empty body — not reproducible, most likely `supertest` spinning an ephemeral listener per request rather than a defect in the write path, since the create handler itself has no path that returns a bare 404 (`src/api/rest/purchase-handlers.ts` only ever answers 201, 400 or 409). Unexplained is not the same as safe to ignore, so `unmatchedRouteHandler` (`src/api/middleware/unmatched-route.ts`) is now the last thing mounted in `createPurchasesApiApp`: anything that reaches it — a genuinely unmatched route, whatever produced that one 404 — logs the method and path server-side and answers the same `{ message, code }` shape every other rejection here uses, instead of Express's silent, unparseable HTML default.
+
 ## Local development
 
 ```bash

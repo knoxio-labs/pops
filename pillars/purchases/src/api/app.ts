@@ -25,6 +25,7 @@ import { purchasesContract } from '../contract/rest.js';
 import { makeRequestHandler, type PurchasesApiDeps } from './handlers.js';
 import { jsonBodyErrorHandler } from './middleware/json-body-error.js';
 import { createServiceAccountScopeMiddleware } from './middleware/service-account-scope.js';
+import { unmatchedRouteHandler } from './middleware/unmatched-route.js';
 import { createRequestValidationErrorHandler } from './rest/error-mapping.js';
 import { makePurchasesRestHandlers } from './rest/handlers.js';
 
@@ -119,6 +120,11 @@ export function createPurchasesApiApp(deps: PurchasesApiDeps): Express {
     // another — see `rest/error-mapping.ts`.
     requestValidationErrorHandler: createRequestValidationErrorHandler(),
   });
+
+  // After the raw probes and the whole contract surface: anything still
+  // unmatched here is a genuine 404, logged rather than left to Express's
+  // silent default. See `middleware/unmatched-route.ts`.
+  app.use(unmatchedRouteHandler);
 
   return app;
 }
