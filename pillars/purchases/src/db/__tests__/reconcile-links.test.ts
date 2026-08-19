@@ -1,12 +1,15 @@
 /**
- * `listPurchasesForTransaction` — the link table read backwards.
+ * `listPurchasesForTransaction` — the order its answer comes back in.
  *
- * Exercised elsewhere only through the REST route
- * (`api/rest/__tests__/reconcile-handlers.test.ts`), which never drives two
- * charges on the SAME order into one transaction — the accumulating branch
- * below. A combined settlement across two orders is a modelled case per the
- * docstring; two charges of one order sharing a settlement is the same case
- * one level down and deserves the same coverage.
+ * The grouping itself is already driven end to end by
+ * `api/__tests__/transaction-links-api.test.ts`: a combined settlement across
+ * two orders, two charges of one order summed into that order alone, and a
+ * transaction no order explains. What no test there pins is the sequence —
+ * that file sorts the answer before comparing it, deliberately, because it is
+ * asserting membership. Order is a contract of this function rather than of
+ * the route: ids are random UUIDs and one ingest's rows share a `createdAt`
+ * to the second, so without the explicit `orderBy` the result is genuinely
+ * non-deterministic and nothing downstream would notice.
  */
 import { describe, expect, it } from 'vitest';
 
@@ -19,7 +22,6 @@ import {
 import { amazonOrder, openTempDb, seedAmazonSource } from './helpers.js';
 
 import type { ProposedLink } from '../../reconcile/types.js';
-import type { OpenedPurchasesDb } from '../index.js';
 
 function link(chargeId: string, transactionUri: string, amountCents: number): ProposedLink {
   return {
@@ -33,97 +35,51 @@ function link(chargeId: string, transactionUri: string, amountCents: number): Pr
 }
 
 describe('listPurchasesForTransaction', () => {
-  it('returns nothing for a transaction URI no link references', () => {
+  it('returns the orders of one settlement newest first, not in the order they were ingested', () => {
     const temp = openTempDb();
-    expect(listPurchasesForTransaction(temp.opened.db, 'pops://finance/transaction/none')).toEqual(
-      []
-    );
-    temp.cleanup();
-  });
-
-  it('accumulates two charges from the SAME order under one entry', () => {
-    const temp = openTempDb();
-    const opened: OpenedPurchasesDb = temp.opened;
+    const opened = temp.opened;
     seedAmazonSource(opened);
 
-    const orderId = createPurchase(
+    // Ingested newest-first so that insertion order and `orderedAt` order
+    // disagree: an implementation that returned rows as SQLite handed them
+    // back would answer with the older order at the front.
+    const newerOrderId = createPurchase(
       opened.db,
       amazonOrder({
-        checksum: 'amazon:split-charges',
-        sourceOrderId: 'amazon-split-charges',
-        totalCents: 6000,
-        charges: [
-          { sourceChargeRef: 'c1', amountCents: 4000, role: 'capture' },
-          { sourceChargeRef: 'c2', amountCents: 2000, role: 'capture' },
-        ],
-      })
-    );
-    const charges = listSolvableCharges(opened.db, { source: 'amazon' }).filter(
-      (c) => c.purchaseId === orderId
-    );
-    expect(charges).toHaveLength(2);
-
-    const transactionUri = 'pops://finance/transaction/combined';
-    persistProposedLinks(
-      opened.db,
-      charges.map((charge) => link(charge.id, transactionUri, -charge.amountCents))
-    );
-
-    const result = listPurchasesForTransaction(opened.db, transactionUri);
-
-    expect(result).toHaveLength(1);
-    expect(result[0]?.purchase.id).toBe(orderId);
-    expect(result[0]?.charges).toHaveLength(2);
-    expect(result[0]?.linkedCents).toBe(-6000);
-
-    temp.cleanup();
-  });
-
-  it('groups a combined settlement across two different orders separately', () => {
-    const temp = openTempDb();
-    const opened: OpenedPurchasesDb = temp.opened;
-    seedAmazonSource(opened);
-
-    const firstOrderId = createPurchase(
-      opened.db,
-      amazonOrder({
-        checksum: 'amazon:combined-a',
-        sourceOrderId: 'amazon-combined-a',
-        orderedAt: '2026-01-01T00:00:00Z',
-        totalCents: 1000,
-        charges: [{ sourceChargeRef: 'ca', amountCents: 1000, role: 'capture' }],
-      })
-    );
-    const secondOrderId = createPurchase(
-      opened.db,
-      amazonOrder({
-        checksum: 'amazon:combined-b',
-        sourceOrderId: 'amazon-combined-b',
+        checksum: 'amazon:combined-newer',
+        sourceOrderId: 'amazon-combined-newer',
         orderedAt: '2026-01-02T00:00:00Z',
         totalCents: 2000,
         charges: [{ sourceChargeRef: 'cb', amountCents: 2000, role: 'capture' }],
       })
     );
+    const olderOrderId = createPurchase(
+      opened.db,
+      amazonOrder({
+        checksum: 'amazon:combined-older',
+        sourceOrderId: 'amazon-combined-older',
+        orderedAt: '2026-01-01T00:00:00Z',
+        totalCents: 1000,
+        charges: [{ sourceChargeRef: 'ca', amountCents: 1000, role: 'capture' }],
+      })
+    );
 
     const charges = listSolvableCharges(opened.db, { source: 'amazon' });
-    const firstCharge = charges.find((c) => c.purchaseId === firstOrderId);
-    const secondCharge = charges.find((c) => c.purchaseId === secondOrderId);
-    if (firstCharge === undefined || secondCharge === undefined) {
+    const newerCharge = charges.find((c) => c.purchaseId === newerOrderId);
+    const olderCharge = charges.find((c) => c.purchaseId === olderOrderId);
+    if (newerCharge === undefined || olderCharge === undefined) {
       throw new Error('expected both orders to have solvable charges');
     }
 
     const transactionUri = 'pops://finance/transaction/two-orders';
     persistProposedLinks(opened.db, [
-      link(firstCharge.id, transactionUri, -1000),
-      link(secondCharge.id, transactionUri, -2000),
+      link(newerCharge.id, transactionUri, -2000),
+      link(olderCharge.id, transactionUri, -1000),
     ]);
 
     const result = listPurchasesForTransaction(opened.db, transactionUri);
 
-    expect(result).toHaveLength(2);
-    // Newest order first.
-    expect(result[0]?.purchase.id).toBe(secondOrderId);
-    expect(result[1]?.purchase.id).toBe(firstOrderId);
+    expect(result.map((entry) => entry.purchase.id)).toEqual([newerOrderId, olderOrderId]);
 
     temp.cleanup();
   });

@@ -17,6 +17,7 @@ import { openTempDb } from '../../db/__tests__/helpers.js';
 import { JSON_BODY_LIMIT_BYTES, createPurchasesApiApp } from '../app.js';
 import { jsonBodyErrorHandler } from '../middleware/json-body-error.js';
 import { __resetPillarRegistryCache } from '../pillars/registry.js';
+import { PASSED_THROUGH_STATUS, passThroughErrorReporter } from './helpers.js';
 
 import type { Express } from 'express';
 
@@ -82,17 +83,11 @@ describe('an error that is not a body-parser failure', () => {
       next(new Error('something unrelated went wrong'));
     });
     unrelated.use(jsonBodyErrorHandler);
-    // Proves the handler declined the error rather than swallowing it:
-    // this only runs if `jsonBodyErrorHandler` called `next(err)`.
-    unrelated.use(
-      (err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-        res.status(599).json({ passedThrough: err instanceof Error ? err.message : String(err) });
-      }
-    );
+    unrelated.use(passThroughErrorReporter);
 
     const res = await request(unrelated).get('/boom');
 
-    expect(res.status).toBe(599);
+    expect(res.status).toBe(PASSED_THROUGH_STATUS);
     expect(res.body).toEqual({ passedThrough: 'something unrelated went wrong' });
   });
 });

@@ -7,7 +7,7 @@
  * happy path of each function; this file covers the filters and exclusions
  * that decide what the solver never even sees.
  */
-import { beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import {
   confirmLink,
@@ -19,14 +19,22 @@ import {
   persistProposedLinks,
   rejectLink,
   setPurchaseStatus,
-  upsertSource,
 } from '../index.js';
-import { amazonOrder, ARRANGEMENT_TIMEOUT_MS, openTempDb, seedAmazonSource } from './helpers.js';
+import {
+  amazonOrder,
+  ARRANGEMENT_TIMEOUT_MS,
+  openTempDb,
+  seedAmazonSource,
+  seedWoolworthsSource,
+} from './helpers.js';
 
 import type { OpenedPurchasesDb } from '../index.js';
 
 describe('listSolvableCharges', () => {
   let opened: OpenedPurchasesDb;
+  // A no-op until the arrangement opens something, so a build that fails
+  // before it does reports its own error rather than one from teardown.
+  let release: () => void = () => undefined;
   let cardOrderId: string;
   let cashOrderId: string;
   let ignoredOrderId: string;
@@ -35,8 +43,9 @@ describe('listSolvableCharges', () => {
   beforeAll(() => {
     const temp = openTempDb();
     opened = temp.opened;
+    release = temp.cleanup;
     seedAmazonSource(opened);
-    setupSource(opened, 'woolworths');
+    seedWoolworthsSource(opened);
 
     cardOrderId = createPurchase(
       opened.db,
@@ -84,6 +93,10 @@ describe('listSolvableCharges', () => {
       charges: [{ amountCents: 1234, role: 'capture' }],
     });
   }, ARRANGEMENT_TIMEOUT_MS);
+
+  afterAll(() => {
+    release();
+  });
 
   it('excludes cash orders — a settlement will never arrive for one', () => {
     const purchaseIds = listSolvableCharges(opened.db).map((charge) => charge.purchaseId);
@@ -135,6 +148,9 @@ describe('listSolvableCharges', () => {
 
 describe('listOrdersNeedingDerivedCharge', () => {
   let opened: OpenedPurchasesDb;
+  // A no-op until the arrangement opens something, so a build that fails
+  // before it does reports its own error rather than one from teardown.
+  let release: () => void = () => undefined;
   let noChargeOrderId: string;
   let capturedOrderId: string;
   let refundOnlyOrderId: string;
@@ -144,6 +160,7 @@ describe('listOrdersNeedingDerivedCharge', () => {
   beforeAll(() => {
     const temp = openTempDb();
     opened = temp.opened;
+    release = temp.cleanup;
     seedAmazonSource(opened);
 
     noChargeOrderId = createPurchase(
@@ -197,6 +214,10 @@ describe('listOrdersNeedingDerivedCharge', () => {
     );
   }, ARRANGEMENT_TIMEOUT_MS);
 
+  afterAll(() => {
+    release();
+  });
+
   it('includes an order with no charge at all', () => {
     const ids = listOrdersNeedingDerivedCharge(opened.db).map((order) => order.id);
     expect(ids).toContain(noChargeOrderId);
@@ -242,12 +263,12 @@ describe('listOrdersNeedingDerivedCharge', () => {
 });
 
 describe('listConfirmedLinks', () => {
-  it('reads fleet-wide — every confirmed link regardless of when its order was placed', () => {
+  it('returns the confirmed link and not the one still only proposed', () => {
     const temp = openTempDb();
     const opened = temp.opened;
     seedAmazonSource(opened);
 
-    const orderId = createPurchase(
+    const confirmedOrderId = createPurchase(
       opened.db,
       amazonOrder({
         checksum: 'amazon:confirmed',
@@ -256,25 +277,49 @@ describe('listConfirmedLinks', () => {
         charges: [{ amountCents: 5678, role: 'capture' }],
       })
     );
-    const [charge] = listSolvableCharges(opened.db, { source: 'amazon' }).filter(
-      (c) => c.purchaseId === orderId
+    const proposedOrderId = createPurchase(
+      opened.db,
+      amazonOrder({
+        checksum: 'amazon:proposed',
+        sourceOrderId: 'amazon-proposed',
+        orderedAt: '2026-06-01T00:00:00Z',
+        charges: [{ amountCents: 1234, role: 'capture' }],
+      })
     );
-    if (charge === undefined) throw new Error('expected a solvable charge');
+    const solvable = listSolvableCharges(opened.db, { source: 'amazon' });
+    const confirmedCharge = solvable.find((c) => c.purchaseId === confirmedOrderId);
+    const proposedCharge = solvable.find((c) => c.purchaseId === proposedOrderId);
+    if (confirmedCharge === undefined || proposedCharge === undefined) {
+      throw new Error('expected both orders to have solvable charges');
+    }
 
     persistProposedLinks(opened.db, [
       {
-        chargeId: charge.id,
+        chargeId: confirmedCharge.id,
         transactionUri: 'pops://finance/transaction/1',
         transactionDescription: 'AMAZON',
         amountCents: 5678,
         linkType: 'exact',
         confidence: 1,
       },
+      {
+        chargeId: proposedCharge.id,
+        transactionUri: 'pops://finance/transaction/2',
+        transactionDescription: 'AMAZON',
+        amountCents: 1234,
+        linkType: 'exact',
+        confidence: 1,
+      },
     ]);
-    confirmLink(opened.db, charge.id, 'pops://finance/transaction/1', '2026-01-01T00:00:00Z');
+    confirmLink(
+      opened.db,
+      confirmedCharge.id,
+      'pops://finance/transaction/1',
+      '2026-01-01T00:00:00Z'
+    );
 
     expect(listConfirmedLinks(opened.db)).toEqual([
-      { chargeId: charge.id, transactionUri: 'pops://finance/transaction/1' },
+      { chargeId: confirmedCharge.id, transactionUri: 'pops://finance/transaction/1' },
     ]);
 
     temp.cleanup();
@@ -327,14 +372,3 @@ describe('listRejectedPairings', () => {
     temp.cleanup();
   });
 });
-
-function setupSource(opened: OpenedPurchasesDb, id: string): void {
-  upsertSource(opened.db, {
-    id,
-    label: id,
-    descriptorPattern: `${id.toUpperCase()}%`,
-    settlementWindowDays: 21,
-    autoLinkPolicy: 'review',
-    ingestAdapter: 'receipt-ocr',
-  });
-}

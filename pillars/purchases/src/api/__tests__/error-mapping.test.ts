@@ -23,6 +23,7 @@ import {
   isForeignKeyConstraintError,
   isUniqueConstraintError,
 } from '../shared/sqlite-errors.js';
+import { PASSED_THROUGH_STATUS, passThroughErrorReporter } from './helpers.js';
 
 function sqliteError(code: string): Error {
   return Object.assign(new Error(`${code}: constraint failed`), { code });
@@ -98,17 +99,11 @@ describe('createRequestValidationErrorHandler', () => {
       next(new Error('unrelated failure'));
     });
     app.use(createRequestValidationErrorHandler());
-    // Proves the handler declined the error rather than swallowing it:
-    // this only runs if it called `next(err)`.
-    app.use(
-      (err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-        res.status(599).json({ passedThrough: err instanceof Error ? err.message : String(err) });
-      }
-    );
+    app.use(passThroughErrorReporter);
 
     const res = await request(app).get('/boom');
 
-    expect(res.status).toBe(599);
+    expect(res.status).toBe(PASSED_THROUGH_STATUS);
     expect(res.body).toEqual({ passedThrough: 'unrelated failure' });
   });
 });

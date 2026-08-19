@@ -10,7 +10,7 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { chargeIdsForPurchases, createPurchase } from '../index.js';
+import { chargeIdsForPurchases, createPurchase, listSolvableCharges } from '../index.js';
 import { amazonOrder, openTempDb, seedAmazonSource } from './helpers.js';
 
 describe('chargeIdsForPurchases', () => {
@@ -44,10 +44,18 @@ describe('chargeIdsForPurchases', () => {
         charges: [{ sourceChargeRef: 'c3', amountCents: 5678, role: 'capture' }],
       })
     );
-    expect(outOfScopeId).not.toEqual(inScopeId);
 
-    const ids = chargeIdsForPurchases(opened.db, [inScopeId]);
-    expect(ids).toHaveLength(2);
+    const chargeIdsOf = (purchaseId: string): string[] =>
+      listSolvableCharges(opened.db)
+        .filter((charge) => charge.purchaseId === purchaseId)
+        .map((charge) => charge.id)
+        .toSorted();
+    const inScopeChargeIds = chargeIdsOf(inScopeId);
+    const outOfScopeChargeIds = chargeIdsOf(outOfScopeId);
+    expect(inScopeChargeIds).toHaveLength(2);
+    expect(outOfScopeChargeIds).toHaveLength(1);
+
+    expect(chargeIdsForPurchases(opened.db, [inScopeId]).toSorted()).toEqual(inScopeChargeIds);
 
     temp.cleanup();
   });

@@ -84,14 +84,16 @@ export default defineConfig({
        * to claim. Closing that gap meant a dedicated read for
        * `db/services/reconcile-reads.ts` (the solver's whole view — every
        * scope filter, every eligibility predicate — had no direct test at
-       * all), one for `reconcile-links.ts`'s combined-settlement grouping,
-       * a unit test for `chargeIdsForPurchases` (exported, never called or
-       * tested), the two branches of both error-mapping middlewares, and a
-       * currency/name tie-break case in `merchant-spend.ts`. What is left
-       * uncovered past that is the genuinely thin edge cases the earlier
-       * note describes, plus a handful the ticket that raised this back to
-       * 91 flagged as likely unreachable through the public API — those are
-       * tracked, not silently accepted.
+       * all), a unit test for `chargeIdsForPurchases` (exported, never
+       * called or tested), the two branches of both error-mapping
+       * middlewares, and a name tie-break case in `merchant-spend.ts`.
+       *
+       * What is still uncovered is real edge-case branches — locale and
+       * timezone parsing, reconciliation error paths, the ingest adapters —
+       * spread thin across the several dozen files that each have one or
+       * two, rather than concentrated anywhere a single test would reach,
+       * plus a handful that look unreachable through the public API and
+       * need a judgement call on excluding them rather than more tests.
        */
       thresholds: {
         statements: 95,

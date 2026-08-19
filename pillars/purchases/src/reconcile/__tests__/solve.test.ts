@@ -252,6 +252,18 @@ describe('refunds', () => {
     });
     expect(review[0]?.reason).toBe('no-candidate');
   });
+
+  it('never settles a refund with a zero-amount transaction', () => {
+    // A zero row carries no sign, so the sign test alone lets it through to
+    // a refund — and the partial stage would then link it, reporting a
+    // refund as settled by a transaction that moved no money.
+    const { links, review } = run({
+      charges: [charge({ amountCents: -1179, role: 'refund' })],
+      transactions: [txn({ amountCents: 0 })],
+    });
+    expect(links).toHaveLength(0);
+    expect(review[0]?.reason).toBe('no-candidate');
+  });
 });
 
 describe('determinism', () => {

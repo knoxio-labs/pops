@@ -148,6 +148,17 @@ export function seedAmazonSource(opened: OpenedPurchasesDb): void {
   });
 }
 
+export function seedWoolworthsSource(opened: OpenedPurchasesDb): void {
+  upsertSource(opened.db, {
+    id: 'woolworths',
+    label: 'Woolworths',
+    descriptorPattern: 'WOOLWORTHS%',
+    settlementWindowDays: 14,
+    autoLinkPolicy: 'auto',
+    ingestAdapter: 'woolworths-receipt',
+  });
+}
+
 /** A minimal valid order. Override any field per test. */
 export function amazonOrder(overrides: Partial<CreatePurchaseInput> = {}): CreatePurchaseInput {
   return {
