@@ -15,10 +15,7 @@ const EXIF_PREAMBLE = Buffer.from('Exif\0\0', 'ascii');
 
 /** A JPEG carrying an APP0 segment and then the APP1 the reader wants. */
 export function jpegWithTiff(tiff: Buffer | null): Buffer {
-  const app0 = Buffer.concat([
-    Buffer.from([0xff, 0xe0]),
-    lengthPrefixed(Buffer.from('JFIF\0\0\0\0\0\0', 'latin1')),
-  ]);
+  const app0 = Buffer.concat([Buffer.from([0xff, 0xe0]), lengthPrefixed(Buffer.alloc(10))]);
   const app1 =
     tiff === null
       ? Buffer.alloc(0)
