@@ -50,34 +50,29 @@ internal struct ReceiptCapturePrompt: View {
     /// where the button went.
     private var cameraSection: some View {
         PopsCard {
-            switch model.cameraAccess {
-            case .notDetermined, .authorized:
+            if let refusal = CameraRefusal.refusing(model.cameraAccess) {
+                refusalSection(refusal)
+            } else {
                 PopsButton(ReceiptCaptureCopy.captureButton) {
                     Task { await model.startCapture() }
                 }
                 .accessibilityIdentifier(ReceiptCaptureAccessibility.captureButton)
-            case .denied:
-                refusal(ReceiptCaptureCopy.cameraDenied, offeringSettings: true)
-            case .restricted:
-                refusal(ReceiptCaptureCopy.cameraRestricted, offeringSettings: false)
-            case .unavailable:
-                refusal(ReceiptCaptureCopy.cameraUnavailable, offeringSettings: false)
             }
         }
     }
 
-    /// `offeringSettings` is false for `restricted` and `unavailable` on
-    /// purpose: neither can be changed from Settings, and a button that leads
-    /// somewhere with nothing to change is worse than no button.
-    private func refusal(_ message: String, offeringSettings: Bool) -> some View {
+    /// Which refusals earn the Settings link is ``CameraRefusal``'s decision,
+    /// not this view's — see there for why only one of them does.
+    private func refusalSection(_ refusal: CameraRefusal) -> some View {
         VStack(alignment: .leading, spacing: PopsSpacing.md) {
-            Text(message)
+            Text(refusal.message)
                 .font(.popsBody)
                 .foregroundStyle(Color.popsMutedForeground)
-            if offeringSettings, let settings = SystemSettings.url {
+            if refusal.offersSettings, let settings = SystemSettings.url {
                 Link(ReceiptCaptureCopy.openSettings, destination: settings)
                     .font(.popsHeadline)
                     .foregroundStyle(Color.popsAccent)
+                    .accessibilityIdentifier(ReceiptCaptureAccessibility.openSettings)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

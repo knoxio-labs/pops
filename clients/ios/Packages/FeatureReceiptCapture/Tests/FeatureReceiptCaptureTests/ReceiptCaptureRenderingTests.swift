@@ -1,5 +1,6 @@
 import AppCore
 import AppCoreFakes
+import DesignSystemTestSupport
 import Foundation
 import SwiftUI
 import Testing
@@ -21,6 +22,19 @@ import Testing
 /// screen itself would therefore compare blank against blank and pass whatever
 /// the copy said. ``ReceiptCaptureLayoutTests`` below covers the scrolling from
 /// the other end, the way `PairingDynamicTypeTests` does.
+///
+/// Every comparison that depends on one state being a *different colour* from
+/// another carries `.requiresCompiledColorCatalog`, for the reason
+/// `HostToolchainColorSupport` documents and `ReceiptResultRenderingTests`
+/// next door already applies: where the build system copies
+/// `Colors.xcassets` without compiling it, every `Color.pops*` token resolves
+/// to the same placeholder, so the copy is drawn in the background's own
+/// colour and every one of these screens rasterises to a bare canvas —
+/// identical to each other and identical in both schemes. That is the
+/// renderer having nothing to say, not the screens being the same, and the
+/// two must not be reported alike. What survives on that lane is what does not
+/// need a colour: determinism, and `ReceiptCaptureLayoutTests`' heights.
+/// ``CameraRefusalTests`` covers the refusals' substance there instead.
 @Suite("Receipt capture rendering")
 @MainActor
 internal struct ReceiptCaptureRenderingTests {
@@ -67,7 +81,7 @@ internal struct ReceiptCaptureRenderingTests {
     /// of the same view, and two empty canvases satisfy none of them — but a
     /// suite that never checked would not say so, which is precisely how the
     /// screen-level version of this test passed while drawing nothing.
-    @Test("the prompt draws something rather than an empty canvas")
+    @Test("the prompt draws something rather than an empty canvas", .requiresCompiledColorCatalog)
     func theCanvasIsNotEmpty() throws {
         let drawn = try #require(Self.render(Self.prompt(access: .authorized)))
         let blank = try #require(Self.render(Color.popsBackground))
@@ -76,10 +90,15 @@ internal struct ReceiptCaptureRenderingTests {
     }
 
     /// The four camera answers are four different screens, not one screen with
-    /// a different sentence somewhere off-canvas. `restricted` and
-    /// `unavailable` differ from `denied` in more than wording — neither offers
-    /// the Settings link, because neither can be undone there.
-    @Test("each camera refusal draws differently from the offer and from the others")
+    /// a different sentence somewhere off-canvas.
+    ///
+    /// Only that they differ. Which of them offers the Settings link is not
+    /// something this can see — the refusals differ by copy whether the link
+    /// is there or not, so every comparison here passes either way.
+    /// ``CameraRefusalTests`` is what holds that rule.
+    @Test(
+        "each camera refusal draws differently from the offer and from the others",
+        .requiresCompiledColorCatalog)
     func everyRefusalLooksDifferent() throws {
         let offered = try #require(Self.render(Self.prompt(access: .authorized)))
         let denied = try #require(Self.render(Self.prompt(access: .denied)))
@@ -96,7 +115,9 @@ internal struct ReceiptCaptureRenderingTests {
     /// `AppCore`'s own Simulator suite asserts the camera reports `.unavailable`
     /// there, and this is the other end of it: that state is a drawn screen
     /// with content, not a blank one and not a camera showing black.
-    @Test("the no-camera state is a real screen rather than an empty one")
+    @Test(
+        "the no-camera state is a real screen rather than an empty one",
+        .requiresCompiledColorCatalog)
     func theNoCameraStateDrawsSomething() throws {
         let blank = try #require(Self.render(Color.popsBackground))
         let unavailable = try #require(Self.render(Self.prompt(access: .unavailable)))
@@ -122,7 +143,7 @@ internal struct ReceiptCaptureRenderingTests {
 
     /// The four problems say four different things. One sentence covering all
     /// of them would still pass the test above.
-    @Test("the problems do not all draw the same sentence")
+    @Test("the problems do not all draw the same sentence", .requiresCompiledColorCatalog)
     func problemsAreDistinct() throws {
         let drawn = try [
             ReceiptCaptureProblem.cameraFailed, .noPages, .unpreparedPages, .tooManyPages(9),

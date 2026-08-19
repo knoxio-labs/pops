@@ -15,5 +15,10 @@ internal enum ReceiptCaptureAccessibility {
     /// The screen shown when the camera cannot be opened at all — which is
     /// every Simulator, so this is the state an automated flow actually meets.
     internal static let cameraRefusal = "receipt-capture-camera-refusal"
+    /// Present only on the one refusal Settings can undo — see
+    /// ``CameraRefusal``. A flow asserting this is *absent* is asserting that
+    /// rule, which is why it needs a name of its own rather than being found
+    /// by its label.
+    internal static let openSettings = "receipt-capture-open-settings"
     internal static let problem = "receipt-capture-problem"
 }
