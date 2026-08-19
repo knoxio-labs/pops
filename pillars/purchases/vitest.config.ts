@@ -80,7 +80,13 @@ export default defineConfig({
      * subprocess boot, not a supertest request) and are tracked separately
      * rather than re-litigated here.
      *
-     * No timeout was raised for any of this.
+     * So the decision on the residual is the third of the levers that were
+     * open: a box running far more than it has cores for is a property of
+     * the box, not of this suite, and is recorded here so the next person
+     * does not re-investigate it. The transport was fixed because its cost
+     * was real and removable, not because it disposes of that. Neither of
+     * the other two levers was taken — no timeout was raised anywhere, and
+     * no file stopped asserting wall clock.
      */
     environment: 'node',
     exclude: [...configDefaults.exclude, 'app/**'],
