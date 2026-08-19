@@ -48,6 +48,64 @@ export const ReceiptPartSchema = z.object({
 /** How many parts one receipt may be sent as. */
 export const MAX_RECEIPT_PARTS = 8;
 
+/**
+ * Where the device was standing when the shutter fired.
+ *
+ * **Sensitive, and treated as such throughout.** It is stored because the
+ * user photographed their own receipt, and it is never logged, never put in
+ * a URL or query string, and never echoed in an error — a refused upload
+ * says the body did not match the contract and nothing about what was in
+ * it (`api/rest/error-mapping.ts`).
+ *
+ * WGS-84 signed decimal degrees, the form every phone geolocation API
+ * already returns. No accuracy radius: nothing consumes one yet, and a
+ * field no reader uses is a field that drifts.
+ */
+export const CaptureLocationSchema = z.object({
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+});
+
+/**
+ * What the device knew that the paper cannot state.
+ *
+ * Every field optional, and the whole object optional, so the plain upload
+ * path is byte-identical to what it was: a browser drop-zone posting a
+ * scanned PDF knows none of this and must not have to say so. The mobile
+ * bridge knows all of it directly, and a device clock and a device
+ * location are recorded facts where a timezone read off a printed address
+ * is an inference.
+ *
+ * It does NOT override the receipt's own printed date. A photo taken at the
+ * till and a photo taken at home a week later must produce the same
+ * purchase date, and only the paper knows that one. What `capturedAt`
+ * replaces is the *upload* time in the undated fallback — the shop is
+ * closer to when the shutter fired than to when the file reached the
+ * server — and the purchase still carries `date-uncertain`.
+ */
+export const CaptureMetadataSchema = z.object({
+  /**
+   * ISO-8601 instant from the device clock, with an offset.
+   *
+   * The offset is not decoration: `+11:00` states which offset the device
+   * was on, which is evidence about where it was standing. A client that
+   * normalises to `Z` still gets a correct instant and simply supplies no
+   * such evidence — see `ingest/receipt/capture.ts`.
+   */
+  capturedAt: z.iso.datetime({ offset: true }).optional(),
+  /**
+   * IANA zone the device was in — `Australia/Perth`, `Europe/Paris`.
+   *
+   * The strongest zone evidence there is, because it is a statement rather
+   * than an inference, and the only one carrying a DST rule. A name the
+   * runtime does not know falls through to the next-best evidence instead
+   * of throwing inside a date calculation — the same treatment the zone the
+   * model infers already gets.
+   */
+  timeZone: z.string().trim().min(1).max(64).optional(),
+  location: CaptureLocationSchema.optional(),
+});
+
 export const UploadReceiptBodySchema = z.object({
   /**
    * One receipt, in order, top to bottom. A full supermarket shop does not
@@ -59,6 +117,17 @@ export const UploadReceiptBodySchema = z.object({
    * receipt needing more than eight frames is a scanner's job.
    */
   parts: z.array(ReceiptPartSchema).min(1).max(MAX_RECEIPT_PARTS),
+  /**
+   * What the device knew, for a client that has it. Additive and optional:
+   * a caller that omits it gets exactly the behaviour it got before this
+   * field existed.
+   *
+   * One object for the whole submission rather than one per part, because
+   * several photographs of one long receipt are one capture event — and a
+   * client that could say something different about frame three of the same
+   * till slip would be saying something about a different shop.
+   */
+  capture: CaptureMetadataSchema.optional(),
 });
 
 /** One thing the gate objected to, in the receipt's own terms. */

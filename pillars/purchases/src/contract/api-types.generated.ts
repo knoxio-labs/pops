@@ -1053,6 +1053,15 @@ export interface operations {
     requestBody?: {
       content: {
         'application/json': {
+          capture?: {
+            /** Format: date-time */
+            capturedAt?: string;
+            location?: {
+              latitude: number;
+              longitude: number;
+            };
+            timeZone?: string;
+          };
           parts: {
             dataBase64: string;
             /** @enum {string} */

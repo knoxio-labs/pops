@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { resolveCapture } from '../capture.js';
 import { ExtractedReceiptSchema } from '../extraction.js';
 import { gateExtraction } from '../gate.js';
 import { receiptToPurchase, RECEIPT_SOURCE_ID } from '../purchase.js';
@@ -43,7 +44,7 @@ const map = (over: Partial<ExtractedReceipt> = {}, stored: StoredReceipt[] = [ST
   const extracted = receipt(over);
   const gate = gateExtraction(extracted);
   if (!gate.admissible) throw new Error('test fixture stopped reconciling');
-  return receiptToPurchase(extracted, gate, stored, UPLOADED_AT);
+  return receiptToPurchase(extracted, gate, stored, { uploadedAt: UPLOADED_AT });
 };
 
 const mapped = (over: Partial<ExtractedReceipt> = {}) => map(over).purchase;
@@ -56,7 +57,7 @@ describe('receiptToPurchase invariants', () => {
     const extracted = receipt();
     const gate = gateExtraction(extracted);
     if (!gate.admissible) throw new Error('test fixture stopped reconciling');
-    expect(() => receiptToPurchase(extracted, gate, [], UPLOADED_AT)).toThrow(
+    expect(() => receiptToPurchase(extracted, gate, [], { uploadedAt: UPLOADED_AT })).toThrow(
       'receiptKey needs at least one stored part'
     );
   });
@@ -288,6 +289,102 @@ describe('a receipt that does not say when it happened', () => {
 
   it('does not tag a receipt whose date it could read', () => {
     expect(mapped().tags).not.toContain('date-uncertain');
+  });
+});
+
+describe('what the device and the photograph said', () => {
+  const withCapture = (
+    over: Partial<ExtractedReceipt>,
+    client: Parameters<typeof resolveCapture>[0],
+    photo: Parameters<typeof resolveCapture>[1] = null
+  ) => {
+    const extracted = receipt(over);
+    const gate = gateExtraction(extracted);
+    if (!gate.admissible) throw new Error('test fixture stopped reconciling');
+    return receiptToPurchase(extracted, gate, [STORED], {
+      uploadedAt: UPLOADED_AT,
+      capture: resolveCapture(client, photo, extracted.timeZone),
+    }).purchase;
+  };
+
+  const PHOTO = {
+    localTime: { year: 2026, month: 8, day: 1, hour: 14, minute: 32, second: 7 },
+    utcOffsetMinutes: 600,
+    location: { latitude: -33.87, longitude: 151.21 },
+  };
+
+  it('dates an undated receipt from the shutter rather than from the upload', () => {
+    // Unbounded otherwise: a receipt photographed in October and uploaded in
+    // December is dated December.
+    const purchase = withCapture(
+      { purchasedOn: null },
+      { capturedAt: '2026-08-01T14:32:07+10:00' }
+    );
+    expect(purchase.orderedAt).toBe('2026-08-01T04:32:07.000Z');
+    expect(purchase.tags).toContain('date-uncertain');
+  });
+
+  it('keeps the tag, because a capture time is still not a stated date', () => {
+    expect(withCapture({ purchasedOn: null }, undefined, PHOTO).tags).toContain('date-uncertain');
+  });
+
+  it('lets the printed date win over the capture time', () => {
+    // A photo taken at the till and a photo taken at home a week later must
+    // produce the same purchase date, and only the paper knows it.
+    const purchase = withCapture({}, { capturedAt: '2026-08-08T09:00:00+10:00' });
+    expect(purchase.orderedAt).toBe('2026-08-01T04:32:00.000Z');
+    expect(purchase.tags).not.toContain('date-uncertain');
+  });
+
+  it('places the printed wall clock with the zone the client declared', () => {
+    // Perth is two hours behind Sydney, which is what the model inferred
+    // from the address; the device outranks it.
+    const purchase = withCapture({}, { timeZone: 'Australia/Perth' });
+    expect(purchase.orderedAt).toBe('2026-08-01T06:32:00.000Z');
+    expect(purchase.tags).not.toContain('timezone-uncertain');
+  });
+
+  it("places it with the camera's offset when the receipt named no zone", () => {
+    const purchase = withCapture({ timeZone: null }, undefined, {
+      ...PHOTO,
+      utcOffsetMinutes: 480,
+    });
+    expect(purchase.orderedAt).toBe('2026-08-01T06:32:00.000Z');
+    // An offset states where the camera was, not where the shop is.
+    expect(purchase.tags).toContain('timezone-uncertain');
+  });
+
+  it('carries the capture facts, each with the claimant that stated it', () => {
+    const purchase = withCapture({}, { timeZone: 'Australia/Perth' }, PHOTO);
+    expect(purchase.capture).toEqual({
+      capturedAt: '2026-08-01T04:32:07.000Z',
+      capturedAtSource: 'exif',
+      utcOffsetMinutes: 600,
+      declaredTimeZone: 'Australia/Perth',
+      latitude: -33.87,
+      longitude: 151.21,
+      locationSource: 'exif',
+    });
+  });
+
+  it('states nothing when nothing was supplied', () => {
+    expect(mapped().capture).toEqual({
+      capturedAt: null,
+      capturedAtSource: null,
+      utcOffsetMinutes: null,
+      declaredTimeZone: null,
+      latitude: null,
+      longitude: null,
+      locationSource: null,
+    });
+  });
+
+  it('leaves the checksum alone, because it describes the reading', () => {
+    // A client that starts sending coordinates for uploads it already sent
+    // has corrected nothing the recipe describes.
+    expect(withCapture({}, { location: { latitude: 1, longitude: 2 } }).checksum).toBe(
+      mapped().checksum
+    );
   });
 });
 

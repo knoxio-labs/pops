@@ -6,6 +6,7 @@
  * (the usual cause being `foreign_keys=OFF`) is worse than none, because it
  * reads as protection.
  */
+import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
@@ -13,6 +14,7 @@ import {
   DuplicatePurchaseError,
   InvalidIngestPayloadError,
   listPurchases,
+  purchaseCapture,
   purchases,
 } from '../index.js';
 import { openPurchasesDb } from '../open-purchases-db.js';
@@ -604,5 +606,76 @@ describe('unknown refs', () => {
         })
       )
     ).not.toThrow();
+  });
+});
+
+describe('purchase_capture constraints', () => {
+  const insertCaptureRaw = (values: Record<string, unknown>): void => {
+    counter += 1;
+    const purchaseId = createPurchase(
+      opened.db,
+      coffeeOrder({
+        checksum: `capture-${String(counter)}`,
+        sourceOrderId: `capture-order-${String(counter)}`,
+      })
+    );
+    opened.db
+      .insert(purchaseCapture)
+      .values({ purchaseId, ...values } as never)
+      .run();
+  };
+
+  it('rejects a provenance outside the closed vocabulary', () => {
+    expect(() => {
+      insertCaptureRaw({ capturedAt: '2026-08-01T04:32:07.000Z', capturedAtSource: 'vibes' });
+    }).toThrow(/CHECK constraint failed/i);
+    expect(() => {
+      insertCaptureRaw({ latitude: 1, longitude: 2, locationSource: 'vibes' });
+    }).toThrow(/CHECK constraint failed/i);
+  });
+
+  it('rejects a coordinate that is not on the globe', () => {
+    expect(() => {
+      insertCaptureRaw({ latitude: 91, longitude: 2 });
+    }).toThrow(/CHECK constraint failed/i);
+    expect(() => {
+      insertCaptureRaw({ latitude: 1, longitude: -181 });
+    }).toThrow(/CHECK constraint failed/i);
+  });
+
+  it('rejects half a coordinate, which is not a place', () => {
+    expect(() => {
+      insertCaptureRaw({ latitude: 1 });
+    }).toThrow(/CHECK constraint failed/i);
+    expect(() => {
+      insertCaptureRaw({ longitude: 2 });
+    }).toThrow(/CHECK constraint failed/i);
+  });
+
+  it('rejects an offset no zone on earth has ever used', () => {
+    // Wider than +/-14:00 is a garbled EXIF field or a client sending
+    // nonsense, and applying it moves a purchase across a day boundary.
+    expect(() => {
+      insertCaptureRaw({ utcOffsetMinutes: 900 });
+    }).toThrow(/CHECK constraint failed/i);
+  });
+
+  it('accepts the ordinary row, where most of it is unknown', () => {
+    expect(() => {
+      insertCaptureRaw({ capturedAt: '2026-08-01T04:32:07.000Z', capturedAtSource: 'exif' });
+    }).not.toThrow();
+  });
+
+  it('goes with the order it describes', () => {
+    // The coordinates outlive nothing: deleting the purchase deletes them,
+    // which is the only erasure path this pillar has.
+    const purchaseId = createPurchase(opened.db, coffeeOrder());
+    opened.db
+      .insert(purchaseCapture)
+      .values({ purchaseId, latitude: -33.87, longitude: 151.21, locationSource: 'exif' })
+      .run();
+
+    opened.db.delete(purchases).where(eq(purchases.id, purchaseId)).run();
+    expect(opened.db.select().from(purchaseCapture).all()).toEqual([]);
   });
 });

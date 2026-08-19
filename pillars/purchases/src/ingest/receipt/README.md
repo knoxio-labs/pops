@@ -235,9 +235,11 @@ else does.
 
 ## The endpoint
 
-`POST /receipts` with `{ parts: [{ mediaType, dataBase64 }] }`, where
-`mediaType` is one of the four image types, `application/pdf` or
-`text/plain`. JSON rather than multipart because these are phone photos and
+`POST /receipts` with `{ parts: [{ mediaType, dataBase64 }], capture? }`,
+where `mediaType` is one of the four image types, `application/pdf` or
+`text/plain`, and `capture` is what the device knew — optional and additive,
+so a caller that omits it gets exactly what it got before the field existed
+(see below). JSON rather than multipart because these are phone photos and
 invoices — hundreds of kilobytes, not hundreds of megabytes — and it keeps
 the surface describable in the same ts-rest contract as everything else.
 The API's own 20mb body limit is the effective ceiling; past it the request
@@ -319,6 +321,95 @@ rows rather than a compiled enum (ADR-035), and every other one is
 registered by whoever ingests through it. On use rather than at boot, so a
 deployment that has never received an upload does not claim a source it has
 never written to.
+
+## What the device and the photograph know
+
+A receipt states its own date, sometimes. It never states a timezone, and
+it says nothing at all about where it was photographed — so until now the
+zone came from a model reading the printed address, and an undated receipt
+was dated from the moment its bytes arrived.
+
+Two things know better. A phone photographing a receipt at the till knows
+the instant and the zone directly, and can send both (`capture` on the
+upload body). The photograph itself carries `DateTimeOriginal`,
+`OffsetTimeOriginal` and GPS tags, which are recorded data rather than
+inference (`exif.ts`).
+
+They are not equally credible, and the ranking (`capture.ts`) is the whole
+of the feature:
+
+| rank | evidence                                     | about                       |
+| ---- | -------------------------------------------- | --------------------------- |
+| 1    | the zone the client declared                 | where the device WAS        |
+| 2    | the zone the model inferred from the address | where the SHOP is           |
+| 3    | the offset on the client's `capturedAt`      | where the device was        |
+| 4    | the offset the camera wrote                  | where the CAMERA was        |
+| 5    | the configured default                       | where the shops usually are |
+
+**EXIF ranks below the printed address, and that is the point.** It records
+where the photograph was taken, not where the shop was: a receipt
+photographed at home a week later carries home's coordinates and that
+week's date. It ranks above the default because it is usually right.
+
+The ordering that looks wrong and is not: a client's _declared zone_
+outranks the address while the _offset_ implied by the same client's
+`capturedAt` does not. A device naming `Australia/Perth` is making a
+statement and carries a DST rule with it; `+08:00` is a fact about one
+instant, the same species of evidence a camera writes, and both offsets
+describe the photographer rather than the shop.
+
+An offset is enough to place a wall clock in time and is not enough to name
+a zone — `+09:30` is Adelaide and Broken Hill, and in December it is
+neither — so ranks 3 and 4 resolve through a fixed offset and keep the
+`timezone-uncertain` tag. The tag has not changed meaning: it still says the
+zone was established neither by the receipt nor by the client.
+
+**Where it helps most is the undated receipt.** One that states no date is
+still created and still tagged `date-uncertain`, but it is now dated from
+the shutter rather than from the upload — closer to the shop by an unbounded
+margin, since a receipt photographed in October and uploaded in December was
+otherwise a December purchase. The receipt's own printed date still wins
+whenever it states one: a photo taken at the till and a photo taken at home
+must produce the same purchase date, and only the paper knows it.
+
+**Absent metadata is the ordinary case, not a failure.** iOS and Android
+both strip EXIF on share, a screenshot never had any, a PDF invoice is not a
+photograph, and a browser drop-zone sends no `capture` block at all. Every
+tier falls through, and an upload carrying none of this behaves exactly as
+it did before the feature existed.
+
+There is no EXIF library. Four tags are needed, and the three containers
+that carry them — JPEG's APP1 segment, PNG's `eXIf` chunk, WebP's `EXIF`
+chunk — are a few dozen lines each, where a library is a large parser
+running over bytes an untrusted client uploaded. Everything in `exif.ts` is
+bounds-checked and answers `null` rather than throwing, and the fixtures are
+built byte by byte precisely so the cases a real photograph cannot provide —
+the other byte order, an offset pointing past the end, half a coordinate, a
+truncation at every length — are the ones under test.
+
+### The location is sensitive
+
+It is stored because the user photographed their own receipt, and it is
+handled as the most sensitive thing this pillar holds:
+
+- **Never logged.** No line on the write path prints it.
+- **Never in a URL or a query string.** It arrives in a body and stays
+  there.
+- **Never in an error.** ts-rest's validation issues are already dropped
+  (`api/rest/error-mapping.ts`), so a refused coordinate is not echoed back
+  in the refusal.
+- **Never in a response.** No read path returns it, and the tests assert
+  that the response which stored a location does not contain it.
+
+`purchase_capture` is its own table rather than columns on `purchases` for
+the same reason. A column on the order row is a column every `SELECT` over
+an order carries into every serializer and every read path written later; a
+separate table has to be joined deliberately.
+
+**Nothing resolves a zone from the coordinates.** That needs a geographic
+database this fleet does not carry, and a bounding box would be a guess
+wearing a measurement's clothes. `timeZone` is how a client states a zone;
+coordinates are stored as evidence and read by nothing yet.
 
 ## Naming the merchant
 

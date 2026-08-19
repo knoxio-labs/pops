@@ -73,6 +73,71 @@ export interface LocalParts {
   readonly day: number;
   readonly hour: number;
   readonly minute: number;
+  /**
+   * Optional because a receipt prints minutes at best. A camera writes
+   * seconds, and truncating them would claim a precision the file did not
+   * have to lose.
+   */
+  readonly second?: number;
+}
+
+/**
+ * The reading as if it were UTC, or null when it is not a real moment.
+ *
+ * `Date.UTC` normalises rather than rejects: month 13 becomes January of
+ * the next year, 31 February becomes 3 March, hour 25 becomes tomorrow. A
+ * garbled reading would yield a confident, wrong date. Refusing anything
+ * the round-trip does not reproduce catches all of it, including 31
+ * February, without a table of month lengths.
+ */
+function naiveUtcOf(parts: LocalParts): number | null {
+  const second = parts.second ?? 0;
+  const naive = Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, second);
+  const roundTrip = new Date(naive);
+  if (
+    roundTrip.getUTCFullYear() !== parts.year ||
+    roundTrip.getUTCMonth() !== parts.month - 1 ||
+    roundTrip.getUTCDate() !== parts.day ||
+    roundTrip.getUTCHours() !== parts.hour ||
+    roundTrip.getUTCMinutes() !== parts.minute ||
+    roundTrip.getUTCSeconds() !== second
+  ) {
+    return null;
+  }
+  return naive;
+}
+
+/**
+ * The largest offset any real zone has ever used, either side of UTC.
+ *
+ * A guard rather than a lookup: nothing legitimate exceeds ±14:00, so a
+ * larger figure is a garbled EXIF field or a client sending nonsense, and
+ * applying it would move a purchase across a day boundary.
+ */
+const MAX_UTC_OFFSET_MINUTES = 14 * 60;
+
+function isPlausibleUtcOffsetMinutes(minutes: number): boolean {
+  return Number.isInteger(minutes) && Math.abs(minutes) <= MAX_UTC_OFFSET_MINUTES;
+}
+
+/**
+ * Resolve a local wall-clock reading against a KNOWN offset rather than a
+ * zone, or null when the reading is not a real moment.
+ *
+ * A camera writes `OffsetTimeOriginal`, and a device sends an ISO instant
+ * carrying its own offset — both state the offset that was in force and
+ * neither names a zone. That is enough to place the reading in time and is
+ * not enough to place it in a zone, so the two are separate functions: this
+ * one has no DST rule to apply and needs none.
+ */
+export function instantFromLocalPartsAtOffset(
+  parts: LocalParts,
+  offsetMinutes: number
+): string | null {
+  if (!isPlausibleUtcOffsetMinutes(offsetMinutes)) return null;
+  const naive = naiveUtcOf(parts);
+  if (naive === null) return null;
+  return new Date(naive - offsetMinutes * 60_000).toISOString();
 }
 
 /**
@@ -88,25 +153,10 @@ export function instantFromLocalParts(
   parts: LocalParts,
   timeZone = storeTimeZone()
 ): string | null {
-  const naive = Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute);
+  const naive = naiveUtcOf(parts);
+  if (naive === null) return null;
 
-  // `Date.UTC` normalises rather than rejects: month 13 becomes January of
-  // the next year, 31 February becomes 3 March, hour 25 becomes tomorrow.
-  // A garbled reading would yield a confident, wrong date. Refusing
-  // anything the round-trip does not reproduce catches all of it, including
-  // 31 February, without a table of month lengths.
-  const roundTrip = new Date(naive);
-  if (
-    roundTrip.getUTCFullYear() !== parts.year ||
-    roundTrip.getUTCMonth() !== parts.month - 1 ||
-    roundTrip.getUTCDate() !== parts.day ||
-    roundTrip.getUTCHours() !== parts.hour ||
-    roundTrip.getUTCMinutes() !== parts.minute
-  ) {
-    return null;
-  }
-
-  const firstGuess = zoneOffsetMinutes(roundTrip, timeZone);
+  const firstGuess = zoneOffsetMinutes(new Date(naive), timeZone);
   if (firstGuess === null) return null;
   const corrected = zoneOffsetMinutes(new Date(naive - firstGuess * 60_000), timeZone);
   if (corrected === null) return null;

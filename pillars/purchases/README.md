@@ -6,7 +6,7 @@ Port 3013, `purchases.db`, registers itself with `registry` on boot.
 
 ## The shape
 
-An **order** is the single point of entry. Five flat lists hang off it, and the cross-references between those lists are all optional:
+An **order** is the single point of entry. Five flat lists hang off it — plus one row, at most, recording when and where an uploaded receipt was photographed — and the cross-references between those lists are all optional:
 
 ```
 purchases  (the order)
@@ -20,7 +20,8 @@ purchases  (the order)
   │    ├─ purchase_link_rejections  pairings a human ruled out
   │    └─ purchase_item_allocations which charge paid for which line
   ├─ purchase_tags                  facts about the order that aren't fields
-  └─ purchase_documents             evidence → documents
+  ├─ purchase_documents             evidence → documents
+  └─ purchase_capture               when and where it was photographed
 ```
 
 Four grains, because real purchase data has four and collapsing any of them loses information that cannot be recovered. One Amazon order ships in three boxes and settles as two card charges. One AliExpress order trickles in over two months. A quantity-3 line becomes three inventory records with three serial numbers.

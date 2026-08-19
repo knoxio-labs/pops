@@ -27,11 +27,17 @@
 import { createHash } from 'node:crypto';
 
 import { allocateProRata } from '../allocation.js';
-import { instantFromLocalParts, isKnownTimeZone, storeTimeZone } from '../local-time.js';
+import { instantFromLocalParts, instantFromLocalPartsAtOffset } from '../local-time.js';
 import { parseAmountCents } from '../money.js';
+import { resolveCapture } from './capture.js';
 import { receiptKey } from './store.js';
 
-import type { CreateItemInput, CreatePurchaseInput } from '../../db/services/purchase-input.js';
+import type {
+  CreateCaptureInput,
+  CreateItemInput,
+  CreatePurchaseInput,
+} from '../../db/services/purchase-input.js';
+import type { ResolvedCapture, TimeReference } from './capture.js';
 import type { ExtractedReceipt } from './extraction.js';
 import type { AdmissibleGate } from './gate.js';
 import type { StoredReceipt } from './store.js';
@@ -69,6 +75,13 @@ const DEFAULT_CURRENCY = 'AUD';
 
 export interface ReceiptPurchaseResult {
   readonly purchase: CreatePurchaseInput;
+}
+
+/** Everything about the upload that the receipt itself does not state. */
+export interface ReceiptContext {
+  /** Defaults to now. Stamped by the caller, before the model is asked. */
+  readonly uploadedAt?: string;
+  readonly capture?: ResolvedCapture;
 }
 
 function toItem(
@@ -113,17 +126,22 @@ function withAllocatedShipping(
 }
 
 /**
- * Where the shop is, and how sure we are.
+ * The capture facts worth persisting, or nothing.
  *
- * The model infers a zone from the printed address, so it can name one that
- * does not exist. A rejected guess falls back to the configured default and
- * says so, rather than throwing inside a date calculation or silently
- * placing a Paris receipt in Sydney.
+ * Provenance travels with each fact rather than with the row: a client that
+ * sends only a location leaves the capture time to the camera, and a reader
+ * that cannot tell those apart cannot judge either.
  */
-function resolveZone(extracted: ExtractedReceipt): { zone: string; certain: boolean } {
-  return isKnownTimeZone(extracted.timeZone)
-    ? { zone: extracted.timeZone, certain: true }
-    : { zone: storeTimeZone(), certain: false };
+function captureInput(capture: ResolvedCapture): CreateCaptureInput {
+  return {
+    capturedAt: capture.capturedAt,
+    capturedAtSource: capture.capturedAtSource,
+    utcOffsetMinutes: capture.utcOffsetMinutes,
+    declaredTimeZone: capture.declaredTimeZone,
+    latitude: capture.location?.latitude ?? null,
+    longitude: capture.location?.longitude ?? null,
+    locationSource: capture.locationSource,
+  };
 }
 
 /**
@@ -134,7 +152,7 @@ function resolveZone(extracted: ExtractedReceipt): { zone: string; certain: bool
  * same as none at all, because a normalised 3 March is a fabrication either
  * way.
  */
-function occurredAt(extracted: ExtractedReceipt, zone: string): string | null {
+function occurredAt(extracted: ExtractedReceipt, reference: TimeReference): string | null {
   if (extracted.purchasedOn === null) return null;
   const [year, month, day] = extracted.purchasedOn.split('-').map(Number);
   if (year === undefined || month === undefined || day === undefined) return null;
@@ -144,10 +162,10 @@ function occurredAt(extracted: ExtractedReceipt, zone: string): string | null {
       ? [ASSUMED_HOUR, 0]
       : extracted.purchasedAt.split(':').map(Number);
 
-  return instantFromLocalParts(
-    { year, month, day, hour: hour ?? ASSUMED_HOUR, minute: minute ?? 0 },
-    zone
-  );
+  const parts = { year, month, day, hour: hour ?? ASSUMED_HOUR, minute: minute ?? 0 };
+  return reference.kind === 'offset'
+    ? instantFromLocalPartsAtOffset(parts, reference.offsetMinutes)
+    : instantFromLocalParts(parts, reference.zone);
 }
 
 /**
@@ -198,25 +216,36 @@ function checksumFor(key: string, purchase: Omit<CreatePurchaseInput, 'checksum'
  * The upload instant, not midnight on the upload day: it is a guess either
  * way, and pretending to a precision the guess does not have would make it
  * harder to spot. A reviewer setting the real date replaces it wholesale.
+ *
+ * When something states when the photograph was taken — the client, or the
+ * camera — that instant stands in for the upload in the same fallback, and
+ * the tag stays. The shutter fired closer to the shop than the upload did,
+ * and by an unbounded margin: a receipt photographed in October and
+ * uploaded in December is dated December without it.
+ *
+ * `capture` defaults to what an upload carrying no metadata resolves to,
+ * which is the zone the model inferred or the configured default — exactly
+ * the behaviour this function had before any of it existed.
  */
 export function receiptToPurchase(
   extracted: ExtractedReceipt,
   gate: AdmissibleGate,
   stored: readonly StoredReceipt[],
-  uploadedAt: string = new Date().toISOString()
+  context: ReceiptContext = {}
 ): ReceiptPurchaseResult {
+  const uploadedAt = context.uploadedAt ?? new Date().toISOString();
+  const capture = context.capture ?? resolveCapture(undefined, null, extracted.timeZone);
   const key = receiptKey(stored);
   const [first] = stored;
   if (first === undefined) {
     throw new Error('receiptToPurchase needs at least one stored part');
   }
-  const { zone, certain: zoneCertain } = resolveZone(extracted);
-  const stated = occurredAt(extracted, zone);
-  const orderedAt = stated ?? uploadedAt;
+  const stated = occurredAt(extracted, capture.timeReference);
+  const orderedAt = stated ?? capture.capturedAt ?? uploadedAt;
 
   const tags = [
     ...(stated === null ? [DATE_UNCERTAIN] : []),
-    ...(zoneCertain ? [] : [TIMEZONE_UNCERTAIN]),
+    ...(capture.zoneCertain ? [] : [TIMEZONE_UNCERTAIN]),
   ];
 
   const locale = { currency: extracted.currency };
@@ -269,6 +298,12 @@ export function receiptToPurchase(
     // shop, and a reviewer needs all of them to check a long receipt
     // against what was read from it.
     documents: stored.map((one) => ({ documentUri: one.uri, kind: 'receipt' as const })),
+    // Deliberately outside the checksum below. The checksum answers "would
+    // re-reading this upload produce a different purchase", and these are
+    // facts about the photograph rather than about the reading — a client
+    // that starts sending coordinates for uploads it already sent has not
+    // corrected anything the recipe describes.
+    capture: captureInput(capture),
   };
 
   return { purchase: { ...withoutChecksum, checksum: checksumFor(key, withoutChecksum) } };
