@@ -149,6 +149,26 @@ function positiveRef(negativeRef: string): string {
   return negativeRef === 'S' ? 'N' : 'E';
 }
 
+/**
+ * Is this a coordinate, or a receiver that had nothing to say?
+ *
+ * A device with no fix writes zeros rather than omitting the tags, and a
+ * client whose geolocation call failed can send the same pair. Exactly
+ * `0, 0` is Null Island — open water 600km off Ghana, where the equator
+ * meets the prime meridian — and no receipt is from there.
+ *
+ * Refused rather than stored, because a stored one is indistinguishable from
+ * a real place: it satisfies every bound, passes both column CHECKs, and
+ * would put every fixless upload at the same plausible-looking point. The
+ * cost of the rule is a coordinate genuinely on Null Island to the full
+ * precision of three rationals, which is not a case worth keeping at the
+ * price of admitting all the others.
+ */
+export function isRealFix(location: CaptureLocation | null | undefined): boolean {
+  if (location === null || location === undefined) return false;
+  return location.latitude !== 0 || location.longitude !== 0;
+}
+
 function locationFrom(tiff: Tiff, gps: Map<number, Entry>): CaptureLocation | null {
   const latitude = coordinate(
     rationalTripleOf(tiff, gps.get(TAG_GPS_LATITUDE)),
@@ -164,7 +184,8 @@ function locationFrom(tiff: Tiff, gps: Map<number, Entry>): CaptureLocation | nu
   );
   // Half a coordinate is not a place. Both or neither.
   if (latitude === null || longitude === null) return null;
-  return { latitude, longitude };
+  const fix = { latitude, longitude };
+  return isRealFix(fix) ? fix : null;
 }
 
 /**

@@ -415,6 +415,14 @@ the same reason. A column on the order row is a column every `SELECT` over
 an order carries into every serializer and every read path written later; a
 separate table has to be joined deliberately.
 
+All of that is a decision rather than a consequence of reading the file, and
+it is recorded as one in
+[ADR-047](../../../../../docs/architecture/adr-047-purchases-stores-capture-location.md),
+along with the constraint the mobile bridge inherits: bfm accepts the same
+`capture` object on `POST /mobile/purchases/receipts` and forwards it whole,
+judging none of it, because this pillar owns the judgement and holds the
+upload instant a capture time is measured against.
+
 **Nothing resolves a zone from the coordinates.** That needs a geographic
 database this fleet does not carry, and a bounding box would be a guess
 wearing a measurement's clothes. `timeZone` is how a client states a zone;

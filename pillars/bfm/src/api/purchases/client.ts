@@ -8,7 +8,9 @@
  * own total, deduping the file, creating the purchase — belongs to `purchases`.
  * bfm adds no idempotency key for that reason (ADR-046); the producer
  * content-addresses the bytes, so a retry is the same photograph and the same
- * purchase.
+ * purchase. The capture metadata beside them is proxied on the same terms:
+ * forwarded whole, judged nowhere — see `../../contract/rest-schemas.ts` and
+ * ADR-047.
  *
  * Like the finance leg, every call goes through the {@link PillarGateway}, so a
  * half-broken federation arrives as a value with a kind rather than an
@@ -21,6 +23,7 @@ import { type GatewayOutcome, type PillarGateway, isGatewayOk } from '../pillars
 import { parseOrMismatch } from '../pillars/parse-response.js';
 import { PurchasesReceiptOutcomeSchema, toMobileReceiptOutcome } from './wire.js';
 
+import type { MobileCaptureMetadata } from '../../contract/capture.js';
 import type { MobileReceiptOutcome, MobileReceiptPart } from '../../contract/rest-schemas.js';
 
 /** The purchases pillar id, as registered with the registry. */
@@ -36,24 +39,34 @@ export const PURCHASES_PILLAR_ID = 'purchases';
  */
 export type PurchasesReceiptRouter = {
   receipt: {
-    upload: (input: { parts: readonly MobileReceiptPart[] }) => Promise<unknown>;
+    upload: (input: {
+      parts: readonly MobileReceiptPart[];
+      capture?: MobileCaptureMetadata;
+    }) => Promise<unknown>;
   };
 };
 
 export interface MobilePurchasesClient {
-  uploadReceipt(parts: readonly MobileReceiptPart[]): Promise<GatewayOutcome<MobileReceiptOutcome>>;
+  uploadReceipt(
+    parts: readonly MobileReceiptPart[],
+    capture?: MobileCaptureMetadata
+  ): Promise<GatewayOutcome<MobileReceiptOutcome>>;
 }
 
 export function createMobilePurchasesClient(gateway: PillarGateway): MobilePurchasesClient {
   return {
-    async uploadReceipt(parts: readonly MobileReceiptPart[]) {
+    async uploadReceipt(parts: readonly MobileReceiptPart[], capture?: MobileCaptureMetadata) {
       // The parts travel unchanged. Re-encoding them here would be a second
       // representation of bytes the producer content-addresses, so a byte-level
       // difference would break its dedup and turn a retry into a second
       // purchase.
+      // The capture block travels unchanged too, and is omitted entirely when
+      // the handset sent none rather than passed as an explicit `undefined`:
+      // the producer's body schema distinguishes absent from present, and
+      // relying on JSON dropping the key would be relying on a coincidence.
       const outcome = await gateway.call<PurchasesReceiptRouter, unknown>(
         PURCHASES_PILLAR_ID,
-        (handle) => handle.receipt.upload({ parts })
+        (handle) => handle.receipt.upload(capture === undefined ? { parts } : { parts, capture })
       );
 
       const answered = parseOrMismatch(

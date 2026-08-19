@@ -288,8 +288,9 @@ count query per scroll tick, and a total that is stale the moment it is read.
 read on the phone's behalf, and what it may be is fixed by
 [ADR-046](../../docs/architecture/adr-046-mobile-write-surface-is-ingestion-only.md):
 the mobile surface accepts **ingestion** — content the handset captured — and
-never a mutation of a record a pillar already holds. Four properties follow,
-and each is asserted in `src/api/__tests__/mobile-receipts.test.ts` or
+never a mutation of a record a pillar already holds. Five properties follow,
+and each is asserted in `src/api/__tests__/mobile-receipts.test.ts`,
+`src/api/purchases/__tests__/client.test.ts` or
 `src/contract/__tests__/mobile-verbs.test.ts`:
 
 - **The bytes travel unchanged.** `purchases` content-addresses them, which is
@@ -323,6 +324,22 @@ and each is asserted in `src/api/__tests__/mobile-receipts.test.ts` or
   purchases refuses at its own ceiling") rather than fixed here, since the
   mapping it exposes is shared by every cross-pillar call in the repo, not
   specific to receipts.
+- **The capture block travels unchanged too, and is judged nowhere.** The body
+  may carry `capture`: the handset's own clock at the shutter (`capturedAt`,
+  offset required), the IANA zone it was in, and where it was standing
+  (`location`, WGS-84 signed decimal degrees). Every field optional and the
+  whole object optional, so an app build predating it sends exactly what it
+  sent before — which matters more here than elsewhere, because the client is
+  distributed rather than deployed and old versions call this route from
+  hardware nobody can roll forward ([ADR-043](../../docs/architecture/adr-043-clients-as-a-unit-kind.md)).
+  `purchases` decides what each field is worth and stores it apart from the
+  order row ([ADR-047](../../docs/architecture/adr-047-purchases-stores-capture-location.md));
+  bfm judges none of it, for the same reason it mints no idempotency key. It
+  does mirror the producer's bounds, so a coordinate that is not a point on the
+  globe is a `400` here rather than an upstream error the phone cannot act on —
+  and the refusal names neither the field nor the value, because a location is
+  the most sensitive thing this route carries and a validation error quoting it
+  is the ordinary way one reaches a log it was never meant to.
 - **The grant is a write grant.** `purchases.receipt` was added to
   `BFM_SERVICE_ACCOUNT_SCOPES` for this and authorises nothing else in that
   pillar. See [Provisioning the service account](#provisioning-the-service-account).

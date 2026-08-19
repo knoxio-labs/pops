@@ -9,7 +9,8 @@
  *
  * The sensitivity rules are asserted here too, because they are properties
  * of the endpoint rather than of a function: a location never appears in a
- * response, and a refused one is never echoed back.
+ * response, a refused one is never echoed back, and none of it reaches the
+ * vision prompt.
  */
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -270,5 +271,125 @@ describe('a location is sensitive data', () => {
       expect(response.status).toBe(400);
     }
     expect(captureRows()).toHaveLength(0);
+  });
+
+  it('never reaches the vision prompt', async () => {
+    // The pillar's standing rule is that only what the paper shows goes to
+    // the Anthropic API — merchant descriptions, never account or card
+    // numbers. A coordinate is on the same side of that line, along with the
+    // device clock and the device zone.
+    //
+    // `ReceiptVision.read` takes the parts and nothing else, so this is
+    // structural today. The assertion exists because that is precisely how it
+    // stops being structural: somebody widens the struct the prompt is built
+    // from, and every other test in this pillar still passes.
+    const seen: unknown[] = [];
+    const watching: ReceiptVision = {
+      read: async (parts) => {
+        seen.push(parts);
+        return JSON.stringify(READING);
+      },
+    };
+    const app = createPurchasesApiApp({
+      purchasesDb: opened,
+      version: '1.2.3',
+      selfBaseUrl: 'http://localhost:3013',
+      vision: watching,
+      merchant: NO_MERCHANT,
+    });
+
+    await post(app, {
+      parts: [{ mediaType: 'image/jpeg', dataBase64: PHOTOGRAPHED_IN_SYDNEY }],
+      capture: {
+        capturedAt: '2026-08-01T14:32:00+10:00',
+        timeZone: 'Australia/Perth',
+        location: { latitude: -31.9523, longitude: 115.8613 },
+      },
+    });
+
+    expect(seen).toHaveLength(1);
+    const serialised = JSON.stringify(seen);
+    for (const forbidden of [
+      'latitude',
+      'longitude',
+      'location',
+      '31.95',
+      '115.86',
+      'Australia/Perth',
+      'capturedAt',
+      'timeZone',
+    ]) {
+      expect(serialised).not.toContain(forbidden);
+    }
+
+    // The photograph's own bytes DO go to the model, and those bytes contain
+    // the EXIF block this receipt's location was read out of. That is the
+    // file rather than a field the pillar extracted and forwarded, and the
+    // model has to see it to read the receipt at all.
+    expect(serialised).toContain('dataBase64');
+  });
+});
+
+describe('a receiver that had nothing to say', () => {
+  it('does not store Null Island when the client sends it', async () => {
+    // A geolocation call that failed reports `0, 0` as readily as one that
+    // succeeded reports a place. It satisfies every bound and both column
+    // CHECKs, so nothing downstream would catch it — and every fixless
+    // upload would land at the same plausible-looking point in open water
+    // off Ghana.
+    const response = await post(appWith(), {
+      parts: [{ mediaType: 'image/jpeg', dataBase64: PLAIN_JPEG }],
+      capture: {
+        capturedAt: '2026-08-01T14:32:00+10:00',
+        location: { latitude: 0, longitude: 0 },
+      },
+    });
+
+    expect(response.status).toBe(200);
+    const [row] = captureRows();
+    // The upload is kept and the clock is still recorded — only the
+    // non-place is dropped.
+    expect(row?.capturedAt).not.toBeNull();
+    expect(row?.latitude).toBeNull();
+    expect(row?.longitude).toBeNull();
+    expect(row?.locationSource).toBeNull();
+  });
+
+  it('does not store Null Island when a camera wrote it into the file', async () => {
+    const fixless = jpegWithExif({
+      dateTimeOriginal: '2026:08:01 14:32:07',
+      offsetTimeOriginal: '+10:00',
+      gps: {
+        latitude: dms(0, 0, 0),
+        latitudeRef: 'N',
+        longitude: dms(0, 0, 0),
+        longitudeRef: 'E',
+      },
+    }).toString('base64');
+
+    const response = await post(appWith(), {
+      parts: [{ mediaType: 'image/jpeg', dataBase64: fixless }],
+    });
+
+    expect(response.status).toBe(200);
+    const [row] = captureRows();
+    expect(row?.capturedAt).not.toBeNull();
+    expect(row?.latitude).toBeNull();
+    expect(row?.locationSource).toBeNull();
+  });
+
+  it('still stores a coordinate that is only nearly zero', async () => {
+    // The rule is exactly `0, 0`, not "near the origin". A real fix in the
+    // Gulf of Guinea is a place, and rounding the rule outwards would start
+    // discarding them.
+    const response = await post(appWith(), {
+      parts: [{ mediaType: 'image/jpeg', dataBase64: PLAIN_JPEG }],
+      capture: { location: { latitude: 0, longitude: 0.0001 } },
+    });
+
+    expect(response.status).toBe(200);
+    const [row] = captureRows();
+    expect(row?.longitude).toBeCloseTo(0.0001, 6);
+    expect(row?.locationSource).toBe('client');
   });
 });
