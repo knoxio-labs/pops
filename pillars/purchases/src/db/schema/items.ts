@@ -169,7 +169,16 @@ export const purchaseItemUnits = sqliteTable(
     itemId: text('item_id')
       .notNull()
       .references(() => purchaseItems.id, { onDelete: 'cascade' }),
-    /** Present in the Amazon export as `Item Serial Number`, and the strongest identity a unit can have. */
+    /**
+     * The serial engraved on the hardware — what a warranty claim or an
+     * insurance report is keyed on. Nothing writes this column yet.
+     *
+     * Not the Amazon DSAR export's `Item Serial Number`: on the reference
+     * bundle 28 of its 31 populated rows carry an `Authenticity_2D=AZ:...`
+     * token, Amazon's Transparency anti-counterfeit code. It identifies a
+     * *package*, not the device inside it, and does not belong here — see
+     * `src/ingest/amazon/README.md`.
+     */
     serialNumber: text('serial_number'),
     inventoryItemUri: text('inventory_item_uri'),
     inventoryItemStaleAt: text('inventory_item_stale_at'),

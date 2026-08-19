@@ -40,6 +40,12 @@ Every one of these is present in the reference bundle and every one is silent if
 - **Quantity 0 is real** on 27 rows — cancelled lines, which the contract's minimum of 1 cannot express. They are ingested at quantity 1 and flagged rather than dropped, because three cancelled rows in the bundle carry a non-zero total and "cancelled ⇒ ignore" would lose real money from the reconciliation.
 - **Gift messages contain newlines** inside quoted fields on 7 rows, which is why this goes through a CSV parser rather than splitting on `\n`.
 
+## `Item Serial Number` is not a device serial
+
+Populated on 31 of the reference bundle's rows. **28 of those 31 carry an `Authenticity_2D=AZ:...` value** — Amazon's Transparency anti-counterfeit token, printed on the packaging and scanned to prove the unit is genuine. It identifies a _package_, not the device inside it: it is not the serial engraved on the hardware, it does not appear on a warranty claim, and it will not match anything the owner can read off the item.
+
+`purchase_item_units.serial_number` is for the device serial. Do not map this column into it, including "cleaned up" by stripping the `Authenticity_2D=` prefix — the remainder is still not a device serial. This adapter does not read the column at all.
+
 ## Anomalies
 
 Parsing never aborts. A 943-row backfill that dies on row 700 is worse than one that lands every order it can and names what it could not take. Every compromise is reported as an `AmazonAnomaly` carrying the order it happened on.
