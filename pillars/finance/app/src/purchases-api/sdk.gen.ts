@@ -10,6 +10,22 @@ import type {
   AnalyticsProductLeaderboardData,
   AnalyticsProductLeaderboardErrors,
   AnalyticsProductLeaderboardResponses,
+  ProductDeleteAliasData,
+  ProductDeleteAliasErrors,
+  ProductDeleteAliasResponses,
+  ProductDeleteData,
+  ProductDeleteErrors,
+  ProductDeleteResponses,
+  ProductListData,
+  ProductListResponses,
+  ProductProposeData,
+  ProductProposeResponses,
+  ProductRenameData,
+  ProductRenameErrors,
+  ProductRenameResponses,
+  ProductUpdateAliasData,
+  ProductUpdateAliasErrors,
+  ProductUpdateAliasResponses,
   PurchaseCreateData,
   PurchaseCreateErrors,
   PurchaseCreateResponses,
@@ -122,6 +138,100 @@ export const purchaseItemsByTag = <ThrowOnError extends boolean = false>(
   (options.client ?? client).get<PurchaseItemsByTagResponses, unknown, ThrowOnError>({
     url: '/items',
     ...options,
+  });
+
+/**
+ * The learned product dictionary: products and the printed wordings that resolve to them
+ */
+export const productList = <ThrowOnError extends boolean = false>(
+  options?: Options<ProductListData, ThrowOnError>
+): RequestResult<ProductListResponses, unknown, ThrowOnError> =>
+  (options?.client ?? client).get<ProductListResponses, unknown, ThrowOnError>({
+    url: '/products',
+    ...options,
+  });
+
+/**
+ * Forget one printed wording, returning its lines to the on-the-fly grouping
+ */
+export const productDeleteAlias = <ThrowOnError extends boolean = false>(
+  options: Options<ProductDeleteAliasData, ThrowOnError>
+): RequestResult<ProductDeleteAliasResponses, ProductDeleteAliasErrors, ThrowOnError> =>
+  (options.client ?? client).delete<
+    ProductDeleteAliasResponses,
+    ProductDeleteAliasErrors,
+    ThrowOnError
+  >({
+    url: '/products/aliases/{aliasId}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Merge, split, assert or retract one printed wording
+ */
+export const productUpdateAlias = <ThrowOnError extends boolean = false>(
+  options: Options<ProductUpdateAliasData, ThrowOnError>
+): RequestResult<ProductUpdateAliasResponses, ProductUpdateAliasErrors, ThrowOnError> =>
+  (options.client ?? client).patch<
+    ProductUpdateAliasResponses,
+    ProductUpdateAliasErrors,
+    ThrowOnError
+  >({
+    url: '/products/aliases/{aliasId}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Mint a dictionary entry per printed wording and retire unconfirmed entries nothing prints
+ */
+export const productPropose = <ThrowOnError extends boolean = false>(
+  options?: Options<ProductProposeData, ThrowOnError>
+): RequestResult<ProductProposeResponses, unknown, ThrowOnError> =>
+  (options?.client ?? client).post<ProductProposeResponses, unknown, ThrowOnError>({
+    url: '/products/proposals',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  });
+
+/**
+ * Forget a product and every wording that resolved to it
+ */
+export const productDelete = <ThrowOnError extends boolean = false>(
+  options: Options<ProductDeleteData, ThrowOnError>
+): RequestResult<ProductDeleteResponses, ProductDeleteErrors, ThrowOnError> =>
+  (options.client ?? client).delete<ProductDeleteResponses, ProductDeleteErrors, ThrowOnError>({
+    url: '/products/{productId}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Rename a product without touching the wordings that resolve to it
+ */
+export const productRename = <ThrowOnError extends boolean = false>(
+  options: Options<ProductRenameData, ThrowOnError>
+): RequestResult<ProductRenameResponses, ProductRenameErrors, ThrowOnError> =>
+  (options.client ?? client).patch<ProductRenameResponses, ProductRenameErrors, ThrowOnError>({
+    url: '/products/{productId}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
   });
 
 /**

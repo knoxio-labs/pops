@@ -124,9 +124,11 @@ export type AnalyticsProductLeaderboardResponses = {
    */
   200: {
     coverage: {
+      confirmedProductLines: number;
       lineCount: number;
       nameKeyedLines: number;
       productCount: number;
+      proposedProductLines: number;
       skuKeyedLines: number;
       unidentifiedLines: number;
     };
@@ -181,6 +183,16 @@ export type AnalyticsProductLeaderboardResponses = {
             basis: 'name';
             name: string;
             normalisedName: string;
+            sku: null;
+            source: string;
+          }
+        | {
+            basis: 'product';
+            confirmed: boolean;
+            label: string;
+            name: string;
+            normalisedName: string;
+            productId: string;
             sku: null;
             source: string;
           }
@@ -261,6 +273,242 @@ export type PurchaseItemsByTagResponses = {
 
 export type PurchaseItemsByTagResponse =
   PurchaseItemsByTagResponses[keyof PurchaseItemsByTagResponses];
+
+export type ProductListData = {
+  body?: never;
+  path?: never;
+  query?: {
+    source?: string;
+    confirmed?: 'true' | 'false';
+  };
+  url: '/products';
+};
+
+export type ProductListResponses = {
+  /**
+   * 200
+   */
+  200: {
+    products: Array<{
+      aliases: Array<{
+        confirmedAt: string | null;
+        createdAt: string;
+        id: string;
+        normalisedName: string;
+        printedName: string;
+        scopeKey: string;
+        source: string;
+      }>;
+      createdAt: string;
+      id: string;
+      label: string;
+    }>;
+  };
+};
+
+export type ProductListResponse = ProductListResponses[keyof ProductListResponses];
+
+export type ProductDeleteAliasData = {
+  /**
+   * Body
+   */
+  body?: {
+    [key: string]: never;
+  };
+  path: {
+    aliasId: string;
+  };
+  query?: never;
+  url: '/products/aliases/{aliasId}';
+};
+
+export type ProductDeleteAliasErrors = {
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+  };
+};
+
+export type ProductDeleteAliasError = ProductDeleteAliasErrors[keyof ProductDeleteAliasErrors];
+
+export type ProductDeleteAliasResponses = {
+  /**
+   * 200
+   */
+  200: {
+    ok: true;
+  };
+};
+
+export type ProductDeleteAliasResponse =
+  ProductDeleteAliasResponses[keyof ProductDeleteAliasResponses];
+
+export type ProductUpdateAliasData = {
+  /**
+   * Body
+   */
+  body?: {
+    confirmed?: boolean;
+    productId?: string | null;
+  };
+  path: {
+    aliasId: string;
+  };
+  query?: never;
+  url: '/products/aliases/{aliasId}';
+};
+
+export type ProductUpdateAliasErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+  };
+};
+
+export type ProductUpdateAliasError = ProductUpdateAliasErrors[keyof ProductUpdateAliasErrors];
+
+export type ProductUpdateAliasResponses = {
+  /**
+   * 200
+   */
+  200: {
+    confirmedAt: string | null;
+    createdAt: string;
+    id: string;
+    normalisedName: string;
+    printedName: string;
+    scopeKey: string;
+    source: string;
+  };
+};
+
+export type ProductUpdateAliasResponse =
+  ProductUpdateAliasResponses[keyof ProductUpdateAliasResponses];
+
+export type ProductProposeData = {
+  /**
+   * Body
+   */
+  body?: {
+    [key: string]: never;
+  };
+  path?: never;
+  query?: never;
+  url: '/products/proposals';
+};
+
+export type ProductProposeResponses = {
+  /**
+   * 200
+   */
+  200: {
+    confirmed: number;
+    observedWordings: number;
+    proposed: number;
+    retired: number;
+    scannedLines: number;
+  };
+};
+
+export type ProductProposeResponse = ProductProposeResponses[keyof ProductProposeResponses];
+
+export type ProductDeleteData = {
+  /**
+   * Body
+   */
+  body?: {
+    [key: string]: never;
+  };
+  path: {
+    productId: string;
+  };
+  query?: never;
+  url: '/products/{productId}';
+};
+
+export type ProductDeleteErrors = {
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+  };
+};
+
+export type ProductDeleteError = ProductDeleteErrors[keyof ProductDeleteErrors];
+
+export type ProductDeleteResponses = {
+  /**
+   * 200
+   */
+  200: {
+    ok: true;
+  };
+};
+
+export type ProductDeleteResponse = ProductDeleteResponses[keyof ProductDeleteResponses];
+
+export type ProductRenameData = {
+  /**
+   * Body
+   */
+  body?: {
+    label: string;
+  };
+  path: {
+    productId: string;
+  };
+  query?: never;
+  url: '/products/{productId}';
+};
+
+export type ProductRenameErrors = {
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+  };
+};
+
+export type ProductRenameError = ProductRenameErrors[keyof ProductRenameErrors];
+
+export type ProductRenameResponses = {
+  /**
+   * 200
+   */
+  200: {
+    aliases: Array<{
+      confirmedAt: string | null;
+      createdAt: string;
+      id: string;
+      normalisedName: string;
+      printedName: string;
+      scopeKey: string;
+      source: string;
+    }>;
+    createdAt: string;
+    id: string;
+    label: string;
+  };
+};
+
+export type ProductRenameResponse = ProductRenameResponses[keyof ProductRenameResponses];
 
 export type PurchaseListData = {
   body?: never;

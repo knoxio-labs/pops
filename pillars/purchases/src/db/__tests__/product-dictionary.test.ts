@@ -13,7 +13,7 @@
  * verb the pass has is tested against a confirmed entry as well as an
  * unconfirmed one.
  */
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   createPurchase,
@@ -126,11 +126,13 @@ describe('what the proposal pass learns', () => {
 
     const outcome = proposeProducts(opened.db);
 
+    // One entry: the two chicken lines normalise alike, and the sku line is
+    // not merely unproposed — an entry for it could never be reached, because
+    // the dictionary is not consulted when a sku is stated.
     expect(outcome).toMatchObject({ scannedLines: 3, observedWordings: 1, proposed: 1 });
-    expect(listProducts(opened.db)).toHaveLength(1);
-    // The sku line is not merely unproposed — an entry for it could never be
-    // reached, because the dictionary is not consulted when a sku is stated.
-    expect(aliasFor('CHK BRST 1KG').normalisedName).toBe('chk brst 1kg');
+    const products = listProducts(opened.db);
+    expect(products).toHaveLength(1);
+    expect(products[0]?.aliases.map((alias) => alias.normalisedName)).toEqual(['chk brst 1kg']);
   });
 
   it('is idempotent: a second run over unchanged lines changes nothing', () => {
@@ -317,9 +319,20 @@ describe('what a human asserts, and how it is undone', () => {
 
   it('keeps the original instant when an assertion is re-stated', () => {
     const aliasId = aliasFor('CHK BRST 1KG').id;
-    const first = updateAlias(opened.db, aliasId, { confirmed: true }).confirmedAt;
+    // The clock is held still and then moved on purpose: both writes land in
+    // the same millisecond otherwise, and the assertion would pass against an
+    // implementation that overwrites the timestamp on every call.
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date('2026-03-01T00:00:00.000Z'));
+      const first = updateAlias(opened.db, aliasId, { confirmed: true }).confirmedAt;
+      vi.setSystemTime(new Date('2026-04-01T00:00:00.000Z'));
 
-    expect(updateAlias(opened.db, aliasId, { confirmed: true }).confirmedAt).toBe(first);
+      expect(updateAlias(opened.db, aliasId, { confirmed: true }).confirmedAt).toBe(first);
+      expect(first).toBe('2026-03-01T00:00:00.000Z');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('forgets one wording on request, returning its lines to the on-the-fly grouping', () => {
