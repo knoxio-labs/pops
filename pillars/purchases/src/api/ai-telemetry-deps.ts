@@ -6,17 +6,32 @@
  * backfill does not re-read `GET /ai-pricing` a hundred times. Reporting is
  * fire-and-forget — a slow or absent sink never changes what a caller does.
  *
- * `report` is deliberately unset so `callWithLogging` falls back to the
- * env-driven sink, which no-ops under vitest when `AI_API_URL` and
- * `POPS_INTERNAL_CREDENTIAL` are unset. A test can therefore exercise the
- * real wrapper without a network.
+ * `report` is the env-driven sink built explicitly rather than left to the
+ * wrapper's default, for two reasons: a record the ai pillar refuses is
+ * logged instead of dropped, because the cost of losing one is a ledger that
+ * is quietly short and a fleet AI spend figure nobody knows to distrust; and
+ * the credential is resolved file-then-environment here, which the default's
+ * env-only read is not.
+ *
+ * The sink is deliberately NOT given the pricing lookup's `ai-api` fallback
+ * URL: an absent `AI_API_URL` is what makes it a no-op under vitest, and a
+ * default would have every test in this pillar POST at a hostname that does
+ * not resolve. The deployed stack sets `AI_API_URL` instead, which is also
+ * what the pricing lookup reads.
  */
 import {
   type CallWithLoggingDeps,
+  createEnvReportSink,
   httpLookupPricing,
   type LookupPricingFn,
   type PricingEntry,
 } from '@pops/ai-telemetry';
+
+import {
+  AI_BASE_URL_ENV,
+  ledgerReportFailedMessage,
+  resolveLedgerCredential,
+} from './ai-ledger-credential.js';
 
 export const PURCHASES_DOMAIN = 'purchases';
 export const ANTHROPIC_PROVIDER = 'anthropic';
@@ -45,8 +60,14 @@ export function purchasesTelemetryDeps(): CallWithLoggingDeps {
   if (override) return override;
   cached ??= {
     lookupPricing: memoizePricing(
-      httpLookupPricing(process.env['AI_API_URL'] ?? DEFAULT_AI_API_URL)
+      httpLookupPricing(process.env[AI_BASE_URL_ENV] ?? DEFAULT_AI_API_URL)
     ),
+    report: createEnvReportSink({
+      credential: resolveLedgerCredential(),
+      onError: (error) => {
+        console.warn(ledgerReportFailedMessage(error));
+      },
+    }),
   };
   return cached;
 }
