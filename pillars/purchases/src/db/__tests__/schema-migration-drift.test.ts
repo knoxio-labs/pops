@@ -33,6 +33,8 @@ import {
   purchaseItemNotes,
   purchaseLinkRejections,
   purchaseItems,
+  purchaseProductAliases,
+  purchaseProducts,
   purchaseItemTags,
   purchaseItemUnits,
   purchases,
@@ -74,6 +76,8 @@ const ALL_TABLES: readonly SQLiteTable[] = [
   purchaseItemAllocations,
   purchaseDocuments,
   purchaseCapture,
+  purchaseProducts,
+  purchaseProductAliases,
 ];
 
 interface ColumnInfo {

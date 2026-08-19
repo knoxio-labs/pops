@@ -176,6 +176,25 @@ export const ProductIdentitySchema = z.discriminatedUnion('basis', [
     normalisedName: z.string(),
   }),
   z.object({
+    basis: z.literal('product'),
+    source: z.string(),
+    sku: z.null(),
+    /** As the merchant printed it, for display beside the product's own name. */
+    name: z.string(),
+    /** The wording that matched the dictionary entry. */
+    normalisedName: z.string(),
+    /** The product this wording resolves to — the grouping key. */
+    productId: z.string(),
+    /** The product's own name, which a human may have written. */
+    label: z.string(),
+    /**
+     * Whether a human asserted this wording is that product. False means a
+     * pass proposed the entry, which is exactly as strong a claim as a
+     * `name` group: one wording, one product, nothing merged.
+     */
+    confirmed: z.boolean(),
+  }),
+  z.object({
     basis: z.literal('unidentified'),
     source: z.string(),
     sku: z.null(),
@@ -330,13 +349,19 @@ export const ProductPurchasesSchema = z.object({
  *
  * The route's honesty check. Exactly one shipped adapter states a product
  * identifier, so a leaderboard over grocery or receipt lines rests almost
- * entirely on normalised printed names — a weaker claim than one over
- * sku-keyed lines, and one no row on its own reveals.
+ * entirely on printed names — a weaker claim than one over sku-keyed lines,
+ * and one no row on its own reveals. The two dictionary figures are counted
+ * apart for the same reason: an entry a human asserted is evidence, an entry
+ * a pass minted is the printed-name proposal with an id attached.
  */
 export const ProductIdentityCoverageSchema = z.object({
   lineCount: z.int().min(0),
   /** Grouped on an identifier the merchant stated. */
   skuKeyedLines: z.int().min(0),
+  /** Grouped through a dictionary entry a human asserted. */
+  confirmedProductLines: z.int().min(0),
+  /** Grouped through a dictionary entry a pass proposed and nobody has confirmed. */
+  proposedProductLines: z.int().min(0),
   /** Grouped on a normalised printed name — a proposal, not an assertion. */
   nameKeyedLines: z.int().min(0),
   /** Grouped with nothing: no sku, and no name that normalises to anything. */

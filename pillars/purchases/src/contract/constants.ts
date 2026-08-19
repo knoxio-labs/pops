@@ -269,16 +269,19 @@ export type CaptureSource = (typeof CAPTURE_SOURCES)[number];
  * What evidence held a product group together in a product-grain aggregate.
  *
  * Not a column either: decided per line from what its source actually
- * stated. `sku` is the merchant's own identifier and the only basis a source
- * asserts; `name` is printed names that normalise alike, which is a proposal
- * and can both over- and under-merge; `unidentified` is a line stating
- * neither, grouped with nothing.
+ * stated, plus the learned dictionary. `sku` is the merchant's own
+ * identifier and the only basis a source asserts; `product` is a dictionary
+ * entry claiming the printed wording, which is as strong as the entry's own
+ * `confirmed` flag and no stronger; `name` is printed names that normalise
+ * alike with no entry between them, a proposal that can both over- and
+ * under-merge; `unidentified` is a line stating neither, grouped with
+ * nothing.
  *
- * Three-way for the reason {@link MERCHANT_RESOLUTIONS} is: exactly one
- * shipped adapter writes a sku, so collapsing the bases would present a
+ * Split this finely for the reason {@link MERCHANT_RESOLUTIONS} is: exactly
+ * one shipped adapter writes a sku, so collapsing the bases would present a
  * name match as a product identity across the majority of lines.
  */
-export const PRODUCT_IDENTITY_BASES = ['sku', 'name', 'unidentified'] as const;
+export const PRODUCT_IDENTITY_BASES = ['sku', 'product', 'name', 'unidentified'] as const;
 export type ProductIdentityBasis = (typeof PRODUCT_IDENTITY_BASES)[number];
 
 /**

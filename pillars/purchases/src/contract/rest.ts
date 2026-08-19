@@ -12,6 +12,7 @@
 import { initContract } from '@ts-rest/core';
 
 import { purchasesAnalyticsContract } from './rest-analytics.js';
+import { purchasesProductContract } from './rest-products.js';
 import { purchasesPurchaseContract } from './rest-purchases.js';
 import { purchasesReceiptContract } from './rest-receipts.js';
 import { purchasesReconcileContract } from './rest-reconcile.js';
@@ -23,6 +24,7 @@ const c = initContract();
 export const purchasesContract = c.router(
   {
     analytics: purchasesAnalyticsContract,
+    product: purchasesProductContract,
     purchase: purchasesPurchaseContract,
     receipt: purchasesReceiptContract,
     reconcile: purchasesReconcileContract,

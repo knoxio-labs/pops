@@ -54,6 +54,76 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/products': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** The learned product dictionary: products and the printed wordings that resolve to them */
+    get: operations['product.list'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/products/aliases/{aliasId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Forget one printed wording, returning its lines to the on-the-fly grouping */
+    delete: operations['product.deleteAlias'];
+    options?: never;
+    head?: never;
+    /** Merge, split, assert or retract one printed wording */
+    patch: operations['product.updateAlias'];
+    trace?: never;
+  };
+  '/products/proposals': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Mint a dictionary entry per printed wording and retire unconfirmed entries nothing prints */
+    post: operations['product.propose'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/products/{productId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Forget a product and every wording that resolved to it */
+    delete: operations['product.delete'];
+    options?: never;
+    head?: never;
+    /** Rename a product without touching the wordings that resolve to it */
+    patch: operations['product.rename'];
+    trace?: never;
+  };
   '/purchases': {
     parameters: {
       query?: never;
@@ -444,9 +514,11 @@ export interface operations {
         content: {
           'application/json': {
             coverage: {
+              confirmedProductLines: number;
               lineCount: number;
               nameKeyedLines: number;
               productCount: number;
+              proposedProductLines: number;
               skuKeyedLines: number;
               unidentifiedLines: number;
             };
@@ -511,6 +583,18 @@ export interface operations {
                     basis: 'name';
                     name: string;
                     normalisedName: string;
+                    /** @enum {string|null} */
+                    sku: null;
+                    source: string;
+                  }
+                | {
+                    /** @enum {string} */
+                    basis: 'product';
+                    confirmed: boolean;
+                    label: string;
+                    name: string;
+                    normalisedName: string;
+                    productId: string;
                     /** @enum {string|null} */
                     sku: null;
                     source: string;
@@ -606,6 +690,275 @@ export interface operations {
                 url: string | null;
               };
             }[];
+          };
+        };
+      };
+    };
+  };
+  'product.list': {
+    parameters: {
+      query?: {
+        source?: string;
+        confirmed?: 'true' | 'false';
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            products: {
+              aliases: {
+                confirmedAt: string | null;
+                createdAt: string;
+                id: string;
+                normalisedName: string;
+                printedName: string;
+                scopeKey: string;
+                source: string;
+              }[];
+              createdAt: string;
+              id: string;
+              label: string;
+            }[];
+          };
+        };
+      };
+    };
+  };
+  'product.deleteAlias': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        aliasId: string;
+      };
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': Record<string, never>;
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            /** @enum {boolean} */
+            ok: true;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+          };
+        };
+      };
+    };
+  };
+  'product.updateAlias': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        aliasId: string;
+      };
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          confirmed?: boolean;
+          productId?: string | null;
+        };
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            confirmedAt: string | null;
+            createdAt: string;
+            id: string;
+            normalisedName: string;
+            printedName: string;
+            scopeKey: string;
+            source: string;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+          };
+        };
+      };
+    };
+  };
+  'product.propose': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': Record<string, never>;
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            confirmed: number;
+            observedWordings: number;
+            proposed: number;
+            retired: number;
+            scannedLines: number;
+          };
+        };
+      };
+    };
+  };
+  'product.delete': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        productId: string;
+      };
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': Record<string, never>;
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            /** @enum {boolean} */
+            ok: true;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+          };
+        };
+      };
+    };
+  };
+  'product.rename': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        productId: string;
+      };
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          label: string;
+        };
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            aliases: {
+              confirmedAt: string | null;
+              createdAt: string;
+              id: string;
+              normalisedName: string;
+              printedName: string;
+              scopeKey: string;
+              source: string;
+            }[];
+            createdAt: string;
+            id: string;
+            label: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
           };
         };
       };

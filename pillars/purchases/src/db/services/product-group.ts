@@ -15,6 +15,11 @@
  * `2026-01-01T20:00:00Z`. Sorting those two as text puts them the wrong way
  * round, and a row whose endpoints disagree with its own cadence is worse
  * than either answer alone.
+ *
+ * A `product` group is the one basis that can hold several printed wordings,
+ * so two of its fields are folded rather than read off a line: the name and
+ * the source travel together off the newest line, and `confirmed` is true
+ * only where every wording that reached the group was asserted.
  */
 import { landedCostCents } from './accounting.js';
 import { summariseIntervals } from './interval-stats.js';
@@ -146,10 +151,10 @@ export interface ProductPurchases {
   readonly unitPrice: ProductUnitPrice;
   /**
    * Every merchant this product was bought from, in this currency, and the
-   * scope of the group: more than one only where the source is a single
-   * merchant's feed that names its own stores, as the Woolworths export
-   * does. Under any other source the group is keyed on the merchant and
-   * this holds exactly one.
+   * scope of the group. More than one in two cases and no others: the source
+   * is a single merchant's feed that names its own stores, as the Woolworths
+   * export does; or a human pointed wordings from several merchants at one
+   * dictionary product. Nothing derived ever widens this on its own.
    */
   readonly merchants: readonly MerchantIdentity[];
 }
@@ -224,8 +229,15 @@ export function startBucket(ranked: RankedLine, identity: ProductIdentity): Prod
  * both ends and both price extremes — and folding the opening line into them
  * a second time here reaches the same answer.
  */
-export function accumulate(bucket: ProductBucket, ranked: RankedLine, measured: boolean): void {
+export function accumulate(
+  bucket: ProductBucket,
+  ranked: RankedLine,
+  identity: ProductIdentity,
+  measured: boolean
+): void {
   const { line, rank } = ranked;
+
+  foldConfirmation(bucket, identity);
 
   bucket.orders.set(line.purchaseId, rank.instant);
 
@@ -245,6 +257,61 @@ export function accumulate(bucket: ProductBucket, ranked: RankedLine, measured: 
   if (isOlder(rank, bucket.earliest.rank)) bucket.earliest = ranked;
 }
 
+/**
+ * A group is asserted only where every wording that reached it was.
+ *
+ * The alternative — wearing whichever line's marker opened the bucket —
+ * makes the badge depend on read order, and half the time reports a row as
+ * asserted while some of its lines are in it on a pass's proposal. Only ever
+ * moves true to false, so the answer does not depend on the order the lines
+ * arrive in either.
+ */
+function foldConfirmation(bucket: ProductBucket, identity: ProductIdentity): void {
+  if (bucket.identity.basis !== 'product' || identity.basis !== 'product') return;
+  if (identity.confirmed || !bucket.identity.confirmed) return;
+  bucket.identity = { ...bucket.identity, confirmed: false };
+}
+
+/** The running per-basis tally {@link countCoverage} adds to. */
+export interface CoverageTally {
+  skuKeyedLines: number;
+  confirmedProductLines: number;
+  proposedProductLines: number;
+  nameKeyedLines: number;
+  unidentifiedLines: number;
+}
+
+/**
+ * Tally one line against the basis that grouped it.
+ *
+ * The `never` assignment is what makes it exhaustive: a basis added later
+ * fails to compile here instead of falling through, uncounted, and breaking
+ * the invariant that the buckets sum to the line count — which is how a
+ * coverage figure comes to overstate the identified share of an answer, the
+ * one error this route must not make.
+ */
+export function countCoverage(coverage: CoverageTally, identity: ProductIdentity): void {
+  switch (identity.basis) {
+    case 'sku':
+      coverage.skuKeyedLines += 1;
+      return;
+    case 'product':
+      if (identity.confirmed) coverage.confirmedProductLines += 1;
+      else coverage.proposedProductLines += 1;
+      return;
+    case 'name':
+      coverage.nameKeyedLines += 1;
+      return;
+    case 'unidentified':
+      coverage.unidentifiedLines += 1;
+      return;
+    default: {
+      const unhandled: never = identity;
+      throw new Error(`no coverage bucket is defined for ${JSON.stringify(unhandled)}`);
+    }
+  }
+}
+
 export function noteMerchant(bucket: ProductBucket, line: ScopedLine): void {
   const { key, identity } = identifyMerchant(line.merchantEntityId, line.merchantEntityName);
   const candidate: LabelledMerchant = {
@@ -259,16 +326,24 @@ export function noteMerchant(bucket: ProductBucket, line: ScopedLine): void {
 }
 
 /**
- * Wear the latest line's printed name.
+ * Wear the latest line's printed name, and the source that printed it.
  *
- * Only the label moves, never the key: a `sku` group is keyed on the sku and
- * a `name` group on the normalised name, both of which survive a merchant
- * rewording what it prints. An `unidentified` group holds one line and has
- * nothing to choose between.
+ * Only the label moves, never the key: a `sku` group is keyed on the sku, a
+ * `name` group on the normalised name and a `product` group on the product
+ * id, all of which survive a merchant rewording what it prints — and a
+ * `product` group keeps the product's own `label` beside the printed name it
+ * is wearing, so a name a human wrote is never overwritten by a till's. An
+ * `unidentified` group holds one line and has nothing to choose between.
+ *
+ * The source travels with the name because it is constant within every other
+ * basis's key, but a `product` group may hold lines from several, and a name
+ * from one line beside a source from another describes a line that does not
+ * exist.
  */
 function label(bucket: ProductBucket): ProductIdentity {
   if (bucket.identity.basis === 'unidentified') return bucket.identity;
-  return { ...bucket.identity, name: bucket.latest.line.name };
+  const { name, source } = bucket.latest.line;
+  return { ...bucket.identity, name, source };
 }
 
 export function present(bucket: ProductBucket): ProductPurchases {

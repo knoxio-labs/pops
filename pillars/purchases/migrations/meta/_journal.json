@@ -64,6 +64,13 @@
       "when": 1787100000000,
       "tag": "0008_inventory_fanout_decisions",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1787200000000,
+      "tag": "0009_product_dictionary",
+      "breakpoints": true
     }
   ]
 }

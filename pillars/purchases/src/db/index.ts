@@ -60,9 +60,28 @@ export {
 export {
   identifyProduct,
   normalisedName,
+  productLookupKey,
+  productScopeKey,
+  type ProductDictionary,
+  type ProductDictionaryEntry,
   type ProductIdentity,
   type ProductLine,
 } from './services/product-identity.js';
+
+export {
+  ProductDictionaryNotFoundError,
+  deleteAlias,
+  deleteProduct,
+  listProducts,
+  loadProductDictionary,
+  proposeProducts,
+  renameProduct,
+  updateAlias,
+  type ListProductsFilter,
+  type ProductWithAliases,
+  type ProposalOutcome,
+  type UpdateAliasInput,
+} from './services/product-dictionary.js';
 
 export {
   rankProductPurchases,

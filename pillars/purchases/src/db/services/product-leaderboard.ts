@@ -8,16 +8,17 @@
  * answer this — an order total says nothing about which of its lines keeps
  * coming back.
  *
- * **The identity is the whole problem, and it is only partly solved.**
- * Grouping is {@link identifyProduct}: the merchant's sku where one is
- * stated, the normalised printed name where none is, and the line's own id
- * where there is neither. Only the first is an identity a source asserted,
- * and exactly one shipped adapter writes one. So a name-keyed group is a
- * proposal — two products whose names normalise alike merge, one product
- * printed two ways stays split — and every row says which basis formed it
- * rather than presenting all three at one confidence. {@link
+ * **The identity is the whole problem.** Grouping is {@link identifyProduct}:
+ * the merchant's sku where one is stated, a learned dictionary entry where
+ * the printed wording has one, the normalised printed name where it does
+ * not, and the line's own id where there is neither. Only the sku is an
+ * identity a source asserted, and exactly one shipped adapter writes one. So
+ * a name-keyed group is a proposal — two products whose names normalise alike
+ * merge, one product printed two ways stays split — and a dictionary group is
+ * only as strong as the evidence behind its entry. Every row says which basis
+ * formed it rather than presenting them all at one confidence. {@link
  * ProductIdentityCoverage} states the same thing over the whole scope, so a
- * consumer can see how much of the answer rests on printed names before it
+ * consumer can see how much of the answer rests on a proposal before it
  * renders a single row.
  *
  * **A group never spans merchants a source did not put together.** Under a
@@ -25,7 +26,9 @@
  * key is confined to the order's merchant, so two shops printing the same
  * abbreviation are two rows rather than one row summing both. Under a
  * source that is one merchant's own feed the key is the source, which is
- * what keeps a chain's product from splitting per store.
+ * what keeps a chain's product from splitting per store. A dictionary group
+ * is the one thing that can reach across that boundary, and only because
+ * somebody pointed two scoped wordings at one product on purpose.
  *
  * **Why the join does not do the arithmetic.** One row per line, joined only
  * to its order. Nothing here touches charges or links, which is what makes
@@ -46,14 +49,17 @@
  */
 import {
   accumulate,
+  countCoverage,
   noteMerchant,
   present,
   rankLine,
   startBucket,
+  type CoverageTally,
   type ProductBucket,
   type ProductPurchases,
   type RankedLine,
 } from './product-group.js';
+import { loadProductDictionary } from './product-dictionary.js';
 import { identifyProduct } from './product-identity.js';
 import { selectMeasuredItemIds, selectScopedLines } from './product-leaderboard-lines.js';
 import { tupleKey } from './tuple-key.js';
@@ -84,6 +90,10 @@ export interface ProductIdentityCoverage {
   readonly lineCount: number;
   /** Grouped on an identifier the merchant stated. */
   readonly skuKeyedLines: number;
+  /** Grouped through a dictionary entry a human asserted. */
+  readonly confirmedProductLines: number;
+  /** Grouped through a dictionary entry a pass proposed and nobody has confirmed. */
+  readonly proposedProductLines: number;
   /** Grouped on a normalised printed name — a proposal, not an assertion. */
   readonly nameKeyedLines: number;
   /** Grouped with nothing: no sku, and no name that normalises to anything. */
@@ -116,30 +126,38 @@ export function rankProductPurchases(
 ): ProductLeaderboard {
   const lines = selectScopedLines(db, filter);
   const measuredItemIds = selectMeasuredItemIds(db, filter);
+  const dictionary = loadProductDictionary(db);
 
   const buckets = new Map<string, ProductBucket>();
-  const coverage = { skuKeyedLines: 0, nameKeyedLines: 0, unidentifiedLines: 0 };
+  const coverage: CoverageTally = {
+    skuKeyedLines: 0,
+    confirmedProductLines: 0,
+    proposedProductLines: 0,
+    nameKeyedLines: 0,
+    unidentifiedLines: 0,
+  };
 
   for (const line of lines) {
-    const { key: productKey, identity } = identifyProduct({
-      id: line.itemId,
-      source: line.source,
-      sku: line.sku,
-      skuScheme: line.skuScheme,
-      name: line.name,
-      merchantEntityId: line.merchantEntityId,
-      merchantEntityName: line.merchantEntityName,
-    });
-    if (identity.basis === 'sku') coverage.skuKeyedLines += 1;
-    else if (identity.basis === 'name') coverage.nameKeyedLines += 1;
-    else coverage.unidentifiedLines += 1;
+    const { key: productKey, identity } = identifyProduct(
+      {
+        id: line.itemId,
+        source: line.source,
+        sku: line.sku,
+        skuScheme: line.skuScheme,
+        name: line.name,
+        merchantEntityId: line.merchantEntityId,
+        merchantEntityName: line.merchantEntityName,
+      },
+      dictionary
+    );
+    countCoverage(coverage, identity);
 
     const ranked: RankedLine = { rank: rankLine(line), line };
     const key = tupleKey(productKey, line.currency);
     const existing = buckets.get(key);
     const bucket = existing ?? startBucket(ranked, identity);
     if (existing === undefined) buckets.set(key, bucket);
-    accumulate(bucket, ranked, measuredItemIds.has(line.itemId));
+    accumulate(bucket, ranked, identity, measuredItemIds.has(line.itemId));
     noteMerchant(bucket, line);
   }
 
