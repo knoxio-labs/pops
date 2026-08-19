@@ -154,18 +154,43 @@ export class AuthFailureError extends Error {
   }
 }
 
+/**
+ * Hooks for a caller whose purchases reference something outside the request.
+ *
+ * A purchase can name a file the request does not carry — an invoice URI that
+ * has to resolve to bytes on the volume. Those bytes must exist before the row
+ * that points at them, and must not be left behind when no row is written, so
+ * the caller needs both edges of each request rather than the totals.
+ *
+ * A run can also end part-way through: {@link AuthFailureError} leaves the
+ * purchases after the stop with neither hook called, so a caller that acts on
+ * `beforeRequest` has to reconcile what it did when the call throws as well as
+ * when it returns.
+ */
+export interface PostPurchaseHooks {
+  /** Before the request is made. */
+  readonly beforeRequest?: (purchase: CreatePurchaseInput) => void;
+  /** After a 201, and only a 201. */
+  readonly afterCreated?: (purchase: CreatePurchaseInput) => void;
+}
+
 export async function postPurchases(
   client: IngestClient,
-  purchases: readonly CreatePurchaseInput[]
+  purchases: readonly CreatePurchaseInput[],
+  hooks: PostPurchaseHooks = {}
 ): Promise<BackfillOutcome> {
   let created = 0;
   let skipped = 0;
   const failures: string[] = [];
 
   for (const purchase of purchases) {
+    hooks.beforeRequest?.(purchase);
     const response = await ingestFetch(client, '/purchases', 'POST', purchase);
 
-    if (response.status === 201) created += 1;
+    if (response.status === 201) {
+      created += 1;
+      hooks.afterCreated?.(purchase);
+    }
     // A checksum or (source, orderId) that already exists. Re-running a
     // backfill is expected, so this is the normal path, not an error.
     else if (response.status === 409) skipped += 1;
