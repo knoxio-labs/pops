@@ -2,15 +2,17 @@
  * What product identity each shipped adapter can actually state.
  *
  * This is a measurement, not a preference, and it is the substrate every
- * repeat-purchase question is built on: one source of three names a product,
- * and it names it in its own catalogue's namespace.
+ * repeat-purchase question is built on: the sources that name a product name
+ * it in their own catalogue's namespace, and the rest name none.
  *
- * | adapter      | states                                                  |
- * | ------------ | ------------------------------------------------------- |
- * | `amazon`     | an ASIN per line, in the `asin` scheme                   |
- * | `woolworths` | nothing — a receipt row is description and amount        |
- * | `receipt`    | nothing, because the extraction schema refuses to let a
- *                  vision model infer an identifier it cannot check         |
+ * | adapter          | states                                              |
+ * | ---------------- | --------------------------------------------------- |
+ * | `amazon`         | an ASIN per line, in the `asin` scheme               |
+ * | `amazon-digital` | the same, from the same `ASIN` column                |
+ * | `woolworths`     | nothing — a receipt row is description and amount    |
+ * | `receipt`        | nothing, because the extraction schema refuses to
+ *                      let a vision model infer an identifier it cannot
+ *                      check                                              |
  *
  * The two "nothing" rows are the load-bearing ones and the reason this file
  * exists rather than a sentence in a README. An adapter that started minting
@@ -21,11 +23,14 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { ADAPTERS, amazonItems } from './adapter-fixtures.js';
+import { ADAPTERS, amazonDigitalItems, amazonItems } from './adapter-fixtures.js';
+
+import type { CreateItemInput } from '../../db/services/purchase-input.js';
 
 /** Which adapters this measurement says state an identity, and in what scheme. */
 const STATED_SCHEME: Readonly<Record<string, string | null>> = {
   amazon: 'asin',
+  'amazon-digital': 'asin',
   woolworths: null,
   receipt: null,
 };
@@ -53,18 +58,29 @@ describe.each(ADAPTERS)('the %s adapter', (name, items) => {
   });
 });
 
-describe('the one adapter that names a product', () => {
+const NAMING_ADAPTERS: readonly (readonly [string, () => readonly CreateItemInput[]])[] = [
+  ['amazon', amazonItems],
+  ['amazon-digital', amazonDigitalItems],
+];
+
+describe.each(NAMING_ADAPTERS)('the %s adapter, which names a product', (name, items) => {
   it('carries the ASIN through verbatim', () => {
-    const identities = amazonItems()
+    const identities = items()
       .map((item) => item.sku)
       .filter((sku) => sku != null);
-    expect(identities.length).toBeGreaterThan(0);
-    expect(identities.every((sku) => /^[A-Z0-9]{10}$/u.test(sku.value))).toBe(true);
+    expect(identities.length, name).toBeGreaterThan(0);
+    expect(
+      identities.every((sku) => /^[A-Z0-9]{10}$/u.test(sku.value)),
+      name
+    ).toBe(true);
   });
 
   it('names every line, because the export states one on every row', () => {
-    // The asymmetry is the finding: the source that has a namespace uses it
-    // for everything it sells, and the other two have nothing to use.
-    expect(amazonItems().filter((item) => item.sku == null)).toEqual([]);
+    // The asymmetry is the finding: the sources that have a namespace use it
+    // for everything they sell, and the other two have nothing to use.
+    expect(
+      items().filter((item) => item.sku == null),
+      name
+    ).toEqual([]);
   });
 });

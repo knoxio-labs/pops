@@ -68,10 +68,14 @@ describe('grain', () => {
     // one would name the line after the first product and hand it both
     // products' money, with no anomaly to say so.
     expect(orderFor(ORDER_TWO_ITEMS).items).toEqual([
-      expect.objectContaining({ name: 'The First Of Two', sku: 'B000000010', lineTotalCents: 400 }),
+      expect.objectContaining({
+        name: 'The First Of Two',
+        sku: { value: 'B000000010', scheme: 'asin' },
+        lineTotalCents: 400,
+      }),
       expect.objectContaining({
         name: 'The Second Of Two',
-        sku: 'B000000011',
+        sku: { value: 'B000000011', scheme: 'asin' },
         lineTotalCents: 600,
       }),
     ]);
@@ -173,7 +177,7 @@ describe('the line', () => {
   it('keeps the ASIN as the sku and the marketplace as the merchant category', () => {
     expect(orderFor(ORDER_PROMOTION_OFFSET).items?.[0]).toMatchObject({
       name: 'A Borrowed Audiobook',
-      sku: 'B000000001',
+      sku: { value: 'B000000001', scheme: 'asin' },
       quantity: 1,
       merchantCategory: 'www.audible.com.au',
     });

@@ -1,13 +1,18 @@
+import { DIGITAL_ORDERS_CSV } from '../amazon-digital/__tests__/__fixtures__/digital-orders.js';
+import { parseAmazonDigitalOrders } from '../amazon-digital/digital-orders.js';
 /**
  * Every shipped adapter, driven over its own fixture, reduced to the lines
  * it produces.
  *
- * Shared because two rules are asserted over the same three adapters and
- * neither owns them: what an adapter must not classify
+ * Shared because two rules are asserted over the same adapters and neither
+ * owns them: what an adapter must not classify
  * (`no-asserted-classification.test.ts`) and what identity it can actually
  * state (`product-identity.test.ts`). A second copy of these drivers would
  * be a second thing to update the day a fixture changes, and the one left
  * behind would keep passing.
+ *
+ * {@link ADAPTERS} is the list both rules run over, so a new adapter is
+ * covered by adding it here once rather than in each suite.
  */
 import { ORDER_HISTORY_CSV } from '../amazon/__tests__/__fixtures__/order-history.js';
 import { parseAmazonOrderHistory } from '../amazon/order-history.js';
@@ -27,6 +32,10 @@ function itemsOf(purchases: readonly CreatePurchaseInput[]): readonly CreateItem
 
 export function amazonItems(): readonly CreateItemInput[] {
   return itemsOf(parseAmazonOrderHistory(ORDER_HISTORY_CSV).orders);
+}
+
+export function amazonDigitalItems(): readonly CreateItemInput[] {
+  return itemsOf(parseAmazonDigitalOrders(DIGITAL_ORDERS_CSV).orders);
 }
 
 export function woolworthsItems(): readonly CreateItemInput[] {
@@ -71,6 +80,7 @@ export function receiptItems(): readonly CreateItemInput[] {
 
 export const ADAPTERS: readonly (readonly [string, () => readonly CreateItemInput[]])[] = [
   ['amazon', amazonItems],
+  ['amazon-digital', amazonDigitalItems],
   ['woolworths', woolworthsItems],
   ['receipt', receiptItems],
 ];

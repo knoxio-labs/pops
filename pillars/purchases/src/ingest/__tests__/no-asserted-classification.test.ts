@@ -15,15 +15,26 @@
  * empty. It is the regression that catches the rule eroding, which is
  * exactly how the table filled up with promo prose the first time.
  *
- * The rule has one deliberate exception and it is not tested here because
- * no shipped source exercises it: an adapter MAY set `kind` where its
- * source states it outright. `Digital Content Orders.csv` will, and that is
- * transcription rather than inference. When that adapter lands this file
- * gains a case for it rather than a waiver.
+ * The rule has one deliberate exception: an adapter MAY set `kind` where its
+ * source states it outright, which is transcription rather than inference.
+ * `Digital Content Orders.csv` does, so `amazon-digital` carries a case in
+ * {@link TRANSCRIBED_KIND} rather than a waiver — and that case pins the
+ * value, so an adapter drifting into a second kind is caught here too.
  */
 import { describe, expect, it } from 'vitest';
 
 import { ADAPTERS, amazonItems, receiptItems, woolworthsItems } from './adapter-fixtures.js';
+
+import type { ItemKind } from '../../contract/constants.js';
+
+/**
+ * The kind a source states outright, for the adapters whose source does.
+ * Every adapter absent from this map must state none — anything it wrote
+ * there it would have had to infer.
+ */
+const TRANSCRIBED_KIND: Readonly<Record<string, ItemKind | undefined>> = {
+  'amazon-digital': 'digital',
+};
 
 describe.each(ADAPTERS)('the %s adapter', (name, items) => {
   it('produces lines to assert on at all', () => {
@@ -33,12 +44,9 @@ describe.each(ADAPTERS)('the %s adapter', (name, items) => {
     expect(items().length, name).toBeGreaterThan(0);
   });
 
-  it('states no item kind', () => {
-    expect(
-      items()
-        .map((item) => item.kind)
-        .filter((kind) => kind !== undefined)
-    ).toEqual([]);
+  it('states an item kind only where its source states one outright', () => {
+    const kinds = [...new Set(items().map((item) => item.kind))];
+    expect(kinds, name).toEqual([TRANSCRIBED_KIND[name]]);
   });
 
   it('states no item tag', () => {

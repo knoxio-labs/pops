@@ -1,5 +1,5 @@
 /**
- * The backfill in migration 0006, run against rows shaped the way the
+ * The backfill in migration 0007, run against rows shaped the way the
  * shipped adapters actually wrote them before a scheme existed.
  *
  * Every other suite opens a database that was empty when the migration ran,
@@ -8,7 +8,7 @@
  * live file, where the ASINs it mislabelled are indistinguishable from
  * article numbers afterwards.
  *
- * The database is brought up to 0005 from a journal truncated at that point,
+ * The database is brought up to 0006 from a journal truncated at that point,
  * seeded with raw SQL, closed, then reopened against the real migrations
  * folder — drizzle's migrator runs only the entries newer than the last one
  * recorded.
@@ -21,8 +21,8 @@ import type Database from 'better-sqlite3';
 
 import type { OpenedPurchasesDb } from '../index.js';
 
-/** The last entry before 0006 adds `sku_scheme`. */
-const BEFORE_SKU_SCHEME = '0005_reconcile_decisions_persist';
+/** The last entry before 0007 adds `sku_scheme`. */
+const BEFORE_SKU_SCHEME = '0006_purchase_capture';
 
 interface SeededItem {
   readonly id: string;
@@ -31,7 +31,7 @@ interface SeededItem {
 }
 
 /**
- * The world as it stood at 0005: Amazon lines carrying ASINs, grocery and
+ * The world as it stood at 0006: Amazon lines carrying ASINs, grocery and
  * drop-zone lines carrying nothing, and the states a caller could reach
  * through `POST /purchases`, where `sku` was a bare string of any shape on
  * an order whose `source` was whatever the caller typed.
@@ -48,14 +48,14 @@ const SEED: readonly SeededItem[] = [
   // identifier is plainly not an ASIN, and the backfill must not decide
   // otherwise from the label alone.
   { id: 'a-posted-article', source: 'amazon', sku: '4471' },
-  // Accepted by the pre-0006 column, which had no minimum length.
+  // Accepted by the pre-0007 column, which had no minimum length.
   { id: 'a-blank', source: 'amazon', sku: '' },
 ];
 
 let opened: OpenedPurchasesDb;
 let cleanup: () => void;
 
-function seedThrough0005(raw: Database.Database): void {
+function seedThrough0006(raw: Database.Database): void {
   for (const source of new Set(SEED.map((item) => item.source))) {
     raw.prepare(`INSERT INTO purchase_sources (id, label) VALUES (?, ?)`).run(source, source);
     raw
@@ -90,8 +90,8 @@ function identityOf(itemId: string): StoredIdentity {
 beforeEach(() => {
   ({ opened, cleanup } = openSeededAtMigration({
     through: BEFORE_SKU_SCHEME,
-    prefix: 'purchases-migration-0006-',
-    seed: seedThrough0005,
+    prefix: 'purchases-migration-0007-',
+    seed: seedThrough0006,
   }));
 });
 
@@ -99,7 +99,7 @@ afterEach(() => {
   cleanup();
 });
 
-describe('applying 0006 to a database that already holds bare identifiers', () => {
+describe('applying 0007 to a database that already holds bare identifiers', () => {
   it("names Amazon's identifiers as ASINs", () => {
     expect(identityOf('a-tamper')).toEqual({ sku: 'B0DSVZQ8P5', scheme: 'asin' });
     expect(identityOf('a-funnel')).toEqual({ sku: 'B0FCSJTKJ8', scheme: 'asin' });
@@ -122,7 +122,7 @@ describe('applying 0006 to a database that already holds bare identifiers', () =
   });
 
   it('takes a blank identifier back to stating nothing', () => {
-    // The pre-0006 column accepted an empty string, and naming a namespace
+    // The pre-0007 column accepted an empty string, and naming a namespace
     // over one would mint an identity out of nothing.
     expect(identityOf('a-blank')).toEqual({ sku: null, scheme: null });
   });

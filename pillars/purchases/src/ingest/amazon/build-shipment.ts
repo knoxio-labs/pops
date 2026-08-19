@@ -17,12 +17,12 @@
  * basis the export already uses for `Total Amount` and `Total Discounts`.
  */
 
-import { isWellFormedSku } from '../../contract/constants.js';
 import { allocateProRata } from '../allocation.js';
 import { SHIPMENT_STATUS_BY_SOURCE_VALUE, type AmazonAnomaly, type Row } from './columns.js';
 import {
   readCarrierAndTracking,
   readCents,
+  readProductIdentity,
   readQuantity,
   readText,
   readTimestampWithAnomaly,
@@ -218,7 +218,7 @@ function buildItem(
     // The one product identity any shipped adapter can state. `asin` names
     // the namespace so a later grouping knows an ASIN means the same product
     // wherever it turns up, and that a store's own article number does not.
-    sku: productIdentity(readText(row['ASIN'])),
+    sku: readProductIdentity(row['ASIN']),
     quantity,
     unitPriceCents,
     // Σ(Unit Price × Quantity) reconstructs Shipment Item Subtotal exactly
@@ -231,21 +231,6 @@ function buildItem(
     // columns and none of them states what the thing IS.
     merchantCondition: readText(row['Product Condition']),
   };
-}
-
-/**
- * What the export's `ASIN` column can honestly be said to be.
- *
- * Almost always an ASIN. When the column holds something that cannot be one
- * — a blank the reader kept, a marketplace id from a row shape Amazon
- * changed — the line still names a product to the merchant that printed it,
- * so it takes the weakest true claim rather than failing the order or
- * asserting a cross-source identity the string cannot support.
- */
-function productIdentity(asin: string | null): CreateItemInput['sku'] {
-  if (asin === null) return null;
-  if (isWellFormedSku('asin', asin)) return { value: asin, scheme: 'asin' };
-  return isWellFormedSku('merchant', asin) ? { value: asin, scheme: 'merchant' } : null;
 }
 
 function readShipmentStatus(raw: string | undefined): CreateShipmentInput['status'] {

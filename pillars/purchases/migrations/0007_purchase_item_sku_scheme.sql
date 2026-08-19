@@ -26,7 +26,7 @@
 -- half; `db/__tests__/schema-invariants.test.ts` pins both directions.
 ALTER TABLE `purchase_items` ADD `sku_scheme` text CONSTRAINT "ck_purchase_items_sku_scheme" CHECK (`sku_scheme` IS NULL OR (`sku` IS NOT NULL AND trim(`sku`) <> '' AND `sku_scheme` IN ('asin','merchant')));--> statement-breakpoint
 
--- An empty identifier is not one. The pre-0006 column accepted any string,
+-- An empty identifier is not one. The pre-0007 column accepted any string,
 -- so a caller could post `sku: ""`; naming a namespace over it would mint an
 -- identity out of nothing, which is precisely what NULL is here to say.
 UPDATE `purchase_items` SET `sku` = NULL WHERE `sku` IS NOT NULL AND trim(`sku`) = '';--> statement-breakpoint
