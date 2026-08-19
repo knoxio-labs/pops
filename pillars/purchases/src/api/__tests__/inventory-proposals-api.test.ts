@@ -126,3 +126,15 @@ it('refuses an accept that names something other than a pops URI', async () => {
 
   expect(getPurchase(opened.db, purchaseId)?.items[0]?.units).toEqual([]);
 });
+
+it('refuses an accept that names a row on a pillar other than inventory', async () => {
+  // A decision cannot be retracted, and the cron leg that resolves this
+  // column marks anything not addressed to inventory a bad URI forever, so
+  // the wrong pillar has to be refused at the boundary or not at all.
+  await decide({
+    decision: 'accepted',
+    inventoryItemUri: 'pops://finance/transaction/t-1',
+  }).expect(400);
+
+  expect(getPurchase(opened.db, purchaseId)?.items[0]?.units).toEqual([]);
+});

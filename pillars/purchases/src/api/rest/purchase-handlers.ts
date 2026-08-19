@@ -47,16 +47,31 @@ function notFound(id: string) {
 }
 
 /**
- * One 404 for "no such order", "no such line on it" and "no such unit on
- * that line", for the reason {@link makePurchaseHandlers.patchItem} gives:
- * telling them apart tells a caller holding a wrong id that the row exists
- * somewhere else.
+ * One 404 for "no such order" and "no such line on it", because
+ * distinguishing them tells a caller holding a wrong order id that the line
+ * exists somewhere else.
  */
 function itemNotFound(purchaseId: string, itemId: string) {
   return {
     status: 404 as const,
     body: {
       message: `Item ${itemId} not found on purchase ${purchaseId}`,
+      code: 'NOT_FOUND',
+    },
+  };
+}
+
+/**
+ * The same 404, for a route that also reaches it when the line is real and
+ * the named unit is not. It says only that nothing here answers the
+ * request, which is true of all three cases — where "item not found" would
+ * be a false statement to a caller who supplied a good line and a bad unit.
+ */
+function proposalNotFound(purchaseId: string, itemId: string) {
+  return {
+    status: 404 as const,
+    body: {
+      message: `No inventory proposal on item ${itemId} of purchase ${purchaseId} matches this answer`,
       code: 'NOT_FOUND',
     },
   };
@@ -163,7 +178,7 @@ export function makePurchaseHandlers(db: PurchasesDb, onIngest: () => void = () 
         if (mapped?.status === 400) return { status: 400 as const, body: mapped.body };
         throw err as Error;
       }
-      if (unit === undefined) return itemNotFound(params.id, params.itemId);
+      if (unit === undefined) return proposalNotFound(params.id, params.itemId);
       return { status: 200 as const, body: { unit } };
     },
 

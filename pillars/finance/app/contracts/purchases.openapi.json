@@ -3579,7 +3579,7 @@
                         "type": "string"
                       },
                       "inventoryItemUri": {
-                        "pattern": "^pops:\\/\\/[a-z0-9-]+\\/[a-z0-9-]+\\/[^/\\s]+$",
+                        "pattern": "^pops:\\/\\/inventory\\/item\\/[^/\\s]+$",
                         "type": "string"
                       },
                       "unitId": {

@@ -140,7 +140,7 @@ describe('what makes a proposal', () => {
     expect(listInventoryProposals(opened.db, purchaseId)).toHaveLength(1);
   });
 
-  it('offers nothing for a line that went back, but still offers a discounted one', () => {
+  it('offers nothing for a line that went back, and prices a partly refunded one net', () => {
     const purchaseId = seed();
     const itemId = itemIdOf(purchaseId);
     const setRefund = opened.raw.prepare(
@@ -148,10 +148,26 @@ describe('what makes a proposal', () => {
     );
 
     setRefund.run(500, itemId);
-    expect(listInventoryProposals(opened.db, purchaseId)).toHaveLength(1);
+    expect(listInventoryProposals(opened.db, purchaseId).map((p) => p.purchasePriceCents)).toEqual([
+      19400,
+    ]);
 
     setRefund.run(19900, itemId);
     expect(listInventoryProposals(opened.db, purchaseId)).toEqual([]);
+  });
+
+  it('splits a partial refund across the units of the line it was given back on', () => {
+    const purchaseId = seed({
+      items: [{ ...DURABLE_LINE, quantity: 2, unitPriceCents: 19900, lineTotalCents: 39800 }],
+    });
+    opened.raw
+      .prepare('UPDATE purchase_items SET refunded_cents = ? WHERE id = ?')
+      .run(1000, itemIdOf(purchaseId));
+
+    const prices = listInventoryProposals(opened.db, purchaseId).map((p) => p.purchasePriceCents);
+
+    expect(prices).toEqual([19400, 19400]);
+    expect(prices.reduce((sum, price) => sum + price, 0)).toBe(38800);
   });
 
   it('answers nothing for an order that does not exist', () => {
@@ -304,18 +320,59 @@ describe('answering a proposal', () => {
     expect(listInventoryProposals(opened.db, purchaseId)).toEqual([]);
   });
 
-  it('answers on the oldest undecided unit when the caller names none', () => {
+  it('answers the unit the proposal named', () => {
     const purchaseId = seed({
       items: [{ ...DURABLE_LINE, quantity: 2, units: [{ serialNumber: 'SN-7' }] }],
     });
+    const named = unitsOf(purchaseId)[0]?.id;
+
+    const unit = decideInventoryProposal(opened.db, purchaseId, itemIdOf(purchaseId), {
+      decision: 'accepted',
+      inventoryItemUri: INVENTORY_URI,
+      unitId: named,
+    });
+
+    expect(unit?.id).toBe(named);
+    expect(unit?.serialNumber).toBe('SN-7');
+    expect(listInventoryProposals(opened.db, purchaseId)).toMatchObject([{ unitId: null }]);
+  });
+
+  it('mints a unit for an unnamed answer rather than deciding the one a serial identifies', () => {
+    const purchaseId = seed({
+      items: [{ ...DURABLE_LINE, quantity: 2, units: [{ serialNumber: 'SN-7' }] }],
+    });
+    const identified = unitsOf(purchaseId)[0]?.id;
 
     const unit = decideInventoryProposal(opened.db, purchaseId, itemIdOf(purchaseId), {
       decision: 'accepted',
       inventoryItemUri: INVENTORY_URI,
     });
 
-    expect(unit?.serialNumber).toBe('SN-7');
-    expect(unitsOf(purchaseId)).toHaveLength(1);
+    expect(unit?.id).not.toBe(identified);
+    expect(unit?.serialNumber).toBeNull();
+    expect(unitsOf(purchaseId)).toHaveLength(2);
+    // The unit the human was never shown is still on offer, with the serial
+    // still attached to it rather than to the asset they did accept.
+    expect(listInventoryProposals(opened.db, purchaseId)).toMatchObject([
+      { unitId: identified, serialNumber: 'SN-7' },
+    ]);
+  });
+
+  it('refuses an unnamed answer once every unit of the line has a row', () => {
+    const purchaseId = seed({
+      items: [
+        {
+          ...DURABLE_LINE,
+          quantity: 2,
+          units: [{ serialNumber: 'SN-7' }, { serialNumber: 'SN-8' }],
+        },
+      ],
+    });
+
+    expect(() =>
+      decideInventoryProposal(opened.db, purchaseId, itemIdOf(purchaseId), { decision: 'declined' })
+    ).toThrow(InventoryProposalConflictError);
+    expect(unitsOf(purchaseId).filter((unit) => unit.inventoryDeclinedAt !== null)).toEqual([]);
   });
 
   it('will not answer a line through the wrong order', () => {

@@ -2,9 +2,8 @@
  * Proposing inventory assets from durable line items.
  *
  * **Propose, never create.** Nothing here writes into `inventory`. A
- * proposal is a projection of rows purchases already holds, shaped in
- * inventory's own field names so the caller that accepts one can hand it
- * straight to `POST /items` on that pillar; the write into inventory
+ * proposal is a projection of rows purchases already holds, named after
+ * inventory's own fields where it has them; the write into inventory
  * belongs to whoever is holding the human's consent, and purchases learns
  * about it afterwards through `inventory-proposal-decisions.ts`. Fanning
  * out automatically fills inventory with cables, batteries and light globes
@@ -45,12 +44,22 @@ const UNRECEIVED_SHIPMENT_STATUSES: readonly ShipmentStatus[] = ['cancelled', 'r
 /**
  * One unanswered offer to inventory.
  *
- * The payload fields carry inventory's own names so a caller can map them
- * onto `POST /items` without a translation table in between — with one
- * deliberate exception. Money crosses in integer cents, because purchases
- * holds no float dollar value anywhere and must not mint one on the way
- * out; inventory's `purchasePrice` is a `real`, and dividing by 100 is the
- * accepting caller's step.
+ * Field names follow inventory's where a counterpart exists, so most of
+ * the payload needs no translation. Three do not map, and a caller that
+ * posts this straight to that pillar's `POST /items` should know which:
+ *
+ *   `purchasePriceCents`     inventory's `purchasePrice` is a float dollar
+ *                            amount; purchases mints no float anywhere, so
+ *                            dividing by 100 is the caller's step
+ *   `purchaseTransactionUri` inventory's create body takes a bare
+ *                            `purchaseTransactionId` and has no writer for
+ *                            `home_inventory.purchase_transaction_uri` at
+ *                            all, so this key is dropped on the floor there
+ *   `serialNumber`           inventory holds no such column
+ *
+ * The last two are carried anyway because they are the strongest facts
+ * purchases has about the asset, and a field withheld until its reader
+ * exists is a field nobody builds the reader for.
  *
  * `brand` and `model` are absent rather than null. The ticket that asked
  * for this wanted them, and purchases holds neither: no schema column, no
@@ -79,7 +88,11 @@ export interface InventoryProposal {
   readonly serialNumber: string | null;
   /** The order's `orderedAt` — when the thing was bought, not when the row was written. */
   readonly purchaseDate: string;
-  /** This unit's share of the line's landed cost. The shares of a line sum to it exactly. */
+  /**
+   * This unit's share of what the line actually cost: its landed cost less
+   * whatever came back on it. The shares of a line sum to that figure
+   * exactly.
+   */
   readonly purchasePriceCents: number;
   readonly purchasedFromName: string | null;
   /**
@@ -122,7 +135,8 @@ interface ProposableLine {
  * cancelled or returned delivery is goods that never arrived, and a fully
  * refunded line is goods that went back, and proposing either as an asset
  * is the noise that gets a fan-out prompt dismissed unread. A *partial*
- * refund is a price change, not a return, so it still proposes.
+ * refund kept the goods and gave some money back, so the line still
+ * proposes and {@link slotPricesCents} prices it net of what came back.
  */
 function listProposableLines(db: PurchasesDb, purchaseId: string): ProposableLine[] {
   return db
@@ -203,6 +217,16 @@ export function isUndecided(unit: PurchaseItemUnitRow): boolean {
 /**
  * How many slots a line has, and what each is worth.
  *
+ * Landed cost less refunds, which is what the thing cost the household and
+ * therefore what an insurance or resale figure should read. `accounting.ts`
+ * derives `netSpendCents` at the order level for the same reason it is
+ * derived here rather than left to the caller: several consumers netting
+ * refunds independently is several chances to disagree, and this payload
+ * does not even carry the refund for one to net with. It is not clamped at
+ * zero — an over-refunded line is worth seeing rather than hiding (ADR-042)
+ * — though a line refunded past its own total is excluded before it gets
+ * here.
+ *
  * Shares are apportioned by `allocateProRata` at equal weight rather than
  * by dividing, so three units of a $10.00 line come back as 334c, 333c and
  * 333c and sum to the line exactly — the same property the shipping
@@ -213,7 +237,7 @@ export function isUndecided(unit: PurchaseItemUnitRow): boolean {
 function slotPricesCents(line: ProposableLine, unitCount: number): number[] {
   const slots = Math.max(line.quantity, unitCount, 1);
   return allocateProRata(
-    landedCostCents(line),
+    landedCostCents(line) - line.refundedCents,
     Array.from({ length: slots }, () => 1)
   );
 }
@@ -259,7 +283,7 @@ export function listInventoryProposals(db: PurchasesDb, purchaseId: string): Inv
         itemName: line.name,
         serialNumber: unit?.serialNumber ?? null,
         purchaseDate: order.orderedAt,
-        purchasePriceCents: price ?? 0,
+        purchasePriceCents: price,
         purchasedFromName: order.merchantEntityName,
         purchaseTransactionUri: transactionUri,
         kindConfirmed: line.kindConfirmedAt !== null,
