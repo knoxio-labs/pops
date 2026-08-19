@@ -209,6 +209,8 @@ Coverage carries a threshold ratchet in `vitest.config.ts`.
 
 **Chasing a flake.** This suite has produced three intermittent-failure reports (POPS-1349, POPS-1430, POPS-1567) that all evaporated because nobody kept the output of the run that actually went red. From the repo root, `node scripts/flake-hunt.mjs --filter @pops/purchases [--coverage]` runs the suite in a loop and keeps a red run's full JSON report, stdout/stderr, failing test name(s), loop iteration, wall clock, and load average at start and end — deleting everything from the green runs so an unattended soak doesn't fill the disk. See its `--help` for the full option set; it works for any unit, not only this one.
 
+**An unmatched route is not silent.** `unmatchedRouteHandler` (`src/api/middleware/unmatched-route.ts`) is the last thing mounted in `createPurchasesApiApp`: a request whose method and path match no route logs both server-side and answers the same `{ message, code }` shape every other rejection here uses, instead of Express's silent, unparseable HTML default. `OPTIONS` is passed through untouched so Express still builds its automatic `Allow` response. This covers unmatched routes only — a 404 a handler returns itself, such as a purchase id that does not exist, still writes nothing server-side. It was prompted by POPS-1312, one `POST /purchases` in 748 answering 404 with an empty body during a real backfill, which was never reproduced and is not explained by anything in this handler; that ticket stays open on its own terms, and POPS-2303 tracks whether the rest of the fleet gets the same handler.
+
 ## Local development
 
 ```bash
