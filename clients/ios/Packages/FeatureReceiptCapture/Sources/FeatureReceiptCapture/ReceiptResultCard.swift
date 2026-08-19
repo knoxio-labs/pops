@@ -36,6 +36,14 @@ internal struct ReceiptResultCard: View {
                     Text(content.message)
                         .font(.popsBody)
                         .foregroundStyle(Color.popsForeground)
+                    Text(content.summary)
+                        .font(.popsSubheadline)
+                        .foregroundStyle(Color.popsForeground)
+                    if let purchasedOn = content.purchasedOn {
+                        Text(purchasedOn)
+                            .font(.popsCaption)
+                            .foregroundStyle(Color.popsMutedForeground)
+                    }
                     Text(content.reference)
                         .font(.popsCaption)
                         .foregroundStyle(Color.popsMutedForeground)

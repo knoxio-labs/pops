@@ -140,7 +140,7 @@ describe('the three outcomes', () => {
 
   it('answers 200 for needs-review — a real purchase awaiting a human, not a failure', async () => {
     const { app, token } = openWith(
-      purchasesNeedsReview([{ kind: 'sum-mismatch', detail: 'off by 240c' }])
+      purchasesNeedsReview([{ kind: 'sum-mismatch', detail: 'off by 240c', deltaCents: -240 }])
     );
 
     const res = await post(app, token, { parts: ONE_PART });
@@ -148,8 +148,39 @@ describe('the three outcomes', () => {
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
       kind: 'needs-review',
-      problems: [{ code: 'sum-mismatch', detail: 'off by 240c' }],
+      receiptCount: 1,
+      problems: [{ code: 'sum-mismatch', detail: 'off by 240c', deltaCents: -240 }],
+      extracted: {
+        merchantName: 'Woolworths',
+        address: '12 Example St',
+        purchasedOn: '2026-08-13',
+        purchasedAt: '14:05',
+        currency: 'AUD',
+        total: '$84.20',
+        tax: '$7.65',
+        discounts: ['$2.00'],
+        surcharges: ['$0.50'],
+        shipping: null,
+        lines: [{ description: 'MILK 2L', amount: '$3.10', quantity: 2, unitNote: '2 @ $1.55' }],
+        unreadableNotes: ['line 7 is smudged'],
+      },
     });
+  });
+
+  it('serves the reading through the real perimeter, not only through the mapper', async () => {
+    // The route declares the outcome schema, so ts-rest would strip a field the
+    // contract does not know about. This is the assertion that fails if the
+    // reading is added to the mapper and forgotten in the contract — the exact
+    // shape of the defect this arm had.
+    const { app, token } = openWith(
+      purchasesNeedsReview([{ kind: 'sum-mismatch', detail: 'off by 240c', deltaCents: -240 }])
+    );
+
+    const res = await post(app, token, { parts: ONE_PART });
+
+    expect(res.body.extracted?.merchantName).toBe('Woolworths');
+    expect(res.body.extracted?.lines).toHaveLength(1);
+    expect(res.body.problems?.[0]?.deltaCents).toBe(-240);
   });
 
   it('answers 200 for unreadable, with the reason the model gave', async () => {
@@ -158,7 +189,11 @@ describe('the three outcomes', () => {
     const res = await post(app, token, { parts: ONE_PART });
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ kind: 'unreadable', reason: 'the photograph is too blurred' });
+    expect(res.body).toEqual({
+      kind: 'unreadable',
+      receiptCount: 1,
+      reason: 'the photograph is too blurred',
+    });
   });
 
   it('sends the parts on unchanged', async () => {

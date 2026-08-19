@@ -26,7 +26,9 @@ internal struct ReceiptResultCopyTests {
         .noLines,
         .negativeLine,
         .sumMismatch,
+        .ambiguousTax,
         .damaged,
+        .unrecognised("a-reason-invented-later"),
     ]
 
     @Test("every gateway failure says something, and no two say the same thing")
@@ -96,5 +98,43 @@ internal struct ReceiptResultCopyTests {
     @Test("the reference names the purchase it points at")
     func referenceNamesThePurchase() {
         #expect(ReceiptResultCopy.purchaseReference("purchase-42").contains("purchase-42"))
+    }
+
+    /// The producer's vocabulary is for its own logs. A reader shown
+    /// `negative-shipping` has been taught nothing about their receipt, and
+    /// the gate's `detail` is drawn beside this to say what actually happened.
+    @Test("an unrecognised gate reason does not leak the wire code to the reader")
+    func unrecognisedKindDoesNotShowItsWireCode() {
+        let label = ReceiptResultCopy.gateFailureLabel(.unrecognised("negative-shipping"))
+
+        #expect(!label.contains("negative-shipping"))
+        #expect(!label.trimmingCharacters(in: .whitespaces).isEmpty)
+    }
+
+    /// Two kinds the gate can produce today. A build with no phrasing for one
+    /// falls back to the generic sentence, which is survivable; two DIFFERENT
+    /// reasons reading identically is not.
+    @Test("ambiguous tax does not read like a sum mismatch")
+    func ambiguousTaxIsItsOwnReason() {
+        #expect(
+            ReceiptResultCopy.gateFailureLabel(.ambiguousTax)
+                != ReceiptResultCopy.gateFailureLabel(.sumMismatch)
+        )
+    }
+
+    @Test("the summary reads as one line a reader can check against the paper")
+    func summaryReadsAsOneLine() {
+        let summary = ReceiptResultCopy.purchaseSummary(
+            merchantName: "Woolworths", itemCount: 12, total: "$84.20")
+
+        #expect(summary == "Woolworths · 12 items · $84.20")
+    }
+
+    @Test("a summary with nothing but a total is still a sentence, not a stray separator")
+    func summaryWithOnlyATotal() {
+        let summary = ReceiptResultCopy.purchaseSummary(
+            merchantName: nil, itemCount: 0, total: "$1.99")
+
+        #expect(summary == "$1.99")
     }
 }
