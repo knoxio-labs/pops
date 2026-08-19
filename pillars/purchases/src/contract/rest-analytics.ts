@@ -17,7 +17,7 @@ import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
 
 import { MERCHANT_RESOLUTIONS } from './constants.js';
-import { ListPurchasesQuerySchema } from './rest-schemas.js';
+import { ErrorBodySchema, ListPurchasesQuerySchema } from './rest-schemas.js';
 import {
   CurrencySchema,
   IsoTimestampSchema,
@@ -117,9 +117,14 @@ export const MerchantSpendRollupSchema = z.object({
  * The same scope vocabulary as the order index, minus the page.
  *
  * Derived from it rather than restated so the two cannot disagree about what
- * `from`, `to`, `sources` or `statuses` select. There is deliberately no
- * `limit`: a roll-up over the first 500 of 748 orders is not a smaller
- * answer, it is a wrong one, and nothing in the response would say so.
+ * `from`, `to`, `sources`, `statuses`, `currency` or the merchant parameters
+ * select. That identity is what makes a merchant row openable: the drill-down
+ * sends this row's scope back to `GET /purchases` and is answered by exactly
+ * the orders the row counted, because both go through one set of predicates.
+ *
+ * There is deliberately no `limit`: a roll-up over the first 500 of 748
+ * orders is not a smaller answer, it is a wrong one, and nothing in the
+ * response would say so.
  */
 export const MerchantSpendQuerySchema = ListPurchasesQuerySchema.omit({
   limit: true,
@@ -131,7 +136,12 @@ export const purchasesAnalyticsContract = c.router({
     method: 'GET',
     path: '/analytics/merchant-spend',
     query: MerchantSpendQuerySchema,
-    responses: { 200: MerchantSpendRollupSchema },
+    responses: {
+      200: MerchantSpendRollupSchema,
+      // Two merchant parameters at once, refused for the same reason the
+      // order index refuses them.
+      400: ErrorBodySchema,
+    },
     summary: 'Spend per merchant and currency over a period, with the explained/unexplained split',
   },
 });

@@ -7,11 +7,13 @@ import { MerchantRow } from './MerchantRow.js';
 
 import type { ReactElement } from 'react';
 
-import type { MerchantIdentity } from './types.js';
+import type { MerchantIdentity, SpendPeriod } from './types.js';
 import type { CurrencyGroup } from './useMerchantLensModel.js';
 
 interface Props {
   group: CurrencyGroup;
+  /** Threaded down so a row's orders are read over the row's own window. */
+  period: SpendPeriod;
 }
 
 /**
@@ -21,7 +23,7 @@ interface Props {
  * roll-up returns one per currency because no single number spans them, and
  * summing AUD into USD here would invent the figure the contract refused to.
  */
-export function CurrencyGroupSection({ group }: Props): ReactElement {
+export function CurrencyGroupSection({ group, period }: Props): ReactElement {
   const { t } = useTranslation('purchases');
   const { currency, total } = group;
 
@@ -54,7 +56,7 @@ export function CurrencyGroupSection({ group }: Props): ReactElement {
       <ul className="space-y-3" aria-label={t('merchants.list.ariaLabel', { currency })}>
         {group.merchants.map((merchant) => (
           <li key={merchantKey(merchant.merchant)}>
-            <MerchantRow merchant={merchant} />
+            <MerchantRow merchant={merchant} period={period} />
           </li>
         ))}
       </ul>

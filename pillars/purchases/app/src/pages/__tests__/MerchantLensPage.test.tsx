@@ -1,20 +1,24 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import enAUPurchases from '@pops/locales/en-AU/purchases.json';
 
 const merchantSpendMock = vi.hoisted(() => vi.fn());
+const purchaseListMock = vi.hoisted(() => vi.fn());
 
 vi.mock('../../purchases-api/index.js', () => ({
   analyticsMerchantSpend: (...args: unknown[]) => merchantSpendMock(...args),
+  purchaseList: (...args: unknown[]) => purchaseListMock(...args),
 }));
 
 import { MerchantLensPage } from '../MerchantLensPage';
 
 import type {
   CurrencySpend,
+  MerchantOrder,
   MerchantSpend,
   SpendAccounting,
   SpendPeriod,
@@ -31,7 +35,9 @@ function renderPage(): ReturnType<typeof userEvent.setup> {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={client}>
-      <MerchantLensPage />
+      <MemoryRouter initialEntries={['/purchases/merchants']}>
+        <MerchantLensPage />
+      </MemoryRouter>
     </QueryClientProvider>
   );
   return user;
@@ -90,6 +96,44 @@ function rollupReturns(
   merchantSpendMock.mockResolvedValue({ data: { period, merchants, totals } });
 }
 
+function purchaseOrder(overrides: Partial<MerchantOrder> = {}): MerchantOrder {
+  return {
+    id: 'purchase-1',
+    checksum: 'amazon:249-1512883-0105415',
+    createdAt: '2026-02-03T00:00:00Z',
+    currency: 'AUD',
+    discountCents: 0,
+    ingestMethod: 'export',
+    merchantEntityId: null,
+    merchantEntityName: 'Amazon',
+    orderedAt: '2026-02-02T01:41:21Z',
+    paymentHint: null,
+    rawRef: null,
+    settlementMode: 'card',
+    shippingCents: 0,
+    source: 'amazon',
+    sourceOrderId: '249-1512883-0105415',
+    status: 'linked',
+    subtotalCents: 5678,
+    surchargeCents: 0,
+    taxCents: 0,
+    totalCents: 5678,
+    updatedAt: '2026-02-03T00:00:00Z',
+    ...overrides,
+  };
+}
+
+function ordersReturn(orders: MerchantOrder[]): void {
+  purchaseListMock.mockResolvedValue({ data: { items: orders } });
+}
+
+async function openTheOrdersOf(
+  user: ReturnType<typeof userEvent.setup>,
+  merchant: string
+): Promise<void> {
+  await user.click(screen.getByRole('button', { name: `Show the orders behind ${merchant}` }));
+}
+
 /** `noUncheckedIndexedAccess` makes indexing optional; assert rather than cast. */
 function nth<T>(items: readonly T[], index: number): T {
   const item = items[index];
@@ -115,6 +159,8 @@ async function settled(): Promise<void> {
 
 beforeEach(() => {
   merchantSpendMock.mockReset();
+  purchaseListMock.mockReset();
+  ordersReturn([]);
 });
 
 afterEach(() => {
@@ -326,6 +372,240 @@ describe('MerchantLensPage — period', () => {
   });
 });
 
+/**
+ * The reach the lens was missing. A merchant row is where a reader forms the
+ * question the order detail page answers, so what matters here is that the
+ * request carries the row's OWN identity — a label group asked for by label,
+ * an entity group by id — and that the answer is a set of links to
+ * `/purchases/:purchaseId`.
+ */
+describe('MerchantLensPage — opening a merchant row', () => {
+  it('opens a label group by its label, and no other way', async () => {
+    rollupReturns([namedMerchant('Amazon')]);
+    ordersReturn([purchaseOrder()]);
+    const user = renderPage();
+    await settled();
+
+    await openTheOrdersOf(user, 'Amazon');
+
+    await waitFor(() => {
+      expect(purchaseListMock).toHaveBeenCalledWith({
+        query: {
+          merchantEntityName: 'Amazon',
+          currency: 'AUD',
+          limit: 500,
+        },
+      });
+    });
+  });
+
+  it('opens an entity group by its id, never by the label it is wearing', async () => {
+    rollupReturns([entityMerchant('ent-1', 'Woolworths')]);
+    ordersReturn([purchaseOrder({ merchantEntityId: 'ent-1', merchantEntityName: 'Woolworths' })]);
+    const user = renderPage();
+    await settled();
+
+    await openTheOrdersOf(user, 'Woolworths');
+
+    await waitFor(() => {
+      expect(purchaseListMock).toHaveBeenCalledWith({
+        query: { merchantEntityId: 'ent-1', currency: 'AUD', limit: 500 },
+      });
+    });
+    const [[sent]] = purchaseListMock.mock.calls as [[{ query: Record<string, unknown> }]];
+    expect(sent.query).not.toHaveProperty('merchantEntityName');
+  });
+
+  it('opens the unattributed bucket as a bucket, not as a merchant named nothing', async () => {
+    rollupReturns([unattributedMerchant()]);
+    ordersReturn([purchaseOrder({ merchantEntityName: null })]);
+    const user = renderPage();
+    await settled();
+
+    await openTheOrdersOf(user, enAUPurchases['merchants.unattributed']);
+
+    await waitFor(() => {
+      expect(purchaseListMock).toHaveBeenCalledWith({
+        query: { merchantUnattributed: true, currency: 'AUD', limit: 500 },
+      });
+    });
+  });
+
+  // The window the figures were computed over, not the one the picker is
+  // showing: a list read over a different window than its headline is a
+  // disagreement a reader cannot see.
+  it('reads the orders over the window the roll-up reported', async () => {
+    rollupReturns([namedMerchant('Amazon')], [currencyTotal('AUD')], {
+      from: '2026-01-01T00:00:00.000000000Z',
+      to: '2026-12-31T23:59:59Z',
+    });
+    ordersReturn([purchaseOrder()]);
+    const user = renderPage();
+    await settled();
+
+    await openTheOrdersOf(user, 'Amazon');
+
+    await waitFor(() => {
+      expect(purchaseListMock).toHaveBeenCalledWith({
+        query: {
+          merchantEntityName: 'Amazon',
+          currency: 'AUD',
+          from: '2026-01-01T00:00:00.000000000Z',
+          to: '2026-12-31T23:59:59Z',
+          limit: 500,
+        },
+      });
+    });
+  });
+
+  it('gives each order a link to its own detail page', async () => {
+    rollupReturns([namedMerchant('Amazon')]);
+    ordersReturn([
+      purchaseOrder({ id: 'order-a', sourceOrderId: 'A-1', totalCents: 5678 }),
+      purchaseOrder({ id: 'order-b', sourceOrderId: 'B-2', totalCents: 1200 }),
+    ]);
+    const user = renderPage();
+    await settled();
+
+    await openTheOrdersOf(user, 'Amazon');
+
+    const list = await screen.findByRole('list', { name: 'Orders paid to Amazon' });
+    const links = within(list).getAllByRole('link');
+    expect(links.map((link) => link.getAttribute('href'))).toEqual([
+      '/purchases/order-a',
+      '/purchases/order-b',
+    ]);
+    expect(within(list).getByText('A-1')).toBeVisible();
+    expect(within(list).getByText('$56.78')).toBeVisible();
+  });
+
+  it('does not ask for any orders until the row is opened', async () => {
+    rollupReturns([namedMerchant('Amazon'), namedMerchant('Bunnings')]);
+    renderPage();
+    await settled();
+
+    expect(purchaseListMock).not.toHaveBeenCalled();
+  });
+
+  it('blames the page cap for a short list only when the list is at the cap', async () => {
+    rollupReturns([{ ...namedMerchant('Amazon'), orderCount: 748 }]);
+    ordersReturn(
+      Array.from({ length: 500 }, (_unused, index) => purchaseOrder({ id: `order-${index}` }))
+    );
+    const user = renderPage();
+    await settled();
+
+    await openTheOrdersOf(user, 'Amazon');
+
+    expect(
+      await screen.findByText(/Showing the first 500 of the 748 orders in this total/)
+    ).toBeVisible();
+  });
+
+  // A shortfall nowhere near the cap has a cause this page never observed —
+  // an order deleted between the roll-up read and this one produces it — so
+  // it must be reported as a disagreement, not as the cap.
+  it('does not blame the page cap for a shortfall nowhere near it', async () => {
+    rollupReturns([{ ...namedMerchant('Amazon'), orderCount: 3 }]);
+    ordersReturn([purchaseOrder({ id: 'order-a' })]);
+    const user = renderPage();
+    await settled();
+
+    await openTheOrdersOf(user, 'Amazon');
+
+    expect(
+      await screen.findByText(/Showing 1 orders, and the roll-up counted 3.*two reads disagree/)
+    ).toBeVisible();
+    expect(screen.queryByText(/page limit, so the rest are past it/)).toBeNull();
+  });
+
+  // The direction the label filter's `IS NULL` exists to prevent: a list
+  // holding more than the headline above it was computed from.
+  it('names a list longer than the count the row carries', async () => {
+    rollupReturns([{ ...namedMerchant('Amazon'), orderCount: 1 }]);
+    ordersReturn([purchaseOrder({ id: 'order-a' }), purchaseOrder({ id: 'order-b' })]);
+    const user = renderPage();
+    await settled();
+
+    await openTheOrdersOf(user, 'Amazon');
+
+    expect(
+      await screen.findByText(/holds more orders than the figures above were computed from/)
+    ).toBeVisible();
+  });
+
+  it('points the disclosure control at a region only while that region exists', async () => {
+    rollupReturns([namedMerchant('Amazon')]);
+    ordersReturn([purchaseOrder()]);
+    const user = renderPage();
+    await settled();
+
+    const closed = screen.getByRole('button', { name: 'Show the orders behind Amazon' });
+    expect(closed).not.toHaveAttribute('aria-controls');
+
+    await openTheOrdersOf(user, 'Amazon');
+
+    const opened = await screen.findByRole('button', { name: 'Hide the orders behind Amazon' });
+    const controlled = opened.getAttribute('aria-controls');
+    expect(controlled).not.toBeNull();
+    expect(document.getElementById(controlled ?? '')).not.toBeNull();
+  });
+
+  // The row exists because the roll-up counted orders here, so an empty
+  // answer is two reads disagreeing rather than an ordinary empty state.
+  it('calls an empty answer a disagreement rather than "nothing to show"', async () => {
+    rollupReturns([{ ...namedMerchant('Amazon'), orderCount: 12 }]);
+    ordersReturn([]);
+    const user = renderPage();
+    await settled();
+
+    await openTheOrdersOf(user, 'Amazon');
+
+    expect(await screen.findByText(/The two reads disagree/)).toBeVisible();
+  });
+
+  it('surfaces the server explanation and retries from the drill-down error', async () => {
+    rollupReturns([namedMerchant('Amazon')]);
+    purchaseListMock.mockResolvedValue({ error: { message: 'purchases is down' } });
+    const user = renderPage();
+    await settled();
+
+    await openTheOrdersOf(user, 'Amazon');
+
+    const alert = await screen.findByRole('alert');
+    expect(within(alert).getByText('purchases is down')).toBeVisible();
+
+    ordersReturn([purchaseOrder({ id: 'order-a' })]);
+    await user.click(within(alert).getByRole('button', { name: 'Retry' }));
+
+    expect(await screen.findByRole('link', { name: /A-1|249/ })).toHaveAttribute(
+      'href',
+      '/purchases/order-a'
+    );
+  });
+
+  it('closes again, and says so on the control', async () => {
+    rollupReturns([namedMerchant('Amazon')]);
+    ordersReturn([purchaseOrder()]);
+    const user = renderPage();
+    await settled();
+
+    await openTheOrdersOf(user, 'Amazon');
+    const control = await screen.findByRole('button', {
+      name: 'Hide the orders behind Amazon',
+    });
+    expect(control).toHaveAttribute('aria-expanded', 'true');
+
+    await user.click(control);
+
+    expect(screen.queryByRole('list', { name: 'Orders paid to Amazon' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Show the orders behind Amazon' })).toHaveAttribute(
+      'aria-expanded',
+      'false'
+    );
+  });
+});
+
 describe('MerchantLensPage — states', () => {
   it('says the period is empty rather than rendering nothing', async () => {
     rollupReturns([], []);
@@ -367,8 +647,14 @@ describe('MerchantLensPage — states', () => {
       entityMerchant('ent-1', 'Woolworths'),
       unattributedMerchant(),
     ]);
-    renderPage();
+    ordersReturn([purchaseOrder()]);
+    const user = renderPage();
     await settled();
+
+    // Opened, because the drill-down's whole catalog is unreachable while
+    // every row is closed.
+    await openTheOrdersOf(user, 'Amazon');
+    await screen.findByRole('list', { name: 'Orders paid to Amazon' });
 
     expect(document.body.textContent).not.toMatch(/merchants\.[a-zA-Z]/);
   });

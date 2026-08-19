@@ -6,6 +6,7 @@
  * `readonly` arrays into the mutable ones ts-rest's response types expect.
  */
 import { rollUpMerchantSpend } from '../../db/index.js';
+import { resolvePurchaseScope } from './purchase-scope.js';
 
 import type { z } from 'zod';
 
@@ -17,12 +18,10 @@ type MerchantSpendQuery = z.infer<typeof MerchantSpendQuerySchema>;
 export function makeAnalyticsHandlers(db: PurchasesDb) {
   return {
     merchantSpend: async ({ query }: { query: MerchantSpendQuery }) => {
-      const rollup = rollUpMerchantSpend(db, {
-        sources: query.sources,
-        statuses: query.statuses,
-        from: query.from,
-        to: query.to,
-      });
+      const scope = resolvePurchaseScope(query);
+      if (!scope.ok) return { status: 400 as const, body: scope.body };
+
+      const rollup = rollUpMerchantSpend(db, scope.scope);
 
       return {
         status: 200 as const,

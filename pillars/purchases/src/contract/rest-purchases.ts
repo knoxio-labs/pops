@@ -46,6 +46,9 @@ export const purchasesPurchaseContract = c.router({
     query: ListPurchasesQuerySchema,
     responses: {
       200: z.object({ items: z.array(PurchaseSchema) }),
+      // Two merchant parameters at once. Declared, because the alternative a
+      // caller cannot detect is a 200 computed from whichever one won.
+      400: ErrorBodySchema,
     },
     summary: 'List orders, newest first',
   },
