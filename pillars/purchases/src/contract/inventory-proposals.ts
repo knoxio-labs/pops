@@ -53,9 +53,11 @@ export const InventoryProposalSchema = z.object({
   purchasePriceCents: z.int(),
   purchasedFromName: z.string().nullable(),
   /**
-   * The order's settling transaction, when exactly one confirmed link names
-   * one. Null when the order settled across several, or when the only links
-   * it has are the matcher's own unconfirmed proposals.
+   * The order's settling transaction, when exactly one confirmed link on a
+   * charge that paid for the goods names one. Null when the order was paid
+   * across several, or when the only links it has are the matcher's own
+   * unconfirmed proposals. A refund or a card hold is a transaction of the
+   * order without being a payment for it, and neither counts as a second.
    */
   purchaseTransactionUri: PopsUriSchema.nullable(),
   /**

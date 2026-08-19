@@ -25,13 +25,14 @@
  */
 import { and, asc, eq, inArray, isNotNull } from 'drizzle-orm';
 
+import { isResidualBearing, SETTLEMENT_ROLES } from '../../contract/constants.js';
 import { allocateProRata } from '../../ingest/allocation.js';
 import { purchaseChargeLinks, purchaseCharges } from '../schema/charges.js';
 import { purchaseItems, purchaseItemUnits } from '../schema/items.js';
 import { purchases, purchaseShipments } from '../schema/purchases.js';
 import { landedCostCents } from './accounting.js';
 
-import type { ShipmentStatus } from '../../contract/constants.js';
+import type { SettlementRole, ShipmentStatus } from '../../contract/constants.js';
 import type { PurchaseItemUnitRow } from '../schema.js';
 import type { PurchasesDb } from './internal.js';
 
@@ -40,6 +41,22 @@ import type { PurchasesDb } from './internal.js';
  * these is not an asset, whatever the merchant charged for it.
  */
 const UNRECEIVED_SHIPMENT_STATUSES: readonly ShipmentStatus[] = ['cancelled', 'returned'];
+
+/**
+ * Charge roles that paid for the goods, which is what "settled against one
+ * transaction" has to count.
+ *
+ * A `refund` is money coming back and an `authorization` is a hold its own
+ * capture records again — both are transactions of the order without being
+ * settlements of it, and {@link settlementTransactionUri} answers null the
+ * moment it sees a second URI. Counting either would strip the transaction
+ * link from exactly the orders most likely to carry a durable asset: one
+ * refunded in part, and one whose bank recorded the hold as its own row.
+ * The same pair `accounting.ts` excludes, expressed the same way.
+ */
+const SETTLING_ROLES: readonly SettlementRole[] = SETTLEMENT_ROLES.filter(
+  (role) => isResidualBearing(role) && role !== 'refund'
+);
 
 /**
  * One unanswered offer to inventory.
@@ -96,12 +113,13 @@ export interface InventoryProposal {
   readonly purchasePriceCents: number;
   readonly purchasedFromName: string | null;
   /**
-   * `pops://finance/transaction/<id>`, when the order settled against
+   * `pops://finance/transaction/<id>`, when the order was paid for by
    * exactly one transaction a human confirmed. Null otherwise, and both
    * halves of that matter: an unconfirmed link is the matcher's proposal
-   * and not a fact, and an order spanning two transactions has no single
-   * one to name — inventory's column holds one URI, so guessing which
-   * would file the asset against half its own payment.
+   * and not a fact, and an order spanning two payments has no single one to
+   * name — inventory's column holds one URI, so guessing which would file
+   * the asset against half its own payment. Refunds and card holds are not
+   * payments and do not count as a second one; see {@link SETTLING_ROLES}.
    */
   readonly purchaseTransactionUri: string | null;
   /**
@@ -169,9 +187,10 @@ function listProposableLines(db: PurchasesDb, purchaseId: string): ProposableLin
 /**
  * The single finance transaction this order settled against, or null.
  *
- * Confirmed links only. The sweep tears down and rewrites every
- * unconfirmed link on each run, so one of those is a candidate the engine
- * currently likes rather than a settlement anyone has agreed to.
+ * Confirmed links only, and only on a charge in a {@link SETTLING_ROLES}
+ * role. The sweep tears down and rewrites every unconfirmed link on each
+ * run, so one of those is a candidate the engine currently likes rather
+ * than a settlement anyone has agreed to.
  */
 function settlementTransactionUri(db: PurchasesDb, purchaseId: string): string | null {
   const rows = db
@@ -179,7 +198,11 @@ function settlementTransactionUri(db: PurchasesDb, purchaseId: string): string |
     .from(purchaseChargeLinks)
     .innerJoin(purchaseCharges, eq(purchaseChargeLinks.chargeId, purchaseCharges.id))
     .where(
-      and(eq(purchaseCharges.purchaseId, purchaseId), isNotNull(purchaseChargeLinks.confirmedAt))
+      and(
+        eq(purchaseCharges.purchaseId, purchaseId),
+        isNotNull(purchaseChargeLinks.confirmedAt),
+        inArray(purchaseCharges.role, [...SETTLING_ROLES])
+      )
     )
     .all();
   return rows.length === 1 ? (rows[0]?.uri ?? null) : null;

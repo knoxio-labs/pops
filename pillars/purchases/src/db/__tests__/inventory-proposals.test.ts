@@ -23,6 +23,7 @@ import {
 } from '../index.js';
 import { amazonOrder, openTempDb, seedAmazonSource } from './helpers.js';
 
+import type { SettlementRole } from '../../contract/constants.js';
 import type { CreateItemInput, CreatePurchaseInput, OpenedPurchasesDb } from '../index.js';
 
 let opened: OpenedPurchasesDb;
@@ -413,12 +414,16 @@ describe('naming the transaction that paid for it', () => {
       );
   }
 
-  function seedWithCharges(count: number): { purchaseId: string; chargeIds: string[] } {
+  function seedWithCharges(
+    count: number,
+    roles: readonly SettlementRole[] = []
+  ): { purchaseId: string; chargeIds: string[] } {
     const purchaseId = seed({
       charges: Array.from({ length: count }, (_unused, index) => ({
         sourceChargeRef: `chg-${index}`,
-        amountCents: 19900,
+        amountCents: roles[index] === 'refund' ? -5000 : 19900,
         chargedAt: '2026-02-02T12:00:00Z',
+        role: roles[index] ?? 'capture',
       })),
     });
     const chargeIds = getPurchase(opened.db, purchaseId)?.charges.map((c) => c.charge.id) ?? [];
@@ -450,6 +455,32 @@ describe('naming the transaction that paid for it', () => {
 
     linkTransaction(chargeIds[0] ?? '', 'pops://finance/transaction/t1', true);
     linkTransaction(chargeIds[1] ?? '', 'pops://finance/transaction/t2', true);
+
+    expect(uriOf(purchaseId)).toBeNull();
+  });
+
+  it('still names the payment when a refund on the order has a transaction of its own', () => {
+    const { purchaseId, chargeIds } = seedWithCharges(2, ['capture', 'refund']);
+
+    linkTransaction(chargeIds[0] ?? '', 'pops://finance/transaction/t1', true);
+    linkTransaction(chargeIds[1] ?? '', 'pops://finance/transaction/t-refund', true);
+
+    expect(uriOf(purchaseId)).toBe('pops://finance/transaction/t1');
+  });
+
+  it('still names the payment when the card hold landed as its own transaction', () => {
+    const { purchaseId, chargeIds } = seedWithCharges(2, ['authorization', 'capture']);
+
+    linkTransaction(chargeIds[0] ?? '', 'pops://finance/transaction/t-hold', true);
+    linkTransaction(chargeIds[1] ?? '', 'pops://finance/transaction/t1', true);
+
+    expect(uriOf(purchaseId)).toBe('pops://finance/transaction/t1');
+  });
+
+  it('names nothing for a hold nobody has captured', () => {
+    const { purchaseId, chargeIds } = seedWithCharges(1, ['authorization']);
+
+    linkTransaction(chargeIds[0] ?? '', 'pops://finance/transaction/t-hold', true);
 
     expect(uriOf(purchaseId)).toBeNull();
   });
