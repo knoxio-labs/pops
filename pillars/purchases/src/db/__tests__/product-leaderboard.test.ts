@@ -813,3 +813,262 @@ function linkEveryCharge(db: PurchasesDb, purchaseId: string): void {
     }
   }
 }
+
+const DAY_SECONDS = 86_400;
+
+describe('cadence', () => {
+  it('reports no cadence for a product bought once', () => {
+    createPurchase(
+      opened.db,
+      order({
+        checksum: 'once',
+        items: [line({ name: 'Kettle', sku: { value: 'B00KETTLE', scheme: 'merchant' } })],
+      })
+    );
+
+    // Not a zero and not a null: a single purchase has no gap, and either
+    // stand-in renders beside real cadences as if it were one.
+    expect(only(rankProductPurchases(opened.db)).cadence).toEqual({ basis: 'single-purchase' });
+  });
+
+  it('measures the gaps between distinct orders', () => {
+    for (const day of ['01', '08', '29']) {
+      createPurchase(
+        opened.db,
+        order({
+          checksum: `pods-${day}`,
+          orderedAt: `2026-01-${day}T00:00:00Z`,
+          items: [line({ name: 'Coffee Pods', sku: { value: 'B00PODS', scheme: 'merchant' } })],
+        })
+      );
+    }
+
+    // Gaps of 7 and 21 days.
+    expect(only(rankProductPurchases(opened.db)).cadence).toEqual({
+      basis: 'intervals',
+      medianIntervalSeconds: 14 * DAY_SECONDS,
+      meanIntervalSeconds: 14 * DAY_SECONDS,
+      shortestIntervalSeconds: 7 * DAY_SECONDS,
+      longestIntervalSeconds: 21 * DAY_SECONDS,
+    });
+  });
+
+  it('keeps two lines in one basket a single purchase rather than a zero-length cadence', () => {
+    createPurchase(
+      opened.db,
+      order({
+        checksum: 'two-bags',
+        items: [
+          line({ name: 'Coffee Pods', sku: { value: 'B00PODS', scheme: 'merchant' } }),
+          line({ name: 'Coffee Pods', sku: { value: 'B00PODS', scheme: 'merchant' } }),
+        ],
+      })
+    );
+
+    const entry = only(rankProductPurchases(opened.db));
+
+    expect(entry.lineCount).toBe(2);
+    // Buying ahead is not buying again. A fold that measured gaps between
+    // lines would report this product as re-bought instantly.
+    expect(entry.cadence).toEqual({ basis: 'single-purchase' });
+  });
+
+  it('separates the median from the mean on a bursty history', () => {
+    for (const orderedAt of [
+      '2026-01-01T00:00:00Z',
+      '2026-01-02T00:00:00Z',
+      '2026-01-03T00:00:00Z',
+      '2027-01-03T00:00:00Z',
+    ]) {
+      createPurchase(
+        opened.db,
+        order({
+          checksum: `burst-${orderedAt}`,
+          orderedAt,
+          items: [line({ name: 'Label Tape', sku: { value: 'B00TAPE', scheme: 'merchant' } })],
+        })
+      );
+    }
+
+    const { cadence } = only(rankProductPurchases(opened.db));
+    if (cadence.basis !== 'intervals') throw new Error('expected intervals');
+
+    expect(cadence.medianIntervalSeconds).toBe(1 * DAY_SECONDS);
+    expect(cadence.meanIntervalSeconds).toBeGreaterThan(100 * DAY_SECONDS);
+  });
+});
+
+describe('ordering within a group', () => {
+  /**
+   * The two orders are 6 hours apart and their timestamps sort the other way
+   * as text. Everything a group reports about its own ends — both dates, the
+   * label it wears, both ends of its price history — has to agree with the
+   * gap its cadence measures, and text ordering makes all four disagree.
+   */
+  function twoOffsetOrders(): void {
+    createPurchase(
+      opened.db,
+      order({
+        checksum: 'earlier-in-fact',
+        orderedAt: '2026-01-02T00:00:00+10:00',
+        items: [
+          line({
+            name: 'Filter Papers v1',
+            sku: { value: 'B00FILTER', scheme: 'merchant' },
+            unitPriceCents: 800,
+          }),
+        ],
+      })
+    );
+    createPurchase(
+      opened.db,
+      order({
+        checksum: 'later-in-fact',
+        orderedAt: '2026-01-01T20:00:00Z',
+        items: [
+          line({
+            name: 'Filter Papers v2',
+            sku: { value: 'B00FILTER', scheme: 'merchant' },
+            unitPriceCents: 900,
+          }),
+        ],
+      })
+    );
+  }
+
+  it('orders the two dates by the instant rather than the text', () => {
+    twoOffsetOrders();
+
+    const entry = only(rankProductPurchases(opened.db));
+
+    expect(entry.firstPurchasedAt).toBe('2026-01-02T00:00:00+10:00');
+    expect(entry.lastPurchasedAt).toBe('2026-01-01T20:00:00Z');
+  });
+
+  it('wears the label and the last price of the line that is genuinely latest', () => {
+    twoOffsetOrders();
+
+    const entry = only(rankProductPurchases(opened.db));
+
+    expect(entry.product.name).toBe('Filter Papers v2');
+    expect(entry.unitPrice.firstCents).toBe(800);
+    expect(entry.unitPrice.lastCents).toBe(900);
+  });
+
+  it('measures the gap those two dates actually span', () => {
+    twoOffsetOrders();
+
+    expect(only(rankProductPurchases(opened.db)).cadence).toEqual({
+      basis: 'intervals',
+      medianIntervalSeconds: 6 * 3600,
+      meanIntervalSeconds: 6 * 3600,
+      shortestIntervalSeconds: 6 * 3600,
+      longestIntervalSeconds: 6 * 3600,
+    });
+  });
+});
+
+describe('unit price history', () => {
+  function boughtAt(unitPriceCents: number, day: string, extra: Partial<CreateItemInput> = {}) {
+    createPurchase(
+      opened.db,
+      order({
+        checksum: `beans-${day}`,
+        orderedAt: `2026-01-${day}T00:00:00Z`,
+        items: [
+          line({
+            name: 'Coffee Beans',
+            sku: { value: 'B00BEANS', scheme: 'merchant' },
+            unitPriceCents,
+            lineTotalCents: unitPriceCents,
+            ...extra,
+          }),
+        ],
+      })
+    );
+  }
+
+  it('reports the ends and the extremes of the series rather than a drift figure', () => {
+    boughtAt(1000, '01');
+    boughtAt(600, '02');
+    boughtAt(1400, '03');
+    boughtAt(1200, '04');
+
+    const { unitPrice } = only(rankProductPurchases(opened.db));
+
+    expect(unitPrice.firstCents).toBe(1000);
+    expect(unitPrice.lastCents).toBe(1200);
+    // A first-to-last read alone says "up 20%". The extremes are what say
+    // the two ends do not represent the series.
+    expect(unitPrice.minCents).toBe(600);
+    expect(unitPrice.maxCents).toBe(1400);
+  });
+
+  it('is the merchant price, not the landed cost, so a big basket does not look like a price rise', () => {
+    boughtAt(1000, '01');
+    boughtAt(1000, '02', { allocatedShippingCents: 4000, allocatedAdjustmentCents: 300 });
+
+    const entry = only(rankProductPurchases(opened.db));
+
+    // Allocated shipping is a share of an order-level figure spread over
+    // that order's lines. Building the series on landed cost would report
+    // this unchanged price as a 430% rise.
+    expect(entry.unitPrice.firstCents).toBe(1000);
+    expect(entry.unitPrice.lastCents).toBe(1000);
+    expect(entry.unitPrice.maxCents).toBe(1000);
+    // The landed cost still carries the allocation, which is its job.
+    expect(entry.landedCostCents).toBe(1000 + 1000 + 4000 + 300);
+  });
+
+  it('splits the promotional marker three ways rather than reading silence as an ordinary price', () => {
+    boughtAt(1000, '01', { promotionalPrice: false });
+    boughtAt(600, '02', { promotionalPrice: true });
+    boughtAt(1000, '03');
+
+    const { unitPrice } = only(rankProductPurchases(opened.db));
+
+    expect(unitPrice.promotionalLineCount).toBe(1);
+    expect(unitPrice.ordinaryLineCount).toBe(1);
+    // The line whose source said nothing. Folded into `ordinary` it would
+    // assert a price the merchant never characterised.
+    expect(unitPrice.unstatedPromotionLineCount).toBe(1);
+  });
+
+  it('counts the lines whose price is a weight, so a heavier bag is not read as a dearer one', () => {
+    boughtAt(145, '01', { notes: ['0.500 kg NET @ $2.90/kg'] });
+    boughtAt(348, '02', { notes: ['1.200 kg NET @ $2.90/kg'] });
+
+    const { unitPrice, lineCount } = only(rankProductPurchases(opened.db));
+
+    // Same price per kilo throughout; the series says +140% and only this
+    // count says why.
+    expect(unitPrice.firstCents).toBe(145);
+    expect(unitPrice.lastCents).toBe(348);
+    expect(unitPrice.measuredLineCount).toBe(2);
+    expect(unitPrice.measuredLineCount).toBe(lineCount);
+  });
+
+  it('does not count a quantity note as a measure', () => {
+    boughtAt(924, '01', { notes: ['Qty 2 @ $9.24 each', 'PRICE REDUCED BY $7.26 each'] });
+
+    expect(only(rankProductPurchases(opened.db)).unitPrice.measuredLineCount).toBe(0);
+  });
+
+  it('counts a line carrying several notes once', () => {
+    boughtAt(145, '01', { notes: ['0.500 kg NET @ $2.90/kg', 'PRICE REDUCED BY $0.20'] });
+
+    const entry = only(rankProductPurchases(opened.db));
+
+    // The note read is a separate query for exactly this reason: joined onto
+    // the lines it would return this line twice and double every sum below.
+    expect(entry.unitPrice.measuredLineCount).toBe(1);
+    expect(entry.lineCount).toBe(1);
+    expect(entry.landedCostCents).toBe(145);
+  });
+
+  it('leaves a line with no notes out of the measured count', () => {
+    boughtAt(1000, '01');
+
+    expect(only(rankProductPurchases(opened.db)).unitPrice.measuredLineCount).toBe(0);
+  });
+});

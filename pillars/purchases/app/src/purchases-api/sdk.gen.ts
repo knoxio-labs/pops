@@ -98,7 +98,7 @@ export const analyticsMerchantSpend = <ThrowOnError extends boolean = false>(
   >({ url: '/analytics/merchant-spend', ...options });
 
 /**
- * Repeat purchases per product, each group carrying the identity basis it was formed on
+ * Repeat purchases per product — cadence, unit-price history, and the identity basis each group was formed on
  */
 export const analyticsProductLeaderboard = <ThrowOnError extends boolean = false>(
   options?: Options<AnalyticsProductLeaderboardData, ThrowOnError>

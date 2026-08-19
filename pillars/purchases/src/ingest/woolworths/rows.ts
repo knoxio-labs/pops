@@ -1,3 +1,4 @@
+import { isMeasureNote } from '../measure-notes.js';
 import { parseAmountCents } from '../money.js';
 
 /**
@@ -85,8 +86,11 @@ const QUANTITY_RE = /^qty\s+(\d+)\s*@\s*\$?([\d,]+\.?\d*)\s*each/iu;
  * It is not a quantity: 0.202 is not a count of anything, and forcing it
  * into one gives a bag of oranges a quantity of zero. The weight is kept
  * verbatim as provenance and the line counts as one item.
+ *
+ * The shape lives in `../measure-notes.ts` because the note this row
+ * becomes is read back by the product-grain aggregate, which has to know
+ * that such a line's unit price is a weight rather than a price.
  */
-const MEASURE_RE = /^[\d.,]+\s*(kg|g|ml|l|ea)\b.*@/iu;
 
 /**
  * Rows that modify the product above them rather than naming a new one.
@@ -246,7 +250,7 @@ export function groupReceiptRows(rows: readonly ReceiptRow[]): GroupedRows {
     const amount = parseAmountCents(row.amount);
     if (quantityMatch !== null) {
       grouper.applyQuantity(row, quantityMatch, description);
-    } else if (MEASURE_RE.test(description)) {
+    } else if (isMeasureNote(description)) {
       grouper.applyMeasure(row, description);
     } else if (amount !== null && amount < 0) {
       grouper.applyDiscount(description, amount);

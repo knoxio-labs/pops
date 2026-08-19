@@ -136,6 +136,17 @@ export type AnalyticsProductLeaderboardResponses = {
       to: string | null;
     };
     products: Array<{
+      cadence:
+        | {
+            basis: 'single-purchase';
+          }
+        | {
+            basis: 'intervals';
+            longestIntervalSeconds: number;
+            meanIntervalSeconds: number;
+            medianIntervalSeconds: number;
+            shortestIntervalSeconds: number;
+          };
       currency: string;
       firstPurchasedAt: string;
       landedCostCents: number;
@@ -182,6 +193,16 @@ export type AnalyticsProductLeaderboardResponses = {
           };
       refundedCents: number;
       unitCount: number;
+      unitPrice: {
+        firstCents: number;
+        lastCents: number;
+        maxCents: number;
+        measuredLineCount: number;
+        minCents: number;
+        ordinaryLineCount: number;
+        promotionalLineCount: number;
+        unstatedPromotionLineCount: number;
+      };
     }>;
   };
 };

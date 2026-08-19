@@ -1,6 +1,8 @@
 /**
  * Repeat purchases at the **product** grain: the same thing bought across N
- * orders, what it has cost, and when it was last bought.
+ * orders, what it has cost, how often it comes back, and what it has cost
+ * per unit each time. What one group holds and reports is
+ * {@link ProductBucket}, beside this.
  *
  * The merchant roll-up beside this one is at the order grain and cannot
  * answer this — an order total says nothing about which of its lines keeps
@@ -29,10 +31,10 @@
  * to its order. Nothing here touches charges or links, which is what makes
  * "how many orders" a count of distinct order ids rather than a number that
  * multiplies by however many charges settled them — the fan-out the merchant
- * roll-up has to fold around. Landed cost comes from
- * {@link landedCostCents}, the same call the order read makes, rather than
- * being restated as `lineTotal + shipping + adjustment` in SQL where it
- * could drift from it.
+ * roll-up has to fold around. Landed cost comes from `landedCostCents` in
+ * `accounting.ts`, the same call the order read makes, rather than being
+ * restated as `lineTotal + shipping + adjustment` in SQL where it could
+ * drift from it.
  *
  * **Grouped by currency as well as product.** Adding an AUD line to a USD one
  * produces an integer that means nothing and looks authoritative.
@@ -42,21 +44,24 @@
  * a withheld group is withheld by a criterion the response names. A `limit`
  * would instead drop rows for a reason nothing in the response records.
  */
-import { landedCostCents } from './accounting.js';
 import {
-  identifyMerchant,
-  merchantLabelRank,
-  merchantSortKey,
-  withNewerLabel,
-  type LabelledMerchant,
-  type MerchantIdentity,
-} from './merchant-identity.js';
-import { identifyProduct, type ProductIdentity } from './product-identity.js';
-import { selectScopedLines, type ScopedLine } from './product-leaderboard-lines.js';
+  accumulate,
+  noteMerchant,
+  present,
+  rankLine,
+  startBucket,
+  type ProductBucket,
+  type ProductPurchases,
+  type RankedLine,
+} from './product-group.js';
+import { identifyProduct } from './product-identity.js';
+import { selectMeasuredItemIds, selectScopedLines } from './product-leaderboard-lines.js';
 import { tupleKey } from './tuple-key.js';
 
 import type { PurchasesDb } from './internal.js';
 import type { PurchaseScopeFilter } from './purchase-reads.js';
+
+export type { ProductCadence, ProductPurchases, ProductUnitPrice } from './product-group.js';
 
 export interface ProductLeaderboardFilter extends PurchaseScopeFilter {
   /**
@@ -64,39 +69,6 @@ export interface ProductLeaderboardFilter extends PurchaseScopeFilter {
    * Defaults to 1, which withholds nothing.
    */
   readonly minOrderCount?: number;
-}
-
-/** One product's history in one currency. */
-export interface ProductPurchases {
-  readonly product: ProductIdentity;
-  readonly currency: string;
-  /** Distinct orders this product appears in — the "across N orders" figure. */
-  readonly orderCount: number;
-  /** Lines. Higher than {@link orderCount} when one order lists the product twice. */
-  readonly lineCount: number;
-  /** Units, summing each line's quantity. */
-  readonly unitCount: number;
-  readonly firstPurchasedAt: string;
-  readonly lastPurchasedAt: string;
-  /** Summed `lineTotal + allocatedShipping + allocatedAdjustment` over the lines. */
-  readonly landedCostCents: number;
-  /**
-   * Settled refunds recorded against these lines. Gross of any refund
-   * recorded at the *order* grain, which no adapter attributes to a line —
-   * the Amazon disbursement feed names an order and never a line — so this
-   * reads 0 for every line the shipped adapters write. Returned rather than
-   * folded into the landed cost so a consumer cannot mistake one for the
-   * other.
-   */
-  readonly refundedCents: number;
-  /**
-   * Every merchant this product was bought from, in this currency, and the
-   * scope of the group: more than one only where the source is a single
-   * merchant's feed that names its own stores, as the Woolworths export
-   * does. Under any other source the group is keyed on the merchant and
-   * this holds exactly one.
-   */
-  readonly merchants: readonly MerchantIdentity[];
 }
 
 /**
@@ -130,77 +102,6 @@ export interface ProductLeaderboard {
   readonly coverage: ProductIdentityCoverage;
 }
 
-interface ProductBucket {
-  identity: ProductIdentity;
-  /** Rank of the line whose printed name this bucket is wearing. */
-  labelRank: string;
-  currency: string;
-  orderIds: Set<string>;
-  lineCount: number;
-  unitCount: number;
-  firstPurchasedAt: string;
-  lastPurchasedAt: string;
-  landedCostCents: number;
-  refundedCents: number;
-  merchants: Map<string, LabelledMerchant>;
-}
-
-function startBucket(line: ScopedLine, identity: ProductIdentity, rank: string): ProductBucket {
-  return {
-    identity,
-    labelRank: rank,
-    currency: line.currency,
-    orderIds: new Set([line.purchaseId]),
-    lineCount: 1,
-    unitCount: line.quantity,
-    firstPurchasedAt: line.orderedAt,
-    lastPurchasedAt: line.orderedAt,
-    landedCostCents: landedCostCents(line),
-    refundedCents: line.refundedCents,
-    merchants: new Map(),
-  };
-}
-
-function accumulate(bucket: ProductBucket, line: ScopedLine, rank: string): void {
-  bucket.orderIds.add(line.purchaseId);
-  bucket.lineCount += 1;
-  bucket.unitCount += line.quantity;
-  bucket.landedCostCents += landedCostCents(line);
-  bucket.refundedCents += line.refundedCents;
-  if (line.orderedAt < bucket.firstPurchasedAt) bucket.firstPurchasedAt = line.orderedAt;
-  if (line.orderedAt > bucket.lastPurchasedAt) bucket.lastPurchasedAt = line.orderedAt;
-  relabel(bucket, line, rank);
-}
-
-/**
- * Wear the newest line's printed name.
- *
- * Only the label moves, never the key: a `sku` group is keyed on the sku and
- * a `name` group on the normalised name, both of which survive a merchant
- * rewording what it prints. Newest-wins rather than first-seen because
- * "first" is whichever row the query happened to return first, which would
- * make a rendered name depend on read order. An `unidentified` group holds
- * one line and has nothing to choose between.
- */
-function relabel(bucket: ProductBucket, line: ScopedLine, rank: string): void {
-  if (bucket.identity.basis === 'unidentified' || rank <= bucket.labelRank) return;
-  bucket.identity = { ...bucket.identity, name: line.name };
-  bucket.labelRank = rank;
-}
-
-function noteMerchant(bucket: ProductBucket, line: ScopedLine): void {
-  const { key, identity } = identifyMerchant(line.merchantEntityId, line.merchantEntityName);
-  const candidate: LabelledMerchant = {
-    identity,
-    labelRank: merchantLabelRank(line.orderedAt, line.purchaseId),
-  };
-  const existing = bucket.merchants.get(key);
-  bucket.merchants.set(
-    key,
-    existing === undefined ? candidate : withNewerLabel(existing, candidate)
-  );
-}
-
 /**
  * Repeat purchases per product identity over the orders a filter selects.
  *
@@ -214,6 +115,7 @@ export function rankProductPurchases(
   filter: ProductLeaderboardFilter = {}
 ): ProductLeaderboard {
   const lines = selectScopedLines(db, filter);
+  const measuredItemIds = selectMeasuredItemIds(db, filter);
 
   const buckets = new Map<string, ProductBucket>();
   const coverage = { skuKeyedLines: 0, nameKeyedLines: 0, unidentifiedLines: 0 };
@@ -232,18 +134,18 @@ export function rankProductPurchases(
     else if (identity.basis === 'name') coverage.nameKeyedLines += 1;
     else coverage.unidentifiedLines += 1;
 
-    const rank = tupleKey(line.orderedAt, line.itemId);
+    const ranked: RankedLine = { rank: rankLine(line), line };
     const key = tupleKey(productKey, line.currency);
     const existing = buckets.get(key);
-    const bucket = existing ?? startBucket(line, identity, rank);
-    if (existing !== undefined) accumulate(bucket, line, rank);
-    else buckets.set(key, bucket);
+    const bucket = existing ?? startBucket(ranked, identity);
+    if (existing === undefined) buckets.set(key, bucket);
+    accumulate(bucket, ranked, measuredItemIds.has(line.itemId));
     noteMerchant(bucket, line);
   }
 
   const minOrderCount = filter.minOrderCount ?? 1;
   const products = [...buckets.entries()]
-    .filter(([, bucket]) => bucket.orderIds.size >= minOrderCount)
+    .filter(([, bucket]) => bucket.orders.size >= minOrderCount)
     .map(([key, bucket]) => ({ key, entry: present(bucket) }))
     .sort(compareEntries)
     .map(({ entry }) => entry);
@@ -251,23 +153,6 @@ export function rankProductPurchases(
   return {
     products,
     coverage: { ...coverage, lineCount: lines.length, productCount: buckets.size },
-  };
-}
-
-function present(bucket: ProductBucket): ProductPurchases {
-  return {
-    product: bucket.identity,
-    currency: bucket.currency,
-    orderCount: bucket.orderIds.size,
-    lineCount: bucket.lineCount,
-    unitCount: bucket.unitCount,
-    firstPurchasedAt: bucket.firstPurchasedAt,
-    lastPurchasedAt: bucket.lastPurchasedAt,
-    landedCostCents: bucket.landedCostCents,
-    refundedCents: bucket.refundedCents,
-    merchants: [...bucket.merchants.values()]
-      .map((merchant) => merchant.identity)
-      .sort((a, b) => (merchantSortKey(a) < merchantSortKey(b) ? -1 : 1)),
   };
 }
 

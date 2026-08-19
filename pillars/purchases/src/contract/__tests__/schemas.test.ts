@@ -21,7 +21,12 @@ import {
 } from '../constants.js';
 import { PurchasesErrorSchema } from '../errors.js';
 import { purchasesManifest } from '../manifest.js';
-import { MerchantIdentitySchema, ProductIdentitySchema } from '../rest-analytics.js';
+import {
+  MerchantIdentitySchema,
+  ProductCadenceSchema,
+  ProductIdentitySchema,
+  ProductUnitPriceSchema,
+} from '../rest-analytics.js';
 // The identity a line's merchant STATED, as against the grouping identity
 // above, which is how the aggregate decided two lines are one product.
 import { ProductIdentitySchema as StatedProductIdentitySchema } from '../schemas/product-identity.js';
@@ -328,6 +333,91 @@ describe('ProductIdentitySchema — the basis a group was formed on', () => {
     ['an unknown basis', { basis: 'vibes', source: 'amazon', sku: null, name: 'Funnel' }],
   ])('rejects %s', (_label, value) => {
     expect(ProductIdentitySchema.safeParse(value).success).toBe(false);
+  });
+});
+
+describe('ProductCadenceSchema', () => {
+  it('accepts a product with no second purchase to measure against', () => {
+    expect(ProductCadenceSchema.safeParse({ basis: 'single-purchase' }).success).toBe(true);
+  });
+
+  it('accepts a measured cadence', () => {
+    const cadence = {
+      basis: 'intervals',
+      medianIntervalSeconds: 1_209_600,
+      meanIntervalSeconds: 1_209_600,
+      shortestIntervalSeconds: 604_800,
+      longestIntervalSeconds: 1_814_400,
+    };
+
+    expect(ProductCadenceSchema.safeParse(cadence).success).toBe(true);
+  });
+
+  it('strips interval figures off a single purchase rather than passing a zero through', () => {
+    const parsed = ProductCadenceSchema.parse({
+      basis: 'single-purchase',
+      medianIntervalSeconds: 0,
+      meanIntervalSeconds: 0,
+      shortestIntervalSeconds: 0,
+      longestIntervalSeconds: 0,
+    });
+
+    // The failure the union exists to prevent: a product bought once
+    // wearing a zero, which renders as "bought again immediately".
+    expect(parsed).toEqual({ basis: 'single-purchase' });
+  });
+
+  it.each([
+    ['a measured cadence missing its median', { basis: 'intervals', meanIntervalSeconds: 1 }],
+    [
+      'a negative gap, which no ordering of two instants can produce',
+      {
+        basis: 'intervals',
+        medianIntervalSeconds: -1,
+        meanIntervalSeconds: 1,
+        shortestIntervalSeconds: 1,
+        longestIntervalSeconds: 1,
+      },
+    ],
+  ])('rejects %s', (_label, value) => {
+    expect(ProductCadenceSchema.safeParse(value).success).toBe(false);
+  });
+});
+
+describe('ProductUnitPriceSchema', () => {
+  const series = {
+    firstCents: 1000,
+    lastCents: 1200,
+    minCents: 600,
+    maxCents: 1400,
+    promotionalLineCount: 1,
+    ordinaryLineCount: 1,
+    unstatedPromotionLineCount: 2,
+    measuredLineCount: 0,
+  };
+
+  it('accepts the series the fold produces', () => {
+    expect(ProductUnitPriceSchema.safeParse(series).success).toBe(true);
+  });
+
+  it('requires the count that says the merchant never characterised the price', () => {
+    const { unstatedPromotionLineCount: _dropped, ...twoWay } = series;
+
+    // A two-way split reads silence as an ordinary price, which is the same
+    // failure as a merchant total that drops its residual.
+    expect(ProductUnitPriceSchema.safeParse(twoWay).success).toBe(false);
+  });
+
+  it('requires the count that says a unit price is a weight', () => {
+    const { measuredLineCount: _dropped, ...uncaveated } = series;
+
+    expect(ProductUnitPriceSchema.safeParse(uncaveated).success).toBe(false);
+  });
+
+  it('refuses a negative line count', () => {
+    expect(ProductUnitPriceSchema.safeParse({ ...series, measuredLineCount: -1 }).success).toBe(
+      false
+    );
   });
 });
 
