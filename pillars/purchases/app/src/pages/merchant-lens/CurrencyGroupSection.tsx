@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 
-import { formatCents } from '../../money.js';
+import { formatCents } from '@pops/ui';
+
 import { explainedSplit } from './explained-split.js';
 import { ExplainedSplit } from './ExplainedSplit.js';
 import { MerchantRow } from './MerchantRow.js';

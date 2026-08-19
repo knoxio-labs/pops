@@ -745,9 +745,11 @@ jobs:
     # export, `contacts` and `purchases` from their vendored snapshot (ADR-033).
     # A vendored copy's own drift against its producer is covered separately by
     # the `vendored-contracts` job above — this job only re-runs codegen against
-    # whatever is committed. The `purchases` leg is gated here from the day its
-    # client landed, ahead of any finance page consuming it, so the client
-    # cannot rot in the gap.
+    # whatever is committed. The `purchases` leg was gated here from the day
+    # its client landed, before any finance page consumed it, so the client
+    # could not rot in the gap; the transaction purchase-detail panel
+    # (pillars/finance/app/src/pages/transactions/purchase-detail/) is now that
+    # consumer.
     #
     # Every leg is ALSO re-checked, more generally, by app-quality.yml's own
     # per-app `Codegen drift` step (`@pops/app-food` and `@pops/app-finance`

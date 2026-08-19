@@ -1,9 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 
-import { Button, formatDate } from '@pops/ui';
+import { Button, formatCents, formatDate } from '@pops/ui';
 
-import { formatCents } from '../../money.js';
 import { merchantLabel } from './merchant-label.js';
 import { MERCHANT_ORDERS_LIMIT } from './merchant-orders-query.js';
 import { orderCountAgreement } from './order-count-agreement.js';

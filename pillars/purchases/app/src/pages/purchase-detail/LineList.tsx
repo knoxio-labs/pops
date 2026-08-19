@@ -1,8 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
-import { cn } from '@pops/ui';
-
-import { formatCents } from '../../money.js';
+import { cn, formatCents } from '@pops/ui';
 
 import type { ReactElement } from 'react';
 
