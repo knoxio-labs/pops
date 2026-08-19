@@ -101,7 +101,7 @@ Matching is an exact membership test against the orders this parser built. An or
 
 Nothing else. There is no `unknown-order`, no `no-order-id` and no `ambiguous-order-id` in this bundle — every non-digital id resolved.
 
-The 56 digital ones are a known gap rather than a misread: all 55 distinct `D01-` ids appear in `Digital Content Orders.csv`, which this adapter does not read, and **none** appears in `Order History.csv`. They get their own rejection kind for that reason — a retail id that fails to resolve means an order was dropped, which is a bug, and burying it among 56 expected misses would hide it.
+The 56 digital ones are a known gap rather than a misread: their `D01-` ids appear in `Digital Content Orders.csv`, which `../amazon-digital/` reads under its own source, and **none** appears in `Order History.csv`. They get their own rejection kind for that reason — a retail id that fails to resolve means an order was dropped, which is a bug, and burying it among 56 expected misses would hide it. Their orders do exist now, under the digital source; nothing attaches these invoices to them (POPS-2373).
 
 The 6 duplicates are the one case content addressing cannot handle. Two files carrying the same invoice number for the same order have _different bytes_, so they hash to different paths and `uq_purchase_documents` sees two distinct URIs. The second is dropped here, or the order would show one invoice twice. Two invoices with genuinely different numbers on one order are kept — 11 orders have those.
 

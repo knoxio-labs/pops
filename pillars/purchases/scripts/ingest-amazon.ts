@@ -52,6 +52,7 @@ import type {
   CreateDocumentInput,
   CreatePurchaseInput,
 } from '../src/db/services/purchase-input.js';
+import type { IngestClient } from './backfill.js';
 
 const ORDER_HISTORY_PATH = join('Your Amazon Orders', 'Order History.csv');
 const REFUND_DETAILS_PATH = join(...REFUND_DETAILS_BUNDLE_PATH);
@@ -271,16 +272,35 @@ export async function main(argv: readonly string[] = process.argv.slice(2)): Pro
     ingestAdapter: 'amazon-dsar-export',
   });
 
+  await postWithInvoices(client, orders, matched);
+}
+
+/**
+ * Post the orders carrying their invoices, and settle the volume either way.
+ *
+ * The settle is in a `finally` because the run can end through a throw:
+ * `postPurchases` stops on a 401/403 rather than repeating the same failure
+ * for every remaining order, and the bytes already written for requests that
+ * will now never be made are exactly the ones that have to come back off.
+ */
+async function postWithInvoices(
+  client: IngestClient,
+  orders: readonly CreatePurchaseInput[],
+  matched: readonly MatchedInvoice[]
+): Promise<void> {
   const plan = planInvoiceDocuments(matched);
   const writer = createInvoiceWriter(plan);
-  reportOutcome(
-    await postPurchases(client, attachInvoiceDocuments(orders, plannedDocuments(plan)), {
-      beforeRequest: writer.write,
-      afterCreated: writer.keep,
-    })
-  );
 
-  reportInvoiceWrites(writer.settle(), matched.length);
+  try {
+    reportOutcome(
+      await postPurchases(client, attachInvoiceDocuments(orders, plannedDocuments(plan)), {
+        beforeRequest: writer.write,
+        afterCreated: writer.keep,
+      })
+    );
+  } finally {
+    reportInvoiceWrites(writer.settle(), matched.length);
+  }
 }
 
 /**

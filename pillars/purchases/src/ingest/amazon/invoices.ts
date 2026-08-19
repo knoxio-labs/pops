@@ -72,9 +72,10 @@ export interface AmazonInvoiceMatch {
 
 /**
  * Digital orders carry a `D01-` id and live in `Digital Content Orders.csv`,
- * which this adapter does not read. `Order History.csv` carries none of them,
- * so their invoices can never match — separating them keeps a genuinely
- * dropped retail order visible instead of buried in a pile of expected misses.
+ * which `../amazon-digital/` reads under its own source. `Order History.csv`
+ * carries none of them, so their invoices can never match here — separating
+ * them keeps a genuinely dropped retail order visible instead of buried in a
+ * pile of expected misses.
  */
 const DIGITAL_ORDER_PREFIX = 'D01-';
 

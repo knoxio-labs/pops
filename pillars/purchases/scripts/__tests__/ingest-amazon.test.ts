@@ -24,7 +24,7 @@ import {
   legacyInvoice,
   pdfWithRuns,
 } from '../../src/ingest/amazon/__tests__/__fixtures__/invoice-pdf.js';
-import { INGEST_API_KEY_ENV } from '../backfill.js';
+import { AuthFailureError, INGEST_API_KEY_ENV } from '../backfill.js';
 
 vi.mock('../../src/ingest/amazon/index.js', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../src/ingest/amazon/index.js')>()),
@@ -297,6 +297,18 @@ describe('the write path', () => {
     stubFetch(422);
 
     await main([bundleWith({ '1.pdf': invoiceFor(KNOWN_ORDER) })]);
+
+    expect(storedFiles(receipts)).toEqual([]);
+  });
+
+  it('leaves nothing on the volume when the run is stopped part-way by a 403', async () => {
+    // The stop leaves the loop through a throw, so the sweep that takes the
+    // bytes back off the volume has to happen on that way out too.
+    stubFetch(403);
+
+    await expect(main([bundleWith({ '1.pdf': invoiceFor(KNOWN_ORDER) })])).rejects.toThrow(
+      AuthFailureError
+    );
 
     expect(storedFiles(receipts)).toEqual([]);
   });
