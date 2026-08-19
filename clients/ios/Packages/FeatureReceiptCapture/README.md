@@ -30,9 +30,13 @@ Three consequences follow, and each is enforced on the handset rather than disco
 
 ## Why the camera is presented modally and never inside a navigation stack
 
-There is an open UIKit defect — reproduced by others on iOS 26, not fixed as of the POPS-1960 spike — where `VNDocumentCameraViewController`'s own navigation bar throws `NSInternalInconsistencyException` immediately after a capture when it is nested inside another navigation controller. So this feature has no `NavigationStack` at all: its two screens replace each other, and the scanner is a freshly-created instance presented from a `.sheet`, acting as its own delegate.
+There is an open UIKit defect — reproduced by others on iOS 26, not fixed as of the POPS-1960 spike — where `VNDocumentCameraViewController`'s own navigation bar throws `NSInternalInconsistencyException` immediately after a capture when it is nested inside another navigation controller. So this feature has no `NavigationStack` at all: its two screens replace each other, and the scanner is a freshly-created instance presented from a `.fullScreenCover`, acting as its own delegate.
 
 `VNDocumentCameraViewController.isSupported` is deliberately not used as the "is there a camera" gate. It returns `true` in the Simulator, where the document camera cannot configure a capture input at all. The gate is `CameraAuthorizing` instead, which reports `.unavailable` there — asserted against the real implementation by `AppCore`'s Simulator-only camera suite — so the Simulator lands on the drawn "no camera on this device" state rather than a black screen. That state carries an accessibility identifier for the same reason: it is the one a UI flow hosted on a Simulator will actually meet.
+
+### `.fullScreenCover`, not `.sheet`
+
+`FeaturePairing`'s QR scanner is presented from a `.sheet`, and this screen deliberately differs. A page sheet on iPhone is interactively dismissible by a downward swipe, and `VNDocumentCameraViewControllerDelegate` is never told about that dismissal — `documentCameraViewControllerDidCancel(_:)` fires for the Cancel button only, not for a swipe. Pairing can afford that: there is a manual-entry form underneath the scanner, so an accidental dismissal costs nothing. Here it would silently discard however many pages had already been photographed, with no delegate callback and no confirmation — the worse failure mode, since a person mid-scan has already put in the effort a swipe would erase. `.fullScreenCover` has no swipe-to-dismiss gesture, so the only way out of the scanner is its own Cancel button or a finished scan, both of which already report through the delegate. It also matches how the system document camera is meant to appear: undecorated and full-screen, not inset with a sheet's grabber and rounded corners.
 
 ## Reachable, end to end
 

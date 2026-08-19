@@ -211,6 +211,24 @@ internal struct ReceiptCaptureFlowTests {
         #expect(model.problem == .tooManyPages(overLong))
     }
 
+    /// The precedence the model's own doc comment claims: too-many-pages is
+    /// checked before a page that could not be prepared. A scan can only ever
+    /// show this ordering when both are true at once — one condition alone
+    /// tells you nothing about which came first — so this is the one input
+    /// that exercises it. `aDroppedPageRefusesTheReceipt` and
+    /// `tooManyPagesAreRefusedOnDevice` each isolate a single condition and
+    /// would stay green if the two guards were swapped.
+    @Test("a scan that is both over the limit and short a page is refused for its length")
+    func tooManyPagesTakesPrecedenceOverAnUnpreparedPage() {
+        let model = Self.model(camera: StubCameraAuthorization(standing: .authorized))
+        let overLong = ReceiptPart.maxPerReceipt + 1
+
+        model.didCapture(Self.pages(overLong - 1), from: overLong)
+
+        #expect(model.state == .ready)
+        #expect(model.problem == .tooManyPages(overLong))
+    }
+
     @Test("exactly the wire limit is still a receipt")
     func theLimitItselfIsAccepted() {
         let model = Self.model(camera: StubCameraAuthorization(standing: .authorized))
