@@ -93,8 +93,14 @@ export interface SourceRegistration {
    * A LIKE pattern, not a substring: the trailing `%` is load-bearing.
    * Without it this is an equality test that matches nothing, because no
    * bank descriptor is a bare merchant name. See `src/reconcile/descriptor.ts`.
+   *
+   * Null declares no pattern, which blocks nothing — different from
+   * declaring one that matches nothing, and the right answer for a source
+   * whose charges reach the bank under names a single LIKE cannot cover.
    */
-  readonly descriptorPattern: string;
+  readonly descriptorPattern: string | null;
+  /** Per-source override of the pillar's default matching window, in days. */
+  readonly settlementWindowDays?: number;
   readonly autoLinkPolicy: 'auto' | 'review';
   readonly ingestAdapter: string;
 }
@@ -141,6 +147,25 @@ export async function postPurchases(
   }
 
   return { created, skipped, failures };
+}
+
+/**
+ * Read the bundle root out of a CLI's arguments.
+ *
+ * @param argv Arguments after the script name.
+ * @param command The `pnpm` script to name in the usage message.
+ * @throws When no non-flag argument was given.
+ */
+export function readBundlePath(argv: readonly string[], command: string): string {
+  const bundlePath = argv.find((arg) => !arg.startsWith('--'));
+  if (bundlePath === undefined) {
+    throw new Error(
+      `usage: pnpm ${command} -- "<bundle-root>" [--dry-run]\n` +
+        '<bundle-root> is the unzipped DSAR bundle: the directory CONTAINING ' +
+        '"Your Amazon Orders", not that folder itself.'
+    );
+  }
+  return bundlePath;
 }
 
 /** Print the outcome and set a non-zero exit code if anything failed. */
