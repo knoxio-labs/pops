@@ -24,6 +24,8 @@ export {
 } from './sdk.gen';
 export type {
   AnalyticsMerchantSpendData,
+  AnalyticsMerchantSpendError,
+  AnalyticsMerchantSpendErrors,
   AnalyticsMerchantSpendResponse,
   AnalyticsMerchantSpendResponses,
   ClientOptions,
@@ -46,6 +48,8 @@ export type {
   PurchaseItemsByTagResponse,
   PurchaseItemsByTagResponses,
   PurchaseListData,
+  PurchaseListError,
+  PurchaseListErrors,
   PurchaseListResponse,
   PurchaseListResponses,
   PurchasePatchItemData,

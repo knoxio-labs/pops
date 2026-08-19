@@ -279,6 +279,10 @@ export interface operations {
       query?: {
         sources?: string[];
         statuses?: ('awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored')[];
+        currency?: string;
+        merchantEntityId?: string;
+        merchantEntityName?: string;
+        merchantUnattributed?: boolean;
         from?: string;
         to?: string;
       };
@@ -348,6 +352,18 @@ export interface operations {
           };
         };
       };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+          };
+        };
+      };
     };
   };
   'purchase.itemsByTag': {
@@ -408,6 +424,10 @@ export interface operations {
       query?: {
         sources?: string[];
         statuses?: ('awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored')[];
+        currency?: string;
+        merchantEntityId?: string;
+        merchantEntityName?: string;
+        merchantUnattributed?: boolean;
         from?: string;
         to?: string;
         limit?: number;
@@ -452,6 +472,18 @@ export interface operations {
               totalCents: number;
               updatedAt: string;
             }[];
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
           };
         };
       };

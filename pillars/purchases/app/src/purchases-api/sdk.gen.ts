@@ -5,6 +5,7 @@ import { client } from './client.gen';
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import type {
   AnalyticsMerchantSpendData,
+  AnalyticsMerchantSpendErrors,
   AnalyticsMerchantSpendResponses,
   PurchaseCreateData,
   PurchaseCreateErrors,
@@ -18,6 +19,7 @@ import type {
   PurchaseItemsByTagData,
   PurchaseItemsByTagResponses,
   PurchaseListData,
+  PurchaseListErrors,
   PurchaseListResponses,
   PurchasePatchItemData,
   PurchasePatchItemErrors,
@@ -80,11 +82,12 @@ export type Options<
  */
 export const analyticsMerchantSpend = <ThrowOnError extends boolean = false>(
   options?: Options<AnalyticsMerchantSpendData, ThrowOnError>
-): RequestResult<AnalyticsMerchantSpendResponses, unknown, ThrowOnError> =>
-  (options?.client ?? client).get<AnalyticsMerchantSpendResponses, unknown, ThrowOnError>({
-    url: '/analytics/merchant-spend',
-    ...options,
-  });
+): RequestResult<AnalyticsMerchantSpendResponses, AnalyticsMerchantSpendErrors, ThrowOnError> =>
+  (options?.client ?? client).get<
+    AnalyticsMerchantSpendResponses,
+    AnalyticsMerchantSpendErrors,
+    ThrowOnError
+  >({ url: '/analytics/merchant-spend', ...options });
 
 /**
  * Every line carrying an item tag, across every order
@@ -102,8 +105,8 @@ export const purchaseItemsByTag = <ThrowOnError extends boolean = false>(
  */
 export const purchaseList = <ThrowOnError extends boolean = false>(
   options?: Options<PurchaseListData, ThrowOnError>
-): RequestResult<PurchaseListResponses, unknown, ThrowOnError> =>
-  (options?.client ?? client).get<PurchaseListResponses, unknown, ThrowOnError>({
+): RequestResult<PurchaseListResponses, PurchaseListErrors, ThrowOnError> =>
+  (options?.client ?? client).get<PurchaseListResponses, PurchaseListErrors, ThrowOnError>({
     url: '/purchases',
     ...options,
   });
