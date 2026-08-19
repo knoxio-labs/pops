@@ -20,6 +20,7 @@
  */
 import { createHash } from 'node:crypto';
 
+import { WOOLWORTHS_SOURCE_ID } from '../source-ids.js';
 import { readBlocks, type ReceiptHeader, type ReceiptPage } from './blocks.js';
 import { readPayment, type PaymentReading } from './payment.js';
 import { groupReceiptRows, parseAmountCents, type GroupingAnomaly } from './rows.js';
@@ -28,7 +29,7 @@ import { readTransactionDetails } from './time.js';
 import type { SettlementMode } from '../../contract/constants.js';
 import type { CreateItemInput, CreatePurchaseInput } from '../../db/services/purchase-input.js';
 
-export const WOOLWORTHS_SOURCE_ID = 'woolworths';
+export { WOOLWORTHS_SOURCE_ID };
 
 const CURRENCY = 'AUD';
 

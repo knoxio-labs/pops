@@ -1,3 +1,4 @@
+import { eq } from 'drizzle-orm';
 /**
  * The product-grain leaderboard, held to the standard an aggregate needs.
  *
@@ -24,6 +25,7 @@ import {
   createPurchase,
   purchaseChargeLinks,
   purchaseCharges,
+  purchaseItems,
   rankProductPurchases,
   upsertSource,
 } from '../index.js';
@@ -52,6 +54,14 @@ beforeEach(() => {
     autoLinkPolicy: 'auto',
     ingestAdapter: 'woolworths-receipt',
   });
+  upsertSource(opened.db, {
+    id: 'receipt',
+    label: 'Uploaded receipt',
+    descriptorPattern: '%',
+    settlementWindowDays: 14,
+    autoLinkPolicy: 'review',
+    ingestAdapter: 'receipt-upload',
+  });
 });
 
 afterEach(() => {
@@ -71,6 +81,16 @@ function order(
     merchantEntityName: 'Amazon',
     ...overrides,
   };
+}
+
+/**
+ * An order from the source every photographed receipt shares, whatever shop
+ * printed it — so the shop is a property of the order and not of the source.
+ */
+function photographedOrder(
+  overrides: Partial<CreatePurchaseInput> & { checksum: string; merchantEntityName: string }
+): CreatePurchaseInput {
+  return order({ source: 'receipt', ingestMethod: 'upload', ...overrides });
 }
 
 /** An order from a source that states no product identifier. */
@@ -272,6 +292,51 @@ describe('grouping', () => {
     }
   });
 
+  it('keeps two shops apart when they print the same line under the shared receipt source', () => {
+    for (const shop of ['Kettle Black', 'Patricia Coffee']) {
+      createPurchase(
+        opened.db,
+        photographedOrder({
+          checksum: shop,
+          merchantEntityName: shop,
+          items: [line({ name: 'LATTE', lineTotalCents: 550 })],
+        })
+      );
+    }
+
+    const leaderboard = rankProductPurchases(opened.db);
+
+    // One source id covers every photographed receipt, so grouping on the
+    // source alone would report one coffee bought at two shops as one
+    // product bought twice for $11 — a merge nothing downstream can see.
+    expect(leaderboard.products).toHaveLength(2);
+    expect(leaderboard.products.map((entry) => entry.orderCount)).toEqual([1, 1]);
+    expect(leaderboard.products.map((entry) => entry.merchants)).toEqual([
+      [{ resolution: 'name', entityId: null, name: 'Kettle Black' }],
+      [{ resolution: 'name', entityId: null, name: 'Patricia Coffee' }],
+    ]);
+  });
+
+  it("still folds one shop's repeat purchases under that same source", () => {
+    for (const month of ['01', '02']) {
+      createPurchase(
+        opened.db,
+        photographedOrder({
+          checksum: `kettle-${month}`,
+          orderedAt: `2026-${month}-04T00:00:00Z`,
+          merchantEntityName: 'Kettle Black',
+          items: [line({ name: 'LATTE', lineTotalCents: 550 })],
+        })
+      );
+    }
+
+    // Confining the key to the merchant must not confine it to the order:
+    // the same shop's repeats are the answer this route exists to give.
+    const entry = only(rankProductPurchases(opened.db));
+    expect(entry.orderCount).toBe(2);
+    expect(entry.landedCostCents).toBe(1100);
+  });
+
   it('splits one sku bought in two currencies rather than adding the cents together', () => {
     createPurchase(
       opened.db,
@@ -289,6 +354,9 @@ describe('grouping', () => {
     const leaderboard = rankProductPurchases(opened.db);
     expect(leaderboard.products.map((entry) => entry.currency)).toEqual(['AUD', 'USD']);
     expect(leaderboard.products.every((entry) => entry.orderCount === 1)).toBe(true);
+    // Counted per row rather than per product, which is what the field says
+    // and what makes it the denominator for what `minOrderCount` withheld.
+    expect(leaderboard.coverage.productCount).toBe(2);
   });
 });
 
@@ -314,6 +382,35 @@ describe('money', () => {
     // implementation of landed cost, free to drift from the one the line
     // read uses. This asserts the figure, not the expression.
     expect(only(rankProductPurchases(opened.db)).landedCostCents).toBe(1379);
+  });
+
+  it('sums line refunds and leaves the landed cost gross of them', () => {
+    const refunded = createPurchase(
+      opened.db,
+      order({
+        checksum: 'refunded',
+        items: [line({ name: 'Funnel', sku: 'B0FCSJTKJ8', lineTotalCents: 1179 })],
+      })
+    );
+    const partly = createPurchase(
+      opened.db,
+      order({
+        checksum: 'kept',
+        items: [line({ name: 'Funnel', sku: 'B0FCSJTKJ8', lineTotalCents: 1179 })],
+      })
+    );
+    recordLineRefund(opened.db, refunded, 400);
+    recordLineRefund(opened.db, partly, 250);
+
+    const entry = only(rankProductPurchases(opened.db));
+
+    // Two refunded lines rather than one, so the figure is only right if
+    // every line in the group is added rather than the first one reported.
+    expect(entry.refundedCents).toBe(650);
+    // Beside the cost rather than inside it: a consumer that wants net can
+    // subtract, and one that does not cannot be handed a net figure it
+    // believes is gross.
+    expect(entry.landedCostCents).toBe(2358);
   });
 
   it('does not multiply a product when many charges and links settle its order', () => {
@@ -344,11 +441,11 @@ describe('money', () => {
 });
 
 describe('merchants', () => {
-  it('names every merchant a product was bought from, once each', () => {
+  it('names every store of one chain a product was bought at, once each', () => {
     for (const [checksum, merchant] of [
-      ['woolies-a', 'Woolworths Metro'],
-      ['woolies-b', 'Woolworths Metro'],
-      ['coles', 'Coles'],
+      ['woolies-a', 'Woolworths 1034 Canterbury Plaza'],
+      ['woolies-b', 'Woolworths 1034 Canterbury Plaza'],
+      ['metro', 'Woolworths Metro Town Hall'],
     ] as const) {
       createPurchase(
         opened.db,
@@ -362,10 +459,13 @@ describe('merchants', () => {
 
     const entry = only(rankProductPurchases(opened.db));
 
+    // The export adapter labels each store, but one chain prints one
+    // catalogue: splitting per branch would report a weekly staple as
+    // several occasional ones.
     expect(entry.orderCount).toBe(3);
     expect(entry.merchants).toEqual([
-      { resolution: 'name', entityId: null, name: 'Coles' },
-      { resolution: 'name', entityId: null, name: 'Woolworths Metro' },
+      { resolution: 'name', entityId: null, name: 'Woolworths 1034 Canterbury Plaza' },
+      { resolution: 'name', entityId: null, name: 'Woolworths Metro Town Hall' },
     ]);
   });
 
@@ -597,6 +697,21 @@ describe('agreement with the line reads it summarises', () => {
     expect(entryFor(leaderboard, 'Funnel').landedCostCents).toBe(2658);
   });
 });
+
+/**
+ * A refund attributed to an order's lines.
+ *
+ * Written through the column directly because nothing in the tree writes it:
+ * the Amazon disbursement feed names an *order* and never a line, so there
+ * is no ingest path that produces this state — and the fold must already be
+ * right for the adapter that eventually does.
+ */
+function recordLineRefund(db: PurchasesDb, purchaseId: string, cents: number): void {
+  db.update(purchaseItems)
+    .set({ refundedCents: cents })
+    .where(eq(purchaseItems.purchaseId, purchaseId))
+    .run();
+}
 
 /**
  * Two links on every charge of an order — the arrangement whose join

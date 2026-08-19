@@ -78,7 +78,11 @@ afterwards. Leaving items ungrouped is the safer wrong answer.
 `GET /analytics/product-leaderboard` groups on what a source does state —
 the sku, else the normalised printed name, else nothing — and labels every
 group with which of the three it used, rather than waiting for this to be
-solved or pretending it is. The rule is `identifyProduct` in
+solved or pretending it is. Because a printed name is only interpretable
+against the till that printed it, the key is confined to the order's
+merchant for every source except the ones that are a single merchant's own
+feed: `receipt` is one source id for every shop, and merging on it would be
+exactly the over-eager merge above. The rule is `identifyProduct` in
 `src/db/services/product-identity.ts`.
 
 ## Checksums are not keys

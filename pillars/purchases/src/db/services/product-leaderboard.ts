@@ -18,6 +18,13 @@
  * consumer can see how much of the answer rests on printed names before it
  * renders a single row.
  *
+ * **A group never spans merchants a source did not put together.** Under a
+ * source that covers many shops — every uploaded receipt shares one — the
+ * key is confined to the order's merchant, so two shops printing the same
+ * abbreviation are two rows rather than one row summing both. Under a
+ * source that is one merchant's own feed the key is the source, which is
+ * what keeps a chain's product from splitting per store.
+ *
  * **Why the join does not do the arithmetic.** One row per line, joined only
  * to its order. Nothing here touches charges or links, which is what makes
  * "how many orders" a count of distinct order ids rather than a number that
@@ -83,9 +90,11 @@ export interface ProductPurchases {
    */
   readonly refundedCents: number;
   /**
-   * Every merchant this product was bought from, in this currency. Usually
-   * one; more than one where a source covers many merchants, as receipt
-   * ingest does.
+   * Every merchant this product was bought from, in this currency, and the
+   * scope of the group: more than one only where the source is a single
+   * merchant's feed that names its own stores, as the Woolworths export
+   * does. Under any other source the group is keyed on the merchant and
+   * this holds exactly one.
    */
   readonly merchants: readonly MerchantIdentity[];
 }
@@ -107,7 +116,11 @@ export interface ProductIdentityCoverage {
   readonly nameKeyedLines: number;
   /** Grouped with nothing: no sku, and no name that normalises to anything. */
   readonly unidentifiedLines: number;
-  /** Products the scope holds, including any `minOrderCount` withheld. */
+  /**
+   * Groups the scope holds, including any `minOrderCount` withheld — one per
+   * product *and currency*, so a sku bought in two currencies counts twice,
+   * for the reason it is two rows.
+   */
   readonly productCount: number;
 }
 
@@ -211,6 +224,8 @@ export function rankProductPurchases(
       source: line.source,
       sku: line.sku,
       name: line.name,
+      merchantEntityId: line.merchantEntityId,
+      merchantEntityName: line.merchantEntityName,
     });
     if (identity.basis === 'sku') coverage.skuKeyedLines += 1;
     else if (identity.basis === 'name') coverage.nameKeyedLines += 1;

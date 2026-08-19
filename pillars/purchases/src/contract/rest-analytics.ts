@@ -150,6 +150,12 @@ export const MerchantSpendQuerySchema = ListPurchasesQuerySchema.omit({
  *
  * `source` is on every variant because the same string means different
  * things at different merchants, and a group is only ever within one source.
+ * The source is not on its own the scope, though: where one source covers
+ * many shops — every uploaded receipt shares one id — the group is keyed on
+ * the order's merchant as well, so `merchants` is the set of merchants the
+ * group could ever have held and two shops printing one abbreviation are two
+ * rows. Only a source that is a single merchant's own feed groups across the
+ * merchant labels it states, which is how a chain's stores stay one product.
  */
 export const ProductIdentitySchema = z.discriminatedUnion('basis', [
   z.object({
@@ -209,7 +215,11 @@ export const ProductPurchasesSchema = z.object({
    * mistaken for each other.
    */
   refundedCents: NonNegativeCentsSchema,
-  /** Every merchant this product was bought from, in this currency. */
+  /**
+   * Every merchant this product was bought from, in this currency, which is
+   * also the group's scope. More than one only under a source that is a
+   * single merchant's own feed and names its stores.
+   */
   merchants: z.array(MerchantIdentitySchema).min(1),
 });
 
@@ -230,7 +240,11 @@ export const ProductIdentityCoverageSchema = z.object({
   nameKeyedLines: z.int().min(0),
   /** Grouped with nothing: no sku, and no name that normalises to anything. */
   unidentifiedLines: z.int().min(0),
-  /** Products the scope holds, including any `minOrderCount` withheld. */
+  /**
+   * Groups the scope holds, including any `minOrderCount` withheld. One per
+   * product *and currency*: a sku bought in two currencies counts twice,
+   * because it is two rows.
+   */
   productCount: z.int().min(0),
 });
 

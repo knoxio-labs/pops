@@ -29,6 +29,7 @@ import { createHash } from 'node:crypto';
 import { allocateProRata } from '../allocation.js';
 import { instantFromLocalParts, instantFromLocalPartsAtOffset } from '../local-time.js';
 import { parseAmountCents } from '../money.js';
+import { RECEIPT_SOURCE_ID } from '../source-ids.js';
 import { resolveCapture } from './capture.js';
 import { receiptKey } from './store.js';
 
@@ -42,7 +43,7 @@ import type { ExtractedReceipt } from './extraction.js';
 import type { AdmissibleGate } from './gate.js';
 import type { StoredReceipt } from './store.js';
 
-export const RECEIPT_SOURCE_ID = 'receipt';
+export { RECEIPT_SOURCE_ID };
 
 /**
  * When the receipt prints a date but no time: midnight, local to the shop.

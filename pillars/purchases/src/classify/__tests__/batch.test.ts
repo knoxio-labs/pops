@@ -19,6 +19,8 @@ const line = (over: Partial<BatchableItem> = {}): BatchableItem => ({
   source: 'woolworths',
   sku: null,
   name: 'WW Cage Free Eggs XL 12pk 700g',
+  merchantEntityId: null,
+  merchantEntityName: 'Woolworths',
   ...over,
 });
 
@@ -132,6 +134,34 @@ describe('across sources', () => {
 
     expect(batchingKey(line({ source: 'woolworths', name: 'Milk' }))).not.toBe(
       batchingKey(line({ source: 'receipt', name: 'Milk' }))
+    );
+  });
+
+  it('never shares a decision between two shops that share the receipt source', () => {
+    // Every uploaded receipt is written under one source id whatever shop
+    // printed it, so the source alone does not say two lines came from the
+    // same till — and one decision covering both would be a decision about
+    // two different products.
+    expect(
+      batchingKey(line({ source: 'receipt', name: 'LATTE', merchantEntityName: 'Kettle Black' }))
+    ).not.toBe(
+      batchingKey(line({ source: 'receipt', name: 'LATTE', merchantEntityName: 'Patricia' }))
+    );
+  });
+
+  it('still shares one decision across the stores of a single merchant export', () => {
+    // The Woolworths adapter labels each store — `Woolworths 1034 Canterbury
+    // Plaza` — but one chain prints one catalogue, so splitting a product per
+    // branch would multiply the same decision by however many shops the
+    // household uses.
+    expect(
+      batchingKey(
+        line({ source: 'woolworths', name: 'Milk 2L', merchantEntityName: 'Woolworths 1034' })
+      )
+    ).toBe(
+      batchingKey(
+        line({ source: 'woolworths', name: 'Milk 2L', merchantEntityName: 'Woolworths 2245' })
+      )
     );
   });
 

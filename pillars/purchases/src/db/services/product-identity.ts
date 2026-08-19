@@ -19,6 +19,15 @@
  * key that groups nothing, which is the correct answer for a line that
  * states nothing to group on.
  *
+ * **A printed name is only comparable against the till that printed it.**
+ * The source is not that till: `receipt` is one source id for every shop a
+ * user photographs, so keying on the source alone would fold two cafes'
+ * `LATTE` lines into one product with one summed cost and one shop's
+ * wording as the label. The key is therefore confined to the merchant
+ * unless {@link sourceNamesOneMerchant} says the source is one merchant's
+ * own feed — which is what lets a Woolworths product still group across the
+ * chain's stores instead of splitting per branch.
+ *
  * **What this is not.** Only the `sku` basis is an identity a merchant
  * asserted. A name-keyed group is a *proposal* — two products whose printed
  * names normalise alike are merged, and one product a merchant prints two
@@ -28,6 +37,8 @@
  * durable, confirmable product identity for the sources that state none is
  * a separate, unbuilt thing.
  */
+import { sourceNamesOneMerchant } from '../../ingest/source-ids.js';
+import { identifyMerchant } from './merchant-identity.js';
 import { tupleKey } from './tuple-key.js';
 
 /** What identifying a line needs to know about it. */
@@ -36,6 +47,9 @@ export interface ProductLine {
   readonly source: string;
   readonly sku: string | null;
   readonly name: string;
+  /** Its order's merchant, which the key is confined to unless the source names one. */
+  readonly merchantEntityId: string | null;
+  readonly merchantEntityName: string | null;
 }
 
 /**
@@ -43,8 +57,10 @@ export interface ProductLine {
  *
  * `source` is on every variant because the same string means different
  * things at different merchants: an Amazon ASIN and a Woolworths article
- * number that happen to match are not one product, and a receipt
- * abbreviation is only interpretable against the till that printed it.
+ * number that happen to match are not one product. The source is not on its
+ * own the scope of a group, though — under a source that covers many
+ * merchants the key is confined to one of them, so the merchants a group
+ * lists are the merchants it could ever have held.
  */
 export type ProductIdentity =
   | {
@@ -90,12 +106,27 @@ export function normalisedName(name: string): string {
     .trim();
 }
 
+/**
+ * How far a key reaches: the source, narrowed to one merchant where the
+ * source is not itself one merchant's feed.
+ *
+ * Narrowing costs a split that is visible — two rows naming two shops —
+ * where not narrowing costs a merge that is not: one row, one summed cost,
+ * and nothing in it saying two shops were added together.
+ */
+function identityScope(line: ProductLine): string {
+  if (sourceNamesOneMerchant(line.source)) return tupleKey(line.source);
+  const merchant = identifyMerchant(line.merchantEntityId, line.merchantEntityName);
+  return tupleKey(line.source, merchant.key);
+}
+
 /** The group a line belongs to, and the evidence that put it there. */
 export function identifyProduct(line: ProductLine): { key: string; identity: ProductIdentity } {
+  const scope = identityScope(line);
   const sku = line.sku?.trim() ?? '';
   if (sku !== '') {
     return {
-      key: tupleKey(line.source, 'sku', sku),
+      key: tupleKey(scope, 'sku', sku),
       identity: { basis: 'sku', source: line.source, sku, name: line.name },
     };
   }
@@ -103,7 +134,7 @@ export function identifyProduct(line: ProductLine): { key: string; identity: Pro
   const normalised = normalisedName(line.name);
   if (normalised !== '') {
     return {
-      key: tupleKey(line.source, 'name', normalised),
+      key: tupleKey(scope, 'name', normalised),
       identity: {
         basis: 'name',
         source: line.source,
@@ -119,7 +150,7 @@ export function identifyProduct(line: ProductLine): { key: string; identity: Pro
   // alternative is a bucket every nameless line falls into and is counted
   // as one product in.
   return {
-    key: tupleKey(line.source, 'unidentified', line.id),
+    key: tupleKey(scope, 'unidentified', line.id),
     identity: {
       basis: 'unidentified',
       source: line.source,

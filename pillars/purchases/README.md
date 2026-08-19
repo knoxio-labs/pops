@@ -92,8 +92,10 @@ The same thing bought across N orders: per product, how many distinct orders hol
 **Grouping is the hard part and it is only partly solved.** A group is formed on one of three bases, and which one travels with the group:
 
 - `sku` — the merchant's own identifier. The only basis a source asserts, and exactly one shipped adapter writes one (`sku: readText(row['ASIN'])` in the Amazon mapper). Within Amazon, repeats group perfectly.
-- `name` — printed names that normalise alike, within one source. A **proposal**: it merges two products a till abbreviates the same way, and splits one product printed two ways. Every Woolworths and receipt line lands here.
+- `name` — printed names that normalise alike, within one merchant. A **proposal**: it merges two products a till abbreviates the same way, and splits one product printed two ways. Every Woolworths and receipt line lands here.
 - `unidentified` — no sku and no name that normalises to anything. Groups with nothing, one line per row, because a bucket every nameless line falls into would report a whole shop as one product.
+
+A group never spans merchants a source did not put together. `receipt` is one source id for every shop a user photographs, so a key on the source alone would fold two cafes' `LATTE` lines into one product with one summed cost; the key is confined to the order's merchant unless the source is a single merchant's own feed, which is what keeps a Woolworths product grouped across the chain's stores instead of splitting per branch. `merchants` on a row is therefore the group's scope, not just a list of where it was seen.
 
 The rule is `identifyProduct` in `src/db/services/product-identity.ts`, shared with the classification pass so a decision the pass made about a product and a row this route shows for it describe the same lines. Minting a durable, confirmable product identity for the sources that state none is POPS-243, and until it lands this route's answer is strong for Amazon and provisional everywhere else.
 
