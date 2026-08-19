@@ -89,7 +89,7 @@ A `needs-review` problem's `code` is an open string on the wire — a gate that 
 
 ## Where the base URL comes from
 
-`BuiltInBaseURL` resolves what a build ships with, which in Release is nothing — see [Where the BFM base URL comes from](../../README.md#where-the-bfm-base-url-comes-from). Nothing constructs a `BFMHTTPClient` from it yet; that is the composition root's job, and the root is still a placeholder.
+`BuiltInBaseURL` resolves what a build ships with, which in Release is nothing — see [Where the BFM base URL comes from](../../README.md#where-the-bfm-base-url-comes-from). Nothing here constructs a `BFMHTTPClient` from it: that is the composition root's job, and it builds one per paired device from the base URL the pairing exchange stored, not from the built-in default. The built-in one is what the pairing form suggests in Debug, so simulator work does not have to type a host.
 
 ## Running the tests
 

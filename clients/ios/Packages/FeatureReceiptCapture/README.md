@@ -15,7 +15,7 @@ That boundary is asserted, not merely intended: `ModuleBoundaryTests` in `AppCor
 | The result screen (`created` / `needs-review` / `unreadable`, plus gateway failures) | here — `ReceiptResultView`, `ReceiptResultViewModel`     |
 | Camera permission, and the Settings deep link                                        | `AppCore` — `CameraAuthorizing`, `SystemSettings`        |
 | `created` / `needs-review` / `unreadable`                                            | `AppCore` — `ReceiptCaptureRepository`, `ReceiptOutcome` |
-| `POST /mobile/purchases/receipts` and its outcomes                                   | not built yet — `BFMClient` conformance, POPS-1958       |
+| `POST /mobile/purchases/receipts` and its outcomes                                   | `BFMClient` — `BFMReceiptCaptureRepository`              |
 | An end-to-end Maestro flow                                                           | not built yet — POPS-1963                                |
 
 ## What a multi-page receipt is
@@ -34,9 +34,11 @@ There is an open UIKit defect — reproduced by others on iOS 26, not fixed as o
 
 `VNDocumentCameraViewController.isSupported` is deliberately not used as the "is there a camera" gate. It returns `true` in the Simulator, where the document camera cannot configure a capture input at all. The gate is `CameraAuthorizing` instead, which reports `.unavailable` there — asserted against the real implementation by `AppCore`'s Simulator-only camera suite — so the Simulator lands on the drawn "no camera on this device" state rather than a black screen. That state carries an accessibility identifier for the same reason: it is the one a UI flow hosted on a Simulator will actually meet.
 
-## Reachable, and real once the transport is
+## Reachable, end to end
 
-`FeatureReceiptCapture.feature` is registered in `RootFeature.renderable` and `ContentView` maps it to `ReceiptCaptureView`. `AppDependencies.receiptCapture` is still bound to `AppDependencies.unbound.receiptCapture` at both of `AppComposition`'s construction sites: `BFMClient` has no `POST /mobile/purchases/receipts` conformance yet (POPS-1958), so there is nothing real to point it at, and a capture submitted today reaches the result screen's `dependencyNotBound` state rather than a client that does not exist.
+`FeatureReceiptCapture.feature` is registered in `RootFeature.renderable`, the BFM's bootstrap advertises it, and `ContentView` maps it to `ReceiptCaptureView`. A paired device's `AppDependencies.receiptCapture` is a `BFMReceiptCaptureRepository` pointed at that device's own BFM, so a capture submitted from the screen reaches the purchases pillar.
+
+`AppComposition`'s other construction site — the pairing screen's dependencies — leaves the seam unbound on purpose, alongside `transactions`: the base URL arrives with the pairing code, so before pairing there is no BFM to point a client at, and a capture attempted from there would fail with `dependencyNotBound`. Nothing can reach this screen from there; `CompositionRootTests` asserts both halves.
 
 ## The host build
 

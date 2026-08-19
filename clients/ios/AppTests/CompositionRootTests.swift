@@ -33,26 +33,38 @@ internal struct CompositionRootTests {
         )
     }
 
-    @Test("a paired device gets a repository that speaks to its own BFM")
+    /// Every seam that speaks to a BFM, not just the first one that did.
+    ///
+    /// `receiptCapture` is named here because it was the seam left bound to the
+    /// unbound stub for as long as no client could satisfy it, with a comment
+    /// giving the reason — and a comment is not something anybody re-reads when
+    /// the reason expires. Asserting it makes the next change to this
+    /// initialiser a test failure instead.
+    @Test("a paired device gets repositories that speak to its own BFM")
     func pairedDependenciesAreReal() throws {
         let bound = composition().dependencies(for: try device())
 
         #expect(bound.transactions is BFMTransactionsRepository)
         #expect(bound.pairing is BFMDevicePairingService)
+        #expect(bound.receiptCapture is BFMReceiptCaptureRepository)
     }
 
     /// Pairing is bound before there is a BFM to bind anything else to — the
-    /// base URL arrives with the code — so reading transactions from the
-    /// pairing screen is a mistake this leaves unbound rather than papering
-    /// over with a client pointed nowhere.
-    @Test("the pairing screen can pair, and cannot read transactions")
+    /// base URL arrives with the code — so reading transactions or uploading a
+    /// receipt from the pairing screen is a mistake this leaves unbound rather
+    /// than papering over with a client pointed nowhere.
+    @Test("the pairing screen can pair, and can reach nothing else")
     func pairingDependenciesBindOnlyPairing() async {
         let unpaired = composition().pairingDependencies
 
         #expect(unpaired.pairing is BFMDevicePairingService)
         #expect(!(unpaired.transactions is BFMTransactionsRepository))
+        #expect(!(unpaired.receiptCapture is BFMReceiptCaptureRepository))
         await #expect(throws: RepositoryError.dependencyNotBound) {
             try await unpaired.transactions.transactions(after: nil)
+        }
+        await #expect(throws: RepositoryError.dependencyNotBound) {
+            _ = try await unpaired.receiptCapture.capture([])
         }
     }
 

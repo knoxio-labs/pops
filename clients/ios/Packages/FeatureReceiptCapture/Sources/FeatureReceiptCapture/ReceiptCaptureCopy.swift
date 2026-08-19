@@ -50,8 +50,8 @@ internal enum ReceiptCaptureCopy {
 /// Every word the result screen shows.
 ///
 /// Kept apart from ``ReceiptCaptureCopy`` because the two describe different
-/// screens the moment POPS-1959 exists — this reads a ``ReceiptOutcome``, and
-/// ``ReceiptCaptureCopy`` will read whatever that ticket produces.
+/// screens: this one is read from a ``ReceiptOutcome`` the server produced,
+/// the other from what the camera and the person in front of it did.
 internal enum ReceiptResultCopy {
     internal static let submitting = "Reading your receipt…"
     internal static let retry = "Retry"
@@ -69,8 +69,8 @@ internal enum ReceiptResultCopy {
     internal static func purchaseReference(_ purchaseId: String) -> String {
         "Reference \(purchaseId)"
     }
-    /// The navigation target POPS-1949 names as a known gap: there is
-    /// nowhere in the app yet that shows a purchase once it exists.
+    /// A known gap said out loud rather than hidden: nothing in this app shows
+    /// a purchase once it exists, so there is no screen to send anybody to.
     internal static let createdNoDestination =
         "There's nowhere in the app yet to view this purchase."
 
