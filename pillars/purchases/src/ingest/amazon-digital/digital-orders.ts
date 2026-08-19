@@ -12,7 +12,7 @@
 import { createHash } from 'node:crypto';
 
 import { parseBundleRows } from '../amazon/csv.js';
-import { readQuantity, readText, readTimestamp } from '../amazon/fields.js';
+import { readText, readTimestamp } from '../amazon/fields.js';
 import {
   buildRefundCharges,
   reportOrphanRefunds,
@@ -23,16 +23,12 @@ import {
   DIGITAL_REQUIRED_COLUMNS,
   SUCCESSFUL_ORDER_STATUS,
 } from './columns.js';
-import { readComponents, totalComponents } from './components.js';
+import { totalComponents } from './components.js';
 import { parseAmazonDigitalReturns } from './digital-returns.js';
+import { buildItem, readLines } from './lines.js';
 
-import type {
-  CreateChargeInput,
-  CreateItemInput,
-  CreatePurchaseInput,
-} from '../../db/services/purchase-input.js';
+import type { CreateChargeInput, CreatePurchaseInput } from '../../db/services/purchase-input.js';
 import type { AmazonAnomaly, Row } from '../amazon/columns.js';
-import type { Component, ComponentTotals } from './components.js';
 
 /**
  * `purchase_sources.id` this adapter writes under.
@@ -188,66 +184,6 @@ function buildOrder(
   };
 }
 
-/** One order item, with the component rows that state its money. */
-interface DigitalLine {
-  readonly row: Row;
-  readonly components: readonly Component[];
-}
-
-/**
- * Split an order's rows into its items and read each one's components, or
- * give up on the whole order.
- *
- * Grouped on `Digital Order Item ID` rather than assumed to be one item.
- * The reference bundle has one item on 90 of 90 orders, but nothing in the
- * file's shape forbids two — the returns file next door groups on the same
- * pair for the same reason — and reading two items as one would name the
- * line after the first product while giving it both products' money, with
- * nothing to say it had happened.
- *
- * Giving up on the whole order rather than on the unreadable item is the
- * same call the component reader makes: zero is a real total here, so an
- * order landed short of a line would be indistinguishable from a promotion
- * that cancelled the price.
- */
-function readLines(
-  rows: readonly Row[],
-  sourceOrderId: string,
-  anomalies: AmazonAnomaly[]
-): DigitalLine[] | null {
-  const rowsByItemId = new Map<string, Row[]>();
-  for (const row of rows) {
-    const itemId = readText(row['Digital Order Item ID']) ?? '';
-    const existing = rowsByItemId.get(itemId);
-    if (existing === undefined) rowsByItemId.set(itemId, [row]);
-    else existing.push(row);
-  }
-
-  const lines: DigitalLine[] = [];
-  for (const itemRows of rowsByItemId.values()) {
-    const first = itemRows[0];
-    if (first === undefined) continue;
-
-    const components = readComponents(
-      itemRows,
-      'Transaction Amount',
-      'Component Type',
-      (anomaly) => {
-        anomalies.push({
-          ...anomaly,
-          sourceOrderId,
-          detail: `${anomaly.detail}; the order was not ingested`,
-        });
-      }
-    );
-    if (components === null) return null;
-
-    lines.push({ row: first, components });
-  }
-
-  return lines;
-}
-
 /**
  * Read the three order-level facts without which an order must not be
  * written.
@@ -283,64 +219,6 @@ function readOrderHeader(
   if (currency === null) return drop('unreadable Base Currency Code');
 
   return { orderedAt, currency: currency.toUpperCase() };
-}
-
-/**
- * One line, from the first of the component rows that describe it.
- *
- * `Product Name`, `ASIN`, `Quantity Ordered` and `Marketplace` are stated
- * per component row and repeat within an item, so the first row states them
- * all; `money` is that item's own components, netted. `kind` is `digital`
- * outright: the file is what a digital purchase IS, so this is transcribing
- * the merchant rather than proposing a classification, and it persists
- * asserted.
- *
- * No `shipmentRef`. There is no delivery: nothing arrives, nothing is
- * carried and nothing can be tracked, and a synthetic shipment would put a
- * fictional box in the one table whose whole purpose is real ones.
- */
-function buildItem(
-  row: Row,
-  money: ComponentTotals,
-  sourceOrderId: string,
-  anomalies: AmazonAnomaly[]
-): CreateItemInput | null {
-  const name = readText(row['Product Name']);
-  if (name === null) {
-    anomalies.push({
-      kind: 'dropped-line',
-      sourceOrderId,
-      detail: `line "${readText(row['ASIN']) ?? 'unknown ASIN'}" has no Product Name`,
-    });
-    return null;
-  }
-
-  const stated = readQuantity(row['Quantity Ordered']);
-  if (stated === 0) {
-    anomalies.push({
-      kind: 'zero-quantity-line',
-      sourceOrderId,
-      detail: `line "${name}" has quantity 0; ingested as 1`,
-    });
-  }
-  const quantity = stated === null || stated < 1 ? 1 : stated;
-
-  return {
-    name,
-    sku: readText(row['ASIN']),
-    quantity,
-    // Integer division truncates, so this reconstructs the line total only
-    // where the subtotal divides evenly. `lineTotalCents` carries the
-    // stated figure rather than the product, so no cent is invented.
-    unitPriceCents: Math.trunc(money.subtotalCents / quantity),
-    lineTotalCents: money.subtotalCents,
-    // Negative, matching the physical adapter's sign convention: an
-    // adjustment is directional, while the order-level `discountCents` is a
-    // non-negative magnitude.
-    allocatedAdjustmentCents: money.priceAdjustmentCents,
-    kind: 'digital',
-    merchantCategory: readText(row['Marketplace']),
-  };
 }
 
 /**

@@ -135,9 +135,7 @@ export const ItemTagSchema = z
  * reading, an item tag classifies a thing — and one of them growing a value
  * must not be able to widen the other.
  */
-export const PurchaseTagSchema = z
-  .string()
-  .regex(ITEM_TAG_PATTERN, 'expected a lower-case slug, e.g. date-uncertain');
+export const PurchaseTagSchema = z.string().regex(ITEM_TAG_PATTERN, 'expected a lower-case slug');
 
 /**
  * A classification bound to the marker that says whether to trust it.

@@ -27,7 +27,7 @@ The CSV is **one row per monetary component of an order item**. `Component Type`
 | item      | `(Order ID, Digital Order Item ID)` | 90   |
 | component | the row                             | 226  |
 
-Order and item are the same grain here: **one item per order on 90 of 90**. A digital order is one redemption.
+Order and item are the same grain on this download: **one item per order on 90 of 90**. A digital order is one redemption. The parser groups on `(Order ID, Digital Order Item ID)` anyway rather than reading that as a rule — nothing in the file's shape forbids two items, and collapsing them would name the line after the first product while handing it both products' money, silently.
 
 **`Transaction Amount` summed across an order is the only figure in the file that says what was charged.** `Price` states the list price, and on a credit-redeemed audiobook that is $14.95 against $0.00 actually paid. `Price Tax` is not the tax — it is the tax-inclusive price, equal to `Price` on 224 of 226 rows.
 
@@ -48,7 +48,7 @@ That is an Audible credit being redeemed. The order nets to **zero** and no mone
 
 Row order within an order is not fixed; the pairs interleave. Nothing here depends on it.
 
-The four money fields come out of the components directly, and the identity holds on **90 of 90** orders — unlike the physical export, where it is advisory:
+The four money fields come out of the components directly, and the last line of this is an identity rather than a measurement — `totalCents` is computed from the other three:
 
 ```
 subtotalCents  = Σ positive Price Amount
@@ -57,7 +57,9 @@ discountCents  = |Σ negative components, either type|
 totalCents     = Σ all components  ==  subtotal + tax − discount
 ```
 
-**A zero total is a real value**, which is why an order with any unreadable component is dropped rather than landed at zero: a parse failure that produced one would be indistinguishable from a promotion that cancelled the price. For the same reason a promotion-cancelled order carries the order tag `promotion-offset`. Without it, the 23 credit redemptions look exactly like the 5 genuinely free items, and "this cost nothing" loses the difference between a gift and a thing paid for with a credit.
+**A zero total is a real value**, which is why an order with any unreadable component is dropped rather than landed at zero: a parse failure that produced one would be indistinguishable from a promotion that cancelled the price. For the same reason a promotion-cancelled order carries the order tag `promotion-offset`. Without it, the 23 credit redemptions look exactly like the 5 genuinely free items, and "this cost nothing" loses the difference between a gift and a thing paid for with a credit. That tag reaches the database through `tags` on the create body — a field the contract did not carry until this adapter needed it, and a claim worth checking rather than assuming, since ts-rest hands the handler the zod-parsed body and `z.object()` discards an unknown key without complaining.
+
+**A total below zero is not.** A promotion cancels a price to exactly zero; components that net negative say a merchant paid the account, which nothing in the file explains. Such an order is dropped rather than landed as negative spend in the merchant total.
 
 ## What it does not produce
 

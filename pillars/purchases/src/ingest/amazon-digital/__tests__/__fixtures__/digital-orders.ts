@@ -10,54 +10,14 @@
  * gitignored repo-wide (AGENTS.md, Security), so a committed `.csv` fixture
  * would silently not exist for anyone else.
  */
+import {
+  DIGITAL_ROW_DEFAULTS,
+  digitalCsvWithRows,
+  digitalRowWith,
+  type Column,
+} from './digital-csv.js';
 
-const HEADER = [
-  'ASIN',
-  'Base Currency Code',
-  'Component Type',
-  'Digital Order Item ID',
-  'Marketplace',
-  'Order Date',
-  'Order ID',
-  'Order Status',
-  'Price',
-  'Product Name',
-  'Quantity Ordered',
-  'Transaction Amount',
-] as const;
-
-type Column = (typeof HEADER)[number];
-
-/** Every column Amazon fills with a sentinel rather than leaving empty. */
-const DEFAULTS: Record<Column, string> = {
-  ASIN: 'B000000001',
-  'Base Currency Code': 'AUD',
-  'Component Type': 'Price Amount',
-  'Digital Order Item ID': 'ITEM0000000000000001',
-  Marketplace: 'www.amazon.com.au',
-  'Order Date': '2025-02-18T11:30:00Z',
-  'Order ID': 'D01-0000000-0000001',
-  'Order Status': 'SUCCESS',
-  Price: '14.95',
-  'Product Name': 'A Digital Thing',
-  'Quantity Ordered': '1',
-  'Transaction Amount': '13.59',
-};
-
-function quote(value: string): string {
-  return `"${value.replaceAll('"', '""')}"`;
-}
-
-export function digitalRowWith(overrides: Partial<Record<Column, string>>): string {
-  const row = { ...DEFAULTS, ...overrides };
-  return HEADER.map((column) => quote(row[column])).join(',');
-}
-
-export function digitalCsvWithRows(rows: readonly string[]): string {
-  // The real file opens with a UTF-8 BOM, and it lands on the first header
-  // name rather than being consumed as an encoding marker.
-  return `﻿${HEADER.map(quote).join(',')}\n${rows.join('\n')}\n`;
-}
+export { digitalCsvWithRows, digitalRowWith } from './digital-csv.js';
 
 /** A subscription renewal: one price component, one tax component. */
 export const ORDER_PAID = 'D01-0000000-0000001';
@@ -286,7 +246,7 @@ const FIXTURE_ROWS: readonly Partial<Record<Column, string>>[] = [
 
 /** Every Order ID the rows above state, in file order, without repeats. */
 export const ORDER_IDS_IN_FIXTURE: readonly string[] = [
-  ...new Set(FIXTURE_ROWS.map((row) => row['Order ID'] ?? DEFAULTS['Order ID'])),
+  ...new Set(FIXTURE_ROWS.map((row) => row['Order ID'] ?? DIGITAL_ROW_DEFAULTS['Order ID'])),
 ];
 
 export const DIGITAL_ORDERS_CSV = digitalCsvWithRows(FIXTURE_ROWS.map(digitalRowWith));
