@@ -29,6 +29,7 @@ export interface ScopedLine
       | 'purchaseId'
       | 'name'
       | 'sku'
+      | 'skuScheme'
       | 'quantity'
       | 'lineTotalCents'
       | 'allocatedShippingCents'
@@ -62,6 +63,7 @@ export function selectScopedLines(
       purchaseId: purchaseItems.purchaseId,
       name: purchaseItems.name,
       sku: purchaseItems.sku,
+      skuScheme: purchaseItems.skuScheme,
       quantity: purchaseItems.quantity,
       lineTotalCents: purchaseItems.lineTotalCents,
       allocatedShippingCents: purchaseItems.allocatedShippingCents,

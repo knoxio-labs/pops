@@ -135,7 +135,9 @@ describe('grouping', () => {
         order({
           checksum: `order-${month}`,
           orderedAt: `2026-${month}-04T00:00:00Z`,
-          items: [line({ name: 'Magnetic Dosing Funnel', sku: 'B0FCSJTKJ8' })],
+          items: [
+            line({ name: 'Magnetic Dosing Funnel', sku: { value: 'B0FCSJTKJ8', scheme: 'asin' } }),
+          ],
         })
       );
     }
@@ -161,8 +163,8 @@ describe('grouping', () => {
       order({
         checksum: 'split',
         items: [
-          line({ name: 'Magnetic Dosing Funnel', sku: 'B0FCSJTKJ8' }),
-          line({ name: 'Magnetic Dosing Funnel', sku: 'B0FCSJTKJ8' }),
+          line({ name: 'Magnetic Dosing Funnel', sku: { value: 'B0FCSJTKJ8', scheme: 'asin' } }),
+          line({ name: 'Magnetic Dosing Funnel', sku: { value: 'B0FCSJTKJ8', scheme: 'asin' } }),
         ],
       })
     );
@@ -182,7 +184,13 @@ describe('grouping', () => {
       order({
         checksum: 'qty',
         items: [
-          line({ name: 'Pods', sku: 'B01', quantity: 6, unitPriceCents: 100, lineTotalCents: 600 }),
+          line({
+            name: 'Pods',
+            sku: { value: 'B01', scheme: 'merchant' },
+            quantity: 6,
+            unitPriceCents: 100,
+            lineTotalCents: 600,
+          }),
         ],
       })
     );
@@ -196,13 +204,16 @@ describe('grouping', () => {
   it('never merges the same sku string across two sources', () => {
     createPurchase(
       opened.db,
-      order({ checksum: 'am', items: [line({ name: 'Barware Set', sku: '6015322' })] })
+      order({
+        checksum: 'am',
+        items: [line({ name: 'Barware Set', sku: { value: '6015322', scheme: 'merchant' } })],
+      })
     );
     createPurchase(
       opened.db,
       receiptOrder({
         checksum: 'wo',
-        items: [line({ name: 'Barware Set', sku: '6015322' })],
+        items: [line({ name: 'Barware Set', sku: { value: '6015322', scheme: 'merchant' } })],
       })
     );
 
@@ -340,14 +351,17 @@ describe('grouping', () => {
   it('splits one sku bought in two currencies rather than adding the cents together', () => {
     createPurchase(
       opened.db,
-      order({ checksum: 'aud', items: [line({ name: 'Funnel', sku: 'B0FCSJTKJ8' })] })
+      order({
+        checksum: 'aud',
+        items: [line({ name: 'Funnel', sku: { value: 'B0FCSJTKJ8', scheme: 'asin' } })],
+      })
     );
     createPurchase(
       opened.db,
       order({
         checksum: 'usd',
         currency: 'USD',
-        items: [line({ name: 'Funnel', sku: 'B0FCSJTKJ8' })],
+        items: [line({ name: 'Funnel', sku: { value: 'B0FCSJTKJ8', scheme: 'asin' } })],
       })
     );
 
@@ -369,7 +383,7 @@ describe('money', () => {
         items: [
           line({
             name: 'Funnel',
-            sku: 'B0FCSJTKJ8',
+            sku: { value: 'B0FCSJTKJ8', scheme: 'asin' },
             lineTotalCents: 1179,
             allocatedShippingCents: 250,
             allocatedAdjustmentCents: -50,
@@ -389,14 +403,26 @@ describe('money', () => {
       opened.db,
       order({
         checksum: 'refunded',
-        items: [line({ name: 'Funnel', sku: 'B0FCSJTKJ8', lineTotalCents: 1179 })],
+        items: [
+          line({
+            name: 'Funnel',
+            sku: { value: 'B0FCSJTKJ8', scheme: 'asin' },
+            lineTotalCents: 1179,
+          }),
+        ],
       })
     );
     const partly = createPurchase(
       opened.db,
       order({
         checksum: 'kept',
-        items: [line({ name: 'Funnel', sku: 'B0FCSJTKJ8', lineTotalCents: 1179 })],
+        items: [
+          line({
+            name: 'Funnel',
+            sku: { value: 'B0FCSJTKJ8', scheme: 'asin' },
+            lineTotalCents: 1179,
+          }),
+        ],
       })
     );
     recordLineRefund(opened.db, refunded, 400);
@@ -419,7 +445,13 @@ describe('money', () => {
       order({
         checksum: 'fanout',
         totalCents: 6000,
-        items: [line({ name: 'Funnel', sku: 'B0FCSJTKJ8', lineTotalCents: 6000 })],
+        items: [
+          line({
+            name: 'Funnel',
+            sku: { value: 'B0FCSJTKJ8', scheme: 'asin' },
+            lineTotalCents: 6000,
+          }),
+        ],
         charges: [
           { sourceChargeRef: 'a', amountCents: 2000 },
           { sourceChargeRef: 'b', amountCents: 2000 },
@@ -476,7 +508,7 @@ describe('merchants', () => {
         checksum: 'entity',
         merchantEntityId: 'ent-1',
         merchantEntityName: 'Amazon AU',
-        items: [line({ name: 'Funnel', sku: 'B0FCSJTKJ8' })],
+        items: [line({ name: 'Funnel', sku: { value: 'B0FCSJTKJ8', scheme: 'asin' } })],
       })
     );
     createPurchase(
@@ -484,7 +516,7 @@ describe('merchants', () => {
       order({
         checksum: 'anon',
         merchantEntityName: null,
-        items: [line({ name: 'Funnel', sku: 'B0FCSJTKJ8' })],
+        items: [line({ name: 'Funnel', sku: { value: 'B0FCSJTKJ8', scheme: 'asin' } })],
       })
     );
 
@@ -505,7 +537,7 @@ describe('scope and withholding', () => {
       order({
         checksum: 'old',
         orderedAt: '2025-02-02T01:41:21Z',
-        items: [line({ name: 'Funnel', sku: 'B0FCSJTKJ8' })],
+        items: [line({ name: 'Funnel', sku: { value: 'B0FCSJTKJ8', scheme: 'asin' } })],
       })
     );
     createPurchase(
@@ -513,7 +545,7 @@ describe('scope and withholding', () => {
       order({
         checksum: 'new',
         orderedAt: '2026-02-02T01:41:21Z',
-        items: [line({ name: 'Funnel', sku: 'B0FCSJTKJ8' })],
+        items: [line({ name: 'Funnel', sku: { value: 'B0FCSJTKJ8', scheme: 'asin' } })],
       })
     );
 
@@ -528,7 +560,10 @@ describe('scope and withholding', () => {
       order({
         checksum: 'a',
         orderedAt: '2026-01-04T00:00:00Z',
-        items: [line({ name: 'Funnel', sku: 'REPEAT' }), line({ name: 'Tamper', sku: 'ONCE' })],
+        items: [
+          line({ name: 'Funnel', sku: { value: 'REPEAT', scheme: 'merchant' } }),
+          line({ name: 'Tamper', sku: { value: 'ONCE', scheme: 'merchant' } }),
+        ],
       })
     );
     createPurchase(
@@ -536,7 +571,7 @@ describe('scope and withholding', () => {
       order({
         checksum: 'b',
         orderedAt: '2026-02-04T00:00:00Z',
-        items: [line({ name: 'Funnel', sku: 'REPEAT' })],
+        items: [line({ name: 'Funnel', sku: { value: 'REPEAT', scheme: 'merchant' } })],
       })
     );
 
@@ -559,7 +594,10 @@ describe('scope and withholding', () => {
   it('withholds nothing by default', () => {
     createPurchase(
       opened.db,
-      order({ checksum: 'a', items: [line({ name: 'Tamper', sku: 'ONCE' })] })
+      order({
+        checksum: 'a',
+        items: [line({ name: 'Tamper', sku: { value: 'ONCE', scheme: 'merchant' } })],
+      })
     );
 
     expect(rankProductPurchases(opened.db).products).toHaveLength(1);
@@ -570,7 +608,10 @@ describe('scope and withholding', () => {
       opened.db,
       order({
         checksum: 'mixed',
-        items: [line({ name: 'Funnel', sku: 'B0FCSJTKJ8' }), line({ name: 'Tamper' })],
+        items: [
+          line({ name: 'Funnel', sku: { value: 'B0FCSJTKJ8', scheme: 'asin' } }),
+          line({ name: 'Tamper' }),
+        ],
       })
     );
     createPurchase(
@@ -612,9 +653,21 @@ describe('ordering', () => {
         checksum: 'a',
         orderedAt: '2026-01-04T00:00:00Z',
         items: [
-          line({ name: 'Twice cheap', sku: 'TWICE-CHEAP', lineTotalCents: 100 }),
-          line({ name: 'Twice dear', sku: 'TWICE-DEAR', lineTotalCents: 9000 }),
-          line({ name: 'Once', sku: 'ONCE', lineTotalCents: 50_000 }),
+          line({
+            name: 'Twice cheap',
+            sku: { value: 'TWICE-CHEAP', scheme: 'merchant' },
+            lineTotalCents: 100,
+          }),
+          line({
+            name: 'Twice dear',
+            sku: { value: 'TWICE-DEAR', scheme: 'merchant' },
+            lineTotalCents: 9000,
+          }),
+          line({
+            name: 'Once',
+            sku: { value: 'ONCE', scheme: 'merchant' },
+            lineTotalCents: 50_000,
+          }),
         ],
       })
     );
@@ -624,8 +677,16 @@ describe('ordering', () => {
         checksum: 'b',
         orderedAt: '2026-02-04T00:00:00Z',
         items: [
-          line({ name: 'Twice cheap', sku: 'TWICE-CHEAP', lineTotalCents: 100 }),
-          line({ name: 'Twice dear', sku: 'TWICE-DEAR', lineTotalCents: 9000 }),
+          line({
+            name: 'Twice cheap',
+            sku: { value: 'TWICE-CHEAP', scheme: 'merchant' },
+            lineTotalCents: 100,
+          }),
+          line({
+            name: 'Twice dear',
+            sku: { value: 'TWICE-DEAR', scheme: 'merchant' },
+            lineTotalCents: 9000,
+          }),
         ],
       })
     );
@@ -646,12 +707,21 @@ describe('ordering', () => {
       order({
         checksum: 'usd',
         currency: 'USD',
-        items: [line({ name: 'Dear in USD', sku: 'USD-1', lineTotalCents: 90_000 })],
+        items: [
+          line({
+            name: 'Dear in USD',
+            sku: { value: 'USD-1', scheme: 'merchant' },
+            lineTotalCents: 90_000,
+          }),
+        ],
       })
     );
     createPurchase(
       opened.db,
-      order({ checksum: 'aud', items: [line({ name: 'Cheap in AUD', sku: 'AUD-1' })] })
+      order({
+        checksum: 'aud',
+        items: [line({ name: 'Cheap in AUD', sku: { value: 'AUD-1', scheme: 'merchant' } })],
+      })
     );
 
     expect(rankProductPurchases(opened.db).products.map((entry) => entry.currency)).toEqual([
@@ -668,8 +738,16 @@ describe('agreement with the line reads it summarises', () => {
       order({
         checksum: 'a',
         items: [
-          line({ name: 'Funnel', sku: 'B0FCSJTKJ8', lineTotalCents: 1179 }),
-          line({ name: 'Tamper', sku: 'B0DSVZQ8P5', lineTotalCents: 4499 }),
+          line({
+            name: 'Funnel',
+            sku: { value: 'B0FCSJTKJ8', scheme: 'asin' },
+            lineTotalCents: 1179,
+          }),
+          line({
+            name: 'Tamper',
+            sku: { value: 'B0DSVZQ8P5', scheme: 'asin' },
+            lineTotalCents: 4499,
+          }),
         ],
       })
     );
@@ -680,7 +758,7 @@ describe('agreement with the line reads it summarises', () => {
         items: [
           line({
             name: 'Funnel',
-            sku: 'B0FCSJTKJ8',
+            sku: { value: 'B0FCSJTKJ8', scheme: 'asin' },
             lineTotalCents: 1179,
             allocatedShippingCents: 300,
           }),

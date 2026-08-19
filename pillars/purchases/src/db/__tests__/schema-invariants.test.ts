@@ -9,9 +9,12 @@
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { toPurchaseDetailBody } from '../../api/rest/serializers.js';
+import { SKU_SCHEMES } from '../../contract/constants.js';
 import {
   createPurchase,
   DuplicatePurchaseError,
+  getPurchase,
   InvalidIngestPayloadError,
   listPurchases,
   purchaseCapture,
@@ -222,6 +225,121 @@ describe('item constraints', () => {
     expect(() =>
       opened.raw.prepare(`UPDATE purchase_items SET kind = NULL WHERE purchase_id = ?`).run(id)
     ).toThrow(/CHECK constraint failed/i);
+  });
+
+  it('rejects a scheme with no identifier under it', () => {
+    // A namespace naming nothing says nothing, and it is the half of the
+    // pair SQLite could still be given on a table that already exists.
+    const id = createPurchase(opened.db, coffeeOrder());
+    expect(() =>
+      opened.raw.prepare(`UPDATE purchase_items SET sku = NULL WHERE purchase_id = ?`).run(id)
+    ).toThrow(/CHECK constraint failed/i);
+  });
+
+  it('rejects a blank identifier wearing a namespace', () => {
+    // A namespace over an empty string is an identity minted from nothing,
+    // which is the state NULL exists to say and the one a grouping would
+    // still join two products on.
+    const id = createPurchase(opened.db, coffeeOrder());
+    expect(() =>
+      opened.raw.prepare(`UPDATE purchase_items SET sku = '  ' WHERE purchase_id = ?`).run(id)
+    ).toThrow(/CHECK constraint failed/i);
+  });
+
+  it('rejects a scheme outside the closed vocabulary', () => {
+    // `barcode` is a namespace POPS may well want one day, and the point is
+    // that wanting it is not enough: the CHECK has to be widened by a
+    // migration first.
+    expect(SKU_SCHEMES).not.toContain('barcode');
+    const id = createPurchase(opened.db, coffeeOrder());
+    expect(() =>
+      opened.raw
+        .prepare(`UPDATE purchase_items SET sku_scheme = 'barcode' WHERE purchase_id = ?`)
+        .run(id)
+    ).toThrow(/CHECK constraint failed/i);
+  });
+
+  it.each(SKU_SCHEMES)('accepts %s, because the vocabulary says it exists', (scheme) => {
+    // The binding the constant and the CHECK otherwise lack: a scheme added
+    // to `SKU_SCHEMES` without widening the CHECK typechecks, parses, and
+    // fails at INSERT against the live file.
+    const id = createPurchase(opened.db, coffeeOrder());
+    expect(() =>
+      opened.raw
+        .prepare(`UPDATE purchase_items SET sku_scheme = ? WHERE purchase_id = ?`)
+        .run(scheme, id)
+    ).not.toThrow();
+  });
+
+  it('refuses an identifier that cannot belong to the namespace it claims', () => {
+    // `asin` is the one namespace that merges lines across sources, so a
+    // store article number claiming it is the accidental merge arriving
+    // through the front door. The wire schema rejects it too; this is the
+    // in-process path, which never passes through zod.
+    expect(() =>
+      createPurchase(
+        opened.db,
+        amazonOrder({
+          checksum: 'checksum-false-asin',
+          sourceOrderId: 'order-false-asin',
+          items: [
+            {
+              name: 'Timber screws 4471',
+              sku: { value: '4471', scheme: 'asin' },
+              unitPriceCents: 1000,
+              lineTotalCents: 1000,
+            },
+          ],
+        })
+      )
+    ).toThrow(/cannot belong to the 'asin' namespace/i);
+  });
+
+  it('stores that same identifier as what it is', () => {
+    const id = createPurchase(
+      opened.db,
+      amazonOrder({
+        checksum: 'checksum-article',
+        sourceOrderId: 'order-article',
+        items: [
+          {
+            name: 'Timber screws 4471',
+            sku: { value: '4471', scheme: 'merchant' },
+            unitPriceCents: 1000,
+            lineTotalCents: 1000,
+          },
+        ],
+      })
+    );
+    const row = opened.raw
+      .prepare(`SELECT sku, sku_scheme AS scheme FROM purchase_items WHERE purchase_id = ?`)
+      .get(id) as { sku: string; scheme: string };
+    expect(row).toEqual({ sku: '4471', scheme: 'merchant' });
+  });
+
+  it('stores the identifier and its namespace together, or neither', () => {
+    createPurchase(opened.db, coffeeOrder());
+    const rows = opened.raw
+      .prepare(`SELECT sku, sku_scheme AS scheme FROM purchase_items`)
+      .all() as { sku: string | null; scheme: string | null }[];
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) {
+      expect(row.sku === null).toBe(row.scheme === null);
+    }
+    expect(rows.some((row) => row.scheme === 'asin')).toBe(true);
+  });
+
+  it('refuses to serve an identifier whose namespace was stripped behind the write path', () => {
+    // The converse CHECK cannot be added to an existing table without a
+    // rebuild that would cascade every tag, note and unit off its lines, so
+    // the read projection is what refuses the state — rather than handing a
+    // consumer a bare string it would be free to group two products on.
+    const id = createPurchase(opened.db, coffeeOrder());
+    opened.raw.prepare(`UPDATE purchase_items SET sku_scheme = NULL WHERE purchase_id = ?`).run(id);
+    expect(() => getPurchase(opened.db, id)).not.toThrow();
+    const detail = getPurchase(opened.db, id);
+    if (detail === undefined) throw new Error('the seeded order vanished');
+    expect(() => toPurchaseDetailBody(detail)).toThrow(/with no scheme/i);
   });
 
   it('rejects a receipt-character boolean that is neither stated value', () => {

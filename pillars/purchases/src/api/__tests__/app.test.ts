@@ -42,7 +42,7 @@ const fullOrder = {
       ref: 'tamper',
       shipmentRef: 'box1',
       name: 'Espresso Tamping Station',
-      sku: 'B0DSVZQ8P5',
+      sku: { value: 'B0DSVZQ8P5', scheme: 'asin' },
       unitPriceCents: 4499,
       lineTotalCents: 4499,
       kind: 'durable',
@@ -144,7 +144,7 @@ describe('POST /purchases', () => {
   it('projects tags with their confirmation marker and computes landed cost', async () => {
     const res = await request(app).post('/purchases').send(fullOrder);
     const tamper = res.body.items.find(
-      (i: { item: { sku: string } }) => i.item.sku === 'B0DSVZQ8P5'
+      (i: { item: { sku: { value: string } | null } }) => i.item.sku?.value === 'B0DSVZQ8P5'
     );
     expect(tamper.tags.map((t: { tag: string }) => t.tag)).toEqual(['coffee', 'kitchen']);
     // Stated in the payload, so asserted — a caller supplying an item tag is
@@ -300,7 +300,9 @@ describe('GET /items', () => {
     const res = await request(app).get('/items?tag=coffee');
     expect(res.status).toBe(200);
     expect(res.body.items).toHaveLength(1);
-    expect(res.body.items[0].item.sku).toBe('B0DSVZQ8P5');
+    // The identifier arrives with the namespace that says how far it
+    // means anything, never as a bare string.
+    expect(res.body.items[0].item.sku).toEqual({ value: 'B0DSVZQ8P5', scheme: 'asin' });
     // Without this a caller summing "everything tagged coffee" cannot tell
     // which of those labels anyone ever agreed with.
     expect(res.body.items[0].confirmedAt).not.toBeNull();
@@ -832,7 +834,7 @@ describe('purchase handler edge paths', () => {
               {
                 ref: 'pods',
                 name: 'Coffee Pods',
-                sku: 'B0POD',
+                sku: { value: 'B0POD', scheme: 'merchant' },
                 unitPriceCents: 1200,
                 lineTotalCents: 1200,
               },

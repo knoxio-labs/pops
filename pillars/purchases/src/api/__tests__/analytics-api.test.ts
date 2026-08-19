@@ -168,7 +168,7 @@ describe('GET /analytics/product-leaderboard', () => {
           items: [
             {
               name: 'Magnetic Dosing Funnel',
-              sku: 'B0FCSJTKJ8',
+              sku: { value: 'B0FCSJTKJ8', scheme: 'asin' },
               unitPriceCents: 1179,
               lineTotalCents: 1179,
             },
@@ -201,7 +201,12 @@ describe('GET /analytics/product-leaderboard', () => {
       order({
         checksum: 'mixed',
         items: [
-          { name: 'Funnel', sku: 'B0FCSJTKJ8', unitPriceCents: 1179, lineTotalCents: 1179 },
+          {
+            name: 'Funnel',
+            sku: { value: 'B0FCSJTKJ8', scheme: 'asin' },
+            unitPriceCents: 1179,
+            lineTotalCents: 1179,
+          },
           { name: 'Bananas Cavendish', unitPriceCents: 400, lineTotalCents: 400 },
         ],
       })
@@ -225,8 +230,18 @@ describe('GET /analytics/product-leaderboard', () => {
         checksum: 'a',
         orderedAt: '2026-01-04T00:00:00Z',
         items: [
-          { name: 'Funnel', sku: 'REPEAT', unitPriceCents: 100, lineTotalCents: 100 },
-          { name: 'Tamper', sku: 'ONCE', unitPriceCents: 100, lineTotalCents: 100 },
+          {
+            name: 'Funnel',
+            sku: { value: 'REPEAT', scheme: 'merchant' },
+            unitPriceCents: 100,
+            lineTotalCents: 100,
+          },
+          {
+            name: 'Tamper',
+            sku: { value: 'ONCE', scheme: 'merchant' },
+            unitPriceCents: 100,
+            lineTotalCents: 100,
+          },
         ],
       })
     );
@@ -235,7 +250,14 @@ describe('GET /analytics/product-leaderboard', () => {
       order({
         checksum: 'b',
         orderedAt: '2026-02-04T00:00:00Z',
-        items: [{ name: 'Funnel', sku: 'REPEAT', unitPriceCents: 100, lineTotalCents: 100 }],
+        items: [
+          {
+            name: 'Funnel',
+            sku: { value: 'REPEAT', scheme: 'merchant' },
+            unitPriceCents: 100,
+            lineTotalCents: 100,
+          },
+        ],
       })
     );
 
@@ -253,7 +275,14 @@ describe('GET /analytics/product-leaderboard', () => {
       opened.db,
       order({
         checksum: 'a',
-        items: [{ name: 'Tamper', sku: 'ONCE', unitPriceCents: 100, lineTotalCents: 100 }],
+        items: [
+          {
+            name: 'Tamper',
+            sku: { value: 'ONCE', scheme: 'merchant' },
+            unitPriceCents: 100,
+            lineTotalCents: 100,
+          },
+        ],
       })
     );
 
@@ -273,7 +302,14 @@ describe('GET /analytics/product-leaderboard', () => {
       opened.db,
       order({
         checksum: 'am',
-        items: [{ name: 'Funnel', sku: 'B0FCSJTKJ8', unitPriceCents: 100, lineTotalCents: 100 }],
+        items: [
+          {
+            name: 'Funnel',
+            sku: { value: 'B0FCSJTKJ8', scheme: 'asin' },
+            unitPriceCents: 100,
+            lineTotalCents: 100,
+          },
+        ],
       })
     );
     createPurchase(
@@ -299,7 +335,7 @@ describe('GET /analytics/product-leaderboard', () => {
           items: [
             {
               name: `Thing ${String(i)}`,
-              sku: `SKU-${String(i)}`,
+              sku: { value: `SKU-${String(i)}`, scheme: 'merchant' },
               unitPriceCents: 100,
               lineTotalCents: 100,
             },

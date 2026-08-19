@@ -6,6 +6,9 @@
  * row-grouping logic in `order-history.ts` so the traps can be tested
  * directly against the values that produced them.
  */
+import { isWellFormedSku } from '../../contract/constants.js';
+
+import type { CreateItemInput } from '../../db/services/purchase-input.js';
 
 /**
  * Amazon never writes an empty cell. Every absent value in the 943-row
@@ -120,6 +123,25 @@ export function readQuantity(raw: string | undefined): number | null {
   if (!/^\d+$/u.test(text)) return null;
   const value = Number(text);
   return Number.isSafeInteger(value) ? value : null;
+}
+
+/**
+ * What the export's `ASIN` column can honestly be said to be.
+ *
+ * Almost always an ASIN. When the column holds something that cannot be one
+ * — a blank the reader kept, a marketplace id from a row shape Amazon
+ * changed — the line still names a product to the merchant that printed it,
+ * so it takes the weakest true claim rather than failing the order or
+ * asserting a cross-source identity the string cannot support.
+ *
+ * Shared by the physical and digital exports, which carry the same column
+ * and have no reason to read it differently.
+ */
+export function readProductIdentity(raw: string | undefined): CreateItemInput['sku'] {
+  const asin = readText(raw);
+  if (asin === null) return null;
+  if (isWellFormedSku('asin', asin)) return { value: asin, scheme: 'asin' };
+  return isWellFormedSku('merchant', asin) ? { value: asin, scheme: 'merchant' } : null;
 }
 
 /**

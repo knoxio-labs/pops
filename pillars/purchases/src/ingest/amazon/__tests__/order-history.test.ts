@@ -98,6 +98,44 @@ describe('shipment-level columns', () => {
   });
 });
 
+describe('what the ASIN column is taken to be', () => {
+  const IDENTITY_ORDER_ID = '249-0000013-0000013';
+
+  function identityFor(asin: string) {
+    const csv = csvWithRows([
+      rowWith({
+        ASIN: asin,
+        'Order ID': IDENTITY_ORDER_ID,
+        'Product Name': 'Widget',
+        'Total Amount': '10.00',
+        'Unit Price': '10.00',
+      }),
+    ]);
+    const parsed = parseAmazonOrderHistory(csv).orders.find(
+      (candidate) => candidate.sourceOrderId === IDENTITY_ORDER_ID
+    );
+    if (parsed === undefined) throw new Error('fixture order was not parsed');
+    return (parsed.items ?? [])[0]?.sku ?? null;
+  }
+
+  it('names a well-formed ASIN as one', () => {
+    expect(identityFor('B0000000AA')).toEqual({ value: 'B0000000AA', scheme: 'asin' });
+  });
+
+  it('claims only merchant-local reach for a value that cannot be an ASIN', () => {
+    // `asin` is the namespace that merges lines across sources. A column
+    // holding something else — a shape Amazon changed, a marketplace id —
+    // still names the product to Amazon, and nothing more than that. The
+    // order is kept either way: dropping a line over its identifier would
+    // lose the money on it.
+    expect(identityFor('4471')).toEqual({ value: '4471', scheme: 'merchant' });
+  });
+
+  it('states nothing where the column is blank', () => {
+    expect(identityFor('')).toBeNull();
+  });
+});
+
 describe('shipping allocation', () => {
   const SHIPPING_ORDER_ID = '249-0000012-0000012';
 

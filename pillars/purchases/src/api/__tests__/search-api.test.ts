@@ -60,7 +60,7 @@ function seedCoffeeOrder(): string {
       {
         ref: 'i0',
         name: 'Dosing funnel 58mm',
-        sku: 'B07XYZ1234',
+        sku: { value: 'B07XYZ1234', scheme: 'asin' },
         unitPriceCents: 3537,
         lineTotalCents: 3537,
       },

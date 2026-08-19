@@ -6,7 +6,7 @@
  * name, ASIN, quantity, marketplace — repeats across that item's component
  * rows while the money does not.
  */
-import { readQuantity, readText } from '../amazon/fields.js';
+import { readProductIdentity, readQuantity, readText } from '../amazon/fields.js';
 import { readComponents } from './components.js';
 
 import type { CreateItemInput } from '../../db/services/purchase-input.js';
@@ -115,7 +115,7 @@ export function buildItem(
 
   return {
     name,
-    sku: readText(row['ASIN']),
+    sku: readProductIdentity(row['ASIN']),
     quantity,
     // Integer division truncates, so this reconstructs the line total only
     // where the subtotal divides evenly. `lineTotalCents` carries the

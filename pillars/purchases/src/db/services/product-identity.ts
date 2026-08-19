@@ -41,11 +41,20 @@ import { sourceNamesOneMerchant } from '../../ingest/source-ids.js';
 import { identifyMerchant } from './merchant-identity.js';
 import { tupleKey } from './tuple-key.js';
 
+import type { SkuScheme } from '../../contract/constants.js';
+
 /** What identifying a line needs to know about it. */
 export interface ProductLine {
   readonly id: string;
   readonly source: string;
   readonly sku: string | null;
+  /**
+   * The namespace {@link sku} lives in. Not part of the key — the key is
+   * already confined to one merchant, which is narrower than any scheme —
+   * but carried so a consumer showing the identifier can say what kind of
+   * string it is rather than printing a bare one.
+   */
+  readonly skuScheme: SkuScheme | null;
   readonly name: string;
   /** Its order's merchant, which the key is confined to unless the source names one. */
   readonly merchantEntityId: string | null;

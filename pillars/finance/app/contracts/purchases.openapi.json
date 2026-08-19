@@ -831,8 +831,20 @@
                                 "type": "string"
                               },
                               "sku": {
+                                "additionalProperties": false,
                                 "nullable": true,
-                                "type": "string"
+                                "properties": {
+                                  "scheme": {
+                                    "enum": ["asin", "merchant"],
+                                    "type": "string"
+                                  },
+                                  "value": {
+                                    "minLength": 1,
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["value", "scheme"],
+                                "type": "object"
                               },
                               "unitPriceCents": {
                                 "maximum": 9007199254740991,
@@ -1336,8 +1348,20 @@
                           "type": "string"
                         },
                         "sku": {
+                          "additionalProperties": false,
                           "nullable": true,
-                          "type": "string"
+                          "properties": {
+                            "scheme": {
+                              "enum": ["asin", "merchant"],
+                              "type": "string"
+                            },
+                            "value": {
+                              "minLength": 1,
+                              "type": "string"
+                            }
+                          },
+                          "required": ["value", "scheme"],
+                          "type": "object"
                         },
                         "tags": {
                           "items": {
@@ -1879,8 +1903,20 @@
                                 "type": "string"
                               },
                               "sku": {
+                                "additionalProperties": false,
                                 "nullable": true,
-                                "type": "string"
+                                "properties": {
+                                  "scheme": {
+                                    "enum": ["asin", "merchant"],
+                                    "type": "string"
+                                  },
+                                  "value": {
+                                    "minLength": 1,
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["value", "scheme"],
+                                "type": "object"
                               },
                               "unitPriceCents": {
                                 "maximum": 9007199254740991,
@@ -2711,8 +2747,20 @@
                                 "type": "string"
                               },
                               "sku": {
+                                "additionalProperties": false,
                                 "nullable": true,
-                                "type": "string"
+                                "properties": {
+                                  "scheme": {
+                                    "enum": ["asin", "merchant"],
+                                    "type": "string"
+                                  },
+                                  "value": {
+                                    "minLength": 1,
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["value", "scheme"],
+                                "type": "object"
                               },
                               "unitPriceCents": {
                                 "maximum": 9007199254740991,
@@ -3208,8 +3256,20 @@
                           "type": "string"
                         },
                         "sku": {
+                          "additionalProperties": false,
                           "nullable": true,
-                          "type": "string"
+                          "properties": {
+                            "scheme": {
+                              "enum": ["asin", "merchant"],
+                              "type": "string"
+                            },
+                            "value": {
+                              "minLength": 1,
+                              "type": "string"
+                            }
+                          },
+                          "required": ["value", "scheme"],
+                          "type": "object"
                         },
                         "unitPriceCents": {
                           "maximum": 9007199254740991,
@@ -3846,8 +3906,20 @@
                                         "type": "string"
                                       },
                                       "sku": {
+                                        "additionalProperties": false,
                                         "nullable": true,
-                                        "type": "string"
+                                        "properties": {
+                                          "scheme": {
+                                            "enum": ["asin", "merchant"],
+                                            "type": "string"
+                                          },
+                                          "value": {
+                                            "minLength": 1,
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": ["value", "scheme"],
+                                        "type": "object"
                                       },
                                       "unitPriceCents": {
                                         "maximum": 9007199254740991,

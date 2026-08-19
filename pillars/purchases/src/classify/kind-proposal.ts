@@ -50,12 +50,14 @@ export class KindProposalShapeError extends Error {}
  * The product name is all the model gets, because it is all the sources
  * state. The merchant is included because it is genuine evidence — a line
  * from a grocery receipt is a different prior from a line from a hardware
- * store — and the sku because an ASIN is sometimes recognisable.
+ * store — and the product identifier because an ASIN is sometimes
+ * recognisable. Its scheme goes with it: `asin B07XYZ1234` tells the model
+ * what kind of string it is looking at, where a bare one is noise.
  */
 export function kindPrompt(candidates: readonly ProposalCandidate[]): string {
   const listed = candidates
     .map((candidate, index) => {
-      const sku = candidate.sku === null ? '' : ` [${candidate.sku}]`;
+      const sku = candidate.sku === null ? '' : ` [${candidate.sku.scheme} ${candidate.sku.value}]`;
       return `${String(index + 1)}. (${candidate.source}) ${candidate.name}${sku}`;
     })
     .join('\n');

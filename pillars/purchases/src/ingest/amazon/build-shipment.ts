@@ -22,6 +22,7 @@ import { SHIPMENT_STATUS_BY_SOURCE_VALUE, type AmazonAnomaly, type Row } from '.
 import {
   readCarrierAndTracking,
   readCents,
+  readProductIdentity,
   readQuantity,
   readText,
   readTimestampWithAnomaly,
@@ -214,7 +215,10 @@ function buildItem(
   return {
     shipmentRef,
     name,
-    sku: readText(row['ASIN']),
+    // The one product identity any shipped adapter can state. `asin` names
+    // the namespace so a later grouping knows an ASIN means the same product
+    // wherever it turns up, and that a store's own article number does not.
+    sku: readProductIdentity(row['ASIN']),
     quantity,
     unitPriceCents,
     // Σ(Unit Price × Quantity) reconstructs Shipment Item Subtotal exactly

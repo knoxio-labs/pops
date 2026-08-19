@@ -540,7 +540,11 @@ export interface operations {
                 quantity: number;
                 refundedCents: number;
                 shipmentId: string | null;
-                sku: string | null;
+                sku: {
+                  /** @enum {string} */
+                  scheme: 'asin' | 'merchant';
+                  value: string;
+                } | null;
                 unitPriceCents: number;
                 url: string | null;
               };
@@ -675,7 +679,11 @@ export interface operations {
             quantity?: number;
             ref?: string;
             shipmentRef?: string | null;
-            sku?: string | null;
+            sku?: {
+              /** @enum {string} */
+              scheme: 'asin' | 'merchant';
+              value: string;
+            } | null;
             tags?: string[];
             unitPriceCents: number;
             units?: {
@@ -801,7 +809,11 @@ export interface operations {
                 quantity: number;
                 refundedCents: number;
                 shipmentId: string | null;
-                sku: string | null;
+                sku: {
+                  /** @enum {string} */
+                  scheme: 'asin' | 'merchant';
+                  value: string;
+                } | null;
                 unitPriceCents: number;
                 url: string | null;
               };
@@ -989,7 +1001,11 @@ export interface operations {
                 quantity: number;
                 refundedCents: number;
                 shipmentId: string | null;
-                sku: string | null;
+                sku: {
+                  /** @enum {string} */
+                  scheme: 'asin' | 'merchant';
+                  value: string;
+                } | null;
                 unitPriceCents: number;
                 url: string | null;
               };
@@ -1159,7 +1175,11 @@ export interface operations {
               quantity: number;
               refundedCents: number;
               shipmentId: string | null;
-              sku: string | null;
+              sku: {
+                /** @enum {string} */
+                scheme: 'asin' | 'merchant';
+                value: string;
+              } | null;
               unitPriceCents: number;
               url: string | null;
             };
@@ -1338,7 +1358,11 @@ export interface operations {
                       quantity: number;
                       refundedCents: number;
                       shipmentId: string | null;
-                      sku: string | null;
+                      sku: {
+                        /** @enum {string} */
+                        scheme: 'asin' | 'merchant';
+                        value: string;
+                      } | null;
                       unitPriceCents: number;
                       url: string | null;
                     };

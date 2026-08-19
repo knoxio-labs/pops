@@ -12,7 +12,9 @@
  * key falls back the way it does.
  */
 import { identifyProduct, normalisedName } from '../db/services/product-identity.js';
+import { productIdentityOf } from '../db/services/stored-product-identity.js';
 
+import type { ProductIdentity } from '../contract/types/purchase.js';
 import type { ProductLine } from '../db/services/product-identity.js';
 
 export { normalisedName };
@@ -31,7 +33,12 @@ export interface ProposalCandidate {
   readonly source: string;
   /** The first line's name, which is what the model is shown. */
   readonly name: string;
-  readonly sku: string | null;
+  /**
+   * The identifier the merchant stated, with the namespace it stated it in.
+   * Never the bare string: the prompt is a consumer like any other, and
+   * `4471` alone tells a reader nothing about what it identifies.
+   */
+  readonly sku: ProductIdentity | null;
   /** Every line this one decision will be written to. */
   readonly itemIds: readonly string[];
 }
@@ -51,7 +58,13 @@ export function toCandidates(items: readonly BatchableItem[]): readonly Proposal
     if (existing === undefined) {
       const itemIds = [item.id];
       byKey.set(key, {
-        candidate: { key, source: item.source, name: item.name, sku: item.sku, itemIds },
+        candidate: {
+          key,
+          source: item.source,
+          name: item.name,
+          sku: productIdentityOf(item),
+          itemIds,
+        },
         itemIds,
       });
     } else {

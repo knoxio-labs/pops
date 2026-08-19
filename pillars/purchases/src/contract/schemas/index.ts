@@ -31,3 +31,5 @@ export {
   SettlementRoleSchema,
   ShipmentStatusSchema,
 } from './purchase.js';
+
+export { ProductIdentitySchema, SkuSchemeSchema } from './product-identity.js';

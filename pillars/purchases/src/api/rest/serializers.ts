@@ -1,5 +1,3 @@
-import type { z } from 'zod';
-
 /**
  * Row → wire projection for the order detail envelope.
  *
@@ -13,13 +11,19 @@ import type { z } from 'zod';
  * reason this file matters. A line's `kind` is stored flat, as a value and
  * a confirmation timestamp in two columns; on the wire it is one object, so
  * a consumer cannot reach the value without being handed the marker that
- * says whether to believe it. This is the only place that projection
- * happens, which is what makes it hold.
+ * says whether to believe it. Its product identifier is stored the same way
+ * and fused the same way, for the same reason: an identifier means nothing
+ * without the namespace it belongs to. This is the only place either
+ * projection happens, which is what makes them hold.
  *
  * The return type is the contract's own inferred type, so a field added to
  * `PurchaseDetailSchema` without a matching row fails here rather than at
  * runtime.
  */
+import { productIdentityOf } from '../../db/index.js';
+
+import type { z } from 'zod';
+
 import type {
   PurchaseItemDetailSchema,
   PurchaseItemSchema,
@@ -32,17 +36,25 @@ export type PurchaseItemBody = z.infer<typeof PurchaseItemSchema>;
 export type PurchaseItemDetailBody = z.infer<typeof PurchaseItemDetailSchema>;
 
 /**
- * A line, with its classification and that classification's provenance
- * fused into one value.
+ * A line, with its classification and its product identifier each fused to
+ * the qualifier that says how to read it.
  *
  * `kind: null` means unclassified. Anything else carries `confirmedAt`,
  * which is null while a proposal pass owns the value and set once it has
- * been asserted. There is deliberately no way to serialise one without the
- * other.
+ * been asserted. `sku: null` means the source stated no identifier — every
+ * shipped adapter but the Amazon exports — and anything else carries the namespace it
+ * belongs to. There is deliberately no way to serialise either half alone.
+ *
+ * Both fusions are one call each — `productIdentityOf` for the identifier,
+ * inline for the kind — so neither half can be reached alone.
  */
 export function toPurchaseItemBody(item: PurchaseItemRow): PurchaseItemBody {
-  const { kind, kindConfirmedAt, ...rest } = item;
-  return { ...rest, kind: kind === null ? null : { value: kind, confirmedAt: kindConfirmedAt } };
+  const { kind, kindConfirmedAt, skuScheme, ...rest } = item;
+  return {
+    ...rest,
+    sku: productIdentityOf(item),
+    kind: kind === null ? null : { value: kind, confirmedAt: kindConfirmedAt },
+  };
 }
 
 export function toPurchaseItemDetailBody(entry: PurchaseItemDetail): PurchaseItemDetailBody {

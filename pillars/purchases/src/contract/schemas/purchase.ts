@@ -13,6 +13,7 @@ import {
   SETTLEMENT_ROLES,
   SHIPMENT_STATUSES,
 } from '../constants.js';
+import { ProductIdentitySchema } from './product-identity.js';
 
 export const IngestMethodSchema = z.enum(INGEST_METHODS);
 export const SettlementModeSchema = z.enum(SETTLEMENT_MODES);
@@ -162,7 +163,8 @@ export const PurchaseItemSchema = z.object({
   shipmentId: z.string().nullable(),
   position: z.int().min(0),
   name: z.string(),
-  sku: z.string().nullable(),
+  /** Null when the source states no identifier — every shipped adapter but the Amazon exports. */
+  sku: ProductIdentitySchema.nullable(),
   url: z.string().nullable(),
   imageUrl: z.string().nullable(),
   quantity: z.int().min(1),
