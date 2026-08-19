@@ -67,6 +67,23 @@ function stubFetch(status: number): void {
   });
 }
 
+/**
+ * A fetch that answers the nth request with `statuses[n]`, so a test states
+ * the sequence it drives rather than encoding it as arithmetic on the call
+ * count. A request past the end of the sequence is a failure: these tests are
+ * about how many requests go out, so an unplanned one must not be answered.
+ */
+function stubFetchSequence(statuses: readonly number[]): void {
+  vi.stubGlobal('fetch', (url: string, init: RequestInit) => {
+    calls.push({ url, init });
+    const status = statuses[calls.length - 1];
+    if (status === undefined) {
+      throw new Error(`unplanned request ${String(calls.length)} of ${String(statuses.length)}`);
+    }
+    return Promise.resolve(new Response('nope', { status }));
+  });
+}
+
 /** The `x-api-key` of a recorded call, however the headers were expressed. */
 function apiKeyOf(init: RequestInit): string | null {
   return new Headers(init.headers).get('x-api-key');
@@ -77,6 +94,23 @@ function callAt(index: number): { url: string; init: RequestInit } {
   const call = calls[index];
   if (call === undefined) throw new Error(`no request was issued at index ${String(index)}`);
   return call;
+}
+
+/**
+ * Drive `postPurchases` to the auth failure it should stop on, narrowing to
+ * it soundly. A run that completes, or that throws anything else, fails here
+ * rather than at an assertion on properties of something that was never an
+ * `AuthFailureError`.
+ */
+async function authFailureFrom(
+  purchases: readonly CreatePurchaseInput[]
+): Promise<AuthFailureError> {
+  const caught: unknown = await postPurchases(CLIENT, purchases).then(
+    () => undefined,
+    (error: unknown) => error
+  );
+  if (caught instanceof AuthFailureError) return caught;
+  throw new Error(`the run did not stop with an AuthFailureError, it gave ${String(caught)}`);
 }
 
 beforeEach(() => {
@@ -167,17 +201,14 @@ describe('postPurchases', () => {
     ]);
   });
 
-  it('keeps sending the key after a rejected order', async () => {
-    calls = [];
-    vi.stubGlobal('fetch', (url: string, init: RequestInit) => {
-      calls.push({ url, init });
-      return Promise.resolve(new Response('nope', { status: calls.length === 1 ? 422 : 201 }));
-    });
+  it('keeps sending the key after a rejected order, and keeps going', async () => {
+    stubFetchSequence([422, 201]);
 
     const outcome = await postPurchases(CLIENT, [purchase('bad'), purchase('good')]);
 
     expect(outcome.created).toBe(1);
     expect(outcome.failures).toHaveLength(1);
+    expect(calls).toHaveLength(2);
     expect(calls.map(({ init }) => apiKeyOf(init))).toEqual([CLIENT.apiKey, CLIENT.apiKey]);
   });
 
@@ -190,10 +221,7 @@ describe('postPurchases', () => {
   });
 
   it('stops the run on a mid-run 403 instead of reporting one failure per remaining order', async () => {
-    vi.stubGlobal('fetch', (url: string, init: RequestInit) => {
-      calls.push({ url, init });
-      return Promise.resolve(new Response('nope', { status: calls.length <= 2 ? 201 : 403 }));
-    });
+    stubFetchSequence([201, 201, 403]);
 
     const promise = postPurchases(CLIENT, [
       purchase('order-1'),
@@ -203,45 +231,33 @@ describe('postPurchases', () => {
     ]);
 
     await expect(promise).rejects.toThrow(AuthFailureError);
-    // The loop stopped at the 403 rather than issuing a request per
-    // remaining order: exactly the three orders up to and including the
-    // failing one were sent.
     expect(calls).toHaveLength(3);
   });
 
   it('names the status and how many orders were written before a 401 stopped the run', async () => {
-    vi.stubGlobal('fetch', (url: string, init: RequestInit) => {
-      calls.push({ url, init });
-      return Promise.resolve(new Response('nope', { status: calls.length === 1 ? 201 : 401 }));
-    });
+    stubFetchSequence([201, 401]);
 
-    let error: unknown;
-    try {
-      await postPurchases(CLIENT, [purchase('order-1'), purchase('order-2')]);
-    } catch (caught) {
-      error = caught;
-    }
+    const error = await authFailureFrom([purchase('order-1'), purchase('order-2')]);
 
-    expect(error).toBeInstanceOf(AuthFailureError);
-    const authFailure = error as AuthFailureError;
-    expect(authFailure.status).toBe(401);
-    expect(authFailure.created).toBe(1);
-    expect(authFailure.message).toContain('401');
-    expect(authFailure.message).toContain('1 order(s)');
+    expect(error.status).toBe(401);
+    expect(error.outcome).toEqual({ created: 1, skipped: 0, failures: [] });
+    expect(error.message).toContain('401');
+    expect(error.message).toContain('1 order(s) were written');
   });
 
-  it('does not stop the run for a per-order rejection, only for an account-level auth failure', async () => {
-    calls = [];
-    vi.stubGlobal('fetch', (url: string, init: RequestInit) => {
-      calls.push({ url, init });
-      return Promise.resolve(new Response('malformed', { status: calls.length === 1 ? 422 : 201 }));
-    });
+  it('carries the skips and the failure lines it had already collected', async () => {
+    stubFetchSequence([409, 422, 409, 403]);
 
-    const outcome = await postPurchases(CLIENT, [purchase('malformed'), purchase('order-2')]);
+    const error = await authFailureFrom([
+      purchase('already-there'),
+      purchase('bad'),
+      purchase('also-there'),
+      purchase('order-4'),
+    ]);
 
-    expect(outcome.created).toBe(1);
-    expect(outcome.failures).toHaveLength(1);
-    expect(calls).toHaveLength(2);
+    expect(error.outcome.skipped).toBe(2);
+    expect(error.outcome.failures).toEqual(['bad -> 422 nope']);
+    expect(error.message).toContain('2 were already present');
   });
 });
 
@@ -265,6 +281,25 @@ describe('runCli', () => {
 
     expect(process.exitCode).toBe(1);
     expect(errorSpy).toHaveBeenCalledWith(`no service-account key: set ${INGEST_API_KEY_ENV}`);
+    errorSpy.mockRestore();
+  });
+
+  it('reports what an aborted run had already done before printing why it stopped', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const stopped = new AuthFailureError(403, {
+      created: 2,
+      skipped: 30,
+      failures: ['bad -> 422 malformed'],
+    });
+
+    await runCli(() => Promise.reject(stopped));
+
+    expect(warnSpy).toHaveBeenCalledWith('created 2, skipped 30, failed 1');
+    expect(errorSpy).toHaveBeenCalledWith('  bad -> 422 malformed');
+    expect(errorSpy).toHaveBeenCalledWith(stopped.message);
+    expect(process.exitCode).toBe(1);
+    warnSpy.mockRestore();
     errorSpy.mockRestore();
   });
 

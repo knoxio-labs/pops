@@ -127,14 +127,22 @@ export interface BackfillOutcome {
  * order.
  */
 export class AuthFailureError extends Error {
+  /**
+   * @param status The status that stopped the run, 401 or 403.
+   * @param outcome What the run had already done when it stopped. A backfill
+   *   is not transactional, and the orders it skipped and the ones it failed
+   *   on are as much a part of that as the ones it wrote.
+   */
   constructor(
     readonly status: number,
-    readonly created: number
+    readonly outcome: BackfillOutcome
   ) {
     super(
       `stopping: the service account is not authorised to write purchases (${String(status)}). ` +
-        `${String(created)} order(s) were written before this happened; grant the account ` +
-        'purchases.source and purchases.purchase and resume from there.'
+        `${String(outcome.created)} order(s) were written and ${String(outcome.skipped)} were ` +
+        'already present before this happened; grant the account purchases.source and ' +
+        'purchases.purchase, then re-run — an order already written comes back as a 409 and is ' +
+        'skipped.'
     );
     this.name = 'AuthFailureError';
   }
@@ -156,7 +164,7 @@ export async function postPurchases(
     // backfill is expected, so this is the normal path, not an error.
     else if (response.status === 409) skipped += 1;
     else if (response.status === 401 || response.status === 403) {
-      throw new AuthFailureError(response.status, created);
+      throw new AuthFailureError(response.status, { created, skipped, failures });
     } else {
       failures.push(
         `${purchase.sourceOrderId ?? '?'} -> ${String(response.status)} ${await response.text()}`
@@ -202,11 +210,17 @@ export function isCliEntrypoint(
  * Run a CLI's `main`, printing a failure as a one-line message rather than
  * letting it surface as an unhandled rejection with a stack trace — the
  * shape every failure in these scripts should have, config errors included.
+ *
+ * A run stopped by {@link AuthFailureError} reports what it had already done
+ * first. Both CLIs report through `reportOutcome(await postPurchases(...))`,
+ * so a throw skips that call and the counts and failure lines collected
+ * before the stop would otherwise be lost with it.
  */
 export async function runCli(main: () => Promise<void>): Promise<void> {
   try {
     await main();
   } catch (error) {
+    if (error instanceof AuthFailureError) reportOutcome(error.outcome);
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;
   }
