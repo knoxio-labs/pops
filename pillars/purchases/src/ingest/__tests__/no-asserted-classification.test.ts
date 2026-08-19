@@ -78,7 +78,7 @@ function receiptItems(): readonly CreateItemInput[] {
           alreadyPresent: false,
         },
       ],
-      '2026-08-06T23:11:00.000Z'
+      { uploadedAt: '2026-08-06T23:11:00.000Z' }
     ).purchase.items ?? []
   );
 }

@@ -179,6 +179,18 @@ export const MERCHANT_RESOLUTIONS = ['entity', 'name', 'unattributed'] as const;
 export type MerchantResolution = (typeof MERCHANT_RESOLUTIONS)[number];
 
 /**
+ * Who stated a capture fact about a receipt photograph.
+ *
+ * `client` is a device that says where and when it was — the mobile bridge.
+ * `exif` is the photograph saying it about itself. Recorded per fact rather
+ * than per row: a client that sends only a location leaves the capture time
+ * to the camera, and a reader that cannot tell the two apart cannot judge
+ * either.
+ */
+export const CAPTURE_SOURCES = ['client', 'exif'] as const;
+export type CaptureSource = (typeof CAPTURE_SOURCES)[number];
+
+/**
  * Floor for a stored match confidence. Mirrors finance's
  * `MIN_MATCH_CONFIDENCE` so a rule migrated between the two pillars keeps
  * its meaning.

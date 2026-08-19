@@ -700,6 +700,14 @@ export type ReceiptUploadData = {
    * Body
    */
   body?: {
+    capture?: {
+      capturedAt?: string;
+      location?: {
+        latitude: number;
+        longitude: number;
+      };
+      timeZone?: string;
+    };
     parts: Array<{
       dataBase64: string;
       mediaType:

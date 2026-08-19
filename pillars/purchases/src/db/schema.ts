@@ -17,7 +17,8 @@
  *     │    ├─ purchase_charge_links     charge → finance transaction
  *     │    ├─ purchase_link_rejections  pairings a human ruled out
  *     │    └─ purchase_item_allocations which charge paid for which line
- *     └─ purchase_documents             evidence → documents
+ *     ├─ purchase_documents             evidence → documents
+ *     └─ purchase_capture               when and where it was photographed
  *
  * Two properties of that shape are load-bearing:
  *
@@ -33,6 +34,7 @@
  */
 import type { InferInsertModel, InferSelectModel } from 'drizzle-orm';
 
+import type { purchaseCapture as purchaseCaptureTable } from './schema/capture.js';
 import type {
   purchaseCharges as purchaseChargesTable,
   purchaseChargeLinks as purchaseChargeLinksTable,
@@ -60,6 +62,7 @@ export {
   purchaseItemAllocations,
   purchaseLinkRejections,
 } from './schema/charges.js';
+export { purchaseCapture } from './schema/capture.js';
 export { purchaseDocuments } from './schema/documents.js';
 export {
   purchaseItemNotes,
@@ -94,5 +97,7 @@ export type PurchaseMatchRuleRow = InferSelectModel<typeof purchaseMatchRulesTab
 export type PurchaseMatchRuleInsert = InferInsertModel<typeof purchaseMatchRulesTable>;
 export type PurchaseDocumentRow = InferSelectModel<typeof purchaseDocumentsTable>;
 export type PurchaseDocumentInsert = InferInsertModel<typeof purchaseDocumentsTable>;
+export type PurchaseCaptureRow = InferSelectModel<typeof purchaseCaptureTable>;
+export type PurchaseCaptureInsert = InferInsertModel<typeof purchaseCaptureTable>;
 export type PurchaseSourceRow = InferSelectModel<typeof purchaseSourcesTable>;
 export type PurchaseSourceInsert = InferInsertModel<typeof purchaseSourcesTable>;

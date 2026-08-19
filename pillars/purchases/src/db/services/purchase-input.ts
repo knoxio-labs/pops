@@ -10,6 +10,7 @@
  * are types only, with no behaviour.
  */
 import type {
+  CaptureSource,
   ChargeOrigin,
   DocumentKind,
   IngestMethod,
@@ -96,6 +97,30 @@ export interface CreateChargeInput {
   readonly allocations?: readonly CreateChargeAllocationInput[];
 }
 
+/**
+ * When and where the evidence was captured — a device that said so, or the
+ * photograph itself.
+ *
+ * Every field independently optional: a client sending only a location
+ * leaves the capture time to the camera, and a photograph that kept its
+ * timestamp and lost its GPS is the ordinary case. An input with nothing in
+ * it writes no row, so an order carries this only when something actually
+ * stated it.
+ *
+ * The coordinates are sensitive. Nothing on the write path logs them, and
+ * no read path returns them (`schema/capture.ts`).
+ */
+export interface CreateCaptureInput {
+  /** ISO-8601 instant the shutter fired. NOT when the shop happened. */
+  readonly capturedAt?: string | null;
+  readonly capturedAtSource?: CaptureSource | null;
+  readonly utcOffsetMinutes?: number | null;
+  readonly declaredTimeZone?: string | null;
+  readonly latitude?: number | null;
+  readonly longitude?: number | null;
+  readonly locationSource?: CaptureSource | null;
+}
+
 export interface CreateDocumentInput {
   readonly documentUri: string;
   readonly shipmentRef?: string | null;
@@ -125,6 +150,11 @@ export interface CreatePurchaseInput {
   readonly items?: readonly CreateItemInput[];
   readonly charges?: readonly CreateChargeInput[];
   readonly documents?: readonly CreateDocumentInput[];
+  /**
+   * What the device and the photograph said about themselves. Written only
+   * when it states something — see {@link CreateCaptureInput}.
+   */
+  readonly capture?: CreateCaptureInput;
   /**
    * Facts about the whole order that are not fields — `date-uncertain` and
    * its future siblings. Free-form; see `schema/purchases.ts`.

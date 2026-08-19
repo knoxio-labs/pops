@@ -6,6 +6,7 @@
  * (the usual cause being `foreign_keys=OFF`) is worse than none, because it
  * reads as protection.
  */
+import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
@@ -13,6 +14,7 @@ import {
   DuplicatePurchaseError,
   InvalidIngestPayloadError,
   listPurchases,
+  purchaseCapture,
   purchases,
 } from '../index.js';
 import { openPurchasesDb } from '../open-purchases-db.js';
@@ -604,5 +606,94 @@ describe('unknown refs', () => {
         })
       )
     ).not.toThrow();
+  });
+});
+
+type CaptureColumns = typeof purchaseCapture.$inferInsert;
+
+describe('purchase_capture constraints', () => {
+  const capturedOrder = (): string => {
+    counter += 1;
+    return createPurchase(
+      opened.db,
+      coffeeOrder({
+        checksum: `capture-${String(counter)}`,
+        sourceOrderId: `capture-order-${String(counter)}`,
+      })
+    );
+  };
+
+  const insertCapture = (values: Omit<CaptureColumns, 'purchaseId'>): void => {
+    opened.db
+      .insert(purchaseCapture)
+      .values({ purchaseId: capturedOrder(), ...values })
+      .run();
+  };
+
+  /**
+   * The provenance columns are the one case the typed insert cannot state:
+   * the enum is what is under test, so the value has to arrive as SQL.
+   */
+  const insertProvenanceRaw = (column: 'captured_at_source' | 'location_source'): void => {
+    opened.raw
+      .prepare(
+        `INSERT INTO purchase_capture (purchase_id, latitude, longitude, ${column}) ` +
+          'VALUES (?, ?, ?, ?)'
+      )
+      .run(capturedOrder(), 1, 2, 'vibes');
+  };
+
+  it('rejects a provenance outside the closed vocabulary', () => {
+    expect(() => {
+      insertProvenanceRaw('captured_at_source');
+    }).toThrow(/CHECK constraint failed/i);
+    expect(() => {
+      insertProvenanceRaw('location_source');
+    }).toThrow(/CHECK constraint failed/i);
+  });
+
+  it('rejects a coordinate that is not on the globe', () => {
+    expect(() => {
+      insertCapture({ latitude: 91, longitude: 2 });
+    }).toThrow(/CHECK constraint failed/i);
+    expect(() => {
+      insertCapture({ latitude: 1, longitude: -181 });
+    }).toThrow(/CHECK constraint failed/i);
+  });
+
+  it('rejects half a coordinate, which is not a place', () => {
+    expect(() => {
+      insertCapture({ latitude: 1 });
+    }).toThrow(/CHECK constraint failed/i);
+    expect(() => {
+      insertCapture({ longitude: 2 });
+    }).toThrow(/CHECK constraint failed/i);
+  });
+
+  it('rejects an offset no zone on earth has ever used', () => {
+    // Wider than +/-14:00 is a garbled EXIF field or a client sending
+    // nonsense, and applying it moves a purchase across a day boundary.
+    expect(() => {
+      insertCapture({ utcOffsetMinutes: 900 });
+    }).toThrow(/CHECK constraint failed/i);
+  });
+
+  it('accepts the ordinary row, where most of it is unknown', () => {
+    expect(() => {
+      insertCapture({ capturedAt: '2026-08-01T04:32:07.000Z', capturedAtSource: 'exif' });
+    }).not.toThrow();
+  });
+
+  it('goes with the order it describes', () => {
+    // The coordinates outlive nothing: deleting the purchase deletes them,
+    // which is the only erasure path this pillar has.
+    const purchaseId = createPurchase(opened.db, coffeeOrder());
+    opened.db
+      .insert(purchaseCapture)
+      .values({ purchaseId, latitude: -33.87, longitude: 151.21, locationSource: 'exif' })
+      .run();
+
+    opened.db.delete(purchases).where(eq(purchases.id, purchaseId)).run();
+    expect(opened.db.select().from(purchaseCapture).all()).toEqual([]);
   });
 });
