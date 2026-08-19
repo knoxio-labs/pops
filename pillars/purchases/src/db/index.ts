@@ -136,7 +136,11 @@ export {
   type ConfirmOutcome,
 } from './services/reconcile-writes.js';
 
-export { recordMatchRule, type MatchRuleEvidence } from './services/match-rules.js';
+export {
+  listActiveMatchRules,
+  recordMatchRule,
+  type MatchRuleEvidence,
+} from './services/match-rules.js';
 
 export {
   clearDocumentUriStale,

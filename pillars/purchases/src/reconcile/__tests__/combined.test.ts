@@ -1,43 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { solve } from '../solve.js';
+import { charge, run, txn } from './solver-fixtures.js';
 
-import type { SolvableCharge, SolvableTransaction, SolverInput, SolverOutput } from '../types.js';
-
-function charge(overrides: Partial<SolvableCharge> = {}): SolvableCharge {
-  return {
-    id: 'chg-1',
-    purchaseId: 'ord-1',
-    position: 0,
-    amountCents: 2000,
-    role: 'capture',
-    orderedAt: '2026-03-04T00:00:00Z',
-    descriptorPattern: null,
-    settlementWindowDays: null,
-    ...overrides,
-  };
-}
-
-function txn(overrides: Partial<SolvableTransaction> = {}): SolvableTransaction {
-  return {
-    uri: 'pops://finance/transaction/t1',
-    description: 'AMAZON MKTPLACE AU',
-    amountCents: 5000,
-    date: '2026-03-06',
-    ...overrides,
-  };
-}
-
-function run(input: Partial<SolverInput> = {}): SolverOutput {
-  return solve({
-    charges: [],
-    transactions: [],
-    confirmed: [],
-    rejected: [],
-    defaultWindowDays: 21,
-    ...input,
-  });
-}
+import type { SolverInput } from '../types.js';
 
 describe('combined settlement', () => {
   it('links several charges to the one transaction that paid for them', () => {

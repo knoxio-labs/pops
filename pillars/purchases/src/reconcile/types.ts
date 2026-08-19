@@ -7,7 +7,7 @@
  * arithmetic testable against adversarial cases and what makes
  * re-derivation safe: the same snapshot always produces the same output.
  */
-import type { LinkType, SettlementRole } from '../contract/constants.js';
+import type { LinkType, MatchType, SettlementRole } from '../contract/constants.js';
 
 /**
  * A charge presented for matching.
@@ -21,6 +21,16 @@ import type { LinkType, SettlementRole } from '../contract/constants.js';
 export interface SolvableCharge {
   readonly id: string;
   readonly purchaseId: string;
+  /**
+   * The parent order's `purchases.source`.
+   *
+   * Carried for stage 4 alone: a learned rule is scoped to the source it
+   * was decided for, so matching a rule against a charge means knowing
+   * which merchant the charge came from. Blocking reads
+   * {@link descriptorPattern}, which is the source's registered pattern
+   * rather than its identity.
+   */
+  readonly source: string;
   /**
    * `purchase_charges.position` — the charge's place in its source
    * document.
@@ -80,10 +90,47 @@ export interface RejectedPairing {
   readonly transactionUri: string;
 }
 
+/**
+ * A `purchase_match_rules` row as the solver sees it.
+ *
+ * **A descriptor pattern, not a pointer from an order to the transaction
+ * that settled it.** The queue writes one when a human confirms a link,
+ * keyed on the accepted transaction's normalised descriptor and scoped to
+ * the order's source — so what it remembers is which descriptors belong to
+ * a merchant, which is the only form of an answer that can still be useful
+ * for an order nobody has imported yet.
+ *
+ * `isActive` and `confidence` are carried rather than being left to the
+ * reader's WHERE clause. The solver is a pure function of this input, so a
+ * caller that forgot the filter would otherwise change the answer silently;
+ * with them here the same snapshot always produces the same links.
+ */
+export interface SolvableRule {
+  readonly id: string;
+  /** Already normalised by `matchPatternFor` when the rule was written. */
+  readonly descriptionPattern: string;
+  readonly matchType: MatchType;
+  /** The source the rule was decided for. Null applies it everywhere. */
+  readonly source: string | null;
+  readonly isActive: boolean;
+  readonly confidence: number;
+  /** Selection order when several rules match. Lower wins. */
+  readonly priority: number;
+}
+
 export interface SolverInput {
   readonly charges: readonly SolvableCharge[];
   readonly transactions: readonly SolvableTransaction[];
   readonly confirmed: readonly ConfirmedLink[];
+  /**
+   * Descriptor patterns learned from confirmed links, for stage 4.
+   *
+   * Every one of them is a decision a human already made about a merchant,
+   * which is why the stage exists at all — but a rule names a merchant,
+   * never a transaction, so it can only widen which descriptors are
+   * considered. It never licenses an amount the arithmetic rejects.
+   */
+  readonly rules: readonly SolvableRule[];
   /**
    * Pairings a human ruled out, which the ladder must not propose again.
    * Without them a reject is a button that the next sweep silently undoes.
@@ -110,6 +157,15 @@ export interface ProposedLink {
   readonly amountCents: number;
   readonly linkType: LinkType;
   readonly confidence: number;
+  /**
+   * The learned rule that admitted this transaction, or null when the
+   * ladder reached it on the source's own descriptor pattern.
+   *
+   * Written through to `purchase_charge_links.match_rule_id`, which is what
+   * lets a link be explained by naming the rule behind it rather than
+   * asserting one exists.
+   */
+  readonly matchRuleId: string | null;
 }
 
 /**
@@ -161,6 +217,17 @@ export const STAGE_CONFIDENCE: Readonly<Record<LinkType, number>> = {
   split: 0.9,
   combined: 0.9,
   partial: 0.6,
+  /**
+   * The ceiling a stage-4 link may reach, not the value it takes: a rule
+   * carries its own confidence, inherited from the link that taught it, and
+   * the lower of the two wins. A rule learned from a part-payment is
+   * weaker evidence than one learned from an exact match.
+   *
+   * Below `exact` and below a partition, because the amount agreeing is the
+   * same arithmetic either way — what is weaker here is the descriptor,
+   * admitted by a learned association rather than by the source's own
+   * registered pattern.
+   */
   rule: 0.8,
   /** Only ever written by a human action, never proposed by the solver. */
   manual: 1,

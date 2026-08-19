@@ -45,6 +45,7 @@ export function listSolvableCharges(db: PurchasesDb, scope: ReconcileScope = {})
     .select({
       id: purchaseCharges.id,
       purchaseId: purchaseCharges.purchaseId,
+      source: purchases.source,
       position: purchaseCharges.position,
       amountCents: purchaseCharges.amountCents,
       role: purchaseCharges.role,
@@ -69,6 +70,7 @@ export function listSolvableCharges(db: PurchasesDb, scope: ReconcileScope = {})
   return rows.map((row) => ({
     id: row.id,
     purchaseId: row.purchaseId,
+    source: row.source,
     position: row.position,
     amountCents: row.amountCents,
     role: row.role,
