@@ -118,6 +118,28 @@ export interface BackfillOutcome {
   readonly failures: readonly string[];
 }
 
+/**
+ * A 401/403 from `/purchases` means the account cannot write purchases at
+ * all — every subsequent request in the run is known to fail before it is
+ * sent, unlike a per-order rejection which says nothing about the next
+ * order. `postPurchases` throws this instead of adding to `failures` so the
+ * run stops rather than repeating the same failure for every remaining
+ * order.
+ */
+export class AuthFailureError extends Error {
+  constructor(
+    readonly status: number,
+    readonly created: number
+  ) {
+    super(
+      `stopping: the service account is not authorised to write purchases (${String(status)}). ` +
+        `${String(created)} order(s) were written before this happened; grant the account ` +
+        'purchases.source and purchases.purchase and resume from there.'
+    );
+    this.name = 'AuthFailureError';
+  }
+}
+
 export async function postPurchases(
   client: IngestClient,
   purchases: readonly CreatePurchaseInput[]
@@ -133,7 +155,9 @@ export async function postPurchases(
     // A checksum or (source, orderId) that already exists. Re-running a
     // backfill is expected, so this is the normal path, not an error.
     else if (response.status === 409) skipped += 1;
-    else {
+    else if (response.status === 401 || response.status === 403) {
+      throw new AuthFailureError(response.status, created);
+    } else {
       failures.push(
         `${purchase.sourceOrderId ?? '?'} -> ${String(response.status)} ${await response.text()}`
       );

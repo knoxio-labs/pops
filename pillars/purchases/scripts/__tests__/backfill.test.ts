@@ -15,6 +15,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  AuthFailureError,
   createIngestClient,
   DEFAULT_BASE_URL,
   INGEST_API_KEY_ENV,
@@ -186,6 +187,61 @@ describe('postPurchases', () => {
 
     expect(outcome).toEqual({ created: 0, skipped: 1, failures: [] });
     expect(apiKeyOf(callAt(0).init)).toBe(CLIENT.apiKey);
+  });
+
+  it('stops the run on a mid-run 403 instead of reporting one failure per remaining order', async () => {
+    vi.stubGlobal('fetch', (url: string, init: RequestInit) => {
+      calls.push({ url, init });
+      return Promise.resolve(new Response('nope', { status: calls.length <= 2 ? 201 : 403 }));
+    });
+
+    const promise = postPurchases(CLIENT, [
+      purchase('order-1'),
+      purchase('order-2'),
+      purchase('order-3'),
+      purchase('order-4'),
+    ]);
+
+    await expect(promise).rejects.toThrow(AuthFailureError);
+    // The loop stopped at the 403 rather than issuing a request per
+    // remaining order: exactly the three orders up to and including the
+    // failing one were sent.
+    expect(calls).toHaveLength(3);
+  });
+
+  it('names the status and how many orders were written before a 401 stopped the run', async () => {
+    vi.stubGlobal('fetch', (url: string, init: RequestInit) => {
+      calls.push({ url, init });
+      return Promise.resolve(new Response('nope', { status: calls.length === 1 ? 201 : 401 }));
+    });
+
+    let error: unknown;
+    try {
+      await postPurchases(CLIENT, [purchase('order-1'), purchase('order-2')]);
+    } catch (caught) {
+      error = caught;
+    }
+
+    expect(error).toBeInstanceOf(AuthFailureError);
+    const authFailure = error as AuthFailureError;
+    expect(authFailure.status).toBe(401);
+    expect(authFailure.created).toBe(1);
+    expect(authFailure.message).toContain('401');
+    expect(authFailure.message).toContain('1 order(s)');
+  });
+
+  it('does not stop the run for a per-order rejection, only for an account-level auth failure', async () => {
+    calls = [];
+    vi.stubGlobal('fetch', (url: string, init: RequestInit) => {
+      calls.push({ url, init });
+      return Promise.resolve(new Response('malformed', { status: calls.length === 1 ? 422 : 201 }));
+    });
+
+    const outcome = await postPurchases(CLIENT, [purchase('malformed'), purchase('order-2')]);
+
+    expect(outcome.created).toBe(1);
+    expect(outcome.failures).toHaveLength(1);
+    expect(calls).toHaveLength(2);
   });
 });
 
