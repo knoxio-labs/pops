@@ -36,13 +36,29 @@ export {
   type ConfirmItemInput,
 } from './services/purchase-item-mutations.js';
 
+export { type MerchantIdentity } from './services/merchant-identity.js';
+
 export {
   rollUpMerchantSpend,
   type CurrencySpend,
-  type MerchantIdentity,
   type MerchantSpend,
   type MerchantSpendRollup,
 } from './services/merchant-spend.js';
+
+export {
+  identifyProduct,
+  normalisedName,
+  type ProductIdentity,
+  type ProductLine,
+} from './services/product-identity.js';
+
+export {
+  rankProductPurchases,
+  type ProductIdentityCoverage,
+  type ProductLeaderboard,
+  type ProductLeaderboardFilter,
+  type ProductPurchases,
+} from './services/product-leaderboard.js';
 
 export {
   searchPurchases,

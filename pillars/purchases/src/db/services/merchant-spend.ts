@@ -46,40 +46,21 @@ import { and, eq } from 'drizzle-orm';
 import { purchaseChargeLinks, purchaseCharges, purchases } from '../schema.js';
 import { computeAccounting, type PurchaseAccounting } from './accounting.js';
 import { groupBy } from './group-by.js';
+import {
+  identifyMerchant,
+  merchantLabelRank,
+  merchantSortKey,
+  withNewerLabel,
+  type LabelledMerchant,
+  type MerchantIdentity,
+} from './merchant-identity.js';
 import { purchaseFilterConditions, type PurchaseScopeFilter } from './purchase-reads.js';
+import { tupleKey } from './tuple-key.js';
 
 import type { SQL } from 'drizzle-orm';
 
 import type { PurchaseChargeLinkRow, PurchaseChargeRow } from '../schema.js';
 import type { PurchasesDb } from './internal.js';
-
-/**
- * Who the spend is attributed to, and how confidently.
- *
- * Three-way because the pillar has two different things called a merchant
- * and they are not interchangeable. `merchantEntityId` is operative — a
- * resolved `contacts` entity. `merchantEntityName` is only a label, and no
- * export adapter sets an id at all, so today an Amazon roll-up is grouped on
- * the string `Amazon`. Presenting that as the same kind of fact as a
- * resolved entity would be reporting a string match as an identity: two
- * merchants sharing a label share a row, and renaming one splits its
- * history.
- */
-export type MerchantIdentity =
-  | {
-      readonly resolution: 'entity';
-      /** The resolved `contacts` entity. Present, or this is not an entity group. */
-      readonly entityId: string;
-      /** Its label, which an order carrying the id is not obliged to state. */
-      readonly name: string | null;
-    }
-  | {
-      readonly resolution: 'name';
-      readonly entityId: null;
-      /** The grouping key itself, so never absent. */
-      readonly name: string;
-    }
-  | { readonly resolution: 'unattributed'; readonly entityId: null; readonly name: null };
 
 /** One merchant's spend in one currency. */
 export interface MerchantSpend {
@@ -141,43 +122,10 @@ function addAccounting(a: PurchaseAccounting, b: PurchaseAccounting): PurchaseAc
 }
 
 interface MerchantBucket {
-  identity: MerchantIdentity;
+  merchant: LabelledMerchant;
   currency: string;
   orderCount: number;
   accounting: PurchaseAccounting;
-  /** `orderedAt` and id of the order whose label this bucket is wearing. */
-  labelRank: string;
-}
-
-/**
- * The bucket an order belongs to, and how that bucket is identified.
- *
- * The key is a JSON tuple rather than a delimited string so a merchant whose
- * *name* happens to equal another merchant's *entity id* cannot land in the
- * same bucket, and so no delimiter has to be assumed absent from a merchant
- * name.
- */
-function identify(
-  entityId: string | null,
-  name: string | null,
-  currency: string
-): { key: string; identity: MerchantIdentity } {
-  if (entityId !== null) {
-    return {
-      key: JSON.stringify(['entity', entityId, currency]),
-      identity: { entityId, name, resolution: 'entity' },
-    };
-  }
-  if (name !== null) {
-    return {
-      key: JSON.stringify(['name', name, currency]),
-      identity: { entityId: null, name, resolution: 'name' },
-    };
-  }
-  return {
-    key: JSON.stringify(['unattributed', null, currency]),
-    identity: { entityId: null, name: null, resolution: 'unattributed' },
-  };
 }
 
 /**
@@ -250,28 +198,25 @@ export function rollUpMerchantSpend(
       chargesByPurchase.get(order.id) ?? [],
       linksByChargeId
     );
-    const { key, identity } = identify(
+    const { key: merchantKey, identity } = identifyMerchant(
       order.merchantEntityId,
-      order.merchantEntityName,
-      order.currency
+      order.merchantEntityName
     );
-    const labelRank = JSON.stringify([order.orderedAt, order.id]);
+    const merchant: LabelledMerchant = {
+      identity,
+      labelRank: merchantLabelRank(order.orderedAt, order.id),
+    };
+    const key = tupleKey(merchantKey, order.currency);
 
     const existing = buckets.get(key);
     if (existing === undefined) {
-      buckets.set(key, {
-        identity,
-        currency: order.currency,
-        orderCount: 1,
-        accounting,
-        labelRank,
-      });
+      buckets.set(key, { merchant, currency: order.currency, orderCount: 1, accounting });
       continue;
     }
 
     existing.orderCount += 1;
     existing.accounting = addAccounting(existing.accounting, accounting);
-    relabel(existing, identity, labelRank);
+    existing.merchant = withNewerLabel(existing.merchant, merchant);
   }
 
   const merchants = presentBuckets(buckets);
@@ -279,34 +224,11 @@ export function rollUpMerchantSpend(
   return { merchants, totals: totalsByCurrency(merchants) };
 }
 
-/**
- * Take another order's label for an entity group, if that order has one.
- *
- * Only an entity group's label can move: a `name` group is keyed on the label
- * itself and an `unattributed` one has none by definition.
- *
- * Two rules, and the second is the one that is easy to get wrong. The newest
- * order's label wins, deterministically, because an entity-keyed bucket spans
- * orders written either side of a rename in `contacts`. But an order that
- * states *no* label is not a rename to nothing — `merchantEntityId` is
- * operative and `merchantEntityName` is only its label, so a nameless newer
- * order carries no label information and must not erase the one the group
- * has. For the same reason a group that is still nameless takes the first
- * label it is offered, whatever that order's rank.
- */
-function relabel(bucket: MerchantBucket, identity: MerchantIdentity, labelRank: string): void {
-  if (bucket.identity.resolution !== 'entity' || identity.name === null) return;
-  if (bucket.identity.name !== null && labelRank <= bucket.labelRank) return;
-
-  bucket.identity = { ...bucket.identity, name: identity.name };
-  bucket.labelRank = labelRank;
-}
-
 /** Drop the fold's bookkeeping fields and put the groups in display order. */
 function presentBuckets(buckets: ReadonlyMap<string, MerchantBucket>): readonly MerchantSpend[] {
   return [...buckets.values()]
     .map((bucket): MerchantSpend => ({
-      merchant: bucket.identity,
+      merchant: bucket.merchant.identity,
       currency: bucket.currency,
       orderCount: bucket.orderCount,
       accounting: bucket.accounting,
@@ -325,8 +247,8 @@ function compareMerchantSpend(a: MerchantSpend, b: MerchantSpend): number {
   if (a.accounting.netSpendCents !== b.accounting.netSpendCents) {
     return b.accounting.netSpendCents - a.accounting.netSpendCents;
   }
-  const aKey = JSON.stringify([a.merchant.name, a.merchant.entityId]);
-  const bKey = JSON.stringify([b.merchant.name, b.merchant.entityId]);
+  const aKey = merchantSortKey(a.merchant);
+  const bKey = merchantSortKey(b.merchant);
   if (aKey === bKey) return 0;
   return aKey < bKey ? -1 : 1;
 }

@@ -12,6 +12,7 @@ import {
   isResidualBearing,
   LINK_TYPES,
   MERCHANT_RESOLUTIONS,
+  PRODUCT_IDENTITY_BASES,
   PURCHASE_STATUSES,
   RESIDUAL_BEARING_ROLES,
   SETTLEMENT_ROLES,
@@ -19,7 +20,7 @@ import {
 } from '../constants.js';
 import { PurchasesErrorSchema } from '../errors.js';
 import { purchasesManifest } from '../manifest.js';
-import { MerchantIdentitySchema } from '../rest-analytics.js';
+import { MerchantIdentitySchema, ProductIdentitySchema } from '../rest-analytics.js';
 import {
   CentsSchema,
   CurrencySchema,
@@ -182,6 +183,7 @@ describe('closed vocabularies', () => {
     ['LINK_TYPES', LINK_TYPES],
     ['SETTLEMENT_ROLES', SETTLEMENT_ROLES],
     ['MERCHANT_RESOLUTIONS', MERCHANT_RESOLUTIONS],
+    ['PRODUCT_IDENTITY_BASES', PRODUCT_IDENTITY_BASES],
   ])('%s has no duplicates', (_label, values) => {
     expect(new Set(values).size).toBe(values.length);
   });
@@ -228,6 +230,60 @@ describe('MerchantIdentitySchema', () => {
     ['an unknown resolution', { resolution: 'vibes', entityId: null, name: null }],
   ])('rejects %s', (_label, value) => {
     expect(MerchantIdentitySchema.safeParse(value).success).toBe(false);
+  });
+});
+
+describe('ProductIdentitySchema', () => {
+  it('offers exactly the bases the vocabulary names', () => {
+    const covered = ProductIdentitySchema.options.map((option) => option.shape.basis.value);
+
+    expect(covered.toSorted()).toEqual([...PRODUCT_IDENTITY_BASES].toSorted());
+  });
+
+  it('accepts each variant in the shape the fold produces', () => {
+    const variants = [
+      { basis: 'sku', source: 'amazon', sku: 'B0FCSJTKJ8', name: 'Magnetic Dosing Funnel' },
+      {
+        basis: 'name',
+        source: 'woolworths',
+        sku: null,
+        name: 'WW Full Cream Milk 2L',
+        normalisedName: 'ww full cream milk 2l',
+      },
+      { basis: 'unidentified', source: 'woolworths', sku: null, name: '***', itemId: 'item-1' },
+    ];
+
+    for (const variant of variants) {
+      expect(ProductIdentitySchema.safeParse(variant).success, JSON.stringify(variant)).toBe(true);
+    }
+  });
+
+  it.each([
+    // A sku group without the identifier it claims to be keyed on is the
+    // whole failure the basis exists to prevent: a name match presented as
+    // a merchant-stated identity.
+    ['a sku group without its sku', { basis: 'sku', source: 'amazon', sku: null, name: 'Funnel' }],
+    [
+      'a name group carrying a sku',
+      {
+        basis: 'name',
+        source: 'woolworths',
+        sku: 'B0FCSJTKJ8',
+        name: 'Milk',
+        normalisedName: 'milk',
+      },
+    ],
+    [
+      'a name group without the key it was formed on',
+      { basis: 'name', source: 'woolworths', sku: null, name: 'Milk' },
+    ],
+    [
+      'an unidentified group without its line',
+      { basis: 'unidentified', source: 'woolworths', sku: null, name: '***' },
+    ],
+    ['an unknown basis', { basis: 'vibes', source: 'amazon', sku: null, name: 'Funnel' }],
+  ])('rejects %s', (_label, value) => {
+    expect(ProductIdentitySchema.safeParse(value).success).toBe(false);
   });
 });
 
