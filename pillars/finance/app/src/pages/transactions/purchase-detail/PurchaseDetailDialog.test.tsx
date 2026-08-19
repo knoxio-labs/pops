@@ -305,6 +305,7 @@ describe('PurchaseDetailDialog', () => {
 
     expect(await screen.findByText(/purchases pillar could not be reached/u)).toBeInTheDocument();
     expect(screen.queryByText('Could not load purchase detail')).not.toBeInTheDocument();
+    expect(screen.queryByText('upstream unreachable')).not.toBeInTheDocument();
   });
 
   it('reports a refused request as a failure rather than an outage', async () => {
