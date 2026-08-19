@@ -324,6 +324,386 @@
         "tags": ["analytics"]
       }
     },
+    "/analytics/product-leaderboard": {
+      "get": {
+        "operationId": "analytics.productLeaderboard",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "sources",
+            "schema": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          },
+          {
+            "in": "query",
+            "name": "statuses",
+            "schema": {
+              "items": {
+                "enum": ["awaiting_settlement", "linked", "partial", "settled_cash", "ignored"],
+                "type": "string"
+              },
+              "type": "array"
+            }
+          },
+          {
+            "in": "query",
+            "name": "currency",
+            "schema": {
+              "pattern": "^[A-Z]{3}$",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "merchantEntityId",
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "merchantEntityName",
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "merchantUnattributed",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "schema": {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "schema": {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "minOrderCount",
+            "schema": {
+              "maximum": 9007199254740991,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "coverage": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "lineCount": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "nameKeyedLines": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "productCount": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "skuKeyedLines": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "unidentifiedLines": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "lineCount",
+                        "skuKeyedLines",
+                        "nameKeyedLines",
+                        "unidentifiedLines",
+                        "productCount"
+                      ],
+                      "type": "object"
+                    },
+                    "minOrderCount": {
+                      "maximum": 9007199254740991,
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "period": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "from": {
+                          "nullable": true,
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                          "type": "string"
+                        },
+                        "to": {
+                          "nullable": true,
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                          "type": "string"
+                        }
+                      },
+                      "required": ["from", "to"],
+                      "type": "object"
+                    },
+                    "products": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "currency": {
+                            "pattern": "^[A-Z]{3}$",
+                            "type": "string"
+                          },
+                          "firstPurchasedAt": {
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                            "type": "string"
+                          },
+                          "landedCostCents": {
+                            "maximum": 9007199254740991,
+                            "minimum": -9007199254740991,
+                            "type": "integer"
+                          },
+                          "lastPurchasedAt": {
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                            "type": "string"
+                          },
+                          "lineCount": {
+                            "maximum": 9007199254740991,
+                            "minimum": 1,
+                            "type": "integer"
+                          },
+                          "merchants": {
+                            "items": {
+                              "oneOf": [
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "entityId": {
+                                      "type": "string"
+                                    },
+                                    "name": {
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
+                                    "resolution": {
+                                      "enum": ["entity"],
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": ["resolution", "entityId", "name"],
+                                  "type": "object"
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "entityId": {
+                                      "enum": [null],
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
+                                    "name": {
+                                      "type": "string"
+                                    },
+                                    "resolution": {
+                                      "enum": ["name"],
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": ["resolution", "entityId", "name"],
+                                  "type": "object"
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "entityId": {
+                                      "enum": [null],
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
+                                    "name": {
+                                      "enum": [null],
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
+                                    "resolution": {
+                                      "enum": ["unattributed"],
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": ["resolution", "entityId", "name"],
+                                  "type": "object"
+                                }
+                              ]
+                            },
+                            "minItems": 1,
+                            "type": "array"
+                          },
+                          "orderCount": {
+                            "maximum": 9007199254740991,
+                            "minimum": 1,
+                            "type": "integer"
+                          },
+                          "product": {
+                            "oneOf": [
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "basis": {
+                                    "enum": ["sku"],
+                                    "type": "string"
+                                  },
+                                  "name": {
+                                    "type": "string"
+                                  },
+                                  "sku": {
+                                    "type": "string"
+                                  },
+                                  "source": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["basis", "source", "sku", "name"],
+                                "type": "object"
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "basis": {
+                                    "enum": ["name"],
+                                    "type": "string"
+                                  },
+                                  "name": {
+                                    "type": "string"
+                                  },
+                                  "normalisedName": {
+                                    "type": "string"
+                                  },
+                                  "sku": {
+                                    "enum": [null],
+                                    "nullable": true,
+                                    "type": "string"
+                                  },
+                                  "source": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["basis", "source", "sku", "name", "normalisedName"],
+                                "type": "object"
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "basis": {
+                                    "enum": ["unidentified"],
+                                    "type": "string"
+                                  },
+                                  "itemId": {
+                                    "type": "string"
+                                  },
+                                  "name": {
+                                    "type": "string"
+                                  },
+                                  "sku": {
+                                    "enum": [null],
+                                    "nullable": true,
+                                    "type": "string"
+                                  },
+                                  "source": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["basis", "source", "sku", "name", "itemId"],
+                                "type": "object"
+                              }
+                            ]
+                          },
+                          "refundedCents": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "unitCount": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "product",
+                          "currency",
+                          "orderCount",
+                          "lineCount",
+                          "unitCount",
+                          "firstPurchasedAt",
+                          "lastPurchasedAt",
+                          "landedCostCents",
+                          "refundedCents",
+                          "merchants"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": ["period", "minOrderCount", "products", "coverage"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          }
+        },
+        "summary": "Repeat purchases per product, each group carrying the identity basis it was formed on",
+        "tags": ["analytics"]
+      }
+    },
     "/items": {
       "get": {
         "operationId": "purchase.itemsByTag",

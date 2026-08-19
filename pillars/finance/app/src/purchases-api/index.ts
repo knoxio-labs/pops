@@ -2,6 +2,7 @@
 
 export {
   analyticsMerchantSpend,
+  analyticsProductLeaderboard,
   type Options,
   purchaseCreate,
   purchaseDelete,
@@ -28,6 +29,11 @@ export type {
   AnalyticsMerchantSpendErrors,
   AnalyticsMerchantSpendResponse,
   AnalyticsMerchantSpendResponses,
+  AnalyticsProductLeaderboardData,
+  AnalyticsProductLeaderboardError,
+  AnalyticsProductLeaderboardErrors,
+  AnalyticsProductLeaderboardResponse,
+  AnalyticsProductLeaderboardResponses,
   ClientOptions,
   PurchaseCreateData,
   PurchaseCreateError,

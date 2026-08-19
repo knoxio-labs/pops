@@ -156,3 +156,177 @@ describe('GET /analytics/merchant-spend', () => {
     expect(res.body.totals[0].accounting.totalCents).toBe(5000);
   });
 });
+
+describe('GET /analytics/product-leaderboard', () => {
+  it('returns a repeat with the basis its group was formed on', async () => {
+    for (const month of ['01', '02']) {
+      createPurchase(
+        opened.db,
+        order({
+          checksum: `funnel-${month}`,
+          orderedAt: `2026-${month}-04T00:00:00Z`,
+          items: [
+            {
+              name: 'Magnetic Dosing Funnel',
+              sku: 'B0FCSJTKJ8',
+              unitPriceCents: 1179,
+              lineTotalCents: 1179,
+            },
+          ],
+        })
+      );
+    }
+
+    const res = await request(app).get('/analytics/product-leaderboard');
+
+    expect(res.status).toBe(200);
+    const [entry] = res.body.products;
+    expect(entry.orderCount).toBe(2);
+    expect(entry.landedCostCents).toBe(2358);
+    expect(entry.lastPurchasedAt).toBe('2026-02-04T00:00:00Z');
+    // The basis travels with the group. Without it a consumer cannot tell a
+    // merchant-stated identity from a name that happened to match.
+    expect(entry.product).toEqual({
+      basis: 'sku',
+      source: 'amazon',
+      sku: 'B0FCSJTKJ8',
+      name: 'Magnetic Dosing Funnel',
+    });
+    expect(entry.merchants).toEqual([{ resolution: 'name', entityId: null, name: 'Amazon' }]);
+  });
+
+  it('states how much of the scope rests on printed names rather than identifiers', async () => {
+    createPurchase(
+      opened.db,
+      order({
+        checksum: 'mixed',
+        items: [
+          { name: 'Funnel', sku: 'B0FCSJTKJ8', unitPriceCents: 1179, lineTotalCents: 1179 },
+          { name: 'Bananas Cavendish', unitPriceCents: 400, lineTotalCents: 400 },
+        ],
+      })
+    );
+
+    const res = await request(app).get('/analytics/product-leaderboard');
+
+    expect(res.body.coverage).toEqual({
+      lineCount: 2,
+      skuKeyedLines: 1,
+      nameKeyedLines: 1,
+      unidentifiedLines: 0,
+      productCount: 2,
+    });
+  });
+
+  it('applies minOrderCount and echoes it, so an absent group has a stated reason', async () => {
+    createPurchase(
+      opened.db,
+      order({
+        checksum: 'a',
+        orderedAt: '2026-01-04T00:00:00Z',
+        items: [
+          { name: 'Funnel', sku: 'REPEAT', unitPriceCents: 100, lineTotalCents: 100 },
+          { name: 'Tamper', sku: 'ONCE', unitPriceCents: 100, lineTotalCents: 100 },
+        ],
+      })
+    );
+    createPurchase(
+      opened.db,
+      order({
+        checksum: 'b',
+        orderedAt: '2026-02-04T00:00:00Z',
+        items: [{ name: 'Funnel', sku: 'REPEAT', unitPriceCents: 100, lineTotalCents: 100 }],
+      })
+    );
+
+    const res = await request(app).get('/analytics/product-leaderboard?minOrderCount=2');
+
+    expect(res.body.minOrderCount).toBe(2);
+    expect(res.body.products).toHaveLength(1);
+    // The withheld product is still counted, so the response cannot be read
+    // as "this is everything that was bought".
+    expect(res.body.coverage.productCount).toBe(2);
+  });
+
+  it('defaults minOrderCount to 1 and says so', async () => {
+    createPurchase(
+      opened.db,
+      order({
+        checksum: 'a',
+        items: [{ name: 'Tamper', sku: 'ONCE', unitPriceCents: 100, lineTotalCents: 100 }],
+      })
+    );
+
+    const res = await request(app).get('/analytics/product-leaderboard');
+    expect(res.body.minOrderCount).toBe(1);
+    expect(res.body.products).toHaveLength(1);
+  });
+
+  it('rejects a minOrderCount below one rather than treating it as no filter', async () => {
+    expect((await request(app).get('/analytics/product-leaderboard?minOrderCount=0')).status).toBe(
+      400
+    );
+  });
+
+  it('applies the same scope vocabulary the merchant roll-up does', async () => {
+    createPurchase(
+      opened.db,
+      order({
+        checksum: 'am',
+        items: [{ name: 'Funnel', sku: 'B0FCSJTKJ8', unitPriceCents: 100, lineTotalCents: 100 }],
+      })
+    );
+    createPurchase(
+      opened.db,
+      order({
+        checksum: 'wo',
+        source: 'woolworths',
+        items: [{ name: 'Bananas', unitPriceCents: 400, lineTotalCents: 400 }],
+      })
+    );
+
+    const res = await request(app).get('/analytics/product-leaderboard?sources=woolworths');
+    expect(res.body.coverage.lineCount).toBe(1);
+    expect(res.body.products[0].product.basis).toBe('name');
+  });
+
+  it('does not offer a limit, so a truncated leaderboard cannot be requested', async () => {
+    for (let i = 0; i < 5; i += 1) {
+      createPurchase(
+        opened.db,
+        order({
+          checksum: `n-${String(i)}`,
+          items: [
+            {
+              name: `Thing ${String(i)}`,
+              sku: `SKU-${String(i)}`,
+              unitPriceCents: 100,
+              lineTotalCents: 100,
+            },
+          ],
+        })
+      );
+    }
+
+    const res = await request(app).get('/analytics/product-leaderboard?limit=1');
+    expect(res.status).toBe(200);
+    expect(res.body.products).toHaveLength(5);
+  });
+
+  it('returns an empty leaderboard rather than 404 when nothing is in scope', async () => {
+    const res = await request(app).get('/analytics/product-leaderboard');
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      period: { from: null, to: null },
+      minOrderCount: 1,
+      products: [],
+      coverage: {
+        lineCount: 0,
+        skuKeyedLines: 0,
+        nameKeyedLines: 0,
+        unidentifiedLines: 0,
+        productCount: 0,
+      },
+    });
+  });
+});

@@ -93,6 +93,8 @@ function unclassifiedItems(db: PurchasesDb): readonly BatchableItem[] {
       source: purchases.source,
       sku: purchaseItems.sku,
       name: purchaseItems.name,
+      merchantEntityId: purchases.merchantEntityId,
+      merchantEntityName: purchases.merchantEntityName,
     })
     .from(purchaseItems)
     .innerJoin(purchases, eq(purchases.id, purchaseItems.purchaseId))

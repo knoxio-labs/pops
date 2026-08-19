@@ -20,6 +20,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/analytics/product-leaderboard': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Repeat purchases per product, each group carrying the identity basis it was formed on */
+    get: operations['analytics.productLeaderboard'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/items': {
     parameters: {
       query?: never;
@@ -348,6 +365,120 @@ export interface operations {
               };
               currency: string;
               orderCount: number;
+            }[];
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+          };
+        };
+      };
+    };
+  };
+  'analytics.productLeaderboard': {
+    parameters: {
+      query?: {
+        sources?: string[];
+        statuses?: ('awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored')[];
+        currency?: string;
+        merchantEntityId?: string;
+        merchantEntityName?: string;
+        merchantUnattributed?: boolean;
+        from?: string;
+        to?: string;
+        minOrderCount?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            coverage: {
+              lineCount: number;
+              nameKeyedLines: number;
+              productCount: number;
+              skuKeyedLines: number;
+              unidentifiedLines: number;
+            };
+            minOrderCount: number;
+            period: {
+              from: string | null;
+              to: string | null;
+            };
+            products: {
+              currency: string;
+              firstPurchasedAt: string;
+              landedCostCents: number;
+              lastPurchasedAt: string;
+              lineCount: number;
+              merchants: (
+                | {
+                    entityId: string;
+                    name: string | null;
+                    /** @enum {string} */
+                    resolution: 'entity';
+                  }
+                | {
+                    /** @enum {string|null} */
+                    entityId: null;
+                    name: string;
+                    /** @enum {string} */
+                    resolution: 'name';
+                  }
+                | {
+                    /** @enum {string|null} */
+                    entityId: null;
+                    /** @enum {string|null} */
+                    name: null;
+                    /** @enum {string} */
+                    resolution: 'unattributed';
+                  }
+              )[];
+              orderCount: number;
+              product:
+                | {
+                    /** @enum {string} */
+                    basis: 'sku';
+                    name: string;
+                    sku: string;
+                    source: string;
+                  }
+                | {
+                    /** @enum {string} */
+                    basis: 'name';
+                    name: string;
+                    normalisedName: string;
+                    /** @enum {string|null} */
+                    sku: null;
+                    source: string;
+                  }
+                | {
+                    /** @enum {string} */
+                    basis: 'unidentified';
+                    itemId: string;
+                    name: string;
+                    /** @enum {string|null} */
+                    sku: null;
+                    source: string;
+                  };
+              refundedCents: number;
+              unitCount: number;
             }[];
           };
         };

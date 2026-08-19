@@ -9,6 +9,7 @@
  */
 import { createHash } from 'node:crypto';
 
+import { AMAZON_SOURCE_ID } from '../source-ids.js';
 import { buildShipment } from './build-shipment.js';
 import {
   ORDER_HISTORY_FILENAME,
@@ -23,8 +24,7 @@ import { parseAmazonRefundDetails } from './refunds.js';
 
 import type { CreateChargeInput, CreatePurchaseInput } from '../../db/services/purchase-input.js';
 
-/** `purchase_sources.id` this adapter writes under. */
-export const AMAZON_SOURCE_ID = 'amazon';
+export { AMAZON_SOURCE_ID };
 
 /** Stands in on an anomaly for a row that names no order at all. */
 const UNKNOWN_ORDER_ID = '(no order id)';
