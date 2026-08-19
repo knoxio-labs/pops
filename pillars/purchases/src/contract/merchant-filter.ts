@@ -1,10 +1,10 @@
 /**
  * The merchant a read is scoped to, and the query parameters that name one.
  *
- * This is the filter counterpart of `MerchantIdentity`, the roll-up's output:
- * every group `GET /analytics/merchant-spend` returns must be nameable here,
- * or the one view built around merchants is the one view that cannot open a
- * merchant's orders. The two are exhaustive over the same
+ * This is the filter counterpart of `MerchantIdentity`, the roll-up's output,
+ * so that a group `GET /analytics/merchant-spend` returns can be named here —
+ * otherwise the one view built around merchants is the one view that cannot
+ * open a merchant's orders. The two are exhaustive over the same
  * {@link MerchantResolution} vocabulary, asserted rather than assumed.
  *
  * A union rather than three loose fields because `resolution` constrains the

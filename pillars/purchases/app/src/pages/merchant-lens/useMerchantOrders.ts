@@ -13,10 +13,10 @@ export type MerchantOrdersModel =
       state: 'ready';
       orders: MerchantOrder[];
       /**
-       * How many orders the row said it had, against how many came back.
-       * Equal is the ordinary case; fewer means the page cap cut the list
-       * short and the difference is named rather than left as a list that
-       * silently disagrees with the headline above it.
+       * How many orders the row said it had, to be read against how many came
+       * back. Equal is the ordinary case; any other reading is named on
+       * screen rather than left as a list that silently disagrees with the
+       * headline above it.
        */
       counted: number;
     };

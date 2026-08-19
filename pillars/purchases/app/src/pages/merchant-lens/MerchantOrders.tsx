@@ -5,10 +5,13 @@ import { Button, formatDate } from '@pops/ui';
 
 import { formatCents } from '../../money.js';
 import { merchantLabel } from './merchant-label.js';
+import { MERCHANT_ORDERS_LIMIT } from './merchant-orders-query.js';
+import { orderCountAgreement } from './order-count-agreement.js';
 import { useMerchantOrders } from './useMerchantOrders.js';
 
 import type { ReactElement } from 'react';
 
+import type { OrderCountAgreement } from './order-count-agreement.js';
 import type { MerchantOrder, MerchantSpend, SpendPeriod } from './types.js';
 
 interface Props {
@@ -55,40 +58,56 @@ export function MerchantOrders({ merchant, period, regionId }: Props): ReactElem
     );
   }
 
-  if (model.orders.length === 0) {
-    // Not an ordinary empty state: this row was rendered because the roll-up
-    // counted orders here, so nothing coming back means the two reads
-    // disagree rather than that there is nothing to show.
-    return (
-      <p id={regionId} className="text-warning text-xs">
-        {t('merchants.drilldown.none', { count: model.counted })}
-      </p>
-    );
-  }
+  const shown = model.orders.length;
+  const agreement = orderCountAgreement(shown, model.counted, MERCHANT_ORDERS_LIMIT);
 
   return (
     <div id={regionId} className="space-y-2">
-      <ul
-        className="divide-y rounded-md border"
-        aria-label={t('merchants.drilldown.ariaLabel', {
-          merchant: merchantLabel(merchant.merchant, t),
-        })}
-      >
-        {model.orders.map((order) => (
-          <li key={order.id}>
-            <OrderRow order={order} />
-          </li>
-        ))}
-      </ul>
-      {model.orders.length < model.counted && (
-        <p className="text-warning text-xs">
-          {t('merchants.drilldown.truncated', {
-            shown: model.orders.length,
-            counted: model.counted,
+      {shown > 0 && (
+        <ul
+          className="divide-y rounded-md border"
+          aria-label={t('merchants.drilldown.ariaLabel', {
+            merchant: merchantLabel(merchant.merchant, t),
           })}
-        </p>
+        >
+          {model.orders.map((order) => (
+            <li key={order.id}>
+              <OrderRow order={order} />
+            </li>
+          ))}
+        </ul>
       )}
+      <Disagreement agreement={agreement} shown={shown} counted={model.counted} />
     </div>
+  );
+}
+
+interface DisagreementProps {
+  agreement: OrderCountAgreement;
+  shown: number;
+  counted: number;
+}
+
+/**
+ * What the list and the row's count say about each other, when they say
+ * different things.
+ *
+ * The row exists because the roll-up counted orders here, so none of these
+ * are ordinary empty or partial states, and each names only what the page
+ * has established: the page cap is claimed as the cause exactly when the
+ * list came back at the cap.
+ */
+function Disagreement({ agreement, shown, counted }: DisagreementProps): ReactElement | null {
+  const { t } = useTranslation('purchases');
+
+  if (agreement === 'agrees') return null;
+
+  return (
+    <p className="text-warning text-xs">
+      {agreement === 'none'
+        ? t('merchants.drilldown.none', { count: counted })
+        : t(`merchants.drilldown.${agreement}`, { shown, counted })}
+    </p>
   );
 }
 

@@ -110,10 +110,15 @@ cannot see. `currency` travels for the same reason: a merchant billing in two
 currencies is two rows, and a request omitting it would answer both with the
 same orders.
 
-**Where the two reads disagree, the page says so.** Fewer orders than the row
-counted is named as the page cap cutting the list short. None at all is named
-as a disagreement rather than as an ordinary empty state — the row exists
-because the roll-up counted orders here.
+**Where the two reads disagree, the page says so, and only claims a cause it
+has.** A list that came back at the page cap and short of the count is named
+as the cap cutting it short; a list short of both is named as the two reads
+disagreeing, because nothing on this page established why. None at all is a
+disagreement rather than an ordinary empty state — the row exists because the
+roll-up counted orders here. More orders than the row counted is reported
+too: it is the direction a widened `name` filter would fail in, and a list
+quietly holding more than its headline was computed from is the failure the
+filter is spelled to prevent.
 
 The tag treemap, the per-item history and the inventory cross-reference the
 merchant lens is specified to drill into have no routes behind them. The page
@@ -243,6 +248,7 @@ src/
       useMerchantLensModel.ts      GET /analytics/merchant-spend, folded per currency
       merchant-label.ts            what to call a group, entity id included
       merchant-orders-query.ts     one roll-up row → the order-index request it denotes
+      order-count-agreement.ts     how the list stands against the count above it
       useMerchantOrders.ts         GET /purchases, scoped to one merchant group
       CurrencyGroupSection.tsx     one currency, its total, its merchants
       MerchantRow.tsx              one merchant: headline, split, figures, its orders

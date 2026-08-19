@@ -487,7 +487,25 @@ describe('MerchantLensPage — opening a merchant row', () => {
     expect(purchaseListMock).not.toHaveBeenCalled();
   });
 
-  it('says how much of the total the list is when the page cap cuts it short', async () => {
+  it('blames the page cap for a short list only when the list is at the cap', async () => {
+    rollupReturns([{ ...namedMerchant('Amazon'), orderCount: 748 }]);
+    ordersReturn(
+      Array.from({ length: 500 }, (_unused, index) => purchaseOrder({ id: `order-${index}` }))
+    );
+    const user = renderPage();
+    await settled();
+
+    await openTheOrdersOf(user, 'Amazon');
+
+    expect(
+      await screen.findByText(/Showing the first 500 of the 748 orders in this total/)
+    ).toBeVisible();
+  });
+
+  // A shortfall nowhere near the cap has a cause this page never observed —
+  // an order deleted between the roll-up read and this one produces it — so
+  // it must be reported as a disagreement, not as the cap.
+  it('does not blame the page cap for a shortfall nowhere near it', async () => {
     rollupReturns([{ ...namedMerchant('Amazon'), orderCount: 3 }]);
     ordersReturn([purchaseOrder({ id: 'order-a' })]);
     const user = renderPage();
@@ -495,7 +513,42 @@ describe('MerchantLensPage — opening a merchant row', () => {
 
     await openTheOrdersOf(user, 'Amazon');
 
-    expect(await screen.findByText(/Showing 1 of the 3 orders in this total/)).toBeVisible();
+    expect(
+      await screen.findByText(/Showing 1 orders, and the roll-up counted 3.*two reads disagree/)
+    ).toBeVisible();
+    expect(screen.queryByText(/page limit, so the rest are past it/)).toBeNull();
+  });
+
+  // The direction the label filter's `IS NULL` exists to prevent: a list
+  // holding more than the headline above it was computed from.
+  it('names a list longer than the count the row carries', async () => {
+    rollupReturns([{ ...namedMerchant('Amazon'), orderCount: 1 }]);
+    ordersReturn([purchaseOrder({ id: 'order-a' }), purchaseOrder({ id: 'order-b' })]);
+    const user = renderPage();
+    await settled();
+
+    await openTheOrdersOf(user, 'Amazon');
+
+    expect(
+      await screen.findByText(/holds more orders than the figures above were computed from/)
+    ).toBeVisible();
+  });
+
+  it('points the disclosure control at a region only while that region exists', async () => {
+    rollupReturns([namedMerchant('Amazon')]);
+    ordersReturn([purchaseOrder()]);
+    const user = renderPage();
+    await settled();
+
+    const closed = screen.getByRole('button', { name: 'Show the orders behind Amazon' });
+    expect(closed).not.toHaveAttribute('aria-controls');
+
+    await openTheOrdersOf(user, 'Amazon');
+
+    const opened = await screen.findByRole('button', { name: 'Hide the orders behind Amazon' });
+    const controlled = opened.getAttribute('aria-controls');
+    expect(controlled).not.toBeNull();
+    expect(document.getElementById(controlled ?? '')).not.toBeNull();
   });
 
   // The row exists because the roll-up counted orders here, so an empty

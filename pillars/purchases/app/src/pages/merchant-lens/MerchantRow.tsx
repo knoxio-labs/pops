@@ -75,7 +75,7 @@ export function MerchantRow({ merchant, period }: Props): ReactElement {
         size="sm"
         variant="outline"
         aria-expanded={open}
-        aria-controls={regionId}
+        aria-controls={open ? regionId : undefined}
         onClick={() => setOpen((wasOpen) => !wasOpen)}
       >
         {t(open ? 'merchants.drilldown.hide' : 'merchants.drilldown.show', {
