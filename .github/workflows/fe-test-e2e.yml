@@ -65,6 +65,10 @@ jobs:
       - name: Build pillars and shared packages
         run: pnpm --filter "./pillars/*" --filter "@pops/shell^..." build
 
+      - name: Let apt wait for the dpkg lock
+        run: |
+          echo 'DPkg::Lock::Timeout "300";' | sudo tee /etc/apt/apt.conf.d/99lock-timeout
+
       - name: Cache Playwright browsers
         id: playwright-cache
         uses: actions/cache@v6
@@ -80,9 +84,9 @@ jobs:
           for attempt in 1 2 3; do
             if timeout 300 npx playwright install --with-deps; then exit 0; fi
             echo "::warning::playwright install --with-deps attempt ${attempt} failed or stalled; retrying"
-            sleep 15
+            sleep $((attempt * 45))
           done
-          echo "::error::playwright install --with-deps failed after 3 bounded attempts; a stalled apt mirror is the usual cause"
+          echo "::error::playwright install --with-deps failed after 3 bounded attempts; a slow mirror or a dpkg lock held by another process are the usual causes"
           exit 1
 
       - name: Install Playwright system dependencies
@@ -93,9 +97,9 @@ jobs:
           for attempt in 1 2 3; do
             if timeout 300 npx playwright install-deps; then exit 0; fi
             echo "::warning::playwright install-deps attempt ${attempt} failed or stalled; retrying"
-            sleep 15
+            sleep $((attempt * 45))
           done
-          echo "::error::playwright install-deps failed after 3 bounded attempts; a stalled apt mirror is the usual cause"
+          echo "::error::playwright install-deps failed after 3 bounded attempts; a slow mirror or a dpkg lock held by another process are the usual causes"
           exit 1
 
       - name: Run Playwright tests
