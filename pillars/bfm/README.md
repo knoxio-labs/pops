@@ -177,21 +177,34 @@ both reach them without a device or a session.
 
 ### Rate limiting
 
-Three budgets, on three different keys, because they answer three different
-questions. All three count with `src/api/rate-limit.ts`.
+Five budgets, on three different keys, because they answer three different
+questions. All five count with `src/api/rate-limit.ts`.
 
-| Surface              | Key                            | Bounds                                          |
-| -------------------- | ------------------------------ | ----------------------------------------------- |
-| Code issuance        | the operator's email           | how many codes one human can mint               |
-| `POST /devices/pair` | client address, plus a ceiling | how many **guesses** the code space takes       |
-| `/mobile/*`          | client address, plus a ceiling | how much **work** an unauthenticated flood buys |
+| Surface                                   | Key                            | Bounds                                              |
+| ----------------------------------------- | ------------------------------ | --------------------------------------------------- |
+| Code issuance                             | the operator's email           | how many codes one human can mint                   |
+| `POST /devices/pair`                      | client address, plus a ceiling | how many **guesses** the code space takes           |
+| `POST /devices/challenge` + `.../refresh` | client address, plus a ceiling | how many **guesses** a stolen refresh token takes   |
+| `/mobile/*`                               | client address, plus a ceiling | how much **work** an unauthenticated flood buys     |
+| `POST /mobile/purchases/receipts`         | client address, plus a ceiling | how many **paid vision calls** a client can trigger |
 
-The latter two share `src/api/tiered-rate-limit.ts` — the same two-tier shape,
+The last four share `src/api/tiered-rate-limit.ts` — the same two-tier shape,
 a coarse unkeyed ceiling charged before a fine per-address one, because
 `CF-Connecting-IP` is both the only usable client identity on a bypassed
 hostname and forgeable by anything on the LAN. They keep separate counters on
 purpose: one shared counter would let ordinary phone traffic lock a handset out
-of pairing, and a pairing flood degrade every device already paired.
+of pairing, a pairing flood degrade every device already paired, or a burst of
+receipt uploads lock a handset out of its own transaction list.
+
+The receipt budget is deliberately not a share of `/mobile/*`'s. That one was
+sized against a page of transaction rows; a receipt upload buffers up to 12mb
+and costs a Claude vision call in `purchases` downstream, which neither the
+numbers nor the reasoning behind them accounted for. Giving it a tighter
+budget of its own, mounted the same way and ahead of the same guard, bounds
+the one route on this pillar that turns a request into real money — sized
+against a buggy client retrying, not against an internet attacker, since
+`requireDevice` already keeps anyone without a paired handset off it entirely
+(POPS-1989).
 
 Every counter is **in memory**, which is correct for a single-container pillar
 and wrong the moment there are two: each limit would become per-replica and the

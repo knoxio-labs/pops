@@ -34,6 +34,11 @@ a paired phone                        bfm
                                           │ prefix budget spent?       yes ─► 429
                                           │ this client's spent?       yes ─► 429
                                           ▼
+                                      (POST /mobile/purchases/receipts only)
+                                      receipt-rate-limit.ts
+                                          │ route budget spent?        yes ─► 429
+                                          │ this client's spent?       yes ─► 429
+                                          ▼
                                       require-device.ts
                                           │ token intact and current?  no ─► 401
                                           │ device row still trusted?  no ─► 403
@@ -64,13 +69,14 @@ a phone whose ten minutes lapsed     bfm
                                       { accessToken, refreshToken }
 ```
 
-All three budgets are the same mechanism with different numbers —
+All four budgets are the same mechanism with different numbers —
 `api/tiered-rate-limit.ts`, one directory up, because it is not specific to
 authentication. They keep separate counters: sharing one would let ordinary
 phone traffic lock a handset out of pairing, or a handset failing to refresh
-stop a different one from pairing. The two refresh routes deliberately share
-ONE, because they are two halves of a single exchange and separate budgets
-would be one budget spendable twice by alternating paths.
+stop a different one from pairing, or a slow morning of receipts lock a
+handset out of its own transaction list. The two refresh routes deliberately
+share ONE, because they are two halves of a single exchange and separate
+budgets would be one budget spendable twice by alternating paths.
 
 `device-signature.ts` is the bytes half of proof of possession, used by two
 paths for two different halves of itself. Pairing uses only the key parsing —
@@ -149,6 +155,15 @@ mounted the same way and for a related but distinct reason: there the
 credential is a code a human can type, so the budget bounds **guesses** rather
 than work. Its window is one pairing-code lifetime, so a client that spends its
 budget waits only as long as the code it was failing against would have lived.
+
+`receipt-rate-limit.ts` sits in front of `POST /mobile/purchases/receipts`
+only, mounted the same way and ahead of `require-device.ts` for the same
+reason, but bounding a third thing: neither a signature check nor a guess, but
+a Claude vision call in `purchases` that this pillar's own budget cannot see
+or throttle once the request has left it. The general prefix budget was sized
+against a page of transaction rows; the receipt route costs something the
+mobile perimeter was never sized to protect against, so it gets a tighter
+budget of its own rather than a share of the wider one (POPS-1989).
 
 The counters are process-local, which is exact for one container and wrong for
 two — POPS-1474 tracks that, with the trigger pinned to whichever change first
