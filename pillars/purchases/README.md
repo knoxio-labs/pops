@@ -154,6 +154,16 @@ The grant is those four and nothing wider; `src/api/pillars/service-account.ts` 
 
 **A missing key does not stop the pillar booting**, unlike `bfm`. Everything this pillar's own contract serves is local, so refusing to start would trade a degraded reconciliation for a dead pillar. The absence is reported once at boot instead.
 
+### The fifth call is not a service-account call
+
+The receipt drop-zone's vision extraction reports its usage, cost and latency to the ai pillar's `POST /ai-usage/record` through `@pops/ai-telemetry`, like every other Claude caller in the fleet. That ingest does not read `X-API-Key`. It is gated by the per-caller credential of [ADR-039](../../docs/architecture/adr-039-pillar-isolation.md): a `purchases.<secret>` value in `x-pops-internal-credential`, which the ai pillar verifies against its own `POPS_INTERNAL_SECRET_PURCHASES` and the `ai.usage.record` scope. The two credentials are not interchangeable, and holding one says nothing about holding the other.
+
+This pillar reads its half from `POPS_INTERNAL_CREDENTIAL_FILE` first and `POPS_INTERNAL_CREDENTIAL` second — the file-then-environment order every secret here uses, in `src/api/secret-source.ts`. The deploy delivers the credential inline in `POPS_INTERNAL_CREDENTIAL`, through the per-caller internal-auth env file every other reporting pillar receives; the file variant is there because the resolver is shared, not because anything mounts one today. `src/api/ai-ledger-credential.ts` is the source of truth for the caller name and both variables; the ai pillar's accepted-caller row is in `pillars/ai/src/api/app.ts`. Provisioning both halves together is the whole job: either alone is worth nothing.
+
+**Reporting is best-effort, but it is not silent.** A record the ai pillar refuses — no credential, a stale secret, a grant that does not carry the scope — is logged with the status and both variable names rather than dropped; a record that never reached the pillar at all is logged as the delivery failure it is, without sending an operator after a credential that may be fine. That matters because the failure it hides is invisible by construction: the extraction succeeds, the user gets their receipt, the tokens are spent, and only the fleet's AI spend figure is wrong, by exactly this pillar's share. `src/ingest/receipt/__tests__/ledger-attribution.test.ts` drives a receipt through the real wrapper against a real socket and asserts both: the credential and the attributed record on the wire, and the log line when the pillar refuses.
+
+The sink is a no-op when neither `AI_API_URL` nor `POPS_API_URL` resolves, which is what keeps the test suite off the network; the deployed stack sets `AI_API_URL`.
+
 ## The assistant surface
 
 Purchases holds the only line-item-granularity spend data in the fleet, and until POPS-1753 it was the one pillar nothing could ask a question of. The decision that ticket asked for is **yes to both seams, on the grounds that neither one is a frontend**:
