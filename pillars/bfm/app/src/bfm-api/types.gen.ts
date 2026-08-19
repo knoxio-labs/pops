@@ -469,6 +469,7 @@ export type MobilePurchasesUploadReceiptData = {
    * Body
    */
   body?: {
+    capturedAt?: string;
     parts: Array<{
       dataBase64: string;
       mediaType:
@@ -479,6 +480,7 @@ export type MobilePurchasesUploadReceiptData = {
         | 'application/pdf'
         | 'text/plain';
     }>;
+    timeZone?: string;
   };
   path?: never;
   query?: never;

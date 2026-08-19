@@ -140,6 +140,8 @@ export type PurchaseListResponses = {
    */
   200: {
     items: Array<{
+      captureLatitude: number | null;
+      captureLongitude: number | null;
       checksum: string;
       createdAt: string;
       currency: string;
@@ -368,6 +370,8 @@ export type PurchaseCreateResponses = {
       }>;
     }>;
     purchase: {
+      captureLatitude: number | null;
+      captureLongitude: number | null;
       checksum: string;
       createdAt: string;
       currency: string;
@@ -568,6 +572,8 @@ export type PurchaseGetResponses = {
       }>;
     }>;
     purchase: {
+      captureLatitude: number | null;
+      captureLongitude: number | null;
       checksum: string;
       createdAt: string;
       currency: string;
@@ -700,6 +706,7 @@ export type ReceiptUploadData = {
    * Body
    */
   body?: {
+    capturedAt?: string;
     parts: Array<{
       dataBase64: string;
       mediaType:
@@ -710,6 +717,7 @@ export type ReceiptUploadData = {
         | 'application/pdf'
         | 'text/plain';
     }>;
+    timeZone?: string;
   };
   path?: never;
   query?: never;
@@ -846,6 +854,8 @@ export type ReceiptUploadResponses = {
             }>;
           }>;
           purchase: {
+            captureLatitude: number | null;
+            captureLongitude: number | null;
             checksum: string;
             createdAt: string;
             currency: string;
@@ -1013,6 +1023,8 @@ export type ReconcileLinksResponses = {
       }>;
       linkedCents: number;
       purchase: {
+        captureLatitude: number | null;
+        captureLongitude: number | null;
         checksum: string;
         createdAt: string;
         currency: string;

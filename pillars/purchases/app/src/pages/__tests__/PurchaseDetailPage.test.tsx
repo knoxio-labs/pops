@@ -67,6 +67,9 @@ function detail(overrides: Partial<PurchaseDetail> = {}): PurchaseDetail {
     documents: [],
     items: [line()],
     purchase: {
+      // Null: neither fixture arrived as a photograph carrying a fix.
+      captureLatitude: null,
+      captureLongitude: null,
       checksum: 'sha256-abc',
       createdAt: '2026-08-12T10:00:00.000Z',
       currency: 'AUD',

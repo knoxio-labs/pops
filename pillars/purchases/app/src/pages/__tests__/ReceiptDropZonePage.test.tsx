@@ -113,6 +113,9 @@ function purchaseDetail(overrides: Partial<PurchaseDetail['purchase']> = {}): Pu
     documents: [],
     items: [lineItem('Sourdough loaf'), lineItem('Oat milk')],
     purchase: {
+      // Null: neither fixture arrived as a photograph carrying a fix.
+      captureLatitude: null,
+      captureLongitude: null,
       checksum: 'sha256-abc',
       createdAt: '2026-08-13T02:00:00.000Z',
       currency: 'AUD',
