@@ -1,8 +1,5 @@
 import AppCore
-import Foundation
 import Testing
-
-@testable import BFMClient
 
 /// The `created` arm of `POST /mobile/purchases/receipts`, mapped.
 ///
