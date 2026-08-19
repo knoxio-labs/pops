@@ -38,7 +38,7 @@ const BATCH: readonly ProposalCandidate[] = [
     key: 'k1',
     source: 'amazon',
     name: 'Robot vacuum',
-    sku: { value: 'B0ROBOT', scheme: 'asin' },
+    sku: { value: 'B0ROBOTVAC', scheme: 'asin' },
     itemIds: ['i1'],
   },
 ];
@@ -133,7 +133,7 @@ describe('propose', () => {
     expect(result).toBe('{"proposals":[]}');
 
     const [request] = createMock.mock.calls[0] as [{ messages: { content: string }[] }];
-    expect(request.messages[0]?.content).toContain('1. (amazon) Robot vacuum [asin B0ROBOT]');
+    expect(request.messages[0]?.content).toContain('1. (amazon) Robot vacuum [asin B0ROBOTVAC]');
   });
 
   it("reports usage under its own operation, not the receipt reader's", async () => {

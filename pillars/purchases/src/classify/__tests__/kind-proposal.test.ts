@@ -19,14 +19,14 @@ const candidate = (over: Partial<ProposalCandidate> = {}): ProposalCandidate => 
   key: 'k1',
   source: 'amazon',
   name: 'Robot vacuum',
-  sku: asin('B0ROBOT'),
+  sku: asin('B0ROBOTVAC'),
   itemIds: ['i1'],
   ...over,
 });
 
 const BATCH: readonly ProposalCandidate[] = [
-  candidate({ key: 'k1', name: 'Robot vacuum', sku: asin('B0ROBOT') }),
-  candidate({ key: 'k2', name: 'AA batteries 24pk', sku: asin('B0AA') }),
+  candidate({ key: 'k1', name: 'Robot vacuum', sku: asin('B0ROBOTVAC') }),
+  candidate({ key: 'k2', name: 'AA batteries 24pk', sku: asin('B0AABATT24') }),
   candidate({ key: 'k3', source: 'woolworths', name: 'Bananas', sku: null }),
 ];
 
@@ -35,7 +35,7 @@ const reply = (proposals: unknown): string => JSON.stringify({ proposals });
 describe('the prompt', () => {
   it('lists every candidate under a one-based number', () => {
     const prompt = kindPrompt(BATCH);
-    expect(prompt).toContain('1. (amazon) Robot vacuum [asin B0ROBOT]');
+    expect(prompt).toContain('1. (amazon) Robot vacuum [asin B0ROBOTVAC]');
     expect(prompt).toContain('3. (woolworths) Bananas');
   });
 
@@ -44,6 +44,15 @@ describe('the prompt', () => {
       .split('\n')
       .filter((row) => row.startsWith('1. '));
     expect(listed).toEqual(['1. (amazon) Bananas']);
+  });
+
+  it('names no merchant for a candidate whose lines came from several', () => {
+    // A cross-source ASIN group has no merchant, and the prompt says so by
+    // saying nothing rather than by quoting whichever line was read first.
+    const listed = kindPrompt([candidate({ source: null, name: 'Robot vacuum' })])
+      .split('\n')
+      .filter((row) => row.startsWith('1. '));
+    expect(listed).toEqual(['1. Robot vacuum [asin B0ROBOTVAC]']);
   });
 
   it('offers unknown and tells the model when to use it', () => {

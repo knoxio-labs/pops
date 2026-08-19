@@ -17,6 +17,7 @@
  * basis the export already uses for `Total Amount` and `Total Discounts`.
  */
 
+import { isWellFormedSku } from '../../contract/constants.js';
 import { allocateProRata } from '../allocation.js';
 import { SHIPMENT_STATUS_BY_SOURCE_VALUE, type AmazonAnomaly, type Row } from './columns.js';
 import {
@@ -232,8 +233,19 @@ function buildItem(
   };
 }
 
+/**
+ * What the export's `ASIN` column can honestly be said to be.
+ *
+ * Almost always an ASIN. When the column holds something that cannot be one
+ * — a blank the reader kept, a marketplace id from a row shape Amazon
+ * changed — the line still names a product to the merchant that printed it,
+ * so it takes the weakest true claim rather than failing the order or
+ * asserting a cross-source identity the string cannot support.
+ */
 function productIdentity(asin: string | null): CreateItemInput['sku'] {
-  return asin === null ? null : { value: asin, scheme: 'asin' };
+  if (asin === null) return null;
+  if (isWellFormedSku('asin', asin)) return { value: asin, scheme: 'asin' };
+  return isWellFormedSku('merchant', asin) ? { value: asin, scheme: 'merchant' } : null;
 }
 
 function readShipmentStatus(raw: string | undefined): CreateShipmentInput['status'] {

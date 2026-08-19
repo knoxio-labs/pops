@@ -42,7 +42,7 @@ function seedLine(overrides: Parameters<typeof amazonOrder>[0] = {}): {
       items: [
         {
           name: 'Robot vacuum',
-          sku: { value: 'B0ROBOT', scheme: 'asin' },
+          sku: { value: 'B0ROBOTVAC', scheme: 'asin' },
           unitPriceCents: 79900,
           lineTotalCents: 79900,
         },

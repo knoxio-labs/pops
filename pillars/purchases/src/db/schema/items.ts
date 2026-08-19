@@ -72,13 +72,19 @@ export const purchaseItems = sqliteTable(
      * than assumed. `ITEM_KINDS`' arrangement: the vocabulary is declared
      * contract-side in {@link SKU_SCHEMES} and enforced by a CHECK.
      *
-     * The pair is total, but only one direction of it is a CHECK: a
-     * namespace with nothing in it is rejected by the database, while an
-     * identifier with no namespace is prevented one layer up, by
-     * `CreateItemInput` carrying both halves as a single value that the
-     * insert splits at one site. SQLite cannot add the second CHECK to a
-     * table that already exists without a rebuild, and rebuilding this one
-     * would cascade every tag, note, unit and allocation off its lines.
+     * Only one direction of the pair is a CHECK: a namespace with nothing
+     * under it — no identifier, or a blank standing in for one — is
+     * rejected by the database, while an identifier with no namespace is
+     * prevented one layer up, by `CreateItemInput` carrying both halves as
+     * a single value that the insert splits at one site. SQLite cannot add
+     * the second CHECK to a table that already exists without a rebuild,
+     * and rebuilding this one would cascade every tag, note, unit and
+     * allocation off its lines.
+     *
+     * The write path also checks the identifier against the namespace it
+     * claims (`isWellFormedSku`), because `asin` is the claim that
+     * merges lines across sources and a store article number must not be
+     * able to make it by accident.
      *
      * The wire fuses the two back into one object for the reason
      * `Classified<T>` gives: a consumer must not be able to reach the value

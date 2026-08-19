@@ -17,10 +17,14 @@ import {
   RESIDUAL_BEARING_ROLES,
   SETTLEMENT_ROLES,
   SHIPMENT_STATUSES,
+  SKU_SCHEMES,
 } from '../constants.js';
 import { PurchasesErrorSchema } from '../errors.js';
 import { purchasesManifest } from '../manifest.js';
 import { MerchantIdentitySchema, ProductIdentitySchema } from '../rest-analytics.js';
+// The identity a line's merchant STATED, as against the grouping identity
+// above, which is how the aggregate decided two lines are one product.
+import { ProductIdentitySchema as StatedProductIdentitySchema } from '../schemas/product-identity.js';
 import {
   CentsSchema,
   CurrencySchema,
@@ -184,8 +188,46 @@ describe('closed vocabularies', () => {
     ['SETTLEMENT_ROLES', SETTLEMENT_ROLES],
     ['MERCHANT_RESOLUTIONS', MERCHANT_RESOLUTIONS],
     ['PRODUCT_IDENTITY_BASES', PRODUCT_IDENTITY_BASES],
+    ['SKU_SCHEMES', SKU_SCHEMES],
   ])('%s has no duplicates', (_label, values) => {
     expect(new Set(values).size).toBe(values.length);
+  });
+});
+
+describe('ProductIdentitySchema — the identity a source stated', () => {
+  it('accepts an ASIN in the namespace that issues it', () => {
+    expect(StatedProductIdentitySchema.safeParse({ value: 'B0DSVZQ8P5', scheme: 'asin' }).success).toBe(
+      true
+    );
+  });
+
+  it('refuses to let an article number claim the namespace that merges across sources', () => {
+    // The whole failure the pair exists to prevent, arriving as a request
+    // body: `asin` is what makes two lines from different merchants one
+    // product, so a four-digit store number may not claim it.
+    const parsed = StatedProductIdentitySchema.safeParse({ value: '4471', scheme: 'asin' });
+    expect(parsed.success).toBe(false);
+  });
+
+  it('accepts that same number as what it is', () => {
+    expect(StatedProductIdentitySchema.safeParse({ value: '4471', scheme: 'merchant' }).success).toBe(
+      true
+    );
+  });
+
+  it.each(['', '   ', '\t'])('rejects %p, which identifies nothing in any namespace', (value) => {
+    expect(StatedProductIdentitySchema.safeParse({ value, scheme: 'merchant' }).success).toBe(false);
+  });
+
+  it('rejects an identifier with no namespace, and a namespace with no identifier', () => {
+    expect(StatedProductIdentitySchema.safeParse({ value: 'B0DSVZQ8P5' }).success).toBe(false);
+    expect(StatedProductIdentitySchema.safeParse({ scheme: 'asin' }).success).toBe(false);
+  });
+
+  it('rejects a namespace outside the vocabulary', () => {
+    expect(
+      StatedProductIdentitySchema.safeParse({ value: '9310072021453', scheme: 'barcode' }).success
+    ).toBe(false);
   });
 });
 
@@ -233,7 +275,7 @@ describe('MerchantIdentitySchema', () => {
   });
 });
 
-describe('ProductIdentitySchema', () => {
+describe('ProductIdentitySchema — the basis a group was formed on', () => {
   it('offers exactly the bases the vocabulary names', () => {
     const covered = ProductIdentitySchema.options.map((option) => option.shape.basis.value);
 

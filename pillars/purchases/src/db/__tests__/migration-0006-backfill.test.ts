@@ -13,29 +13,13 @@
  * folder — drizzle's migrator runs only the entries newer than the last one
  * recorded.
  */
-import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-import Database from 'better-sqlite3';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
-import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { stageMigrationsThrough } from '@pops/pillar-sdk/db';
+import { openSeededAtMigration } from './migration-harness.js';
 
-import { openPurchasesDb } from '../open-purchases-db.js';
+import type Database from 'better-sqlite3';
 
 import type { OpenedPurchasesDb } from '../index.js';
-
-const MIGRATIONS_DIR = join(
-  dirname(fileURLToPath(import.meta.url)),
-  '..',
-  '..',
-  '..',
-  'migrations'
-);
 
 /** The last entry before 0006 adds `sku_scheme`. */
 const BEFORE_SKU_SCHEME = '0005_reconcile_decisions_persist';
@@ -48,9 +32,9 @@ interface SeededItem {
 
 /**
  * The world as it stood at 0005: Amazon lines carrying ASINs, grocery and
- * drop-zone lines carrying nothing, and one line a caller posted an
- * identifier for through `POST /purchases` without ever saying what kind of
- * identifier it was — the only way this column could hold a non-ASIN.
+ * drop-zone lines carrying nothing, and the states a caller could reach
+ * through `POST /purchases`, where `sku` was a bare string of any shape on
+ * an order whose `source` was whatever the caller typed.
  */
 const SEED: readonly SeededItem[] = [
   { id: 'a-tamper', source: 'amazon', sku: 'B0DSVZQ8P5' },
@@ -59,22 +43,19 @@ const SEED: readonly SeededItem[] = [
   { id: 'w-eggs', source: 'woolworths', sku: null },
   { id: 'r-timber', source: 'receipt', sku: null },
   { id: 'b-article', source: 'bunnings', sku: '4471' },
+  // Posted through the API against the `amazon` source, which is a
+  // caller-supplied label rather than evidence of who wrote the row. The
+  // identifier is plainly not an ASIN, and the backfill must not decide
+  // otherwise from the label alone.
+  { id: 'a-posted-article', source: 'amazon', sku: '4471' },
+  // Accepted by the pre-0006 column, which had no minimum length.
+  { id: 'a-blank', source: 'amazon', sku: '' },
 ];
 
-let dir: string;
-let dbPath: string;
 let opened: OpenedPurchasesDb;
+let cleanup: () => void;
 
-function seedThrough0005(): void {
-  const staged = stageMigrationsThrough({
-    migrationsFolder: MIGRATIONS_DIR,
-    targetFolder: join(dir, 'migrations'),
-    through: BEFORE_SKU_SCHEME,
-  });
-  const raw = new Database(dbPath);
-  raw.pragma('foreign_keys = ON');
-  migrate(drizzle(raw), { migrationsFolder: staged });
-
+function seedThrough0005(raw: Database.Database): void {
   for (const source of new Set(SEED.map((item) => item.source))) {
     raw.prepare(`INSERT INTO purchase_sources (id, label) VALUES (?, ?)`).run(source, source);
     raw
@@ -93,7 +74,6 @@ function seedThrough0005(): void {
       )
       .run(item.id, `p-${item.source}`, position, item.id, item.sku);
   }
-  raw.close();
 }
 
 interface StoredIdentity {
@@ -108,15 +88,15 @@ function identityOf(itemId: string): StoredIdentity {
 }
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'purchases-migration-0006-'));
-  dbPath = join(dir, 'purchases.db');
-  seedThrough0005();
-  opened = openPurchasesDb(dbPath);
+  ({ opened, cleanup } = openSeededAtMigration({
+    through: BEFORE_SKU_SCHEME,
+    prefix: 'purchases-migration-0006-',
+    seed: seedThrough0005,
+  }));
 });
 
 afterEach(() => {
-  opened.raw.close();
-  rmSync(dir, { recursive: true, force: true });
+  cleanup();
 });
 
 describe('applying 0006 to a database that already holds bare identifiers', () => {
@@ -130,6 +110,21 @@ describe('applying 0006 to a database that already holds bare identifiers', () =
     // weakest claim there is, and the backfill must not upgrade it into a
     // cross-source one on its behalf.
     expect(identityOf('b-article')).toEqual({ sku: '4471', scheme: 'merchant' });
+  });
+
+  it('refuses to upgrade an identifier just because the order says amazon', () => {
+    // `purchases`.`source` is a free-form string a caller supplies, so it is
+    // not evidence that the Amazon adapter wrote this line. Stamping `asin`
+    // here would be irreversible: afterwards a mislabelled article number is
+    // indistinguishable from a real ASIN, which is the one failure the pair
+    // was added to prevent.
+    expect(identityOf('a-posted-article')).toEqual({ sku: '4471', scheme: 'merchant' });
+  });
+
+  it('takes a blank identifier back to stating nothing', () => {
+    // The pre-0006 column accepted an empty string, and naming a namespace
+    // over one would mint an identity out of nothing.
+    expect(identityOf('a-blank')).toEqual({ sku: null, scheme: null });
   });
 
   it('leaves a line that states no identifier stating none', () => {

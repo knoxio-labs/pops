@@ -19,6 +19,9 @@ export type PurchaseAccounting = PurchaseDetail['accounting'];
 /** One line, with its tags, units, notes and landed cost. */
 export type PurchaseLine = PurchaseDetail['items'][number];
 
+/** The namespace a line's product identifier lives in. */
+export type SkuScheme = NonNullable<PurchaseLine['item']['sku']>['scheme'];
+
 /** One charge, with what it was allocated to and what it is linked to. */
 export type PurchaseCharge = PurchaseDetail['charges'][number];
 

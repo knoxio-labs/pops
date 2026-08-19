@@ -154,6 +154,25 @@ describe('how far an identifier reaches', () => {
     expect(candidates[0]?.itemIds).toEqual(['a', 'b']);
   });
 
+  it('names no merchant for a group that spans two of them', () => {
+    // The first line's merchant is a fact about that line. Reporting it as
+    // the group's is how it reaches the classification prompt as evidence
+    // about a product bought somewhere else.
+    const candidates = toCandidates([
+      line({ id: 'a', source: 'amazon', sku: asin('B0DSVZQ8P5'), name: 'Tamping Station' }),
+      line({ id: 'b', source: 'amazon-email', sku: asin('B0DSVZQ8P5'), name: 'Tamping Station' }),
+    ]);
+    expect(candidates[0]?.source).toBeNull();
+  });
+
+  it('keeps the merchant of a group that came from one', () => {
+    const candidates = toCandidates([
+      line({ id: 'a', source: 'amazon', sku: asin('B0DSVZQ8P5'), name: 'Tamping Station' }),
+      line({ id: 'b', source: 'amazon', sku: asin('B0DSVZQ8P5'), name: 'Tamper Station 58mm' }),
+    ]);
+    expect(candidates[0]?.source).toBe('amazon');
+  });
+
   it('never groups a merchant-local identifier across two sources', () => {
     // `4471` at a hardware store and `4471` at a grocer are two products
     // that share a string, and nothing but the scheme says so.

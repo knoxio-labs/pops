@@ -11,29 +11,17 @@
  * — the last point before `0002` adds a NOT NULL column with a default — then
  * seeded and reopened with the real opener, which applies the rest.
  */
-import { mkdtempSync, readdirSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { readdirSync } from 'node:fs';
 
-import Database from 'better-sqlite3';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
-import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { readMigrationJournal, stageMigrationsThrough } from '@pops/pillar-sdk/db';
+import { readMigrationJournal } from '@pops/pillar-sdk/db';
 
-import { openPurchasesDb } from '../open-purchases-db.js';
+import { MIGRATIONS_DIR, openSeededAtMigration } from './migration-harness.js';
+
+import type Database from 'better-sqlite3';
 
 import type { OpenedPurchasesDb } from '../index.js';
-
-const MIGRATIONS_DIR = join(
-  dirname(fileURLToPath(import.meta.url)),
-  '..',
-  '..',
-  '..',
-  'migrations'
-);
 
 /** The last entry before `0002_purchase_surcharge` adds `surcharge_cents`. */
 const BEFORE_ADDED_COLUMN = '0001_purchase_tags';
@@ -54,21 +42,11 @@ const ITEMS: readonly SeededItem[] = [
 /** The evidence pointer, carrying the characters a rebuild is most likely to mangle. */
 const RAW_REF = "woolworths-export-2026-02.csv#row=41 'left at door'";
 
-let dir: string;
-let dbPath: string;
 let opened: OpenedPurchasesDb;
+let dir: string;
+let cleanup: () => void;
 
-function seedThroughFirstMigration(): void {
-  const staged = stageMigrationsThrough({
-    migrationsFolder: MIGRATIONS_DIR,
-    through: BEFORE_ADDED_COLUMN,
-    targetFolder: join(dir, 'staged-migrations'),
-  });
-
-  const raw = new Database(dbPath);
-  raw.pragma('foreign_keys = ON');
-  migrate(drizzle(raw), { migrationsFolder: staged });
-
+function seedThroughFirstMigration(raw: Database.Database): void {
   raw.prepare(`INSERT INTO purchase_sources (id, label) VALUES ('woolworths', 'Woolworths')`).run();
   raw
     .prepare(
@@ -89,8 +67,6 @@ function seedThroughFirstMigration(): void {
   }
 
   raw.prepare(`INSERT INTO purchase_tags (purchase_id, tag) VALUES ('p-1', 'weekly-shop')`).run();
-
-  raw.close();
 }
 
 function rows<T>(sql: string): T[] {
@@ -98,15 +74,15 @@ function rows<T>(sql: string): T[] {
 }
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'purchases-migration-safety-'));
-  dbPath = join(dir, 'purchases.db');
-  seedThroughFirstMigration();
-  opened = openPurchasesDb(dbPath);
+  ({ opened, dir, cleanup } = openSeededAtMigration({
+    through: BEFORE_ADDED_COLUMN,
+    prefix: 'purchases-migration-safety-',
+    seed: seedThroughFirstMigration,
+  }));
 });
 
 afterEach(() => {
-  opened.raw.close();
-  rmSync(dir, { recursive: true, force: true });
+  cleanup();
 });
 
 describe('applying the rest of the journal to a populated purchases database', () => {

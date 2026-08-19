@@ -69,8 +69,7 @@ function seedLines(
     amazonOrder({
       items: items.map((item) => ({
         name: item.name,
-        sku:
-          item.sku === undefined || item.sku === null ? null : { value: item.sku, scheme: 'asin' },
+        sku: item.sku == null ? null : { value: item.sku, scheme: 'asin' },
         unitPriceCents: item.cents ?? 1000,
         lineTotalCents: item.cents ?? 1000,
       })),
@@ -97,9 +96,9 @@ describe('what the pass writes', () => {
 
   it('writes one answer to every line sharing a product', async () => {
     const id = seedLines([
-      { name: 'AA batteries 24pk', sku: 'B0AA' },
-      { name: 'AA batteries', sku: 'B0AA' },
-      { name: 'Robot vacuum', sku: 'B0ROBOT' },
+      { name: 'AA batteries 24pk', sku: 'B0AABATT24' },
+      { name: 'AA batteries', sku: 'B0AABATT24' },
+      { name: 'Robot vacuum', sku: 'B0ROBOTVAC' },
     ]);
     const proposer = alwaysAnswers('consumable');
     const outcome = await proposeItemKinds(opened.db, proposer);

@@ -117,6 +117,32 @@ export function isCrossSourceSkuScheme(scheme: SkuScheme): boolean {
 }
 
 /**
+ * An Amazon catalogue id: ten characters, upper-case letters and digits.
+ * Covers both forms Amazon issues — `B0` plus eight, and a book's ISBN-10.
+ */
+const ASIN_PATTERN = /^[A-Z0-9]{10}$/u;
+
+/**
+ * True when `value` can belong to the namespace it claims.
+ *
+ * The scheme is a claim about reach, and `asin` is the claim that lets two
+ * lines from *different* sources become one product. A four-digit store
+ * article number posted as `asin` is that merge happening by accident, so
+ * the claim is checked against the only shape a scheme publishes: an ASIN
+ * is ten upper-case alphanumerics, and a merchant-local identifier has no
+ * shape POPS can know beyond not being blank.
+ *
+ * A caller determined to lie can still state a well-formed ASIN it made up.
+ * That is a false statement rather than a collision, and it is no more
+ * defensible than a false price on the same line — the check exists to stop
+ * the accident, which is the failure the pair was introduced for.
+ */
+export function isWellFormedSku(scheme: SkuScheme, value: string): boolean {
+  if (value.trim() === '') return false;
+  return scheme === 'asin' ? ASIN_PATTERN.test(value) : true;
+}
+
+/**
  * The shape of a POPS item tag — purchases' own product-grained vocabulary
  * (`fruit`, `healthy`, `single-origin`), not finance's transaction-grained
  * `tag_vocabulary`.

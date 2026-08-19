@@ -6,7 +6,21 @@ import { formatCents } from '../../money.js';
 
 import type { ReactElement } from 'react';
 
-import type { PurchaseLine } from './types.js';
+import type { PurchaseLine, SkuScheme } from './types.js';
+
+/**
+ * How each namespace is named to a reader.
+ *
+ * A record rather than a template over the raw scheme: `merchant` is a POPS
+ * word for "only this shop knows what this number means", and rendering it
+ * untranslated next to translated text is how an internal vocabulary leaks
+ * onto the page. Keyed by the scheme so a namespace added to the contract
+ * fails to compile here rather than printing its own enum token.
+ */
+const SKU_LABEL_KEYS: Record<SkuScheme, string> = {
+  asin: 'purchase.items.skuAsin',
+  merchant: 'purchase.items.skuMerchant',
+};
 
 interface LineListProps {
   lines: PurchaseLine[];
@@ -70,8 +84,10 @@ function LineRow({ line, currency, isHighlighted }: LineRowProps): ReactElement 
       </div>
 
       <p className="text-muted-foreground text-xs">
-        {item.sku === null ? t('purchase.items.noSku') : `${item.sku.value} (${item.sku.scheme})`} ·{' '}
-        {t('purchase.items.quantity', { count: item.quantity })} ·{' '}
+        {item.sku === null
+          ? t('purchase.items.noSku')
+          : t(SKU_LABEL_KEYS[item.sku.scheme], { value: item.sku.value })}{' '}
+        · {t('purchase.items.quantity', { count: item.quantity })} ·{' '}
         {t('purchase.items.unitPrice', { amount: formatCents(item.unitPriceCents, currency) })}
       </p>
 

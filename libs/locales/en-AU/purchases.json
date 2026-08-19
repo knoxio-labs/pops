@@ -200,6 +200,8 @@
   "purchase.items.ariaLabel": "Lines on this order",
   "purchase.items.empty": "This order carries no lines.",
   "purchase.items.noSku": "No SKU",
+  "purchase.items.skuAsin": "ASIN {{value}}",
+  "purchase.items.skuMerchant": "Merchant code {{value}}",
   "purchase.items.quantity_one": "{{count}} unit",
   "purchase.items.quantity_other": "{{count}} units",
   "purchase.items.unitPrice": "{{amount}} each",

@@ -11,7 +11,7 @@
  * supplies a tag is therefore *asserting* one, which is why tags written
  * here land confirmed — the same reason a source-stated `kind` does.
  */
-import { isItemTag } from '../../contract/constants.js';
+import { isItemTag, isWellFormedSku } from '../../contract/constants.js';
 import { InvalidIngestPayloadError } from '../errors.js';
 import {
   purchaseItemNotes,
@@ -39,6 +39,28 @@ export function insertItem(ctx: IngestContext, input: CreateItemInput, position:
   insertItemUnits(ctx, itemId, input);
 }
 
+/**
+ * The identifier as it will be stored, once the namespace it claims has been
+ * checked against it.
+ *
+ * The wire schema applies the same rule, and this is not a second copy of it
+ * — `isWellFormedSku` is the one predicate, applied here as well because the
+ * shipped adapters build a payload in-process and never pass through zod.
+ * An `asin` that cannot be an ASIN is the accidental cross-source merge the
+ * pair exists to prevent, and a blank identifier is an identity minted from
+ * nothing, which is what NULL is for.
+ */
+function skuColumns(input: CreateItemInput): Pick<PurchaseItemInsert, 'sku' | 'skuScheme'> {
+  const identity = input.sku;
+  if (identity == null) return { sku: null, skuScheme: null };
+  if (!isWellFormedSku(identity.scheme, identity.value)) {
+    throw new InvalidIngestPayloadError(
+      `product identifier '${identity.value}' cannot belong to the '${identity.scheme}' namespace it claims`
+    );
+  }
+  return { sku: identity.value, skuScheme: identity.scheme };
+}
+
 function itemRow(ctx: IngestContext, input: CreateItemInput, position: number): PurchaseItemInsert {
   return {
     purchaseId: ctx.purchase.id,
@@ -47,8 +69,7 @@ function itemRow(ctx: IngestContext, input: CreateItemInput, position: number): 
     name: input.name,
     // Split at exactly one site, from one value, so no caller can name an
     // identifier without the namespace that says how far it means anything.
-    sku: input.sku?.value ?? null,
-    skuScheme: input.sku?.scheme ?? null,
+    ...skuColumns(input),
     url: input.url ?? null,
     imageUrl: input.imageUrl ?? null,
     quantity: input.quantity ?? 1,

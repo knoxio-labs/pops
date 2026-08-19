@@ -82,6 +82,14 @@ identifier without the qualifier that says what it may be compared to.
 groups one ASIN across sources and refuses to group a merchant-local number
 across them.
 
+The scheme is a claim about reach, so it is checked against the identifier
+rather than taken on trust: an ASIN is ten upper-case alphanumerics, and a
+four-digit store article number therefore cannot claim to be one — through
+the wire schema or through an adapter running in-process, which never passes
+through zod. A caller can still state an ASIN it invented; that is a false
+statement rather than an accidental collision, and the accident is what the
+pair was added to prevent.
+
 An adapter that states nothing writes nothing. **NULL means the source named
 no product**, not that a transcription was skipped, and two NULLs are not a
 match — a `GROUP BY` that folded them would put one verdict on an entire

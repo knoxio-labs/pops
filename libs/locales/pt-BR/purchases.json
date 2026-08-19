@@ -200,6 +200,8 @@
   "purchase.items.ariaLabel": "Linhas desta compra",
   "purchase.items.empty": "Esta compra não tem linhas.",
   "purchase.items.noSku": "Sem SKU",
+  "purchase.items.skuAsin": "ASIN {{value}}",
+  "purchase.items.skuMerchant": "Código do comerciante {{value}}",
   "purchase.items.quantity_one": "{{count}} unidade",
   "purchase.items.quantity_other": "{{count}} unidades",
   "purchase.items.unitPrice": "{{amount}} cada",

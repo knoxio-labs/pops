@@ -233,6 +233,30 @@ describe('PurchaseDetailPage', () => {
     expect(within(lines).getByText('pops://inventory/item/inv-9')).toBeVisible();
   });
 
+  it('names the namespace an identifier lives in, in the reader’s language', async () => {
+    // `asin` and `merchant` are the contract's words, not a reader's, and
+    // one of them printed raw next to translated text is an internal
+    // vocabulary on the page.
+    answers(detail({ items: [line({ sku: { value: '4471', scheme: 'merchant' } })] }));
+    renderAt('/purchases/order-1');
+
+    const lines = await screen.findByRole('list', {
+      name: enAUPurchases['purchase.items.ariaLabel'],
+    });
+    expect(within(lines).getByText(/Merchant code 4471/u)).toBeVisible();
+    expect(within(lines).queryByText(/\(merchant\)/u)).toBeNull();
+  });
+
+  it('says so plainly when a line states no identifier', async () => {
+    answers(detail({ items: [line({ sku: null })] }));
+    renderAt('/purchases/order-1');
+
+    const lines = await screen.findByRole('list', {
+      name: enAUPurchases['purchase.items.ariaLabel'],
+    });
+    expect(within(lines).getByText(/No SKU/u)).toBeVisible();
+  });
+
   it('tells a proposed link apart from a confirmed one', async () => {
     answers(
       detail({

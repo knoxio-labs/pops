@@ -28,7 +28,16 @@ export function batchingKey(item: BatchableItem): string {
 /** One product: every line that shares a batching key. */
 export interface ProposalCandidate {
   readonly key: string;
-  readonly source: string;
+  /**
+   * The merchant every line in this group came from, or null when they came
+   * from more than one.
+   *
+   * Only a cross-source scheme can produce a group spanning merchants, and
+   * for such a group there is no merchant to name: naming the first line's
+   * would hand a consumer — the classification prompt above all — a fact
+   * that is true of one line and asserted about all of them.
+   */
+  readonly source: string | null;
   /** The first line's name, which is what the model is shown. */
   readonly name: string;
   readonly sku: string | null;
@@ -44,21 +53,35 @@ export interface ProposalCandidate {
  * spent its budget on the lines worth deciding.
  */
 export function toCandidates(items: readonly BatchableItem[]): readonly ProposalCandidate[] {
-  const byKey = new Map<string, { candidate: ProposalCandidate; itemIds: string[] }>();
+  interface Group {
+    readonly key: string;
+    source: string | null;
+    readonly name: string;
+    readonly sku: ProductIdentity | null;
+    readonly itemIds: string[];
+  }
+
+  const byKey = new Map<string, Group>();
   for (const item of items) {
     const key = batchingKey(item);
     const existing = byKey.get(key);
     if (existing === undefined) {
-      const itemIds = [item.id];
       byKey.set(key, {
-        candidate: { key, source: item.source, name: item.name, sku: item.sku, itemIds },
-        itemIds,
+        key,
+        source: item.source,
+        name: item.name,
+        sku: item.sku,
+        itemIds: [item.id],
       });
-    } else {
-      existing.itemIds.push(item.id);
+      continue;
     }
+    existing.itemIds.push(item.id);
+    // An ASIN group can span merchants, and then no single merchant is a
+    // fact about the group. Dropping the first line's is what stops it from
+    // being reported as one.
+    if (existing.source !== item.source) existing.source = null;
   }
-  return [...byKey.values()].map((entry) => entry.candidate);
+  return [...byKey.values()];
 }
 
 /** Split candidates into fixed-size batches, in order. */
