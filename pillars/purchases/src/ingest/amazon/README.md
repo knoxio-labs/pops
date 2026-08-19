@@ -40,6 +40,14 @@ Every one of these is present in the reference bundle and every one is silent if
 - **Quantity 0 is real** on 27 rows — cancelled lines, which the contract's minimum of 1 cannot express. They are ingested at quantity 1 and flagged rather than dropped, because three cancelled rows in the bundle carry a non-zero total and "cancelled ⇒ ignore" would lose real money from the reconciliation.
 - **Gift messages contain newlines** inside quoted fields on 7 rows, which is why this goes through a CSV parser rather than splitting on `\n`.
 
+## Do not map `Item Serial Number` onto a device serial
+
+Populated on 31 of the reference bundle's rows, measured 2026-08-11. **28 of those 31 carry an `Authenticity_2D=AZ:...` value** — Amazon's Transparency anti-counterfeit token, printed on the packaging and scanned to prove the unit is genuine. It identifies a _package_, not the device inside it, so it is not the serial engraved on the hardware and will not match anything the owner can read off the item.
+
+The remaining three carry no prefix, and nothing in the bundle says what they are. That is what makes the column unusable rather than merely dirty: it is mixed and unlabelled, so neither stripping the `Authenticity_2D=` prefix nor keeping only the three unprefixed rows yields a device serial — the first leaves a package token with its label removed, the second selects on a pattern that was never documented to mean anything.
+
+`purchase_item_units.serial_number` is for the device serial, so this column does not belong in it. This adapter reads no serial column at all and emits no units; `order-history.test.ts` holds it to that.
+
 ## Anomalies
 
 Parsing never aborts. A 943-row backfill that dies on row 700 is worse than one that lands every order it can and names what it could not take. Every compromise is reported as an `AmazonAnomaly` carrying the order it happened on.

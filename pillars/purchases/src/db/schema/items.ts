@@ -169,7 +169,20 @@ export const purchaseItemUnits = sqliteTable(
     itemId: text('item_id')
       .notNull()
       .references(() => purchaseItems.id, { onDelete: 'cascade' }),
-    /** Present in the Amazon export as `Item Serial Number`, and the strongest identity a unit can have. */
+    /**
+     * Intended to hold the serial engraved on the hardware, the identity an
+     * owner can read off the item itself. Free text: callers set it over
+     * `POST /purchases` and nothing validates what arrives.
+     *
+     * Not the Amazon DSAR export's `Item Serial Number`. On the reference
+     * bundle measured 2026-08-11, 28 of its 31 populated rows carry an
+     * `Authenticity_2D=AZ:...` token — Amazon's Transparency anti-counterfeit
+     * code, which identifies a *package*, not the device inside it. The
+     * remaining three carry no prefix and nothing says what they are, so the
+     * column cannot be sorted by inspection either. No ingest adapter in this
+     * repo writes it; see
+     * `pillars/purchases/src/ingest/amazon/README.md`.
+     */
     serialNumber: text('serial_number'),
     inventoryItemUri: text('inventory_item_uri'),
     inventoryItemStaleAt: text('inventory_item_stale_at'),

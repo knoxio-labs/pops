@@ -395,3 +395,32 @@ describe('contract conformance', () => {
     }
   });
 });
+
+describe('`Item Serial Number`', () => {
+  // On the reference bundle it is mostly a Transparency anti-counterfeit
+  // token identifying the packaging, so carrying it into a unit's serial
+  // number would assert a device identity nobody can read off the device.
+  // The README says this parser reads no serial column; this is what holds
+  // it there once someone decides the mapping looks obvious.
+  const AUTHENTICITY_TOKEN = 'Authenticity_2D=AZ:c3f10a9e4b';
+
+  const { orders: parsed } = parseAmazonOrderHistory(
+    csvWithRows([rowWith({ 'Order ID': ORDER_SINGLE, 'Item Serial Number': AUTHENTICITY_TOKEN })])
+  );
+
+  it('parses the row carrying it, so the assertions below are not vacuous', () => {
+    expect(parsed).toHaveLength(1);
+    expect(parsed.flatMap((result) => result.items ?? [])).toHaveLength(1);
+  });
+
+  it('produces no unit to hang a serial on', () => {
+    expect(
+      parsed.flatMap((result) => result.items ?? []).flatMap((item) => item.units ?? [])
+    ).toEqual([]);
+  });
+
+  it('does not reach the payload under any other field either', () => {
+    expect(JSON.stringify(parsed)).not.toContain('Authenticity_2D');
+    expect(JSON.stringify(parsed)).not.toContain(AUTHENTICITY_TOKEN);
+  });
+});
