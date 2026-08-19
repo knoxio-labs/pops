@@ -236,6 +236,30 @@ internal struct ContentViewTabSwitcherTests {
         )
     }
 
+    /// `TabView` is built with no explicit `selection` binding — see
+    /// `ContentView`'s own doc comment on why — so UIKit's own default is what
+    /// decides which tab is showing on launch. That default is not free-
+    /// standing knowledge: it is exactly the assumption
+    /// `RootCopy.nothingAvailable` and the six Maestro flows are built on,
+    /// that the BFM's first-listed feature is the one a person actually
+    /// lands on. This is what makes that assumption a fact rather than a
+    /// hope.
+    @Test("the first feature the BFM listed is the one selected on launch")
+    func theFirstOfferedFeatureIsSelected() throws {
+        let switcher = try #require(
+            try mountedTabBar(available: [
+                .receiptCapture,
+                MobileFeature(rawValue: "budgets"),
+                MobileFeature(rawValue: "wishlist"),
+            ]),
+            "more than one feature is available and no tab bar was built for them")
+
+        #expect(
+            switcher.selectedIndex == 0,
+            "landed on tab \(switcher.selectedIndex) rather than the BFM's first-listed feature"
+        )
+    }
+
     @Test("a fourth feature is a fourth tab, not the same tabs again")
     func theTabCountFollowsTheSurface() throws {
         let two = try offeredTabTitles(available: [
