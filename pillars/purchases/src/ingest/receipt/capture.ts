@@ -46,6 +46,7 @@ import {
   storeTimeZone,
 } from '../local-time.js';
 import { readPhotoCapture } from './exif.js';
+import { isRealFix } from './exif.js';
 
 import type { CaptureSource } from '../../contract/constants.js';
 import type { CaptureLocalTime, CaptureLocation, PhotoCapture } from './exif.js';
@@ -215,7 +216,9 @@ function clientSignals(client: ClientCapture | undefined): ClientSignals {
     declaredZone: isKnownTimeZone(client?.timeZone) ? client.timeZone : null,
     offsetMinutes: declaredOffsetMinutes(client?.capturedAt),
     instant: clientInstant(client?.capturedAt),
-    location: client?.location ?? null,
+    // A client whose geolocation call failed can send `0, 0` as readily as a
+    // fixless camera writes it. Same answer for both: not a place.
+    location: isRealFix(client?.location) ? (client?.location ?? null) : null,
   };
 }
 
