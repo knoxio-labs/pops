@@ -35,9 +35,6 @@
  * a withheld group is withheld by a criterion the response names. A `limit`
  * would instead drop rows for a reason nothing in the response records.
  */
-import { and, eq } from 'drizzle-orm';
-
-import { purchaseItems, purchases } from '../schema.js';
 import { landedCostCents } from './accounting.js';
 import {
   identifyMerchant,
@@ -48,10 +45,11 @@ import {
   type MerchantIdentity,
 } from './merchant-identity.js';
 import { identifyProduct, type ProductIdentity } from './product-identity.js';
-import { purchaseFilterConditions, type PurchaseScopeFilter } from './purchase-reads.js';
+import { selectScopedLines, type ScopedLine } from './product-leaderboard-lines.js';
 import { tupleKey } from './tuple-key.js';
 
 import type { PurchasesDb } from './internal.js';
+import type { PurchaseScopeFilter } from './purchase-reads.js';
 
 export interface ProductLeaderboardFilter extends PurchaseScopeFilter {
   /**
@@ -133,40 +131,6 @@ interface ProductBucket {
   refundedCents: number;
   merchants: Map<string, LabelledMerchant>;
 }
-
-/**
- * The lines a scope selects, each with the order facts the fold needs.
- *
- * One query and one row per line: `purchase_items` joined to its order, with
- * the same predicates the order index applies for the same filter, so the
- * leaderboard covers exactly the orders that filter selects.
- */
-function selectScopedLines(db: PurchasesDb, filter: PurchaseScopeFilter) {
-  const scope = purchaseFilterConditions(filter);
-  const query = db
-    .select({
-      itemId: purchaseItems.id,
-      purchaseId: purchaseItems.purchaseId,
-      name: purchaseItems.name,
-      sku: purchaseItems.sku,
-      quantity: purchaseItems.quantity,
-      lineTotalCents: purchaseItems.lineTotalCents,
-      allocatedShippingCents: purchaseItems.allocatedShippingCents,
-      allocatedAdjustmentCents: purchaseItems.allocatedAdjustmentCents,
-      refundedCents: purchaseItems.refundedCents,
-      source: purchases.source,
-      orderedAt: purchases.orderedAt,
-      currency: purchases.currency,
-      merchantEntityId: purchases.merchantEntityId,
-      merchantEntityName: purchases.merchantEntityName,
-    })
-    .from(purchaseItems)
-    .innerJoin(purchases, eq(purchases.id, purchaseItems.purchaseId));
-
-  return (scope.length > 0 ? query.where(and(...scope)) : query).all();
-}
-
-type ScopedLine = ReturnType<typeof selectScopedLines>[number];
 
 function startBucket(line: ScopedLine, identity: ProductIdentity, rank: string): ProductBucket {
   return {
