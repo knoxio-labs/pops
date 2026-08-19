@@ -13,6 +13,7 @@ import {
   listPurchases,
 } from '../../db/index.js';
 import { tryMapServiceError } from './error-mapping.js';
+import { resolvePurchaseScope } from './purchase-scope.js';
 import {
   toPurchaseDetailBody,
   toPurchaseItemBody,
@@ -44,11 +45,11 @@ function notFound(id: string) {
 export function makePurchaseHandlers(db: PurchasesDb, onIngest: () => void = () => undefined) {
   return {
     list: async ({ query }: { query: ListQuery }) => {
+      const scope = resolvePurchaseScope(query);
+      if (!scope.ok) return { status: 400 as const, body: scope.body };
+
       const items = listPurchases(db, {
-        sources: query.sources,
-        statuses: query.statuses,
-        from: query.from,
-        to: query.to,
+        ...scope.scope,
         limit: query.limit,
         offset: query.offset,
       });

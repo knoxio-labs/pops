@@ -75,7 +75,9 @@ function MerchantLensBody({ model }: { model: MerchantLensModel }): ReactElement
       {model.groups.length === 0 ? (
         <EmptyState />
       ) : (
-        model.groups.map((group) => <CurrencyGroupSection key={group.currency} group={group} />)
+        model.groups.map((group) => (
+          <CurrencyGroupSection key={group.currency} group={group} period={model.period} />
+        ))
       )}
     </div>
   );

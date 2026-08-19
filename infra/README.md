@@ -28,14 +28,15 @@ breaking change for every downstream deployer.
 Litestream sidecars and the pillars they belong to still write to the shared
 `pops-sqlite-data`.
 
-**Secrets** — 15, each `file: ../secrets/<name>`, resolved from `infra/` (so the
+**Secrets** — 16, each `file: ../secrets/<name>`, resolved from `infra/` (so the
 gitignored repo-root `secrets/`): `bfm_jwt_signing_key`, `claude_api_key`,
 `finance_api_key`, `instagram_cookies`, `notion_api_token`,
 `paperless_admin_password`, `paperless_secret_key`, `pops_api_internal_token`,
-`pops_api_key`, `pops_bfm_api_key`, `telegram_bot_token`, `thetvdb_api_key`,
-`tmdb_api_key`, `up_bank_token`, `up_webhook_secret`. Only 9 are mounted into a
-service (`pops-worker-food`, `paperless-ngx`, `pops-mcp`, `moltbot`,
-`moltbot-validator`, `bfm-api`); the other 6 are declared and mounted nowhere.
+`pops_api_key`, `pops_bfm_api_key`, `pops_purchases_api_key`,
+`telegram_bot_token`, `thetvdb_api_key`, `tmdb_api_key`, `up_bank_token`,
+`up_webhook_secret`. Only 10 are mounted into a service (`pops-worker-food`,
+`paperless-ngx`, `pops-mcp`, `moltbot`, `moltbot-validator`, `bfm-api`,
+`purchases-api`); the other 6 are declared and mounted nowhere.
 A declared secret is inert — compose materialises one only for services that
 reference it — which is what lets a value be provisioned on the host before the
 release that starts reading it.

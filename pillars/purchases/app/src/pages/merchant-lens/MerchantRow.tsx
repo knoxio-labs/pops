@@ -1,26 +1,36 @@
+import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Badge } from '@pops/ui';
+import { Badge, Button } from '@pops/ui';
 
 import { formatCents } from '../../money.js';
 import { explainedSplit } from './explained-split.js';
 import { ExplainedSplit } from './ExplainedSplit.js';
+import { merchantLabel } from './merchant-label.js';
+import { MerchantOrders } from './MerchantOrders.js';
 
-import type { TFunction } from 'i18next';
 import type { ReactElement } from 'react';
 
-import type { MerchantIdentity, MerchantSpend } from './types.js';
+import type { MerchantSpend, SpendPeriod } from './types.js';
 
 interface Props {
   merchant: MerchantSpend;
+  /**
+   * The window the roll-up reported, not the one the picker currently shows.
+   * The orders this row opens are read over the same window its figures were
+   * computed over, or the list and the headline describe different things.
+   */
+  period: SpendPeriod;
 }
 
 /**
- * One merchant, one currency: the headline, the split, and the figures the
- * split is made of.
+ * One merchant, one currency: the headline, the split, the figures the split
+ * is made of, and the orders behind them.
  */
-export function MerchantRow({ merchant }: Props): ReactElement {
+export function MerchantRow({ merchant, period }: Props): ReactElement {
   const { t } = useTranslation('purchases');
+  const [open, setOpen] = useState(false);
+  const regionId = useId();
   const { accounting, currency } = merchant;
 
   return (
@@ -60,6 +70,20 @@ export function MerchantRow({ merchant }: Props): ReactElement {
           value={formatCents(accounting.netSpendCents, currency)}
         />
       </dl>
+
+      <Button
+        size="sm"
+        variant="outline"
+        aria-expanded={open}
+        aria-controls={open ? regionId : undefined}
+        onClick={() => setOpen((wasOpen) => !wasOpen)}
+      >
+        {t(open ? 'merchants.drilldown.hide' : 'merchants.drilldown.show', {
+          merchant: merchantLabel(merchant.merchant, t),
+        })}
+      </Button>
+
+      {open && <MerchantOrders merchant={merchant} period={period} regionId={regionId} />}
     </article>
   );
 }
@@ -71,20 +95,4 @@ function Figure({ label, value }: { label: string; value: string }): ReactElemen
       <dd className="text-foreground tabular-nums">{value}</dd>
     </div>
   );
-}
-
-/**
- * An entity group is not obliged to carry a label, so falling back to its id
- * keeps the row identifiable instead of blank — and keeps it distinguishable
- * from the unattributed group, which is a different statement entirely.
- */
-function merchantLabel(identity: MerchantIdentity, t: TFunction<'purchases'>): string {
-  switch (identity.resolution) {
-    case 'entity':
-      return identity.name ?? t('merchants.unnamedEntity', { entityId: identity.entityId });
-    case 'name':
-      return identity.name;
-    case 'unattributed':
-      return t('merchants.unattributed');
-  }
 }

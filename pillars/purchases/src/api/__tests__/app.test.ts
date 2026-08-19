@@ -715,6 +715,106 @@ describe('purchase handler edge paths', () => {
     expect((await request(app).get('/purchases?from=last%20tuesday')).status).toBe(400);
   });
 
+  describe('the merchant filter a roll-up row opens', () => {
+    async function seedMerchants(): Promise<void> {
+      const merchants = [
+        { merchantEntityId: 'ent-woolies', merchantEntityName: 'Woolworths' },
+        { merchantEntityId: null, merchantEntityName: 'Woolworths' },
+        { merchantEntityId: null, merchantEntityName: null },
+      ];
+      for (const [index, merchant] of merchants.entries()) {
+        await request(app)
+          .post('/purchases')
+          .send({
+            ...minimalOrder,
+            ...merchant,
+            checksum: `merchant-${String(index)}`,
+            sourceOrderId: `merchant-${String(index)}`,
+          });
+      }
+    }
+
+    function checksums(body: { items: { checksum: string }[] }): string[] {
+      return body.items.map((item) => item.checksum);
+    }
+
+    it('opens an entity group without the label group that shares its name', async () => {
+      await seedMerchants();
+      const res = await request(app).get('/purchases?merchantEntityId=ent-woolies');
+
+      expect(res.status).toBe(200);
+      expect(checksums(res.body)).toEqual(['merchant-0']);
+    });
+
+    it('opens a label group without the entity group that shares its name', async () => {
+      await seedMerchants();
+      const res = await request(app).get('/purchases?merchantEntityName=Woolworths');
+
+      expect(res.status).toBe(200);
+      expect(checksums(res.body)).toEqual(['merchant-1']);
+    });
+
+    it('opens the unattributed bucket', async () => {
+      await seedMerchants();
+      const res = await request(app).get('/purchases?merchantUnattributed=true');
+
+      expect(res.status).toBe(200);
+      expect(checksums(res.body)).toEqual(['merchant-2']);
+    });
+
+    // A client sending its control's state unconditionally must not thereby
+    // forbid the other two parameters, so `false` is the absence of a filter
+    // rather than a request to exclude the bucket.
+    it('treats merchantUnattributed=false as no merchant filter at all', async () => {
+      await seedMerchants();
+      const res = await request(app).get(
+        '/purchases?merchantUnattributed=false&merchantEntityName=Woolworths'
+      );
+
+      expect(res.status).toBe(200);
+      expect(checksums(res.body)).toEqual(['merchant-1']);
+    });
+
+    it('refuses two merchant parameters rather than answering one of them', async () => {
+      await seedMerchants();
+      const res = await request(app).get(
+        '/purchases?merchantEntityId=ent-woolies&merchantEntityName=Woolworths'
+      );
+
+      expect(res.status).toBe(400);
+      expect(res.body.code).toBe('MERCHANT_FILTER_CONFLICT');
+      expect(res.body.message).toContain('merchantEntityId');
+      expect(res.body.message).toContain('merchantEntityName');
+    });
+
+    it('refuses the same combination on the roll-up the row came from', async () => {
+      await seedMerchants();
+      const res = await request(app).get(
+        '/analytics/merchant-spend?merchantEntityName=Woolworths&merchantUnattributed=true'
+      );
+
+      expect(res.status).toBe(400);
+      expect(res.body.code).toBe('MERCHANT_FILTER_CONFLICT');
+    });
+
+    it('scopes a roll-up to one merchant, so a row and its orders agree', async () => {
+      await seedMerchants();
+      const rollup = await request(app).get(
+        '/analytics/merchant-spend?merchantEntityName=Woolworths&currency=AUD'
+      );
+      const orders = await request(app).get(
+        '/purchases?merchantEntityName=Woolworths&currency=AUD'
+      );
+
+      expect(rollup.body.merchants).toHaveLength(1);
+      expect(rollup.body.merchants[0].orderCount).toBe(orders.body.items.length);
+    });
+
+    it('rejects a currency that is not an ISO code rather than matching nothing', async () => {
+      expect((await request(app).get('/purchases?currency=dollars')).status).toBe(400);
+    });
+  });
+
   it('rejects a malformed pops:// document uri', async () => {
     const res = await request(app)
       .post('/purchases')

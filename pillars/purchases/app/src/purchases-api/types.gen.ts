@@ -10,11 +10,28 @@ export type AnalyticsMerchantSpendData = {
   query?: {
     sources?: Array<string>;
     statuses?: Array<'awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored'>;
+    currency?: string;
+    merchantEntityId?: string;
+    merchantEntityName?: string;
+    merchantUnattributed?: boolean;
     from?: string;
     to?: string;
   };
   url: '/analytics/merchant-spend';
 };
+
+export type AnalyticsMerchantSpendErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+  };
+};
+
+export type AnalyticsMerchantSpendError =
+  AnalyticsMerchantSpendErrors[keyof AnalyticsMerchantSpendErrors];
 
 export type AnalyticsMerchantSpendResponses = {
   /**
@@ -126,6 +143,10 @@ export type PurchaseListData = {
   query?: {
     sources?: Array<string>;
     statuses?: Array<'awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored'>;
+    currency?: string;
+    merchantEntityId?: string;
+    merchantEntityName?: string;
+    merchantUnattributed?: boolean;
     from?: string;
     to?: string;
     limit?: number;
@@ -133,6 +154,18 @@ export type PurchaseListData = {
   };
   url: '/purchases';
 };
+
+export type PurchaseListErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+  };
+};
+
+export type PurchaseListError = PurchaseListErrors[keyof PurchaseListErrors];
 
 export type PurchaseListResponses = {
   /**

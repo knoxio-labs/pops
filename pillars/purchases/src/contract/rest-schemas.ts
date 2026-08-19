@@ -219,6 +219,18 @@ export const UpsertPurchaseSourceBodySchema = z.object({
  * Query filters for the order index. `sources` and `statuses` accept a
  * repeated query parameter; a single value is lifted into an array so
  * `?statuses=linked` and `?statuses=linked&statuses=partial` both work.
+ *
+ * The three merchant parameters are spelled separately because the pillar's
+ * three ways of attributing a merchant are three different statements, not
+ * three encodings of one. `merchantEntityId` selects a resolved `contacts`
+ * entity; `merchantEntityName` selects orders that carry only that label and
+ * no entity at all; `merchantUnattributed=true` selects orders naming no
+ * merchant. A filter accepting only the entity id would match nothing today,
+ * since no export adapter resolves one.
+ *
+ * At most one may be sent. A combination denotes no group the merchant
+ * roll-up produces, so the handler refuses it with a 400 rather than
+ * intersecting the two into an answer nothing asked for.
  */
 export const ListPurchasesQuerySchema = z.object({
   sources: z
@@ -230,6 +242,20 @@ export const ListPurchasesQuerySchema = z.object({
       z.array(PurchaseStatusSchema)
     )
     .optional(),
+  /**
+   * The order's own currency. Present because the roll-up groups on merchant
+   * *and* currency, so without it a merchant billing in two currencies has
+   * one row per currency and no way to open either of them alone.
+   */
+  currency: CurrencySchema.optional(),
+  merchantEntityId: z.string().min(1).optional(),
+  /**
+   * Matched verbatim, not trimmed: `merchantEntityName` is stored exactly as
+   * the source stated it and is the roll-up's own grouping key, so a filter
+   * that rewrote it would select a group that does not exist.
+   */
+  merchantEntityName: z.string().min(1).optional(),
+  merchantUnattributed: QueryBoolSchema.optional(),
   from: IsoTimestampSchema.optional(),
   to: IsoTimestampSchema.optional(),
   limit: z.coerce.number().int().min(1).max(500).optional(),
