@@ -36,7 +36,9 @@ The two alternatives were rejected, and they are the ones that manufacture wrong
 - **Promoting confidence** so a borderline stage fires. The stages that decline are declining on ambiguity, and a rule that named the merchant cannot break a tie between two of that merchant's transactions — it is evidence about the descriptor both of them already share.
 - **Licensing a near-miss amount.** This undercuts the premise the whole engine rests on. A stale rule — the merchant changed nothing, this simply is not the transaction that settled the order — would then reconcile money to the wrong purchase and record confidence for it. Silence costs a link that was never available; the alternative costs a wrong one.
 
-So a stage-4 miss is a no-op: the charge continues to partial and review exactly as if the rule did not exist, and stage 4 runs no subset-sum of its own.
+So a stage-4 miss costs nothing: a rule that admits no candidate at the charge amount leaves the charge to partial and review exactly as if it did not exist, and stage 4 runs no subset-sum of its own.
+
+**One exception, and it is deliberate.** Two rule-admitted candidates for exactly the charge amount settle the charge into review as ambiguous, so it never reaches partial — a charge the ladder would otherwise have part-paid from some smaller transaction. That is the presence of a rule changing an outcome the rule cannot itself settle, and it is the safe direction: two transactions from a merchant a human has accepted, each for exactly this charge, say one of them settled it, and the ladder does not invent a residual to avoid asking. Stage 1 declines the same shape the same way.
 
 **Ordering.** After combined, because a partition that closes exactly is stronger evidence than a learned descriptor. Before partial, for two reasons: a rule is a decision a human already made, and partial **consumes a transaction** — running it first lets one speculative part-payment claim the very transaction the rule was written about, silently disabling the correction.
 
@@ -47,6 +49,8 @@ Every other blocking test still applies — window, sign, non-zero, and the reje
 **A rule's own confidence caps the link's, and the stage caps that.** The rule inherits the confidence of the link that taught it, so one learned from a part-payment stays weaker than one learned from an exact match, and both sit below a plain `exact`. A rule below `MIN_MATCH_CONFIDENCE` never fires at all.
 
 **The sweep does not touch `timesApplied` or `lastUsedAt`.** Those record attributions a rule has earned — one per human decision, never revised downward — and unconfirmed links are re-derived from scratch on a timer, so counting an auto-link would add one every fifteen minutes for a link that never changed. The count happens when a stage-4 link is confirmed, which is also when the descriptor is re-recorded against the same rule row.
+
+What the sweep does report is `ruleLinksProposed`, the number of its proposals that came from stage 4, on the result and in the completion log line. Without it the stage is invisible in production: the rule table's counters answer a question about decisions, so a rule auto-linking money every night would look identical to one that has never matched anything. Attributing that count to individual rules is a separate piece of work, tracked in POPS-2377.
 
 **What bounds the stage's reach today is the writer, not the reader.** A rule can only be learned from a descriptor that was already proposed, and nothing proposes a blocked one — there is no route that links a charge to a transaction by hand. So the reachable wins are the ones where normalisation is what widens the pattern (store numbers, order references), not the ones where a human names a descriptor the source has never matched. Giving the operator a way to do the latter is tracked separately.
 
@@ -60,7 +64,7 @@ A decision that changed nothing durable is the reason the queue used to re-ask t
 | `reject`  | deleted | a `purchase_link_rejections` row for the pairing                  |
 | `unlink`  | deleted | nothing — by design                                               |
 
-**A confirm learns the merchant, not the link.** The rule is keyed on the accepted transaction's descriptor, normalised so a store number or an order reference does not become part of the pattern (`WOOLWORTHS 1234 SYDNEY` and `WOOLWORTHS 5567 SYDNEY` are one merchant), and scoped to the order's own `source`. The link then carries `match_rule_id`, so a link can be explained by naming the rule behind it — and a stage-4 link carries it from the moment it is proposed, naming the rule that admitted its descriptor. A descriptor that normalises to nothing (a terminal emitting a bare reference) writes no rule and still pins the link; refusing a real decision to protect an empty pattern would be the wrong trade.
+**A confirm learns the merchant, not the link.** The rule is keyed on the accepted transaction's descriptor, normalised so a store number or an order reference does not become part of the pattern (`WOOLWORTHS 1234 SYDNEY` and `WOOLWORTHS 5567 SYDNEY` are one merchant), and scoped to the order's own `source`. The link then carries `match_rule_id`, so a link can be explained by naming the rule behind it — and a stage-4 link carries it from the moment it is proposed, naming the rule that admitted its descriptor. A confirm fills that column in and never revises it: the rule a decision teaches is keyed on the exact descriptor, which for a `contains` or `regex` rule is a different row from the one that proposed the link, and re-pointing it there would credit the decision to a rule that had nothing to do with it. A descriptor that normalises to nothing (a terminal emitting a bare reference) writes no rule and still pins the link; refusing a real decision to protect an empty pattern would be the wrong trade.
 
 The descriptor comes from `purchase_charge_links.transaction_description`, written when the sweep proposes the link. The alternatives were both worse: asking finance during the decision makes an accept fail whenever the peer is down, and taking the descriptor from the request body trusts the caller with the value the rule is keyed on.
 
@@ -76,10 +80,12 @@ Exact, split and partial are per-charge: they ask what settles _this_ charge. **
 
 So: per-charge exact and split, then combined over everything they left untouched, then per-charge learned rules, then per-charge partial, then review.
 
-Both boundaries carry a reason, and both have a test that fails if the phases are swapped:
+Every boundary carries a reason, and every one has a test that fails if the phases are swapped:
 
 - **exact and split before combined** — a charge with its own exact match should take it rather than being swept into someone else's partition.
 - **combined before partial** — partial is the weakest guess the ladder makes _and it consumes a transaction_. Running it first lets one speculative part-payment claim the very transaction a clean multi-charge partition needed, leaving those charges with nothing. Learned rules sit in that gap for the same reason, from the other side: see above.
+
+A phase-ordering test is only a test if BOTH phases can settle the charge it contests. One built on a world where the later phase has nothing to say is green with the phases swapped and green with the phase deleted — so each of the stage-4 boundary tests is paired with the run that shows the rule firing on the same charge when nothing competes for it.
 
 A charge only joins a combination if the transaction is eligible for it on its own terms — inside _its_ window, matching _its_ source descriptor, same sign. Amounts adding up is not a reason to link across merchants or across years.
 

@@ -497,6 +497,45 @@ describe('what the rule then does on a later sweep', () => {
     expect(learned?.confirmedAt).toBeNull();
   });
 
+  it('counts the attribution when the operator agrees with the link it proposed', async () => {
+    // The other half of the refusal below. A stage-4 link a human confirms
+    // IS an attribution the rule earned, and the descriptor it was confirmed
+    // on re-records against the same row rather than minting a second rule
+    // saying what the first already said.
+    twoOrders();
+    const finance = bothStores();
+    await runSweep(deps(finance));
+    const proposed = onlyLink();
+    const { matchRuleId } = confirmLink(db, proposed.chargeId, proposed.uri, NOW);
+    await runSweep(deps(finance));
+    const learned = linkRows().find((link) => link.linkType === 'rule');
+    if (learned === undefined) throw new Error('expected the stage-4 link');
+
+    expect(confirmLink(db, learned.chargeId, learned.uri, NOW)).toEqual({
+      pinned: true,
+      matchRuleId,
+    });
+
+    expect(ruleRows()).toMatchObject([{ id: matchRuleId, timesApplied: 2 }]);
+  });
+
+  it('reports how many of a sweep proposals came from stage 4', async () => {
+    // The only production signal the stage fired at all: the rule table's
+    // own counters answer a different question, so without this a rule
+    // auto-linking money every night looks exactly like a rule that never
+    // matches anything.
+    twoOrders();
+    const finance = bothStores();
+    const before = await runSweep(deps(finance));
+    const proposed = onlyLink();
+    confirmLink(db, proposed.chargeId, proposed.uri, NOW);
+
+    const after = await runSweep(deps(finance));
+
+    expect(before).toMatchObject({ kind: 'swept', ruleLinksProposed: 0 });
+    expect(after).toMatchObject({ kind: 'swept', ruleLinksProposed: 1 });
+  });
+
   it('counts the attribution only when the operator agrees with it', async () => {
     // `timesApplied` is a history of decisions, and a sweep re-derives
     // every unconfirmed link on a timer — so counting an auto-link would
@@ -525,5 +564,37 @@ describe('what the rule then does on a later sweep', () => {
     await runSweep(deps(finance));
 
     expect(linkRows().map((link) => link.description)).toEqual([STORE_ONE]);
+  });
+
+  it('keeps naming the rule that admitted the descriptor when the confirm teaches another', async () => {
+    // A `contains` rule admits a descriptor that is not the pattern it
+    // stores, so the row a confirm records — keyed on the exact normalised
+    // descriptor — is a DIFFERENT row from the one that proposed the link.
+    // Overwriting the attribution there would credit the decision to a rule
+    // that had nothing to do with it, which is the whole value of the
+    // column: explaining a link by naming the rule behind it.
+    twoOrders();
+    opened.raw
+      .prepare(
+        `INSERT INTO purchase_match_rules
+           (id, description_pattern, match_type, source, is_active, confidence, priority, times_applied)
+         VALUES ('hand-written', 'AMAZON MKTPLACE', 'contains', 'amazon', 1, 0.9, 0, 0)`
+      )
+      .run();
+
+    await runSweep(deps(bothStores()));
+    const learned = linkRows().find((link) => link.linkType === 'rule');
+    if (learned === undefined) throw new Error('expected the stage-4 link');
+    expect(learned.matchRuleId).toBe('hand-written');
+
+    const outcome = confirmLink(db, learned.chargeId, learned.uri, NOW);
+
+    expect(outcome).toEqual({ pinned: true, matchRuleId: 'hand-written' });
+    expect(linkRows().find((link) => link.linkType === 'rule')?.matchRuleId).toBe('hand-written');
+    // The decision still taught the exact descriptor, as any confirm does.
+    expect(ruleRows().map((rule) => [rule.descriptionPattern, rule.timesApplied])).toEqual([
+      ['AMAZON MKTPLACE', 0],
+      ['AMAZON MKTPLACE AU', 1],
+    ]);
   });
 });
