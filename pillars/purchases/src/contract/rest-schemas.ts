@@ -84,6 +84,14 @@ export const CreateShipmentBodySchema = z.object({
 });
 
 export const CreateItemUnitBodySchema = z.object({
+  /**
+   * The serial engraved on the hardware, persisted verbatim and unvalidated.
+   * Amazon's DSAR export has no such column: its `Item Serial Number` is
+   * mostly a Transparency anti-counterfeit token identifying the packaging,
+   * so its adapter sends no units at all rather than promoting a package
+   * code into a field that means something else. See
+   * `pillars/purchases/src/ingest/amazon/README.md`.
+   */
   serialNumber: z.string().nullable().optional(),
   inventoryItemUri: PopsUriSchema.nullable().optional(),
 });

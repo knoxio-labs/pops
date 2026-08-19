@@ -170,14 +170,18 @@ export const purchaseItemUnits = sqliteTable(
       .notNull()
       .references(() => purchaseItems.id, { onDelete: 'cascade' }),
     /**
-     * The serial engraved on the hardware — what a warranty claim or an
-     * insurance report is keyed on. Nothing writes this column yet.
+     * Intended to hold the serial engraved on the hardware, the identity an
+     * owner can read off the item itself. Free text: callers set it over
+     * `POST /purchases` and nothing validates what arrives.
      *
-     * Not the Amazon DSAR export's `Item Serial Number`: on the reference
-     * bundle 28 of its 31 populated rows carry an `Authenticity_2D=AZ:...`
-     * token, Amazon's Transparency anti-counterfeit code. It identifies a
-     * *package*, not the device inside it, and does not belong here — see
-     * `src/ingest/amazon/README.md`.
+     * Not the Amazon DSAR export's `Item Serial Number`. On the reference
+     * bundle measured 2026-08-11, 28 of its 31 populated rows carry an
+     * `Authenticity_2D=AZ:...` token — Amazon's Transparency anti-counterfeit
+     * code, which identifies a *package*, not the device inside it. The
+     * remaining three carry no prefix and nothing says what they are, so the
+     * column cannot be sorted by inspection either. No ingest adapter in this
+     * repo writes it; see
+     * `pillars/purchases/src/ingest/amazon/README.md`.
      */
     serialNumber: text('serial_number'),
     inventoryItemUri: text('inventory_item_uri'),
