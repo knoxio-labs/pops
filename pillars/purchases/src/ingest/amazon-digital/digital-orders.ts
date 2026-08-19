@@ -6,20 +6,20 @@
  * `D01-…` against the physical `NNN-NNNNNNN-NNNNNNN` — and so they are
  * ingested under their own `purchase_sources` row rather than through a
  * widened order-history parser. The measurements behind that, and behind
- * the component arithmetic below, are in the README beside this file.
+ * the component arithmetic in `components.ts`, are in the README beside
+ * this file.
  */
 import { createHash } from 'node:crypto';
 
 import { parseBundleRows } from '../amazon/csv.js';
-import { readCents, readQuantity, readText, readTimestamp } from '../amazon/fields.js';
+import { readQuantity, readText, readTimestamp } from '../amazon/fields.js';
 import { buildRefundCharges, reportOrphanRefunds } from '../amazon/refund-charges.js';
 import {
   DIGITAL_ORDERS_FILENAME,
   DIGITAL_REQUIRED_COLUMNS,
-  PRICE_COMPONENT,
   SUCCESSFUL_ORDER_STATUS,
-  TAX_COMPONENT,
 } from './columns.js';
+import { readComponents, totalComponents } from './components.js';
 import { parseAmazonDigitalReturns, type DigitalRefund } from './digital-returns.js';
 
 import type {
@@ -28,6 +28,7 @@ import type {
   CreatePurchaseInput,
 } from '../../db/services/purchase-input.js';
 import type { AmazonAnomaly, Row } from '../amazon/columns.js';
+import type { ComponentTotals } from './components.js';
 
 /**
  * `purchase_sources.id` this adapter writes under.
@@ -125,20 +126,6 @@ function groupByOrderId(rows: readonly Row[], anomalies: AmazonAnomaly[]): Map<s
   return groups;
 }
 
-/** The money an order's component rows add up to, in the order's currency. */
-interface OrderMoney {
-  /** Σ positive `Price Amount` components. */
-  readonly subtotalCents: number;
-  /** Σ positive `Tax` components. */
-  readonly taxCents: number;
-  /** Magnitude of Σ negative components, of either type. */
-  readonly discountCents: number;
-  /** Σ every component, signed. What the card was actually charged. */
-  readonly totalCents: number;
-  /** Σ negative `Price Amount` components, kept signed for the line. */
-  readonly priceAdjustmentCents: number;
-}
-
 function buildOrder(
   sourceOrderId: string,
   rows: readonly Row[],
@@ -148,46 +135,31 @@ function buildOrder(
   const first = rows[0];
   if (first === undefined) return null;
 
-  const drop = (detail: string): null => {
-    anomalies.push({ kind: 'dropped-order', sourceOrderId, detail });
-    return null;
-  };
+  const header = readOrderHeader(first, sourceOrderId, anomalies);
+  if (header === null) return null;
 
-  // A row whose `Order Status` is not SUCCESS describes a purchase that did
-  // not complete. The physical parser ingests a cancelled line because the
-  // money was really spent; here the opposite holds — recording a failed
-  // digital order would invent spend that never left the account.
-  const status = readText(first['Order Status']);
-  if (status?.toLowerCase() !== SUCCESSFUL_ORDER_STATUS) {
-    return drop(
-      `Order Status is ${status === null ? 'absent' : `"${status}"`} rather than "SUCCESS", ` +
-        'so the purchase did not complete and no spend was recorded'
-    );
-  }
+  // Dropped rather than landed at zero: zero is a real total here, so an
+  // order silently landed at one would be indistinguishable from a
+  // promotion that cancelled the price.
+  const components = readComponents(rows, 'Transaction Amount', 'Component Type', (anomaly) => {
+    anomalies.push({
+      ...anomaly,
+      sourceOrderId,
+      detail: `${anomaly.detail}; the order was not ingested`,
+    });
+  });
+  if (components === null) return null;
 
-  const orderedAt = readTimestamp(first['Order Date']);
-  if (orderedAt === null) return drop(`unreadable Order Date "${first['Order Date'] ?? ''}"`);
-
-  const currency = readText(first['Base Currency Code']);
-  if (currency === null) return drop('unreadable Base Currency Code');
-  const orderCurrency = currency.toUpperCase();
-
-  const money = readComponents(rows, sourceOrderId, anomalies);
-  if (money === null) return null;
-
+  const money = totalComponents(components);
   const item = buildItem(first, money, sourceOrderId, anomalies);
-  const charges = buildRefundCharges(sourceOrderId, orderCurrency, refunds, anomalies);
-
-  // A price fully cancelled by a promotion, rather than a thing that was
-  // free. The two are the same $0 in every column but this one.
-  const promotionOffset = money.totalCents === 0 && money.subtotalCents > 0;
+  const charges = buildRefundCharges(sourceOrderId, header.currency, refunds, anomalies);
 
   return {
     source: AMAZON_DIGITAL_SOURCE_ID,
     sourceOrderId,
     ingestMethod: 'export',
-    orderedAt,
-    currency: orderCurrency,
+    orderedAt: header.orderedAt,
+    currency: header.currency,
     subtotalCents: money.subtotalCents,
     taxCents: money.taxCents,
     discountCents: money.discountCents,
@@ -201,79 +173,47 @@ function buildOrder(
     checksum: checksumFor(sourceOrderId, rows, charges),
     ...(item === null ? {} : { items: [item] }),
     ...(charges.length > 0 ? { charges } : {}),
-    ...(promotionOffset ? { tags: [PROMOTION_OFFSET_TAG] } : {}),
+    // A price fully cancelled by a promotion, rather than a thing that was
+    // free. The two are the same $0 in every column but this one.
+    ...(money.totalCents === 0 && money.subtotalCents > 0 ? { tags: [PROMOTION_OFFSET_TAG] } : {}),
   };
 }
 
 /**
- * Net an order's component rows into the four money fields.
+ * Read the three order-level facts without which an order must not be
+ * written.
  *
- * The file is one row per monetary component, and `Transaction Amount` is
- * that component's own money. Summing it across the order is the only
- * figure in the file that states what the card was charged: `Price` is the
- * list price, and on a credit-redeemed audiobook it is $14.95 against $0.00
- * actually paid.
- *
- * The redemption arrives as a matched pair — `Price Amount +13.59` with
- * `Price Amount -13.59` marked `Promotion`, and the same for tax — so the
- * positives are the goods and the negatives are the discount. Reading the
- * first row's `Price` instead would report every one of those orders at
- * full price.
- *
- * An order with no readable component is dropped rather than landed at
- * zero: zero is a real total here, so a parse failure that produced one
- * would be indistinguishable from a promotion that cancelled the price.
+ * A status other than `SUCCESS` is the one that reads oddly beside the
+ * physical parser, which ingests a cancelled line. The two are consistent:
+ * there the money really was spent and dropping the line would lose it,
+ * whereas here recording a failed purchase would invent spend that never
+ * left the account.
  */
-function readComponents(
-  rows: readonly Row[],
+function readOrderHeader(
+  row: Row,
   sourceOrderId: string,
   anomalies: AmazonAnomaly[]
-): OrderMoney | null {
-  let subtotalCents = 0;
-  let taxCents = 0;
-  let discountCents = 0;
-  let priceAdjustmentCents = 0;
+): { orderedAt: string; currency: string } | null {
+  const drop = (detail: string): null => {
+    anomalies.push({ kind: 'dropped-order', sourceOrderId, detail });
+    return null;
+  };
 
-  for (const row of rows) {
-    const component = readText(row['Component Type']);
-    if (component !== PRICE_COMPONENT && component !== TAX_COMPONENT) {
-      anomalies.push({
-        kind: 'unknown-component-type',
-        sourceOrderId,
-        detail:
-          `row states Component Type "${component ?? ''}", which is neither ` +
-          `"${PRICE_COMPONENT}" nor "${TAX_COMPONENT}"; the order was not ingested because ` +
-          'nothing says which side of the subtotal/tax split it belongs on',
-      });
-      return null;
-    }
-
-    const cents = readCents(row['Transaction Amount']);
-    if (cents === null) {
-      anomalies.push({
-        kind: 'unparseable-money',
-        sourceOrderId,
-        detail:
-          `${component} component has an unreadable Transaction Amount ` +
-          `"${row['Transaction Amount'] ?? ''}"; the order was not ingested`,
-      });
-      return null;
-    }
-
-    if (cents < 0) {
-      discountCents -= cents;
-      if (component === PRICE_COMPONENT) priceAdjustmentCents += cents;
-    } else if (component === PRICE_COMPONENT) subtotalCents += cents;
-    else taxCents += cents;
+  const status = readText(row['Order Status']);
+  if (status?.toLowerCase() !== SUCCESSFUL_ORDER_STATUS) {
+    return drop(
+      `Order Status is ${status === null ? 'absent' : `"${status}"`} rather than "SUCCESS", ` +
+        'so the purchase did not complete and no spend was recorded'
+    );
   }
 
-  return {
-    subtotalCents,
-    taxCents,
-    discountCents,
-    totalCents: subtotalCents + taxCents - discountCents,
-    priceAdjustmentCents,
-  };
+  const orderedAt = readTimestamp(row['Order Date']);
+  if (orderedAt === null) return drop(`unreadable Order Date "${row['Order Date'] ?? ''}"`);
+
+  const currency = readText(row['Base Currency Code']);
+  if (currency === null) return drop('unreadable Base Currency Code');
+
+  return { orderedAt, currency: currency.toUpperCase() };
 }
 
 /**
@@ -292,7 +232,7 @@ function readComponents(
  */
 function buildItem(
   row: Row,
-  money: OrderMoney,
+  money: ComponentTotals,
   sourceOrderId: string,
   anomalies: AmazonAnomaly[]
 ): CreateItemInput | null {
@@ -307,7 +247,6 @@ function buildItem(
   }
 
   const stated = readQuantity(row['Quantity Ordered']);
-  const quantity = stated === null || stated < 1 ? 1 : stated;
   if (stated === 0) {
     anomalies.push({
       kind: 'zero-quantity-line',
@@ -315,6 +254,7 @@ function buildItem(
       detail: `line "${name}" has quantity 0; ingested as 1`,
     });
   }
+  const quantity = stated === null || stated < 1 ? 1 : stated;
 
   return {
     name,

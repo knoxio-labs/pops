@@ -59,8 +59,9 @@ export const DIGITAL_RETURNS_REQUIRED_COLUMNS = [
 ] as const;
 
 /**
- * The two component types the file states. `Price Amount` is the goods,
- * `Tax` is the tax, and an order's rows are one of each per redemption.
+ * The two component types both digital files state. `Price Amount` is the
+ * goods, `Tax` is the tax, and a group's rows are one of each per
+ * redemption.
  *
  * A third value has never been seen, so a row carrying one is reported
  * rather than folded into either: guessing which side of the subtotal/tax

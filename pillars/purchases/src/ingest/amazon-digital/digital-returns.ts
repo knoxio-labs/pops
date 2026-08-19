@@ -19,9 +19,8 @@ import {
   COMPLETED_RETURN_STATUS,
   DIGITAL_RETURNS_FILENAME,
   DIGITAL_RETURNS_REQUIRED_COLUMNS,
-  PRICE_COMPONENT,
-  TAX_COMPONENT,
 } from './columns.js';
+import { netComponents, readComponents } from './components.js';
 
 import type { AmazonAnomaly, Row } from '../amazon/columns.js';
 
@@ -49,19 +48,18 @@ const UNKNOWN_ORDER_ID = '(no order id)';
  * Parse the CSV text of `Digital Returns.csv`.
  *
  * Rows are grouped by `(Order ID, Digital Order Item ID)` because that pair
- * is what one reversal is: an order item can in principle be returned, and
- * the components of two reversals of two items must not net against each
+ * is what one reversal is: an order item can in principle be returned on
+ * its own, and the components of two reversals must not net against each
  * other into one wrong number.
  */
 export function parseAmazonDigitalReturns(csvText: string): DigitalRefundParseResult {
   const anomalies: AmazonAnomaly[] = [];
   const refundsByOrderId = new Map<string, DigitalRefund[]>();
 
-  for (const [, rows] of groupByReturnedItem(
-    parseBundleRows(csvText, DIGITAL_RETURNS_FILENAME, DIGITAL_RETURNS_REQUIRED_COLUMNS),
-    anomalies
-  )) {
-    const refund = readRefund(rows, anomalies);
+  const rows = parseBundleRows(csvText, DIGITAL_RETURNS_FILENAME, DIGITAL_RETURNS_REQUIRED_COLUMNS);
+
+  for (const [, group] of groupByReturnedItem(rows, anomalies)) {
+    const refund = readRefund(group, anomalies);
     if (refund === null) continue;
 
     const existing = refundsByOrderId.get(refund.sourceOrderId);
@@ -96,20 +94,44 @@ function groupByReturnedItem(rows: readonly Row[], anomalies: AmazonAnomaly[]): 
 }
 
 /**
+ * Whether the netted components agree with the total the file states
+ * separately, where it states one at all.
+ *
+ * Two independent readings of one figure. A disagreement means one of them
+ * is wrong and nothing in the file says which, so neither is used.
+ */
+function agreesWithStatedTotal(
+  row: Row,
+  amountCents: number,
+  sourceOrderId: string,
+  anomalies: AmazonAnomaly[]
+): boolean {
+  const statedCents = readCents(row['Amount Refunded']);
+  if (statedCents === null || statedCents === amountCents) return true;
+
+  anomalies.push({
+    kind: 'refund-amount-disagreement',
+    sourceOrderId,
+    detail:
+      `Amount Refunded states ${String(statedCents)}c but the reversal's components net to ` +
+      `${String(amountCents)}c; no refund was recorded`,
+  });
+  return false;
+}
+
+/**
  * Net one reversal's component rows into a refund, or explain why not.
  *
- * Two gates, each stopping a different way of inventing money:
+ * Three gates, each stopping a different way of inventing money:
  *
  * - **the return must be complete.** An unfinished reversal has not moved
  *   anything, and recording it would understate what the order cost.
  * - **the net must be positive.** A reversal that nets to zero returned a
  *   subscription credit rather than money, and a zero-value refund charge
  *   would claim a disbursement no bank statement will ever carry.
- *
- * `Amount Refunded` is a second, independent statement of the same figure,
- * so where the file states it and it disagrees with the netted components
- * the refund is refused rather than guessed at — a disagreement means one
- * of the two readings is wrong and nothing in the file says which.
+ * - **`Amount Refunded` must agree where the file states it.** It is a
+ *   second, independent statement of the same figure, and where two
+ *   readings disagree nothing in the file says which is right.
  */
 function readRefund(rows: readonly Row[], anomalies: AmazonAnomaly[]): DigitalRefund | null {
   const first = rows[0];
@@ -130,27 +152,21 @@ function readRefund(rows: readonly Row[], anomalies: AmazonAnomaly[]): DigitalRe
     );
   }
 
-  let amountCents = 0;
-  for (const row of rows) {
-    const component = readText(row['Monetary Component Type']);
-    if (component !== PRICE_COMPONENT && component !== TAX_COMPONENT) {
+  const components = readComponents(
+    rows,
+    'Transaction Amount',
+    'Monetary Component Type',
+    (anomaly) => {
       anomalies.push({
-        kind: 'unknown-component-type',
+        ...anomaly,
         sourceOrderId,
-        detail:
-          `return row states Monetary Component Type "${component ?? ''}", which is neither ` +
-          `"${PRICE_COMPONENT}" nor "${TAX_COMPONENT}"; the reversal was not recorded`,
+        detail: `${anomaly.detail}; the reversal was not recorded`,
       });
-      return null;
     }
+  );
+  if (components === null) return null;
 
-    const cents = readCents(row['Transaction Amount']);
-    if (cents === null) {
-      return drop(`unreadable Transaction Amount "${row['Transaction Amount'] ?? ''}"`);
-    }
-    amountCents += cents;
-  }
-
+  const amountCents = netComponents(components);
   if (amountCents <= 0) {
     return drop(
       `the reversal's components net to ${String(amountCents)}c, so no money came back — a ` +
@@ -158,17 +174,7 @@ function readRefund(rows: readonly Row[], anomalies: AmazonAnomaly[]): DigitalRe
     );
   }
 
-  const statedCents = readCents(first['Amount Refunded']);
-  if (statedCents !== null && statedCents !== amountCents) {
-    anomalies.push({
-      kind: 'refund-amount-disagreement',
-      sourceOrderId,
-      detail:
-        `Amount Refunded states ${String(statedCents)}c but the reversal's components net to ` +
-        `${String(amountCents)}c; no refund was recorded`,
-    });
-    return null;
-  }
+  if (!agreesWithStatedTotal(first, amountCents, sourceOrderId, anomalies)) return null;
 
   const currency = readText(first['Base Currency']);
   if (currency === null) return drop('unreadable Base Currency');
