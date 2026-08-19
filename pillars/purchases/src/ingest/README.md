@@ -1,8 +1,8 @@
 # Ingest adapters
 
-Three today — `amazon/`, `woolworths/`, `receipt/` — and email is coming.
-Each has its own README for what makes its source hard. This file is what
-they have to agree on.
+Four today — `amazon/`, `amazon-digital/`, `woolworths/`, `receipt/` — and
+email is coming. Each has its own README for what makes its source hard.
+This file is what they have to agree on.
 
 ## Naming a purchase
 
@@ -23,6 +23,14 @@ The ladder, best first:
 1. **The merchant's own order id.** Amazon states one, so `amazon` uses it
    verbatim. Nothing derived can beat an identifier the merchant already
    commits to.
+
+   The `source` half of the key is doing real work there. Amazon issues
+   digital order ids from a namespace independent of its physical one, so
+   `amazon-digital` is its own source rather than a widened `amazon`: the
+   two spaces are free to collide, and under one source a collision would
+   come back as the 409 a backfill counts as "already had it" — a whole
+   order lost inside a run that reported success.
+
 2. **The transaction the till recorded.** Woolworths states no order id but
    prints `POS 066 TRANS 3184` — a counter per register per store.
    `store-POS-transaction-date` gives 413 distinct keys from 413 receipts,

@@ -16,6 +16,7 @@ import {
   listPurchases,
   purchaseCapture,
   purchases,
+  upsertSource,
 } from '../index.js';
 import { openPurchasesDb } from '../open-purchases-db.js';
 import { amazonOrder, coffeeOrder, openTempDb, seedAmazonSource } from './helpers.js';
@@ -106,6 +107,19 @@ describe('purchases constraints', () => {
     expect(() => {
       insertOrderRaw({ sourceOrderId: 'dupe' });
     }).toThrow(/UNIQUE constraint failed/i);
+  });
+
+  it('allows the same merchant order id under two different sources', () => {
+    // The unique index is `(source, source_order_id)`, not `source_order_id`
+    // alone, and that is the whole thing separating Amazon's digital order
+    // ids from its physical ones. Widening it to a global key would make a
+    // colliding pair report as a re-import and silently drop the second.
+    upsertSource(opened.db, { id: 'amazon-digital', label: 'Amazon Digital' });
+
+    insertOrderRaw({ source: 'amazon', sourceOrderId: 'shared' });
+    expect(() => {
+      insertOrderRaw({ source: 'amazon-digital', sourceOrderId: 'shared' });
+    }).not.toThrow();
   });
 
   it('allows many orders with no merchant order id', () => {

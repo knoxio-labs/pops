@@ -241,6 +241,7 @@ export type PurchaseCreateData = {
     sourceOrderId?: string | null;
     subtotalCents?: number;
     surchargeCents?: number;
+    tags?: Array<string>;
     taxCents?: number;
     totalCents: number;
   };

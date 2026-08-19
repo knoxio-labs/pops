@@ -22,6 +22,7 @@ import {
   NonNegativeCentsSchema,
   PopsUriSchema,
   PurchaseStatusSchema,
+  PurchaseTagSchema,
   SettlementModeSchema,
   SettlementRoleSchema,
   ShipmentStatusSchema,
@@ -193,6 +194,13 @@ export const CreatePurchaseBodySchema = z.object({
    * re-uploading the same bundle must be a no-op.
    */
   checksum: z.string().trim().min(1),
+  /**
+   * Facts about how the order itself was read — `date-uncertain` when the
+   * source stated no date, `promotion-offset` when a promotion cancelled
+   * the price to zero. Without them an inferred figure is indistinguishable
+   * from one the source stated, which is the difference a reviewer needs.
+   */
+  tags: z.array(PurchaseTagSchema).optional(),
   shipments: z.array(CreateShipmentBodySchema).optional(),
   items: z.array(CreateItemBodySchema).optional(),
   charges: z.array(CreateChargeBodySchema).optional(),

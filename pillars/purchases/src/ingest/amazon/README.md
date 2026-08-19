@@ -81,7 +81,7 @@ Both are anomalies, never silent: an unrecorded refund leaves the order reportin
 
 **No documents** (POPS-1304). The bundle ships 325 tax-invoice PDFs, but their filenames carry no order id — mapping one to an order needs text extraction from the PDF.
 
-**No digital orders** (POPS-1306). `Digital Content Orders.csv` is a separate Order ID namespace with zero overlap against the 748 physical orders, so it needs its own path rather than a widened parser. `Digital Returns.csv` belongs with it, not here.
+**No digital orders.** `Digital Content Orders.csv` is a separate Order ID namespace with zero overlap against the 748 physical orders, and `../amazon-digital/` reads it under its own source. `Digital Returns.csv` belongs with it, not here.
 
 ## Running it
 

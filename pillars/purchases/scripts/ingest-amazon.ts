@@ -27,6 +27,7 @@ import {
   createIngestClient,
   isCliEntrypoint,
   postPurchases,
+  readBundlePath,
   reportOutcome,
   runCli,
   summariseAnomalies,
@@ -35,18 +36,6 @@ import {
 
 const ORDER_HISTORY_PATH = join('Your Amazon Orders', 'Order History.csv');
 const REFUND_DETAILS_PATH = join(...REFUND_DETAILS_BUNDLE_PATH);
-
-function readBundlePath(argv: readonly string[]): string {
-  const bundlePath = argv.find((arg) => !arg.startsWith('--'));
-  if (bundlePath === undefined) {
-    throw new Error(
-      'usage: pnpm ingest:amazon -- "<bundle-root>" [--dry-run]\n' +
-        '<bundle-root> is the unzipped DSAR bundle: the directory CONTAINING ' +
-        '"Your Amazon Orders", not that folder itself.'
-    );
-  }
-  return bundlePath;
-}
 
 /**
  * Read `Refund Details.csv`, which a bundle from an account that never
@@ -67,7 +56,7 @@ function readRefundDetails(bundlePath: string): string | undefined {
 }
 
 export async function main(argv: readonly string[] = process.argv.slice(2)): Promise<void> {
-  const bundlePath = readBundlePath(argv);
+  const bundlePath = readBundlePath(argv, 'ingest:amazon');
   const dryRun = argv.includes('--dry-run');
 
   // Resolved before the bundle is read: a multi-hundred-megabyte DSAR parse
