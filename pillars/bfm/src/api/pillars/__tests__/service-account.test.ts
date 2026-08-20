@@ -115,7 +115,11 @@ describe('the granted scopes', () => {
   });
 
   it('grants only what bfm calls today', () => {
-    expect(BFM_SERVICE_ACCOUNT_SCOPES).toEqual(['finance.transactions', 'purchases.receipt']);
+    expect(BFM_SERVICE_ACCOUNT_SCOPES).toEqual([
+      'finance.transactions',
+      'purchases.purchase',
+      'purchases.receipt',
+    ]);
   });
 
   it('grants no root scope, so a widening stays a visible diff', () => {

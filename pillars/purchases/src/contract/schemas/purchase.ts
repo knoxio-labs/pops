@@ -72,6 +72,32 @@ export const PurchaseSchema = z.object({
   updatedAt: IsoTimestampSchema,
 });
 
+/**
+ * An order as a list renders it: every field of {@link PurchaseSchema}, plus
+ * the two things a row needs that are not columns.
+ *
+ * They travel on the list rather than being fetched per row on purpose. A
+ * consumer that has to ask again for a line count, or again for the receipt to
+ * show a thumbnail, makes one request per visible row — which on a handset is
+ * the difference between a list that loads and a list that ships without
+ * thumbnails.
+ */
+export const PurchaseListRowSchema = PurchaseSchema.extend({
+  /** How many lines the order has. `0` is normal — a receipt read as a total alone has none. */
+  itemCount: z.int().min(0),
+  /**
+   * The order's first receipt-kind document, or `null` when it has none.
+   *
+   * A `pops://` reference rather than bytes: a list row carrying an image
+   * inline would make a page of orders a megabyte of base64, and the same
+   * receipt would be re-sent on every page that showed it. No route
+   * dereferences it today, so a consumer can key a cache on it and recognise
+   * two rows as the same receipt, and cannot render one — see the pillar
+   * README.
+   */
+  receiptUri: PopsUriSchema.nullable(),
+});
+
 export const PurchaseShipmentSchema = z.object({
   id: z.string(),
   purchaseId: z.string(),

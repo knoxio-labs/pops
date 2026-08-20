@@ -54,6 +54,8 @@ import {
   MobileForbiddenErrorSchema,
   MobileInvalidTokenErrorSchema,
   MobilePayloadTooLargeErrorSchema,
+  MobilePurchaseDetailSchema,
+  MobilePurchasesPageSchema,
   MobileReceiptOutcomeSchema,
   MobileReceiptUploadBodySchema,
   MobileRequestErrorSchema,
@@ -156,17 +158,54 @@ const mobileFinanceContract = c.router({
 });
 
 /**
- * The mobile write surface: content the handset captured, handed to the pillar
- * that owns it.
+ * The phone's view of `purchases`: the orders it can read, and the receipt it
+ * can hand over.
  *
- * One route today, and the reason it is only one is the capability it declares
- * rather than the verb it uses. `purchases.receipts.write` buys a receipt
- * upload and nothing else in that pillar — reading an order is a separate
- * capability, and destroying one is not on this surface at all (ADR-048).
- * `__tests__/mobile-capabilities.test.ts` walks this contract and fails on a
- * mobile route that declares nothing.
+ * Three routes and two capabilities, which is the whole point of ADR-048 in
+ * one sub-router. `purchases.receipts.write` buys the upload and nothing else;
+ * `purchases.read` buys the list and the detail and nothing else. A device may
+ * hold either without the other — photographing a till slip and scrolling a
+ * history of everything the household has bought are different authorities —
+ * and destroying an order is on neither, because it is not on this surface at
+ * all. `__tests__/mobile-capabilities.test.ts` walks this contract and fails on
+ * a mobile route that declares nothing.
  */
 const mobilePurchasesContract = c.router({
+  listPurchases: {
+    method: 'GET',
+    path: '/mobile/purchases',
+    query: z.object({
+      limit: MobilePageLimit,
+      /**
+       * Opaque continuation token from a previous page's `nextCursor`. Its
+       * contents are bfm's business and may change; the app must echo it back
+       * unmodified and must never construct one.
+       */
+      cursor: z.string().optional(),
+    }),
+    responses: {
+      200: MobilePurchasesPageSchema,
+      ...MOBILE_REQUEST_RESPONSES,
+      ...MOBILE_PERIMETER_RESPONSES,
+      ...MOBILE_UPSTREAM_RESPONSES,
+    },
+    summary: 'One cursor-paginated page of purchase list rows',
+    metadata: requires('purchases.read'),
+  },
+  getPurchase: {
+    method: 'GET',
+    path: '/mobile/purchases/:id',
+    pathParams: z.object({ id: z.string() }),
+    responses: {
+      200: MobilePurchaseDetailSchema,
+      ...MOBILE_REQUEST_RESPONSES,
+      ...MOBILE_PERIMETER_RESPONSES,
+      404: MobileUpstreamErrorSchema,
+      ...MOBILE_UPSTREAM_RESPONSES,
+    },
+    summary: 'The fuller record behind one list row, with its lines',
+    metadata: requires('purchases.read'),
+  },
   uploadReceipt: {
     method: 'POST',
     path: '/mobile/purchases/receipts',

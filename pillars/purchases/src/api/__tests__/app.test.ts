@@ -309,6 +309,77 @@ describe('GET /purchases', () => {
     const res = await requestOn(app).get('/purchases?from=2026-02-30T00:00:00Z');
     expect(res.status).toBe(400);
   });
+
+  /**
+   * The two aggregates a list row carries. They exist so a consumer building a
+   * scrollable list makes one request rather than one per visible row, and
+   * they are asserted through the route rather than against the query because
+   * the failure that matters is a row reaching a client without them.
+   */
+  it('counts an order’s lines on the row itself', async () => {
+    await requestOn(app).post('/purchases').send(fullOrder);
+
+    const res = await requestOn(app).get('/purchases');
+
+    expect(res.body.items[0].itemCount).toBe(2);
+  });
+
+  it('names the order’s receipt on the row, and null when it has none', async () => {
+    const withReceipt = await requestOn(app)
+      .post('/purchases')
+      .send({
+        ...minimalOrder,
+        sourceOrderId: 'order-with-receipt',
+        checksum: 'checksum-with-receipt',
+        documents: [{ documentUri: 'pops://purchases/receipt/abc', kind: 'receipt' }],
+      });
+    expect(withReceipt.status).toBe(201);
+    const withoutReceipt = await requestOn(app)
+      .post('/purchases')
+      .send({
+        ...minimalOrder,
+        sourceOrderId: 'order-without-receipt',
+        checksum: 'checksum-without-receipt',
+      });
+    expect(withoutReceipt.status).toBe(201);
+
+    const res = await requestOn(app).get('/purchases');
+
+    const byId = new Map<string, string | null>(
+      res.body.items.map((row: { id: string; receiptUri: string | null }) => [
+        row.id,
+        row.receiptUri,
+      ])
+    );
+    expect(byId.get(withReceipt.body.purchase.id)).toBe('pops://purchases/receipt/abc');
+    expect(byId.get(withoutReceipt.body.purchase.id)).toBeNull();
+  });
+
+  it('ignores a document that is not a receipt when naming one', async () => {
+    // A tax invoice is evidence too, and it is not what a list row shows.
+    const created = await requestOn(app)
+      .post('/purchases')
+      .send({
+        ...minimalOrder,
+        documents: [{ documentUri: 'pops://purchases/invoice/x', kind: 'tax_invoice' }],
+      });
+    expect(created.status).toBe(201);
+
+    const res = await requestOn(app).get('/purchases');
+
+    expect(res.body.items[0].receiptUri).toBeNull();
+  });
+
+  it('counts zero lines as zero rather than omitting the field', async () => {
+    // A receipt read as a total alone has no lines, and a row missing the
+    // field entirely is one a generated client cannot decode.
+    const created = await requestOn(app).post('/purchases').send(minimalOrder);
+    expect(created.status).toBe(201);
+
+    const res = await requestOn(app).get('/purchases');
+
+    expect(res.body.items[0]).toHaveProperty('itemCount', 0);
+  });
 });
 
 describe('GET /items', () => {

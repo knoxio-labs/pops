@@ -1034,11 +1034,13 @@ export interface operations {
               id: string;
               /** @enum {string} */
               ingestMethod: 'email' | 'export' | 'upload' | 'manual';
+              itemCount: number;
               merchantEntityId: string | null;
               merchantEntityName: string | null;
               orderedAt: string;
               paymentHint: string | null;
               rawRef: string | null;
+              receiptUri: string | null;
               /** @enum {string} */
               settlementMode: 'card' | 'cash' | 'unknown';
               shippingCents: number;

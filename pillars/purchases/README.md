@@ -162,6 +162,8 @@ A supermarket receipt says `CHK BRST 1KG`; an invoice for the same thing says `C
 
 A product left with no wordings is deleted in the same write: a product nothing resolves to is a label no read path can reach, and one a caller could still confirm and rename.
 
+Each row of that table is a control on `/purchases/products` — the frontend's own README states how the page presents them, and what a correction does to figures already derived from the old grouping.
+
 **The grain is the wording, not the line**, which buys the dictionary its main property — a mapping is stated once and applies to every line that ever prints that wording, past or future, with no backfill — and costs it one: two genuinely different products that a merchant prints _identically_ cannot be told apart here, because there is nothing but the wording to tell them apart with. That is the `name` basis's existing limitation carried forward rather than a new one, and it is the same trade the rest of this section argues for: a visible non-answer over an invisible wrong one.
 
 **`confirmedAt` is the whole boundary between a pass and a person**, the same idiom `purchase_item_tags` and `purchase_items.kindConfirmedAt` carry. Null means the proposal pass owns the row — it may retire the entry once no line prints that wording. Non-null means a human asserted it, and the pass may not retire, repoint or relabel it, even when the line that prompted it has been deleted. The pass runs over **every** line with no scope filter, deliberately: deriving the dictionary from a window would retire entries whose lines merely fell outside it.
@@ -170,7 +172,7 @@ A product left with no wordings is deleted in the same write: a product nothing 
 
 **Running the pass is a command, and it previews by default.** `pnpm -F @pops/purchases propose:products` runs the real pass inside a transaction it then rolls back, and prints the counts plus a sample of the wordings it would mint and retire and of the renamed products those retirements would take with them. It leaves the dictionary exactly as it found it — opening the file still applies any pending migration, as every command here does. `-- --write` runs the same pass and commits it; that is a second scan of whatever the lines say by then, so a database still being ingested into can legitimately answer the two runs differently. Like `propose:kinds` it goes at the SQLite file rather than over HTTP, so it needs no base URL and no service-account key — and unlike it, this pass calls no model, so a preview costs a scan and nothing else. The preview is the default here and not there because this pass deletes: it retires the unconfirmed entries no line prints any more, where the kind pass only ever fills a NULL. `POST /products/proposals` is still the other way in, and still writes immediately.
 
-**Nothing runs the pass on a schedule, and that is a decision rather than an omission.** The pass is idempotent and reads every line by design, and it will not retire, repoint or relabel a confirmed entry — though the marker is on the wording and not on the product, so a product a human renamed is deleted with its last unconfirmed wording either way (POPS-2431). What the pass produces is a review queue, and no surface shows that queue (POPS-2392). A nightly run would mint entries nobody can see or correct, and would move every eligible leaderboard row off the honest `name` basis onto an unconfirmed `product` one on every deployment, without anyone having asked for a dictionary at all. So it stays on demand, where the preview can put the deletions in front of someone before they happen; POPS-2416 revisits it once the corrections have a home.
+**Nothing runs the pass on a schedule, and that is a decision rather than an omission.** The pass is idempotent and reads every line by design, and it will not retire, repoint or relabel a confirmed entry — though the marker is on the wording and not on the product, so a product a human renamed is deleted with its last unconfirmed wording either way (POPS-2431). What the pass produces is a review queue, and `pillars/purchases/app` now shows it: `/purchases/products` runs the pass, reports its `ProposalOutcome` in full, and offers every correction in the table above, so neither the pass nor its undo needs an HTTP client any more. The argument against a schedule is what survives that: a nightly run would move every eligible leaderboard row off the honest `name` basis onto an unconfirmed `product` one on every deployment, without anyone having asked for a dictionary at all. So it stays on demand, where the preview can put the deletions in front of someone before they happen; POPS-2416 revisits it now that the corrections have a home.
 
 ## Other invariants that span files
 
@@ -311,8 +313,30 @@ Two things this still does not buy, both real:
 
 `ai.tools` stays empty, and that is a different decision rather than the same one twice. That slot hosts tool _definitions_ for the orchestrator's own tool-router to project; purchases' assistant reach is the MCP module above. Finance, inventory, media and cerebrum all declare `ai.tools: []` and all ship MCP tools.
 
+## The list row carries two things the order row does not
+
+`GET /purchases` answers `PurchaseListRowSchema` — every field of the order,
+plus `itemCount` and `receiptUri`. Both are aggregates rather than columns, and
+they travel on the page because the alternative is a request per visible row:
+a consumer building a scrollable list would otherwise fetch the page and then
+fetch every order in it to count its lines and find its receipt. `receiptUri`
+is the order's first receipt-kind document by `(createdAt, id)`, the same
+ordering `GET /purchases/:id` returns documents in, so a row and the detail
+behind it name the same receipt. Both aggregates are scoped to the ids on the
+page, not to the filter — see `listPurchaseRows` in
+`src/db/services/purchase-reads.ts`.
+
+**Nothing serves the bytes `receiptUri` names (POPS-2475).** The file is on
+disk, content-addressed, and reachable by no route: a consumer can key a cache
+on the URI and recognise two rows as the same receipt, and cannot render it.
+
 ## What is deliberately absent
 
+- **A keyset anchor on `GET /purchases`** (POPS-2476). It pages by
+  `limit`/`offset`, so a list walked while an order is ingested at the head
+  re-serves a row and skips another. finance grew `(beforeDate, beforeId)` for
+  exactly this; bfm's mobile purchases cursor carries an offset until this
+  does.
 - **Gmail IMAP ingest** (POPS-242). The ongoing feed, once the export/upload paths proved the reconciliation model — they have: `src/ingest/` carries `amazon/`, `amazon-digital/`, `woolworths/` and `receipt/` today. Email is the one source still unwritten.
 - **The merchant lens** (POPS-241). Its backend has been there since POPS-1752 (`GET /analytics/merchant-spend` above); the view is a separate slice. The reconciliation queue, the other half of that ticket, now exists at `/purchases` — see [`app/README.md`](app/README.md) for what its two decisions do and do not persist.
 

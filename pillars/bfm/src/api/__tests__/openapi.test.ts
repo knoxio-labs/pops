@@ -131,7 +131,9 @@ describe('GET /openapi', () => {
       '/mobile/bootstrap',
       '/mobile/finance/transactions',
       '/mobile/finance/transactions/{id}',
+      '/mobile/purchases',
       '/mobile/purchases/receipts',
+      '/mobile/purchases/{id}',
     ]);
   });
 

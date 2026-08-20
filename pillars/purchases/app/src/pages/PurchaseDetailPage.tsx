@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, useParams, useSearchParams } from 'react-router';
 
 import { useSetPageContext } from '@pops/navigation';
-import { Button, formatCents, PageHeader } from '@pops/ui';
+import { formatCents, PageHeader } from '@pops/ui';
 
 import { AccountingSplit } from './purchase-detail/AccountingSplit.js';
 import { ChargeList } from './purchase-detail/ChargeList.js';
@@ -14,6 +14,7 @@ import {
   usePurchaseDetail,
   type PurchaseDetailModel,
 } from './purchase-detail/usePurchaseDetail.js';
+import { RetryableError } from './RetryableError.js';
 
 import type { ReactElement, ReactNode } from 'react';
 
@@ -70,13 +71,12 @@ function PurchaseDetailBody({ model, highlightedItemId }: PurchaseDetailBodyProp
 
     case 'failed':
       return (
-        <div role="alert" className="border-destructive/50 bg-destructive/10 rounded-md border p-4">
-          <p className="mb-2 text-sm font-medium">{t('purchase.error.title')}</p>
-          <p className="text-muted-foreground mb-3 text-xs">{model.failure.message}</p>
-          <Button size="sm" variant="outline" onClick={model.refetch}>
-            {t('purchase.error.retry')}
-          </Button>
-        </div>
+        <RetryableError
+          title={t('purchase.error.title')}
+          message={model.failure.message}
+          retryLabel={t('purchase.error.retry')}
+          onRetry={model.refetch}
+        />
       );
 
     case 'ready':

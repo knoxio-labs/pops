@@ -8,8 +8,8 @@ It listens on port **3014**.
 It owns a database — the device allow-list, described under
 [Persistence](#persistence) below — which makes it a data pillar by kind
 (ADR-035). Its mobile surfaces are the transaction list and detail under
-`/mobile/finance/*` and the receipt upload under `/mobile/purchases/*`, behind
-the perimeter that guards them — and the whole path a
+`/mobile/finance/*` and the purchase list, detail and receipt upload under
+`/mobile/purchases/*`, behind the perimeter that guards them — and the whole path a
 phone takes to get behind that perimeter is here too: the operator surface that
 mints a pairing code, and the exchange that spends it for a device identity.
 See
@@ -23,21 +23,23 @@ It also holds a service-account credential and one way to spend it — see
 [Reaching sibling pillars](#reaching-sibling-pillars) and
 [`src/api/pillars/README.md`](src/api/pillars/README.md).
 
-| Surface                                | What it does                                                                         |
-| -------------------------------------- | ------------------------------------------------------------------------------------ |
-| `GET /health`                          | Liveness shape. Served from the ts-rest contract, so it cannot drift from the doc.   |
-| `GET /openapi`                         | The committed contract projection, served verbatim so peers build a route map.       |
-| `POST /devices/pair`                   | Spends a pairing code for a device identity. Unauthenticated by definition.          |
-| `POST /devices/challenge`              | Mints a single-use nonce for a refresh. Carries no credential and needs none.        |
-| `POST /devices/refresh`                | Rotates a refresh token against a Secure Enclave signature. Detects reuse.           |
-| `POST /operator/pairing/codes`         | Mints a single-use pairing code. The plaintext is returned once and never again.     |
-| `GET /operator/devices`                | Paired handsets, revoked ones included. Never returns a token or a key.              |
-| `DELETE /operator/devices/:id`         | Soft-revokes, and kills the device's refresh-token family in the same transaction.   |
-| `GET /mobile/bootstrap`                | What the app should render, and who bfm says it is talking to. See below.            |
-| `GET /mobile/finance/transactions`     | One cursor-paginated page of list rows — see [The mobile shape](#the-mobile-shape).  |
-| `GET /mobile/finance/transactions/:id` | The fuller record behind one row, for the detail screen.                             |
-| `POST /mobile/purchases/receipts`      | Hands a captured receipt to `purchases` — see [The mobile write](#the-mobile-write). |
-| `/mobile/*`                            | Everything the phone calls, gated by `requireDevice`.                                |
+| Surface                                | What it does                                                                                 |
+| -------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `GET /health`                          | Liveness shape. Served from the ts-rest contract, so it cannot drift from the doc.           |
+| `GET /openapi`                         | The committed contract projection, served verbatim so peers build a route map.               |
+| `POST /devices/pair`                   | Spends a pairing code for a device identity. Unauthenticated by definition.                  |
+| `POST /devices/challenge`              | Mints a single-use nonce for a refresh. Carries no credential and needs none.                |
+| `POST /devices/refresh`                | Rotates a refresh token against a Secure Enclave signature. Detects reuse.                   |
+| `POST /operator/pairing/codes`         | Mints a single-use pairing code. The plaintext is returned once and never again.             |
+| `GET /operator/devices`                | Paired handsets, revoked ones included. Never returns a token or a key.                      |
+| `DELETE /operator/devices/:id`         | Soft-revokes, and kills the device's refresh-token family in the same transaction.           |
+| `GET /mobile/bootstrap`                | What the app should render, and who bfm says it is talking to. See below.                    |
+| `GET /mobile/finance/transactions`     | One cursor-paginated page of list rows — see [The mobile shape](#the-mobile-shape).          |
+| `GET /mobile/finance/transactions/:id` | The fuller record behind one row, for the detail screen.                                     |
+| `GET /mobile/purchases`                | One cursor-paginated page of purchase list rows — see [The mobile shape](#the-mobile-shape). |
+| `GET /mobile/purchases/:id`            | One order with its lines, for the detail screen.                                             |
+| `POST /mobile/purchases/receipts`      | Hands a captured receipt to `purchases` — see [The mobile write](#the-mobile-write).         |
+| `/mobile/*`                            | Everything the phone calls, gated by `requireDevice` and then `requireCapability`.           |
 
 `/health` answers without a database round-trip, which is why an unreachable
 `bfm.db` still reads as live.
@@ -282,6 +284,33 @@ bfm asks finance for one row more than the page. That extra row's existence is
 what proves another page exists — asking for a total instead would be a second
 count query per scroll tick, and a total that is stale the moment it is read.
 
+### The purchases list, and where it differs
+
+`GET /mobile/purchases` and `GET /mobile/purchases/:id` are the same shape of
+leg against a different producer (`src/api/purchases/list-wire.ts`,
+`list-cursor.ts`), and three things about them are worth knowing before
+reading either.
+
+**A row carries what a row draws, including its receipt.** `itemCount` and
+`receiptUri` come down with the page rather than being fetched per order,
+because a list that needs a request per visible row to show a thumbnail is a
+list that ships without thumbnails. `purchases` computes both for the page —
+see that pillar's README. Nothing serves the bytes `receiptUri` names yet
+(POPS-2475), so the phone can key a cache on it and cannot draw it.
+
+**The date is a day, not an instant.** `orderedOn` is `YYYY-MM-DD`, derived by
+bfm from the offset the order's own `orderedAt` carries. That is deliberate and
+it is the mistake the transactions leg made in the other direction: a client
+handed an instant resolves it in whatever zone the handset is standing in, so a
+purchase made at 9pm re-dates itself when its owner flies west. The detail
+carries `orderedAt` beside the day for anything that genuinely needs the
+instant; a client must never re-derive the day from it.
+
+**The cursor carries an OFFSET, not an anchor.** `purchases`' list exposes no
+keyset anchor, so the walk has the instability the finance leg was built to
+avoid: an order captured at the head mid-scroll shifts every offset by one.
+Opacity is what keeps that fixable without touching a handset (POPS-2476).
+
 ## The mobile write
 
 `POST /mobile/purchases/receipts` is the only route on this pillar that is not
@@ -500,7 +529,7 @@ and send it in that header, against the registry's admin surface reachable
 externally through the shell proxy:
 
 ```bash
-curl -sS -X POST https://pops.local/registry-api/service-accounts -H 'Content-Type: application/json' -H "cf-access-jwt-assertion: $ACCESS_JWT" -d '{"name":"bfm","scopes":["finance.transactions","purchases.receipt"]}'
+curl -sS -X POST https://pops.local/registry-api/service-accounts -H 'Content-Type: application/json' -H "cf-access-jwt-assertion: $ACCESS_JWT" -d '{"name":"bfm","scopes":["finance.transactions","purchases.purchase","purchases.receipt"]}'
 ```
 
 Two deployment shapes let a bare `curl` through, which is why this can work on
