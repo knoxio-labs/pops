@@ -22,6 +22,12 @@ public enum PopsRadius {
 /// Stroke widths.
 public enum PopsBorder {
     public static let hairline: CGFloat = 1
+
+    /// A rule that is saying something — the field the keyboard is pointed at,
+    /// the one holding a problem. Thick enough to be seen without colour,
+    /// because a state carried only by a hue is a state a reader who cannot
+    /// separate those hues does not have.
+    public static let emphasis: CGFloat = 2
 }
 
 /// Fixed dimensions, named by what occupies them.
@@ -40,6 +46,17 @@ public enum PopsSize {
     /// guidance. A control smaller than this is one that gets missed rather
     /// than one that looks tidy.
     public static let touchTarget: CGFloat = 44
+
+    /// The column an amount is set in, beside the description it belongs to.
+    /// Wide enough for a figure with a currency's worth of minor units and no
+    /// wider: an amount column given half the row is one the eye stops
+    /// treating as a column.
+    public static let amountColumn: CGFloat = 112
+
+    /// A field holding a small count — a quantity, a page number. Narrow on
+    /// purpose: a count in a field the width of a description is one a reader
+    /// starts reading as a description.
+    public static let countField: CGFloat = 72
 
     /// One captured page, shown beside what was read off it. Taller than it is
     /// wide because a till receipt is, and a plate in a photograph's
