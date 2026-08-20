@@ -150,6 +150,8 @@ A supermarket receipt says `CHK BRST 1KG`; an invoice for the same thing says `C
 
 A product left with no wordings is deleted in the same write: a product nothing resolves to is a label no read path can reach, and one a caller could still confirm and rename.
 
+**The grain is the wording, not the line**, which buys the dictionary its main property — a mapping is stated once and applies to every line that ever prints that wording, past or future, with no backfill — and costs it one: two genuinely different products that a merchant prints _identically_ cannot be told apart here, because there is nothing but the wording to tell them apart with. That is the `name` basis's existing limitation carried forward rather than a new one, and it is the same trade the rest of this section argues for: a visible non-answer over an invisible wrong one.
+
 **`confirmedAt` is the whole boundary between a pass and a person**, the same idiom `purchase_item_tags` and `purchase_items.kindConfirmedAt` carry. Null means the proposal pass owns the row — it may retire the entry once no line prints that wording. Non-null means a human asserted it, and the pass may not retire, repoint or relabel it, even when the line that prompted it has been deleted. The pass runs over **every** line with no scope filter, deliberately: deriving the dictionary from a window would retire entries whose lines merely fell outside it.
 
 **A database that never runs the pass behaves exactly as it did before this existed** — an on-the-fly group per normalised name, resolved fresh on every read. Nothing is backfilled and no ingest path writes here.

@@ -98,25 +98,32 @@ no product**, not that a transcription was skipped, and two NULLs are not a
 match — a `GROUP BY` that folded them would put one verdict on an entire
 merchant.
 
-That leaves the open problem, tracked as POPS-243, correctly scoped: for
-Woolworths and for uploaded receipts there is no key to normalise _toward_,
-so the job is not "map receipt-speak onto a known product" but "mint a
-product identity from a printed name, with nothing to anchor it to". Such an
-identity is a POPS judgement, not a merchant's word, and it does not belong
-in this column — `sku` holds what a source stated. The failure mode to design
-against is over-eager merging: two genuinely different products collapsing
-into one corrupts spend attribution in a way that is very hard to notice
-afterwards. Leaving items ungrouped is the safer wrong answer.
+That scoped the remaining problem correctly: for Woolworths and for uploaded
+receipts there is no key to normalise _toward_, so the job was never "map
+receipt-speak onto a known product" but "mint a product identity from a
+printed name, with nothing to anchor it to". Such an identity is a POPS
+judgement, not a merchant's word, and it does not belong in this column —
+`sku` holds what a source stated. It lives instead in the **learned
+dictionary**, `src/db/services/product-dictionary.ts`, described in [the
+pillar README](../../README.md#the-product-dictionary): a table of printed
+wordings a human can point at one product, sitting outside ingest on purpose
+and never consulted for a line that states a sku.
+
+The failure mode both designs are built against is over-eager merging: two
+genuinely different products collapsing into one corrupts spend attribution
+in a way that is very hard to notice afterwards, so leaving items ungrouped
+is the safer wrong answer. An adapter is the worst possible place to make
+that call — it sees one document, and a guess it wrote here would be
+indistinguishable from a merchant's word.
 
 `GET /analytics/product-leaderboard` groups on what a source does state —
 the sku, else the normalised printed name, else nothing — and labels every
-group with which of the three it used, rather than waiting for this to be
-solved or pretending it is. Because a printed name is only interpretable
-against the till that printed it, the key is confined to the order's
-merchant for every source except the ones that are a single merchant's own
-feed: `receipt` is one source id for every shop, and merging on it would be
-exactly the over-eager merge above. The rule is `identifyProduct` in
-`src/db/services/product-identity.ts`.
+group with which basis it used, rather than pretending. Because a printed
+name is only interpretable against the till that printed it, the key is
+confined to the order's merchant for every source except the ones that are a
+single merchant's own feed: `receipt` is one source id for every shop, and
+merging on it would be exactly the over-eager merge above. The rule is
+`identifyProduct` in `src/db/services/product-identity.ts`.
 
 ## Checksums are not keys
 
