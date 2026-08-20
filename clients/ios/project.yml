@@ -63,7 +63,16 @@ targets:
     type: application
     platform: iOS
     sources:
-      - App
+      # XcodeGen 2.46 predates Icon Composer, so it does not know `.icon` is a
+      # bundle and walks into it as a source directory. Excluded from the glob
+      # and named once as a file, which is what makes actool compile it as the
+      # icon rather than the app carrying two loose PNGs.
+      - path: App
+        excludes:
+          - AppIcon.icon/**
+      - path: App/AppIcon.icon
+        type: file
+        buildPhase: resources
     dependencies:
       - package: AppCore
       - package: Auth
@@ -120,6 +129,7 @@ targets:
         MARKETING_VERSION: '0.1.0'
         CURRENT_PROJECT_VERSION: '1'
         TARGETED_DEVICE_FAMILY: '1'
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         CODE_SIGN_STYLE: Automatic
       configs:
         # Read through App/Info.plist, which is the only way to reach a key Xcode's
