@@ -277,6 +277,12 @@ pass re-mints a forgotten wording, a split undoes a merge. This one takes the
 assertions with it, and re-running the pass restores the proposals without the
 decisions.
 
+**A rename is not protection.** `confirmedAt` marks the wording, not the
+product, so a product every wording of which is still a proposal is deleted
+along with its last one — the name somebody typed goes with it. The page says
+that on every proposed entry rather than letting a rename read as a decision
+the pass will respect.
+
 ### Running the pass
 
 The panel at the top runs `POST /products/proposals` and reports its whole
