@@ -247,12 +247,14 @@ describe('POST /search with filters', () => {
   });
 
   it.each(['2026-13-45T00:00:00Z', '2026-01-01T00:00:00+99:00'])(
-    'refuses %s on both routes rather than answering one of them with a window',
+    'refuses %s on every route that takes a window rather than answering one of them',
     async (bound) => {
-      // `IsoTimestampSchema` closes the shape and not the range, so these
-      // reach a handler. Compared as text against a canonical column they
-      // name a window nobody could have meant, and the list that comes back
-      // is indistinguishable from a filter that matched broadly.
+      // Neither names an instant, and compared as text against a canonical
+      // column both denote a window nobody could have meant — the list that
+      // comes back is indistinguishable from a filter that matched broadly.
+      // Which layer refuses differs by route and does not matter here: what
+      // matters is that no route answers 200, and that each sends the
+      // `ErrorBody` its contract declares rather than a shape of its own.
       seedCoffeeOrder();
 
       const searched = await requestOn(app)
@@ -270,10 +272,33 @@ describe('POST /search with filters', () => {
       expect(listed.status).toBe(400);
       expect(rolledUp.status).toBe(400);
       expect(ErrorBodySchema.safeParse(listed.body).success).toBe(true);
-      expect(listed.body.message).toContain(bound);
-      expect(rolledUp.body.message).toContain(bound);
+      expect(ErrorBodySchema.safeParse(rolledUp.body).success).toBe(true);
+      // A search filter's value is a bare string in the contract, so both
+      // values reach the scope reader on this route and it names the one it
+      // refused.
+      expect(searched.body.message).toContain(bound);
     }
   );
+
+  it('names the bound it refused when the value is one the contract admits', async () => {
+    // `from` and `to` are typed `IsoTimestampSchema`, which closes the shape
+    // and the calendar range both, so an impossible date is refused ahead of
+    // every handler and answered with the contract's fixed body — correct,
+    // but it cannot name the value. An out-of-range offset is what the
+    // schema does admit: the shape is legal and the fields are a real date,
+    // so it reaches the scope reader, which is the layer that can say which
+    // bound it could not read.
+    seedCoffeeOrder();
+    const bound = '2026-01-01T00:00:00+99:00';
+
+    const listed = await requestOn(app).get('/purchases').query({ from: bound });
+    const rolledUp = await requestOn(app).get('/analytics/merchant-spend').query({ to: bound });
+
+    expect(listed.status).toBe(400);
+    expect(rolledUp.status).toBe(400);
+    expect(listed.body.message).toContain(bound);
+    expect(rolledUp.body.message).toContain(bound);
+  });
 
   it('scopes to the requested status', async () => {
     seedCoffeeOrder();

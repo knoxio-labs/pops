@@ -55,11 +55,13 @@ import type { SQL } from 'drizzle-orm';
  * process runs — the misplacement `src/ingest/local-time.ts` exists to
  * prevent, arrived at from the other end.
  *
- * Out-of-range fields (`2026-13-01`, `+99:00`) name nothing and yield null.
- * An overflowing day (`2026-02-30`) does not: it rolls into March, which is
- * what `Date.parse` has always done for the folds and what SQLite's own
- * date functions do for the migration that rewrites stored rows, so the two
- * agree rather than disagreeing quietly.
+ * A date that does not exist never reaches the parse: the schema checks its
+ * calendar fields round-trip, so `2026-02-30` and `2026-13-01` are refused
+ * by the shape check above rather than rolled into the following month. What
+ * still reaches the parse is a value whose shape and calendar fields are
+ * both legal and which names no instant anyway — an offset outside the
+ * ±23:59 a zone can hold, like `+99:00`. That yields null here, which is why
+ * the check is a parse and not a second copy of the schema's rules.
  */
 export function canonicalInstant(value: string): string | null {
   if (!IsoTimestampSchema.safeParse(value).success) return null;
