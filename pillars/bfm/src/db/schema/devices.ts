@@ -57,6 +57,24 @@ export const devices = sqliteTable(
       .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
     /** Null while the device is trusted. Set once, never cleared — re-trusting means pairing again. */
     revokedAt: text('revoked_at'),
+    /**
+     * What this handset is allowed to do, as a JSON array of capability names
+     * (ADR-048). The grant, per device: a `/mobile` route declares the
+     * capability it requires and `requireCapability` refuses a request whose
+     * caller does not hold it.
+     *
+     * JSON in one column rather than a join table because a grant is read on
+     * every authenticated request and written only at pairing, and because it
+     * has no attributes of its own — a row per capability would buy a second
+     * query per request to reassemble a set.
+     *
+     * Defaults to the EMPTY grant, which is the fail-closed direction: a row
+     * that reached this table without anyone deciding what it may do may do
+     * nothing. Pairing writes the default vocabulary explicitly, and the
+     * migration that added this column backfilled the devices that predate it
+     * with the same set.
+     */
+    capabilities: text('capabilities').notNull().default('[]'),
   },
   // No index on `id`: SQLite backs a non-INTEGER primary key with an implicit
   // unique index, so lookups by device id are already index-driven. Adding one

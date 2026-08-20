@@ -53,16 +53,82 @@ internal struct ReceiptResultCopyTests {
         #expect(Set(labels).count == labels.count)
     }
 
-    /// The distinction the whole ticket rests on: `needsReview` is "we read
-    /// it and the numbers don't add up," `unreadable` is "we couldn't read
-    /// it at all." A generic apology here is exactly the failure POPS-1961
-    /// names.
-    @Test("needs-review and unreadable do not read alike")
+    /// `needsReview` and `unreadable` are two different screens with two
+    /// different headings, whatever the needs-review message ends up saying
+    /// for a given failure set.
+    @Test("needs-review and unreadable headings do not read alike")
     func needsReviewIsNotUnreadable() {
         #expect(ReceiptResultCopy.needsReviewHeading != ReceiptResultCopy.unreadableHeading)
-        #expect(ReceiptResultCopy.needsReviewMessage != ReceiptResultCopy.unreadableMessage)
-        #expect(!ReceiptResultCopy.needsReviewMessage.lowercased().contains("couldn't read"))
+        #expect(
+            !ReceiptResultCopy.needsReviewMessage(for: [.sumMismatch]).lowercased()
+                .contains("couldn't read"))
         #expect(!ReceiptResultCopy.unreadableMessage.lowercased().contains("don't add up"))
+    }
+
+    /// The bug this whole file exists to catch: a headline that claims the
+    /// receipt's arithmetic was wrong when the gate never said that. Only a
+    /// failure set that actually contains `.sumMismatch` may say "add up" —
+    /// checked for every one of the other seven kinds individually, and for
+    /// every kind paired with a second failure of the same kind (the
+    /// Priceline case: two `.damaged` failures, no sum mismatch at all).
+    @Test(
+        "a needs-review message never blames arithmetic unless the gate reported a sum mismatch",
+        arguments: [
+            ReceiptGateFailureKind.unreadableTotal,
+            .unreadableLine,
+            .noLines,
+            .negativeLine,
+            .ambiguousTax,
+            .damaged,
+            .unrecognised("a-reason-invented-later"),
+        ])
+    func onlySumMismatchBlamesArithmetic(_ kind: ReceiptGateFailureKind) {
+        #expect(!ReceiptResultCopy.needsReviewMessage(for: [kind]).lowercased().contains("add up"))
+        #expect(
+            !ReceiptResultCopy.needsReviewMessage(for: [kind, kind]).lowercased()
+                .contains("add up"))
+    }
+
+    @Test("a sum mismatch does blame the arithmetic")
+    func sumMismatchDoesBlameArithmetic() {
+        #expect(
+            ReceiptResultCopy.needsReviewMessage(for: [.sumMismatch]).lowercased()
+                .contains("add up"))
+    }
+
+    /// The observed hardware case: two `.damaged` failures and nothing else.
+    /// The headline must point at legibility, not arithmetic, and must not
+    /// pretend the reader can fix it by re-entering the numbers by hand.
+    @Test("two damaged failures read as a legibility problem, not an arithmetic one")
+    func damagedReceiptPointsAtARetake() {
+        let message = ReceiptResultCopy.needsReviewMessage(for: [.damaged, .damaged])
+
+        #expect(message.lowercased().contains("could not be read"))
+        #expect(!message.lowercased().contains("add up"))
+    }
+
+    /// Mixing a legibility problem with an arithmetic one must not collapse
+    /// into either category's sentence alone — the reader needs to know it
+    /// is not just one problem.
+    @Test("a mix of failure categories does not pretend to be only one problem")
+    func mixedCategoriesDoNotPickOneArbitrarily() {
+        let message = ReceiptResultCopy.needsReviewMessage(for: [.sumMismatch, .damaged])
+
+        #expect(message != ReceiptFailureCategory.arithmetic.message)
+        #expect(message != ReceiptFailureCategory.unreadable.message)
+    }
+
+    /// Every failure kind maps to exactly one category, so a headline never
+    /// silently drifts as new kinds are added — the compiler enforces the
+    /// switch is exhaustive, this proves the three buckets are distinct.
+    @Test("every gate failure kind resolves to a message, and the three categories differ")
+    func everyCategoryHasItsOwnMessage() {
+        let messages: Set<String> = [
+            ReceiptFailureCategory.unreadable.message,
+            ReceiptFailureCategory.arithmetic.message,
+            ReceiptFailureCategory.other.message,
+        ]
+        #expect(messages.count == 3)
     }
 
     @Test("created does not read like either failure outcome")

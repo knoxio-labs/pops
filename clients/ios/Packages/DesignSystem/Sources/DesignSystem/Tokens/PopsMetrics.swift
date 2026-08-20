@@ -23,3 +23,29 @@ public enum PopsRadius {
 public enum PopsBorder {
     public static let hairline: CGFloat = 1
 }
+
+/// Fixed dimensions, named by what occupies them.
+///
+/// Separate from ``PopsSpacing`` because these are not gaps and do not belong
+/// on its scale: a gap between two things and the size of one of them answer
+/// to different questions, and putting a 44 on the spacing scale would invite
+/// it to be used as padding.
+///
+/// Each is a *base* size at the default text size. A view that draws one is
+/// expected to run it through `@ScaledMetric` so it grows with Dynamic Type —
+/// a fixed frame around scaling text is the clipping this package exists to
+/// prevent, arrived at from the other side.
+public enum PopsSize {
+    /// The smallest square a fingertip reliably hits, from Apple's own
+    /// guidance. A control smaller than this is one that gets missed rather
+    /// than one that looks tidy.
+    public static let touchTarget: CGFloat = 44
+
+    /// One captured page, shown beside what was read off it. Taller than it is
+    /// wide because a till receipt is, and a plate in a photograph's
+    /// proportions makes the thing in it unrecognisable.
+    public static let pageWidth: CGFloat = 116
+
+    /// See ``pageWidth``.
+    public static let pageHeight: CGFloat = 168
+}

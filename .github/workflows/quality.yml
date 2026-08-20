@@ -584,6 +584,29 @@ jobs:
       - name: purchases, bfm and iOS agree on the receipt max-parts limit
         run: node scripts/ci/check-receipt-max-parts-drift.mjs
 
+  supertest-transport-adoption:
+    name: Supertest transport adoption
+    # finance, bfm and purchases each own a pre-listened test transport, and
+    # each transport's properties are pinned by its own tests. Its ADOPTION was
+    # pinned by nothing: a new test file importing `supertest` directly
+    # compiles, passes, and reinstates the per-request server churn the
+    # transport exists to remove. Four purchases test files did exactly that in
+    # one week. This bans the specifier across all three pillars with only the
+    # transport exempt, and treats a transport that stops matching as a
+    # violation rather than a clean tree. Reads TS/JS source and JSON, pulls in
+    # no third-party deps, so it skips `pnpm install`. See
+    # scripts/ci/check-supertest-transport-adoption.mjs.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Gate self-test (proves the guard catches each import shape, and reports a gutted transport)
+        run: node scripts/ci/check-supertest-transport-adoption.mjs --self-test
+      - name: finance, bfm and purchases reach supertest only through their transport
+        run: node scripts/ci/check-supertest-transport-adoption.mjs
+
   contract-consumers:
     name: Vendored consumers of a changed contract (ADR-033)
     # The producer-side half of the job above, and a REPORT rather than a gate.

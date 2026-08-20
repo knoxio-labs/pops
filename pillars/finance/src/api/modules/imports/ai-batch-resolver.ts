@@ -30,6 +30,7 @@ import { AiCircuitBreaker } from './ai-circuit-breaker.js';
 import { buildKnownEntityHint } from './entity-vocabulary.js';
 import { buildFailure } from './process-transaction-helpers.js';
 import { finalizeAiResult } from './process-transaction.js';
+import { PROGRESS_INTERVAL_ROWS, yieldToEventLoop } from './processing-helpers.js';
 
 import type { FinanceDb } from '../../../db/index.js';
 import type { AiCacheEntry } from './ai-categorizer.js';
@@ -50,6 +51,13 @@ export interface ResolvePendingAiArgs {
   results: (TransactionProcessResult | undefined)[];
   /** Injectable for tests; defaults to a fresh breaker for this run. */
   breaker?: AiCircuitBreaker;
+  /**
+   * Called with the running total of pending rows this pass has settled, after
+   * each batch. The pass is network-bound and can be the longest part of a run,
+   * so a caller reporting only its start and end leaves the count frozen for
+   * the duration.
+   */
+  onResolved?: (resolvedCount: number) => void;
 }
 
 function chunk<T>(items: T[], size: number): T[][] {
@@ -88,50 +96,78 @@ function bucketUnavailable(env: ResolvePendingAiArgs, items: PendingAiItem[]): v
   finalizeNullRows(env, items);
 }
 
+async function resolveChunk(
+  args: ResolvePendingAiArgs,
+  items: PendingAiItem[],
+  breaker: AiCircuitBreaker,
+  knownEntityNames: string[]
+): Promise<void> {
+  const { db, context, counters, results } = args;
+  try {
+    const { results: batchResults, usage } = await categorizeBatchWithAi(
+      items.map((item) => toCategorizerInput(item.transaction)),
+      context.importBatchId,
+      context.knownTags,
+      knownEntityNames
+    );
+    breaker.recordRecovery();
+    if (usage) {
+      counters.aiApiCalls++;
+      counters.totalInputTokens += usage.inputTokens;
+      counters.totalOutputTokens += usage.outputTokens;
+      counters.totalCostUsd += usage.costUsd;
+    }
+    items.forEach((item, i) => {
+      results[item.index] = finalizeAiResultSafely(
+        { db, transaction: item.transaction, context, counters },
+        batchResults[i] ?? null
+      );
+    });
+  } catch (error) {
+    if (!(error instanceof AiCategorizationError)) throw error;
+    if (error.code === 'RATE_LIMITED') breaker.recordRateLimited();
+    bucketUnavailable(args, items);
+  }
+}
+
 export async function resolvePendingAi(args: ResolvePendingAiArgs): Promise<void> {
-  const { db, pending, context, counters, results } = args;
+  const { pending, context, counters, onResolved } = args;
   if (pending.length === 0) return;
 
   if (!isAiCategorizerEnabled()) {
     counters.aiDisabled = true;
     counters.aiDisabledCount += pending.length;
-    finalizeNullRows(args, pending);
+    // Settled in slices rather than one shot: with the categorizer off every
+    // deferred row is settled here, so this loop is the whole visible tail of
+    // the run and reporting only at its end freezes the count for all of it.
+    let settled = 0;
+    for (const items of chunk(pending, PROGRESS_INTERVAL_ROWS)) {
+      finalizeNullRows(args, items);
+      settled += items.length;
+      if (onResolved) {
+        onResolved(settled);
+        await yieldToEventLoop();
+      }
+    }
     return;
   }
 
   const breaker = args.breaker ?? new AiCircuitBreaker();
   const knownEntityNames = buildKnownEntityHint(context.entityLookup);
+  let resolvedCount = 0;
 
   for (const items of chunk(pending, getCategorizerBatchSize())) {
+    resolvedCount += items.length;
     if (breaker.isOpen) {
       bucketUnavailable(args, items);
-      continue;
+    } else {
+      await resolveChunk(args, items, breaker, knownEntityNames);
     }
-
-    try {
-      const { results: batchResults, usage } = await categorizeBatchWithAi(
-        items.map((item) => toCategorizerInput(item.transaction)),
-        context.importBatchId,
-        context.knownTags,
-        knownEntityNames
-      );
-      breaker.recordRecovery();
-      if (usage) {
-        counters.aiApiCalls++;
-        counters.totalInputTokens += usage.inputTokens;
-        counters.totalOutputTokens += usage.outputTokens;
-        counters.totalCostUsd += usage.costUsd;
-      }
-      items.forEach((item, i) => {
-        results[item.index] = finalizeAiResultSafely(
-          { db, transaction: item.transaction, context, counters },
-          batchResults[i] ?? null
-        );
-      });
-    } catch (error) {
-      if (!(error instanceof AiCategorizationError)) throw error;
-      if (error.code === 'RATE_LIMITED') breaker.recordRateLimited();
-      bucketUnavailable(args, items);
+    if (onResolved) {
+      onResolved(resolvedCount);
+      // A batch answered from cache resolves without ever reaching the network,
+      // so the await above is microtasks only and no poll would be served.
+      await yieldToEventLoop();
     }
   }
 }

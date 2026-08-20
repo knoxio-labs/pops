@@ -10,11 +10,13 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import supertest from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { aiModelPricing, openAiDb, type OpenedAiDb } from '../../db/index.js';
 import { createAiApiApp } from '../app.js';
+import { createTestTransport } from './test-http.js';
+
+const { requestOn } = createTestTransport();
 
 let tmpDir: string;
 let aiDb: OpenedAiDb;
@@ -46,20 +48,20 @@ describe('GET /ai-pricing/:provider/:model', () => {
       })
       .run();
 
-    const res = await supertest(app).get('/ai-pricing/claude/claude-haiku-4-5');
+    const res = await requestOn(app).get('/ai-pricing/claude/claude-haiku-4-5');
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ input: 0.8, output: 4 });
   });
 
   it('falls back to the default price for an unknown provider/model (never 404s)', async () => {
-    const res = await supertest(app).get('/ai-pricing/unknown/model-x');
+    const res = await requestOn(app).get('/ai-pricing/unknown/model-x');
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ input: 1, output: 5 });
   });
 
   it('is NOT internal-auth gated (public-readable)', async () => {
     // No x-pops-internal-credential header — must still resolve.
-    const res = await supertest(app).get('/ai-pricing/claude/anything');
+    const res = await requestOn(app).get('/ai-pricing/claude/anything');
     expect(res.status).toBe(200);
     expect(typeof res.body.input).toBe('number');
     expect(typeof res.body.output).toBe('number');

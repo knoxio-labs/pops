@@ -11,6 +11,7 @@
  * body's dollar `amount` back to cents for the persistence layer.
  */
 import { centsToDollars, dollarsToCents } from '../../money.js';
+import { foreignChargeFields, type ForeignChargeFields } from './transaction-foreign-charge.js';
 
 import type { TransactionType } from '../../contract/corrections-constants.js';
 import type {
@@ -20,7 +21,7 @@ import type {
 } from '../../db/index.js';
 
 /** API response shape (camelCase). */
-export interface Transaction {
+export interface Transaction extends ForeignChargeFields {
   id: string;
   description: string;
   account: string;
@@ -42,7 +43,7 @@ export interface Transaction {
  * (`TransactionSnapshotSchema` in the REST contract) — dollars `amount`,
  * same as every other wire shape.
  */
-export interface TransactionSnapshot {
+export interface TransactionSnapshot extends ForeignChargeFields {
   id: string;
   notionId: string | null;
   description: string;
@@ -128,6 +129,7 @@ export function toTransaction(row: TransactionRow): Transaction {
     country: row.country,
     relatedTransactionId: row.relatedTransactionId,
     notes: row.notes,
+    ...foreignChargeFields(row),
     lastEditedTime: row.lastEditedTime,
   };
 }
@@ -149,6 +151,7 @@ export function toTransactionSnapshot(row: TransactionRow): TransactionSnapshot 
     country: row.country,
     relatedTransactionId: row.relatedTransactionId,
     notes: row.notes,
+    ...foreignChargeFields(row),
     checksum: row.checksum,
     rawRow: row.rawRow,
     lastEditedTime: row.lastEditedTime,
@@ -175,6 +178,7 @@ export function fromTransactionSnapshot(snapshot: TransactionSnapshot): Transact
     country: snapshot.country,
     relatedTransactionId: snapshot.relatedTransactionId,
     notes: snapshot.notes,
+    ...foreignChargeFields(snapshot),
     checksum: snapshot.checksum,
     rawRow: snapshot.rawRow,
     lastEditedTime: snapshot.lastEditedTime,

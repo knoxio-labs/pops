@@ -58,15 +58,15 @@ const server = app.listen(port, () => {
 
 /**
  * Soft-URI reconciliation cron: resolves `home_inventory.purchase_transaction_uri`
- * and `home_inventory.owner_uri` against their owning pillars and stamps the
- * matching `*_stale_at` column when the owner answers 404.
+ * against finance and stamps `purchase_transaction_stale_at` when finance
+ * answers 404.
  *
- * Started unconditionally. A tick that cannot reach finance or the registry
- * writes nothing — only a 404 stamps, everything else is left for the next
- * tick — whereas gating the worker would leave every `stale_at` permanently
- * null, which reads as "every reference resolves" and is the exact failure
- * this cron exists to end. A tick with no URIs to resolve is silent and calls
- * nobody.
+ * Started unconditionally. A tick that cannot reach finance writes nothing —
+ * only a 404 stamps, everything else is left for the next tick — whereas
+ * gating the worker would leave every `stale_at` permanently null, which reads
+ * as "every reference resolves" and is the exact failure this cron exists to
+ * end. A tick with no URIs to resolve is silent and calls nobody, except to
+ * warn when rows name a transaction whose URI was never derived.
  */
 const reconcileUriWorker = startCrossPillarReconciliationWorker({
   db: inventoryDb.db,

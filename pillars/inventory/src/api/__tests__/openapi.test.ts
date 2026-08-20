@@ -10,11 +10,13 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { openInventoryDb, type OpenedInventoryDb } from '../../db/index.js';
 import { createInventoryApiApp } from '../app.js';
+import { createTestTransport } from './test-http.js';
+
+const { requestOn } = createTestTransport();
 
 let tmpDir: string;
 let inventoryDb: OpenedInventoryDb;
@@ -42,7 +44,7 @@ describe('GET /openapi', () => {
       selfBaseUrl: 'http://localhost:3002',
     });
 
-    const res = await request(app).get('/openapi');
+    const res = await requestOn(app).get('/openapi');
 
     expect(res.status).toBe(200);
     const body = res.body as OpenApiBody;

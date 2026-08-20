@@ -154,6 +154,19 @@ function resolveTxnEntityId(
   return resolved;
 }
 
+/** The parsed row's foreign-charge fields, absent on a domestic charge. */
+function foreignChargeColumns(txn: CommitPayload['transactions'][number]): {
+  foreignAmountMinor: number | null;
+  foreignCurrency: string | null;
+  fxFeeCents: number | null;
+} {
+  return {
+    foreignAmountMinor: txn.foreignAmountMinor ?? null,
+    foreignCurrency: txn.foreignCurrency ?? null,
+    fxFeeCents: txn.fxFeeCents ?? null,
+  };
+}
+
 function writeTransactionsPhase(
   tx: FinanceDb,
   payload: CommitPayload,
@@ -179,7 +192,7 @@ function writeTransactionsPhase(
         entityName: txn.entityName ?? null,
         location: txn.location ?? null,
         country: txn.country ?? null,
-        notes: txn.notes ?? null,
+        ...foreignChargeColumns(txn),
         rawRow: txn.rawRow,
         checksum: txn.checksum,
         matchType: provenance.matchType,

@@ -18,6 +18,7 @@
  */
 import { and, desc, eq, isNull } from 'drizzle-orm';
 
+import { serialiseDeviceCapabilities } from '../../contract/capabilities.js';
 import { devices, refreshTokens } from '../schema.js';
 
 import type { BfmDb } from '../open-bfm-db.js';
@@ -85,6 +86,12 @@ export interface InsertDeviceValues {
    * either side of an insert are not guaranteed to agree.
    */
   createdAt: string;
+  /**
+   * What this handset may do (ADR-048). Required rather than defaulted here:
+   * the column defaults to the empty grant so a row nobody decided about
+   * authorises nothing, and a caller that genuinely wants that has to say so.
+   */
+  capabilities: readonly string[];
 }
 
 /** Write one device row. Takes a {@link BfmDb}, so a transaction handle composes. */
@@ -97,6 +104,7 @@ export function insertDevice(db: BfmDb, values: InsertDeviceValues): void {
       publicKeyDer: values.publicKeyDer,
       createdAt: values.createdAt,
       lastSeenAt: values.createdAt,
+      capabilities: serialiseDeviceCapabilities(values.capabilities),
     })
     .run();
 }

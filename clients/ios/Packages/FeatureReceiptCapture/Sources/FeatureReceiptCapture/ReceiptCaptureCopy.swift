@@ -5,22 +5,42 @@ import Foundation
 /// and `FeaturePairing`: the app has no localisation layer, and copy
 /// scattered through a view makes adding one a hunt.
 internal enum ReceiptCaptureCopy {
-    internal static let title = "Receipt capture"
+    /// The tab's own name rather than a description of the button under it.
+    /// A screen titled after its one control tells a reader what will happen
+    /// when they press it and nothing about where they are.
+    internal static let title = "Receipts"
     internal static let instruction =
-        "Photograph the receipt. A long one can be several photos — take them "
-        + "top to bottom and they'll be read as one receipt."
+        "Photograph a receipt and it's read into a purchase — merchant, items and total."
     internal static let captureButton = "Photograph a receipt"
     internal static let captureAnother = "Photograph another receipt"
+
+    // MARK: getting a readable photograph
+
+    /// What actually decides whether the reading comes back usable, said
+    /// before the photograph rather than after it fails.
+    ///
+    /// Three, and no more: this is the screen's second-most-important content
+    /// and a list long enough to scroll is one nobody reads. Each is paired
+    /// with a glyph in ``ReceiptCapturePrompt`` — the symbol names live there
+    /// because they are pictures rather than words.
+    internal static let guidanceTitle = "For a clean read"
+    internal static let guidanceFlat = "Lay it flat and fill the frame."
+    internal static let guidanceLight = "Even light, no shadow across the print."
+    internal static let guidanceLongReceipt =
+        "A long receipt is several photos, top to bottom — they're read as one."
 
     // MARK: camera refusals
 
     /// Undoable from Settings, so this is the only one offered a link.
+    internal static let cameraDeniedTitle = "Camera access is off"
     internal static let cameraDenied =
         "Pops can't use the camera. Allow camera access in Settings to photograph a receipt."
+    internal static let cameraRestrictedTitle = "Camera access is managed"
     internal static let cameraRestricted =
         "Camera access is turned off by a profile or Screen Time policy on this device, "
         + "so a receipt can't be photographed here."
     /// Also what the Simulator reaches, where there is no camera to open.
+    internal static let cameraUnavailableTitle = "No camera on this device"
     internal static let cameraUnavailable =
         "This device has no camera, so a receipt can't be photographed here."
     internal static let openSettings = "Open Settings"
@@ -47,6 +67,57 @@ internal enum ReceiptCaptureCopy {
     }
 }
 
+/// What kind of thing went wrong, grouped from the eight
+/// ``ReceiptGateFailureKind`` cases down to the three actions a reader can
+/// actually take: retake the photo, check the maths, or look at the detail
+/// below because neither of those is quite it.
+///
+/// The needs-review headline used to assume every refusal was a sum
+/// mismatch. It is not — a receipt that read as damaged has nothing wrong
+/// with its arithmetic, and telling the reader otherwise sends them to
+/// check the one thing that was fine.
+internal enum ReceiptFailureCategory: Hashable {
+    /// Legibility problems: the model could not read enough of the receipt
+    /// to answer for it. A retake is the fix, so the message says so.
+    case unreadable
+    /// The one kind this screen used to claim for all eight: the receipt's
+    /// own components do not sum to its own printed total.
+    case arithmetic
+    /// Everything else the gate can refuse for — a negative line, an
+    /// ambiguous tax reading, or a reason this build has no name for — none
+    /// of which is a legibility problem or an arithmetic one.
+    case other
+
+    internal init(_ kind: ReceiptGateFailureKind) {
+        switch kind {
+        case .unreadableTotal, .unreadableLine, .noLines, .damaged:
+            self = .unreadable
+        case .sumMismatch:
+            self = .arithmetic
+        case .negativeLine, .ambiguousTax, .unrecognised:
+            self = .other
+        }
+    }
+
+    internal var message: String {
+        switch self {
+        case .unreadable:
+            return
+                "Parts of this receipt could not be read, so nothing was recorded. "
+                + "Retake the photo — flatter and better-lit usually fixes this."
+        case .arithmetic:
+            return
+                "The numbers on this receipt don't add up to its printed total, "
+                + "so nothing was recorded. Enter it manually, or retake the photo "
+                + "and try again."
+        case .other:
+            return
+                "Something on this receipt didn't check out, so nothing was recorded. "
+                + "Check the details below, then enter it manually or retake the photo."
+        }
+    }
+}
+
 /// Every word the result screen shows.
 ///
 /// Kept apart from ``ReceiptCaptureCopy`` because the two describe different
@@ -55,6 +126,16 @@ internal enum ReceiptCaptureCopy {
 internal enum ReceiptResultCopy {
     internal static let submitting = "Reading your receipt…"
     internal static let retry = "Retry"
+
+    /// The heading over the photographs themselves. They sit above every
+    /// outcome, because the paper is the thing all three are about and only
+    /// the commentary underneath changes.
+    internal static let capturedPages = "What you photographed"
+    /// What VoiceOver calls one page of a scan. The pages are the same object
+    /// in every outcome, so the label is too.
+    internal static func page(_ index: Int, of total: Int) -> String {
+        total == 1 ? "Photo of the receipt" : "Photo \(index) of \(total)"
+    }
 
     // MARK: created
 
@@ -84,13 +165,23 @@ internal enum ReceiptResultCopy {
     /// Omitted entirely at zero: "0 items" beside a total reads as a receipt
     /// that recorded nothing, when what happened is that the reading found no
     /// separate lines.
-    private static func itemCountLabel(_ itemCount: Int) -> String? {
+    ///
+    /// `internal` because the confirmation card draws it on a line of its own
+    /// as well as inside ``purchaseSummary(merchantName:itemCount:total:)`` —
+    /// the summary is what VoiceOver reads as one sentence, the separate lines
+    /// are what a sighted reader scans, and both have to say the same thing.
+    internal static func itemCountLabel(_ itemCount: Int) -> String? {
         switch itemCount {
         case ..<1: nil
         case 1: "1 item"
         default: "\(itemCount) items"
         }
     }
+
+    /// The label beside the figure on the confirmation card. Named rather
+    /// than reusing ``FieldLabel/total``: that set describes a *reading* the
+    /// gate refused, and this one describes a purchase that was written.
+    internal static let createdTotalLabel = "Total"
     internal static func purchasedOn(_ formattedDate: String) -> String {
         "Dated \(formattedDate)"
     }
@@ -98,12 +189,43 @@ internal enum ReceiptResultCopy {
     // MARK: needs review
 
     internal static let needsReviewHeading = "Needs a closer look"
-    internal static let needsReviewMessage =
-        "The numbers on this receipt don't add up to its printed total, "
-        + "so nothing was recorded. Enter it manually, or retake the photo "
-        + "and try again."
+
+    /// The headline sentence, derived from the failure kinds the gate
+    /// actually reported rather than assuming one cause for all eight.
+    ///
+    /// Each ``ReceiptFailureCategory`` present contributes its own honest
+    /// claim; more than one category present is said outright rather than
+    /// collapsed into whichever one sorts first — a sum-mismatch-and-damaged
+    /// receipt is not "just" either problem.
+    internal static func needsReviewMessage(for failures: [ReceiptGateFailureKind]) -> String {
+        let categories = Set(failures.map(ReceiptFailureCategory.init))
+        if let onlyCategory = categories.first, categories.count == 1 {
+            return onlyCategory.message
+        }
+        if categories.isEmpty {
+            return
+                "This receipt needs a closer look before it can be recorded. "
+                + "Check the details below, then enter it manually or retake the photo."
+        }
+        return
+            "This receipt has more than one problem, so nothing was recorded. "
+            + "Check the details below, then enter it manually or retake the photo."
+    }
     internal static let needsReviewWhatWeRead = "What was read"
     internal static let needsReviewWhatFailed = "Why it needs review"
+
+    /// How a line item's quantity and unit note are folded into one aside
+    /// beside the amount, so the description column stays a column.
+    internal static func lineNote(quantity: Int?, unitNote: String?) -> String? {
+        let parts =
+            [
+                quantity.map { "×\($0)" },
+                unitNote?.trimmingCharacters(in: .whitespacesAndNewlines),
+            ]
+            .compactMap { $0 }
+            .filter { !$0.isEmpty }
+        return parts.isEmpty ? nil : parts.joined(separator: " ")
+    }
 
     /// The labels on the table under ``needsReviewWhatWeRead``. Nested rather
     /// than prefixed so the set reads as one table, matching
@@ -117,7 +239,6 @@ internal enum ReceiptResultCopy {
         internal static let discounts = "Discounts"
         internal static let surcharges = "Surcharges"
         internal static let shipping = "Shipping"
-        internal static let lines = "Items"
         internal static let unreadableNotes = "Could not be read"
     }
 

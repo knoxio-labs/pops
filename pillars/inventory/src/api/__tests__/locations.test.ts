@@ -16,12 +16,14 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { locationsService, openInventoryDb, type OpenedInventoryDb } from '../../db/index.js';
 import { createInventoryApiApp } from '../app.js';
+import { createTestTransport } from './test-http.js';
 import { makeClient } from './test-utils.js';
+
+const { requestOn } = createTestTransport();
 
 let tmpDir: string;
 let inventoryDb: OpenedInventoryDb;
@@ -163,7 +165,7 @@ describe('locations REST — raw HTTP wire smoke', () => {
       version: '0.0.1-test',
       selfBaseUrl: 'http://localhost:3002',
     });
-    const res = await request(app).get('/locations');
+    const res = await requestOn(app).get('/locations');
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ data: [], total: 0 });
   });
@@ -174,7 +176,7 @@ describe('locations REST — raw HTTP wire smoke', () => {
       version: '0.0.1-test',
       selfBaseUrl: 'http://localhost:3002',
     });
-    const created = await request(app).post('/locations').send({ name: 'Garage' });
+    const created = await requestOn(app).post('/locations').send({ name: 'Garage' });
     expect(created.status).toBe(201);
     expect(created.body.data.name).toBe('Garage');
 
