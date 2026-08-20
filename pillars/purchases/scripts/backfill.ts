@@ -60,17 +60,25 @@ export function createIngestClient(env: NodeJS.ProcessEnv = process.env): Ingest
 /**
  * The one place a backfill request is built, so the credential cannot be
  * dropped from one call site and kept on another.
+ *
+ * Exported for the attach half (`attach-documents.ts`), which is a separate
+ * file only because this one is at its line budget — a second `fetch` there
+ * would be a second chance to forget the header.
+ *
+ * A `GET` carries no body: `fetch` rejects a request that has one on that
+ * verb, and `JSON.stringify(undefined)` is `undefined` rather than the empty
+ * string, so an omitted body is genuinely absent.
  */
-function ingestFetch(
+export function ingestFetch(
   client: IngestClient,
   path: string,
-  method: 'POST' | 'PUT',
-  body: unknown
+  method: 'GET' | 'POST' | 'PUT',
+  body?: unknown
 ): Promise<Response> {
   return fetch(`${client.baseUrl}${path}`, {
     method,
     headers: { 'content-type': 'application/json', [SERVICE_ACCOUNT_HEADER]: client.apiKey },
-    body: JSON.stringify(body),
+    body: body === undefined ? undefined : JSON.stringify(body),
   });
 }
 
