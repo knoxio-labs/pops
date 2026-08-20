@@ -71,6 +71,8 @@
   "transactions.purchaseLink.partlyConfirmedHint": "Some of what this transaction paid for was confirmed by hand and some was matched automatically.",
   "transactions.purchaseLink.orders": "{{count}} orders",
   "transactions.purchaseLink.open": "Show what this transaction bought",
+  "transactions.purchaseLink.unavailable": "Unavailable",
+  "transactions.purchaseLink.unavailableHint": "Purchases could not be answered, so this column may be incomplete — an empty cell here does not mean the transaction has no order.",
 
   "budgets.failedToLoad": "Failed to load budgets",
   "budgets.totalCount": "{{count}} total budgets",

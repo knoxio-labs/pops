@@ -111,6 +111,11 @@ const AUTO_LINKED = 'Auto-linked';
 const PART_CONFIRMED = 'Part confirmed';
 const AUTO_LINKED_HINT =
   'Matched automatically and confirmed by nobody — a later sweep may withdraw it.';
+const UNAVAILABLE = 'Unavailable';
+const UNAVAILABLE_CAVEAT =
+  'Purchases could not be answered, so this column may be incomplete — an empty cell here does not mean the transaction has no order.';
+/** What the heading announces as one string, which is how it is composed. */
+const UNAVAILABLE_ANNOUNCED = `Purchase ${UNAVAILABLE_CAVEAT}`;
 
 /**
  * The indicator on one row, or null where the row has none.
@@ -130,6 +135,16 @@ function indicatorFor(description: string): HTMLElement | null {
 /** The whole announced name for a row in one state: the state, then the action. */
 function announced(state: string): RegExp {
   return new RegExp(`^${state}\\s*${OPEN_LABEL}$`);
+}
+
+/**
+ * Matched on the leading word rather than the whole name, so the same helper
+ * finds the heading in both of the states these tests exist to tell apart.
+ */
+function purchaseHeader(): HTMLElement {
+  return screen.getByRole('columnheader', {
+    name: (accessibleName) => accessibleName.startsWith('Purchase'),
+  });
 }
 
 afterEach(() => {
@@ -220,18 +235,95 @@ describe('the purchase column', () => {
     expect(onShowPurchase).toHaveBeenCalledWith(expect.objectContaining({ id: 'tx-derived' }));
   });
 
-  it('draws no indicators when the pillar refuses, rather than failing the page', async () => {
-    // A column is decoration on a page that is fully useful without it. The
-    // reader who wants to know why opens the row, where the panel names the
-    // failure and offers the retry. The column itself stays, and today a
-    // refusal and "no order explains any of these" render alike.
+  it('names the column plainly when every row was answered for', async () => {
+    reconcileLinksBatchMock.mockResolvedValue({ data: { transactions: SUMMARIES } });
+    renderTable();
+
+    await waitFor(() => expect(indicatorFor('AMAZON MKTPLACE AU')).not.toBeNull());
+    expect(purchaseHeader()).toHaveAccessibleName('Purchase');
+  });
+});
+
+describe('when the purchases pillar does not answer', () => {
+  /** A 503: the pillar is up enough to answer, and what it answers is nothing. */
+  function pillarIsDown(): void {
     reconcileLinksBatchMock.mockResolvedValue({ error: {}, response: { status: 503 } });
+  }
+
+  it('draws no indicators and does not fail the page', async () => {
+    // A column is decoration on a page that is fully useful without it, so a
+    // refusal costs the reader the column and nothing else.
+    pillarIsDown();
+    renderTable();
+
+    await waitFor(() => expect(purchaseHeader()).not.toHaveAccessibleName('Purchase'));
+    expect(screen.getByText('ATM WITHDRAWAL')).toBeInTheDocument();
+    expect(indicatorFor('AMAZON MKTPLACE AU')).toBeNull();
+  });
+
+  it('says so once, on the heading, not once per row', async () => {
+    pillarIsDown();
+    renderTable();
+
+    await waitFor(() => expect(purchaseHeader()).toHaveTextContent(UNAVAILABLE));
+    // Four rows, one signal. A marker per row would be a marker on thousands
+    // of them for something that is true once about the whole column.
+    expect(screen.getAllByText(UNAVAILABLE_ANNOUNCED)).toHaveLength(1);
+    for (const row of ['ATM WITHDRAWAL', 'AMAZON MKTPLACE AU', 'WOOLWORTHS 1234', 'ALIEXPRESS']) {
+      expect(indicatorFor(row)).toBeNull();
+    }
+  });
+
+  it('announces the whole caveat, not just the word', async () => {
+    pillarIsDown();
+    renderTable();
+
+    // "Unavailable" alone does not answer the question the reader now has,
+    // which is what the empty cells below it mean.
+    await waitFor(() => expect(purchaseHeader()).toHaveAccessibleName(UNAVAILABLE_ANNOUNCED));
+  });
+
+  it('reads differently from a page where no order explains anything', async () => {
+    // The whole point. Both pages draw an empty column; only one of them is
+    // reporting a fact about the transactions.
+    reconcileLinksBatchMock.mockResolvedValue({ data: { transactions: [] } });
+    renderTable();
+    await waitFor(() => expect(reconcileLinksBatchMock).toHaveBeenCalled());
+    const answered = purchaseHeader().textContent;
+    expect(answered).toBe('Purchase');
+    expect(indicatorFor('ATM WITHDRAWAL')).toBeNull();
+
+    cleanup();
+    reconcileLinksBatchMock.mockReset();
+    pillarIsDown();
+    renderTable();
+
+    await waitFor(() => expect(purchaseHeader().textContent).not.toBe(answered));
+    expect(indicatorFor('ATM WITHDRAWAL')).toBeNull();
+  });
+
+  it('marks the column when the producer refuses the batch, not only when it is down', async () => {
+    // The producer rejects a whole batch over one malformed URI, deliberately.
+    // That blanks exactly as many rows as an outage does, so the reader needs
+    // the same warning — `isUnavailableError`, which would call this one the
+    // caller's fault, is for wording the detail panel, not this heading.
+    reconcileLinksBatchMock.mockResolvedValue({
+      error: { message: 'transactionUris[2] is not a finance transaction URI' },
+      response: { status: 400 },
+    });
+    renderTable();
+
+    await waitFor(() => expect(purchaseHeader()).toHaveTextContent(UNAVAILABLE));
+  });
+
+  it('says nothing while the answer is still in flight', async () => {
+    // An in-flight lookup has not failed. Warning during the normal loading
+    // moment would train the reader to ignore the warning.
+    reconcileLinksBatchMock.mockReturnValue(new Promise(() => undefined));
     renderTable();
 
     await waitFor(() => expect(reconcileLinksBatchMock).toHaveBeenCalled());
-    expect(screen.getByText('ATM WITHDRAWAL')).toBeInTheDocument();
-    expect(screen.getByRole('columnheader', { name: 'Purchase' })).toBeInTheDocument();
-    expect(indicatorFor('AMAZON MKTPLACE AU')).toBeNull();
+    expect(purchaseHeader()).toHaveAccessibleName('Purchase');
   });
 });
 
@@ -322,12 +414,66 @@ describe('what the query is keyed on', () => {
       wrapper: withClient(client),
     });
 
-    await waitFor(() => expect(result.current.size).toBe(SUMMARIES.length));
+    await waitFor(() => expect(result.current.byTransactionId.size).toBe(SUMMARIES.length));
     const first = result.current;
     rerender();
 
     // Rebuilding it would walk every summary on every keystroke, on a page
     // that re-renders per keystroke.
     expect(result.current).toBe(first);
+    expect(result.current.byTransactionId).toBe(first.byTransactionId);
+  });
+});
+
+describe('what the hook reports about the lookup itself', () => {
+  function summaries(transactions: readonly { id: string }[] = TRANSACTIONS) {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    return renderHook(() => usePurchaseLinkSummaries(transactions), {
+      wrapper: withClient(client),
+    });
+  }
+
+  it('separates a failure from an answer of nothing', async () => {
+    // Both produce an empty map. Only the map alone cannot say which.
+    reconcileLinksBatchMock.mockResolvedValue({ error: {}, response: { status: 503 } });
+    const failed = summaries();
+    await waitFor(() => expect(failed.result.current.unavailable).toBe(true));
+    expect(failed.result.current.byTransactionId.size).toBe(0);
+
+    cleanup();
+    reconcileLinksBatchMock.mockReset();
+    reconcileLinksBatchMock.mockResolvedValue({ data: { transactions: [] } });
+    const answered = summaries();
+    await waitFor(() => expect(reconcileLinksBatchMock).toHaveBeenCalled());
+    expect(answered.result.current.unavailable).toBe(false);
+    expect(answered.result.current.byTransactionId.size).toBe(0);
+  });
+
+  it('reports nothing wrong when it never asked', async () => {
+    // The query is disabled on an empty page. An unasked question has not
+    // failed, and the heading must not claim it did while the list loads.
+    const { result } = summaries([]);
+
+    await waitFor(() => expect(result.current.byTransactionId.size).toBe(0));
+    expect(result.current.unavailable).toBe(false);
+    expect(reconcileLinksBatchMock).not.toHaveBeenCalled();
+  });
+
+  it('is unavailable when one chunk of a split batch fails', async () => {
+    // Past 500 rows the lookup is several requests, and a partial answer is
+    // the worst case here: the rows that did come back look authoritative
+    // while the rest look unlinked. `Promise.all` over the chunks must
+    // reject as a whole, not average the two answers into "some data,
+    // still available" — asserted on the hook directly, since what this
+    // case exercises is the chunking and rejection propagation in
+    // `fetchSummaries`, not anything about how a column draws.
+    reconcileLinksBatchMock
+      .mockResolvedValueOnce({ data: { transactions: [] } })
+      .mockRejectedValueOnce(new Error('socket hang up'));
+    const many = Array.from({ length: 501 }, (_, index) => ({ id: `tx-${index}` }));
+
+    const { result } = summaries(many);
+
+    await waitFor(() => expect(result.current.unavailable).toBe(true));
   });
 });
