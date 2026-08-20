@@ -47,6 +47,18 @@ It returns a list of orders, not one. A combined settlement — several charges,
 
 A transaction no order explains is an empty list and a `200`. That is the ordinary case for most of a statement, and a `404` would have consumers treating "this was not a purchase" as a fault.
 
+### The plural form, for a list rather than a panel
+
+`POST /reconcile/links/batch` takes up to 500 transaction URIs and answers each with counts: how many distinct orders explain it, how many of those links a human confirmed, and how many the matcher merely derived. A transactions table drawing "does an order explain this row" over a page of fifty rows would otherwise call the singular route fifty times, which is why no such column existed.
+
+It is a `POST` that mutates nothing. Five hundred URIs is roughly twenty-five kilobytes of query string, past what proxies reliably accept, and a URL truncated in transit fails as a wrong answer rather than as an error — so the keys travel in the body.
+
+It **counts, and returns no orders and no money**. Returning the orders would make it a second, fuller answer to the question the singular route already answers, free to drift from it; a consumer that wants the orders opens the one transaction it is asking about. Money is absent for the reason the merchant roll-up refuses a grand total: a charge's currency is the settlement currency, one transaction can settle orders in more than one, and a single `linkedCents` here would be a cross-currency sum wearing a currency's clothes.
+
+The two counts stay apart for the reason `confirmedAt` exists at all. A single "has a purchase" flag would report the matcher's current belief — which a later sweep may withdraw — as a decision somebody made, on every row it drew. Both non-zero is a partly-decided transaction, which is a real state rather than a rounding of either.
+
+A requested URI **absent** from the answer means no order explains it. Echoing every URI back with zeroes would make the response proportional to the question rather than to the answer, on a surface where most of the question is misses. The 500 is the route's bound, and it binds tighter than a `limit` would: the answer is at most one fixed-size row per URI asked about, so a caller that can count its own request already knows the size of the response, and there is nothing for an `offset` to page over.
+
 ## The accounting split
 
 `GET /purchases/:id` returns the split pre-computed, because each number calls for something different and deriving them per consumer is how three frontends end up disagreeing:
@@ -156,7 +168,9 @@ A product left with no wordings is deleted in the same write: a product nothing 
 
 **A database that never runs the pass behaves exactly as it did before this existed** — an on-the-fly group per normalised name, resolved fresh on every read. Nothing is backfilled and no ingest path writes here.
 
-**And nothing runs the pass on its own today.** It is an explicit `POST /products/proposals` and nothing else: no schedule, no CLI runner beside `propose:kinds`, and no frontend for the corrections. So on a deployment where nobody calls it the dictionary stays empty and the leaderboard answers exactly as it did before — which is the safe direction to be incomplete in, but it does mean the correction loop is not yet reachable from the UI (POPS-2392) or from the command line (POPS-2393).
+**Running the pass is a command, and it previews by default.** `pnpm -F @pops/purchases propose:products` runs the real pass inside a transaction it then rolls back, and prints the counts plus a sample of the wordings it would mint and retire and of the renamed products those retirements would take with them. It leaves the dictionary exactly as it found it — opening the file still applies any pending migration, as every command here does. `-- --write` runs the same pass and commits it; that is a second scan of whatever the lines say by then, so a database still being ingested into can legitimately answer the two runs differently. Like `propose:kinds` it goes at the SQLite file rather than over HTTP, so it needs no base URL and no service-account key — and unlike it, this pass calls no model, so a preview costs a scan and nothing else. The preview is the default here and not there because this pass deletes: it retires the unconfirmed entries no line prints any more, where the kind pass only ever fills a NULL. `POST /products/proposals` is still the other way in, and still writes immediately.
+
+**Nothing runs the pass on a schedule, and that is a decision rather than an omission.** The pass is idempotent and reads every line by design, and it will not retire, repoint or relabel a confirmed entry — though the marker is on the wording and not on the product, so a product a human renamed is deleted with its last unconfirmed wording either way (POPS-2431). What the pass produces is a review queue, and no surface shows that queue (POPS-2392). A nightly run would mint entries nobody can see or correct, and would move every eligible leaderboard row off the honest `name` basis onto an unconfirmed `product` one on every deployment, without anyone having asked for a dictionary at all. So it stays on demand, where the preview can put the deletions in front of someone before they happen; POPS-2416 revisits it once the corrections have a home.
 
 ## Other invariants that span files
 
@@ -187,6 +201,14 @@ A proposal runs out of band — `pnpm propose:kinds`, never inside an adapter, s
 An order with **no charge and no link** (`awaiting_settlement`) is normal and permanent. A receipt captured in October is correct in October whether or not the card that paid for it is imported in December.
 
 A **cash** order (`settlementMode='cash'`) is terminal on arrival — `createPurchase` writes it straight to `settled_cash`. No transaction will ever exist for it, so it must never enter the reconcile queue, while still counting in every spend figure.
+
+## Evidence that arrives after the order
+
+An order's documents travel in its create request, and for a photographed receipt that is the whole story. For an export bundle it is not: the Amazon DSAR bundle's 325 tax invoices sit in a different folder than its order history, they carry no order id in their filenames, and the history is what gets ingested first. By the time the invoices are read the orders are already here, and `POST /purchases` refuses each of them at the checksum — so the create path can never place them.
+
+`POST /purchases/:id/documents` is the way in. One document, addressed by the order's own id, which is the only handle an already-ingested order answers to. `uq_purchase_documents(purchase_id, document_uri)` makes a repeat a `409` rather than a second row, so a backfill can be re-run without checking first: `pnpm ingest:amazon -- "<bundle>" --attach-existing` resolves each merchant order id against `GET /purchases?sources=amazon` and posts what is missing, and a second run reports every invoice as already carried. The route carries no shipment, because the adapter-local `shipmentRef` a create call uses resolves against deliveries defined in the same payload and there are none here — a document belonging to one delivery rather than the whole order can still only be attached at ingest (POPS-2418).
+
+Keep it small. [ADR-042](../../docs/architecture/adr-042-purchase-documents-and-transaction-reconciliation.md) and POPS-1528 migrate purchase evidence to the `documents` pillar, and this route migrates with it.
 
 ## The inventory fan-out
 

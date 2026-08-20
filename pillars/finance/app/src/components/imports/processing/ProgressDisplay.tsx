@@ -12,13 +12,13 @@ interface ProgressLike {
 
 function dedupStatus(progress: ProgressLike | undefined): StepStatus {
   if (progress?.currentStep === 'deduplicating') return 'in_progress';
-  if (['matching', 'writing'].includes(progress?.currentStep ?? '')) return 'done';
+  if (['matching', 'categorizing', 'writing'].includes(progress?.currentStep ?? '')) return 'done';
   return 'pending';
 }
 
 function matchingStatus(progress: ProgressLike | undefined): StepStatus {
   if (progress?.currentStep === 'matching') return 'in_progress';
-  if (progress?.currentStep === 'writing') return 'done';
+  if (['categorizing', 'writing'].includes(progress?.currentStep ?? '')) return 'done';
   return 'pending';
 }
 
@@ -26,6 +26,8 @@ interface ProgressDisplayProps {
   isProcessing: boolean;
   progress: ProgressLike | undefined;
   parsedCount: number;
+  /** True once the run has failed; the display renders nothing. */
+  failed?: boolean;
 }
 
 function computePct(isProcessing: boolean, progress: ProgressLike | undefined): number | undefined {
@@ -33,12 +35,21 @@ function computePct(isProcessing: boolean, progress: ProgressLike | undefined): 
   return (progress.processedCount / progress.totalTransactions) * 100;
 }
 
+/**
+ * The AI step is listed only while it is running: it is skipped entirely on a
+ * run where the deterministic ladder settles every row, and a step that never
+ * starts reads as one that stalled.
+ */
 function buildSteps(isProcessing: boolean, progress: ProgressLike | undefined) {
   if (!isProcessing) return undefined;
-  return [
+  const steps = [
     { label: 'Checking for duplicates', status: dedupStatus(progress) },
     { label: 'Matching entities', status: matchingStatus(progress) },
   ];
+  if (progress?.currentStep === 'categorizing') {
+    steps.push({ label: 'Categorizing with AI', status: 'in_progress' });
+  }
+  return steps;
 }
 
 function buildBatchItems(isProcessing: boolean, progress: ProgressLike | undefined) {
@@ -68,7 +79,16 @@ function computeMessage(
   return `Analyzing ${parsedCount} transactions...`;
 }
 
-export function ProgressDisplay({ isProcessing, progress, parsedCount }: ProgressDisplayProps) {
+export function ProgressDisplay({
+  isProcessing,
+  progress,
+  parsedCount,
+  failed = false,
+}: ProgressDisplayProps) {
+  // A failed run keeps its last progress state, so rendering anyway leaves a
+  // live spinner claiming the import is still being analyzed directly above the
+  // panel saying it failed.
+  if (failed) return null;
   return (
     <LoadingProgressStep
       title="Processing"

@@ -8,17 +8,19 @@
  * other's paths, and that a request naming a row that is not there is refused
  * rather than answered with a body a client cannot tell from success.
  */
-import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { openTempDb, seedAmazonSource } from '../../db/__tests__/helpers.js';
 import { createPurchase, upsertSource } from '../../db/index.js';
 import { createPurchasesApiApp } from '../app.js';
 import { __resetPillarRegistryCache } from '../pillars/registry.js';
+import { createTestTransport } from './test-http.js';
 
 import type { Express } from 'express';
 
 import type { CreatePurchaseInput, OpenedPurchasesDb } from '../../db/index.js';
+
+const { requestOn } = createTestTransport();
 
 let opened: OpenedPurchasesDb;
 let cleanup: () => void;
@@ -75,7 +77,7 @@ interface WireProduct {
 }
 
 async function listProductsOverHttp(query = ''): Promise<WireProduct[]> {
-  const res = await request(app).get(`/products${query}`);
+  const res = await requestOn(app).get(`/products${query}`);
   expect(res.status).toBe(200);
   return res.body.products as WireProduct[];
 }
@@ -93,7 +95,7 @@ describe('POST /products/proposals', () => {
   it('mints an entry per printed wording and reports what it did', async () => {
     createPurchase(opened.db, shop('shop', ['CHK BRST 1KG', 'Chicken Breast 1kg']));
 
-    const res = await request(app).post('/products/proposals').send({});
+    const res = await requestOn(app).post('/products/proposals').send({});
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
@@ -109,7 +111,7 @@ describe('POST /products/proposals', () => {
 describe('the dictionary listing', () => {
   beforeEach(async () => {
     createPurchase(opened.db, shop('shop', ['CHK BRST 1KG', 'Chicken Breast 1kg']));
-    await request(app).post('/products/proposals').send({});
+    await requestOn(app).post('/products/proposals').send({});
   });
 
   it('returns each product with the wordings that resolve to it', async () => {
@@ -126,14 +128,14 @@ describe('the dictionary listing', () => {
     const target = await aliasOverHttp('Chicken Breast 1kg');
     const alias = await aliasOverHttp('CHK BRST 1KG');
 
-    const patched = await request(app)
+    const patched = await requestOn(app)
       .patch(`/products/aliases/${alias.id}`)
       .send({ productId: target.productId, confirmed: true });
 
     expect(patched.status).toBe(200);
     expect(patched.body.confirmedAt).not.toBeNull();
 
-    const board = await request(app).get('/analytics/product-leaderboard');
+    const board = await requestOn(app).get('/analytics/product-leaderboard');
     expect(board.body.products).toHaveLength(1);
     // Half the group's lines are in it on a wording the pass proposed and
     // nobody has asserted, so the row does not claim to be asserted — even
@@ -145,9 +147,9 @@ describe('the dictionary listing', () => {
       proposedProductLines: 1,
     });
 
-    await request(app).patch(`/products/aliases/${target.id}`).send({ confirmed: true });
+    await requestOn(app).patch(`/products/aliases/${target.id}`).send({ confirmed: true });
 
-    const asserted = await request(app).get('/analytics/product-leaderboard');
+    const asserted = await requestOn(app).get('/analytics/product-leaderboard');
     expect(asserted.body.products[0].product).toMatchObject({ confirmed: true });
     expect(asserted.body.coverage).toMatchObject({
       confirmedProductLines: 2,
@@ -158,7 +160,7 @@ describe('the dictionary listing', () => {
   it('renames a product without disturbing its wordings', async () => {
     const target = await aliasOverHttp('CHK BRST 1KG');
 
-    const res = await request(app)
+    const res = await requestOn(app)
       .patch(`/products/${target.productId}`)
       .send({ label: 'Chicken breast, 1kg' });
 
@@ -171,7 +173,7 @@ describe('the dictionary listing', () => {
   it('forgets one wording without touching the rest of the dictionary', async () => {
     const alias = await aliasOverHttp('CHK BRST 1KG');
 
-    expect((await request(app).delete(`/products/aliases/${alias.id}`)).status).toBe(200);
+    expect((await requestOn(app).delete(`/products/aliases/${alias.id}`)).status).toBe(200);
 
     expect((await listProductsOverHttp()).map((product) => product.label)).toEqual([
       'Chicken Breast 1kg',
@@ -181,7 +183,7 @@ describe('the dictionary listing', () => {
   it('forgets a product and every wording that resolved to it', async () => {
     const target = await aliasOverHttp('CHK BRST 1KG');
 
-    expect((await request(app).delete(`/products/${target.productId}`)).status).toBe(200);
+    expect((await requestOn(app).delete(`/products/${target.productId}`)).status).toBe(200);
 
     expect((await listProductsOverHttp()).map((product) => product.label)).toEqual([
       'Chicken Breast 1kg',
@@ -190,7 +192,7 @@ describe('the dictionary listing', () => {
 
   it('filters to what a human has asserted', async () => {
     const alias = await aliasOverHttp('CHK BRST 1KG');
-    await request(app).patch(`/products/aliases/${alias.id}`).send({ confirmed: true });
+    await requestOn(app).patch(`/products/aliases/${alias.id}`).send({ confirmed: true });
 
     expect((await listProductsOverHttp('?confirmed=true')).map((p) => p.label)).toEqual([
       'CHK BRST 1KG',
@@ -203,7 +205,7 @@ describe('the dictionary listing', () => {
 
 describe('refusals', () => {
   it('refuses a wording that names no row', async () => {
-    const res = await request(app).patch('/products/aliases/nope').send({ confirmed: true });
+    const res = await requestOn(app).patch('/products/aliases/nope').send({ confirmed: true });
 
     expect(res.status).toBe(404);
     expect(res.body).toMatchObject({ code: 'NOT_FOUND' });
@@ -211,10 +213,10 @@ describe('refusals', () => {
 
   it('refuses to point a wording at a product that does not exist', async () => {
     createPurchase(opened.db, shop('shop', ['CHK BRST 1KG']));
-    await request(app).post('/products/proposals').send({});
+    await requestOn(app).post('/products/proposals').send({});
     const alias = await aliasOverHttp('CHK BRST 1KG');
 
-    const res = await request(app)
+    const res = await requestOn(app)
       .patch(`/products/aliases/${alias.id}`)
       .send({ productId: 'nope' });
 
@@ -226,19 +228,19 @@ describe('refusals', () => {
 
   it('refuses a patch that states neither a target nor a confirmation', async () => {
     createPurchase(opened.db, shop('shop', ['CHK BRST 1KG']));
-    await request(app).post('/products/proposals').send({});
+    await requestOn(app).post('/products/proposals').send({});
     const alias = await aliasOverHttp('CHK BRST 1KG');
 
-    expect((await request(app).patch(`/products/aliases/${alias.id}`).send({})).status).toBe(400);
+    expect((await requestOn(app).patch(`/products/aliases/${alias.id}`).send({})).status).toBe(400);
   });
 
   it('refuses to rename a product that does not exist', async () => {
-    const res = await request(app).patch('/products/nope').send({ label: 'Anything' });
+    const res = await requestOn(app).patch('/products/nope').send({ label: 'Anything' });
 
     expect(res.status).toBe(404);
   });
 
   it('refuses to delete a product that does not exist', async () => {
-    expect((await request(app).delete('/products/nope')).status).toBe(404);
+    expect((await requestOn(app).delete('/products/nope')).status).toBe(404);
   });
 });

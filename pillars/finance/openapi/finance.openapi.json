@@ -6575,6 +6575,9 @@
                               "checksum": {
                                 "type": "string"
                               },
+                              "country": {
+                                "type": "string"
+                              },
                               "date": {
                                 "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
                                 "type": "string"
@@ -6616,6 +6619,20 @@
                               },
                               "error": {
                                 "type": "string"
+                              },
+                              "foreignAmountMinor": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "foreignCurrency": {
+                                "pattern": "^[A-Z]{3}$",
+                                "type": "string"
+                              },
+                              "fxFeeCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
                               },
                               "location": {
                                 "type": "string"
@@ -6773,6 +6790,9 @@
                               "checksum": {
                                 "type": "string"
                               },
+                              "country": {
+                                "type": "string"
+                              },
                               "date": {
                                 "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
                                 "type": "string"
@@ -6814,6 +6834,20 @@
                               },
                               "error": {
                                 "type": "string"
+                              },
+                              "foreignAmountMinor": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "foreignCurrency": {
+                                "pattern": "^[A-Z]{3}$",
+                                "type": "string"
+                              },
+                              "fxFeeCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
                               },
                               "location": {
                                 "type": "string"
@@ -6971,6 +7005,9 @@
                               "checksum": {
                                 "type": "string"
                               },
+                              "country": {
+                                "type": "string"
+                              },
                               "date": {
                                 "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
                                 "type": "string"
@@ -7012,6 +7049,20 @@
                               },
                               "error": {
                                 "type": "string"
+                              },
+                              "foreignAmountMinor": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "foreignCurrency": {
+                                "pattern": "^[A-Z]{3}$",
+                                "type": "string"
+                              },
+                              "fxFeeCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
                               },
                               "location": {
                                 "type": "string"
@@ -7169,6 +7220,9 @@
                               "checksum": {
                                 "type": "string"
                               },
+                              "country": {
+                                "type": "string"
+                              },
                               "date": {
                                 "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
                                 "type": "string"
@@ -7210,6 +7264,20 @@
                               },
                               "error": {
                                 "type": "string"
+                              },
+                              "foreignAmountMinor": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "foreignCurrency": {
+                                "pattern": "^[A-Z]{3}$",
+                                "type": "string"
+                              },
+                              "fxFeeCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
                               },
                               "location": {
                                 "type": "string"
@@ -7899,6 +7967,9 @@
                         "checksum": {
                           "type": "string"
                         },
+                        "country": {
+                          "type": "string"
+                        },
                         "date": {
                           "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
                           "type": "string"
@@ -7912,6 +7983,20 @@
                         },
                         "entityName": {
                           "type": "string"
+                        },
+                        "foreignAmountMinor": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "foreignCurrency": {
+                          "pattern": "^[A-Z]{3}$",
+                          "type": "string"
+                        },
+                        "fxFeeCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
                         },
                         "location": {
                           "type": "string"
@@ -8326,6 +8411,9 @@
                         "checksum": {
                           "type": "string"
                         },
+                        "country": {
+                          "type": "string"
+                        },
                         "date": {
                           "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
                           "type": "string"
@@ -8333,6 +8421,20 @@
                         "description": {
                           "minLength": 1,
                           "type": "string"
+                        },
+                        "foreignAmountMinor": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "foreignCurrency": {
+                          "pattern": "^[A-Z]{3}$",
+                          "type": "string"
+                        },
+                        "fxFeeCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
                         },
                         "location": {
                           "type": "string"
@@ -8497,7 +8599,7 @@
                       "type": "array"
                     },
                     "currentStep": {
-                      "enum": ["deduplicating", "matching"],
+                      "enum": ["deduplicating", "matching", "categorizing"],
                       "type": "string"
                     },
                     "errors": {
@@ -8568,6 +8670,9 @@
                               "checksum": {
                                 "type": "string"
                               },
+                              "country": {
+                                "type": "string"
+                              },
                               "date": {
                                 "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
                                 "type": "string"
@@ -8609,6 +8714,20 @@
                               },
                               "error": {
                                 "type": "string"
+                              },
+                              "foreignAmountMinor": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "foreignCurrency": {
+                                "pattern": "^[A-Z]{3}$",
+                                "type": "string"
+                              },
+                              "fxFeeCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
                               },
                               "location": {
                                 "type": "string"
@@ -8766,6 +8885,9 @@
                               "checksum": {
                                 "type": "string"
                               },
+                              "country": {
+                                "type": "string"
+                              },
                               "date": {
                                 "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
                                 "type": "string"
@@ -8807,6 +8929,20 @@
                               },
                               "error": {
                                 "type": "string"
+                              },
+                              "foreignAmountMinor": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "foreignCurrency": {
+                                "pattern": "^[A-Z]{3}$",
+                                "type": "string"
+                              },
+                              "fxFeeCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
                               },
                               "location": {
                                 "type": "string"
@@ -8964,6 +9100,9 @@
                               "checksum": {
                                 "type": "string"
                               },
+                              "country": {
+                                "type": "string"
+                              },
                               "date": {
                                 "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
                                 "type": "string"
@@ -9005,6 +9144,20 @@
                               },
                               "error": {
                                 "type": "string"
+                              },
+                              "foreignAmountMinor": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "foreignCurrency": {
+                                "pattern": "^[A-Z]{3}$",
+                                "type": "string"
+                              },
+                              "fxFeeCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
                               },
                               "location": {
                                 "type": "string"
@@ -9162,6 +9315,9 @@
                               "checksum": {
                                 "type": "string"
                               },
+                              "country": {
+                                "type": "string"
+                              },
                               "date": {
                                 "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
                                 "type": "string"
@@ -9203,6 +9359,20 @@
                               },
                               "error": {
                                 "type": "string"
+                              },
+                              "foreignAmountMinor": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "foreignCurrency": {
+                                "pattern": "^[A-Z]{3}$",
+                                "type": "string"
+                              },
+                              "fxFeeCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
                               },
                               "location": {
                                 "type": "string"
@@ -9775,6 +9945,9 @@
                               "checksum": {
                                 "type": "string"
                               },
+                              "country": {
+                                "type": "string"
+                              },
                               "date": {
                                 "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
                                 "type": "string"
@@ -9816,6 +9989,20 @@
                               },
                               "error": {
                                 "type": "string"
+                              },
+                              "foreignAmountMinor": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "foreignCurrency": {
+                                "pattern": "^[A-Z]{3}$",
+                                "type": "string"
+                              },
+                              "fxFeeCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
                               },
                               "location": {
                                 "type": "string"
@@ -9973,6 +10160,9 @@
                               "checksum": {
                                 "type": "string"
                               },
+                              "country": {
+                                "type": "string"
+                              },
                               "date": {
                                 "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
                                 "type": "string"
@@ -10014,6 +10204,20 @@
                               },
                               "error": {
                                 "type": "string"
+                              },
+                              "foreignAmountMinor": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "foreignCurrency": {
+                                "pattern": "^[A-Z]{3}$",
+                                "type": "string"
+                              },
+                              "fxFeeCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
                               },
                               "location": {
                                 "type": "string"
@@ -10171,6 +10375,9 @@
                               "checksum": {
                                 "type": "string"
                               },
+                              "country": {
+                                "type": "string"
+                              },
                               "date": {
                                 "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
                                 "type": "string"
@@ -10212,6 +10419,20 @@
                               },
                               "error": {
                                 "type": "string"
+                              },
+                              "foreignAmountMinor": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "foreignCurrency": {
+                                "pattern": "^[A-Z]{3}$",
+                                "type": "string"
+                              },
+                              "fxFeeCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
                               },
                               "location": {
                                 "type": "string"
@@ -10369,6 +10590,9 @@
                               "checksum": {
                                 "type": "string"
                               },
+                              "country": {
+                                "type": "string"
+                              },
                               "date": {
                                 "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
                                 "type": "string"
@@ -10410,6 +10634,20 @@
                               },
                               "error": {
                                 "type": "string"
+                              },
+                              "foreignAmountMinor": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "foreignCurrency": {
+                                "pattern": "^[A-Z]{3}$",
+                                "type": "string"
+                              },
+                              "fxFeeCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
                               },
                               "location": {
                                 "type": "string"
@@ -14851,6 +15089,22 @@
                             "nullable": true,
                             "type": "string"
                           },
+                          "foreignAmountMinor": {
+                            "maximum": 9007199254740991,
+                            "minimum": -9007199254740991,
+                            "nullable": true,
+                            "type": "integer"
+                          },
+                          "foreignCurrency": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "fxFeeCents": {
+                            "maximum": 9007199254740991,
+                            "minimum": -9007199254740991,
+                            "nullable": true,
+                            "type": "integer"
+                          },
                           "id": {
                             "type": "string"
                           },
@@ -14903,6 +15157,9 @@
                           "country",
                           "relatedTransactionId",
                           "notes",
+                          "foreignAmountMinor",
+                          "foreignCurrency",
+                          "fxFeeCents",
                           "lastEditedTime"
                         ],
                         "type": "object"
@@ -15125,6 +15382,22 @@
                           "nullable": true,
                           "type": "string"
                         },
+                        "foreignAmountMinor": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "foreignCurrency": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "fxFeeCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "nullable": true,
+                          "type": "integer"
+                        },
                         "id": {
                           "type": "string"
                         },
@@ -15177,6 +15450,9 @@
                         "country",
                         "relatedTransactionId",
                         "notes",
+                        "foreignAmountMinor",
+                        "foreignCurrency",
+                        "fxFeeCents",
                         "lastEditedTime"
                       ],
                       "type": "object"
@@ -15392,6 +15668,22 @@
                     "nullable": true,
                     "type": "string"
                   },
+                  "foreignAmountMinor": {
+                    "maximum": 9007199254740991,
+                    "minimum": -9007199254740991,
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "foreignCurrency": {
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "fxFeeCents": {
+                    "maximum": 9007199254740991,
+                    "minimum": -9007199254740991,
+                    "nullable": true,
+                    "type": "integer"
+                  },
                   "id": {
                     "type": "string"
                   },
@@ -15475,6 +15767,9 @@
                   "country",
                   "relatedTransactionId",
                   "notes",
+                  "foreignAmountMinor",
+                  "foreignCurrency",
+                  "fxFeeCents",
                   "checksum",
                   "rawRow",
                   "lastEditedTime",
@@ -15521,6 +15816,22 @@
                         "entityName": {
                           "nullable": true,
                           "type": "string"
+                        },
+                        "foreignAmountMinor": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "foreignCurrency": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "fxFeeCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "nullable": true,
+                          "type": "integer"
                         },
                         "id": {
                           "type": "string"
@@ -15574,6 +15885,9 @@
                         "country",
                         "relatedTransactionId",
                         "notes",
+                        "foreignAmountMinor",
+                        "foreignCurrency",
+                        "fxFeeCents",
                         "lastEditedTime"
                       ],
                       "type": "object"
@@ -15775,6 +16089,22 @@
                           "nullable": true,
                           "type": "string"
                         },
+                        "foreignAmountMinor": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "foreignCurrency": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "fxFeeCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "nullable": true,
+                          "type": "integer"
+                        },
                         "id": {
                           "type": "string"
                         },
@@ -15858,6 +16188,9 @@
                         "country",
                         "relatedTransactionId",
                         "notes",
+                        "foreignAmountMinor",
+                        "foreignCurrency",
+                        "fxFeeCents",
                         "checksum",
                         "rawRow",
                         "lastEditedTime",
@@ -15994,6 +16327,22 @@
                           "nullable": true,
                           "type": "string"
                         },
+                        "foreignAmountMinor": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "foreignCurrency": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "fxFeeCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "nullable": true,
+                          "type": "integer"
+                        },
                         "id": {
                           "type": "string"
                         },
@@ -16046,6 +16395,9 @@
                         "country",
                         "relatedTransactionId",
                         "notes",
+                        "foreignAmountMinor",
+                        "foreignCurrency",
+                        "fxFeeCents",
                         "lastEditedTime"
                       ],
                       "type": "object"
@@ -16248,6 +16600,22 @@
                           "nullable": true,
                           "type": "string"
                         },
+                        "foreignAmountMinor": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "foreignCurrency": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "fxFeeCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "nullable": true,
+                          "type": "integer"
+                        },
                         "id": {
                           "type": "string"
                         },
@@ -16300,6 +16668,9 @@
                         "country",
                         "relatedTransactionId",
                         "notes",
+                        "foreignAmountMinor",
+                        "foreignCurrency",
+                        "fxFeeCents",
                         "lastEditedTime"
                       ],
                       "type": "object"
@@ -16448,6 +16819,22 @@
                           "nullable": true,
                           "type": "string"
                         },
+                        "foreignAmountMinor": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "foreignCurrency": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "fxFeeCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "nullable": true,
+                          "type": "integer"
+                        },
                         "id": {
                           "type": "string"
                         },
@@ -16500,6 +16887,9 @@
                         "country",
                         "relatedTransactionId",
                         "notes",
+                        "foreignAmountMinor",
+                        "foreignCurrency",
+                        "fxFeeCents",
                         "lastEditedTime"
                       ],
                       "type": "object"

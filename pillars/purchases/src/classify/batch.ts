@@ -33,7 +33,13 @@ export function batchingKey(item: BatchableItem, dictionary?: ProductDictionary)
 /** One product: every line that shares a batching key. */
 export interface ProposalCandidate {
   readonly key: string;
-  readonly source: string;
+  /**
+   * The source that stated this product, or `null` where the batch spans
+   * sources because the identifier is one that means the same thing at all
+   * of them. Naming whichever line was read first would tell the model a
+   * fact about one line as though it were a fact about the product.
+   */
+  readonly source: string | null;
   /** The first line's name, which is what the model is shown. */
   readonly name: string;
   /**
@@ -59,14 +65,14 @@ export function toCandidates(
 ): readonly ProposalCandidate[] {
   const byKey = new Map<string, { candidate: ProposalCandidate; itemIds: string[] }>();
   for (const item of items) {
-    const key = batchingKey(item, dictionary);
+    const { key, identity } = identifyProduct(item, dictionary);
     const existing = byKey.get(key);
     if (existing === undefined) {
       const itemIds = [item.id];
       byKey.set(key, {
         candidate: {
           key,
-          source: item.source,
+          source: identity.source,
           name: item.name,
           sku: productIdentityOf(item),
           itemIds,

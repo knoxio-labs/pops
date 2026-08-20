@@ -5,11 +5,13 @@ import { Badge, type ColumnFilter, dateRangeFilter, SortableHeader } from '@pops
 import { TagEditor } from '../../components/TagEditor';
 import { labelForType, TRANSACTION_TYPES, type TransactionType } from '../../lib/transaction-type';
 import { AmountCell, DescriptionCell } from './cells';
+import { buildPurchaseLinkColumn } from './purchase-link/column';
 import { RowActions, type RowActionHandlers } from './RowActions';
 
 import type { ColumnDef } from '@tanstack/react-table';
 import type { TFunction } from 'i18next';
 
+import type { TransactionLinkSummary } from './purchase-link/types';
 import type { Transaction } from './types';
 
 export type { Transaction } from './types';
@@ -17,6 +19,8 @@ export type { Transaction } from './types';
 interface BuildColumnsBase {
   t: TFunction<'finance'>;
   availableTags: string[];
+  /** Keyed on transaction id. A transaction no order explains is absent, not zeroed. */
+  purchaseLinks: Map<string, TransactionLinkSummary>;
   onTagSave: (
     id: string,
     entityId: string | null,
@@ -118,6 +122,11 @@ function buildCoreColumns(t: TFunction<'finance'>): ColumnDef<Transaction>[] {
 function buildInteractiveColumns(args: BuildColumnsArgs): ColumnDef<Transaction>[] {
   const { t } = args;
   return [
+    buildPurchaseLinkColumn({
+      t,
+      summaries: args.purchaseLinks,
+      onShowPurchase: args.onShowPurchase,
+    }),
     {
       accessorKey: 'tags',
       header: t('column.tags'),

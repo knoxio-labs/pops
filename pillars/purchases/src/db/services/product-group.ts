@@ -299,11 +299,20 @@ export function noteMerchant(bucket: ProductBucket, line: ScopedLine): void {
  * basis's key, but a `product` group may hold lines from several, and a name
  * from one line beside a source from another describes a line that does not
  * exist.
+ *
+ * A `sku` group that already reported no source keeps reporting none. There
+ * the null is the identity's own claim that no single source bounds the
+ * group, and taking the newest line's source would answer a question about
+ * the whole group with a fact about one line of it.
  */
 function label(bucket: ProductBucket): ProductIdentity {
-  if (bucket.identity.basis === 'unidentified') return bucket.identity;
+  const identity = bucket.identity;
+  if (identity.basis === 'unidentified') return identity;
   const { name, source } = bucket.latest.line;
-  return { ...bucket.identity, name, source };
+  if (identity.basis === 'sku') {
+    return { ...identity, name, source: identity.source === null ? null : source };
+  }
+  return { ...identity, name, source };
 }
 
 export function present(bucket: ProductBucket): ProductPurchases {

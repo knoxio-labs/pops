@@ -22,7 +22,21 @@ export const transactions = sqliteTable(
     location: text('location'),
     country: text('country'),
     relatedTransactionId: text('related_transaction_id'),
+    /** User-authored only. Importers write their derived detail to typed columns. */
     notes: text('notes'),
+    /**
+     * Amount charged abroad, in the currency's own ISO-4217 minor units — `1100`
+     * is ¥1,100 for JPY (no minor unit) and $11.00 for USD, so it is meaningless
+     * without `foreignCurrency`.
+     */
+    foreignAmountMinor: integer('foreign_amount_minor'),
+    /** ISO-4217 alpha-3 of the charge abroad. Null for a domestic charge. */
+    foreignCurrency: text('foreign_currency'),
+    /**
+     * The issuer's foreign-transaction FEE in AUD cents (~3% of the charge) —
+     * not the converted AUD total, which the statement never states separately.
+     */
+    fxFeeCents: integer('fx_fee_cents'),
     checksum: text('checksum'),
     rawRow: text('raw_row'),
     lastEditedTime: text('last_edited_time').notNull(),

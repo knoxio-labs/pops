@@ -16,6 +16,7 @@ import {
 } from './transactions/columns';
 import { DeleteTransactionDialog } from './transactions/DeleteTransactionDialog';
 import { PurchaseDetailDialog } from './transactions/purchase-detail/PurchaseDetailDialog';
+import { usePurchaseLinkSummaries } from './transactions/purchase-link/usePurchaseLinkSummaries';
 import { TransactionFormDialog } from './transactions/TransactionFormDialog';
 import { useTransactionsPage } from './transactions/useTransactionsPage';
 
@@ -137,6 +138,7 @@ export function TransactionsPage() {
   const { description, setFilteredCount } = useSubtitle(t, state.query.data?.pagination.total); // prettier-ignore
   const accounts = useMemo(() => getDistinctAccounts(state.query.data?.data), [state.query.data]);
   const [purchaseTx, setPurchaseTx] = useState<Transaction | null>(null);
+  const purchaseLinks = usePurchaseLinkSummaries(state.query.data?.data);
 
   if (state.query.error) {
     return <ErrorView message={state.query.error.message} onRetry={() => state.query.refetch()} />;
@@ -145,6 +147,7 @@ export function TransactionsPage() {
   const columns = buildColumns({
     t,
     availableTags: state.availableTags,
+    purchaseLinks,
     onTagSave,
     onTagSuggest,
     onEdit: state.handleEdit,

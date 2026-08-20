@@ -28,6 +28,7 @@
  */
 import { pillarRegistry, RegistryUnreachableError } from '@pops/pillar-sdk/discovery';
 
+import { parseDeviceCapabilities } from '../../contract/capabilities.js';
 import { touchDevice } from '../../db/index.js';
 import { BFM_PILLAR_ID } from '../manifest.js';
 import { deriveFeatures } from './features.js';
@@ -74,7 +75,15 @@ export async function buildMobileBootstrap(
   const pillars = await probeFederation(withoutSelf(registry.pillars), deps.probe);
 
   return {
-    device: { id: device.id, name: device.name, lastSeenAt: seenAt },
+    device: {
+      id: device.id,
+      name: device.name,
+      lastSeenAt: seenAt,
+      // The row's own grant, not the vocabulary this build knows. A device
+      // told what it may do can decline to offer the rest rather than
+      // discovering it one 403 at a time.
+      capabilities: [...parseDeviceCapabilities(device.capabilities, device.id)],
+    },
     registry: { source: registry.source },
     pillars,
     features: deriveFeatures(pillars),

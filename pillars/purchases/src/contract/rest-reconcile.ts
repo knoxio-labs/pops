@@ -19,10 +19,12 @@
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
 
+import { purchasesReconcileBatchContract } from './rest-reconcile-batch.js';
 import { ErrorBodySchema, OkSchema, QueryBoolSchema } from './rest-schemas.js';
 import {
   CentsSchema,
   CurrencySchema,
+  FinanceTransactionUriSchema,
   IsoTimestampSchema,
   LinkTypeSchema,
   PopsUriSchema,
@@ -30,7 +32,6 @@ import {
   PurchaseChargeSchema,
   PurchaseSchema,
 } from './schemas/purchase.js';
-import { popsUriPattern } from './schemas/scalars.js';
 
 const c = initContract();
 
@@ -80,24 +81,6 @@ export const ReconcileQueueQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(500).optional(),
   offset: z.coerce.number().int().min(0).optional(),
 });
-
-/**
- * A `pops://finance/transaction/<id>` reference specifically.
- *
- * Narrower than {@link PopsUriSchema}, and deliberately narrower than the
- * stored column, which stays generic. It exists for the one place a URI is
- * an INPUT: a lookup keyed on a well-formed URI from another pillar matches
- * no link and returns an empty list, which reads as "no order bought this"
- * rather than "you asked the wrong question".
- */
-export const FINANCE_TRANSACTION_URI = popsUriPattern('finance', 'transaction');
-
-const FinanceTransactionUriSchema = z
-  .string()
-  .regex(
-    FINANCE_TRANSACTION_URI,
-    'expected a finance transaction URI, e.g. pops://finance/transaction/<id>'
-  );
 
 export const TransactionLinksQuerySchema = z.object({
   transactionUri: FinanceTransactionUriSchema,
@@ -172,6 +155,10 @@ export const SweepOutcomeSchema = z.discriminatedUnion('kind', [
 ]);
 
 export const purchasesReconcileContract = c.router({
+  // The plural form of `links`, kept in its own file and spread back in here
+  // so it shares this sub-router's scope vocabulary rather than minting a
+  // second one for the same subject.
+  ...purchasesReconcileBatchContract,
   queue: {
     method: 'GET',
     path: '/reconcile/queue',

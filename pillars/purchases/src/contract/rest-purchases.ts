@@ -15,6 +15,7 @@ import {
   InventoryProposalSchema,
 } from './inventory-proposals.js';
 import {
+  AttachDocumentBodySchema,
   CreatePurchaseBodySchema,
   ErrorBodySchema,
   ListItemsByTagQuerySchema,
@@ -25,6 +26,7 @@ import {
 import { PurchaseDetailSchema, PurchaseItemDetailSchema } from './schemas/purchase-detail.js';
 import {
   IsoTimestampSchema,
+  PurchaseDocumentSchema,
   PurchaseItemSchema,
   PurchaseItemUnitSchema,
   PurchaseSchema,
@@ -81,6 +83,34 @@ export const purchasesPurchaseContract = c.router({
       409: ErrorBodySchema,
     },
     summary: 'Create an order with its deliveries, lines, charges and documents',
+  },
+  /**
+   * Attach one document to an order that already exists.
+   *
+   * Evidence does not always arrive with the order it belongs to. A DSAR
+   * bundle's tax invoices sit in a different folder than its order history,
+   * and the history is what gets ingested first — so by the time the invoices
+   * are read, {@link create} refuses every one of those orders at the
+   * checksum and the evidence has nowhere to go.
+   *
+   * A repeat is the 409, not a second row: `uq_purchase_documents` holds the
+   * order-and-URI pair unique, which is what lets a backfill be re-run.
+   *
+   * ADR-042 and the documents pillar will take this surface over, so it is
+   * deliberately one document at a time and carries no shipment.
+   */
+  attachDocument: {
+    method: 'POST',
+    path: '/purchases/:id/documents',
+    pathParams: z.object({ id: z.string() }),
+    body: AttachDocumentBodySchema,
+    responses: {
+      201: z.object({ document: PurchaseDocumentSchema }),
+      404: ErrorBodySchema,
+      // The order already carries that URI. A re-run treats this as a skip.
+      409: ErrorBodySchema,
+    },
+    summary: 'Attach a document to an existing order',
   },
   delete: {
     method: 'DELETE',

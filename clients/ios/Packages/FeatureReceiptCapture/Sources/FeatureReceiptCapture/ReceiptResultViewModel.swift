@@ -19,7 +19,15 @@ public final class ReceiptResultViewModel {
     /// What the screen shows.
     public private(set) var state: ReceiptResultState = .submitting
 
-    private let parts: [ReceiptPart]
+    /// The pages this screen is about, kept after they are sent because the
+    /// screen goes on drawing them: the reading underneath is only checkable
+    /// against the paper it was read off.
+    ///
+    /// `internal` rather than private for that — ``ReceiptResultView`` needs
+    /// them — and no wider, because nothing outside this module has any
+    /// business re-reading one submission's bytes.
+    internal let parts: [ReceiptPart]
+
     private let repository: any ReceiptCaptureRepository
 
     /// Re-entrancy protection. `.task` fires on appearance and a retry is a

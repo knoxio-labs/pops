@@ -6,12 +6,14 @@ import {
   listPurchasesForTransaction,
   listReconcileQueue,
   rejectLink,
+  summariseLinksForTransactions,
   unlinkCharge,
 } from '../../db/index.js';
 import { nowIso } from '../../db/services/internal.js';
 
 import type { z } from 'zod';
 
+import type { TransactionLinksBatchBodySchema } from '../../contract/rest-reconcile-batch.js';
 import type {
   ReconcileQueueQuerySchema,
   TransactionLinksQuerySchema,
@@ -21,6 +23,7 @@ import type { SweepOutcome } from '../../reconcile/sweep.js';
 
 type QueueQuery = z.infer<typeof ReconcileQueueQuerySchema>;
 type TransactionLinksQuery = z.infer<typeof TransactionLinksQuerySchema>;
+type TransactionLinksBatchBody = z.infer<typeof TransactionLinksBatchBodySchema>;
 type Decision = { chargeId: string; transactionUri: string };
 
 /** What the route needs from the runner, without importing its scheduling. */
@@ -81,6 +84,13 @@ export function makeReconcileHandlers(db: PurchasesDb, sweep?: SweepTrigger) {
         transactionUri: query.transactionUri,
         purchases: toWireLinkedPurchases(listPurchasesForTransaction(db, query.transactionUri)),
       },
+    }),
+
+    linksBatch: async ({ body }: { body: TransactionLinksBatchBody }) => ({
+      status: 200 as const,
+      // Copied because the service answers with a readonly array and the wire
+      // body ts-rest validates against is a mutable one.
+      body: { transactions: [...summariseLinksForTransactions(db, body.transactionUris)] },
     }),
 
     confirm: async ({ body }: { body: Decision }) => {

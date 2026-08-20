@@ -160,6 +160,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/purchases/{id}/documents': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Attach a document to an existing order */
+    post: operations['purchase.attachDocument'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/purchases/{id}/inventory-proposals': {
     parameters: {
       query?: never;
@@ -273,6 +290,23 @@ export interface paths {
     get: operations['reconcile.links'];
     put?: never;
     post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/reconcile/links/batch': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Which of these finance transactions an order explains, confirmed or derived */
+    post: operations['reconcile.linksBatch'];
     delete?: never;
     options?: never;
     head?: never;
@@ -592,8 +626,10 @@ export interface operations {
                     /** @enum {string} */
                     basis: 'sku';
                     name: string;
+                    /** @enum {string} */
+                    scheme: 'asin' | 'merchant';
                     sku: string;
-                    source: string;
+                    source: string | null;
                   }
                 | {
                     /** @enum {string} */
@@ -1553,6 +1589,72 @@ export interface operations {
       };
     };
   };
+  'purchase.attachDocument': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          documentUri: string;
+          /** @enum {string} */
+          kind?: 'tax_invoice' | 'receipt' | 'order_confirmation' | 'delivery_photo' | 'other';
+        };
+      };
+    };
+    responses: {
+      /** @description 201 */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            document: {
+              createdAt: string;
+              documentStaleAt: string | null;
+              documentUri: string;
+              id: string;
+              /** @enum {string} */
+              kind: 'tax_invoice' | 'receipt' | 'order_confirmation' | 'delivery_photo' | 'other';
+              purchaseId: string;
+              shipmentId: string | null;
+            };
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+          };
+        };
+      };
+    };
+  };
   'purchase.listInventoryProposals': {
     parameters: {
       query?: never;
@@ -2273,6 +2375,40 @@ export interface operations {
               };
             }[];
             transactionUri: string;
+          };
+        };
+      };
+    };
+  };
+  'reconcile.linksBatch': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          transactionUris: string[];
+        };
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            transactions: {
+              confirmedChargeCount: number;
+              derivedChargeCount: number;
+              purchaseCount: number;
+              transactionUri: string;
+            }[];
           };
         };
       };

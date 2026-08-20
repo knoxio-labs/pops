@@ -10,7 +10,7 @@
  */
 import { z } from 'zod';
 
-import { FINANCE_TRANSACTION_URI } from '../../contract/rest-reconcile.js';
+import { FINANCE_TRANSACTION_URI } from '../../contract/schemas/scalars.js';
 import { calendarDateInZone } from '../../ingest/local-time.js';
 
 import type { InventoryProposal } from '../../db/index.js';

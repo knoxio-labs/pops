@@ -185,6 +185,53 @@ describe('across sources', () => {
     );
   });
 
+  it('shares one decision for an ASIN across the two Amazon exports', () => {
+    // The bundle splits Amazon's catalogue over a physical and a digital
+    // export, so the same ASIN arrives under two source ids. Two decisions
+    // is the same product asked about twice, at twice the cost, with two
+    // answers free to disagree.
+    const candidates = toCandidates([
+      line({ id: 'a', source: 'amazon', ...asin('B0DSVZQ8P5'), name: 'The Way of Kings' }),
+      line({
+        id: 'b',
+        source: 'amazon-digital',
+        ...asin('B0DSVZQ8P5'),
+        name: 'The Way of Kings (Kindle)',
+      }),
+    ]);
+    expect(candidates).toHaveLength(1);
+    expect(candidates[0]?.itemIds).toEqual(['a', 'b']);
+    // No one source bounds the batch, so the prompt is not told one does.
+    expect(candidates[0]?.source).toBeNull();
+  });
+
+  it('never shares a decision between two schemes that print the same string', () => {
+    // A scheme is half the identifier. `6015322` as an Amazon catalogue id
+    // and `6015322` as a grocer's article number are two products, and
+    // merging them is the direction nothing downstream can see.
+    expect(batchingKey(line({ source: 'amazon', ...asin('6015322') }))).not.toBe(
+      batchingKey(line({ source: 'woolworths', ...article('6015322') }))
+    );
+  });
+
+  it('does not widen a cross-source scheme past the identifier it states', () => {
+    // Dropping the scope must not drop the string with it.
+    expect(batchingKey(line({ source: 'amazon', ...asin('B0DSVZQ8P5') }))).not.toBe(
+      batchingKey(line({ source: 'amazon-digital', ...asin('B0FCSJTKJ8') }))
+    );
+  });
+
+  it('treats a sku stated with no scheme as no identifier at all', () => {
+    // Half the pair is not an identity: nothing can say what namespace the
+    // string is in, and keying on it bare is the merge the pair prevents. So
+    // the two fall back to their printed names and stay apart.
+    expect(
+      batchingKey(line({ source: 'amazon', sku: 'B0DSVZQ8P5', skuScheme: null, name: 'Tamper' }))
+    ).not.toBe(
+      batchingKey(line({ source: 'amazon', sku: 'B0DSVZQ8P5', skuScheme: null, name: 'Kettle' }))
+    );
+  });
+
   it('cannot be collided by a sku that looks like another key', () => {
     // Joining the parts on a delimiter is not injective, and a merchant is
     // free to print that delimiter inside an identifier.

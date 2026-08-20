@@ -42,13 +42,14 @@
  * no more trusted than the evidence behind it. Two rules make the dictionary
  * safe to consult:
  *
- * - **It is never consulted for a line that states a sku.** An ASIN already
- *   groups Amazon's repeats exactly, and a wording a human attached must not
- *   be able to absorb an identity a merchant asserted.
+ * - **It is never consulted for a line that states a sku and its scheme.** An
+ *   ASIN already groups Amazon's repeats exactly, and a wording a human
+ *   attached must not be able to absorb an identity a merchant asserted.
  * - **Its entries are scoped by {@link productScopeKey}**, the same scope the
  *   on-the-fly grouping uses, so an entry reaches exactly the lines that
  *   grouping would have put together and no further.
  */
+import { isCrossSourceSkuScheme } from '../../contract/constants.js';
 import { sourceNamesOneMerchant } from '../../ingest/source-ids.js';
 import { identifyMerchant } from './merchant-identity.js';
 import { tupleKey } from './tuple-key.js';
@@ -61,10 +62,13 @@ export interface ProductLine {
   readonly source: string;
   readonly sku: string | null;
   /**
-   * The namespace {@link sku} lives in. Not part of the key — the key is
-   * already confined to one merchant, which is narrower than any scheme —
-   * but carried so a consumer showing the identifier can say what kind of
-   * string it is rather than printing a bare one.
+   * The namespace {@link sku} lives in, and what decides how far a sku key
+   * reaches. A cross-source scheme (see {@link isCrossSourceSkuScheme}) means
+   * the same string at two sources, so its key drops the scope entirely; a
+   * `merchant` identifier means nothing outside the source that issued it and
+   * keeps the scope. A sku carrying no scheme is not treated as an identity
+   * at all: `productIdentityOf` refuses that pair, so grouping falls back to
+   * the printed name rather than keying on a string nothing can interpret.
    */
   readonly skuScheme: SkuScheme | null;
   readonly name: string;
@@ -77,19 +81,38 @@ export interface ProductLine {
  * Which lines a group holds together, and on what evidence.
  *
  * `source` is on every variant because the same string means different
- * things at different merchants: an Amazon ASIN and a Woolworths article
- * number that happen to match are not one product. The source is not on its
- * own the scope of a group, though — under a source that covers many
- * merchants the key is confined to one of them, so on every basis but
- * `product` the merchants a group lists are the merchants it could ever have
- * held. A `product` group is the exception, because pointing two scoped
- * wordings at one product is exactly the crossing a human is allowed to make.
+ * things at different merchants: a merchant-issued article number from one
+ * source and one from another that happen to match are not one product. The
+ * source is not on its own the scope of a group, though — under a source that
+ * covers many merchants the key is confined to one of them, so the merchants
+ * a group lists are the merchants it could ever have held.
+ *
+ * Two variants widen past that, and both say so in the value rather than
+ * leaving a reader to infer it. A `product` group holds whatever wordings a
+ * person pointed at one product, which is exactly the crossing a human is
+ * allowed to make. A `sku` group on a cross-source scheme holds every line
+ * quoting that identifier wherever it was bought, and reports `source: null`
+ * to say no single source bounds it.
  */
 export type ProductIdentity =
   | {
       /** The merchant's own identifier. The only basis a source asserts. */
       readonly basis: 'sku';
-      readonly source: string;
+      /**
+       * The source that stated {@link sku}, or `null` where the group spans
+       * sources because the scheme is one whose identifiers mean the same
+       * thing everywhere. `null` is not "unknown": it is the positive claim
+       * that no single source bounds this group, and naming whichever line
+       * was read first would assert a fact about the product that is only
+       * true of one of its lines.
+       */
+      readonly source: string | null;
+      /**
+       * The namespace {@link sku} lives in. On the key for a cross-source
+       * scheme, and on the wire regardless — a bare identifier beside a null
+       * source tells a reader nothing about what it identifies.
+       */
+      readonly scheme: SkuScheme;
       readonly sku: string;
       /** A label from one of the lines, for display. The sku is the identity. */
       readonly name: string;
@@ -198,6 +221,28 @@ export function productScopeKey(line: ProductLine): string {
 }
 
 /**
+ * How far a sku key reaches.
+ *
+ * `asin` names one product in Amazon's catalogue wherever it is quoted, so
+ * the physical and digital Amazon exports state the same identifier for the
+ * same product and must land in one group. A `merchant` identifier is issued
+ * by one source and means nothing outside it, so it keeps the merchant scope.
+ *
+ * The asymmetry is deliberate and runs the safe way. Under-grouping shows as
+ * two rows naming two sources, which a reader can see and question.
+ * Over-grouping shows as one row with one summed cost and nothing saying two
+ * products were added together. So only a scheme positively declared
+ * cross-source escapes the scope; every other scheme stays inside it.
+ *
+ * The scheme is on the cross-source key as well as the value, so a future
+ * second cross-source scheme cannot collide with `asin` on a shared string.
+ */
+function skuKey(scheme: SkuScheme, scope: string, sku: string): string {
+  if (isCrossSourceSkuScheme(scheme)) return tupleKey('sku', scheme, sku);
+  return tupleKey(scope, 'sku', sku);
+}
+
+/**
  * The group a line belongs to, and the evidence that put it there.
  *
  * With no dictionary this is the on-the-fly grouping and nothing else, which
@@ -209,10 +254,21 @@ export function identifyProduct(
 ): { key: string; identity: ProductIdentity } {
   const scope = productScopeKey(line);
   const sku = line.sku?.trim() ?? '';
-  if (sku !== '') {
+  const scheme = line.skuScheme;
+  // Both halves or neither. An identifier whose namespace is absent is the
+  // pair `productIdentityOf` refuses to hand back, and keying on the bare
+  // string is the merge that pair exists to prevent — so such a line is
+  // treated as stating no identity and falls through to its printed name.
+  if (sku !== '' && scheme !== null) {
     return {
-      key: tupleKey(scope, 'sku', sku),
-      identity: { basis: 'sku', source: line.source, sku, name: line.name },
+      key: skuKey(scheme, scope, sku),
+      identity: {
+        basis: 'sku',
+        source: isCrossSourceSkuScheme(scheme) ? null : line.source,
+        scheme,
+        sku,
+        name: line.name,
+      },
     };
   }
 

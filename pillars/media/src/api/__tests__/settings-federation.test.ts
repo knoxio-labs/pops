@@ -23,7 +23,6 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { sql } from 'drizzle-orm';
-import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { REDACTED } from '@pops/pillar-settings';
@@ -32,6 +31,7 @@ import { comparisonsService, openMediaDb, type OpenedMediaDb } from '../../db/in
 import { plexSettings, rotationSettings, settings } from '../../db/schema.js';
 import * as settingsAdapter from '../../db/services/settings-adapter.js';
 import { createMediaApiApp } from '../app.js';
+import { createTestTransport } from './test-http.js';
 
 let tmpDir: string;
 let mediaDb: OpenedMediaDb;
@@ -65,9 +65,11 @@ afterEach(() => {
   rmSync(tmpDir, { recursive: true, force: true });
 });
 
+const { requestOn } = createTestTransport();
+
 describe('media federated /settings', () => {
   it('lists every declared key resolved to its manifest default', async () => {
-    const res = await request(app()).get('/settings');
+    const res = await requestOn(app()).get('/settings');
     expect(res.status).toBe(200);
     const byKey = new Map<string, string>(
       (res.body.data as { key: string; value: string }[]).map((row) => [row.key, row.value])
@@ -80,10 +82,10 @@ describe('media federated /settings', () => {
   });
 
   it('routes each key prefix to its backing physical table', async () => {
-    await request(app()).put('/settings/plex_url').send({ value: 'http://plex.test:32400' });
-    await request(app()).put('/settings/rotation_target_free_gb').send({ value: '250' });
-    await request(app()).put('/settings/radarr_url').send({ value: 'http://radarr.test' });
-    await request(app()).put('/settings/media.defaultLimit').send({ value: '99' });
+    await requestOn(app()).put('/settings/plex_url').send({ value: 'http://plex.test:32400' });
+    await requestOn(app()).put('/settings/rotation_target_free_gb').send({ value: '250' });
+    await requestOn(app()).put('/settings/radarr_url').send({ value: 'http://radarr.test' });
+    await requestOn(app()).put('/settings/media.defaultLimit').send({ value: '99' });
 
     expect(rawValue(plexSettings, 'plex_url')?.value).toBe('http://plex.test:32400');
     expect(rawValue(rotationSettings, 'rotation_target_free_gb')?.value).toBe('250');
@@ -95,20 +97,22 @@ describe('media federated /settings', () => {
   });
 
   it('round-trips the rotation_enabled toggle through the legacy true/empty encoding', async () => {
-    const on = await request(app()).put('/settings/rotation_enabled').send({ value: 'true' });
+    const on = await requestOn(app()).put('/settings/rotation_enabled').send({ value: 'true' });
     expect(on.body.data).toEqual({ key: 'rotation_enabled', value: 'true' });
     expect(rawValue(rotationSettings, 'rotation_enabled')?.value).toBe('true');
-    expect((await request(app()).get('/settings/rotation_enabled')).body.data.value).toBe('true');
+    expect((await requestOn(app()).get('/settings/rotation_enabled')).body.data.value).toBe('true');
 
-    const off = await request(app()).put('/settings/rotation_enabled').send({ value: 'false' });
+    const off = await requestOn(app()).put('/settings/rotation_enabled').send({ value: 'false' });
     expect(off.body.data).toEqual({ key: 'rotation_enabled', value: 'false' });
     // Disabled persists as the empty string, but reads back as the canonical 'false'.
     expect(rawValue(rotationSettings, 'rotation_enabled')?.value).toBe('');
-    expect((await request(app()).get('/settings/rotation_enabled')).body.data.value).toBe('false');
+    expect((await requestOn(app()).get('/settings/rotation_enabled')).body.data.value).toBe(
+      'false'
+    );
   });
 
   it('bumps updated_at on a carve-out upsert', async () => {
-    await request(app()).put('/settings/plex_url').send({ value: 'http://a' });
+    await requestOn(app()).put('/settings/plex_url').send({ value: 'http://a' });
     const first = mediaDb.db
       .select({ createdAt: plexSettings.createdAt, updatedAt: plexSettings.updatedAt })
       .from(plexSettings)
@@ -118,7 +122,7 @@ describe('media federated /settings', () => {
     mediaDb.raw
       .prepare("UPDATE plex_settings SET updated_at = '2000-01-01 00:00:00' WHERE key = 'plex_url'")
       .run();
-    await request(app()).put('/settings/plex_url').send({ value: 'http://b' });
+    await requestOn(app()).put('/settings/plex_url').send({ value: 'http://b' });
     const second = rawValue(plexSettings, 'plex_url');
     expect(second?.value).toBe('http://b');
     const bumped = mediaDb.db
@@ -131,18 +135,18 @@ describe('media federated /settings', () => {
   });
 
   it('redacts the sensitive plex_token on read but persists it intact', async () => {
-    await request(app()).put('/settings/plex_token').send({ value: 'super-secret-ciphertext' });
+    await requestOn(app()).put('/settings/plex_token').send({ value: 'super-secret-ciphertext' });
     expect(rawValue(plexSettings, 'plex_token')?.value).toBe('super-secret-ciphertext');
 
-    const single = await request(app()).get('/settings/plex_token');
+    const single = await requestOn(app()).get('/settings/plex_token');
     expect(single.body.data.value).toBe(REDACTED);
 
-    const many = await request(app())
+    const many = await requestOn(app())
       .post('/settings/get-many')
       .send({ keys: ['plex_token', 'plex_url'] });
     expect(many.body.settings.plex_token).toBe(REDACTED);
 
-    const collection = await request(app()).get('/settings');
+    const collection = await requestOn(app()).get('/settings');
     const tokenRow = (collection.body.data as { key: string; value: string }[]).find(
       (row) => row.key === 'plex_token'
     );
@@ -150,37 +154,37 @@ describe('media federated /settings', () => {
   });
 
   it('resets a single key to its manifest default and reset-all restores every default', async () => {
-    await request(app()).put('/settings/rotation_target_free_gb').send({ value: '999' });
-    const reset = await request(app()).post('/settings/rotation_target_free_gb/reset');
+    await requestOn(app()).put('/settings/rotation_target_free_gb').send({ value: '999' });
+    const reset = await requestOn(app()).post('/settings/rotation_target_free_gb/reset');
     expect(reset.body.data).toEqual({ key: 'rotation_target_free_gb', value: '100' });
     expect(rawValue(rotationSettings, 'rotation_target_free_gb')).toBeUndefined();
 
-    await request(app()).put('/settings/media.comparisons.eloK').send({ value: '64' });
-    const resetAll = await request(app()).post('/settings/reset').send({});
+    await requestOn(app()).put('/settings/media.comparisons.eloK').send({ value: '64' });
+    const resetAll = await requestOn(app()).post('/settings/reset').send({});
     expect(resetAll.status).toBe(200);
     expect(resetAll.body.settings['media.comparisons.eloK']).toBe('32');
     expect(resetAll.body.settings['rotation_cron_expression']).toBe('0 3 * * *');
   });
 
   it('rejects a set-many addressing an undeclared key with a 400', async () => {
-    const res = await request(app())
+    const res = await requestOn(app())
       .post('/settings/set-many')
       .send({ entries: [{ key: 'media.notAThing', value: 'x' }] });
     expect(res.status).toBe(400);
   });
 
   it('rejects a single-key write outside the declared enum with a 400', async () => {
-    const res = await request(app()).put('/settings/totally.unknown').send({ value: 'x' });
+    const res = await requestOn(app()).put('/settings/totally.unknown').send({ value: 'x' });
     expect(res.status).toBe(400);
   });
 
   it('treats ensure as a write-once seed that never clobbers the landed value', async () => {
-    const first = await request(app())
+    const first = await requestOn(app())
       .post('/settings/plex_url/ensure')
       .send({ value: 'http://first' });
     expect(first.body.data).toEqual({ key: 'plex_url', value: 'http://first' });
 
-    const second = await request(app())
+    const second = await requestOn(app())
       .post('/settings/plex_url/ensure')
       .send({ value: 'http://second' });
     // The seed is preserved: the second ensure returns the originally-landed value.
@@ -203,7 +207,7 @@ describe('comparisons config runtime reads', () => {
   it('reflects a stored override for the int eloK reader', async () => {
     expect(comparisonsService.getEloK(mediaDb.db)).toBe(32);
 
-    await request(app()).put('/settings/media.comparisons.eloK').send({ value: '64' });
+    await requestOn(app()).put('/settings/media.comparisons.eloK').send({ value: '64' });
     expect(comparisonsService.getEloK(mediaDb.db)).toBe(64);
   });
 
@@ -223,10 +227,10 @@ describe('comparisons config runtime reads', () => {
   });
 
   it('resets restore the manifest default the reader observes', async () => {
-    await request(app()).put('/settings/media.comparisons.eloK').send({ value: '64' });
+    await requestOn(app()).put('/settings/media.comparisons.eloK').send({ value: '64' });
     expect(comparisonsService.getEloK(mediaDb.db)).toBe(64);
 
-    await request(app()).post('/settings/media.comparisons.eloK/reset');
+    await requestOn(app()).post('/settings/media.comparisons.eloK/reset');
     expect(comparisonsService.getEloK(mediaDb.db)).toBe(32);
   });
 });

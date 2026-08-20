@@ -18,6 +18,7 @@ import { z } from 'zod';
 
 import { MERCHANT_RESOLUTIONS, PRODUCT_IDENTITY_BASES } from './constants.js';
 import { ErrorBodySchema, ListPurchasesQuerySchema } from './rest-schemas.js';
+import { SkuSchemeSchema } from './schemas/product-identity.js';
 import { PurchaseAccountingSchema } from './schemas/purchase-detail.js';
 import {
   CentsSchema,
@@ -155,18 +156,34 @@ export const MerchantSpendQuerySchema = ListPurchasesQuerySchema.omit({
  * things at different merchants. It is not on its own the scope: where one
  * source covers many shops — every uploaded receipt shares one id — the group
  * is keyed on the order's merchant as well, so two shops printing one
- * abbreviation are two rows. Only two things widen a group past that. A
+ * abbreviation are two rows. Three things widen a group past that. A
  * source that is a single merchant's own feed groups across the merchant
- * labels it states, which is how a chain's stores stay one product; and a
+ * labels it states, which is how a chain's stores stay one product; a
  * `product` group holds whatever wordings a person pointed at one product,
- * which may span both merchants and sources. So on that one variant `source`
- * describes the line that supplied the printed name rather than bounding the
- * group, and the row's own `merchants` is the complete list either way.
+ * which may span both merchants and sources; and a `sku` group whose scheme
+ * names one catalogue everywhere — an ASIN is the same product in Amazon's
+ * physical and digital exports alike — holds every line quoting it. So on
+ * `product` the `source` describes the line that supplied the printed name
+ * rather than bounding the group, and on `sku` it is null outright, which is
+ * the positive claim that no one source bounds it rather than an absence of
+ * information. The row's own `merchants` is the complete list either way.
  */
 export const ProductIdentitySchema = z.discriminatedUnion('basis', [
   z.object({
     basis: z.literal('sku'),
-    source: z.string(),
+    /**
+     * The source that stated {@link sku}, or `null` where the scheme is one
+     * whose identifiers name the same product at every source, so no single
+     * source bounds the group.
+     */
+    source: z.string().nullable(),
+    /**
+     * The namespace {@link sku} lives in. On the wire even where `source` is
+     * present, because a bare identifier beside a null source says nothing
+     * about what it identifies, and a consumer cannot tell from the string
+     * alone whether the group spans sources.
+     */
+    scheme: SkuSchemeSchema,
     /** The merchant's own identifier. Present, or this is not a sku group. */
     sku: z.string(),
     /** A label from one of the lines. The sku is the identity. */

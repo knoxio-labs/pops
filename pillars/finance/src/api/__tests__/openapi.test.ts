@@ -10,12 +10,12 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { openFinanceDb, type OpenedFinanceDb } from '../../db/index.js';
 import { createFinanceApiApp } from '../app.js';
 import { makeContactsFake } from './contacts-fake.js';
+import { requestOn } from './test-utils.js';
 
 let tmpDir: string;
 let financeDb: OpenedFinanceDb;
@@ -44,7 +44,7 @@ describe('GET /openapi', () => {
       contacts: makeContactsFake(),
     });
 
-    const res = await request(app).get('/openapi');
+    const res = await requestOn(app, (agent) => agent.get('/openapi'));
 
     expect(res.status).toBe(200);
     const body = res.body as OpenApiBody;

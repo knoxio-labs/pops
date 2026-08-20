@@ -8,7 +8,7 @@ import type {
   TagRuleChangeSet,
 } from '@pops/finance';
 
-export type BankType = 'ANZ' | 'Amex' | 'ING' | 'Up';
+export type BankType = 'ANZ' | 'ANZ Credit Card' | 'Amex' | 'ING' | 'Up';
 export type { ChangeSet };
 export type EntityType = 'company' | 'person' | 'government' | 'bank';
 

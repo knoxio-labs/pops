@@ -81,21 +81,43 @@ authenticates.
 
 ## Cross-pillar reconciliation
 
-`home_inventory` carries soft references to rows other pillars own
-(`purchase_transaction_uri` → finance, `owner_uri` → registry) alongside a
-nullable `*_stale_at` for each. The server starts a worker on boot that walks
-the distinct URIs and asks the owning pillar whether each still resolves: a 404
-stamps `*_stale_at`, an `ok` clears it, and anything else (unreachable pillar,
-malformed URI) leaves the row untouched for the next tick. The row itself is
-never deleted — existence is best-effort, staleness is a flag.
+`home_inventory.purchase_transaction_uri` is a soft reference to a row the
+finance pillar owns, alongside a nullable `purchase_transaction_stale_at`. It is
+derived, never supplied: both item write paths compute it from the
+`purchaseTransactionId` the item contract already carries, so the two cannot
+disagree and no new wire field was needed. Changing the id repoints the URI and
+clears the stale marker, because that marker was a verdict about the previous
+target.
+
+The server starts a worker on boot that walks the distinct URIs and asks finance
+whether each still resolves: a 404 stamps `purchase_transaction_stale_at`, an
+`ok` clears it, and anything else (unreachable pillar, malformed URI) leaves the
+row untouched for the next tick. The row itself is never deleted — existence is
+best-effort, staleness is a flag.
 
 It ticks daily; `INVENTORY_RECONCILE_URI_INTERVAL_MS` overrides that for smoke
-tests. A tick with no URIs on either leg returns silently without calling
-anyone, so the log line only appears when there was work, and it carries each
-leg's work-set size — an aggregate of zero cannot otherwise be told apart from
-a leg that checked nothing. Probes go out through the server SDK, which
-authenticates with the `POPS_INTERNAL_API_KEY` service-account key; without one
-the probes fail to authenticate and nothing is stamped.
+tests. A tick with no URIs returns silently without calling anyone, so the log
+line only appears when there was work, and it carries the work-set size — an
+aggregate of zero cannot otherwise be told apart from a leg that checked
+nothing. Probes go out through the server SDK, which authenticates with the
+`POPS_INTERNAL_API_KEY` service-account key; without one the probes fail to
+authenticate and nothing is stamped.
+
+Silence is not the same as health, so the tick also counts rows that name a
+finance transaction and have no URI derived for it. That count can only be
+non-zero if a writer stopped deriving or rows arrived by a path that bypasses
+the item builders, and it is warned about whether or not the leg has other work.
+It is the one signal that distinguishes "there was nothing to reconcile" from
+"the thing that produces work has stopped".
+
+### The dormant owner leg
+
+`owner_uri` / `owner_stale_at` exist on the table and are reconciled by nothing.
+No write path sets them and no contract field can name a user, so a leg over
+them could only ever walk an empty list and report success — indistinguishable
+from a healthy leg, and precisely the failure this worker exists to detect. The
+columns stay in place for whenever an owner concept arrives; the cron gains a
+leg at the same time as a writer, not before.
 
 ## Commands
 
