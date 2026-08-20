@@ -26,7 +26,7 @@
         }
     }
 
-    private enum PreviewReceipt {
+    internal enum PreviewReceipt {
         static let purchase = ReceiptPurchase(
             id: "pur_01JQ8XN4E7K2M9V3ZB6TYD",
             merchantName: "Woolworths Metro",
