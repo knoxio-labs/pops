@@ -12,6 +12,7 @@ import type { PillarRegistryEntry } from '@pops/types';
 import type { OpenedPurchasesDb } from '../db/index.js';
 import type { ReceiptVision } from '../ingest/receipt/vision.js';
 import type { MerchantResolver } from './contacts/merchant.js';
+import type { InventoryAssetCreator } from './inventory/client.js';
 import type { SweepTrigger } from './rest/reconcile-handlers.js';
 
 export interface PurchasesApiDeps {
@@ -40,6 +41,13 @@ export interface PurchasesApiDeps {
   vision: ReceiptVision | null;
   /** Names the merchant against contacts. Injectable so tests stay offline. */
   merchant?: MerchantResolver;
+  /**
+   * Creates the inventory asset an accepted proposal names — the pillar's
+   * only write into another pillar's data. Injectable so tests stay
+   * offline; the default reaches inventory with this pillar's
+   * service-account key.
+   */
+  inventoryAssets?: InventoryAssetCreator;
   /**
    * Resolves a presented `X-API-Key` to its service account. Defaults to a
    * registry-backed verifier; tests inject a fake so no test needs a live

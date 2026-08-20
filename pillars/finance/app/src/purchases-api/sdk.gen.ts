@@ -28,6 +28,9 @@ import type {
   ProductUpdateAliasResponses,
   PurchaseCreateData,
   PurchaseCreateErrors,
+  PurchaseCreateInventoryItemData,
+  PurchaseCreateInventoryItemErrors,
+  PurchaseCreateInventoryItemResponses,
   PurchaseCreateResponses,
   PurchaseDecideInventoryProposalData,
   PurchaseDecideInventoryProposalErrors,
@@ -309,6 +312,29 @@ export const purchasePatchItem = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     url: '/purchases/{id}/items/{itemId}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Create an offer's inventory asset and record the accept
+ */
+export const purchaseCreateInventoryItem = <ThrowOnError extends boolean = false>(
+  options: Options<PurchaseCreateInventoryItemData, ThrowOnError>
+): RequestResult<
+  PurchaseCreateInventoryItemResponses,
+  PurchaseCreateInventoryItemErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).post<
+    PurchaseCreateInventoryItemResponses,
+    PurchaseCreateInventoryItemErrors,
+    ThrowOnError
+  >({
+    url: '/purchases/{id}/items/{itemId}/inventory-item',
     ...options,
     headers: {
       'Content-Type': 'application/json',

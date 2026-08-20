@@ -62,12 +62,14 @@ function itemNotFound(purchaseId: string, itemId: string) {
 }
 
 /**
- * The same 404, for a route that also reaches it when the line is real and
- * the named unit is not. It says only that nothing here answers the
- * request, which is true of all three cases — where "item not found" would
- * be a false statement to a caller who supplied a good line and a bad unit.
+ * The same 404, for the two routes that also reach it when the line is real
+ * and the named unit is not — and, on the create route, when every slot on
+ * the line has already been answered. It says only that nothing here
+ * answers the request, which is true of all of them, where "item not found"
+ * would be a false statement to a caller who supplied a good line and a bad
+ * unit.
  */
-function proposalNotFound(purchaseId: string, itemId: string) {
+export function proposalNotFound(purchaseId: string, itemId: string) {
   return {
     status: 404 as const,
     body: {
