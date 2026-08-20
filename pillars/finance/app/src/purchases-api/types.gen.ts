@@ -1589,6 +1589,109 @@ export type ReceiptUploadResponses = {
 
 export type ReceiptUploadResponse = ReceiptUploadResponses[keyof ReceiptUploadResponses];
 
+export type ReceiptReadData = {
+  body?: never;
+  path: {
+    sha256: string;
+  };
+  query?: never;
+  url: '/receipts/{sha256}';
+};
+
+export type ReceiptReadErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+  };
+};
+
+export type ReceiptReadError = ReceiptReadErrors[keyof ReceiptReadErrors];
+
+export type ReceiptReadResponses = {
+  /**
+   * 200
+   */
+  200: {
+    byteLength: number;
+    dataBase64: string;
+    mediaType:
+      | 'image/jpeg'
+      | 'image/png'
+      | 'image/webp'
+      | 'image/gif'
+      | 'application/pdf'
+      | 'text/plain';
+    sha256: string;
+  };
+};
+
+export type ReceiptReadResponse = ReceiptReadResponses[keyof ReceiptReadResponses];
+
+export type ReceiptThumbnailData = {
+  body?: never;
+  path: {
+    sha256: string;
+  };
+  query?: never;
+  url: '/receipts/{sha256}/thumbnail';
+};
+
+export type ReceiptThumbnailErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+  };
+  /**
+   * 415
+   */
+  415: {
+    code?: string;
+    message: string;
+  };
+};
+
+export type ReceiptThumbnailError = ReceiptThumbnailErrors[keyof ReceiptThumbnailErrors];
+
+export type ReceiptThumbnailResponses = {
+  /**
+   * 200
+   */
+  200: {
+    byteLength: number;
+    dataBase64: string;
+    mediaType:
+      | 'image/jpeg'
+      | 'image/png'
+      | 'image/webp'
+      | 'image/gif'
+      | 'application/pdf'
+      | 'text/plain';
+    sha256: string;
+  };
+};
+
+export type ReceiptThumbnailResponse = ReceiptThumbnailResponses[keyof ReceiptThumbnailResponses];
+
 export type ReconcileConfirmData = {
   /**
    * Body

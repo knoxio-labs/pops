@@ -262,6 +262,40 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/receipts/{sha256}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** The bytes a pops://purchases/receipt/<sha256> URI names */
+    get: operations['receipt.read'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/receipts/{sha256}/thumbnail': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** The same receipt at a size a list row can afford */
+    get: operations['receipt.thumbnail'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/reconcile/confirm': {
     parameters: {
       query?: never;
@@ -2243,6 +2277,134 @@ export interface operations {
       };
       /** @description 503 */
       503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+          };
+        };
+      };
+    };
+  };
+  'receipt.read': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        sha256: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            byteLength: number;
+            dataBase64: string;
+            /** @enum {string} */
+            mediaType:
+              | 'image/jpeg'
+              | 'image/png'
+              | 'image/webp'
+              | 'image/gif'
+              | 'application/pdf'
+              | 'text/plain';
+            sha256: string;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+          };
+        };
+      };
+    };
+  };
+  'receipt.thumbnail': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        sha256: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            byteLength: number;
+            dataBase64: string;
+            /** @enum {string} */
+            mediaType:
+              | 'image/jpeg'
+              | 'image/png'
+              | 'image/webp'
+              | 'image/gif'
+              | 'application/pdf'
+              | 'text/plain';
+            sha256: string;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+          };
+        };
+      };
+      /** @description 415 */
+      415: {
         headers: {
           [name: string]: unknown;
         };

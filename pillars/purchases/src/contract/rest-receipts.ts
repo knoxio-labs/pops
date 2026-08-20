@@ -190,6 +190,48 @@ export const ReceiptOutcomeSchema = z.discriminatedUnion('kind', [
   }),
 ]);
 
+/**
+ * A stored receipt, on the wire.
+ *
+ * Base64 in JSON rather than a raw body with a `Content-Type`, for the reason
+ * the upload leg is base64: one representation of these bytes, describable in
+ * the same ts-rest contract as everything else, so the OpenAPI document, the
+ * generated clients and the gateway that proxies it to a handset all need no
+ * special case. A receipt is a photograph a phone already bounded to 2400px,
+ * so the encoding's third is tens of kilobytes on a thumbnail and is paid once
+ * per receipt per device — against a binary response type that four code
+ * generators would each have to be taught.
+ *
+ * `mediaType` travels in the body rather than only in a header because it is a
+ * fact about the receipt, not about this response: the same value is what the
+ * upload declared, and a client that stores the bytes needs it back.
+ */
+export const StoredReceiptBytesSchema = z.object({
+  /** SHA-256 of the ORIGINAL upload, which is what the `pops://` URI names. */
+  sha256: z.string().regex(/^[0-9a-f]{64}$/u),
+  /**
+   * What these bytes are. A thumbnail is always `image/jpeg` whatever its
+   * original was; the full receipt reports the type it was uploaded as.
+   */
+  mediaType: z.enum(MEDIA_TYPES),
+  /** Length of the decoded bytes, so a client can size a buffer before decoding. */
+  byteLength: z.int().min(1),
+  /** The file, base64 with no data-URI prefix. */
+  dataBase64: z.string().min(1),
+});
+
+/**
+ * The hash out of a `pops://purchases/receipt/<sha256>` URI.
+ *
+ * Constrained on the contract, not only in the handler, so a malformed hash is
+ * a 400 the document declares rather than a 404 that reads like "your receipt
+ * is gone". It is also what keeps the value away from the filesystem: 64 hex
+ * digits cannot contain a separator or a `..`.
+ */
+const ReceiptSha256ParamSchema = z.object({
+  sha256: z.string().regex(/^[0-9a-f]{64}$/u),
+});
+
 export const purchasesReceiptContract = c.router({
   upload: {
     method: 'POST',
@@ -208,5 +250,37 @@ export const purchasesReceiptContract = c.router({
       503: ErrorBodySchema,
     },
     summary: 'Read an uploaded receipt — photograph, PDF or pasted body — and create its purchase',
+  },
+  read: {
+    method: 'GET',
+    path: '/receipts/:sha256',
+    pathParams: ReceiptSha256ParamSchema,
+    responses: {
+      200: StoredReceiptBytesSchema,
+      // The hash is not a hash. Distinct from the 404 below on purpose: one
+      // says the request was malformed, the other says the store does not
+      // have it, and a client that cannot tell them apart retries the wrong
+      // one.
+      400: ErrorBodySchema,
+      // Well-formed, and nothing is stored under it.
+      404: ErrorBodySchema,
+    },
+    summary: 'The bytes a pops://purchases/receipt/<sha256> URI names',
+  },
+  thumbnail: {
+    method: 'GET',
+    path: '/receipts/:sha256/thumbnail',
+    pathParams: ReceiptSha256ParamSchema,
+    responses: {
+      200: StoredReceiptBytesSchema,
+      400: ErrorBodySchema,
+      404: ErrorBodySchema,
+      // The receipt is here and is not a picture — a PDF invoice, a pasted
+      // body, or an image whose bytes will not decode. A settled answer
+      // rather than a transient one: the caller draws a placeholder and does
+      // not ask again.
+      415: ErrorBodySchema,
+    },
+    summary: 'The same receipt at a size a list row can afford',
   },
 });

@@ -23,6 +23,7 @@ import { existsSync, mkdirSync, renameSync, statSync, writeFileSync } from 'node
 import { dirname, join } from 'node:path';
 
 import { resolvePurchasesSqlitePath } from '../../api/purchases-sqlite-path.js';
+import { MEDIA_TYPES } from './vision.js';
 
 import type { ReceiptMediaType, ReceiptPart } from './vision.js';
 
@@ -66,6 +67,74 @@ export function receiptUri(sha256: string): string {
  */
 export function receiptSha256(bytes: Buffer): string {
   return createHash('sha256').update(bytes).digest('hex');
+}
+
+/**
+ * What a stored file's name says it is.
+ *
+ * Derived from {@link EXTENSIONS} rather than written out again, so the two
+ * directions cannot disagree: an extension the writer can produce is one the
+ * reader can name, and adding a media type extends both at once. The map is
+ * injective — no two media types share an extension — which is what makes an
+ * extension a sound answer to "what is this file".
+ */
+const MEDIA_TYPE_BY_EXTENSION: ReadonlyMap<string, ReceiptMediaType> = new Map(
+  MEDIA_TYPES.map((mediaType) => [EXTENSIONS[mediaType], mediaType])
+);
+
+/**
+ * The only shape a stored receipt's name can have: 64 lowercase hex digits.
+ *
+ * This is what makes the read path traversal-proof. The sha reaches the store
+ * from a URL, and a value matching this cannot contain a slash, a dot or a
+ * `..`, so the joined path is inside the shard directory by construction
+ * rather than by a check somebody has to remember afterwards.
+ */
+const SHA256_RE = /^[0-9a-f]{64}$/u;
+
+/** Whether a string could name something this store wrote. */
+export function isReceiptSha256(value: string): boolean {
+  return SHA256_RE.test(value);
+}
+
+/** A receipt found on disk, with the type its own name states. */
+export interface ResolvedReceipt {
+  readonly sha256: string;
+  readonly path: string;
+  readonly mediaType: ReceiptMediaType;
+  readonly byteLength: number;
+}
+
+/**
+ * Find the bytes a `pops://purchases/receipt/<sha256>` URI names.
+ *
+ * The stored name carries an extension the hash does not, so a hash alone does
+ * not determine a path. Resolving that by listing the shard directory would
+ * make every read cost a `readdir` of a directory that grows without bound;
+ * instead the six names the writer could possibly have chosen are tried
+ * directly, which is a fixed handful of `stat` calls and no directory scan.
+ *
+ * Deliberately answered from the STORE rather than from `purchase_documents`.
+ * A receipt the gate refused, or one the model could not read at all, is
+ * stored and handed to the caller as a URI while no purchase — and therefore
+ * no document row — exists for it. Requiring a row would 404 exactly the
+ * receipts a human has to look at to settle what the paper said.
+ *
+ * @returns The file, or `null` when the hash is malformed or names nothing.
+ */
+export function resolveStoredReceipt(
+  sha256: string,
+  root = resolveReceiptStoreRoot()
+): ResolvedReceipt | null {
+  if (!isReceiptSha256(sha256)) return null;
+
+  const directory = join(root, sha256.slice(0, 2));
+  for (const [extension, mediaType] of MEDIA_TYPE_BY_EXTENSION) {
+    const path = join(directory, `${sha256}.${extension}`);
+    if (!existsSync(path)) continue;
+    return { sha256, path, mediaType, byteLength: statSync(path).size };
+  }
+  return null;
 }
 
 /**
