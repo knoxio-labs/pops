@@ -7,12 +7,23 @@
 
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import Database from 'better-sqlite3';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { readMigrationJournal } from '@pops/pillar-sdk/db';
+
 import { openBfmDb } from '../index.js';
+
+const MIGRATIONS_DIR = join(
+  dirname(fileURLToPath(import.meta.url)),
+  '..',
+  '..',
+  '..',
+  'migrations'
+);
 
 let dir: string;
 
@@ -106,7 +117,12 @@ describe('openBfmDb', () => {
       const applied = second.raw
         .prepare(`SELECT count(*) AS n FROM __drizzle_migrations`)
         .get() as { n: number };
-      expect(applied.n, 'the migration journal was replayed instead of short-circuiting').toBe(1);
+      // Read off the journal rather than written out: the claim is "each entry
+      // applied exactly once", and a literal turns the next migration into a
+      // failure in a test that is not about migrations.
+      expect(applied.n, 'the migration journal was replayed instead of short-circuiting').toBe(
+        readMigrationJournal(MIGRATIONS_DIR).length
+      );
     } finally {
       second.raw.close();
     }

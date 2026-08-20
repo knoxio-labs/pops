@@ -52,6 +52,7 @@
  */
 import { randomUUID } from 'node:crypto';
 
+import { DEFAULT_DEVICE_CAPABILITIES } from '../../contract/capabilities.js';
 import {
   DEFAULT_REFRESH_TOKEN_TTL_MS,
   generateRefreshToken,
@@ -164,6 +165,10 @@ export function completePairingExchange(
       model: input.deviceModel,
       publicKeyDer,
       createdAt,
+      // The full vocabulary, written explicitly rather than left to the
+      // column's default — which is the empty grant, so a row that reached
+      // the table without anyone deciding may do nothing (ADR-048).
+      capabilities: DEFAULT_DEVICE_CAPABILITIES,
     });
 
     insertRefreshToken(tx, {

@@ -27,6 +27,7 @@ import { createMobileRateLimit, type MobileRateLimitOptions } from './auth/mobil
 import { createPairingRateLimit, type PairingRateLimitOptions } from './auth/pairing-rate-limit.js';
 import { createReceiptRateLimit, type ReceiptRateLimitOptions } from './auth/receipt-rate-limit.js';
 import { createRefreshRateLimit, type RefreshRateLimitOptions } from './auth/refresh-rate-limit.js';
+import { createRequireCapability } from './auth/require-capability.js';
 import { createRequireDevice } from './auth/require-device.js';
 import { createIdentityMiddleware } from './middleware/identity.js';
 import {
@@ -146,6 +147,13 @@ export function createBfmApiApp(deps: BfmApiDeps, options: CreateBfmApiAppOption
     MOBILE_PATH_PREFIX,
     createRequireDevice({ db: deps.db, accessTokenSigningKey: deps.accessTokenSigningKey })
   );
+
+  // Then what that handset is allowed to ask for (ADR-048). Mounted on the same
+  // prefix and immediately behind the guard, because it reads the device the
+  // guard resolved — and on the prefix rather than per route for the same
+  // reason the guard is: a mobile route added later is covered the moment it
+  // exists, and one that declares no capability is refused rather than served.
+  app.use(MOBILE_PATH_PREFIX, createRequireCapability());
 
   // The upload route's own ceiling, mounted ahead of the default parser so it
   // is the one that runs there — body-parser marks a request it has read, and

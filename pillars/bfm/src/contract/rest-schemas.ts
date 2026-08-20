@@ -88,6 +88,46 @@ export type DeviceRevokedError = z.infer<typeof DeviceRevokedErrorSchema>;
 export type MobileAuthError = z.infer<typeof MobileAuthErrorSchema>;
 
 /**
+ * The third refusal on this perimeter, and the one that is not about
+ * credentials at all (ADR-048).
+ *
+ * The token verified and the handset is trusted; this device's grant simply
+ * does not cover the route it asked for. That makes it a `403` alongside
+ * `device_revoked` and a completely different instruction: refreshing changes
+ * nothing, and returning to pairing would destroy a working credential over a
+ * screen the device was never entitled to open. The app's recovery is to stop
+ * offering the feature, not to end the session.
+ *
+ * `capability` names what the route required rather than what the grant holds.
+ * A refusal that enumerated the grant would hand an attacker who reached this
+ * far a map of everything else the handset can do, for no gain to the app —
+ * which only needs to know which door it just found locked.
+ */
+export const MobileCapabilityDeniedErrorSchema = z.object({
+  code: z.literal('capability_not_granted'),
+  message: z.string(),
+  capability: z.string(),
+});
+
+export type MobileCapabilityDeniedError = z.infer<typeof MobileCapabilityDeniedErrorSchema>;
+
+/**
+ * What a `/mobile` route's `403` can be, either way round.
+ *
+ * A union rather than one schema with a two-member `code` enum, on the same
+ * reasoning that keeps 401 and 403 apart above: the two bodies do not carry
+ * the same fields — a revocation has no capability to name — and a shape whose
+ * `capability` was optional would have every consumer branch on a field the
+ * document could not tell it when to expect.
+ */
+export const MobileForbiddenErrorSchema = z.discriminatedUnion('code', [
+  DeviceRevokedErrorSchema,
+  MobileCapabilityDeniedErrorSchema,
+]);
+
+export type MobileForbiddenError = z.infer<typeof MobileForbiddenErrorSchema>;
+
+/**
  * The one 403 body, written once.
  *
  * Two independent places answer it — the `/mobile` guard on every request, and
@@ -413,6 +453,21 @@ export const BootstrapDeviceSchema = z.object({
   id: z.string(),
   name: z.string(),
   lastSeenAt: z.iso.datetime(),
+  /**
+   * What this handset's grant holds (ADR-048), so the app can decline to offer
+   * what it would only be refused for.
+   *
+   * Open strings rather than an enum, for the reason every other vocabulary on
+   * this wire is open: the app is distributed rather than deployed, so a build
+   * already on a phone must be able to decode a payload naming a capability
+   * that build has never heard of. It ignores the ones it does not know, which
+   * is exactly right — a capability an installed build cannot use is one it
+   * has no screen for.
+   *
+   * The grant, not the vocabulary. Two devices can be told different things
+   * here, and that is the point of the model.
+   */
+  capabilities: z.array(z.string()),
 });
 
 export const MobileBootstrapResponseSchema = z.object({
