@@ -8,16 +8,16 @@ Both ends of the flow. `ReceiptCaptureView` photographs a receipt through Vision
 
 That boundary is asserted, not merely intended: `ModuleBoundaryTests` in `AppCore` fails if any package outside `Auth` and `BFMClient` imports either.
 
-| Concern                                                                              | Lives in                                                 |
-| ------------------------------------------------------------------------------------ | -------------------------------------------------------- |
-| The capture screen and the camera-refusal states                                     | here — `ReceiptCaptureView`, `ReceiptCaptureViewModel`   |
-| The document camera itself, and pages becoming bytes                                 | here — `ReceiptDocumentScanner`, `ReceiptPageEncoder`    |
-| The result screen (`created` / `needs-review` / `unreadable`, plus gateway failures) | here — `ReceiptResultView`, `ReceiptResultViewModel`     |
+| Concern                                                                              | Lives in                                                      |
+| ------------------------------------------------------------------------------------ | ------------------------------------------------------------- |
+| The capture screen and the camera-refusal states                                     | here — `ReceiptCaptureView`, `ReceiptCaptureViewModel`        |
+| The document camera itself, and pages becoming bytes                                 | here — `ReceiptDocumentScanner`, `ReceiptPageEncoder`         |
+| The result screen (`created` / `needs-review` / `unreadable`, plus gateway failures) | here — `ReceiptResultView`, `ReceiptResultViewModel`          |
 | The editable, pre-filled form a reading becomes                                      | here — `ReceiptDraft`, `ReceiptDraftForm`, `ReceiptDraftView` |
-| Camera permission, and the Settings deep link                                        | `AppCore` — `CameraAuthorizing`, `SystemSettings`        |
-| `created` / `needs-review` / `unreadable`                                            | `AppCore` — `ReceiptCaptureRepository`, `ReceiptOutcome` |
-| `POST /mobile/purchases/receipts` and its outcomes                                   | `BFMClient` — `BFMReceiptCaptureRepository`              |
-| An end-to-end Maestro flow                                                           | not built yet — POPS-1963                                |
+| Camera permission, and the Settings deep link                                        | `AppCore` — `CameraAuthorizing`, `SystemSettings`             |
+| `created` / `needs-review` / `unreadable`                                            | `AppCore` — `ReceiptCaptureRepository`, `ReceiptOutcome`      |
+| `POST /mobile/purchases/receipts` and its outcomes                                   | `BFMClient` — `BFMReceiptCaptureRepository`                   |
+| An end-to-end Maestro flow                                                           | not built yet — POPS-1963                                     |
 
 ## The surface, and why it is shaped this way
 
