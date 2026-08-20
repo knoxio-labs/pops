@@ -38,16 +38,11 @@ const PurchasesPurchaseSchema = z.object({
    * bare string. It is the date a confirmation screen shows, and a value the
    * phone cannot parse renders as a blank or as today — neither of which is
    * distinguishable from a receipt that stated no date, which purchases
-   * signals a completely different way. The pattern mirrors purchases'
-   * `IsoTimestampSchema` exactly, offsets included, so bfm rejects what that
+   * signals a completely different way. This mirrors purchases'
+   * `IsoTimestampSchema` — offsets included — so bfm rejects what that
    * pillar rejects and nothing more.
    */
-  orderedAt: z
-    .string()
-    .regex(
-      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,9})?(Z|[+-]\d{2}:\d{2})$/u,
-      'expected an ISO-8601 timestamp with a timezone'
-    ),
+  orderedAt: z.iso.datetime({ offset: true }),
 });
 
 const PurchasesPurchaseDetailSchema = z.object({
