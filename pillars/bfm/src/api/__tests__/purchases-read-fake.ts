@@ -26,11 +26,27 @@ export interface PurchasesFakeRow {
   totalCents: number;
   currency: string;
   orderedAt: string;
+  /**
+   * Minutes ahead of UTC where the order was placed. Optional here because
+   * the producer's own field is: a row written before that column existed
+   * carries none, and the fake has to be able to spell that row.
+   */
+  orderedAtOffsetMinutes?: number | null;
   status: string;
   itemCount: number;
   receiptUri: string | null;
 }
 
+/**
+ * A row as purchases serves one.
+ *
+ * The default instant is a Sydney morning — 12:15 on the 13th at +10:00,
+ * stored as 02:15 UTC on the same day. It is deliberately NOT one of the
+ * shapes that hides a day-derivation bug: see
+ * `mobile-purchases-read.test.ts` for the pair that does not agree with
+ * itself, which is what a fixture has to be able to express before this
+ * suite can defend the day at all.
+ */
 export function purchasesRow(
   overrides: Partial<PurchasesFakeRow> & { id: string }
 ): PurchasesFakeRow {
@@ -40,6 +56,7 @@ export function purchasesRow(
     totalCents: 8420,
     currency: 'AUD',
     orderedAt: '2026-08-13T02:15:00.000Z',
+    orderedAtOffsetMinutes: 600,
     status: 'awaiting_settlement',
     itemCount: 3,
     receiptUri: 'pops://purchases/receipt/abc',
@@ -141,6 +158,8 @@ export function purchasesDetail(
     merchantEntityName?: string | null;
     totalCents?: number;
     orderedAt?: string;
+    /** Absent leaves the producer's default; `null` spells a row that has none. */
+    orderedAtOffsetMinutes?: number | null;
     status?: string;
     items?: readonly {
       item: { id: string; name: string; quantity: number; lineTotalCents: number };
@@ -166,6 +185,8 @@ export function purchasesDetail(
         surchargeCents: 60,
         currency: 'AUD',
         orderedAt: overrides.orderedAt ?? '2026-08-13T02:15:00.000Z',
+        orderedAtOffsetMinutes:
+          overrides.orderedAtOffsetMinutes === undefined ? 600 : overrides.orderedAtOffsetMinutes,
         status: overrides.status ?? 'awaiting_settlement',
       },
       // Nested under `item`, exactly as `PurchaseItemDetailSchema` sends it.

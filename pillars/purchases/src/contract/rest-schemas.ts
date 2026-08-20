@@ -27,6 +27,7 @@ import {
   SettlementModeSchema,
   SettlementRoleSchema,
   ShipmentStatusSchema,
+  UtcOffsetMinutesSchema,
 } from './schemas/purchase.js';
 
 export const ErrorBodySchema = z.object({
@@ -204,6 +205,15 @@ export const CreatePurchaseBodySchema = z.object({
   sourceOrderId: z.string().nullable().optional(),
   ingestMethod: IngestMethodSchema,
   orderedAt: IsoTimestampSchema,
+  /**
+   * Minutes ahead of UTC where the order was placed, at `orderedAt`.
+   *
+   * Optional because only an adapter that resolved a printed wall clock
+   * knows one. An adapter whose source states an instant should omit it
+   * rather than send a guess: a wrong offset moves the order's rendered day,
+   * where an absent one only leaves it in UTC.
+   */
+  orderedAtOffsetMinutes: UtcOffsetMinutesSchema.nullable().optional(),
   currency: CurrencySchema,
   subtotalCents: NonNegativeCentsSchema.optional(),
   shippingCents: NonNegativeCentsSchema.optional(),

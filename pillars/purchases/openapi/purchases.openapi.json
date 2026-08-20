@@ -1771,6 +1771,12 @@
                             "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                             "type": "string"
                           },
+                          "orderedAtOffsetMinutes": {
+                            "maximum": 840,
+                            "minimum": -840,
+                            "nullable": true,
+                            "type": "integer"
+                          },
                           "paymentHint": {
                             "nullable": true,
                             "type": "string"
@@ -1841,6 +1847,7 @@
                           "sourceOrderId",
                           "ingestMethod",
                           "orderedAt",
+                          "orderedAtOffsetMinutes",
                           "currency",
                           "subtotalCents",
                           "surchargeCents",
@@ -2156,6 +2163,12 @@
                   "orderedAt": {
                     "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                     "type": "string"
+                  },
+                  "orderedAtOffsetMinutes": {
+                    "maximum": 840,
+                    "minimum": -840,
+                    "nullable": true,
+                    "type": "integer"
                   },
                   "paymentHint": {
                     "nullable": true,
@@ -2815,6 +2828,12 @@
                           "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                           "type": "string"
                         },
+                        "orderedAtOffsetMinutes": {
+                          "maximum": 840,
+                          "minimum": -840,
+                          "nullable": true,
+                          "type": "integer"
+                        },
                         "paymentHint": {
                           "nullable": true,
                           "type": "string"
@@ -2880,6 +2899,7 @@
                         "sourceOrderId",
                         "ingestMethod",
                         "orderedAt",
+                        "orderedAtOffsetMinutes",
                         "currency",
                         "subtotalCents",
                         "surchargeCents",
@@ -3665,6 +3685,12 @@
                           "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                           "type": "string"
                         },
+                        "orderedAtOffsetMinutes": {
+                          "maximum": 840,
+                          "minimum": -840,
+                          "nullable": true,
+                          "type": "integer"
+                        },
                         "paymentHint": {
                           "nullable": true,
                           "type": "string"
@@ -3730,6 +3756,7 @@
                         "sourceOrderId",
                         "ingestMethod",
                         "orderedAt",
+                        "orderedAtOffsetMinutes",
                         "currency",
                         "subtotalCents",
                         "surchargeCents",
@@ -5441,6 +5468,12 @@
                                   "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                                   "type": "string"
                                 },
+                                "orderedAtOffsetMinutes": {
+                                  "maximum": 840,
+                                  "minimum": -840,
+                                  "nullable": true,
+                                  "type": "integer"
+                                },
                                 "paymentHint": {
                                   "nullable": true,
                                   "type": "string"
@@ -5506,6 +5539,7 @@
                                 "sourceOrderId",
                                 "ingestMethod",
                                 "orderedAt",
+                                "orderedAtOffsetMinutes",
                                 "currency",
                                 "subtotalCents",
                                 "surchargeCents",
@@ -6181,6 +6215,12 @@
                                 "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                                 "type": "string"
                               },
+                              "orderedAtOffsetMinutes": {
+                                "maximum": 840,
+                                "minimum": -840,
+                                "nullable": true,
+                                "type": "integer"
+                              },
                               "paymentHint": {
                                 "nullable": true,
                                 "type": "string"
@@ -6246,6 +6286,7 @@
                               "sourceOrderId",
                               "ingestMethod",
                               "orderedAt",
+                              "orderedAtOffsetMinutes",
                               "currency",
                               "subtotalCents",
                               "surchargeCents",

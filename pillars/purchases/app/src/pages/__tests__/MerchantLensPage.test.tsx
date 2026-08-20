@@ -109,6 +109,9 @@ function purchaseOrder(overrides: Partial<MerchantOrder> = {}): MerchantOrder {
     merchantEntityId: null,
     merchantEntityName: 'Amazon',
     orderedAt: '2026-02-02T01:41:21Z',
+    // An export states an instant and no place, so there is no offset to
+    // record. Null rather than 0, which would claim Greenwich.
+    orderedAtOffsetMinutes: null,
     paymentHint: null,
     rawRef: null,
     settlementMode: 'card',

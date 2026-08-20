@@ -1,0 +1,29 @@
+-- Where an order was placed, beside when.
+--
+-- `ordered_at` is spelled in UTC so that a text comparison over the column
+-- is a chronological one. That spelling is right for ordering and destroys
+-- the only evidence of where the shop was: a 9am Sydney receipt is stored
+-- as `23:00Z` the day before, and a reader holding the instant alone can
+-- name the day in Greenwich and nowhere else. It dates the shop a day
+-- early, on the user's own receipt, and nothing throws.
+--
+-- A signed offset rather than an IANA zone, because the ingest paths cannot
+-- always honestly supply a zone: a camera's EXIF and a client's `capturedAt`
+-- state an offset and name no place. `purchase_capture.utc_offset_minutes`
+-- records the same species of fact in the same shape, with the same ±14:00
+-- bound — the widest offset any zone has ever used, beyond which the figure
+-- is a garbled field rather than a place.
+--
+-- On `purchases` rather than beside the capture columns on purpose. Every
+-- list row needs this one, and `purchase_capture` holds the coordinates —
+-- a table whose whole design is that an ordinary read does NOT join it.
+-- Putting a field every serializer wants inside it would force exactly the
+-- join that table exists to prevent.
+--
+-- Nothing is backfilled. The offset a historical row was written under is
+-- not recoverable from the row; it could only be re-derived by re-asserting
+-- the assumption the ingest made, which for the export adapters was never
+-- an assumption about a place at all. Migration 0006 declined the same
+-- thing for the same reason: silently re-dating a reconciled order to
+-- improve its provenance is not a migration's business.
+ALTER TABLE `purchases` ADD `ordered_at_offset_minutes` integer CONSTRAINT "ck_purchases_ordered_at_offset" CHECK("purchases"."ordered_at_offset_minutes" IS NULL OR ("purchases"."ordered_at_offset_minutes" >= -840 AND "purchases"."ordered_at_offset_minutes" <= 840));

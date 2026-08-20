@@ -27,11 +27,32 @@ import type {
 
 /**
  * ISO-8601 with an explicit offset, enforced rather than accepted as a bare
- * string. The offset is not decoration here: {@link calendarDayOf} reads the
- * day out of it, so a producer that started emitting a bare local time would
- * silently change which day every order is on.
+ * string. A producer that started emitting a bare local time would name no
+ * instant at all, and every order would be placed by however far the shop
+ * is from Greenwich.
+ *
+ * It does NOT follow that the offset says where the order happened.
+ * `purchases` canonicalises this column to UTC so that a text comparison
+ * over it is a chronological one, so in practice it always ends in `Z` —
+ * which is why the merchant-local day is read from
+ * {@link OrderedAtOffsetSchema} and not out of this string.
  */
 const OrderedAtSchema = z.iso.datetime({ offset: true });
+
+/**
+ * Minutes ahead of UTC where the order was placed, as `purchases` recorded
+ * it — the fact that makes the merchant-local calendar day recoverable.
+ *
+ * Optional as well as nullable, and the two mean different things. Null is
+ * the producer saying it never knew an offset: an export whose source
+ * stated an instant rather than a printed wall clock, or a row written
+ * before that pillar had anywhere to keep one. Absent is an older producer
+ * that cannot say at all — and it is read as null rather than refused,
+ * because such a producer has no offsets stored either, so the honest
+ * answer is the same one and a `502` on a handset would be worse than a
+ * date in UTC.
+ */
+const OrderedAtOffsetSchema = z.int().min(-840).max(840).nullable().optional();
 
 /** The order fields a list row is built from. */
 export const PurchasesListRowSchema = z.object({
@@ -41,6 +62,7 @@ export const PurchasesListRowSchema = z.object({
   totalCents: z.number().int(),
   currency: z.string(),
   orderedAt: OrderedAtSchema,
+  orderedAtOffsetMinutes: OrderedAtOffsetSchema,
   /**
    * Open, not the producer's enum, for the reason the finance leg leaves
    * `type` open: `purchases` adding a status must not make every order fail to
@@ -102,6 +124,7 @@ export const PurchasesDetailResponseSchema = z.object({
     surchargeCents: z.number().int(),
     currency: z.string(),
     orderedAt: OrderedAtSchema,
+    orderedAtOffsetMinutes: OrderedAtOffsetSchema,
     status: z.string(),
   }),
   items: z.array(PurchasesItemSchema),
@@ -118,36 +141,50 @@ export const PurchasesDetailResponseSchema = z.object({
 export type PurchasesDetailResponse = z.infer<typeof PurchasesDetailResponseSchema>;
 
 /**
- * The calendar day an ISO-8601 timestamp names AT ITS OWN OFFSET.
+ * The calendar day an order is dated, WHERE IT WAS PLACED.
  *
- * The whole point is that no ambient zone takes part. `2026-08-20T21:30:00+10:00`
- * is the 20th, and stays the 20th on a handset that has since flown to Los
- * Angeles — where resolving the instant in the device's zone would render the
- * 20th as the 19th and nothing on screen would say why. The transactions leg
- * beside this one shipped that mistake, which is why the day is computed on
- * this side of the wire rather than left to a client.
+ * No ambient zone takes part. A 9am Sydney shop stays the 21st on a handset
+ * that has since flown to Los Angeles — where resolving the instant in the
+ * device's zone would render it as the 20th and nothing on screen would say
+ * why. The transactions leg beside this one shipped that mistake, which is
+ * why the day is computed on this side of the wire rather than left to a
+ * client.
  *
- * Arithmetic on the epoch rather than string surgery, so an offset that pushes
- * the local time past midnight in either direction lands on the right day:
- * `2026-08-20T23:30:00-05:00` is the 20th locally and the 21st in UTC, and the
- * local answer is the one a reader means.
+ * `offsetMinutes` is a separate argument because the instant usually cannot
+ * carry it. `purchases` spells `orderedAt` in UTC so that a text comparison
+ * over the column is a chronological one — correct for ordering, and it
+ * leaves the string saying nothing about where the shop was. Reading the
+ * day out of `2026-08-20T23:00:00.000Z` alone answers the 20th for a
+ * receipt that printed the 21st, which is the whole defect this argument
+ * exists to close.
+ *
+ * When it is null the timestamp's own suffix answers instead. That is not a
+ * second source of truth: a producer that states the offset writes both
+ * from the same fact, and one that states none is either spelling the
+ * instant in UTC — where the suffix yields zero and the UTC day is the only
+ * day anybody can name — or spelling an offset, which is then the best
+ * evidence there is.
+ *
+ * Arithmetic on the epoch rather than string surgery, so an offset that
+ * pushes the local time past midnight in either direction lands on the
+ * right day.
  */
-export function calendarDayOf(timestamp: string): string {
-  const offsetMinutes = readOffsetMinutes(timestamp);
+export function calendarDayOf(timestamp: string, offsetMinutes: number | null): string {
   const instant = Date.parse(timestamp);
   if (Number.isNaN(instant)) {
     throw new Error(`[bfm-api] not an ISO-8601 timestamp: ${timestamp}`);
   }
-  return new Date(instant + offsetMinutes * 60_000).toISOString().slice(0, 10);
+  const applied = offsetMinutes ?? readOffsetMinutes(timestamp);
+  return new Date(instant + applied * 60_000).toISOString().slice(0, 10);
 }
 
 /**
  * Minutes east of UTC, from the timestamp's own suffix.
  *
- * `Z` is zero. Anything else the schema admits ends in `±HH:MM`. A string that
- * is neither never reaches here — `OrderedAtSchema` rejects it before the
- * mapping runs — and the throw is what keeps that true rather than defaulting
- * a malformed value to UTC and dating it silently wrong.
+ * `Z` is zero. Anything else the schema admits ends in `±HH:MM`. A string
+ * that is neither never reaches here — `OrderedAtSchema` rejects it before
+ * the mapping runs — and the throw is what keeps that true rather than
+ * defaulting a malformed value to UTC and dating it silently wrong.
  */
 function readOffsetMinutes(timestamp: string): number {
   if (timestamp.endsWith('Z') || timestamp.endsWith('z')) return 0;
@@ -167,7 +204,7 @@ export function toMobilePurchase(row: PurchasesListRow): MobilePurchase {
     merchantName: row.merchantEntityName,
     totalCents: row.totalCents,
     currency: row.currency,
-    orderedOn: calendarDayOf(row.orderedAt),
+    orderedOn: calendarDayOf(row.orderedAt, row.orderedAtOffsetMinutes ?? null),
     itemCount: row.itemCount,
     status: row.status,
     receiptUri: row.receiptUri,
@@ -182,7 +219,7 @@ export function toMobilePurchaseDetail(detail: PurchasesDetailResponse): MobileP
     merchantName: purchase.merchantEntityName,
     totalCents: purchase.totalCents,
     currency: purchase.currency,
-    orderedOn: calendarDayOf(purchase.orderedAt),
+    orderedOn: calendarDayOf(purchase.orderedAt, purchase.orderedAtOffsetMinutes ?? null),
     orderedAt: purchase.orderedAt,
     itemCount: detail.items.length,
     status: purchase.status,
