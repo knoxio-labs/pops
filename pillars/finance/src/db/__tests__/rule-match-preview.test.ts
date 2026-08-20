@@ -2,51 +2,23 @@
  * Invariant tests for `previewRuleMatchTransactions` — the DB-wide rule-match
  * preview behind the "Manage Rules" impact panel.
  *
- * Seeds an in-memory `transactions` table with the canonical DDL and asserts
+ * Seeds an in-memory database carrying the migrated finance schema and asserts
  * the preview matches exactly what a rule would hit at import time: matching is
  * against the post-`normalizeDescription` form (digits stripped, whitespace
  * collapsed, uppercased), the total count spans the full DB (never the page
  * limit), and pagination slices the newest-first ordering.
  */
-import Database from 'better-sqlite3';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { dollarsToCents } from '../../money.js';
 import { previewRuleMatchTransactions } from '../services/transaction-corrections-matching.js';
+import { freshMigratedFinanceDb } from './migrated-db.js';
+
+import type Database from 'better-sqlite3';
 
 import type { FinanceDb } from '../services/internal.js';
 import type { TransactionCorrectionMatchType } from '../services/transaction-corrections-types.js';
-
-const TRANSACTIONS_DDL = `
-CREATE TABLE transactions (
-  id text PRIMARY KEY NOT NULL,
-  notion_id text,
-  description text NOT NULL,
-  account text NOT NULL,
-  amount_cents integer NOT NULL,
-  date text NOT NULL,
-  type text NOT NULL,
-  tags text NOT NULL DEFAULT '[]',
-  entity_id text,
-  entity_name text,
-  location text,
-  country text,
-  related_transaction_id text,
-  notes text,
-  foreign_amount_minor integer,
-  foreign_currency text,
-  fx_fee_cents integer,
-  checksum text,
-  raw_row text,
-  last_edited_time text NOT NULL,
-  match_type text,
-  match_rule_id text,
-  match_confidence real
-);
-CREATE INDEX idx_transactions_date ON transactions (date);
-CREATE UNIQUE INDEX idx_transactions_checksum ON transactions (checksum);
-`;
+import type { MigratedFinanceDb } from './migrated-db.js';
 
 interface SeedOverrides {
   id?: string;
@@ -58,15 +30,10 @@ interface SeedOverrides {
   checksum?: string | null;
 }
 
-interface TestHarness {
-  db: FinanceDb;
-  raw: Database.Database;
-}
+type TestHarness = MigratedFinanceDb;
 
 function freshDb(): TestHarness {
-  const raw = new Database(':memory:');
-  raw.exec(TRANSACTIONS_DDL);
-  return { db: drizzle(raw), raw };
+  return freshMigratedFinanceDb();
 }
 
 let seq = 0;

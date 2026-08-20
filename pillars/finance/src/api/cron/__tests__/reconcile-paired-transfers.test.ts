@@ -1,13 +1,12 @@
 /**
  * Tests for the nightly paired-transfer reconcile worker (#3607 Stage 3d)
- * against an in-memory SQLite seeded with the canonical `transactions` DDL.
- * Covers the feature gate, linking, ambiguity, cross-pass idempotency, and the
+ * against an in-memory SQLite carrying the migrated finance schema. Covers the
+ * feature gate, linking, ambiguity, cross-pass idempotency, and the
  * recursive-timer / stop() lifecycle.
  */
-import Database from 'better-sqlite3';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { freshMigratedFinanceDb } from '../../../db/__tests__/migrated-db.js';
 import {
   createTransaction,
   getTransaction,
@@ -18,45 +17,12 @@ import { startReconcilePairedTransfersWorker } from '../reconcile-paired-transfe
 
 import type { FinanceDb } from '../../../db/services/internal.js';
 
-const TRANSACTIONS_DDL = `
-CREATE TABLE transactions (
-  id text PRIMARY KEY NOT NULL,
-  notion_id text,
-  description text NOT NULL,
-  account text NOT NULL,
-  amount_cents integer NOT NULL,
-  date text NOT NULL,
-  type text NOT NULL,
-  tags text NOT NULL DEFAULT '[]',
-  entity_id text,
-  entity_name text,
-  location text,
-  country text,
-  related_transaction_id text,
-  notes text,
-  foreign_amount_minor integer,
-  foreign_currency text,
-  fx_fee_cents integer,
-  checksum text,
-  raw_row text,
-  last_edited_time text NOT NULL,
-  match_type text,
-  match_rule_id text,
-  match_confidence real
-);
-CREATE INDEX idx_transactions_date ON transactions (date);
-CREATE INDEX idx_transactions_account ON transactions (account);
-`;
-
 const ENABLED = 'FINANCE_TRANSFER_PAIR_ENABLED';
 const WINDOW = 'FINANCE_TRANSFER_PAIR_WINDOW_DAYS';
 const LONG_INTERVAL = 1_000_000;
 
 function freshDb(): FinanceDb {
-  const raw = new Database(':memory:');
-  raw.pragma('foreign_keys = ON');
-  raw.exec(TRANSACTIONS_DDL);
-  return drizzle(raw);
+  return freshMigratedFinanceDb().db;
 }
 
 function seed(db: FinanceDb, overrides: Partial<CreateTransactionInput> = {}): TransactionRow {

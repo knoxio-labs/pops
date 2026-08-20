@@ -4,11 +4,9 @@
  * Entities are no longer mirrored in finance — `buildEntityMaps` and
  * `buildDefaultTagsByEntity` are PURE transforms over a contact set fetched
  * live from the contacts pillar, so they need no DB. `findExistingChecksums`
- * and `insertImportTransaction` run against an in-memory `transactions` table
- * (no entity FK — the column is plain text, matching the post-0057 schema).
+ * and `insertImportTransaction` run against an in-memory database carrying the
+ * migrated finance schema.
  */
-import Database from 'better-sqlite3';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { ImportTransactionPersistError } from '../errors.js';
@@ -19,56 +17,17 @@ import {
   findExistingChecksums,
   insertImportTransaction,
 } from '../services/imports.js';
+import { freshMigratedFinanceDb } from './migrated-db.js';
 
 import type { ContactEntity } from '../../api/contacts/client.js';
 import type { InsertImportTransactionInput } from '../services/imports.js';
 import type { FinanceDb } from '../services/internal.js';
+import type { MigratedFinanceDb } from './migrated-db.js';
 
-const SCHEMA_DDL = `
-CREATE TABLE transactions (
-  id text PRIMARY KEY NOT NULL,
-  notion_id text,
-  description text NOT NULL,
-  account text NOT NULL,
-  amount_cents integer NOT NULL,
-  date text NOT NULL,
-  type text NOT NULL,
-  tags text DEFAULT '[]' NOT NULL,
-  entity_id text,
-  entity_name text,
-  location text,
-  country text,
-  related_transaction_id text,
-  notes text,
-  foreign_amount_minor integer,
-  foreign_currency text,
-  fx_fee_cents integer,
-  checksum text,
-  raw_row text,
-  last_edited_time text NOT NULL,
-  match_type text,
-  match_rule_id text,
-  match_confidence real
-);
-CREATE UNIQUE INDEX transactions_notion_id_unique ON transactions (notion_id);
-CREATE INDEX idx_transactions_date ON transactions (date);
-CREATE INDEX idx_transactions_account ON transactions (account);
-CREATE INDEX idx_transactions_entity ON transactions (entity_id);
-CREATE INDEX idx_transactions_last_edited ON transactions (last_edited_time);
-CREATE INDEX idx_transactions_notion_id ON transactions (notion_id);
-CREATE UNIQUE INDEX idx_transactions_checksum ON transactions (checksum);
-`;
-
-interface TestHarness {
-  db: FinanceDb;
-  raw: Database.Database;
-}
+type TestHarness = MigratedFinanceDb;
 
 function freshDb(): TestHarness {
-  const raw = new Database(':memory:');
-  raw.pragma('foreign_keys = ON');
-  raw.exec(SCHEMA_DDL);
-  return { db: drizzle(raw), raw };
+  return freshMigratedFinanceDb();
 }
 
 function contact(over: Partial<ContactEntity> & { name: string }): ContactEntity {
@@ -256,7 +215,11 @@ describe('insertImportTransaction', () => {
     expect(row.checksum).toBeNull();
   });
 
-  it('honours the transactions.checksum unique index', () => {
+  it('lets two rows share a checksum, leaving dedup to findExistingChecksums', () => {
+    // `0059_recompute_canonical_checksum` re-keyed every row to a checksum
+    // derived from the charge alone and dropped the UNIQUE index, because two
+    // genuinely distinct charges can hash the same. Dedup moved to the commit
+    // path, which asks `findExistingChecksums` first.
     const base: Omit<InsertImportTransactionInput, 'description'> = {
       account: 'amex',
       amountCents: -100,
@@ -269,9 +232,9 @@ describe('insertImportTransaction', () => {
       checksum: 'dup',
     };
     insertImportTransaction(harness.db, { ...base, description: 'first' });
-    expect(() => insertImportTransaction(harness.db, { ...base, description: 'second' })).toThrow(
-      /UNIQUE constraint failed/
-    );
+    insertImportTransaction(harness.db, { ...base, description: 'second' });
+
+    expect(findExistingChecksums(harness.db, ['dup'])).toEqual(new Set(['dup']));
   });
 
   it('rolls back when used inside a transaction that aborts', () => {

@@ -1,14 +1,7 @@
 /**
  * Invariant tests for the budgets service against an in-memory SQLite
- * seeded with the canonical `budgets` + `transactions` DDL — DB + service
- * layer only.
- *
- * The DDL is inlined rather than applied from the migration journal so
- * each test runs against a lean two-table fixture instead of the full
- * finance schema.
+ * carrying the migrated finance schema — DB + service layer only.
  */
-import Database from 'better-sqlite3';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { BudgetConflictError, BudgetNotFoundError } from '../errors.js';
@@ -23,61 +16,17 @@ import {
   updateBudget,
   withSpend,
 } from '../services/budgets.js';
+import { freshMigratedFinanceDb } from './migrated-db.js';
+
+import type Database from 'better-sqlite3';
 
 import type { FinanceDb } from '../services/internal.js';
-
-const BUDGETS_DDL = `
-CREATE TABLE budgets (
-  id text PRIMARY KEY NOT NULL,
-  notion_id text,
-  category text NOT NULL,
-  period text,
-  amount_cents integer,
-  active integer DEFAULT 0 NOT NULL,
-  notes text,
-  last_edited_time text NOT NULL,
-  owner_uri text,
-  owner_uri_stale_at text
-);
-CREATE UNIQUE INDEX budgets_notion_id_unique ON budgets (notion_id);
-CREATE UNIQUE INDEX idx_budgets_category_period ON budgets (category, COALESCE(period, char(0)));
-CREATE INDEX idx_budgets_owner_uri ON budgets (owner_uri);
-
-CREATE TABLE transactions (
-  id text PRIMARY KEY NOT NULL,
-  notion_id text,
-  description text NOT NULL,
-  account text NOT NULL,
-  amount_cents integer NOT NULL,
-  date text NOT NULL,
-  type text NOT NULL,
-  tags text DEFAULT '[]' NOT NULL,
-  entity_id text,
-  entity_name text,
-  location text,
-  country text,
-  related_transaction_id text,
-  notes text,
-  foreign_amount_minor integer,
-  foreign_currency text,
-  fx_fee_cents integer,
-  checksum text,
-  raw_row text,
-  last_edited_time text NOT NULL,
-  match_type text,
-  match_rule_id text,
-  match_confidence real
-);
-CREATE INDEX idx_transactions_date ON transactions (date);
-`;
 
 type FinanceTestDb = FinanceDb & { $client: Database.Database };
 
 function freshDb(): FinanceTestDb {
-  const raw = new Database(':memory:');
-  raw.pragma('foreign_keys = ON');
-  raw.exec(BUDGETS_DDL);
-  return drizzle(raw);
+  const { db, raw } = freshMigratedFinanceDb();
+  return Object.assign(db, { $client: raw });
 }
 
 interface SeedTransactionInput {
