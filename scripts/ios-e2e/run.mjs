@@ -73,6 +73,7 @@ import { setTimeout as sleep } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 
 import { startControlPlane } from './control-plane.mjs';
+import { startPurchasesStub } from './purchases-stub.mjs';
 import { seededTransactions } from './transactions-fixture.mjs';
 import { startUpstreamStub } from './upstream-stub.mjs';
 
@@ -437,7 +438,18 @@ async function main() {
   }
 
   try {
-    const upstream = await startUpstreamStub({ rows: seededTransactions, host: HOST });
+    // Started before the registry that advertises it, because the address it
+    // is advertised at is the port it just bound. It answers nothing until a
+    // flow asks it to — see `purchases-stub.mjs`.
+    const purchases = await startPurchasesStub({ host: HOST });
+    teardown.unshift(purchases.close);
+    process.stdout.write(`ios-e2e: purchases stub on ${purchases.url} (withheld until armed)\n`);
+
+    const upstream = await startUpstreamStub({
+      rows: seededTransactions,
+      purchasesBaseUrl: purchases.url,
+      host: HOST,
+    });
     teardown.unshift(upstream.close);
     process.stdout.write(`ios-e2e: registry + finance stub on ${upstream.url}\n`);
 
@@ -486,6 +498,7 @@ async function main() {
       bfmBaseUrl: baseURL.origin,
       accessTokenSecret: ACCESS_TOKEN_SECRET,
       upstream,
+      purchases,
     });
     teardown.unshift(control.close);
     // The same identity check, through the proxy this time. A control plane

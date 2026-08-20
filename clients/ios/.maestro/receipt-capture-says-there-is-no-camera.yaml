@@ -1,0 +1,81 @@
+appId: com.knoxiolabs.pops
+name: A second feature earns a tab, and receipt capture says why it cannot open the camera
+---
+# An unpaired launch, every time — the credentials live in the keychain,
+# outside what `clearState` empties.
+- clearState
+- clearKeychain
+- launchApp
+
+- assertVisible:
+    id: 'pairing-code-field'
+
+# Armed before pairing, for the reason the root flows arm before pairing:
+# `AppShellModel.loadBootstrap()` fires the moment pairing lands a paired
+# device, so the switch has to be thrown before that request exists rather than
+# raced against it. Until it is thrown, `receipt-capture` is `unavailable` and
+# this app has exactly one feature — which is what every flow older than this
+# one is written against.
+- runScript: scripts/receipts-become-available.js
+- assertTrue: ${output.receipts.status == 200}
+- assertTrue: ${output.receipts.state.purchasesReachable == true}
+
+- runFlow:
+    file: subflows/enter-the-pairing-details.yaml
+    env:
+      SERVER_URL: ${CONTROL_BASE_URL}
+
+# The first tab, and the reason this assertion is here rather than assumed: a
+# `TabView` with no explicit selection shows its first tab, so reaching the
+# transactions list is how this flow knows the root drew a switcher rather than
+# the single-feature screen — and that finance is still healthy, which is what
+# makes the tap below a navigation rather than a recovery.
+- assertVisible:
+    id: 'transactions-list'
+
+# The tab bar itself, which exists only at two or more usable features
+# (`ContentView.features`). Its label is `RootCopy.name(of:)`'s, shared with the
+# sentence the root screen writes when a feature is withheld — so a rename that
+# broke one would break the other, and this flow says so.
+- tapOn: 'Receipts'
+
+# The Simulator has no camera, so this is the state a flow here actually meets
+# — `ReceiptCaptureAccessibility.cameraRefusal` says as much beside the
+# identifier. Asserting it is asserting that the tab reached the receipt screen
+# AND that the screen read the camera decision on appearing, which is the one
+# thing a phone with a camera would never show.
+- assertVisible:
+    id: 'receipt-capture-camera-refusal'
+
+# `ReceiptCaptureCopy.cameraUnavailable` in full. Maestro matches a text
+# selector as a regex against the WHOLE label, so a prefix of this sentence
+# matches nothing and would pass against whatever is on screen.
+#
+# The sentence rather than the identifier, because which of the three refusals
+# this is cannot be read off the identifier — all three carry it. "No camera on
+# this device" and "you said no" have opposite next actions, and a screen that
+# offered the wrong one is the regression worth failing on.
+- assertVisible: "This device has no camera, so a receipt can't be photographed here."
+
+# The rule `CameraRefusal.offersSettings` exists for: only a refusal somebody
+# can actually reverse gets a way to reverse it. There is nothing in Settings
+# that gives a Simulator a camera, so a link here would be an offer ending in a
+# dead end.
+#
+# AFTER the assertion above, and that order is load-bearing: `assertNotVisible`
+# answers the moment the element is absent, which a screen mid-transition
+# always is, so a negative assertion placed first is a line that cannot fail.
+- assertNotVisible:
+    id: 'receipt-capture-open-settings'
+
+# And no camera button, because `ReceiptCapturePrompt` draws the refusal
+# INSTEAD of it rather than beside it. A button that survived the refusal would
+# open a scanner that can never produce a frame.
+- assertNotVisible:
+    id: 'receipt-capture-start'
+
+# The other tab still goes back. A switcher that can only be crossed once is a
+# worse root than the single-feature screen it replaced.
+- tapOn: 'Transactions'
+- assertVisible:
+    id: 'transactions-list'

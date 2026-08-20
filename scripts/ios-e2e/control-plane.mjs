@@ -165,6 +165,10 @@ function agedAuthorization(header, secret) {
  *     setFinanceContractMismatch: (active: boolean) => void,
  *     isFinanceContractMismatch: () => boolean,
  *   },
+ *   purchases: {
+ *     setReachable: (active: boolean) => void,
+ *     isReachable: () => boolean,
+ *   },
  *   host?: string,
  * }} options
  * @returns {Promise<{ url: string, port: number, state: () => Record<string, unknown>, close: () => Promise<void> }>}
@@ -173,6 +177,7 @@ export async function startControlPlane({
   bfmBaseUrl,
   accessTokenSecret,
   upstream,
+  purchases,
   host = '127.0.0.1',
 }) {
   const counters = { armed: false, substitutions: 0, refreshes: 0, lastDeviceId: null };
@@ -181,6 +186,7 @@ export async function startControlPlane({
     financeOutage: upstream.isFinanceOutage(),
     financeOpenApiUnreachable: upstream.isFinanceOpenApiUnreachable(),
     financeContractMismatch: upstream.isFinanceContractMismatch(),
+    purchasesReachable: purchases.isReachable(),
   });
 
   const control = (method, pathname) => {
@@ -196,6 +202,10 @@ export async function startControlPlane({
       upstream.setFinanceOutage(false);
       upstream.setFinanceOpenApiUnreachable(false);
       upstream.setFinanceContractMismatch(false);
+      // Back to withheld, which is the state every flow written before
+      // `receipt-capture` existed was written against. A flow that wants the
+      // second tab arms it for itself.
+      purchases.setReachable(false);
       return { status: 200, body: state() };
     }
     if (method === 'POST' && pathname === '/__e2e/finance/down') {
@@ -222,6 +232,18 @@ export async function startControlPlane({
       upstream.setFinanceContractMismatch(false);
       return { status: 200, body: state() };
     }
+    // The `receipt-capture` feature, on and off. Expressed as purchases'
+    // `/openapi` answering or refusing rather than as a registry entry
+    // appearing and disappearing — `purchases-stub.mjs` carries the reason,
+    // and it is the same one finance's two `/openapi` switches have.
+    if (method === 'POST' && pathname === '/__e2e/purchases/up') {
+      purchases.setReachable(true);
+      return { status: 200, body: state() };
+    }
+    if (method === 'POST' && pathname === '/__e2e/purchases/down') {
+      purchases.setReachable(false);
+      return { status: 200, body: state() };
+    }
     if (method === 'GET' && pathname === '/__e2e/state') return { status: 200, body: state() };
     // Named rather than forwarded. A typo in a flow would otherwise reach the
     // BFM, 404 there, and read as the pillar having lost a route.
@@ -237,6 +259,8 @@ export async function startControlPlane({
           'POST /__e2e/finance/openapi-reachable',
           'POST /__e2e/finance/contract-mismatch',
           'POST /__e2e/finance/contract-ok',
+          'POST /__e2e/purchases/up',
+          'POST /__e2e/purchases/down',
           'POST /__e2e/reset',
           'GET /__e2e/state',
         ],
