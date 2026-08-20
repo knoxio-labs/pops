@@ -3,6 +3,10 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import {
+  DEFAULT_DEVICE_CAPABILITIES,
+  serialiseDeviceCapabilities,
+} from '../../contract/capabilities.js';
 import { openBfmDb, type OpenedBfmDb } from '../index.js';
 
 import type { DeviceInsert, PairingCodeInsert, RefreshTokenInsert } from '../index.js';
@@ -73,6 +77,11 @@ export function deviceRow(overrides: Partial<DeviceInsert> = {}): DeviceInsert &
     name: "Joao's iPhone",
     model: 'iPhone17,1',
     publicKeyDer: spkiPublicKeyBase64(),
+    // What pairing grants, so a device built here behaves like one that
+    // actually paired. The COLUMN default is the empty grant and must stay
+    // that way — a test fixture is the right place to be generous, a schema
+    // default is not.
+    capabilities: serialiseDeviceCapabilities(DEFAULT_DEVICE_CAPABILITIES),
     ...overrides,
   };
 }

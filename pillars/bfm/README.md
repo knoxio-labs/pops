@@ -284,14 +284,21 @@ count query per scroll tick, and a total that is stale the moment it is read.
 
 ## The mobile write
 
-`POST /mobile/purchases/receipts` is the only verb on this pillar that is not a
-read on the phone's behalf, and what it may be is fixed by
-[ADR-046](../../docs/architecture/adr-046-mobile-write-surface-is-ingestion-only.md):
-the mobile surface accepts **ingestion** — content the handset captured — and
-never a mutation of a record a pillar already holds. Five properties follow,
-and each is asserted in `src/api/__tests__/mobile-receipts.test.ts`,
+`POST /mobile/purchases/receipts` is the only route on this pillar that is not
+a read on the phone's behalf, and what may join it is fixed by
+[ADR-048](../../docs/architecture/adr-048-mobile-capability-scopes.md): a
+mobile route is reachable when the calling device's grant holds the
+**capability** that route declares, and the HTTP verb takes no part in the
+decision. This one declares `purchases.receipts.write`, which buys a receipt
+upload and nothing else in that pillar.
+
+That supersedes the ingestion-only rule
+([ADR-046](../../docs/architecture/adr-046-mobile-write-surface-is-ingestion-only.md)),
+which forbade `PUT`, `PATCH` and `DELETE` under `/mobile` outright. What
+survives from it is everything below. Five properties follow, and each is
+asserted in `src/api/__tests__/mobile-receipts.test.ts`,
 `src/api/purchases/__tests__/client.test.ts` or
-`src/contract/__tests__/mobile-verbs.test.ts`:
+`src/contract/__tests__/mobile-capabilities.test.ts`:
 
 - **The bytes travel unchanged.** `purchases` content-addresses them, which is
   what makes a retry idempotent, so bfm mints no idempotency key and re-encodes
@@ -439,15 +446,18 @@ registration is a separate mechanism and still goes through the
 
 ## What deliberately does not live here
 
-- **Mutations of anything a pillar already holds.** The mobile surface accepts
-  writes, and only ingestion: content the handset captured, handed to the
-  pillar that owns it. `PUT`, `PATCH` and `DELETE` are forbidden under
-  `/mobile` permanently, which is
-  [ADR-046](../../docs/architecture/adr-046-mobile-write-surface-is-ingestion-only.md)
-  and is enforced on the contract by
-  `src/contract/__tests__/mobile-verbs.test.ts` rather than by this sentence. A
-  phone that needs to edit a record is asking for the operator surface, which
-  is behind Cloudflare Access for a reason.
+- **Destructive and administrative operations.** Deleting a record, revoking a
+  device, minting a pairing code, editing a service account: those stay on the
+  operator surface behind Cloudflare Access, because the recovery from a
+  mis-tap there is a restore rather than another edit, and because the blast
+  radius is the fleet rather than one record. Everything else is admissible one
+  capability at a time —
+  [ADR-048](../../docs/architecture/adr-048-mobile-capability-scopes.md), with
+  the vocabulary in `src/contract/capabilities.ts` and
+  `src/contract/__tests__/mobile-capabilities.test.ts` enforcing that no mobile
+  route is reachable without declaring one.
+- **A way to see or narrow a device's grant.** Every device is granted the full
+  vocabulary at pairing and nothing reads it back to an operator (POPS-2460).
 - **The bootstrap route and the nginx route.** `GET /mobile/bootstrap`
   (POPS-1378) and the nginx route plus the compiled pillar roster (POPS-1386)
   are each their own ticket. Revocation here sets `devices.revokedAt`, which is

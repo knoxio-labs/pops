@@ -2,7 +2,11 @@
 
 ## Status
 
-Accepted — 2026-08-13. Reverses the "nothing under `/mobile` uses a verb other than `GET`" invariant recorded in `pillars/bfm/README.md`, and replaces it with a narrower one that CI enforces (POPS-1950).
+Superseded — 2026-08-20 by [ADR-048](adr-048-mobile-capability-scopes.md). Accepted 2026-08-13; it reversed the "nothing under `/mobile` uses a verb other than `GET`" invariant recorded in `pillars/bfm/README.md`, and replaced it with a narrower one that CI enforced (POPS-1950).
+
+**What ADR-048 reverses:** constraint 1 below, and only that. `PUT`, `PATCH` and `DELETE` are no longer forbidden under `/mobile`, and the "permanently, not pending a use case" that qualified the ban was an overreach — the verb was standing in for an authorisation granularity that did not exist yet, and ADR-048 builds that granularity instead. Constraints 2 through 4 (device-originated bodies whose idempotency the producer owns, `requireDevice` plus a named ADR-044 scope on every write, body caps enforced at bfm) survive unchanged and are restated in ADR-048.
+
+**What is still worth reading here:** the account of why a receipt upload and a transaction rewrite are different risks. That reasoning is correct and is what motivates the capability model; it is the remedy below, not the analysis, that was wrong. The `mobile-verbs` test this ADR describes is gone, replaced by `mobile-capabilities`.
 
 ## Context
 

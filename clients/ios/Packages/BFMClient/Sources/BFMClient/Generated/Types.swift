@@ -1938,6 +1938,8 @@ internal enum Operations {
                     internal struct JsonPayload: Codable, Hashable, Sendable {
                         /// - Remark: Generated from `#/paths/mobile/bootstrap/GET/responses/200/content/json/device`.
                         internal struct DevicePayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/bootstrap/GET/responses/200/content/json/device/capabilities`.
+                            internal var capabilities: [Swift.String]
                             /// - Remark: Generated from `#/paths/mobile/bootstrap/GET/responses/200/content/json/device/id`.
                             internal var id: Swift.String
                             /// - Remark: Generated from `#/paths/mobile/bootstrap/GET/responses/200/content/json/device/lastSeenAt`.
@@ -1947,25 +1949,33 @@ internal enum Operations {
                             /// Creates a new `DevicePayload`.
                             ///
                             /// - Parameters:
+                            ///   - capabilities:
                             ///   - id:
                             ///   - lastSeenAt:
                             ///   - name:
                             internal init(
+                                capabilities: [Swift.String],
                                 id: Swift.String,
                                 lastSeenAt: Foundation.Date,
                                 name: Swift.String
                             ) {
+                                self.capabilities = capabilities
                                 self.id = id
                                 self.lastSeenAt = lastSeenAt
                                 self.name = name
                             }
                             internal enum CodingKeys: String, CodingKey {
+                                case capabilities
                                 case id
                                 case lastSeenAt
                                 case name
                             }
                             internal init(from decoder: any Swift.Decoder) throws {
                                 let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.capabilities = try container.decode(
+                                    [Swift.String].self,
+                                    forKey: .capabilities
+                                )
                                 self.id = try container.decode(
                                     Swift.String.self,
                                     forKey: .id
@@ -1979,6 +1989,7 @@ internal enum Operations {
                                     forKey: .name
                                 )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "capabilities",
                                     "id",
                                     "lastSeenAt",
                                     "name"
@@ -2314,45 +2325,133 @@ internal enum Operations {
                 /// - Remark: Generated from `#/paths/mobile/bootstrap/GET/responses/403/content`.
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/bootstrap/GET/responses/403/content/json`.
-                    internal struct JsonPayload: Codable, Hashable, Sendable {
-                        /// - Remark: Generated from `#/paths/mobile/bootstrap/GET/responses/403/content/json/code`.
-                        internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
-                            case deviceRevoked = "device_revoked"
+                    internal enum JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/bootstrap/GET/responses/403/content/json/case1`.
+                        internal struct Case1Payload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/bootstrap/GET/responses/403/content/json/case1/code`.
+                            internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case deviceRevoked = "device_revoked"
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/bootstrap/GET/responses/403/content/json/case1/code`.
+                            internal var code: Operations.Mobile_bootstrap.Output.Forbidden.Body.JsonPayload.Case1Payload.CodePayload
+                            /// - Remark: Generated from `#/paths/mobile/bootstrap/GET/responses/403/content/json/case1/message`.
+                            internal var message: Swift.String
+                            /// Creates a new `Case1Payload`.
+                            ///
+                            /// - Parameters:
+                            ///   - code:
+                            ///   - message:
+                            internal init(
+                                code: Operations.Mobile_bootstrap.Output.Forbidden.Body.JsonPayload.Case1Payload.CodePayload,
+                                message: Swift.String
+                            ) {
+                                self.code = code
+                                self.message = message
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case code
+                                case message
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.code = try container.decode(
+                                    Operations.Mobile_bootstrap.Output.Forbidden.Body.JsonPayload.Case1Payload.CodePayload.self,
+                                    forKey: .code
+                                )
+                                self.message = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .message
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "code",
+                                    "message"
+                                ])
+                            }
                         }
-                        /// - Remark: Generated from `#/paths/mobile/bootstrap/GET/responses/403/content/json/code`.
-                        internal var code: Operations.Mobile_bootstrap.Output.Forbidden.Body.JsonPayload.CodePayload
-                        /// - Remark: Generated from `#/paths/mobile/bootstrap/GET/responses/403/content/json/message`.
-                        internal var message: Swift.String
-                        /// Creates a new `JsonPayload`.
-                        ///
-                        /// - Parameters:
-                        ///   - code:
-                        ///   - message:
-                        internal init(
-                            code: Operations.Mobile_bootstrap.Output.Forbidden.Body.JsonPayload.CodePayload,
-                            message: Swift.String
-                        ) {
-                            self.code = code
-                            self.message = message
+                        /// - Remark: Generated from `#/paths/mobile/bootstrap/GET/responses/403/content/json/case1`.
+                        case case1(Operations.Mobile_bootstrap.Output.Forbidden.Body.JsonPayload.Case1Payload)
+                        /// - Remark: Generated from `#/paths/mobile/bootstrap/GET/responses/403/content/json/case2`.
+                        internal struct Case2Payload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/bootstrap/GET/responses/403/content/json/case2/capability`.
+                            internal var capability: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/bootstrap/GET/responses/403/content/json/case2/code`.
+                            internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case capabilityNotGranted = "capability_not_granted"
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/bootstrap/GET/responses/403/content/json/case2/code`.
+                            internal var code: Operations.Mobile_bootstrap.Output.Forbidden.Body.JsonPayload.Case2Payload.CodePayload
+                            /// - Remark: Generated from `#/paths/mobile/bootstrap/GET/responses/403/content/json/case2/message`.
+                            internal var message: Swift.String
+                            /// Creates a new `Case2Payload`.
+                            ///
+                            /// - Parameters:
+                            ///   - capability:
+                            ///   - code:
+                            ///   - message:
+                            internal init(
+                                capability: Swift.String,
+                                code: Operations.Mobile_bootstrap.Output.Forbidden.Body.JsonPayload.Case2Payload.CodePayload,
+                                message: Swift.String
+                            ) {
+                                self.capability = capability
+                                self.code = code
+                                self.message = message
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case capability
+                                case code
+                                case message
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.capability = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .capability
+                                )
+                                self.code = try container.decode(
+                                    Operations.Mobile_bootstrap.Output.Forbidden.Body.JsonPayload.Case2Payload.CodePayload.self,
+                                    forKey: .code
+                                )
+                                self.message = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .message
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "capability",
+                                    "code",
+                                    "message"
+                                ])
+                            }
                         }
-                        internal enum CodingKeys: String, CodingKey {
-                            case code
-                            case message
-                        }
+                        /// - Remark: Generated from `#/paths/mobile/bootstrap/GET/responses/403/content/json/case2`.
+                        case case2(Operations.Mobile_bootstrap.Output.Forbidden.Body.JsonPayload.Case2Payload)
                         internal init(from decoder: any Swift.Decoder) throws {
-                            let container = try decoder.container(keyedBy: CodingKeys.self)
-                            self.code = try container.decode(
-                                Operations.Mobile_bootstrap.Output.Forbidden.Body.JsonPayload.CodePayload.self,
-                                forKey: .code
+                            var errors: [any Swift.Error] = []
+                            do {
+                                self = .case1(try .init(from: decoder))
+                                return
+                            } catch {
+                                errors.append(error)
+                            }
+                            do {
+                                self = .case2(try .init(from: decoder))
+                                return
+                            } catch {
+                                errors.append(error)
+                            }
+                            throw Swift.DecodingError.failedToDecodeOneOfSchema(
+                                type: Self.self,
+                                codingPath: decoder.codingPath,
+                                errors: errors
                             )
-                            self.message = try container.decode(
-                                Swift.String.self,
-                                forKey: .message
-                            )
-                            try decoder.ensureNoAdditionalProperties(knownKeys: [
-                                "code",
-                                "message"
-                            ])
+                        }
+                        internal func encode(to encoder: any Swift.Encoder) throws {
+                            switch self {
+                            case let .case1(value):
+                                try value.encode(to: encoder)
+                            case let .case2(value):
+                                try value.encode(to: encoder)
+                            }
                         }
                     }
                     /// - Remark: Generated from `#/paths/mobile/bootstrap/GET/responses/403/content/application\/json`.
@@ -2977,45 +3076,133 @@ internal enum Operations {
                 /// - Remark: Generated from `#/paths/mobile/finance/transactions/GET/responses/403/content`.
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/finance/transactions/GET/responses/403/content/json`.
-                    internal struct JsonPayload: Codable, Hashable, Sendable {
-                        /// - Remark: Generated from `#/paths/mobile/finance/transactions/GET/responses/403/content/json/code`.
-                        internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
-                            case deviceRevoked = "device_revoked"
+                    internal enum JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/finance/transactions/GET/responses/403/content/json/case1`.
+                        internal struct Case1Payload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/finance/transactions/GET/responses/403/content/json/case1/code`.
+                            internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case deviceRevoked = "device_revoked"
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/finance/transactions/GET/responses/403/content/json/case1/code`.
+                            internal var code: Operations.MobileFinance_listTransactions.Output.Forbidden.Body.JsonPayload.Case1Payload.CodePayload
+                            /// - Remark: Generated from `#/paths/mobile/finance/transactions/GET/responses/403/content/json/case1/message`.
+                            internal var message: Swift.String
+                            /// Creates a new `Case1Payload`.
+                            ///
+                            /// - Parameters:
+                            ///   - code:
+                            ///   - message:
+                            internal init(
+                                code: Operations.MobileFinance_listTransactions.Output.Forbidden.Body.JsonPayload.Case1Payload.CodePayload,
+                                message: Swift.String
+                            ) {
+                                self.code = code
+                                self.message = message
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case code
+                                case message
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.code = try container.decode(
+                                    Operations.MobileFinance_listTransactions.Output.Forbidden.Body.JsonPayload.Case1Payload.CodePayload.self,
+                                    forKey: .code
+                                )
+                                self.message = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .message
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "code",
+                                    "message"
+                                ])
+                            }
                         }
-                        /// - Remark: Generated from `#/paths/mobile/finance/transactions/GET/responses/403/content/json/code`.
-                        internal var code: Operations.MobileFinance_listTransactions.Output.Forbidden.Body.JsonPayload.CodePayload
-                        /// - Remark: Generated from `#/paths/mobile/finance/transactions/GET/responses/403/content/json/message`.
-                        internal var message: Swift.String
-                        /// Creates a new `JsonPayload`.
-                        ///
-                        /// - Parameters:
-                        ///   - code:
-                        ///   - message:
-                        internal init(
-                            code: Operations.MobileFinance_listTransactions.Output.Forbidden.Body.JsonPayload.CodePayload,
-                            message: Swift.String
-                        ) {
-                            self.code = code
-                            self.message = message
+                        /// - Remark: Generated from `#/paths/mobile/finance/transactions/GET/responses/403/content/json/case1`.
+                        case case1(Operations.MobileFinance_listTransactions.Output.Forbidden.Body.JsonPayload.Case1Payload)
+                        /// - Remark: Generated from `#/paths/mobile/finance/transactions/GET/responses/403/content/json/case2`.
+                        internal struct Case2Payload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/finance/transactions/GET/responses/403/content/json/case2/capability`.
+                            internal var capability: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/finance/transactions/GET/responses/403/content/json/case2/code`.
+                            internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case capabilityNotGranted = "capability_not_granted"
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/finance/transactions/GET/responses/403/content/json/case2/code`.
+                            internal var code: Operations.MobileFinance_listTransactions.Output.Forbidden.Body.JsonPayload.Case2Payload.CodePayload
+                            /// - Remark: Generated from `#/paths/mobile/finance/transactions/GET/responses/403/content/json/case2/message`.
+                            internal var message: Swift.String
+                            /// Creates a new `Case2Payload`.
+                            ///
+                            /// - Parameters:
+                            ///   - capability:
+                            ///   - code:
+                            ///   - message:
+                            internal init(
+                                capability: Swift.String,
+                                code: Operations.MobileFinance_listTransactions.Output.Forbidden.Body.JsonPayload.Case2Payload.CodePayload,
+                                message: Swift.String
+                            ) {
+                                self.capability = capability
+                                self.code = code
+                                self.message = message
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case capability
+                                case code
+                                case message
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.capability = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .capability
+                                )
+                                self.code = try container.decode(
+                                    Operations.MobileFinance_listTransactions.Output.Forbidden.Body.JsonPayload.Case2Payload.CodePayload.self,
+                                    forKey: .code
+                                )
+                                self.message = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .message
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "capability",
+                                    "code",
+                                    "message"
+                                ])
+                            }
                         }
-                        internal enum CodingKeys: String, CodingKey {
-                            case code
-                            case message
-                        }
+                        /// - Remark: Generated from `#/paths/mobile/finance/transactions/GET/responses/403/content/json/case2`.
+                        case case2(Operations.MobileFinance_listTransactions.Output.Forbidden.Body.JsonPayload.Case2Payload)
                         internal init(from decoder: any Swift.Decoder) throws {
-                            let container = try decoder.container(keyedBy: CodingKeys.self)
-                            self.code = try container.decode(
-                                Operations.MobileFinance_listTransactions.Output.Forbidden.Body.JsonPayload.CodePayload.self,
-                                forKey: .code
+                            var errors: [any Swift.Error] = []
+                            do {
+                                self = .case1(try .init(from: decoder))
+                                return
+                            } catch {
+                                errors.append(error)
+                            }
+                            do {
+                                self = .case2(try .init(from: decoder))
+                                return
+                            } catch {
+                                errors.append(error)
+                            }
+                            throw Swift.DecodingError.failedToDecodeOneOfSchema(
+                                type: Self.self,
+                                codingPath: decoder.codingPath,
+                                errors: errors
                             )
-                            self.message = try container.decode(
-                                Swift.String.self,
-                                forKey: .message
-                            )
-                            try decoder.ensureNoAdditionalProperties(knownKeys: [
-                                "code",
-                                "message"
-                            ])
+                        }
+                        internal func encode(to encoder: any Swift.Encoder) throws {
+                            switch self {
+                            case let .case1(value):
+                                try value.encode(to: encoder)
+                            case let .case2(value):
+                                try value.encode(to: encoder)
+                            }
                         }
                     }
                     /// - Remark: Generated from `#/paths/mobile/finance/transactions/GET/responses/403/content/application\/json`.
@@ -3912,45 +4099,133 @@ internal enum Operations {
                 /// - Remark: Generated from `#/paths/mobile/finance/transactions/{id}/GET/responses/403/content`.
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/finance/transactions/{id}/GET/responses/403/content/json`.
-                    internal struct JsonPayload: Codable, Hashable, Sendable {
-                        /// - Remark: Generated from `#/paths/mobile/finance/transactions/{id}/GET/responses/403/content/json/code`.
-                        internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
-                            case deviceRevoked = "device_revoked"
+                    internal enum JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/finance/transactions/{id}/GET/responses/403/content/json/case1`.
+                        internal struct Case1Payload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/finance/transactions/{id}/GET/responses/403/content/json/case1/code`.
+                            internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case deviceRevoked = "device_revoked"
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/finance/transactions/{id}/GET/responses/403/content/json/case1/code`.
+                            internal var code: Operations.MobileFinance_getTransaction.Output.Forbidden.Body.JsonPayload.Case1Payload.CodePayload
+                            /// - Remark: Generated from `#/paths/mobile/finance/transactions/{id}/GET/responses/403/content/json/case1/message`.
+                            internal var message: Swift.String
+                            /// Creates a new `Case1Payload`.
+                            ///
+                            /// - Parameters:
+                            ///   - code:
+                            ///   - message:
+                            internal init(
+                                code: Operations.MobileFinance_getTransaction.Output.Forbidden.Body.JsonPayload.Case1Payload.CodePayload,
+                                message: Swift.String
+                            ) {
+                                self.code = code
+                                self.message = message
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case code
+                                case message
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.code = try container.decode(
+                                    Operations.MobileFinance_getTransaction.Output.Forbidden.Body.JsonPayload.Case1Payload.CodePayload.self,
+                                    forKey: .code
+                                )
+                                self.message = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .message
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "code",
+                                    "message"
+                                ])
+                            }
                         }
-                        /// - Remark: Generated from `#/paths/mobile/finance/transactions/{id}/GET/responses/403/content/json/code`.
-                        internal var code: Operations.MobileFinance_getTransaction.Output.Forbidden.Body.JsonPayload.CodePayload
-                        /// - Remark: Generated from `#/paths/mobile/finance/transactions/{id}/GET/responses/403/content/json/message`.
-                        internal var message: Swift.String
-                        /// Creates a new `JsonPayload`.
-                        ///
-                        /// - Parameters:
-                        ///   - code:
-                        ///   - message:
-                        internal init(
-                            code: Operations.MobileFinance_getTransaction.Output.Forbidden.Body.JsonPayload.CodePayload,
-                            message: Swift.String
-                        ) {
-                            self.code = code
-                            self.message = message
+                        /// - Remark: Generated from `#/paths/mobile/finance/transactions/{id}/GET/responses/403/content/json/case1`.
+                        case case1(Operations.MobileFinance_getTransaction.Output.Forbidden.Body.JsonPayload.Case1Payload)
+                        /// - Remark: Generated from `#/paths/mobile/finance/transactions/{id}/GET/responses/403/content/json/case2`.
+                        internal struct Case2Payload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/finance/transactions/{id}/GET/responses/403/content/json/case2/capability`.
+                            internal var capability: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/finance/transactions/{id}/GET/responses/403/content/json/case2/code`.
+                            internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case capabilityNotGranted = "capability_not_granted"
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/finance/transactions/{id}/GET/responses/403/content/json/case2/code`.
+                            internal var code: Operations.MobileFinance_getTransaction.Output.Forbidden.Body.JsonPayload.Case2Payload.CodePayload
+                            /// - Remark: Generated from `#/paths/mobile/finance/transactions/{id}/GET/responses/403/content/json/case2/message`.
+                            internal var message: Swift.String
+                            /// Creates a new `Case2Payload`.
+                            ///
+                            /// - Parameters:
+                            ///   - capability:
+                            ///   - code:
+                            ///   - message:
+                            internal init(
+                                capability: Swift.String,
+                                code: Operations.MobileFinance_getTransaction.Output.Forbidden.Body.JsonPayload.Case2Payload.CodePayload,
+                                message: Swift.String
+                            ) {
+                                self.capability = capability
+                                self.code = code
+                                self.message = message
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case capability
+                                case code
+                                case message
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.capability = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .capability
+                                )
+                                self.code = try container.decode(
+                                    Operations.MobileFinance_getTransaction.Output.Forbidden.Body.JsonPayload.Case2Payload.CodePayload.self,
+                                    forKey: .code
+                                )
+                                self.message = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .message
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "capability",
+                                    "code",
+                                    "message"
+                                ])
+                            }
                         }
-                        internal enum CodingKeys: String, CodingKey {
-                            case code
-                            case message
-                        }
+                        /// - Remark: Generated from `#/paths/mobile/finance/transactions/{id}/GET/responses/403/content/json/case2`.
+                        case case2(Operations.MobileFinance_getTransaction.Output.Forbidden.Body.JsonPayload.Case2Payload)
                         internal init(from decoder: any Swift.Decoder) throws {
-                            let container = try decoder.container(keyedBy: CodingKeys.self)
-                            self.code = try container.decode(
-                                Operations.MobileFinance_getTransaction.Output.Forbidden.Body.JsonPayload.CodePayload.self,
-                                forKey: .code
+                            var errors: [any Swift.Error] = []
+                            do {
+                                self = .case1(try .init(from: decoder))
+                                return
+                            } catch {
+                                errors.append(error)
+                            }
+                            do {
+                                self = .case2(try .init(from: decoder))
+                                return
+                            } catch {
+                                errors.append(error)
+                            }
+                            throw Swift.DecodingError.failedToDecodeOneOfSchema(
+                                type: Self.self,
+                                codingPath: decoder.codingPath,
+                                errors: errors
                             )
-                            self.message = try container.decode(
-                                Swift.String.self,
-                                forKey: .message
-                            )
-                            try decoder.ensureNoAdditionalProperties(knownKeys: [
-                                "code",
-                                "message"
-                            ])
+                        }
+                        internal func encode(to encoder: any Swift.Encoder) throws {
+                            switch self {
+                            case let .case1(value):
+                                try value.encode(to: encoder)
+                            case let .case2(value):
+                                try value.encode(to: encoder)
+                            }
                         }
                     }
                     /// - Remark: Generated from `#/paths/mobile/finance/transactions/{id}/GET/responses/403/content/application\/json`.
@@ -5512,45 +5787,133 @@ internal enum Operations {
                 /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/403/content`.
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/403/content/json`.
-                    internal struct JsonPayload: Codable, Hashable, Sendable {
-                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/403/content/json/code`.
-                        internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
-                            case deviceRevoked = "device_revoked"
+                    internal enum JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/403/content/json/case1`.
+                        internal struct Case1Payload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/403/content/json/case1/code`.
+                            internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case deviceRevoked = "device_revoked"
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/403/content/json/case1/code`.
+                            internal var code: Operations.MobilePurchases_uploadReceipt.Output.Forbidden.Body.JsonPayload.Case1Payload.CodePayload
+                            /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/403/content/json/case1/message`.
+                            internal var message: Swift.String
+                            /// Creates a new `Case1Payload`.
+                            ///
+                            /// - Parameters:
+                            ///   - code:
+                            ///   - message:
+                            internal init(
+                                code: Operations.MobilePurchases_uploadReceipt.Output.Forbidden.Body.JsonPayload.Case1Payload.CodePayload,
+                                message: Swift.String
+                            ) {
+                                self.code = code
+                                self.message = message
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case code
+                                case message
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.code = try container.decode(
+                                    Operations.MobilePurchases_uploadReceipt.Output.Forbidden.Body.JsonPayload.Case1Payload.CodePayload.self,
+                                    forKey: .code
+                                )
+                                self.message = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .message
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "code",
+                                    "message"
+                                ])
+                            }
                         }
-                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/403/content/json/code`.
-                        internal var code: Operations.MobilePurchases_uploadReceipt.Output.Forbidden.Body.JsonPayload.CodePayload
-                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/403/content/json/message`.
-                        internal var message: Swift.String
-                        /// Creates a new `JsonPayload`.
-                        ///
-                        /// - Parameters:
-                        ///   - code:
-                        ///   - message:
-                        internal init(
-                            code: Operations.MobilePurchases_uploadReceipt.Output.Forbidden.Body.JsonPayload.CodePayload,
-                            message: Swift.String
-                        ) {
-                            self.code = code
-                            self.message = message
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/403/content/json/case1`.
+                        case case1(Operations.MobilePurchases_uploadReceipt.Output.Forbidden.Body.JsonPayload.Case1Payload)
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/403/content/json/case2`.
+                        internal struct Case2Payload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/403/content/json/case2/capability`.
+                            internal var capability: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/403/content/json/case2/code`.
+                            internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case capabilityNotGranted = "capability_not_granted"
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/403/content/json/case2/code`.
+                            internal var code: Operations.MobilePurchases_uploadReceipt.Output.Forbidden.Body.JsonPayload.Case2Payload.CodePayload
+                            /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/403/content/json/case2/message`.
+                            internal var message: Swift.String
+                            /// Creates a new `Case2Payload`.
+                            ///
+                            /// - Parameters:
+                            ///   - capability:
+                            ///   - code:
+                            ///   - message:
+                            internal init(
+                                capability: Swift.String,
+                                code: Operations.MobilePurchases_uploadReceipt.Output.Forbidden.Body.JsonPayload.Case2Payload.CodePayload,
+                                message: Swift.String
+                            ) {
+                                self.capability = capability
+                                self.code = code
+                                self.message = message
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case capability
+                                case code
+                                case message
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.capability = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .capability
+                                )
+                                self.code = try container.decode(
+                                    Operations.MobilePurchases_uploadReceipt.Output.Forbidden.Body.JsonPayload.Case2Payload.CodePayload.self,
+                                    forKey: .code
+                                )
+                                self.message = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .message
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "capability",
+                                    "code",
+                                    "message"
+                                ])
+                            }
                         }
-                        internal enum CodingKeys: String, CodingKey {
-                            case code
-                            case message
-                        }
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/403/content/json/case2`.
+                        case case2(Operations.MobilePurchases_uploadReceipt.Output.Forbidden.Body.JsonPayload.Case2Payload)
                         internal init(from decoder: any Swift.Decoder) throws {
-                            let container = try decoder.container(keyedBy: CodingKeys.self)
-                            self.code = try container.decode(
-                                Operations.MobilePurchases_uploadReceipt.Output.Forbidden.Body.JsonPayload.CodePayload.self,
-                                forKey: .code
+                            var errors: [any Swift.Error] = []
+                            do {
+                                self = .case1(try .init(from: decoder))
+                                return
+                            } catch {
+                                errors.append(error)
+                            }
+                            do {
+                                self = .case2(try .init(from: decoder))
+                                return
+                            } catch {
+                                errors.append(error)
+                            }
+                            throw Swift.DecodingError.failedToDecodeOneOfSchema(
+                                type: Self.self,
+                                codingPath: decoder.codingPath,
+                                errors: errors
                             )
-                            self.message = try container.decode(
-                                Swift.String.self,
-                                forKey: .message
-                            )
-                            try decoder.ensureNoAdditionalProperties(knownKeys: [
-                                "code",
-                                "message"
-                            ])
+                        }
+                        internal func encode(to encoder: any Swift.Encoder) throws {
+                            switch self {
+                            case let .case1(value):
+                                try value.encode(to: encoder)
+                            case let .case2(value):
+                                try value.encode(to: encoder)
+                            }
                         }
                     }
                     /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/403/content/application\/json`.
