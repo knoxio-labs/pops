@@ -9,11 +9,11 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { openCerebrumDb, type OpenedCerebrumDb } from '../../db/index.js';
 import { createCerebrumApiApp } from '../app.js';
+import { createTestTransport } from './test-http.js';
 import { makeCerebrumApiDeps } from './test-utils.js';
 
 let tmpDir: string;
@@ -33,9 +33,11 @@ function makeApp(): ReturnType<typeof createCerebrumApiApp> {
   return createCerebrumApiApp(makeCerebrumApiDeps({ cerebrumDb, tmpDir }));
 }
 
+const { requestOn } = createTestTransport();
+
 describe('GET /health', () => {
   it('returns ok + status + pillar + version + ts', async () => {
-    const res = await request(makeApp()).get('/health');
+    const res = await requestOn(makeApp()).get('/health');
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
       ok: true,
@@ -50,7 +52,7 @@ describe('GET /health', () => {
   it('fails closed when the cerebrum handle is closed', async () => {
     const app = makeApp();
     cerebrumDb.raw.close();
-    const res = await request(app).get('/health');
+    const res = await requestOn(app).get('/health');
     expect(res.status).toBe(500);
   });
 });

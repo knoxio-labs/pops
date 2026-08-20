@@ -1,3 +1,6 @@
+import { describe, expect, it } from 'vitest';
+
+import { createDocumentsApiApp } from '../app.js';
 /**
  * Smoke test for the documents-api `GET /openapi` route.
  *
@@ -6,15 +9,14 @@
  * live pillar. This asserts the document is reachable, is OpenAPI 3.x, and
  * carries the known `paperless.status` / `paperless.search` operationIds.
  */
-import request from 'supertest';
-import { describe, expect, it } from 'vitest';
-
-import { createDocumentsApiApp } from '../app.js';
+import { createTestTransport } from './test-http.js';
 
 type OpenApiBody = {
   openapi?: unknown;
   paths?: Record<string, Record<string, { operationId?: unknown }> | undefined>;
 };
+
+const { requestOn } = createTestTransport();
 
 describe('GET /openapi', () => {
   it('serves the committed projection as JSON (3.x + paperless.* operationIds)', async () => {
@@ -23,7 +25,7 @@ describe('GET /openapi', () => {
       selfBaseUrl: 'http://localhost:3012',
     });
 
-    const res = await request(app).get('/openapi');
+    const res = await requestOn(app).get('/openapi');
 
     expect(res.status).toBe(200);
     const body = res.body as OpenApiBody;

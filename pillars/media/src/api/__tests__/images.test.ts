@@ -13,13 +13,13 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import supertest from 'supertest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { moviesService, openMediaDb, tvShowsService, type OpenedMediaDb } from '../../db/index.js';
 import { createMediaApiApp } from '../app.js';
 import { TmdbClient } from '../clients/tmdb/client.js';
 import { ImageCacheService } from '../clients/tmdb/image-cache.js';
+import { createTestTransport } from './test-http.js';
 
 import type { TmdbMovieDetail } from '../clients/tmdb/types.js';
 
@@ -107,11 +107,13 @@ function writeCachedImage(mediaDirName: string, id: number, filename: string, by
 
 const JPEG_MAGIC = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46]);
 
+const { requestOn } = createTestTransport();
+
 describe('GET /media/images — tier 1 (cached file)', () => {
   it('serves a cached poster with its bytes and content-type', async () => {
     writeCachedImage('movies', 550, 'poster.jpg', JPEG_MAGIC);
 
-    const res = await supertest(app()).get('/media/images/movie/550/poster.jpg');
+    const res = await requestOn(app()).get('/media/images/movie/550/poster.jpg');
 
     expect(res.status).toBe(200);
     expect(res.headers['content-type']).toBe('image/jpeg');
@@ -125,7 +127,7 @@ describe('GET /media/images — tier 1 (cached file)', () => {
     writeCachedImage('movies', 550, 'poster.jpg', JPEG_MAGIC);
     writeCachedImage('movies', 550, 'override.jpg', override);
 
-    const res = await supertest(app()).get('/media/images/movie/550/poster.jpg');
+    const res = await requestOn(app()).get('/media/images/movie/550/poster.jpg');
 
     expect(res.status).toBe(200);
     expect(Buffer.from(res.body)).toEqual(override);
@@ -134,7 +136,7 @@ describe('GET /media/images — tier 1 (cached file)', () => {
   it('serves tv images from the tv/ directory (not tvs/)', async () => {
     writeCachedImage('tv', 81189, 'poster.jpg', JPEG_MAGIC);
 
-    const res = await supertest(app()).get('/media/images/tv/81189/poster.jpg');
+    const res = await requestOn(app()).get('/media/images/tv/81189/poster.jpg');
 
     expect(res.status).toBe(200);
     expect(Buffer.from(res.body)).toEqual(JPEG_MAGIC);
@@ -143,7 +145,7 @@ describe('GET /media/images — tier 1 (cached file)', () => {
   it('deletes a corrupted SVG placeholder rather than serving it', async () => {
     writeCachedImage('movies', 550, 'backdrop.jpg', Buffer.from('<svg xmlns="...">'));
 
-    const res = await supertest(app()).get('/media/images/movie/550/backdrop.jpg');
+    const res = await requestOn(app()).get('/media/images/movie/550/backdrop.jpg');
 
     expect(res.status).toBe(404);
     expect(res.body.error).toBe('Image not found');
@@ -152,19 +154,19 @@ describe('GET /media/images — tier 1 (cached file)', () => {
 
 describe('GET /media/images — validation', () => {
   it('returns 400 for an invalid media type', async () => {
-    const res = await supertest(app()).get('/media/images/tvshow/550/poster.jpg');
+    const res = await requestOn(app()).get('/media/images/tvshow/550/poster.jpg');
     expect(res.status).toBe(400);
     expect(res.body.error).toContain('Invalid media type');
   });
 
   it('returns 400 for a non-numeric id', async () => {
-    const res = await supertest(app()).get('/media/images/movie/abc/poster.jpg');
+    const res = await requestOn(app()).get('/media/images/movie/abc/poster.jpg');
     expect(res.status).toBe(400);
     expect(res.body.error).toContain('Invalid id');
   });
 
   it('returns 400 for an unknown filename', async () => {
-    const res = await supertest(app()).get('/media/images/movie/550/malicious.exe');
+    const res = await requestOn(app()).get('/media/images/movie/550/malicious.exe');
     expect(res.status).toBe(400);
     expect(res.body.error).toContain('Invalid filename');
   });
@@ -172,7 +174,7 @@ describe('GET /media/images — validation', () => {
   it('accepts season_N.jpg as a valid filename', async () => {
     writeCachedImage('tv', 81189, 'season_2.jpg', JPEG_MAGIC);
 
-    const res = await supertest(app()).get('/media/images/tv/81189/season_2.jpg');
+    const res = await requestOn(app()).get('/media/images/tv/81189/season_2.jpg');
 
     expect(res.status).toBe(200);
     expect(Buffer.from(res.body)).toEqual(JPEG_MAGIC);
@@ -181,7 +183,7 @@ describe('GET /media/images — validation', () => {
 
 describe('GET /media/images — tier 3 (404 / CDN fallback, no network)', () => {
   it('returns 404 when no cached file exists and the DB has no record', async () => {
-    const res = await supertest(app()).get('/media/images/movie/9999/poster.jpg');
+    const res = await requestOn(app()).get('/media/images/movie/9999/poster.jpg');
 
     expect(res.status).toBe(404);
     expect(res.body.error).toBe('Image not found');
@@ -190,7 +192,7 @@ describe('GET /media/images — tier 3 (404 / CDN fallback, no network)', () => 
   });
 
   it('returns 404 for override.jpg without attempting any download', async () => {
-    const res = await supertest(app()).get('/media/images/movie/550/override.jpg');
+    const res = await requestOn(app()).get('/media/images/movie/550/override.jpg');
 
     expect(res.status).toBe(404);
     expect(imageCache.downloadMovieImages).not.toHaveBeenCalled();
@@ -204,7 +206,7 @@ describe('GET /media/images — tier 3 (404 / CDN fallback, no network)', () => 
       posterPath: '/stored.jpg',
     });
 
-    const res = await supertest(app()).get('/media/images/movie/550/poster.jpg');
+    const res = await requestOn(app()).get('/media/images/movie/550/poster.jpg');
 
     expect(imageCache.downloadMovieImages).toHaveBeenCalledWith(550, '/stored.jpg', null, null);
     expect(res.status).toBe(302);
@@ -219,7 +221,7 @@ describe('GET /media/images — tier 3 (404 / CDN fallback, no network)', () => 
       posterPath: 'https://artworks.thetvdb.com/poster.jpg',
     });
 
-    const res = await supertest(app()).get('/media/images/tv/81189/poster.jpg');
+    const res = await requestOn(app()).get('/media/images/tv/81189/poster.jpg');
 
     expect(imageCache.downloadTvShowImages).toHaveBeenCalledWith({
       tvdbId: 81189,
@@ -239,7 +241,7 @@ describe('GET /media/images — TMDB poster-path lookup (mocked)', () => {
       .spyOn(tmdb, 'getMovie')
       .mockResolvedValue(movieDetail({ posterPath: '/tmdb-fetched.jpg' }));
 
-    const res = await supertest(app()).get('/media/images/movie/550/poster.jpg');
+    const res = await requestOn(app()).get('/media/images/movie/550/poster.jpg');
 
     expect(getMovie).toHaveBeenCalledWith(550);
     expect(imageCache.downloadMovieImages).toHaveBeenCalledWith(
@@ -258,7 +260,7 @@ describe('GET /media/images — TMDB poster-path lookup (mocked)', () => {
       .spyOn(tmdb, 'getMovie')
       .mockResolvedValue(movieDetail({ posterPath: null }));
 
-    const res = await supertest(app()).get('/media/images/movie/550/poster.jpg');
+    const res = await requestOn(app()).get('/media/images/movie/550/poster.jpg');
 
     expect(getMovie).toHaveBeenCalledWith(550);
     expect(imageCache.downloadMovieImages).not.toHaveBeenCalled();
@@ -269,7 +271,7 @@ describe('GET /media/images — TMDB poster-path lookup (mocked)', () => {
     moviesService.createMovie(mediaDb.db, { tmdbId: 550, title: 'Fight Club', backdropPath: null });
     const getMovie = vi.spyOn(tmdb, 'getMovie');
 
-    const res = await supertest(app()).get('/media/images/movie/550/backdrop.jpg');
+    const res = await requestOn(app()).get('/media/images/movie/550/backdrop.jpg');
 
     expect(getMovie).not.toHaveBeenCalled();
     expect(res.status).toBe(404);
@@ -279,7 +281,7 @@ describe('GET /media/images — TMDB poster-path lookup (mocked)', () => {
     moviesService.createMovie(mediaDb.db, { tmdbId: 550, title: 'Fight Club', posterPath: null });
     vi.spyOn(tmdb, 'getMovie').mockRejectedValue(new Error('TMDB unavailable'));
 
-    const res = await supertest(app()).get('/media/images/movie/550/poster.jpg');
+    const res = await requestOn(app()).get('/media/images/movie/550/poster.jpg');
 
     expect(res.status).toBe(404);
   });

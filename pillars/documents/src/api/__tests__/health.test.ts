@@ -1,3 +1,6 @@
+import { describe, expect, it } from 'vitest';
+
+import { createDocumentsApiApp } from '../app.js';
 /**
  * Smoke tests for the documents-api Express app + health probe.
  *
@@ -5,10 +8,9 @@
  * "fails closed when the handle is closed" case — health is a pure
  * liveness shape.
  */
-import request from 'supertest';
-import { describe, expect, it } from 'vitest';
+import { createTestTransport } from './test-http.js';
 
-import { createDocumentsApiApp } from '../app.js';
+const { requestOn } = createTestTransport();
 
 describe('GET /health', () => {
   it('returns ok + status + pillar + version + ts', async () => {
@@ -16,7 +18,7 @@ describe('GET /health', () => {
       version: '0.0.1-test',
       selfBaseUrl: 'http://localhost:3012',
     });
-    const res = await request(app).get('/health');
+    const res = await requestOn(app).get('/health');
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
       ok: true,

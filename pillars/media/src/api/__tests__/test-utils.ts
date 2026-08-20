@@ -5,10 +5,17 @@
  * `client.movies.list()`) so per-test bodies stay readable — only the
  * transport changed. Non-2xx responses throw `HttpError` with the parsed
  * `{ status, body }` so tests assert on `.rejects.toMatchObject({ status })`.
+ *
+ * Requests go over `test-http.ts`'s shared, pre-listened server rather than
+ * over `supertest(app)`, which binds a throwaway listener and dials a fresh
+ * connection for every call. That header explains what the churn costs under
+ * contention; this is the choke point through which the whole pillar's
+ * suites inherit the fix.
  */
-import supertest from 'supertest';
+import { createTestTransport } from './test-http.js';
 
 import type { Express } from 'express';
+import type supertest from 'supertest';
 
 import type { SyncJob, SyncLogEntry } from '../../db/index.js';
 import type { PlexSchedulerStatus as SchedulerStatus } from '../cron/plex-scheduler.js';
@@ -23,6 +30,7 @@ import type {
   WatchHistoryEntry,
 } from '../modules/watch-history-types.js';
 import type { WatchlistEntry } from '../modules/watchlist-types.js';
+import type { BoundAgent } from './test-http.js';
 
 export class HttpError extends Error {
   readonly status: number;
@@ -65,8 +73,10 @@ export interface WatchlistQuery {
   offset?: number;
 }
 
+const transport = createTestTransport();
+
 export function makeClient(app: Express) {
-  const r = supertest(app);
+  const r = transport.requestOn(app);
   return {
     movies: {
       list: (query: MovieQuery = {}) =>
@@ -355,7 +365,7 @@ interface TvShowSearchResultWire {
   year: string | null;
 }
 
-function makeSearchClient(r: ReturnType<typeof supertest>) {
+function makeSearchClient(r: BoundAgent) {
   return {
     movies: (query: { query: string; page?: number }) =>
       send<{
@@ -445,7 +455,7 @@ interface AssembledShelfWire {
   hasMore: boolean;
 }
 
-function makeDiscoveryClient(r: ReturnType<typeof supertest>) {
+function makeDiscoveryClient(r: BoundAgent) {
   return {
     getDismissed: () => send<{ data: number[] }>(r.get('/discovery/dismissed')),
     dismiss: (tmdbId: number) =>
@@ -624,7 +634,7 @@ interface RadarrDiskWire {
   totalSpace: number;
 }
 
-function makeRotationClient(r: ReturnType<typeof supertest>) {
+function makeRotationClient(r: BoundAgent) {
   return {
     addToQueue: (body: Record<string, unknown>) =>
       send<{ message: string }>(r.post('/rotation/candidates').send(body)),
@@ -780,7 +790,7 @@ interface ScoreChangeWire {
 
 type MediaTypeWire = 'movie' | 'tv_show';
 
-function makeComparisonsClient(r: ReturnType<typeof supertest>) {
+function makeComparisonsClient(r: BoundAgent) {
   return {
     listDimensions: () => send<{ data: DimensionWire[] }>(r.get('/comparison-dimensions')),
     createDimension: (body: Record<string, unknown>) =>

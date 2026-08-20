@@ -10,11 +10,11 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { openMediaDb, type OpenedMediaDb } from '../../db/index.js';
 import { createMediaApiApp } from '../app.js';
+import { createTestTransport } from './test-http.js';
 
 let tmpDir: string;
 let mediaDb: OpenedMediaDb;
@@ -34,6 +34,8 @@ type OpenApiBody = {
   paths?: Record<string, Record<string, { operationId?: unknown }> | undefined>;
 };
 
+const { requestOn } = createTestTransport();
+
 describe('GET /openapi', () => {
   it('serves the committed projection as JSON (3.x + arr.config operationId)', async () => {
     const app = createMediaApiApp({
@@ -42,7 +44,7 @@ describe('GET /openapi', () => {
       selfBaseUrl: 'http://localhost:3003',
     });
 
-    const res = await request(app).get('/openapi');
+    const res = await requestOn(app).get('/openapi');
 
     expect(res.status).toBe(200);
     const body = res.body as OpenApiBody;
