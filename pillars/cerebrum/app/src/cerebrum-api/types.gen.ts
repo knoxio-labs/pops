@@ -27,7 +27,7 @@ export type DebriefCreateResponses = {
       createdAt: string;
       id: number;
       mediaId: number | null;
-      mediaType: 'movie' | 'episode';
+      mediaType: 'movie' | 'episode' | null;
       status: 'pending' | 'active' | 'complete';
       watchHistoryId: number;
     };
@@ -82,7 +82,7 @@ export type DebriefGetResponses = {
       createdAt: string;
       id: number;
       mediaId: number | null;
-      mediaType: 'movie' | 'episode';
+      mediaType: 'movie' | 'episode' | null;
       status: 'pending' | 'active' | 'complete';
       watchHistoryId: number;
     } | null;
@@ -113,7 +113,7 @@ export type DebriefGetByMediaResponses = {
       createdAt: string;
       id: number;
       mediaId: number | null;
-      mediaType: 'movie' | 'episode';
+      mediaType: 'movie' | 'episode' | null;
       status: 'pending' | 'active' | 'complete';
       watchHistoryId: number;
     } | null;
@@ -147,7 +147,7 @@ export type DebriefListPendingResponses = {
       createdAt: string;
       id: number;
       mediaId: number | null;
-      mediaType: 'movie' | 'episode';
+      mediaType: 'movie' | 'episode' | null;
       status: 'pending' | 'active' | 'complete';
       watchHistoryId: number;
     }>;
@@ -269,7 +269,7 @@ export type DebriefDismissResponses = {
       createdAt: string;
       id: number;
       mediaId: number | null;
-      mediaType: 'movie' | 'episode';
+      mediaType: 'movie' | 'episode' | null;
       status: 'pending' | 'active' | 'complete';
       watchHistoryId: number;
     };
@@ -1541,7 +1541,7 @@ export type GliaActionsHistoryResponses = {
       rationale: string;
       revertedAt: string | null;
       status: 'pending' | 'approved' | 'rejected' | 'executed' | 'reverted';
-      userDecision: 'approve' | 'reject' | 'modify';
+      userDecision: 'approve' | 'reject' | 'modify' | null;
       userNote: string | null;
     }>;
     total: number;
@@ -1585,7 +1585,7 @@ export type GliaActionsListResponses = {
       rationale: string;
       revertedAt: string | null;
       status: 'pending' | 'approved' | 'rejected' | 'executed' | 'reverted';
-      userDecision: 'approve' | 'reject' | 'modify';
+      userDecision: 'approve' | 'reject' | 'modify' | null;
       userNote: string | null;
     }>;
     total: number;
@@ -1633,7 +1633,7 @@ export type GliaActionsGetResponses = {
       rationale: string;
       revertedAt: string | null;
       status: 'pending' | 'approved' | 'rejected' | 'executed' | 'reverted';
-      userDecision: 'approve' | 'reject' | 'modify';
+      userDecision: 'approve' | 'reject' | 'modify' | null;
       userNote: string | null;
     };
   };
@@ -1702,7 +1702,7 @@ export type GliaActionsDecideResponses = {
       rationale: string;
       revertedAt: string | null;
       status: 'pending' | 'approved' | 'rejected' | 'executed' | 'reverted';
-      userDecision: 'approve' | 'reject' | 'modify';
+      userDecision: 'approve' | 'reject' | 'modify' | null;
       userNote: string | null;
     };
     transition: {
@@ -1770,7 +1770,7 @@ export type GliaActionsExecuteResponses = {
       rationale: string;
       revertedAt: string | null;
       status: 'pending' | 'approved' | 'rejected' | 'executed' | 'reverted';
-      userDecision: 'approve' | 'reject' | 'modify';
+      userDecision: 'approve' | 'reject' | 'modify' | null;
       userNote: string | null;
     };
   };
@@ -1839,7 +1839,7 @@ export type GliaActionsRevertResponses = {
       rationale: string;
       revertedAt: string | null;
       status: 'pending' | 'approved' | 'rejected' | 'executed' | 'reverted';
-      userDecision: 'approve' | 'reject' | 'modify';
+      userDecision: 'approve' | 'reject' | 'modify' | null;
       userNote: string | null;
     };
     revertResult: {
@@ -2896,7 +2896,7 @@ export type NudgesContradictionsData = {
   body?: {
     limit?: number;
     offset?: number;
-    status?: 'pending' | 'dismissed' | 'acted' | 'expired';
+    status?: 'pending' | 'dismissed' | 'acted' | 'expired' | null;
   };
   path?: never;
   query?: never;

@@ -4731,7 +4731,7 @@
                     "type": "integer"
                   },
                   "drawTier": {
-                    "enum": ["high", "mid", "low"],
+                    "enum": ["high", "mid", "low", null],
                     "nullable": true,
                     "type": "string"
                   },
@@ -4756,7 +4756,7 @@
                     "type": "string"
                   },
                   "source": {
-                    "enum": ["arena", "tier_list"],
+                    "enum": ["arena", "tier_list", null],
                     "nullable": true,
                     "type": "string"
                   },
@@ -4956,7 +4956,7 @@
                       "additionalProperties": false,
                       "properties": {
                         "drawTier": {
-                          "enum": ["high", "mid", "low"],
+                          "enum": ["high", "mid", "low", null],
                           "nullable": true,
                           "type": "string"
                         },
@@ -5762,7 +5762,7 @@
                       "type": "object"
                     },
                     "reason": {
-                      "enum": ["insufficient_watched_movies"],
+                      "enum": ["insufficient_watched_movies", null],
                       "nullable": true,
                       "type": "string"
                     }
@@ -8417,7 +8417,7 @@
                           "type": "string"
                         },
                         "rotationStatus": {
-                          "enum": ["leaving", "protected"],
+                          "enum": ["leaving", "protected", null],
                           "nullable": true,
                           "type": "string"
                         },
@@ -8683,7 +8683,7 @@
                           "type": "string"
                         },
                         "rotationStatus": {
-                          "enum": ["leaving", "protected"],
+                          "enum": ["leaving", "protected", null],
                           "nullable": true,
                           "type": "string"
                         },
@@ -8934,7 +8934,7 @@
                             "type": "string"
                           },
                           "rotationStatus": {
-                            "enum": ["leaving", "protected"],
+                            "enum": ["leaving", "protected", null],
                             "nullable": true,
                             "type": "string"
                           },
@@ -9802,7 +9802,7 @@
                             "type": "string"
                           },
                           "rotationStatus": {
-                            "enum": ["leaving", "protected"],
+                            "enum": ["leaving", "protected", null],
                             "nullable": true,
                             "type": "string"
                           },
@@ -10090,7 +10090,7 @@
                           "type": "string"
                         },
                         "rotationStatus": {
-                          "enum": ["leaving", "protected"],
+                          "enum": ["leaving", "protected", null],
                           "nullable": true,
                           "type": "string"
                         },
@@ -10455,7 +10455,7 @@
                           "type": "string"
                         },
                         "rotationStatus": {
-                          "enum": ["leaving", "protected"],
+                          "enum": ["leaving", "protected", null],
                           "nullable": true,
                           "type": "string"
                         },
@@ -10800,7 +10800,7 @@
                           "type": "string"
                         },
                         "rotationStatus": {
-                          "enum": ["leaving", "protected"],
+                          "enum": ["leaving", "protected", null],
                           "nullable": true,
                           "type": "string"
                         },

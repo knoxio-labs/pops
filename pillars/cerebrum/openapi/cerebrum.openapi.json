@@ -68,7 +68,7 @@
                           "type": "integer"
                         },
                         "mediaType": {
-                          "enum": ["movie", "episode"],
+                          "enum": ["movie", "episode", null],
                           "nullable": true,
                           "type": "string"
                         },
@@ -209,7 +209,7 @@
                           "type": "integer"
                         },
                         "mediaType": {
-                          "enum": ["movie", "episode"],
+                          "enum": ["movie", "episode", null],
                           "nullable": true,
                           "type": "string"
                         },
@@ -300,7 +300,7 @@
                           "type": "integer"
                         },
                         "mediaType": {
-                          "enum": ["movie", "episode"],
+                          "enum": ["movie", "episode", null],
                           "nullable": true,
                           "type": "string"
                         },
@@ -401,7 +401,7 @@
                             "type": "integer"
                           },
                           "mediaType": {
-                            "enum": ["movie", "episode"],
+                            "enum": ["movie", "episode", null],
                             "nullable": true,
                             "type": "string"
                           },
@@ -692,7 +692,7 @@
                           "type": "integer"
                         },
                         "mediaType": {
-                          "enum": ["movie", "episode"],
+                          "enum": ["movie", "episode", null],
                           "nullable": true,
                           "type": "string"
                         },
@@ -4224,7 +4224,7 @@
                             "type": "string"
                           },
                           "userDecision": {
-                            "enum": ["approve", "reject", "modify"],
+                            "enum": ["approve", "reject", "modify", null],
                             "nullable": true,
                             "type": "string"
                           },
@@ -4367,7 +4367,7 @@
                             "type": "string"
                           },
                           "userDecision": {
-                            "enum": ["approve", "reject", "modify"],
+                            "enum": ["approve", "reject", "modify", null],
                             "nullable": true,
                             "type": "string"
                           },
@@ -4481,7 +4481,7 @@
                           "type": "string"
                         },
                         "userDecision": {
-                          "enum": ["approve", "reject", "modify"],
+                          "enum": ["approve", "reject", "modify", null],
                           "nullable": true,
                           "type": "string"
                         },
@@ -4632,7 +4632,7 @@
                           "type": "string"
                         },
                         "userDecision": {
-                          "enum": ["approve", "reject", "modify"],
+                          "enum": ["approve", "reject", "modify", null],
                           "nullable": true,
                           "type": "string"
                         },
@@ -4845,7 +4845,7 @@
                           "type": "string"
                         },
                         "userDecision": {
-                          "enum": ["approve", "reject", "modify"],
+                          "enum": ["approve", "reject", "modify", null],
                           "nullable": true,
                           "type": "string"
                         },
@@ -5010,7 +5010,7 @@
                           "type": "string"
                         },
                         "userDecision": {
-                          "enum": ["approve", "reject", "modify"],
+                          "enum": ["approve", "reject", "modify", null],
                           "nullable": true,
                           "type": "string"
                         },
@@ -7819,7 +7819,7 @@
                     "type": "integer"
                   },
                   "status": {
-                    "enum": ["pending", "dismissed", "acted", "expired"],
+                    "enum": ["pending", "dismissed", "acted", "expired", null],
                     "nullable": true,
                     "type": "string"
                   }
