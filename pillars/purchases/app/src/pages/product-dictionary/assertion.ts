@@ -35,6 +35,39 @@ export function aliasIsAsserted(alias: DictionaryAlias): boolean {
 }
 
 /**
+ * True where a human typed this product's name.
+ *
+ * `labelConfirmedAt` is to a product what `confirmedAt` is to a wording, and
+ * it is the only marker that separates a name from a till's abbreviation: an
+ * untouched proposal wears whichever wording minted it, so a pass re-mints an
+ * identical product after one is deleted, while a name somebody typed is
+ * reconstructible from nothing.
+ */
+export function productIsNamed(product: DictionaryProduct): boolean {
+  return product.labelConfirmedAt !== null;
+}
+
+/**
+ * True where forgetting this one wording would take a human-named product
+ * with it.
+ *
+ * A product left with no wordings is deleted in the same write — see the
+ * pillar's `db/services/product-dictionary-writes.ts` — so the last wording
+ * reaching a named product holds the name up. That deletion is intended: a
+ * person emptying a product by hand is a person holding the tool, not a pass
+ * reaching past one. What must not be intended is doing it unknowingly, which
+ * is the only thing this predicate is consulted for.
+ */
+export function forgettingEndsNamedProduct(
+  product: DictionaryProduct,
+  alias: DictionaryAlias
+): boolean {
+  return (
+    productIsNamed(product) && product.aliases.length === 1 && product.aliases[0]?.id === alias.id
+  );
+}
+
+/**
  * A product reads `asserted` only where **every** wording reaching it was
  * asserted, which is the rule the leaderboard's `confirmed` flag uses one
  * layer down: one unasserted wording means the group still holds lines on a

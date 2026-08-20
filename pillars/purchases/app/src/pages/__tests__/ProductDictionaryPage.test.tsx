@@ -502,6 +502,28 @@ describe('ProductDictionaryPage — correcting an entry', () => {
     expect(screen.getByText(enAUPurchases['products.status.forgetWording'])).toBeInTheDocument();
   });
 
+  it('keeps forgetting a wording to one click while its product survives it', async () => {
+    dictionaryReturns([
+      buildProduct({
+        id: 'product-named',
+        label: 'Full cream milk 2L',
+        labelConfirmedAt: '2026-05-03T00:00:00.000Z',
+        aliases: [
+          buildAlias({ id: 'alias-1', printedName: 'MLK 2L', normalisedName: 'mlk 2l' }),
+          buildAlias({ id: 'alias-2', printedName: 'FC MILK 2L', normalisedName: 'fc milk 2l' }),
+        ],
+      }),
+    ]);
+    renderDictionary();
+    await productEntries();
+
+    await userEvent.click(control('Forget the wording MLK 2L'));
+
+    await waitFor(() =>
+      expect(productDeleteAliasMock).toHaveBeenCalledWith({ path: { aliasId: 'alias-1' } })
+    );
+  });
+
   it('says a correction did not stick, carrying the server’s own explanation', async () => {
     dictionaryReturns(twoProducts);
     productUpdateAliasMock.mockResolvedValue({
@@ -514,5 +536,87 @@ describe('ProductDictionaryPage — correcting an entry', () => {
     await userEvent.click(control('Give CHK BRST 1KG its own product'));
 
     expect(await screen.findByText(/no such product/)).toBeInTheDocument();
+  });
+});
+
+// A product left with no wordings is deleted in the same write, so forgetting
+// the last wording reaching a product somebody named destroys the name too —
+// and nothing rebuilds it: the next pass re-mints the product wearing the
+// printed wording. That is the same loss "Forget this product" spends a second
+// click on, reached through a control that spent none.
+describe('ProductDictionaryPage — the last wording of a product somebody named', () => {
+  const named = buildProduct({
+    id: 'product-named',
+    label: 'Full cream milk 2L',
+    labelConfirmedAt: '2026-05-03T00:00:00.000Z',
+    aliases: [buildAlias({ id: 'alias-only', printedName: 'MLK 2L', normalisedName: 'mlk 2l' })],
+  });
+
+  it('asks twice before the click that takes the product and its typed name', async () => {
+    dictionaryReturns([named]);
+    renderDictionary();
+    await productEntries();
+
+    await userEvent.click(control('Forget the wording MLK 2L'));
+    expect(productDeleteAliasMock).not.toHaveBeenCalled();
+
+    await userEvent.click(control('Forget MLK 2L, and the product Full cream milk 2L with it'));
+    await waitFor(() =>
+      expect(productDeleteAliasMock).toHaveBeenCalledWith({ path: { aliasId: 'alias-only' } })
+    );
+  });
+
+  it('lets the second thought stand down without forgetting anything', async () => {
+    dictionaryReturns([named]);
+    renderDictionary();
+    await productEntries();
+
+    await userEvent.click(control('Forget the wording MLK 2L'));
+    await userEvent.click(control('Keep the wording MLK 2L'));
+
+    expect(control('Forget the wording MLK 2L')).toBeInTheDocument();
+    expect(productDeleteAliasMock).not.toHaveBeenCalled();
+  });
+
+  // The wording-only message would be true and incomplete, which on the one
+  // irreversible correction here is the same as misleading.
+  it('reports the product as gone too, not only the wording', async () => {
+    dictionaryReturns([named], []);
+    renderDictionary();
+    await productEntries();
+
+    await userEvent.click(control('Forget the wording MLK 2L'));
+    await userEvent.click(control('Forget MLK 2L, and the product Full cream milk 2L with it'));
+
+    expect(
+      await screen.findByText(enAUPurchases['products.status.forgetWordingWithProduct'])
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(enAUPurchases['products.status.forgetWording'])
+    ).not.toBeInTheDocument();
+  });
+
+  // The label is the wording that minted it, so the next pass re-mints an
+  // identical product. Nothing a human wrote is at stake and the ceremony
+  // would be ceremony readers learn to click through.
+  it('keeps one click for the only wording of a product nobody named', async () => {
+    dictionaryReturns([
+      buildProduct({
+        id: 'product-unnamed',
+        label: 'MLK 2L',
+        labelConfirmedAt: null,
+        aliases: [
+          buildAlias({ id: 'alias-only', printedName: 'MLK 2L', normalisedName: 'mlk 2l' }),
+        ],
+      }),
+    ]);
+    renderDictionary();
+    await productEntries();
+
+    await userEvent.click(control('Forget the wording MLK 2L'));
+
+    await waitFor(() =>
+      expect(productDeleteAliasMock).toHaveBeenCalledWith({ path: { aliasId: 'alias-only' } })
+    );
   });
 });

@@ -54,6 +54,11 @@ export const DEFAULT_DICTIONARY_FILTERS: DictionaryFilterState = {
  * on the paths they undo: `split` is the whole answer to a wrong merge and
  * `retract` to a wrong assertion, and a surface where an undo is a variant of
  * a do is a surface where the undo is the one nobody finds.
+ *
+ * `forgetWordingWithProduct` rides the same route as `forgetWording` and is a
+ * separate member for the same reason: forgetting the last wording reaching a
+ * named product also deletes the product, which is a different thing to have
+ * done to the dictionary and has to be a different thing said afterwards.
  */
 export type DictionaryEdit =
   | { readonly kind: 'merge'; readonly aliasId: string; readonly productId: string }
@@ -61,6 +66,7 @@ export type DictionaryEdit =
   | { readonly kind: 'assert'; readonly aliasId: string }
   | { readonly kind: 'retract'; readonly aliasId: string }
   | { readonly kind: 'forgetWording'; readonly aliasId: string }
+  | { readonly kind: 'forgetWordingWithProduct'; readonly aliasId: string }
   | { readonly kind: 'rename'; readonly productId: string; readonly label: string }
   | { readonly kind: 'forgetProduct'; readonly productId: string };
 
