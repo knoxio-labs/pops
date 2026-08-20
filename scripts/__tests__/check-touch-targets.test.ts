@@ -782,7 +782,7 @@ describe('regimeOrdering does not compare cross-family same-direction regimes by
   });
 });
 
-describe('loadBreakpoints: an em-valued --breakpoint-* resolves the same as rem, not as px (POPS-2274)', () => {
+describe('loadBreakpoints: an em-valued --breakpoint-* resolves the same PX THRESHOLD as rem, but a DIFFERENT unit bucket (POPS-2274, corrected by POPS-2280)', () => {
   it('treats --breakpoint-tablet: 48em as a 768px threshold, not 48px', async () => {
     const root = mkdtempSync(join(tmpdir(), 'touch-target-em-breakpoint-'));
     try {
@@ -800,17 +800,91 @@ describe('loadBreakpoints: an em-valued --breakpoint-* resolves the same as rem,
       const mod = await import(
         `${pathToFileURL(join(root, 'scripts/check-touch-targets.mjs')).href}?em=${Date.now()}`
       );
-      // `tablet` (48em) and `md` (768px default) are the SAME real threshold,
-      // so md is a proven same-family min-width superset of tablet and
-      // rescues tablet's missing box with its own real 44px one — clean. If
-      // 48em were misread as 48px, md(768) would no longer be a superset of
-      // tablet(48) (768 <= 48 is false), the cascade would fall through to
-      // the unprefixed 24px base instead, and this would wrongly flag.
+      // `tablet` (48em, explicitly declared) and `md` (768px-equivalent, but
+      // left at Tailwind's own `rem` default since globals.css never
+      // redeclares it) resolve to the SAME px threshold — but Tailwind's
+      // compiled stylesheet buckets same-direction breakpoints by declared
+      // UNIT STRING first (`em` sorts ahead of `rem`), so which one's
+      // declaration actually WINS at width >= 768px depends on emission
+      // order, not threshold (POPS-2280). PR #4166's POPS-2274 fix treated
+      // any two named breakpoints at the same threshold as an interchangeable
+      // cascade source regardless of unit — that is the exact premise
+      // POPS-2280 disproves. `tablet` can no longer borrow `md`'s box: they
+      // are different families (`named:em` vs `named:rem`), so this fails
+      // closed (flags) instead of silently trusting a same-threshold,
+      // different-unit sibling.
+      const hits = mod.findViolations(
+        'pillars/x/app/src/A.tsx',
+        '<button className="h-6 w-6 before:-inset-9 md:h-11 md:w-11 md:before:-inset-0 tablet:before:-inset-0"><XIcon /></button>'
+      );
+      expect(hits).toEqual([{ file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'button' }]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('still lets a same-UNIT named sibling rescue a missing box (regression control)', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'touch-target-same-unit-breakpoint-'));
+    try {
+      mkdirSync(join(root, 'scripts'), { recursive: true });
+      mkdirSync(join(root, 'libs/ui/src/theme'), { recursive: true });
+      copyFileSync(
+        join(here, '../check-touch-targets.mjs'),
+        join(root, 'scripts/check-touch-targets.mjs')
+      );
+      writeFileSync(
+        join(root, 'libs/ui/src/theme/globals.css'),
+        '@theme {\n  --breakpoint-tablet: 48em;\n  --breakpoint-md: 48em;\n}\n'
+      );
+
+      const mod = await import(
+        `${pathToFileURL(join(root, 'scripts/check-touch-targets.mjs')).href}?sameunit=${Date.now()}`
+      );
+      // `tablet` and `md` are BOTH declared in `em` here (`named:em` for
+      // both), so the same-family superset rescue this whole mechanism
+      // exists for still applies: md really is the wider regime that wins in
+      // the compiled stylesheet, and its 44px box rescues tablet's missing
+      // one.
       const hits = mod.findViolations(
         'pillars/x/app/src/A.tsx',
         '<button className="h-6 w-6 before:-inset-9 md:h-11 md:w-11 md:before:-inset-0 tablet:before:-inset-0"><XIcon /></button>'
       );
       expect(hits).toEqual([]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('fails closed when deleting a "redundant" px redeclaration reverts a default breakpoint to its rem unit bucket (POPS-2280)', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'touch-target-deleted-redeclaration-'));
+    try {
+      mkdirSync(join(root, 'scripts'), { recursive: true });
+      mkdirSync(join(root, 'libs/ui/src/theme'), { recursive: true });
+      copyFileSync(
+        join(here, '../check-touch-targets.mjs'),
+        join(root, 'scripts/check-touch-targets.mjs')
+      );
+      // `sm` is deliberately NOT redeclared here — it reverts to Tailwind's
+      // own `40rem` default, the `rem` bucket, while `md`/`lg`/`xl`/`2xl` are
+      // declared in `px`. loadBreakpoints()'s docstring says default names
+      // are honoured "even if a 'redundant' default redeclaration is deleted
+      // from globals.css" — that claim is only about the NAME surviving, not
+      // about the UNIT bucket it lands in, which is exactly the trap this
+      // proves: correctness must not depend on whether `sm`'s px
+      // redeclaration happens to still be in globals.css.
+      writeFileSync(
+        join(root, 'libs/ui/src/theme/globals.css'),
+        '@theme {\n  --breakpoint-md: 768px;\n  --breakpoint-lg: 1024px;\n  --breakpoint-xl: 1280px;\n  --breakpoint-2xl: 1536px;\n}\n'
+      );
+
+      const mod = await import(
+        `${pathToFileURL(join(root, 'scripts/check-touch-targets.mjs')).href}?deletedredeclaration=${Date.now()}`
+      );
+      const hits = mod.findViolations(
+        'pillars/x/app/src/A.tsx',
+        '<button className="h-11 w-11 md:h-6 md:w-6 md:before:-inset-9 sm:before:-inset-0"><XIcon /></button>'
+      );
+      expect(hits).toEqual([{ file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'button' }]);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -923,5 +997,118 @@ describe('BREAKPOINT_NAMES: a hyphenated custom breakpoint name is captured whol
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
+  });
+});
+
+describe('a scoped max-h-*/max-w-* ceiling CAPS the cascaded reading, it does not substitute for it (POPS-2279)', () => {
+  it('flags a scoped ceiling with no reading of its own applied to a cascaded base box (24px), not the 384px ceiling itself', () => {
+    const src =
+      '<button className="h-6 w-6 before:-inset-9 sm:max-h-96 sm:max-w-96 sm:before:-inset-0"><XIcon /></button>';
+    expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([
+      { file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'button' },
+    ]);
+  });
+
+  it('flags the max-sm: (phone-width) mirror of the same ceiling-caps-not-substitutes bug', () => {
+    const src =
+      '<button className="h-6 w-6 before:-inset-9 max-sm:max-h-96 max-sm:max-w-96 max-sm:before:-inset-0"><XIcon /></button>';
+    expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([
+      { file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'button' },
+    ]);
+  });
+
+  it('flags an arbitrary pixel ceiling with the same bug', () => {
+    const src =
+      '<button className="h-6 w-6 before:-inset-9 sm:max-h-[48px] sm:max-w-[48px] sm:before:-inset-0"><XIcon /></button>';
+    expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([
+      { file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'button' },
+    ]);
+  });
+
+  it('flags a per-axis inset collapse alongside a ceiling on only one axis', () => {
+    const src =
+      '<button className="h-6 w-6 before:-inset-9 sm:max-w-96 sm:before:-inset-x-0"><XIcon /></button>';
+    expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([
+      { file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'button' },
+    ]);
+  });
+
+  it('still flags a smaller ceiling below 44px capping a real base reading (unaffected control)', () => {
+    const src = '<button className="h-11 w-11 sm:max-h-6 sm:max-w-6"><XIcon /></button>';
+    expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([
+      { file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'button' },
+    ]);
+  });
+
+  it('does not flag a ceiling that only grows what the cascade resolves', () => {
+    const src =
+      '<button className="h-6 w-6 before:-inset-9 sm:max-h-12 sm:max-w-12"><XIcon /></button>';
+    expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([]);
+  });
+
+  it('does not flag a scoped ceiling still >= 44px applied to a cascaded reading', () => {
+    const src = '<button className="h-11 w-11 sm:max-h-96 sm:max-w-96"><XIcon /></button>';
+    expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([]);
+  });
+});
+
+describe('a banded viewport token (sm:max-md:) is evaluated against its real intersection domain (POPS-2281)', () => {
+  it('flags a banded token whose box vanishes above the band, filed under its OWN regime rather than the wider sm regime', () => {
+    const src =
+      '<button className="h-6 w-6 before:-inset-9 sm:max-md:h-11 sm:max-md:w-11 sm:before:-inset-0"><XIcon /></button>';
+    expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([
+      { file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'button' },
+    ]);
+  });
+
+  it('flags the reversed segment order of the same band', () => {
+    const src =
+      '<button className="h-6 w-6 before:-inset-9 max-md:sm:h-11 max-md:sm:w-11 sm:before:-inset-0"><XIcon /></button>';
+    expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([
+      { file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'button' },
+    ]);
+  });
+
+  it('flags a not-*-wrapped band, failing closed the same way', () => {
+    const src =
+      '<button className="h-6 w-6 before:-inset-9 not-sm:max-md:h-11 not-sm:max-md:w-11 sm:before:-inset-0"><XIcon /></button>';
+    expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([
+      { file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'button' },
+    ]);
+  });
+
+  it('does not flag the single-segment control — the canonical POPS-2255 idiom stays clean', () => {
+    const src =
+      '<button className="h-6 w-6 before:-inset-9 sm:h-11 sm:w-11 sm:before:-inset-0"><XIcon /></button>';
+    expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([]);
+  });
+});
+
+describe('a scoped min-h-*/min-w-* is a floor applied to the cascaded reading, not a competing 0px reading (POPS-2282)', () => {
+  it('does not flag a scoped min-w-0 once the regime is independently registered by a sibling h/w utility — the non-vacuous case', () => {
+    // sm is registered by sm:h-16 (a real bare reading). sm:min-w-0 must be
+    // read as a floor applied to the CASCADED width (44, borrowed from the
+    // base since sm sets no bare w reading), not as sm's own 0px reading —
+    // which would short-circuit the cascade at a value sm never renders.
+    const src = '<button className="h-11 w-11 sm:h-16 sm:min-w-0"><XIcon /></button>';
+    expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([]);
+  });
+
+  it('does not flag the max-sm: mirror, floor on the other axis', () => {
+    const src = '<button className="h-11 w-11 max-sm:w-16 max-sm:min-h-0"><XIcon /></button>';
+    expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([]);
+  });
+
+  it('still flags a real shrink in the same regime alongside an unrelated min- floor (regression control)', () => {
+    const src =
+      '<button className="h-11 w-11 max-sm:h-6 max-sm:w-6 max-sm:min-w-0"><XIcon /></button>';
+    expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([
+      { file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'button' },
+    ]);
+  });
+
+  it('still leaves the vacuous single-utility case silent (min- never registers a regime on its own)', () => {
+    const src = '<button className="h-11 w-11 sm:min-w-0"><XIcon /></button>';
+    expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([]);
   });
 });

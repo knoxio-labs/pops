@@ -11,6 +11,11 @@ export * from './schema.js';
 export type { PurchasesDb } from './services/internal.js';
 
 export {
+  productIdentityOf,
+  type StoredProductIdentity,
+} from './services/stored-product-identity.js';
+
+export {
   computeAccounting,
   landedCostCents,
   type PurchaseAccounting,
@@ -36,13 +41,60 @@ export {
   type ConfirmItemInput,
 } from './services/purchase-item-mutations.js';
 
+export { type MerchantIdentity } from './services/merchant-identity.js';
+
+export { listInventoryProposals, type InventoryProposal } from './services/inventory-proposals.js';
+
+export {
+  decideInventoryProposal,
+  type InventoryProposalDecision,
+} from './services/inventory-proposal-decisions.js';
+
 export {
   rollUpMerchantSpend,
   type CurrencySpend,
-  type MerchantIdentity,
   type MerchantSpend,
   type MerchantSpendRollup,
 } from './services/merchant-spend.js';
+
+export {
+  identifyProduct,
+  normalisedName,
+  productLookupKey,
+  productScopeKey,
+  type ProductDictionary,
+  type ProductDictionaryEntry,
+  type ProductIdentity,
+  type ProductLine,
+} from './services/product-identity.js';
+
+export {
+  getProduct,
+  listProducts,
+  loadProductDictionary,
+  type ListProductsFilter,
+  type ProductWithAliases,
+} from './services/product-dictionary.js';
+
+export { proposeProducts, type ProposalOutcome } from './services/product-dictionary-proposals.js';
+
+export {
+  deleteAlias,
+  deleteProduct,
+  renameProduct,
+  updateAlias,
+  type UpdateAliasInput,
+} from './services/product-dictionary-writes.js';
+
+export {
+  rankProductPurchases,
+  type ProductCadence,
+  type ProductIdentityCoverage,
+  type ProductLeaderboard,
+  type ProductLeaderboardFilter,
+  type ProductPurchases,
+  type ProductUnitPrice,
+} from './services/product-leaderboard.js';
 
 export {
   searchPurchases,
@@ -63,6 +115,8 @@ export {
   findPurchaseAtInstantForAmount,
   findPurchaseBySourceOrderId,
 } from './services/purchase-lookups.js';
+
+export { attachDocument, type AttachDocumentInput } from './services/purchase-documents.js';
 
 export {
   createPurchase,
@@ -98,6 +152,11 @@ export {
 } from './services/reconcile-links.js';
 
 export {
+  summariseLinksForTransactions,
+  type TransactionLinkSummary,
+} from './services/reconcile-links-batch.js';
+
+export {
   listReconcileQueue,
   type QueueEntry,
   type QueueFilter,
@@ -115,7 +174,11 @@ export {
   type ConfirmOutcome,
 } from './services/reconcile-writes.js';
 
-export { recordMatchRule, type MatchRuleEvidence } from './services/match-rules.js';
+export {
+  listActiveMatchRules,
+  recordMatchRule,
+  type MatchRuleEvidence,
+} from './services/match-rules.js';
 
 export {
   clearDocumentUriStale,

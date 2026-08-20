@@ -148,6 +148,17 @@ export function seedAmazonSource(opened: OpenedPurchasesDb): void {
   });
 }
 
+export function seedWoolworthsSource(opened: OpenedPurchasesDb): void {
+  upsertSource(opened.db, {
+    id: 'woolworths',
+    label: 'Woolworths',
+    descriptorPattern: 'WOOLWORTHS%',
+    settlementWindowDays: 14,
+    autoLinkPolicy: 'auto',
+    ingestAdapter: 'woolworths-receipt',
+  });
+}
+
 /** A minimal valid order. Override any field per test. */
 export function amazonOrder(overrides: Partial<CreatePurchaseInput> = {}): CreatePurchaseInput {
   return {
@@ -176,7 +187,7 @@ export function coffeeOrder(overrides: Partial<CreatePurchaseInput> = {}): Creat
         ref: 'tamper',
         shipmentRef: 'box1',
         name: 'Espresso Tamping Station',
-        sku: 'B0DSVZQ8P5',
+        sku: { value: 'B0DSVZQ8P5', scheme: 'asin' },
         unitPriceCents: 4499,
         lineTotalCents: 4499,
         kind: 'durable',
@@ -186,7 +197,7 @@ export function coffeeOrder(overrides: Partial<CreatePurchaseInput> = {}): Creat
         ref: 'funnel',
         shipmentRef: 'box1',
         name: 'Magnetic Dosing Funnel',
-        sku: 'B0FCSJTKJ8',
+        sku: { value: 'B0FCSJTKJ8', scheme: 'asin' },
         unitPriceCents: 1179,
         lineTotalCents: 1179,
         kind: 'durable',

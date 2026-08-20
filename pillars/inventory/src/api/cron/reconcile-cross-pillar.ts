@@ -8,10 +8,10 @@ import {
 /**
  * Cross-pillar URI reconciliation worker.
  *
- * Nightly job that walks the distinct `purchase_transaction_uri` and
- * `owner_uri` values on `home_inventory` and asks the owning pillar — via
- * the typed `pillar()` proxy from `@pops/pillar-sdk/server` — whether each
- * reference still resolves. Reconciliation outcomes:
+ * Nightly job that walks the distinct `purchase_transaction_uri` values on
+ * `home_inventory` and asks finance — via the typed `pillar()` proxy from
+ * `@pops/pillar-sdk/server` — whether each reference still resolves.
+ * Reconciliation outcomes:
  *
  *   - `ok`            → clear the corresponding `*_stale_at` column on
  *                       rows whose URI matches
@@ -22,18 +22,23 @@ import {
  *
  * The next tick is armed only after the current one settles, so a slow
  * reconciliation cannot pile up overlapping runs.
+ *
+ * There is deliberately no `owner_uri` leg. That column has no writer and no
+ * contract field that could name a user, so a leg over it could only ever walk
+ * an empty list and report success — which is indistinguishable from a healthy
+ * leg and is the failure this worker exists to detect, not to perform. The
+ * column stays dormant until something can populate it.
  */
 import { crossPillarUrisService, type InventoryDb } from '../../db/index.js';
 import { reconcileUriBatch, type ReconcileLogger } from './reconcile-cross-pillar-runner.js';
 
 /**
- * Opaque cross-pillar router types for the proxies. `@pops/finance` and
- * `@pops/registry` both speak REST now, so there is no concrete router type to
- * import — the proxies are fully opaque (`unknown`); `PillarHandle<unknown>`
- * resolves to a handle with no procedure keys.
+ * Opaque cross-pillar router type for the proxy. `@pops/finance` speaks REST
+ * now, so there is no concrete router type to import — the proxy is fully
+ * opaque (`unknown`); `PillarHandle<unknown>` resolves to a handle with no
+ * procedure keys.
  */
 export type FinanceRouter = unknown;
-export type RegistryRouter = unknown;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -41,7 +46,6 @@ export type { ReconcileLogger };
 
 export interface ReconcileProxies {
   finance?: PillarHandle<FinanceRouter>;
-  registry?: PillarHandle<RegistryRouter>;
 }
 
 export interface ReconcileWorkerOptions {
@@ -97,7 +101,9 @@ function classifyResult(value: unknown): ReconcileOutcome {
   if (isCallResult(value)) {
     if (value.kind === 'ok') return 'ok';
     if (value.kind === 'not-found') return 'not-found';
-    if (value.kind === 'bad-request') return 'bad-request';
+    // `refused` (e.g. a producer's own 413/422) is the same "the request as
+    // sent will never succeed" fact `bad-request` already reports here.
+    if (value.kind === 'bad-request' || value.kind === 'refused') return 'bad-request';
     return 'unavailable';
   }
   return 'ok';
@@ -106,7 +112,7 @@ function classifyResult(value: unknown): ReconcileOutcome {
 function classifyError(err: unknown): ReconcileOutcome {
   if (err instanceof PillarCallError) {
     if (err.result.kind === 'not-found') return 'not-found';
-    if (err.result.kind === 'bad-request') return 'bad-request';
+    if (err.result.kind === 'bad-request' || err.result.kind === 'refused') return 'bad-request';
     return 'unavailable';
   }
   return 'unavailable';
@@ -132,15 +138,24 @@ export async function runReconciliation(options: {
   const db = options.db;
 
   const purchaseTransactionUris = crossPillarUrisService.listDistinctPurchaseTransactionUris(db);
-  const ownerUris = crossPillarUrisService.listDistinctOwnerUris(db);
-  // Nothing to resolve means nothing to say. A nightly "complete" line over two
-  // empty work sets is indistinguishable from one over two healthy ones, and
-  // constructing the proxies would demand a service-account key for a tick that
+  // Read before the early return. A work set that shrank because the writer
+  // stopped deriving looks exactly like one that shrank because the data went
+  // away, and only this count tells them apart.
+  const missingUris = crossPillarUrisService.countRowsMissingPurchaseTransactionUri(db);
+  if (missingUris > 0) {
+    options.logger?.warn?.(
+      'inventory cross-pillar reconciliation: rows name a finance transaction with no uri to reconcile',
+      { rows: missingUris }
+    );
+  }
+
+  // Nothing to resolve means nothing to say. A nightly "complete" line over an
+  // empty work set is indistinguishable from one over a healthy one, and
+  // constructing the proxy would demand a service-account key for a tick that
   // is not going to make a call.
-  if (purchaseTransactionUris.length === 0 && ownerUris.length === 0) return counters;
+  if (purchaseTransactionUris.length === 0) return counters;
 
   const finance = options.proxies?.finance ?? serverPillar<FinanceRouter>('finance');
-  const registry = options.proxies?.registry ?? serverPillar<RegistryRouter>('registry');
 
   await reconcileUriBatch({
     db,
@@ -156,31 +171,11 @@ export async function runReconciliation(options: {
     onNotFound: (uri) => crossPillarUrisService.markPurchaseTransactionUriStale(db, uri, stampIso),
   });
 
-  await reconcileUriBatch({
-    db,
-    logger: options.logger,
-    counters,
-    uris: ownerUris,
-    // The owner URI namespace stays `pops://core/user/...` even though the
-    // pillar directory/id renamed to `registry`. The registry pillar's `/users`
-    // handler still resolves `pops://core/...` URIs, and the rows persisted on
-    // disk carry the `core` namespace — so the URI shape match MUST keep
-    // `expectedPillar: 'core'`, NOT `registry`.
-    expectedPillar: 'core',
-    expectedType: 'user',
-    parse: parseSoftUri,
-    probe: (_parsed, uri) => safeCall(() => registry.callDynamic('users', 'get', { uri }, 'query')),
-    onOk: (uri) => crossPillarUrisService.clearOwnerUriStale(db, uri),
-    onNotFound: (uri) => crossPillarUrisService.markOwnerUriStale(db, uri, stampIso),
-  });
-
-  // Per-leg work-set sizes travel with the counters: aggregated totals alone
-  // cannot tell "the finance leg checked nothing" from "it checked ten and all
-  // resolved".
+  // The work-set size travels with the counters: totals alone cannot tell
+  // "checked nothing" from "checked ten and all resolved".
   options.logger?.info?.('inventory cross-pillar reconciliation complete', {
     ...counters,
     purchaseTransactionUris: purchaseTransactionUris.length,
-    ownerUris: ownerUris.length,
   });
   return counters;
 }

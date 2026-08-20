@@ -30,8 +30,8 @@ name: The root screen says why nothing is usable, and Try again leaves it
 # text selector as a regex against the WHOLE label, so a prefix of this
 # sentence matches nothing and passes whatever is on screen. Both declared
 # features are `unavailable` here: finance because `/openapi` stopped
-# answering, receipt-capture because this harness's registry stub never
-# registers `purchases` (only `finance` — `scripts/ios-e2e/upstream-stub.mjs`).
+# answering, receipt-capture because the harness withholds `purchases` unless a
+# flow arms it and this one does not — `scripts/ios-e2e/purchases-stub.mjs`.
 - assertVisible: 'Transactions is not available right now. Receipts is not available right now.'
 
 # AFTER the assertion above, and that order is load-bearing: a relaunch — or

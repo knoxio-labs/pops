@@ -7,6 +7,8 @@
  * — but it means the SQLite-side branches need a unit test, or they are
  * only exercised the day the two descriptions drift apart.
  */
+import { RequestValidationError } from '@ts-rest/express';
+import express from 'express';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -14,12 +16,16 @@ import {
   PurchaseNotFoundError,
   PurchaseSourceNotFoundError,
 } from '../../db/index.js';
-import { tryMapServiceError } from '../rest/error-mapping.js';
+import { createRequestValidationErrorHandler, tryMapServiceError } from '../rest/error-mapping.js';
 import {
   isCheckConstraintError,
   isForeignKeyConstraintError,
   isUniqueConstraintError,
 } from '../shared/sqlite-errors.js';
+import { PASSED_THROUGH_STATUS, passThroughErrorReporter } from './helpers.js';
+import { createTestTransport } from './test-http.js';
+
+const { requestOn } = createTestTransport();
 
 function sqliteError(code: string): Error {
   return Object.assign(new Error(`${code}: constraint failed`), { code });
@@ -69,6 +75,38 @@ describe('tryMapServiceError', () => {
     expect(tryMapServiceError('a string')).toBeNull();
     expect(tryMapServiceError(null)).toBeNull();
     expect(tryMapServiceError({ code: 42 })).toBeNull();
+  });
+});
+
+describe('createRequestValidationErrorHandler', () => {
+  it('answers a RequestValidationError with the contract-shaped 400, dropping the issues', async () => {
+    const app = express();
+    app.get('/boom', (_req, _res, next) => {
+      next(new RequestValidationError(null, null, null, null));
+    });
+    app.use(createRequestValidationErrorHandler());
+
+    const res = await requestOn(app).get('/boom');
+
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({
+      message: 'Request does not match the contract schema',
+      code: 'VALIDATION_ERROR',
+    });
+  });
+
+  it('forwards anything else to the next handler unmapped', async () => {
+    const app = express();
+    app.get('/boom', (_req, _res, next) => {
+      next(new Error('unrelated failure'));
+    });
+    app.use(createRequestValidationErrorHandler());
+    app.use(passThroughErrorReporter);
+
+    const res = await requestOn(app).get('/boom');
+
+    expect(res.status).toBe(PASSED_THROUGH_STATUS);
+    expect(res.body).toEqual({ passedThrough: 'unrelated failure' });
   });
 });
 

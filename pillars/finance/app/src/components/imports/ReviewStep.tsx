@@ -52,6 +52,7 @@ export function ReviewStep() {
         allPreviewTransactions={allPreviewTransactions}
       />
       <ReviewHeader
+        isReevaluating={review.isReevaluating}
         unresolvedCount={review.unresolvedCount}
         browseOpen={proposal.browseOpen}
         setBrowseOpen={proposal.setBrowseOpen}

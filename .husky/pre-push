@@ -54,3 +54,10 @@ if ! git merge-tree --write-tree origin/main HEAD > /dev/null 2>&1; then
   echo "pre-push: branch '$branch' conflicts with origin/main — rebase before pushing."
   exit 1
 fi
+
+# Projects every linted file this push touches onto origin/main's current
+# tip and fails if the projection crosses the oxlint `max-lines` cap — the
+# rebase-tips-a-shared-file-over-budget failure mode that no other local
+# gate sees, because lint-staged only lints staged files and this cares
+# about files the push touches that this commit did not stage.
+node scripts/ci/check-line-budget-headroom.mjs --base main

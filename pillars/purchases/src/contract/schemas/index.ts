@@ -4,6 +4,7 @@ export {
   ChargeOriginSchema,
   CurrencySchema,
   DocumentKindSchema,
+  FinanceTransactionUriSchema,
   IngestMethodSchema,
   IsoTimestampSchema,
   ItemKindClassificationSchema,
@@ -12,14 +13,10 @@ export {
   LinkTypeSchema,
   NonNegativeCentsSchema,
   PopsUriSchema,
-  PurchaseAccountingSchema,
-  PurchaseChargeDetailSchema,
   PurchaseChargeLinkSchema,
   PurchaseChargeSchema,
-  PurchaseDetailSchema,
   PurchaseDocumentSchema,
   PurchaseItemAllocationSchema,
-  PurchaseItemDetailSchema,
   PurchaseItemSchema,
   PurchaseItemTagSchema,
   PurchaseItemUnitSchema,
@@ -31,3 +28,12 @@ export {
   SettlementRoleSchema,
   ShipmentStatusSchema,
 } from './purchase.js';
+
+export {
+  PurchaseAccountingSchema,
+  PurchaseChargeDetailSchema,
+  PurchaseDetailSchema,
+  PurchaseItemDetailSchema,
+} from './purchase-detail.js';
+
+export { ProductIdentitySchema, SkuSchemeSchema } from './product-identity.js';

@@ -7,6 +7,7 @@
  * from a timer and from an ingest hook at once.
  */
 import {
+  listActiveMatchRules,
   listConfirmedLinks,
   listOrdersNeedingDerivedCharge,
   listRejectedPairings,
@@ -29,6 +30,17 @@ export interface SweepResult {
   readonly derivedChargesMinted: number;
   readonly linksTornDown: number;
   readonly linksWritten: number;
+  /**
+   * How many of this sweep's proposals came from stage 4.
+   *
+   * The only production signal that a learned rule did anything. The rule
+   * table's own `timesApplied`/`lastUsedAt` deliberately count human
+   * decisions rather than sweeps — see `listActiveMatchRules` — so without
+   * this a rule auto-linking money every night is indistinguishable from
+   * one that has never fired. Proposals rather than rows written, because
+   * an unchanged link re-proposed is still the stage doing its work.
+   */
+  readonly ruleLinksProposed: number;
   readonly review: readonly ChargeForReview[];
 }
 
@@ -106,6 +118,7 @@ export async function runSweep(deps: SweepDeps, scope: ReconcileScope = {}): Pro
         tx,
         charges.map((charge) => charge.id)
       ),
+      rules: listActiveMatchRules(tx),
       defaultWindowDays,
     });
 
@@ -115,6 +128,7 @@ export async function runSweep(deps: SweepDeps, scope: ReconcileScope = {}): Pro
       derivedChargesMinted: minted,
       linksTornDown: tearDownUnconfirmedLinks(tx, unconfirmedChargeIds(charges, confirmed)),
       linksWritten: persistProposedLinks(tx, solved.links),
+      ruleLinksProposed: solved.links.filter((link) => link.linkType === 'rule').length,
       review: solved.review,
     };
   });
@@ -169,6 +183,7 @@ function emptySweep(): SweepResult {
     derivedChargesMinted: 0,
     linksTornDown: 0,
     linksWritten: 0,
+    ruleLinksProposed: 0,
     review: [],
   };
 }

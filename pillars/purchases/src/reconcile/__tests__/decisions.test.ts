@@ -88,6 +88,8 @@ interface LinkRow {
   chargeId: string;
   uri: string;
   description: string | null;
+  linkType: string;
+  confidence: number;
   confirmedAt: string | null;
   matchRuleId: string | null;
 }
@@ -96,8 +98,8 @@ function linkRows(): LinkRow[] {
   return opened.raw
     .prepare(
       `SELECT charge_id as chargeId, transaction_uri as uri,
-              transaction_description as description, confirmed_at as confirmedAt,
-              match_rule_id as matchRuleId
+              transaction_description as description, link_type as linkType,
+              confidence, confirmed_at as confirmedAt, match_rule_id as matchRuleId
        FROM purchase_charge_links ORDER BY transaction_uri`
     )
     .all() as LinkRow[];
@@ -427,5 +429,172 @@ describe('rejecting survives the next sweep', () => {
 
     expect(linkRows()).toHaveLength(1);
     expect(rejectionRows()).toHaveLength(0);
+  });
+});
+
+describe('what the rule then does on a later sweep', () => {
+  // The case digit-stripping exists for. A source registers ONE descriptor
+  // pattern by hand; a merchant bills under a store number that varies, so
+  // charges settled under any other store are blocked forever and the queue
+  // asks nothing about them. The rule a confirm writes is the merchant with
+  // its digits removed, which is the only thing in the system that knows
+  // the two stores are one shop.
+  const STORE_ONE = 'AMAZON MKTPLACE AU 4128';
+  const STORE_TWO = 'AMAZON MKTPLACE AU 5567';
+
+  /** Registered from one statement line, as an operator reading one does. */
+  function sourcePatternFromOneStore(): void {
+    upsertSource(db, {
+      id: 'amazon',
+      label: 'Amazon',
+      descriptorPattern: `${STORE_ONE}%`,
+      settlementWindowDays: 21,
+      autoLinkPolicy: 'review',
+      ingestAdapter: 'amazon-export',
+    });
+  }
+
+  const bothStores = (): FinanceClient =>
+    financeReturning(
+      { id: 't1', description: STORE_ONE, amountCents: 4128 },
+      { id: 't2', description: STORE_TWO, amountCents: 2200 }
+    );
+
+  function twoOrders(): void {
+    sourcePatternFromOneStore();
+    anOrder({ checksum: 'a' });
+    anOrder({ checksum: 'b', sourceOrderId: 'b', totalCents: 2200 });
+  }
+
+  it('leaves the second store unmatched while nothing has been decided', async () => {
+    twoOrders();
+
+    await runSweep(deps(bothStores()));
+
+    // Only the store the pattern was written from. Without this the test
+    // below would prove nothing — the link could have come from blocking.
+    expect(linkRows().map((link) => link.description)).toEqual([STORE_ONE]);
+  });
+
+  it('matches the second store once the first has been confirmed', async () => {
+    twoOrders();
+    const finance = bothStores();
+    await runSweep(deps(finance));
+    const proposed = onlyLink();
+    const { matchRuleId } = confirmLink(db, proposed.chargeId, proposed.uri, NOW);
+
+    await runSweep(deps(finance));
+
+    const learned = linkRows().find((link) => link.description === STORE_TWO);
+    expect(learned).toMatchObject({
+      linkType: 'rule',
+      // The rule's own confidence — inherited from the exact link that
+      // taught it — capped by the stage.
+      confidence: 0.8,
+      matchRuleId,
+    });
+    // Proposed, not pinned: a stage-4 link is re-derived like any other.
+    expect(learned?.confirmedAt).toBeNull();
+  });
+
+  it('counts the attribution when the operator agrees with the link it proposed', async () => {
+    // The other half of the refusal below. A stage-4 link a human confirms
+    // IS an attribution the rule earned, and the descriptor it was confirmed
+    // on re-records against the same row rather than minting a second rule
+    // saying what the first already said.
+    twoOrders();
+    const finance = bothStores();
+    await runSweep(deps(finance));
+    const proposed = onlyLink();
+    const { matchRuleId } = confirmLink(db, proposed.chargeId, proposed.uri, NOW);
+    await runSweep(deps(finance));
+    const learned = linkRows().find((link) => link.linkType === 'rule');
+    if (learned === undefined) throw new Error('expected the stage-4 link');
+
+    expect(confirmLink(db, learned.chargeId, learned.uri, NOW)).toEqual({
+      pinned: true,
+      matchRuleId,
+    });
+
+    expect(ruleRows()).toMatchObject([{ id: matchRuleId, timesApplied: 2 }]);
+  });
+
+  it('reports how many of a sweep proposals came from stage 4', async () => {
+    // The only production signal the stage fired at all: the rule table's
+    // own counters answer a different question, so without this a rule
+    // auto-linking money every night looks exactly like a rule that never
+    // matches anything.
+    twoOrders();
+    const finance = bothStores();
+    const before = await runSweep(deps(finance));
+    const proposed = onlyLink();
+    confirmLink(db, proposed.chargeId, proposed.uri, NOW);
+
+    const after = await runSweep(deps(finance));
+
+    expect(before).toMatchObject({ kind: 'swept', ruleLinksProposed: 0 });
+    expect(after).toMatchObject({ kind: 'swept', ruleLinksProposed: 1 });
+  });
+
+  it('counts the attribution only when the operator agrees with it', async () => {
+    // `timesApplied` is a history of decisions, and a sweep re-derives
+    // every unconfirmed link on a timer — so counting an auto-link would
+    // add one every fifteen minutes for a link that never changed.
+    twoOrders();
+    const finance = bothStores();
+    await runSweep(deps(finance));
+    const proposed = onlyLink();
+    confirmLink(db, proposed.chargeId, proposed.uri, NOW);
+
+    await runSweep(deps(finance));
+    await runSweep(deps(finance));
+
+    expect(ruleRows()).toMatchObject([{ timesApplied: 1 }]);
+  });
+
+  it('stops proposing it once the rule is deactivated', async () => {
+    twoOrders();
+    const finance = bothStores();
+    await runSweep(deps(finance));
+    const proposed = onlyLink();
+    confirmLink(db, proposed.chargeId, proposed.uri, NOW);
+    await runSweep(deps(finance));
+    opened.raw.prepare('UPDATE purchase_match_rules SET is_active = 0').run();
+
+    await runSweep(deps(finance));
+
+    expect(linkRows().map((link) => link.description)).toEqual([STORE_ONE]);
+  });
+
+  it('keeps naming the rule that admitted the descriptor when the confirm teaches another', async () => {
+    // A `contains` rule admits a descriptor that is not the pattern it
+    // stores, so the row a confirm records — keyed on the exact normalised
+    // descriptor — is a DIFFERENT row from the one that proposed the link.
+    // Overwriting the attribution there would credit the decision to a rule
+    // that had nothing to do with it, which is the whole value of the
+    // column: explaining a link by naming the rule behind it.
+    twoOrders();
+    opened.raw
+      .prepare(
+        `INSERT INTO purchase_match_rules
+           (id, description_pattern, match_type, source, is_active, confidence, priority, times_applied)
+         VALUES ('hand-written', 'AMAZON MKTPLACE', 'contains', 'amazon', 1, 0.9, 0, 0)`
+      )
+      .run();
+
+    await runSweep(deps(bothStores()));
+    const learned = linkRows().find((link) => link.linkType === 'rule');
+    if (learned === undefined) throw new Error('expected the stage-4 link');
+    expect(learned.matchRuleId).toBe('hand-written');
+
+    const outcome = confirmLink(db, learned.chargeId, learned.uri, NOW);
+
+    expect(outcome).toEqual({ pinned: true, matchRuleId: 'hand-written' });
+    expect(linkRows().find((link) => link.linkType === 'rule')?.matchRuleId).toBe('hand-written');
+    // The decision still taught the exact descriptor, as any confirm does.
+    expect(ruleRows().map((rule) => [rule.descriptionPattern, rule.timesApplied])).toEqual([
+      ['AMAZON MKTPLACE', 0],
+      ['AMAZON MKTPLACE AU', 1],
+    ]);
   });
 });

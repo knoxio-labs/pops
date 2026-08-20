@@ -456,6 +456,12 @@
                     "device": {
                       "additionalProperties": false,
                       "properties": {
+                        "capabilities": {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
                         "id": {
                           "type": "string"
                         },
@@ -468,7 +474,7 @@
                           "type": "string"
                         }
                       },
-                      "required": ["id", "name", "lastSeenAt"],
+                      "required": ["id", "name", "lastSeenAt", "capabilities"],
                       "type": "object"
                     },
                     "features": {
@@ -549,18 +555,39 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "code": {
-                      "enum": ["device_revoked"],
-                      "type": "string"
+                  "oneOf": [
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "code": {
+                          "enum": ["device_revoked"],
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code", "message"],
+                      "type": "object"
                     },
-                    "message": {
-                      "type": "string"
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "capability": {
+                          "type": "string"
+                        },
+                        "code": {
+                          "enum": ["capability_not_granted"],
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code", "message", "capability"],
+                      "type": "object"
                     }
-                  },
-                  "required": ["code", "message"],
-                  "type": "object"
+                  ]
                 }
               }
             },
@@ -732,18 +759,39 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "code": {
-                      "enum": ["device_revoked"],
-                      "type": "string"
+                  "oneOf": [
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "code": {
+                          "enum": ["device_revoked"],
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code", "message"],
+                      "type": "object"
                     },
-                    "message": {
-                      "type": "string"
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "capability": {
+                          "type": "string"
+                        },
+                        "code": {
+                          "enum": ["capability_not_granted"],
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code", "message", "capability"],
+                      "type": "object"
                     }
-                  },
-                  "required": ["code", "message"],
-                  "type": "object"
+                  ]
                 }
               }
             },
@@ -995,18 +1043,39 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "code": {
-                      "enum": ["device_revoked"],
-                      "type": "string"
+                  "oneOf": [
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "code": {
+                          "enum": ["device_revoked"],
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code", "message"],
+                      "type": "object"
                     },
-                    "message": {
-                      "type": "string"
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "capability": {
+                          "type": "string"
+                        },
+                        "code": {
+                          "enum": ["capability_not_granted"],
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code", "message", "capability"],
+                      "type": "object"
                     }
-                  },
-                  "required": ["code", "message"],
-                  "type": "object"
+                  ]
                 }
               }
             },
@@ -1159,6 +1228,39 @@
               "schema": {
                 "additionalProperties": false,
                 "properties": {
+                  "capture": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "capturedAt": {
+                        "format": "date-time",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$",
+                        "type": "string"
+                      },
+                      "location": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "latitude": {
+                            "maximum": 90,
+                            "minimum": -90,
+                            "type": "number"
+                          },
+                          "longitude": {
+                            "maximum": 180,
+                            "minimum": -180,
+                            "type": "number"
+                          }
+                        },
+                        "required": ["latitude", "longitude"],
+                        "type": "object"
+                      },
+                      "timeZone": {
+                        "maxLength": 64,
+                        "minLength": 1,
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
                   "parts": {
                     "items": {
                       "additionalProperties": false,
@@ -1254,6 +1356,102 @@
                     {
                       "additionalProperties": false,
                       "properties": {
+                        "extracted": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "address": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "currency": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "discounts": {
+                              "items": {
+                                "type": "string"
+                              },
+                              "type": "array"
+                            },
+                            "lines": {
+                              "items": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "amount": {
+                                    "type": "string"
+                                  },
+                                  "description": {
+                                    "type": "string"
+                                  },
+                                  "quantity": {
+                                    "exclusiveMinimum": true,
+                                    "maximum": 9007199254740991,
+                                    "minimum": 0,
+                                    "nullable": true,
+                                    "type": "integer"
+                                  },
+                                  "unitNote": {
+                                    "nullable": true,
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["description", "amount", "quantity", "unitNote"],
+                                "type": "object"
+                              },
+                              "type": "array"
+                            },
+                            "merchantName": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "purchasedAt": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "purchasedOn": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "shipping": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "surcharges": {
+                              "items": {
+                                "type": "string"
+                              },
+                              "type": "array"
+                            },
+                            "tax": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "total": {
+                              "type": "string"
+                            },
+                            "unreadableNotes": {
+                              "items": {
+                                "type": "string"
+                              },
+                              "type": "array"
+                            }
+                          },
+                          "required": [
+                            "merchantName",
+                            "address",
+                            "purchasedOn",
+                            "purchasedAt",
+                            "currency",
+                            "total",
+                            "tax",
+                            "discounts",
+                            "surcharges",
+                            "shipping",
+                            "lines",
+                            "unreadableNotes"
+                          ],
+                          "type": "object"
+                        },
                         "kind": {
                           "enum": ["needs-review"],
                           "type": "string"
@@ -1265,17 +1463,29 @@
                               "code": {
                                 "type": "string"
                               },
+                              "deltaCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "nullable": true,
+                                "type": "integer"
+                              },
                               "detail": {
                                 "type": "string"
                               }
                             },
-                            "required": ["code", "detail"],
+                            "required": ["code", "detail", "deltaCents"],
                             "type": "object"
                           },
                           "type": "array"
+                        },
+                        "receiptCount": {
+                          "exclusiveMinimum": true,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
                         }
                       },
-                      "required": ["kind", "problems"],
+                      "required": ["kind", "receiptCount", "problems", "extracted"],
                       "type": "object"
                     },
                     {
@@ -1287,9 +1497,15 @@
                         },
                         "reason": {
                           "type": "string"
+                        },
+                        "receiptCount": {
+                          "exclusiveMinimum": true,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
                         }
                       },
-                      "required": ["kind", "reason"],
+                      "required": ["kind", "receiptCount", "reason"],
                       "type": "object"
                     }
                   ]
@@ -1344,18 +1560,39 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "code": {
-                      "enum": ["device_revoked"],
-                      "type": "string"
+                  "oneOf": [
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "code": {
+                          "enum": ["device_revoked"],
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code", "message"],
+                      "type": "object"
                     },
-                    "message": {
-                      "type": "string"
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "capability": {
+                          "type": "string"
+                        },
+                        "code": {
+                          "enum": ["capability_not_granted"],
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code", "message", "capability"],
+                      "type": "object"
                     }
-                  },
-                  "required": ["code", "message"],
-                  "type": "object"
+                  ]
                 }
               }
             },

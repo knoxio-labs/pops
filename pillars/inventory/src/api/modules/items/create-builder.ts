@@ -1,4 +1,5 @@
-import type { homeInventory } from '../../../db/index.js';
+import { crossPillarUrisService, type homeInventory } from '../../../db/index.js';
+
 import type { CreateInventoryItemInput } from './types.js';
 
 const CREATE_NULLABLE_STRING_KEYS = [
@@ -63,5 +64,8 @@ export function buildCreateValues(
     lastEditedTime: now,
     ...nullableStringsFromInput(input),
     ...nullableNumbersFromInput(input),
+    purchaseTransactionUri: crossPillarUrisService.purchaseTransactionUriFor(
+      input.purchaseTransactionId
+    ),
   };
 }

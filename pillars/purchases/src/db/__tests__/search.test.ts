@@ -9,9 +9,11 @@
 import { beforeEach, afterEach, describe, expect, it } from 'vitest';
 
 import { buildPurchasesManifest } from '../../api/manifest.js';
+import { isWellFormedSku } from '../../contract/constants.js';
 import { createPurchase, searchPurchases, setPurchaseStatus, upsertSource } from '../index.js';
 import { amazonOrder, openTempDb, seedAmazonSource } from './helpers.js';
 
+import type { ProductIdentity } from '../../contract/types/purchase.js';
 import type { OpenedPurchasesDb } from '../index.js';
 
 let opened: OpenedPurchasesDb;
@@ -25,6 +27,18 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
 });
+
+/**
+ * The namespace a fixture's identifier can actually claim.
+ *
+ * `asin` merges lines across sources, so the write path refuses it for a
+ * string that cannot be an ASIN. A fixture that wants a merchant-local
+ * identifier states one rather than mislabelling it.
+ */
+function identityFor(sku: string | null | undefined): ProductIdentity | null {
+  if (sku == null) return null;
+  return { value: sku, scheme: isWellFormedSku('asin', sku) ? 'asin' : 'merchant' };
+}
 
 function orderWithItems(
   checksum: string,
@@ -42,7 +56,7 @@ function orderWithItems(
       items: items.map((item, index) => ({
         ref: `i${String(index)}`,
         name: item.name,
-        sku: item.sku ?? null,
+        sku: identityFor(item.sku),
         unitPriceCents: 1000,
         lineTotalCents: 1000,
       })),
@@ -118,6 +132,28 @@ describe('the line-item adapter', () => {
 
     expect(hits).toHaveLength(1);
     expect(hits[0]?.matchField).toBe('sku');
+    // The hit is what an MCP tool reads, and a bare identifier is what it
+    // would group two products on. The predicate matched the raw column
+    // because that is what a reader types; the hit carries the pair.
+    expect(hits[0]?.data['sku']).toEqual({ value: 'B07XYZ1234', scheme: 'asin' });
+  });
+
+  it('carries a merchant-local identifier qualified as one', () => {
+    orderWithItems('a', 'Amazon', [{ name: 'funnel', sku: 'funnel-58' }]);
+
+    const hits = searchPurchases(opened.db, 'funnel-58');
+
+    expect(hits[0]?.data['sku']).toEqual({ value: 'funnel-58', scheme: 'merchant' });
+  });
+
+  it('states no identifier for a line whose source stated none', () => {
+    orderWithItems('a', 'Amazon', [{ name: 'Coffee beans' }]);
+
+    const hits = searchPurchases(opened.db, 'coffee beans').filter((hit) =>
+      hit.uri.includes('purchase-item')
+    );
+
+    expect(hits[0]?.data['sku']).toBeNull();
   });
 
   it('reports one hit per line at its strongest field, not one per matching field', () => {

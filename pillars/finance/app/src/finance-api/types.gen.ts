@@ -2440,6 +2440,7 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
         account: string;
         amount: number;
         checksum: string;
+        country?: string;
         date: string;
         description: string;
         entity: {
@@ -2457,6 +2458,9 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
             | 'none';
         };
         error?: string;
+        foreignAmountMinor?: number;
+        foreignCurrency?: string;
+        fxFeeCents?: number;
         location?: string;
         matchedRules?: Array<{
           confidence: number;
@@ -2497,6 +2501,7 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
         account: string;
         amount: number;
         checksum: string;
+        country?: string;
         date: string;
         description: string;
         entity: {
@@ -2514,6 +2519,9 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
             | 'none';
         };
         error?: string;
+        foreignAmountMinor?: number;
+        foreignCurrency?: string;
+        fxFeeCents?: number;
         location?: string;
         matchedRules?: Array<{
           confidence: number;
@@ -2554,6 +2562,7 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
         account: string;
         amount: number;
         checksum: string;
+        country?: string;
         date: string;
         description: string;
         entity: {
@@ -2571,6 +2580,9 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
             | 'none';
         };
         error?: string;
+        foreignAmountMinor?: number;
+        foreignCurrency?: string;
+        fxFeeCents?: number;
         location?: string;
         matchedRules?: Array<{
           confidence: number;
@@ -2611,6 +2623,7 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
         account: string;
         amount: number;
         checksum: string;
+        country?: string;
         date: string;
         description: string;
         entity: {
@@ -2628,6 +2641,9 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
             | 'none';
         };
         error?: string;
+        foreignAmountMinor?: number;
+        foreignCurrency?: string;
+        fxFeeCents?: number;
         location?: string;
         matchedRules?: Array<{
           confidence: number;
@@ -2792,10 +2808,14 @@ export type ImportsCommitImportData = {
       account: string;
       amount: number;
       checksum: string;
+      country?: string;
       date: string;
       description: string;
       entityId?: string;
       entityName?: string;
+      foreignAmountMinor?: number;
+      foreignCurrency?: string;
+      fxFeeCents?: number;
       location?: string;
       matchConfidence?: number;
       matchRuleId?: string;
@@ -2946,8 +2966,12 @@ export type ImportsProcessImportData = {
       account: string;
       amount: number;
       checksum: string;
+      country?: string;
       date: string;
       description: string;
+      foreignAmountMinor?: number;
+      foreignCurrency?: string;
+      fxFeeCents?: number;
       location?: string;
       rawRow: string;
     }>;
@@ -3048,7 +3072,7 @@ export type ImportsGetImportProgressResponses = {
       error?: string;
       status: 'processing' | 'success' | 'failed';
     }>;
-    currentStep: 'deduplicating' | 'matching';
+    currentStep: 'deduplicating' | 'matching' | 'categorizing';
     errors: Array<{
       description: string;
       error: string;
@@ -3067,6 +3091,7 @@ export type ImportsGetImportProgressResponses = {
         account: string;
         amount: number;
         checksum: string;
+        country?: string;
         date: string;
         description: string;
         entity: {
@@ -3084,6 +3109,9 @@ export type ImportsGetImportProgressResponses = {
             | 'none';
         };
         error?: string;
+        foreignAmountMinor?: number;
+        foreignCurrency?: string;
+        fxFeeCents?: number;
         location?: string;
         matchedRules?: Array<{
           confidence: number;
@@ -3124,6 +3152,7 @@ export type ImportsGetImportProgressResponses = {
         account: string;
         amount: number;
         checksum: string;
+        country?: string;
         date: string;
         description: string;
         entity: {
@@ -3141,6 +3170,9 @@ export type ImportsGetImportProgressResponses = {
             | 'none';
         };
         error?: string;
+        foreignAmountMinor?: number;
+        foreignCurrency?: string;
+        fxFeeCents?: number;
         location?: string;
         matchedRules?: Array<{
           confidence: number;
@@ -3181,6 +3213,7 @@ export type ImportsGetImportProgressResponses = {
         account: string;
         amount: number;
         checksum: string;
+        country?: string;
         date: string;
         description: string;
         entity: {
@@ -3198,6 +3231,9 @@ export type ImportsGetImportProgressResponses = {
             | 'none';
         };
         error?: string;
+        foreignAmountMinor?: number;
+        foreignCurrency?: string;
+        fxFeeCents?: number;
         location?: string;
         matchedRules?: Array<{
           confidence: number;
@@ -3238,6 +3274,7 @@ export type ImportsGetImportProgressResponses = {
         account: string;
         amount: number;
         checksum: string;
+        country?: string;
         date: string;
         description: string;
         entity: {
@@ -3255,6 +3292,9 @@ export type ImportsGetImportProgressResponses = {
             | 'none';
         };
         error?: string;
+        foreignAmountMinor?: number;
+        foreignCurrency?: string;
+        fxFeeCents?: number;
         location?: string;
         matchedRules?: Array<{
           confidence: number;
@@ -3443,6 +3483,7 @@ export type ImportsReevaluateWithPendingRulesResponses = {
         account: string;
         amount: number;
         checksum: string;
+        country?: string;
         date: string;
         description: string;
         entity: {
@@ -3460,6 +3501,9 @@ export type ImportsReevaluateWithPendingRulesResponses = {
             | 'none';
         };
         error?: string;
+        foreignAmountMinor?: number;
+        foreignCurrency?: string;
+        fxFeeCents?: number;
         location?: string;
         matchedRules?: Array<{
           confidence: number;
@@ -3500,6 +3544,7 @@ export type ImportsReevaluateWithPendingRulesResponses = {
         account: string;
         amount: number;
         checksum: string;
+        country?: string;
         date: string;
         description: string;
         entity: {
@@ -3517,6 +3562,9 @@ export type ImportsReevaluateWithPendingRulesResponses = {
             | 'none';
         };
         error?: string;
+        foreignAmountMinor?: number;
+        foreignCurrency?: string;
+        fxFeeCents?: number;
         location?: string;
         matchedRules?: Array<{
           confidence: number;
@@ -3557,6 +3605,7 @@ export type ImportsReevaluateWithPendingRulesResponses = {
         account: string;
         amount: number;
         checksum: string;
+        country?: string;
         date: string;
         description: string;
         entity: {
@@ -3574,6 +3623,9 @@ export type ImportsReevaluateWithPendingRulesResponses = {
             | 'none';
         };
         error?: string;
+        foreignAmountMinor?: number;
+        foreignCurrency?: string;
+        fxFeeCents?: number;
         location?: string;
         matchedRules?: Array<{
           confidence: number;
@@ -3614,6 +3666,7 @@ export type ImportsReevaluateWithPendingRulesResponses = {
         account: string;
         amount: number;
         checksum: string;
+        country?: string;
         date: string;
         description: string;
         entity: {
@@ -3631,6 +3684,9 @@ export type ImportsReevaluateWithPendingRulesResponses = {
             | 'none';
         };
         error?: string;
+        foreignAmountMinor?: number;
+        foreignCurrency?: string;
+        fxFeeCents?: number;
         location?: string;
         matchedRules?: Array<{
           confidence: number;
@@ -5247,6 +5303,9 @@ export type TransactionsListResponses = {
       description: string;
       entityId: string | null;
       entityName: string | null;
+      foreignAmountMinor: number | null;
+      foreignCurrency: string | null;
+      fxFeeCents: number | null;
       id: string;
       lastEditedTime: string;
       location: string | null;
@@ -5333,6 +5392,9 @@ export type TransactionsCreateResponses = {
       description: string;
       entityId: string | null;
       entityName: string | null;
+      foreignAmountMinor: number | null;
+      foreignCurrency: string | null;
+      fxFeeCents: number | null;
       id: string;
       lastEditedTime: string;
       location: string | null;
@@ -5406,6 +5468,9 @@ export type TransactionsRestoreData = {
     description: string;
     entityId: string | null;
     entityName: string | null;
+    foreignAmountMinor: number | null;
+    foreignCurrency: string | null;
+    fxFeeCents: number | null;
     id: string;
     lastEditedTime: string;
     location: string | null;
@@ -5475,6 +5540,9 @@ export type TransactionsRestoreResponses = {
       description: string;
       entityId: string | null;
       entityName: string | null;
+      foreignAmountMinor: number | null;
+      foreignCurrency: string | null;
+      fxFeeCents: number | null;
       id: string;
       lastEditedTime: string;
       location: string | null;
@@ -5570,6 +5638,9 @@ export type TransactionsDeleteResponses = {
       description: string;
       entityId: string | null;
       entityName: string | null;
+      foreignAmountMinor: number | null;
+      foreignCurrency: string | null;
+      fxFeeCents: number | null;
       id: string;
       lastEditedTime: string;
       location: string | null;
@@ -5649,6 +5720,9 @@ export type TransactionsGetResponses = {
       description: string;
       entityId: string | null;
       entityName: string | null;
+      foreignAmountMinor: number | null;
+      foreignCurrency: string | null;
+      fxFeeCents: number | null;
       id: string;
       lastEditedTime: string;
       location: string | null;
@@ -5729,6 +5803,9 @@ export type TransactionsUpdateResponses = {
       description: string;
       entityId: string | null;
       entityName: string | null;
+      foreignAmountMinor: number | null;
+      foreignCurrency: string | null;
+      fxFeeCents: number | null;
       id: string;
       lastEditedTime: string;
       location: string | null;
@@ -5801,6 +5878,9 @@ export type TransactionsUnlinkTransferResponses = {
       description: string;
       entityId: string | null;
       entityName: string | null;
+      foreignAmountMinor: number | null;
+      foreignCurrency: string | null;
+      fxFeeCents: number | null;
       id: string;
       lastEditedTime: string;
       location: string | null;

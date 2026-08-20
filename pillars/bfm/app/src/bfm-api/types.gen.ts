@@ -205,10 +205,16 @@ export type MobileBootstrapErrors = {
   /**
    * 403
    */
-  403: {
-    code: 'device_revoked';
-    message: string;
-  };
+  403:
+    | {
+        code: 'device_revoked';
+        message: string;
+      }
+    | {
+        capability: string;
+        code: 'capability_not_granted';
+        message: string;
+      };
   /**
    * 429
    */
@@ -227,6 +233,7 @@ export type MobileBootstrapResponses = {
    */
   200: {
     device: {
+      capabilities: Array<string>;
       id: string;
       lastSeenAt: string;
       name: string;
@@ -275,10 +282,16 @@ export type MobileFinanceListTransactionsErrors = {
   /**
    * 403
    */
-  403: {
-    code: 'device_revoked';
-    message: string;
-  };
+  403:
+    | {
+        code: 'device_revoked';
+        message: string;
+      }
+    | {
+        capability: string;
+        code: 'capability_not_granted';
+        message: string;
+      };
   /**
    * 429
    */
@@ -373,10 +386,16 @@ export type MobileFinanceGetTransactionErrors = {
   /**
    * 403
    */
-  403: {
-    code: 'device_revoked';
-    message: string;
-  };
+  403:
+    | {
+        code: 'device_revoked';
+        message: string;
+      }
+    | {
+        capability: string;
+        code: 'capability_not_granted';
+        message: string;
+      };
   /**
    * 404
    */
@@ -469,6 +488,14 @@ export type MobilePurchasesUploadReceiptData = {
    * Body
    */
   body?: {
+    capture?: {
+      capturedAt?: string;
+      location?: {
+        latitude: number;
+        longitude: number;
+      };
+      timeZone?: string;
+    };
     parts: Array<{
       dataBase64: string;
       mediaType:
@@ -503,10 +530,16 @@ export type MobilePurchasesUploadReceiptErrors = {
   /**
    * 403
    */
-  403: {
-    code: 'device_revoked';
-    message: string;
-  };
+  403:
+    | {
+        code: 'device_revoked';
+        message: string;
+      }
+    | {
+        capability: string;
+        code: 'capability_not_granted';
+        message: string;
+      };
   /**
    * 413
    */
@@ -578,15 +611,37 @@ export type MobilePurchasesUploadReceiptResponses = {
         };
       }
     | {
+        extracted: {
+          address: string | null;
+          currency: string | null;
+          discounts: Array<string>;
+          lines: Array<{
+            amount: string;
+            description: string;
+            quantity: number | null;
+            unitNote: string | null;
+          }>;
+          merchantName: string | null;
+          purchasedAt: string | null;
+          purchasedOn: string | null;
+          shipping: string | null;
+          surcharges: Array<string>;
+          tax: string | null;
+          total: string;
+          unreadableNotes: Array<string>;
+        };
         kind: 'needs-review';
         problems: Array<{
           code: string;
+          deltaCents: number | null;
           detail: string;
         }>;
+        receiptCount: number;
       }
     | {
         kind: 'unreadable';
         reason: string;
+        receiptCount: number;
       };
 };
 

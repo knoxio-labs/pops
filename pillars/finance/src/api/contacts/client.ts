@@ -23,9 +23,10 @@
  * name uniqueness case-INSENSITIVELY (`WHERE name COLLATE NOCASE = ?`), so the
  * 409 fallback is the backstop for a genuine concurrent insert. A `create`
  * failure that ISN'T a 409 is split into two error kinds so a caller can react
- * differently: `unavailable`/`degraded` throw {@link ContactsUnavailableError}
- * (TRANSIENT — retry later), while `bad-request`/`unauthorized`/
- * `contract-mismatch`/`not-found` throw {@link ContactsPermanentError}
+ * differently: `unavailable`/`degraded`/`rate-limited` throw
+ * {@link ContactsUnavailableError} (TRANSIENT — retry later, `rate-limited` on
+ * the producer's own schedule), while `bad-request`/`unauthorized`/
+ * `contract-mismatch`/`not-found`/`refused` throw {@link ContactsPermanentError}
  * (PERMANENT — retrying the same input never helps).
  *
  * `/server`, not `/client` (POPS-2021). The handle is built through
@@ -123,9 +124,10 @@ export interface ContactsClient {
    * (case-insensitive) name FIRST, creates when none matches, and tolerates a
    * 409 from a racing concurrent create by re-fetching. `created` reports
    * whether THIS call inserted a new contact. Never resolves silently on
-   * failure: a TRANSIENT failure (contacts unreachable / mid-recovery) throws
-   * {@link ContactsUnavailableError}; a PERMANENT one (malformed request, auth,
-   * contract mismatch) throws {@link ContactsPermanentError}. `commitImport`
+   * failure: a TRANSIENT failure (contacts unreachable / mid-recovery /
+   * rate-limited) throws {@link ContactsUnavailableError}; a PERMANENT one
+   * (malformed request, auth, contract mismatch, an unrecognised refusal)
+   * throws {@link ContactsPermanentError}. `commitImport`
    * (issue #3683) is the one caller that catches `ContactsUnavailableError`
    * specifically and degrades to a `pending:contact:{uuid}` placeholder + an
    * outbox row instead of aborting; `ContactsPermanentError` and every other
@@ -136,9 +138,10 @@ export interface ContactsClient {
 
 /**
  * Thrown when a contact pre-create fails for a reason expected to clear on
- * retry — contacts unreachable, or mid-recovery (`degraded`). The ONE failure
- * mode `commitImport` degrades to an outbox row instead of aborting; retrying
- * the same `{ name, type }` later is expected to eventually succeed.
+ * retry — contacts unreachable, mid-recovery (`degraded`), or rate-limited
+ * (`rate-limited`, 429). The ONE failure mode `commitImport` degrades to an
+ * outbox row instead of aborting; retrying the same `{ name, type }` later is
+ * expected to eventually succeed.
  */
 export class ContactsUnavailableError extends Error {
   override readonly name = 'ContactsUnavailableError';
@@ -162,19 +165,33 @@ export class ContactsPermanentError extends Error {
   }
 }
 
-/**
- * The `create` result kinds retrying can never resolve. Everything else
- * non-ok/non-conflict (`unavailable`, `degraded`) is treated as transient.
- */
-type PermanentCreateFailureKind = Exclude<
-  CallResult<unknown>['kind'],
-  'ok' | 'conflict' | 'unavailable' | 'degraded'
->;
+/** The non-ok, non-conflict `create` result kinds this classifier sorts. */
+type CreateFailureKind = Exclude<CallResult<unknown>['kind'], 'ok' | 'conflict'>;
 
-function isPermanentCreateFailureKind(
-  kind: Exclude<CallResult<unknown>['kind'], 'ok' | 'conflict'>
-): kind is PermanentCreateFailureKind {
-  return kind !== 'unavailable' && kind !== 'degraded';
+/**
+ * TRANSIENT vs PERMANENT for every non-ok/non-conflict `create` result kind.
+ *
+ * A total switch with no default arm, matching `toGatewayFailure` and
+ * `upstream-error.ts`'s `classify`: a kind added to {@link CallResult} that
+ * is not listed in one of these two arms fails the build here rather than
+ * being silently absorbed by a catch-all negation. `rate-limited` (429) is
+ * TRANSIENT — the producer is asking for a retry on its own schedule, not
+ * refusing the request — so it degrades to the outbox exactly like
+ * `unavailable`/`degraded` rather than aborting the commit.
+ */
+function classifyCreateFailureKind(kind: CreateFailureKind): 'transient' | 'permanent' {
+  switch (kind) {
+    case 'unavailable':
+    case 'degraded':
+    case 'rate-limited':
+      return 'transient';
+    case 'not-found':
+    case 'contract-mismatch':
+    case 'bad-request':
+    case 'unauthorized':
+    case 'refused':
+      return 'permanent';
+  }
 }
 
 /** Per-page size for the bulk list sweep — matches the contacts list `MAX_LIMIT`. */
@@ -285,7 +302,7 @@ export function createContactsClient(
         if (raced) return { id: raced.id, name: raced.name, created: false };
         throw new ContactsUnavailableError(`409 for "${name}" but no existing contact found`);
       }
-      if (isPermanentCreateFailureKind(created.kind)) {
+      if (classifyCreateFailureKind(created.kind) === 'permanent') {
         if (created.kind === UNAUTHORIZED_REASON) {
           console.error(credentialRejectedMessage(CONTACTS_PILLAR_ID, 'entities.create'));
         }

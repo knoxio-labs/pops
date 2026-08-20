@@ -86,10 +86,13 @@ internal struct ReceiptCaptureFailureTests {
         #expect(isTransport(actual))
     }
 
-    /// A gate-failure code this build has never heard of fails the whole
-    /// outcome rather than being rendered under a made-up label — the same
-    /// call ``BFMTransactionsRepository`` makes about a row it cannot map.
-    @Test("a needs-review code outside the closed kind is a contract mismatch")
+    /// A gate-failure code this build has never heard of is NOT a failure.
+    /// The wire keeps `code` open so a gate that grows a reason does not break
+    /// a build already on a handset, and answering `.contractMismatch` here
+    /// would spend that guarantee — the reader would be told to update the app
+    /// about a receipt that merely needs reviewing. The mapping test suite
+    /// covers what it becomes instead.
+    @Test("a needs-review code outside the known set is not a failure")
     func unrecognisedGateFailureCode() async {
         let actual = await error(
             status: .ok,
@@ -97,7 +100,24 @@ internal struct ReceiptCaptureFailureTests {
                 problems: ReceiptCaptureWire.problem(code: "receipt-ate-the-model"))
         )
 
-        #expect(actual == .contractMismatch)
+        #expect(actual == nil)
+    }
+
+    /// The reading is the one part of `needs-review` the review screen cannot
+    /// be drawn without, so a body missing it fails rather than arriving as an
+    /// outcome with nothing in it — which is exactly what this arm used to do
+    /// on every upload.
+    @Test("a needs-review body with no reading does not decode as an empty review")
+    func needsReviewWithoutExtraction() async {
+        let actual = await error(
+            status: .ok,
+            json: """
+                {"kind":"needs-review","receiptCount":1,\
+                "problems":[{"code":"no-lines","detail":"none","deltaCents":null}]}
+                """
+        )
+
+        #expect(isTransport(actual))
     }
 
     private func isTransport(_ error: RepositoryError?) -> Bool {

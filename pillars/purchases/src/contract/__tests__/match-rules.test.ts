@@ -8,7 +8,11 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { matchPatternFor, normalizeMatchDescriptor } from '../match-rules.js';
+import {
+  compileMatchRulePattern,
+  matchPatternFor,
+  normalizeMatchDescriptor,
+} from '../match-rules.js';
 
 describe('normalizeMatchDescriptor', () => {
   it('collapses a merchant descriptor to the merchant', () => {
@@ -47,5 +51,47 @@ describe('matchPatternFor', () => {
 
   it('returns the normalised form for a real descriptor', () => {
     expect(matchPatternFor('Amazon Mktplace AU 4128')).toBe('AMAZON MKTPLACE AU');
+  });
+});
+
+describe('compileMatchRulePattern', () => {
+  const matches = (
+    pattern: string,
+    matchType: 'exact' | 'contains' | 'regex',
+    descriptor: string
+  ) => compileMatchRulePattern(pattern, matchType)(normalizeMatchDescriptor(descriptor));
+
+  it('takes an exact pattern as the whole merchant', () => {
+    expect(matches('AMAZON MKTPLACE AU', 'exact', 'Amazon Mktplace AU 4128')).toBe(true);
+    expect(matches('AMAZON MKTPLACE', 'exact', 'Amazon Mktplace AU 4128')).toBe(false);
+  });
+
+  it('takes a contains pattern as any part of it', () => {
+    expect(matches('AMAZON MKTPLACE', 'contains', 'Amazon Mktplace AU 4128')).toBe(true);
+    expect(matches('WOOLWORTHS', 'contains', 'Amazon Mktplace AU 4128')).toBe(false);
+  });
+
+  it('honours a regex pattern finance would honour', () => {
+    // An identity escape is legal in a non-unicode regex and a SyntaxError
+    // in a unicode one. Compiling with `u` here would turn a pattern the
+    // finance rule table accepts into a silent no-match on this side, and
+    // the failure is invisible: the rule looks stored and does nothing.
+    expect(matches('AMAZON\\ MKTPLACE.*', 'regex', 'Amazon Mktplace AU 4128')).toBe(true);
+    expect(matches('^woolworths', 'regex', 'Amazon Mktplace AU 4128')).toBe(false);
+  });
+
+  it('matches nothing for a pattern that cannot be compiled', () => {
+    // A sweep is a batch over every charge in a window. One malformed row
+    // must cost that row's matches, never the night's reconciliation.
+    expect(matches('AMAZON (', 'regex', 'Amazon Mktplace AU 4128')).toBe(false);
+  });
+
+  it('matches nothing for an empty pattern, whatever the match type', () => {
+    // Digits alone normalise to empty, so an `exact` empty pattern would
+    // auto-link every bare-reference descriptor in the window. Finance's
+    // `exact` allows it; this side deliberately does not.
+    for (const matchType of ['exact', 'contains', 'regex'] as const) {
+      expect(matches('', matchType, '4471 0092')).toBe(false);
+    }
   });
 });

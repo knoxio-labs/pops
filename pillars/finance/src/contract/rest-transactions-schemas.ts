@@ -27,6 +27,12 @@ export const TransactionSchema = z.object({
   country: z.string().nullable(),
   relatedTransactionId: z.string().nullable(),
   notes: z.string().nullable(),
+  /** Amount charged abroad, in `foreignCurrency`'s own ISO-4217 minor units. */
+  foreignAmountMinor: z.number().int().nullable(),
+  /** ISO-4217 alpha-3 of the charge abroad. */
+  foreignCurrency: z.string().nullable(),
+  /** The issuer's foreign-transaction fee in AUD cents — a fee, not a converted total. */
+  fxFeeCents: z.number().int().nullable(),
   lastEditedTime: z.string(),
 });
 
@@ -51,6 +57,12 @@ export const TransactionSnapshotSchema = z.object({
   country: z.string().nullable(),
   relatedTransactionId: z.string().nullable(),
   notes: z.string().nullable(),
+  /** Amount charged abroad, in `foreignCurrency`'s own ISO-4217 minor units. */
+  foreignAmountMinor: z.number().int().nullable(),
+  /** ISO-4217 alpha-3 of the charge abroad. */
+  foreignCurrency: z.string().nullable(),
+  /** The issuer's foreign-transaction fee in AUD cents — a fee, not a converted total. */
+  fxFeeCents: z.number().int().nullable(),
   checksum: z.string().nullable(),
   rawRow: z.string().nullable(),
   lastEditedTime: z.string(),

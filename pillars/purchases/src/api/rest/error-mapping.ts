@@ -6,8 +6,11 @@
 import { RequestValidationError } from '@ts-rest/express';
 
 import {
+  DocumentAlreadyAttachedError,
   DuplicatePurchaseError,
   InvalidIngestPayloadError,
+  InventoryProposalConflictError,
+  ProductDictionaryNotFoundError,
   PurchaseNotFoundError,
   PurchaseSourceNotFoundError,
 } from '../../db/index.js';
@@ -67,7 +70,11 @@ export interface MappedHttpError {
 }
 
 export function tryMapServiceError(err: unknown): MappedHttpError | null {
-  if (err instanceof PurchaseNotFoundError || err instanceof PurchaseSourceNotFoundError) {
+  if (
+    err instanceof PurchaseNotFoundError ||
+    err instanceof PurchaseSourceNotFoundError ||
+    err instanceof ProductDictionaryNotFoundError
+  ) {
     return { status: 404, body: { message: err.message, code: 'NOT_FOUND' } };
   }
   // Not a failure: an adapter re-ingesting a bundle it has already
@@ -80,6 +87,18 @@ export function tryMapServiceError(err: unknown): MappedHttpError | null {
   // broken pillar, and reasonably retrying forever.
   if (err instanceof InvalidIngestPayloadError) {
     return { status: 400, body: { message: err.message, code: 'INVALID_INGEST_PAYLOAD' } };
+  }
+  // The order already carries that document. A backfill re-run lands here
+  // for everything it attached last time and treats it as a skip, exactly
+  // as it treats the duplicate order above.
+  if (err instanceof DocumentAlreadyAttachedError) {
+    return { status: 409, body: { message: err.message, code: 'DOCUMENT_ALREADY_ATTACHED' } };
+  }
+  // The proposal was already answered. Distinct from the ingest duplicate
+  // above because the caller is a review surface, not an adapter: it should
+  // refresh and show the decision that already exists rather than skip.
+  if (err instanceof InventoryProposalConflictError) {
+    return { status: 409, body: { message: err.message, code: 'PROPOSAL_ALREADY_DECIDED' } };
   }
   if (isUniqueConstraintError(err)) {
     return {

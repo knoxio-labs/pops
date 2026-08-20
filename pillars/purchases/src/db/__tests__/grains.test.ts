@@ -396,4 +396,13 @@ describe('documents', () => {
     expect(invoice?.shipmentId).toBeNull();
     expect(photo?.shipmentId).toBe(detail?.shipments[0]?.id);
   });
+
+  it('defaults an unstated kind to other, as the attach route does', () => {
+    const id = createPurchase(
+      opened.db,
+      amazonOrder({ documents: [{ documentUri: 'pops://documents/document/inv-2' }] })
+    );
+
+    expect(getPurchase(opened.db, id)?.documents[0]?.kind).toBe('other');
+  });
 });

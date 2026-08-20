@@ -9,24 +9,22 @@
  */
 import { createHash } from 'node:crypto';
 
-import Papa from 'papaparse';
-
+import { AMAZON_SOURCE_ID } from '../source-ids.js';
 import { buildShipment } from './build-shipment.js';
 import {
-  AmazonBundleShapeError,
   ORDER_HISTORY_FILENAME,
   REQUIRED_COLUMNS,
   type AmazonAnomaly,
   type Row,
 } from './columns.js';
+import { parseBundleRows } from './csv.js';
 import { readText, readTimestamp } from './fields.js';
-import { buildRefundCharges, reportOrphanRefunds } from './refund-charges.js';
-import { parseAmazonRefundDetails, type AmazonRefund } from './refunds.js';
+import { buildRefundCharges, reportOrphanRefunds, type SourceRefund } from './refund-charges.js';
+import { parseAmazonRefundDetails } from './refunds.js';
 
 import type { CreateChargeInput, CreatePurchaseInput } from '../../db/services/purchase-input.js';
 
-/** `purchase_sources.id` this adapter writes under. */
-export const AMAZON_SOURCE_ID = 'amazon';
+export { AMAZON_SOURCE_ID };
 
 /** Stands in on an anomaly for a row that names no order at all. */
 const UNKNOWN_ORDER_ID = '(no order id)';
@@ -61,12 +59,12 @@ export function parseAmazonOrderHistory(
 
   const refunds =
     refundDetailsCsv === undefined
-      ? { refundsByOrderId: new Map<string, readonly AmazonRefund[]>(), anomalies: [] }
+      ? { refundsByOrderId: new Map<string, readonly SourceRefund[]>(), anomalies: [] }
       : parseAmazonRefundDetails(refundDetailsCsv);
   anomalies.push(...refunds.anomalies);
 
   const byOrderId = new Map<string, Row[]>();
-  for (const row of parseRows(csvText)) {
+  for (const row of parseBundleRows(csvText, ORDER_HISTORY_FILENAME, REQUIRED_COLUMNS)) {
     const orderId = readText(row['Order ID']);
     if (orderId === null) {
       // Nothing can be done with a row that names no order, but dropping it
@@ -94,52 +92,15 @@ export function parseAmazonOrderHistory(
 
   // A refund whose order WAS built but whose currency disagreed is not an
   // orphan — `buildRefundCharges` has already reported that separately.
-  reportOrphanRefunds(refunds.refundsByOrderId, builtOrderIds, anomalies);
+  reportOrphanRefunds(refunds.refundsByOrderId, builtOrderIds, ORDER_HISTORY_FILENAME, anomalies);
 
   return { orders, anomalies };
-}
-
-function parseRows(csvText: string): Row[] {
-  const parsed = Papa.parse<Row>(csvText, {
-    header: true,
-    skipEmptyLines: true,
-    transformHeader: (header) => header.trim(),
-  });
-
-  // Papa returns rows AND errors, so ignoring `errors` lets a malformed file
-  // half-parse into plausible wrong orders — the exact outcome the shape
-  // check below exists to prevent. The reference bundle parses with zero
-  // errors, so any error at all means this is not the file we think it is.
-  const [firstError] = parsed.errors;
-  if (firstError !== undefined) {
-    throw new AmazonBundleShapeError(
-      `${ORDER_HISTORY_FILENAME} did not parse as CSV: ${firstError.type} ${firstError.code} ` +
-        `at row ${String(firstError.row ?? '?')} — ${firstError.message}`
-    );
-  }
-
-  const fields = parsed.meta.fields ?? [];
-  if (fields.length === 0) {
-    throw new AmazonBundleShapeError(`${ORDER_HISTORY_FILENAME} has no header row`);
-  }
-
-  const present = new Set(fields);
-  const missing = REQUIRED_COLUMNS.filter((column) => !present.has(column));
-  if (missing.length > 0) {
-    throw new AmazonBundleShapeError(
-      `${ORDER_HISTORY_FILENAME} is missing ${String(missing.length)} expected column(s): ` +
-        `${missing.join(', ')}. This is a different export format, not a corrupt file — ` +
-        `verify the bundle against a fresh download before widening the parser.`
-    );
-  }
-
-  return parsed.data;
 }
 
 function buildOrder(
   sourceOrderId: string,
   rows: readonly Row[],
-  refunds: readonly AmazonRefund[],
+  refunds: readonly SourceRefund[],
   anomalies: AmazonAnomaly[]
 ): CreatePurchaseInput | null {
   const firstRow = rows[0];

@@ -16,6 +16,28 @@ export class PurchaseNotFoundError extends Error {
   }
 }
 
+/**
+ * An attach named a document the order already carries.
+ *
+ * Distinct from {@link DuplicatePurchaseError} because the caller is
+ * attaching evidence to an order it did not create, and the two say different
+ * things about what to do next: a duplicate order means skip the order, this
+ * means the document is already where it was meant to go. A backfill re-run
+ * lands here for everything it attached last time, which is what makes
+ * running it twice a no-op rather than a second row.
+ */
+export class DocumentAlreadyAttachedError extends Error {
+  readonly purchaseId: string;
+  readonly documentUri: string;
+
+  constructor(purchaseId: string, documentUri: string) {
+    super(`Purchase ${purchaseId} already carries document ${documentUri}`);
+    this.name = 'DocumentAlreadyAttachedError';
+    this.purchaseId = purchaseId;
+    this.documentUri = documentUri;
+  }
+}
+
 export class PurchaseSourceNotFoundError extends Error {
   readonly sourceId: string;
 
@@ -23,6 +45,25 @@ export class PurchaseSourceNotFoundError extends Error {
     super(`Purchase source '${sourceId}' not found`);
     this.name = 'PurchaseSourceNotFoundError';
     this.sourceId = sourceId;
+  }
+}
+
+/**
+ * A product-dictionary edit named a product or a printed wording that is not
+ * there.
+ *
+ * One error for both grains rather than two, because the caller's recovery is
+ * the same in either case — re-read the dictionary, the row it was holding is
+ * gone — and the message already says which grain it was.
+ */
+export class ProductDictionaryNotFoundError extends Error {
+  /** The id that named nothing. */
+  readonly ref: string;
+
+  constructor(kind: 'product' | 'alias', ref: string) {
+    super(kind === 'product' ? `Product '${ref}' not found` : `Product alias '${ref}' not found`);
+    this.name = 'ProductDictionaryNotFoundError';
+    this.ref = ref;
   }
 }
 
@@ -73,6 +114,25 @@ export class InvalidIngestPayloadError extends Error {
   constructor(detail: string) {
     super(`Invalid ingest payload: ${detail}`);
     this.name = 'InvalidIngestPayloadError';
+    this.detail = detail;
+  }
+}
+
+/**
+ * An inventory proposal was answered that had already been answered — the
+ * named unit is accepted or declined, or every unit of the line is.
+ *
+ * A conflict rather than a bad request, because the payload is fine and the
+ * state is what refuses it. A double-submitted accept lands here instead of
+ * putting a second asset in inventory for one physical thing, which is the
+ * failure this state exists to prevent.
+ */
+export class InventoryProposalConflictError extends Error {
+  readonly detail: string;
+
+  constructor(detail: string) {
+    super(detail);
+    this.name = 'InventoryProposalConflictError';
     this.detail = detail;
   }
 }

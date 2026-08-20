@@ -5,10 +5,30 @@
  * charge is allowed to claim, and what happens to one that cannot be
  * attached — sit together rather than inside the order assembly.
  */
-import { ORDER_HISTORY_FILENAME, type AmazonAnomaly } from './columns.js';
+import { type AmazonAnomaly } from './columns.js';
 
 import type { CreateChargeInput } from '../../db/services/purchase-input.js';
-import type { AmazonRefund } from './refunds.js';
+
+/**
+ * What both halves of the bundle produce once their own file's grain has
+ * been resolved: an order, a positive magnitude, a currency and the instant
+ * the money moved.
+ *
+ * The one refund type, not a shape the two parsers happen to agree on:
+ * `refunds.ts` reads one stated amount per row and `digital-returns.ts`
+ * nets a reversal's component rows, and both return this. The shaping rules
+ * below are about what a refund charge may claim, and those do not differ
+ * by file.
+ */
+export interface SourceRefund {
+  readonly sourceOrderId: string;
+  /** Magnitude in {@link currency}. Positive — the charge that carries it is negated. */
+  readonly amountCents: number;
+  /** ISO 4217 as the file states it, upper-cased. Not necessarily the order's currency. */
+  readonly currency: string;
+  /** When the money moved, which is what a transaction would settle against. */
+  readonly refundedAt: string;
+}
 
 /**
  * Turn an order's refunds into charges.
@@ -37,7 +57,7 @@ import type { AmazonRefund } from './refunds.js';
 export function buildRefundCharges(
   sourceOrderId: string,
   orderCurrency: string,
-  refunds: readonly AmazonRefund[],
+  refunds: readonly SourceRefund[],
   anomalies: AmazonAnomaly[]
 ): CreateChargeInput[] {
   const charges: CreateChargeInput[] = [];
@@ -82,8 +102,9 @@ export function buildRefundCharges(
  * downloads, or that the order was dropped for an unreadable date.
  */
 export function reportOrphanRefunds(
-  refundsByOrderId: ReadonlyMap<string, readonly AmazonRefund[]>,
+  refundsByOrderId: ReadonlyMap<string, readonly SourceRefund[]>,
   builtOrderIds: ReadonlySet<string>,
+  sourceFilename: string,
   anomalies: AmazonAnomaly[]
 ): void {
   for (const [sourceOrderId, orderRefunds] of refundsByOrderId) {
@@ -94,7 +115,7 @@ export function reportOrphanRefunds(
         sourceOrderId,
         detail:
           `refund of ${String(refund.amountCents)}c ${refund.currency} names an order that ` +
-          `${ORDER_HISTORY_FILENAME} did not yield, so the money could not be attached`,
+          `${sourceFilename} did not yield, so the money could not be attached`,
       });
     }
   }

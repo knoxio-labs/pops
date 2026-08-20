@@ -16,13 +16,16 @@
  *
  * Only what the mobile outcome draws is described. `purchases`' `created` arm
  * carries a full purchase detail (shipments, charges, documents, accounting)
- * and its `needs-review` arm carries the whole extracted reading; neither is
- * something a phone renders, and a schema that demanded them would turn a
- * producer trimming an unused field into a `502` on a handset.
+ * that a phone does not render, and a schema demanding all of it would turn a
+ * producer trimming an unused field into a `502` on a handset. The reading on
+ * the `needs-review` arm IS drawn, so it is described — but loosely: every
+ * string the model transcribed is accepted as a string, and every field the
+ * review screen has no label for is left out, so the producer can still tighten
+ * its own extraction schema without that reaching a handset as an outage.
  */
 import { z } from 'zod';
 
-import type { MobileReceiptOutcome } from '../../contract/rest-schemas.js';
+import type { MobileExtractedReceipt, MobileReceiptOutcome } from '../../contract/rest-schemas.js';
 
 /** The purchase fields the mobile confirmation is built from. */
 const PurchasesPurchaseSchema = z.object({
@@ -35,16 +38,11 @@ const PurchasesPurchaseSchema = z.object({
    * bare string. It is the date a confirmation screen shows, and a value the
    * phone cannot parse renders as a blank or as today — neither of which is
    * distinguishable from a receipt that stated no date, which purchases
-   * signals a completely different way. The pattern mirrors purchases'
-   * `IsoTimestampSchema` exactly, offsets included, so bfm rejects what that
+   * signals a completely different way. This mirrors purchases'
+   * `IsoTimestampSchema` — offsets included — so bfm rejects what that
    * pillar rejects and nothing more.
    */
-  orderedAt: z
-    .string()
-    .regex(
-      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,9})?(Z|[+-]\d{2}:\d{2})$/u,
-      'expected an ISO-8601 timestamp with a timezone'
-    ),
+  orderedAt: z.iso.datetime({ offset: true }),
 });
 
 const PurchasesPurchaseDetailSchema = z.object({
@@ -62,6 +60,40 @@ const PurchasesGateFailureSchema = z.object({
    */
   kind: z.string(),
   detail: z.string(),
+  /** Present only on a sum mismatch. Absent on every other kind. */
+  deltaCents: z.number().int().optional(),
+});
+
+/**
+ * The reading, as loosely as it can be described and still be mapped.
+ *
+ * Every money field stays the string the model transcribed — parsing here
+ * would be bfm inventing cents for figures the producer's own gate has just
+ * refused to believe. The optional fields are optional because `purchases`
+ * defaults them rather than requiring them, so a model that omitted one
+ * produced a perfectly good reading and must not arrive as a `502`.
+ */
+const PurchasesExtractedLineSchema = z.object({
+  description: z.string(),
+  amount: z.string(),
+  quantity: z.number().int().positive().optional(),
+  unitNote: z.string().optional(),
+});
+
+const PurchasesExtractedReceiptSchema = z.object({
+  merchantName: z.string().nullable(),
+  address: z.string().nullable().optional(),
+  purchasedOn: z.string().nullable(),
+  purchasedAt: z.string().nullable(),
+  currency: z.string().nullable(),
+  total: z.string(),
+  tax: z.string().nullable(),
+  discounts: z.array(z.string()).optional(),
+  surcharges: z.array(z.string()).optional(),
+  shipping: z.string().nullable().optional(),
+  lines: z.array(PurchasesExtractedLineSchema),
+  /** The producer's name for what the phone calls `unreadableNotes`. */
+  unreadable: z.array(z.string()).optional(),
 });
 
 /**
@@ -77,10 +109,20 @@ export const PurchasesReceiptOutcomeSchema = z.discriminatedUnion('kind', [
   }),
   z.object({
     kind: z.literal('needs-review'),
+    /**
+     * Every part the producer stored, in the order it was sent. Only the count
+     * is published — see {@link MobileReceiptOutcome} — but the array is what
+     * the producer sends and `min(1)` is what its own contract promises, so a
+     * producer that stopped storing parts is caught here rather than reaching a
+     * phone as a receipt made of no photographs.
+     */
+    receiptUris: z.array(z.string()).min(1),
     failures: z.array(PurchasesGateFailureSchema),
+    extracted: PurchasesExtractedReceiptSchema,
   }),
   z.object({
     kind: z.literal('unreadable'),
+    receiptUris: z.array(z.string()).min(1),
     reason: z.string(),
   }),
 ]);
@@ -106,12 +148,48 @@ export function toMobileReceiptOutcome(outcome: PurchasesReceiptOutcome): Mobile
     case 'needs-review':
       return {
         kind: 'needs-review',
+        receiptCount: outcome.receiptUris.length,
         problems: outcome.failures.map((failure) => ({
           code: failure.kind,
           detail: failure.detail,
+          deltaCents: failure.deltaCents ?? null,
         })),
+        extracted: toMobileExtractedReceipt(outcome.extracted),
       };
     case 'unreadable':
-      return { kind: 'unreadable', reason: outcome.reason };
+      return {
+        kind: 'unreadable',
+        receiptCount: outcome.receiptUris.length,
+        reason: outcome.reason,
+      };
   }
+}
+
+/**
+ * The producer's reading → the mobile one. Absent becomes explicit: the
+ * producer omits a defaulted field, and the phone's wire type says `null` or
+ * `[]` so the generated client has one shape to decode rather than two.
+ */
+function toMobileExtractedReceipt(
+  extracted: z.infer<typeof PurchasesExtractedReceiptSchema>
+): MobileExtractedReceipt {
+  return {
+    merchantName: extracted.merchantName,
+    address: extracted.address ?? null,
+    purchasedOn: extracted.purchasedOn,
+    purchasedAt: extracted.purchasedAt,
+    currency: extracted.currency,
+    total: extracted.total,
+    tax: extracted.tax,
+    discounts: extracted.discounts ?? [],
+    surcharges: extracted.surcharges ?? [],
+    shipping: extracted.shipping ?? null,
+    lines: extracted.lines.map((line) => ({
+      description: line.description,
+      amount: line.amount,
+      quantity: line.quantity ?? null,
+      unitNote: line.unitNote ?? null,
+    })),
+    unreadableNotes: extracted.unreadable ?? [],
+  };
 }

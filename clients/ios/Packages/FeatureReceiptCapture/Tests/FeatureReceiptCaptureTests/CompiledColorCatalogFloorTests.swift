@@ -17,9 +17,9 @@ import Testing
                 HostToolchainColorSupport.colorsAreCompiled,
                 """
                 colorsAreCompiled is false on iOS, where xcodebuild test always \
-                compiles Colors.xcassets. ReceiptResultRenderingTests is \
-                skipping right now instead of running — see \
-                HostToolchainColorSupport.
+                compiles Colors.xcassets. ReceiptResultRenderingTests and \
+                ReceiptCaptureRenderingTests are skipping right now instead of \
+                running — see HostToolchainColorSupport.
                 """
             )
         }

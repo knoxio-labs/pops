@@ -13,13 +13,13 @@ import { mkdtempSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { openTempDb } from '../../db/__tests__/helpers.js';
 import { RECEIPT_SOURCE_ID } from '../../ingest/receipt/purchase.js';
 import { createPurchasesApiApp } from '../app.js';
 import { __resetPillarRegistryCache } from '../pillars/registry.js';
+import { createTestTransport } from './test-http.js';
 
 import type { Express } from 'express';
 
@@ -78,6 +78,8 @@ const GOOD_READING = JSON.stringify({
 
 const saying = (answer: string | null): ReceiptVision => ({ read: async () => answer });
 
+const { requestOn } = createTestTransport();
+
 let opened: OpenedPurchasesDb;
 let cleanup: () => void;
 let receiptDir: string;
@@ -119,13 +121,13 @@ afterEach(() => {
 });
 
 const upload = (app: Express, dataBase64 = JPEG_BASE64, mediaType = 'image/jpeg') =>
-  request(app)
+  requestOn(app)
     .post('/receipts')
     .send({ parts: [{ mediaType, dataBase64 }] });
 
 /** One receipt sent as several parts, in order. */
 const uploadAll = (app: Express, parts: { mediaType: string; dataBase64: string }[]) =>
-  request(app).post('/receipts').send({ parts });
+  requestOn(app).post('/receipts').send({ parts });
 
 describe('a receipt the model reads and the paper agrees with', () => {
   it('creates the purchase, its line items and its charge', async () => {
@@ -249,7 +251,7 @@ describe('re-uploading the same photograph', () => {
     const wrapped = JPEG_BASE64.replace(/(.{8})/u, '$1\n  ');
     expect(wrapped).toMatch(/\s/u);
 
-    const response = await request(app)
+    const response = await requestOn(app)
       .post('/receipts')
       .send({ parts: [{ mediaType: 'image/jpeg', dataBase64: wrapped }] });
 
@@ -566,7 +568,7 @@ describe('a reading the paper disagrees with', () => {
     expect(response.body.receiptUris[0]).toMatch(/^pops:\/\/purchases\/receipt\//u);
     expect(readdirSync(receiptDir)).toHaveLength(1);
 
-    const listed = await request(appWith(saying(wrong))).get('/purchases');
+    const listed = await requestOn(appWith(saying(wrong))).get('/purchases');
     expect(listed.body.items).toHaveLength(0);
   });
 

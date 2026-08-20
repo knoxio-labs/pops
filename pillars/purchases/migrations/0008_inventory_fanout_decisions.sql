@@ -1,0 +1,24 @@
+-- A durable line suggests an inventory asset, and until now nothing could
+-- record that the suggestion had been dealt with. `inventory_item_uri`
+-- already says "this unit IS in inventory"; there was no way to say "this
+-- unit was offered and turned down", so the same cable, battery and light
+-- globe would be proposed again on every review — which is precisely the
+-- behaviour that makes a fan-out prompt get ignored.
+--
+-- On the unit rather than on the line because the decision is per physical
+-- thing: a quantity-3 line is up to three assets, and a decision hung off
+-- the line could only accept or decline all three. Units are created lazily
+-- for exactly this reason — a unit row appears when a unit needs identity,
+-- and a decision about it is identity.
+--
+-- The CHECK makes the two markers mutually exclusive. A unit that is in
+-- inventory has not been declined, and a declined unit is not in inventory;
+-- without the constraint a reader would have to invent a precedence rule,
+-- and two readers would invent different ones. Column-level rather than
+-- table-level because SQLite does not extend a table constraint to a column
+-- added by a later migration.
+--
+-- No index. The only query that reads this column reads every unit of one
+-- order's lines, which `idx_purchase_item_units_item` already serves; an
+-- index here would be write cost for a predicate nothing issues on its own.
+ALTER TABLE `purchase_item_units` ADD `inventory_declined_at` text CONSTRAINT "ck_purchase_item_units_inventory_declined_at" CHECK (`inventory_declined_at` IS NULL OR `inventory_item_uri` IS NULL);

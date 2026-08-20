@@ -563,6 +563,50 @@ jobs:
       - name: Every vendored contract matches its canonical source
         run: node scripts/ci/check-vendored-contracts.mjs
 
+  receipt-max-parts-drift:
+    name: Receipt max-parts drift
+    # How many parts one receipt may be sent as is written down three times —
+    # `purchases`' MAX_RECEIPT_PARTS (the canonical limit), bfm's hand-mirrored
+    # MOBILE_RECEIPT_MAX_PARTS, and the iOS app's hand-mirrored
+    # ReceiptPart.maxPerReceipt — with nothing else in the build comparing
+    # them. This guard parses all three constants out of their real source
+    # files and fails when any is missing or they disagree. It reads the
+    # source tree directly and pulls in no third-party deps, so it skips
+    # `pnpm install`. See scripts/ci/check-receipt-max-parts-drift.mjs.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Gate self-test (proves the guard catches a mismatch, a rename, and a missing file)
+        run: node scripts/ci/check-receipt-max-parts-drift.mjs --self-test
+      - name: purchases, bfm and iOS agree on the receipt max-parts limit
+        run: node scripts/ci/check-receipt-max-parts-drift.mjs
+
+  supertest-transport-adoption:
+    name: Supertest transport adoption
+    # finance, bfm and purchases each own a pre-listened test transport, and
+    # each transport's properties are pinned by its own tests. Its ADOPTION was
+    # pinned by nothing: a new test file importing `supertest` directly
+    # compiles, passes, and reinstates the per-request server churn the
+    # transport exists to remove. Four purchases test files did exactly that in
+    # one week. This bans the specifier across all three pillars with only the
+    # transport exempt, and treats a transport that stops matching as a
+    # violation rather than a clean tree. Reads TS/JS source and JSON, pulls in
+    # no third-party deps, so it skips `pnpm install`. See
+    # scripts/ci/check-supertest-transport-adoption.mjs.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Gate self-test (proves the guard catches each import shape, and reports a gutted transport)
+        run: node scripts/ci/check-supertest-transport-adoption.mjs --self-test
+      - name: finance, bfm and purchases reach supertest only through their transport
+        run: node scripts/ci/check-supertest-transport-adoption.mjs
+
   contract-consumers:
     name: Vendored consumers of a changed contract (ADR-033)
     # The producer-side half of the job above, and a REPORT rather than a gate.
@@ -619,6 +663,35 @@ jobs:
             echo "No merge base against origin/$BASE_REF — reporting every leg."
             node scripts/ci/report-contract-consumers.mjs
           fi
+
+  line-budget-headroom:
+    name: Line-budget headroom
+    # A file that predates two in-flight branches can sit right at its oxlint
+    # `max-lines` cap on one of them and cross it the moment the other lands —
+    # a failure neither PR's own diff explains, landing on whichever merges
+    # second. This projects every linted file the change touches onto the
+    # target branch's CURRENT tip (this branch's own net delta to the file,
+    # applied on top of the target's live count — a cheap stand-in for an
+    # actual merge) and fails before the real oxlint run would, with the file
+    # and margin named. Needs full history for a merge base, so it is its own
+    # job rather than a step riding along with a shallow-checkout gate; Tier A
+    # all the same — node builtins and `.oxlintrc.json` only, no
+    # `pnpm install`. See scripts/ci/check-line-budget-headroom.mjs.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # need a merge base against the target branch
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Gate self-test (proves the guard catches a shared file tipped over its cap)
+        run: node scripts/ci/check-line-budget-headroom.mjs --self-test
+      - name: Project touched files onto the target branch and check headroom
+        env:
+          # Same three-event resolution as `contract-consumers` above.
+          BASE_REF: ${{ github.base_ref || github.event.merge_group.base_ref || 'main' }}
+        run: node scripts/ci/check-line-budget-headroom.mjs --base "$BASE_REF"
 
   device-signature-fixture:
     name: Device signature encoding (iOS ↔ BFM)
@@ -724,9 +797,11 @@ jobs:
     # export, `contacts` and `purchases` from their vendored snapshot (ADR-033).
     # A vendored copy's own drift against its producer is covered separately by
     # the `vendored-contracts` job above — this job only re-runs codegen against
-    # whatever is committed. The `purchases` leg is gated here from the day its
-    # client landed, ahead of any finance page consuming it, so the client
-    # cannot rot in the gap.
+    # whatever is committed. The `purchases` leg was gated here from the day
+    # its client landed, before any finance page consumed it, so the client
+    # could not rot in the gap; the transaction purchase-detail panel
+    # (pillars/finance/app/src/pages/transactions/purchase-detail/) is now that
+    # consumer.
     #
     # Every leg is ALSO re-checked, more generally, by app-quality.yml's own
     # per-app `Codegen drift` step (`@pops/app-food` and `@pops/app-finance`

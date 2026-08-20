@@ -33,10 +33,11 @@ internal final class AppComposition {
     internal let session: SessionStore
     internal let shell: AppShellModel
 
-    /// The pairing screen's dependencies. Transactions is left unbound rather
-    /// than pointed at a client: there is no BFM to point it at yet, and a
-    /// screen that could read transactions before the device is paired is a
-    /// screen that should not exist.
+    /// The pairing screen's dependencies. Everything that speaks to a BFM is
+    /// left unbound rather than pointed at a client: the base URL arrives with
+    /// the pairing code, so there is nothing to point one at yet, and a screen
+    /// that could read transactions or upload a receipt before the device is
+    /// paired is a screen that should not exist.
     internal let pairingDependencies: AppDependencies
 
     private let credentialStore: DeviceCredentialStore
@@ -97,11 +98,7 @@ internal final class AppComposition {
             transactions: BFMTransactionsRepository(client: authenticated(device)),
             pairing: BFMDevicePairingService(credentialStore: credentialStore),
             reachability: shell,
-            // Left unbound: `BFMClient` has no `POST /mobile/receipts` conformance
-            // yet, so there is nothing real to point this at. A screen that reads
-            // it fails with `dependencyNotBound` rather than reaching a client that
-            // does not exist.
-            receiptCapture: AppDependencies.unbound.receiptCapture
+            receiptCapture: BFMReceiptCaptureRepository(client: authenticated(device))
         )
         bound = (device, dependencies)
         return dependencies

@@ -27,9 +27,13 @@ import {
   purchaseChargeLinks,
   purchaseCharges,
   rollUpMerchantSpend,
-  upsertSource,
 } from '../index.js';
-import { ARRANGEMENT_TIMEOUT_MS, openTempDb, seedAmazonSource } from './helpers.js';
+import {
+  ARRANGEMENT_TIMEOUT_MS,
+  openTempDb,
+  seedAmazonSource,
+  seedWoolworthsSource,
+} from './helpers.js';
 
 import type {
   CreateChargeInput,
@@ -46,14 +50,7 @@ let cleanup: () => void;
 
 function seedSources(target: OpenedPurchasesDb): void {
   seedAmazonSource(target);
-  upsertSource(target.db, {
-    id: 'woolworths',
-    label: 'Woolworths',
-    descriptorPattern: 'WOOLWORTHS%',
-    settlementWindowDays: 14,
-    autoLinkPolicy: 'auto',
-    ingestAdapter: 'woolworths-receipt',
-  });
+  seedWoolworthsSource(target);
 }
 
 /**
@@ -630,6 +627,36 @@ describe('merchant attribution is reported at the confidence it actually has', (
     expect(rollup.merchants[0]?.accounting.totalCents).toBe(300);
   });
 
+  it('reads which order is most recent as an instant, not as text', () => {
+    // The two are six hours apart and their timestamps sort the other way
+    // round as text, which is all it takes for a rename to be applied
+    // backwards: `+10:00` puts the earlier order after the later one.
+    createPurchase(
+      opened.db,
+      order({
+        checksum: 'old-name',
+        merchantEntityId: 'ent-1',
+        merchantEntityName: 'Bunnings',
+        orderedAt: '2026-01-02T00:00:00+10:00',
+        totalCents: 100,
+      })
+    );
+    createPurchase(
+      opened.db,
+      order({
+        checksum: 'new-name',
+        merchantEntityId: 'ent-1',
+        merchantEntityName: 'Bunnings Warehouse',
+        orderedAt: '2026-01-01T20:00:00Z',
+        totalCents: 200,
+      })
+    );
+
+    const rollup = rollUpMerchantSpend(opened.db);
+    expect(rollup.merchants).toHaveLength(1);
+    expect(rollup.merchants[0]?.merchant.name).toBe('Bunnings Warehouse');
+  });
+
   it('does not let a newer order that states no merchant erase the label', () => {
     // `merchantEntityId` is operative and `merchantEntityName` is only its
     // label, so an order that states no label carries no label information.
@@ -828,6 +855,20 @@ describe('ordering is deterministic', () => {
 
     const rollup = rollUpMerchantSpend(opened.db);
     expect(rollup.merchants.map((m) => m.merchant.name)).toEqual(['Big', 'Small', 'Dollarshop']);
+  });
+
+  it('breaks a tie on net spend by name', () => {
+    createPurchase(
+      opened.db,
+      order({ checksum: 'zorro', merchantEntityName: 'Zorro', totalCents: 500 })
+    );
+    createPurchase(
+      opened.db,
+      order({ checksum: 'alpha', merchantEntityName: 'Alpha', totalCents: 500 })
+    );
+
+    const rollup = rollUpMerchantSpend(opened.db);
+    expect(rollup.merchants.map((m) => m.merchant.name)).toEqual(['Alpha', 'Zorro']);
   });
 
   it('produces the same serialisation on a repeated call', () => {

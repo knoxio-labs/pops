@@ -24,6 +24,7 @@ import type { BfmDb, OpenedBfmDb } from '../../db/index.js';
 import type { BfmApiDeps } from '../app.js';
 import type { MobileRateLimitOptions } from '../auth/mobile-rate-limit.js';
 import type { PairingRateLimitOptions } from '../auth/pairing-rate-limit.js';
+import type { ReceiptRateLimitOptions } from '../auth/receipt-rate-limit.js';
 import type { RefreshChallengeStore } from '../auth/refresh-challenge.js';
 import type { RefreshRateLimitOptions } from '../auth/refresh-rate-limit.js';
 import type { MobileFinanceClient } from '../finance/client.js';
@@ -107,6 +108,8 @@ export interface TestAppOptions {
   pairingRateLimit?: PairingRateLimitOptions;
   /** Same, for the budget the challenge and refresh routes share. */
   refreshRateLimit?: RefreshRateLimitOptions;
+  /** Same, for the receipt upload's own budget. */
+  receiptRateLimit?: ReceiptRateLimitOptions;
   /**
    * The nonce store both refresh routes use. Left absent, the app builds one
    * with the shipped TTL — which is what a suite that is not about challenges
@@ -147,6 +150,9 @@ function passthroughDeps(options: TestAppOptions): Partial<BfmApiDeps> {
     ...(options.refreshRateLimit === undefined
       ? {}
       : { refreshRateLimit: options.refreshRateLimit }),
+    ...(options.receiptRateLimit === undefined
+      ? {}
+      : { receiptRateLimit: options.receiptRateLimit }),
     ...(options.refreshChallenges === undefined
       ? {}
       : { refreshChallenges: options.refreshChallenges }),

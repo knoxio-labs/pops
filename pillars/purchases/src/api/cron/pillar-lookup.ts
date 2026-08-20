@@ -67,6 +67,14 @@ function classify(result: CallResult<unknown>): ReconcileLookupResult {
     case 'degraded':
     case 'contract-mismatch':
     case 'conflict':
+    // `refused` is a permanent producer-side refusal, but not one this
+    // adapter has a specific reading for the way it does `bad-request`
+    // (malformed id) — guessing which is wrong more often than treating it
+    // like everything else here: preserve the row, retry next tick.
+    // `rate-limited` is genuinely transient and belongs in this bucket on
+    // its own terms.
+    case 'refused':
+    case 'rate-limited':
       return { kind: 'unavailable', reason: result.kind };
   }
 }

@@ -11,12 +11,15 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { openInventoryDb, type OpenedInventoryDb } from '../../db/index.js';
+import { crossPillarUrisService, openInventoryDb, type OpenedInventoryDb } from '../../db/index.js';
+import { homeInventory } from '../../db/schema.js';
 import { createInventoryApiApp } from '../app.js';
+import { createTestTransport } from './test-http.js';
 import { HttpError, makeClient } from './test-utils.js';
+
+const { requestOn } = createTestTransport();
 
 let tmpDir: string;
 let inventoryDb: OpenedInventoryDb;
@@ -123,6 +126,72 @@ describe('items REST — CRUD happy paths', () => {
   });
 });
 
+describe('items REST — cross-pillar soft URI derivation', () => {
+  it('gives the reconciliation cron a work set for an item created with a transaction id', async () => {
+    const created = await client().items.create({
+      itemName: 'Monitor',
+      purchaseTransactionId: 'tx-created',
+    });
+    expect(created.data.purchaseTransactionId).toBe('tx-created');
+
+    expect(crossPillarUrisService.listDistinctPurchaseTransactionUris(inventoryDb.db)).toEqual([
+      'pops://finance/transaction/tx-created',
+    ]);
+    expect(crossPillarUrisService.countRowsMissingPurchaseTransactionUri(inventoryDb.db)).toBe(0);
+  });
+
+  it('repoints the uri and drops the previous staleness verdict when the id changes', async () => {
+    const api = client();
+    const created = await api.items.create({
+      itemName: 'Camera',
+      purchaseTransactionId: 'tx-old',
+    });
+    crossPillarUrisService.markPurchaseTransactionUriStale(
+      inventoryDb.db,
+      'pops://finance/transaction/tx-old',
+      '2026-06-14T00:00:00.000Z'
+    );
+
+    await api.items.update(created.data.id, { purchaseTransactionId: 'tx-new' });
+
+    expect(crossPillarUrisService.listDistinctPurchaseTransactionUris(inventoryDb.db)).toEqual([
+      'pops://finance/transaction/tx-new',
+    ]);
+    const [row] = inventoryDb.db
+      .select({ staleAt: homeInventory.purchaseTransactionStaleAt })
+      .from(homeInventory)
+      .all();
+    expect(row?.staleAt).toBeNull();
+  });
+
+  it('empties the work set when the transaction id is cleared', async () => {
+    const api = client();
+    const created = await api.items.create({
+      itemName: 'Speaker',
+      purchaseTransactionId: 'tx-clear',
+    });
+
+    await api.items.update(created.data.id, { purchaseTransactionId: null });
+
+    expect(crossPillarUrisService.listDistinctPurchaseTransactionUris(inventoryDb.db)).toEqual([]);
+    expect(crossPillarUrisService.countRowsMissingPurchaseTransactionUri(inventoryDb.db)).toBe(0);
+  });
+
+  it('leaves the uri alone on an update that does not mention the transaction id', async () => {
+    const api = client();
+    const created = await api.items.create({
+      itemName: 'Router',
+      purchaseTransactionId: 'tx-keep',
+    });
+
+    await api.items.update(created.data.id, { itemName: 'Router 2' });
+
+    expect(crossPillarUrisService.listDistinctPurchaseTransactionUris(inventoryDb.db)).toEqual([
+      'pops://finance/transaction/tx-keep',
+    ]);
+  });
+});
+
 describe('items REST — filters + projections', () => {
   it('searchByAssetId returns the row when found (case-insensitive)', async () => {
     const api = client();
@@ -209,9 +278,9 @@ describe('items REST — raw HTTP wire smoke', () => {
       version: '0.0.1-test',
       selfBaseUrl: 'http://localhost:3002',
     });
-    await request(app).post('/items').send({ itemName: 'Wire smoke item' });
+    await requestOn(app).post('/items').send({ itemName: 'Wire smoke item' });
 
-    const res = await request(app).get('/items');
+    const res = await requestOn(app).get('/items');
     expect(res.status).toBe(200);
     expect(res.body.data).toHaveLength(1);
     expect(res.body.data[0].itemName).toBe('Wire smoke item');

@@ -9,11 +9,13 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { openFoodDb, type OpenedFoodDb } from '../../db/index.js';
 import { createFoodApiApp } from '../app.js';
+import { createTestTransport } from './test-http.js';
+
+const { requestOn } = createTestTransport();
 
 let tmpDir: string;
 let foodDb: OpenedFoodDb;
@@ -35,7 +37,7 @@ describe('GET /health', () => {
       version: '0.0.1-test',
       selfBaseUrl: 'http://localhost:3005',
     });
-    const res = await request(app).get('/health');
+    const res = await requestOn(app).get('/health');
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
       ok: true,
@@ -54,7 +56,7 @@ describe('GET /health', () => {
       selfBaseUrl: 'http://localhost:3005',
     });
     foodDb.raw.close();
-    const res = await request(app).get('/health');
+    const res = await requestOn(app).get('/health');
     expect(res.status).toBe(500);
   });
 });

@@ -17,7 +17,13 @@
  *     │    ├─ purchase_charge_links     charge → finance transaction
  *     │    ├─ purchase_link_rejections  pairings a human ruled out
  *     │    └─ purchase_item_allocations which charge paid for which line
- *     └─ purchase_documents             evidence → documents
+ *     ├─ purchase_documents             evidence → documents
+ *     └─ purchase_capture               when and where it was photographed
+ *
+ * Two tables sit outside that tree because they are not facts about one
+ * order: `purchase_products` and `purchase_product_aliases`, the learned
+ * dictionary that gives a printed line a durable product identity for the
+ * sources that state no sku.
  *
  * Two properties of that shape are load-bearing:
  *
@@ -33,6 +39,7 @@
  */
 import type { InferInsertModel, InferSelectModel } from 'drizzle-orm';
 
+import type { purchaseCapture as purchaseCaptureTable } from './schema/capture.js';
 import type {
   purchaseCharges as purchaseChargesTable,
   purchaseChargeLinks as purchaseChargeLinksTable,
@@ -47,6 +54,10 @@ import type {
   purchaseItemUnits as purchaseItemUnitsTable,
 } from './schema/items.js';
 import type {
+  purchaseProductAliases as purchaseProductAliasesTable,
+  purchaseProducts as purchaseProductsTable,
+} from './schema/products.js';
+import type {
   purchases as purchasesTable,
   purchaseShipments as purchaseShipmentsTable,
   purchaseTags as purchaseTagsTable,
@@ -60,6 +71,7 @@ export {
   purchaseItemAllocations,
   purchaseLinkRejections,
 } from './schema/charges.js';
+export { purchaseCapture } from './schema/capture.js';
 export { purchaseDocuments } from './schema/documents.js';
 export {
   purchaseItemNotes,
@@ -67,6 +79,7 @@ export {
   purchaseItemTags,
   purchaseItemUnits,
 } from './schema/items.js';
+export { purchaseProductAliases, purchaseProducts } from './schema/products.js';
 export { purchases, purchaseShipments, purchaseTags } from './schema/purchases.js';
 export { purchaseMatchRules } from './schema/rules.js';
 export { purchaseSources } from './schema/sources.js';
@@ -94,5 +107,11 @@ export type PurchaseMatchRuleRow = InferSelectModel<typeof purchaseMatchRulesTab
 export type PurchaseMatchRuleInsert = InferInsertModel<typeof purchaseMatchRulesTable>;
 export type PurchaseDocumentRow = InferSelectModel<typeof purchaseDocumentsTable>;
 export type PurchaseDocumentInsert = InferInsertModel<typeof purchaseDocumentsTable>;
+export type PurchaseCaptureRow = InferSelectModel<typeof purchaseCaptureTable>;
+export type PurchaseCaptureInsert = InferInsertModel<typeof purchaseCaptureTable>;
 export type PurchaseSourceRow = InferSelectModel<typeof purchaseSourcesTable>;
 export type PurchaseSourceInsert = InferInsertModel<typeof purchaseSourcesTable>;
+export type PurchaseProductRow = InferSelectModel<typeof purchaseProductsTable>;
+export type PurchaseProductInsert = InferInsertModel<typeof purchaseProductsTable>;
+export type PurchaseProductAliasRow = InferSelectModel<typeof purchaseProductAliasesTable>;
+export type PurchaseProductAliasInsert = InferInsertModel<typeof purchaseProductAliasesTable>;

@@ -19,6 +19,17 @@ public enum ReceiptMediaType: String, Hashable, Sendable, CaseIterable {
 /// ``ReceiptCaptureRepository/capture(_:)`` — never several. Order matters:
 /// top to bottom, the order the paper is read in.
 public struct ReceiptPart: Hashable, Sendable {
+    /// How many parts one receipt may be sent as.
+    ///
+    /// Mirrors the BFM's `MOBILE_RECEIPT_MAX_PARTS`
+    /// (`pillars/bfm/src/contract/rest-schemas.ts`), which itself mirrors the
+    /// purchases pillar's `MAX_RECEIPT_PARTS`. A repo-root guard
+    /// (`scripts/ci/check-receipt-max-parts-drift.mjs`) compares all three and
+    /// fails the build when they disagree, so this number cannot silently
+    /// drift out of step with the server the way a hand-mirrored constant
+    /// ordinarily could.
+    public static let maxPerReceipt = 8
+
     public let mediaType: ReceiptMediaType
     public let data: Data
 

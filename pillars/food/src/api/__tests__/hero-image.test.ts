@@ -9,12 +9,14 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import sharp from 'sharp';
-import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { type OpenedFoodDb, openFoodDb } from '../../db/index.js';
 import { createFoodApiApp } from '../app.js';
+import { createTestTransport } from './test-http.js';
 import { makeClient } from './test-utils.js';
+
+const { requestOn } = createTestTransport();
 
 let tmpDir: string;
 let foodDb: OpenedFoodDb;
@@ -62,17 +64,17 @@ describe('hero-image REST', () => {
     expect(uploaded.data.width).toBe(16);
     expect(uploaded.data.height).toBe(12);
 
-    const served = await request(app()).get(`/recipes/${recipeId}/hero.png`);
+    const served = await requestOn(app()).get(`/recipes/${recipeId}/hero.png`);
     expect(served.status).toBe(200);
     expect(served.headers['content-type']).toContain('image/png');
 
-    const thumb = await request(app()).get(`/recipes/${recipeId}/hero-thumb.webp`);
+    const thumb = await requestOn(app()).get(`/recipes/${recipeId}/hero-thumb.webp`);
     expect(thumb.status).toBe(200);
 
     const removed = await client.heroImage.remove(recipeId);
     expect(removed.ok).toBe(true);
 
-    const gone = await request(app()).get(`/recipes/${recipeId}/hero.png`);
+    const gone = await requestOn(app()).get(`/recipes/${recipeId}/hero.png`);
     expect(gone.status).toBe(404);
   });
 

@@ -6,13 +6,15 @@
  * smaller one that partly paid it. `solve.ts` decides the order they run in
  * and what happens between them.
  */
-import { descriptorMatcherFor } from './descriptor.js';
+import { descriptorMatcherFor, type DescriptorMatcher } from './descriptor.js';
+import { ruleMatcherFor } from './rules.js';
 import { findSubsetSummingTo, MIN_SPLIT_SIZE } from './subset-sum.js';
 import {
   STAGE_CONFIDENCE,
   type ChargeForReview,
   type ProposedLink,
   type SolvableCharge,
+  type SolvableRule,
   type SolvableTransaction,
 } from './types.js';
 import { isWithinWindow, settlementWindowFor } from './window.js';
@@ -30,7 +32,18 @@ export interface BlockingContext {
   readonly defaultWindowDays: number;
   /** Pairings a human ruled out, indexed by charge. */
   readonly rejected: ReadonlyMap<string, ReadonlySet<string>>;
+  /**
+   * Learned descriptor patterns, for stage 4.
+   *
+   * Here rather than passed alongside because a rule decides the same
+   * question the source's `descriptorPattern` does — which descriptors
+   * count as this merchant's — and only stage 4 reads them.
+   */
+  readonly rules: readonly SolvableRule[];
 }
+
+/** Leaves the descriptor to stage 4's rules, which decide it per candidate. */
+const ANY_DESCRIPTOR: DescriptorMatcher = () => true;
 
 export type MatchOutcome =
   | { kind: 'linked'; links: readonly ProposedLink[] }
@@ -86,6 +99,24 @@ export function eligibilityFor(
   charge: SolvableCharge,
   blocking: BlockingContext
 ): (transaction: SolvableTransaction) => boolean {
+  return eligibilityWith(charge, blocking, descriptorMatcherFor(charge.descriptorPattern));
+}
+
+/**
+ * {@link eligibilityFor} with the descriptor test supplied.
+ *
+ * Every other test blocking makes — window, sign, non-zero, rejected — is
+ * a fact about the charge and the transaction, and holds whatever admitted
+ * the descriptor. Stage 4 swaps that one test and nothing else, which is
+ * both what makes it a widening of blocking rather than a second ladder,
+ * and what stops a learned rule from ever reaching past a rejection or
+ * outside a window.
+ */
+function eligibilityWith(
+  charge: SolvableCharge,
+  blocking: BlockingContext,
+  matchesDescriptor: DescriptorMatcher
+): (transaction: SolvableTransaction) => boolean {
   if (charge.amountCents === 0) return () => false;
 
   const window = settlementWindowFor(
@@ -95,7 +126,6 @@ export function eligibilityFor(
   if (window === null) return () => false;
 
   const wantPositive = charge.amountCents > 0;
-  const matchesDescriptor = descriptorMatcherFor(charge.descriptorPattern);
   const rejected = blocking.rejected.get(charge.id);
 
   return (transaction) => {
@@ -197,6 +227,98 @@ export function matchPartial(
   return { kind: 'linked', links: [linkOf(charge, only, only.amountCents, 'partial')] };
 }
 
+/** A candidate stage 4 admitted, and the rule that admitted it. */
+export interface RuleCandidate {
+  readonly transaction: SolvableTransaction;
+  readonly rule: SolvableRule;
+}
+
+/**
+ * Stage 4's candidate pool: everything blocking would accept if the
+ * source's registered pattern were replaced by the merchant descriptors a
+ * human has already accepted for it.
+ *
+ * A source declares ONE `descriptorPattern`, registered by hand, and a
+ * merchant bills under several — so a pattern that is right for most of an
+ * account's charges silently blocks the rest, every night, forever. That is
+ * the miss this rescues, and it is the only thing a descriptor-pattern rule
+ * can rescue: the rule names the merchant, so the ladder still has to find
+ * the transaction itself.
+ *
+ * Every other blocking test still applies, including the rejection set —
+ * see {@link eligibilityWith}.
+ */
+export function ruleCandidatesFor(
+  charge: SolvableCharge,
+  transactions: readonly SolvableTransaction[],
+  claimed: ReadonlySet<string>,
+  blocking: BlockingContext
+): readonly RuleCandidate[] {
+  const ruleFor = ruleMatcherFor(charge, blocking.rules);
+  const inScope = eligibilityWith(charge, blocking, ANY_DESCRIPTOR);
+
+  return orderedTransactions(
+    transactions.filter((transaction) => !claimed.has(transaction.uri) && inScope(transaction))
+  ).flatMap((transaction) => {
+    const rule = ruleFor(transaction.description);
+    return rule === null ? [] : [{ transaction, rule }];
+  });
+}
+
+/**
+ * Stage 4 — a single rule-admitted transaction for exactly the charge
+ * amount.
+ *
+ * **The amount test is stage 1's, unchanged.** A rule moves the descriptor
+ * boundary and nothing else: it never licenses a near-miss amount, and it
+ * runs no subset-sum of its own. Both were considered and both are the same
+ * mistake — a learned descriptor is a claim about a merchant, and treating
+ * it as evidence about an amount would let a stale rule reconcile money to
+ * the wrong order, which is strictly worse than leaving the order in the
+ * queue. A rule whose merchant has nothing at the right amount in the
+ * window therefore admits no candidate at all, and the charge falls through
+ * to partial and review exactly as it did before the rule existed.
+ *
+ * Two rule-admitted candidates at the charge amount go to review for the
+ * same reason stage 1's do: a human accepted this merchant, not this
+ * transaction, so the rule cannot break the tie it just created.
+ *
+ * **That tie settles the charge**, which is the one way the presence of a
+ * rule changes an outcome it cannot itself reach: the charge stops here
+ * rather than falling through to partial. Deliberate, and the safer of the
+ * two. Two transactions from a merchant a human has accepted, each for
+ * exactly this charge, is evidence that one of them settled it — so the
+ * remaining choice is between asking and part-paying the charge from some
+ * smaller unrelated transaction, and the ladder does not invent a residual
+ * to avoid a question. Stage 1 declines the same shape the same way.
+ */
+export function matchLearnedRule(
+  charge: SolvableCharge,
+  candidates: readonly RuleCandidate[]
+): MatchOutcome | null {
+  const hits = candidates.filter(
+    (candidate) => candidate.transaction.amountCents === charge.amountCents
+  );
+  if (hits.length === 0) return null;
+  if (hits.length > 1) return { kind: 'review', reason: 'ambiguous' };
+
+  const [only] = hits;
+  if (only === undefined) return null;
+  return {
+    kind: 'linked',
+    links: [
+      {
+        ...linkOf(charge, only.transaction, only.transaction.amountCents, 'rule'),
+        // The rule's own confidence, inherited from the link that taught
+        // it, capped by the stage. A rule learned from a part-payment is
+        // weaker evidence than one learned from an exact match.
+        confidence: Math.min(only.rule.confidence, STAGE_CONFIDENCE.rule),
+        matchRuleId: only.rule.id,
+      },
+    ],
+  };
+}
+
 export function linkOf(
   charge: SolvableCharge,
   transaction: SolvableTransaction,
@@ -210,5 +332,6 @@ export function linkOf(
     amountCents,
     linkType,
     confidence: STAGE_CONFIDENCE[linkType],
+    matchRuleId: null,
   };
 }

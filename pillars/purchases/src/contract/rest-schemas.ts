@@ -9,6 +9,7 @@
  */
 import { z } from 'zod';
 
+import { ProductIdentitySchema } from './schemas/product-identity.js';
 import {
   AutoLinkPolicySchema,
   CentsSchema,
@@ -22,6 +23,7 @@ import {
   NonNegativeCentsSchema,
   PopsUriSchema,
   PurchaseStatusSchema,
+  PurchaseTagSchema,
   SettlementModeSchema,
   SettlementRoleSchema,
   ShipmentStatusSchema,
@@ -84,6 +86,14 @@ export const CreateShipmentBodySchema = z.object({
 });
 
 export const CreateItemUnitBodySchema = z.object({
+  /**
+   * The serial engraved on the hardware, persisted verbatim and unvalidated.
+   * Amazon's DSAR export has no such column: its `Item Serial Number` is
+   * mostly a Transparency anti-counterfeit token identifying the packaging,
+   * so its adapter sends no units at all rather than promoting a package
+   * code into a field that means something else. See
+   * `pillars/purchases/src/ingest/amazon/README.md`.
+   */
   serialNumber: z.string().nullable().optional(),
   inventoryItemUri: PopsUriSchema.nullable().optional(),
 });
@@ -92,7 +102,16 @@ export const CreateItemBodySchema = z.object({
   ref: RefSchema.optional(),
   shipmentRef: RefSchema.nullable().optional(),
   name: z.string().trim().min(1),
-  sku: z.string().nullable().optional(),
+  /**
+   * The identifier the source stated, and the namespace it stated it in.
+   * Both or neither — an adapter that cannot say which namespace an
+   * identifier belongs to has not read one, and a bare string here is what
+   * let a single column mean a different thing per adapter.
+   *
+   * Omit it for every source that states none, which today is every one but
+   * the Amazon export.
+   */
+  sku: ProductIdentitySchema.nullable().optional(),
   url: z.string().nullable().optional(),
   imageUrl: z.string().nullable().optional(),
   quantity: z.int().min(1).optional(),
@@ -170,6 +189,16 @@ export const CreateDocumentBodySchema = z.object({
   kind: DocumentKindSchema.optional(),
 });
 
+/**
+ * One document attached to an order that already exists.
+ *
+ * No `shipmentRef`: that is a create-call wiring handle, resolved against
+ * deliveries defined in the same payload, and there are none here. A document
+ * that belongs to one delivery rather than the whole order can only be
+ * attached at ingest today.
+ */
+export const AttachDocumentBodySchema = CreateDocumentBodySchema.omit({ shipmentRef: true });
+
 export const CreatePurchaseBodySchema = z.object({
   source: z.string().trim().min(1),
   sourceOrderId: z.string().nullable().optional(),
@@ -193,6 +222,13 @@ export const CreatePurchaseBodySchema = z.object({
    * re-uploading the same bundle must be a no-op.
    */
   checksum: z.string().trim().min(1),
+  /**
+   * Facts about how the order itself was read — `date-uncertain` when the
+   * source stated no date, `promotion-offset` when a promotion cancelled
+   * the price to zero. Without them an inferred figure is indistinguishable
+   * from one the source stated, which is the difference a reviewer needs.
+   */
+  tags: z.array(PurchaseTagSchema).optional(),
   shipments: z.array(CreateShipmentBodySchema).optional(),
   items: z.array(CreateItemBodySchema).optional(),
   charges: z.array(CreateChargeBodySchema).optional(),
@@ -211,6 +247,18 @@ export const UpsertPurchaseSourceBodySchema = z.object({
  * Query filters for the order index. `sources` and `statuses` accept a
  * repeated query parameter; a single value is lifted into an array so
  * `?statuses=linked` and `?statuses=linked&statuses=partial` both work.
+ *
+ * The three merchant parameters are spelled separately because the pillar's
+ * three ways of attributing a merchant are three different statements, not
+ * three encodings of one. `merchantEntityId` selects a resolved `contacts`
+ * entity; `merchantEntityName` selects orders that carry only that label and
+ * no entity at all; `merchantUnattributed=true` selects orders naming no
+ * merchant. A filter accepting only the entity id would match nothing today,
+ * since no export adapter resolves one.
+ *
+ * At most one may be sent. A combination denotes no group the merchant
+ * roll-up produces, so the handler refuses it with a 400 rather than
+ * intersecting the two into an answer nothing asked for.
  */
 export const ListPurchasesQuerySchema = z.object({
   sources: z
@@ -222,6 +270,20 @@ export const ListPurchasesQuerySchema = z.object({
       z.array(PurchaseStatusSchema)
     )
     .optional(),
+  /**
+   * The order's own currency. Present because the roll-up groups on merchant
+   * *and* currency, so without it a merchant billing in two currencies has
+   * one row per currency and no way to open either of them alone.
+   */
+  currency: CurrencySchema.optional(),
+  merchantEntityId: z.string().min(1).optional(),
+  /**
+   * Matched verbatim, not trimmed: `merchantEntityName` is stored exactly as
+   * the source stated it and is the roll-up's own grouping key, so a filter
+   * that rewrote it would select a group that does not exist.
+   */
+  merchantEntityName: z.string().min(1).optional(),
+  merchantUnattributed: QueryBoolSchema.optional(),
   from: IsoTimestampSchema.optional(),
   to: IsoTimestampSchema.optional(),
   limit: z.coerce.number().int().min(1).max(500).optional(),

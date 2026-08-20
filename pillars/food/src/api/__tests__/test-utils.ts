@@ -5,12 +5,19 @@
  * per-test bodies stay readable. Non-2xx responses throw `HttpError` with the
  * parsed `{ status, body }` so tests assert on
  * `.rejects.toMatchObject({ status })`.
+ *
+ * Requests go over `test-http.ts`'s shared, pre-listened server rather than
+ * over `supertest(app)`, which binds a throwaway listener and dials a fresh
+ * connection for every call. That header explains what the churn costs under
+ * contention; this is the choke point through which the whole pillar's suites
+ * inherit the fix.
  */
-import supertest from 'supertest';
+import { createTestTransport } from './test-http.js';
 
 import type { Express } from 'express';
 
 import type { IngredientWeight, UnitConversion } from '../modules/conversions/types.js';
+import type { Test } from './test-http.js';
 
 interface PrepState {
   id: number;
@@ -226,7 +233,7 @@ export class HttpError extends Error {
   }
 }
 
-async function send<T>(req: supertest.Test): Promise<T> {
+async function send<T>(req: Test): Promise<T> {
   const res = await req;
   if (res.status >= 200 && res.status < 300) return res.body as T;
   throw new HttpError(res.status, res.body);
@@ -375,8 +382,10 @@ type MarkCookedResult =
   | { ok: true; recipeRunId: number; yieldedBatchId: number | null }
   | { ok: false; reason: string; shortfalls?: CookShortfall[] };
 
+const transport = createTestTransport();
+
 export function makeClient(app: Express) {
-  const r = supertest(app);
+  const r = transport.requestOn(app);
   return {
     cook: {
       prepareCook: (body: PrepareCookBody) =>

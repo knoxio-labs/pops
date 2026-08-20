@@ -6,7 +6,7 @@ Port 3013, `purchases.db`, registers itself with `registry` on boot.
 
 ## The shape
 
-An **order** is the single point of entry. Five flat lists hang off it, and the cross-references between those lists are all optional:
+An **order** is the single point of entry. Five flat lists hang off it — plus one row, at most, recording when and where an uploaded receipt was photographed — and the cross-references between those lists are all optional:
 
 ```
 purchases  (the order)
@@ -20,8 +20,14 @@ purchases  (the order)
   │    ├─ purchase_link_rejections  pairings a human ruled out
   │    └─ purchase_item_allocations which charge paid for which line
   ├─ purchase_tags                  facts about the order that aren't fields
-  └─ purchase_documents             evidence → documents
+  ├─ purchase_documents             evidence → documents
+  └─ purchase_capture               when and where it was photographed
+
+purchase_products                   a product a human recognises
+  └─ purchase_product_aliases       one printed wording that resolves to it
 ```
+
+Two tables sit outside that tree. They are not facts about one order: they are the learned dictionary that gives a printed line a durable product identity, for the sources that state no identifier of their own.
 
 Four grains, because real purchase data has four and collapsing any of them loses information that cannot be recovered. One Amazon order ships in three boxes and settles as two card charges. One AliExpress order trickles in over two months. A quantity-3 line becomes three inventory records with three serial numbers.
 
@@ -40,6 +46,18 @@ It returns a list of orders, not one. A combined settlement — several charges,
 **`GET /reconcile/queue` is not a substitute, and looks like one.** The queue answers "what still wants a decision": confirming a link is what removes its charge from it, and an auto-link source never enters it at all. Both of those are established links and are exactly what a finance view is asking about, so a lookup built by scanning the queue reports "no purchase" for the two states where the relationship is most certain. The reverse lookup indexes `purchase_charge_links` directly and reports each link's `confirmedAt` rather than filtering on it — a consumer that renders a derived link as a settled fact is reporting the engine's guess.
 
 A transaction no order explains is an empty list and a `200`. That is the ordinary case for most of a statement, and a `404` would have consumers treating "this was not a purchase" as a fault.
+
+### The plural form, for a list rather than a panel
+
+`POST /reconcile/links/batch` takes up to 500 transaction URIs and answers each with counts: how many distinct orders explain it, how many of those links a human confirmed, and how many the matcher merely derived. A transactions table drawing "does an order explain this row" over a page of fifty rows would otherwise call the singular route fifty times, which is why no such column existed.
+
+It is a `POST` that mutates nothing. Five hundred URIs is roughly twenty-five kilobytes of query string, past what proxies reliably accept, and a URL truncated in transit fails as a wrong answer rather than as an error — so the keys travel in the body.
+
+It **counts, and returns no orders and no money**. Returning the orders would make it a second, fuller answer to the question the singular route already answers, free to drift from it; a consumer that wants the orders opens the one transaction it is asking about. Money is absent for the reason the merchant roll-up refuses a grand total: a charge's currency is the settlement currency, one transaction can settle orders in more than one, and a single `linkedCents` here would be a cross-currency sum wearing a currency's clothes.
+
+The two counts stay apart for the reason `confirmedAt` exists at all. A single "has a purchase" flag would report the matcher's current belief — which a later sweep may withdraw — as a decision somebody made, on every row it drew. Both non-zero is a partly-decided transaction, which is a real state rather than a rounding of either.
+
+A requested URI **absent** from the answer means no order explains it. Echoing every URI back with zeroes would make the response proportional to the question rather than to the answer, on a surface where most of the question is misses. The 500 is the route's bound, and it binds tighter than a `limit` would: the answer is at most one fixed-size row per URI asked about, so a caller that can count its own request already knows the size of the response, and there is nothing for an `offset` to page over.
 
 ## The accounting split
 
@@ -65,7 +83,9 @@ Folding `awaitingImport` into the residual would flag every recent order as brok
 
 ## The aggregate surface
 
-`GET /analytics/merchant-spend` is the pillar's only aggregate route. Everything else is a row reader, and a merchant headline cannot be assembled from row readers: `GET /purchases` pages at 500 and returns no charge-link state, and `GET /items` cannot enumerate without a `tag`.
+Two routes, at two grains. Everything else is a row reader, and neither headline can be assembled from row readers: `GET /purchases` pages at 500 and returns no charge-link state, and `GET /items` cannot enumerate without a `tag`.
+
+### `GET /analytics/merchant-spend` — the order grain
 
 It answers one question — what was spent per merchant over a period, and how much of it is explained — and returns the same six figures the per-order split does, summed. `residualCents` is in the response rather than derived by the caller: a consumer that has to compute the unexplained bucket is a consumer that can forget to, and a view which drops it turns a known unknown into a false certainty.
 
@@ -76,13 +96,81 @@ Two things it deliberately does not do:
 
 Merchant attribution is reported three ways, because the pillar has two different things called a merchant: `entity` (grouped on a resolved `contacts` entity id, the operative identity), `name` (grouped on the label, because no entity was ever attached), and `unattributed` (the order names no merchant). Today every export-ingested order lands under `name` — no export adapter sets an id, only receipt ingest does (POPS-1852). Collapsing the three would report a string match as an identity, and orders naming no merchant would vanish from a total that claims to describe them.
 
+**A group can be opened.** `GET /purchases` takes the same three — `merchantEntityId`, `merchantEntityName`, `merchantUnattributed` — plus `currency`, off the same scope vocabulary the roll-up derives its own query from, so the same parameters select the same orders in both. A row saying "Bunnings, 12 orders, $1,041.20 of which $151.20 is unexplained" is where a reader forms the question `GET /purchases/:id` answers, and naming an unexplained figure nobody can then chase is a weaker version of hiding it.
+
+The three are exclusive, and `name` is the one that has to be spelled carefully. A `name` group holds exactly the orders that resolved to no entity, so the filter matches the label **and** a null entity id; matching the label alone would sweep in every order that did resolve to an entity wearing that label, and the list would hold more orders than the row it was opened from counted. Two parameters at once is a 400 rather than an intersection: `merchantEntityId` and `merchantEntityName` together denote no group the roll-up produces, and the intersection is empty by construction.
+
 The fold reuses `computeAccounting` per order rather than restating the split as `SUM()` in SQL, so the residual keeps exactly one implementation. That is also why the arithmetic happens after the rows are re-grouped and not in the database: an order with three charges appears three times in a charge join and six times once links are joined, and a database-side `SUM(total_cents)` would report six times what was spent.
 
-**What POPS-244 still needs on top of this**, none of which this route provides:
+### `GET /analytics/product-leaderboard` — the product grain
 
-- a repeat-purchase leaderboard at the product grain (POPS-1849), which needs the line-item identity normalisation of POPS-243 to group on anything better than `sku`;
+The same thing bought across N orders: per product, how many distinct orders hold it, how many lines and units, first and last purchase, how often it comes back, what one of it has cost each time, summed landed cost, and every merchant it was bought from. Landed cost reuses `landedCostCents` per line rather than restating `lineTotal + allocatedShipping + allocatedAdjustment` in SQL, on the same single-implementation rule the residual follows. Nothing here joins charges or links, which is what makes "how many orders" a count of distinct order ids rather than a figure that multiplies by however many charges settled them.
+
+**Grouping is the hard part.** A group is formed on one of four bases, and which one travels with the group:
+
+- `sku` — the merchant's own identifier. The only basis a source asserts, and exactly one shipped adapter writes one (`sku: readText(row['ASIN'])` in the Amazon mapper). Within Amazon, repeats group perfectly.
+- `product` — a [dictionary](#the-product-dictionary) entry claimed the printed wording. Carries `confirmed`, because an entry a human asserted is evidence and an entry a pass minted is the `name` proposal with an id attached. A row reads `confirmed` only where **every** wording in the group was asserted: one unasserted wording is lines the group holds on a pass's proposal, and half a merge presented as a fact is the error this whole route is arranged against.
+- `name` — printed names that normalise alike, within one merchant, with no dictionary entry between them. A **proposal**: it merges two products a till abbreviates the same way, and splits one product printed two ways.
+- `unidentified` — no sku and no name that normalises to anything. Groups with nothing, one line per row, because a bucket every nameless line falls into would report a whole shop as one product.
+
+A group never spans merchants a source did not put together. `receipt` is one source id for every shop a user photographs, so a key on the source alone would fold two cafes' `LATTE` lines into one product with one summed cost; the key is confined to the order's merchant unless the source is a single merchant's own feed, which is what keeps a Woolworths product grouped across the chain's stores instead of splitting per branch. `merchants` on a row is therefore the group's scope, not just a list of where it was seen. The one thing that reaches across that boundary is a person pointing two scoped wordings at one dictionary product, which is deliberate and is the only way a `product` row comes to list merchants a source never put together.
+
+The rule is `identifyProduct` in `src/db/services/product-identity.ts`, shared with the classification pass so a decision the pass made about a product and a row this route shows for it describe the same lines.
+
+`coverage` says exactly that per request — lines in scope split across the bases, plus the product count — so a consumer can see how much of the answer rests on a proposal before it renders a row. The two dictionary figures are counted apart for the same reason the bases are. It is computed over the whole scope, before any withholding.
+
+`minOrderCount` is the N. It is not a page cap: it selects on the answer's own defining property, is stated by the caller, and is echoed in the response, so a group that is absent is absent for a reason the payload names. There is still no `limit`, for the reason the merchant roll-up has none. Currency is part of the grouping key here too.
+
+**Cadence** is on every row: the median gap between consecutive purchases, the mean, and the two extremes, in seconds. Measured between **distinct orders** rather than lines, so two bags of the same coffee in one basket are one purchase and not an instant re-buy. A product bought once carries `{ "basis": "single-purchase" }` and no figures at all — a zero would render as "bought again immediately", which is the opposite of what it means, and a null invites a consumer to draw an empty cadence beside a real one. The median leads because a bursty history's mean describes a rhythm nothing ever happened at; the mean is returned beside it precisely so the distance between the two is visible. Nothing is relative to now: "due for a re-buy" needs a clock, and a read that consulted one would answer differently to two calls a minute apart.
+
+**Unit-price history** is on every row too, and it is four observations rather than a drift figure. `firstCents` → `lastCents` is the drift and `minCents` / `maxCents` say whether those two ends represent the series; a single percentage would be the one number a consumer renders and would hide every case where they do not — a product whose last purchase happened to be on special reads as a permanent price cut. The series is built on `purchase_items.unit_price_cents`, the merchant's price for one, and deliberately **not** on landed cost: allocated shipping and adjustment are shares of an order-level figure spread over that order's lines, so the same product bought alone and bought inside a twenty-line order carries wildly different allocations, and a per-unit series built on landed cost moves with the shape of the basket rather than with the price.
+
+Three counts qualify it, each a fact off a column rather than an inference:
+
+- `promotionalLineCount` / `ordinaryLineCount` / `unstatedPromotionLineCount` — the `^` marker, three-way on the rule the residual follows. Only the Woolworths receipt states it either way, so folding "nobody said" into "ordinary" would assert a price the merchant never characterised.
+- `measuredLineCount` — lines priced by measure (`0.202 kg NET @ $2.90/kg`), which fruit, veg and the deli counter all are. Such a line carries a quantity of 1 and a unit price equal to what that weight cost, so 0.5 kg of bananas against 1.2 kg reads as a 140% rise with nothing else on the row to say otherwise. It is recognised from the merchant prose the adapters store verbatim (`src/ingest/measure-notes.ts`, shared with the Woolworths grouper that writes it), which is best-effort and wrong in both directions — a wording it has not met is read as a count, and a genuine per-each price (`1 ea @ $5.00`) is read as a measure. Neither moves a figure: nothing derives a price from the answer, so a miss leaves the caveat unstated and a false positive states one that was not needed. A structured flag on the line, set at ingest, is POPS-2389.
+
+Everything a group says about its own ends — both dates, the label it wears, the merchant it is attributed to, both ends of the price series — is ordered by the **parsed instant** rather than by the timestamp text, so an order stamped `2026-01-02T00:00:00+10:00` correctly precedes one stamped `2026-01-01T20:00:00Z`. Text ordering puts those two the wrong way round and leaves a row whose endpoints disagree with its own cadence. `src/db/services/order-rank.ts` is the one notion of that ordering, shared with the merchant roll-up's label ranking rather than restated beside it. The `from` / `to` window that decides which orders are in scope at all is still a text comparison in SQL (POPS-2070), so the same offset that these folds now order correctly can still put an order on the wrong side of a period boundary.
+
+**What POPS-244 still needs on top of these**, none of which these routes provide:
+
 - the consumable-vs-durable kind split (POPS-1850). Its substrate now exists — `kind` and `kindConfirmedAt` — so it must be **three** numbers, confirmed-consumable, confirmed-durable and unreviewed, mirroring `matched` / `awaitingImport` / `residual`. A two-way percentage would report a classification pass's proposal as a finding;
-- tag counterfactuals such as "cut all `snack` line items" (POPS-1851). Item tags now carry their own `confirmedAt`, so the same three-way rule applies — but they are still drawn from whatever a classification pass proposed rather than being guaranteed finance `tag_vocabulary` slugs, and a counterfactual is only as meaningful as the vocabulary it groups on.
+- tag counterfactuals such as "cut all `snack` line items" (POPS-1851). Item tags now carry their own `confirmedAt`, so the same three-way rule applies — but they are still drawn from whatever a classification pass proposed rather than being guaranteed finance `tag_vocabulary` slugs, and a counterfactual is only as meaningful as the vocabulary it groups on;
+- **regret detection, which the pillar cannot yet support at all** (POPS-2388). The ticket's design is line item → `pops://inventory/item/<id>` → `home_inventory.in_use = 0`, and every link in it is missing: nothing writes `purchase_item_units.inventory_item_uri` except a caller stating one by hand, no shipped adapter states one, and nothing yet creates the inventory row an accepted fan-out proposal names (POPS-2356). Even with the chain complete, `home_inventory.in_use` is a nullable tri-state with no date on it — NULL on every row nobody has reviewed — so `in_use = 0` cannot distinguish a thing retired after five years of use from one never taken out of its box, and a leaderboard row reading "you regret this" off it would be a confident falsehood about the most personal number in the pillar. The honest answer is that this waits for the fan-out and for a signal that carries a date.
+
+## The product dictionary
+
+A supermarket receipt says `CHK BRST 1KG`; an invoice for the same thing says `Chicken Breast 1kg`. Two of the three shipped adapters state no product identifier at all — a Woolworths receipt row is `{prefixChar, description, amount}`, and the receipt extraction schema refuses inferred identifiers by design — so for those lines a printed wording is the only evidence of identity there is. `purchase_products` and `purchase_product_aliases` are where that evidence is written down. Service in `src/db/services/product-dictionary.ts`, routes under `/products`.
+
+**What it learns from.** Two things:
+
+1. _Repetition._ `POST /products/proposals` scans every stored line, and mints one entry per distinct scoped printed wording, pointing at a product of its own. That is not a guess — it is the grouping the aggregates already do, written down so a human can point at it.
+2. _Assertion._ `PATCH /products/aliases/:aliasId` with a `productId` points one wording at another wording's product. From then on both resolve to it, for every line already stored and every line that arrives later, without anyone being asked again. That is the mapping being learned, and it is learned once.
+
+**What it will not attempt.** It will not infer that `CHK BRST 1KG` and `Chicken Breast 1kg` are the same thing. Nothing in this pillar's data says they are: the merchants state no identifier, the prices differ, and the only available signal is string similarity — which is exactly the signal that cannot tell `MILK 1L` from `MILK 2L`. Two products collapsing into one corrupts spend attribution in a way no later reader can see, where leaving them apart is a visible non-answer. So the lookup is **exact on the normalised name**: no prefix, no substring, no edit distance. Finance's `entity-matcher.ts` can afford those stages because a bank descriptor's noise is its _suffix_; a product name's discriminating tokens are its suffix, and inverting that assumption is how the invisible error gets made.
+
+**Two rules keep an entry from reaching further than its evidence.** The dictionary is never consulted for a line that states a sku, so a minted identity can never absorb an ASIN-keyed group — Amazon is out of scope here and loses nothing by it. And an entry is scoped by the same `productScopeKey` the on-the-fly grouping uses, so two cafés printing `LATTE` get two entries under the `receipt` source while a Woolworths wording still reaches the whole chain. The one thing that crosses a scope boundary is a human pointing two entries at one product, which is the feature.
+
+**How a bad entry is undone.** Every write is reversible and none of them touches a line:
+
+| the mistake          | the undo                                                                                            |
+| -------------------- | --------------------------------------------------------------------------------------------------- |
+| a wrong merge        | `PATCH /products/aliases/:id` with `productId: null` — mints the wording a product of its own again |
+| a wrong confirmation | the same route with `confirmed: false` — back to a proposal a pass may retire                       |
+| a wrong entry        | `DELETE /products/aliases/:id` — the lines fall back to the on-the-fly `name` grouping              |
+| a wrong product      | `DELETE /products/:id` — takes every wording with it                                                |
+
+A product left with no wordings is deleted in the same write: a product nothing resolves to is a label no read path can reach, and one a caller could still confirm and rename.
+
+**The grain is the wording, not the line**, which buys the dictionary its main property — a mapping is stated once and applies to every line that ever prints that wording, past or future, with no backfill — and costs it one: two genuinely different products that a merchant prints _identically_ cannot be told apart here, because there is nothing but the wording to tell them apart with. That is the `name` basis's existing limitation carried forward rather than a new one, and it is the same trade the rest of this section argues for: a visible non-answer over an invisible wrong one.
+
+**`confirmedAt` is the whole boundary between a pass and a person**, the same idiom `purchase_item_tags` and `purchase_items.kindConfirmedAt` carry. Null means the proposal pass owns the row — it may retire the entry once no line prints that wording. Non-null means a human asserted it, and the pass may not retire, repoint or relabel it, even when the line that prompted it has been deleted. The pass runs over **every** line with no scope filter, deliberately: deriving the dictionary from a window would retire entries whose lines merely fell outside it.
+
+**A database that never runs the pass behaves exactly as it did before this existed** — an on-the-fly group per normalised name, resolved fresh on every read. Nothing is backfilled and no ingest path writes here.
+
+**Running the pass is a command, and it previews by default.** `pnpm -F @pops/purchases propose:products` runs the real pass inside a transaction it then rolls back, and prints the counts plus a sample of the wordings it would mint and retire and of the renamed products those retirements would take with them. It leaves the dictionary exactly as it found it — opening the file still applies any pending migration, as every command here does. `-- --write` runs the same pass and commits it; that is a second scan of whatever the lines say by then, so a database still being ingested into can legitimately answer the two runs differently. Like `propose:kinds` it goes at the SQLite file rather than over HTTP, so it needs no base URL and no service-account key — and unlike it, this pass calls no model, so a preview costs a scan and nothing else. The preview is the default here and not there because this pass deletes: it retires the unconfirmed entries no line prints any more, where the kind pass only ever fills a NULL. `POST /products/proposals` is still the other way in, and still writes immediately.
+
+**Nothing runs the pass on a schedule, and that is a decision rather than an omission.** The pass is idempotent and reads every line by design, and it will not retire, repoint or relabel a confirmed entry — though the marker is on the wording and not on the product, so a product a human renamed is deleted with its last unconfirmed wording either way (POPS-2431). What the pass produces is a review queue, and no surface shows that queue (POPS-2392). A nightly run would mint entries nobody can see or correct, and would move every eligible leaderboard row off the honest `name` basis onto an unconfirmed `product` one on every deployment, without anyone having asked for a dictionary at all. So it stays on demand, where the preview can put the deletions in front of someone before they happen; POPS-2416 revisits it once the corrections have a home.
 
 ## Other invariants that span files
 
@@ -91,6 +179,8 @@ The fold reuses `computeAccounting` per order rather than restating the split as
 **A charge carries two amounts.** `amountCents` is in the settlement currency — what moved on the card, and what the matcher compares against finance transactions. `orderAmountCents` is the same money in the order's currency, which is what the residual is computed in. For a USD AliExpress order settling in AUD they differ; for everything else they are equal, stored anyway so the residual never branches.
 
 **`totalCents` is not constrained to the sum of its components.** Profiling the real Amazon DSAR export found `subtotal + shipping + tax − discount` holding on 926 of 943 rows; the rest drift by cents on older orders. A CHECK on the identity would reject valid orders at ingest, so adapters record the order and route the mismatch to review. Component non-negativity _is_ enforced.
+
+**An identifier is never handed over without its namespace.** `purchase_items.sku` holds what a source stated about _which product_ a line is, and a bare identifier is not an identity: an ASIN and a store's own article number are both strings, and joining lines on the string alone merges two products that collide by accident. So the column is a pair — `sku` with `skuScheme` — fused into one object on the wire for the same reason `kind` is. `asin` means the same product wherever it appears; `merchant` means nothing outside the source that issued it. NULL means the source named no product, which is every shipped adapter but the two Amazon exports, and two NULLs are not a match. See `src/ingest/README.md` under "Naming a product".
 
 **A classification is never handed over without its provenance.** No source states what a thing is, so `purchase_items.kind` and the item tags are POPS judgements — part machine proposal, part human decision. `kindConfirmedAt` and a tag row's `confirmedAt` are what separate the two: null means a classification pass proposed it and a re-run may reconsider, non-null means it was asserted and nothing may re-derive it. On the wire `kind` is one object carrying its own marker rather than two sibling fields, because two fields leave "read the pair" a convention and a consumer that ignores it reports a guess as a fact.
 
@@ -111,6 +201,44 @@ A proposal runs out of band — `pnpm propose:kinds`, never inside an adapter, s
 An order with **no charge and no link** (`awaiting_settlement`) is normal and permanent. A receipt captured in October is correct in October whether or not the card that paid for it is imported in December.
 
 A **cash** order (`settlementMode='cash'`) is terminal on arrival — `createPurchase` writes it straight to `settled_cash`. No transaction will ever exist for it, so it must never enter the reconcile queue, while still counting in every spend figure.
+
+## Evidence that arrives after the order
+
+An order's documents travel in its create request, and for a photographed receipt that is the whole story. For an export bundle it is not: the Amazon DSAR bundle's 325 tax invoices sit in a different folder than its order history, they carry no order id in their filenames, and the history is what gets ingested first. By the time the invoices are read the orders are already here, and `POST /purchases` refuses each of them at the checksum — so the create path can never place them.
+
+`POST /purchases/:id/documents` is the way in. One document, addressed by the order's own id, which is the only handle an already-ingested order answers to. `uq_purchase_documents(purchase_id, document_uri)` makes a repeat a `409` rather than a second row, so a backfill can be re-run without checking first: `pnpm ingest:amazon -- "<bundle>" --attach-existing` resolves each merchant order id against `GET /purchases?sources=amazon` and posts what is missing, and a second run reports every invoice as already carried. The route carries no shipment, because the adapter-local `shipmentRef` a create call uses resolves against deliveries defined in the same payload and there are none here — a document belonging to one delivery rather than the whole order can still only be attached at ingest (POPS-2418).
+
+Keep it small. [ADR-042](../../docs/architecture/adr-042-purchase-documents-and-transaction-reconciliation.md) and POPS-1528 migrate purchase evidence to the `documents` pillar, and this route migrates with it.
+
+## The inventory fan-out
+
+A durable line suggests an asset. `GET /purchases/:id/inventory-proposals` is that suggestion and nothing more: **purchases writes nothing into `inventory` and this route does not create anything**. Unattended fan-out fills that pillar with cables, batteries and light globes inside a month, at which point the user stops trusting it — which is why `ITEM_KINDS` calls both fan-out directions proposals.
+
+**What makes a proposal** is a unit slot, not a line. `purchase_items.kind = 'durable'` is the substrate and nothing here re-derives durability from a name; a quantity-3 durable line is up to three assets with three warranties, so it yields three offers answered one at a time. Two exclusions beyond the kind are load-bearing rather than fussy: a line on a `cancelled` or `returned` delivery is goods that never arrived, and a fully refunded line is goods that went back. A _partial_ refund kept the goods and gave some money back, so the line still proposes — priced net of what came back.
+
+The payload borrows inventory's field names where that pillar has a counterpart — `itemName`, `purchaseDate`, `purchasedFromName`. **Three fields do not cross unchanged**, and anyone writing the create side (POPS-2356) needs that before assuming a straight copy works:
+
+| field                    | what happens on the other side                                                                                                                                                                          |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `purchasePriceCents`     | inventory's `purchasePrice` is a float dollar amount; this pillar mints no float anywhere, so dividing by 100 is the accepting caller's step                                                            |
+| `purchaseTransactionUri` | inventory's `POST /items` takes a bare `purchaseTransactionId`, and `home_inventory.purchase_transaction_uri` has no REST writer at all — posted as-is, the key is silently stripped by zod (POPS-1526) |
+| `serialNumber`           | inventory has no such column anywhere (POPS-2386)                                                                                                                                                       |
+
+The last two are carried anyway: they are the strongest facts purchases holds about the asset, and a field withheld until its reader exists is a field nobody builds the reader for.
+
+The price is the unit's share of **landed cost less anything refunded on the line**, apportioned by `allocateProRata` so a line's shares sum to that figure exactly. The sticker price of a thing is not what it cost to get it into the house, and money that came back is not part of what it cost either — `accounting.ts` derives `netSpendCents` at the order level for the same reason it is derived here rather than left to each consumer.
+
+`purchaseTransactionUri` is filled only when exactly one **confirmed** link on a charge that **paid for the goods** names one, and all three halves matter. An unconfirmed link is the matcher's current guess, which the next sweep is free to tear down; an order paid across two transactions has no single one to name, and inventory's column holds one URI, so guessing would file the asset against half its own payment. A `refund` charge and an `authorization` charge are transactions of the order without being payments for it, so neither counts as that second one — otherwise a partially refunded order, or one whose bank recorded the card hold as its own row, would lose the link entirely, and those are exactly the orders most likely to carry a durable asset. Same pair `accounting.ts` excludes. Two other fields the ticket asked for are deliberately absent rather than null: purchases holds no `brand` and no `model` — no column, no source that states one — and splitting them out of a line name is guessing where a wrong answer is invisible afterwards (POPS-2355).
+
+**Who accepts is a human, per item, and the accept is not this pillar's write.** `POST /purchases/:id/items/:itemId/inventory-proposal` records the answer: `accepted` carries the `pops://inventory/item/<id>` URI of a row the caller **has already created** on the inventory pillar, and `declined` records the refusal. Recording an accept before the inventory row exists would store a reference to nothing, which the nightly cron would then dutifully mark stale. That leaves the create itself — and the review UI that collects the opt-in — outside this pillar (POPS-2356, POPS-2357). Only an `inventory`/`item` URI is accepted: the column is resolved by one cron leg that marks anything else a bad URI forever, and since a decision cannot be retracted a mistyped `pops://finance/transaction/...` would be permanent.
+
+**Answer a proposal with the `unitId` it came with.** A proposal for a unit that already has a row carries that row's id, and it is the only thing telling two offers on the same line apart — one of them may be the unit whose serial number the source stated. An answer that names no `unitId` is an answer to a proposal whose `unitId` was `null`, so it mints the row rather than landing on an existing one; a line that already has a row for every unit it claims has no such proposal left and refuses an unnamed answer with a `409`. Folding an unnamed answer onto the oldest undecided row instead would record the human's decision against a different physical thing than the one they were shown.
+
+**What stops a line proposing twice** is that a decided slot is not offered. `purchase_item_units.inventory_item_uri` says the unit is in inventory; `inventory_declined_at` says it was offered and turned down; a CHECK holds them mutually exclusive so no reader has to invent a precedence rule. A decision on a line with no undecided slot left is a `409`, not a silent extra unit — that is what stops a double-submitted accept putting two assets in inventory for one physical thing. There is no way to retract a decision (POPS-2358).
+
+A stale link is **not** a re-opened proposal. `inventory_item_stale_at` means the nightly cron got a genuine 404 from inventory for that URI; it is evidence to show a human, and re-offering an asset they deleted on purpose would fight them.
+
+Accepting is also what finally populates the inventory leg of the nightly soft-URI cron. Until now the only writer of `inventory_item_uri` was an ingest payload that supplied one, which no shipped adapter does.
 
 ## Who may call it
 
@@ -149,6 +277,16 @@ The grant is those four and nothing wider; `src/api/pillars/service-account.ts` 
 
 **A missing key does not stop the pillar booting**, unlike `bfm`. Everything this pillar's own contract serves is local, so refusing to start would trade a degraded reconciliation for a dead pillar. The absence is reported once at boot instead.
 
+### The fifth call is not a service-account call
+
+The receipt drop-zone's vision extraction reports its usage, cost and latency to the ai pillar's `POST /ai-usage/record` through `@pops/ai-telemetry`, like every other Claude caller in the fleet. That ingest does not read `X-API-Key`. It is gated by the per-caller credential of [ADR-039](../../docs/architecture/adr-039-pillar-isolation.md): a `purchases.<secret>` value in `x-pops-internal-credential`, which the ai pillar verifies against its own `POPS_INTERNAL_SECRET_PURCHASES` and the `ai.usage.record` scope. The two credentials are not interchangeable, and holding one says nothing about holding the other.
+
+This pillar reads its half from `POPS_INTERNAL_CREDENTIAL_FILE` first and `POPS_INTERNAL_CREDENTIAL` second — the file-then-environment order every secret here uses, in `src/api/secret-source.ts`. The deploy delivers the credential inline in `POPS_INTERNAL_CREDENTIAL`, through the per-caller internal-auth env file every other reporting pillar receives; the file variant is there because the resolver is shared, not because anything mounts one today. `src/api/ai-ledger-credential.ts` is the source of truth for the caller name and both variables; the ai pillar's accepted-caller row is in `pillars/ai/src/api/app.ts`. Provisioning both halves together is the whole job: either alone is worth nothing.
+
+**Reporting is best-effort, but it is not silent.** A record the ai pillar refuses — no credential, a stale secret, a grant that does not carry the scope — is logged with the status and both variable names rather than dropped; a record that never reached the pillar at all is logged as the delivery failure it is, without sending an operator after a credential that may be fine. That matters because the failure it hides is invisible by construction: the extraction succeeds, the user gets their receipt, the tokens are spent, and only the fleet's AI spend figure is wrong, by exactly this pillar's share. `src/ingest/receipt/__tests__/ledger-attribution.test.ts` drives a receipt through the real wrapper against a real socket and asserts both: the credential and the attributed record on the wire, and the log line when the pillar refuses.
+
+The sink is a no-op when neither `AI_API_URL` nor `POPS_API_URL` resolves, which is what keeps the test suite off the network; the deployed stack sets `AI_API_URL`.
+
 ## The assistant surface
 
 Purchases holds the only line-item-granularity spend data in the fleet, and until POPS-1753 it was the one pillar nothing could ask a question of. The decision that ticket asked for is **yes to both seams, on the grounds that neither one is a frontend**:
@@ -173,7 +311,7 @@ Two things this still does not buy, both real:
 
 ## What is deliberately absent
 
-- **Gmail IMAP ingest** (POPS-242). The ongoing feed, once the export/upload paths proved the reconciliation model — they have: `src/ingest/` carries `amazon/`, `woolworths/` and `receipt/` today. Email is the one source still unwritten.
+- **Gmail IMAP ingest** (POPS-242). The ongoing feed, once the export/upload paths proved the reconciliation model — they have: `src/ingest/` carries `amazon/`, `amazon-digital/`, `woolworths/` and `receipt/` today. Email is the one source still unwritten.
 - **The merchant lens** (POPS-241). Its backend has been there since POPS-1752 (`GET /analytics/merchant-spend` above); the view is a separate slice. The reconciliation queue, the other half of that ticket, now exists at `/purchases` — see [`app/README.md`](app/README.md) for what its two decisions do and do not persist.
 
 **A frontend is no longer among them (POPS-1506).** This pillar used to have no `app/` directory, and `buildPurchasesManifest` declared no `nav` and no `pages` on the grounds that a rail entry pointing at a bundle slot that does not exist is a dead link. That reasoning was never an argument against a frontend — it was an argument against advertising one before the slot existed. `pillars/purchases/app` is that slot, so both dimensions are now declared: one nav item, one page descriptor, one route, kept the same size on purpose. The pillar sits on the app rail between finance and media, because reconciliation is a two-pillar workflow and the operator crosses between them constantly.
@@ -193,6 +331,8 @@ Three of these do work the rest cannot, and are worth knowing about before chang
 Coverage carries a threshold ratchet in `vitest.config.ts`.
 
 **Chasing a flake.** This suite has produced three intermittent-failure reports (POPS-1349, POPS-1430, POPS-1567) that all evaporated because nobody kept the output of the run that actually went red. From the repo root, `node scripts/flake-hunt.mjs --filter @pops/purchases [--coverage]` runs the suite in a loop and keeps a red run's full JSON report, stdout/stderr, failing test name(s), loop iteration, wall clock, and load average at start and end — deleting everything from the green runs so an unattended soak doesn't fill the disk. See its `--help` for the full option set; it works for any unit, not only this one.
+
+**An unmatched route is not silent.** `unmatchedRouteHandler` (`src/api/middleware/unmatched-route.ts`) is the last thing mounted in `createPurchasesApiApp`: a request whose method and path match no route logs both server-side and answers the same `{ message, code }` shape every other rejection here uses, instead of Express's silent, unparseable HTML default. `OPTIONS` is passed through untouched so Express still builds its automatic `Allow` response. This covers unmatched routes only — a 404 a handler returns itself, such as a purchase id that does not exist, still writes nothing server-side. It was prompted by POPS-1312, one `POST /purchases` in 748 answering 404 with an empty body during a real backfill, which was never reproduced and is not explained by anything in this handler; that ticket stays open on its own terms, and POPS-2303 tracks whether the rest of the fleet gets the same handler.
 
 ## Local development
 

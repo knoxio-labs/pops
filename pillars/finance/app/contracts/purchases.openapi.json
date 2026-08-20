@@ -33,9 +33,40 @@
           },
           {
             "in": "query",
+            "name": "currency",
+            "schema": {
+              "pattern": "^[A-Z]{3}$",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "merchantEntityId",
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "merchantEntityName",
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "merchantUnattributed",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
             "name": "from",
             "schema": {
-              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+              "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
               "type": "string"
             }
           },
@@ -43,7 +74,7 @@
             "in": "query",
             "name": "to",
             "schema": {
-              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+              "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
               "type": "string"
             }
           }
@@ -185,12 +216,12 @@
                       "properties": {
                         "from": {
                           "nullable": true,
-                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                          "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                           "type": "string"
                         },
                         "to": {
                           "nullable": true,
-                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                          "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                           "type": "string"
                         }
                       },
@@ -267,9 +298,575 @@
               }
             },
             "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
           }
         },
         "summary": "Spend per merchant and currency over a period, with the explained/unexplained split",
+        "tags": ["analytics"]
+      }
+    },
+    "/analytics/product-leaderboard": {
+      "get": {
+        "operationId": "analytics.productLeaderboard",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "sources",
+            "schema": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          },
+          {
+            "in": "query",
+            "name": "statuses",
+            "schema": {
+              "items": {
+                "enum": ["awaiting_settlement", "linked", "partial", "settled_cash", "ignored"],
+                "type": "string"
+              },
+              "type": "array"
+            }
+          },
+          {
+            "in": "query",
+            "name": "currency",
+            "schema": {
+              "pattern": "^[A-Z]{3}$",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "merchantEntityId",
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "merchantEntityName",
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "merchantUnattributed",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "schema": {
+              "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "schema": {
+              "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "minOrderCount",
+            "schema": {
+              "maximum": 9007199254740991,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "coverage": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "confirmedProductLines": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "lineCount": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "nameKeyedLines": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "productCount": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "proposedProductLines": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "skuKeyedLines": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "unidentifiedLines": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "lineCount",
+                        "skuKeyedLines",
+                        "confirmedProductLines",
+                        "proposedProductLines",
+                        "nameKeyedLines",
+                        "unidentifiedLines",
+                        "productCount"
+                      ],
+                      "type": "object"
+                    },
+                    "minOrderCount": {
+                      "maximum": 9007199254740991,
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "period": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "from": {
+                          "nullable": true,
+                          "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+                          "type": "string"
+                        },
+                        "to": {
+                          "nullable": true,
+                          "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+                          "type": "string"
+                        }
+                      },
+                      "required": ["from", "to"],
+                      "type": "object"
+                    },
+                    "products": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "cadence": {
+                            "oneOf": [
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "basis": {
+                                    "enum": ["single-purchase"],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["basis"],
+                                "type": "object"
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "basis": {
+                                    "enum": ["intervals"],
+                                    "type": "string"
+                                  },
+                                  "longestIntervalSeconds": {
+                                    "maximum": 9007199254740991,
+                                    "minimum": 0,
+                                    "type": "integer"
+                                  },
+                                  "meanIntervalSeconds": {
+                                    "maximum": 9007199254740991,
+                                    "minimum": 0,
+                                    "type": "integer"
+                                  },
+                                  "medianIntervalSeconds": {
+                                    "maximum": 9007199254740991,
+                                    "minimum": 0,
+                                    "type": "integer"
+                                  },
+                                  "shortestIntervalSeconds": {
+                                    "maximum": 9007199254740991,
+                                    "minimum": 0,
+                                    "type": "integer"
+                                  }
+                                },
+                                "required": [
+                                  "basis",
+                                  "medianIntervalSeconds",
+                                  "meanIntervalSeconds",
+                                  "shortestIntervalSeconds",
+                                  "longestIntervalSeconds"
+                                ],
+                                "type": "object"
+                              }
+                            ]
+                          },
+                          "currency": {
+                            "pattern": "^[A-Z]{3}$",
+                            "type": "string"
+                          },
+                          "firstPurchasedAt": {
+                            "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+                            "type": "string"
+                          },
+                          "landedCostCents": {
+                            "maximum": 9007199254740991,
+                            "minimum": -9007199254740991,
+                            "type": "integer"
+                          },
+                          "lastPurchasedAt": {
+                            "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+                            "type": "string"
+                          },
+                          "lineCount": {
+                            "maximum": 9007199254740991,
+                            "minimum": 1,
+                            "type": "integer"
+                          },
+                          "merchants": {
+                            "items": {
+                              "oneOf": [
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "entityId": {
+                                      "type": "string"
+                                    },
+                                    "name": {
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
+                                    "resolution": {
+                                      "enum": ["entity"],
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": ["resolution", "entityId", "name"],
+                                  "type": "object"
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "entityId": {
+                                      "enum": [null],
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
+                                    "name": {
+                                      "type": "string"
+                                    },
+                                    "resolution": {
+                                      "enum": ["name"],
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": ["resolution", "entityId", "name"],
+                                  "type": "object"
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "entityId": {
+                                      "enum": [null],
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
+                                    "name": {
+                                      "enum": [null],
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
+                                    "resolution": {
+                                      "enum": ["unattributed"],
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": ["resolution", "entityId", "name"],
+                                  "type": "object"
+                                }
+                              ]
+                            },
+                            "minItems": 1,
+                            "type": "array"
+                          },
+                          "orderCount": {
+                            "maximum": 9007199254740991,
+                            "minimum": 1,
+                            "type": "integer"
+                          },
+                          "product": {
+                            "oneOf": [
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "basis": {
+                                    "enum": ["sku"],
+                                    "type": "string"
+                                  },
+                                  "name": {
+                                    "type": "string"
+                                  },
+                                  "scheme": {
+                                    "enum": ["asin", "merchant"],
+                                    "type": "string"
+                                  },
+                                  "sku": {
+                                    "type": "string"
+                                  },
+                                  "source": {
+                                    "nullable": true,
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["basis", "source", "scheme", "sku", "name"],
+                                "type": "object"
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "basis": {
+                                    "enum": ["name"],
+                                    "type": "string"
+                                  },
+                                  "name": {
+                                    "type": "string"
+                                  },
+                                  "normalisedName": {
+                                    "type": "string"
+                                  },
+                                  "sku": {
+                                    "enum": [null],
+                                    "nullable": true,
+                                    "type": "string"
+                                  },
+                                  "source": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["basis", "source", "sku", "name", "normalisedName"],
+                                "type": "object"
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "basis": {
+                                    "enum": ["product"],
+                                    "type": "string"
+                                  },
+                                  "confirmed": {
+                                    "type": "boolean"
+                                  },
+                                  "label": {
+                                    "type": "string"
+                                  },
+                                  "name": {
+                                    "type": "string"
+                                  },
+                                  "productId": {
+                                    "type": "string"
+                                  },
+                                  "sku": {
+                                    "enum": [null],
+                                    "nullable": true,
+                                    "type": "string"
+                                  },
+                                  "source": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "basis",
+                                  "source",
+                                  "sku",
+                                  "name",
+                                  "productId",
+                                  "label",
+                                  "confirmed"
+                                ],
+                                "type": "object"
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "basis": {
+                                    "enum": ["unidentified"],
+                                    "type": "string"
+                                  },
+                                  "itemId": {
+                                    "type": "string"
+                                  },
+                                  "name": {
+                                    "type": "string"
+                                  },
+                                  "sku": {
+                                    "enum": [null],
+                                    "nullable": true,
+                                    "type": "string"
+                                  },
+                                  "source": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["basis", "source", "sku", "name", "itemId"],
+                                "type": "object"
+                              }
+                            ]
+                          },
+                          "refundedCents": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "unitCount": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "unitPrice": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "firstCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "lastCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "maxCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "measuredLineCount": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "minCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "ordinaryLineCount": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "promotionalLineCount": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "unstatedPromotionLineCount": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "firstCents",
+                              "lastCents",
+                              "minCents",
+                              "maxCents",
+                              "promotionalLineCount",
+                              "ordinaryLineCount",
+                              "unstatedPromotionLineCount",
+                              "measuredLineCount"
+                            ],
+                            "type": "object"
+                          }
+                        },
+                        "required": [
+                          "product",
+                          "currency",
+                          "orderCount",
+                          "lineCount",
+                          "unitCount",
+                          "firstPurchasedAt",
+                          "lastPurchasedAt",
+                          "landedCostCents",
+                          "refundedCents",
+                          "cadence",
+                          "unitPrice",
+                          "merchants"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": ["period", "minOrderCount", "products", "coverage"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          }
+        },
+        "summary": "Repeat purchases per product — cadence, unit-price history, and the identity basis each group was formed on",
         "tags": ["analytics"]
       }
     },
@@ -309,7 +906,7 @@
                         "properties": {
                           "confirmedAt": {
                             "nullable": true,
-                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                            "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                             "type": "string"
                           },
                           "item": {
@@ -326,7 +923,7 @@
                                 "type": "integer"
                               },
                               "createdAt": {
-                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                                 "type": "string"
                               },
                               "gstApplicable": {
@@ -346,7 +943,7 @@
                                 "properties": {
                                   "confirmedAt": {
                                     "nullable": true,
-                                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                    "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                                     "type": "string"
                                   },
                                   "value": {
@@ -400,8 +997,20 @@
                                 "type": "string"
                               },
                               "sku": {
+                                "additionalProperties": false,
                                 "nullable": true,
-                                "type": "string"
+                                "properties": {
+                                  "scheme": {
+                                    "enum": ["asin", "merchant"],
+                                    "type": "string"
+                                  },
+                                  "value": {
+                                    "minLength": 1,
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["value", "scheme"],
+                                "type": "object"
                               },
                               "unitPriceCents": {
                                 "maximum": 9007199254740991,
@@ -456,6 +1065,560 @@
         "tags": ["purchase"]
       }
     },
+    "/products": {
+      "get": {
+        "operationId": "product.list",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "source",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "confirmed",
+            "schema": {
+              "enum": ["true", "false"],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "products": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "aliases": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "confirmedAt": {
+                                  "nullable": true,
+                                  "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+                                  "type": "string"
+                                },
+                                "createdAt": {
+                                  "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+                                  "type": "string"
+                                },
+                                "id": {
+                                  "type": "string"
+                                },
+                                "normalisedName": {
+                                  "type": "string"
+                                },
+                                "printedName": {
+                                  "type": "string"
+                                },
+                                "scopeKey": {
+                                  "type": "string"
+                                },
+                                "source": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "scopeKey",
+                                "source",
+                                "normalisedName",
+                                "printedName",
+                                "confirmedAt",
+                                "createdAt"
+                              ],
+                              "type": "object"
+                            },
+                            "minItems": 1,
+                            "type": "array"
+                          },
+                          "createdAt": {
+                            "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+                            "type": "string"
+                          },
+                          "id": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string"
+                          }
+                        },
+                        "required": ["id", "label", "createdAt", "aliases"],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": ["products"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          }
+        },
+        "summary": "The learned product dictionary: products and the printed wordings that resolve to them",
+        "tags": ["product"]
+      }
+    },
+    "/products/aliases/{aliasId}": {
+      "delete": {
+        "operationId": "product.deleteAlias",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "aliasId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {},
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "ok": {
+                      "enum": [true],
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["ok"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "404"
+          }
+        },
+        "summary": "Forget one printed wording, returning its lines to the on-the-fly grouping",
+        "tags": ["product"]
+      },
+      "patch": {
+        "operationId": "product.updateAlias",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "aliasId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "confirmed": {
+                    "type": "boolean"
+                  },
+                  "productId": {
+                    "minLength": 1,
+                    "nullable": true,
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "confirmedAt": {
+                      "nullable": true,
+                      "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "normalisedName": {
+                      "type": "string"
+                    },
+                    "printedName": {
+                      "type": "string"
+                    },
+                    "scopeKey": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "scopeKey",
+                    "source",
+                    "normalisedName",
+                    "printedName",
+                    "confirmedAt",
+                    "createdAt"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "404"
+          }
+        },
+        "summary": "Merge, split, assert or retract one printed wording",
+        "tags": ["product"]
+      }
+    },
+    "/products/proposals": {
+      "post": {
+        "operationId": "product.propose",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {},
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "confirmed": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "observedWordings": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "proposed": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "retired": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "scannedLines": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "scannedLines",
+                    "observedWordings",
+                    "proposed",
+                    "retired",
+                    "confirmed"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          }
+        },
+        "summary": "Mint a dictionary entry per printed wording and retire unconfirmed entries nothing prints",
+        "tags": ["product"]
+      }
+    },
+    "/products/{productId}": {
+      "delete": {
+        "operationId": "product.delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "productId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {},
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "ok": {
+                      "enum": [true],
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["ok"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "404"
+          }
+        },
+        "summary": "Forget a product and every wording that resolved to it",
+        "tags": ["product"]
+      },
+      "patch": {
+        "operationId": "product.rename",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "productId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "label": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": ["label"],
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "aliases": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "confirmedAt": {
+                            "nullable": true,
+                            "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+                            "type": "string"
+                          },
+                          "id": {
+                            "type": "string"
+                          },
+                          "normalisedName": {
+                            "type": "string"
+                          },
+                          "printedName": {
+                            "type": "string"
+                          },
+                          "scopeKey": {
+                            "type": "string"
+                          },
+                          "source": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "scopeKey",
+                          "source",
+                          "normalisedName",
+                          "printedName",
+                          "confirmedAt",
+                          "createdAt"
+                        ],
+                        "type": "object"
+                      },
+                      "minItems": 1,
+                      "type": "array"
+                    },
+                    "createdAt": {
+                      "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["id", "label", "createdAt", "aliases"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "404"
+          }
+        },
+        "summary": "Rename a product without touching the wordings that resolve to it",
+        "tags": ["product"]
+      }
+    },
     "/purchases": {
       "get": {
         "operationId": "purchase.list",
@@ -483,9 +1646,40 @@
           },
           {
             "in": "query",
+            "name": "currency",
+            "schema": {
+              "pattern": "^[A-Z]{3}$",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "merchantEntityId",
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "merchantEntityName",
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "merchantUnattributed",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
             "name": "from",
             "schema": {
-              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+              "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
               "type": "string"
             }
           },
@@ -493,7 +1687,7 @@
             "in": "query",
             "name": "to",
             "schema": {
-              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+              "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
               "type": "string"
             }
           },
@@ -531,7 +1725,7 @@
                             "type": "string"
                           },
                           "createdAt": {
-                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                            "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                             "type": "string"
                           },
                           "currency": {
@@ -559,7 +1753,7 @@
                             "type": "string"
                           },
                           "orderedAt": {
-                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                            "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                             "type": "string"
                           },
                           "paymentHint": {
@@ -617,7 +1811,7 @@
                             "type": "integer"
                           },
                           "updatedAt": {
-                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                            "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                             "type": "string"
                           }
                         },
@@ -655,6 +1849,26 @@
               }
             },
             "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
           }
         },
         "summary": "List orders, newest first",
@@ -699,7 +1913,7 @@
                         },
                         "chargedAt": {
                           "nullable": true,
-                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                          "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                           "type": "string"
                         },
                         "currency": {
@@ -854,8 +2068,20 @@
                           "type": "string"
                         },
                         "sku": {
+                          "additionalProperties": false,
                           "nullable": true,
-                          "type": "string"
+                          "properties": {
+                            "scheme": {
+                              "enum": ["asin", "merchant"],
+                              "type": "string"
+                            },
+                            "value": {
+                              "minLength": 1,
+                              "type": "string"
+                            }
+                          },
+                          "required": ["value", "scheme"],
+                          "type": "object"
                         },
                         "tags": {
                           "items": {
@@ -906,7 +2132,7 @@
                     "type": "string"
                   },
                   "orderedAt": {
-                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                    "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                     "type": "string"
                   },
                   "paymentHint": {
@@ -931,7 +2157,7 @@
                         },
                         "deliveredAt": {
                           "nullable": true,
-                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                          "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                           "type": "string"
                         },
                         "ref": {
@@ -940,7 +2166,7 @@
                         },
                         "shippedAt": {
                           "nullable": true,
-                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                          "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                           "type": "string"
                         },
                         "shippingCents": {
@@ -988,6 +2214,13 @@
                     "maximum": 9007199254740991,
                     "minimum": 0,
                     "type": "integer"
+                  },
+                  "tags": {
+                    "items": {
+                      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                      "type": "string"
+                    },
+                    "type": "array"
                   },
                   "taxCents": {
                     "maximum": 9007199254740991,
@@ -1082,7 +2315,7 @@
                                   "type": "string"
                                 },
                                 "createdAt": {
-                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                  "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                                   "type": "string"
                                 },
                                 "id": {
@@ -1107,11 +2340,11 @@
                               },
                               "chargedAt": {
                                 "nullable": true,
-                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                                 "type": "string"
                               },
                               "createdAt": {
-                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                                 "type": "string"
                               },
                               "currency": {
@@ -1155,7 +2388,7 @@
                                 "type": "string"
                               },
                               "updatedAt": {
-                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                                 "type": "string"
                               }
                             },
@@ -1196,11 +2429,11 @@
                                 },
                                 "confirmedAt": {
                                   "nullable": true,
-                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                  "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                                   "type": "string"
                                 },
                                 "createdAt": {
-                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                  "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                                   "type": "string"
                                 },
                                 "id": {
@@ -1252,12 +2485,12 @@
                         "additionalProperties": false,
                         "properties": {
                           "createdAt": {
-                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                            "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                             "type": "string"
                           },
                           "documentStaleAt": {
                             "nullable": true,
-                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                            "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                             "type": "string"
                           },
                           "documentUri": {
@@ -1316,7 +2549,7 @@
                                 "type": "integer"
                               },
                               "createdAt": {
-                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                                 "type": "string"
                               },
                               "gstApplicable": {
@@ -1336,7 +2569,7 @@
                                 "properties": {
                                   "confirmedAt": {
                                     "nullable": true,
-                                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                    "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                                     "type": "string"
                                   },
                                   "value": {
@@ -1390,8 +2623,20 @@
                                 "type": "string"
                               },
                               "sku": {
+                                "additionalProperties": false,
                                 "nullable": true,
-                                "type": "string"
+                                "properties": {
+                                  "scheme": {
+                                    "enum": ["asin", "merchant"],
+                                    "type": "string"
+                                  },
+                                  "value": {
+                                    "minLength": 1,
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["value", "scheme"],
+                                "type": "object"
                               },
                               "unitPriceCents": {
                                 "maximum": 9007199254740991,
@@ -1444,7 +2689,7 @@
                               "properties": {
                                 "confirmedAt": {
                                   "nullable": true,
-                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                  "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                                   "type": "string"
                                 },
                                 "tag": {
@@ -1462,15 +2707,20 @@
                               "additionalProperties": false,
                               "properties": {
                                 "createdAt": {
-                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                  "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                                   "type": "string"
                                 },
                                 "id": {
                                   "type": "string"
                                 },
+                                "inventoryDeclinedAt": {
+                                  "nullable": true,
+                                  "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+                                  "type": "string"
+                                },
                                 "inventoryItemStaleAt": {
                                   "nullable": true,
-                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                  "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                                   "type": "string"
                                 },
                                 "inventoryItemUri": {
@@ -1492,6 +2742,7 @@
                                 "serialNumber",
                                 "inventoryItemUri",
                                 "inventoryItemStaleAt",
+                                "inventoryDeclinedAt",
                                 "createdAt"
                               ],
                               "type": "object"
@@ -1511,7 +2762,7 @@
                           "type": "string"
                         },
                         "createdAt": {
-                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                          "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                           "type": "string"
                         },
                         "currency": {
@@ -1539,7 +2790,7 @@
                           "type": "string"
                         },
                         "orderedAt": {
-                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                          "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                           "type": "string"
                         },
                         "paymentHint": {
@@ -1597,7 +2848,7 @@
                           "type": "integer"
                         },
                         "updatedAt": {
-                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                          "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                           "type": "string"
                         }
                       },
@@ -1635,12 +2886,12 @@
                             "type": "string"
                           },
                           "createdAt": {
-                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                            "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                             "type": "string"
                           },
                           "deliveredAt": {
                             "nullable": true,
-                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                            "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                             "type": "string"
                           },
                           "id": {
@@ -1656,7 +2907,7 @@
                           },
                           "shippedAt": {
                             "nullable": true,
-                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                            "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                             "type": "string"
                           },
                           "shippingCents": {
@@ -1677,7 +2928,7 @@
                             "type": "string"
                           },
                           "updatedAt": {
-                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                            "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                             "type": "string"
                           }
                         },
@@ -1914,7 +3165,7 @@
                                   "type": "string"
                                 },
                                 "createdAt": {
-                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                  "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                                   "type": "string"
                                 },
                                 "id": {
@@ -1939,11 +3190,11 @@
                               },
                               "chargedAt": {
                                 "nullable": true,
-                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                                 "type": "string"
                               },
                               "createdAt": {
-                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                                 "type": "string"
                               },
                               "currency": {
@@ -1987,7 +3238,7 @@
                                 "type": "string"
                               },
                               "updatedAt": {
-                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                                 "type": "string"
                               }
                             },
@@ -2028,11 +3279,11 @@
                                 },
                                 "confirmedAt": {
                                   "nullable": true,
-                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                  "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                                   "type": "string"
                                 },
                                 "createdAt": {
-                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                  "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                                   "type": "string"
                                 },
                                 "id": {
@@ -2084,12 +3335,12 @@
                         "additionalProperties": false,
                         "properties": {
                           "createdAt": {
-                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                            "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                             "type": "string"
                           },
                           "documentStaleAt": {
                             "nullable": true,
-                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                            "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                             "type": "string"
                           },
                           "documentUri": {
@@ -2148,7 +3399,7 @@
                                 "type": "integer"
                               },
                               "createdAt": {
-                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                                 "type": "string"
                               },
                               "gstApplicable": {
@@ -2168,7 +3419,7 @@
                                 "properties": {
                                   "confirmedAt": {
                                     "nullable": true,
-                                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                    "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                                     "type": "string"
                                   },
                                   "value": {
@@ -2222,8 +3473,20 @@
                                 "type": "string"
                               },
                               "sku": {
+                                "additionalProperties": false,
                                 "nullable": true,
-                                "type": "string"
+                                "properties": {
+                                  "scheme": {
+                                    "enum": ["asin", "merchant"],
+                                    "type": "string"
+                                  },
+                                  "value": {
+                                    "minLength": 1,
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["value", "scheme"],
+                                "type": "object"
                               },
                               "unitPriceCents": {
                                 "maximum": 9007199254740991,
@@ -2276,7 +3539,7 @@
                               "properties": {
                                 "confirmedAt": {
                                   "nullable": true,
-                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                  "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                                   "type": "string"
                                 },
                                 "tag": {
@@ -2294,15 +3557,20 @@
                               "additionalProperties": false,
                               "properties": {
                                 "createdAt": {
-                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                  "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                                   "type": "string"
                                 },
                                 "id": {
                                   "type": "string"
                                 },
+                                "inventoryDeclinedAt": {
+                                  "nullable": true,
+                                  "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+                                  "type": "string"
+                                },
                                 "inventoryItemStaleAt": {
                                   "nullable": true,
-                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                  "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                                   "type": "string"
                                 },
                                 "inventoryItemUri": {
@@ -2324,6 +3592,7 @@
                                 "serialNumber",
                                 "inventoryItemUri",
                                 "inventoryItemStaleAt",
+                                "inventoryDeclinedAt",
                                 "createdAt"
                               ],
                               "type": "object"
@@ -2343,7 +3612,7 @@
                           "type": "string"
                         },
                         "createdAt": {
-                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                          "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                           "type": "string"
                         },
                         "currency": {
@@ -2371,7 +3640,7 @@
                           "type": "string"
                         },
                         "orderedAt": {
-                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                          "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                           "type": "string"
                         },
                         "paymentHint": {
@@ -2429,7 +3698,7 @@
                           "type": "integer"
                         },
                         "updatedAt": {
-                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                          "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                           "type": "string"
                         }
                       },
@@ -2467,12 +3736,12 @@
                             "type": "string"
                           },
                           "createdAt": {
-                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                            "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                             "type": "string"
                           },
                           "deliveredAt": {
                             "nullable": true,
-                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                            "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                             "type": "string"
                           },
                           "id": {
@@ -2488,7 +3757,7 @@
                           },
                           "shippedAt": {
                             "nullable": true,
-                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                            "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                             "type": "string"
                           },
                           "shippingCents": {
@@ -2509,7 +3778,7 @@
                             "type": "string"
                           },
                           "updatedAt": {
-                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                            "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                             "type": "string"
                           }
                         },
@@ -2575,6 +3844,253 @@
           }
         },
         "summary": "Get an order with its deliveries, lines, charges, documents and accounting split",
+        "tags": ["purchase"]
+      }
+    },
+    "/purchases/{id}/documents": {
+      "post": {
+        "operationId": "purchase.attachDocument",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "documentUri": {
+                    "pattern": "^pops:\\/\\/[a-z0-9-]+\\/[a-z0-9-]+\\/[^/\\s]+$",
+                    "type": "string"
+                  },
+                  "kind": {
+                    "enum": [
+                      "tax_invoice",
+                      "receipt",
+                      "order_confirmation",
+                      "delivery_photo",
+                      "other"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": ["documentUri"],
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "document": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "createdAt": {
+                          "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+                          "type": "string"
+                        },
+                        "documentStaleAt": {
+                          "nullable": true,
+                          "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+                          "type": "string"
+                        },
+                        "documentUri": {
+                          "pattern": "^pops:\\/\\/[a-z0-9-]+\\/[a-z0-9-]+\\/[^/\\s]+$",
+                          "type": "string"
+                        },
+                        "id": {
+                          "type": "string"
+                        },
+                        "kind": {
+                          "enum": [
+                            "tax_invoice",
+                            "receipt",
+                            "order_confirmation",
+                            "delivery_photo",
+                            "other"
+                          ],
+                          "type": "string"
+                        },
+                        "purchaseId": {
+                          "type": "string"
+                        },
+                        "shipmentId": {
+                          "nullable": true,
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "purchaseId",
+                        "shipmentId",
+                        "documentUri",
+                        "documentStaleAt",
+                        "kind",
+                        "createdAt"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": ["document"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "201"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "409"
+          }
+        },
+        "summary": "Attach a document to an existing order",
+        "tags": ["purchase"]
+      }
+    },
+    "/purchases/{id}/inventory-proposals": {
+      "get": {
+        "operationId": "purchase.listInventoryProposals",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "proposals": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "itemId": {
+                            "type": "string"
+                          },
+                          "itemName": {
+                            "type": "string"
+                          },
+                          "kindConfirmed": {
+                            "type": "boolean"
+                          },
+                          "purchaseDate": {
+                            "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+                            "type": "string"
+                          },
+                          "purchaseId": {
+                            "type": "string"
+                          },
+                          "purchasePriceCents": {
+                            "maximum": 9007199254740991,
+                            "minimum": -9007199254740991,
+                            "type": "integer"
+                          },
+                          "purchaseTransactionUri": {
+                            "nullable": true,
+                            "pattern": "^pops:\\/\\/[a-z0-9-]+\\/[a-z0-9-]+\\/[^/\\s]+$",
+                            "type": "string"
+                          },
+                          "purchasedFromName": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "serialNumber": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "slot": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "unitId": {
+                            "nullable": true,
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "purchaseId",
+                          "itemId",
+                          "unitId",
+                          "slot",
+                          "itemName",
+                          "serialNumber",
+                          "purchaseDate",
+                          "purchasePriceCents",
+                          "purchasedFromName",
+                          "purchaseTransactionUri",
+                          "kindConfirmed"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": ["proposals"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          }
+        },
+        "summary": "Unanswered inventory offers derived from an order's durable lines",
         "tags": ["purchase"]
       }
     },
@@ -2645,7 +4161,7 @@
                           "type": "integer"
                         },
                         "createdAt": {
-                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                          "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                           "type": "string"
                         },
                         "gstApplicable": {
@@ -2665,7 +4181,7 @@
                           "properties": {
                             "confirmedAt": {
                               "nullable": true,
-                              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                              "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                               "type": "string"
                             },
                             "value": {
@@ -2719,8 +4235,20 @@
                           "type": "string"
                         },
                         "sku": {
+                          "additionalProperties": false,
                           "nullable": true,
-                          "type": "string"
+                          "properties": {
+                            "scheme": {
+                              "enum": ["asin", "merchant"],
+                              "type": "string"
+                            },
+                            "value": {
+                              "minLength": 1,
+                              "type": "string"
+                            }
+                          },
+                          "required": ["value", "scheme"],
+                          "type": "object"
                         },
                         "unitPriceCents": {
                           "maximum": 9007199254740991,
@@ -2773,7 +4301,7 @@
                         "properties": {
                           "confirmedAt": {
                             "nullable": true,
-                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                            "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                             "type": "string"
                           },
                           "tag": {
@@ -2791,15 +4319,20 @@
                         "additionalProperties": false,
                         "properties": {
                           "createdAt": {
-                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                            "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                             "type": "string"
                           },
                           "id": {
                             "type": "string"
                           },
+                          "inventoryDeclinedAt": {
+                            "nullable": true,
+                            "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+                            "type": "string"
+                          },
                           "inventoryItemStaleAt": {
                             "nullable": true,
-                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                            "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                             "type": "string"
                           },
                           "inventoryItemUri": {
@@ -2821,6 +4354,7 @@
                           "serialNumber",
                           "inventoryItemUri",
                           "inventoryItemStaleAt",
+                          "inventoryDeclinedAt",
                           "createdAt"
                         ],
                         "type": "object"
@@ -2880,6 +4414,194 @@
         "tags": ["purchase"]
       }
     },
+    "/purchases/{id}/items/{itemId}/inventory-proposal": {
+      "post": {
+        "operationId": "purchase.decideInventoryProposal",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "itemId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "additionalProperties": false,
+                    "properties": {
+                      "decision": {
+                        "enum": ["accepted"],
+                        "type": "string"
+                      },
+                      "inventoryItemUri": {
+                        "pattern": "^pops:\\/\\/inventory\\/item\\/[^/\\s]+$",
+                        "type": "string"
+                      },
+                      "unitId": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["decision", "inventoryItemUri"],
+                    "type": "object"
+                  },
+                  {
+                    "additionalProperties": false,
+                    "properties": {
+                      "decision": {
+                        "enum": ["declined"],
+                        "type": "string"
+                      },
+                      "unitId": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["decision"],
+                    "type": "object"
+                  }
+                ]
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "unit": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "createdAt": {
+                          "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+                          "type": "string"
+                        },
+                        "id": {
+                          "type": "string"
+                        },
+                        "inventoryDeclinedAt": {
+                          "nullable": true,
+                          "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+                          "type": "string"
+                        },
+                        "inventoryItemStaleAt": {
+                          "nullable": true,
+                          "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+                          "type": "string"
+                        },
+                        "inventoryItemUri": {
+                          "nullable": true,
+                          "pattern": "^pops:\\/\\/[a-z0-9-]+\\/[a-z0-9-]+\\/[^/\\s]+$",
+                          "type": "string"
+                        },
+                        "itemId": {
+                          "type": "string"
+                        },
+                        "serialNumber": {
+                          "nullable": true,
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "itemId",
+                        "serialNumber",
+                        "inventoryItemUri",
+                        "inventoryItemStaleAt",
+                        "inventoryDeclinedAt",
+                        "createdAt"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": ["unit"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "409"
+          }
+        },
+        "summary": "Accept or decline one inventory proposal on a line",
+        "tags": ["purchase"]
+      }
+    },
     "/receipts": {
       "post": {
         "operationId": "receipt.upload",
@@ -2890,6 +4612,39 @@
               "schema": {
                 "additionalProperties": false,
                 "properties": {
+                  "capture": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "capturedAt": {
+                        "format": "date-time",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$",
+                        "type": "string"
+                      },
+                      "location": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "latitude": {
+                            "maximum": 90,
+                            "minimum": -90,
+                            "type": "number"
+                          },
+                          "longitude": {
+                            "maximum": 180,
+                            "minimum": -180,
+                            "type": "number"
+                          }
+                        },
+                        "required": ["latitude", "longitude"],
+                        "type": "object"
+                      },
+                      "timeZone": {
+                        "maxLength": 64,
+                        "minLength": 1,
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
                   "parts": {
                     "items": {
                       "additionalProperties": false,
@@ -3005,7 +4760,7 @@
                                           "type": "string"
                                         },
                                         "createdAt": {
-                                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                          "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                                           "type": "string"
                                         },
                                         "id": {
@@ -3036,11 +4791,11 @@
                                       },
                                       "chargedAt": {
                                         "nullable": true,
-                                        "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                        "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                                         "type": "string"
                                       },
                                       "createdAt": {
-                                        "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                        "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                                         "type": "string"
                                       },
                                       "currency": {
@@ -3089,7 +4844,7 @@
                                         "type": "string"
                                       },
                                       "updatedAt": {
-                                        "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                        "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                                         "type": "string"
                                       }
                                     },
@@ -3130,11 +4885,11 @@
                                         },
                                         "confirmedAt": {
                                           "nullable": true,
-                                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                          "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                                           "type": "string"
                                         },
                                         "createdAt": {
-                                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                          "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                                           "type": "string"
                                         },
                                         "id": {
@@ -3186,12 +4941,12 @@
                                 "additionalProperties": false,
                                 "properties": {
                                   "createdAt": {
-                                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                    "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                                     "type": "string"
                                   },
                                   "documentStaleAt": {
                                     "nullable": true,
-                                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                    "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                                     "type": "string"
                                   },
                                   "documentUri": {
@@ -3250,7 +5005,7 @@
                                         "type": "integer"
                                       },
                                       "createdAt": {
-                                        "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                        "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                                         "type": "string"
                                       },
                                       "gstApplicable": {
@@ -3270,7 +5025,7 @@
                                         "properties": {
                                           "confirmedAt": {
                                             "nullable": true,
-                                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                            "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                                             "type": "string"
                                           },
                                           "value": {
@@ -3324,8 +5079,20 @@
                                         "type": "string"
                                       },
                                       "sku": {
+                                        "additionalProperties": false,
                                         "nullable": true,
-                                        "type": "string"
+                                        "properties": {
+                                          "scheme": {
+                                            "enum": ["asin", "merchant"],
+                                            "type": "string"
+                                          },
+                                          "value": {
+                                            "minLength": 1,
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": ["value", "scheme"],
+                                        "type": "object"
                                       },
                                       "unitPriceCents": {
                                         "maximum": 9007199254740991,
@@ -3378,7 +5145,7 @@
                                       "properties": {
                                         "confirmedAt": {
                                           "nullable": true,
-                                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                          "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                                           "type": "string"
                                         },
                                         "tag": {
@@ -3396,15 +5163,20 @@
                                       "additionalProperties": false,
                                       "properties": {
                                         "createdAt": {
-                                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                          "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                                           "type": "string"
                                         },
                                         "id": {
                                           "type": "string"
                                         },
+                                        "inventoryDeclinedAt": {
+                                          "nullable": true,
+                                          "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+                                          "type": "string"
+                                        },
                                         "inventoryItemStaleAt": {
                                           "nullable": true,
-                                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                          "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                                           "type": "string"
                                         },
                                         "inventoryItemUri": {
@@ -3426,6 +5198,7 @@
                                         "serialNumber",
                                         "inventoryItemUri",
                                         "inventoryItemStaleAt",
+                                        "inventoryDeclinedAt",
                                         "createdAt"
                                       ],
                                       "type": "object"
@@ -3445,7 +5218,7 @@
                                   "type": "string"
                                 },
                                 "createdAt": {
-                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                  "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                                   "type": "string"
                                 },
                                 "currency": {
@@ -3473,7 +5246,7 @@
                                   "type": "string"
                                 },
                                 "orderedAt": {
-                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                  "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                                   "type": "string"
                                 },
                                 "paymentHint": {
@@ -3531,7 +5304,7 @@
                                   "type": "integer"
                                 },
                                 "updatedAt": {
-                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                  "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                                   "type": "string"
                                 }
                               },
@@ -3569,12 +5342,12 @@
                                     "type": "string"
                                   },
                                   "createdAt": {
-                                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                    "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                                     "type": "string"
                                   },
                                   "deliveredAt": {
                                     "nullable": true,
-                                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                    "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                                     "type": "string"
                                   },
                                   "id": {
@@ -3590,7 +5363,7 @@
                                   },
                                   "shippedAt": {
                                     "nullable": true,
-                                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                    "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                                     "type": "string"
                                   },
                                   "shippingCents": {
@@ -3617,7 +5390,7 @@
                                     "type": "string"
                                   },
                                   "updatedAt": {
-                                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                    "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                                     "type": "string"
                                   }
                                 },
@@ -4036,11 +5809,11 @@
                                     },
                                     "chargedAt": {
                                       "nullable": true,
-                                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                      "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                                       "type": "string"
                                     },
                                     "createdAt": {
-                                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                      "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                                       "type": "string"
                                     },
                                     "currency": {
@@ -4084,7 +5857,7 @@
                                       "type": "string"
                                     },
                                     "updatedAt": {
-                                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                      "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                                       "type": "string"
                                     }
                                   },
@@ -4124,11 +5897,11 @@
                                     },
                                     "confirmedAt": {
                                       "nullable": true,
-                                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                      "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                                       "type": "string"
                                     },
                                     "createdAt": {
-                                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                      "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                                       "type": "string"
                                     },
                                     "id": {
@@ -4185,7 +5958,7 @@
                                 "type": "string"
                               },
                               "createdAt": {
-                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                                 "type": "string"
                               },
                               "currency": {
@@ -4213,7 +5986,7 @@
                                 "type": "string"
                               },
                               "orderedAt": {
-                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                                 "type": "string"
                               },
                               "paymentHint": {
@@ -4271,7 +6044,7 @@
                                 "type": "integer"
                               },
                               "updatedAt": {
-                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                                "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                                 "type": "string"
                               }
                             },
@@ -4320,6 +6093,87 @@
           }
         },
         "summary": "Orders linked to one finance transaction, confirmed or derived",
+        "tags": ["reconcile"]
+      }
+    },
+    "/reconcile/links/batch": {
+      "post": {
+        "operationId": "reconcile.linksBatch",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "transactionUris": {
+                    "items": {
+                      "pattern": "^pops:\\/\\/finance\\/transaction\\/[^/\\s]+$",
+                      "type": "string"
+                    },
+                    "maxItems": 500,
+                    "minItems": 1,
+                    "type": "array"
+                  }
+                },
+                "required": ["transactionUris"],
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "transactions": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "confirmedChargeCount": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "derivedChargeCount": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "purchaseCount": {
+                            "maximum": 9007199254740991,
+                            "minimum": 1,
+                            "type": "integer"
+                          },
+                          "transactionUri": {
+                            "pattern": "^pops:\\/\\/finance\\/transaction\\/[^/\\s]+$",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "transactionUri",
+                          "purchaseCount",
+                          "confirmedChargeCount",
+                          "derivedChargeCount"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": ["transactions"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          }
+        },
+        "summary": "Which of these finance transactions an order explains, confirmed or derived",
         "tags": ["reconcile"]
       }
     },
@@ -4401,7 +6255,7 @@
                             "type": "string"
                           },
                           "orderedAt": {
-                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                            "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                             "type": "string"
                           },
                           "proposed": {
@@ -4917,7 +6771,7 @@
                             "type": "string"
                           },
                           "createdAt": {
-                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                            "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                             "type": "string"
                           },
                           "descriptorPattern": {
@@ -5078,7 +6932,7 @@
                       "type": "string"
                     },
                     "createdAt": {
-                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                      "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                       "type": "string"
                     },
                     "descriptorPattern": {
@@ -5199,7 +7053,7 @@
                       "type": "string"
                     },
                     "createdAt": {
-                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+                      "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                       "type": "string"
                     },
                     "descriptorPattern": {

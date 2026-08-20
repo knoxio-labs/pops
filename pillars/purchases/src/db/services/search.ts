@@ -11,6 +11,9 @@
  * pillar can answer "which order had the dosing funnel in it", so the item
  * adapter searches `name` and `sku` and every item hit carries its
  * `purchaseId` — a line is meaningless without the order it was bought on.
+ * The `sku` predicate is over the raw column, because a caller typing an
+ * ASIN types the identifier and not the namespace it lives in; the hit
+ * carries both, because that is what a consumer may group on.
  *
  * **Matching is a candidate scan, then a rank.** `LIKE '%text%'` narrows in
  * SQL and `search-ranking.ts` scores what comes back. No FTS index: the
@@ -52,6 +55,7 @@ import { and, eq, like, or, sql } from 'drizzle-orm';
 import { purchaseItems, purchases } from '../schema.js';
 import { purchaseFilterConditions } from './purchase-reads.js';
 import { bestMatch, byScoreDescending, rank } from './search-ranking.js';
+import { productIdentityOf } from './stored-product-identity.js';
 
 import type { SQL } from 'drizzle-orm';
 import type { AnySQLiteColumn } from 'drizzle-orm/sqlite-core';
@@ -80,7 +84,14 @@ type OrderRow = Pick<
 
 type ItemRow = Pick<
   PurchaseItemRow,
-  'id' | 'purchaseId' | 'name' | 'sku' | 'quantity' | 'lineTotalCents' | 'refundedCents'
+  | 'id'
+  | 'purchaseId'
+  | 'name'
+  | 'sku'
+  | 'skuScheme'
+  | 'quantity'
+  | 'lineTotalCents'
+  | 'refundedCents'
 > &
   Pick<PurchaseRow, 'orderedAt' | 'currency' | 'merchantEntityName'>;
 
@@ -159,6 +170,7 @@ function itemRows(db: PurchasesDb, text: string, scope: PurchaseScopeFilter): It
       purchaseId: purchaseItems.purchaseId,
       name: purchaseItems.name,
       sku: purchaseItems.sku,
+      skuScheme: purchaseItems.skuScheme,
       quantity: purchaseItems.quantity,
       lineTotalCents: purchaseItems.lineTotalCents,
       refundedCents: purchaseItems.refundedCents,
@@ -203,7 +215,9 @@ function itemCandidate(row: ItemRow, text: string): ScoredCandidate | null {
         // be unreachable.
         purchaseId: row.purchaseId,
         name: row.name,
-        sku: row.sku,
+        // The namespace travels with the identifier here too: a hit is what
+        // an MCP tool reads, and a bare string is what it would join on.
+        sku: productIdentityOf(row),
         quantity: row.quantity,
         lineTotalCents: row.lineTotalCents,
         refundedCents: row.refundedCents,

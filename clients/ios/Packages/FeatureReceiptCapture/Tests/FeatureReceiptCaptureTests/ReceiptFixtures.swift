@@ -1,10 +1,30 @@
 import AppCore
 
+extension ReceiptPurchase {
+    /// Local to this target for the reason the fixtures below are: the values
+    /// are chosen so that a copy assertion reads as the sentence a user would
+    /// see, and `AppCoreFakes`' own defaults answer to a different suite.
+    internal static func fake(
+        id: String = "purchase-1",
+        merchantName: String? = "Test Grocer",
+        total: MoneyAmount = MoneyAmount(minorUnits: 8420, currencyCode: "AUD"),
+        orderedAt: String = "2026-08-01T04:32:00.000Z",
+        itemCount: Int = 12
+    ) -> ReceiptPurchase {
+        ReceiptPurchase(
+            id: id,
+            merchantName: merchantName,
+            total: total,
+            orderedAt: orderedAt,
+            itemCount: itemCount
+        )
+    }
+}
+
 extension ExtractedReceipt {
     internal static func fake(
         merchantName: String? = "Test Grocer",
         address: String? = "1 Test Street",
-        timeZone: String? = "Australia/Sydney",
         purchasedOn: String? = "2026-08-01",
         purchasedAt: String? = "14:32",
         currency: String? = "AUD",
@@ -19,7 +39,6 @@ extension ExtractedReceipt {
         ExtractedReceipt(
             merchantName: merchantName,
             address: address,
-            timeZone: timeZone,
             purchasedOn: purchasedOn,
             purchasedAt: purchasedAt,
             currency: currency,

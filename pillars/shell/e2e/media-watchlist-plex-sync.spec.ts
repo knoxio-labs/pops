@@ -33,8 +33,159 @@
  * errors) so every test in this suite verifies no uncaught JS error occurs.
  */
 import { expect, test, type Page } from '@playwright/test';
+import { z } from 'zod';
 
-import { stubShellBoot } from './helpers/pillar-rest';
+import { assertMatchesContract, json, fulfilWith, stubShellBoot } from './helpers/pillar-rest';
+
+// ---------------------------------------------------------------------------
+// Contract schemas — hand-mirrored from the media pillar's own zod schemas
+// rather than imported. `shell-no-cross-internal` (`.dependency-cruiser.cjs`)
+// lets the shell import another pillar's `@pops/app-<id>` UI package via its
+// `index.ts` entrypoint only — not that pillar's own `@pops/<id>` contract
+// package or its generated Hey API client, so neither is reachable here.
+// ---------------------------------------------------------------------------
+
+/** Mirrors `SyncJobSchema` (`pillars/media/src/contract/rest-plex-sync.ts`). */
+const SyncJobSchema = z
+  .object({
+    id: z.string(),
+    jobType: z.string(),
+    status: z.enum(['running', 'completed', 'failed']),
+    startedAt: z.string(),
+    completedAt: z.string().nullable(),
+    durationMs: z.number().nullable(),
+    progress: z.object({ processed: z.number(), total: z.number() }).strict(),
+    result: z.unknown(),
+    error: z.string().nullable(),
+  })
+  .strict();
+
+/** `POST /plex/sync` 200 — `plexSyncRoutes.startSyncJob`. */
+const StartSyncResponseSchema = z
+  .object({ data: z.object({ jobId: z.string() }).strict() })
+  .strict();
+
+/** `GET /plex/sync/active` 200 — `plexSyncRoutes.getActiveSyncJobs`. */
+const ActiveSyncJobsResponseSchema = z.object({ data: z.array(SyncJobSchema) }).strict();
+
+/** `GET /plex/sync/:jobId` 200 — `plexSyncRoutes.getSyncJobStatus`. */
+const SyncJobStatusResponseSchema = z.object({ data: SyncJobSchema }).strict();
+
+/**
+ * Mirrors `WatchlistEntrySchema` (`pillars/media/src/contract/rest-watchlist.ts`).
+ * `mediaType` is a bare string on the wire response, not the narrower
+ * `AddToWatchlistBody` enum (`'movie' | 'tv_show'`) — the read schema does
+ * not constrain it, so mirroring it as `z.string()` here (rather than a
+ * literal union) matches what the server actually validates, not a stricter
+ * shape a real response could legitimately violate.
+ */
+const WatchlistEntrySchema = z
+  .object({
+    id: z.number(),
+    mediaType: z.string(),
+    mediaId: z.number(),
+    priority: z.number().nullable(),
+    notes: z.string().nullable(),
+    source: z.string().nullable(),
+    plexRatingKey: z.string().nullable(),
+    addedAt: z.string(),
+    title: z.string().nullable(),
+    posterUrl: z.string().nullable(),
+  })
+  .strict();
+
+/** `PaginationMetaSchema` (`pillars/media/src/contract/rest-schemas.ts`). */
+const PaginationMetaSchema = z
+  .object({
+    total: z.number(),
+    limit: z.number(),
+    offset: z.number(),
+    hasMore: z.boolean(),
+  })
+  .strict();
+
+/** `GET /watchlist` 200 — `mediaWatchlistContract.list` (`rest-watchlist.ts`). */
+const WatchlistListResponseSchema = z
+  .object({ data: z.array(WatchlistEntrySchema), pagination: PaginationMetaSchema })
+  .strict();
+
+/** Mirrors `MovieSchema` (`pillars/media/src/contract/rest-movies.ts`). */
+const MovieSchema = z
+  .object({
+    id: z.number(),
+    tmdbId: z.number(),
+    imdbId: z.string().nullable(),
+    title: z.string(),
+    originalTitle: z.string().nullable(),
+    overview: z.string().nullable(),
+    tagline: z.string().nullable(),
+    releaseDate: z.string().nullable(),
+    runtime: z.number().nullable(),
+    status: z.string().nullable(),
+    originalLanguage: z.string().nullable(),
+    budget: z.number().nullable(),
+    revenue: z.number().nullable(),
+    posterPath: z.string().nullable(),
+    posterUrl: z.string().nullable(),
+    backdropPath: z.string().nullable(),
+    backdropUrl: z.string().nullable(),
+    logoPath: z.string().nullable(),
+    logoUrl: z.string().nullable(),
+    posterOverridePath: z.string().nullable(),
+    voteAverage: z.number().nullable(),
+    voteCount: z.number().nullable(),
+    genres: z.array(z.string()),
+    createdAt: z.string(),
+    updatedAt: z.string(),
+    // Nullable per the media pillar's own `MovieSchema` and the committed
+    // OpenAPI source (`nullable: true`) — see `media-library-search-add-movie.spec.ts`
+    // for the drift this deliberately does not follow the generated Hey API
+    // client into.
+    rotationStatus: z.enum(['leaving', 'protected']).nullable(),
+    rotationExpiresAt: z.string().nullable(),
+  })
+  .strict();
+
+/** `GET /movies` 200 — `mediaMoviesContract.list` (`rest-movies.ts`). */
+const MovieListResponseSchema = z
+  .object({ data: z.array(MovieSchema), pagination: PaginationMetaSchema })
+  .strict();
+
+/** Mirrors `TvShowSchema` (`pillars/media/src/contract/rest-tv-shows-schemas.ts`). */
+const TvShowSchema = z
+  .object({
+    id: z.number(),
+    tvdbId: z.number(),
+    name: z.string(),
+    originalName: z.string().nullable(),
+    overview: z.string().nullable(),
+    firstAirDate: z.string().nullable(),
+    lastAirDate: z.string().nullable(),
+    status: z.string().nullable(),
+    originalLanguage: z.string().nullable(),
+    numberOfSeasons: z.number().nullable(),
+    numberOfEpisodes: z.number().nullable(),
+    episodeRunTime: z.number().nullable(),
+    posterPath: z.string().nullable(),
+    posterUrl: z.string().nullable(),
+    backdropPath: z.string().nullable(),
+    backdropUrl: z.string().nullable(),
+    logoPath: z.string().nullable(),
+    logoUrl: z.string().nullable(),
+    posterOverridePath: z.string().nullable(),
+    voteAverage: z.number().nullable(),
+    voteCount: z.number().nullable(),
+    genres: z.array(z.string()),
+    networks: z.array(z.string()),
+    createdAt: z.string(),
+    updatedAt: z.string(),
+  })
+  .strict();
+
+/** `GET /tv-shows` 200 — `mediaTvShowsContract.list` (`rest-tv-shows.ts`). */
+const TvShowListResponseSchema = z
+  .object({ data: z.array(TvShowSchema), pagination: PaginationMetaSchema })
+  .strict();
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -44,37 +195,7 @@ const MOCK_JOB_ID = 'e2e-plex-watchlist-sync-1';
 const STARTED_AT = '2026-04-26T10:00:00.000Z';
 const COMPLETED_AT = '2026-04-26T10:00:02.500Z';
 
-interface SyncJobProgress {
-  processed: number;
-  total: number;
-}
-
-interface SyncJob {
-  id: string;
-  jobType: 'plexSyncWatchlist';
-  status: 'running' | 'completed' | 'failed';
-  startedAt: string;
-  completedAt: string | null;
-  durationMs: number | null;
-  progress: SyncJobProgress;
-  result: unknown;
-  error: string | null;
-}
-
-interface WatchlistEntry {
-  id: number;
-  mediaType: 'movie' | 'tv';
-  mediaId: number;
-  priority: number | null;
-  notes: string | null;
-  source: string | null;
-  plexRatingKey: string | null;
-  addedAt: string;
-  title: string | null;
-  posterUrl: string | null;
-}
-
-function buildRunningJob(): SyncJob {
+function buildRunningJob(): z.infer<typeof SyncJobSchema> {
   return {
     id: MOCK_JOB_ID,
     jobType: 'plexSyncWatchlist',
@@ -88,7 +209,7 @@ function buildRunningJob(): SyncJob {
   };
 }
 
-function buildCompletedJob(): SyncJob {
+function buildCompletedJob(): z.infer<typeof SyncJobSchema> {
   return {
     id: MOCK_JOB_ID,
     jobType: 'plexSyncWatchlist',
@@ -105,7 +226,7 @@ function buildCompletedJob(): SyncJob {
 // The watchlist items render their <h3> title from each entry's own `title`
 // field (useWatchlistMediaMaps falls back to `entry.title` when the movie/tv
 // map has no matching id), so the movies/tv-shows lists can be empty.
-const WATCHLIST_ENTRIES: WatchlistEntry[] = [
+const WATCHLIST_ENTRIES: z.infer<typeof WatchlistEntrySchema>[] = [
   {
     id: 1,
     mediaType: 'movie',
@@ -169,72 +290,65 @@ type MockState = {
   /** Increments each time the status route is polled. The first poll returns
    *  `running`, all subsequent polls return `completed`. */
   statusPolls: number;
-  /** Flips true once the start mutation has fired. Defensive — surfaces a
-   *  clearer error if status is polled before start. */
-  jobStarted: boolean;
 };
 
 async function installMediaMocks(page: Page): Promise<MockState> {
-  const state: MockState = { statusPolls: 0, jobStarted: false };
+  const state: MockState = { statusPolls: 0 };
 
-  await page.route('**/media-api/watchlist?**', async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
+  await page.route(
+    '**/media-api/watchlist?**',
+    fulfilWith(
+      200,
+      WatchlistListResponseSchema,
+      {
         data: WATCHLIST_ENTRIES,
         pagination: { total: WATCHLIST_ENTRIES.length, limit: 500, offset: 0, hasMore: false },
-      }),
-    });
-  });
+      },
+      'watchlist.list'
+    )
+  );
 
-  await page.route('**/media-api/movies?**', async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ data: [], pagination: EMPTY_PAGINATION }),
-    });
-  });
+  await page.route(
+    '**/media-api/movies?**',
+    fulfilWith(
+      200,
+      MovieListResponseSchema,
+      { data: [], pagination: EMPTY_PAGINATION },
+      'movies.list'
+    )
+  );
 
-  await page.route('**/media-api/tv-shows?**', async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ data: [], pagination: EMPTY_PAGINATION }),
-    });
-  });
+  await page.route(
+    '**/media-api/tv-shows?**',
+    fulfilWith(
+      200,
+      TvShowListResponseSchema,
+      { data: [], pagination: EMPTY_PAGINATION },
+      'tvShows.list'
+    )
+  );
 
-  await page.route('**/media-api/plex/sync/active', async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ data: [] }),
-    });
-  });
+  await page.route(
+    '**/media-api/plex/sync/active',
+    fulfilWith(200, ActiveSyncJobsResponseSchema, { data: [] }, 'plex.getActiveSyncJobs')
+  );
 
-  // POST /plex/sync starts the job; GET /plex/sync/:jobId polls its status.
-  // Both share the `/plex/sync/...` prefix, so branch on method + path.
-  await page.route('**/media-api/plex/sync', async (route) => {
-    if (route.request().method() !== 'POST') {
-      await route.fallback();
-      return;
-    }
-    state.jobStarted = true;
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ data: { jobId: MOCK_JOB_ID } }),
-    });
-  });
+  // POST /plex/sync starts the job; GET /plex/sync/:jobId polls its status
+  // via a separate, more specific route pattern below, so this one only ever
+  // sees the POST.
+  await page.route(
+    '**/media-api/plex/sync',
+    fulfilWith(200, StartSyncResponseSchema, { data: { jobId: MOCK_JOB_ID } }, 'plex.startSyncJob')
+  );
 
-  await page.route(`**/media-api/plex/sync/${MOCK_JOB_ID}`, async (route) => {
+  await page.route(`**/media-api/plex/sync/${MOCK_JOB_ID}`, (route) => {
+    // The response alternates running → completed across polls, so it is
+    // validated per request rather than pre-serialised once by `fulfilWith`.
     state.statusPolls += 1;
     const job = state.statusPolls <= 1 ? buildRunningJob() : buildCompletedJob();
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ data: job }),
-    });
+    const body = { data: job };
+    assertMatchesContract(SyncJobStatusResponseSchema, body, 'plex.getSyncJobStatus');
+    return json(route, 200, body);
   });
 
   return state;

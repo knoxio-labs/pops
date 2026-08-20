@@ -68,7 +68,19 @@ internal struct TransactionDetailRenderingTests {
         return pixels as Data
     }
 
-    @Test("the record renders, and renders the same way twice")
+    /// The one claim here that holds on a lane where `Colors.xcassets` was
+    /// copied without being compiled, and the reason the determinism check
+    /// below is a separate test rather than a second assertion in this one:
+    /// the trait that gates that check would take this smoke test down with
+    /// it, leaving the suite rasterising nothing at all on the host lane.
+    @Test("the record rasterises")
+    func theRecordRasterises() throws {
+        _ = try #require(Self.render(Self.card(TransactionDetail.fake())))
+    }
+
+    /// Gated, because where no token resolves both renders are the same blank
+    /// canvas and match whether the card is deterministic or not.
+    @Test("the record renders the same way twice", .requiresCompiledColorCatalog)
     func rendersDeterministically() throws {
         let once = try #require(Self.render(Self.card(TransactionDetail.fake())))
         let again = try #require(Self.render(Self.card(TransactionDetail.fake())))
@@ -144,7 +156,9 @@ internal struct TransactionDetailRenderingTests {
     /// measuring the platform rather than the screen. Compiled out on the host
     /// rather than skipped, so it cannot report a pass it never made.
     #if os(iOS)
-        @Test("the record still renders at the largest accessibility text size")
+        @Test(
+            "the record still renders at the largest accessibility text size",
+            .requiresCompiledColorCatalog)
         func survivesAccessibilityTextSizes() throws {
             let stock = try #require(Self.render(Self.card(TransactionDetail.fake())))
             let huge = try #require(

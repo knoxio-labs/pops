@@ -13,18 +13,20 @@ import { KindProposalShapeError, kindPrompt, readKindProposals } from '../kind-p
 
 import type { ProposalCandidate } from '../batch.js';
 
+const asin = (value: string) => ({ value, scheme: 'asin' }) as const;
+
 const candidate = (over: Partial<ProposalCandidate> = {}): ProposalCandidate => ({
   key: 'k1',
   source: 'amazon',
   name: 'Robot vacuum',
-  sku: 'B0ROBOT',
+  sku: asin('B0ROBOTVAC'),
   itemIds: ['i1'],
   ...over,
 });
 
 const BATCH: readonly ProposalCandidate[] = [
-  candidate({ key: 'k1', name: 'Robot vacuum', sku: 'B0ROBOT' }),
-  candidate({ key: 'k2', name: 'AA batteries 24pk', sku: 'B0AA' }),
+  candidate({ key: 'k1', name: 'Robot vacuum', sku: asin('B0ROBOTVAC') }),
+  candidate({ key: 'k2', name: 'AA batteries 24pk', sku: asin('B0AABATT24') }),
   candidate({ key: 'k3', source: 'woolworths', name: 'Bananas', sku: null }),
 ];
 
@@ -33,7 +35,7 @@ const reply = (proposals: unknown): string => JSON.stringify({ proposals });
 describe('the prompt', () => {
   it('lists every candidate under a one-based number', () => {
     const prompt = kindPrompt(BATCH);
-    expect(prompt).toContain('1. (amazon) Robot vacuum [B0ROBOT]');
+    expect(prompt).toContain('1. (amazon) Robot vacuum [asin B0ROBOTVAC]');
     expect(prompt).toContain('3. (woolworths) Bananas');
   });
 
@@ -42,6 +44,15 @@ describe('the prompt', () => {
       .split('\n')
       .filter((row) => row.startsWith('1. '));
     expect(listed).toEqual(['1. (amazon) Bananas']);
+  });
+
+  it('lists a batch that no one source bounds without naming one', () => {
+    // An ASIN batch spans the two Amazon exports. `(amazon)` on it would
+    // offer the model a fact about one line as evidence about the product.
+    const listed = kindPrompt([candidate({ source: null, name: 'The Way of Kings' })])
+      .split('\n')
+      .filter((row) => row.startsWith('1. '));
+    expect(listed).toEqual(['1. The Way of Kings [asin B0ROBOTVAC]']);
   });
 
   it('offers unknown and tells the model when to use it', () => {

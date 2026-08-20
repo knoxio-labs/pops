@@ -60,18 +60,27 @@ export function createIngestClient(env: NodeJS.ProcessEnv = process.env): Ingest
 /**
  * The one place a backfill request is built, so the credential cannot be
  * dropped from one call site and kept on another.
+ *
+ * Exported for the attach half (`attach-documents.ts`), which is a separate
+ * file only because this one is at its line budget — a second `fetch` there
+ * would be a second chance to forget the header.
+ *
+ * A `GET` carries no body: `fetch` rejects a request that has one on that
+ * verb, so the key is left off the init entirely rather than set to
+ * `undefined`.
  */
-function ingestFetch(
+export function ingestFetch(
   client: IngestClient,
   path: string,
-  method: 'POST' | 'PUT',
-  body: unknown
+  method: 'GET' | 'POST' | 'PUT',
+  body?: unknown
 ): Promise<Response> {
-  return fetch(`${client.baseUrl}${path}`, {
+  const init: RequestInit = {
     method,
     headers: { 'content-type': 'application/json', [SERVICE_ACCOUNT_HEADER]: client.apiKey },
-    body: JSON.stringify(body),
-  });
+  };
+  if (body !== undefined) init.body = JSON.stringify(body);
+  return fetch(`${client.baseUrl}${path}`, init);
 }
 
 /** Anomalies are counted by kind: a per-line dump buries the shape of them. */
@@ -93,8 +102,14 @@ export interface SourceRegistration {
    * A LIKE pattern, not a substring: the trailing `%` is load-bearing.
    * Without it this is an equality test that matches nothing, because no
    * bank descriptor is a bare merchant name. See `src/reconcile/descriptor.ts`.
+   *
+   * Null declares no pattern, which blocks nothing — different from
+   * declaring one that matches nothing, and the right answer for a source
+   * whose charges reach the bank under names a single LIKE cannot cover.
    */
-  readonly descriptorPattern: string;
+  readonly descriptorPattern: string | null;
+  /** Per-source override of the pillar's default matching window, in days. */
+  readonly settlementWindowDays?: number;
   readonly autoLinkPolicy: 'auto' | 'review';
   readonly ingestAdapter: string;
 }
@@ -118,22 +133,79 @@ export interface BackfillOutcome {
   readonly failures: readonly string[];
 }
 
+/**
+ * A 401/403 from `/purchases` means the account cannot write purchases at
+ * all — every subsequent request in the run is known to fail before it is
+ * sent, unlike a per-order rejection which says nothing about the next
+ * order. `postPurchases` throws this instead of adding to `failures` so the
+ * run stops rather than repeating the same failure for every remaining
+ * order.
+ */
+export class AuthFailureError extends Error {
+  /**
+   * @param status The status that stopped the run, 401 or 403.
+   * @param outcome What the run had already done when it stopped. A backfill
+   *   is not transactional, and the orders it skipped and the ones it failed
+   *   on are as much a part of that as the ones it wrote.
+   */
+  constructor(
+    readonly status: number,
+    readonly outcome: BackfillOutcome
+  ) {
+    super(
+      `stopping: the service account is not authorised to write purchases (${String(status)}). ` +
+        `${String(outcome.created)} order(s) were written and ${String(outcome.skipped)} were ` +
+        'already present before this happened; grant the account purchases.source and ' +
+        'purchases.purchase, then re-run — an order already written comes back as a 409 and is ' +
+        'skipped.'
+    );
+    this.name = 'AuthFailureError';
+  }
+}
+
+/**
+ * Hooks for a caller whose purchases reference something outside the request.
+ *
+ * A purchase can name a file the request does not carry — an invoice URI that
+ * has to resolve to bytes on the volume. Those bytes must exist before the row
+ * that points at them, and must not be left behind when no row is written, so
+ * the caller needs both edges of each request rather than the totals.
+ *
+ * A run can also end part-way through: {@link AuthFailureError} leaves the
+ * purchases after the stop with neither hook called, so a caller that acts on
+ * `beforeRequest` has to reconcile what it did when the call throws as well as
+ * when it returns.
+ */
+export interface PostPurchaseHooks {
+  /** Before the request is made. */
+  readonly beforeRequest?: (purchase: CreatePurchaseInput) => void;
+  /** After a 201, and only a 201. */
+  readonly afterCreated?: (purchase: CreatePurchaseInput) => void;
+}
+
 export async function postPurchases(
   client: IngestClient,
-  purchases: readonly CreatePurchaseInput[]
+  purchases: readonly CreatePurchaseInput[],
+  hooks: PostPurchaseHooks = {}
 ): Promise<BackfillOutcome> {
   let created = 0;
   let skipped = 0;
   const failures: string[] = [];
 
   for (const purchase of purchases) {
+    hooks.beforeRequest?.(purchase);
     const response = await ingestFetch(client, '/purchases', 'POST', purchase);
 
-    if (response.status === 201) created += 1;
+    if (response.status === 201) {
+      created += 1;
+      hooks.afterCreated?.(purchase);
+    }
     // A checksum or (source, orderId) that already exists. Re-running a
     // backfill is expected, so this is the normal path, not an error.
     else if (response.status === 409) skipped += 1;
-    else {
+    else if (response.status === 401 || response.status === 403) {
+      throw new AuthFailureError(response.status, { created, skipped, failures });
+    } else {
       failures.push(
         `${purchase.sourceOrderId ?? '?'} -> ${String(response.status)} ${await response.text()}`
       );
@@ -141,6 +213,25 @@ export async function postPurchases(
   }
 
   return { created, skipped, failures };
+}
+
+/**
+ * Read the bundle root out of a CLI's arguments.
+ *
+ * @param argv Arguments after the script name.
+ * @param command The `pnpm` script to name in the usage message.
+ * @throws When no non-flag argument was given.
+ */
+export function readBundlePath(argv: readonly string[], command: string): string {
+  const bundlePath = argv.find((arg) => !arg.startsWith('--'));
+  if (bundlePath === undefined) {
+    throw new Error(
+      `usage: pnpm ${command} -- "<bundle-root>" [--dry-run]\n` +
+        '<bundle-root> is the unzipped DSAR bundle: the directory CONTAINING ' +
+        '"Your Amazon Orders", not that folder itself.'
+    );
+  }
+  return bundlePath;
 }
 
 /** Print the outcome and set a non-zero exit code if anything failed. */
@@ -178,11 +269,17 @@ export function isCliEntrypoint(
  * Run a CLI's `main`, printing a failure as a one-line message rather than
  * letting it surface as an unhandled rejection with a stack trace — the
  * shape every failure in these scripts should have, config errors included.
+ *
+ * A run stopped by {@link AuthFailureError} reports what it had already done
+ * first. An ingest CLI reports through `reportOutcome(await postPurchases(...))`,
+ * so a throw skips that call and the counts and failure lines collected
+ * before the stop would otherwise be lost with it.
  */
-export async function runCli(main: () => Promise<void>): Promise<void> {
+export async function runCli(main: () => Promise<void> | void): Promise<void> {
   try {
     await main();
   } catch (error) {
+    if (error instanceof AuthFailureError) reportOutcome(error.outcome);
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;
   }

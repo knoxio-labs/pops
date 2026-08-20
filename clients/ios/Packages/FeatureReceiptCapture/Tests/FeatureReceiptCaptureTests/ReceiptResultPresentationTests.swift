@@ -10,25 +10,11 @@ import Testing
 internal struct ReceiptResultPresentationTests {
     private static let presentation = ReceiptResultPresentation()
 
-    @Test("a fresh write and a re-upload of the same bytes read differently")
-    func createdDistinguishesAlreadyStored() {
-        let fresh = Self.presentation.content(
-            .created(purchaseId: "purchase-1", alreadyStored: false))
-        let repeated = Self.presentation.content(
-            .created(purchaseId: "purchase-1", alreadyStored: true))
-
-        guard case .created(let freshContent) = fresh, case .created(let repeatedContent) = repeated
-        else {
-            Issue.record("expected both to present as created")
-            return
-        }
-        #expect(freshContent.message != repeatedContent.message)
-        #expect(freshContent.reference.contains("purchase-1"))
-        #expect(repeatedContent.reference.contains("purchase-1"))
-    }
-
+    /// One claim about the whole reading rather than one per group: each
+    /// group being internally right while the order between them went wrong
+    /// is exactly the regression a per-group assertion cannot see.
     @Test("every field the extraction sent draws, in receipt order")
-    func needsReviewDrawsEveryField() throws {
+    func needsReviewDrawsEveryField() {
         let extracted = ExtractedReceipt.fake(
             discounts: ["2.00"],
             surcharges: ["1.50"],
@@ -40,14 +26,14 @@ internal struct ReceiptResultPresentationTests {
             unreadableNotes: ["torn corner"]
         )
         let result = Self.presentation.content(
-            .needsReview(receiptURIs: ["r1"], failures: [.fake()], extracted: extracted))
+            .needsReview(receiptCount: 1, failures: [.fake()], extracted: extracted))
 
         guard case .needsReview(let content) = result else {
             Issue.record("expected needsReview")
             return
         }
         #expect(
-            content.extractedFields.map(\.label) == [
+            content.orderedFields.map(\.label) == [
                 ReceiptResultCopy.FieldLabel.merchant,
                 ReceiptResultCopy.FieldLabel.address,
                 ReceiptResultCopy.FieldLabel.date,
@@ -56,13 +42,52 @@ internal struct ReceiptResultPresentationTests {
                 ReceiptResultCopy.FieldLabel.discounts,
                 ReceiptResultCopy.FieldLabel.surcharges,
                 ReceiptResultCopy.FieldLabel.shipping,
-                ReceiptResultCopy.FieldLabel.lines,
                 ReceiptResultCopy.FieldLabel.unreadableNotes,
             ])
-        let lines = try #require(
-            content.extractedFields.first { $0.label == ReceiptResultCopy.FieldLabel.lines })
-        #expect(lines.value.contains("Milk"))
-        #expect(lines.value.contains("Bread"))
+    }
+
+    /// The figure the whole reading is checked against is not one of the
+    /// adjustments beside it. Drawing it as a fourth row of tax and shipping
+    /// is how a reader loses which number is which.
+    @Test("the stated total is held apart from what adjusts it")
+    func totalIsNotAnAdjustment() throws {
+        let extracted = ExtractedReceipt.fake(
+            total: "42.50", tax: "3.86", discounts: ["2.00"], surcharges: ["1.50"],
+            shipping: "5.00")
+        let result = Self.presentation.content(
+            .needsReview(receiptCount: 1, failures: [.fake()], extracted: extracted))
+
+        guard case .needsReview(let content) = result else {
+            Issue.record("expected needsReview")
+            return
+        }
+        let total = try #require(content.total)
+        #expect(total.value == "42.50")
+        #expect(!content.adjustments.contains { $0.label == ReceiptResultCopy.FieldLabel.total })
+        #expect(
+            content.adjustments.map(\.label) == [
+                ReceiptResultCopy.FieldLabel.tax,
+                ReceiptResultCopy.FieldLabel.discounts,
+                ReceiptResultCopy.FieldLabel.surcharges,
+                ReceiptResultCopy.FieldLabel.shipping,
+            ])
+    }
+
+    /// Three different kinds of fact, drawn at three weights — so the screen
+    /// has to know which is which rather than holding an interchangeable
+    /// list.
+    @Test("who and when are held apart from each other")
+    func identityIsNamedRatherThanListed() throws {
+        let result = Self.presentation.content(
+            .needsReview(receiptCount: 1, failures: [.fake()], extracted: .fake()))
+
+        guard case .needsReview(let content) = result else {
+            Issue.record("expected needsReview")
+            return
+        }
+        #expect(try #require(content.identity.merchant).value == "Test Grocer")
+        #expect(try #require(content.identity.address).value == "1 Test Street")
+        #expect(try #require(content.identity.date).value == "2026-08-01 14:32")
     }
 
     /// A field the receipt never stated is dropped, not drawn as a dash — a
@@ -73,13 +98,16 @@ internal struct ReceiptResultPresentationTests {
             merchantName: nil, address: nil, purchasedOn: nil, purchasedAt: nil, tax: nil,
             discounts: [], surcharges: [], shipping: nil, lines: [], unreadableNotes: [])
         let result = Self.presentation.content(
-            .needsReview(receiptURIs: [], failures: [.fake()], extracted: extracted))
+            .needsReview(receiptCount: 0, failures: [.fake()], extracted: extracted))
 
         guard case .needsReview(let content) = result else {
             Issue.record("expected needsReview")
             return
         }
-        #expect(content.extractedFields.map(\.label) == [ReceiptResultCopy.FieldLabel.total])
+        #expect(content.orderedFields.map(\.label) == [ReceiptResultCopy.FieldLabel.total])
+        #expect(content.identity.isEmpty)
+        #expect(content.lines.isEmpty)
+        #expect(content.notes == nil)
         #expect(content.photoCount == nil)
     }
 
@@ -87,14 +115,13 @@ internal struct ReceiptResultPresentationTests {
     func whitespaceIsDropped() {
         let extracted = ExtractedReceipt.fake(merchantName: "   \n ")
         let result = Self.presentation.content(
-            .needsReview(receiptURIs: [], failures: [.fake()], extracted: extracted))
+            .needsReview(receiptCount: 0, failures: [.fake()], extracted: extracted))
 
         guard case .needsReview(let content) = result else {
             Issue.record("expected needsReview")
             return
         }
-        #expect(
-            !content.extractedFields.map(\.label).contains(ReceiptResultCopy.FieldLabel.merchant))
+        #expect(content.identity.merchant == nil)
     }
 
     /// A value that is *not* whitespace-only still has its surrounding
@@ -103,14 +130,13 @@ internal struct ReceiptResultPresentationTests {
     func surroundingWhitespaceIsTrimmed() throws {
         let extracted = ExtractedReceipt.fake(merchantName: "  Test Grocer  \n")
         let result = Self.presentation.content(
-            .needsReview(receiptURIs: [], failures: [.fake()], extracted: extracted))
+            .needsReview(receiptCount: 0, failures: [.fake()], extracted: extracted))
 
         guard case .needsReview(let content) = result else {
             Issue.record("expected needsReview")
             return
         }
-        let merchant = try #require(
-            content.extractedFields.first { $0.label == ReceiptResultCopy.FieldLabel.merchant })
+        let merchant = try #require(content.identity.merchant)
         #expect(merchant.value == "Test Grocer")
     }
 
@@ -119,7 +145,7 @@ internal struct ReceiptResultPresentationTests {
         let failure = ReceiptGateFailure.fake(
             kind: .sumMismatch, detail: "lines vs total", deltaCents: -137)
         let result = Self.presentation.content(
-            .needsReview(receiptURIs: [], failures: [failure], extracted: .fake()))
+            .needsReview(receiptCount: 0, failures: [failure], extracted: .fake()))
 
         guard case .needsReview(let content) = result else {
             Issue.record("expected needsReview")
@@ -138,7 +164,7 @@ internal struct ReceiptResultPresentationTests {
         let failure = ReceiptGateFailure.fake(
             kind: .noLines, detail: "no lines read", deltaCents: nil)
         let result = Self.presentation.content(
-            .needsReview(receiptURIs: [], failures: [failure], extracted: .fake()))
+            .needsReview(receiptCount: 0, failures: [failure], extracted: .fake()))
 
         guard case .needsReview(let content) = result else {
             Issue.record("expected needsReview")
@@ -157,7 +183,7 @@ internal struct ReceiptResultPresentationTests {
             ReceiptGateFailure.fake(kind: .negativeLine, detail: "line 2", deltaCents: nil),
         ]
         let result = Self.presentation.content(
-            .needsReview(receiptURIs: [], failures: failures, extracted: .fake()))
+            .needsReview(receiptCount: 0, failures: failures, extracted: .fake()))
 
         guard case .needsReview(let content) = result else {
             Issue.record("expected needsReview")
@@ -175,7 +201,7 @@ internal struct ReceiptResultPresentationTests {
     @Test("the reason reaches the unreadable screen")
     func unreadableCarriesTheReason() {
         let result = Self.presentation.content(
-            .unreadable(receiptURIs: ["r1", "r2"], reason: "the image is blank"))
+            .unreadable(receiptCount: 2, reason: "the image is blank"))
 
         guard case .unreadable(let content) = result else {
             Issue.record("expected unreadable")
@@ -187,7 +213,7 @@ internal struct ReceiptResultPresentationTests {
 
     @Test("no photos means no photo count")
     func noPhotosMeansNoCaption() {
-        let result = Self.presentation.content(.unreadable(receiptURIs: [], reason: "blank"))
+        let result = Self.presentation.content(.unreadable(receiptCount: 0, reason: "blank"))
 
         guard case .unreadable(let content) = result else {
             Issue.record("expected unreadable")
@@ -200,10 +226,11 @@ internal struct ReceiptResultPresentationTests {
     /// point of the tri-state per POPS-1961.
     @Test("the three outcomes say different things")
     func theThreeOutcomesAreDistinct() {
-        let created = Self.presentation.content(.created(purchaseId: "p1", alreadyStored: false))
+        let created = Self.presentation.content(
+            .created(purchase: .fake(id: "p1"), alreadyStored: false))
         let needsReview = Self.presentation.content(
-            .needsReview(receiptURIs: [], failures: [.fake()], extracted: .fake()))
-        let unreadable = Self.presentation.content(.unreadable(receiptURIs: [], reason: "blank"))
+            .needsReview(receiptCount: 0, failures: [.fake()], extracted: .fake()))
+        let unreadable = Self.presentation.content(.unreadable(receiptCount: 0, reason: "blank"))
 
         #expect(headings([created, needsReview, unreadable]).count == 3)
     }

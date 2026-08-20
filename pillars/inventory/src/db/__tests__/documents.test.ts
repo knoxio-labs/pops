@@ -21,7 +21,7 @@ import {
   DocumentItemNotFoundError,
   DocumentNotFoundError,
 } from '../services/documents-errors.js';
-import { create as createItem } from '../services/items.js';
+import { seedInventoryItem } from './item-fixture.js';
 
 import type { Database } from 'better-sqlite3';
 
@@ -97,7 +97,7 @@ function freshDb(): FreshDb {
 }
 
 function seedItem(db: InventoryDb, name = 'Test Item'): string {
-  return createItem(db, { itemName: name }).id;
+  return seedInventoryItem(db, { itemName: name }).id;
 }
 
 describe('documentsService.link', () => {

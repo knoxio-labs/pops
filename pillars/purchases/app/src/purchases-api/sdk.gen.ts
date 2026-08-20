@@ -5,10 +5,36 @@ import { client } from './client.gen';
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import type {
   AnalyticsMerchantSpendData,
+  AnalyticsMerchantSpendErrors,
   AnalyticsMerchantSpendResponses,
+  AnalyticsProductLeaderboardData,
+  AnalyticsProductLeaderboardErrors,
+  AnalyticsProductLeaderboardResponses,
+  ProductDeleteAliasData,
+  ProductDeleteAliasErrors,
+  ProductDeleteAliasResponses,
+  ProductDeleteData,
+  ProductDeleteErrors,
+  ProductDeleteResponses,
+  ProductListData,
+  ProductListResponses,
+  ProductProposeData,
+  ProductProposeResponses,
+  ProductRenameData,
+  ProductRenameErrors,
+  ProductRenameResponses,
+  ProductUpdateAliasData,
+  ProductUpdateAliasErrors,
+  ProductUpdateAliasResponses,
+  PurchaseAttachDocumentData,
+  PurchaseAttachDocumentErrors,
+  PurchaseAttachDocumentResponses,
   PurchaseCreateData,
   PurchaseCreateErrors,
   PurchaseCreateResponses,
+  PurchaseDecideInventoryProposalData,
+  PurchaseDecideInventoryProposalErrors,
+  PurchaseDecideInventoryProposalResponses,
   PurchaseDeleteData,
   PurchaseDeleteErrors,
   PurchaseDeleteResponses,
@@ -18,6 +44,9 @@ import type {
   PurchaseItemsByTagData,
   PurchaseItemsByTagResponses,
   PurchaseListData,
+  PurchaseListErrors,
+  PurchaseListInventoryProposalsData,
+  PurchaseListInventoryProposalsResponses,
   PurchaseListResponses,
   PurchasePatchItemData,
   PurchasePatchItemErrors,
@@ -28,6 +57,8 @@ import type {
   ReconcileConfirmData,
   ReconcileConfirmErrors,
   ReconcileConfirmResponses,
+  ReconcileLinksBatchData,
+  ReconcileLinksBatchResponses,
   ReconcileLinksData,
   ReconcileLinksResponses,
   ReconcileQueueData,
@@ -80,11 +111,28 @@ export type Options<
  */
 export const analyticsMerchantSpend = <ThrowOnError extends boolean = false>(
   options?: Options<AnalyticsMerchantSpendData, ThrowOnError>
-): RequestResult<AnalyticsMerchantSpendResponses, unknown, ThrowOnError> =>
-  (options?.client ?? client).get<AnalyticsMerchantSpendResponses, unknown, ThrowOnError>({
-    url: '/analytics/merchant-spend',
-    ...options,
-  });
+): RequestResult<AnalyticsMerchantSpendResponses, AnalyticsMerchantSpendErrors, ThrowOnError> =>
+  (options?.client ?? client).get<
+    AnalyticsMerchantSpendResponses,
+    AnalyticsMerchantSpendErrors,
+    ThrowOnError
+  >({ url: '/analytics/merchant-spend', ...options });
+
+/**
+ * Repeat purchases per product — cadence, unit-price history, and the identity basis each group was formed on
+ */
+export const analyticsProductLeaderboard = <ThrowOnError extends boolean = false>(
+  options?: Options<AnalyticsProductLeaderboardData, ThrowOnError>
+): RequestResult<
+  AnalyticsProductLeaderboardResponses,
+  AnalyticsProductLeaderboardErrors,
+  ThrowOnError
+> =>
+  (options?.client ?? client).get<
+    AnalyticsProductLeaderboardResponses,
+    AnalyticsProductLeaderboardErrors,
+    ThrowOnError
+  >({ url: '/analytics/product-leaderboard', ...options });
 
 /**
  * Every line carrying an item tag, across every order
@@ -98,12 +146,106 @@ export const purchaseItemsByTag = <ThrowOnError extends boolean = false>(
   });
 
 /**
+ * The learned product dictionary: products and the printed wordings that resolve to them
+ */
+export const productList = <ThrowOnError extends boolean = false>(
+  options?: Options<ProductListData, ThrowOnError>
+): RequestResult<ProductListResponses, unknown, ThrowOnError> =>
+  (options?.client ?? client).get<ProductListResponses, unknown, ThrowOnError>({
+    url: '/products',
+    ...options,
+  });
+
+/**
+ * Forget one printed wording, returning its lines to the on-the-fly grouping
+ */
+export const productDeleteAlias = <ThrowOnError extends boolean = false>(
+  options: Options<ProductDeleteAliasData, ThrowOnError>
+): RequestResult<ProductDeleteAliasResponses, ProductDeleteAliasErrors, ThrowOnError> =>
+  (options.client ?? client).delete<
+    ProductDeleteAliasResponses,
+    ProductDeleteAliasErrors,
+    ThrowOnError
+  >({
+    url: '/products/aliases/{aliasId}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Merge, split, assert or retract one printed wording
+ */
+export const productUpdateAlias = <ThrowOnError extends boolean = false>(
+  options: Options<ProductUpdateAliasData, ThrowOnError>
+): RequestResult<ProductUpdateAliasResponses, ProductUpdateAliasErrors, ThrowOnError> =>
+  (options.client ?? client).patch<
+    ProductUpdateAliasResponses,
+    ProductUpdateAliasErrors,
+    ThrowOnError
+  >({
+    url: '/products/aliases/{aliasId}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Mint a dictionary entry per printed wording and retire unconfirmed entries nothing prints
+ */
+export const productPropose = <ThrowOnError extends boolean = false>(
+  options?: Options<ProductProposeData, ThrowOnError>
+): RequestResult<ProductProposeResponses, unknown, ThrowOnError> =>
+  (options?.client ?? client).post<ProductProposeResponses, unknown, ThrowOnError>({
+    url: '/products/proposals',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  });
+
+/**
+ * Forget a product and every wording that resolved to it
+ */
+export const productDelete = <ThrowOnError extends boolean = false>(
+  options: Options<ProductDeleteData, ThrowOnError>
+): RequestResult<ProductDeleteResponses, ProductDeleteErrors, ThrowOnError> =>
+  (options.client ?? client).delete<ProductDeleteResponses, ProductDeleteErrors, ThrowOnError>({
+    url: '/products/{productId}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Rename a product without touching the wordings that resolve to it
+ */
+export const productRename = <ThrowOnError extends boolean = false>(
+  options: Options<ProductRenameData, ThrowOnError>
+): RequestResult<ProductRenameResponses, ProductRenameErrors, ThrowOnError> =>
+  (options.client ?? client).patch<ProductRenameResponses, ProductRenameErrors, ThrowOnError>({
+    url: '/products/{productId}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
  * List orders, newest first
  */
 export const purchaseList = <ThrowOnError extends boolean = false>(
   options?: Options<PurchaseListData, ThrowOnError>
-): RequestResult<PurchaseListResponses, unknown, ThrowOnError> =>
-  (options?.client ?? client).get<PurchaseListResponses, unknown, ThrowOnError>({
+): RequestResult<PurchaseListResponses, PurchaseListErrors, ThrowOnError> =>
+  (options?.client ?? client).get<PurchaseListResponses, PurchaseListErrors, ThrowOnError>({
     url: '/purchases',
     ...options,
   });
@@ -150,6 +292,36 @@ export const purchaseGet = <ThrowOnError extends boolean = false>(
   });
 
 /**
+ * Attach a document to an existing order
+ */
+export const purchaseAttachDocument = <ThrowOnError extends boolean = false>(
+  options: Options<PurchaseAttachDocumentData, ThrowOnError>
+): RequestResult<PurchaseAttachDocumentResponses, PurchaseAttachDocumentErrors, ThrowOnError> =>
+  (options.client ?? client).post<
+    PurchaseAttachDocumentResponses,
+    PurchaseAttachDocumentErrors,
+    ThrowOnError
+  >({
+    url: '/purchases/{id}/documents',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Unanswered inventory offers derived from an order's durable lines
+ */
+export const purchaseListInventoryProposals = <ThrowOnError extends boolean = false>(
+  options: Options<PurchaseListInventoryProposalsData, ThrowOnError>
+): RequestResult<PurchaseListInventoryProposalsResponses, unknown, ThrowOnError> =>
+  (options.client ?? client).get<PurchaseListInventoryProposalsResponses, unknown, ThrowOnError>({
+    url: '/purchases/{id}/inventory-proposals',
+    ...options,
+  });
+
+/**
  * Confirm a line's kind and item tags
  */
 export const purchasePatchItem = <ThrowOnError extends boolean = false>(
@@ -161,6 +333,29 @@ export const purchasePatchItem = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     url: '/purchases/{id}/items/{itemId}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Accept or decline one inventory proposal on a line
+ */
+export const purchaseDecideInventoryProposal = <ThrowOnError extends boolean = false>(
+  options: Options<PurchaseDecideInventoryProposalData, ThrowOnError>
+): RequestResult<
+  PurchaseDecideInventoryProposalResponses,
+  PurchaseDecideInventoryProposalErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).post<
+    PurchaseDecideInventoryProposalResponses,
+    PurchaseDecideInventoryProposalErrors,
+    ThrowOnError
+  >({
+    url: '/purchases/{id}/items/{itemId}/inventory-proposal',
     ...options,
     headers: {
       'Content-Type': 'application/json',
@@ -209,6 +404,21 @@ export const reconcileLinks = <ThrowOnError extends boolean = false>(
   (options.client ?? client).get<ReconcileLinksResponses, unknown, ThrowOnError>({
     url: '/reconcile/links',
     ...options,
+  });
+
+/**
+ * Which of these finance transactions an order explains, confirmed or derived
+ */
+export const reconcileLinksBatch = <ThrowOnError extends boolean = false>(
+  options?: Options<ReconcileLinksBatchData, ThrowOnError>
+): RequestResult<ReconcileLinksBatchResponses, unknown, ThrowOnError> =>
+  (options?.client ?? client).post<ReconcileLinksBatchResponses, unknown, ThrowOnError>({
+    url: '/reconcile/links/batch',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
   });
 
 /**

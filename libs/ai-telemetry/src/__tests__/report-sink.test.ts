@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi, type Mock } from 'vitest';
 
 import { type InferenceRecord } from '../record-schema.js';
-import { createEnvReportSink } from '../report-sink.js';
+import { AiUsageRecordRefusedError, createEnvReportSink } from '../report-sink.js';
 
 const record: InferenceRecord = {
   provider: 'anthropic',
@@ -82,6 +82,129 @@ describe('createEnvReportSink', () => {
     expect(new Headers(init?.headers).get('x-pops-internal-credential')).toBeNull();
     // trailing slash on the base URL is trimmed, not doubled
     expect(String(fetchImpl.mock.calls[0]?.[0])).toBe('http://ai-api:3008/ai-usage/record');
+  });
+
+  it('reports a refused record instead of dropping it, naming the status', async () => {
+    const onError = vi.fn();
+    const fetchImpl = vi.fn<typeof fetch>(() =>
+      Promise.resolve(new Response(null, { status: 403 }))
+    );
+
+    await expect(
+      createEnvReportSink({
+        baseUrl: 'http://ai-api:3008',
+        credential: 'purchases.secret',
+        fetchImpl,
+        onError,
+      })(record)
+    ).resolves.toBeUndefined();
+
+    expect(onError).toHaveBeenCalledOnce();
+    const reported = onError.mock.calls[0]?.[0];
+    expect(reported).toBeInstanceOf(Error);
+    const message = reported instanceof Error ? reported.message : '';
+    expect(message).toContain('403');
+    // The caller half is what an operator needs; the secret half is not.
+    expect(message).toContain("'purchases'");
+    expect(message).not.toContain('purchases.secret');
+  });
+
+  it('says so when the refused record carried no credential at all', async () => {
+    const onError = vi.fn();
+    const fetchImpl = vi.fn<typeof fetch>(() =>
+      Promise.resolve(new Response(null, { status: 403 }))
+    );
+
+    await createEnvReportSink({ baseUrl: 'http://ai-api:3008', fetchImpl, onError })(record);
+
+    const reported = onError.mock.calls[0]?.[0];
+    expect(reported instanceof Error ? reported.message : '').toContain(
+      'no per-caller credential was presented'
+    );
+  });
+
+  it('reports a refusal as a distinguishable error carrying the status', async () => {
+    const onError = vi.fn();
+    const fetchImpl = vi.fn<typeof fetch>(() =>
+      Promise.resolve(new Response(null, { status: 401 }))
+    );
+
+    await createEnvReportSink({
+      baseUrl: 'http://ai-api:3008',
+      credential: 'purchases.secret',
+      fetchImpl,
+      onError,
+    })(record);
+
+    const reported: unknown = onError.mock.calls[0]?.[0];
+    expect(reported).toBeInstanceOf(AiUsageRecordRefusedError);
+    expect(reported instanceof AiUsageRecordRefusedError ? reported.status : undefined).toBe(401);
+  });
+
+  it('does not dress a transport failure up as a refusal', async () => {
+    const onError = vi.fn();
+    const thrown = new Error('ECONNREFUSED');
+    const fetchImpl = vi.fn<typeof fetch>(() => Promise.reject(thrown));
+
+    await createEnvReportSink({
+      baseUrl: 'http://ai-api:3008',
+      credential: 'purchases.secret',
+      fetchImpl,
+      onError,
+    })(record);
+
+    const reported: unknown = onError.mock.calls[0]?.[0];
+    expect(reported).toBe(thrown);
+    expect(reported).not.toBeInstanceOf(AiUsageRecordRefusedError);
+  });
+
+  it('says a credential without a caller half is malformed rather than absent, and never echoes it', async () => {
+    const onError = vi.fn();
+    const fetchImpl = vi.fn<typeof fetch>(() =>
+      Promise.resolve(new Response(null, { status: 403 }))
+    );
+
+    // The likeliest provisioning slip: the bare secret written where the whole
+    // `name.secret` credential belongs.
+    await createEnvReportSink({
+      baseUrl: 'http://ai-api:3008',
+      credential: 'bare-secret-with-no-caller',
+      fetchImpl,
+      onError,
+    })(record);
+
+    const reported: unknown = onError.mock.calls[0]?.[0];
+    const message = reported instanceof Error ? reported.message : '';
+    expect(message).toContain("not in 'name.secret' form");
+    expect(message).not.toContain('no per-caller credential was presented');
+    expect(message).not.toContain('bare-secret-with-no-caller');
+  });
+
+  it('treats a leading-dot credential the same way, rather than naming an empty caller', async () => {
+    const onError = vi.fn();
+    const fetchImpl = vi.fn<typeof fetch>(() =>
+      Promise.resolve(new Response(null, { status: 403 }))
+    );
+
+    await createEnvReportSink({
+      baseUrl: 'http://ai-api:3008',
+      credential: '.secret',
+      fetchImpl,
+      onError,
+    })(record);
+
+    const reported: unknown = onError.mock.calls[0]?.[0];
+    const message = reported instanceof Error ? reported.message : '';
+    expect(message).toContain("not in 'name.secret' form");
+    expect(message).not.toContain("presented as ''");
+  });
+
+  it('stays quiet on a 2xx', async () => {
+    const onError = vi.fn();
+    await createEnvReportSink({ baseUrl: 'http://ai-api:3008', fetchImpl: okFetch(), onError })(
+      record
+    );
+    expect(onError).not.toHaveBeenCalled();
   });
 
   it('reads the credential from POPS_INTERNAL_CREDENTIAL when not passed explicitly', async () => {

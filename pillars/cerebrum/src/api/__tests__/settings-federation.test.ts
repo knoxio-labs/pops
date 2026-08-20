@@ -13,12 +13,12 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { cerebrumKeyDefaults } from '../../contract/settings/key-defaults.js';
 import { openCerebrumDb, type OpenedCerebrumDb } from '../../db/index.js';
 import { createCerebrumApiApp } from '../app.js';
+import { createTestTransport } from './test-http.js';
 import { makeEmptyPeerClients, makeReflexService, makeTemplateRegistry } from './test-utils.js';
 
 import type { TemplateRegistry } from '../modules/templates/registry.js';
@@ -53,9 +53,11 @@ afterEach(() => {
   rmSync(engramRoot, { recursive: true, force: true });
 });
 
+const { requestOn } = createTestTransport();
+
 describe('cerebrum federated /settings', () => {
   it('lists every declared key (cerebrum + ego) resolved to its manifest default', async () => {
-    const res = await request(app()).get('/settings');
+    const res = await requestOn(app()).get('/settings');
     expect(res.status).toBe(200);
     const byKey = new Map<string, string>(
       (res.body.data as { key: string; value: string }[]).map((row) => [row.key, row.value])
@@ -67,38 +69,38 @@ describe('cerebrum federated /settings', () => {
   });
 
   it('round-trips an update through cerebrum.db and resets to the default', async () => {
-    const put = await request(app()).put('/settings/ego.maxHistory').send({ value: '99' });
+    const put = await requestOn(app()).put('/settings/ego.maxHistory').send({ value: '99' });
     expect(put.status).toBe(200);
     expect(put.body.data).toEqual({ key: 'ego.maxHistory', value: '99' });
 
-    const afterSet = await request(app()).get('/settings/ego.maxHistory');
+    const afterSet = await requestOn(app()).get('/settings/ego.maxHistory');
     expect(afterSet.body.data).toEqual({ key: 'ego.maxHistory', value: '99' });
 
-    const reset = await request(app()).post('/settings/ego.maxHistory/reset');
+    const reset = await requestOn(app()).post('/settings/ego.maxHistory/reset');
     expect(reset.status).toBe(200);
     expect(reset.body.data).toEqual({ key: 'ego.maxHistory', value: '20' });
 
-    const afterReset = await request(app()).get('/settings/ego.maxHistory');
+    const afterReset = await requestOn(app()).get('/settings/ego.maxHistory');
     expect(afterReset.body.data).toBeNull();
   });
 
   it('reset with no keys restores every declared key to its default', async () => {
-    await request(app()).put('/settings/cerebrum.query.maxSources').send({ value: '3' });
-    const reset = await request(app()).post('/settings/reset').send({});
+    await requestOn(app()).put('/settings/cerebrum.query.maxSources').send({ value: '3' });
+    const reset = await requestOn(app()).post('/settings/reset').send({});
     expect(reset.status).toBe(200);
     expect([...reset.body.reset].toSorted()).toEqual([...cerebrumKeyDefaults.keys].toSorted());
     expect(reset.body.settings['cerebrum.query.maxSources']).toBe('10');
   });
 
   it('rejects a set-many addressing an undeclared key with a 400', async () => {
-    const res = await request(app())
+    const res = await requestOn(app())
       .post('/settings/set-many')
       .send({ entries: [{ key: 'cerebrum.notAThing', value: 'x' }] });
     expect(res.status).toBe(400);
   });
 
   it('rejects a single-key write outside the declared enum with a 400', async () => {
-    const res = await request(app()).put('/settings/totally.unknown').send({ value: 'x' });
+    const res = await requestOn(app()).put('/settings/totally.unknown').send({ value: 'x' });
     expect(res.status).toBe(400);
   });
 });

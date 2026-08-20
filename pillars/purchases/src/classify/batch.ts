@@ -1,83 +1,53 @@
 /**
- * Deciding which lines are the same product, so one product is one decision.
+ * Batching lines so one product is one decision.
  *
  * Amazon spend repeats: 54 ASINs in the reference bundle were bought in more
  * than one order, 12.6% of spend, so keying on the sku means one answer
  * covers every past and future repeat of it.
  *
- * **Keying on `(source, sku)` alone is wrong, and wrong exactly where it
- * costs the most.** `sku` is written at one site in the tree — the Amazon
- * order-history mapper. Woolworths states no identifier and a photographed
- * receipt states less, so every non-Amazon line has `sku IS NULL`; SQL
- * `GROUP BY` folds NULLs into one group, and the pass would collapse ~490
- * grocery lines into a single decision applied to an entire merchant. That
- * decision would be `consumable`, because grocery overwhelmingly is — and it
- * would erase the `Wiltshire Impulse Citrus Juicer` and the
- * `6015322 Barware Set/4`, the ~1% of grocery lines that are durable and
- * precisely what the inventory fan-out exists to catch.
- *
- * So the key falls back through what the source actually states: the sku,
- * then the normalised product name, then the line's own id. The last is a
- * key that groups nothing, which is the correct answer for a line that
- * states nothing to group on.
+ * Which lines are one product is decided by
+ * {@link identifyProduct} — the same rule the product-grain aggregate groups
+ * on, so a decision the pass made about a product and a row the leaderboard
+ * shows for it describe the same set of lines. That module carries why the
+ * key falls back the way it does, and the learned dictionary is threaded
+ * through for the same reason: a pass that batched on printed names while the
+ * leaderboard grouped on dictionary products would spend a model call per
+ * wording of one product and then show them as one row.
  */
+import { identifyProduct, normalisedName } from '../db/services/product-identity.js';
+import { productIdentityOf } from '../db/services/stored-product-identity.js';
+
+import type { ProductIdentity } from '../contract/types/purchase.js';
+import type { ProductDictionary, ProductLine } from '../db/services/product-identity.js';
+
+export { normalisedName };
 
 /** What the pass needs to know about a line to decide how to batch it. */
-export interface BatchableItem {
-  readonly id: string;
-  readonly source: string;
-  readonly sku: string | null;
-  readonly name: string;
-}
+export type BatchableItem = ProductLine;
 
-/**
- * Product name reduced to what identifies the product.
- *
- * Case and punctuation vary between receipts of the same item;
- * `WW Smky Chip Chdr TstyShrd Cheese 250g` is the same product however the
- * till chose to space it. Digits are kept — `1L` and `2L` are different
- * products, and dropping them would merge them.
- */
-export function normalisedName(name: string): string {
-  return name
-    .toLowerCase()
-    .replaceAll(/[^a-z0-9]+/gu, ' ')
-    .trim();
-}
-
-/**
- * The batching key for one line.
- *
- * `source` leads because the same string means different things at
- * different merchants, and a decision about an Amazon ASIN should not
- * silently apply to a Woolworths article number that happens to match.
- *
- * JSON rather than a delimiter, for the reason the Woolworths checksum
- * gives: joining on a separator is not injective, and a merchant is free to
- * print that separator inside a sku. Two different products sharing a key
- * share a verdict, which is the failure this whole module exists to avoid.
- */
-export function batchingKey(item: BatchableItem): string {
-  const sku = item.sku?.trim() ?? '';
-  if (sku !== '') return JSON.stringify([item.source, 'sku', sku]);
-
-  const name = normalisedName(item.name);
-  if (name !== '') return JSON.stringify([item.source, 'name', name]);
-
-  // A line with no identifier and no readable name. Keying on its own id
-  // groups it with nothing, which costs one extra decision and is the only
-  // honest answer — the alternative is a bucket every nameless line falls
-  // into and receives one verdict from.
-  return JSON.stringify([item.source, 'item', item.id]);
+/** The batching key for one line. */
+export function batchingKey(item: BatchableItem, dictionary?: ProductDictionary): string {
+  return identifyProduct(item, dictionary).key;
 }
 
 /** One product: every line that shares a batching key. */
 export interface ProposalCandidate {
   readonly key: string;
-  readonly source: string;
+  /**
+   * The source that stated this product, or `null` where the batch spans
+   * sources because the identifier is one that means the same thing at all
+   * of them. Naming whichever line was read first would tell the model a
+   * fact about one line as though it were a fact about the product.
+   */
+  readonly source: string | null;
   /** The first line's name, which is what the model is shown. */
   readonly name: string;
-  readonly sku: string | null;
+  /**
+   * The identifier the merchant stated, with the namespace it stated it in.
+   * Never the bare string: the prompt is a consumer like any other, and
+   * `4471` alone tells a reader nothing about what it identifies.
+   */
+  readonly sku: ProductIdentity | null;
   /** Every line this one decision will be written to. */
   readonly itemIds: readonly string[];
 }
@@ -89,15 +59,24 @@ export interface ProposalCandidate {
  * first and expects the batches to follow, so a run that is interrupted has
  * spent its budget on the lines worth deciding.
  */
-export function toCandidates(items: readonly BatchableItem[]): readonly ProposalCandidate[] {
+export function toCandidates(
+  items: readonly BatchableItem[],
+  dictionary?: ProductDictionary
+): readonly ProposalCandidate[] {
   const byKey = new Map<string, { candidate: ProposalCandidate; itemIds: string[] }>();
   for (const item of items) {
-    const key = batchingKey(item);
+    const { key, identity } = identifyProduct(item, dictionary);
     const existing = byKey.get(key);
     if (existing === undefined) {
       const itemIds = [item.id];
       byKey.set(key, {
-        candidate: { key, source: item.source, name: item.name, sku: item.sku, itemIds },
+        candidate: {
+          key,
+          source: identity.source,
+          name: item.name,
+          sku: productIdentityOf(item),
+          itemIds,
+        },
         itemIds,
       });
     } else {

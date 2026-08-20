@@ -21,7 +21,7 @@
 import { sql } from 'drizzle-orm';
 import { index, integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
-import { ITEM_KINDS } from '../../contract/constants.js';
+import { ITEM_KINDS, SKU_SCHEMES } from '../../contract/constants.js';
 import { purchases, purchaseShipments } from './purchases.js';
 
 export const purchaseItems = sqliteTable(
@@ -55,8 +55,42 @@ export const purchaseItems = sqliteTable(
      */
     position: integer('position').notNull().default(0),
     name: text('name').notNull(),
-    /** Merchant's product identifier — ASIN, article number, barcode. */
+    /**
+     * The product identifier the merchant stated, verbatim, and never
+     * without {@link skuScheme} — see that column for why a bare one is not
+     * an identity.
+     *
+     * NULL is the ordinary case and means the source stated none, which is
+     * every shipped adapter but the Amazon exports. It does not mean a transcription
+     * was skipped, and nothing downstream may treat two NULLs as a match:
+     * SQL `GROUP BY` folds them into one group, which is how ~490 grocery
+     * lines become a single decision.
+     */
     sku: text('sku'),
+    /**
+     * Which namespace {@link sku} lives in, so its reach is stated rather
+     * than assumed. `ITEM_KINDS`' arrangement: the vocabulary is declared
+     * contract-side in {@link SKU_SCHEMES} and enforced by a CHECK.
+     *
+     * Only one direction of the pair is a CHECK: a namespace with nothing
+     * under it — no identifier, or a blank standing in for one — is
+     * rejected by the database, while an identifier with no namespace is
+     * prevented one layer up, by `CreateItemInput` carrying both halves as
+     * a single value that the insert splits at one site. SQLite cannot add
+     * the second CHECK to a table that already exists without a rebuild,
+     * and rebuilding this one would cascade every tag, note, unit and
+     * allocation off its lines.
+     *
+     * The write path also checks the identifier against the namespace it
+     * claims (`isWellFormedSku`), because `asin` is the claim that
+     * merges lines across sources and a store article number must not be
+     * able to make it by accident.
+     *
+     * The wire fuses the two back into one object for the reason
+     * `Classified<T>` gives: a consumer must not be able to reach the value
+     * without the qualifier that says how far it means anything.
+     */
+    skuScheme: text('sku_scheme', { enum: SKU_SCHEMES }),
     url: text('url'),
     imageUrl: text('image_url'),
 
@@ -138,7 +172,10 @@ export const purchaseItems = sqliteTable(
   (t) => [
     index('idx_purchase_items_purchase').on(t.purchaseId, t.position),
     index('idx_purchase_items_shipment').on(t.shipmentId),
-    index('idx_purchase_items_sku').on(t.sku),
+    // Scheme first: "every line carrying this ASIN" is the repeat-purchase
+    // question, and it is only well posed within one namespace. A lookup on
+    // the identifier alone is the merge this pair exists to prevent.
+    index('idx_purchase_items_sku').on(t.skuScheme, t.sku),
     // Composite because both hot predicates read the pair: the proposal
     // pass wants unclassified lines, and a consumer wants confirmed ones.
     index('idx_purchase_items_kind').on(t.kind, t.kindConfirmedAt),
@@ -169,10 +206,39 @@ export const purchaseItemUnits = sqliteTable(
     itemId: text('item_id')
       .notNull()
       .references(() => purchaseItems.id, { onDelete: 'cascade' }),
-    /** Present in the Amazon export as `Item Serial Number`, and the strongest identity a unit can have. */
+    /**
+     * Intended to hold the serial engraved on the hardware, the identity an
+     * owner can read off the item itself. Free text: callers set it over
+     * `POST /purchases` and nothing validates what arrives.
+     *
+     * Not the Amazon DSAR export's `Item Serial Number`. On the reference
+     * bundle measured 2026-08-11, 28 of its 31 populated rows carry an
+     * `Authenticity_2D=AZ:...` token — Amazon's Transparency anti-counterfeit
+     * code, which identifies a *package*, not the device inside it. The
+     * remaining three carry no prefix and nothing says what they are, so the
+     * column cannot be sorted by inspection either. No ingest adapter in this
+     * repo writes it; see
+     * `pillars/purchases/src/ingest/amazon/README.md`.
+     */
     serialNumber: text('serial_number'),
     inventoryItemUri: text('inventory_item_uri'),
     inventoryItemStaleAt: text('inventory_item_stale_at'),
+    /**
+     * When this unit was offered to inventory and turned down.
+     *
+     * The counterpart to {@link inventoryItemUri}, and the reason a
+     * declined proposal does not come back: the two together are what
+     * makes a unit *decided*, and only undecided units are proposed. A
+     * CHECK holds them mutually exclusive, so no reader has to invent a
+     * precedence rule for a unit that claims both.
+     *
+     * A stale link is NOT a decline and does not reopen the proposal. The
+     * nightly cron stamps {@link inventoryItemStaleAt} when inventory
+     * answers a genuine 404 for a URI; that is evidence to show a human,
+     * and re-offering an asset the human deleted on purpose would fight
+     * them.
+     */
+    inventoryDeclinedAt: text('inventory_declined_at'),
     createdAt: text('created_at')
       .notNull()
       .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),

@@ -14,19 +14,19 @@ import Foundation
 internal struct ReceiptResultPresentation: Sendable {
     internal func content(_ outcome: ReceiptOutcome) -> ReceiptResultContent {
         switch outcome {
-        case .created(let purchaseId, let alreadyStored):
-            return .created(created(purchaseId: purchaseId, alreadyStored: alreadyStored))
-        case .needsReview(let receiptURIs, let failures, let extracted):
+        case .created(let purchase, let alreadyStored):
+            return .created(created(purchase: purchase, alreadyStored: alreadyStored))
+        case .needsReview(let receiptCount, let failures, let extracted):
             return .needsReview(
-                needsReview(receiptURIs: receiptURIs, failures: failures, extracted: extracted))
-        case .unreadable(let receiptURIs, let reason):
-            return .unreadable(unreadable(receiptURIs: receiptURIs, reason: reason))
+                needsReview(receiptCount: receiptCount, failures: failures, extracted: extracted))
+        case .unreadable(let receiptCount, let reason):
+            return .unreadable(unreadable(receiptCount: receiptCount, reason: reason))
         }
     }
 }
 
 extension ReceiptResultPresentation {
-    private func created(purchaseId: String, alreadyStored: Bool)
+    private func created(purchase: ReceiptPurchase, alreadyStored: Bool)
         -> ReceiptResultContent
         .CreatedContent
     {
@@ -34,24 +34,50 @@ extension ReceiptResultPresentation {
             heading: ReceiptResultCopy.createdHeading,
             message: alreadyStored
                 ? ReceiptResultCopy.createdAlreadyStoredMessage : ReceiptResultCopy.createdMessage,
-            reference: ReceiptResultCopy.purchaseReference(purchaseId),
-            noDestinationNote: ReceiptResultCopy.createdNoDestination
+            merchantName: purchase.merchantName?.ifNotEmpty,
+            total: purchase.total.formatted(),
+            itemCount: ReceiptResultCopy.itemCountLabel(purchase.itemCount),
+            purchasedOn: purchasedOn(purchase.orderedAt),
+            reference: ReceiptResultCopy.purchaseReference(purchase.id),
+            summary: ReceiptResultCopy.purchaseSummary(
+                merchantName: purchase.merchantName,
+                itemCount: purchase.itemCount,
+                total: purchase.total.formatted()
+            )
         )
     }
 
+    /// The date half of the purchase's timestamp, in the reader's own locale.
+    ///
+    /// Unlike the receipt's transcribed `purchasedOn`, this one IS parsed —
+    /// it is a machine timestamp the purchases pillar computed, not a string
+    /// somebody read off paper, so rendering it as `2026-08-13T02:15:00.000Z`
+    /// would be showing the wire rather than the date. A value that will not
+    /// parse is dropped rather than shown raw: this screen has already said
+    /// what was recorded, and a malformed date adds nothing a reader can use.
+    private func purchasedOn(_ orderedAt: String) -> String? {
+        guard let date = ReceiptTimestamp.date(from: orderedAt) else { return nil }
+        return ReceiptResultCopy.purchasedOn(date.formatted(date: .abbreviated, time: .omitted))
+    }
+
     private func needsReview(
-        receiptURIs: [String], failures: [ReceiptGateFailure], extracted: ExtractedReceipt
+        receiptCount: Int, failures: [ReceiptGateFailure], extracted: ExtractedReceipt
     ) -> ReceiptResultContent.NeedsReviewContent {
         ReceiptResultContent.NeedsReviewContent(
             heading: ReceiptResultCopy.needsReviewHeading,
-            message: ReceiptResultCopy.needsReviewMessage,
-            photoCount: photoCount(receiptURIs),
-            extractedFields: fields(extracted),
+            message: ReceiptResultCopy.needsReviewMessage(for: failures.map(\.kind)),
+            photoCount: photoCount(receiptCount),
+            identity: identity(extracted),
+            lines: lines(extracted.lines),
+            total: field(ReceiptResultCopy.FieldLabel.total, extracted.total),
+            adjustments: adjustments(extracted),
+            notes: field(
+                ReceiptResultCopy.FieldLabel.unreadableNotes, amounts(extracted.unreadableNotes)),
             failureLines: failureLines(failures)
         )
     }
 
-    private func unreadable(receiptURIs: [String], reason: String)
+    private func unreadable(receiptCount: Int, reason: String)
         -> ReceiptResultContent
         .UnreadableContent
     {
@@ -59,38 +85,35 @@ extension ReceiptResultPresentation {
             heading: ReceiptResultCopy.unreadableHeading,
             message: ReceiptResultCopy.unreadableMessage,
             reason: ReceiptResultCopy.unreadableReason(reason),
-            photoCount: photoCount(receiptURIs)
+            photoCount: photoCount(receiptCount)
         )
     }
 
-    private func photoCount(_ receiptURIs: [String]) -> String? {
-        receiptURIs.isEmpty ? nil : ReceiptResultCopy.photoCount(receiptURIs.count)
+    private func photoCount(_ receiptCount: Int) -> String? {
+        receiptCount <= 0 ? nil : ReceiptResultCopy.photoCount(receiptCount)
     }
 
-    /// Every field the extraction can fill in, in receipt order — merchant
-    /// down to items — dropping whatever the receipt did not state.
-    private func fields(_ extracted: ExtractedReceipt) -> [ReceiptResultContent.Field] {
-        var fields: [ReceiptResultContent.Field] = [
-            field(ReceiptResultCopy.FieldLabel.merchant, extracted.merchantName),
-            field(ReceiptResultCopy.FieldLabel.address, extracted.address),
-            field(ReceiptResultCopy.FieldLabel.date, date(extracted)),
-            field(ReceiptResultCopy.FieldLabel.total, extracted.total),
+    /// Who and when, as printed at the top of the paper, dropping whatever
+    /// the receipt did not state.
+    private func identity(_ extracted: ExtractedReceipt) -> ReceiptResultContent.Identity {
+        ReceiptResultContent.Identity(
+            merchant: field(ReceiptResultCopy.FieldLabel.merchant, extracted.merchantName),
+            address: field(ReceiptResultCopy.FieldLabel.address, extracted.address),
+            date: field(ReceiptResultCopy.FieldLabel.date, date(extracted))
+        )
+    }
+
+    /// What moves the line items to the stated total. The total itself is not
+    /// here: it is the figure this group is checked *against*, and drawing it
+    /// as a fourth adjustment is how a reader loses which number is which.
+    private func adjustments(_ extracted: ExtractedReceipt) -> [ReceiptResultContent.Field] {
+        [
             field(ReceiptResultCopy.FieldLabel.tax, extracted.tax),
             field(ReceiptResultCopy.FieldLabel.discounts, amounts(extracted.discounts)),
             field(ReceiptResultCopy.FieldLabel.surcharges, amounts(extracted.surcharges)),
             field(ReceiptResultCopy.FieldLabel.shipping, extracted.shipping),
         ]
         .compactMap { $0 }
-        if let lines = lines(extracted.lines) {
-            fields.append(
-                ReceiptResultContent.Field(label: ReceiptResultCopy.FieldLabel.lines, value: lines))
-        }
-        if let notes = amounts(extracted.unreadableNotes) {
-            fields.append(
-                ReceiptResultContent.Field(
-                    label: ReceiptResultCopy.FieldLabel.unreadableNotes, value: notes))
-        }
-        return fields
     }
 
     /// The date and time as one line, when the receipt states either. Neither
@@ -109,20 +132,20 @@ extension ReceiptResultPresentation {
         amounts.isEmpty ? nil : amounts.joined(separator: ", ")
     }
 
-    private func lines(_ lines: [ExtractedReceiptLine]) -> String? {
-        guard !lines.isEmpty else { return nil }
-        return lines.map(line(_:)).joined(separator: "\n")
-    }
-
-    private func line(_ line: ExtractedReceiptLine) -> String {
-        var text = "\(line.description) — \(line.amount)"
-        if let quantity = line.quantity {
-            text += " (×\(quantity))"
+    /// One row per printed line, in printed order.
+    ///
+    /// Identified by position rather than by description: a receipt can print
+    /// the same item twice, and two rows sharing an identity is a row that
+    /// disappears under `ForEach`.
+    private func lines(_ lines: [ExtractedReceiptLine]) -> [ReceiptResultContent.LineItem] {
+        lines.enumerated().map { index, line in
+            ReceiptResultContent.LineItem(
+                id: "line-\(index)",
+                description: line.description,
+                amount: line.amount,
+                note: ReceiptResultCopy.lineNote(quantity: line.quantity, unitNote: line.unitNote)
+            )
         }
-        if let unitNote = line.unitNote {
-            text += " \(unitNote)"
-        }
-        return text
     }
 
     /// A field, or nothing at all. Whitespace counts as nothing, for the same
@@ -155,5 +178,32 @@ extension String {
     fileprivate var ifNotEmpty: String? {
         let trimmed = trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? nil : trimmed
+    }
+}
+
+/// Reading the purchase timestamp the way the producer is allowed to write it.
+///
+/// Two formatters rather than one, because `ISO8601DateFormatter` treats
+/// `.withFractionalSeconds` as a requirement rather than a permission: the one
+/// that accepts `…:00.000Z` rejects `…:00Z`, and the purchases pillar's own
+/// pattern admits both. Trying the strict one first and falling back is the
+/// whole of it.
+internal enum ReceiptTimestamp {
+    /// Built per call rather than cached in a `static let`, because
+    /// `ISO8601DateFormatter` is a mutable class and not `Sendable` — a shared
+    /// instance is a data race the language refuses under strict concurrency.
+    /// One confirmation screen reads one timestamp, so there is no scrolling
+    /// list paying for it here.
+    internal static func date(from value: String) -> Date? {
+        formatter(fractionalSeconds: true).date(from: value)
+            ?? formatter(fractionalSeconds: false).date(from: value)
+    }
+
+    private static func formatter(fractionalSeconds: Bool) -> ISO8601DateFormatter {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions =
+            fractionalSeconds
+            ? [.withInternetDateTime, .withFractionalSeconds] : [.withInternetDateTime]
+        return formatter
     }
 }

@@ -10,11 +10,28 @@ export type AnalyticsMerchantSpendData = {
   query?: {
     sources?: Array<string>;
     statuses?: Array<'awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored'>;
+    currency?: string;
+    merchantEntityId?: string;
+    merchantEntityName?: string;
+    merchantUnattributed?: boolean;
     from?: string;
     to?: string;
   };
   url: '/analytics/merchant-spend';
 };
+
+export type AnalyticsMerchantSpendErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+  };
+};
+
+export type AnalyticsMerchantSpendError =
+  AnalyticsMerchantSpendErrors[keyof AnalyticsMerchantSpendErrors];
 
 export type AnalyticsMerchantSpendResponses = {
   /**
@@ -71,6 +88,140 @@ export type AnalyticsMerchantSpendResponses = {
 export type AnalyticsMerchantSpendResponse =
   AnalyticsMerchantSpendResponses[keyof AnalyticsMerchantSpendResponses];
 
+export type AnalyticsProductLeaderboardData = {
+  body?: never;
+  path?: never;
+  query?: {
+    sources?: Array<string>;
+    statuses?: Array<'awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored'>;
+    currency?: string;
+    merchantEntityId?: string;
+    merchantEntityName?: string;
+    merchantUnattributed?: boolean;
+    from?: string;
+    to?: string;
+    minOrderCount?: number;
+  };
+  url: '/analytics/product-leaderboard';
+};
+
+export type AnalyticsProductLeaderboardErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+  };
+};
+
+export type AnalyticsProductLeaderboardError =
+  AnalyticsProductLeaderboardErrors[keyof AnalyticsProductLeaderboardErrors];
+
+export type AnalyticsProductLeaderboardResponses = {
+  /**
+   * 200
+   */
+  200: {
+    coverage: {
+      confirmedProductLines: number;
+      lineCount: number;
+      nameKeyedLines: number;
+      productCount: number;
+      proposedProductLines: number;
+      skuKeyedLines: number;
+      unidentifiedLines: number;
+    };
+    minOrderCount: number;
+    period: {
+      from: string | null;
+      to: string | null;
+    };
+    products: Array<{
+      cadence:
+        | {
+            basis: 'single-purchase';
+          }
+        | {
+            basis: 'intervals';
+            longestIntervalSeconds: number;
+            meanIntervalSeconds: number;
+            medianIntervalSeconds: number;
+            shortestIntervalSeconds: number;
+          };
+      currency: string;
+      firstPurchasedAt: string;
+      landedCostCents: number;
+      lastPurchasedAt: string;
+      lineCount: number;
+      merchants: Array<
+        | {
+            entityId: string;
+            name: string | null;
+            resolution: 'entity';
+          }
+        | {
+            entityId: null;
+            name: string;
+            resolution: 'name';
+          }
+        | {
+            entityId: null;
+            name: null;
+            resolution: 'unattributed';
+          }
+      >;
+      orderCount: number;
+      product:
+        | {
+            basis: 'sku';
+            name: string;
+            scheme: 'asin' | 'merchant';
+            sku: string;
+            source: string | null;
+          }
+        | {
+            basis: 'name';
+            name: string;
+            normalisedName: string;
+            sku: null;
+            source: string;
+          }
+        | {
+            basis: 'product';
+            confirmed: boolean;
+            label: string;
+            name: string;
+            productId: string;
+            sku: null;
+            source: string;
+          }
+        | {
+            basis: 'unidentified';
+            itemId: string;
+            name: string;
+            sku: null;
+            source: string;
+          };
+      refundedCents: number;
+      unitCount: number;
+      unitPrice: {
+        firstCents: number;
+        lastCents: number;
+        maxCents: number;
+        measuredLineCount: number;
+        minCents: number;
+        ordinaryLineCount: number;
+        promotionalLineCount: number;
+        unstatedPromotionLineCount: number;
+      };
+    }>;
+  };
+};
+
+export type AnalyticsProductLeaderboardResponse =
+  AnalyticsProductLeaderboardResponses[keyof AnalyticsProductLeaderboardResponses];
+
 export type PurchaseItemsByTagData = {
   body?: never;
   path?: never;
@@ -109,7 +260,10 @@ export type PurchaseItemsByTagResponses = {
         quantity: number;
         refundedCents: number;
         shipmentId: string | null;
-        sku: string | null;
+        sku: {
+          scheme: 'asin' | 'merchant';
+          value: string;
+        } | null;
         unitPriceCents: number;
         url: string | null;
       };
@@ -120,12 +274,252 @@ export type PurchaseItemsByTagResponses = {
 export type PurchaseItemsByTagResponse =
   PurchaseItemsByTagResponses[keyof PurchaseItemsByTagResponses];
 
+export type ProductListData = {
+  body?: never;
+  path?: never;
+  query?: {
+    source?: string;
+    confirmed?: 'true' | 'false';
+  };
+  url: '/products';
+};
+
+export type ProductListResponses = {
+  /**
+   * 200
+   */
+  200: {
+    products: Array<{
+      aliases: Array<{
+        confirmedAt: string | null;
+        createdAt: string;
+        id: string;
+        normalisedName: string;
+        printedName: string;
+        scopeKey: string;
+        source: string;
+      }>;
+      createdAt: string;
+      id: string;
+      label: string;
+    }>;
+  };
+};
+
+export type ProductListResponse = ProductListResponses[keyof ProductListResponses];
+
+export type ProductDeleteAliasData = {
+  /**
+   * Body
+   */
+  body?: {
+    [key: string]: never;
+  };
+  path: {
+    aliasId: string;
+  };
+  query?: never;
+  url: '/products/aliases/{aliasId}';
+};
+
+export type ProductDeleteAliasErrors = {
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+  };
+};
+
+export type ProductDeleteAliasError = ProductDeleteAliasErrors[keyof ProductDeleteAliasErrors];
+
+export type ProductDeleteAliasResponses = {
+  /**
+   * 200
+   */
+  200: {
+    ok: true;
+  };
+};
+
+export type ProductDeleteAliasResponse =
+  ProductDeleteAliasResponses[keyof ProductDeleteAliasResponses];
+
+export type ProductUpdateAliasData = {
+  /**
+   * Body
+   */
+  body?: {
+    confirmed?: boolean;
+    productId?: string | null;
+  };
+  path: {
+    aliasId: string;
+  };
+  query?: never;
+  url: '/products/aliases/{aliasId}';
+};
+
+export type ProductUpdateAliasErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+  };
+};
+
+export type ProductUpdateAliasError = ProductUpdateAliasErrors[keyof ProductUpdateAliasErrors];
+
+export type ProductUpdateAliasResponses = {
+  /**
+   * 200
+   */
+  200: {
+    confirmedAt: string | null;
+    createdAt: string;
+    id: string;
+    normalisedName: string;
+    printedName: string;
+    scopeKey: string;
+    source: string;
+  };
+};
+
+export type ProductUpdateAliasResponse =
+  ProductUpdateAliasResponses[keyof ProductUpdateAliasResponses];
+
+export type ProductProposeData = {
+  /**
+   * Body
+   */
+  body?: {
+    [key: string]: never;
+  };
+  path?: never;
+  query?: never;
+  url: '/products/proposals';
+};
+
+export type ProductProposeResponses = {
+  /**
+   * 200
+   */
+  200: {
+    confirmed: number;
+    observedWordings: number;
+    proposed: number;
+    retired: number;
+    scannedLines: number;
+  };
+};
+
+export type ProductProposeResponse = ProductProposeResponses[keyof ProductProposeResponses];
+
+export type ProductDeleteData = {
+  /**
+   * Body
+   */
+  body?: {
+    [key: string]: never;
+  };
+  path: {
+    productId: string;
+  };
+  query?: never;
+  url: '/products/{productId}';
+};
+
+export type ProductDeleteErrors = {
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+  };
+};
+
+export type ProductDeleteError = ProductDeleteErrors[keyof ProductDeleteErrors];
+
+export type ProductDeleteResponses = {
+  /**
+   * 200
+   */
+  200: {
+    ok: true;
+  };
+};
+
+export type ProductDeleteResponse = ProductDeleteResponses[keyof ProductDeleteResponses];
+
+export type ProductRenameData = {
+  /**
+   * Body
+   */
+  body?: {
+    label: string;
+  };
+  path: {
+    productId: string;
+  };
+  query?: never;
+  url: '/products/{productId}';
+};
+
+export type ProductRenameErrors = {
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+  };
+};
+
+export type ProductRenameError = ProductRenameErrors[keyof ProductRenameErrors];
+
+export type ProductRenameResponses = {
+  /**
+   * 200
+   */
+  200: {
+    aliases: Array<{
+      confirmedAt: string | null;
+      createdAt: string;
+      id: string;
+      normalisedName: string;
+      printedName: string;
+      scopeKey: string;
+      source: string;
+    }>;
+    createdAt: string;
+    id: string;
+    label: string;
+  };
+};
+
+export type ProductRenameResponse = ProductRenameResponses[keyof ProductRenameResponses];
+
 export type PurchaseListData = {
   body?: never;
   path?: never;
   query?: {
     sources?: Array<string>;
     statuses?: Array<'awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored'>;
+    currency?: string;
+    merchantEntityId?: string;
+    merchantEntityName?: string;
+    merchantUnattributed?: boolean;
     from?: string;
     to?: string;
     limit?: number;
@@ -133,6 +527,18 @@ export type PurchaseListData = {
   };
   url: '/purchases';
 };
+
+export type PurchaseListErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+  };
+};
+
+export type PurchaseListError = PurchaseListErrors[keyof PurchaseListErrors];
 
 export type PurchaseListResponses = {
   /**
@@ -211,7 +617,10 @@ export type PurchaseCreateData = {
       quantity?: number;
       ref?: string;
       shipmentRef?: string | null;
-      sku?: string | null;
+      sku?: {
+        scheme: 'asin' | 'merchant';
+        value: string;
+      } | null;
       tags?: Array<string>;
       unitPriceCents: number;
       units?: Array<{
@@ -241,6 +650,7 @@ export type PurchaseCreateData = {
     sourceOrderId?: string | null;
     subtotalCents?: number;
     surchargeCents?: number;
+    tags?: Array<string>;
     taxCents?: number;
     totalCents: number;
   };
@@ -348,7 +758,10 @@ export type PurchaseCreateResponses = {
         quantity: number;
         refundedCents: number;
         shipmentId: string | null;
-        sku: string | null;
+        sku: {
+          scheme: 'asin' | 'merchant';
+          value: string;
+        } | null;
         unitPriceCents: number;
         url: string | null;
       };
@@ -361,6 +774,7 @@ export type PurchaseCreateResponses = {
       units: Array<{
         createdAt: string;
         id: string;
+        inventoryDeclinedAt: string | null;
         inventoryItemStaleAt: string | null;
         inventoryItemUri: string | null;
         itemId: string;
@@ -548,7 +962,10 @@ export type PurchaseGetResponses = {
         quantity: number;
         refundedCents: number;
         shipmentId: string | null;
-        sku: string | null;
+        sku: {
+          scheme: 'asin' | 'merchant';
+          value: string;
+        } | null;
         unitPriceCents: number;
         url: string | null;
       };
@@ -561,6 +978,7 @@ export type PurchaseGetResponses = {
       units: Array<{
         createdAt: string;
         id: string;
+        inventoryDeclinedAt: string | null;
         inventoryItemStaleAt: string | null;
         inventoryItemUri: string | null;
         itemId: string;
@@ -609,6 +1027,94 @@ export type PurchaseGetResponses = {
 };
 
 export type PurchaseGetResponse = PurchaseGetResponses[keyof PurchaseGetResponses];
+
+export type PurchaseAttachDocumentData = {
+  /**
+   * Body
+   */
+  body?: {
+    documentUri: string;
+    kind?: 'tax_invoice' | 'receipt' | 'order_confirmation' | 'delivery_photo' | 'other';
+  };
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/purchases/{id}/documents';
+};
+
+export type PurchaseAttachDocumentErrors = {
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+  };
+};
+
+export type PurchaseAttachDocumentError =
+  PurchaseAttachDocumentErrors[keyof PurchaseAttachDocumentErrors];
+
+export type PurchaseAttachDocumentResponses = {
+  /**
+   * 201
+   */
+  201: {
+    document: {
+      createdAt: string;
+      documentStaleAt: string | null;
+      documentUri: string;
+      id: string;
+      kind: 'tax_invoice' | 'receipt' | 'order_confirmation' | 'delivery_photo' | 'other';
+      purchaseId: string;
+      shipmentId: string | null;
+    };
+  };
+};
+
+export type PurchaseAttachDocumentResponse =
+  PurchaseAttachDocumentResponses[keyof PurchaseAttachDocumentResponses];
+
+export type PurchaseListInventoryProposalsData = {
+  body?: never;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/purchases/{id}/inventory-proposals';
+};
+
+export type PurchaseListInventoryProposalsResponses = {
+  /**
+   * 200
+   */
+  200: {
+    proposals: Array<{
+      itemId: string;
+      itemName: string;
+      kindConfirmed: boolean;
+      purchaseDate: string;
+      purchaseId: string;
+      purchasePriceCents: number;
+      purchaseTransactionUri: string | null;
+      purchasedFromName: string | null;
+      serialNumber: string | null;
+      slot: number;
+      unitId: string | null;
+    }>;
+  };
+};
+
+export type PurchaseListInventoryProposalsResponse =
+  PurchaseListInventoryProposalsResponses[keyof PurchaseListInventoryProposalsResponses];
 
 export type PurchasePatchItemData = {
   /**
@@ -671,7 +1177,10 @@ export type PurchasePatchItemResponses = {
       quantity: number;
       refundedCents: number;
       shipmentId: string | null;
-      sku: string | null;
+      sku: {
+        scheme: 'asin' | 'merchant';
+        value: string;
+      } | null;
       unitPriceCents: number;
       url: string | null;
     };
@@ -684,6 +1193,7 @@ export type PurchasePatchItemResponses = {
     units: Array<{
       createdAt: string;
       id: string;
+      inventoryDeclinedAt: string | null;
       inventoryItemStaleAt: string | null;
       inventoryItemUri: string | null;
       itemId: string;
@@ -695,11 +1205,88 @@ export type PurchasePatchItemResponses = {
 export type PurchasePatchItemResponse =
   PurchasePatchItemResponses[keyof PurchasePatchItemResponses];
 
+export type PurchaseDecideInventoryProposalData = {
+  /**
+   * Body
+   */
+  body?:
+    | {
+        decision: 'accepted';
+        inventoryItemUri: string;
+        unitId?: string;
+      }
+    | {
+        decision: 'declined';
+        unitId?: string;
+      };
+  path: {
+    id: string;
+    itemId: string;
+  };
+  query?: never;
+  url: '/purchases/{id}/items/{itemId}/inventory-proposal';
+};
+
+export type PurchaseDecideInventoryProposalErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+  };
+};
+
+export type PurchaseDecideInventoryProposalError =
+  PurchaseDecideInventoryProposalErrors[keyof PurchaseDecideInventoryProposalErrors];
+
+export type PurchaseDecideInventoryProposalResponses = {
+  /**
+   * 200
+   */
+  200: {
+    unit: {
+      createdAt: string;
+      id: string;
+      inventoryDeclinedAt: string | null;
+      inventoryItemStaleAt: string | null;
+      inventoryItemUri: string | null;
+      itemId: string;
+      serialNumber: string | null;
+    };
+  };
+};
+
+export type PurchaseDecideInventoryProposalResponse =
+  PurchaseDecideInventoryProposalResponses[keyof PurchaseDecideInventoryProposalResponses];
+
 export type ReceiptUploadData = {
   /**
    * Body
    */
   body?: {
+    capture?: {
+      capturedAt?: string;
+      location?: {
+        latitude: number;
+        longitude: number;
+      };
+      timeZone?: string;
+    };
     parts: Array<{
       dataBase64: string;
       mediaType:
@@ -826,7 +1413,10 @@ export type ReceiptUploadResponses = {
               quantity: number;
               refundedCents: number;
               shipmentId: string | null;
-              sku: string | null;
+              sku: {
+                scheme: 'asin' | 'merchant';
+                value: string;
+              } | null;
               unitPriceCents: number;
               url: string | null;
             };
@@ -839,6 +1429,7 @@ export type ReceiptUploadResponses = {
             units: Array<{
               createdAt: string;
               id: string;
+              inventoryDeclinedAt: string | null;
               inventoryItemStaleAt: string | null;
               inventoryItemUri: string | null;
               itemId: string;
@@ -1041,6 +1632,35 @@ export type ReconcileLinksResponses = {
 };
 
 export type ReconcileLinksResponse = ReconcileLinksResponses[keyof ReconcileLinksResponses];
+
+export type ReconcileLinksBatchData = {
+  /**
+   * Body
+   */
+  body?: {
+    transactionUris: Array<string>;
+  };
+  path?: never;
+  query?: never;
+  url: '/reconcile/links/batch';
+};
+
+export type ReconcileLinksBatchResponses = {
+  /**
+   * 200
+   */
+  200: {
+    transactions: Array<{
+      confirmedChargeCount: number;
+      derivedChargeCount: number;
+      purchaseCount: number;
+      transactionUri: string;
+    }>;
+  };
+};
+
+export type ReconcileLinksBatchResponse =
+  ReconcileLinksBatchResponses[keyof ReconcileLinksBatchResponses];
 
 export type ReconcileQueueData = {
   body?: never;

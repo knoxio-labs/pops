@@ -25,6 +25,7 @@ import { getTableConfig, uniqueKeyName } from 'drizzle-orm/sqlite-core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
+  purchaseCapture,
   purchaseChargeLinks,
   purchaseCharges,
   purchaseDocuments,
@@ -32,6 +33,8 @@ import {
   purchaseItemNotes,
   purchaseLinkRejections,
   purchaseItems,
+  purchaseProductAliases,
+  purchaseProducts,
   purchaseItemTags,
   purchaseItemUnits,
   purchases,
@@ -72,6 +75,9 @@ const ALL_TABLES: readonly SQLiteTable[] = [
   purchaseLinkRejections,
   purchaseItemAllocations,
   purchaseDocuments,
+  purchaseCapture,
+  purchaseProducts,
+  purchaseProductAliases,
 ];
 
 interface ColumnInfo {

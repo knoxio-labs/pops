@@ -16,14 +16,18 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { sql } from 'drizzle-orm';
-import supertest from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { openAiDb, type OpenedAiDb } from '../../db/index.js';
 import { createAiApiApp } from '../app.js';
+import { createTestTransport } from './test-http.js';
+
+const { requestOn } = createTestTransport();
 
 const FINANCE_SECRET = 'finance-caller-secret';
 const FINANCE_CRED = `finance.${FINANCE_SECRET}`;
+const PURCHASES_SECRET = 'purchases-caller-secret';
+const PURCHASES_CRED = `purchases.${PURCHASES_SECRET}`;
 
 let tmpDir: string;
 let aiDb: OpenedAiDb;
@@ -66,11 +70,53 @@ afterEach(() => {
   aiDb.raw.close();
   rmSync(tmpDir, { recursive: true, force: true });
   delete process.env['POPS_INTERNAL_SECRET_FINANCE'];
+  delete process.env['POPS_INTERNAL_SECRET_PURCHASES'];
+});
+
+describe('POST /ai-usage/record — the purchases caller', () => {
+  it('writes a row attributed to purchases when it presents its own credential', async () => {
+    process.env['POPS_INTERNAL_SECRET_PURCHASES'] = PURCHASES_SECRET;
+
+    const res = await requestOn(app)
+      .post('/ai-usage/record')
+      .set('x-pops-internal-credential', PURCHASES_CRED)
+      .send(validRecord({ domain: 'purchases', operation: 'receipt-extraction' }));
+
+    expect(res.status).toBe(200);
+    const row = aiDb.db.get<{ domain: string; operation: string }>(
+      sql`SELECT domain, operation FROM ai_inference_log`
+    );
+    expect(row).toMatchObject({ domain: 'purchases', operation: 'receipt-extraction' });
+  });
+
+  it('403s purchases presenting a wrong secret', async () => {
+    process.env['POPS_INTERNAL_SECRET_PURCHASES'] = PURCHASES_SECRET;
+
+    const res = await requestOn(app)
+      .post('/ai-usage/record')
+      .set('x-pops-internal-credential', 'purchases.WRONG')
+      .send(validRecord({ domain: 'purchases' }));
+
+    expect(res.status).toBe(403);
+    expect(countLogs()).toBe(0);
+  });
+
+  it('403s purchases once its secret is blanked, which is how the caller is revoked', async () => {
+    process.env['POPS_INTERNAL_SECRET_PURCHASES'] = '';
+
+    const res = await requestOn(app)
+      .post('/ai-usage/record')
+      .set('x-pops-internal-credential', PURCHASES_CRED)
+      .send(validRecord({ domain: 'purchases' }));
+
+    expect(res.status).toBe(403);
+    expect(countLogs()).toBe(0);
+  });
 });
 
 describe('POST /ai-usage/record — per-caller credential gate', () => {
   it('accepts a valid per-caller credential and writes the row', async () => {
-    const res = await supertest(app)
+    const res = await requestOn(app)
       .post('/ai-usage/record')
       .set('x-pops-internal-credential', FINANCE_CRED)
       .send(validRecord());
@@ -79,13 +125,13 @@ describe('POST /ai-usage/record — per-caller credential gate', () => {
   });
 
   it('403s without any credential', async () => {
-    const res = await supertest(app).post('/ai-usage/record').send(validRecord());
+    const res = await requestOn(app).post('/ai-usage/record').send(validRecord());
     expect(res.status).toBe(403);
     expect(countLogs()).toBe(0);
   });
 
   it('403s a known caller presenting a wrong secret', async () => {
-    const res = await supertest(app)
+    const res = await requestOn(app)
       .post('/ai-usage/record')
       .set('x-pops-internal-credential', 'finance.WRONG')
       .send(validRecord());
@@ -94,7 +140,7 @@ describe('POST /ai-usage/record — per-caller credential gate', () => {
   });
 
   it('403s an unconfigured caller (secret env absent)', async () => {
-    const res = await supertest(app)
+    const res = await requestOn(app)
       .post('/ai-usage/record')
       .set('x-pops-internal-credential', 'cerebrum.anything')
       .send(validRecord());
@@ -105,7 +151,7 @@ describe('POST /ai-usage/record — per-caller credential gate', () => {
 
 describe('POST /ai-usage/record — happy path', () => {
   it('writes exactly one ai_inference_log row and never touches ai_inference_daily', async () => {
-    const res = await supertest(app)
+    const res = await requestOn(app)
       .post('/ai-usage/record')
       .set('x-pops-internal-credential', FINANCE_CRED)
       .send(validRecord());
@@ -117,7 +163,7 @@ describe('POST /ai-usage/record — happy path', () => {
   });
 
   it('maps cached→0|1, promptVersion→metadata.prompt_version, contextId→context_id', async () => {
-    await supertest(app)
+    await requestOn(app)
       .post('/ai-usage/record')
       .set('x-pops-internal-credential', FINANCE_CRED)
       .send(
@@ -143,7 +189,7 @@ describe('POST /ai-usage/record — happy path', () => {
   });
 
   it('persists null metadata when none is supplied', async () => {
-    await supertest(app)
+    await requestOn(app)
       .post('/ai-usage/record')
       .set('x-pops-internal-credential', FINANCE_CRED)
       .send(validRecord());
@@ -157,7 +203,7 @@ describe('POST /ai-usage/record — happy path', () => {
 
 describe('POST /ai-usage/record — validation + best-effort', () => {
   it('400s a malformed domain without writing a row', async () => {
-    const res = await supertest(app)
+    const res = await requestOn(app)
       .post('/ai-usage/record')
       .set('x-pops-internal-credential', FINANCE_CRED)
       .send(validRecord({ domain: 'Finance Pillar!!' }));
@@ -167,7 +213,7 @@ describe('POST /ai-usage/record — validation + best-effort', () => {
   });
 
   it('400s a body that fails the zod schema (negative tokens)', async () => {
-    const res = await supertest(app)
+    const res = await requestOn(app)
       .post('/ai-usage/record')
       .set('x-pops-internal-credential', FINANCE_CRED)
       .send(validRecord({ inputTokens: -5 }));
@@ -178,7 +224,7 @@ describe('POST /ai-usage/record — validation + best-effort', () => {
 
   it('drops oversized metadata (caps the JSON) but still writes the row 200', async () => {
     const huge = 'x'.repeat(8000);
-    const res = await supertest(app)
+    const res = await requestOn(app)
       .post('/ai-usage/record')
       .set('x-pops-internal-credential', FINANCE_CRED)
       .send(validRecord({ metadata: { blob: huge } }));

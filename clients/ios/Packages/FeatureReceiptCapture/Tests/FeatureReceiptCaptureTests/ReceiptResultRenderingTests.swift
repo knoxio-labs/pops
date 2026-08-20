@@ -1,4 +1,5 @@
 import AppCore
+import DesignSystem
 import DesignSystemTestSupport
 import Foundation
 import SwiftUI
@@ -41,9 +42,24 @@ internal struct ReceiptResultRenderingTests {
         return pixels as Data
     }
 
-    @Test("every card renders, and renders the same way twice")
+    /// The one claim here that holds on a lane where `Colors.xcassets` was
+    /// copied without being compiled, and the reason the determinism check
+    /// below is a separate test rather than a second assertion in this one:
+    /// the trait that gates that check would take this smoke test down with
+    /// it, leaving the suite rasterising nothing at all on the host lane.
+    @Test("a card rasterises")
+    func aCardRasterises() throws {
+        _ = try #require(
+            Self.render(
+                Self.card(.created(purchase: .fake(id: "purchase-1"), alreadyStored: false))))
+    }
+
+    /// Gated, because where no token resolves both renders are the same blank
+    /// canvas and match whether the card is deterministic or not.
+    @Test("a card renders the same way twice", .requiresCompiledColorCatalog)
     func rendersDeterministically() throws {
-        let outcome = ReceiptOutcome.created(purchaseId: "purchase-1", alreadyStored: false)
+        let outcome = ReceiptOutcome.created(
+            purchase: .fake(id: "purchase-1"), alreadyStored: false)
         let once = try #require(Self.render(Self.card(outcome)))
         let again = try #require(Self.render(Self.card(outcome)))
 
@@ -56,13 +72,14 @@ internal struct ReceiptResultRenderingTests {
     @Test("the three outcomes do not look alike", .requiresCompiledColorCatalog)
     func theThreeOutcomesAreVisuallyDistinct() throws {
         let created = try #require(
-            Self.render(Self.card(.created(purchaseId: "purchase-1", alreadyStored: false))))
+            Self.render(
+                Self.card(.created(purchase: .fake(id: "purchase-1"), alreadyStored: false))))
         let needsReview = try #require(
             Self.render(
                 Self.card(
-                    .needsReview(receiptURIs: ["uri-1"], failures: [.fake()], extracted: .fake()))))
+                    .needsReview(receiptCount: 1, failures: [.fake()], extracted: .fake()))))
         let unreadable = try #require(
-            Self.render(Self.card(.unreadable(receiptURIs: ["uri-1"], reason: "blank image"))))
+            Self.render(Self.card(.unreadable(receiptCount: 1, reason: "blank image"))))
 
         #expect(created != needsReview)
         #expect(created != unreadable)
@@ -74,9 +91,11 @@ internal struct ReceiptResultRenderingTests {
     @Test("a fresh write does not look like a re-upload", .requiresCompiledColorCatalog)
     func createdDistinguishesAlreadyStored() throws {
         let fresh = try #require(
-            Self.render(Self.card(.created(purchaseId: "purchase-1", alreadyStored: false))))
+            Self.render(
+                Self.card(.created(purchase: .fake(id: "purchase-1"), alreadyStored: false))))
         let repeated = try #require(
-            Self.render(Self.card(.created(purchaseId: "purchase-1", alreadyStored: true))))
+            Self.render(
+                Self.card(.created(purchase: .fake(id: "purchase-1"), alreadyStored: true))))
 
         #expect(fresh != repeated)
     }
@@ -85,7 +104,7 @@ internal struct ReceiptResultRenderingTests {
     /// schemes.
     @Test("a card renders differently in light and dark", .requiresCompiledColorCatalog)
     func followsTheColourScheme() throws {
-        let outcome = ReceiptOutcome.unreadable(receiptURIs: ["uri-1"], reason: "blank image")
+        let outcome = ReceiptOutcome.unreadable(receiptCount: 1, reason: "blank image")
         let light = try #require(Self.render(Self.card(outcome), in: .light))
         let dark = try #require(Self.render(Self.card(outcome), in: .dark))
 
@@ -101,25 +120,82 @@ internal struct ReceiptResultRenderingTests {
             Self.render(
                 Self.card(
                     .needsReview(
-                        receiptURIs: [], failures: [.fake()],
+                        receiptCount: 0, failures: [.fake()],
                         extracted: .fake(lines: [], unreadableNotes: [])))))
         let withoutFailures = try #require(
             Self.render(
                 Self.card(
                     .needsReview(
-                        receiptURIs: [], failures: [],
+                        receiptCount: 0, failures: [],
                         extracted: .fake(lines: [], unreadableNotes: [])))))
 
         #expect(withFailures != withoutFailures)
     }
 
+    /// The reading is rows of line items now, not one newline-joined blob
+    /// under an "Items" label. A card with items has to be a taller, denser
+    /// card than one without.
+    ///
+    /// Gated, though the difference is a layout one: where the catalogue did
+    /// not compile, every token this card draws in resolves alike and the
+    /// canvas carries no visible mark at all, so two layouts that genuinely
+    /// differ still rasterise to the same bytes. Measured, not assumed — this
+    /// comparison was written with the opt-out and the host lane found the two
+    /// renders byte-identical. `ReceiptLineItemPresentationTests` is where the
+    /// line items are answered for on every lane.
+    @Test(
+        "the line items reach the needs-review card",
+        .requiresCompiledColorCatalog)
+    func lineItemsReachTheCanvas() throws {
+        let withLines = try #require(
+            Self.render(
+                Self.card(
+                    .needsReview(
+                        receiptCount: 1, failures: [.fake()],
+                        extracted: .fake(
+                            lines: [.fake(description: "Milk"), .fake(description: "Bread")])))))
+        let withoutLines = try #require(
+            Self.render(
+                Self.card(
+                    .needsReview(
+                        receiptCount: 1, failures: [.fake()], extracted: .fake(lines: [])))))
+
+        #expect(withLines != withoutLines)
+    }
+
+    /// The thing this surface never showed. A plate with a photograph in it
+    /// is not the plate with a glyph in it whatever the palette did, so this
+    /// holds on the host lane too.
+    ///
+    /// It renders ``ReceiptPageView`` rather than the strip around it:
+    /// `ImageRenderer` lays a `ScrollView` out and rasterises none of its
+    /// content, which is why the plate is a view of its own. What the strip
+    /// itself composes is not checkable here — see this package's README.
+    @Test(
+        "a captured page draws its own photograph rather than a placeholder",
+        .comparisonSurvivesAnUncompiledCatalog)
+    func capturedPagesDrawTheirBytes() throws {
+        let png = try #require(PopsTestImage.pngData(), "the fixture image could not be encoded")
+        let page = { (mediaType: ReceiptMediaType) in
+            ReceiptPageView(part: ReceiptPart(mediaType: mediaType, data: png), index: 1, of: 1)
+                .frame(width: PopsSize.pageWidth, height: PopsSize.pageHeight)
+        }
+
+        let photographed = try #require(Self.render(page(.jpeg)))
+        let undrawable = try #require(Self.render(page(.pdf)))
+
+        #expect(photographed != undrawable)
+    }
+
     /// The size the layout has to survive. iOS only, and the conditional is
     /// the honest kind: macOS has no Dynamic Type.
     #if os(iOS)
-        @Test("a needs-review card still renders at the largest accessibility text size")
+        @Test(
+            "a needs-review card still renders at the largest accessibility text size",
+            .requiresCompiledColorCatalog)
         func survivesAccessibilityTextSizes() throws {
             let outcome = ReceiptOutcome.needsReview(
-                receiptURIs: ["uri-1"], failures: [.fake()], extracted: .fake())
+                receiptCount: 1, failures: [.fake()], extracted: .fake())
             let stock = try #require(Self.render(Self.card(outcome)))
             let huge = try #require(
                 Self.render(Self.card(outcome).dynamicTypeSize(.accessibility5)))

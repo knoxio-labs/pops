@@ -10,11 +10,11 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { openCerebrumDb, type OpenedCerebrumDb } from '../../db/index.js';
 import { createCerebrumApiApp } from '../app.js';
+import { createTestTransport } from './test-http.js';
 import { makeCerebrumApiDeps } from './test-utils.js';
 
 let tmpDir: string;
@@ -39,9 +39,11 @@ type OpenApiBody = {
   paths?: Record<string, Record<string, { operationId?: unknown }> | undefined>;
 };
 
+const { requestOn } = createTestTransport();
+
 describe('GET /openapi', () => {
   it('serves the committed projection as JSON (3.x + debrief.create operationId)', async () => {
-    const res = await request(makeApp()).get('/openapi');
+    const res = await requestOn(makeApp()).get('/openapi');
 
     expect(res.status).toBe(200);
     const body = res.body as OpenApiBody;

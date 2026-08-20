@@ -97,13 +97,15 @@ function parseToolName(name: string): { pillarId: string; toolName: string } | n
 }
 
 const TOOL_ERROR_FALLBACK: Record<
-  'not-found' | 'conflict' | 'bad-request' | 'unauthorized',
+  'not-found' | 'conflict' | 'bad-request' | 'unauthorized' | 'refused' | 'rate-limited',
   string
 > = {
   'not-found': 'not found',
   conflict: 'conflict',
   'bad-request': 'bad request',
   unauthorized: 'unauthorized',
+  refused: 'refused',
+  'rate-limited': 'rate limited',
 };
 
 function mapCallResult(pillarId: string, result: CallResult<unknown>): ToolResult {
@@ -119,6 +121,13 @@ function mapCallResult(pillarId: string, result: CallResult<unknown>): ToolResul
     case 'conflict':
     case 'bad-request':
     case 'unauthorized':
+    // `refused` (a permanent 4xx refusal) and `rate-limited` (429) are both
+    // "the pillar answered, and retrying unchanged won't help" — the same
+    // bucket `tool-error` already covers for `bad-request`, not
+    // `pillar-unavailable`. An AI-tool caller has no backoff loop to hand a
+    // `retryAfterSeconds` to; the reason string is all it can act on today.
+    case 'refused':
+    case 'rate-limited':
       return { kind: 'tool-error', reason: result.message ?? TOOL_ERROR_FALLBACK[result.kind] };
   }
 }

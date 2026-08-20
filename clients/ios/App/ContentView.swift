@@ -70,7 +70,7 @@ internal struct ContentView: View {
         case FeatureTransactions.feature:
             TransactionsFlowView(dependencies: dependencies, router: composition.router)
         case FeatureReceiptCapture.feature:
-            ReceiptCaptureView()
+            ReceiptCaptureView(model: ReceiptCaptureViewModel(dependencies: dependencies))
         default:
             // Unreachable: `RootFeature.renderable` is what the shell filters
             // against, so a feature with no screen is never offered. Drawn as

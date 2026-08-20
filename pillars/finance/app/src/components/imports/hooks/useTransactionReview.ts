@@ -92,16 +92,26 @@ function useReevalOnChangeSets(
   sessionId: string | null
 ) {
   const prevChangeSetsRef = useRef(pendingChangeSets);
-  const { runReevaluate } = useReevaluatePending();
+  const { runReevaluate, isReevaluating } = useReevaluatePending();
+  // Accepting several suggestions in quick succession leaves overlapping
+  // re-evaluations in flight, and they do not necessarily resolve in the order
+  // they were issued — a slow early response would otherwise land last and
+  // overwrite the newer result, silently reverting the later accepts. Only the
+  // most recently issued run may apply its outcome.
+  const latestRunRef = useRef(0);
   useEffect(() => {
     if (prevChangeSetsRef.current === pendingChangeSets) return;
     prevChangeSetsRef.current = pendingChangeSets;
     if (!sessionId) return;
 
+    latestRunRef.current += 1;
+    const runId = latestRunRef.current;
     void runReevaluate().then((outcome) => {
-      if (outcome) applyReevaluatedResult(outcome.result);
+      if (!outcome || runId !== latestRunRef.current) return;
+      applyReevaluatedResult(outcome.result);
     });
   }, [pendingChangeSets, sessionId, applyReevaluatedResult, runReevaluate]);
+  return { isReevaluating };
 }
 
 /**
@@ -118,7 +128,11 @@ export function useTransactionReview() {
   const initialTab = localTransactions.uncertain.length > 0 ? 'uncertain' : 'matched';
   const { activeTab, handleTabChange } = useTabWithScrollMemory(initialTab);
 
-  useReevalOnChangeSets(applyReevaluatedResult, pendingChangeSets, processSessionId);
+  const { isReevaluating } = useReevalOnChangeSets(
+    applyReevaluatedResult,
+    pendingChangeSets,
+    processSessionId
+  );
 
   const unresolvedCount = useMemo(
     () => localTransactions.uncertain.length + localTransactions.failed.length,
@@ -144,5 +158,6 @@ export function useTransactionReview() {
     unresolvedCount,
     uncertainGroups,
     failedGroups,
+    isReevaluating,
   };
 }

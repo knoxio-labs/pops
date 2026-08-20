@@ -34,10 +34,20 @@ a paired phone                        bfm
                                           │ prefix budget spent?       yes ─► 429
                                           │ this client's spent?       yes ─► 429
                                           ▼
+                                      (POST /mobile/purchases/receipts only)
+                                      receipt-rate-limit.ts
+                                          │ route budget spent?        yes ─► 429
+                                          │ this client's spent?       yes ─► 429
+                                          ▼
                                       require-device.ts
                                           │ token intact and current?  no ─► 401
-                                          │ device row still trusted?  no ─► 403
+                                          │ device row still trusted?  no ─► 403 device_revoked
                                           │ lastSeenAt stale?         yes ─► touched
+                                          ▼
+                                      require-capability.ts
+                                          │ path a mobile route?       no ─► 404 (the router's)
+                                          │ route declares one?        no ─► 500 (a fault)
+                                          │ grant holds it?            no ─► 403 capability_not_granted
                                           ▼
                                       res.locals.device ─► the route
 
@@ -64,13 +74,14 @@ a phone whose ten minutes lapsed     bfm
                                       { accessToken, refreshToken }
 ```
 
-All three budgets are the same mechanism with different numbers —
+All four budgets are the same mechanism with different numbers —
 `api/tiered-rate-limit.ts`, one directory up, because it is not specific to
 authentication. They keep separate counters: sharing one would let ordinary
 phone traffic lock a handset out of pairing, or a handset failing to refresh
-stop a different one from pairing. The two refresh routes deliberately share
-ONE, because they are two halves of a single exchange and separate budgets
-would be one budget spendable twice by alternating paths.
+stop a different one from pairing, or a slow morning of receipts lock a
+handset out of its own transaction list. The two refresh routes deliberately
+share ONE, because they are two halves of a single exchange and separate
+budgets would be one budget spendable twice by alternating paths.
 
 `device-signature.ts` is the bytes half of proof of possession, used by two
 paths for two different halves of itself. Pairing uses only the key parsing —
@@ -107,9 +118,21 @@ They ask the phone to do different things, and it cannot guess which.
 - **401** — the token is missing, expired, tampered with, or signed by another
   deployment. The handset still holds a refresh token, so the recovery is to
   mint a new access token and retry.
-- **403** — the signature is ours and current, but an operator revoked the
-  device. No amount of refreshing helps; the app returns to pairing and wipes
-  its keychain.
+- **403 `device_revoked`** — the signature is ours and current, but an operator
+  revoked the device. No amount of refreshing helps; the app returns to pairing
+  and wipes its keychain.
+- **403 `capability_not_granted`** — the credential is entirely good and this
+  device's grant does not cover this route
+  ([ADR-048](../../../../../docs/architecture/adr-048-mobile-capability-scopes.md)).
+  Neither recovery applies: refreshing changes nothing, and wiping the keychain
+  would destroy a working pairing over a screen the device was never entitled
+  to open. The app stops offering the feature.
+
+The two 403s share a status because they are the same HTTP fact, and share
+nothing else — which is why the body is a union discriminated on `code` rather
+than one shape with an optional field. `clients/ios` currently folds every 403
+into "end the session", which is right for the first and wrong for the second
+(POPS-2459).
 
 `clients/ios` already switches on exactly this split — `SessionReducer` maps a
 403 to `.revoked(.revokedByOperator)` and nothing else does. Collapsing the two
@@ -125,7 +148,11 @@ deployment). Sending the phone through refresh gets it a truthful
 
 `app.ts` mounts it as `app.use('/mobile', …)` rather than per route, so it
 covers paths no route has been written for yet — including the mobile surfaces
-still to land. None of them can arrive accidentally public.
+still to land. None of them can arrive accidentally public. `require-capability.ts`
+mounts on the same prefix immediately behind it, for the same reason and with
+one addition: a mobile route that declares no capability is answered as a fault
+rather than served, so "added ungated" is not a state a request can pass
+through even before the contract guard catches it.
 
 The cost is that an unrouted `/mobile/*` answers 401 rather than 404. That is
 the right trade twice over: it fails closed, and it declines to tell an
@@ -149,6 +176,15 @@ mounted the same way and for a related but distinct reason: there the
 credential is a code a human can type, so the budget bounds **guesses** rather
 than work. Its window is one pairing-code lifetime, so a client that spends its
 budget waits only as long as the code it was failing against would have lived.
+
+`receipt-rate-limit.ts` sits in front of `POST /mobile/purchases/receipts`
+only, mounted the same way and ahead of `require-device.ts` for the same
+reason, but bounding a third thing: neither a signature check nor a guess, but
+a Claude vision call in `purchases` that this pillar's own budget cannot see
+or throttle once the request has left it. The general prefix budget was sized
+against a page of transaction rows; the receipt route costs something the
+mobile perimeter was never sized to protect against, so it gets a tighter
+budget of its own rather than a share of the wider one (POPS-1989).
 
 The counters are process-local, which is exact for one container and wrong for
 two — POPS-1474 tracks that, with the trigger pinned to whichever change first

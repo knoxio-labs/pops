@@ -28,6 +28,7 @@
 import { and, asc, desc, eq, isNull, sql } from 'drizzle-orm';
 
 import { purchaseItems, purchases } from '../db/schema.js';
+import { loadProductDictionary } from '../db/services/product-dictionary.js';
 import { intoBatches, toCandidates, type ProposalCandidate } from './batch.js';
 import { readKindProposals } from './kind-proposal.js';
 
@@ -92,7 +93,10 @@ function unclassifiedItems(db: PurchasesDb): readonly BatchableItem[] {
       id: purchaseItems.id,
       source: purchases.source,
       sku: purchaseItems.sku,
+      skuScheme: purchaseItems.skuScheme,
       name: purchaseItems.name,
+      merchantEntityId: purchases.merchantEntityId,
+      merchantEntityName: purchases.merchantEntityName,
     })
     .from(purchaseItems)
     .innerJoin(purchases, eq(purchases.id, purchaseItems.purchaseId))
@@ -114,7 +118,7 @@ export async function proposeItemKinds(
   const batchSize = options.batchSize ?? DEFAULT_BATCH_SIZE;
   // The cap is on products, not rows: one product can span many lines, so
   // grouping first is what makes `limit` mean "this many decisions".
-  const all = toCandidates(unclassifiedItems(db));
+  const all = toCandidates(unclassifiedItems(db), loadProductDictionary(db));
   const candidates = options.limit === undefined ? all : all.slice(0, options.limit);
   const batches = intoBatches(candidates, batchSize);
 

@@ -12,21 +12,31 @@ import {
   isResidualBearing,
   LINK_TYPES,
   MERCHANT_RESOLUTIONS,
+  PRODUCT_IDENTITY_BASES,
   PURCHASE_STATUSES,
   RESIDUAL_BEARING_ROLES,
   SETTLEMENT_ROLES,
   SHIPMENT_STATUSES,
+  SKU_SCHEMES,
 } from '../constants.js';
 import { PurchasesErrorSchema } from '../errors.js';
 import { purchasesManifest } from '../manifest.js';
-import { MerchantIdentitySchema } from '../rest-analytics.js';
+import {
+  MerchantIdentitySchema,
+  ProductCadenceSchema,
+  ProductIdentitySchema,
+  ProductUnitPriceSchema,
+} from '../rest-analytics.js';
+// The identity a line's merchant STATED, as against the grouping identity
+// above, which is how the aggregate decided two lines are one product.
+import { ProductIdentitySchema as StatedProductIdentitySchema } from '../schemas/product-identity.js';
+import { PurchaseAccountingSchema } from '../schemas/purchase-detail.js';
 import {
   CentsSchema,
   CurrencySchema,
   IsoTimestampSchema,
   NonNegativeCentsSchema,
   PopsUriSchema,
-  PurchaseAccountingSchema,
 } from '../schemas/purchase.js';
 
 describe('CentsSchema', () => {
@@ -134,6 +144,23 @@ describe('IsoTimestampSchema', () => {
       expect(IsoTimestampSchema.safeParse(value).success).toBe(false);
     }
   );
+
+  it('rejects a day that overflows its month rather than rolling it into the next one', () => {
+    // 2026-02-30 has the right shape and names nothing. `Date` parsing
+    // rolls it forward to 2026-03-02 instead of erroring, which would land
+    // the order in the wrong month with nothing recording the move.
+    expect(IsoTimestampSchema.safeParse('2026-02-30T00:00:00Z').success).toBe(false);
+  });
+
+  it('accepts a real leap day', () => {
+    // 2026-02-30 is properly rejected — 2028-02-29 must not be caught in
+    // the same net, since 2028 is a leap year and the 29th is real.
+    expect(IsoTimestampSchema.safeParse('2028-02-29T00:00:00Z').success).toBe(true);
+  });
+
+  it('rejects 29 February in a non-leap year', () => {
+    expect(IsoTimestampSchema.safeParse('2026-02-29T00:00:00Z').success).toBe(false);
+  });
 });
 
 describe('PopsUriSchema', () => {
@@ -182,8 +209,49 @@ describe('closed vocabularies', () => {
     ['LINK_TYPES', LINK_TYPES],
     ['SETTLEMENT_ROLES', SETTLEMENT_ROLES],
     ['MERCHANT_RESOLUTIONS', MERCHANT_RESOLUTIONS],
+    ['PRODUCT_IDENTITY_BASES', PRODUCT_IDENTITY_BASES],
+    ['SKU_SCHEMES', SKU_SCHEMES],
   ])('%s has no duplicates', (_label, values) => {
     expect(new Set(values).size).toBe(values.length);
+  });
+});
+
+describe('ProductIdentitySchema — the identity a source stated', () => {
+  it('accepts an ASIN in the namespace that issues it', () => {
+    expect(
+      StatedProductIdentitySchema.safeParse({ value: 'B0DSVZQ8P5', scheme: 'asin' }).success
+    ).toBe(true);
+  });
+
+  it('refuses to let an article number claim the namespace that merges across sources', () => {
+    // The whole failure the pair exists to prevent, arriving as a request
+    // body: `asin` is what makes two lines from different merchants one
+    // product, so a four-digit store number may not claim it.
+    const parsed = StatedProductIdentitySchema.safeParse({ value: '4471', scheme: 'asin' });
+    expect(parsed.success).toBe(false);
+  });
+
+  it('accepts that same number as what it is', () => {
+    expect(
+      StatedProductIdentitySchema.safeParse({ value: '4471', scheme: 'merchant' }).success
+    ).toBe(true);
+  });
+
+  it.each(['', '   ', '\t'])('rejects %p, which identifies nothing in any namespace', (value) => {
+    expect(StatedProductIdentitySchema.safeParse({ value, scheme: 'merchant' }).success).toBe(
+      false
+    );
+  });
+
+  it('rejects an identifier with no namespace, and a namespace with no identifier', () => {
+    expect(StatedProductIdentitySchema.safeParse({ value: 'B0DSVZQ8P5' }).success).toBe(false);
+    expect(StatedProductIdentitySchema.safeParse({ scheme: 'asin' }).success).toBe(false);
+  });
+
+  it('rejects a namespace outside the vocabulary', () => {
+    expect(
+      StatedProductIdentitySchema.safeParse({ value: '9310072021453', scheme: 'barcode' }).success
+    ).toBe(false);
   });
 });
 
@@ -228,6 +296,172 @@ describe('MerchantIdentitySchema', () => {
     ['an unknown resolution', { resolution: 'vibes', entityId: null, name: null }],
   ])('rejects %s', (_label, value) => {
     expect(MerchantIdentitySchema.safeParse(value).success).toBe(false);
+  });
+});
+
+describe('ProductIdentitySchema — the basis a group was formed on', () => {
+  it('offers exactly the bases the vocabulary names', () => {
+    const covered = ProductIdentitySchema.options.map((option) => option.shape.basis.value);
+
+    expect(covered.toSorted()).toEqual([...PRODUCT_IDENTITY_BASES].toSorted());
+  });
+
+  it('accepts each variant in the shape the fold produces', () => {
+    const variants = [
+      {
+        basis: 'sku',
+        source: 'woolworths',
+        scheme: 'merchant',
+        sku: '6015322',
+        name: 'Barware Set/4',
+      },
+      // A cross-source scheme reports no source, because none bounds it.
+      {
+        basis: 'sku',
+        source: null,
+        scheme: 'asin',
+        sku: 'B0FCSJTKJ8',
+        name: 'Magnetic Dosing Funnel',
+      },
+      {
+        basis: 'name',
+        source: 'woolworths',
+        sku: null,
+        name: 'WW Full Cream Milk 2L',
+        normalisedName: 'ww full cream milk 2l',
+      },
+      { basis: 'unidentified', source: 'woolworths', sku: null, name: '***', itemId: 'item-1' },
+    ];
+
+    for (const variant of variants) {
+      expect(ProductIdentitySchema.safeParse(variant).success, JSON.stringify(variant)).toBe(true);
+    }
+  });
+
+  it.each([
+    // A sku group without the identifier it claims to be keyed on is the
+    // whole failure the basis exists to prevent: a name match presented as
+    // a merchant-stated identity.
+    [
+      'a sku group without its sku',
+      { basis: 'sku', source: 'amazon', scheme: 'asin', sku: null, name: 'Funnel' },
+    ],
+    // The scheme is half the identifier. A bare string beside a null source
+    // names nothing, and a consumer that showed it would be showing noise.
+    [
+      'a sku group without the scheme its identifier lives in',
+      { basis: 'sku', source: 'amazon', sku: 'B0FCSJTKJ8', name: 'Funnel' },
+    ],
+    [
+      'a sku group under a scheme the vocabulary does not name',
+      { basis: 'sku', source: null, scheme: 'ean', sku: '9300605100480', name: 'Funnel' },
+    ],
+    [
+      'a name group carrying a sku',
+      {
+        basis: 'name',
+        source: 'woolworths',
+        sku: 'B0FCSJTKJ8',
+        name: 'Milk',
+        normalisedName: 'milk',
+      },
+    ],
+    [
+      'a name group without the key it was formed on',
+      { basis: 'name', source: 'woolworths', sku: null, name: 'Milk' },
+    ],
+    [
+      'an unidentified group without its line',
+      { basis: 'unidentified', source: 'woolworths', sku: null, name: '***' },
+    ],
+    ['an unknown basis', { basis: 'vibes', source: 'amazon', sku: null, name: 'Funnel' }],
+  ])('rejects %s', (_label, value) => {
+    expect(ProductIdentitySchema.safeParse(value).success).toBe(false);
+  });
+});
+
+describe('ProductCadenceSchema', () => {
+  it('accepts a product with no second purchase to measure against', () => {
+    expect(ProductCadenceSchema.safeParse({ basis: 'single-purchase' }).success).toBe(true);
+  });
+
+  it('accepts a measured cadence', () => {
+    const cadence = {
+      basis: 'intervals',
+      medianIntervalSeconds: 1_209_600,
+      meanIntervalSeconds: 1_209_600,
+      shortestIntervalSeconds: 604_800,
+      longestIntervalSeconds: 1_814_400,
+    };
+
+    expect(ProductCadenceSchema.safeParse(cadence).success).toBe(true);
+  });
+
+  it('strips interval figures off a single purchase rather than passing a zero through', () => {
+    const parsed = ProductCadenceSchema.parse({
+      basis: 'single-purchase',
+      medianIntervalSeconds: 0,
+      meanIntervalSeconds: 0,
+      shortestIntervalSeconds: 0,
+      longestIntervalSeconds: 0,
+    });
+
+    // The failure the union exists to prevent: a product bought once
+    // wearing a zero, which renders as "bought again immediately".
+    expect(parsed).toEqual({ basis: 'single-purchase' });
+  });
+
+  it.each([
+    ['a measured cadence missing its median', { basis: 'intervals', meanIntervalSeconds: 1 }],
+    [
+      'a negative gap, which no ordering of two instants can produce',
+      {
+        basis: 'intervals',
+        medianIntervalSeconds: -1,
+        meanIntervalSeconds: 1,
+        shortestIntervalSeconds: 1,
+        longestIntervalSeconds: 1,
+      },
+    ],
+  ])('rejects %s', (_label, value) => {
+    expect(ProductCadenceSchema.safeParse(value).success).toBe(false);
+  });
+});
+
+describe('ProductUnitPriceSchema', () => {
+  const series = {
+    firstCents: 1000,
+    lastCents: 1200,
+    minCents: 600,
+    maxCents: 1400,
+    promotionalLineCount: 1,
+    ordinaryLineCount: 1,
+    unstatedPromotionLineCount: 2,
+    measuredLineCount: 0,
+  };
+
+  it('accepts the series the fold produces', () => {
+    expect(ProductUnitPriceSchema.safeParse(series).success).toBe(true);
+  });
+
+  it('requires the count that says the merchant never characterised the price', () => {
+    const { unstatedPromotionLineCount: _dropped, ...twoWay } = series;
+
+    // A two-way split reads silence as an ordinary price, which is the same
+    // failure as a merchant total that drops its residual.
+    expect(ProductUnitPriceSchema.safeParse(twoWay).success).toBe(false);
+  });
+
+  it('requires the count that says a unit price is a weight', () => {
+    const { measuredLineCount: _dropped, ...uncaveated } = series;
+
+    expect(ProductUnitPriceSchema.safeParse(uncaveated).success).toBe(false);
+  });
+
+  it('refuses a negative line count', () => {
+    expect(ProductUnitPriceSchema.safeParse({ ...series, measuredLineCount: -1 }).success).toBe(
+      false
+    );
   });
 });
 

@@ -10,7 +10,6 @@
  * order would pass everything except a combined settlement, which is a phase
  * of the matching ladder rather than an anomaly.
  */
-import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { openTempDb, seedAmazonSource } from '../../db/__tests__/helpers.js';
@@ -19,11 +18,14 @@ import { runSweep } from '../../reconcile/sweep.js';
 import { createPurchasesApiApp } from '../app.js';
 import { financeReturning } from '../finance/__tests__/fixtures.js';
 import { __resetPillarRegistryCache } from '../pillars/registry.js';
+import { createTestTransport } from './test-http.js';
 
 import type { Express } from 'express';
 
 import type { OpenedPurchasesDb } from '../../db/index.js';
 import type { FinanceClient } from '../finance/client.js';
+
+const { requestOn } = createTestTransport();
 
 let opened: OpenedPurchasesDb;
 let cleanup: () => void;
@@ -64,7 +66,7 @@ async function sweepWith(finance: FinanceClient): Promise<void> {
 }
 
 async function lookup(uri: string): Promise<WireLinkedPurchase[]> {
-  const res = await request(app)
+  const res = await requestOn(app)
     .get(`/reconcile/links?transactionUri=${encodeURIComponent(uri)}`)
     .expect(200);
   expect(res.body.transactionUri).toBe(uri);
@@ -116,12 +118,12 @@ describe('GET /reconcile/links', () => {
     const chargeId = (await lookup(TXN))[0]?.charges[0]?.charge.id;
     expect(chargeId).toBeDefined();
 
-    await request(app)
+    await requestOn(app)
       .post('/reconcile/confirm')
       .send({ chargeId, transactionUri: TXN })
       .expect(200);
 
-    const queue = await request(app).get('/reconcile/queue').expect(200);
+    const queue = await requestOn(app).get('/reconcile/queue').expect(200);
     expect(queue.body.items).toEqual([]);
 
     const purchases = await lookup(TXN);
@@ -133,7 +135,7 @@ describe('GET /reconcile/links', () => {
     // ~6,000 grocery line items a year are deliberately kept out of the
     // queue (ADR-042). They are still linked, and a finance view looking at
     // a Woolworths transaction is asking about exactly those.
-    await request(app)
+    await requestOn(app)
       .put('/sources/woolworths')
       .send({ label: 'Woolworths', descriptorPattern: 'WOOLWORTHS%', autoLinkPolicy: 'auto' })
       .expect(200);
@@ -147,7 +149,7 @@ describe('GET /reconcile/links', () => {
       })
     );
 
-    const queue = await request(app).get('/reconcile/queue').expect(200);
+    const queue = await requestOn(app).get('/reconcile/queue').expect(200);
     expect(queue.body.items).toEqual([]);
 
     const purchases = await lookup(TXN);
@@ -231,7 +233,7 @@ describe('GET /reconcile/links', () => {
     // The failure this catches is silent otherwise: an inventory URI is a
     // valid pops:// reference, matches no link, and comes back as an empty
     // list that reads as "no order bought this".
-    await request(app)
+    await requestOn(app)
       .get('/reconcile/links?transactionUri=pops%3A%2F%2Finventory%2Fitem%2F1')
       .expect(400);
   });
@@ -239,10 +241,10 @@ describe('GET /reconcile/links', () => {
   it('rejects a URI that is not a pops:// reference', async () => {
     // A malformed URI would otherwise return an empty list, which reads as
     // "no purchase" rather than "you asked the wrong question".
-    await request(app).get('/reconcile/links?transactionUri=t1').expect(400);
+    await requestOn(app).get('/reconcile/links?transactionUri=t1').expect(400);
   });
 
   it('requires the transaction to be named at all', async () => {
-    await request(app).get('/reconcile/links').expect(400);
+    await requestOn(app).get('/reconcile/links').expect(400);
   });
 });

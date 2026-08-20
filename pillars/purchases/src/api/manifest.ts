@@ -9,9 +9,15 @@ export const PURCHASES_PILLAR_ID = 'purchases' as const;
 /**
  * Wire-format nav contribution for the purchases pillar.
  *
- * Mirrors the app's `navConfig` (`pillars/purchases/app/src/routes.tsx`)
- * field-for-field; Lucide icon names are kebab-case identifiers per the wire
- * schema.
+ * Carries one item per entry in the app's `navConfig`
+ * (`pillars/purchases/app/src/routes.tsx`), in the same order and with the
+ * same paths and label keys. Two fields have no counterpart there rather than
+ * a matching one: `order`, which the app's config does not carry at all
+ * (in-repo the shell reads it from its own `navOrder` literal in
+ * `pillars/shell/src/app/bundle-map.tsx`, and only a registry-discovered
+ * consumer takes it from here), and `icon`, which names the same Lucide
+ * glyphs in the kebab-case the wire schema requires rather than the
+ * PascalCase the app spells them in.
  *
  * `order` sits between finance (10) and media (20) rather than at the end of
  * the rail. Purchases exists to reconcile against finance transactions and
@@ -27,17 +33,27 @@ const PURCHASES_NAV: NavConfigDescriptor = {
   color: 'rose',
   basePath: '/purchases',
   order: 15,
-  items: [{ path: '', label: 'Reconcile', labelKey: 'purchases.reconcile', icon: 'receipt' }],
+  items: [
+    { path: '', label: 'Reconcile', labelKey: 'purchases.reconcile', icon: 'receipt' },
+    { path: '/merchants', label: 'Merchants', labelKey: 'purchases.merchants', icon: 'building-2' },
+    { path: '/receipts', label: 'Receipts', labelKey: 'purchases.receipts', icon: 'file-text' },
+  ],
 };
 
 /**
  * Wire-format pages contribution for the purchases pillar.
  *
  * One descriptor per route declared in the app's `routes` array
- * (`pillars/purchases/app/src/routes.tsx`).
+ * (`pillars/purchases/app/src/routes.tsx`) that the rail can reach — the
+ * order-detail route takes a `:purchaseId` no rail entry can supply, so it
+ * has no nav item and no page descriptor here, the same reasoning
+ * `pillars/purchases/app/src/routes.tsx` documents for leaving it off
+ * `navConfig`.
  */
 const PURCHASES_PAGES: readonly PageDescriptor[] = [
   { path: '', index: true, bundleSlot: 'purchases-reconcile' },
+  { path: 'merchants', bundleSlot: 'purchases-merchants' },
+  { path: 'receipts', bundleSlot: 'purchases-receipts' },
 ];
 
 /**
@@ -103,8 +119,8 @@ const PURCHASES_URI_TYPES: readonly string[] = PURCHASES_SEARCH_ADAPTERS.map(
  * `nav` and `pages` were empty until this pillar had a frontend, because a
  * rail entry pointing at a bundle slot that does not exist is a dead link.
  * `pillars/purchases/app` is that slot, so both dimensions are declared now
- * — one nav item and one page descriptor, matching the one route the app
- * actually mounts.
+ * — one nav item and one page descriptor per rail-reachable route the app
+ * mounts (`pillars/purchases/app/src/routes.tsx`).
  *
  * `search.adapters` was never held back on that reasoning, though it used to
  * be justified by it. A search adapter is a backend seam — the orchestrator

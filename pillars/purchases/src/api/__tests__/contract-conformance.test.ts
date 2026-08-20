@@ -23,12 +23,15 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { isAppRoute } from '@ts-rest/core';
-import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { z } from 'zod';
 
-import { MerchantSpendRollupSchema } from '../../contract/rest-analytics.js';
+import {
+  MerchantSpendRollupSchema,
+  ProductLeaderboardSchema,
+} from '../../contract/rest-analytics.js';
 import { ReceiptOutcomeSchema } from '../../contract/rest-receipts.js';
+import { TransactionLinksBatchSchema } from '../../contract/rest-reconcile-batch.js';
 import {
   QueueEntrySchema,
   SweepOutcomeSchema,
@@ -39,21 +42,27 @@ import { SearchHitSchema } from '../../contract/rest-search.js';
 import { purchasesContract } from '../../contract/rest.js';
 import {
   PurchaseDetailSchema,
+  PurchaseItemDetailSchema,
+} from '../../contract/schemas/purchase-detail.js';
+import {
+  PurchaseItemSchema,
   PurchaseSchema,
   PurchaseSourceSchema,
 } from '../../contract/schemas/purchase.js';
-import { PurchaseItemDetailSchema, PurchaseItemSchema } from '../../contract/schemas/purchase.js';
 import { openTempDb, seedAmazonSource } from '../../db/__tests__/helpers.js';
 import { runSweep } from '../../reconcile/sweep.js';
 import { createPurchasesApiApp } from '../app.js';
 import { FINANCE_UNAVAILABLE, financeReturning } from '../finance/__tests__/fixtures.js';
 import { __resetPillarRegistryCache } from '../pillars/registry.js';
+import { createTestTransport } from './test-http.js';
 
 import type { AppRoute, AppRouter } from '@ts-rest/core';
 import type { Express } from 'express';
 
 import type { OpenedPurchasesDb } from '../../db/index.js';
 import type { ReceiptVision } from '../../ingest/receipt/vision.js';
+
+const { requestOn } = createTestTransport();
 
 let opened: OpenedPurchasesDb;
 let cleanup: () => void;
@@ -163,7 +172,7 @@ const RICH_ORDER = {
       ref: 'tamper',
       shipmentRef: 'box1',
       name: 'Espresso Tamping Station',
-      sku: 'B0DSVZQ8P5',
+      sku: { value: 'B0DSVZQ8P5', scheme: 'asin' },
       url: 'https://example.invalid/p/1',
       imageUrl: 'https://example.invalid/i/1.jpg',
       quantity: 2,
@@ -215,7 +224,7 @@ const RICH_ORDER = {
 
 describe('POST /purchases response', () => {
   it('conforms for a fully-populated order', async () => {
-    const res = await request(app).post('/purchases').send(RICH_ORDER);
+    const res = await requestOn(app).post('/purchases').send(RICH_ORDER);
     expect(res.status).toBe(201);
     expectConforms(PurchaseDetailSchema, res.body, 'POST /purchases (rich)');
   });
@@ -223,7 +232,7 @@ describe('POST /purchases response', () => {
   it('conforms for an order with no deliveries, lines, charges or documents', async () => {
     // The empty case is where an over-eager `.min(1)` or a missing default
     // would show up.
-    const res = await request(app).post('/purchases').send(BARE_ORDER);
+    const res = await requestOn(app).post('/purchases').send(BARE_ORDER);
     expect(res.status).toBe(201);
     expectConforms(PurchaseDetailSchema, res.body, 'POST /purchases (bare)');
     expect(res.body.shipments).toEqual([]);
@@ -235,8 +244,8 @@ describe('POST /purchases response', () => {
 
 describe('GET /purchases/:id response', () => {
   it('conforms, and matches what POST returned byte for byte', async () => {
-    const created = await request(app).post('/purchases').send(RICH_ORDER);
-    const fetched = await request(app).get(`/purchases/${String(created.body.purchase.id)}`);
+    const created = await requestOn(app).post('/purchases').send(RICH_ORDER);
+    const fetched = await requestOn(app).get(`/purchases/${String(created.body.purchase.id)}`);
 
     expect(fetched.status).toBe(200);
     expectConforms(PurchaseDetailSchema, fetched.body, 'GET /purchases/:id');
@@ -248,23 +257,23 @@ describe('GET /purchases/:id response', () => {
 
 describe('DELETE /purchases/:id response', () => {
   it('conforms, and the order is gone after', async () => {
-    const created = await request(app).post('/purchases').send(BARE_ORDER);
+    const created = await requestOn(app).post('/purchases').send(BARE_ORDER);
     const purchaseId = String(created.body.purchase.id);
 
-    const res = await request(app).delete(`/purchases/${purchaseId}`);
+    const res = await requestOn(app).delete(`/purchases/${purchaseId}`);
     expect(res.status).toBe(200);
     expectConforms(OkSchema, res.body, 'DELETE /purchases/:id');
 
-    expect((await request(app).get(`/purchases/${purchaseId}`)).status).toBe(404);
+    expect((await requestOn(app).get(`/purchases/${purchaseId}`)).status).toBe(404);
   });
 });
 
 describe('GET /purchases response', () => {
   it('conforms for every row in the index', async () => {
-    await request(app).post('/purchases').send(RICH_ORDER);
-    await request(app).post('/purchases').send(BARE_ORDER);
+    await requestOn(app).post('/purchases').send(RICH_ORDER);
+    await requestOn(app).post('/purchases').send(BARE_ORDER);
 
-    const res = await request(app).get('/purchases');
+    const res = await requestOn(app).get('/purchases');
     expect(res.status).toBe(200);
     expect(res.body.items).toHaveLength(2);
     for (const [i, item] of (res.body.items as unknown[]).entries()) {
@@ -273,15 +282,15 @@ describe('GET /purchases response', () => {
   });
 
   it('conforms when empty', async () => {
-    const res = await request(app).get('/purchases');
+    const res = await requestOn(app).get('/purchases');
     expect(res.body.items).toEqual([]);
   });
 });
 
 describe('GET /items response', () => {
   it("conforms, and carries the tag's confirmation marker beside each line", async () => {
-    await request(app).post('/purchases').send(RICH_ORDER);
-    const res = await request(app).get('/items?tag=coffee');
+    await requestOn(app).post('/purchases').send(RICH_ORDER);
+    const res = await requestOn(app).get('/items?tag=coffee');
     expect(res.status).toBe(200);
     expect(res.body.items).toHaveLength(1);
     for (const [i, entry] of (res.body.items as { item: unknown }[]).entries()) {
@@ -292,11 +301,11 @@ describe('GET /items response', () => {
 
 describe('PATCH /purchases/:id/items/:itemId response', () => {
   it('conforms, and confirming turns a proposal into a judgement', async () => {
-    const created = await request(app).post('/purchases').send(RICH_ORDER);
+    const created = await requestOn(app).post('/purchases').send(RICH_ORDER);
     const purchaseId = String(created.body.purchase.id);
     const itemId = String(created.body.items[1].item.id);
 
-    const res = await request(app)
+    const res = await requestOn(app)
       .patch(`/purchases/${purchaseId}/items/${itemId}`)
       .send({ kind: 'consumable', tags: ['snack'] });
 
@@ -313,16 +322,16 @@ describe('PATCH /purchases/:id/items/:itemId response', () => {
 
 describe('source responses', () => {
   it('conform on list, get and upsert alike', async () => {
-    const upserted = await request(app)
+    const upserted = await requestOn(app)
       .put('/sources/bunnings')
       .send({ label: 'Bunnings', descriptorPattern: 'BUNNINGS%' });
     expectConforms(PurchaseSourceSchema, upserted.body, 'PUT /sources/:id');
 
-    const fetched = await request(app).get('/sources/bunnings');
+    const fetched = await requestOn(app).get('/sources/bunnings');
     expectConforms(PurchaseSourceSchema, fetched.body, 'GET /sources/:id');
     expect(fetched.body).toEqual(upserted.body);
 
-    const listed = await request(app).get('/sources');
+    const listed = await requestOn(app).get('/sources');
     for (const [i, source] of (listed.body.items as unknown[]).entries()) {
       expectConforms(PurchaseSourceSchema, source, `GET /sources item ${String(i)}`);
     }
@@ -331,11 +340,11 @@ describe('source responses', () => {
 
 describe('DELETE /sources/:id response', () => {
   it('conforms for a source no purchase references', async () => {
-    await request(app)
+    await requestOn(app)
       .put('/sources/unlinked')
       .send({ label: 'Unlinked', descriptorPattern: null });
 
-    const res = await request(app).delete('/sources/unlinked');
+    const res = await requestOn(app).delete('/sources/unlinked');
     expect(res.status).toBe(200);
     expectConforms(OkSchema, res.body, 'DELETE /sources/:id');
   });
@@ -347,7 +356,7 @@ describe('reconcile responses', () => {
     // CurrencySchema, 0..1 confidence) are only a promise until something
     // parses a real response back through them — ts-rest validates
     // requests, not responses.
-    await request(app).post('/purchases').send(RICH_ORDER);
+    await requestOn(app).post('/purchases').send(RICH_ORDER);
     await runSweep({
       db: opened.db,
       // Exactly the rich order's first charge, so the sweep produces a real
@@ -357,7 +366,7 @@ describe('reconcile responses', () => {
       defaultWindowDays: 21,
     });
 
-    const res = await request(app).get('/reconcile/queue');
+    const res = await requestOn(app).get('/reconcile/queue');
     expect(res.status).toBe(200);
     const items = res.body.items as { proposed: unknown[] }[];
     expect(items.length).toBeGreaterThan(0);
@@ -376,7 +385,7 @@ describe('reconcile responses', () => {
     // the same shape, so both are exercised: `confirmedAt` is the field a
     // consumer decides how to render on, and a nullable/optional mismatch
     // there is invisible to every other assertion in this file.
-    await request(app).post('/purchases').send(RICH_ORDER);
+    await requestOn(app).post('/purchases').send(RICH_ORDER);
     await runSweep({
       db: opened.db,
       finance: financeReturning(
@@ -387,7 +396,7 @@ describe('reconcile responses', () => {
     });
 
     const derivedUri = 'pops://finance/transaction/conformance-1';
-    const derived = await request(app)
+    const derived = await requestOn(app)
       .get(`/reconcile/links?transactionUri=${encodeURIComponent(derivedUri)}`)
       .expect(200);
     expectConforms(TransactionLinksSchema, derived.body, 'GET /reconcile/links (derived)');
@@ -395,25 +404,52 @@ describe('reconcile responses', () => {
     expect(linked.length).toBeGreaterThan(0);
 
     const chargeId = linked[0]?.charges[0]?.charge.id;
-    await request(app)
+    await requestOn(app)
       .post('/reconcile/confirm')
       .send({ chargeId, transactionUri: derivedUri })
       .expect(200);
 
-    const confirmed = await request(app)
+    const confirmed = await requestOn(app)
       .get(`/reconcile/links?transactionUri=${encodeURIComponent(derivedUri)}`)
       .expect(200);
     expectConforms(TransactionLinksSchema, confirmed.body, 'GET /reconcile/links (confirmed)');
 
-    const empty = await request(app)
+    const empty = await requestOn(app)
       .get('/reconcile/links?transactionUri=pops%3A%2F%2Ffinance%2Ftransaction%2Fnothing')
       .expect(200);
     expectConforms(TransactionLinksSchema, empty.body, 'GET /reconcile/links (empty)');
     expect(empty.body.purchases).toEqual([]);
   });
 
+  it('conform for the batched reverse lookup, with a linked and an unlinked member', async () => {
+    // The plural form publishes counts rather than the nested orders, so it
+    // shares none of the singular route's schema and none of its coverage.
+    // Both members are sent in one request because the response's shape only
+    // differs between them by a row's presence, which is exactly the sort of
+    // omission a per-route assertion on a happy path never sees.
+    await requestOn(app).post('/purchases').send(RICH_ORDER);
+    await runSweep({
+      db: opened.db,
+      finance: financeReturning({ id: 'conformance-1', amountCents: 4499, date: '2026-02-03' }),
+      defaultWindowDays: 21,
+    });
+
+    const batched = await requestOn(app)
+      .post('/reconcile/links/batch')
+      .send({
+        transactionUris: [
+          'pops://finance/transaction/conformance-1',
+          'pops://finance/transaction/nothing',
+        ],
+      })
+      .expect(200);
+
+    expectConforms(TransactionLinksBatchSchema, batched.body, 'POST /reconcile/links/batch');
+    expect(batched.body.transactions).toHaveLength(1);
+  });
+
   it('conform for both sweep outcomes', async () => {
-    const swept = await request(app).post('/reconcile/sweep').send({});
+    const swept = await requestOn(app).post('/reconcile/sweep').send({});
     expect(swept.status).toBe(200);
     expectConforms(SweepOutcomeSchema, swept.body, 'POST /reconcile/sweep (swept)');
     expect(swept.body.kind).toBe('swept');
@@ -422,7 +458,7 @@ describe('reconcile responses', () => {
     // window returns `swept` with zero counts before finance is ever asked
     // (see `runSweep`), so a charge has to exist for the unreachable-finance
     // branch to be the one that fires.
-    await request(app).post('/purchases').send(RICH_ORDER);
+    await requestOn(app).post('/purchases').send(RICH_ORDER);
     const unreachableFinanceApp = createPurchasesApiApp({
       vision: null,
       purchasesDb: opened,
@@ -430,21 +466,21 @@ describe('reconcile responses', () => {
       selfBaseUrl: 'http://localhost:3013',
       sweep: () => runSweep({ db: opened.db, finance: FINANCE_UNAVAILABLE, defaultWindowDays: 21 }),
     });
-    const skipped = await request(unreachableFinanceApp).post('/reconcile/sweep').send({});
+    const skipped = await requestOn(unreachableFinanceApp).post('/reconcile/sweep').send({});
     expect(skipped.status).toBe(200);
     expectConforms(SweepOutcomeSchema, skipped.body, 'POST /reconcile/sweep (skipped)');
     expect(skipped.body.kind).toBe('skipped');
   });
 
   it('conform for confirm and unlink', async () => {
-    await request(app).post('/purchases').send(RICH_ORDER);
+    await requestOn(app).post('/purchases').send(RICH_ORDER);
     await runSweep({
       db: opened.db,
       finance: financeReturning({ id: 'conformance-2', amountCents: 4499, date: '2026-02-03' }),
       defaultWindowDays: 21,
     });
 
-    const queued = await request(app).get('/reconcile/queue');
+    const queued = await requestOn(app).get('/reconcile/queue');
     const entry = (
       queued.body.items as { chargeId: string; proposed: { transactionUri: string }[] }[]
     ).find((one) => one.proposed.length > 0);
@@ -454,11 +490,11 @@ describe('reconcile responses', () => {
       transactionUri: entry.proposed[0]?.transactionUri,
     };
 
-    const confirmed = await request(app).post('/reconcile/confirm').send(decision);
+    const confirmed = await requestOn(app).post('/reconcile/confirm').send(decision);
     expect(confirmed.status).toBe(200);
     expectConforms(OkSchema, confirmed.body, 'POST /reconcile/confirm');
 
-    const unlinked = await request(app).post('/reconcile/unlink').send(decision);
+    const unlinked = await requestOn(app).post('/reconcile/unlink').send(decision);
     expect(unlinked.status).toBe(200);
     expectConforms(OkSchema, unlinked.body, 'POST /reconcile/unlink');
   });
@@ -466,11 +502,11 @@ describe('reconcile responses', () => {
 
 describe('GET /analytics/merchant-spend response', () => {
   it('conforms, including the unattributed group and a second currency', async () => {
-    await request(app).post('/purchases').send(RICH_ORDER);
-    await request(app)
+    await requestOn(app).post('/purchases').send(RICH_ORDER);
+    await requestOn(app)
       .post('/purchases')
       .send({ ...BARE_ORDER, checksum: 'anon', sourceOrderId: 'anon' });
-    await request(app)
+    await requestOn(app)
       .post('/purchases')
       .send({
         ...BARE_ORDER,
@@ -480,7 +516,7 @@ describe('GET /analytics/merchant-spend response', () => {
         merchantEntityName: 'Amazon US',
       });
 
-    const res = await request(app).get('/analytics/merchant-spend');
+    const res = await requestOn(app).get('/analytics/merchant-spend');
     expect(res.status).toBe(200);
     expectConforms(MerchantSpendRollupSchema, res.body, 'GET /analytics/merchant-spend');
 
@@ -501,11 +537,52 @@ describe('GET /analytics/merchant-spend response', () => {
   });
 
   it('conforms when empty', async () => {
-    const res = await request(app).get('/analytics/merchant-spend');
+    const res = await requestOn(app).get('/analytics/merchant-spend');
     // Asserted before conformance so a regression to an error status reads as
     // one, rather than as an unrelated schema mismatch on the error body.
     expect(res.status).toBe(200);
     expectConforms(MerchantSpendRollupSchema, res.body, 'GET /analytics/merchant-spend (empty)');
+  });
+});
+
+describe('GET /analytics/product-leaderboard response', () => {
+  it('conforms, with all three identity bases present at once', async () => {
+    await requestOn(app).post('/purchases').send(RICH_ORDER);
+    await requestOn(app)
+      .post('/purchases')
+      .send({
+        ...BARE_ORDER,
+        checksum: 'unkeyed',
+        sourceOrderId: 'unkeyed',
+        items: [
+          // No sku: grouped on the normalised printed name.
+          { name: 'Bananas Cavendish', unitPriceCents: 400, lineTotalCents: 400 },
+          // No sku and nothing that normalises: grouped with nothing.
+          { name: '***', unitPriceCents: 100, lineTotalCents: 100 },
+        ],
+      });
+
+    const res = await requestOn(app).get('/analytics/product-leaderboard');
+    expect(res.status).toBe(200);
+    expectConforms(ProductLeaderboardSchema, res.body, 'GET /analytics/product-leaderboard');
+
+    // `product` is a discriminated union, so conformance over one variant
+    // says nothing about the other two. The fixtures above produce one of
+    // each, and each carries a different set of keys.
+    const bases = (res.body.products as { product: { basis: string } }[]).map(
+      (entry) => entry.product.basis
+    );
+    expect([...new Set(bases)].toSorted()).toEqual(['name', 'sku', 'unidentified']);
+  });
+
+  it('conforms when empty', async () => {
+    const res = await requestOn(app).get('/analytics/product-leaderboard');
+    expect(res.status).toBe(200);
+    expectConforms(
+      ProductLeaderboardSchema,
+      res.body,
+      'GET /analytics/product-leaderboard (empty)'
+    );
   });
 });
 
@@ -522,9 +599,9 @@ describe('POST /search response', () => {
     // The orchestrator does not validate a pillar's hits — it forwards them
     // to the shell, which drops a section whose shape it cannot read. A hit
     // that fails here fails silently in production.
-    await request(app).post('/purchases').send(RICH_ORDER);
+    await requestOn(app).post('/purchases').send(RICH_ORDER);
 
-    const res = await request(app)
+    const res = await requestOn(app)
       .post('/search')
       .send({ query: { text: 'a' } });
 
@@ -534,7 +611,7 @@ describe('POST /search response', () => {
   });
 
   it('conforms when nothing matches', async () => {
-    const res = await request(app)
+    const res = await requestOn(app)
       .post('/search')
       .send({ query: { text: 'kayak' } });
     expect(res.status).toBe(200);
@@ -584,7 +661,7 @@ function appWithVision(vision: ReceiptVision): Express {
 }
 
 const uploadReceipt = (visionApp: Express, dataBase64 = JPEG_BASE64) =>
-  request(visionApp)
+  requestOn(visionApp)
     .post('/receipts')
     .send({ parts: [{ mediaType: 'image/jpeg', dataBase64 }] });
 
@@ -613,7 +690,7 @@ describe('POST /receipts response', () => {
 
 describe('the accounting identity holds on the wire', () => {
   it('total reconstructs from the three buckets, with refunds outside it', async () => {
-    const res = await request(app).post('/purchases').send(RICH_ORDER);
+    const res = await requestOn(app).post('/purchases').send(RICH_ORDER);
     const a = res.body.accounting;
 
     expect(a.matchedCents + a.awaitingImportCents + a.residualCents).toBe(a.totalCents);
@@ -624,7 +701,7 @@ describe('the accounting identity holds on the wire', () => {
 
 describe('the OpenAPI projection describes what is actually served', () => {
   it('declares every route the app answers', async () => {
-    const spec = (await request(app).get('/openapi')).body as {
+    const spec = (await requestOn(app).get('/openapi')).body as {
       paths: Record<string, Record<string, unknown>>;
     };
 
@@ -641,7 +718,7 @@ describe('the OpenAPI projection describes what is actually served', () => {
   });
 
   it('gives every operation a unique id, which client generators key on', async () => {
-    const spec = (await request(app).get('/openapi')).body as {
+    const spec = (await requestOn(app).get('/openapi')).body as {
       paths: Record<string, Record<string, { operationId?: string }>>;
     };
     const ids = Object.values(spec.paths).flatMap((methods) =>

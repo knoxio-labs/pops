@@ -3,10 +3,30 @@ import { useMemo, useRef } from 'react';
 import { pillar } from '@pops/pillar-sdk/client';
 import { usePillarSdkOptions } from '@pops/pillar-sdk/react';
 
+import type { CallResult } from '@pops/pillar-sdk/client';
 import type { SettingsManifest } from '@pops/types';
 
 type Options = { value: string; label: string }[];
 type Loaders = Record<string, () => Promise<Options>>;
+
+/** Throws a message fit for the settings UI for every non-`ok` result. */
+function assertOptionsCallOk<T>(
+  result: CallResult<T>,
+  pillarId: string,
+  procedure: string
+): asserts result is Extract<CallResult<T>, { kind: 'ok' }> {
+  if (result.kind === 'ok') return;
+  if (result.kind === 'unavailable') {
+    throw new Error(`Pillar '${pillarId}' is unavailable`);
+  }
+  if (result.kind === 'degraded') {
+    throw new Error(`Pillar '${pillarId}' is degraded (${result.reason})`);
+  }
+  if (result.kind === 'contract-mismatch') {
+    throw new Error(`Cannot call procedure: ${procedure}`);
+  }
+  throw new Error(result.message ?? `Pillar '${pillarId}' call failed: ${result.kind}`);
+}
 
 /**
  * Builds per-field option loaders for `select` settings whose options come
@@ -39,24 +59,7 @@ export function useDynamicOptionsLoaders(manifest: SettingsManifest): Loaders {
 
           const handle = pillar(pillarId, sdkOptionsRef.current);
           const result = await handle.callDynamic(routerName, procName, undefined, 'query');
-
-          if (result.kind === 'unavailable') {
-            throw new Error(`Pillar '${pillarId}' is unavailable`);
-          }
-          if (result.kind === 'degraded') {
-            throw new Error(`Pillar '${pillarId}' is degraded (${result.reason})`);
-          }
-          if (result.kind === 'contract-mismatch') {
-            throw new Error(`Cannot call procedure: ${procedure}`);
-          }
-          if (
-            result.kind === 'not-found' ||
-            result.kind === 'conflict' ||
-            result.kind === 'bad-request' ||
-            result.kind === 'unauthorized'
-          ) {
-            throw new Error(result.message ?? `Pillar '${pillarId}' call failed: ${result.kind}`);
-          }
+          assertOptionsCallOk(result, pillarId, procedure);
 
           const envelope = result.value as { data?: Record<string, unknown>[] } | null;
           const items = envelope?.data ?? [];

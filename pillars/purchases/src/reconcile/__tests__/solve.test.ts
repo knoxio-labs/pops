@@ -1,43 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { solve } from '../solve.js';
+import { charge, run, txn } from './solver-fixtures.js';
 
-import type { SolvableCharge, SolvableTransaction, SolverInput, SolverOutput } from '../types.js';
-
-function charge(overrides: Partial<SolvableCharge> = {}): SolvableCharge {
-  return {
-    id: 'chg-1',
-    purchaseId: 'ord-1',
-    position: 0,
-    amountCents: 4128,
-    role: 'capture',
-    orderedAt: '2026-03-04T00:00:00Z',
-    descriptorPattern: null,
-    settlementWindowDays: null,
-    ...overrides,
-  };
-}
-
-function txn(overrides: Partial<SolvableTransaction> = {}): SolvableTransaction {
-  return {
-    uri: 'pops://finance/transaction/t1',
-    description: 'AMAZON MKTPLACE AU',
-    amountCents: 4128,
-    date: '2026-03-06',
-    ...overrides,
-  };
-}
-
-function run(input: Partial<SolverInput> = {}): SolverOutput {
-  return solve({
-    charges: [charge()],
-    transactions: [txn()],
-    confirmed: [],
-    rejected: [],
-    defaultWindowDays: 21,
-    ...input,
-  });
-}
+import type { SolverInput } from '../types.js';
 
 describe('stage 1 — exact', () => {
   it('links a charge to the single transaction for its amount', () => {
@@ -54,6 +19,7 @@ describe('stage 1 — exact', () => {
         amountCents: 4128,
         linkType: 'exact',
         confidence: 0.99,
+        matchRuleId: null,
       },
     ]);
   });
@@ -252,6 +218,18 @@ describe('refunds', () => {
     });
     expect(review[0]?.reason).toBe('no-candidate');
   });
+
+  it('never settles a refund with a zero-amount transaction', () => {
+    // A zero row carries no sign, so the sign test alone lets it through to
+    // a refund — and the partial stage would then link it, reporting a
+    // refund as settled by a transaction that moved no money.
+    const { links, review } = run({
+      charges: [charge({ amountCents: -1179, role: 'refund' })],
+      transactions: [txn({ amountCents: 0 })],
+    });
+    expect(links).toHaveLength(0);
+    expect(review[0]?.reason).toBe('no-candidate');
+  });
 });
 
 describe('determinism', () => {
@@ -431,6 +409,7 @@ describe('a rejected pairing', () => {
         amountCents: 4128,
         linkType: 'exact',
         confidence: 0.99,
+        matchRuleId: null,
       },
     ]);
   });

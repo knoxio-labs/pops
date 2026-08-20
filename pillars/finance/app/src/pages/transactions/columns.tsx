@@ -1,40 +1,35 @@
-import { Link2, Link2Off, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { Link2 } from 'lucide-react';
 
-import {
-  Badge,
-  Button,
-  type ColumnFilter,
-  dateRangeFilter,
-  DropdownMenu,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  SortableHeader,
-} from '@pops/ui';
+import { Badge, type ColumnFilter, dateRangeFilter, SortableHeader } from '@pops/ui';
 
 import { TagEditor } from '../../components/TagEditor';
 import { labelForType, TRANSACTION_TYPES, type TransactionType } from '../../lib/transaction-type';
 import { AmountCell, DescriptionCell } from './cells';
+import { buildPurchaseLinkColumn } from './purchase-link/column';
+import { RowActions, type RowActionHandlers } from './RowActions';
 
 import type { ColumnDef } from '@tanstack/react-table';
 import type { TFunction } from 'i18next';
 
+import type { TransactionLinkSummary } from './purchase-link/types';
 import type { Transaction } from './types';
 
 export type { Transaction } from './types';
 
-interface BuildColumnsArgs {
+interface BuildColumnsBase {
   t: TFunction<'finance'>;
   availableTags: string[];
+  /** Keyed on transaction id. A transaction no order explains is absent, not zeroed. */
+  purchaseLinks: Map<string, TransactionLinkSummary>;
   onTagSave: (
     id: string,
     entityId: string | null,
     description: string
   ) => (tags: string[]) => Promise<void>;
   onTagSuggest: (description: string, entityId: string | null) => () => Promise<string[]>;
-  onEdit: (transaction: Transaction) => void;
-  onDelete: (transaction: Transaction) => void;
-  onUnlink: (transaction: Transaction) => void;
 }
+
+interface BuildColumnsArgs extends BuildColumnsBase, RowActionHandlers {}
 
 /**
  * Each taxonomy type → its i18n key. The one place the badge labels and the
@@ -127,6 +122,11 @@ function buildCoreColumns(t: TFunction<'finance'>): ColumnDef<Transaction>[] {
 function buildInteractiveColumns(args: BuildColumnsArgs): ColumnDef<Transaction>[] {
   const { t } = args;
   return [
+    buildPurchaseLinkColumn({
+      t,
+      summaries: args.purchaseLinks,
+      onShowPurchase: args.onShowPurchase,
+    }),
     {
       accessorKey: 'tags',
       header: t('column.tags'),
@@ -145,34 +145,7 @@ function buildInteractiveColumns(args: BuildColumnsArgs): ColumnDef<Transaction>
     },
     {
       id: 'actions',
-      cell: ({ row }) => (
-        <div className="text-right">
-          <DropdownMenu
-            trigger={
-              <Button variant="ghost" size="icon" aria-label="Actions">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            }
-            align="end"
-          >
-            <DropdownMenuItem onClick={() => args.onEdit(row.original)}>
-              <Pencil /> Edit
-            </DropdownMenuItem>
-            {row.original.relatedTransactionId ? (
-              <DropdownMenuItem onClick={() => args.onUnlink(row.original)}>
-                <Link2Off /> Unlink transfer
-              </DropdownMenuItem>
-            ) : null}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className="text-destructive focus:text-destructive"
-              onClick={() => args.onDelete(row.original)}
-            >
-              <Trash2 /> Delete
-            </DropdownMenuItem>
-          </DropdownMenu>
-        </div>
-      ),
+      cell: ({ row }) => <RowActions transaction={row.original} t={t} handlers={args} />,
     },
   ];
 }

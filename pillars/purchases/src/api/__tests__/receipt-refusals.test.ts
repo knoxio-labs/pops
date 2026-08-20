@@ -20,12 +20,12 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { openTempDb } from '../../db/__tests__/helpers.js';
 import { createPurchasesApiApp } from '../app.js';
 import { __resetPillarRegistryCache } from '../pillars/registry.js';
+import { createTestTransport } from './test-http.js';
 
 import type { Express } from 'express';
 
@@ -113,6 +113,8 @@ const saying = (answer: string): ReceiptVision => ({ read: async () => answer })
 /** A test must not reach the live resolver; nothing here turns on the link. */
 const NO_MERCHANT: MerchantResolver = { resolve: async () => null };
 
+const { requestOn } = createTestTransport();
+
 let opened: OpenedPurchasesDb;
 let cleanup: () => void;
 let receiptDir: string;
@@ -128,7 +130,7 @@ function appWith(vision: ReceiptVision): Express {
 }
 
 const upload = (app: Express) =>
-  request(app)
+  requestOn(app)
     .post('/receipts')
     .send({ parts: [{ mediaType: 'image/jpeg', dataBase64: JPEG_BASE64 }] });
 
@@ -165,7 +167,7 @@ describe('the upload route, against every kind the gate can raise', () => {
       // something else is not a case for the kind it claims to cover.
       expect(response.body.failures.map((one: GateFailure) => one.kind)).toEqual([kind]);
 
-      const listed = await request(app).get('/purchases');
+      const listed = await requestOn(app).get('/purchases');
       expect(listed.body.items).toHaveLength(0);
     });
   }

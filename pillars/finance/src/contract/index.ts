@@ -16,6 +16,11 @@ export {
 } from './corrections-pure.js';
 export { type ChangeSet, type ChangeSetOp } from './rest-corrections-schemas.js';
 export {
+  parseAnzDescription,
+  type AnzDescription,
+  type AnzForeignCharge,
+} from './anz-description.js';
+export {
   buildImportDedupKey,
   buildImportDedupKeyFromStoredRow,
   extractReferenceValue,

@@ -1,33 +1,172 @@
+import AppCore
 import DesignSystem
 import SwiftUI
 
-/// The feature's whole public surface today: a placeholder that compiles and
-/// is reachable from the shell, ahead of the capture flow itself.
+/// The receipt-capture screen: photograph a receipt, and hand what comes back
+/// to the result screen.
+///
+/// It renders and it forwards taps. Every decision — whether the camera may
+/// open, what an empty scan means, how many photos are too many — is
+/// ``ReceiptCaptureViewModel``'s, which is what makes those answers assertable
+/// without a camera.
+///
+/// ## One frame, two contents
+///
+/// Whichever state it is in, this screen is content that scrolls with a bar
+/// of actions pinned under it. That is the shape the whole tab is built on:
+/// the content changes — a first-run prompt, an outcome, and later a list of
+/// purchases and a form — and the bar stays where a thumb already is. This
+/// package's README carries the sketch, because the screens landing next to
+/// these have to inherit one surface rather than invent three.
+///
+/// ## No navigation chrome, on purpose
+///
+/// The two screens in this flow are one screen replacing the other, not a push.
+/// A `NavigationStack` here would be the nested-navigation-controller shape
+/// that `ReceiptDocumentScanner` documents an open UIKit crash for — and there
+/// is nothing to navigate back to anyway: a captured receipt is either being
+/// read or has been, and the way to a second one is to photograph a second one.
 public struct ReceiptCaptureView: View {
-    public init() {}
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var model: ReceiptCaptureViewModel
+
+    public init(model: ReceiptCaptureViewModel) {
+        _model = State(wrappedValue: model)
+    }
 
     public var body: some View {
-        VStack(spacing: PopsSpacing.md) {
-            Text(ReceiptCaptureCopy.title)
-                .font(.popsTitle)
-                .foregroundStyle(Color.popsForeground)
-            Text(ReceiptCaptureCopy.placeholder)
-                .font(.popsBody)
-                .foregroundStyle(Color.popsMutedForeground)
-                .multilineTextAlignment(.center)
+        @Bindable var bindable = model
+
+        return
+            content
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color.popsBackground)
+            .onAppear { model.refreshCameraAccess() }
+            // Somebody sent to Settings to allow the camera comes back to this
+            // screen, not through `onAppear`. Without this the button stays
+            // replaced by the refusal until the app is relaunched.
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .active { model.refreshCameraAccess() }
+            }
+            // Spoken, not merely rendered. VoiceOver does not move focus to
+            // text that appears where the camera used to be, so without this a
+            // scan that produced nothing reads as the camera having simply
+            // closed.
+            .onChange(of: model.problem) { _, problem in
+                guard let problem else { return }
+                AccessibilityNotification.Announcement(ReceiptCaptureCopy.message(for: problem))
+                    .post()
+            }
+            // `.fullScreenCover`, not `.sheet`: a page sheet on iPhone is
+            // interactively dismissible by a downward swipe, and
+            // `VNDocumentCameraViewControllerDelegate` is never told about
+            // that dismissal — `documentCameraViewControllerDidCancel(_:)`
+            // fires for the Cancel button only. A swipe mid-scan would
+            // discard however many pages had been photographed with nothing
+            // reported, no confirmation, and the model none the wiser. A
+            // full-screen cover has no swipe-to-dismiss gesture, so the only
+            // way out is the scanner's own Cancel button or a finished scan —
+            // both of which already report through the delegate. It also
+            // matches how the system document camera is meant to be shown:
+            // undecorated and full-screen, not inset with a grabber.
+            //
+            // `#if os(iOS)`: `fullScreenCover` is unavailable on macOS, which
+            // this package also targets so `swift test` runs on the host
+            // toolchain (see `Package.swift`). Nothing macOS renders reaches
+            // this branch — the scanner itself is `#if canImport(VisionKit)
+            // && canImport(UIKit)` below — so `.sheet` here is unreachable at
+            // runtime and exists only to keep the host build compiling.
+            #if os(iOS)
+                .fullScreenCover(isPresented: $bindable.isCameraPresented) { scanner }
+            #else
+                .sheet(isPresented: $bindable.isCameraPresented) { scanner }
+            #endif
+    }
+
+    @ViewBuilder private var content: some View {
+        switch model.state {
+        case .ready:
+            prompt
+        case .reading(let submission):
+            reading(submission)
         }
-        .padding(PopsSpacing.lg)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.popsBackground)
     }
 }
 
-#Preview("Receipt capture — light") {
-    ReceiptCaptureView()
-        .preferredColorScheme(.light)
-}
+extension ReceiptCaptureView {
+    /// A `ScrollView` unconditionally, not only when the content overflows. At
+    /// the accessibility Dynamic Type sizes the refusal copy plus a problem is
+    /// taller than a phone, and a fixed layout there puts the action off-screen
+    /// with no way to reach it — which the bar below fixes from the other end,
+    /// by never scrolling at all.
+    private var prompt: some View {
+        ScrollView {
+            ReceiptCapturePrompt(model: model)
+                .padding(PopsSpacing.lg)
+        }
+        .safeAreaInset(edge: .bottom) { promptActions }
+    }
 
-#Preview("Receipt capture — dark") {
-    ReceiptCaptureView()
-        .preferredColorScheme(.dark)
+    /// The camera, or the one refusal that can be undone, or nothing.
+    ///
+    /// Nothing is a real answer and not an omission: a device with no camera
+    /// and a device under a Screen Time policy have no action to offer, and a
+    /// disabled button in a bar is an invitation to keep pressing something
+    /// that will never work.
+    @ViewBuilder private var promptActions: some View {
+        if let refusal = CameraRefusal.refusing(model.cameraAccess) {
+            if refusal.offersSettings, let settings = SystemSettings.url {
+                PopsActionBar {
+                    Link(ReceiptCaptureCopy.openSettings, destination: settings)
+                        .font(.popsHeadline)
+                        .foregroundStyle(Color.popsAccent)
+                        .frame(maxWidth: .infinity)
+                        .accessibilityIdentifier(ReceiptCaptureAccessibility.openSettings)
+                }
+            }
+        } else {
+            PopsActionBar {
+                PopsButton(ReceiptCaptureCopy.captureButton, prominence: .prominent) {
+                    Task { await model.startCapture() }
+                }
+                .accessibilityIdentifier(ReceiptCaptureAccessibility.captureButton)
+            }
+        }
+    }
+
+    /// The result screen, plus the one thing it deliberately does not own: the
+    /// way back to the camera. `ReceiptResultView` draws no chrome, so whoever
+    /// embeds it decides what surrounds it — and what surrounds it here is the
+    /// answer to "and now the next receipt".
+    ///
+    /// Keyed on the submission so a second receipt is a second screen. Without
+    /// it SwiftUI would reuse the first one's model, and the second receipt
+    /// would show the first one's outcome having never been sent.
+    private func reading(_ submission: ReceiptSubmission) -> some View {
+        ReceiptResultView(model: model.result(for: submission))
+            .id(submission.id)
+            .safeAreaInset(edge: .bottom) {
+                PopsActionBar {
+                    PopsButton(ReceiptCaptureCopy.captureAnother, prominence: .prominent) {
+                        model.captureAnother()
+                    }
+                    .accessibilityIdentifier(ReceiptCaptureAccessibility.captureAnotherButton)
+                }
+            }
+    }
+
+    @ViewBuilder private var scanner: some View {
+        #if canImport(VisionKit) && canImport(UIKit)
+            ReceiptDocumentScanner(
+                onCapture: { model.didCapture($0, from: $1) },
+                onCancel: { model.didCancelCapture() },
+                onFailure: { model.didFailCapture() }
+            )
+            .ignoresSafeArea()
+        #else
+            // No camera to present on the host toolchain, and nothing shipped
+            // reaches this branch — see `ReceiptDocumentScanner.swift`.
+            EmptyView()
+        #endif
+    }
 }
