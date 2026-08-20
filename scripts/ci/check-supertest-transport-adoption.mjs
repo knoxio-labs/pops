@@ -2,9 +2,9 @@
 /**
  * Supertest transport adoption guard.
  *
- * `finance`, `bfm`, `purchases`, `media`, `cerebrum` and `documents` each own a
- * pre-listened `127.0.0.1` server plus a pooled keep-alive agent for their API
- * suites, because supertest's own
+ * `finance`, `bfm`, `purchases`, `media`, `cerebrum`, `documents`, `ai`, `food`
+ * and `inventory` each own a pre-listened `127.0.0.1` server plus a pooled
+ * keep-alive agent for their API suites, because supertest's own
  * `request(app)` binds a fresh ephemeral server AND dials a fresh connection
  * for every call — two ephemeral ports per request — and that churn is what
  * stalls under machine contention. See AGENTS.md, "Conventions duplicated per
@@ -83,6 +83,9 @@ export const PILLARS = [
   { id: 'media', transport: 'pillars/media/src/api/__tests__/test-http.ts', minFiles: 310 },
   { id: 'cerebrum', transport: 'pillars/cerebrum/src/api/__tests__/test-http.ts', minFiles: 220 },
   { id: 'documents', transport: 'pillars/documents/src/api/__tests__/test-http.ts', minFiles: 12 },
+  { id: 'ai', transport: 'pillars/ai/src/api/__tests__/test-http.ts', minFiles: 82 },
+  { id: 'food', transport: 'pillars/food/src/api/__tests__/test-http.ts', minFiles: 436 },
+  { id: 'inventory', transport: 'pillars/inventory/src/api/__tests__/test-http.ts', minFiles: 156 },
 ];
 
 /** The package every transport wraps, and the name a violation reaches for. */
@@ -94,10 +97,10 @@ export const BANNED_PACKAGE = 'supertest';
  * nothing does.
  *
  * It is per-pillar rather than one constant because the pillars differ by more
- * than an order of magnitude — 645 files in finance against 25 in documents as
- * of writing. A single floor has to clear the smallest, which leaves it far
- * under every other pillar: finance's walk could return 4% of its tree and
- * still pass. A floor that only the smallest pillar can fail is not a floor.
+ * than an order of magnitude — 873 files in food against 25 in documents as of
+ * writing. A single floor has to clear the smallest, which leaves it far under
+ * every other pillar: food's walk could return 3% of its tree and still pass.
+ * A floor that only the smallest pillar can fail is not a floor.
  *
  * Raise a pillar's number when its tree grows; that is the point. A drop large
  * enough to trip one is a structural change worth looking at, not a nuisance
@@ -384,7 +387,7 @@ function writeFixturePillar(root, pillar, options = {}) {
 }
 
 /**
- * A fixture repo with all three pillars clean.
+ * A fixture repo with every pillar clean.
  *
  * @param {string} root
  */
@@ -615,10 +618,11 @@ function runSelfTest() {
 
 const HELP = `check-supertest-transport-adoption — one door to supertest per pillar.
 
-finance, bfm and purchases each own a pre-listened test transport. This fails
-the build when any file in those pillars imports \`supertest\` directly instead
-of going through it, and equally when the transport itself stops matching —
-which would mean the guard has gone blind rather than the tree gone clean.
+Nine pillars each own a pre-listened test transport: finance, bfm, purchases,
+media, cerebrum, documents, ai, food and inventory. This fails the build when
+any file in one of them imports \`supertest\` directly instead of going through
+it, and equally when the transport itself stops matching — which would mean the
+guard has gone blind rather than the tree gone clean.
 
   --self-test  Run the adversarial matrix (planted variants + degenerate cases).
   --help       This text.

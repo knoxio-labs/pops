@@ -11,13 +11,15 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { crossPillarUrisService, openInventoryDb, type OpenedInventoryDb } from '../../db/index.js';
 import { homeInventory } from '../../db/schema.js';
 import { createInventoryApiApp } from '../app.js';
+import { createTestTransport } from './test-http.js';
 import { HttpError, makeClient } from './test-utils.js';
+
+const { requestOn } = createTestTransport();
 
 let tmpDir: string;
 let inventoryDb: OpenedInventoryDb;
@@ -276,9 +278,9 @@ describe('items REST — raw HTTP wire smoke', () => {
       version: '0.0.1-test',
       selfBaseUrl: 'http://localhost:3002',
     });
-    await request(app).post('/items').send({ itemName: 'Wire smoke item' });
+    await requestOn(app).post('/items').send({ itemName: 'Wire smoke item' });
 
-    const res = await request(app).get('/items');
+    const res = await requestOn(app).get('/items');
     expect(res.status).toBe(200);
     expect(res.body.data).toHaveLength(1);
     expect(res.body.data[0].itemName).toBe('Wire smoke item');

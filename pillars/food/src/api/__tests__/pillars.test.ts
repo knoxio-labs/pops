@@ -9,12 +9,14 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { openFoodDb, type OpenedFoodDb } from '../../db/index.js';
 import { createFoodApiApp } from '../app.js';
 import { __resetPillarRegistryCache } from '../pillars/registry.js';
+import { createTestTransport } from './test-http.js';
+
+const { requestOn } = createTestTransport();
 
 let tmpDir: string;
 let foodDb: OpenedFoodDb;
@@ -45,7 +47,7 @@ function makeApp(): ReturnType<typeof createFoodApiApp> {
 
 describe('GET /pillars', () => {
   it('returns the synthetic food entry when POPS_PILLARS is unset', async () => {
-    const res = await request(makeApp()).get('/pillars');
+    const res = await requestOn(makeApp()).get('/pillars');
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
       pillars: [{ id: 'food', baseUrl: 'http://food-api:3005' }],
@@ -55,7 +57,7 @@ describe('GET /pillars', () => {
   it('merges the synthetic food entry ahead of POPS_PILLARS-parsed siblings', async () => {
     process.env['POPS_PILLARS'] =
       'inventory:http://inventory-api:3002,finance:http://finance-api:3004';
-    const res = await request(makeApp()).get('/pillars');
+    const res = await requestOn(makeApp()).get('/pillars');
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
       pillars: [
@@ -68,7 +70,7 @@ describe('GET /pillars', () => {
 
   it('overrides a POPS_PILLARS `food` entry with the live selfBaseUrl', async () => {
     process.env['POPS_PILLARS'] = 'food:http://stale-food:9000,finance:http://finance-api:3004';
-    const res = await request(makeApp()).get('/pillars');
+    const res = await requestOn(makeApp()).get('/pillars');
     expect(res.body).toEqual({
       pillars: [
         { id: 'food', baseUrl: 'http://food-api:3005' },
@@ -79,19 +81,19 @@ describe('GET /pillars', () => {
 
   it('returns 500 on a malformed POPS_PILLARS', async () => {
     process.env['POPS_PILLARS'] = 'no-colon-here';
-    const res = await request(makeApp()).get('/pillars');
+    const res = await requestOn(makeApp()).get('/pillars');
     expect(res.status).toBe(500);
   });
 
   it('rejects a POPS_PILLARS entry with a path/query/fragment', async () => {
     process.env['POPS_PILLARS'] = 'inventory:http://inventory-api:3002/api';
-    const res = await request(makeApp()).get('/pillars');
+    const res = await requestOn(makeApp()).get('/pillars');
     expect(res.status).toBe(500);
   });
 
   it('strips a trailing slash from a clean origin', async () => {
     process.env['POPS_PILLARS'] = 'inventory:http://inventory-api:3002/';
-    const res = await request(makeApp()).get('/pillars');
+    const res = await requestOn(makeApp()).get('/pillars');
     expect(res.status).toBe(200);
     expect(res.body.pillars).toContainEqual({
       id: 'inventory',
