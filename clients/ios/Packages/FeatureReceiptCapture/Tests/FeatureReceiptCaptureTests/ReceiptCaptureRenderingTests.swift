@@ -69,7 +69,15 @@ internal struct ReceiptCaptureRenderingTests {
         return pixels as Data
     }
 
-    @Test("the capture prompt renders, and renders the same way twice")
+    @Test("the capture prompt rasterises")
+    func thePromptRasterises() throws {
+        _ = try #require(Self.render(Self.prompt(access: .authorized)))
+    }
+
+    /// Gated, because where no token resolves both renders are the same blank
+    /// canvas and match whether the prompt is deterministic or not — which is
+    /// why the rasterisation claim above is a test of its own.
+    @Test("the capture prompt renders the same way twice", .requiresCompiledColorCatalog)
     func rendersDeterministically() throws {
         let once = try #require(Self.render(Self.prompt(access: .authorized)))
         let again = try #require(Self.render(Self.prompt(access: .authorized)))

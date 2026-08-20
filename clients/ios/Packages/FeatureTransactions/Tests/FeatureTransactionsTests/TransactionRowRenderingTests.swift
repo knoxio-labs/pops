@@ -58,7 +58,20 @@ internal struct TransactionRowRenderingTests {
         )
     }
 
-    @Test("a row renders, and renders the same way twice")
+    /// The one claim here that holds on a lane where `Colors.xcassets` was
+    /// copied without being compiled, and the reason the determinism check
+    /// below is a separate test rather than a second assertion in this one:
+    /// the trait that gates that check would take this smoke test down with
+    /// it, leaving the suite rasterising nothing at all on the host lane.
+    @Test("a row rasterises")
+    func rowRasterises() throws {
+        _ = try #require(Self.render(Self.row(Self.transaction())))
+    }
+
+    /// What makes every comparison below a signal rather than noise — and
+    /// gated, because where no token resolves both renders are the same blank
+    /// canvas and match whether the row is deterministic or not.
+    @Test("a row renders the same way twice", .requiresCompiledColorCatalog)
     func rowRendersDeterministically() throws {
         let once = try #require(Self.render(Self.row(Self.transaction())))
         let again = try #require(Self.render(Self.row(Self.transaction())))

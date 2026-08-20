@@ -63,15 +63,59 @@ internal struct RenderComparisonTraitExemptionTests {
         #expect(Self.isClean(source))
     }
 
-    @Test("rendering once, or rendering twice and asserting equality, is not a comparison")
-    func determinismChecksAreNotFlagged() {
+    /// A determinism check is a comparison now — see the scanner's own doc
+    /// comment for why the equality direction stopped being exempt — but the
+    /// trait is all it needs, and declaring it costs the check nothing: on
+    /// the lane the trait disables it on, two blank canvases would have been
+    /// equal whether the view renders deterministically or not.
+    @Test("a determinism check that declares the trait is clean")
+    func aDeclaredDeterminismCheckIsNotFlagged() {
         let source = RenderComparisonTraitFixtures.suite(
             """
-                @Test("renders, and renders the same way twice")
+                @Test("renders the same way twice", .requiresCompiledColorCatalog)
                 func rendersDeterministically() throws {
                     let once = try #require(render(view))
                     let again = try #require(render(view))
                     #expect(once == again)
+                }
+            """)
+
+        #expect(Self.isClean(source))
+    }
+
+    /// The half of a determinism check that survives being split off it: one
+    /// render, no comparison, and so nothing to declare. This is what keeps a
+    /// suite from going dark on the uncompiled-catalogue lane once the
+    /// equality above is gated.
+    @Test("rendering once and asserting it happened is not a comparison")
+    func aLoneRasterisationIsNotFlagged() {
+        let source = RenderComparisonTraitFixtures.suite(
+            """
+                @Test("rasterises at all")
+                func rendersAtAll() throws {
+                    _ = try #require(render(view))
+                }
+            """)
+
+        #expect(Self.isClean(source))
+    }
+
+    /// The opt-out stays open to a comparison that asserts a difference —
+    /// `ReceiptCaptureRenderingTests.problemsAreDrawn` is the real one — and
+    /// stays open when such a test also checks an equality alongside it. It
+    /// is only an *equality-only* comparison that cannot claim to survive an
+    /// uncompiled catalogue.
+    @Test("a comparison that asserts a difference may still opt out")
+    func anInequalityMayOptOut() {
+        let source = RenderComparisonTraitFixtures.suite(
+            """
+                @Test("an extra sentence changes the layout",
+                    .comparisonSurvivesAnUncompiledCatalog)
+                func statesLookDifferent() throws {
+                    let a = try #require(render(view(.one)))
+                    let b = try #require(render(view(.two)))
+                    #expect(a.count == b.count)
+                    #expect(a != b)
                 }
             """)
 
@@ -125,11 +169,34 @@ internal struct RenderComparisonTraitExemptionTests {
                     #expect(first.id != second.id)
                 }
 
-                @Test("renders, and renders the same way twice")
+                @Test("renders the same way twice", .requiresCompiledColorCatalog)
                 func rendersDeterministically() throws {
                     let once = try #require(render(view))
                     let again = try #require(render(view))
                     #expect(once == again)
+                }
+            """)
+
+        #expect(Self.isClean(source))
+    }
+
+    /// The false positive that reading every `==` as a render comparison
+    /// would create, and the reason the operands are traced to a render
+    /// instead. `ReceiptCaptureFlowTests.aSecondReceiptResubmitsThroughTheView`
+    /// is the real file: it reuses one `ImageRenderer` across two submissions
+    /// to drive SwiftUI's view-identity machinery, never looks at either
+    /// image, and asserts about a repository's call count.
+    @Test("rasterising twice and comparing something else is not a render comparison")
+    func aNonRenderEqualityIsNotFlagged() {
+        let source = RenderComparisonTraitFixtures.bareSuite(
+            """
+                @Test("a second submission goes through rather than reusing the first")
+                func resubmits() async {
+                    let renderer = ImageRenderer(content: screen(model))
+                    _ = renderer.cgImage
+                    renderer.content = screen(model)
+                    _ = renderer.cgImage
+                    #expect(await repository.callCount == 2)
                 }
             """)
 
