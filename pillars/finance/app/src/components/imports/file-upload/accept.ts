@@ -1,8 +1,11 @@
 import { isSameFile } from '../../../store/import-store-types';
+import { describeAcceptedTypes, hasAcceptedExtension } from './accepted-types';
 
 export interface AcceptArgs {
   incoming: File[];
   existing: File[];
+  /** The drop zone's `accept` value, the single statement of what is allowed. */
+  acceptedTypes: string;
   maxSizeBytes: number;
   maxSizeMB: number;
   maxTotalSizeBytes: number;
@@ -19,14 +22,22 @@ export interface AcceptResult {
  * rejecting per file rather than discarding the whole batch on one bad member.
  */
 export function acceptFiles(args: AcceptArgs): AcceptResult {
-  const { incoming, existing, maxSizeBytes, maxSizeMB, maxTotalSizeBytes, maxTotalSizeMB } = args;
+  const {
+    incoming,
+    existing,
+    acceptedTypes,
+    maxSizeBytes,
+    maxSizeMB,
+    maxTotalSizeBytes,
+    maxTotalSizeMB,
+  } = args;
   const accepted = [...existing];
   const errors: string[] = [];
   let total = existing.reduce((sum, f) => sum + f.size, 0);
 
   for (const file of incoming) {
-    if (!file.name.toLowerCase().endsWith('.csv')) {
-      errors.push(`${file.name}: not a CSV file.`);
+    if (!hasAcceptedExtension(file.name, acceptedTypes)) {
+      errors.push(`${file.name}: not a ${describeAcceptedTypes(acceptedTypes)} file.`);
       continue;
     }
     if (file.size > maxSizeBytes) {
