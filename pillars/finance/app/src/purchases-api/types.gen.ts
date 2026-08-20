@@ -302,6 +302,7 @@ export type ProductListResponses = {
       createdAt: string;
       id: string;
       label: string;
+      labelConfirmedAt: string | null;
     }>;
   };
 };
@@ -505,6 +506,7 @@ export type ProductRenameResponses = {
     createdAt: string;
     id: string;
     label: string;
+    labelConfirmedAt: string | null;
   };
 };
 

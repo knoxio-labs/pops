@@ -177,12 +177,12 @@ describe('the dictionary listing', () => {
 
   it('keeps a renamed product when the pass runs after its wording is gone', async () => {
     const gone = createPurchase(opened.db, shop('other', ['MILK 2L']));
-    await request(app).post('/products/proposals').send({});
+    await requestOn(app).post('/products/proposals').send({});
     const milk = await aliasOverHttp('MILK 2L');
-    await request(app).patch(`/products/${milk.productId}`).send({ label: 'Full-cream milk 2L' });
+    await requestOn(app).patch(`/products/${milk.productId}`).send({ label: 'Full-cream milk 2L' });
     deletePurchase(opened.db, gone);
 
-    const pass = await request(app).post('/products/proposals').send({});
+    const pass = await requestOn(app).post('/products/proposals').send({});
 
     expect(pass.status).toBe(200);
     expect(pass.body).toMatchObject({ retired: 0 });
