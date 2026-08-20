@@ -1,12 +1,11 @@
 /**
  * DB-layer tests for the paired-transfer persistence half (#3607 Stage 3b),
- * against an in-memory SQLite seeded with the canonical `transactions` DDL.
+ * against an in-memory SQLite carrying the migrated finance schema.
  */
-import Database from 'better-sqlite3';
 import { eq } from 'drizzle-orm';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { beforeEach, describe, expect, it } from 'vitest';
 
+import { freshMigratedFinanceDb } from '../../__tests__/migrated-db.js';
 import { TransactionNotFoundError } from '../../errors.js';
 import { transactions } from '../../schema.js';
 import {
@@ -19,46 +18,8 @@ import { findPairCandidates, linkTransferPair, unlinkTransferPair } from '../tra
 
 import type { FinanceDb } from '../internal.js';
 
-const TRANSACTIONS_DDL = `
-CREATE TABLE transactions (
-  id text PRIMARY KEY NOT NULL,
-  notion_id text,
-  description text NOT NULL,
-  account text NOT NULL,
-  amount_cents integer NOT NULL,
-  date text NOT NULL,
-  type text NOT NULL,
-  tags text NOT NULL DEFAULT '[]',
-  entity_id text,
-  entity_name text,
-  location text,
-  country text,
-  related_transaction_id text,
-  notes text,
-  foreign_amount_minor integer,
-  foreign_currency text,
-  fx_fee_cents integer,
-  checksum text,
-  raw_row text,
-  last_edited_time text NOT NULL,
-  match_type text,
-  match_rule_id text,
-  match_confidence real
-);
-CREATE UNIQUE INDEX transactions_notion_id_unique ON transactions (notion_id);
-CREATE INDEX idx_transactions_date ON transactions (date);
-CREATE INDEX idx_transactions_account ON transactions (account);
-CREATE INDEX idx_transactions_entity ON transactions (entity_id);
-CREATE INDEX idx_transactions_last_edited ON transactions (last_edited_time);
-CREATE INDEX idx_transactions_notion_id ON transactions (notion_id);
-CREATE UNIQUE INDEX idx_transactions_checksum ON transactions (checksum);
-`;
-
 function freshDb(): FinanceDb {
-  const raw = new Database(':memory:');
-  raw.pragma('foreign_keys = ON');
-  raw.exec(TRANSACTIONS_DDL);
-  return drizzle(raw);
+  return freshMigratedFinanceDb().db;
 }
 
 function seed(db: FinanceDb, overrides: Partial<CreateTransactionInput> = {}): TransactionRow {

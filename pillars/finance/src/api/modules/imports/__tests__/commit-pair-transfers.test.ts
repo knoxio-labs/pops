@@ -1,14 +1,13 @@
 /**
  * Tests for the commit-time paired-transfer phase (#3607 Stage 3c), against an
- * in-memory SQLite seeded with the canonical `transactions` DDL. Exercises the
- * feature gate, the happy path (batch↔batch and batch↔existing), rule
- * precedence, and the mutual-uniqueness guard against competing candidates.
+ * in-memory SQLite carrying the migrated finance schema. Exercises the feature
+ * gate, the happy path (batch↔batch and batch↔existing), rule precedence, and
+ * the mutual-uniqueness guard against competing candidates.
  */
-import Database from 'better-sqlite3';
 import { eq } from 'drizzle-orm';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { freshMigratedFinanceDb } from '../../../../db/__tests__/migrated-db.js';
 import { transactions } from '../../../../db/schema.js';
 import {
   createTransaction,
@@ -20,49 +19,11 @@ import { pairTransfersPhase } from '../commit-pair-transfers.js';
 
 import type { FinanceDb } from '../../../../db/services/internal.js';
 
-const TRANSACTIONS_DDL = `
-CREATE TABLE transactions (
-  id text PRIMARY KEY NOT NULL,
-  notion_id text,
-  description text NOT NULL,
-  account text NOT NULL,
-  amount_cents integer NOT NULL,
-  date text NOT NULL,
-  type text NOT NULL,
-  tags text NOT NULL DEFAULT '[]',
-  entity_id text,
-  entity_name text,
-  location text,
-  country text,
-  related_transaction_id text,
-  notes text,
-  foreign_amount_minor integer,
-  foreign_currency text,
-  fx_fee_cents integer,
-  checksum text,
-  raw_row text,
-  last_edited_time text NOT NULL,
-  match_type text,
-  match_rule_id text,
-  match_confidence real
-);
-CREATE UNIQUE INDEX transactions_notion_id_unique ON transactions (notion_id);
-CREATE INDEX idx_transactions_date ON transactions (date);
-CREATE INDEX idx_transactions_account ON transactions (account);
-CREATE INDEX idx_transactions_entity ON transactions (entity_id);
-CREATE INDEX idx_transactions_last_edited ON transactions (last_edited_time);
-CREATE INDEX idx_transactions_notion_id ON transactions (notion_id);
-CREATE UNIQUE INDEX idx_transactions_checksum ON transactions (checksum);
-`;
-
 const ENABLED = 'FINANCE_TRANSFER_PAIR_ENABLED';
 const WINDOW = 'FINANCE_TRANSFER_PAIR_WINDOW_DAYS';
 
 function freshDb(): FinanceDb {
-  const raw = new Database(':memory:');
-  raw.pragma('foreign_keys = ON');
-  raw.exec(TRANSACTIONS_DDL);
-  return drizzle(raw);
+  return freshMigratedFinanceDb().db;
 }
 
 function seed(db: FinanceDb, overrides: Partial<CreateTransactionInput> = {}): TransactionRow {
