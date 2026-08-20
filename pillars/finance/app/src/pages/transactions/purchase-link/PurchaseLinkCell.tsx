@@ -68,7 +68,7 @@ export function PurchaseLinkCell({
       data-purchase-count={summary.purchaseCount}
       title={t(HINT_KEY[state])}
       aria-label={t('transactions.purchaseLink.open')}
-      className="flex items-center gap-1 rounded-sm focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2"
+      className="flex min-h-11 min-w-11 items-center gap-1 rounded-sm focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2"
     >
       <Badge variant={state === 'autoLinked' ? 'outline' : 'secondary'}>
         {t(LABEL_KEY[state])}
