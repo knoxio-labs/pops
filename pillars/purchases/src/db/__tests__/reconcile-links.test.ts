@@ -31,6 +31,7 @@ function link(chargeId: string, transactionUri: string, amountCents: number): Pr
     amountCents,
     linkType: 'exact',
     confidence: 1,
+    matchRuleId: null,
   };
 }
 

@@ -301,6 +301,7 @@ describe('listConfirmedLinks', () => {
         amountCents: 5678,
         linkType: 'exact',
         confidence: 1,
+        matchRuleId: null,
       },
       {
         chargeId: proposedCharge.id,
@@ -309,6 +310,7 @@ describe('listConfirmedLinks', () => {
         amountCents: 1234,
         linkType: 'exact',
         confidence: 1,
+        matchRuleId: null,
       },
     ]);
     confirmLink(
@@ -360,6 +362,7 @@ describe('listRejectedPairings', () => {
         amountCents: 5678,
         linkType: 'exact',
         confidence: 1,
+        matchRuleId: null,
       },
     ]);
     rejectLink(opened.db, charge.id, 'pops://finance/transaction/rejected', '2026-04-02T00:00:00Z');
