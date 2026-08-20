@@ -46,6 +46,14 @@ const LABEL_KEY: Record<LinkState, string> = {
  * from the row's action menu, which is where this feature was going
  * unnoticed — an indicator that says "there is something here" and cannot be
  * followed is half an answer.
+ *
+ * Its accessible name is composed from what it renders — the state, the order
+ * count where there is one, then what clicking does. An `aria-label` naming
+ * only the action would replace the state rather than add to it, and a reader
+ * on a screen reader would get a column of identical buttons: the same
+ * confirmed-as-derived collapse this component exists to avoid, one output
+ * channel over. `confirmed` and `partlyConfirmed` share a badge variant, so
+ * that word is the only thing telling them apart anywhere.
  */
 export function PurchaseLinkCell({
   summary,
@@ -64,10 +72,7 @@ export function PurchaseLinkCell({
     <button
       type="button"
       onClick={onOpen}
-      data-link-state={state}
-      data-purchase-count={summary.purchaseCount}
       title={t(HINT_KEY[state])}
-      aria-label={t('transactions.purchaseLink.open')}
       className="flex min-h-11 min-w-11 items-center gap-1 rounded-sm focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2"
     >
       <Badge variant={state === 'autoLinked' ? 'outline' : 'secondary'}>
@@ -78,6 +83,7 @@ export function PurchaseLinkCell({
           {t('transactions.purchaseLink.orders', { count: summary.purchaseCount })}
         </span>
       )}
+      <span className="sr-only">{t('transactions.purchaseLink.open')}</span>
     </button>
   );
 }

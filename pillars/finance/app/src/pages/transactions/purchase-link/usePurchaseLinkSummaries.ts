@@ -27,6 +27,36 @@ function transactionIdOf(transactionUri: string): string {
   return transactionUri.slice(transactionUri.lastIndexOf('/') + 1);
 }
 
+const FNV_PRIME = 0x01000193;
+const FNV_OFFSETS = [0x811c9dc5, 0x9dc5811c] as const;
+
+function fnv1a(ids: readonly string[], offset: number): number {
+  let hash = offset;
+  for (const id of ids) {
+    for (let index = 0; index < id.length; index += 1) {
+      hash = Math.imul(hash ^ id.charCodeAt(index), FNV_PRIME);
+    }
+    // A separator, so ['ab', 'c'] and ['a', 'bc'] are different lists.
+    hash = Math.imul(hash ^ 0x1f, FNV_PRIME);
+  }
+  return hash >>> 0;
+}
+
+/**
+ * A fixed-size stand-in for the id list, for the query key.
+ *
+ * React Query re-derives a key's hash on every render, and this page holds the
+ * whole transaction history while re-rendering on every keystroke in its
+ * search box, so a key carrying the ids themselves would stringify tens of
+ * thousands of them per keystroke. The count and two independent FNV-1a passes
+ * change when the set changes — which is all the key has to do — and cost the
+ * same to hash whatever the page is holding.
+ */
+export function fingerprint(transactionIds: readonly string[]): string {
+  const [first, second] = FNV_OFFSETS;
+  return `${transactionIds.length}:${fnv1a(transactionIds, first).toString(36)}:${fnv1a(transactionIds, second).toString(36)}`;
+}
+
 async function fetchSummaries(
   transactionIds: readonly string[]
 ): Promise<TransactionLinkSummary[]> {
@@ -57,16 +87,15 @@ async function fetchSummaries(
  * absent from the producer's answer, so nothing here translates a zero into a
  * blank.
  *
- * Keyed on the ids themselves rather than on the transactions query's cache
- * timestamp: a tag edit invalidates the transactions list, and a key that
- * moved with every refetch would re-ask purchases about an unchanged set of
- * rows each time somebody edited one.
+ * Keyed on which transactions were asked about rather than on the transactions
+ * query's cache timestamp: a tag edit invalidates the transactions list, and a
+ * key that moved with every refetch would re-ask purchases about an unchanged
+ * set of rows each time somebody edited one.
  *
- * `retry: false`, as everywhere else this app calls a service — and the
- * failure goes no further than this hook. A column is decoration on a page
- * that is fully useful without it, so a refusal draws no indicators rather
- * than failing the page; the reader who wants to know why opens the row, where
- * the panel says which side failed and offers the retry.
+ * `retry: false`, as everywhere else this app calls a service. A column is
+ * decoration on a page that is fully useful without it, so a refusal draws no
+ * indicators rather than failing the page; the reader who wants to know why
+ * opens the row, where the panel says which side failed and offers the retry.
  */
 export function usePurchaseLinkSummaries(
   transactions: readonly { id: string }[] | undefined
@@ -75,14 +104,19 @@ export function usePurchaseLinkSummaries(
     () => (transactions ?? []).map((transaction) => transaction.id),
     [transactions]
   );
+  const askedAbout = useMemo(() => fingerprint(transactionIds), [transactionIds]);
   const query = useQuery({
     retry: false,
     enabled: transactionIds.length > 0,
-    queryKey: ['purchases', 'reconcile', 'links', 'batch', transactionIds],
+    queryKey: ['purchases', 'reconcile', 'links', 'batch', askedAbout],
     queryFn: async () => fetchSummaries(transactionIds),
   });
 
-  return new Map(
-    (query.data ?? []).map((summary) => [transactionIdOf(summary.transactionUri), summary])
+  return useMemo(
+    () =>
+      new Map(
+        (query.data ?? []).map((summary) => [transactionIdOf(summary.transactionUri), summary])
+      ),
+    [query.data]
   );
 }

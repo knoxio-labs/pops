@@ -88,11 +88,9 @@ export function makeReconcileHandlers(db: PurchasesDb, sweep?: SweepTrigger) {
 
     linksBatch: async ({ body }: { body: TransactionLinksBatchBody }) => ({
       status: 200 as const,
-      body: {
-        transactions: summariseLinksForTransactions(db, body.transactionUris).map((summary) => ({
-          ...summary,
-        })),
-      },
+      // Copied because the service answers with a readonly array and the wire
+      // body ts-rest validates against is a mutable one.
+      body: { transactions: [...summariseLinksForTransactions(db, body.transactionUris)] },
     }),
 
     confirm: async ({ body }: { body: Decision }) => {

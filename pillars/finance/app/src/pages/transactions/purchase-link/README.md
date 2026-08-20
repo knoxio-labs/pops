@@ -53,7 +53,21 @@ settled in.
 
 ## What a refusal looks like
 
-Nothing. The column is decoration on a page that is fully useful without it, so
-a purchases outage draws no indicators and raises no error: `retry: false`, and
-the query's failure never reaches the page. The reader who wants to know why
-opens the row, where the panel names which side failed and offers the retry.
+Nothing on the page. The column is decoration on a page that is fully useful
+without it, so a purchases outage draws no indicators rather than failing the
+page: `retry: false`, and no error surface of its own. The reader who wants to
+know why opens the row, where the panel names which side failed and offers the
+retry.
+
+The rejection is not contained here, though. The shell installs a global
+`QueryCache({ onError })` and every failed query in the app reaches it,
+including this one. It stays quiet because `purchases-api-helpers.ts` replaces
+a transport failure's message with wording of its own, and the shell's
+`isNetworkError` matches fetch's phrasing rather than that — a sibling pillar
+being unreachable is not the reader's connection. That is a rule living in
+another file, so a change to either side can start toasting this column's
+failures without anything here changing.
+
+Absence is also all a refusal renders, which makes an outage look the same as
+"no order explains any of these". Telling those two apart is not built
+(POPS-2429).

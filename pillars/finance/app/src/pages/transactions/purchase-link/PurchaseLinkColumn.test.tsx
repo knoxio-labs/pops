@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, render, renderHook, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useTranslation } from 'react-i18next';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -21,7 +21,7 @@ vi.mock('../../../purchases-api/index.js', () => ({
 import { DataTable } from '@pops/ui';
 
 import { buildColumns } from '../columns';
-import { usePurchaseLinkSummaries } from './usePurchaseLinkSummaries';
+import { fingerprint, usePurchaseLinkSummaries } from './usePurchaseLinkSummaries';
 
 import type { Transaction } from '../types';
 import type { TransactionLinkSummary } from './types';
@@ -85,24 +85,51 @@ function Harness({ transactions }: { transactions: Transaction[] }) {
   return <DataTable columns={columns} data={transactions} paginated={false} />;
 }
 
-function renderTable(transactions: Transaction[] = TRANSACTIONS): ReactNode {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  render(
-    <QueryClientProvider client={client}>
-      <Harness transactions={transactions} />
-    </QueryClientProvider>
-  );
-  return null;
+function withClient(client: QueryClient) {
+  return function Wrapper({ children }: { children: ReactNode }) {
+    return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+  };
 }
 
-/** The real en-AU copy, so the test asserts on what a reader sees. */
-const OPEN_LABEL = 'Show what this transaction bought';
+/** Returns the client, so a test can read what the query was actually keyed on. */
+function renderTable(transactions: Transaction[] = TRANSACTIONS): QueryClient {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  render(<Harness transactions={transactions} />, { wrapper: withClient(client) });
+  return client;
+}
 
-/** The indicator on one row, or null where the row has none. */
+/**
+ * The real en-AU copy throughout, so every assertion here is about a word a
+ * reader sees and a screen reader announces. Asserting the state through a
+ * data attribute instead would leave the label table free to be wrong: swap
+ * two entries in it and every row reads as the opposite claim while the suite
+ * stays green.
+ */
+const OPEN_LABEL = 'Show what this transaction bought';
+const CONFIRMED = 'Confirmed';
+const AUTO_LINKED = 'Auto-linked';
+const PART_CONFIRMED = 'Part confirmed';
+const AUTO_LINKED_HINT =
+  'Matched automatically and confirmed by nobody — a later sweep may withdraw it.';
+
+/**
+ * The indicator on one row, or null where the row has none.
+ *
+ * Found by the action in its accessible name rather than by the whole name, so
+ * this helper does not have to know which state the row is in — the state is
+ * what each test then asserts.
+ */
 function indicatorFor(description: string): HTMLElement | null {
   const cell = screen.getByText(description).closest('tr');
   if (cell === null) throw new Error(`no row for ${description}`);
-  return within(cell).queryByRole('button', { name: OPEN_LABEL });
+  return within(cell).queryByRole('button', {
+    name: (accessibleName) => accessibleName.includes(OPEN_LABEL),
+  });
+}
+
+/** The whole announced name for a row in one state: the state, then the action. */
+function announced(state: string): RegExp {
+  return new RegExp(`^${state}\\s*${OPEN_LABEL}$`);
 }
 
 afterEach(() => {
@@ -122,7 +149,7 @@ describe('the purchase column', () => {
     expect(indicatorFor('ATM WITHDRAWAL')).toBeNull();
   });
 
-  it('marks a confirmed link apart from a derived one', async () => {
+  it('says in words which rows a human decided and which the matcher guessed', async () => {
     reconcileLinksBatchMock.mockResolvedValue({ data: { transactions: SUMMARIES } });
     renderTable();
 
@@ -130,8 +157,32 @@ describe('the purchase column', () => {
 
     // The distinction `confirmedAt` exists for: one is a decision somebody
     // made, the other is what the matcher currently believes.
-    expect(indicatorFor('AMAZON MKTPLACE AU')).toHaveAttribute('data-link-state', 'confirmed');
-    expect(indicatorFor('WOOLWORTHS 1234')).toHaveAttribute('data-link-state', 'autoLinked');
+    expect(indicatorFor('AMAZON MKTPLACE AU')).toHaveTextContent(CONFIRMED);
+    expect(indicatorFor('WOOLWORTHS 1234')).toHaveTextContent(AUTO_LINKED);
+    expect(indicatorFor('WOOLWORTHS 1234')).not.toHaveTextContent(CONFIRMED);
+  });
+
+  it('announces the state to a screen reader, not only the action', async () => {
+    reconcileLinksBatchMock.mockResolvedValue({ data: { transactions: SUMMARIES } });
+    renderTable();
+
+    await waitFor(() => expect(indicatorFor('AMAZON MKTPLACE AU')).not.toBeNull());
+
+    // A name that were only the action would be identical on every row, which
+    // is the confirmed-as-derived collapse this column exists to avoid.
+    expect(indicatorFor('AMAZON MKTPLACE AU')).toHaveAccessibleName(announced(CONFIRMED));
+    expect(indicatorFor('WOOLWORTHS 1234')).toHaveAccessibleName(announced(AUTO_LINKED));
+  });
+
+  it("explains a derived link in the panel's own wording", async () => {
+    reconcileLinksBatchMock.mockResolvedValue({ data: { transactions: SUMMARIES } });
+    renderTable();
+
+    await waitFor(() => expect(indicatorFor('WOOLWORTHS 1234')).not.toBeNull());
+
+    // The hint is the panel's key, not this column's. Renaming it there leaves
+    // i18next echoing the raw key, which this assertion catches.
+    expect(indicatorFor('WOOLWORTHS 1234')).toHaveAttribute('title', AUTO_LINKED_HINT);
   });
 
   it('says the number of orders on a combined settlement', async () => {
@@ -140,12 +191,10 @@ describe('the purchase column', () => {
 
     await waitFor(() => expect(indicatorFor('ALIEXPRESS')).not.toBeNull());
 
-    const combined = indicatorFor('ALIEXPRESS');
-    expect(combined).toHaveAttribute('data-purchase-count', '2');
-    expect(combined?.textContent).toContain('2 orders');
+    expect(indicatorFor('ALIEXPRESS')).toHaveTextContent('2 orders');
     // The rows settling one order each say nothing about a count, so the
     // reader is not asked to read "1 order" on nearly every row.
-    expect(indicatorFor('AMAZON MKTPLACE AU')?.textContent).not.toContain('orders');
+    expect(indicatorFor('AMAZON MKTPLACE AU')).not.toHaveTextContent('orders');
   });
 
   it('reports a part-confirmed transaction as neither', async () => {
@@ -155,10 +204,8 @@ describe('the purchase column', () => {
     renderTable();
 
     await waitFor(() => expect(indicatorFor('AMAZON MKTPLACE AU')).not.toBeNull());
-    expect(indicatorFor('AMAZON MKTPLACE AU')).toHaveAttribute(
-      'data-link-state',
-      'partlyConfirmed'
-    );
+    expect(indicatorFor('AMAZON MKTPLACE AU')).toHaveTextContent(PART_CONFIRMED);
+    expect(indicatorFor('AMAZON MKTPLACE AU')).toHaveAccessibleName(announced(PART_CONFIRMED));
   });
 
   it('opens the detail panel for the row it was clicked on', async () => {
@@ -173,15 +220,17 @@ describe('the purchase column', () => {
     expect(onShowPurchase).toHaveBeenCalledWith(expect.objectContaining({ id: 'tx-derived' }));
   });
 
-  it('draws no column at all when the pillar refuses, rather than failing the page', async () => {
+  it('draws no indicators when the pillar refuses, rather than failing the page', async () => {
     // A column is decoration on a page that is fully useful without it. The
     // reader who wants to know why opens the row, where the panel names the
-    // failure and offers the retry.
+    // failure and offers the retry. The column itself stays, and today a
+    // refusal and "no order explains any of these" render alike.
     reconcileLinksBatchMock.mockResolvedValue({ error: {}, response: { status: 503 } });
     renderTable();
 
     await waitFor(() => expect(reconcileLinksBatchMock).toHaveBeenCalled());
     expect(screen.getByText('ATM WITHDRAWAL')).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Purchase' })).toBeInTheDocument();
     expect(indicatorFor('AMAZON MKTPLACE AU')).toBeNull();
   });
 });
@@ -225,5 +274,60 @@ describe('the batched request', () => {
 
     await waitFor(() => expect(screen.queryByText('ATM WITHDRAWAL')).toBeNull());
     expect(reconcileLinksBatchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('what the query is keyed on', () => {
+  const ids = (count: number): string[] =>
+    Array.from({ length: count }, (_, index) => `1f0a5c9e-0000-4000-8000-${index}`);
+
+  it('separates any two sets of transactions', () => {
+    expect(fingerprint(['a', 'b'])).not.toEqual(fingerprint(['b', 'a']));
+    expect(fingerprint(['ab', 'c'])).not.toEqual(fingerprint(['a', 'bc']));
+    expect(fingerprint(['a'])).not.toEqual(fingerprint(['a', 'a']));
+    expect(fingerprint([])).not.toEqual(fingerprint(['']));
+  });
+
+  it('answers the same for the same set, so a refetch is not a new question', () => {
+    // The list re-fetches whenever a tag is edited. The rows come back as new
+    // objects holding the same ids, and re-asking purchases about an unchanged
+    // set on every edit is what keying on the set rather than the fetch avoids.
+    expect(fingerprint(ids(50))).toEqual(fingerprint(ids(50)));
+  });
+
+  it('stays the same size however much history the page is holding', () => {
+    // React Query re-derives a key's hash on every render, and this page
+    // re-renders on every keystroke in its search box. A key carrying the ids
+    // themselves would stringify all of them, per keystroke.
+    expect(fingerprint(ids(100_000)).length).toBeLessThan(40);
+  });
+
+  it('is what the query is actually keyed on', async () => {
+    reconcileLinksBatchMock.mockResolvedValue({ data: { transactions: [] } });
+    const many = Array.from({ length: 600 }, (_, index) =>
+      transaction(`tx-${index}`, `ROW ${index}`)
+    );
+
+    const client = renderTable(many);
+
+    await waitFor(() => expect(reconcileLinksBatchMock).toHaveBeenCalled());
+    const [query] = client.getQueryCache().getAll();
+    expect(query?.queryHash.length).toBeLessThan(100);
+  });
+
+  it('hands the same map back on a re-render nothing changed', async () => {
+    reconcileLinksBatchMock.mockResolvedValue({ data: { transactions: SUMMARIES } });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const { result, rerender } = renderHook(() => usePurchaseLinkSummaries(TRANSACTIONS), {
+      wrapper: withClient(client),
+    });
+
+    await waitFor(() => expect(result.current.size).toBe(SUMMARIES.length));
+    const first = result.current;
+    rerender();
+
+    // Rebuilding it would walk every summary on every keystroke, on a page
+    // that re-renders per keystroke.
+    expect(result.current).toBe(first);
   });
 });

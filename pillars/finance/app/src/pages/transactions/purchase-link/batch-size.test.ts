@@ -13,6 +13,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
+import { z } from 'zod';
 
 import { TRANSACTION_URI_BATCH_SIZE } from './usePurchaseLinkSummaries';
 
@@ -20,30 +21,35 @@ import { TRANSACTION_URI_BATCH_SIZE } from './usePurchaseLinkSummaries';
 // jsdom, where that is an http URL and `fileURLToPath` refuses it.
 const SPEC_PATH = resolve(process.cwd(), 'contracts/purchases.openapi.json');
 
+/**
+ * Only the one path down to the cap, parsed rather than asserted, so a spec
+ * that moved the cap fails here saying which shape it no longer has instead of
+ * reading `undefined` off something that is no longer an object.
+ */
+const CapSchema = z.object({
+  paths: z.object({
+    '/reconcile/links/batch': z.object({
+      post: z.object({
+        requestBody: z.object({
+          content: z.object({
+            'application/json': z.object({
+              schema: z.object({
+                properties: z.object({
+                  transactionUris: z.object({ maxItems: z.int() }),
+                }),
+              }),
+            }),
+          }),
+        }),
+      }),
+    }),
+  }),
+});
+
 function producerCap(): number {
-  const spec: unknown = JSON.parse(readFileSync(SPEC_PATH, 'utf8'));
-  const schema = (
-    spec as {
-      paths: Record<
-        string,
-        {
-          post?: {
-            requestBody?: {
-              content: Record<
-                string,
-                { schema: { properties: { transactionUris: { maxItems?: number } } } }
-              >;
-            };
-          };
-        }
-      >;
-    }
-  ).paths['/reconcile/links/batch']?.post?.requestBody?.content['application/json']?.schema;
-  const cap = schema?.properties.transactionUris.maxItems;
-  if (typeof cap !== 'number') {
-    throw new Error('the vendored purchases spec declares no maxItems on transactionUris');
-  }
-  return cap;
+  const spec = CapSchema.parse(JSON.parse(readFileSync(SPEC_PATH, 'utf8')));
+  return spec.paths['/reconcile/links/batch'].post.requestBody.content['application/json'].schema
+    .properties.transactionUris.maxItems;
 }
 
 describe('the batched lookup chunk size', () => {
