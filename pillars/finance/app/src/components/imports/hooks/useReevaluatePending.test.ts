@@ -178,7 +178,11 @@ describe('useReevaluatePending', () => {
     expect(a?.affectedCount).toBe(1);
     expect(b?.affectedCount).toBe(1);
     expect(processMock).toHaveBeenCalledTimes(1);
-    expect(reevaluateMock).toHaveBeenCalledTimes(4);
+    // Three, not four: runs are serialized, so the second caller does not
+    // repeat the first's doomed attempt at the dead session. One dead attempt,
+    // one retry against the recovered session, one queued run — and a queued
+    // run reads the current pending change sets, so it covers both callers.
+    expect(reevaluateMock).toHaveBeenCalledTimes(3);
     expect(toastMock.error).not.toHaveBeenCalled();
   });
 
