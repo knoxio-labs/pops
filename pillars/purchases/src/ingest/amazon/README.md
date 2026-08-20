@@ -113,7 +113,7 @@ The 56 digital ones are a known gap rather than a misread: their `D01-` ids appe
 
 The 6 duplicates are the one case content addressing cannot handle. Two files carrying the same invoice number for the same order have _different bytes_, so they hash to different paths and `uq_purchase_documents` sees two distinct URIs. The second is dropped here, or the order would show one invoice twice. Two invoices with genuinely different numbers on one order are kept — 11 orders have those.
 
-**Matched is not attached.** A matched invoice travels in the create request for the order it names, and reaches the database only if that request creates the order. There is no route that attaches a document to an order that already exists, so a run against a database this bundle has already been ingested into attaches nothing at all and says so (POPS-2311).
+**Matched is not attached, and the create pass alone cannot fix that.** A matched invoice travels in the create request for the order it names, and reaches the database only if that request creates the order. A database this bundle has already been ingested into refuses every one of those requests at the checksum, so the create pass attaches nothing at all and says so. `--attach-existing` is the second pass: it reads `GET /purchases?sources=amazon`, resolves each merchant order id to the order already holding it, and posts the invoice to `POST /purchases/{id}/documents`. A repeat is a 409 there, so the flag is safe to re-run — a second run reports every invoice as already carried and writes nothing.
 
 A credit note (`Tax Adjustment Note`, 10 in the bundle) is filed as `other`, not `tax_invoice`: it unwinds an invoice rather than being one, and `DOCUMENT_KINDS` has no entry for it.
 
@@ -125,7 +125,7 @@ In this pillar's own content-addressed store, under `pops://purchases/receipt/<s
 
 **The store is a local directory** — beside this pillar's SQLite file, or `PURCHASES_RECEIPT_DIR`. Running the CLI against a remote `PURCHASES_BASE_URL` from a machine that cannot see the server's volume writes the URIs into the database and the bytes onto the wrong host. Run it where the volume is mounted.
 
-The bytes go down **before** the request that names them, because a row pointing at a file that is not there cannot be repaired: `POST /purchases` is create-only, so a re-run is a 409 and the reference stays broken. What that ordering writes for an order the server then refuses is removed again at the end of the run, so a run that creates nothing leaves nothing behind.
+The bytes go down **before** the request that names them, because a row pointing at a file that is not there cannot be repaired by the create path: `POST /purchases` is create-only, so a re-run is a 409. What that ordering writes for an order no row ends up referencing is removed again at the end of the run, so a run that creates nothing and attaches nothing leaves nothing behind. A 409 from the attach route counts as a reference like a 201 does — it means a row is already pointing at those bytes, and taking them off the volume would break it.
 
 ## What this adapter does not produce
 

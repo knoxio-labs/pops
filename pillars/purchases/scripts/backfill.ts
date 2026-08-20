@@ -66,8 +66,8 @@ export function createIngestClient(env: NodeJS.ProcessEnv = process.env): Ingest
  * would be a second chance to forget the header.
  *
  * A `GET` carries no body: `fetch` rejects a request that has one on that
- * verb, and `JSON.stringify(undefined)` is `undefined` rather than the empty
- * string, so an omitted body is genuinely absent.
+ * verb, so the key is left off the init entirely rather than set to
+ * `undefined`.
  */
 export function ingestFetch(
   client: IngestClient,
@@ -75,11 +75,12 @@ export function ingestFetch(
   method: 'GET' | 'POST' | 'PUT',
   body?: unknown
 ): Promise<Response> {
-  return fetch(`${client.baseUrl}${path}`, {
+  const init: RequestInit = {
     method,
     headers: { 'content-type': 'application/json', [SERVICE_ACCOUNT_HEADER]: client.apiKey },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
+  };
+  if (body !== undefined) init.body = JSON.stringify(body);
+  return fetch(`${client.baseUrl}${path}`, init);
 }
 
 /** Anomalies are counted by kind: a per-line dump buries the shape of them. */

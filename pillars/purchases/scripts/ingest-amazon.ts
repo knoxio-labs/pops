@@ -189,7 +189,12 @@ async function postWithInvoices(
 
     if (attachExisting) {
       reportAttachExisting(
-        await attachToExistingOrders(client, AMAZON_SOURCE_ID, plan, created, writer)
+        await attachToExistingOrders(client, {
+          source: AMAZON_SOURCE_ID,
+          plan,
+          created,
+          writer,
+        })
       );
     }
   } finally {

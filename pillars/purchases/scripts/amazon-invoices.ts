@@ -11,11 +11,11 @@ import { rmSync } from 'node:fs';
 import { receiptSha256, receiptUri, storeReceiptBytes } from '../src/ingest/receipt/store.js';
 import { attachDocuments, fetchPurchaseIdsBySourceOrderId } from './attach-documents.js';
 
-import type { MatchedInvoice } from '../src/ingest/amazon/index.js';
 import type {
   CreateDocumentInput,
   CreatePurchaseInput,
 } from '../src/db/services/purchase-input.js';
+import type { MatchedInvoice } from '../src/ingest/amazon/index.js';
 import type { AttachOutcome, DocumentAttachment } from './attach-documents.js';
 import type { IngestClient } from './backfill.js';
 
@@ -149,6 +149,15 @@ export function createInvoiceWriter(plan: InvoicePlan): InvoiceWriter {
   };
 }
 
+export interface AttachToExistingOrders {
+  /** The purchase source whose order index names the orders to attach to. */
+  readonly source: string;
+  readonly plan: InvoicePlan;
+  /** Merchant order ids this run created, whose invoices already travelled. */
+  readonly created: ReadonlySet<string>;
+  readonly writer: InvoiceWriter;
+}
+
 export interface AttachExistingOutcome {
   /** Merchant order ids in the plan that named an order already in the database. */
   readonly matchedOrders: number;
@@ -170,10 +179,7 @@ export interface AttachExistingOutcome {
  */
 export async function attachToExistingOrders(
   client: IngestClient,
-  source: string,
-  plan: InvoicePlan,
-  created: ReadonlySet<string>,
-  writer: InvoiceWriter
+  { source, plan, created, writer }: AttachToExistingOrders
 ): Promise<AttachExistingOutcome> {
   const idsBySourceOrderId = await fetchPurchaseIdsBySourceOrderId(client, source);
 
