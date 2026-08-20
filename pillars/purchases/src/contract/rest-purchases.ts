@@ -7,7 +7,13 @@
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
 
-import { InventoryProposalDecisionSchema, InventoryProposalSchema } from './inventory-proposals.js';
+import {
+  InventoryAssetFailureSchema,
+  InventoryAssetRequestSchema,
+  InventoryItemUriSchema,
+  InventoryProposalDecisionSchema,
+  InventoryProposalSchema,
+} from './inventory-proposals.js';
 import {
   AttachDocumentBodySchema,
   CreatePurchaseBodySchema,
@@ -147,12 +153,47 @@ export const purchasesPurchaseContract = c.router({
     summary: "Unanswered inventory offers derived from an order's durable lines",
   },
   /**
+   * Create the asset an offer describes, then record the accept — the whole
+   * fan-out in one call, for a caller that holds a human's consent and no
+   * inventory row.
+   *
+   * The order is the guarantee. The projection is asked for the offer
+   * first, so a slot already answered creates nothing at all; the row is
+   * created next; the accept is recorded last, against the URI that came
+   * back. Nothing here can record a decision that never became an asset,
+   * and only a slot answered concurrently can leave an asset whose accept
+   * did not land — which {@link InventoryAssetFailureSchema} reports by
+   * name, carrying the URI.
+   */
+  createInventoryItem: {
+    method: 'POST',
+    path: '/purchases/:id/items/:itemId/inventory-item',
+    pathParams: z.object({ id: z.string(), itemId: z.string() }),
+    body: InventoryAssetRequestSchema,
+    responses: {
+      201: z.object({ inventoryItemUri: InventoryItemUriSchema, unit: PurchaseItemUnitSchema }),
+      400: ErrorBodySchema,
+      // No offer matches: no such order or line, a line nothing proposes,
+      // or every slot on it already answered. One status for all of them,
+      // because telling them apart tells a caller holding the wrong order
+      // id that the line exists somewhere else.
+      404: ErrorBodySchema,
+      // The inventory pillar refused, could not be reached, or the slot was
+      // answered while the create was in flight.
+      502: InventoryAssetFailureSchema,
+    },
+    summary: "Create an offer's inventory asset and record the accept",
+  },
+  /**
    * Record a per-item opt-in or refusal. Scoped under the order for the
    * reason {@link patchItem} is: a line id alone is a guess.
    *
-   * Purchases does not create the inventory row. An accept names a URI the
-   * caller has already created on that pillar, which is what keeps a
-   * fan-out from writing into someone else's data.
+   * The accept names a URI the caller created itself — this route writes
+   * nothing into inventory. It stays a separate operation from
+   * {@link createInventoryItem} because a caller that already holds a URI
+   * has nothing to create: an ingest payload that states one, and a surface
+   * that would rather create the asset under the user's own session than
+   * have purchases do it, both land here.
    */
   decideInventoryProposal: {
     method: 'POST',

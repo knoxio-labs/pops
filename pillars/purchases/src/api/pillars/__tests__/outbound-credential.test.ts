@@ -30,6 +30,7 @@ import { __resetServerPillarCache, __resetServerSdkConfig } from '@pops/pillar-s
 import { createMerchantResolver } from '../../contacts/merchant.js';
 import { createDocumentLookup, createInventoryItemLookup } from '../../cron/pillar-lookup.js';
 import { createFinanceClient, type FinanceRouter } from '../../finance/client.js';
+import { createInventoryAssetCreator } from '../../inventory/client.js';
 import { __resetOutboundCredentialReports } from '../outbound.js';
 import { configurePurchasesServerSdk } from '../sdk-config.js';
 import { SERVICE_ACCOUNT_KEY_ENV, SERVICE_ACCOUNT_KEY_FILE_ENV } from '../service-account.js';
@@ -79,6 +80,12 @@ const OPENAPI = {
         operationId: 'items.get',
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
         responses: { '200': { description: 'ok' } },
+      },
+    },
+    '/items': {
+      post: {
+        operationId: 'items.create',
+        responses: { '201': { description: 'created' } },
       },
     },
     '/paperless/documents/{id}': {
@@ -152,6 +159,7 @@ function okBody(pathname: string): unknown {
     return { data: [], pagination: { total: 0, limit: 500, offset: 0, hasMore: false } };
   }
   if (pathname === '/entities') return { data: [{ id: 'contacts-1', name: 'Bunnings' }] };
+  if (pathname === '/items') return { data: { id: 'inv-1' }, message: 'created' };
   return { id: 'abc' };
 }
 
@@ -204,7 +212,26 @@ function configure(): void {
   expect(configurePurchasesServerSdk({ POPS_INTERNAL_API_KEY: SERVICE_ACCOUNT_KEY })).toBe(true);
 }
 
-/** The four legs, each named by the pillar it calls and the path it hits. */
+/**
+ * The offer the create leg is driven with. Only the fields that cross into
+ * inventory's body matter here; the translation itself is
+ * `inventory/__tests__/asset.test.ts`.
+ */
+const OFFER = {
+  purchaseId: 'p-1',
+  itemId: 'i-1',
+  unitId: null,
+  slot: 0,
+  itemName: 'Cordless Drill',
+  serialNumber: null,
+  purchaseDate: '2026-02-02T23:41:21.000Z',
+  purchasePriceCents: 19900,
+  purchasedFromName: 'Bunnings Warehouse',
+  purchaseTransactionUri: null,
+  kindConfirmed: true,
+} as const;
+
+/** The five legs, each named by the pillar it calls and the path it hits. */
 const LEGS: readonly {
   readonly label: string;
   readonly path: string;
@@ -230,6 +257,14 @@ const LEGS: readonly {
     label: 'receipt ingest resolving a merchant against contacts',
     path: '/entities',
     call: () => createMerchantResolver().resolve('Bunnings Warehouse'),
+  },
+  {
+    // The only leg that writes. An anonymous create would be admitted today
+    // — inventory requires no credential yet — and would become an
+    // unattributable write the day it does.
+    label: 'an accepted proposal creating the asset in inventory',
+    path: '/items',
+    call: () => createInventoryAssetCreator().create(OFFER),
   },
 ];
 
@@ -312,6 +347,19 @@ describe('a callee that rejects the credential', () => {
     // `unavailable` here would be swallowed by the leg that treats an
     // outage as "retry tonight", and tonight would never be different.
     await expect(call()).resolves.toEqual({ kind: 'unauthorized', reason: 'unauthorized' });
+  });
+
+  it('refuses to report the create leg as an outage', async () => {
+    // The grant this leg needs is the one already held for reading, so a
+    // refusal here means the account itself is gone or revoked — nothing a
+    // retry fixes, and nothing that may be reported as "inventory is down".
+    await expect(createInventoryAssetCreator().create(OFFER)).resolves.toEqual({
+      kind: 'unauthorized',
+      reason: 'unauthorized',
+    });
+    expect(errorLog).toHaveBeenCalledWith(
+      expect.stringContaining("inventory rejected this pillar's service-account credential")
+    );
   });
 
   it('declines to name a merchant rather than guessing on the contacts leg', async () => {

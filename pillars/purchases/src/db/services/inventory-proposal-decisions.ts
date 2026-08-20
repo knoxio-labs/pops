@@ -7,10 +7,13 @@
  * The vocabulary they share, including what makes a unit *decided*, lives
  * next to the projection that consumes it.
  *
- * Purchases does not create the inventory row an accept names. That row is
- * the inventory pillar's to write, and a reference recorded before it
- * exists is one the nightly soft-URI cron would find unresolvable and stamp
- * stale — a fan-out reporting its own eagerness as an outage.
+ * Nothing here creates the inventory row an accept names, and nothing here
+ * checks that it exists: an accept records a URI its caller states. Both
+ * routes above this one arrange to have that row already — one because the
+ * caller made it, one because the handler did — because a reference
+ * recorded before its row exists is one the nightly soft-URI cron would
+ * find unresolvable and stamp stale, a fan-out reporting its own eagerness
+ * as an outage.
  */
 import { and, eq } from 'drizzle-orm';
 

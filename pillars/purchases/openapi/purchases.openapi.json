@@ -4426,6 +4426,176 @@
         "tags": ["purchase"]
       }
     },
+    "/purchases/{id}/items/{itemId}/inventory-item": {
+      "post": {
+        "operationId": "purchase.createInventoryItem",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "itemId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "unitId": {
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "inventoryItemUri": {
+                      "pattern": "^pops:\\/\\/inventory\\/item\\/([^/\\s]+)$",
+                      "type": "string"
+                    },
+                    "unit": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "createdAt": {
+                          "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+                          "type": "string"
+                        },
+                        "id": {
+                          "type": "string"
+                        },
+                        "inventoryDeclinedAt": {
+                          "nullable": true,
+                          "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+                          "type": "string"
+                        },
+                        "inventoryItemStaleAt": {
+                          "nullable": true,
+                          "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+                          "type": "string"
+                        },
+                        "inventoryItemUri": {
+                          "nullable": true,
+                          "pattern": "^pops:\\/\\/[a-z0-9-]+\\/[a-z0-9-]+\\/[^/\\s]+$",
+                          "type": "string"
+                        },
+                        "itemId": {
+                          "type": "string"
+                        },
+                        "serialNumber": {
+                          "nullable": true,
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "itemId",
+                        "serialNumber",
+                        "inventoryItemUri",
+                        "inventoryItemStaleAt",
+                        "inventoryDeclinedAt",
+                        "createdAt"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": ["inventoryItemUri", "unit"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "201"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "inventoryItemUri": {
+                      "nullable": true,
+                      "pattern": "^pops:\\/\\/inventory\\/item\\/([^/\\s]+)$",
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message", "inventoryItemUri"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "502"
+          }
+        },
+        "summary": "Create an offer's inventory asset and record the accept",
+        "tags": ["purchase"]
+      }
+    },
     "/purchases/{id}/items/{itemId}/inventory-proposal": {
       "post": {
         "operationId": "purchase.decideInventoryProposal",
@@ -4460,7 +4630,7 @@
                         "type": "string"
                       },
                       "inventoryItemUri": {
-                        "pattern": "^pops:\\/\\/inventory\\/item\\/[^/\\s]+$",
+                        "pattern": "^pops:\\/\\/inventory\\/item\\/([^/\\s]+)$",
                         "type": "string"
                       },
                       "unitId": {
@@ -5791,7 +5961,7 @@
             "name": "transactionUri",
             "required": true,
             "schema": {
-              "pattern": "^pops:\\/\\/finance\\/transaction\\/[^/\\s]+$",
+              "pattern": "^pops:\\/\\/finance\\/transaction\\/([^/\\s]+)$",
               "type": "string"
             }
           }
@@ -6092,7 +6262,7 @@
                       "type": "array"
                     },
                     "transactionUri": {
-                      "pattern": "^pops:\\/\\/finance\\/transaction\\/[^/\\s]+$",
+                      "pattern": "^pops:\\/\\/finance\\/transaction\\/([^/\\s]+)$",
                       "type": "string"
                     }
                   },
@@ -6120,7 +6290,7 @@
                 "properties": {
                   "transactionUris": {
                     "items": {
-                      "pattern": "^pops:\\/\\/finance\\/transaction\\/[^/\\s]+$",
+                      "pattern": "^pops:\\/\\/finance\\/transaction\\/([^/\\s]+)$",
                       "type": "string"
                     },
                     "maxItems": 500,
@@ -6162,7 +6332,7 @@
                             "type": "integer"
                           },
                           "transactionUri": {
-                            "pattern": "^pops:\\/\\/finance\\/transaction\\/[^/\\s]+$",
+                            "pattern": "^pops:\\/\\/finance\\/transaction\\/([^/\\s]+)$",
                             "type": "string"
                           }
                         },

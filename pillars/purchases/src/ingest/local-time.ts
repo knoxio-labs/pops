@@ -67,6 +67,36 @@ function zoneOffsetMinutes(instant: Date, timeZone: string): number | null {
   return match[1] === '-' ? -minutes : minutes;
 }
 
+/**
+ * The calendar day an instant fell on where the shops are, as `yyyy-mm-dd`,
+ * or null when the string is not an instant at all.
+ *
+ * The inverse of {@link instantFromLocalParts}, and needed for the same
+ * reason: a consumer that stores a day rather than a moment has to be told
+ * which day, and deriving it in UTC moves every purchase made after
+ * mid-afternoon in Sydney onto the next one. Answering null rather than
+ * guessing keeps an unparseable stored value from being written on
+ * somewhere else as a confident wrong date.
+ *
+ * Assembled from parts rather than through a locale's short date format,
+ * which varies by ICU build and by locale in both order and separator.
+ */
+export function calendarDateInZone(instant: string, timeZone = storeTimeZone()): string | null {
+  const at = new Date(instant);
+  if (Number.isNaN(at.getTime())) return null;
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(at);
+  const read = (type: Intl.DateTimeFormatPartTypes): string | undefined =>
+    parts.find((part) => part.type === type)?.value;
+  const [year, month, day] = [read('year'), read('month'), read('day')];
+  if (year === undefined || month === undefined || day === undefined) return null;
+  return `${year}-${month}-${day}`;
+}
+
 export interface LocalParts {
   readonly year: number;
   readonly month: number;

@@ -95,6 +95,32 @@ export const PopsUriSchema = z
   );
 
 /**
+ * One `pops://<pillar>/<type>/<id>` shape, matched and built from the same
+ * place.
+ *
+ * Every narrower URI in this pillar — a finance transaction on the way in,
+ * an inventory item on the way out — is the generic shape with two segments
+ * pinned. Written out per site, the validator and the builder for the same
+ * shape drift apart without anything failing: a URI that passes one and not
+ * the other is stored, and the column it lands in is only ever resolved by
+ * a nightly cron that reports the mismatch as a broken link months later.
+ *
+ * The id is a capture group, so the same pattern that validates a URI also
+ * reads the id back out of it.
+ */
+export function popsUriPattern(pillar: string, type: string): RegExp {
+  return new RegExp(`^pops://${pillar}/${type}/([^/\\s]+)$`, 'u');
+}
+
+/** The URI addressing one row on another pillar. Mirror of {@link popsUriPattern}. */
+export function popsUri(pillar: string, type: string, id: string): string {
+  return `pops://${pillar}/${type}/${id}`;
+}
+
+/** Matches a `pops://finance/transaction/<id>` URI, capturing the id. */
+export const FINANCE_TRANSACTION_URI = popsUriPattern('finance', 'transaction');
+
+/**
  * A `pops://finance/transaction/<id>` reference specifically.
  *
  * Narrower than {@link PopsUriSchema}, and deliberately narrower than the
@@ -106,6 +132,6 @@ export const PopsUriSchema = z
 export const FinanceTransactionUriSchema = z
   .string()
   .regex(
-    /^pops:\/\/finance\/transaction\/[^/\s]+$/u,
+    FINANCE_TRANSACTION_URI,
     'expected a finance transaction URI, e.g. pops://finance/transaction/<id>'
   );
