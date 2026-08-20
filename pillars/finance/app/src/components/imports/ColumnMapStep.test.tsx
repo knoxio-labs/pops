@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -60,5 +60,36 @@ describe('ColumnMapStep — auto-detect vs. manual override (#3621)', () => {
 
     expect(getDateSelect(remounted.container)).toHaveValue('Value Date');
     expect(useImportStore.getState().columnMap.date).toBe('Value Date');
+  });
+});
+describe('ColumnMapStep — nothing auto-detected', () => {
+  it('says nothing matched instead of showing four blank dropdowns', () => {
+    useImportStore.getState().setHeaders(['Column 1', 'Column 2', 'Column 3']);
+    useImportStore
+      .getState()
+      .setRows([{ 'Column 1': '31/07/2026', 'Column 2': '-23.22', 'Column 3': 'MERCHANT' }]);
+
+    render(<ColumnMapStep />);
+
+    expect(screen.getByText('No columns matched automatically')).toBeInTheDocument();
+  });
+
+  it('drops the notice once a field is mapped by hand', async () => {
+    const user = userEvent.setup();
+    useImportStore.getState().setHeaders(['Column 1', 'Column 2', 'Column 3']);
+    useImportStore
+      .getState()
+      .setRows([{ 'Column 1': '31/07/2026', 'Column 2': '-23.22', 'Column 3': 'MERCHANT' }]);
+
+    const { container } = render(<ColumnMapStep />);
+    await user.selectOptions(getDateSelect(container), 'Column 1');
+
+    expect(screen.queryByText('No columns matched automatically')).not.toBeInTheDocument();
+  });
+
+  it('shows no notice when the headers are recognisable', () => {
+    render(<ColumnMapStep />);
+
+    expect(screen.queryByText('No columns matched automatically')).not.toBeInTheDocument();
   });
 });
