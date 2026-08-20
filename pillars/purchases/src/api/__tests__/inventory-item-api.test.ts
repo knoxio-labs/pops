@@ -2,9 +2,11 @@
  * The accept that creates the asset, end to end over HTTP.
  *
  * The four things this route promises, and each is a way the fan-out has
- * been wrong before it existed: one accept mints exactly one asset, a
- * repeated accept mints none, a declined slot mints none, and a create that
- * fails is loud rather than recorded. The inventory pillar is a fake here —
+ * been wrong before it existed: one accept mints one asset, a repeated
+ * accept mints none, a declined slot mints none, and a create that fails is
+ * loud rather than recorded. What it does not promise is that two accepts
+ * of one slot in flight together mint one between them — the last block
+ * pins what really happens there. The inventory pillar is a fake here —
  * the transport it stands in for is asserted on the wire in
  * `pillars/__tests__/outbound-credential.test.ts` — so what is under test is
  * the ordering purchases keeps around it.
@@ -99,7 +101,7 @@ function accept(app: Express, body: object = {}) {
   return requestOn(app).post(`/purchases/${purchaseId}/items/${itemId}/inventory-item`).send(body);
 }
 
-describe('an accept becomes exactly one asset', () => {
+describe('an accept becomes one asset', () => {
   it('creates the row, records the accept against its URI, and stops offering the slot', async () => {
     const inventory = fakeInventory();
     const app = appWith(inventory);
