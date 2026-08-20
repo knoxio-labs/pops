@@ -16,17 +16,21 @@
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
 
-import { MERCHANT_RESOLUTIONS } from './constants.js';
-import { ListPurchasesQuerySchema } from './rest-schemas.js';
+import { MERCHANT_RESOLUTIONS, PRODUCT_IDENTITY_BASES } from './constants.js';
+import { ErrorBodySchema, ListPurchasesQuerySchema } from './rest-schemas.js';
+import { PurchaseAccountingSchema } from './schemas/purchase-detail.js';
 import {
+  CentsSchema,
   CurrencySchema,
   IsoTimestampSchema,
-  PurchaseAccountingSchema,
+  NonNegativeCentsSchema,
 } from './schemas/purchase.js';
 
 const c = initContract();
 
 export const MerchantResolutionSchema = z.enum(MERCHANT_RESOLUTIONS);
+
+export const ProductIdentityBasisSchema = z.enum(PRODUCT_IDENTITY_BASES);
 
 /**
  * Which merchant a group is, and on what basis.
@@ -117,13 +121,262 @@ export const MerchantSpendRollupSchema = z.object({
  * The same scope vocabulary as the order index, minus the page.
  *
  * Derived from it rather than restated so the two cannot disagree about what
- * `from`, `to`, `sources` or `statuses` select. There is deliberately no
- * `limit`: a roll-up over the first 500 of 748 orders is not a smaller
- * answer, it is a wrong one, and nothing in the response would say so.
+ * `from`, `to`, `sources`, `statuses`, `currency` or the merchant parameters
+ * select. That identity is what makes a merchant row openable: the drill-down
+ * sends this row's scope back to `GET /purchases` and is answered by exactly
+ * the orders the row counted, because both go through one set of predicates.
+ *
+ * There is deliberately no `limit`: a roll-up over the first 500 of 748
+ * orders is not a smaller answer, it is a wrong one, and nothing in the
+ * response would say so.
  */
 export const MerchantSpendQuerySchema = ListPurchasesQuerySchema.omit({
   limit: true,
   offset: true,
+});
+
+/**
+ * Which lines a product group holds together, and on what evidence.
+ *
+ * A union rather than a `basis` tag beside optional fields, for the reason
+ * {@link MerchantIdentitySchema} is one: the tag constrains the row. Only the
+ * `sku` variant carries an identifier a merchant asserted. `name` is a group
+ * of printed names that normalise alike — a proposal, which can merge two
+ * products a till abbreviates the same way and can split one product printed
+ * two ways — and it carries the normalised key it was formed on so a
+ * consumer can show what was actually matched rather than inferring it from
+ * a display label. `unidentified` states outright that the line offered
+ * nothing to group on, and carries the line id that is therefore its key.
+ *
+ * `source` is on every variant because the same string means different
+ * things at different merchants, and a group is only ever within one source.
+ * The source is not on its own the scope, though: where one source covers
+ * many shops — every uploaded receipt shares one id — the group is keyed on
+ * the order's merchant as well, so `merchants` is the set of merchants the
+ * group could ever have held and two shops printing one abbreviation are two
+ * rows. Only a source that is a single merchant's own feed groups across the
+ * merchant labels it states, which is how a chain's stores stay one product.
+ */
+export const ProductIdentitySchema = z.discriminatedUnion('basis', [
+  z.object({
+    basis: z.literal('sku'),
+    source: z.string(),
+    /** The merchant's own identifier. Present, or this is not a sku group. */
+    sku: z.string(),
+    /** A label from one of the lines. The sku is the identity. */
+    name: z.string(),
+  }),
+  z.object({
+    basis: z.literal('name'),
+    source: z.string(),
+    sku: z.null(),
+    /** As the merchant printed it, for display. */
+    name: z.string(),
+    /** The grouping key itself, so never absent. */
+    normalisedName: z.string(),
+  }),
+  z.object({
+    basis: z.literal('unidentified'),
+    source: z.string(),
+    sku: z.null(),
+    name: z.string(),
+    /** The grouping key itself — the line's own id, so this group holds one line. */
+    itemId: z.string(),
+  }),
+]);
+
+/**
+ * How often a product comes back.
+ *
+ * A union rather than four nullable numbers, for the reason
+ * {@link ProductIdentitySchema} is one: a product bought once has no gap
+ * between purchases, and every number that could stand in for one is read
+ * as a claim — a zero says "bought again immediately", and a null beside
+ * three real figures invites a consumer to render an empty cadence as if it
+ * were a slow one.
+ *
+ * Measured between **distinct orders**, never lines: two bags of the same
+ * coffee in one basket are one purchase, and counting them twice would
+ * report a cadence of zero for a shopper who bought ahead.
+ *
+ * Seconds because timestamps are instants and seconds is the largest unit
+ * that loses nothing about a gap measured in weeks. Rounding to whole days
+ * in the payload would print 6.6 and 7.4 as the same number; how to render
+ * it is the consumer's decision, taken from an exact figure.
+ *
+ * Nothing here is relative to now. "Due for a re-buy" needs a clock, and a
+ * read that consulted one would answer differently to two calls a minute
+ * apart; `lastPurchasedAt` and the median are what a consumer needs to
+ * decide it against its own.
+ */
+export const ProductCadenceSchema = z.discriminatedUnion('basis', [
+  z.object({ basis: z.literal('single-purchase') }),
+  z.object({
+    basis: z.literal('intervals'),
+    /**
+     * The middle gap between consecutive purchases, and the figure to lead
+     * with: a bursty history's mean describes a rhythm that never happened.
+     */
+    medianIntervalSeconds: z.int().min(0),
+    /** The arithmetic mean. Its distance from the median is how bursty the history is. */
+    meanIntervalSeconds: z.int().min(0),
+    shortestIntervalSeconds: z.int().min(0),
+    longestIntervalSeconds: z.int().min(0),
+  }),
+]);
+
+/**
+ * What one unit of this product has cost, each time it was bought.
+ *
+ * `purchase_items.unit_price_cents` — the merchant's price for one — and
+ * deliberately **not** the landed cost. Allocated shipping and adjustment
+ * are shares of an order-level figure spread across that order's lines, so
+ * the same product bought alone and bought inside a twenty-line order
+ * carries wildly different allocations; a per-unit series built on landed
+ * cost moves with the shape of the basket and reports a drift that never
+ * happened.
+ *
+ * Four observations and no verdict. `firstCents` to `lastCents` is the
+ * drift; `minCents` and `maxCents` say whether those two ends represent it.
+ * A single percentage would be the one number a consumer renders, and it
+ * would hide every case where the ends are not representative — a product
+ * whose last purchase happened to be on special reads as a permanent price
+ * cut.
+ *
+ * The counts are what say whether the observations are comparable at all,
+ * and each is a fact off a column rather than an inference.
+ */
+export const ProductUnitPriceSchema = z.object({
+  /** The earliest line's unit price, ordered by the parsed order instant. */
+  firstCents: CentsSchema,
+  /** The latest line's unit price, ordered by the parsed order instant. */
+  lastCents: CentsSchema,
+  minCents: CentsSchema,
+  maxCents: CentsSchema,
+  /** Lines the merchant marked as sold at a promotional price. */
+  promotionalLineCount: z.int().min(0),
+  /** Lines the merchant marked as sold at its ordinary price. */
+  ordinaryLineCount: z.int().min(0),
+  /**
+   * Lines whose merchant stated nothing either way — every line from every
+   * shipped source but the Woolworths receipt. Its own count rather than
+   * folded into the ordinary one, on the three-number rule the merchant
+   * roll-up's residual follows: "not marked as a special" and "nobody said"
+   * are what separate a price series from an unknown one, and a two-way
+   * split would present the second as the first.
+   */
+  unstatedPromotionLineCount: z.int().min(0),
+  /**
+   * Lines priced by measure — `0.202 kg NET @ $2.90/kg`, which fruit, veg
+   * and the deli counter all are. Such a line carries a quantity of 1 and a
+   * unit price equal to what that weight cost, so its "unit price" is a
+   * function of what went on the scale: 0.5 kg of bananas against 1.2 kg
+   * reads as a 140% rise. Where this is non-zero the figures above are
+   * partly weights and the drift is partly a change in how much was bought.
+   *
+   * Recognised from the merchant prose the ingest adapters store verbatim,
+   * which is best-effort in one direction only: a note this misses leaves
+   * the caveat unstated, never a figure overstated, because nothing derives
+   * a price from it.
+   */
+  measuredLineCount: z.int().min(0),
+});
+
+/**
+ * One product's purchase history in one currency.
+ *
+ * `orderCount` is the leaderboard's own figure — distinct orders, so it does
+ * not move with how many charges settled them, and it exceeds neither
+ * `lineCount` nor the orders in scope. `landedCostCents` is the same
+ * `lineTotal + allocatedShipping + allocatedAdjustment` a line read returns,
+ * summed.
+ */
+export const ProductPurchasesSchema = z.object({
+  product: ProductIdentitySchema,
+  currency: CurrencySchema,
+  /** Distinct orders holding this product — the "across N orders" figure. */
+  orderCount: z.int().min(1),
+  /** Lines. Exceeds `orderCount` when one order lists the product twice. */
+  lineCount: z.int().min(1),
+  /** Units, summing each line's quantity. */
+  unitCount: z.int().min(0),
+  firstPurchasedAt: IsoTimestampSchema,
+  lastPurchasedAt: IsoTimestampSchema,
+  /** Signed, because an order-level discount can push a line's share negative. */
+  landedCostCents: CentsSchema,
+  /**
+   * Settled refunds recorded against these lines, and gross of any refund
+   * recorded at the *order* grain — no adapter attributes one to a line, so
+   * this reads 0 for every line the shipped adapters write. Returned beside
+   * the landed cost rather than subtracted from it so the two cannot be
+   * mistaken for each other.
+   */
+  refundedCents: NonNegativeCentsSchema,
+  /** How often it comes back. See {@link ProductCadenceSchema}. */
+  cadence: ProductCadenceSchema,
+  /** What one of it has cost each time. See {@link ProductUnitPriceSchema}. */
+  unitPrice: ProductUnitPriceSchema,
+  /**
+   * Every merchant this product was bought from, in this currency, which is
+   * also the group's scope. More than one only under a source that is a
+   * single merchant's own feed and names its stores.
+   */
+  merchants: z.array(MerchantIdentitySchema).min(1),
+});
+
+/**
+ * How much of the scope the grouping could identify, over every line in it
+ * and before `minOrderCount` withholds anything.
+ *
+ * The route's honesty check. Exactly one shipped adapter states a product
+ * identifier, so a leaderboard over grocery or receipt lines rests almost
+ * entirely on normalised printed names — a weaker claim than one over
+ * sku-keyed lines, and one no row on its own reveals.
+ */
+export const ProductIdentityCoverageSchema = z.object({
+  lineCount: z.int().min(0),
+  /** Grouped on an identifier the merchant stated. */
+  skuKeyedLines: z.int().min(0),
+  /** Grouped on a normalised printed name — a proposal, not an assertion. */
+  nameKeyedLines: z.int().min(0),
+  /** Grouped with nothing: no sku, and no name that normalises to anything. */
+  unidentifiedLines: z.int().min(0),
+  /**
+   * Groups the scope holds, including any `minOrderCount` withheld. One per
+   * product *and currency*: a sku bought in two currencies counts twice,
+   * because it is two rows.
+   */
+  productCount: z.int().min(0),
+});
+
+export const ProductLeaderboardSchema = z.object({
+  /** Echoed so a rendered figure carries the window it was computed over. */
+  period: z.object({
+    from: IsoTimestampSchema.nullable(),
+    to: IsoTimestampSchema.nullable(),
+  }),
+  /**
+   * Echoed for the same reason the period is: it is the criterion by which
+   * groups are absent, and a response that did not state it would be
+   * indistinguishable from a complete one.
+   */
+  minOrderCount: z.int().min(1),
+  /** Currency ascending, then orders descending, then landed cost descending. */
+  products: z.array(ProductPurchasesSchema),
+  coverage: ProductIdentityCoverageSchema,
+});
+
+/**
+ * The scope vocabulary of the merchant roll-up, plus the N.
+ *
+ * `minOrderCount` is not a page cap. It selects on the answer's own defining
+ * property — how many orders a product appears in — is stated by the caller,
+ * and is echoed in the response, so a group that is absent is absent for a
+ * reason the payload names. There is deliberately still no `limit`: a
+ * top-of-list cut would drop rows for a reason nothing records.
+ */
+export const ProductLeaderboardQuerySchema = MerchantSpendQuerySchema.extend({
+  minOrderCount: z.coerce.number().int().min(1).optional(),
 });
 
 export const purchasesAnalyticsContract = c.router({
@@ -131,7 +384,25 @@ export const purchasesAnalyticsContract = c.router({
     method: 'GET',
     path: '/analytics/merchant-spend',
     query: MerchantSpendQuerySchema,
-    responses: { 200: MerchantSpendRollupSchema },
+    responses: {
+      200: MerchantSpendRollupSchema,
+      // Two merchant parameters at once, refused for the same reason the
+      // order index refuses them.
+      400: ErrorBodySchema,
+    },
     summary: 'Spend per merchant and currency over a period, with the explained/unexplained split',
+  },
+  productLeaderboard: {
+    method: 'GET',
+    path: '/analytics/product-leaderboard',
+    query: ProductLeaderboardQuerySchema,
+    responses: {
+      200: ProductLeaderboardSchema,
+      // Inherited with the scope vocabulary: the same two-merchant-parameter
+      // refusal, because this reads the scope the same way.
+      400: ErrorBodySchema,
+    },
+    summary:
+      'Repeat purchases per product — cadence, unit-price history, and the identity basis each group was formed on',
   },
 });

@@ -20,6 +20,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/analytics/product-leaderboard': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Repeat purchases per product — cadence, unit-price history, and the identity basis each group was formed on */
+    get: operations['analytics.productLeaderboard'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/items': {
     parameters: {
       query?: never;
@@ -73,6 +90,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/purchases/{id}/inventory-proposals': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Unanswered inventory offers derived from an order's durable lines */
+    get: operations['purchase.listInventoryProposals'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/purchases/{id}/items/{itemId}': {
     parameters: {
       query?: never;
@@ -88,6 +122,23 @@ export interface paths {
     head?: never;
     /** Confirm a line's kind and item tags */
     patch: operations['purchase.patchItem'];
+    trace?: never;
+  };
+  '/purchases/{id}/items/{itemId}/inventory-proposal': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Accept or decline one inventory proposal on a line */
+    post: operations['purchase.decideInventoryProposal'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
     trace?: never;
   };
   '/receipts': {
@@ -279,6 +330,10 @@ export interface operations {
       query?: {
         sources?: string[];
         statuses?: ('awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored')[];
+        currency?: string;
+        merchantEntityId?: string;
+        merchantEntityName?: string;
+        merchantUnattributed?: boolean;
         from?: string;
         to?: string;
       };
@@ -348,6 +403,155 @@ export interface operations {
           };
         };
       };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+          };
+        };
+      };
+    };
+  };
+  'analytics.productLeaderboard': {
+    parameters: {
+      query?: {
+        sources?: string[];
+        statuses?: ('awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored')[];
+        currency?: string;
+        merchantEntityId?: string;
+        merchantEntityName?: string;
+        merchantUnattributed?: boolean;
+        from?: string;
+        to?: string;
+        minOrderCount?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            coverage: {
+              lineCount: number;
+              nameKeyedLines: number;
+              productCount: number;
+              skuKeyedLines: number;
+              unidentifiedLines: number;
+            };
+            minOrderCount: number;
+            period: {
+              from: string | null;
+              to: string | null;
+            };
+            products: {
+              cadence:
+                | {
+                    /** @enum {string} */
+                    basis: 'single-purchase';
+                  }
+                | {
+                    /** @enum {string} */
+                    basis: 'intervals';
+                    longestIntervalSeconds: number;
+                    meanIntervalSeconds: number;
+                    medianIntervalSeconds: number;
+                    shortestIntervalSeconds: number;
+                  };
+              currency: string;
+              firstPurchasedAt: string;
+              landedCostCents: number;
+              lastPurchasedAt: string;
+              lineCount: number;
+              merchants: (
+                | {
+                    entityId: string;
+                    name: string | null;
+                    /** @enum {string} */
+                    resolution: 'entity';
+                  }
+                | {
+                    /** @enum {string|null} */
+                    entityId: null;
+                    name: string;
+                    /** @enum {string} */
+                    resolution: 'name';
+                  }
+                | {
+                    /** @enum {string|null} */
+                    entityId: null;
+                    /** @enum {string|null} */
+                    name: null;
+                    /** @enum {string} */
+                    resolution: 'unattributed';
+                  }
+              )[];
+              orderCount: number;
+              product:
+                | {
+                    /** @enum {string} */
+                    basis: 'sku';
+                    name: string;
+                    sku: string;
+                    source: string;
+                  }
+                | {
+                    /** @enum {string} */
+                    basis: 'name';
+                    name: string;
+                    normalisedName: string;
+                    /** @enum {string|null} */
+                    sku: null;
+                    source: string;
+                  }
+                | {
+                    /** @enum {string} */
+                    basis: 'unidentified';
+                    itemId: string;
+                    name: string;
+                    /** @enum {string|null} */
+                    sku: null;
+                    source: string;
+                  };
+              refundedCents: number;
+              unitCount: number;
+              unitPrice: {
+                firstCents: number;
+                lastCents: number;
+                maxCents: number;
+                measuredLineCount: number;
+                minCents: number;
+                ordinaryLineCount: number;
+                promotionalLineCount: number;
+                unstatedPromotionLineCount: number;
+              };
+            }[];
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+          };
+        };
+      };
     };
   };
   'purchase.itemsByTag': {
@@ -393,7 +597,11 @@ export interface operations {
                 quantity: number;
                 refundedCents: number;
                 shipmentId: string | null;
-                sku: string | null;
+                sku: {
+                  /** @enum {string} */
+                  scheme: 'asin' | 'merchant';
+                  value: string;
+                } | null;
                 unitPriceCents: number;
                 url: string | null;
               };
@@ -408,6 +616,10 @@ export interface operations {
       query?: {
         sources?: string[];
         statuses?: ('awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored')[];
+        currency?: string;
+        merchantEntityId?: string;
+        merchantEntityName?: string;
+        merchantUnattributed?: boolean;
         from?: string;
         to?: string;
         limit?: number;
@@ -452,6 +664,18 @@ export interface operations {
               totalCents: number;
               updatedAt: string;
             }[];
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
           };
         };
       };
@@ -512,7 +736,11 @@ export interface operations {
             quantity?: number;
             ref?: string;
             shipmentRef?: string | null;
-            sku?: string | null;
+            sku?: {
+              /** @enum {string} */
+              scheme: 'asin' | 'merchant';
+              value: string;
+            } | null;
             tags?: string[];
             unitPriceCents: number;
             units?: {
@@ -544,6 +772,7 @@ export interface operations {
           sourceOrderId?: string | null;
           subtotalCents?: number;
           surchargeCents?: number;
+          tags?: string[];
           taxCents?: number;
           totalCents: number;
         };
@@ -637,7 +866,11 @@ export interface operations {
                 quantity: number;
                 refundedCents: number;
                 shipmentId: string | null;
-                sku: string | null;
+                sku: {
+                  /** @enum {string} */
+                  scheme: 'asin' | 'merchant';
+                  value: string;
+                } | null;
                 unitPriceCents: number;
                 url: string | null;
               };
@@ -650,6 +883,7 @@ export interface operations {
               units: {
                 createdAt: string;
                 id: string;
+                inventoryDeclinedAt: string | null;
                 inventoryItemStaleAt: string | null;
                 inventoryItemUri: string | null;
                 itemId: string;
@@ -825,7 +1059,11 @@ export interface operations {
                 quantity: number;
                 refundedCents: number;
                 shipmentId: string | null;
-                sku: string | null;
+                sku: {
+                  /** @enum {string} */
+                  scheme: 'asin' | 'merchant';
+                  value: string;
+                } | null;
                 unitPriceCents: number;
                 url: string | null;
               };
@@ -838,6 +1076,7 @@ export interface operations {
               units: {
                 createdAt: string;
                 id: string;
+                inventoryDeclinedAt: string | null;
                 inventoryItemStaleAt: string | null;
                 inventoryItemUri: string | null;
                 itemId: string;
@@ -945,6 +1184,42 @@ export interface operations {
       };
     };
   };
+  'purchase.listInventoryProposals': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            proposals: {
+              itemId: string;
+              itemName: string;
+              kindConfirmed: boolean;
+              purchaseDate: string;
+              purchaseId: string;
+              purchasePriceCents: number;
+              purchaseTransactionUri: string | null;
+              purchasedFromName: string | null;
+              serialNumber: string | null;
+              slot: number;
+              unitId: string | null;
+            }[];
+          };
+        };
+      };
+    };
+  };
   'purchase.patchItem': {
     parameters: {
       query?: never;
@@ -995,7 +1270,11 @@ export interface operations {
               quantity: number;
               refundedCents: number;
               shipmentId: string | null;
-              sku: string | null;
+              sku: {
+                /** @enum {string} */
+                scheme: 'asin' | 'merchant';
+                value: string;
+              } | null;
               unitPriceCents: number;
               url: string | null;
             };
@@ -1008,6 +1287,7 @@ export interface operations {
             units: {
               createdAt: string;
               id: string;
+              inventoryDeclinedAt: string | null;
               inventoryItemStaleAt: string | null;
               inventoryItemUri: string | null;
               itemId: string;
@@ -1042,6 +1322,91 @@ export interface operations {
       };
     };
   };
+  'purchase.decideInventoryProposal': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+        itemId: string;
+      };
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json':
+          | {
+              /** @enum {string} */
+              decision: 'accepted';
+              inventoryItemUri: string;
+              unitId?: string;
+            }
+          | {
+              /** @enum {string} */
+              decision: 'declined';
+              unitId?: string;
+            };
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            unit: {
+              createdAt: string;
+              id: string;
+              inventoryDeclinedAt: string | null;
+              inventoryItemStaleAt: string | null;
+              inventoryItemUri: string | null;
+              itemId: string;
+              serialNumber: string | null;
+            };
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+          };
+        };
+      };
+    };
+  };
   'receipt.upload': {
     parameters: {
       query?: never;
@@ -1053,6 +1418,15 @@ export interface operations {
     requestBody?: {
       content: {
         'application/json': {
+          capture?: {
+            /** Format: date-time */
+            capturedAt?: string;
+            location?: {
+              latitude: number;
+              longitude: number;
+            };
+            timeZone?: string;
+          };
           parts: {
             dataBase64: string;
             /** @enum {string} */
@@ -1165,7 +1539,11 @@ export interface operations {
                       quantity: number;
                       refundedCents: number;
                       shipmentId: string | null;
-                      sku: string | null;
+                      sku: {
+                        /** @enum {string} */
+                        scheme: 'asin' | 'merchant';
+                        value: string;
+                      } | null;
                       unitPriceCents: number;
                       url: string | null;
                     };
@@ -1178,6 +1556,7 @@ export interface operations {
                     units: {
                       createdAt: string;
                       id: string;
+                      inventoryDeclinedAt: string | null;
                       inventoryItemStaleAt: string | null;
                       inventoryItemUri: string | null;
                       itemId: string;

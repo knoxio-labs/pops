@@ -27,7 +27,10 @@ import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { z } from 'zod';
 
-import { MerchantSpendRollupSchema } from '../../contract/rest-analytics.js';
+import {
+  MerchantSpendRollupSchema,
+  ProductLeaderboardSchema,
+} from '../../contract/rest-analytics.js';
 import { ReceiptOutcomeSchema } from '../../contract/rest-receipts.js';
 import {
   QueueEntrySchema,
@@ -39,10 +42,13 @@ import { SearchHitSchema } from '../../contract/rest-search.js';
 import { purchasesContract } from '../../contract/rest.js';
 import {
   PurchaseDetailSchema,
+  PurchaseItemDetailSchema,
+} from '../../contract/schemas/purchase-detail.js';
+import {
+  PurchaseItemSchema,
   PurchaseSchema,
   PurchaseSourceSchema,
 } from '../../contract/schemas/purchase.js';
-import { PurchaseItemDetailSchema, PurchaseItemSchema } from '../../contract/schemas/purchase.js';
 import { openTempDb, seedAmazonSource } from '../../db/__tests__/helpers.js';
 import { runSweep } from '../../reconcile/sweep.js';
 import { createPurchasesApiApp } from '../app.js';
@@ -163,7 +169,7 @@ const RICH_ORDER = {
       ref: 'tamper',
       shipmentRef: 'box1',
       name: 'Espresso Tamping Station',
-      sku: 'B0DSVZQ8P5',
+      sku: { value: 'B0DSVZQ8P5', scheme: 'asin' },
       url: 'https://example.invalid/p/1',
       imageUrl: 'https://example.invalid/i/1.jpg',
       quantity: 2,
@@ -506,6 +512,47 @@ describe('GET /analytics/merchant-spend response', () => {
     // one, rather than as an unrelated schema mismatch on the error body.
     expect(res.status).toBe(200);
     expectConforms(MerchantSpendRollupSchema, res.body, 'GET /analytics/merchant-spend (empty)');
+  });
+});
+
+describe('GET /analytics/product-leaderboard response', () => {
+  it('conforms, with all three identity bases present at once', async () => {
+    await request(app).post('/purchases').send(RICH_ORDER);
+    await request(app)
+      .post('/purchases')
+      .send({
+        ...BARE_ORDER,
+        checksum: 'unkeyed',
+        sourceOrderId: 'unkeyed',
+        items: [
+          // No sku: grouped on the normalised printed name.
+          { name: 'Bananas Cavendish', unitPriceCents: 400, lineTotalCents: 400 },
+          // No sku and nothing that normalises: grouped with nothing.
+          { name: '***', unitPriceCents: 100, lineTotalCents: 100 },
+        ],
+      });
+
+    const res = await request(app).get('/analytics/product-leaderboard');
+    expect(res.status).toBe(200);
+    expectConforms(ProductLeaderboardSchema, res.body, 'GET /analytics/product-leaderboard');
+
+    // `product` is a discriminated union, so conformance over one variant
+    // says nothing about the other two. The fixtures above produce one of
+    // each, and each carries a different set of keys.
+    const bases = (res.body.products as { product: { basis: string } }[]).map(
+      (entry) => entry.product.basis
+    );
+    expect([...new Set(bases)].toSorted()).toEqual(['name', 'sku', 'unidentified']);
+  });
+
+  it('conforms when empty', async () => {
+    const res = await request(app).get('/analytics/product-leaderboard');
+    expect(res.status).toBe(200);
+    expectConforms(
+      ProductLeaderboardSchema,
+      res.body,
+      'GET /analytics/product-leaderboard (empty)'
+    );
   });
 });
 

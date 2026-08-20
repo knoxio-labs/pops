@@ -469,6 +469,14 @@ export type MobilePurchasesUploadReceiptData = {
    * Body
    */
   body?: {
+    capture?: {
+      capturedAt?: string;
+      location?: {
+        latitude: number;
+        longitude: number;
+      };
+      timeZone?: string;
+    };
     parts: Array<{
       dataBase64: string;
       mediaType:
@@ -578,15 +586,37 @@ export type MobilePurchasesUploadReceiptResponses = {
         };
       }
     | {
+        extracted: {
+          address: string | null;
+          currency: string | null;
+          discounts: Array<string>;
+          lines: Array<{
+            amount: string;
+            description: string;
+            quantity: number | null;
+            unitNote: string | null;
+          }>;
+          merchantName: string | null;
+          purchasedAt: string | null;
+          purchasedOn: string | null;
+          shipping: string | null;
+          surcharges: Array<string>;
+          tax: string | null;
+          total: string;
+          unreadableNotes: Array<string>;
+        };
         kind: 'needs-review';
         problems: Array<{
           code: string;
+          deltaCents: number | null;
           detail: string;
         }>;
+        receiptCount: number;
       }
     | {
         kind: 'unreadable';
         reason: string;
+        receiptCount: number;
       };
 };
 

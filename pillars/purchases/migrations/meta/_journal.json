@@ -43,6 +43,27 @@
       "when": 1786800000000,
       "tag": "0005_reconcile_decisions_persist",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1786900000000,
+      "tag": "0006_purchase_capture",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1787000000000,
+      "tag": "0007_purchase_item_sku_scheme",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1787100000000,
+      "tag": "0008_inventory_fanout_decisions",
+      "breakpoints": true
     }
   ]
 }

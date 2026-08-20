@@ -37,6 +37,7 @@ import type { Express } from 'express';
 import type { CallResult } from '@pops/pillar-sdk/server';
 
 import type { MobileReceiptPart } from '../../contract/rest-schemas.js';
+import type { ReceiptRateLimitOptions } from '../auth/receipt-rate-limit.js';
 import type { PurchasesFake } from './purchases-fake.js';
 
 const UPLOAD_PATH = '/mobile/purchases/receipts';
@@ -52,14 +53,19 @@ afterEach(() => {
 });
 
 /** An app whose purchases answers `result`, plus a token for a paired device. */
-function openWith(result: CallResult<unknown>): {
+function openWith(
+  result: CallResult<unknown>,
+  receiptRateLimit?: ReceiptRateLimitOptions
+): {
   app: Express;
   token: string;
   fake: PurchasesFake;
+  created: TestApp;
 } {
   const fake = createPurchasesFake(result);
   const created = createTestApp({
     purchases: createMobilePurchasesClient(createPillarGateway(fake.factory)),
+    ...(receiptRateLimit === undefined ? {} : { receiptRateLimit }),
   });
   apps.push(created);
 
@@ -67,7 +73,7 @@ function openWith(result: CallResult<unknown>): {
   created.db.insert(devices).values(row).run();
   const { token } = mintAccessToken(row.id, created.accessTokenSigningKey);
 
-  return { app: created.app, token: token, fake };
+  return { app: created.app, token: token, fake, created };
 }
 
 function post(app: Express, token: string | null, body: object) {
@@ -140,7 +146,7 @@ describe('the three outcomes', () => {
 
   it('answers 200 for needs-review — a real purchase awaiting a human, not a failure', async () => {
     const { app, token } = openWith(
-      purchasesNeedsReview([{ kind: 'sum-mismatch', detail: 'off by 240c' }])
+      purchasesNeedsReview([{ kind: 'sum-mismatch', detail: 'off by 240c', deltaCents: -240 }])
     );
 
     const res = await post(app, token, { parts: ONE_PART });
@@ -148,8 +154,39 @@ describe('the three outcomes', () => {
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
       kind: 'needs-review',
-      problems: [{ code: 'sum-mismatch', detail: 'off by 240c' }],
+      receiptCount: 1,
+      problems: [{ code: 'sum-mismatch', detail: 'off by 240c', deltaCents: -240 }],
+      extracted: {
+        merchantName: 'Woolworths',
+        address: '12 Example St',
+        purchasedOn: '2026-08-13',
+        purchasedAt: '14:05',
+        currency: 'AUD',
+        total: '$84.20',
+        tax: '$7.65',
+        discounts: ['$2.00'],
+        surcharges: ['$0.50'],
+        shipping: null,
+        lines: [{ description: 'MILK 2L', amount: '$3.10', quantity: 2, unitNote: '2 @ $1.55' }],
+        unreadableNotes: ['line 7 is smudged'],
+      },
     });
+  });
+
+  it('serves the reading through the real perimeter, not only through the mapper', async () => {
+    // The route declares the outcome schema, so ts-rest would strip a field the
+    // contract does not know about. This is the assertion that fails if the
+    // reading is added to the mapper and forgotten in the contract — the exact
+    // shape of the defect this arm had.
+    const { app, token } = openWith(
+      purchasesNeedsReview([{ kind: 'sum-mismatch', detail: 'off by 240c', deltaCents: -240 }])
+    );
+
+    const res = await post(app, token, { parts: ONE_PART });
+
+    expect(res.body.extracted?.merchantName).toBe('Woolworths');
+    expect(res.body.extracted?.lines).toHaveLength(1);
+    expect(res.body.problems?.[0]?.deltaCents).toBe(-240);
   });
 
   it('answers 200 for unreadable, with the reason the model gave', async () => {
@@ -158,7 +195,11 @@ describe('the three outcomes', () => {
     const res = await post(app, token, { parts: ONE_PART });
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ kind: 'unreadable', reason: 'the photograph is too blurred' });
+    expect(res.body).toEqual({
+      kind: 'unreadable',
+      receiptCount: 1,
+      reason: 'the photograph is too blurred',
+    });
   });
 
   it('sends the parts on unchanged', async () => {
@@ -171,6 +212,118 @@ describe('the three outcomes', () => {
     await post(app, token, { parts });
 
     expect(fake.uploads).toEqual([{ parts }]);
+  });
+});
+
+describe('what the handset knew that the paper cannot state', () => {
+  const CAPTURE = {
+    capturedAt: '2026-08-13T14:05:00+10:00',
+    timeZone: 'Australia/Sydney',
+    location: { latitude: -33.87, longitude: 151.21 },
+  };
+
+  it('carries the capture block through the perimeter unchanged', async () => {
+    const { app, token, fake } = openWith(purchasesCreated());
+
+    const res = await post(app, token, { parts: ONE_PART, capture: CAPTURE });
+
+    expect(res.status).toBe(200);
+    expect(fake.uploads).toEqual([{ parts: ONE_PART, capture: CAPTURE }]);
+  });
+
+  it('accepts an upload that states none, exactly as before', async () => {
+    // The compatibility guarantee that matters most here: the app is
+    // distributed rather than deployed, so a build predating this field keeps
+    // calling the route from hardware nobody can roll forward (ADR-043).
+    const { app, token, fake } = openWith(purchasesCreated());
+
+    const res = await post(app, token, { parts: ONE_PART });
+
+    expect(res.status).toBe(200);
+    expect(fake.uploads).toEqual([{ parts: ONE_PART }]);
+  });
+
+  it('accepts a capture block stating only some of what it could', async () => {
+    const { app, token, fake } = openWith(purchasesCreated());
+
+    const res = await post(app, token, { parts: ONE_PART, capture: { timeZone: 'Europe/Paris' } });
+
+    expect(res.status).toBe(200);
+    expect(fake.uploads).toEqual([{ parts: ONE_PART, capture: { timeZone: 'Europe/Paris' } }]);
+  });
+
+  it('refuses a capture time with no offset here rather than upstream', async () => {
+    // The producer requires the offset, so a naive local timestamp is a 400
+    // either way. Answering it at the perimeter makes it a fixable client
+    // mistake instead of an upstream error the phone cannot act on.
+    const { app, token, fake } = openWith(purchasesCreated());
+
+    const res = await post(app, token, {
+      parts: ONE_PART,
+      capture: { capturedAt: '2026-08-13T14:05:00' },
+    });
+
+    expect(res.status).toBe(400);
+    expect(fake.uploads).toEqual([]);
+  });
+
+  it('refuses a coordinate that is not a point on the globe', async () => {
+    const { app, token, fake } = openWith(purchasesCreated());
+
+    const res = await post(app, token, {
+      parts: ONE_PART,
+      capture: { location: { latitude: 200, longitude: 10 } },
+    });
+
+    expect(res.status).toBe(400);
+    expect(fake.uploads).toEqual([]);
+  });
+
+  it('refuses half a coordinate, which is not a place', async () => {
+    const { app, token, fake } = openWith(purchasesCreated());
+
+    const res = await post(app, token, {
+      parts: ONE_PART,
+      capture: { location: { latitude: -33.87 } },
+    });
+
+    expect(res.status).toBe(400);
+    expect(fake.uploads).toEqual([]);
+  });
+
+  it('never echoes a coordinate back in the refusal', async () => {
+    // A location is the most sensitive thing this route carries, and a
+    // validation error that quotes the offending value is the ordinary way
+    // one ends up in a log or on a screen it was never meant to reach.
+    const { app, token } = openWith(purchasesCreated());
+
+    const res = await post(app, token, {
+      parts: ONE_PART,
+      capture: { location: { latitude: 123.456, longitude: 151.21 } },
+    });
+
+    expect(res.status).toBe(400);
+    const body = JSON.stringify(res.body);
+    expect(body).not.toContain('151.21');
+    expect(body).not.toContain('123.456');
+    expect(body).not.toContain('latitude');
+    expect(body).not.toContain('longitude');
+  });
+
+  it('forwards a capture time bfm would have no way to check', async () => {
+    // 2041 is the producer's to discard: it owns the upload instant this has
+    // to be compared against. A second opinion here is a second rule.
+    const { app, token, fake } = openWith(purchasesCreated());
+
+    const res = await post(app, token, {
+      parts: ONE_PART,
+      capture: { capturedAt: '2041-03-02T09:00:00Z' },
+    });
+
+    expect(res.status).toBe(200);
+    expect(fake.uploads).toEqual([
+      { parts: ONE_PART, capture: { capturedAt: '2041-03-02T09:00:00Z' } },
+    ]);
   });
 });
 
@@ -295,5 +448,112 @@ describe('when purchases cannot answer', () => {
 
     expect(res.status).toBe(502);
     expect(res.body.code).toBe('upstream_contract_mismatch');
+  });
+});
+
+describe('the receipt budget', () => {
+  function overBudget(perClientLimit: number): ReceiptRateLimitOptions {
+    return { perClientLimit, globalLimit: 1_000 };
+  }
+
+  it('allows exactly the configured budget, then answers 429 with Retry-After', async () => {
+    const { app, token, fake } = openWith(purchasesCreated(), overBudget(2));
+
+    const first = await post(app, token, { parts: ONE_PART });
+    const second = await post(app, token, { parts: ONE_PART });
+    const third = await post(app, token, { parts: ONE_PART });
+
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
+    expect(third.status).toBe(429);
+    expect(third.body.code).toBe('rate_limited');
+    expect(Number(third.headers['retry-after'])).toBeGreaterThan(0);
+    // The two admitted requests, and no more — the budget actually spent
+    // purchases' quota rather than merely reporting one.
+    expect(fake.uploads).toHaveLength(2);
+  });
+
+  it('refuses before calling purchases, so a flood cannot burn a vision call', async () => {
+    // If the limiter ran after the handler, an over-budget request would
+    // still have paid for the exact thing the budget exists to bound.
+    const { app, token, fake } = openWith(purchasesCreated(), overBudget(1));
+
+    await post(app, token, { parts: ONE_PART });
+    const refused = await post(app, token, { parts: ONE_PART });
+
+    expect(refused.status).toBe(429);
+    expect(fake.uploads).toHaveLength(1);
+  });
+
+  it('caps the whole route regardless of the address a caller claims', async () => {
+    const { app, token } = openWith(purchasesCreated(), { perClientLimit: 100, globalLimit: 2 });
+
+    const statuses: number[] = [];
+    for (const ip of ['203.0.113.1', '203.0.113.2', '203.0.113.3']) {
+      const res = await requestOn(app, (r) =>
+        r
+          .post(UPLOAD_PATH)
+          .set('Authorization', `Bearer ${token}`)
+          .set('CF-Connecting-IP', ip)
+          .send({ parts: ONE_PART })
+      );
+      statuses.push(res.status);
+    }
+
+    expect(statuses[2]).toBe(429);
+  });
+
+  it('charges a budget separate from the /mobile perimeter', async () => {
+    // One counter for both would let a burst of list-page reads spend the
+    // receipt budget, or a run of receipts lock a handset out of its own
+    // transaction list.
+    const { app, token } = openWith(purchasesCreated(), overBudget(1));
+
+    await post(app, token, { parts: ONE_PART });
+    expect((await post(app, token, { parts: ONE_PART })).status).toBe(429);
+
+    const mobile = await requestOn(app, (r) =>
+      r.get('/mobile/anything').set('Authorization', `Bearer ${token}`)
+    );
+    expect(mobile.status).not.toBe(429);
+  });
+
+  it('is unaffected by traffic against the general /mobile perimeter', async () => {
+    // The other direction of the previous case: spending the wide, cheap
+    // budget on reads must not eat into the narrow, expensive one.
+    const { app, token, fake } = openWith(purchasesCreated(), {
+      perClientLimit: 5,
+      globalLimit: 5,
+    });
+
+    for (let i = 0; i < 30; i += 1) {
+      await requestOn(app, (r) =>
+        r.get('/mobile/anything').set('Authorization', `Bearer ${token}`)
+      );
+    }
+
+    const res = await post(app, token, { parts: ONE_PART });
+
+    expect(res.status).toBe(200);
+    expect(fake.uploads).toHaveLength(1);
+  });
+
+  it('spends the budget the same whether the upload carries one part or the max', async () => {
+    // The module deliberately charges a flat cost per request rather than one
+    // weighted by part count — purchases reads a whole receipt in one vision
+    // call regardless of how many images it was sent as, so a per-part weight
+    // would track a number that does not track the actual cost. This pins
+    // that a maximal upload spends exactly as much budget as a minimal one,
+    // not more.
+    const eightParts = Array.from({ length: 8 }, () => ONE_PART[0]);
+    const { app, token, fake } = openWith(purchasesCreated(), overBudget(1));
+
+    const heavy = await post(app, token, { parts: eightParts });
+    expect(heavy.status).toBe(200);
+
+    const light = await post(app, token, { parts: ONE_PART });
+    expect(light.status).toBe(429);
+
+    expect(fake.uploads).toHaveLength(1);
   });
 });

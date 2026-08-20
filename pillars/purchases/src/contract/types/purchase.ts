@@ -8,6 +8,7 @@ import type {
   SettlementMode,
   SettlementRole,
   ShipmentStatus,
+  SkuScheme,
 } from '../constants.js';
 
 /**
@@ -92,6 +93,21 @@ export interface Classified<T> {
   confirmedAt: string | null;
 }
 
+/**
+ * A merchant-stated product identifier, bound to the namespace that says how
+ * far it means anything.
+ *
+ * One object rather than two sibling fields, for the reason
+ * {@link Classified} gives. An identifier is only comparable inside its own
+ * scheme, and only across sources when that scheme is cross-source — see
+ * `isCrossSourceSkuScheme`.
+ */
+export interface ProductIdentity {
+  /** As the merchant states it, verbatim. */
+  value: string;
+  scheme: SkuScheme;
+}
+
 /** One line of an order. */
 export interface PurchaseItem {
   id: string;
@@ -101,8 +117,14 @@ export interface PurchaseItem {
   /** The line's position in the source document, so a receipt reads back in printed order. */
   position: number;
   name: string;
-  /** Merchant's product identifier — ASIN, article number, barcode. */
-  sku: string | null;
+  /**
+   * What the merchant called the product, in the namespace it named it in.
+   *
+   * Null means the source stated no identifier, which is every shipped
+   * adapter but the Amazon exports. It does not mean one was dropped in transcription,
+   * and two nulls are not a match.
+   */
+  sku: ProductIdentity | null;
   url: string | null;
   imageUrl: string | null;
   quantity: number;

@@ -26,6 +26,7 @@ import {
 } from '../schema.js';
 import { expectRow, nowIso, type PurchasesDb } from './internal.js';
 import { findPurchaseByChecksum, findPurchaseBySourceOrderId } from './purchase-lookups.js';
+import { insertCapture } from './purchase-write-capture.js';
 import { componentCents, shipmentIdFor, type IngestContext } from './purchase-write-context.js';
 import { insertItem } from './purchase-write-items.js';
 import { assertAllocationsFit, resolveOrderAmount } from './purchase-write-validation.js';
@@ -40,6 +41,7 @@ import type {
 } from './purchase-input.js';
 
 export type {
+  CreateCaptureInput,
   CreateChargeAllocationInput,
   CreateChargeInput,
   CreateDocumentInput,
@@ -97,6 +99,7 @@ export function createPurchase(db: PurchasesDb, input: CreatePurchaseInput): str
     for (const document of input.documents ?? []) {
       insertDocument(ctx, document);
     }
+    insertCapture(ctx, input.capture);
 
     return ctx.purchase.id;
   });

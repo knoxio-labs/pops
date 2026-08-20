@@ -4522,6 +4522,95 @@ internal enum Operations {
             internal enum Body: Sendable, Hashable {
                 /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json`.
                 internal struct JsonPayload: Codable, Hashable, Sendable {
+                    /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/capture`.
+                    internal struct CapturePayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/capture/capturedAt`.
+                        internal var capturedAt: Foundation.Date?
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/capture/location`.
+                        internal struct LocationPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/capture/location/latitude`.
+                            internal var latitude: Swift.Double
+                            /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/capture/location/longitude`.
+                            internal var longitude: Swift.Double
+                            /// Creates a new `LocationPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - latitude:
+                            ///   - longitude:
+                            internal init(
+                                latitude: Swift.Double,
+                                longitude: Swift.Double
+                            ) {
+                                self.latitude = latitude
+                                self.longitude = longitude
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case latitude
+                                case longitude
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.latitude = try container.decode(
+                                    Swift.Double.self,
+                                    forKey: .latitude
+                                )
+                                self.longitude = try container.decode(
+                                    Swift.Double.self,
+                                    forKey: .longitude
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "latitude",
+                                    "longitude"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/capture/location`.
+                        internal var location: Operations.MobilePurchases_uploadReceipt.Input.Body.JsonPayload.CapturePayload.LocationPayload?
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/capture/timeZone`.
+                        internal var timeZone: Swift.String?
+                        /// Creates a new `CapturePayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - capturedAt:
+                        ///   - location:
+                        ///   - timeZone:
+                        internal init(
+                            capturedAt: Foundation.Date? = nil,
+                            location: Operations.MobilePurchases_uploadReceipt.Input.Body.JsonPayload.CapturePayload.LocationPayload? = nil,
+                            timeZone: Swift.String? = nil
+                        ) {
+                            self.capturedAt = capturedAt
+                            self.location = location
+                            self.timeZone = timeZone
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case capturedAt
+                            case location
+                            case timeZone
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.capturedAt = try container.decodeIfPresent(
+                                Foundation.Date.self,
+                                forKey: .capturedAt
+                            )
+                            self.location = try container.decodeIfPresent(
+                                Operations.MobilePurchases_uploadReceipt.Input.Body.JsonPayload.CapturePayload.LocationPayload.self,
+                                forKey: .location
+                            )
+                            self.timeZone = try container.decodeIfPresent(
+                                Swift.String.self,
+                                forKey: .timeZone
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "capturedAt",
+                                "location",
+                                "timeZone"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/capture`.
+                    internal var capture: Operations.MobilePurchases_uploadReceipt.Input.Body.JsonPayload.CapturePayload?
                     /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/PartsPayload`.
                     internal struct PartsPayloadPayload: Codable, Hashable, Sendable {
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/PartsPayload/dataBase64`.
@@ -4576,20 +4665,31 @@ internal enum Operations {
                     /// Creates a new `JsonPayload`.
                     ///
                     /// - Parameters:
+                    ///   - capture:
                     ///   - parts:
-                    internal init(parts: Operations.MobilePurchases_uploadReceipt.Input.Body.JsonPayload.PartsPayload) {
+                    internal init(
+                        capture: Operations.MobilePurchases_uploadReceipt.Input.Body.JsonPayload.CapturePayload? = nil,
+                        parts: Operations.MobilePurchases_uploadReceipt.Input.Body.JsonPayload.PartsPayload
+                    ) {
+                        self.capture = capture
                         self.parts = parts
                     }
                     internal enum CodingKeys: String, CodingKey {
+                        case capture
                         case parts
                     }
                     internal init(from decoder: any Swift.Decoder) throws {
                         let container = try decoder.container(keyedBy: CodingKeys.self)
+                        self.capture = try container.decodeIfPresent(
+                            Operations.MobilePurchases_uploadReceipt.Input.Body.JsonPayload.CapturePayload.self,
+                            forKey: .capture
+                        )
                         self.parts = try container.decode(
                             Operations.MobilePurchases_uploadReceipt.Input.Body.JsonPayload.PartsPayload.self,
                             forKey: .parts
                         )
                         try decoder.ensureNoAdditionalProperties(knownKeys: [
+                            "capture",
                             "parts"
                         ])
                     }
@@ -4756,6 +4856,218 @@ internal enum Operations {
                         case case1(Operations.MobilePurchases_uploadReceipt.Output.Ok.Body.JsonPayload.Case1Payload)
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/case2`.
                         internal struct Case2Payload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/case2/extracted`.
+                            internal struct ExtractedPayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/case2/extracted/address`.
+                                internal var address: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/case2/extracted/currency`.
+                                internal var currency: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/case2/extracted/discounts`.
+                                internal var discounts: [Swift.String]
+                                /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/case2/extracted/LinesPayload`.
+                                internal struct LinesPayloadPayload: Codable, Hashable, Sendable {
+                                    /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/case2/extracted/LinesPayload/amount`.
+                                    internal var amount: Swift.String
+                                    /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/case2/extracted/LinesPayload/description`.
+                                    internal var description: Swift.String
+                                    /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/case2/extracted/LinesPayload/quantity`.
+                                    internal var quantity: Swift.Int?
+                                    /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/case2/extracted/LinesPayload/unitNote`.
+                                    internal var unitNote: Swift.String?
+                                    /// Creates a new `LinesPayloadPayload`.
+                                    ///
+                                    /// - Parameters:
+                                    ///   - amount:
+                                    ///   - description:
+                                    ///   - quantity:
+                                    ///   - unitNote:
+                                    internal init(
+                                        amount: Swift.String,
+                                        description: Swift.String,
+                                        quantity: Swift.Int? = nil,
+                                        unitNote: Swift.String? = nil
+                                    ) {
+                                        self.amount = amount
+                                        self.description = description
+                                        self.quantity = quantity
+                                        self.unitNote = unitNote
+                                    }
+                                    internal enum CodingKeys: String, CodingKey {
+                                        case amount
+                                        case description
+                                        case quantity
+                                        case unitNote
+                                    }
+                                    internal init(from decoder: any Swift.Decoder) throws {
+                                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                                        self.amount = try container.decode(
+                                            Swift.String.self,
+                                            forKey: .amount
+                                        )
+                                        self.description = try container.decode(
+                                            Swift.String.self,
+                                            forKey: .description
+                                        )
+                                        self.quantity = try container.decodeIfPresent(
+                                            Swift.Int.self,
+                                            forKey: .quantity
+                                        )
+                                        self.unitNote = try container.decodeIfPresent(
+                                            Swift.String.self,
+                                            forKey: .unitNote
+                                        )
+                                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                            "amount",
+                                            "description",
+                                            "quantity",
+                                            "unitNote"
+                                        ])
+                                    }
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/case2/extracted/lines`.
+                                internal typealias LinesPayload = [Operations.MobilePurchases_uploadReceipt.Output.Ok.Body.JsonPayload.Case2Payload.ExtractedPayload.LinesPayloadPayload]
+                                /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/case2/extracted/lines`.
+                                internal var lines: Operations.MobilePurchases_uploadReceipt.Output.Ok.Body.JsonPayload.Case2Payload.ExtractedPayload.LinesPayload
+                                /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/case2/extracted/merchantName`.
+                                internal var merchantName: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/case2/extracted/purchasedAt`.
+                                internal var purchasedAt: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/case2/extracted/purchasedOn`.
+                                internal var purchasedOn: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/case2/extracted/shipping`.
+                                internal var shipping: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/case2/extracted/surcharges`.
+                                internal var surcharges: [Swift.String]
+                                /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/case2/extracted/tax`.
+                                internal var tax: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/case2/extracted/total`.
+                                internal var total: Swift.String
+                                /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/case2/extracted/unreadableNotes`.
+                                internal var unreadableNotes: [Swift.String]
+                                /// Creates a new `ExtractedPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - address:
+                                ///   - currency:
+                                ///   - discounts:
+                                ///   - lines:
+                                ///   - merchantName:
+                                ///   - purchasedAt:
+                                ///   - purchasedOn:
+                                ///   - shipping:
+                                ///   - surcharges:
+                                ///   - tax:
+                                ///   - total:
+                                ///   - unreadableNotes:
+                                internal init(
+                                    address: Swift.String? = nil,
+                                    currency: Swift.String? = nil,
+                                    discounts: [Swift.String],
+                                    lines: Operations.MobilePurchases_uploadReceipt.Output.Ok.Body.JsonPayload.Case2Payload.ExtractedPayload.LinesPayload,
+                                    merchantName: Swift.String? = nil,
+                                    purchasedAt: Swift.String? = nil,
+                                    purchasedOn: Swift.String? = nil,
+                                    shipping: Swift.String? = nil,
+                                    surcharges: [Swift.String],
+                                    tax: Swift.String? = nil,
+                                    total: Swift.String,
+                                    unreadableNotes: [Swift.String]
+                                ) {
+                                    self.address = address
+                                    self.currency = currency
+                                    self.discounts = discounts
+                                    self.lines = lines
+                                    self.merchantName = merchantName
+                                    self.purchasedAt = purchasedAt
+                                    self.purchasedOn = purchasedOn
+                                    self.shipping = shipping
+                                    self.surcharges = surcharges
+                                    self.tax = tax
+                                    self.total = total
+                                    self.unreadableNotes = unreadableNotes
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case address
+                                    case currency
+                                    case discounts
+                                    case lines
+                                    case merchantName
+                                    case purchasedAt
+                                    case purchasedOn
+                                    case shipping
+                                    case surcharges
+                                    case tax
+                                    case total
+                                    case unreadableNotes
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.address = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .address
+                                    )
+                                    self.currency = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .currency
+                                    )
+                                    self.discounts = try container.decode(
+                                        [Swift.String].self,
+                                        forKey: .discounts
+                                    )
+                                    self.lines = try container.decode(
+                                        Operations.MobilePurchases_uploadReceipt.Output.Ok.Body.JsonPayload.Case2Payload.ExtractedPayload.LinesPayload.self,
+                                        forKey: .lines
+                                    )
+                                    self.merchantName = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .merchantName
+                                    )
+                                    self.purchasedAt = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .purchasedAt
+                                    )
+                                    self.purchasedOn = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .purchasedOn
+                                    )
+                                    self.shipping = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .shipping
+                                    )
+                                    self.surcharges = try container.decode(
+                                        [Swift.String].self,
+                                        forKey: .surcharges
+                                    )
+                                    self.tax = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .tax
+                                    )
+                                    self.total = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .total
+                                    )
+                                    self.unreadableNotes = try container.decode(
+                                        [Swift.String].self,
+                                        forKey: .unreadableNotes
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "address",
+                                        "currency",
+                                        "discounts",
+                                        "lines",
+                                        "merchantName",
+                                        "purchasedAt",
+                                        "purchasedOn",
+                                        "shipping",
+                                        "surcharges",
+                                        "tax",
+                                        "total",
+                                        "unreadableNotes"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/case2/extracted`.
+                            internal var extracted: Operations.MobilePurchases_uploadReceipt.Output.Ok.Body.JsonPayload.Case2Payload.ExtractedPayload
                             /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/case2/kind`.
                             internal enum KindPayload: String, Codable, Hashable, Sendable, CaseIterable {
                                 case needsReview = "needs-review"
@@ -4766,22 +5078,28 @@ internal enum Operations {
                             internal struct ProblemsPayloadPayload: Codable, Hashable, Sendable {
                                 /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/case2/ProblemsPayload/code`.
                                 internal var code: Swift.String
+                                /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/case2/ProblemsPayload/deltaCents`.
+                                internal var deltaCents: Swift.Int?
                                 /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/case2/ProblemsPayload/detail`.
                                 internal var detail: Swift.String
                                 /// Creates a new `ProblemsPayloadPayload`.
                                 ///
                                 /// - Parameters:
                                 ///   - code:
+                                ///   - deltaCents:
                                 ///   - detail:
                                 internal init(
                                     code: Swift.String,
+                                    deltaCents: Swift.Int? = nil,
                                     detail: Swift.String
                                 ) {
                                     self.code = code
+                                    self.deltaCents = deltaCents
                                     self.detail = detail
                                 }
                                 internal enum CodingKeys: String, CodingKey {
                                     case code
+                                    case deltaCents
                                     case detail
                                 }
                                 internal init(from decoder: any Swift.Decoder) throws {
@@ -4790,12 +5108,17 @@ internal enum Operations {
                                         Swift.String.self,
                                         forKey: .code
                                     )
+                                    self.deltaCents = try container.decodeIfPresent(
+                                        Swift.Int.self,
+                                        forKey: .deltaCents
+                                    )
                                     self.detail = try container.decode(
                                         Swift.String.self,
                                         forKey: .detail
                                     )
                                     try decoder.ensureNoAdditionalProperties(knownKeys: [
                                         "code",
+                                        "deltaCents",
                                         "detail"
                                     ])
                                 }
@@ -4804,24 +5127,38 @@ internal enum Operations {
                             internal typealias ProblemsPayload = [Operations.MobilePurchases_uploadReceipt.Output.Ok.Body.JsonPayload.Case2Payload.ProblemsPayloadPayload]
                             /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/case2/problems`.
                             internal var problems: Operations.MobilePurchases_uploadReceipt.Output.Ok.Body.JsonPayload.Case2Payload.ProblemsPayload
+                            /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/case2/receiptCount`.
+                            internal var receiptCount: Swift.Int
                             /// Creates a new `Case2Payload`.
                             ///
                             /// - Parameters:
+                            ///   - extracted:
                             ///   - kind:
                             ///   - problems:
+                            ///   - receiptCount:
                             internal init(
+                                extracted: Operations.MobilePurchases_uploadReceipt.Output.Ok.Body.JsonPayload.Case2Payload.ExtractedPayload,
                                 kind: Operations.MobilePurchases_uploadReceipt.Output.Ok.Body.JsonPayload.Case2Payload.KindPayload,
-                                problems: Operations.MobilePurchases_uploadReceipt.Output.Ok.Body.JsonPayload.Case2Payload.ProblemsPayload
+                                problems: Operations.MobilePurchases_uploadReceipt.Output.Ok.Body.JsonPayload.Case2Payload.ProblemsPayload,
+                                receiptCount: Swift.Int
                             ) {
+                                self.extracted = extracted
                                 self.kind = kind
                                 self.problems = problems
+                                self.receiptCount = receiptCount
                             }
                             internal enum CodingKeys: String, CodingKey {
+                                case extracted
                                 case kind
                                 case problems
+                                case receiptCount
                             }
                             internal init(from decoder: any Swift.Decoder) throws {
                                 let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.extracted = try container.decode(
+                                    Operations.MobilePurchases_uploadReceipt.Output.Ok.Body.JsonPayload.Case2Payload.ExtractedPayload.self,
+                                    forKey: .extracted
+                                )
                                 self.kind = try container.decode(
                                     Operations.MobilePurchases_uploadReceipt.Output.Ok.Body.JsonPayload.Case2Payload.KindPayload.self,
                                     forKey: .kind
@@ -4830,9 +5167,15 @@ internal enum Operations {
                                     Operations.MobilePurchases_uploadReceipt.Output.Ok.Body.JsonPayload.Case2Payload.ProblemsPayload.self,
                                     forKey: .problems
                                 )
+                                self.receiptCount = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .receiptCount
+                                )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "extracted",
                                     "kind",
-                                    "problems"
+                                    "problems",
+                                    "receiptCount"
                                 ])
                             }
                         }
@@ -4848,21 +5191,27 @@ internal enum Operations {
                             internal var kind: Operations.MobilePurchases_uploadReceipt.Output.Ok.Body.JsonPayload.Case3Payload.KindPayload
                             /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/case3/reason`.
                             internal var reason: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/case3/receiptCount`.
+                            internal var receiptCount: Swift.Int
                             /// Creates a new `Case3Payload`.
                             ///
                             /// - Parameters:
                             ///   - kind:
                             ///   - reason:
+                            ///   - receiptCount:
                             internal init(
                                 kind: Operations.MobilePurchases_uploadReceipt.Output.Ok.Body.JsonPayload.Case3Payload.KindPayload,
-                                reason: Swift.String
+                                reason: Swift.String,
+                                receiptCount: Swift.Int
                             ) {
                                 self.kind = kind
                                 self.reason = reason
+                                self.receiptCount = receiptCount
                             }
                             internal enum CodingKeys: String, CodingKey {
                                 case kind
                                 case reason
+                                case receiptCount
                             }
                             internal init(from decoder: any Swift.Decoder) throws {
                                 let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -4874,9 +5223,14 @@ internal enum Operations {
                                     Swift.String.self,
                                     forKey: .reason
                                 )
+                                self.receiptCount = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .receiptCount
+                                )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
                                     "kind",
-                                    "reason"
+                                    "reason",
+                                    "receiptCount"
                                 ])
                             }
                         }

@@ -8,6 +8,7 @@ import { RequestValidationError } from '@ts-rest/express';
 import {
   DuplicatePurchaseError,
   InvalidIngestPayloadError,
+  InventoryProposalConflictError,
   PurchaseNotFoundError,
   PurchaseSourceNotFoundError,
 } from '../../db/index.js';
@@ -80,6 +81,12 @@ export function tryMapServiceError(err: unknown): MappedHttpError | null {
   // broken pillar, and reasonably retrying forever.
   if (err instanceof InvalidIngestPayloadError) {
     return { status: 400, body: { message: err.message, code: 'INVALID_INGEST_PAYLOAD' } };
+  }
+  // The proposal was already answered. Distinct from the ingest duplicate
+  // above because the caller is a review surface, not an adapter: it should
+  // refresh and show the decision that already exists rather than skip.
+  if (err instanceof InventoryProposalConflictError) {
+    return { status: 409, body: { message: err.message, code: 'PROPOSAL_ALREADY_DECIDED' } };
   }
   if (isUniqueConstraintError(err)) {
     return {

@@ -61,13 +61,16 @@ export class AmazonBundleShapeError extends Error {
 }
 
 /**
- * Something the parser could not represent faithfully. Anomalies never
- * abort the run — a 943-row backfill that dies on row 700 is worse than one
- * that lands every order it can and names what it could not take.
+ * Something a parser could not represent faithfully. Anomalies never abort
+ * the run — a 943-row backfill that dies on row 700 is worse than one that
+ * lands every order it can and names what it could not take.
  *
  * `dropped-line` is the one that matters most: a line that cannot be read
  * is money leaving the order invisibly, because the order still totals
  * correctly from `Total Amount` and nothing downstream can tell.
+ *
+ * Shared by every adapter reading this bundle, physical and digital, so one
+ * backfill report has one shape.
  */
 export interface AmazonAnomaly {
   readonly kind:
@@ -78,7 +81,9 @@ export interface AmazonAnomaly {
     | 'dropped-order'
     | 'dropped-refund'
     | 'orphan-refund'
+    | 'refund-amount-disagreement'
     | 'refund-currency-mismatch'
+    | 'unknown-component-type'
     | 'unparseable-money'
     | 'zero-quantity-line';
   readonly sourceOrderId: string;

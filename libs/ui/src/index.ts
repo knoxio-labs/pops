@@ -7,6 +7,7 @@ export {
   formatCurrency,
   formatAUD,
   formatUSD,
+  formatCents,
   formatDate,
   formatBytes,
   formatRelativeTime,

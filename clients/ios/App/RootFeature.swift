@@ -19,10 +19,9 @@ import FeatureTransactions
 /// - A feature present here that the BFM does not name is not shown. A newer
 ///   build meets a pillar that has gone away and says so.
 ///
-/// `FeatureReceiptCapture` is listed ahead of the BFM ever naming it: nothing
-/// in this build can decide a feature is available on its own, so listing it
-/// here early is inert until `POST /mobile/receipts` exists and the BFM
-/// starts saying so.
+/// Listing a feature here is inert on its own — the BFM has to name it in
+/// `GET /mobile/bootstrap` before anybody sees it — which is why a screen can
+/// be registered here before the server is ready to offer it.
 internal enum RootFeature {
     internal static let renderable: [MobileFeature] = [
         FeatureTransactions.feature,

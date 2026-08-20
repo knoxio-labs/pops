@@ -5,10 +5,17 @@ import { client } from './client.gen';
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import type {
   AnalyticsMerchantSpendData,
+  AnalyticsMerchantSpendErrors,
   AnalyticsMerchantSpendResponses,
+  AnalyticsProductLeaderboardData,
+  AnalyticsProductLeaderboardErrors,
+  AnalyticsProductLeaderboardResponses,
   PurchaseCreateData,
   PurchaseCreateErrors,
   PurchaseCreateResponses,
+  PurchaseDecideInventoryProposalData,
+  PurchaseDecideInventoryProposalErrors,
+  PurchaseDecideInventoryProposalResponses,
   PurchaseDeleteData,
   PurchaseDeleteErrors,
   PurchaseDeleteResponses,
@@ -18,6 +25,9 @@ import type {
   PurchaseItemsByTagData,
   PurchaseItemsByTagResponses,
   PurchaseListData,
+  PurchaseListErrors,
+  PurchaseListInventoryProposalsData,
+  PurchaseListInventoryProposalsResponses,
   PurchaseListResponses,
   PurchasePatchItemData,
   PurchasePatchItemErrors,
@@ -80,11 +90,28 @@ export type Options<
  */
 export const analyticsMerchantSpend = <ThrowOnError extends boolean = false>(
   options?: Options<AnalyticsMerchantSpendData, ThrowOnError>
-): RequestResult<AnalyticsMerchantSpendResponses, unknown, ThrowOnError> =>
-  (options?.client ?? client).get<AnalyticsMerchantSpendResponses, unknown, ThrowOnError>({
-    url: '/analytics/merchant-spend',
-    ...options,
-  });
+): RequestResult<AnalyticsMerchantSpendResponses, AnalyticsMerchantSpendErrors, ThrowOnError> =>
+  (options?.client ?? client).get<
+    AnalyticsMerchantSpendResponses,
+    AnalyticsMerchantSpendErrors,
+    ThrowOnError
+  >({ url: '/analytics/merchant-spend', ...options });
+
+/**
+ * Repeat purchases per product — cadence, unit-price history, and the identity basis each group was formed on
+ */
+export const analyticsProductLeaderboard = <ThrowOnError extends boolean = false>(
+  options?: Options<AnalyticsProductLeaderboardData, ThrowOnError>
+): RequestResult<
+  AnalyticsProductLeaderboardResponses,
+  AnalyticsProductLeaderboardErrors,
+  ThrowOnError
+> =>
+  (options?.client ?? client).get<
+    AnalyticsProductLeaderboardResponses,
+    AnalyticsProductLeaderboardErrors,
+    ThrowOnError
+  >({ url: '/analytics/product-leaderboard', ...options });
 
 /**
  * Every line carrying an item tag, across every order
@@ -102,8 +129,8 @@ export const purchaseItemsByTag = <ThrowOnError extends boolean = false>(
  */
 export const purchaseList = <ThrowOnError extends boolean = false>(
   options?: Options<PurchaseListData, ThrowOnError>
-): RequestResult<PurchaseListResponses, unknown, ThrowOnError> =>
-  (options?.client ?? client).get<PurchaseListResponses, unknown, ThrowOnError>({
+): RequestResult<PurchaseListResponses, PurchaseListErrors, ThrowOnError> =>
+  (options?.client ?? client).get<PurchaseListResponses, PurchaseListErrors, ThrowOnError>({
     url: '/purchases',
     ...options,
   });
@@ -150,6 +177,17 @@ export const purchaseGet = <ThrowOnError extends boolean = false>(
   });
 
 /**
+ * Unanswered inventory offers derived from an order's durable lines
+ */
+export const purchaseListInventoryProposals = <ThrowOnError extends boolean = false>(
+  options: Options<PurchaseListInventoryProposalsData, ThrowOnError>
+): RequestResult<PurchaseListInventoryProposalsResponses, unknown, ThrowOnError> =>
+  (options.client ?? client).get<PurchaseListInventoryProposalsResponses, unknown, ThrowOnError>({
+    url: '/purchases/{id}/inventory-proposals',
+    ...options,
+  });
+
+/**
  * Confirm a line's kind and item tags
  */
 export const purchasePatchItem = <ThrowOnError extends boolean = false>(
@@ -161,6 +199,29 @@ export const purchasePatchItem = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     url: '/purchases/{id}/items/{itemId}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Accept or decline one inventory proposal on a line
+ */
+export const purchaseDecideInventoryProposal = <ThrowOnError extends boolean = false>(
+  options: Options<PurchaseDecideInventoryProposalData, ThrowOnError>
+): RequestResult<
+  PurchaseDecideInventoryProposalResponses,
+  PurchaseDecideInventoryProposalErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).post<
+    PurchaseDecideInventoryProposalResponses,
+    PurchaseDecideInventoryProposalErrors,
+    ThrowOnError
+  >({
+    url: '/purchases/{id}/items/{itemId}/inventory-proposal',
     ...options,
     headers: {
       'Content-Type': 'application/json',

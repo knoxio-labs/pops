@@ -86,17 +86,48 @@ export function purchasesCreated(
   };
 }
 
+/**
+ * A reading as `purchases` serves one, with every defaulted field present.
+ * Tests that care about an omission override it explicitly, so the difference
+ * between "the producer sent this" and "the producer left it out" is visible
+ * at the call site rather than buried here.
+ */
+export function purchasesExtracted(
+  overrides: Record<string, unknown> = {}
+): Record<string, unknown> {
+  return {
+    merchantName: 'Woolworths',
+    address: '12 Example St',
+    timeZone: 'Australia/Perth',
+    purchasedOn: '2026-08-13',
+    purchasedAt: '14:05',
+    currency: 'AUD',
+    total: '$84.20',
+    tax: '$7.65',
+    discounts: ['$2.00'],
+    surcharges: ['$0.50'],
+    shipping: null,
+    lines: [{ description: 'MILK 2L', amount: '$3.10', quantity: 2, unitNote: '2 @ $1.55' }],
+    unreadable: ['line 7 is smudged'],
+    ...overrides,
+  };
+}
+
 /** The producer's `needs-review` arm: read, but the arithmetic disagreed. */
 export function purchasesNeedsReview(
-  failures: readonly { kind: string; detail: string }[]
+  failures: readonly { kind: string; detail: string; deltaCents?: number }[],
+  overrides: {
+    receiptUris?: readonly string[];
+    extracted?: Record<string, unknown>;
+  } = {}
 ): CallResult<unknown> {
   return {
     kind: 'ok',
     value: {
       kind: 'needs-review',
-      receiptUris: ['pops://purchases/receipt/abc'],
+      receiptUris: overrides.receiptUris ?? ['pops://purchases/receipt/abc'],
       failures,
-      extracted: { merchant: 'Woolworths', lines: [] },
+      extracted: overrides.extracted ?? purchasesExtracted(),
     },
   };
 }

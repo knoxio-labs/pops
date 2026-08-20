@@ -9,11 +9,14 @@
  * only form of an answer that can still be useful for an order nobody has
  * imported yet.
  */
-import { sql } from 'drizzle-orm';
+import { and, asc, eq, gte, sql } from 'drizzle-orm';
 
+import { MIN_MATCH_CONFIDENCE } from '../../contract/constants.js';
 import { matchPatternFor } from '../../contract/match-rules.js';
 import { purchaseMatchRules } from '../schema.js';
 import { expectRow, type PurchasesDb } from './internal.js';
+
+import type { SolvableRule } from '../../reconcile/types.js';
 
 /**
  * What a human decision knows about the merchant it was made for.
@@ -94,4 +97,48 @@ export function recordMatchRule(db: PurchasesDb, evidence: MatchRuleEvidence): s
     .all();
 
   return expectRow(rows, 'recordMatchRule').id;
+}
+
+/**
+ * The rules stage 4 runs on: active, and confident enough to act on.
+ *
+ * Read fleet-wide rather than per sweep scope, for the reason
+ * `listConfirmedLinks` is: a rule is a claim about a merchant rather
+ * than about anything inside a date window, and scoping it to the swept
+ * range would make the same charge match or miss depending on which
+ * trigger fired.
+ *
+ * The `isActive` and confidence filters are repeated in the solver, which
+ * carries both columns and applies them itself. Deliberate duplication:
+ * this one keeps the snapshot small, that one keeps the solver a pure
+ * function of its input rather than of a WHERE clause somewhere else.
+ *
+ * `timesApplied` and `lastUsedAt` are not touched here and must not be.
+ * They record the attributions a rule has EARNED — one per human decision,
+ * never revised downward — and a sweep re-derives every unconfirmed link
+ * from scratch on a timer, so counting an auto-link would add a count every
+ * fifteen minutes for a link that is the same link each time. The
+ * attribution is counted when a stage-4 link is confirmed, by the writer
+ * above, which is the point at which a human agreed the rule was right.
+ */
+export function listActiveMatchRules(db: PurchasesDb): SolvableRule[] {
+  return db
+    .select({
+      id: purchaseMatchRules.id,
+      descriptionPattern: purchaseMatchRules.descriptionPattern,
+      matchType: purchaseMatchRules.matchType,
+      source: purchaseMatchRules.source,
+      isActive: purchaseMatchRules.isActive,
+      confidence: purchaseMatchRules.confidence,
+      priority: purchaseMatchRules.priority,
+    })
+    .from(purchaseMatchRules)
+    .where(
+      and(
+        eq(purchaseMatchRules.isActive, true),
+        gte(purchaseMatchRules.confidence, MIN_MATCH_CONFIDENCE)
+      )
+    )
+    .orderBy(asc(purchaseMatchRules.priority), asc(purchaseMatchRules.id))
+    .all();
 }

@@ -98,6 +98,44 @@ describe('shipment-level columns', () => {
   });
 });
 
+describe('what the ASIN column is taken to be', () => {
+  const IDENTITY_ORDER_ID = '249-0000013-0000013';
+
+  function identityFor(asin: string) {
+    const csv = csvWithRows([
+      rowWith({
+        ASIN: asin,
+        'Order ID': IDENTITY_ORDER_ID,
+        'Product Name': 'Widget',
+        'Total Amount': '10.00',
+        'Unit Price': '10.00',
+      }),
+    ]);
+    const parsed = parseAmazonOrderHistory(csv).orders.find(
+      (candidate) => candidate.sourceOrderId === IDENTITY_ORDER_ID
+    );
+    if (parsed === undefined) throw new Error('fixture order was not parsed');
+    return (parsed.items ?? [])[0]?.sku ?? null;
+  }
+
+  it('names a well-formed ASIN as one', () => {
+    expect(identityFor('B0000000AA')).toEqual({ value: 'B0000000AA', scheme: 'asin' });
+  });
+
+  it('claims only merchant-local reach for a value that cannot be an ASIN', () => {
+    // `asin` is the namespace that merges lines across sources. A column
+    // holding something else — a shape Amazon changed, a marketplace id —
+    // still names the product to Amazon, and nothing more than that. The
+    // order is kept either way: dropping a line over its identifier would
+    // lose the money on it.
+    expect(identityFor('4471')).toEqual({ value: '4471', scheme: 'merchant' });
+  });
+
+  it('states nothing where the column is blank', () => {
+    expect(identityFor('')).toBeNull();
+  });
+});
+
 describe('shipping allocation', () => {
   const SHIPPING_ORDER_ID = '249-0000012-0000012';
 
@@ -393,5 +431,34 @@ describe('contract conformance', () => {
     for (const result of orders) {
       expect(result.charges ?? []).toHaveLength(0);
     }
+  });
+});
+
+describe('`Item Serial Number`', () => {
+  // On the reference bundle it is mostly a Transparency anti-counterfeit
+  // token identifying the packaging, so carrying it into a unit's serial
+  // number would assert a device identity nobody can read off the device.
+  // The README says this parser reads no serial column; this is what holds
+  // it there once someone decides the mapping looks obvious.
+  const AUTHENTICITY_TOKEN = 'Authenticity_2D=AZ:c3f10a9e4b';
+
+  const { orders: parsed } = parseAmazonOrderHistory(
+    csvWithRows([rowWith({ 'Order ID': ORDER_SINGLE, 'Item Serial Number': AUTHENTICITY_TOKEN })])
+  );
+
+  it('parses the row carrying it, so the assertions below are not vacuous', () => {
+    expect(parsed).toHaveLength(1);
+    expect(parsed.flatMap((result) => result.items ?? [])).toHaveLength(1);
+  });
+
+  it('produces no unit to hang a serial on', () => {
+    expect(
+      parsed.flatMap((result) => result.items ?? []).flatMap((item) => item.units ?? [])
+    ).toEqual([]);
+  });
+
+  it('does not reach the payload under any other field either', () => {
+    expect(JSON.stringify(parsed)).not.toContain('Authenticity_2D');
+    expect(JSON.stringify(parsed)).not.toContain(AUTHENTICITY_TOKEN);
   });
 });

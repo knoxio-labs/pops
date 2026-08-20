@@ -6,14 +6,52 @@ import Foundation
 /// scattered through a view makes adding one a hunt.
 internal enum ReceiptCaptureCopy {
     internal static let title = "Receipt capture"
-    internal static let placeholder = "Photographing and uploading a receipt is coming soon."
+    internal static let instruction =
+        "Photograph the receipt. A long one can be several photos — take them "
+        + "top to bottom and they'll be read as one receipt."
+    internal static let captureButton = "Photograph a receipt"
+    internal static let captureAnother = "Photograph another receipt"
+
+    // MARK: camera refusals
+
+    /// Undoable from Settings, so this is the only one offered a link.
+    internal static let cameraDenied =
+        "Pops can't use the camera. Allow camera access in Settings to photograph a receipt."
+    internal static let cameraRestricted =
+        "Camera access is turned off by a profile or Screen Time policy on this device, "
+        + "so a receipt can't be photographed here."
+    /// Also what the Simulator reaches, where there is no camera to open.
+    internal static let cameraUnavailable =
+        "This device has no camera, so a receipt can't be photographed here."
+    internal static let openSettings = "Open Settings"
+
+    // MARK: capture problems
+
+    /// One sentence per ``ReceiptCaptureProblem``, each ending in what to do
+    /// next — none of these are states a person can be left sitting in.
+    internal static func message(for problem: ReceiptCaptureProblem) -> String {
+        switch problem {
+        case .cameraFailed:
+            return "The camera stopped before the receipt was captured. Try again."
+        case .noPages:
+            return "No photos came back from that scan. Try again."
+        case .unpreparedPages:
+            return
+                "One of those photos couldn't be prepared, and a receipt missing a page "
+                + "would be read wrong. Photograph the whole receipt again."
+        case .tooManyPages(let count):
+            return
+                "That's \(count) photos, and a receipt can be sent as at most "
+                + "\(ReceiptPart.maxPerReceipt). Photograph it again in fewer, larger pieces."
+        }
+    }
 }
 
 /// Every word the result screen shows.
 ///
 /// Kept apart from ``ReceiptCaptureCopy`` because the two describe different
-/// screens the moment POPS-1959 exists — this reads a ``ReceiptOutcome``, and
-/// ``ReceiptCaptureCopy`` will read whatever that ticket produces.
+/// screens: this one is read from a ``ReceiptOutcome`` the server produced,
+/// the other from what the camera and the person in front of it did.
 internal enum ReceiptResultCopy {
     internal static let submitting = "Reading your receipt…"
     internal static let retry = "Retry"
@@ -31,10 +69,31 @@ internal enum ReceiptResultCopy {
     internal static func purchaseReference(_ purchaseId: String) -> String {
         "Reference \(purchaseId)"
     }
-    /// The navigation target POPS-1949 names as a known gap: there is
-    /// nowhere in the app yet that shows a purchase once it exists.
-    internal static let createdNoDestination =
-        "There's nowhere in the app yet to view this purchase."
+    /// What was recorded, as a reader checks it against the paper still in
+    /// their hand: merchant, how many items, what it cost. A merchant the
+    /// pillar could not resolve is left out rather than filled with a
+    /// placeholder — the item count and the total are still checkable, and a
+    /// "Unknown merchant" line is a claim about the receipt that nobody made.
+    internal static func purchaseSummary(
+        merchantName: String?, itemCount: Int, total: String
+    ) -> String {
+        [merchantName, itemCountLabel(itemCount), total]
+            .compactMap { $0 }
+            .joined(separator: " · ")
+    }
+    /// Omitted entirely at zero: "0 items" beside a total reads as a receipt
+    /// that recorded nothing, when what happened is that the reading found no
+    /// separate lines.
+    private static func itemCountLabel(_ itemCount: Int) -> String? {
+        switch itemCount {
+        case ..<1: nil
+        case 1: "1 item"
+        default: "\(itemCount) items"
+        }
+    }
+    internal static func purchasedOn(_ formattedDate: String) -> String {
+        "Dated \(formattedDate)"
+    }
 
     // MARK: needs review
 
@@ -79,8 +138,13 @@ internal enum ReceiptResultCopy {
 
     // MARK: gate failures
 
-    /// One line per ``ReceiptGateFailureKind``, in the receipt's own terms —
-    /// mirroring the closed list the purchases pillar's gate can fail on.
+    /// One line per ``ReceiptGateFailureKind``, in the receipt's own terms.
+    ///
+    /// ``ReceiptGateFailureKind/unrecognised(_:)`` gets a generic sentence
+    /// rather than the raw wire code: the gate's own `detail` is drawn beside
+    /// this and says what actually happened, and showing a reader
+    /// `negative-shipping` teaches them the producer's vocabulary instead of
+    /// telling them about their receipt.
     internal static func gateFailureLabel(_ kind: ReceiptGateFailureKind) -> String {
         switch kind {
         case .unreadableTotal:
@@ -93,8 +157,12 @@ internal enum ReceiptResultCopy {
             return "A line item read as a negative amount."
         case .sumMismatch:
             return "The line items don't add up to the printed total."
+        case .ambiguousTax:
+            return "It's unclear whether the prices include tax."
         case .damaged:
             return "The receipt looks damaged or unclear."
+        case .unrecognised:
+            return "Something on this receipt didn't check out."
         }
     }
 

@@ -177,21 +177,34 @@ both reach them without a device or a session.
 
 ### Rate limiting
 
-Three budgets, on three different keys, because they answer three different
-questions. All three count with `src/api/rate-limit.ts`.
+Five budgets, on three different keys, because they answer three different
+questions. All five count with `src/api/rate-limit.ts`.
 
-| Surface              | Key                            | Bounds                                          |
-| -------------------- | ------------------------------ | ----------------------------------------------- |
-| Code issuance        | the operator's email           | how many codes one human can mint               |
-| `POST /devices/pair` | client address, plus a ceiling | how many **guesses** the code space takes       |
-| `/mobile/*`          | client address, plus a ceiling | how much **work** an unauthenticated flood buys |
+| Surface                                   | Key                            | Bounds                                              |
+| ----------------------------------------- | ------------------------------ | --------------------------------------------------- |
+| Code issuance                             | the operator's email           | how many codes one human can mint                   |
+| `POST /devices/pair`                      | client address, plus a ceiling | how many **guesses** the code space takes           |
+| `POST /devices/challenge` + `.../refresh` | client address, plus a ceiling | how many **guesses** a stolen refresh token takes   |
+| `/mobile/*`                               | client address, plus a ceiling | how much **work** an unauthenticated flood buys     |
+| `POST /mobile/purchases/receipts`         | client address, plus a ceiling | how many **paid vision calls** a client can trigger |
 
-The latter two share `src/api/tiered-rate-limit.ts` — the same two-tier shape,
+The last four share `src/api/tiered-rate-limit.ts` — the same two-tier shape,
 a coarse unkeyed ceiling charged before a fine per-address one, because
 `CF-Connecting-IP` is both the only usable client identity on a bypassed
 hostname and forgeable by anything on the LAN. They keep separate counters on
 purpose: one shared counter would let ordinary phone traffic lock a handset out
-of pairing, and a pairing flood degrade every device already paired.
+of pairing, a pairing flood degrade every device already paired, or a burst of
+receipt uploads lock a handset out of its own transaction list.
+
+The receipt budget is deliberately not a share of `/mobile/*`'s. That one was
+sized against a page of transaction rows; a receipt upload buffers up to 12mb
+and costs a Claude vision call in `purchases` downstream, which neither the
+numbers nor the reasoning behind them accounted for. Giving it a tighter
+budget of its own, mounted the same way and ahead of the same guard, bounds
+the one route on this pillar that turns a request into real money — sized
+against a buggy client retrying, not against an internet attacker, since
+`requireDevice` already keeps anyone without a paired handset off it entirely
+(POPS-1989).
 
 Every counter is **in memory**, which is correct for a single-container pillar
 and wrong the moment there are two: each limit would become per-replica and the
@@ -275,8 +288,9 @@ count query per scroll tick, and a total that is stale the moment it is read.
 read on the phone's behalf, and what it may be is fixed by
 [ADR-046](../../docs/architecture/adr-046-mobile-write-surface-is-ingestion-only.md):
 the mobile surface accepts **ingestion** — content the handset captured — and
-never a mutation of a record a pillar already holds. Four properties follow,
-and each is asserted in `src/api/__tests__/mobile-receipts.test.ts` or
+never a mutation of a record a pillar already holds. Five properties follow,
+and each is asserted in `src/api/__tests__/mobile-receipts.test.ts`,
+`src/api/purchases/__tests__/client.test.ts` or
 `src/contract/__tests__/mobile-verbs.test.ts`:
 
 - **The bytes travel unchanged.** `purchases` content-addresses them, which is
@@ -287,9 +301,12 @@ and each is asserted in `src/api/__tests__/mobile-receipts.test.ts` or
   `unreadable` are told apart by the body's `kind`, because all three are
   purchases having read the upload and answered. Only a failure to get an
   answer at all is a non-200, through the same upstream mapping the read routes
-  use. The mobile `needs-review` deliberately carries the problems and not the
-  full extracted reading: reviewing one is a side-by-side against the
-  photograph, which is the operator surface's job.
+  use. Each arm carries what its screen draws: `created` the purchase summary,
+  `needs-review` the gate's objections **and** the reading they are about,
+  because an objection without the reading names a discrepancy the reader has
+  nothing to check it against. What no arm carries is the stored parts'
+  `pops://` URIs — no mobile route serves those bytes, so `receiptCount` is
+  published instead of a pointer the handset cannot follow.
 - **The size ceiling is bfm's own.** `MOBILE_UPLOAD_MAX_BYTES` (12mb) is
   mounted on that one path — every other route keeps Express's 100kb default —
   and an oversized body is refused here, in the shape the contract declares,
@@ -307,6 +324,22 @@ and each is asserted in `src/api/__tests__/mobile-receipts.test.ts` or
   purchases refuses at its own ceiling") rather than fixed here, since the
   mapping it exposes is shared by every cross-pillar call in the repo, not
   specific to receipts.
+- **The capture block travels unchanged too, and is judged nowhere.** The body
+  may carry `capture`: the handset's own clock at the shutter (`capturedAt`,
+  offset required), the IANA zone it was in, and where it was standing
+  (`location`, WGS-84 signed decimal degrees). Every field optional and the
+  whole object optional, so an app build predating it sends exactly what it
+  sent before — which matters more here than elsewhere, because the client is
+  distributed rather than deployed and old versions call this route from
+  hardware nobody can roll forward ([ADR-043](../../docs/architecture/adr-043-clients-as-a-unit-kind.md)).
+  `purchases` decides what each field is worth and stores it apart from the
+  order row ([ADR-047](../../docs/architecture/adr-047-purchases-stores-capture-location.md));
+  bfm judges none of it, for the same reason it mints no idempotency key. It
+  does mirror the producer's bounds, so a coordinate that is not a point on the
+  globe is a `400` here rather than an upstream error the phone cannot act on —
+  and the refusal names neither the field nor the value, because a location is
+  the most sensitive thing this route carries and a validation error quoting it
+  is the ordinary way one reaches a log it was never meant to.
 - **The grant is a write grant.** `purchases.receipt` was added to
   `BFM_SERVICE_ACCOUNT_SCOPES` for this and authorises nothing else in that
   pillar. See [Provisioning the service account](#provisioning-the-service-account).

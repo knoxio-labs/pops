@@ -1,8 +1,8 @@
 # Ingest adapters
 
-Three today — `amazon/`, `woolworths/`, `receipt/` — and email is coming.
-Each has its own README for what makes its source hard. This file is what
-they have to agree on.
+Four today — `amazon/`, `amazon-digital/`, `woolworths/`, `receipt/` — and
+email is coming. Each has its own README for what makes its source hard.
+This file is what they have to agree on.
 
 ## Naming a purchase
 
@@ -23,6 +23,14 @@ The ladder, best first:
 1. **The merchant's own order id.** Amazon states one, so `amazon` uses it
    verbatim. Nothing derived can beat an identifier the merchant already
    commits to.
+
+   The `source` half of the key is doing real work there. Amazon issues
+   digital order ids from a namespace independent of its physical one, so
+   `amazon-digital` is its own source rather than a widened `amazon`: the
+   two spaces are free to collide, and under one source a collision would
+   come back as the 409 a backfill counts as "already had it" — a whole
+   order lost inside a run that reported success.
+
 2. **The transaction the till recorded.** Woolworths states no order id but
    prints `POS 066 TRANS 3184` — a counter per register per store.
    `store-POS-transaction-date` gives 413 distinct keys from 413 receipts,
@@ -54,18 +62,61 @@ second copy.
 
 ## Naming a product
 
-Unsolved, deliberately, and tracked as POPS-243.
+**Only the two Amazon exports state a product identity, and they state it in
+Amazon's catalogue namespace.** That is a measurement, and it is the substrate
+every repeat-purchase question stands on. `ingest/__tests__/product-identity.test.ts`
+is where it is pinned; a new adapter is added to that file's `ADAPTERS` list
+or it goes unmeasured.
 
-Amazon states an ASIN and it is stored as `sku`. Woolworths states nothing —
-line items carry a name and a price and no identifier at all — and an
-uploaded receipt states less. So the same product bought at two shops,
-or at one shop twice under slightly different receipt-speak, does not group.
+| adapter          | states                                                                                                                                                      |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `amazon`         | an ASIN per line, from the export's own column                                                                                                              |
+| `amazon-digital` | the same, read from the same column by the same reader (`amazon/fields.ts`)                                                                                 |
+| `woolworths`     | nothing — an item row is `{prefixChar, description, amount}`, no identifier                                                                                 |
+| `receipt`        | nothing, and by design: `receipt/extraction.ts` refuses to let a vision model infer an identifier, because an inference cannot be checked against the paper |
 
-That kills the highest-signal output of the whole feature, which is why it
-has its own issue rather than a guess here. The failure mode to design
+So an identifier is stored as a **pair** — `sku` and `sku_scheme` — never as
+a bare string. The scheme says how far the identifier's meaning reaches:
+`asin` is the same product wherever it appears, `merchant` means nothing
+outside the source that issued it. Both halves travel as one value from the
+request body to the row and back onto the wire, so no consumer can obtain an
+identifier without the qualifier that says what it may be compared to.
+`classify/batch.ts` is the first consumer to act on the distinction: it
+groups one ASIN across sources and refuses to group a merchant-local number
+across them.
+
+The scheme is a claim about reach, so it is checked against the identifier
+rather than taken on trust: an ASIN is ten upper-case alphanumerics, and a
+four-digit store article number therefore cannot claim to be one — through
+the wire schema or through an adapter running in-process, which never passes
+through zod. A caller can still state an ASIN it invented; that is a false
+statement rather than an accidental collision, and the accident is what the
+pair was added to prevent.
+
+An adapter that states nothing writes nothing. **NULL means the source named
+no product**, not that a transcription was skipped, and two NULLs are not a
+match — a `GROUP BY` that folded them would put one verdict on an entire
+merchant.
+
+That leaves the open problem, tracked as POPS-243, correctly scoped: for
+Woolworths and for uploaded receipts there is no key to normalise _toward_,
+so the job is not "map receipt-speak onto a known product" but "mint a
+product identity from a printed name, with nothing to anchor it to". Such an
+identity is a POPS judgement, not a merchant's word, and it does not belong
+in this column — `sku` holds what a source stated. The failure mode to design
 against is over-eager merging: two genuinely different products collapsing
 into one corrupts spend attribution in a way that is very hard to notice
 afterwards. Leaving items ungrouped is the safer wrong answer.
+
+`GET /analytics/product-leaderboard` groups on what a source does state —
+the sku, else the normalised printed name, else nothing — and labels every
+group with which of the three it used, rather than waiting for this to be
+solved or pretending it is. Because a printed name is only interpretable
+against the till that printed it, the key is confined to the order's
+merchant for every source except the ones that are a single merchant's own
+feed: `receipt` is one source id for every shop, and merging on it would be
+exactly the over-eager merge above. The rule is `identifyProduct` in
+`src/db/services/product-identity.ts`.
 
 ## Checksums are not keys
 

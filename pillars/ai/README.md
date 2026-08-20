@@ -88,10 +88,21 @@ on the `registry` pillar) and deregisters on `SIGTERM`/`SIGINT`. It exposes
 
 Most routes trust the docker network and the gateway in front of it. The one
 exception is the cross-pillar ingest `POST /ai-usage/record`: nginx never
-proxies it, and it 403s any request missing the shared `x-pops-internal-token`,
-so only sibling pillars carrying that token can write usage. The pricing read
+proxies it, and it 403s any request that does not carry a valid per-caller
+`x-pops-internal-credential` (`name.secret`) held by an accepted caller with
+the `ai.usage.record` scope. The pricing read
 `GET /ai-pricing/:provider/:model` stays open so callers can shape cost before
 recording.
+
+The accepted callers are compiled in — `ACCEPTED_CALLERS` in `src/api/app.ts`
+— one row per AI-calling pillar (`finance`, `cerebrum`, `food-worker`,
+`purchases`) plus the one-shot `ops-backfill`. Each names the env var carrying
+that caller's secret, `POPS_INTERNAL_SECRET_<CALLER>`; blanking it revokes
+that caller without a code change, and leaving it unset never provisions the
+caller in the first place. A caller this pillar does not hold a secret for is
+refused, and its AI spend is simply absent from the ledger — so the row here
+and the credential on the calling side are provisioned together or neither is
+worth anything.
 
 ## Commands
 

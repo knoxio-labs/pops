@@ -1,8 +1,7 @@
 import { useTranslation } from 'react-i18next';
 
-import { cn, formatDate } from '@pops/ui';
+import { cn, formatCents, formatDate } from '@pops/ui';
 
-import { formatCents } from '../../money.js';
 import { deltaState } from './money.js';
 
 import type { ReactElement } from 'react';

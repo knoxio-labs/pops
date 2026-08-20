@@ -11,6 +11,11 @@ export * from './schema.js';
 export type { PurchasesDb } from './services/internal.js';
 
 export {
+  productIdentityOf,
+  type StoredProductIdentity,
+} from './services/stored-product-identity.js';
+
+export {
   computeAccounting,
   landedCostCents,
   type PurchaseAccounting,
@@ -36,13 +41,38 @@ export {
   type ConfirmItemInput,
 } from './services/purchase-item-mutations.js';
 
+export { type MerchantIdentity } from './services/merchant-identity.js';
+
+export { listInventoryProposals, type InventoryProposal } from './services/inventory-proposals.js';
+
+export {
+  decideInventoryProposal,
+  type InventoryProposalDecision,
+} from './services/inventory-proposal-decisions.js';
+
 export {
   rollUpMerchantSpend,
   type CurrencySpend,
-  type MerchantIdentity,
   type MerchantSpend,
   type MerchantSpendRollup,
 } from './services/merchant-spend.js';
+
+export {
+  identifyProduct,
+  normalisedName,
+  type ProductIdentity,
+  type ProductLine,
+} from './services/product-identity.js';
+
+export {
+  rankProductPurchases,
+  type ProductCadence,
+  type ProductIdentityCoverage,
+  type ProductLeaderboard,
+  type ProductLeaderboardFilter,
+  type ProductPurchases,
+  type ProductUnitPrice,
+} from './services/product-leaderboard.js';
 
 export {
   searchPurchases,
@@ -115,7 +145,11 @@ export {
   type ConfirmOutcome,
 } from './services/reconcile-writes.js';
 
-export { recordMatchRule, type MatchRuleEvidence } from './services/match-rules.js';
+export {
+  listActiveMatchRules,
+  recordMatchRule,
+  type MatchRuleEvidence,
+} from './services/match-rules.js';
 
 export {
   clearDocumentUriStale,

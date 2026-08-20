@@ -25,6 +25,7 @@ import { MOBILE_UPLOAD_MAX_BYTES } from '../contract/rest-schemas.js';
 import { bfmContract } from '../contract/rest.js';
 import { createMobileRateLimit, type MobileRateLimitOptions } from './auth/mobile-rate-limit.js';
 import { createPairingRateLimit, type PairingRateLimitOptions } from './auth/pairing-rate-limit.js';
+import { createReceiptRateLimit, type ReceiptRateLimitOptions } from './auth/receipt-rate-limit.js';
 import { createRefreshRateLimit, type RefreshRateLimitOptions } from './auth/refresh-rate-limit.js';
 import { createRequireDevice } from './auth/require-device.js';
 import { createIdentityMiddleware } from './middleware/identity.js';
@@ -75,6 +76,8 @@ export interface BfmApiDeps extends BfmRestHandlerDeps {
   pairingRateLimit?: PairingRateLimitOptions;
   /** Same, for the budget the challenge and refresh routes share. */
   refreshRateLimit?: RefreshRateLimitOptions;
+  /** Same, for the receipt upload's own budget. See {@link MOBILE_RECEIPT_UPLOAD_PATH}. */
+  receiptRateLimit?: ReceiptRateLimitOptions;
 }
 
 export interface CreateBfmApiAppOptions {
@@ -117,6 +120,16 @@ export function createBfmApiApp(deps: BfmApiDeps, options: CreateBfmApiAppOption
   const refreshBudget = createRefreshRateLimit(deps.refreshRateLimit).handler;
   app.use(CHALLENGE_PATH, refreshBudget);
   app.use(REFRESH_PATH, refreshBudget);
+
+  // The receipt upload's own budget, on the same footing again. It is a
+  // second limiter rather than a wider mount of the perimeter one above for
+  // the same reason pairing and refresh get their own: it bounds a different
+  // cost. The general budget was sized against a page of rows; this one
+  // against a Claude vision call downstream in `purchases`, which is real
+  // money rather than a signature check. Mounted ahead of
+  // `requireDevice` so a caller past its budget costs a map lookup, not an
+  // HMAC verification.
+  app.use(MOBILE_RECEIPT_UPLOAD_PATH, createReceiptRateLimit(deps.receiptRateLimit).handler);
 
   // Then the guard, still ahead of the body parser. It reads headers only, so
   // an unauthenticated caller never gets bfm to parse a request body — which

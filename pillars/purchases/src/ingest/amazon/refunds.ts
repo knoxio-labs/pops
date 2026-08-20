@@ -12,10 +12,10 @@
  * whole reason `purchase_items.refundedCents` is left alone by this adapter
  * — see the README.
  */
-import Papa from 'papaparse';
-
-import { AmazonBundleShapeError, type AmazonAnomaly, type Row } from './columns.js';
+import { type AmazonAnomaly, type Row } from './columns.js';
+import { parseBundleRows } from './csv.js';
 import { readCents, readText, readTimestamp } from './fields.js';
+import { type SourceRefund } from './refund-charges.js';
 
 export const REFUND_DETAILS_FILENAME = 'Refund Details.csv';
 
@@ -49,20 +49,9 @@ export const REFUND_REQUIRED_COLUMNS = [
  */
 const COMPLETED_REVERSAL_STATUS = 'completed';
 
-/** One refund, as the disbursement feed states it. */
-export interface AmazonRefund {
-  readonly sourceOrderId: string;
-  /** Magnitude in {@link currency}. Positive — the charge that carries it is negated. */
-  readonly amountCents: number;
-  /** ISO 4217, as the file states it. Not necessarily the order's currency. */
-  readonly currency: string;
-  /** When the money was disbursed, which is what a transaction would settle against. */
-  readonly refundedAt: string;
-}
-
 export interface AmazonRefundParseResult {
   /** Keyed by `Order ID`, preserving file order within each order. */
-  readonly refundsByOrderId: ReadonlyMap<string, readonly AmazonRefund[]>;
+  readonly refundsByOrderId: ReadonlyMap<string, readonly SourceRefund[]>;
   readonly anomalies: readonly AmazonAnomaly[];
 }
 
@@ -79,9 +68,9 @@ const UNKNOWN_ORDER_ID = '(no order id)';
  */
 export function parseAmazonRefundDetails(csvText: string): AmazonRefundParseResult {
   const anomalies: AmazonAnomaly[] = [];
-  const refundsByOrderId = new Map<string, AmazonRefund[]>();
+  const refundsByOrderId = new Map<string, SourceRefund[]>();
 
-  for (const row of parseRows(csvText)) {
+  for (const row of parseBundleRows(csvText, REFUND_DETAILS_FILENAME, REFUND_REQUIRED_COLUMNS)) {
     const refund = readRefund(row, anomalies);
     if (refund === null) continue;
 
@@ -93,40 +82,7 @@ export function parseAmazonRefundDetails(csvText: string): AmazonRefundParseResu
   return { refundsByOrderId, anomalies };
 }
 
-function parseRows(csvText: string): Row[] {
-  const parsed = Papa.parse<Row>(csvText, {
-    header: true,
-    skipEmptyLines: true,
-    transformHeader: (header) => header.trim(),
-  });
-
-  const [firstError] = parsed.errors;
-  if (firstError !== undefined) {
-    throw new AmazonBundleShapeError(
-      `${REFUND_DETAILS_FILENAME} did not parse as CSV: ${firstError.type} ${firstError.code} ` +
-        `at row ${String(firstError.row ?? '?')} — ${firstError.message}`
-    );
-  }
-
-  const fields = parsed.meta.fields ?? [];
-  if (fields.length === 0) {
-    throw new AmazonBundleShapeError(`${REFUND_DETAILS_FILENAME} has no header row`);
-  }
-
-  const present = new Set(fields);
-  const missing = REFUND_REQUIRED_COLUMNS.filter((column) => !present.has(column));
-  if (missing.length > 0) {
-    throw new AmazonBundleShapeError(
-      `${REFUND_DETAILS_FILENAME} is missing ${String(missing.length)} expected column(s): ` +
-        `${missing.join(', ')}. This is a different export format, not a corrupt file — ` +
-        `verify the bundle against a fresh download before widening the parser.`
-    );
-  }
-
-  return parsed.data;
-}
-
-function readRefund(row: Row, anomalies: AmazonAnomaly[]): AmazonRefund | null {
+function readRefund(row: Row, anomalies: AmazonAnomaly[]): SourceRefund | null {
   const sourceOrderId = readText(row['Order ID']) ?? UNKNOWN_ORDER_ID;
   const drop = (detail: string): null => {
     anomalies.push({ kind: 'dropped-refund', sourceOrderId, detail });

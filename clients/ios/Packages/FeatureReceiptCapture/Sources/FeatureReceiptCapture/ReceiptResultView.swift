@@ -7,8 +7,8 @@ import SwiftUI
 /// landed, whether the call ever got far enough to answer with one — is
 /// ``ReceiptResultViewModel``'s. Same split as `TransactionDetailView`.
 ///
-/// The screen draws no navigation chrome of its own: whoever embeds it (the
-/// capture flow POPS-1959 builds) owns where it sits and what the bar says.
+/// The screen draws no navigation chrome of its own: whoever embeds it — the
+/// capture flow — owns where it sits and what the bar says.
 public struct ReceiptResultView: View {
     @State private var model: ReceiptResultViewModel
 
@@ -25,14 +25,20 @@ public struct ReceiptResultView: View {
             .task { await model.submit() }
     }
 
-    @ViewBuilder private var content: some View {
+    /// `internal` rather than `private` so a test can render one state at a
+    /// time without going through `body`'s `.task` — the same reason
+    /// `ReceiptCapturePrompt` was split out as its own type instead of a
+    /// private computed property.
+    @ViewBuilder internal var content: some View {
         switch model.state {
         case .submitting:
             LoadingStateView(message: ReceiptResultCopy.submitting)
+                .accessibilityIdentifier(ReceiptResultAccessibility.submitting)
         case .failed(let error):
             ErrorStateView(
                 message: ReceiptResultCopy.message(for: error),
-                retryTitle: ReceiptResultCopy.retry
+                retryTitle: ReceiptResultCopy.retry,
+                retryAccessibilityIdentifier: ReceiptResultAccessibility.retryButton
             ) {
                 Task { await model.submit() }
             }

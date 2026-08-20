@@ -1,43 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { solve } from '../solve.js';
+import { charge, run, txn } from './solver-fixtures.js';
 
-import type { SolvableCharge, SolvableTransaction, SolverInput, SolverOutput } from '../types.js';
-
-function charge(overrides: Partial<SolvableCharge> = {}): SolvableCharge {
-  return {
-    id: 'chg-1',
-    purchaseId: 'ord-1',
-    position: 0,
-    amountCents: 4128,
-    role: 'capture',
-    orderedAt: '2026-03-04T00:00:00Z',
-    descriptorPattern: null,
-    settlementWindowDays: null,
-    ...overrides,
-  };
-}
-
-function txn(overrides: Partial<SolvableTransaction> = {}): SolvableTransaction {
-  return {
-    uri: 'pops://finance/transaction/t1',
-    description: 'AMAZON MKTPLACE AU',
-    amountCents: 4128,
-    date: '2026-03-06',
-    ...overrides,
-  };
-}
-
-function run(input: Partial<SolverInput> = {}): SolverOutput {
-  return solve({
-    charges: [charge()],
-    transactions: [txn()],
-    confirmed: [],
-    rejected: [],
-    defaultWindowDays: 21,
-    ...input,
-  });
-}
+import type { SolverInput } from '../types.js';
 
 describe('stage 1 — exact', () => {
   it('links a charge to the single transaction for its amount', () => {
@@ -54,6 +19,7 @@ describe('stage 1 — exact', () => {
         amountCents: 4128,
         linkType: 'exact',
         confidence: 0.99,
+        matchRuleId: null,
       },
     ]);
   });
@@ -443,6 +409,7 @@ describe('a rejected pairing', () => {
         amountCents: 4128,
         linkType: 'exact',
         confidence: 0.99,
+        matchRuleId: null,
       },
     ]);
   });

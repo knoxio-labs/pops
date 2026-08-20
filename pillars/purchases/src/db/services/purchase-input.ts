@@ -1,3 +1,13 @@
+import type {
+  CaptureSource,
+  ChargeOrigin,
+  DocumentKind,
+  IngestMethod,
+  ItemKind,
+  SettlementMode,
+  SettlementRole,
+  ShipmentStatus,
+} from '../../contract/constants.js';
 /**
  * The ingest payload shape.
  *
@@ -9,15 +19,7 @@
  * Split from `purchase-writes.ts` so the write path stays readable; these
  * are types only, with no behaviour.
  */
-import type {
-  ChargeOrigin,
-  DocumentKind,
-  IngestMethod,
-  ItemKind,
-  SettlementMode,
-  SettlementRole,
-  ShipmentStatus,
-} from '../../contract/constants.js';
+import type { ProductIdentity } from '../../contract/types/purchase.js';
 
 export interface CreateShipmentInput {
   /** Adapter-local wiring handle. Never persisted. */
@@ -43,7 +45,16 @@ export interface CreateItemInput {
   /** Adapter-local {@link CreateShipmentInput.ref} of the delivery that brought it. */
   readonly shipmentRef?: string | null;
   readonly name: string;
-  readonly sku?: string | null;
+  /**
+   * The merchant's product identifier and the namespace it lives in, as one
+   * value. Undefined for every source that states none.
+   *
+   * One value rather than two fields is what holds the pair total: the
+   * column CHECK can reject a namespace with nothing in it, but SQLite
+   * cannot be given the converse on a table that already exists, so this
+   * type is where "an identifier with no namespace" stops being expressible.
+   */
+  readonly sku?: ProductIdentity | null;
   readonly url?: string | null;
   readonly imageUrl?: string | null;
   readonly quantity?: number;
@@ -96,6 +107,30 @@ export interface CreateChargeInput {
   readonly allocations?: readonly CreateChargeAllocationInput[];
 }
 
+/**
+ * When and where the evidence was captured — a device that said so, or the
+ * photograph itself.
+ *
+ * Every field independently optional: a client sending only a location
+ * leaves the capture time to the camera, and a photograph that kept its
+ * timestamp and lost its GPS is the ordinary case. An input with nothing in
+ * it writes no row, so an order carries this only when something actually
+ * stated it.
+ *
+ * The coordinates are sensitive. Nothing on the write path logs them, and
+ * no read path returns them (`schema/capture.ts`).
+ */
+export interface CreateCaptureInput {
+  /** ISO-8601 instant the shutter fired. NOT when the shop happened. */
+  readonly capturedAt?: string | null;
+  readonly capturedAtSource?: CaptureSource | null;
+  readonly utcOffsetMinutes?: number | null;
+  readonly declaredTimeZone?: string | null;
+  readonly latitude?: number | null;
+  readonly longitude?: number | null;
+  readonly locationSource?: CaptureSource | null;
+}
+
 export interface CreateDocumentInput {
   readonly documentUri: string;
   readonly shipmentRef?: string | null;
@@ -125,6 +160,11 @@ export interface CreatePurchaseInput {
   readonly items?: readonly CreateItemInput[];
   readonly charges?: readonly CreateChargeInput[];
   readonly documents?: readonly CreateDocumentInput[];
+  /**
+   * What the device and the photograph said about themselves. Written only
+   * when it states something — see {@link CreateCaptureInput}.
+   */
+  readonly capture?: CreateCaptureInput;
   /**
    * Facts about the whole order that are not fields — `date-uncertain` and
    * its future siblings. Free-form; see `schema/purchases.ts`.

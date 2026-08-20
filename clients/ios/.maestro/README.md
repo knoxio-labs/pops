@@ -1,8 +1,8 @@
 # UI-level flows
 
 The only tests in this client that exercise a screen the way somebody holding
-the phone does — everything else stops at the view model. One happy path and
-five recoveries, each starting from an unpaired launch:
+the phone does — everything else stops at the view model. One happy path, five
+recoveries and one second feature, each starting from an unpaired launch:
 
 | Flow                                            | What it proves                                                                                                                    |
 | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
@@ -12,6 +12,7 @@ five recoveries, each starting from an unpaired launch:
 | `unreachable-transactions-say-so.yaml`          | Transactions that cannot be fetched say so instead of reading as an empty list.                                                   |
 | `root-says-so-when-nothing-is-usable.yaml`      | A feature the BFM reports `unavailable` never opens its screen; the root says so and Try again leaves it once the pillar answers. |
 | `root-contract-mismatch-reads-differently.yaml` | A pillar answering something unreadable reads as a different sentence from `unavailable`, not the same one.                       |
+| `receipt-capture-says-there-is-no-camera.yaml`  | A second usable feature earns a tab, and the screen behind it explains the camera it cannot open instead of offering one.         |
 
 ## Running them
 
@@ -173,10 +174,33 @@ call the seams are in `scripts/` beside the flows, one per switch.
   that is not JSON — a misrouted proxy's signature, and the one case that must
   read as a different sentence from "nothing usable at all" rather than the
   same one.
+- **A second feature** is the `purchases` pillar answering its own `/openapi`.
+  It is on the registry for the whole run and refuses that probe until a flow
+  asks it not to, which is the same shape finance's two `/openapi` switches
+  have and for the same cache reason. `scripts/ios-e2e/purchases-stub.mjs`
+  carries it, on its own port — two pillars cannot share one `/openapi`.
 
 A silent recovery leaves no mark on a screenshot, so the expiry flow finishes
 by reading `GET /__e2e/state` back: one token aged, one refresh spent. Without
 it every assertion in that flow would also hold if the arming had done nothing.
+
+## Receipt capture, and the half of it no flow can reach
+
+The Simulator has no camera. `VNDocumentCameraViewController` presents there
+without crashing and then refuses to configure a capture input at all, so there
+is no preview, no shutter and no scan output — nothing for Maestro or any other
+Simulator-hosted driver to interact with. That is not a Maestro limitation and
+no selector works around it.
+
+So `receipt-capture-says-there-is-no-camera.yaml` drives everything on the near
+side of the camera: the tab that only exists once a second feature is usable,
+the screen behind it, which of the three refusals it is showing, and the rule
+that only a reversible refusal is offered a way to reverse it. What sits on the
+far side — a capture, an upload, and the three outcomes the result screen draws
+from it — needs the capture step stubbed inside the app before a flow can reach
+it, and that is tracked rather than done here. Until it is, those outcomes are
+covered where they can be: `FeatureReceiptCapture`'s own suites render each one
+and read it back.
 
 ## What these flows do not prove
 

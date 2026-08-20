@@ -6,7 +6,7 @@
  * every consumer wants and re-deriving it per caller is how the residual
  * ends up computed three different ways.
  */
-import { and, asc, desc, eq, gte, inArray, lte } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, inArray, isNull, lte } from 'drizzle-orm';
 
 import {
   purchaseDocuments,
@@ -26,6 +26,7 @@ import { selectChargeDetails, type PurchaseChargeDetail } from './purchase-read-
 import type { SQL } from 'drizzle-orm';
 
 import type { PurchaseStatus } from '../../contract/constants.js';
+import type { MerchantFilter } from '../../contract/merchant-filter.js';
 import type {
   PurchaseDocumentRow,
   PurchaseItemRow,
@@ -48,6 +49,10 @@ export interface PurchaseScopeFilter {
   readonly from?: string;
   /** Inclusive upper bound on `orderedAt` (ISO-8601). */
   readonly to?: string;
+  /** The order's own currency, which the merchant roll-up also groups on. */
+  readonly currency?: string;
+  /** One merchant group, spelled the way the roll-up keys one. */
+  readonly merchant?: MerchantFilter;
 }
 
 export interface ListPurchasesFilter extends PurchaseScopeFilter {
@@ -119,7 +124,35 @@ export function purchaseFilterConditions(filter: PurchaseScopeFilter): readonly 
       : []),
     ...(filter.from === undefined ? [] : [gte(purchases.orderedAt, filter.from)]),
     ...(filter.to === undefined ? [] : [lte(purchases.orderedAt, filter.to)]),
+    ...(filter.currency === undefined ? [] : [eq(purchases.currency, filter.currency)]),
+    ...(filter.merchant === undefined ? [] : merchantConditions(filter.merchant)),
   ];
+}
+
+/**
+ * The `purchases` predicates one merchant group denotes.
+ *
+ * The `merchantEntityId IS NULL` on the `name` branch is the load-bearing
+ * one, and dropping it is the silent widening this filter exists to avoid: a
+ * `name` group holds exactly the orders that resolved to no entity, so
+ * matching the label alone would sweep in every order that *did* resolve to
+ * an entity wearing the same label. The list would then hold more orders than
+ * the row it was opened from counted, and nothing on screen would say which
+ * of the two figures was wrong.
+ *
+ * Symmetrically, an `entity` group is keyed on the id alone: an order
+ * carrying the id is not obliged to also state the label, and the roll-up
+ * takes its label from whichever of the group's orders is newest.
+ */
+function merchantConditions(merchant: MerchantFilter): readonly SQL[] {
+  switch (merchant.resolution) {
+    case 'entity':
+      return [eq(purchases.merchantEntityId, merchant.entityId)];
+    case 'name':
+      return [isNull(purchases.merchantEntityId), eq(purchases.merchantEntityName, merchant.name)];
+    case 'unattributed':
+      return [isNull(purchases.merchantEntityId), isNull(purchases.merchantEntityName)];
+  }
 }
 
 export function listPurchases(

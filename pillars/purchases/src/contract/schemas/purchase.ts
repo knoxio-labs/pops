@@ -13,6 +13,7 @@ import {
   SETTLEMENT_ROLES,
   SHIPMENT_STATUSES,
 } from '../constants.js';
+import { ProductIdentitySchema } from './product-identity.js';
 
 export const IngestMethodSchema = z.enum(INGEST_METHODS);
 export const SettlementModeSchema = z.enum(SETTLEMENT_MODES);
@@ -127,6 +128,17 @@ export const ItemTagSchema = z
   .regex(ITEM_TAG_PATTERN, 'expected a lower-case slug, e.g. fruit or single-origin');
 
 /**
+ * An order tag: a fact about how the whole order was read, not about a
+ * product. `date-uncertain`, `promotion-offset`.
+ *
+ * Same slug rule as {@link ItemTagSchema} and a separate schema anyway,
+ * because the two vocabularies are separate — an order tag records a
+ * reading, an item tag classifies a thing — and one of them growing a value
+ * must not be able to widen the other.
+ */
+export const PurchaseTagSchema = z.string().regex(ITEM_TAG_PATTERN, 'expected a lower-case slug');
+
+/**
  * A classification bound to the marker that says whether to trust it.
  *
  * The whole point of the object is that a consumer cannot obtain
@@ -151,7 +163,8 @@ export const PurchaseItemSchema = z.object({
   shipmentId: z.string().nullable(),
   position: z.int().min(0),
   name: z.string(),
-  sku: z.string().nullable(),
+  /** Null when the source states no identifier — every shipped adapter but the Amazon exports. */
+  sku: ProductIdentitySchema.nullable(),
   url: z.string().nullable(),
   imageUrl: z.string().nullable(),
   quantity: z.int().min(1),
@@ -175,6 +188,13 @@ export const PurchaseItemUnitSchema = z.object({
   serialNumber: z.string().nullable(),
   inventoryItemUri: PopsUriSchema.nullable(),
   inventoryItemStaleAt: IsoTimestampSchema.nullable(),
+  /**
+   * Set when this unit was offered to inventory and turned down. Mutually
+   * exclusive with {@link inventoryItemUri}: a unit is undecided, in
+   * inventory, or declined, and only an undecided one is ever proposed
+   * again.
+   */
+  inventoryDeclinedAt: IsoTimestampSchema.nullable(),
   createdAt: IsoTimestampSchema,
 });
 
@@ -233,65 +253,4 @@ export const PurchaseSourceSchema = z.object({
   autoLinkPolicy: AutoLinkPolicySchema,
   ingestAdapter: z.string().nullable(),
   createdAt: IsoTimestampSchema,
-});
-
-/**
- * The accounting split.
- *
- * Part of the wire format on purpose, and pre-split so no consumer has to
- * derive it. A view that drops the residual converts a known unknown into a
- * false certainty, which ADR-042 rates as worse than showing nothing; one
- * that folds `awaitingImportCents` into it flags every recent order as
- * broken until its statement imports; and one that folds refunds in reports
- * returned money as missing money.
- *
- * The identity consumers can rely on:
- * `totalCents === matchedCents + awaitingImportCents + residualCents`,
- * with `refundedCents` orthogonal and `netSpendCents` the headline figure,
- * `totalCents − refundedCents`. That last one answers what the order cost,
- * not how much of it has been proven — "money we can prove moved, net of
- * refunds" stays derivable as `matched + awaitingImport − refunded`.
- */
-export const PurchaseAccountingSchema = z.object({
-  totalCents: CentsSchema,
-  matchedCents: CentsSchema,
-  awaitingImportCents: CentsSchema,
-  residualCents: CentsSchema,
-  /** Positive magnitude, so `refundedCents: 1179` reads as "$11.79 came back". */
-  refundedCents: NonNegativeCentsSchema,
-  /** Signed and unclamped: negative is a genuine over-refund, not an artefact. */
-  netSpendCents: CentsSchema,
-});
-
-export const PurchaseItemDetailSchema = z.object({
-  item: PurchaseItemSchema,
-  /** POPS classification, each carrying whether it is asserted or proposed. */
-  tags: z.array(PurchaseItemTagSchema),
-  /** Verbatim merchant prose, in the order it was printed. */
-  notes: z.array(z.string()),
-  units: z.array(PurchaseItemUnitSchema),
-  landedCostCents: CentsSchema,
-});
-
-export const PurchaseChargeDetailSchema = z.object({
-  charge: PurchaseChargeSchema,
-  links: z.array(PurchaseChargeLinkSchema),
-  allocations: z.array(PurchaseItemAllocationSchema),
-});
-
-/** An order and every list hanging off it. */
-export const PurchaseDetailSchema = z.object({
-  /**
-   * Facts about the order that are not fields — `date-uncertain` when the
-   * receipt stated no date, `timezone-uncertain` when the shop's zone had
-   * to be guessed. A reviewer needs these to know which figures the source
-   * actually stated.
-   */
-  tags: z.array(z.string()),
-  purchase: PurchaseSchema,
-  shipments: z.array(PurchaseShipmentSchema),
-  items: z.array(PurchaseItemDetailSchema),
-  charges: z.array(PurchaseChargeDetailSchema),
-  documents: z.array(PurchaseDocumentSchema),
-  accounting: PurchaseAccountingSchema,
 });

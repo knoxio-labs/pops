@@ -42,7 +42,7 @@ const fullOrder = {
       ref: 'tamper',
       shipmentRef: 'box1',
       name: 'Espresso Tamping Station',
-      sku: 'B0DSVZQ8P5',
+      sku: { value: 'B0DSVZQ8P5', scheme: 'asin' },
       unitPriceCents: 4499,
       lineTotalCents: 4499,
       kind: 'durable',
@@ -144,7 +144,7 @@ describe('POST /purchases', () => {
   it('projects tags with their confirmation marker and computes landed cost', async () => {
     const res = await request(app).post('/purchases').send(fullOrder);
     const tamper = res.body.items.find(
-      (i: { item: { sku: string } }) => i.item.sku === 'B0DSVZQ8P5'
+      (i: { item: { sku: { value: string } | null } }) => i.item.sku?.value === 'B0DSVZQ8P5'
     );
     expect(tamper.tags.map((t: { tag: string }) => t.tag)).toEqual(['coffee', 'kitchen']);
     // Stated in the payload, so asserted — a caller supplying an item tag is
@@ -300,7 +300,9 @@ describe('GET /items', () => {
     const res = await request(app).get('/items?tag=coffee');
     expect(res.status).toBe(200);
     expect(res.body.items).toHaveLength(1);
-    expect(res.body.items[0].item.sku).toBe('B0DSVZQ8P5');
+    // The identifier arrives with the namespace that says how far it
+    // means anything, never as a bare string.
+    expect(res.body.items[0].item.sku).toEqual({ value: 'B0DSVZQ8P5', scheme: 'asin' });
     // Without this a caller summing "everything tagged coffee" cannot tell
     // which of those labels anyone ever agreed with.
     expect(res.body.items[0].confirmedAt).not.toBeNull();
@@ -713,6 +715,156 @@ describe('purchase handler edge paths', () => {
 
   it('rejects a non-ISO range bound rather than silently matching nothing', async () => {
     expect((await request(app).get('/purchases?from=last%20tuesday')).status).toBe(400);
+  });
+
+  describe('the merchant filter a roll-up row opens', () => {
+    async function seedMerchants(): Promise<void> {
+      const merchants = [
+        { merchantEntityId: 'ent-woolies', merchantEntityName: 'Woolworths' },
+        { merchantEntityId: null, merchantEntityName: 'Woolworths' },
+        { merchantEntityId: null, merchantEntityName: null },
+      ];
+      for (const [index, merchant] of merchants.entries()) {
+        await request(app)
+          .post('/purchases')
+          .send({
+            ...minimalOrder,
+            ...merchant,
+            checksum: `merchant-${String(index)}`,
+            sourceOrderId: `merchant-${String(index)}`,
+          });
+      }
+    }
+
+    function checksums(body: { items: { checksum: string }[] }): string[] {
+      return body.items.map((item) => item.checksum);
+    }
+
+    it('opens an entity group without the label group that shares its name', async () => {
+      await seedMerchants();
+      const res = await request(app).get('/purchases?merchantEntityId=ent-woolies');
+
+      expect(res.status).toBe(200);
+      expect(checksums(res.body)).toEqual(['merchant-0']);
+    });
+
+    it('opens a label group without the entity group that shares its name', async () => {
+      await seedMerchants();
+      const res = await request(app).get('/purchases?merchantEntityName=Woolworths');
+
+      expect(res.status).toBe(200);
+      expect(checksums(res.body)).toEqual(['merchant-1']);
+    });
+
+    it('opens the unattributed bucket', async () => {
+      await seedMerchants();
+      const res = await request(app).get('/purchases?merchantUnattributed=true');
+
+      expect(res.status).toBe(200);
+      expect(checksums(res.body)).toEqual(['merchant-2']);
+    });
+
+    // A client sending its control's state unconditionally must not thereby
+    // forbid the other two parameters, so `false` is the absence of a filter
+    // rather than a request to exclude the bucket.
+    it('treats merchantUnattributed=false as no merchant filter at all', async () => {
+      await seedMerchants();
+      const res = await request(app).get(
+        '/purchases?merchantUnattributed=false&merchantEntityName=Woolworths'
+      );
+
+      expect(res.status).toBe(200);
+      expect(checksums(res.body)).toEqual(['merchant-1']);
+    });
+
+    it('refuses two merchant parameters rather than answering one of them', async () => {
+      await seedMerchants();
+      const res = await request(app).get(
+        '/purchases?merchantEntityId=ent-woolies&merchantEntityName=Woolworths'
+      );
+
+      expect(res.status).toBe(400);
+      expect(res.body.code).toBe('MERCHANT_FILTER_CONFLICT');
+      expect(res.body.message).toContain('merchantEntityId');
+      expect(res.body.message).toContain('merchantEntityName');
+    });
+
+    it('refuses the same combination on the roll-up the row came from', async () => {
+      await seedMerchants();
+      const res = await request(app).get(
+        '/analytics/merchant-spend?merchantEntityName=Woolworths&merchantUnattributed=true'
+      );
+
+      expect(res.status).toBe(400);
+      expect(res.body.code).toBe('MERCHANT_FILTER_CONFLICT');
+    });
+
+    it('scopes a roll-up to one merchant, so a row and its orders agree', async () => {
+      await seedMerchants();
+      const rollup = await request(app).get(
+        '/analytics/merchant-spend?merchantEntityName=Woolworths&currency=AUD'
+      );
+      const orders = await request(app).get(
+        '/purchases?merchantEntityName=Woolworths&currency=AUD'
+      );
+
+      expect(rollup.body.merchants).toHaveLength(1);
+      expect(rollup.body.merchants[0].orderCount).toBe(orders.body.items.length);
+    });
+
+    it('rejects a currency that is not an ISO code rather than matching nothing', async () => {
+      expect((await request(app).get('/purchases?currency=dollars')).status).toBe(400);
+    });
+
+    // The leaderboard takes the roll-up's whole scope vocabulary, so a
+    // parameter it advertises and ignores would answer a narrowed question
+    // with the unnarrowed figure. `amazon` keys chain-wide, so both orders
+    // land in one group and an ignored filter shows up as orderCount 2.
+    async function seedSameSkuAtTwoMerchants(): Promise<void> {
+      const merchants = ['Woolworths', 'Coles'];
+      for (const [index, merchantEntityName] of merchants.entries()) {
+        await request(app)
+          .post('/purchases')
+          .send({
+            ...minimalOrder,
+            merchantEntityName,
+            checksum: `leaderboard-${String(index)}`,
+            sourceOrderId: `leaderboard-${String(index)}`,
+            items: [
+              {
+                ref: 'pods',
+                name: 'Coffee Pods',
+                sku: { value: 'B0POD', scheme: 'merchant' },
+                unitPriceCents: 1200,
+                lineTotalCents: 1200,
+              },
+            ],
+          });
+      }
+    }
+
+    it('scopes the leaderboard to one merchant rather than counting both', async () => {
+      await seedSameSkuAtTwoMerchants();
+      const scoped = await request(app).get(
+        '/analytics/product-leaderboard?merchantEntityName=Woolworths'
+      );
+      const unscoped = await request(app).get('/analytics/product-leaderboard');
+
+      expect(unscoped.body.products).toHaveLength(1);
+      expect(unscoped.body.products[0].orderCount).toBe(2);
+      expect(scoped.body.products).toHaveLength(1);
+      expect(scoped.body.products[0].orderCount).toBe(1);
+    });
+
+    it('refuses two merchant parameters on the leaderboard as well', async () => {
+      await seedSameSkuAtTwoMerchants();
+      const res = await request(app).get(
+        '/analytics/product-leaderboard?merchantEntityId=ent-woolies&merchantEntityName=Woolworths'
+      );
+
+      expect(res.status).toBe(400);
+      expect(res.body.code).toBe('MERCHANT_FILTER_CONFLICT');
+    });
   });
 
   it('rejects a malformed pops:// document uri', async () => {

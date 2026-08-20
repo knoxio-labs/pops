@@ -10,6 +10,24 @@ extension ReceiptPart {
     }
 }
 
+extension ReceiptPurchase {
+    public static func fake(
+        id: String = "purchase-fake",
+        merchantName: String? = "Fake Store",
+        total: MoneyAmount = MoneyAmount(minorUnits: 8420, currencyCode: "AUD"),
+        orderedAt: String = "2026-01-01T09:30:00.000Z",
+        itemCount: Int = 12
+    ) -> ReceiptPurchase {
+        ReceiptPurchase(
+            id: id,
+            merchantName: merchantName,
+            total: total,
+            orderedAt: orderedAt,
+            itemCount: itemCount
+        )
+    }
+}
+
 extension ExtractedReceiptLine {
     public static func fake(
         description: String = "Fake item",
@@ -27,7 +45,6 @@ extension ExtractedReceipt {
     public static func fake(
         merchantName: String? = "Fake Store",
         address: String? = nil,
-        timeZone: String? = nil,
         purchasedOn: String? = "2026-01-01",
         purchasedAt: String? = nil,
         currency: String? = "AUD",
@@ -42,7 +59,6 @@ extension ExtractedReceipt {
         ExtractedReceipt(
             merchantName: merchantName,
             address: address,
-            timeZone: timeZone,
             purchasedOn: purchasedOn,
             purchasedAt: purchasedAt,
             currency: currency,

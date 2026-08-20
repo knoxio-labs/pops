@@ -53,6 +53,7 @@ const ACCEPTED_CALLERS: readonly InternalCallerSpec[] = [
   { name: 'finance', scopes: [AI_USAGE_SCOPE], secretEnv: 'POPS_INTERNAL_SECRET_FINANCE' },
   { name: 'cerebrum', scopes: [AI_USAGE_SCOPE], secretEnv: 'POPS_INTERNAL_SECRET_CEREBRUM' },
   { name: 'food-worker', scopes: [AI_USAGE_SCOPE], secretEnv: 'POPS_INTERNAL_SECRET_FOOD_WORKER' },
+  { name: 'purchases', scopes: [AI_USAGE_SCOPE], secretEnv: 'POPS_INTERNAL_SECRET_PURCHASES' },
   {
     name: 'ops-backfill',
     scopes: [AI_USAGE_SCOPE],

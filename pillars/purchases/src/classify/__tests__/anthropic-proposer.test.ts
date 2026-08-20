@@ -34,7 +34,13 @@ const KEY_VAR = 'ANTHROPIC_API_KEY';
 const MODEL_VAR = 'PURCHASES_ITEM_KIND_MODEL';
 
 const BATCH: readonly ProposalCandidate[] = [
-  { key: 'k1', source: 'amazon', name: 'Robot vacuum', sku: 'B0ROBOT', itemIds: ['i1'] },
+  {
+    key: 'k1',
+    source: 'amazon',
+    name: 'Robot vacuum',
+    sku: { value: 'B0ROBOTVAC', scheme: 'asin' },
+    itemIds: ['i1'],
+  },
 ];
 
 function anthropicMessage(text: string, inputTokens = 100, outputTokens = 20) {
@@ -127,7 +133,7 @@ describe('propose', () => {
     expect(result).toBe('{"proposals":[]}');
 
     const [request] = createMock.mock.calls[0] as [{ messages: { content: string }[] }];
-    expect(request.messages[0]?.content).toContain('1. (amazon) Robot vacuum [B0ROBOT]');
+    expect(request.messages[0]?.content).toContain('1. (amazon) Robot vacuum [asin B0ROBOTVAC]');
   });
 
   it("reports usage under its own operation, not the receipt reader's", async () => {

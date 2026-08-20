@@ -563,6 +563,27 @@ jobs:
       - name: Every vendored contract matches its canonical source
         run: node scripts/ci/check-vendored-contracts.mjs
 
+  receipt-max-parts-drift:
+    name: Receipt max-parts drift
+    # How many parts one receipt may be sent as is written down three times —
+    # `purchases`' MAX_RECEIPT_PARTS (the canonical limit), bfm's hand-mirrored
+    # MOBILE_RECEIPT_MAX_PARTS, and the iOS app's hand-mirrored
+    # ReceiptPart.maxPerReceipt — with nothing else in the build comparing
+    # them. This guard parses all three constants out of their real source
+    # files and fails when any is missing or they disagree. It reads the
+    # source tree directly and pulls in no third-party deps, so it skips
+    # `pnpm install`. See scripts/ci/check-receipt-max-parts-drift.mjs.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Gate self-test (proves the guard catches a mismatch, a rename, and a missing file)
+        run: node scripts/ci/check-receipt-max-parts-drift.mjs --self-test
+      - name: purchases, bfm and iOS agree on the receipt max-parts limit
+        run: node scripts/ci/check-receipt-max-parts-drift.mjs
+
   contract-consumers:
     name: Vendored consumers of a changed contract (ADR-033)
     # The producer-side half of the job above, and a REPORT rather than a gate.
@@ -724,9 +745,11 @@ jobs:
     # export, `contacts` and `purchases` from their vendored snapshot (ADR-033).
     # A vendored copy's own drift against its producer is covered separately by
     # the `vendored-contracts` job above — this job only re-runs codegen against
-    # whatever is committed. The `purchases` leg is gated here from the day its
-    # client landed, ahead of any finance page consuming it, so the client
-    # cannot rot in the gap.
+    # whatever is committed. The `purchases` leg was gated here from the day
+    # its client landed, before any finance page consumed it, so the client
+    # could not rot in the gap; the transaction purchase-detail panel
+    # (pillars/finance/app/src/pages/transactions/purchase-detail/) is now that
+    # consumer.
     #
     # Every leg is ALSO re-checked, more generally, by app-quality.yml's own
     # per-app `Codegen drift` step (`@pops/app-food` and `@pops/app-finance`

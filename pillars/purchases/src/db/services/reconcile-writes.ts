@@ -118,6 +118,7 @@ export function persistProposedLinks(db: PurchasesDb, links: readonly ProposedLi
         amountCents: link.amountCents,
         linkType: link.linkType,
         confidence: link.confidence,
+        matchRuleId: link.matchRuleId,
       })
       .onConflictDoNothing()
       .run().changes;
@@ -202,9 +203,12 @@ export interface ConfirmOutcome {
   /** False when no such link exists — the queue was read before a sweep. */
   readonly pinned: boolean;
   /**
-   * The rule this link is now attributed to, or null when the descriptor
-   * carried no pattern worth keying on — or when the link predates
-   * descriptors being recorded at all.
+   * The rule this link is attributed to: the one that admitted it when
+   * stage 4 proposed it, otherwise the one this decision just taught.
+   *
+   * Null is a normal outcome, not a failure — the descriptor may carry no
+   * pattern worth keying on, and a link proposed before descriptors were
+   * recorded carries none at all.
    */
   readonly matchRuleId: string | null;
 }
@@ -220,7 +224,9 @@ export interface ConfirmOutcome {
  *
  * `matchRuleId` on the link is what ties the two together, and it is what a
  * later reader needs to explain a link by naming the rule behind it rather
- * than asserting one exists.
+ * than asserting one exists. A confirm fills it in; it never revises one a
+ * stage-4 proposal already wrote, because those name different things — the
+ * rule that admitted this descriptor against the rule this decision teaches.
  *
  * **Confirming an already-confirmed link does nothing.** Not defensive
  * coding: without it a double-click records a second application of a rule
@@ -260,13 +266,21 @@ export function confirmLink(
     if (link === undefined) return { pinned: false, matchRuleId: null };
     if (link.confirmedAt !== null) return { pinned: true, matchRuleId: link.matchRuleId };
 
-    const matchRuleId = recordMatchRule(tx, {
+    const recorded = recordMatchRule(tx, {
       transactionDescription: link.transactionDescription,
       source: link.source,
       entityId: link.entityId,
       entityName: link.entityName,
       confidence: link.confidence,
     });
+
+    // A link proposed by stage 4 already names the rule that admitted its
+    // descriptor, and that is the attribution the reader needs: the rule
+    // this link happened BECAUSE of. `recordMatchRule` keys on the exact
+    // normalised descriptor, so for a `contains` or `regex` rule it is a
+    // different row, and overwriting here would silently re-attribute the
+    // link to a rule that had nothing to do with proposing it.
+    const matchRuleId = link.matchRuleId ?? recorded;
 
     tx.update(purchaseChargeLinks)
       .set({ confirmedAt: nowIso, matchRuleId })
