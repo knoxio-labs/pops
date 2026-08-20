@@ -134,11 +134,18 @@ internal struct ReceiptResultRenderingTests {
 
     /// The reading is rows of line items now, not one newline-joined blob
     /// under an "Items" label. A card with items has to be a taller, denser
-    /// card than one without — which is a difference in layout, so it holds
-    /// wherever the renderer runs.
+    /// card than one without.
+    ///
+    /// Gated, though the difference is a layout one: where the catalogue did
+    /// not compile, every token this card draws in resolves alike and the
+    /// canvas carries no visible mark at all, so two layouts that genuinely
+    /// differ still rasterise to the same bytes. Measured, not assumed — this
+    /// comparison was written with the opt-out and the host lane found the two
+    /// renders byte-identical. `ReceiptLineItemPresentationTests` is where the
+    /// line items are answered for on every lane.
     @Test(
         "the line items reach the needs-review card",
-        .comparisonSurvivesAnUncompiledCatalog)
+        .requiresCompiledColorCatalog)
     func lineItemsReachTheCanvas() throws {
         let withLines = try #require(
             Self.render(

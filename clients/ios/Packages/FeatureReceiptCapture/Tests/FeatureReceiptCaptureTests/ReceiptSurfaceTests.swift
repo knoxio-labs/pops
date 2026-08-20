@@ -177,6 +177,44 @@ internal struct ReceiptPagesTests {
     }
 }
 
+/// The words the capture screen shows when a scan produced no receipt.
+///
+/// `ReceiptCaptureRenderingTests.problemsAreDistinct` makes the same claim by
+/// rasterising, and disables itself where the colour catalogue did not
+/// compile. Four sentences are four sentences on every lane.
+@Suite("Capture problem copy")
+internal struct ReceiptCaptureProblemCopyTests {
+    private static let everyProblem: [ReceiptCaptureProblem] = [
+        .cameraFailed, .noPages, .unpreparedPages, .tooManyPages(9),
+    ]
+
+    @Test("every problem says something", arguments: everyProblem)
+    func everyProblemHasCopy(problem: ReceiptCaptureProblem) {
+        #expect(
+            !ReceiptCaptureCopy.message(for: problem)
+                .trimmingCharacters(in: .whitespaces).isEmpty)
+    }
+
+    /// One sentence covering all four would leave somebody whose scan came
+    /// back empty reading that they took too many photographs.
+    @Test("no two problems say the same thing")
+    func problemsReadDifferently() {
+        let messages = Self.everyProblem.map(ReceiptCaptureCopy.message(for:))
+
+        #expect(Set(messages).count == messages.count)
+    }
+
+    /// "you took eleven" is what makes the limit actionable, and the limit
+    /// itself is what makes the next attempt likely to work.
+    @Test("too many pages says how many, and how many are allowed")
+    func tooManyPagesCarriesBothNumbers() {
+        let message = ReceiptCaptureCopy.message(for: .tooManyPages(11))
+
+        #expect(message.contains("11"))
+        #expect(message.contains("\(ReceiptPart.maxPerReceipt)"))
+    }
+}
+
 /// The one layout decision on these screens that is not the framework's.
 @Suite("Line item layout")
 internal struct ReceiptLineLayoutTests {
