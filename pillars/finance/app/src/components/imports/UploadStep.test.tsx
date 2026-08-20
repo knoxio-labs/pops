@@ -99,3 +99,29 @@ describe('UploadStep — merging several CSVs', () => {
     expect(useImportStore.getState().currentStep).toBe(1);
   });
 });
+
+describe('UploadStep — a headerless export uploaded under a headed bank', () => {
+  it('imports every line rather than losing the first charge to the header row', async () => {
+    const lineCount = 556;
+    const contents =
+      Array.from(
+        { length: lineCount },
+        (_unused, index) => `01/07/2026,-${(index + 1).toFixed(2)},MERCHANT ${index + 1},,,,,`
+      ).join('\r\n') + '\r\n';
+
+    const { container } = render(<UploadStep />);
+
+    // 'ANZ' is the headed dialect; the file is a headerless credit-card export.
+    const anz = container.querySelector('[role="radio"][value="ANZ"]');
+    if (!anz) throw new Error('ANZ radio not found');
+    fireEvent.click(anz);
+    selectFiles([csvFile('anz.csv', contents)]);
+    clickNext();
+
+    await waitFor(() => expect(useImportStore.getState().currentStep).toBe(2));
+    const state = useImportStore.getState();
+    expect(state.rows).toHaveLength(lineCount);
+    expect(state.headers).not.toContain('MERCHANT 1');
+    expect(state.rows[0]).toMatchObject({ 'Column 3': 'MERCHANT 1' });
+  });
+});

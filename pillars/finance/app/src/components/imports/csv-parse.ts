@@ -6,10 +6,10 @@ import type { ParsedCsvFile } from './csv-merge';
 /**
  * Reading an uploaded CSV into the wizard's row shape, for both header layouts.
  *
- * A headerless export is read positionally and keyed by the dialect's synthetic
- * column names, so merging, auto-detection, mapping and preview all receive the
- * same `Record<string, string>` a headed file produces and none of them needs
- * to know the file arrived without a header row.
+ * Every file is read positionally and then keyed by column name, so merging,
+ * auto-detection, mapping and preview all receive the same
+ * `Record<string, string>` whether or not the export named its columns, and
+ * none of them needs to know which it was.
  */
 
 export interface ParseResult {
@@ -18,33 +18,63 @@ export interface ParseResult {
   parsed?: ParsedCsvFile;
 }
 
-/**
- * Key a headerless file's rows by the dialect's synthetic column names, so
- * every later step — merging, auto-detection, mapping, preview — sees the same
- * `Record<string, string>` shape a headed file produces.
- *
- * Rows longer than the declared columns keep their surplus cells under a
- * positional name rather than being dropped, since a silently truncated row
- * would import as a valid transaction with data missing.
- */
-function keyByColumns(
-  rows: string[][],
-  columns: readonly string[]
-): { headers: string[]; rows: Record<string, string>[] } {
-  const width = Math.max(columns.length, ...rows.map((row) => row.length));
-  const headers = Array.from(
-    { length: width },
-    (_unused, index) => columns[index] ?? `Column ${index + 1}`
-  );
-  return {
-    headers,
-    rows: rows.map((row) =>
-      Object.fromEntries(headers.map((header, index) => [header, row[index] ?? '']))
-    ),
-  };
+const DATE_CELL = /^\d{1,4}[/-]\d{1,2}[/-]\d{1,4}$/;
+const AMOUNT_CELL = /^[-+(]?\d+(\.\d+)?\)?$/;
+
+function isDateLike(cell: string): boolean {
+  return DATE_CELL.test(cell.trim());
 }
 
-function parseHeaderless(file: File, columns: readonly string[]): Promise<ParseResult> {
+function isAmountLike(cell: string): boolean {
+  const cleaned = cell.trim().replaceAll(/[$,\s]/g, '');
+  return cleaned.length > 0 && AMOUNT_CELL.test(cleaned);
+}
+
+function looksLikeTransaction(row: readonly string[]): boolean {
+  return row.some((cell) => isDateLike(cell) || isAmountLike(cell));
+}
+
+/**
+ * Whether row 1 names the columns or is already a transaction.
+ *
+ * The file answers this more reliably than the bank picker does, and the cost
+ * of believing the picker is silent: reading a headerless export as headed
+ * consumes a real charge as the column names and drops it from the import with
+ * nothing to show for it, while reading a headed export as headerless imports
+ * the column names as a transaction. A row carrying a date or a signed amount
+ * is data; only a row carrying neither falls back to what the dialect declares.
+ */
+export function firstRowIsHeader(rows: readonly string[][], dialect: BankDialect): boolean {
+  const first = rows[0];
+  if (!first) return dialect.hasHeader;
+  return !looksLikeTransaction(first);
+}
+
+/**
+ * Name every column of the widest row, falling back to a positional name where
+ * the source has none.
+ *
+ * Rows longer than the declared columns keep their surplus cells rather than
+ * being dropped, since a silently truncated row would import as a valid
+ * transaction with data missing. Repeated names are suffixed so two columns
+ * never collapse into one key.
+ */
+function nameColumns(names: readonly string[], width: number): string[] {
+  const occurrences = new Map<string, number>();
+  return Array.from({ length: width }, (_unused, index) => {
+    const base = names[index]?.trim() || `Column ${index + 1}`;
+    const seen = occurrences.get(base) ?? 0;
+    occurrences.set(base, seen + 1);
+    return seen === 0 ? base : `${base}_${seen}`;
+  });
+}
+
+function stripByteOrderMark(row: readonly string[]): string[] {
+  const [first, ...rest] = row;
+  return first === undefined ? [] : [first.replace(/^\uFEFF/, ''), ...rest];
+}
+
+function parseCsvFile(file: File, dialect: BankDialect): Promise<ParseResult> {
   return new Promise((resolve) => {
     Papa.parse<string[]>(file, {
       header: false,
@@ -57,53 +87,36 @@ function parseHeaderless(file: File, columns: readonly string[]): Promise<ParseR
           });
           return;
         }
-        if (results.data.length === 0) {
+        const lines = results.data.map(stripByteOrderMark);
+        const [firstLine] = lines;
+        if (!firstLine) {
           resolve({ ok: false, error: `${file.name}: CSV file is empty` });
           return;
         }
-        const { headers, rows } = keyByColumns(results.data, columns);
-        resolve({ ok: true, parsed: { fileName: file.name, headers, rows } });
+        const hasHeaderRow = firstRowIsHeader(lines, dialect);
+        const dataRows = hasHeaderRow ? lines.slice(1) : lines;
+        if (dataRows.length === 0) {
+          resolve({ ok: false, error: `${file.name}: CSV file is empty` });
+          return;
+        }
+        const names = hasHeaderRow ? firstLine : (dialect.columns ?? []);
+        const width = Math.max(names.length, ...dataRows.map((row) => row.length));
+        const headers = nameColumns(names, width);
+        resolve({
+          ok: true,
+          parsed: {
+            fileName: file.name,
+            headers,
+            rows: dataRows.map((row) =>
+              Object.fromEntries(headers.map((header, index) => [header, row[index] ?? '']))
+            ),
+          },
+        });
       },
       error: (error) =>
         resolve({ ok: false, error: `${file.name}: Failed to parse CSV: ${error.message}` }),
     });
   });
-}
-
-function parseHeaded(file: File): Promise<ParseResult> {
-  return new Promise((resolve) => {
-    Papa.parse<Record<string, string>>(file, {
-      header: true,
-      skipEmptyLines: true,
-      complete: (results) => {
-        if (results.errors.length > 0) {
-          resolve({
-            ok: false,
-            error: `${file.name}: CSV parsing error: ${results.errors[0]?.message ?? 'Unknown error'}`,
-          });
-          return;
-        }
-        if (results.data.length === 0) {
-          resolve({ ok: false, error: `${file.name}: CSV file is empty` });
-          return;
-        }
-        const headers = results.meta.fields ?? [];
-        if (headers.length === 0) {
-          resolve({ ok: false, error: `${file.name}: CSV file has no headers` });
-          return;
-        }
-        resolve({ ok: true, parsed: { fileName: file.name, headers, rows: results.data } });
-      },
-      error: (error) =>
-        resolve({ ok: false, error: `${file.name}: Failed to parse CSV: ${error.message}` }),
-    });
-  });
-}
-
-function parseCsvFile(file: File, dialect: BankDialect): Promise<ParseResult> {
-  return dialect.hasHeader || !dialect.columns
-    ? parseHeaded(file)
-    : parseHeaderless(file, dialect.columns);
 }
 
 export async function parseAllFiles(
