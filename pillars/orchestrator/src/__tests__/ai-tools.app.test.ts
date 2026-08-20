@@ -1,11 +1,13 @@
-import request from 'supertest';
 import { describe, expect, it, vi } from 'vitest';
 
 import { createOrchestratorApp } from '../app.js';
+import { createTestTransport } from './test-http.js';
 
 import type { Tool } from '@pops/pillar-sdk';
 
 import type { BuildToolList } from '../ai-tools/index.js';
+
+const { requestOn } = createTestTransport();
 
 const SELF_BASE_URL = 'http://localhost:3009';
 
@@ -26,7 +28,7 @@ describe('GET /ai/tools', () => {
     ];
     const buildToolList: BuildToolList = vi.fn(async () => projected);
 
-    const res = await request(makeApp(buildToolList)).get('/ai/tools');
+    const res = await requestOn(makeApp(buildToolList)).get('/ai/tools');
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ tools: projected });
@@ -40,7 +42,7 @@ describe('GET /ai/tools', () => {
     // tool.
     const buildToolList: BuildToolList = vi.fn(async (): Promise<readonly Tool[]> => []);
 
-    const res = await request(makeApp(buildToolList)).get('/ai/tools');
+    const res = await requestOn(makeApp(buildToolList)).get('/ai/tools');
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ tools: [] });
@@ -52,7 +54,7 @@ describe('GET /ai/tools', () => {
     });
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-    const res = await request(makeApp(buildToolList)).get('/ai/tools');
+    const res = await requestOn(makeApp(buildToolList)).get('/ai/tools');
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ tools: [] });

@@ -13,12 +13,14 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import supertest from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { openCoreDb, userSettings, type OpenedCoreDb } from '../../db/index.js';
 import { createCoreApiApp } from '../app.js';
+import { createTestTransport } from './test-http.js';
 import { makeClient } from './test-utils.js';
+
+const { requestOn } = createTestTransport();
 
 let tmpDir: string;
 let coreDb: OpenedCoreDb;
@@ -72,7 +74,7 @@ describe('users — URI contract', () => {
   });
 
   it('400s when the uri query param is missing at the contract boundary', async () => {
-    const res = await supertest(app()).get('/users');
+    const res = await requestOn(app()).get('/users');
     expect(res.status).toBe(400);
   });
 });

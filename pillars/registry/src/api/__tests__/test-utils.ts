@@ -6,14 +6,23 @@
  * transport changed. Non-2xx responses throw `HttpError` carrying the
  * parsed `{ status, body }` so tests assert on
  * `.rejects.toMatchObject({ status })`.
+ *
+ * Requests go over `test-http.ts`'s shared, pre-listened server rather than
+ * over `supertest(app)`, which binds a throwaway listener and dials a fresh
+ * connection for every call. That header explains what the churn costs under
+ * contention; this is the choke point through which most of the pillar's
+ * suites inherit the fix.
  */
-import supertest from 'supertest';
+import { createTestTransport } from './test-http.js';
 
 import type { Express } from 'express';
 
 import type { FeatureManifest, FeatureStatus } from '@pops/types';
 
 import type { CreatedServiceAccount, ServiceAccount } from '../modules/service-accounts/types.js';
+import type { Test } from './test-http.js';
+
+const transport = createTestTransport();
 
 export class HttpError extends Error {
   readonly status: number;
@@ -30,7 +39,7 @@ export class HttpError extends Error {
   }
 }
 
-async function send<T>(req: supertest.Test): Promise<T> {
+async function send<T>(req: Test): Promise<T> {
   const res = await req;
   if (res.status >= 200 && res.status < 300) return res.body as T;
   throw new HttpError(res.status, res.body);
@@ -41,7 +50,7 @@ async function send<T>(req: supertest.Test): Promise<T> {
  * header on every request the client issues. */
 export type ClientHeaders = Record<string, string>;
 
-function withHeaders(req: supertest.Test, headers: ClientHeaders | undefined): supertest.Test {
+function withHeaders(req: Test, headers: ClientHeaders | undefined): Test {
   if (!headers) return req;
   let out = req;
   for (const [name, value] of Object.entries(headers)) out = out.set(name, value);
@@ -49,7 +58,7 @@ function withHeaders(req: supertest.Test, headers: ClientHeaders | undefined): s
 }
 
 export function makeClient(app: Express, headers?: ClientHeaders) {
-  const base = supertest(app);
+  const base = transport.requestOn(app);
   const r = {
     get: (url: string) => withHeaders(base.get(url), headers),
     post: (url: string) => withHeaders(base.post(url), headers),

@@ -2,8 +2,9 @@
 /**
  * Supertest transport adoption guard.
  *
- * `finance`, `bfm`, `purchases`, `media`, `cerebrum`, `documents`, `ai`, `food`
- * and `inventory` each own a pre-listened `127.0.0.1` server plus a pooled
+ * `finance`, `bfm`, `purchases`, `media`, `cerebrum`, `documents`, `ai`, `food`,
+ * `inventory`, `lists`, `orchestrator` and `registry` each own a pre-listened
+ * `127.0.0.1` server plus a pooled
  * keep-alive agent for their API suites, because supertest's own
  * `request(app)` binds a fresh ephemeral server AND dials a fresh connection
  * for every call — two ephemeral ports per request — and that churn is what
@@ -86,6 +87,13 @@ export const PILLARS = [
   { id: 'ai', transport: 'pillars/ai/src/api/__tests__/test-http.ts', minFiles: 82 },
   { id: 'food', transport: 'pillars/food/src/api/__tests__/test-http.ts', minFiles: 436 },
   { id: 'inventory', transport: 'pillars/inventory/src/api/__tests__/test-http.ts', minFiles: 156 },
+  { id: 'lists', transport: 'pillars/lists/src/api/__tests__/test-http.ts', minFiles: 69 },
+  {
+    id: 'orchestrator',
+    transport: 'pillars/orchestrator/src/__tests__/test-http.ts',
+    minFiles: 12,
+  },
+  { id: 'registry', transport: 'pillars/registry/src/api/__tests__/test-http.ts', minFiles: 79 },
 ];
 
 /** The package every transport wraps, and the name a violation reaches for. */
@@ -618,8 +626,9 @@ function runSelfTest() {
 
 const HELP = `check-supertest-transport-adoption — one door to supertest per pillar.
 
-Nine pillars each own a pre-listened test transport: finance, bfm, purchases,
-media, cerebrum, documents, ai, food and inventory. This fails the build when
+Twelve pillars each own a pre-listened test transport: finance, bfm, purchases,
+media, cerebrum, documents, ai, food, inventory, lists, orchestrator and
+registry. This fails the build when
 any file in one of them imports \`supertest\` directly instead of going through
 it, and equally when the transport itself stops matching — which would mean the
 guard has gone blind rather than the tree gone clean.

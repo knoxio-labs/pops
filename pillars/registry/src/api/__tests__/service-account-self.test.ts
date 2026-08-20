@@ -11,14 +11,16 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { REGISTRY_SERVICE_ACCOUNT_SELF_PATH } from '@pops/pillar-sdk';
 
 import { openCoreDb, type OpenedCoreDb } from '../../db/index.js';
 import { createCoreApiApp } from '../app.js';
+import { createTestTransport } from './test-http.js';
 import { makeClient } from './test-utils.js';
+
+const { requestOn } = createTestTransport();
 
 let tmpDir: string;
 let coreDb: OpenedCoreDb;
@@ -46,7 +48,7 @@ describe('GET /service-accounts/self', () => {
   it('returns the principal behind a live key, scopes verbatim', async () => {
     const { id, key } = await mintKey('bfm', ['finance.transactions', 'core.settings']);
 
-    const response = await request(app())
+    const response = await requestOn(app())
       .get(REGISTRY_SERVICE_ACCOUNT_SELF_PATH)
       .set('x-api-key', key);
 
@@ -59,12 +61,12 @@ describe('GET /service-accounts/self', () => {
   });
 
   it('401s a request with no key, even under the dev-user fallback', async () => {
-    const response = await request(app()).get(REGISTRY_SERVICE_ACCOUNT_SELF_PATH);
+    const response = await requestOn(app()).get(REGISTRY_SERVICE_ACCOUNT_SELF_PATH);
     expect(response.status).toBe(401);
   });
 
   it('401s a well-formed key that matches no account', async () => {
-    const response = await request(app())
+    const response = await requestOn(app())
       .get(REGISTRY_SERVICE_ACCOUNT_SELF_PATH)
       .set('x-api-key', 'pops_sa_deadbeef.not-a-real-secret-value-000000');
     expect(response.status).toBe(401);
@@ -73,12 +75,12 @@ describe('GET /service-accounts/self', () => {
   it('401s a key whose account has been revoked', async () => {
     const { id, key } = await mintKey('revoked-caller', ['finance.transactions']);
     await expect(
-      request(app()).get(REGISTRY_SERVICE_ACCOUNT_SELF_PATH).set('x-api-key', key)
+      requestOn(app()).get(REGISTRY_SERVICE_ACCOUNT_SELF_PATH).set('x-api-key', key)
     ).resolves.toMatchObject({ status: 200 });
 
     await makeClient(app()).serviceAccounts.revoke(id);
 
-    const response = await request(app())
+    const response = await requestOn(app())
       .get(REGISTRY_SERVICE_ACCOUNT_SELF_PATH)
       .set('x-api-key', key);
     expect(response.status).toBe(401);
@@ -86,7 +88,7 @@ describe('GET /service-accounts/self', () => {
 
   it('never echoes the presented key back', async () => {
     const { key } = await mintKey('echo-check', ['finance.transactions']);
-    const response = await request(app())
+    const response = await requestOn(app())
       .get(REGISTRY_SERVICE_ACCOUNT_SELF_PATH)
       .set('x-api-key', key);
     expect(response.text).not.toContain(key);

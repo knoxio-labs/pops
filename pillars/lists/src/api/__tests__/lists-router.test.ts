@@ -3,9 +3,9 @@
  *
  * Spins up an in-memory SQLite with the lists migration (0062), builds the
  * Express app via the production factory, and drives every endpoint through
- * supertest. The `client` helper groups calls by resource
- * (`client.list.create({...})`, `client.items.check({id})`) so the assertions
- * read like the contract.
+ * this pillar's shared test transport. The `client` helper groups calls by
+ * resource (`client.list.create({...})`, `client.items.check({id})`) so the
+ * assertions read like the contract.
  *
  * Status semantics:
  *   - Service NotFound (`ListNotFoundError`, `ListItemNotFoundError`)
@@ -19,15 +19,17 @@ import { join } from 'node:path';
 
 import BetterSqlite3, { type Database } from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
-import supertest from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { createListsApiApp } from '../app.js';
+import { createTestTransport } from './test-http.js';
 
 import type { Express } from 'express';
 
 import type { ListsDb } from '../../db/index.js';
 import type { ListsApiDeps } from '../handlers.js';
+
+const { requestOn } = createTestTransport();
 
 const MIGRATION_FILES = ['0062_chemical_donald_blake.sql'];
 
@@ -157,7 +159,7 @@ function makeClient(app: Express): {
     >;
   };
 } {
-  const api = supertest(app);
+  const api = requestOn(app);
   return {
     list: {
       list: async (q) => assert2xx(await api.get('/lists').query(q ?? {})),
@@ -814,7 +816,7 @@ describe('lists REST surface', () => {
 
     it('rejects refKind=free with HTTP 400 at the contract boundary', async () => {
       const { id: listId } = await client.list.create({ name: 'Shop', kind: 'shopping' });
-      const res = await supertest(buildApp(raw, db))
+      const res = await requestOn(buildApp(raw, db))
         .post(`/lists/${listId}/items/upsert-by-ref`)
         .send({
           refKind: 'free',

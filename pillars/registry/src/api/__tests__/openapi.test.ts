@@ -10,11 +10,13 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { openCoreDb, type OpenedCoreDb } from '../../db/index.js';
 import { createCoreApiApp } from '../app.js';
+import { createTestTransport } from './test-http.js';
+
+const { requestOn } = createTestTransport();
 
 let tmpDir: string;
 let coreDb: OpenedCoreDb;
@@ -42,7 +44,7 @@ describe('GET /openapi', () => {
       selfBaseUrl: 'http://localhost:3001',
     });
 
-    const res = await request(app).get('/openapi');
+    const res = await requestOn(app).get('/openapi');
 
     expect(res.status).toBe(200);
     const body = res.body as OpenApiBody;

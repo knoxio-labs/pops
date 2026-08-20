@@ -14,16 +14,18 @@ import { createServer, get as httpGet, type Server } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { openCoreDb, type OpenedCoreDb } from '../../db/index.js';
 import { createCoreApiApp } from '../app.js';
 import { registryEventBus, registryEventListenerCount } from '../modules/registry/event-bus.js';
+import { createTestTransport } from './test-http.js';
 
 import type { AddressInfo } from 'node:net';
 
 import type { ManifestPayload } from '@pops/pillar-sdk';
+
+const { requestOn } = createTestTransport();
 
 let tmpDir: string;
 let coreDb: OpenedCoreDb;
@@ -55,7 +57,7 @@ afterEach(async () => {
 
 /** Register a pillar over the raw HTTP route — this emits the registry event the SSE stream forwards. */
 async function registerFinance(): Promise<void> {
-  const res = await request(app).post('/core.registry.register').send({
+  const res = await requestOn(app).post('/core.registry.register').send({
     pillarId: 'finance',
     baseUrl: 'http://finance-api:3004',
     manifest: financeManifest(),

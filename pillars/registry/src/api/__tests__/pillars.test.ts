@@ -15,14 +15,16 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { openCoreDb, pillarRegistryService, type OpenedCoreDb } from '../../db/index.js';
 import { createCoreApiApp } from '../app.js';
 import { __resetPillarRegistryCache } from '../pillars/registry.js';
+import { createTestTransport } from './test-http.js';
 
 import type { ManifestPayload } from '@pops/pillar-sdk';
+
+const { requestOn } = createTestTransport();
 
 let tmpDir: string;
 let coreDb: OpenedCoreDb;
@@ -80,7 +82,7 @@ function makeApp(): ReturnType<typeof createCoreApiApp> {
 
 describe('GET /pillars — seed-only fallback (empty registry)', () => {
   it('returns the synthetic registry entry when POPS_PILLARS is unset', async () => {
-    const res = await request(makeApp()).get('/pillars');
+    const res = await requestOn(makeApp()).get('/pillars');
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
       pillars: [{ id: 'registry', baseUrl: 'http://registry-api:3001' }],
@@ -89,7 +91,7 @@ describe('GET /pillars — seed-only fallback (empty registry)', () => {
 
   it('merges the synthetic registry entry ahead of POPS_PILLARS-parsed siblings', async () => {
     process.env['POPS_PILLARS'] = 'food:http://food-api:3000,finance:http://finance-api:3000';
-    const res = await request(makeApp()).get('/pillars');
+    const res = await requestOn(makeApp()).get('/pillars');
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
       pillars: [
@@ -102,7 +104,7 @@ describe('GET /pillars — seed-only fallback (empty registry)', () => {
 
   it('overrides a POPS_PILLARS `registry` entry with the live selfBaseUrl', async () => {
     process.env['POPS_PILLARS'] = 'registry:http://stale-registry:9000,food:http://food-api:3000';
-    const res = await request(makeApp()).get('/pillars');
+    const res = await requestOn(makeApp()).get('/pillars');
     expect(res.body).toEqual({
       pillars: [
         { id: 'registry', baseUrl: 'http://registry-api:3001' },
@@ -113,19 +115,19 @@ describe('GET /pillars — seed-only fallback (empty registry)', () => {
 
   it('returns 500 on a malformed POPS_PILLARS seed', async () => {
     process.env['POPS_PILLARS'] = 'no-colon-here';
-    const res = await request(makeApp()).get('/pillars');
+    const res = await requestOn(makeApp()).get('/pillars');
     expect(res.status).toBe(500);
   });
 
   it('rejects a POPS_PILLARS seed entry with a path/query/fragment', async () => {
     process.env['POPS_PILLARS'] = 'food:http://food-api:3000/api';
-    const res = await request(makeApp()).get('/pillars');
+    const res = await requestOn(makeApp()).get('/pillars');
     expect(res.status).toBe(500);
   });
 
   it('strips a trailing slash from a clean seed origin', async () => {
     process.env['POPS_PILLARS'] = 'food:http://food-api:3000/';
-    const res = await request(makeApp()).get('/pillars');
+    const res = await requestOn(makeApp()).get('/pillars');
     expect(res.status).toBe(200);
     expect(res.body.pillars).toContainEqual({
       id: 'food',
@@ -137,7 +139,7 @@ describe('GET /pillars — seed-only fallback (empty registry)', () => {
 describe('GET /pillars — registry-as-truth', () => {
   it('surfaces a DB-registered pillar even when POPS_PILLARS is unset', async () => {
     register('media', 'http://media-api:3005');
-    const res = await request(makeApp()).get('/pillars');
+    const res = await requestOn(makeApp()).get('/pillars');
     expect(res.status).toBe(200);
     expect(res.body.pillars).toContainEqual({
       id: 'registry',
@@ -149,7 +151,7 @@ describe('GET /pillars — registry-as-truth', () => {
   it('falls back to a seeded id the registry has no live entry for', async () => {
     process.env['POPS_PILLARS'] = 'finance:http://finance-api:3004';
     register('media', 'http://media-api:3005');
-    const res = await request(makeApp()).get('/pillars');
+    const res = await requestOn(makeApp()).get('/pillars');
     expect(res.status).toBe(200);
     // media comes from the live registry; finance is seed-only fallback.
     expect(res.body.pillars).toContainEqual({ id: 'media', baseUrl: 'http://media-api:3005' });
@@ -159,7 +161,7 @@ describe('GET /pillars — registry-as-truth', () => {
   it('lets a live registration win over a stale seed entry for the same id', async () => {
     process.env['POPS_PILLARS'] = 'media:http://stale-media:9999';
     register('media', 'http://media-api:3005');
-    const res = await request(makeApp()).get('/pillars');
+    const res = await requestOn(makeApp()).get('/pillars');
     expect(res.status).toBe(200);
     const mediaEntries = res.body.pillars.filter((p: { id: string }) => p.id === 'media');
     expect(mediaEntries).toEqual([{ id: 'media', baseUrl: 'http://media-api:3005' }]);
@@ -168,7 +170,7 @@ describe('GET /pillars — registry-as-truth', () => {
   it('orders live registry entries ahead of seed-only fallback entries', async () => {
     process.env['POPS_PILLARS'] = 'finance:http://finance-api:3004';
     register('media', 'http://media-api:3005');
-    const res = await request(makeApp()).get('/pillars');
+    const res = await requestOn(makeApp()).get('/pillars');
     expect(res.body.pillars).toEqual([
       { id: 'registry', baseUrl: 'http://registry-api:3001' },
       { id: 'media', baseUrl: 'http://media-api:3005' },
@@ -178,7 +180,7 @@ describe('GET /pillars — registry-as-truth', () => {
 
   it('never proxies the synthetic registry self-entry to a DB-registered registry row', async () => {
     register('registry', 'http://stale-registry-row:9000');
-    const res = await request(makeApp()).get('/pillars');
+    const res = await requestOn(makeApp()).get('/pillars');
     const registryEntries = res.body.pillars.filter((p: { id: string }) => p.id === 'registry');
     expect(registryEntries).toEqual([{ id: 'registry', baseUrl: 'http://registry-api:3001' }]);
   });
