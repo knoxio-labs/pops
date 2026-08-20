@@ -563,6 +563,29 @@ jobs:
       - name: Every vendored contract matches its canonical source
         run: node scripts/ci/check-vendored-contracts.mjs
 
+  pops-uri-pattern-adoption:
+    name: popsUriPattern adoption
+    # `pillars/purchases/src/contract/schemas/scalars.ts` exports popsUriPattern,
+    # a factory whose entire purpose is to stop a narrow pops://<pillar>/<type>
+    # regex from being typed out by hand. Nothing enforced that, and main
+    # bypassed it within days of it landing — in the same file that defines it.
+    # This guard scans pillars/purchases production source for a hand-written
+    # narrow regex literal or new RegExp(...) call outside the factory, and
+    # for the discovery floor of known-good definitions the scan must still
+    # reach. It reads the source tree directly and pulls in no third-party
+    # deps, so it skips `pnpm install`. See
+    # scripts/ci/check-pops-uri-pattern-adoption.mjs.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Gate self-test (proves the guard catches a hand-pinned regex literal, a half-pinned one, and a hand-pinned new RegExp(…), without false-flagging a generic pattern)
+        run: node scripts/ci/check-pops-uri-pattern-adoption.mjs --self-test
+      - name: Every pops:// URI pattern in purchases goes through popsUriPattern
+        run: node scripts/ci/check-pops-uri-pattern-adoption.mjs
+
   receipt-max-parts-drift:
     name: Receipt max-parts drift
     # How many parts one receipt may be sent as is written down three times —
