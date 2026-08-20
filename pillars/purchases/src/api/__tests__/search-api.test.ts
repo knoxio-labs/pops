@@ -246,6 +246,35 @@ describe('POST /search with filters', () => {
     expect(listed.body.items.map((row: { id: string }) => row.id)).toEqual([amazon]);
   });
 
+  it.each(['2026-13-45T00:00:00Z', '2026-01-01T00:00:00+99:00'])(
+    'refuses %s on both routes rather than answering one of them with a window',
+    async (bound) => {
+      // `IsoTimestampSchema` closes the shape and not the range, so these
+      // reach a handler. Compared as text against a canonical column they
+      // name a window nobody could have meant, and the list that comes back
+      // is indistinguishable from a filter that matched broadly.
+      seedCoffeeOrder();
+
+      const searched = await requestOn(app)
+        .post('/search')
+        .send({
+          query: {
+            text: 'dosing funnel',
+            filters: [{ field: 'orderedAt', operator: 'gte', value: bound }],
+          },
+        });
+      const listed = await requestOn(app).get('/purchases').query({ from: bound });
+      const rolledUp = await requestOn(app).get('/analytics/merchant-spend').query({ to: bound });
+
+      expect(searched.status).toBe(400);
+      expect(listed.status).toBe(400);
+      expect(rolledUp.status).toBe(400);
+      expect(ErrorBodySchema.safeParse(listed.body).success).toBe(true);
+      expect(listed.body.message).toContain(bound);
+      expect(rolledUp.body.message).toContain(bound);
+    }
+  );
+
   it('scopes to the requested status', async () => {
     seedCoffeeOrder();
 

@@ -24,6 +24,7 @@ import {
   findPurchaseAtInstantForAmount,
   listPurchases,
   listSolvableCharges,
+  UnreadableOrderedAtBoundError,
 } from '../index.js';
 import { openTempDb, seedWoolworthsSource } from './helpers.js';
 
@@ -83,6 +84,15 @@ describe('canonicalInstant', () => {
     expect(canonicalInstant('2026-13-45T00:00:00Z')).toBeNull();
     expect(canonicalInstant('2026-01-01T00:00:00+99:00')).toBeNull();
   });
+
+  it("names no instant for a wall clock with no zone, rather than the host machine's", () => {
+    // `new Date` resolves this against wherever the process runs, so the
+    // stored instant would differ between a Sydney laptop and a UTC
+    // container by the ten or eleven hours `src/ingest/local-time.ts` exists
+    // to keep out. The contract does not admit it and neither does this.
+    expect(canonicalInstant('2026-02-02T01:41:21')).toBeNull();
+    expect(canonicalInstant('2026-02-02 01:41:21')).toBeNull();
+  });
 });
 
 describe('writing an order', () => {
@@ -108,6 +118,12 @@ describe('writing an order', () => {
 
   it('refuses a timestamp naming no instant rather than storing one that sorts somewhere', () => {
     expect(() => createPurchase(opened.db, order('nonsense', '2026-13-45T00:00:00Z'))).toThrow(
+      /names no instant/u
+    );
+  });
+
+  it('refuses a wall clock with no zone rather than storing where the server stands', () => {
+    expect(() => createPurchase(opened.db, order('naive', '2026-02-02T01:41:21'))).toThrow(
       /names no instant/u
     );
   });
@@ -199,4 +215,26 @@ describe('a bound at second precision against a sub-second order', () => {
       listPurchases(opened.db, { from: '2026-02-01T00:00:00Z', to: '2026-02-02T01:41:22Z' })
     ).toHaveLength(1);
   });
+});
+
+describe('a bound that names no instant', () => {
+  beforeEach(() => {
+    createPurchase(opened.db, order('january', '2026-01-15T03:20:00.000Z'));
+  });
+
+  it.each(['2026-13-45T00:00:00Z', '2026-01-01T00:00:00+99:00'])(
+    'refuses %s rather than comparing it as text',
+    (bound) => {
+      // Passed through, such a bound is a lexicographic comparison against
+      // canonical rows: `2026-13-45…` sits past every real date, so the
+      // answer is an empty list a caller cannot tell from a window that
+      // genuinely held nothing.
+      expect(() => listPurchases(opened.db, { from: bound })).toThrow(
+        UnreadableOrderedAtBoundError
+      );
+      expect(() => listSolvableCharges(opened.db, { to: bound })).toThrow(
+        UnreadableOrderedAtBoundError
+      );
+    }
+  );
 });

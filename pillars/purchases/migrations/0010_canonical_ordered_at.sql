@@ -11,11 +11,12 @@
 --
 -- `strftime('%Y-%m-%dT%H:%M:%fZ', …)` is the same form `toISOString()`
 -- produces and the same form the `created_at` / `updated_at` defaults on this
--- table already carry, so a row an adapter wrote is rewritten to itself. The
--- two agree on the awkward cases too, which a test asserts rather than
--- assumes: an offset is resolved to UTC, a missing fraction becomes `.000`,
--- a sub-millisecond fraction is truncated, and an out-of-range field yields
--- NULL in SQLite exactly where `new Date(…)` yields an invalid date.
+-- table already carry, so a row an adapter wrote is rewritten to itself. A
+-- test holds the two to the same answer on the spellings the old writer
+-- could store — an offset resolved to UTC, a missing fraction padded to
+-- `.000` — and pins the one place they part: below a millisecond SQLite
+-- rounds where `toISOString()` truncates, so the two land a millisecond
+-- apart on a column whose windows are days wide.
 --
 -- The NULL guard is what makes this safe rather than destructive: a value
 -- SQLite cannot read is left exactly as it was. Without it the column is

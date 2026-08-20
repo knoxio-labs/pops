@@ -320,6 +320,24 @@ describe('which matches survive to the response', () => {
     expect(dates[0]).toBe('2026-01-01T00:40:00.000Z');
     expect(dates.at(-1)).toBe('2026-01-01T00:16:00.000Z');
   });
+
+  it('sends an order whose date it cannot read to the end, not to the top', () => {
+    // The write path refuses such a timestamp, and migration 0010 left the
+    // rows written before it exactly as they were — so this row exists only
+    // by being forced in over the writer's head. As text `whenever` follows
+    // every real date, which would hand the head of every hit list to the
+    // one order nothing is known about.
+    orderWithItems('older', 'Vevor supplies', [], '2026-01-01T00:00:00Z');
+    orderWithItems('newer', 'Vevor supplies', [], '2026-06-01T00:00:00Z');
+    orderWithItems('undated', 'Vevor supplies', [], '2026-03-01T00:00:00Z');
+    opened.raw
+      .prepare(`UPDATE purchases SET ordered_at = 'whenever' WHERE checksum = 'undated'`)
+      .run();
+
+    const dates = searchPurchases(opened.db, 'vevor supplies').map((hit) => hit.data['orderedAt']);
+
+    expect(dates).toEqual(['2026-06-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', 'whenever']);
+  });
 });
 
 /**

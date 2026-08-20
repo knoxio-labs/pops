@@ -9,10 +9,11 @@
  * was, and a fold reading that as text would place it wherever its first
  * character happened to fall.
  *
- * One helper rather than one per fold. The product leaderboard and the
- * merchant roll-up both answer "which order came later", and two
- * implementations of that would agree only by inspection — the first
- * correction to either would leave the other behind.
+ * One helper rather than one per fold. The product leaderboard, the
+ * merchant roll-up, the dictionary's printed name and search's recency
+ * ordering all answer "which order came later", and five implementations of
+ * that would agree only by inspection — the first correction to any of them
+ * would leave the rest behind.
  */
 
 /** An order's position in time, with a deterministic tie-break. */
@@ -59,4 +60,26 @@ export function isOlder(candidate: OrderRank, incumbent: OrderRank): boolean {
   if (!hasInstant(incumbent)) return true;
   if (candidate.instant !== incumbent.instant) return candidate.instant < incumbent.instant;
   return candidate.tieBreaker < incumbent.tieBreaker;
+}
+
+function compareText(a: string, b: string): number {
+  if (a === b) return 0;
+  return a < b ? -1 : 1;
+}
+
+/**
+ * Newest first, for a sort rather than a fold.
+ *
+ * A comparator cannot borrow {@link isNewer}: that answers false both ways
+ * for an unreadable timestamp, which is the right answer for "is this one
+ * the newest" and no answer at all for a sort, so such a row would land
+ * wherever the scan left it. Here it sorts last — after every order whose
+ * instant is known, and among its own kind by the tie-break — so the one
+ * row nothing is known about cannot take the top of a list ordered by
+ * recency.
+ */
+export function byNewestFirst(a: OrderRank, b: OrderRank): number {
+  if (hasInstant(a) !== hasInstant(b)) return hasInstant(a) ? -1 : 1;
+  if (hasInstant(a) && a.instant !== b.instant) return b.instant - a.instant;
+  return compareText(a.tieBreaker, b.tieBreaker);
 }

@@ -30,9 +30,16 @@
  * digits are what stops `…21Z` and `…21.500Z` sorting apart. Precision below
  * a millisecond is dropped, which is the precision the whole pillar keeps —
  * `nowIso()` and the column defaults have no more.
+ *
+ * A value that names no instant is refused wherever it appears rather than
+ * compared: at ingest by `createPurchase`, on the wire by the readers of a
+ * window bound, and here by {@link orderedAtWindow} for anything that got
+ * past them. A bound handed to SQL unread is a text comparison against
+ * canonical rows, which answers `200` over a window nobody asked for.
  */
 import { gte, lte } from 'drizzle-orm';
 
+import { IsoTimestampSchema } from '../../contract/schemas/purchase.js';
 import { purchases } from '../schema.js';
 
 import type { SQL } from 'drizzle-orm';
@@ -41,6 +48,13 @@ import type { SQL } from 'drizzle-orm';
  * The instant a timestamp names, spelled the one way, or null when it names
  * no instant at all.
  *
+ * The shape is checked before the value is parsed, so what is accepted here
+ * is what the contract accepts and no more. `new Date` is wider than that in
+ * a way that matters: it resolves a naive `2026-02-02T01:41:21` against the
+ * host's timezone, which would make the stored instant depend on where the
+ * process runs — the misplacement `src/ingest/local-time.ts` exists to
+ * prevent, arrived at from the other end.
+ *
  * Out-of-range fields (`2026-13-01`, `+99:00`) name nothing and yield null.
  * An overflowing day (`2026-02-30`) does not: it rolls into March, which is
  * what `Date.parse` has always done for the folds and what SQLite's own
@@ -48,19 +62,33 @@ import type { SQL } from 'drizzle-orm';
  * agree rather than disagreeing quietly.
  */
 export function canonicalInstant(value: string): string | null {
+  if (!IsoTimestampSchema.safeParse(value).success) return null;
   const parsed = new Date(value);
   return Number.isFinite(parsed.getTime()) ? parsed.toISOString() : null;
 }
 
 /**
- * A window bound in the form the stored column is comparable against.
+ * A window bound that names no instant, refused rather than compared.
  *
- * A bound naming no instant is handed back untouched. Rewriting it would
- * invent a window the caller did not ask for, and the contract already
- * refuses the shapes an API caller can send.
+ * Every route that takes a window off the wire reads its bounds first and
+ * answers `400`, so reaching this is a caller that did not: an internal
+ * sweep, a script, a future route that forgot. Loud there beats a plausible
+ * list built from a predicate nobody could have meant.
  */
-export function canonicalBound(value: string): string {
-  return canonicalInstant(value) ?? value;
+export class UnreadableOrderedAtBoundError extends Error {
+  readonly value: string;
+
+  constructor(value: string) {
+    super(`ordered_at bound '${value}' names no instant`);
+    this.name = 'UnreadableOrderedAtBoundError';
+    this.value = value;
+  }
+}
+
+function canonicalBound(value: string): string {
+  const bound = canonicalInstant(value);
+  if (bound === null) throw new UnreadableOrderedAtBoundError(value);
+  return bound;
 }
 
 /** Inclusive bounds on `orderedAt`, in whatever ISO-8601 form the caller wrote them. */
@@ -76,6 +104,9 @@ export interface OrderedAtBounds {
  * reconcile sweep cover the same rows for the same window — two copies of
  * `gte`/`lte` agree only by inspection, and the first correction to either
  * leaves the other behind.
+ *
+ * Throws {@link UnreadableOrderedAtBoundError} for a bound naming no
+ * instant, rather than comparing it as text.
  */
 export function orderedAtWindow(bounds: OrderedAtBounds): readonly SQL[] {
   return [
