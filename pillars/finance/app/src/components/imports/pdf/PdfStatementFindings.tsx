@@ -23,7 +23,9 @@ function Finding({
   children: React.ReactNode;
 }) {
   const palette =
-    tone === 'warning' ? 'border-warning/30 bg-warning/5 text-warning' : 'border-info/20 bg-info/5 text-info';
+    tone === 'warning'
+      ? 'border-warning/30 bg-warning/5 text-warning'
+      : 'border-info/20 bg-info/5 text-info';
   return (
     <div className={`rounded-lg border p-4 ${palette}`}>
       <h4 className="flex items-center gap-2 text-sm font-medium mb-1">
@@ -70,8 +72,8 @@ export function PdfStatementFindings({ statement, fileCount }: PdfStatementFindi
         >
           <p>
             These start like a transaction row and do not match the layout this importer knows, so
-            they will not be imported. A statement whose layout has changed looks exactly like
-            this — check them against the PDF before continuing.
+            they will not be imported. A statement whose layout has changed looks exactly like this
+            — check them against the PDF before continuing.
           </p>
           <LineList lines={unrecognisedRows} label="Unreadable statement lines" />
         </Finding>

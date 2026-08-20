@@ -19,7 +19,11 @@ import {
   readAnzPdfUpload,
   uploadRoute,
 } from './anz-pdf-import';
-import { imageOnlyPdf, monospacedTextPdf, passwordProtectedPdf } from './synthetic-pdf.test-helpers';
+import {
+  imageOnlyPdf,
+  monospacedTextPdf,
+  passwordProtectedPdf,
+} from './synthetic-pdf.test-helpers';
 
 import type { AccountCoverage } from './anz-pdf-import';
 import type { PlacedText } from './synthetic-pdf.test-helpers';
@@ -59,7 +63,9 @@ function statementRow(row: Row, line: number): PlacedText[] {
 }
 
 function statementPdf(rows: readonly Row[], extraLines: readonly PlacedText[] = []): Uint8Array {
-  return monospacedTextPdf([[...extraLines, ...rows.flatMap((row, i) => statementRow(row, i + 2))]]);
+  return monospacedTextPdf([
+    [...extraLines, ...rows.flatMap((row, i) => statementRow(row, i + 2))],
+  ]);
 }
 
 function pdfFile(bytes: Uint8Array, name = 'statement.pdf'): File {
@@ -230,13 +236,19 @@ describe('describePdfFailure', () => {
 
   it('tells someone with a scan that the download is the fix', () => {
     expect(
-      describePdfFailure({ fileName: 'scan.pdf', failure: { outcome: 'no-text-layer', pageCount: 3 } })
+      describePdfFailure({
+        fileName: 'scan.pdf',
+        failure: { outcome: 'no-text-layer', pageCount: 3 },
+      })
     ).toContain('Internet Banking');
   });
 
   it('keeps the underlying reason a file was not a PDF', () => {
     expect(
-      describePdfFailure({ fileName: 'x.pdf', failure: { outcome: 'not-a-pdf', detail: 'no header' } })
+      describePdfFailure({
+        fileName: 'x.pdf',
+        failure: { outcome: 'not-a-pdf', detail: 'no header' },
+      })
     ).toContain('no header');
   });
 

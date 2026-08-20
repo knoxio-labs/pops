@@ -10,10 +10,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { useImportStore } from '../../store/importStore';
-import {
-  monospacedTextPdf,
-  passwordProtectedPdf,
-} from './pdf/synthetic-pdf.test-helpers';
+import { monospacedTextPdf, passwordProtectedPdf } from './pdf/synthetic-pdf.test-helpers';
 import { UploadStep } from './UploadStep';
 
 import type { PlacedText } from './pdf/synthetic-pdf.test-helpers';
@@ -54,10 +51,7 @@ function clickPrimary() {
 describe('UploadStep — ANZ credit-card PDF statements', () => {
   it('offers PDF alongside CSV only for the credit card', () => {
     render(<UploadStep />);
-    expect(screen.getByLabelText('Upload CSV or PDF files')).toHaveAttribute(
-      'accept',
-      '.csv,.pdf'
-    );
+    expect(screen.getByLabelText('Upload CSV or PDF files')).toHaveAttribute('accept', '.csv,.pdf');
   });
 
   it('does not offer PDF for a bank with no PDF reader behind it', () => {

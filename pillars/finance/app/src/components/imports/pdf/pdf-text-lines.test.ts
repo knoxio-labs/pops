@@ -18,14 +18,24 @@ describe('measureCharacterCell', () => {
   });
 
   it('ignores gap runs, whose width is the hole rather than a character', () => {
-    expect(measureCharacterCell([run('ABCD', 0, 700), gap(24, 700, 120), run('EF', 144, 700)])).toBe(
-      6
-    );
+    expect(
+      measureCharacterCell([run('ABCD', 0, 700), gap(24, 700, 120), run('EF', 144, 700)])
+    ).toBe(6);
   });
 
   it('averages a proportional line rather than refusing to measure it', () => {
-    const wide: PdfTextItem = { str: 'WW', width: 20, transform: [10, 0, 0, 10, 0, 700], hasEOL: false };
-    const narrow: PdfTextItem = { str: 'ii', width: 4, transform: [10, 0, 0, 10, 20, 700], hasEOL: false };
+    const wide: PdfTextItem = {
+      str: 'WW',
+      width: 20,
+      transform: [10, 0, 0, 10, 0, 700],
+      hasEOL: false,
+    };
+    const narrow: PdfTextItem = {
+      str: 'ii',
+      width: 4,
+      transform: [10, 0, 0, 10, 20, 700],
+      hasEOL: false,
+    };
     expect(measureCharacterCell([wide, narrow])).toBe(6);
   });
 
@@ -89,7 +99,12 @@ describe('linesFromTextItems', () => {
   });
 
   it('ignores runs with no text at all', () => {
-    const empty: PdfTextItem = { str: '', width: 0, transform: [6, 0, 0, 6, 0, 700], hasEOL: false };
+    const empty: PdfTextItem = {
+      str: '',
+      width: 0,
+      transform: [6, 0, 0, 6, 0, 700],
+      hasEOL: false,
+    };
     expect(linesFromTextItems([empty, run('kept', 0, 700)])).toEqual(['kept']);
   });
 });

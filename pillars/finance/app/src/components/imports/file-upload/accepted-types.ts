@@ -28,9 +28,7 @@ export function hasAcceptedExtension(fileName: string, accepted: string): boolea
  * reads `CSV or PDF`.
  */
 export function describeAcceptedTypes(accepted: string): string {
-  const names = acceptedExtensions(accepted).map((extension) =>
-    extension.slice(1).toUpperCase()
-  );
+  const names = acceptedExtensions(accepted).map((extension) => extension.slice(1).toUpperCase());
   if (names.length === 0) return 'file';
   if (names.length === 1) return names[0] ?? 'file';
   return `${names.slice(0, -1).join(', ')} or ${names.at(-1)}`;
