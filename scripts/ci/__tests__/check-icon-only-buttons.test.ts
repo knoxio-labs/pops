@@ -7,17 +7,10 @@
  * discovery walk that silently stops finding files, fails here.
  */
 
-import { execFileSync } from 'node:child_process';
-import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-import { describe, expect, it } from 'vitest';
+import { describe, expect, inject, it } from 'vitest';
 
 import { findViolations, isScannable } from '../check-icon-only-buttons.mjs';
-
-const here = dirname(fileURLToPath(import.meta.url));
-const repoRoot = resolve(here, '..', '..', '..');
-const guard = join(repoRoot, 'scripts', 'ci', 'check-icon-only-buttons.mjs');
+import { passingProofStdout } from './real-tree-proofs.js';
 
 describe('an icon-only button with no aria-label is reported', () => {
   it.each(['icon', 'icon-xs', 'icon-sm', 'icon-lg'])('Button size="%s"', (size) => {
@@ -402,12 +395,15 @@ describe('isScannable', () => {
 
 describe('the guard proves itself', () => {
   it('passes its own --self-test', () => {
-    const output = execFileSync(process.execPath, [guard, '--self-test'], { encoding: 'utf-8' });
+    const output = passingProofStdout(
+      inject('realTreeProofs'),
+      'check-icon-only-buttons:self-test'
+    );
     expect(output).toMatch(/self-test OK/u);
   });
 
   it('passes on the real tree and says how much it looked at', () => {
-    const stdout = execFileSync(process.execPath, [guard], { encoding: 'utf-8' });
+    const stdout = passingProofStdout(inject('realTreeProofs'), 'check-icon-only-buttons');
     const scanned = Number(/Scanned (\d+) \.tsx file/.exec(stdout)?.[1]);
     expect(scanned).toBeGreaterThan(200);
     expect(stdout).toMatch(/OK — every icon-only/u);

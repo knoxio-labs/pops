@@ -10,7 +10,10 @@
  *   returns the entry to a proposal a pass may retire;
  * - a wrong *entry* — {@link deleteAlias} forgets the wording, and its lines
  *   fall back to the on-the-fly grouping they had before the pass ran;
- * - a wrong *product* — {@link deleteProduct} takes every wording with it.
+ * - a wrong *product* — {@link deleteProduct} takes every wording with it;
+ * - a wrong *name* — {@link renameProduct} again. What that does not undo is
+ *   the fact that a human named it: the product stays out of the pass's
+ *   reach, and {@link deleteProduct} is the way to be rid of it entirely.
  *
  * A product left with no wordings is deleted in the same write, because a
  * product nothing resolves to is a label no read path can ever reach — and one
@@ -139,7 +142,20 @@ function resolveConfirmation(
   return alias.confirmedAt ?? nowIso();
 }
 
-/** Rename a product. The wordings that resolve to it are untouched. */
+/**
+ * Rename a product, and record that a human is the one who named it.
+ *
+ * The wordings that resolve to it are untouched — a name is not a claim
+ * about any of them, and confirming them here would turn an unconfirmed
+ * merge into an asserted one behind the caller's back. What the rename does
+ * put beyond the pass's reach is the product: `labelConfirmedAt` is what
+ * stops {@link deleteOrphanedProducts} being handed a row whose name nothing
+ * can reconstruct, once the wording that prompted the rename stops printing.
+ *
+ * The instant moves on every rename, unlike a re-stated confirmation on an
+ * alias: a new name is a new assertion, where re-confirming the same wording
+ * is the same one.
+ */
 export function renameProduct(
   db: PurchasesDb,
   productId: string,
@@ -147,7 +163,7 @@ export function renameProduct(
 ): PurchaseProductRow {
   const row = db
     .update(purchaseProducts)
-    .set({ label })
+    .set({ label, labelConfirmedAt: nowIso() })
     .where(eq(purchaseProducts.id, productId))
     .returning()
     .all()[0];

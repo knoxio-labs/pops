@@ -11,7 +11,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { openTempDb, seedAmazonSource } from '../../db/__tests__/helpers.js';
-import { createPurchase, upsertSource } from '../../db/index.js';
+import { createPurchase, deletePurchase, upsertSource } from '../../db/index.js';
 import { createPurchasesApiApp } from '../app.js';
 import { __resetPillarRegistryCache } from '../pillars/registry.js';
 import { createTestTransport } from './test-http.js';
@@ -73,6 +73,7 @@ interface WireAlias {
 interface WireProduct {
   id: string;
   label: string;
+  labelConfirmedAt: string | null;
   aliases: WireAlias[];
 }
 
@@ -168,6 +169,26 @@ describe('the dictionary listing', () => {
     expect(res.body).toMatchObject({ label: 'Chicken breast, 1kg' });
     expect(res.body.aliases).toHaveLength(1);
     expect(res.body.aliases[0]).toMatchObject({ printedName: 'CHK BRST 1KG' });
+    // The naming travels on the wire: a caller cannot otherwise tell a name
+    // somebody typed from the wording a pass minted the product with.
+    expect(res.body.labelConfirmedAt).not.toBeNull();
+    expect(res.body.aliases[0].confirmedAt).toBeNull();
+  });
+
+  it('keeps a renamed product when the pass runs after its wording is gone', async () => {
+    const gone = createPurchase(opened.db, shop('other', ['MILK 2L']));
+    await requestOn(app).post('/products/proposals').send({});
+    const milk = await aliasOverHttp('MILK 2L');
+    await requestOn(app).patch(`/products/${milk.productId}`).send({ label: 'Full-cream milk 2L' });
+    deletePurchase(opened.db, gone);
+
+    const pass = await requestOn(app).post('/products/proposals').send({});
+
+    expect(pass.status).toBe(200);
+    expect(pass.body).toMatchObject({ retired: 0 });
+    expect((await listProductsOverHttp()).map((product) => product.label)).toContain(
+      'Full-cream milk 2L'
+    );
   });
 
   it('forgets one wording without touching the rest of the dictionary', async () => {

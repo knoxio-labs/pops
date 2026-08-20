@@ -44,6 +44,7 @@ function buildProduct(overrides: Partial<DictionaryProduct> = {}): DictionaryPro
   return {
     id: 'product-1',
     label: 'Chicken breast 1kg',
+    labelConfirmedAt: null,
     createdAt: '2026-05-01T00:00:00.000Z',
     aliases: [buildAlias()],
     ...overrides,

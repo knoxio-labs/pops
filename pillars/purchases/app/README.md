@@ -277,11 +277,17 @@ pass re-mints a forgotten wording, a split undoes a merge. This one takes the
 assertions with it, and re-running the pass restores the proposals without the
 decisions.
 
-**A rename is not protection.** `confirmedAt` marks the wording, not the
-product, so a product every wording of which is still a proposal is deleted
-along with its last one — the name somebody typed goes with it. The page says
-that on every proposed entry rather than letting a rename read as a decision
-the pass will respect.
+**A rename is protection from the pass, not from a person.** Typing a name
+records `labelConfirmedAt` on the product, and the pass holds back every
+wording reaching a named product even while those wordings are still
+proposals — so a name cannot be lost to a retire, which is the one loss here
+no re-run could undo. What still empties a named product is somebody doing it
+by hand: forgetting its last wording, or pointing that wording at another
+product, leaves nothing resolving to it and the orphan sweep takes it, name
+and all. **Forget this wording** is a single click where **Forget this
+product** asks twice, so today the shorter path to losing a name is the one
+with less ceremony — POPS-2518. The page does not yet distinguish a named
+product from a proposal either (POPS-2486).
 
 ### Running the pass
 
