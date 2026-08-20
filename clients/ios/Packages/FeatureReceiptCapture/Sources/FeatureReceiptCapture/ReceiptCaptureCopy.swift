@@ -94,10 +94,6 @@ internal enum ReceiptResultCopy {
     internal static func purchasedOn(_ formattedDate: String) -> String {
         "Dated \(formattedDate)"
     }
-    /// A known gap said out loud rather than hidden: nothing in this app shows
-    /// a purchase once it exists, so there is no screen to send anybody to.
-    internal static let createdNoDestination =
-        "There's nowhere in the app yet to view this purchase."
 
     // MARK: needs review
 

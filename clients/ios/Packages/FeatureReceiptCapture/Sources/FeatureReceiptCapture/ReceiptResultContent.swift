@@ -49,12 +49,8 @@ internal enum ReceiptResultContent: Hashable, Sendable {
         /// The receipt's own date, when the purchase carries one.
         internal let purchasedOn: String?
         internal let reference: String
-        /// There is nowhere in the app yet to view the purchase this
-        /// reference points at. Said outright rather than left for the
-        /// reader to discover by tapping a reference that goes nowhere.
-        internal let noDestinationNote: String
         internal var accessibilityLabel: String {
-            [heading + ".", message, summary, purchasedOn, reference, noDestinationNote]
+            [heading + ".", message, summary, purchasedOn, reference]
                 .compactMap { $0 }
                 .joined(separator: " ")
         }

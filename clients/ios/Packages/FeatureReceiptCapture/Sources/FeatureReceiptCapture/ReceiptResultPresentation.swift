@@ -40,8 +40,7 @@ extension ReceiptResultPresentation {
                 total: purchase.total.formatted()
             ),
             purchasedOn: purchasedOn(purchase.orderedAt),
-            reference: ReceiptResultCopy.purchaseReference(purchase.id),
-            noDestinationNote: ReceiptResultCopy.createdNoDestination
+            reference: ReceiptResultCopy.purchaseReference(purchase.id)
         )
     }
 
