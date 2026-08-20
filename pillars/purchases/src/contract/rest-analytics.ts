@@ -145,17 +145,23 @@ export const MerchantSpendQuerySchema = ListPurchasesQuerySchema.omit({
  * products a till abbreviates the same way and can split one product printed
  * two ways — and it carries the normalised key it was formed on so a
  * consumer can show what was actually matched rather than inferring it from
- * a display label. `unidentified` states outright that the line offered
- * nothing to group on, and carries the line id that is therefore its key.
+ * a display label. `product` is a dictionary entry claiming the wording, and
+ * says in its own `confirmed` whether that entry is a person's assertion or
+ * another pass's proposal. `unidentified` states outright that the line
+ * offered nothing to group on, and carries the line id that is therefore its
+ * key.
  *
  * `source` is on every variant because the same string means different
- * things at different merchants, and a group is only ever within one source.
- * The source is not on its own the scope, though: where one source covers
- * many shops — every uploaded receipt shares one id — the group is keyed on
- * the order's merchant as well, so `merchants` is the set of merchants the
- * group could ever have held and two shops printing one abbreviation are two
- * rows. Only a source that is a single merchant's own feed groups across the
- * merchant labels it states, which is how a chain's stores stay one product.
+ * things at different merchants. It is not on its own the scope: where one
+ * source covers many shops — every uploaded receipt shares one id — the group
+ * is keyed on the order's merchant as well, so two shops printing one
+ * abbreviation are two rows. Only two things widen a group past that. A
+ * source that is a single merchant's own feed groups across the merchant
+ * labels it states, which is how a chain's stores stay one product; and a
+ * `product` group holds whatever wordings a person pointed at one product,
+ * which may span both merchants and sources. So on that one variant `source`
+ * describes the line that supplied the printed name rather than bounding the
+ * group, and the row's own `merchants` is the complete list either way.
  */
 export const ProductIdentitySchema = z.discriminatedUnion('basis', [
   z.object({
@@ -339,9 +345,11 @@ export const ProductPurchasesSchema = z.object({
   /** What one of it has cost each time. See {@link ProductUnitPriceSchema}. */
   unitPrice: ProductUnitPriceSchema,
   /**
-   * Every merchant this product was bought from, in this currency, which is
-   * also the group's scope. More than one only under a source that is a
-   * single merchant's own feed and names its stores.
+   * Every merchant this product was bought from, in this currency, and the
+   * scope of the group. More than one in two cases and no others: the source
+   * is a single merchant's own feed that names its stores, as the Woolworths
+   * export does; or a person pointed wordings from several merchants at one
+   * dictionary product. Nothing derived ever widens this on its own.
    */
   merchants: z.array(MerchantIdentitySchema).min(1),
 });

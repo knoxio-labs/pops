@@ -47,19 +47,18 @@
  * a withheld group is withheld by a criterion the response names. A `limit`
  * would instead drop rows for a reason nothing in the response records.
  */
+import { countCoverage, type CoverageTally } from './product-coverage.js';
+import { loadProductDictionary } from './product-dictionary.js';
 import {
   accumulate,
-  countCoverage,
   noteMerchant,
   present,
   rankLine,
   startBucket,
-  type CoverageTally,
   type ProductBucket,
   type ProductPurchases,
   type RankedLine,
 } from './product-group.js';
-import { loadProductDictionary } from './product-dictionary.js';
 import { identifyProduct } from './product-identity.js';
 import { selectMeasuredItemIds, selectScopedLines } from './product-leaderboard-lines.js';
 import { tupleKey } from './tuple-key.js';

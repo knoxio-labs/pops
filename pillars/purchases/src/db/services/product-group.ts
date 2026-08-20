@@ -272,46 +272,6 @@ function foldConfirmation(bucket: ProductBucket, identity: ProductIdentity): voi
   bucket.identity = { ...bucket.identity, confirmed: false };
 }
 
-/** The running per-basis tally {@link countCoverage} adds to. */
-export interface CoverageTally {
-  skuKeyedLines: number;
-  confirmedProductLines: number;
-  proposedProductLines: number;
-  nameKeyedLines: number;
-  unidentifiedLines: number;
-}
-
-/**
- * Tally one line against the basis that grouped it.
- *
- * The `never` assignment is what makes it exhaustive: a basis added later
- * fails to compile here instead of falling through, uncounted, and breaking
- * the invariant that the buckets sum to the line count — which is how a
- * coverage figure comes to overstate the identified share of an answer, the
- * one error this route must not make.
- */
-export function countCoverage(coverage: CoverageTally, identity: ProductIdentity): void {
-  switch (identity.basis) {
-    case 'sku':
-      coverage.skuKeyedLines += 1;
-      return;
-    case 'product':
-      if (identity.confirmed) coverage.confirmedProductLines += 1;
-      else coverage.proposedProductLines += 1;
-      return;
-    case 'name':
-      coverage.nameKeyedLines += 1;
-      return;
-    case 'unidentified':
-      coverage.unidentifiedLines += 1;
-      return;
-    default: {
-      const unhandled: never = identity;
-      throw new Error(`no coverage bucket is defined for ${JSON.stringify(unhandled)}`);
-    }
-  }
-}
-
 export function noteMerchant(bucket: ProductBucket, line: ScopedLine): void {
   const { key, identity } = identifyMerchant(line.merchantEntityId, line.merchantEntityName);
   const candidate: LabelledMerchant = {
