@@ -22,7 +22,7 @@ import {
   ConnectionNotFoundError,
   SelfConnectionError,
 } from '../services/connections-errors.js';
-import { create as createItem } from '../services/items.js';
+import { seedInventoryItem } from './item-fixture.js';
 
 import type { TraceNode } from '../services/connections-types.js';
 import type { InventoryDb } from '../services/internal.js';
@@ -92,8 +92,8 @@ function freshDb(): InventoryDb {
 
 /** Seed two items and return their IDs in sorted (A<B) order. */
 function seedPair(db: InventoryDb, nameA = 'Item A', nameB = 'Item B'): [string, string] {
-  const a = createItem(db, { itemName: nameA });
-  const b = createItem(db, { itemName: nameB });
+  const a = seedInventoryItem(db, { itemName: nameA });
+  const b = seedInventoryItem(db, { itemName: nameB });
   return [a.id, b.id].toSorted() as [string, string];
 }
 
@@ -120,7 +120,7 @@ describe('connectionsService.create', () => {
   });
 
   it('rejects connecting an item to itself with SelfConnectionError', () => {
-    const item = createItem(db, { itemName: 'Solo' });
+    const item = seedInventoryItem(db, { itemName: 'Solo' });
     expect(() =>
       connectionsService.create(db, { itemAId: item.id, itemBId: item.id })
     ).toThrowError(SelfConnectionError);
@@ -143,14 +143,14 @@ describe('connectionsService.create', () => {
   });
 
   it('throws ConnectionItemNotFoundError when itemA is missing', () => {
-    const b = createItem(db, { itemName: 'B' });
+    const b = seedInventoryItem(db, { itemName: 'B' });
     expect(() => connectionsService.create(db, { itemAId: 'nope', itemBId: b.id })).toThrowError(
       ConnectionItemNotFoundError
     );
   });
 
   it('throws ConnectionItemNotFoundError when itemB is missing', () => {
-    const a = createItem(db, { itemName: 'A' });
+    const a = seedInventoryItem(db, { itemName: 'A' });
     expect(() => connectionsService.create(db, { itemAId: a.id, itemBId: 'nope' })).toThrowError(
       ConnectionItemNotFoundError
     );
@@ -184,7 +184,7 @@ describe('connectionsService.list', () => {
   });
 
   it('returns empty rows + zero total when the item has no connections', () => {
-    const item = createItem(db, { itemName: 'Lonely' });
+    const item = seedInventoryItem(db, { itemName: 'Lonely' });
     const result = connectionsService.list(db, item.id, 50, 0);
     expect(result).toEqual({ rows: [], total: 0 });
   });
@@ -208,9 +208,9 @@ describe('connectionsService.list', () => {
   });
 
   it('paginates rows but reports the full total for the filter', () => {
-    const hub = createItem(db, { itemName: 'Hub' });
+    const hub = seedInventoryItem(db, { itemName: 'Hub' });
     for (let i = 0; i < 3; i++) {
-      const peer = createItem(db, { itemName: `Peer ${i}` });
+      const peer = seedInventoryItem(db, { itemName: `Peer ${i}` });
       connectionsService.create(db, { itemAId: hub.id, itemBId: peer.id });
     }
 
@@ -250,9 +250,9 @@ describe('connectionsService.delete', () => {
   });
 
   it('leaves unrelated connections untouched', () => {
-    const a = createItem(db, { itemName: 'A' });
-    const b = createItem(db, { itemName: 'B' });
-    const c = createItem(db, { itemName: 'C' });
+    const a = seedInventoryItem(db, { itemName: 'A' });
+    const b = seedInventoryItem(db, { itemName: 'B' });
+    const c = seedInventoryItem(db, { itemName: 'C' });
 
     const pairAB = [a.id, b.id].toSorted() as [string, string];
     const pairAC = [a.id, c.id].toSorted() as [string, string];
@@ -272,7 +272,7 @@ describe('connectionsService.trace', () => {
   });
 
   it('returns root with no children when the item has no connections', () => {
-    const item = createItem(db, { itemName: 'Lonely' });
+    const item = seedInventoryItem(db, { itemName: 'Lonely' });
     const tree = connectionsService.trace(db, item.id, 10);
     expect(tree.id).toBe(item.id);
     expect(tree.itemName).toBe('Lonely');
@@ -280,9 +280,9 @@ describe('connectionsService.trace', () => {
   });
 
   it('returns immediate neighbours as direct children', () => {
-    const hub = createItem(db, { itemName: 'Hub' });
-    const peer1 = createItem(db, { itemName: 'Peer 1' });
-    const peer2 = createItem(db, { itemName: 'Peer 2' });
+    const hub = seedInventoryItem(db, { itemName: 'Hub' });
+    const peer1 = seedInventoryItem(db, { itemName: 'Peer 1' });
+    const peer2 = seedInventoryItem(db, { itemName: 'Peer 2' });
     connectionsService.create(db, { itemAId: hub.id, itemBId: peer1.id });
     connectionsService.create(db, { itemAId: hub.id, itemBId: peer2.id });
 
@@ -292,10 +292,10 @@ describe('connectionsService.trace', () => {
   });
 
   it('traverses multi-hop chains recursively', () => {
-    const a = createItem(db, { itemName: 'A' });
-    const b = createItem(db, { itemName: 'B' });
-    const c = createItem(db, { itemName: 'C' });
-    const d = createItem(db, { itemName: 'D' });
+    const a = seedInventoryItem(db, { itemName: 'A' });
+    const b = seedInventoryItem(db, { itemName: 'B' });
+    const c = seedInventoryItem(db, { itemName: 'C' });
+    const d = seedInventoryItem(db, { itemName: 'D' });
 
     const pairs = [
       [a.id, b.id],
@@ -319,9 +319,9 @@ describe('connectionsService.trace', () => {
   });
 
   it('caps depth at maxDepth', () => {
-    const a = createItem(db, { itemName: 'A' });
-    const b = createItem(db, { itemName: 'B' });
-    const c = createItem(db, { itemName: 'C' });
+    const a = seedInventoryItem(db, { itemName: 'A' });
+    const b = seedInventoryItem(db, { itemName: 'B' });
+    const c = seedInventoryItem(db, { itemName: 'C' });
 
     const pairAB = [a.id, b.id].toSorted() as [string, string];
     const pairBC = [b.id, c.id].toSorted() as [string, string];
@@ -335,9 +335,9 @@ describe('connectionsService.trace', () => {
   });
 
   it('breaks cycles in a triangle so each node appears at most once', () => {
-    const a = createItem(db, { itemName: 'A' });
-    const b = createItem(db, { itemName: 'B' });
-    const c = createItem(db, { itemName: 'C' });
+    const a = seedInventoryItem(db, { itemName: 'A' });
+    const b = seedInventoryItem(db, { itemName: 'B' });
+    const c = seedInventoryItem(db, { itemName: 'C' });
 
     for (const [x, y] of [
       [a.id, b.id],
@@ -370,7 +370,7 @@ describe('connectionsService.graph', () => {
   });
 
   it('returns a single-node subgraph when the item has no connections', () => {
-    const item = createItem(db, { itemName: 'Lonely' });
+    const item = seedInventoryItem(db, { itemName: 'Lonely' });
     const result = connectionsService.graph(db, item.id, 10);
     expect(result.nodes).toHaveLength(1);
     expect(result.nodes[0]!.id).toBe(item.id);
@@ -378,9 +378,9 @@ describe('connectionsService.graph', () => {
   });
 
   it('includes cross-links between visited nodes (triangle)', () => {
-    const a = createItem(db, { itemName: 'A' });
-    const b = createItem(db, { itemName: 'B' });
-    const c = createItem(db, { itemName: 'C' });
+    const a = seedInventoryItem(db, { itemName: 'A' });
+    const b = seedInventoryItem(db, { itemName: 'B' });
+    const c = seedInventoryItem(db, { itemName: 'C' });
 
     for (const [x, y] of [
       [a.id, b.id],
@@ -397,9 +397,9 @@ describe('connectionsService.graph', () => {
   });
 
   it('respects maxDepth', () => {
-    const a = createItem(db, { itemName: 'A' });
-    const b = createItem(db, { itemName: 'B' });
-    const c = createItem(db, { itemName: 'C' });
+    const a = seedInventoryItem(db, { itemName: 'A' });
+    const b = seedInventoryItem(db, { itemName: 'B' });
+    const c = seedInventoryItem(db, { itemName: 'C' });
 
     const pairAB = [a.id, b.id].toSorted() as [string, string];
     const pairBC = [b.id, c.id].toSorted() as [string, string];
@@ -421,7 +421,7 @@ describe('connectionsService.graph', () => {
   });
 
   it('includes node metadata (itemName, assetId, type)', () => {
-    const item = createItem(db, {
+    const item = seedInventoryItem(db, {
       itemName: 'MacBook Pro',
       assetId: 'ASSET-001',
       type: 'electronics',
