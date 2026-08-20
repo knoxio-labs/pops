@@ -2406,6 +2406,7 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
         account: string;
         amount: number;
         checksum: string;
+        country?: string;
         date: string;
         description: string;
         entity: {
@@ -2433,6 +2434,7 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
           priority: number;
           ruleId: string;
         }>;
+        notes?: string;
         rawRow: string;
         ruleProvenance?: {
           confidence: number;
@@ -2463,6 +2465,7 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
         account: string;
         amount: number;
         checksum: string;
+        country?: string;
         date: string;
         description: string;
         entity: {
@@ -2490,6 +2493,7 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
           priority: number;
           ruleId: string;
         }>;
+        notes?: string;
         rawRow: string;
         ruleProvenance?: {
           confidence: number;
@@ -2520,6 +2524,7 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
         account: string;
         amount: number;
         checksum: string;
+        country?: string;
         date: string;
         description: string;
         entity: {
@@ -2547,6 +2552,7 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
           priority: number;
           ruleId: string;
         }>;
+        notes?: string;
         rawRow: string;
         ruleProvenance?: {
           confidence: number;
@@ -2577,6 +2583,7 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
         account: string;
         amount: number;
         checksum: string;
+        country?: string;
         date: string;
         description: string;
         entity: {
@@ -2604,6 +2611,7 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
           priority: number;
           ruleId: string;
         }>;
+        notes?: string;
         rawRow: string;
         ruleProvenance?: {
           confidence: number;
@@ -2756,6 +2764,7 @@ export type ImportsCommitImportData = {
       account: string;
       amount: number;
       checksum: string;
+      country?: string;
       date: string;
       description: string;
       entityId?: string;
@@ -2764,6 +2773,7 @@ export type ImportsCommitImportData = {
       matchConfidence?: number;
       matchRuleId?: string;
       matchType?: 'alias' | 'exact' | 'prefix' | 'contains' | 'ai' | 'learned' | 'manual' | 'none';
+      notes?: string;
       rawRow: string;
       suggestedTags?: Array<{
         isNew?: boolean;
@@ -2910,9 +2920,11 @@ export type ImportsProcessImportData = {
       account: string;
       amount: number;
       checksum: string;
+      country?: string;
       date: string;
       description: string;
       location?: string;
+      notes?: string;
       rawRow: string;
     }>;
   };
@@ -3031,6 +3043,7 @@ export type ImportsGetImportProgressResponses = {
         account: string;
         amount: number;
         checksum: string;
+        country?: string;
         date: string;
         description: string;
         entity: {
@@ -3058,6 +3071,7 @@ export type ImportsGetImportProgressResponses = {
           priority: number;
           ruleId: string;
         }>;
+        notes?: string;
         rawRow: string;
         ruleProvenance?: {
           confidence: number;
@@ -3088,6 +3102,7 @@ export type ImportsGetImportProgressResponses = {
         account: string;
         amount: number;
         checksum: string;
+        country?: string;
         date: string;
         description: string;
         entity: {
@@ -3115,6 +3130,7 @@ export type ImportsGetImportProgressResponses = {
           priority: number;
           ruleId: string;
         }>;
+        notes?: string;
         rawRow: string;
         ruleProvenance?: {
           confidence: number;
@@ -3145,6 +3161,7 @@ export type ImportsGetImportProgressResponses = {
         account: string;
         amount: number;
         checksum: string;
+        country?: string;
         date: string;
         description: string;
         entity: {
@@ -3172,6 +3189,7 @@ export type ImportsGetImportProgressResponses = {
           priority: number;
           ruleId: string;
         }>;
+        notes?: string;
         rawRow: string;
         ruleProvenance?: {
           confidence: number;
@@ -3202,6 +3220,7 @@ export type ImportsGetImportProgressResponses = {
         account: string;
         amount: number;
         checksum: string;
+        country?: string;
         date: string;
         description: string;
         entity: {
@@ -3229,6 +3248,7 @@ export type ImportsGetImportProgressResponses = {
           priority: number;
           ruleId: string;
         }>;
+        notes?: string;
         rawRow: string;
         ruleProvenance?: {
           confidence: number;
@@ -3405,6 +3425,7 @@ export type ImportsReevaluateWithPendingRulesResponses = {
         account: string;
         amount: number;
         checksum: string;
+        country?: string;
         date: string;
         description: string;
         entity: {
@@ -3432,6 +3453,7 @@ export type ImportsReevaluateWithPendingRulesResponses = {
           priority: number;
           ruleId: string;
         }>;
+        notes?: string;
         rawRow: string;
         ruleProvenance?: {
           confidence: number;
@@ -3462,6 +3484,7 @@ export type ImportsReevaluateWithPendingRulesResponses = {
         account: string;
         amount: number;
         checksum: string;
+        country?: string;
         date: string;
         description: string;
         entity: {
@@ -3489,6 +3512,7 @@ export type ImportsReevaluateWithPendingRulesResponses = {
           priority: number;
           ruleId: string;
         }>;
+        notes?: string;
         rawRow: string;
         ruleProvenance?: {
           confidence: number;
@@ -3519,6 +3543,7 @@ export type ImportsReevaluateWithPendingRulesResponses = {
         account: string;
         amount: number;
         checksum: string;
+        country?: string;
         date: string;
         description: string;
         entity: {
@@ -3546,6 +3571,7 @@ export type ImportsReevaluateWithPendingRulesResponses = {
           priority: number;
           ruleId: string;
         }>;
+        notes?: string;
         rawRow: string;
         ruleProvenance?: {
           confidence: number;
@@ -3576,6 +3602,7 @@ export type ImportsReevaluateWithPendingRulesResponses = {
         account: string;
         amount: number;
         checksum: string;
+        country?: string;
         date: string;
         description: string;
         entity: {
@@ -3603,6 +3630,7 @@ export type ImportsReevaluateWithPendingRulesResponses = {
           priority: number;
           ruleId: string;
         }>;
+        notes?: string;
         rawRow: string;
         ruleProvenance?: {
           confidence: number;

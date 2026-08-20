@@ -178,6 +178,8 @@ function writeTransactionsPhase(
         entityId: entityId ?? null,
         entityName: txn.entityName ?? null,
         location: txn.location ?? null,
+        country: txn.country ?? null,
+        notes: txn.notes ?? null,
         rawRow: txn.rawRow,
         checksum: txn.checksum,
         matchType: provenance.matchType,

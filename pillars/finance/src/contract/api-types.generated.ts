@@ -3790,6 +3790,7 @@ export interface operations {
                 account: string;
                 amount: number;
                 checksum: string;
+                country?: string;
                 date: string;
                 description: string;
                 entity: {
@@ -3819,6 +3820,7 @@ export interface operations {
                   priority: number;
                   ruleId: string;
                 }[];
+                notes?: string;
                 rawRow: string;
                 ruleProvenance?: {
                   confidence: number;
@@ -3854,6 +3856,7 @@ export interface operations {
                 account: string;
                 amount: number;
                 checksum: string;
+                country?: string;
                 date: string;
                 description: string;
                 entity: {
@@ -3883,6 +3886,7 @@ export interface operations {
                   priority: number;
                   ruleId: string;
                 }[];
+                notes?: string;
                 rawRow: string;
                 ruleProvenance?: {
                   confidence: number;
@@ -3918,6 +3922,7 @@ export interface operations {
                 account: string;
                 amount: number;
                 checksum: string;
+                country?: string;
                 date: string;
                 description: string;
                 entity: {
@@ -3947,6 +3952,7 @@ export interface operations {
                   priority: number;
                   ruleId: string;
                 }[];
+                notes?: string;
                 rawRow: string;
                 ruleProvenance?: {
                   confidence: number;
@@ -3982,6 +3988,7 @@ export interface operations {
                 account: string;
                 amount: number;
                 checksum: string;
+                country?: string;
                 date: string;
                 description: string;
                 entity: {
@@ -4011,6 +4018,7 @@ export interface operations {
                   priority: number;
                   ruleId: string;
                 }[];
+                notes?: string;
                 rawRow: string;
                 ruleProvenance?: {
                   confidence: number;
@@ -4256,6 +4264,7 @@ export interface operations {
             account: string;
             amount: number;
             checksum: string;
+            country?: string;
             date: string;
             description: string;
             entityId?: string;
@@ -4273,6 +4282,7 @@ export interface operations {
               | 'learned'
               | 'manual'
               | 'none';
+            notes?: string;
             rawRow: string;
             suggestedTags?: {
               isNew?: boolean;
@@ -4451,9 +4461,11 @@ export interface operations {
             account: string;
             amount: number;
             checksum: string;
+            country?: string;
             date: string;
             description: string;
             location?: string;
+            notes?: string;
             rawRow: string;
           }[];
         };
@@ -4556,6 +4568,7 @@ export interface operations {
                 account: string;
                 amount: number;
                 checksum: string;
+                country?: string;
                 date: string;
                 description: string;
                 entity: {
@@ -4585,6 +4598,7 @@ export interface operations {
                   priority: number;
                   ruleId: string;
                 }[];
+                notes?: string;
                 rawRow: string;
                 ruleProvenance?: {
                   confidence: number;
@@ -4620,6 +4634,7 @@ export interface operations {
                 account: string;
                 amount: number;
                 checksum: string;
+                country?: string;
                 date: string;
                 description: string;
                 entity: {
@@ -4649,6 +4664,7 @@ export interface operations {
                   priority: number;
                   ruleId: string;
                 }[];
+                notes?: string;
                 rawRow: string;
                 ruleProvenance?: {
                   confidence: number;
@@ -4684,6 +4700,7 @@ export interface operations {
                 account: string;
                 amount: number;
                 checksum: string;
+                country?: string;
                 date: string;
                 description: string;
                 entity: {
@@ -4713,6 +4730,7 @@ export interface operations {
                   priority: number;
                   ruleId: string;
                 }[];
+                notes?: string;
                 rawRow: string;
                 ruleProvenance?: {
                   confidence: number;
@@ -4748,6 +4766,7 @@ export interface operations {
                 account: string;
                 amount: number;
                 checksum: string;
+                country?: string;
                 date: string;
                 description: string;
                 entity: {
@@ -4777,6 +4796,7 @@ export interface operations {
                   priority: number;
                   ruleId: string;
                 }[];
+                notes?: string;
                 rawRow: string;
                 ruleProvenance?: {
                   confidence: number;
@@ -4982,6 +5002,7 @@ export interface operations {
                 account: string;
                 amount: number;
                 checksum: string;
+                country?: string;
                 date: string;
                 description: string;
                 entity: {
@@ -5011,6 +5032,7 @@ export interface operations {
                   priority: number;
                   ruleId: string;
                 }[];
+                notes?: string;
                 rawRow: string;
                 ruleProvenance?: {
                   confidence: number;
@@ -5046,6 +5068,7 @@ export interface operations {
                 account: string;
                 amount: number;
                 checksum: string;
+                country?: string;
                 date: string;
                 description: string;
                 entity: {
@@ -5075,6 +5098,7 @@ export interface operations {
                   priority: number;
                   ruleId: string;
                 }[];
+                notes?: string;
                 rawRow: string;
                 ruleProvenance?: {
                   confidence: number;
@@ -5110,6 +5134,7 @@ export interface operations {
                 account: string;
                 amount: number;
                 checksum: string;
+                country?: string;
                 date: string;
                 description: string;
                 entity: {
@@ -5139,6 +5164,7 @@ export interface operations {
                   priority: number;
                   ruleId: string;
                 }[];
+                notes?: string;
                 rawRow: string;
                 ruleProvenance?: {
                   confidence: number;
@@ -5174,6 +5200,7 @@ export interface operations {
                 account: string;
                 amount: number;
                 checksum: string;
+                country?: string;
                 date: string;
                 description: string;
                 entity: {
@@ -5203,6 +5230,7 @@ export interface operations {
                   priority: number;
                   ruleId: string;
                 }[];
+                notes?: string;
                 rawRow: string;
                 ruleProvenance?: {
                   confidence: number;

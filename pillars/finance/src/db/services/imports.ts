@@ -59,6 +59,8 @@ export interface InsertImportTransactionInput {
   entityId: string | null;
   entityName: string | null;
   location: string | null;
+  country?: string | null;
+  notes?: string | null;
   rawRow?: string;
   checksum?: string;
   /** How the entity assignment was produced (CF057/#3658) — nullable, see schema doc. */
@@ -174,6 +176,8 @@ export function insertImportTransaction(
       entityId: input.entityId,
       entityName: input.entityName,
       location: input.location,
+      country: input.country ?? null,
+      notes: input.notes ?? null,
       checksum: input.checksum ?? null,
       rawRow: input.rawRow ?? null,
       lastEditedTime: now,

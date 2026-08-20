@@ -21,6 +21,10 @@ export const ParsedTransactionSchema = z.object({
   amount: z.number(),
   account: z.string().min(1),
   location: z.string().optional(),
+  /** ISO-3166-1 alpha-2, set by parsers that can tell a charge was foreign. */
+  country: z.string().optional(),
+  /** Parser-derived detail the columns cannot hold yet, e.g. an ANZ foreign amount and fx fee. */
+  notes: z.string().optional(),
   rawRow: z.string(),
   checksum: z.string(),
 });

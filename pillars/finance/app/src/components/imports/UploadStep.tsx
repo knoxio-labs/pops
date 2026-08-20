@@ -1,60 +1,15 @@
-import Papa from 'papaparse';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button, RadioInput } from '@pops/ui';
 
 import { useImportStore } from '../../store/importStore';
-import { mergeParsedFiles, type ParsedCsvFile } from './csv-merge';
+import { bankDialect } from './bank-dialect';
+import { mergeParsedFiles } from './csv-merge';
+import { parseAllFiles } from './csv-parse';
 import { FileUpload } from './FileUpload';
 
 import type { BankType } from '../../store/import-store-types';
-
-interface ParseResult {
-  ok: boolean;
-  error?: string;
-  parsed?: ParsedCsvFile;
-}
-
-function parseCsvFile(file: File): Promise<ParseResult> {
-  return new Promise((resolve) => {
-    Papa.parse<Record<string, string>>(file, {
-      header: true,
-      skipEmptyLines: true,
-      complete: (results) => {
-        if (results.errors.length > 0) {
-          resolve({
-            ok: false,
-            error: `${file.name}: CSV parsing error: ${results.errors[0]?.message ?? 'Unknown error'}`,
-          });
-          return;
-        }
-        if (results.data.length === 0) {
-          resolve({ ok: false, error: `${file.name}: CSV file is empty` });
-          return;
-        }
-        const headers = results.meta.fields ?? [];
-        if (headers.length === 0) {
-          resolve({ ok: false, error: `${file.name}: CSV file has no headers` });
-          return;
-        }
-        resolve({ ok: true, parsed: { fileName: file.name, headers, rows: results.data } });
-      },
-      error: (error) =>
-        resolve({ ok: false, error: `${file.name}: Failed to parse CSV: ${error.message}` }),
-    });
-  });
-}
-
-async function parseAllFiles(files: File[]): Promise<{ error?: string; parsed: ParsedCsvFile[] }> {
-  const parsed: ParsedCsvFile[] = [];
-  for (const file of files) {
-    const result = await parseCsvFile(file);
-    if (!result.ok || !result.parsed) return { error: result.error ?? 'Unknown error', parsed: [] };
-    parsed.push(result.parsed);
-  }
-  return { parsed };
-}
 
 function UploadFooter({
   onNext,
@@ -76,6 +31,7 @@ function UploadFooter({
 
 const BANK_OPTIONS = [
   { value: 'ANZ', label: 'ANZ', description: 'Everyday, Savings' },
+  { value: 'ANZ Credit Card', label: 'ANZ Credit Card', description: 'Frequent Flyer, Rewards' },
   { value: 'Amex', label: 'Amex', description: 'American Express' },
   { value: 'ING', label: 'ING', description: 'Savings, Everyday' },
   { value: 'Up', label: 'Up', description: 'Everyday, Round Up' },
@@ -83,6 +39,8 @@ const BANK_OPTIONS = [
 
 const BANK_HELP: Record<BankType, string> = {
   ANZ: 'Log in to ANZ Internet Banking, open your account, and export transactions as CSV.',
+  'ANZ Credit Card':
+    'Log in to ANZ Internet Banking, open your credit card, and export transactions as CSV. The export has no header row — that is expected.',
   Amex: 'Log in to your Amex online portal and download your transactions as a CSV export.',
   ING: 'Log in to ING Banking Online, open your account, and export transactions as CSV.',
   Up: 'In the Up app, go to your account, tap Export, and choose CSV format.',
@@ -123,7 +81,7 @@ function useUploadStep() {
     }
     setIsProcessing(true);
     setError(null);
-    const { error: parseError, parsed } = await parseAllFiles(files);
+    const { error: parseError, parsed } = await parseAllFiles(files, bankDialect(bankType));
     if (parseError) {
       setIsProcessing(false);
       setError(parseError);
@@ -138,7 +96,7 @@ function useUploadStep() {
     setHeaders(merged.headers);
     setRows(merged.rows);
     nextStep();
-  }, [files, rows, setHeaders, setRows, nextStep]);
+  }, [files, rows, bankType, setHeaders, setRows, nextStep]);
 
   return {
     files,
