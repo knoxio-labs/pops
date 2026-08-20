@@ -1577,6 +1577,35 @@ export type ReconcileLinksResponses = {
 
 export type ReconcileLinksResponse = ReconcileLinksResponses[keyof ReconcileLinksResponses];
 
+export type ReconcileLinksBatchData = {
+  /**
+   * Body
+   */
+  body?: {
+    transactionUris: Array<string>;
+  };
+  path?: never;
+  query?: never;
+  url: '/reconcile/links/batch';
+};
+
+export type ReconcileLinksBatchResponses = {
+  /**
+   * 200
+   */
+  200: {
+    transactions: Array<{
+      confirmedChargeCount: number;
+      derivedChargeCount: number;
+      purchaseCount: number;
+      transactionUri: string;
+    }>;
+  };
+};
+
+export type ReconcileLinksBatchResponse =
+  ReconcileLinksBatchResponses[keyof ReconcileLinksBatchResponses];
+
 export type ReconcileQueueData = {
   body?: never;
   path?: never;

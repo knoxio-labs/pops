@@ -150,6 +150,11 @@ export {
 } from './services/reconcile-links.js';
 
 export {
+  summariseLinksForTransactions,
+  type TransactionLinkSummary,
+} from './services/reconcile-links-batch.js';
+
+export {
   listReconcileQueue,
   type QueueEntry,
   type QueueFilter,

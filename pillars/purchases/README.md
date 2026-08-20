@@ -47,6 +47,18 @@ It returns a list of orders, not one. A combined settlement — several charges,
 
 A transaction no order explains is an empty list and a `200`. That is the ordinary case for most of a statement, and a `404` would have consumers treating "this was not a purchase" as a fault.
 
+### The plural form, for a list rather than a panel
+
+`POST /reconcile/links/batch` takes up to 500 transaction URIs and answers each with counts: how many distinct orders explain it, how many of those links a human confirmed, and how many the matcher merely derived. A transactions table drawing "does an order explain this row" over a page of fifty rows would otherwise call the singular route fifty times, which is why no such column existed.
+
+It is a `POST` that mutates nothing. Five hundred URIs is roughly twenty-five kilobytes of query string, past what proxies reliably accept, and a URL truncated in transit fails as a wrong answer rather than as an error — so the keys travel in the body.
+
+It **counts, and returns no orders and no money**. Returning the orders would make it a second, fuller answer to the question the singular route already answers, free to drift from it; a consumer that wants the orders opens the one transaction it is asking about. Money is absent for the reason the merchant roll-up refuses a grand total: a charge's currency is the settlement currency, one transaction can settle orders in more than one, and a single `linkedCents` here would be a cross-currency sum wearing a currency's clothes.
+
+The two counts stay apart for the reason `confirmedAt` exists at all. A single "has a purchase" flag would report the matcher's current belief — which a later sweep may withdraw — as a decision somebody made, on every row it drew. Both non-zero is a partly-decided transaction, which is a real state rather than a rounding of either.
+
+A requested URI **absent** from the answer means no order explains it. Echoing every URI back with zeroes would make the response proportional to the question rather than to the answer, on a surface where most of the question is misses. The 500 is the route's bound, and it binds tighter than a `limit` would: the answer is at most one fixed-size row per URI asked about, so a caller that can count its own request already knows the size of the response, and there is nothing for an `offset` to page over.
+
 ## The accounting split
 
 `GET /purchases/:id` returns the split pre-computed, because each number calls for something different and deriving them per consumer is how three frontends end up disagreeing:

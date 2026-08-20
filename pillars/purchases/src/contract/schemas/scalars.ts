@@ -48,3 +48,19 @@ export const PopsUriSchema = z
     /^pops:\/\/[a-z0-9-]+\/[a-z0-9-]+\/[^/\s]+$/u,
     'expected a pops:// URI, e.g. pops://finance/transaction/<id>'
   );
+
+/**
+ * A `pops://finance/transaction/<id>` reference specifically.
+ *
+ * Narrower than {@link PopsUriSchema}, and deliberately narrower than the
+ * stored column, which stays generic. It exists for the places a URI is an
+ * INPUT: a lookup keyed on a well-formed URI from another pillar matches no
+ * link and returns an empty answer, which reads as "no order bought this"
+ * rather than "you asked the wrong question".
+ */
+export const FinanceTransactionUriSchema = z
+  .string()
+  .regex(
+    /^pops:\/\/finance\/transaction\/[^/\s]+$/u,
+    'expected a finance transaction URI, e.g. pops://finance/transaction/<id>'
+  );
