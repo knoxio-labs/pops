@@ -17,13 +17,15 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import supertest from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { ingestSourcesService, type OpenedFoodDb, openFoodDb } from '../../db/index.js';
 import { createFoodApiApp } from '../app.js';
 import { writeScreenshotPayload } from '../modules/ingest/ingest-storage.js';
+import { createTestTransport } from './test-http.js';
 import { HttpError, makeClient } from './test-utils.js';
+
+const { requestOn } = createTestTransport();
 
 const FOOD_WORKER_SECRET = 'food-worker-caller-secret';
 const FOOD_WORKER_CRED = `food-worker.${FOOD_WORKER_SECRET}`;
@@ -176,19 +178,19 @@ describe('ingest REST — workerComplete (DB-only)', () => {
 
 describe('ingest media serve routes', () => {
   it('400s on a non-numeric source id', async () => {
-    const res = await supertest(app()).get('/ingest/source/abc/screenshot');
+    const res = await requestOn(app()).get('/ingest/source/abc/screenshot');
     expect(res.status).toBe(400);
   });
 
   it('404s when the source row does not exist', async () => {
-    const res = await supertest(app()).get('/ingest/source/999999/screenshot');
+    const res = await requestOn(app()).get('/ingest/source/999999/screenshot');
     expect(res.status).toBe(404);
   });
 
   it('serves the screenshot bytes for a real, unarchived source', async () => {
     const sourceId = seedSource('screenshot');
     writeScreenshotPayload(sourceId, 'image/png', PNG_BASE64);
-    const res = await supertest(app()).get(`/ingest/source/${sourceId}/screenshot`);
+    const res = await requestOn(app()).get(`/ingest/source/${sourceId}/screenshot`);
     expect(res.status).toBe(200);
     expect(res.headers['content-type']).toContain('image/png');
     expect(res.body.length).toBeGreaterThan(0);
@@ -196,7 +198,7 @@ describe('ingest media serve routes', () => {
 
   it('404s for video when none was written', async () => {
     const sourceId = seedSource('screenshot');
-    const res = await supertest(app()).get(`/ingest/source/${sourceId}/video`);
+    const res = await requestOn(app()).get(`/ingest/source/${sourceId}/video`);
     expect(res.status).toBe(404);
   });
 });

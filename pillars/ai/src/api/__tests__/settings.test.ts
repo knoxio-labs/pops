@@ -11,11 +11,13 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import supertest from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { openAiDb, type OpenedAiDb } from '../../db/index.js';
 import { createAiApiApp } from '../app.js';
+import { createTestTransport } from './test-http.js';
+
+const { requestOn } = createTestTransport();
 
 let tmpDir: string;
 let aiDb: OpenedAiDb;
@@ -34,37 +36,37 @@ afterEach(() => {
 
 describe('ai pillar settings RU+reset', () => {
   it('list resolves the manifest default for an unset key', async () => {
-    const res = await supertest(app).get('/settings');
+    const res = await requestOn(app).get('/settings');
     expect(res.status).toBe(200);
     const rows = res.body.data as { key: string; value: string }[];
     expect(rows).toContainEqual({ key: 'ai.model', value: 'claude-haiku-4-5' });
   });
 
   it('get returns null for an unset key (no default at the single-key read)', async () => {
-    const res = await supertest(app).get('/settings/ai.model');
+    const res = await requestOn(app).get('/settings/ai.model');
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ data: null });
   });
 
   it('round-trips a write then read', async () => {
-    const put = await supertest(app)
+    const put = await requestOn(app)
       .put('/settings/ai.monthlyTokenBudget')
       .send({ value: '50000' });
     expect(put.status).toBe(200);
 
-    const get = await supertest(app).get('/settings/ai.monthlyTokenBudget');
+    const get = await requestOn(app).get('/settings/ai.monthlyTokenBudget');
     expect(get.body.data).toEqual({ key: 'ai.monthlyTokenBudget', value: '50000' });
   });
 
   it('resets a key back to its manifest default', async () => {
-    await supertest(app).put('/settings/ai.model').send({ value: 'claude-opus-4-8' });
-    const reset = await supertest(app).post('/settings/ai.model/reset').send({});
+    await requestOn(app).put('/settings/ai.model').send({ value: 'claude-opus-4-8' });
+    const reset = await requestOn(app).post('/settings/ai.model/reset').send({});
     expect(reset.status).toBe(200);
     expect(reset.body.data).toEqual({ key: 'ai.model', value: 'claude-haiku-4-5' });
   });
 
   it('rejects a key outside the declared ai.* set at the contract boundary', async () => {
-    const res = await supertest(app).get('/settings/core.plexUrl');
+    const res = await requestOn(app).get('/settings/core.plexUrl');
     expect(res.status).toBe(400);
   });
 });
