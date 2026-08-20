@@ -2,7 +2,9 @@
 
 Every colour, type size and gap in the iOS app resolves through this package.
 
-That is the entire point of it. The real visual design is being produced elsewhere and has not landed; when it does, it should be one diff against `Sources/DesignSystem/Resources/Colors.xcassets` and the scales in `Sources/DesignSystem/Tokens/`, not a sweep through every screen. Nothing here is a visual decision worth defending — the values are deliberately plain, and none of them is a claim about what the app will look like.
+That is the entire point of it. The real visual design is being produced elsewhere and has not landed; when it does, it should be one diff against `Sources/DesignSystem/Resources/Colors.xcassets` and the scales in `Sources/DesignSystem/Tokens/`, not a sweep through every screen. The palette is deliberately plain and none of its values is a claim about what the app will look like.
+
+The **structural** primitives under `Sources/DesignSystem/Primitives/` are a different matter, and they are decisions. `PopsStatusHeader` says an outcome is announced by a glyph and a colour before it is announced by a sentence; `PopsActionBar` says a screen's primary action does not scroll away; `PopsButton`'s prominent variant says at most one action per screen is the one to press; `PopsPhoto` says a picture the app is holding is drawn as a plate that is the same object, at the same size, whether or not there is a picture in it yet. Those hold across a repaint — a redesign changes what they look like, not that the app has them.
 
 ## The two rules
 
@@ -29,6 +31,18 @@ Generated sources are the one exclusion. A generator makes none of these choices
 `LoadingStateView`, `EmptyStateView` and `ErrorStateView` take their user-facing text — `message`, and `ErrorStateView`'s `retryTitle` — from the caller, not from a string this package owns. A blank or whitespace-only string falls back to a plain English default (`fallbackMessage`, `fallbackRetryTitle`); `LoadingStateView.message` and `ErrorStateView.retryTitle` also default to that fallback when the caller omits them, since both parameters carry a default value — `EmptyStateView.message` and `ErrorStateView.message` are required, so a blank string is the only route to the fallback there. Those defaults are `String`, not `LocalizedStringKey`, on purpose.
 
 That is a module-boundary decision, not an oversight. This package renders whatever text a caller hands it and has no way to know what locale that text should be in — deciding that belongs to the feature that owns the data behind the message, not to the primitive that displays it. Translation is out of scope for this package by design: no feature module localises anything, so a `.xcstrings` catalogue here would be infrastructure with no consumer to exercise it. A feature that needs translated copy supplies its own localized string to these parameters exactly as it supplies any other message — whether the app localises at all is a decision for the app as a whole, and this package does not make it on the app's behalf.
+
+## The one colour that does not come from the catalogue
+
+`PopsActionBar` draws on `.regularMaterial`, and that is the single deliberate exception. A material is what makes content visibly pass *behind* a pinned bar; a flat fill in `popsBackground` cannot, and reads as the screen ending there. The hairline above it is `popsSeparator`, because that is a rule rather than a surface.
+
+Nothing else may reach for a system material or a system colour, and `TokenDisciplineScanner` still refuses the latter everywhere.
+
+## The one inverted contrast pair
+
+Every foreground token is measured against `popsBackground` and `popsSurface`. `PopsButton`'s prominent variant is the reverse — `popsBackground` drawn *on* `popsAccent` — and `ContrastTests.filledAccentIsReadable` measures exactly that pair. It is a test of its own rather than another row in the matrix, because the matrix is a cross product: adding `popsAccent` as a surface would also demand that `popsWarning` and `popsDestructive` read on it, which nothing draws and nothing should.
+
+That pair is the whole reason a filled control can exist here at all. Before it there was no foreground guaranteed to read on the accent, so there was no honest filled button and the app had one button weight for everything.
 
 ## Light and dark diverge in the asset catalogue, and nowhere else
 

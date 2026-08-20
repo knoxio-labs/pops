@@ -68,8 +68,9 @@ name: A second feature earns a tab, and receipt capture says why it cannot open 
 - assertNotVisible:
     id: 'receipt-capture-open-settings'
 
-# And no camera button, because `ReceiptCapturePrompt` draws the refusal
-# INSTEAD of it rather than beside it. A button that survived the refusal would
+# And no camera button. The action bar `ReceiptCaptureView` pins under the
+# content offers the camera, the one refusal Settings can undo, or nothing at
+# all — and this refusal is the third case. A button that survived it would
 # open a scanner that can never produce a frame.
 - assertNotVisible:
     id: 'receipt-capture-start'

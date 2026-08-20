@@ -60,4 +60,28 @@ internal struct ContrastTests {
             )
         }
     }
+
+    /// The one inverted pair, and the reason a filled control can exist at
+    /// all: `PopsButton`'s prominent variant draws its label in
+    /// `popsBackground` on `popsAccent`, which is the reverse of every row
+    /// above and therefore not covered by them.
+    ///
+    /// It is a test of its own rather than another entry in the matrix
+    /// because the matrix is a cross product: adding `popsAccent` as a surface
+    /// would also demand that `popsWarning` and `popsDestructive` read on it,
+    /// which nothing draws and nothing should.
+    @Test(
+        "a filled accent control's label is readable on it",
+        arguments: ColorScheme.allCases)
+    func filledAccentIsReadable(scheme: ColorScheme) {
+        let measured = Self.ratio(.popsBackground, on: .popsAccent, in: scheme)
+        let reading = String(format: "%.2f", measured)
+
+        #expect(
+            measured >= Self.minimumRatio,
+            """
+            popsBackground on popsAccent in \(scheme) is \(reading):1, below \
+            \(Self.minimumRatio):1 — PopsButton's prominent variant is unreadable
+            """)
+    }
 }

@@ -1,4 +1,5 @@
 import AppCore
+import DesignSystem
 import DesignSystemTestSupport
 import Foundation
 import SwiftUI
@@ -129,6 +130,54 @@ internal struct ReceiptResultRenderingTests {
                         extracted: .fake(lines: [], unreadableNotes: [])))))
 
         #expect(withFailures != withoutFailures)
+    }
+
+    /// The reading is rows of line items now, not one newline-joined blob
+    /// under an "Items" label. A card with items has to be a taller, denser
+    /// card than one without — which is a difference in layout, so it holds
+    /// wherever the renderer runs.
+    @Test(
+        "the line items reach the needs-review card",
+        .comparisonSurvivesAnUncompiledCatalog)
+    func lineItemsReachTheCanvas() throws {
+        let withLines = try #require(
+            Self.render(
+                Self.card(
+                    .needsReview(
+                        receiptCount: 1, failures: [.fake()],
+                        extracted: .fake(
+                            lines: [.fake(description: "Milk"), .fake(description: "Bread")])))))
+        let withoutLines = try #require(
+            Self.render(
+                Self.card(
+                    .needsReview(
+                        receiptCount: 1, failures: [.fake()], extracted: .fake(lines: [])))))
+
+        #expect(withLines != withoutLines)
+    }
+
+    /// The thing this surface never showed. A plate with a photograph in it
+    /// is not the plate with a glyph in it whatever the palette did, so this
+    /// holds on the host lane too.
+    ///
+    /// It renders ``ReceiptPageView`` rather than the strip around it:
+    /// `ImageRenderer` lays a `ScrollView` out and rasterises none of its
+    /// content, which is why the plate is a view of its own. What the strip
+    /// itself composes is not checkable here — see this package's README.
+    @Test(
+        "a captured page draws its own photograph rather than a placeholder",
+        .comparisonSurvivesAnUncompiledCatalog)
+    func capturedPagesDrawTheirBytes() throws {
+        let png = try #require(PopsTestImage.pngData(), "the fixture image could not be encoded")
+        let page = { (mediaType: ReceiptMediaType) in
+            ReceiptPageView(part: ReceiptPart(mediaType: mediaType, data: png), index: 1, of: 1)
+                .frame(width: PopsSize.pageWidth, height: PopsSize.pageHeight)
+        }
+
+        let photographed = try #require(Self.render(page(.jpeg)))
+        let undrawable = try #require(Self.render(page(.pdf)))
+
+        #expect(photographed != undrawable)
     }
 
     /// The size the layout has to survive. iOS only, and the conditional is
