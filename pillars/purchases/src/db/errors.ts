@@ -26,6 +26,25 @@ export class PurchaseSourceNotFoundError extends Error {
   }
 }
 
+/**
+ * A product-dictionary edit named a product or a printed wording that is not
+ * there.
+ *
+ * One error for both grains rather than two, because the caller's recovery is
+ * the same in either case — re-read the dictionary, the row it was holding is
+ * gone — and the message already says which grain it was.
+ */
+export class ProductDictionaryNotFoundError extends Error {
+  /** The id that named nothing. */
+  readonly ref: string;
+
+  constructor(kind: 'product' | 'alias', ref: string) {
+    super(kind === 'product' ? `Product '${ref}' not found` : `Product alias '${ref}' not found`);
+    this.name = 'ProductDictionaryNotFoundError';
+    this.ref = ref;
+  }
+}
+
 /** Which identity already claimed the order. See {@link DuplicatePurchaseError}. */
 export type DuplicateMatch = 'checksum' | 'source-order-id';
 

@@ -69,19 +69,21 @@ export {
 } from './services/product-identity.js';
 
 export {
-  ProductDictionaryNotFoundError,
-  deleteAlias,
-  deleteProduct,
   listProducts,
   loadProductDictionary,
-  proposeProducts,
-  renameProduct,
-  updateAlias,
   type ListProductsFilter,
   type ProductWithAliases,
-  type ProposalOutcome,
-  type UpdateAliasInput,
 } from './services/product-dictionary.js';
+
+export { proposeProducts, type ProposalOutcome } from './services/product-dictionary-proposals.js';
+
+export {
+  deleteAlias,
+  deleteProduct,
+  renameProduct,
+  updateAlias,
+  type UpdateAliasInput,
+} from './services/product-dictionary-writes.js';
 
 export {
   rankProductPurchases,

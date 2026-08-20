@@ -9,6 +9,7 @@ import {
   DuplicatePurchaseError,
   InvalidIngestPayloadError,
   InventoryProposalConflictError,
+  ProductDictionaryNotFoundError,
   PurchaseNotFoundError,
   PurchaseSourceNotFoundError,
 } from '../../db/index.js';
@@ -68,7 +69,11 @@ export interface MappedHttpError {
 }
 
 export function tryMapServiceError(err: unknown): MappedHttpError | null {
-  if (err instanceof PurchaseNotFoundError || err instanceof PurchaseSourceNotFoundError) {
+  if (
+    err instanceof PurchaseNotFoundError ||
+    err instanceof PurchaseSourceNotFoundError ||
+    err instanceof ProductDictionaryNotFoundError
+  ) {
     return { status: 404, body: { message: err.message, code: 'NOT_FOUND' } };
   }
   // Not a failure: an adapter re-ingesting a bundle it has already

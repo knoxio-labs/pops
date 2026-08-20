@@ -132,21 +132,21 @@ A supermarket receipt says `CHK BRST 1KG`; an invoice for the same thing says `C
 
 **What it learns from.** Two things:
 
-1. *Repetition.* `POST /products/proposals` scans every stored line, and mints one entry per distinct scoped printed wording, pointing at a product of its own. That is not a guess — it is the grouping the aggregates already do, written down so a human can point at it.
-2. *Assertion.* `PATCH /products/aliases/:aliasId` with a `productId` points one wording at another wording's product. From then on both resolve to it, for every line already stored and every line that arrives later, without anyone being asked again. That is the mapping being learned, and it is learned once.
+1. _Repetition._ `POST /products/proposals` scans every stored line, and mints one entry per distinct scoped printed wording, pointing at a product of its own. That is not a guess — it is the grouping the aggregates already do, written down so a human can point at it.
+2. _Assertion._ `PATCH /products/aliases/:aliasId` with a `productId` points one wording at another wording's product. From then on both resolve to it, for every line already stored and every line that arrives later, without anyone being asked again. That is the mapping being learned, and it is learned once.
 
-**What it will not attempt.** It will not infer that `CHK BRST 1KG` and `Chicken Breast 1kg` are the same thing. Nothing in this pillar's data says they are: the merchants state no identifier, the prices differ, and the only available signal is string similarity — which is exactly the signal that cannot tell `MILK 1L` from `MILK 2L`. Two products collapsing into one corrupts spend attribution in a way no later reader can see, where leaving them apart is a visible non-answer. So the lookup is **exact on the normalised name**: no prefix, no substring, no edit distance. Finance's `entity-matcher.ts` can afford those stages because a bank descriptor's noise is its *suffix*; a product name's discriminating tokens are its suffix, and inverting that assumption is how the invisible error gets made.
+**What it will not attempt.** It will not infer that `CHK BRST 1KG` and `Chicken Breast 1kg` are the same thing. Nothing in this pillar's data says they are: the merchants state no identifier, the prices differ, and the only available signal is string similarity — which is exactly the signal that cannot tell `MILK 1L` from `MILK 2L`. Two products collapsing into one corrupts spend attribution in a way no later reader can see, where leaving them apart is a visible non-answer. So the lookup is **exact on the normalised name**: no prefix, no substring, no edit distance. Finance's `entity-matcher.ts` can afford those stages because a bank descriptor's noise is its _suffix_; a product name's discriminating tokens are its suffix, and inverting that assumption is how the invisible error gets made.
 
 **Two rules keep an entry from reaching further than its evidence.** The dictionary is never consulted for a line that states a sku, so a minted identity can never absorb an ASIN-keyed group — Amazon is out of scope here and loses nothing by it. And an entry is scoped by the same `productScopeKey` the on-the-fly grouping uses, so two cafés printing `LATTE` get two entries under the `receipt` source while a Woolworths wording still reaches the whole chain. The one thing that crosses a scope boundary is a human pointing two entries at one product, which is the feature.
 
 **How a bad entry is undone.** Every write is reversible and none of them touches a line:
 
-| the mistake | the undo |
-| --- | --- |
-| a wrong merge | `PATCH /products/aliases/:id` with `productId: null` — mints the wording a product of its own again |
-| a wrong confirmation | the same route with `confirmed: false` — back to a proposal a pass may retire |
-| a wrong entry | `DELETE /products/aliases/:id` — the lines fall back to the on-the-fly `name` grouping |
-| a wrong product | `DELETE /products/:id` — takes every wording with it |
+| the mistake          | the undo                                                                                            |
+| -------------------- | --------------------------------------------------------------------------------------------------- |
+| a wrong merge        | `PATCH /products/aliases/:id` with `productId: null` — mints the wording a product of its own again |
+| a wrong confirmation | the same route with `confirmed: false` — back to a proposal a pass may retire                       |
+| a wrong entry        | `DELETE /products/aliases/:id` — the lines fall back to the on-the-fly `name` grouping              |
+| a wrong product      | `DELETE /products/:id` — takes every wording with it                                                |
 
 A product left with no wordings is deleted in the same write: a product nothing resolves to is a label no read path can reach, and one a caller could still confirm and rename.
 

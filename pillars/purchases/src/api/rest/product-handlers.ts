@@ -2,12 +2,11 @@
  * Handlers for the `product.*` ts-rest sub-router.
  *
  * Thin: the dictionary's rules — what a pass may retire, what a confirmation
- * puts beyond its reach, when an emptied product is removed — all live in
- * `db/services/product-dictionary.ts`, because they are invariants of the
+ * puts beyond its reach, when an emptied product is removed — all live under
+ * `db/services/product-dictionary*.ts`, because they are invariants of the
  * data rather than of the wire.
  */
 import {
-  ProductDictionaryNotFoundError,
   deleteAlias,
   deleteProduct,
   listProducts,
@@ -15,6 +14,7 @@ import {
   renameProduct,
   updateAlias,
 } from '../../db/index.js';
+import { tryMapServiceError } from './error-mapping.js';
 
 import type { z } from 'zod';
 
@@ -31,6 +31,13 @@ type UpdateAliasBody = z.infer<typeof UpdateProductAliasBodySchema>;
 
 function notFound(message: string) {
   return { status: 404 as const, body: { message, code: 'NOT_FOUND' } };
+}
+
+/** Re-throw anything that is not a service error this contract declares. */
+function asNotFound(err: unknown) {
+  const mapped = tryMapServiceError(err);
+  if (mapped?.status === 404) return { status: 404 as const, body: mapped.body };
+  throw err as Error;
 }
 
 /**
@@ -59,8 +66,7 @@ export function makeProductHandlers(db: PurchasesDb) {
       try {
         renameProduct(db, params.productId, body.label);
       } catch (err) {
-        if (err instanceof ProductDictionaryNotFoundError) return notFound(err.message);
-        throw err as Error;
+        return asNotFound(err);
       }
       // Re-read rather than serialise the updated row: the response carries
       // the product's wordings, and a rename does not know them.
@@ -86,8 +92,7 @@ export function makeProductHandlers(db: PurchasesDb) {
       try {
         return { status: 200 as const, body: updateAlias(db, params.aliasId, body) };
       } catch (err) {
-        if (err instanceof ProductDictionaryNotFoundError) return notFound(err.message);
-        throw err as Error;
+        return asNotFound(err);
       }
     },
 
