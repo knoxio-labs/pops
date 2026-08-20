@@ -1,4 +1,5 @@
-import type { homeInventory } from '../../../db/index.js';
+import { crossPillarUrisService, type homeInventory } from '../../../db/index.js';
+
 import type { UpdateInventoryItemInput } from './types.js';
 
 type InventoryUpdate = Partial<typeof homeInventory.$inferInsert>;
@@ -45,10 +46,27 @@ export function buildInventoryUpdate(input: UpdateInventoryItemInput): Inventory
   if (assignNullableKeys(updates, input, NULLABLE_STRING_KEYS)) touched = true;
   if (assignNullableKeys(updates, input, NULLABLE_NUMBER_KEYS)) touched = true;
   if (assignBooleanFlags(updates, input)) touched = true;
+  assignDerivedPurchaseTransactionUri(updates, input);
 
   if (!touched) return null;
   updates.lastEditedTime = new Date().toISOString();
   return updates;
+}
+
+/**
+ * Keep the derived soft URI in lockstep with the id it is derived from, and
+ * drop the staleness verdict along with it — that verdict was reached about
+ * the previous target and says nothing about the new one.
+ */
+function assignDerivedPurchaseTransactionUri(
+  updates: InventoryUpdate,
+  input: UpdateInventoryItemInput
+): void {
+  if (input.purchaseTransactionId === undefined) return;
+  updates.purchaseTransactionUri = crossPillarUrisService.purchaseTransactionUriFor(
+    input.purchaseTransactionId
+  );
+  updates.purchaseTransactionStaleAt = null;
 }
 
 function assignItemName(updates: InventoryUpdate, input: UpdateInventoryItemInput): boolean {

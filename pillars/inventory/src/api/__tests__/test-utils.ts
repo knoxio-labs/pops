@@ -74,6 +74,7 @@ export interface ItemCreateBody {
   replacementValue?: number | null;
   resaleValue?: number | null;
   purchasePrice?: number | null;
+  purchaseTransactionId?: string | null;
 }
 
 export interface ItemListQuery {

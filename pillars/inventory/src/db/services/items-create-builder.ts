@@ -1,3 +1,5 @@
+import { purchaseTransactionUriFor } from './cross-pillar-uris.js';
+
 /** Insert-payload builder for the items service. */
 import type { homeInventory } from '../schema.js';
 import type { CreateItemInput } from './items-types.js';
@@ -58,5 +60,6 @@ export function buildCreateValues(
     lastEditedTime: now,
     ...nullableStringsFromInput(input),
     ...nullableNumbersFromInput(input),
+    purchaseTransactionUri: purchaseTransactionUriFor(input.purchaseTransactionId),
   };
 }

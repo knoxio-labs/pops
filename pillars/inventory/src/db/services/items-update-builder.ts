@@ -1,3 +1,5 @@
+import { purchaseTransactionUriFor } from './cross-pillar-uris.js';
+
 /**
  * Update-payload builder for the items service.
  *
@@ -61,6 +63,20 @@ function assignNullableNumberKeys(updates: InventoryUpdate, input: UpdateItemInp
   return touched;
 }
 
+/**
+ * Keep the derived soft URI in lockstep with the id it is derived from, and
+ * drop the staleness verdict along with it — that verdict was reached about
+ * the previous target and says nothing about the new one.
+ */
+function assignDerivedPurchaseTransactionUri(
+  updates: InventoryUpdate,
+  input: UpdateItemInput
+): void {
+  if (input.purchaseTransactionId === undefined) return;
+  updates.purchaseTransactionUri = purchaseTransactionUriFor(input.purchaseTransactionId);
+  updates.purchaseTransactionStaleAt = null;
+}
+
 function assignBooleanFlags(updates: InventoryUpdate, input: UpdateItemInput): boolean {
   let touched = false;
   if (input.inUse !== undefined) {
@@ -86,6 +102,7 @@ export function buildUpdateValues(input: UpdateItemInput): InventoryUpdate | nul
   if (assignNullableStringKeys(updates, input)) touched = true;
   if (assignNullableNumberKeys(updates, input)) touched = true;
   if (assignBooleanFlags(updates, input)) touched = true;
+  assignDerivedPurchaseTransactionUri(updates, input);
 
   if (!touched) return null;
   updates.lastEditedTime = new Date().toISOString();
