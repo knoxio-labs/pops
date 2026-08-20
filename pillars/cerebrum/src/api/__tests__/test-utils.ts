@@ -18,7 +18,6 @@ import { TemplateRegistry } from '../modules/templates/registry.js';
 import { createTestTransport } from './test-http.js';
 
 import type { Express } from 'express';
-import type supertest from 'supertest';
 
 import type {
   DebriefMediaTypeWire,
@@ -120,6 +119,7 @@ import type { QueryLlm, QueryStreamChunk, QueryStreamLlm } from '../modules/quer
 import type { ReflexService } from '../modules/reflex/reflex-service.js';
 import type { PeerClients } from '../modules/retrieval/peer-clients.js';
 import type { ContradictionDetector } from '../modules/workers/auditor.js';
+import type { Test } from './test-http.js';
 
 /**
  * Offline {@link IngestLlm} stub. Tests pass a per-operation responder map
@@ -319,7 +319,7 @@ export class HttpError extends Error {
   }
 }
 
-async function send<T>(req: supertest.Test): Promise<T> {
+async function send<T>(req: Test): Promise<T> {
   const res = await req;
   if (res.status >= 200 && res.status < 300) return res.body as T;
   throw new HttpError(res.status, res.body);

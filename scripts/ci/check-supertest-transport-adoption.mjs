@@ -2,8 +2,9 @@
 /**
  * Supertest transport adoption guard.
  *
- * `finance`, `bfm` and `purchases` each own a pre-listened `127.0.0.1` server
- * plus a pooled keep-alive agent for their API suites, because supertest's own
+ * `finance`, `bfm`, `purchases`, `media`, `cerebrum` and `documents` each own a
+ * pre-listened `127.0.0.1` server plus a pooled keep-alive agent for their API
+ * suites, because supertest's own
  * `request(app)` binds a fresh ephemeral server AND dials a fresh connection
  * for every call — two ephemeral ports per request — and that churn is what
  * stalls under machine contention. See AGENTS.md, "Conventions duplicated per
@@ -35,7 +36,7 @@
  *     the transport's own import, the guard says so instead of reporting a
  *     clean tree it can no longer read.
  *   - discovery asserts a floor. A pillar that yields fewer than
- *     `MIN_SCANNED_FILES` scannable files means the walk broke, not that the
+ *     its own `minFiles` scannable files means the walk broke, not that the
  *     pillar is small.
  *   - the ban is only meaningful while the package is reachable, so each
  *     pillar must still DECLARE supertest. A pillar that dropped the dependency
@@ -71,25 +72,37 @@ const repoRoot = resolve(here, '..', '..');
  * @typedef {object} PillarSpec
  * @property {string} id        Pillar directory name under `pillars/`.
  * @property {string} transport The one file allowed to import supertest, repo-relative posix.
+ * @property {number} minFiles  Discovery floor for this pillar; see the note below the list.
  */
 
 /** @type {PillarSpec[]} */
 export const PILLARS = [
-  { id: 'finance', transport: 'pillars/finance/src/api/__tests__/test-utils.ts' },
-  { id: 'bfm', transport: 'pillars/bfm/src/api/__tests__/test-http.ts' },
-  { id: 'purchases', transport: 'pillars/purchases/src/api/__tests__/test-http.ts' },
+  { id: 'finance', transport: 'pillars/finance/src/api/__tests__/test-utils.ts', minFiles: 320 },
+  { id: 'bfm', transport: 'pillars/bfm/src/api/__tests__/test-http.ts', minFiles: 80 },
+  { id: 'purchases', transport: 'pillars/purchases/src/api/__tests__/test-http.ts', minFiles: 200 },
+  { id: 'media', transport: 'pillars/media/src/api/__tests__/test-http.ts', minFiles: 310 },
+  { id: 'cerebrum', transport: 'pillars/cerebrum/src/api/__tests__/test-http.ts', minFiles: 220 },
+  { id: 'documents', transport: 'pillars/documents/src/api/__tests__/test-http.ts', minFiles: 12 },
 ];
 
 /** The package every transport wraps, and the name a violation reaches for. */
 export const BANNED_PACKAGE = 'supertest';
 
 /**
- * Below this, the walk is broken rather than the pillar small. The smallest of
- * the three carries 166 scannable files as of writing; this is set an order of
- * magnitude under that so a legitimate shrink does not trip it, and a walk that
- * silently returned almost nothing does.
+ * Each pillar's `minFiles` is roughly half its current scannable count, so a
+ * legitimate shrink does not trip it and a walk that silently returned almost
+ * nothing does.
+ *
+ * It is per-pillar rather than one constant because the pillars differ by more
+ * than an order of magnitude — 645 files in finance against 25 in documents as
+ * of writing. A single floor has to clear the smallest, which leaves it far
+ * under every other pillar: finance's walk could return 4% of its tree and
+ * still pass. A floor that only the smallest pillar can fail is not a floor.
+ *
+ * Raise a pillar's number when its tree grows; that is the point. A drop large
+ * enough to trip one is a structural change worth looking at, not a nuisance
+ * to be tuned away.
  */
-export const MIN_SCANNED_FILES = 20;
 
 const SOURCE_EXTENSIONS = ['.ts', '.tsx', '.mts', '.cts', '.js', '.jsx', '.mjs', '.cjs'];
 
@@ -265,10 +278,10 @@ export function collectViolations(root) {
     const { files, errors } = walkSourceFiles(pillarRoot);
     violations.push(...errors);
 
-    if (files.length < MIN_SCANNED_FILES) {
+    if (files.length < pillar.minFiles) {
       violations.push(
-        `pillars/${pillar.id} yielded ${String(files.length)} scannable source files, under the ` +
-          `floor of ${String(MIN_SCANNED_FILES)}. The pillar moved or the walk is broken — either ` +
+        `pillars/${pillar.id} yielded ${String(files.length)} scannable source files, under its ` +
+          `floor of ${String(pillar.minFiles)}. The pillar moved or the walk is broken — either ` +
           'way this guard is not reading what it claims to read.'
       );
       continue;
@@ -331,7 +344,7 @@ export function collectViolations(root) {
 function writeFixturePillar(root, pillar, options = {}) {
   const {
     transportImports = true,
-    fileCount = MIN_SCANNED_FILES + 5,
+    fileCount = pillar.minFiles + 5,
     aliasName = null,
     declare = true,
   } = options;
@@ -531,7 +544,7 @@ function selfTestCases() {
           force: true,
         });
       },
-      expect: /under the floor of/u,
+      expect: /under its floor of/u,
     },
     {
       name: 'DEGENERATE: the walk returns almost nothing',
@@ -539,7 +552,7 @@ function selfTestCases() {
         writeCleanFixture(root);
         writeFixturePillar(root, /** @type {PillarSpec} */ (PILLARS[1]), { fileCount: 1 });
       },
-      expect: /under the floor of/u,
+      expect: /under its floor of/u,
     },
     {
       name: 'DEGENERATE: package.json is unparseable',

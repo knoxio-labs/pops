@@ -53,6 +53,12 @@ const APP_HEADER = 'x-pops-test-app';
 const keepAliveAgent = new http.Agent({ keepAlive: true });
 
 /** The verbs the cerebrum API suites actually issue. */
+/**
+ * Re-exported so the pillar's helpers can name a request without importing
+ * `supertest` themselves — the transport is the one file allowed to.
+ */
+export type Test = supertest.Test;
+
 export interface BoundAgent {
   get(url: string): supertest.Test;
   post(url: string): supertest.Test;
