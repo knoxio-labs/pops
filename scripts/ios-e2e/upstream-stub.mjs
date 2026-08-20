@@ -80,6 +80,8 @@ import { readFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { fileURLToPath } from 'node:url';
 
+import { purchasesRegistryEntry } from './purchases-stub.mjs';
+
 const FINANCE_CONTRACT_PATH = fileURLToPath(
   new URL('../../pillars/finance/openapi/finance.openapi.json', import.meta.url)
 );
@@ -310,7 +312,16 @@ export function selectPage(rows, query) {
 }
 
 /**
- * The registry snapshot the BFM reads, with finance pointed at this stub.
+ * The registry snapshot the BFM reads, with finance pointed at this stub and
+ * purchases pointed at its own.
+ *
+ * `purchases` is listed whenever an address for it was supplied, and its
+ * reachability is decided by whether ITS `/openapi` answers rather than by
+ * whether it appears here — see `purchases-stub.mjs` for why a switch that
+ * added and removed a registry entry would be a switch nothing sees for up to
+ * thirty seconds. Omitting the address entirely is still supported and is what
+ * this file's own tests use: the roster then reads exactly as it did before
+ * there was a second pillar.
  *
  * Two readers in a live BFM parse this, with different rules, and the snapshot
  * has to satisfy the stricter of each — which is not the same reader twice:
@@ -324,10 +335,14 @@ export function selectPage(rows, query) {
  *   one that requires `status`, throwing on an entry without it, where the
  *   discovery parser treats it as optional. That is why `status` is stated.
  *
- * @param {{ financeBaseUrl: string, now?: string }} options
+ * @param {{ financeBaseUrl: string, purchasesBaseUrl?: string, now?: string }} options
  * @returns {{ fetchedAt: string, pillars: Array<{ pillarId: string, baseUrl: string, registered: boolean, status: string, lastHeartbeatAt: string, manifest: Record<string, unknown> }> }}
  */
-export function buildRegistrySnapshot({ financeBaseUrl, now = new Date().toISOString() }) {
+export function buildRegistrySnapshot({
+  financeBaseUrl,
+  purchasesBaseUrl,
+  now = new Date().toISOString(),
+}) {
   return {
     fetchedAt: now,
     pillars: [
@@ -357,6 +372,9 @@ export function buildRegistrySnapshot({ financeBaseUrl, now = new Date().toISOSt
           healthcheck: { path: '/health' },
         },
       },
+      ...(purchasesBaseUrl === undefined
+        ? []
+        : [purchasesRegistryEntry({ baseUrl: purchasesBaseUrl, now })]),
     ],
   };
 }
@@ -386,7 +404,11 @@ const CONTRACT_MISMATCH_BODY = '<html><body>404 Not Found</body></html>';
 /**
  * Starts the registry-and-finance origin the BFM talks to.
  *
- * @param {{ rows: Array<Record<string, unknown>>, contract?: Record<string, unknown>, host?: string }} options
+ * `purchasesBaseUrl` is the address of the second pillar's own origin, if this
+ * run has one — it is put on the roster this server publishes, and nothing
+ * else here reads it. See `purchases-stub.mjs`.
+ *
+ * @param {{ rows: Array<Record<string, unknown>>, contract?: Record<string, unknown>, purchasesBaseUrl?: string, host?: string }} options
  * @returns {Promise<{
  *   url: string,
  *   port: number,
@@ -402,6 +424,7 @@ const CONTRACT_MISMATCH_BODY = '<html><body>404 Not Found</body></html>';
 export async function startUpstreamStub({
   rows,
   contract = readFinanceContract(),
+  purchasesBaseUrl,
   host = '127.0.0.1',
 }) {
   const routes = financeRoutes(contract);
@@ -451,7 +474,13 @@ export async function startUpstreamStub({
           message: `ios-e2e upstream stub has no TCP address to advertise (got ${JSON.stringify(address)})`,
         });
       }
-      return json(200, buildRegistrySnapshot({ financeBaseUrl: `http://${host}:${address.port}` }));
+      return json(
+        200,
+        buildRegistrySnapshot({
+          financeBaseUrl: `http://${host}:${address.port}`,
+          purchasesBaseUrl,
+        })
+      );
     }
 
     if (url.pathname === '/openapi') {
