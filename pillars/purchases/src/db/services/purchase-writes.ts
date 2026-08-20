@@ -18,13 +18,13 @@ import {
 } from '../errors.js';
 import {
   purchaseCharges,
-  purchaseDocuments,
   purchaseItemAllocations,
   purchases,
   purchaseShipments,
   purchaseTags,
 } from '../schema.js';
 import { expectRow, nowIso, type PurchasesDb } from './internal.js';
+import { insertPurchaseDocument } from './purchase-documents.js';
 import { findPurchaseByChecksum, findPurchaseBySourceOrderId } from './purchase-lookups.js';
 import { insertCapture } from './purchase-write-capture.js';
 import { componentCents, shipmentIdFor, type IngestContext } from './purchase-write-context.js';
@@ -243,14 +243,11 @@ function insertAllocations(ctx: IngestContext, chargeId: string, input: CreateCh
 }
 
 function insertDocument(ctx: IngestContext, input: CreateDocumentInput): void {
-  ctx.tx
-    .insert(purchaseDocuments)
-    .values({
-      purchaseId: ctx.purchase.id,
-      shipmentId: shipmentIdFor(ctx, input.shipmentRef),
-      documentUri: input.documentUri,
-      kind: input.kind ?? 'other',
-      createdAt: ctx.now,
-    })
-    .run();
+  insertPurchaseDocument(ctx.tx, {
+    purchaseId: ctx.purchase.id,
+    shipmentId: shipmentIdFor(ctx, input.shipmentRef),
+    documentUri: input.documentUri,
+    kind: input.kind ?? 'other',
+    createdAt: ctx.now,
+  });
 }

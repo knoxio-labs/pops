@@ -189,6 +189,19 @@ export const CreateDocumentBodySchema = z.object({
   kind: DocumentKindSchema.optional(),
 });
 
+/**
+ * One document attached to an order that already exists.
+ *
+ * No `shipmentRef`: that is a create-call wiring handle, resolved against
+ * deliveries defined in the same payload, and there are none here. A document
+ * that belongs to one delivery rather than the whole order can only be
+ * attached at ingest today.
+ */
+export const AttachDocumentBodySchema = z.object({
+  documentUri: PopsUriSchema,
+  kind: DocumentKindSchema.optional(),
+});
+
 export const CreatePurchaseBodySchema = z.object({
   source: z.string().trim().min(1),
   sourceOrderId: z.string().nullable().optional(),
