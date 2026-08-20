@@ -489,11 +489,12 @@ pages/
 
 ### Conventions duplicated per pillar
 
-Three patterns are repeated in every pillar rather than shared through a lib. That is deliberate in two cases and unpaid debt in the third, but in all three **a change has to be made everywhere** — there is no single definition to edit.
+Four patterns are repeated per pillar rather than shared through a lib. Some are deliberate and some are unpaid debt, but in all of them **a change has to be made everywhere** — there is no single definition to edit.
 
 - **The DB opener.** Each pillar exports its own `open<Pillar>Db(path)`. They agree on the pragmas, on creating the parent directory, and on resolving the migrations folder through `import.meta.url` so it works both through the workspace symlink and inside the image. Each opener's file header documents its own pragmas; read one before writing another.
 - **Queue settings.** `food` and `cerebrum` each declare their own BullMQ producer with matching retry, backoff and retention constants, and each builds its Redis connection with `maxRetriesPerRequest: null`. There is no shared SDK helper, so the two can drift silently.
 - **Unavailable-error classification.** Each pillar frontend keeps a local `*-api-helpers.ts` deciding what counts as "pillar unavailable". The SDK deliberately does not own this.
+- **The supertest transport.** `finance`, `bfm` and `purchases` each own a pre-listened `127.0.0.1` server plus a pooled keep-alive agent for their API suites, because supertest's own `request(app)` binds an ephemeral server and dials a fresh connection per call, and that churn is what stalls under machine contention. `pillars/finance/src/api/__tests__/test-utils.ts` carries the original diagnosis and the netstat evidence; `pillars/bfm/src/api/__tests__/test-http.ts` and `pillars/purchases/src/api/__tests__/test-http.ts` restate it. Read finance's header before editing any of them — a correction to the diagnosis belongs in all three. The shapes differ on purpose (finance wraps a typed client, bfm dispatches to the most recently bound app, purchases routes per request on a header) and each is pinned by its own tests.
 
 ### The OpenAPI version pin
 

@@ -5,17 +5,19 @@
  * `OPTIONS`/`Allow` response Express builds only when every layer declines.
  */
 import express from 'express';
-import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { amazonOrder, openTempDb, seedAmazonSource } from '../../db/__tests__/helpers.js';
 import { createPurchasesApiApp } from '../app.js';
 import { unmatchedRouteHandler } from '../middleware/unmatched-route.js';
 import { __resetPillarRegistryCache } from '../pillars/registry.js';
+import { createTestTransport } from './test-http.js';
 
 import type { Express } from 'express';
 
 import type { OpenedPurchasesDb } from '../../db/index.js';
+
+const { requestOn } = createTestTransport();
 
 let opened: OpenedPurchasesDb;
 let cleanup: () => void;
@@ -43,7 +45,7 @@ afterEach(() => {
 
 describe('a request that matches no route', () => {
   it('answers 404 with a readable JSON body instead of an empty one', async () => {
-    const res = await request(app).post('/purchases/does-not-exist/nested');
+    const res = await requestOn(app).post('/purchases/does-not-exist/nested');
 
     expect(res.status).toBe(404);
     expect(res.headers['content-type']).toMatch(/^application\/json/);
@@ -53,7 +55,7 @@ describe('a request that matches no route', () => {
   });
 
   it('logs the method and path server-side', async () => {
-    await request(app).get('/no-such-route');
+    await requestOn(app).get('/no-such-route');
 
     expect(errorSpy).toHaveBeenCalledWith(
       '[purchases-api] no route matched',
@@ -62,7 +64,7 @@ describe('a request that matches no route', () => {
   });
 
   it('logs the path without the query string it was called with', async () => {
-    await request(app).get('/no-such-route?q=coffee%20grinder&token=hunter2');
+    await requestOn(app).get('/no-such-route?q=coffee%20grinder&token=hunter2');
 
     expect(errorSpy).toHaveBeenCalledWith(
       '[purchases-api] no route matched',
@@ -74,15 +76,15 @@ describe('a request that matches no route', () => {
 
 describe('mounting it last', () => {
   it('does not shadow a real route', async () => {
-    await request(app).get('/health').expect(200);
-    await request(app).get('/purchases').expect(200);
-    await request(app).post('/purchases').send(amazonOrder()).expect(201);
+    await requestOn(app).get('/health').expect(200);
+    await requestOn(app).get('/purchases').expect(200);
+    await requestOn(app).post('/purchases').send(amazonOrder()).expect(201);
 
     expect(errorSpy).not.toHaveBeenCalled();
   });
 
   it('leaves the automatic OPTIONS response on a real route intact', async () => {
-    const res = await request(app).options('/purchases');
+    const res = await requestOn(app).options('/purchases');
 
     expect(res.status).toBe(200);
     expect(res.headers['allow']).toContain('GET');
@@ -98,7 +100,7 @@ describe('mounting it last', () => {
     });
     responded.use(unmatchedRouteHandler);
 
-    const res = await request(responded).get('/anything');
+    const res = await requestOn(responded).get('/anything');
 
     expect(res.status).toBe(202);
     expect(res.body).toMatchObject({ code: 'ALREADY_ANSWERED' });

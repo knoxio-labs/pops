@@ -15,7 +15,6 @@
  * search, and the ingest CLI and operator smoke script, which used to be on
  * the list above and now send a key of their own.
  */
-import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { openTempDb, seedAmazonSource } from '../../db/__tests__/helpers.js';
@@ -26,12 +25,15 @@ import {
   resolveRequireCredential,
 } from '../middleware/service-account-scope.js';
 import { __resetPillarRegistryCache } from '../pillars/registry.js';
+import { createTestTransport } from './test-http.js';
 
 import type { Express } from 'express';
 
 import type { ServiceAccountVerification, ServiceAccountVerifier } from '@pops/pillar-sdk/server';
 
 import type { OpenedPurchasesDb } from '../../db/index.js';
+
+const { requestOn } = createTestTransport();
 
 let opened: OpenedPurchasesDb;
 let cleanup: () => void;
@@ -102,7 +104,7 @@ describe('the purchases scope map', () => {
 describe('a request with no credential', () => {
   it('reads without one — browser traffic through the shell presents none', async () => {
     const verify = vi.fn(verifierReturning({ outcome: 'rejected' }));
-    const response = await request(app(verify)).get('/purchases');
+    const response = await requestOn(app(verify)).get('/purchases');
 
     expect(response.status).toBe(200);
     expect(verify).not.toHaveBeenCalled();
@@ -110,7 +112,7 @@ describe('a request with no credential', () => {
 
   it('writes without one — the two-process test drives this path with no key', async () => {
     const verify = vi.fn(verifierReturning({ outcome: 'rejected' }));
-    const response = await request(app(verify)).post('/purchases').send(newOrder);
+    const response = await requestOn(app(verify)).post('/purchases').send(newOrder);
 
     expect(response.status).toBe(201);
     expect(verify).not.toHaveBeenCalled();
@@ -119,7 +121,7 @@ describe('a request with no credential', () => {
 
 describe('a live credential whose grant does not cover the operation', () => {
   it('403s a purchase-only account reaching the source surface', async () => {
-    const response = await request(app(verifierReturning(grantedScopes(['purchases.purchase']))))
+    const response = await requestOn(app(verifierReturning(grantedScopes(['purchases.purchase']))))
       .put('/sources/amazon')
       .set('x-api-key', KEY)
       .send({ label: 'Amazon', ingestAdapter: 'amazon-export' });
@@ -129,7 +131,9 @@ describe('a live credential whose grant does not cover the operation', () => {
   });
 
   it('403s an account granted a neighbouring pillar entirely', async () => {
-    const response = await request(app(verifierReturning(grantedScopes(['finance', 'inventory']))))
+    const response = await requestOn(
+      app(verifierReturning(grantedScopes(['finance', 'inventory'])))
+    )
       .get('/purchases')
       .set('x-api-key', KEY);
 
@@ -138,7 +142,7 @@ describe('a live credential whose grant does not cover the operation', () => {
 
   it('names the account and the missing scope so the grant can be widened', async () => {
     const warn = vi.spyOn(console, 'warn');
-    await request(app(verifierReturning(grantedScopes(['purchases.purchase']))))
+    await requestOn(app(verifierReturning(grantedScopes(['purchases.purchase']))))
       .put('/sources/amazon')
       .set('x-api-key', KEY)
       .send({ label: 'Amazon', ingestAdapter: 'amazon-export' });
@@ -152,7 +156,7 @@ describe('a live credential whose grant does not cover the operation', () => {
 
 describe('a live credential whose grant covers the operation', () => {
   it('admits a purchase-scoped account to the purchase surface', async () => {
-    const response = await request(app(verifierReturning(grantedScopes(['purchases.purchase']))))
+    const response = await requestOn(app(verifierReturning(grantedScopes(['purchases.purchase']))))
       .get('/purchases')
       .set('x-api-key', KEY);
 
@@ -160,7 +164,7 @@ describe('a live credential whose grant covers the operation', () => {
   });
 
   it('matches by dot prefix, not by exact procedure', async () => {
-    const response = await request(app(verifierReturning(grantedScopes(['purchases']))))
+    const response = await requestOn(app(verifierReturning(grantedScopes(['purchases']))))
       .put('/sources/amazon')
       .set('x-api-key', KEY)
       .send({ label: 'Amazon', ingestAdapter: 'amazon-export' });
@@ -171,7 +175,7 @@ describe('a live credential whose grant covers the operation', () => {
 
 describe('failing closed', () => {
   it('401s a key the registry does not recognise, rather than falling back to network trust', async () => {
-    const response = await request(app(verifierReturning({ outcome: 'rejected' })))
+    const response = await requestOn(app(verifierReturning({ outcome: 'rejected' })))
       .get('/purchases')
       .set('x-api-key', KEY);
 
@@ -179,7 +183,7 @@ describe('failing closed', () => {
   });
 
   it('401s an unknown key on a write, so the gate is not read-only', async () => {
-    const response = await request(app(verifierReturning({ outcome: 'rejected' })))
+    const response = await requestOn(app(verifierReturning({ outcome: 'rejected' })))
       .post('/purchases')
       .set('x-api-key', KEY)
       .send(newOrder);
@@ -188,7 +192,7 @@ describe('failing closed', () => {
   });
 
   it('503s rather than admitting a caller it could not verify', async () => {
-    const response = await request(
+    const response = await requestOn(
       app(verifierReturning({ outcome: 'unavailable', detail: 'ECONNREFUSED' }))
     )
       .get('/purchases')
@@ -198,7 +202,7 @@ describe('failing closed', () => {
   });
 
   it('leaks neither the key nor the registry detail to the caller', async () => {
-    const response = await request(
+    const response = await requestOn(
       app(verifierReturning({ outcome: 'unavailable', detail: 'ECONNREFUSED registry-api:3001' }))
     )
       .get('/purchases')
@@ -230,7 +234,7 @@ describe('resolveRequireCredential', () => {
 
 describe('paths outside the contract', () => {
   it('does not gate the health probe, even with a rejected key', async () => {
-    const response = await request(app(verifierReturning({ outcome: 'rejected' })))
+    const response = await requestOn(app(verifierReturning({ outcome: 'rejected' })))
       .get('/health')
       .set('x-api-key', KEY);
 
@@ -238,7 +242,7 @@ describe('paths outside the contract', () => {
   });
 
   it('does not gate the pillar listing', async () => {
-    const response = await request(app(verifierReturning({ outcome: 'rejected' })))
+    const response = await requestOn(app(verifierReturning({ outcome: 'rejected' })))
       .get('/pillars')
       .set('x-api-key', KEY);
 
@@ -247,7 +251,7 @@ describe('paths outside the contract', () => {
 
   it('does not gate the OpenAPI projection', async () => {
     const verify = vi.fn(verifierReturning({ outcome: 'rejected' }));
-    const response = await request(app(verify)).get('/openapi').set('x-api-key', KEY);
+    const response = await requestOn(app(verify)).get('/openapi').set('x-api-key', KEY);
 
     expect(response.status).toBe(200);
     expect(verify).not.toHaveBeenCalled();

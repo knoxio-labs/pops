@@ -10,7 +10,6 @@
  * stand-in for them.
  */
 import express from 'express';
-import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { openTempDb } from '../../db/__tests__/helpers.js';
@@ -18,10 +17,13 @@ import { JSON_BODY_LIMIT_BYTES, createPurchasesApiApp } from '../app.js';
 import { jsonBodyErrorHandler } from '../middleware/json-body-error.js';
 import { __resetPillarRegistryCache } from '../pillars/registry.js';
 import { PASSED_THROUGH_STATUS, passThroughErrorReporter } from './helpers.js';
+import { createTestTransport } from './test-http.js';
 
 import type { Express } from 'express';
 
 import type { OpenedPurchasesDb } from '../../db/index.js';
+
+const { requestOn } = createTestTransport();
 
 let opened: OpenedPurchasesDb;
 let cleanup: () => void;
@@ -61,7 +63,7 @@ describe('a body over the JSON limit', () => {
     };
     const baseSize = Buffer.byteLength(JSON.stringify(bodyWithoutNote));
     const oversizedNote = 'x'.repeat(JSON_BODY_LIMIT_BYTES - baseSize + marginBytes);
-    const res = await request(app)
+    const res = await requestOn(app)
       .post('/purchases')
       .send({
         ...bodyWithoutNote,
@@ -85,7 +87,7 @@ describe('an error that is not a body-parser failure', () => {
     unrelated.use(jsonBodyErrorHandler);
     unrelated.use(passThroughErrorReporter);
 
-    const res = await request(unrelated).get('/boom');
+    const res = await requestOn(unrelated).get('/boom');
 
     expect(res.status).toBe(PASSED_THROUGH_STATUS);
     expect(res.body).toEqual({ passedThrough: 'something unrelated went wrong' });

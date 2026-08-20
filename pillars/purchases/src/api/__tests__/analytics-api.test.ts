@@ -6,17 +6,19 @@
  * reach the filter, and whether the response survives serialisation with
  * every figure the merchant lens needs still on it.
  */
-import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { openTempDb, seedAmazonSource } from '../../db/__tests__/helpers.js';
 import { createPurchase, upsertSource } from '../../db/index.js';
 import { createPurchasesApiApp } from '../app.js';
 import { __resetPillarRegistryCache } from '../pillars/registry.js';
+import { createTestTransport } from './test-http.js';
 
 import type { Express } from 'express';
 
 import type { CreatePurchaseInput, OpenedPurchasesDb } from '../../db/index.js';
+
+const { requestOn } = createTestTransport();
 
 let opened: OpenedPurchasesDb;
 let cleanup: () => void;
@@ -75,7 +77,7 @@ describe('GET /analytics/merchant-spend', () => {
       })
     );
 
-    const res = await request(app).get('/analytics/merchant-spend');
+    const res = await requestOn(app).get('/analytics/merchant-spend');
 
     expect(res.status).toBe(200);
     const group = res.body.merchants[0];
@@ -91,7 +93,7 @@ describe('GET /analytics/merchant-spend', () => {
   it('echoes the period so a rendered figure carries the window it describes', async () => {
     createPurchase(opened.db, order({ checksum: 'a' }));
 
-    const res = await request(app).get(
+    const res = await requestOn(app).get(
       '/analytics/merchant-spend?from=2026-01-01T00:00:00Z&to=2026-12-31T23:59:59Z'
     );
 
@@ -103,7 +105,7 @@ describe('GET /analytics/merchant-spend', () => {
 
   it('reports a null period when unbounded, rather than omitting the key', async () => {
     createPurchase(opened.db, order({ checksum: 'a' }));
-    const res = await request(app).get('/analytics/merchant-spend');
+    const res = await requestOn(app).get('/analytics/merchant-spend');
     expect(res.body.period).toEqual({ from: null, to: null });
   });
 
@@ -111,7 +113,7 @@ describe('GET /analytics/merchant-spend', () => {
     createPurchase(opened.db, order({ checksum: 'old', orderedAt: '2025-02-02T01:41:21Z' }));
     createPurchase(opened.db, order({ checksum: 'new', orderedAt: '2026-02-02T01:41:21Z' }));
 
-    const res = await request(app).get('/analytics/merchant-spend?from=2026-01-01T00:00:00Z');
+    const res = await requestOn(app).get('/analytics/merchant-spend?from=2026-01-01T00:00:00Z');
     expect(res.body.totals[0].orderCount).toBe(1);
   });
 
@@ -119,10 +121,10 @@ describe('GET /analytics/merchant-spend', () => {
     createPurchase(opened.db, order({ checksum: 'am', source: 'amazon' }));
     createPurchase(opened.db, order({ checksum: 'wo', source: 'woolworths' }));
 
-    const single = await request(app).get('/analytics/merchant-spend?sources=amazon');
+    const single = await requestOn(app).get('/analytics/merchant-spend?sources=amazon');
     expect(single.body.totals[0].orderCount).toBe(1);
 
-    const both = await request(app).get(
+    const both = await requestOn(app).get(
       '/analytics/merchant-spend?sources=amazon&sources=woolworths'
     );
     expect(both.body.totals[0].orderCount).toBe(2);
@@ -132,12 +134,12 @@ describe('GET /analytics/merchant-spend', () => {
     // A bound the server cannot parse must not fall through to "no bound" —
     // that answers a different question than the one asked, and the response
     // would look completely normal.
-    const res = await request(app).get('/analytics/merchant-spend?from=2026');
+    const res = await requestOn(app).get('/analytics/merchant-spend?from=2026');
     expect(res.status).toBe(400);
   });
 
   it('returns empty lists rather than 404 when nothing is in scope', async () => {
-    const res = await request(app).get('/analytics/merchant-spend');
+    const res = await requestOn(app).get('/analytics/merchant-spend');
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ period: { from: null, to: null }, merchants: [], totals: [] });
   });
@@ -150,7 +152,7 @@ describe('GET /analytics/merchant-spend', () => {
       createPurchase(opened.db, order({ checksum: `n-${String(i)}`, totalCents: 1000 }));
     }
 
-    const res = await request(app).get('/analytics/merchant-spend?limit=1');
+    const res = await requestOn(app).get('/analytics/merchant-spend?limit=1');
     expect(res.status).toBe(200);
     expect(res.body.totals[0].orderCount).toBe(5);
     expect(res.body.totals[0].accounting.totalCents).toBe(5000);
@@ -177,7 +179,7 @@ describe('GET /analytics/product-leaderboard', () => {
       );
     }
 
-    const res = await request(app).get('/analytics/product-leaderboard');
+    const res = await requestOn(app).get('/analytics/product-leaderboard');
 
     expect(res.status).toBe(200);
     const [entry] = res.body.products;
@@ -219,7 +221,7 @@ describe('GET /analytics/product-leaderboard', () => {
       );
     }
 
-    const res = await request(app).get('/analytics/product-leaderboard');
+    const res = await requestOn(app).get('/analytics/product-leaderboard');
 
     expect(res.status).toBe(200);
     const [entry] = res.body.products;
@@ -258,7 +260,7 @@ describe('GET /analytics/product-leaderboard', () => {
       })
     );
 
-    const res = await request(app).get('/analytics/product-leaderboard');
+    const res = await requestOn(app).get('/analytics/product-leaderboard');
 
     // A zero on the wire is read as "bought again immediately", which is the
     // opposite of what one purchase means.
@@ -282,7 +284,7 @@ describe('GET /analytics/product-leaderboard', () => {
       })
     );
 
-    const res = await request(app).get('/analytics/product-leaderboard');
+    const res = await requestOn(app).get('/analytics/product-leaderboard');
 
     expect(res.body.coverage).toEqual({
       lineCount: 2,
@@ -331,7 +333,7 @@ describe('GET /analytics/product-leaderboard', () => {
       })
     );
 
-    const res = await request(app).get('/analytics/product-leaderboard?minOrderCount=2');
+    const res = await requestOn(app).get('/analytics/product-leaderboard?minOrderCount=2');
 
     expect(res.body.minOrderCount).toBe(2);
     expect(res.body.products).toHaveLength(1);
@@ -356,15 +358,15 @@ describe('GET /analytics/product-leaderboard', () => {
       })
     );
 
-    const res = await request(app).get('/analytics/product-leaderboard');
+    const res = await requestOn(app).get('/analytics/product-leaderboard');
     expect(res.body.minOrderCount).toBe(1);
     expect(res.body.products).toHaveLength(1);
   });
 
   it('rejects a minOrderCount below one rather than treating it as no filter', async () => {
-    expect((await request(app).get('/analytics/product-leaderboard?minOrderCount=0')).status).toBe(
-      400
-    );
+    expect(
+      (await requestOn(app).get('/analytics/product-leaderboard?minOrderCount=0')).status
+    ).toBe(400);
   });
 
   it('applies the same scope vocabulary the merchant roll-up does', async () => {
@@ -391,7 +393,7 @@ describe('GET /analytics/product-leaderboard', () => {
       })
     );
 
-    const res = await request(app).get('/analytics/product-leaderboard?sources=woolworths');
+    const res = await requestOn(app).get('/analytics/product-leaderboard?sources=woolworths');
     expect(res.body.coverage.lineCount).toBe(1);
     expect(res.body.products[0].product.basis).toBe('name');
   });
@@ -414,13 +416,13 @@ describe('GET /analytics/product-leaderboard', () => {
       );
     }
 
-    const res = await request(app).get('/analytics/product-leaderboard?limit=1');
+    const res = await requestOn(app).get('/analytics/product-leaderboard?limit=1');
     expect(res.status).toBe(200);
     expect(res.body.products).toHaveLength(5);
   });
 
   it('returns an empty leaderboard rather than 404 when nothing is in scope', async () => {
-    const res = await request(app).get('/analytics/product-leaderboard');
+    const res = await requestOn(app).get('/analytics/product-leaderboard');
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
       period: { from: null, to: null },
