@@ -22,7 +22,12 @@ purchases  (the order)
   ├─ purchase_tags                  facts about the order that aren't fields
   ├─ purchase_documents             evidence → documents
   └─ purchase_capture               when and where it was photographed
+
+purchase_products                   a product a human recognises
+  └─ purchase_product_aliases       one printed wording that resolves to it
 ```
+
+Two tables sit outside that tree. They are not facts about one order: they are the learned dictionary that gives a printed line a durable product identity, for the sources that state no identifier of their own.
 
 Four grains, because real purchase data has four and collapsing any of them loses information that cannot be recovered. One Amazon order ships in three boxes and settles as two card charges. One AliExpress order trickles in over two months. A quantity-3 line becomes three inventory records with three serial numbers.
 
@@ -89,17 +94,18 @@ The fold reuses `computeAccounting` per order rather than restating the split as
 
 The same thing bought across N orders: per product, how many distinct orders hold it, how many lines and units, first and last purchase, how often it comes back, what one of it has cost each time, summed landed cost, and every merchant it was bought from. Landed cost reuses `landedCostCents` per line rather than restating `lineTotal + allocatedShipping + allocatedAdjustment` in SQL, on the same single-implementation rule the residual follows. Nothing here joins charges or links, which is what makes "how many orders" a count of distinct order ids rather than a figure that multiplies by however many charges settled them.
 
-**Grouping is the hard part and it is only partly solved.** A group is formed on one of three bases, and which one travels with the group:
+**Grouping is the hard part.** A group is formed on one of four bases, and which one travels with the group:
 
 - `sku` — the merchant's own identifier. The only basis a source asserts, and exactly one shipped adapter writes one (`sku: readText(row['ASIN'])` in the Amazon mapper). Within Amazon, repeats group perfectly.
-- `name` — printed names that normalise alike, within one merchant. A **proposal**: it merges two products a till abbreviates the same way, and splits one product printed two ways. Every Woolworths and receipt line lands here.
+- `product` — a [dictionary](#the-product-dictionary) entry claimed the printed wording. Carries `confirmed`, because an entry a human asserted is evidence and an entry a pass minted is the `name` proposal with an id attached. A row reads `confirmed` only where **every** wording in the group was asserted: one unasserted wording is lines the group holds on a pass's proposal, and half a merge presented as a fact is the error this whole route is arranged against.
+- `name` — printed names that normalise alike, within one merchant, with no dictionary entry between them. A **proposal**: it merges two products a till abbreviates the same way, and splits one product printed two ways.
 - `unidentified` — no sku and no name that normalises to anything. Groups with nothing, one line per row, because a bucket every nameless line falls into would report a whole shop as one product.
 
-A group never spans merchants a source did not put together. `receipt` is one source id for every shop a user photographs, so a key on the source alone would fold two cafes' `LATTE` lines into one product with one summed cost; the key is confined to the order's merchant unless the source is a single merchant's own feed, which is what keeps a Woolworths product grouped across the chain's stores instead of splitting per branch. `merchants` on a row is therefore the group's scope, not just a list of where it was seen.
+A group never spans merchants a source did not put together. `receipt` is one source id for every shop a user photographs, so a key on the source alone would fold two cafes' `LATTE` lines into one product with one summed cost; the key is confined to the order's merchant unless the source is a single merchant's own feed, which is what keeps a Woolworths product grouped across the chain's stores instead of splitting per branch. `merchants` on a row is therefore the group's scope, not just a list of where it was seen. The one thing that reaches across that boundary is a person pointing two scoped wordings at one dictionary product, which is deliberate and is the only way a `product` row comes to list merchants a source never put together.
 
-The rule is `identifyProduct` in `src/db/services/product-identity.ts`, shared with the classification pass so a decision the pass made about a product and a row this route shows for it describe the same lines. Minting a durable, confirmable product identity for the sources that state none is POPS-243, and until it lands this route's answer is strong for Amazon and provisional everywhere else.
+The rule is `identifyProduct` in `src/db/services/product-identity.ts`, shared with the classification pass so a decision the pass made about a product and a row this route shows for it describe the same lines.
 
-`coverage` says exactly that per request — lines in scope split across the three bases, plus the product count — so a consumer can see how much of the answer rests on printed names before it renders a row. It is computed over the whole scope, before any withholding.
+`coverage` says exactly that per request — lines in scope split across the bases, plus the product count — so a consumer can see how much of the answer rests on a proposal before it renders a row. The two dictionary figures are counted apart for the same reason the bases are. It is computed over the whole scope, before any withholding.
 
 `minOrderCount` is the N. It is not a page cap: it selects on the answer's own defining property, is stated by the caller, and is echoed in the response, so a group that is absent is absent for a reason the payload names. There is still no `limit`, for the reason the merchant roll-up has none. Currency is part of the grouping key here too.
 
@@ -119,6 +125,38 @@ Everything a group says about its own ends — both dates, the label it wears, t
 - the consumable-vs-durable kind split (POPS-1850). Its substrate now exists — `kind` and `kindConfirmedAt` — so it must be **three** numbers, confirmed-consumable, confirmed-durable and unreviewed, mirroring `matched` / `awaitingImport` / `residual`. A two-way percentage would report a classification pass's proposal as a finding;
 - tag counterfactuals such as "cut all `snack` line items" (POPS-1851). Item tags now carry their own `confirmedAt`, so the same three-way rule applies — but they are still drawn from whatever a classification pass proposed rather than being guaranteed finance `tag_vocabulary` slugs, and a counterfactual is only as meaningful as the vocabulary it groups on;
 - **regret detection, which the pillar cannot yet support at all** (POPS-2388). The ticket's design is line item → `pops://inventory/item/<id>` → `home_inventory.in_use = 0`, and every link in it is missing: nothing writes `purchase_item_units.inventory_item_uri` except a caller stating one by hand, no shipped adapter states one, and nothing yet creates the inventory row an accepted fan-out proposal names (POPS-2356). Even with the chain complete, `home_inventory.in_use` is a nullable tri-state with no date on it — NULL on every row nobody has reviewed — so `in_use = 0` cannot distinguish a thing retired after five years of use from one never taken out of its box, and a leaderboard row reading "you regret this" off it would be a confident falsehood about the most personal number in the pillar. The honest answer is that this waits for the fan-out and for a signal that carries a date.
+
+## The product dictionary
+
+A supermarket receipt says `CHK BRST 1KG`; an invoice for the same thing says `Chicken Breast 1kg`. Two of the three shipped adapters state no product identifier at all — a Woolworths receipt row is `{prefixChar, description, amount}`, and the receipt extraction schema refuses inferred identifiers by design — so for those lines a printed wording is the only evidence of identity there is. `purchase_products` and `purchase_product_aliases` are where that evidence is written down. Service in `src/db/services/product-dictionary.ts`, routes under `/products`.
+
+**What it learns from.** Two things:
+
+1. _Repetition._ `POST /products/proposals` scans every stored line, and mints one entry per distinct scoped printed wording, pointing at a product of its own. That is not a guess — it is the grouping the aggregates already do, written down so a human can point at it.
+2. _Assertion._ `PATCH /products/aliases/:aliasId` with a `productId` points one wording at another wording's product. From then on both resolve to it, for every line already stored and every line that arrives later, without anyone being asked again. That is the mapping being learned, and it is learned once.
+
+**What it will not attempt.** It will not infer that `CHK BRST 1KG` and `Chicken Breast 1kg` are the same thing. Nothing in this pillar's data says they are: the merchants state no identifier, the prices differ, and the only available signal is string similarity — which is exactly the signal that cannot tell `MILK 1L` from `MILK 2L`. Two products collapsing into one corrupts spend attribution in a way no later reader can see, where leaving them apart is a visible non-answer. So the lookup is **exact on the normalised name**: no prefix, no substring, no edit distance. Finance's `entity-matcher.ts` can afford those stages because a bank descriptor's noise is its _suffix_; a product name's discriminating tokens are its suffix, and inverting that assumption is how the invisible error gets made.
+
+**Two rules keep an entry from reaching further than its evidence.** The dictionary is never consulted for a line that states a sku, so a minted identity can never absorb an ASIN-keyed group — Amazon is out of scope here and loses nothing by it. And an entry is scoped by the same `productScopeKey` the on-the-fly grouping uses, so two cafés printing `LATTE` get two entries under the `receipt` source while a Woolworths wording still reaches the whole chain. The one thing that crosses a scope boundary is a human pointing two entries at one product, which is the feature.
+
+**How a bad entry is undone.** Every write is reversible and none of them touches a line:
+
+| the mistake          | the undo                                                                                            |
+| -------------------- | --------------------------------------------------------------------------------------------------- |
+| a wrong merge        | `PATCH /products/aliases/:id` with `productId: null` — mints the wording a product of its own again |
+| a wrong confirmation | the same route with `confirmed: false` — back to a proposal a pass may retire                       |
+| a wrong entry        | `DELETE /products/aliases/:id` — the lines fall back to the on-the-fly `name` grouping              |
+| a wrong product      | `DELETE /products/:id` — takes every wording with it                                                |
+
+A product left with no wordings is deleted in the same write: a product nothing resolves to is a label no read path can reach, and one a caller could still confirm and rename.
+
+**The grain is the wording, not the line**, which buys the dictionary its main property — a mapping is stated once and applies to every line that ever prints that wording, past or future, with no backfill — and costs it one: two genuinely different products that a merchant prints _identically_ cannot be told apart here, because there is nothing but the wording to tell them apart with. That is the `name` basis's existing limitation carried forward rather than a new one, and it is the same trade the rest of this section argues for: a visible non-answer over an invisible wrong one.
+
+**`confirmedAt` is the whole boundary between a pass and a person**, the same idiom `purchase_item_tags` and `purchase_items.kindConfirmedAt` carry. Null means the proposal pass owns the row — it may retire the entry once no line prints that wording. Non-null means a human asserted it, and the pass may not retire, repoint or relabel it, even when the line that prompted it has been deleted. The pass runs over **every** line with no scope filter, deliberately: deriving the dictionary from a window would retire entries whose lines merely fell outside it.
+
+**A database that never runs the pass behaves exactly as it did before this existed** — an on-the-fly group per normalised name, resolved fresh on every read. Nothing is backfilled and no ingest path writes here.
+
+**And nothing runs the pass on its own today.** It is an explicit `POST /products/proposals` and nothing else: no schedule, no CLI runner beside `propose:kinds`, and no frontend for the corrections. So on a deployment where nobody calls it the dictionary stays empty and the leaderboard answers exactly as it did before — which is the safe direction to be incomplete in, but it does mean the correction loop is not yet reachable from the UI (POPS-2392) or from the command line (POPS-2393).
 
 ## Other invariants that span files
 

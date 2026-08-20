@@ -9,13 +9,16 @@
  * {@link identifyProduct} — the same rule the product-grain aggregate groups
  * on, so a decision the pass made about a product and a row the leaderboard
  * shows for it describe the same set of lines. That module carries why the
- * key falls back the way it does.
+ * key falls back the way it does, and the learned dictionary is threaded
+ * through for the same reason: a pass that batched on printed names while the
+ * leaderboard grouped on dictionary products would spend a model call per
+ * wording of one product and then show them as one row.
  */
 import { identifyProduct, normalisedName } from '../db/services/product-identity.js';
 import { productIdentityOf } from '../db/services/stored-product-identity.js';
 
 import type { ProductIdentity } from '../contract/types/purchase.js';
-import type { ProductLine } from '../db/services/product-identity.js';
+import type { ProductDictionary, ProductLine } from '../db/services/product-identity.js';
 
 export { normalisedName };
 
@@ -23,8 +26,8 @@ export { normalisedName };
 export type BatchableItem = ProductLine;
 
 /** The batching key for one line. */
-export function batchingKey(item: BatchableItem): string {
-  return identifyProduct(item).key;
+export function batchingKey(item: BatchableItem, dictionary?: ProductDictionary): string {
+  return identifyProduct(item, dictionary).key;
 }
 
 /** One product: every line that shares a batching key. */
@@ -50,10 +53,13 @@ export interface ProposalCandidate {
  * first and expects the batches to follow, so a run that is interrupted has
  * spent its budget on the lines worth deciding.
  */
-export function toCandidates(items: readonly BatchableItem[]): readonly ProposalCandidate[] {
+export function toCandidates(
+  items: readonly BatchableItem[],
+  dictionary?: ProductDictionary
+): readonly ProposalCandidate[] {
   const byKey = new Map<string, { candidate: ProposalCandidate; itemIds: string[] }>();
   for (const item of items) {
-    const key = batchingKey(item);
+    const key = batchingKey(item, dictionary);
     const existing = byKey.get(key);
     if (existing === undefined) {
       const itemIds = [item.id];

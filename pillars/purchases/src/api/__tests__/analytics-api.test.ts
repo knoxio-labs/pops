@@ -287,6 +287,8 @@ describe('GET /analytics/product-leaderboard', () => {
     expect(res.body.coverage).toEqual({
       lineCount: 2,
       skuKeyedLines: 1,
+      confirmedProductLines: 0,
+      proposedProductLines: 0,
       nameKeyedLines: 1,
       unidentifiedLines: 0,
       productCount: 2,
@@ -429,6 +431,8 @@ describe('GET /analytics/product-leaderboard', () => {
       coverage: {
         lineCount: 0,
         skuKeyedLines: 0,
+        confirmedProductLines: 0,
+        proposedProductLines: 0,
         nameKeyedLines: 0,
         unidentifiedLines: 0,
         productCount: 0,

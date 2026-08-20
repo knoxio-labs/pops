@@ -33,9 +33,21 @@
  * names normalise alike are merged, and one product a merchant prints two
  * ways stays split. Which basis a group was formed on therefore travels with
  * the group rather than being flattened away, because a consumer that cannot
- * tell them apart is a consumer presenting a guess as a fact. Minting a
- * durable, confirmable product identity for the sources that state none is
- * a separate, unbuilt thing.
+ * tell them apart is a consumer presenting a guess as a fact.
+ *
+ * **The dictionary is the durable form of that proposal.** Pass one and a
+ * line whose scoped normalised name has an entry resolves to the product it
+ * names instead — which is how one product printed two ways stops being two
+ * groups. The entry says whether a human asserted it, so a `product` group is
+ * no more trusted than the evidence behind it. Two rules make the dictionary
+ * safe to consult:
+ *
+ * - **It is never consulted for a line that states a sku.** An ASIN already
+ *   groups Amazon's repeats exactly, and a wording a human attached must not
+ *   be able to absorb an identity a merchant asserted.
+ * - **Its entries are scoped by {@link productScopeKey}**, the same scope the
+ *   on-the-fly grouping uses, so an entry reaches exactly the lines that
+ *   grouping would have put together and no further.
  */
 import { sourceNamesOneMerchant } from '../../ingest/source-ids.js';
 import { identifyMerchant } from './merchant-identity.js';
@@ -68,8 +80,10 @@ export interface ProductLine {
  * things at different merchants: an Amazon ASIN and a Woolworths article
  * number that happen to match are not one product. The source is not on its
  * own the scope of a group, though — under a source that covers many
- * merchants the key is confined to one of them, so the merchants a group
- * lists are the merchants it could ever have held.
+ * merchants the key is confined to one of them, so on every basis but
+ * `product` the merchants a group lists are the merchants it could ever have
+ * held. A `product` group is the exception, because pointing two scoped
+ * wordings at one product is exactly the crossing a human is allowed to make.
  */
 export type ProductIdentity =
   | {
@@ -91,6 +105,39 @@ export type ProductIdentity =
       readonly normalisedName: string;
     }
   | {
+      /**
+       * A dictionary entry claimed this printed wording. The group is every
+       * line whose wording resolves to the same product, which is more than
+       * one wording exactly where a human said so.
+       */
+      readonly basis: 'product';
+      /**
+       * The source of the line this identity describes. Not a bound on the
+       * group: a product a human merged across merchants holds lines from
+       * several, and an aggregate folding them says so in its own merchant
+       * list rather than here.
+       */
+      readonly source: string;
+      readonly sku: null;
+      /** As the merchant printed it, for display beside the product's own name. */
+      readonly name: string;
+      /** The product this wording resolves to — the grouping key. */
+      readonly productId: string;
+      /** The product's own name, which a human may have written. */
+      readonly label: string;
+      /**
+       * Whether a human asserted this wording is that product. False means a
+       * pass proposed it, which is exactly as strong a claim as a `name`
+       * group — one wording, one product, nothing merged.
+       *
+       * Per line, so an aggregate folding a group of lines into one row must
+       * fold this too: a group is asserted only where every wording in it
+       * was, because one unasserted wording is lines the group holds on a
+       * pass's proposal.
+       */
+      readonly confirmed: boolean;
+    }
+  | {
       /** No sku and no readable name: this group holds exactly one line. */
       readonly basis: 'unidentified';
       readonly source: string;
@@ -99,6 +146,27 @@ export type ProductIdentity =
       /** The grouping key itself — the line's own id. */
       readonly itemId: string;
     };
+
+/** One dictionary entry: what a printed wording resolves to. */
+export interface ProductDictionaryEntry {
+  readonly productId: string;
+  readonly label: string;
+  /** False where a pass proposed the entry and a later pass may retire it. */
+  readonly confirmed: boolean;
+}
+
+/**
+ * The dictionary, keyed by {@link productLookupKey}.
+ *
+ * A map rather than a query per line: every caller folds thousands of lines
+ * in one pass, and the whole dictionary is a few hundred rows.
+ */
+export type ProductDictionary = ReadonlyMap<string, ProductDictionaryEntry>;
+
+/** The key a dictionary entry is stored and looked up under. */
+export function productLookupKey(scopeKey: string, normalised: string): string {
+  return tupleKey(scopeKey, normalised);
+}
 
 /**
  * Product name reduced to what identifies the product.
@@ -123,15 +191,23 @@ export function normalisedName(name: string): string {
  * where not narrowing costs a merge that is not: one row, one summed cost,
  * and nothing in it saying two shops were added together.
  */
-function identityScope(line: ProductLine): string {
+export function productScopeKey(line: ProductLine): string {
   if (sourceNamesOneMerchant(line.source)) return tupleKey(line.source);
   const merchant = identifyMerchant(line.merchantEntityId, line.merchantEntityName);
   return tupleKey(line.source, merchant.key);
 }
 
-/** The group a line belongs to, and the evidence that put it there. */
-export function identifyProduct(line: ProductLine): { key: string; identity: ProductIdentity } {
-  const scope = identityScope(line);
+/**
+ * The group a line belongs to, and the evidence that put it there.
+ *
+ * With no dictionary this is the on-the-fly grouping and nothing else, which
+ * is what a database that has never run the proposal pass gets.
+ */
+export function identifyProduct(
+  line: ProductLine,
+  dictionary?: ProductDictionary
+): { key: string; identity: ProductIdentity } {
+  const scope = productScopeKey(line);
   const sku = line.sku?.trim() ?? '';
   if (sku !== '') {
     return {
@@ -142,6 +218,24 @@ export function identifyProduct(line: ProductLine): { key: string; identity: Pro
 
   const normalised = normalisedName(line.name);
   if (normalised !== '') {
+    const entry = dictionary?.get(productLookupKey(scope, normalised));
+    if (entry !== undefined) {
+      // Keyed on the product alone, not the scope, because merging two
+      // merchants' wordings is the one thing this table exists to allow —
+      // and it only ever happens because a human pointed both at one row.
+      return {
+        key: tupleKey('product', entry.productId),
+        identity: {
+          basis: 'product',
+          source: line.source,
+          sku: null,
+          name: line.name,
+          productId: entry.productId,
+          label: entry.label,
+          confirmed: entry.confirmed,
+        },
+      };
+    }
     return {
       key: tupleKey(scope, 'name', normalised),
       identity: {

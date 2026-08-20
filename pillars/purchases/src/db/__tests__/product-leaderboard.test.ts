@@ -585,6 +585,8 @@ describe('scope and withholding', () => {
     expect(leaderboard.coverage).toEqual({
       lineCount: 3,
       skuKeyedLines: 3,
+      confirmedProductLines: 0,
+      proposedProductLines: 0,
       nameKeyedLines: 0,
       unidentifiedLines: 0,
       productCount: 2,
@@ -603,7 +605,7 @@ describe('scope and withholding', () => {
     expect(rankProductPurchases(opened.db).products).toHaveLength(1);
   });
 
-  it('accounts for every line in scope exactly once across the three bases', () => {
+  it('accounts for every line in scope exactly once across the bases', () => {
     createPurchase(
       opened.db,
       order({
@@ -625,9 +627,13 @@ describe('scope and withholding', () => {
     const { coverage } = rankProductPurchases(opened.db);
 
     expect(coverage.lineCount).toBe(4);
-    expect(coverage.skuKeyedLines + coverage.nameKeyedLines + coverage.unidentifiedLines).toBe(
-      coverage.lineCount
-    );
+    expect(
+      coverage.skuKeyedLines +
+        coverage.confirmedProductLines +
+        coverage.proposedProductLines +
+        coverage.nameKeyedLines +
+        coverage.unidentifiedLines
+    ).toBe(coverage.lineCount);
     expect(coverage).toMatchObject({ skuKeyedLines: 1, nameKeyedLines: 2, unidentifiedLines: 1 });
   });
 
@@ -637,6 +643,8 @@ describe('scope and withholding', () => {
       coverage: {
         lineCount: 0,
         skuKeyedLines: 0,
+        confirmedProductLines: 0,
+        proposedProductLines: 0,
         nameKeyedLines: 0,
         unidentifiedLines: 0,
         productCount: 0,
