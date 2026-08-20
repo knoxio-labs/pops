@@ -44,12 +44,16 @@ export interface InventoryItemCreateBody {
 /**
  * The bare transaction id inside a `pops://finance/transaction/<id>` URI.
  *
- * Inventory's create body takes the id rather than the URI, and its own
- * `purchase_transaction_uri` column has no REST writer at all, so this is
- * the only way the settling transaction crosses. Anything not addressed to
- * a finance transaction answers null rather than being split on its last
- * slash: the column means "a finance transaction", and filing a documents
- * id in it would be a false statement no reader could catch.
+ * Inventory's create body takes the id and no URI field, so this is the only
+ * way the settling transaction crosses. It is not lossy: that pillar derives
+ * `home_inventory.purchase_transaction_uri` from the id on both its write
+ * paths, reproducing this exact spelling — so sending the id populates the
+ * URI column too, and the two sides must keep agreeing on the shape.
+ *
+ * Anything not addressed to a finance transaction answers null rather than
+ * being split on its last slash: the column means "a finance transaction",
+ * and filing a documents id in it would be a false statement no reader
+ * could catch.
  */
 export function financeTransactionId(uri: string | null): string | null {
   if (uri === null) return null;
