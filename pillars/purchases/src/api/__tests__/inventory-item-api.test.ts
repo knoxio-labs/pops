@@ -9,7 +9,7 @@
  * `pillars/__tests__/outbound-credential.test.ts` — so what is under test is
  * the ordering purchases keeps around it.
  */
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { amazonOrder, openTempDb, seedAmazonSource } from '../../db/__tests__/helpers.js';
 import { createPurchase, getPurchase, listDistinctInventoryItemUris } from '../../db/index.js';
@@ -227,6 +227,33 @@ describe('a create that fails is visible, never recorded', () => {
       inventoryItemUri: 'pops://inventory/item/inv-race',
     });
     expect(orphaned.body.message).toContain('Do not repeat this request');
+  });
+
+  it('logs the orphaned asset, since the response only reaches the caller', async () => {
+    // A script that drops the 502 would otherwise leave the only trace of
+    // that row nowhere on this side at all.
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    let app: Express | undefined;
+    const inventory: InventoryAssetCreator = {
+      create: async () => {
+        await requestOn(app as Express)
+          .post(`/purchases/${purchaseId}/items/${itemId}/inventory-proposal`)
+          .send({ decision: 'declined' });
+        return { kind: 'created', inventoryItemUri: 'pops://inventory/item/inv-race' };
+      },
+    };
+    app = appWith(inventory);
+
+    try {
+      await accept(app).expect(502);
+
+      expect(logged).toHaveBeenCalledWith(
+        expect.stringContaining('accept was not recorded'),
+        expect.objectContaining({ inventoryItemUri: 'pops://inventory/item/inv-race' })
+      );
+    } finally {
+      logged.mockRestore();
+    }
   });
 
   it('does not record an orphaned asset against the slot someone else answered', async () => {

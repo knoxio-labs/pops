@@ -103,8 +103,17 @@ function nothingRecorded(result: Exclude<InventoryAssetCreateResult, { kind: 'cr
  * caused this. The URI is here because it is the only trace of a row
  * purchases holds no reference to, and a person has to decide what happens
  * to it.
+ *
+ * It is logged as well as returned, because the response only reaches
+ * whoever made the request. A script that drops a `502` would otherwise
+ * leave the single trace of that row nowhere at all — the row itself says
+ * which order it came from, but nothing on this side would say it exists.
  */
 function assetOrphaned(inventoryItemUri: string, reason: string) {
+  console.error('[purchases-api] inventory asset created but its accept was not recorded', {
+    inventoryItemUri,
+    reason,
+  });
   return badGateway(
     `Inventory created ${inventoryItemUri}, but the accept could not be recorded (${reason}). ` +
       'That asset exists and purchases holds no reference to it: delete it in inventory, or ' +
