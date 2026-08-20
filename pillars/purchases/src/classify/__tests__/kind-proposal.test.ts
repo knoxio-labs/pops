@@ -46,6 +46,15 @@ describe('the prompt', () => {
     expect(listed).toEqual(['1. (amazon) Bananas']);
   });
 
+  it('lists a batch that no one source bounds without naming one', () => {
+    // An ASIN batch spans the two Amazon exports. `(amazon)` on it would
+    // offer the model a fact about one line as evidence about the product.
+    const listed = kindPrompt([candidate({ source: null, name: 'The Way of Kings' })])
+      .split('\n')
+      .filter((row) => row.startsWith('1. '));
+    expect(listed).toEqual(['1. The Way of Kings [asin B0ROBOTVAC]']);
+  });
+
   it('offers unknown and tells the model when to use it', () => {
     // Without this the model always picks one of four, and the column's
     // designed-for state — NULL — becomes unreachable.

@@ -53,12 +53,17 @@ export class KindProposalShapeError extends Error {}
  * store — and the product identifier because an ASIN is sometimes
  * recognisable. Its scheme goes with it: `asin B07XYZ1234` tells the model
  * what kind of string it is looking at, where a bare one is noise.
+ *
+ * A batch spanning sources is listed without one rather than under the
+ * first line's, because the source is offered to the model as evidence about
+ * the product and there naming one would be evidence about a line.
  */
 export function kindPrompt(candidates: readonly ProposalCandidate[]): string {
   const listed = candidates
     .map((candidate, index) => {
       const sku = candidate.sku === null ? '' : ` [${candidate.sku.scheme} ${candidate.sku.value}]`;
-      return `${String(index + 1)}. (${candidate.source}) ${candidate.name}${sku}`;
+      const source = candidate.source === null ? '' : `(${candidate.source}) `;
+      return `${String(index + 1)}. ${source}${candidate.name}${sku}`;
     })
     .join('\n');
 
