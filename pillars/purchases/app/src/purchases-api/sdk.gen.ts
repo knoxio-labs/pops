@@ -26,6 +26,9 @@ import type {
   ProductUpdateAliasData,
   ProductUpdateAliasErrors,
   ProductUpdateAliasResponses,
+  PurchaseAttachDocumentData,
+  PurchaseAttachDocumentErrors,
+  PurchaseAttachDocumentResponses,
   PurchaseCreateData,
   PurchaseCreateErrors,
   PurchaseCreateResponses,
@@ -54,6 +57,8 @@ import type {
   ReconcileConfirmData,
   ReconcileConfirmErrors,
   ReconcileConfirmResponses,
+  ReconcileLinksBatchData,
+  ReconcileLinksBatchResponses,
   ReconcileLinksData,
   ReconcileLinksResponses,
   ReconcileQueueData,
@@ -287,6 +292,25 @@ export const purchaseGet = <ThrowOnError extends boolean = false>(
   });
 
 /**
+ * Attach a document to an existing order
+ */
+export const purchaseAttachDocument = <ThrowOnError extends boolean = false>(
+  options: Options<PurchaseAttachDocumentData, ThrowOnError>
+): RequestResult<PurchaseAttachDocumentResponses, PurchaseAttachDocumentErrors, ThrowOnError> =>
+  (options.client ?? client).post<
+    PurchaseAttachDocumentResponses,
+    PurchaseAttachDocumentErrors,
+    ThrowOnError
+  >({
+    url: '/purchases/{id}/documents',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
  * Unanswered inventory offers derived from an order's durable lines
  */
 export const purchaseListInventoryProposals = <ThrowOnError extends boolean = false>(
@@ -380,6 +404,21 @@ export const reconcileLinks = <ThrowOnError extends boolean = false>(
   (options.client ?? client).get<ReconcileLinksResponses, unknown, ThrowOnError>({
     url: '/reconcile/links',
     ...options,
+  });
+
+/**
+ * Which of these finance transactions an order explains, confirmed or derived
+ */
+export const reconcileLinksBatch = <ThrowOnError extends boolean = false>(
+  options?: Options<ReconcileLinksBatchData, ThrowOnError>
+): RequestResult<ReconcileLinksBatchResponses, unknown, ThrowOnError> =>
+  (options?.client ?? client).post<ReconcileLinksBatchResponses, unknown, ThrowOnError>({
+    url: '/reconcile/links/batch',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
   });
 
 /**

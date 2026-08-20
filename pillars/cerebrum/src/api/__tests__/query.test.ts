@@ -11,11 +11,11 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import supertest from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { openCerebrumDb, type OpenedCerebrumDb } from '../../db/index.js';
 import { createCerebrumApiApp } from '../app.js';
+import { createTestTransport } from './test-http.js';
 import {
   makeClient,
   makeEmptyPeerClients,
@@ -90,6 +90,8 @@ function client(deps: AppDeps = {}) {
   return makeClient(buildApp(deps));
 }
 
+const { requestOn } = createTestTransport();
+
 describe('POST /query/ask', () => {
   it('answers from retrieved sources and parses valid citations', async () => {
     seedEngram(cerebrumDb, 'eng_20260101_0001_db', 'DB choice', ['work']);
@@ -154,8 +156,7 @@ describe('POST /query/stream (SSE)', () => {
     seedEngram(cerebrumDb, 'eng_20260101_0001_s', 'Streamed', ['work']);
     const streamLlm = makeFakeQueryStreamLlm(['SQLite ', '[eng_20260101_0001_s] ', 'wins.']);
 
-    const res = await supertest
-      .agent(buildApp({ streamLlm }))
+    const res = await requestOn(buildApp({ streamLlm }))
       .post('/query/stream')
       .send({ question: 'which database?' });
 
@@ -175,8 +176,7 @@ describe('POST /query/stream (SSE)', () => {
   });
 
   it('emits a single-token no-info stream when nothing is retrieved', async () => {
-    const res = await supertest
-      .agent(buildApp())
+    const res = await requestOn(buildApp())
       .post('/query/stream')
       .send({ question: 'nothing at all matches this' });
 
@@ -187,7 +187,7 @@ describe('POST /query/stream (SSE)', () => {
   });
 
   it('rejects an invalid body with 400 before opening the stream', async () => {
-    const res = await supertest.agent(buildApp()).post('/query/stream').send({ question: '' });
+    const res = await requestOn(buildApp()).post('/query/stream').send({ question: '' });
     expect(res.status).toBe(400);
   });
 });

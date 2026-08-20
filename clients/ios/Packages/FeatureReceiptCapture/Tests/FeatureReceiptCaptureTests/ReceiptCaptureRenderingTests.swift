@@ -69,7 +69,15 @@ internal struct ReceiptCaptureRenderingTests {
         return pixels as Data
     }
 
-    @Test("the capture prompt renders, and renders the same way twice")
+    @Test("the capture prompt rasterises")
+    func thePromptRasterises() throws {
+        _ = try #require(Self.render(Self.prompt(access: .authorized)))
+    }
+
+    /// Gated, because where no token resolves both renders are the same blank
+    /// canvas and match whether the prompt is deterministic or not — which is
+    /// why the rasterisation claim above is a test of its own.
+    @Test("the capture prompt renders the same way twice", .requiresCompiledColorCatalog)
     func rendersDeterministically() throws {
         let once = try #require(Self.render(Self.prompt(access: .authorized)))
         let again = try #require(Self.render(Self.prompt(access: .authorized)))
@@ -128,13 +136,24 @@ internal struct ReceiptCaptureRenderingTests {
         #expect(light != dark, "the no-camera screen renders identically in both colour schemes")
     }
 
-    /// A problem is an extra sentence, and an extra sentence moves the
-    /// layout whether or not the copy had a colour to be drawn in — so unlike
-    /// its neighbours this one has a real answer on the uncompiled-catalogue
-    /// lane and says so rather than staying silent about it.
+    /// A problem is an extra card, and an extra card moves the layout.
+    ///
+    /// This once carried `.comparisonSurvivesAnUncompiledCatalog`, on the
+    /// reasoning that a moved layout is visible whether or not the palette
+    /// resolved. That reasoning does not hold and the host lane says so: with
+    /// every token resolving alike there is nothing drawn on the canvas to be
+    /// moved, and two genuinely different layouts come back byte-identical. It
+    /// survived while the problem was a bare sentence and stopped when it
+    /// became a card, which is the kind of accident a trait chosen by argument
+    /// rather than by measurement invites.
+    ///
+    /// The claim itself did not move to a weaker lane — it moved to a better
+    /// test. ``ReceiptCaptureLayoutTests/everyProblemTakesUpRoom`` renders at a
+    /// fixed width with the height unconstrained and compares the layout's own
+    /// answer, which `ImageRenderer` reports faithfully with no palette at all.
     @Test(
         "every capture problem reaches the screen",
-        .comparisonSurvivesAnUncompiledCatalog,
+        .requiresCompiledColorCatalog,
         arguments: [
             ReceiptCaptureProblem.cameraFailed, .noPages, .unpreparedPages, .tooManyPages(9),
         ])
@@ -215,15 +234,29 @@ internal struct ReceiptCaptureLayoutTests {
         }
     #endif
 
-    /// A problem is an extra sentence on a screen that was already laid out.
-    /// If it did not make the screen taller it is not on it — which is the
-    /// half of "the problem is drawn" that survives the scroll view.
-    @Test("a capture problem takes up room on the screen it is reported on")
-    func aProblemChangesTheLayout() throws {
+    /// A problem is an extra card on a screen that was already laid out. If it
+    /// did not make the screen taller it is not on it — which is the half of
+    /// "the problem is drawn" that survives the scroll view, and the half that
+    /// survives an uncompiled colour catalogue: a height is the layout's own
+    /// answer, and `ImageRenderer` reports it faithfully whether or not a
+    /// single pixel was ever coloured in.
+    ///
+    /// Every problem rather than one of them, because one would leave three
+    /// branches of `ReceiptCapturePrompt.problemMessage` covered only by a
+    /// comparison that disables itself on the host lane.
+    @Test(
+        "every capture problem takes up room on the screen it is reported on",
+        arguments: [
+            ReceiptCaptureProblem.cameraFailed, .noPages, .unpreparedPages, .tooManyPages(9),
+        ])
+    func everyProblemTakesUpRoom(problem: ReceiptCaptureProblem) throws {
         let clean = try #require(Self.height(access: .authorized))
-        let complaining = try #require(Self.height(access: .authorized, problem: .noPages))
+        let complaining = try #require(Self.height(access: .authorized, problem: problem))
 
-        #expect(complaining > clean)
+        try #require(clean > 0, "the capture screen rasterised to zero height")
+        #expect(
+            complaining > clean,
+            "\(problem) did not make the screen any taller, so it is not on it")
     }
 }
 

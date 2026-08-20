@@ -6,6 +6,7 @@
 import { RequestValidationError } from '@ts-rest/express';
 
 import {
+  DocumentAlreadyAttachedError,
   DuplicatePurchaseError,
   InvalidIngestPayloadError,
   InventoryProposalConflictError,
@@ -86,6 +87,12 @@ export function tryMapServiceError(err: unknown): MappedHttpError | null {
   // broken pillar, and reasonably retrying forever.
   if (err instanceof InvalidIngestPayloadError) {
     return { status: 400, body: { message: err.message, code: 'INVALID_INGEST_PAYLOAD' } };
+  }
+  // The order already carries that document. A backfill re-run lands here
+  // for everything it attached last time and treats it as a skip, exactly
+  // as it treats the duplicate order above.
+  if (err instanceof DocumentAlreadyAttachedError) {
+    return { status: 409, body: { message: err.message, code: 'DOCUMENT_ALREADY_ATTACHED' } };
   }
   // The proposal was already answered. Distinct from the ingest duplicate
   // above because the caller is a review surface, not an adapter: it should

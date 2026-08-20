@@ -205,10 +205,16 @@ export type MobileBootstrapErrors = {
   /**
    * 403
    */
-  403: {
-    code: 'device_revoked';
-    message: string;
-  };
+  403:
+    | {
+        code: 'device_revoked';
+        message: string;
+      }
+    | {
+        capability: string;
+        code: 'capability_not_granted';
+        message: string;
+      };
   /**
    * 429
    */
@@ -227,6 +233,7 @@ export type MobileBootstrapResponses = {
    */
   200: {
     device: {
+      capabilities: Array<string>;
       id: string;
       lastSeenAt: string;
       name: string;
@@ -275,10 +282,16 @@ export type MobileFinanceListTransactionsErrors = {
   /**
    * 403
    */
-  403: {
-    code: 'device_revoked';
-    message: string;
-  };
+  403:
+    | {
+        code: 'device_revoked';
+        message: string;
+      }
+    | {
+        capability: string;
+        code: 'capability_not_granted';
+        message: string;
+      };
   /**
    * 429
    */
@@ -373,10 +386,16 @@ export type MobileFinanceGetTransactionErrors = {
   /**
    * 403
    */
-  403: {
-    code: 'device_revoked';
-    message: string;
-  };
+  403:
+    | {
+        code: 'device_revoked';
+        message: string;
+      }
+    | {
+        capability: string;
+        code: 'capability_not_granted';
+        message: string;
+      };
   /**
    * 404
    */
@@ -511,10 +530,16 @@ export type MobilePurchasesUploadReceiptErrors = {
   /**
    * 403
    */
-  403: {
-    code: 'device_revoked';
-    message: string;
-  };
+  403:
+    | {
+        code: 'device_revoked';
+        message: string;
+      }
+    | {
+        capability: string;
+        code: 'capability_not_granted';
+        message: string;
+      };
   /**
    * 413
    */

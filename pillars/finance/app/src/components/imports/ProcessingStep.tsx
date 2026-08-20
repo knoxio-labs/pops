@@ -75,6 +75,7 @@ export function ProcessingStep() {
         isProcessing={Boolean(isProcessing)}
         progress={progress ?? undefined}
         parsedCount={parsedTransactions.length}
+        failed={isFailure}
       />
       {completedWarnings?.map((warning) => (
         <WarningCard key={warning.type} warning={warning} />

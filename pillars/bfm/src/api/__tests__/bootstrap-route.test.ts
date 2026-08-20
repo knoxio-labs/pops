@@ -18,6 +18,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { configureDiscoveryForTest, failNextRegistryFetches } from '@pops/pillar-sdk/testing';
 
+import {
+  DEFAULT_DEVICE_CAPABILITIES,
+  MOBILE_SESSION_CAPABILITY,
+  serialiseDeviceCapabilities,
+} from '../../contract/capabilities.js';
 import { MobileBootstrapResponseSchema } from '../../contract/rest-schemas.js';
 import { deviceRow } from '../../db/__tests__/helpers.js';
 import { devices } from '../../db/index.js';
@@ -216,7 +221,35 @@ describe('a paired device asking what to render', () => {
 
     const res = await bootstrapAs(app, device);
 
-    expect(Object.keys(res.body.device).toSorted()).toEqual(['id', 'lastSeenAt', 'name']);
+    expect(Object.keys(res.body.device).toSorted()).toEqual([
+      'capabilities',
+      'id',
+      'lastSeenAt',
+      'name',
+    ]);
+  });
+
+  it('tells the device what its own grant holds', async () => {
+    const app = open({ bootstrap: { probe: healthyProbe('finance') } });
+    const device = pairedDevice(app);
+
+    const res = await bootstrapAs(app, device);
+
+    expect(res.body.device.capabilities).toEqual([...DEFAULT_DEVICE_CAPABILITIES]);
+  });
+
+  it('reports the row’s own grant, not the vocabulary this build knows', async () => {
+    // The whole point of the model: two handsets can be told different things.
+    // Asserting against the default set alone would pass just as well if this
+    // field were hard-coded from the constant.
+    const app = open({ bootstrap: { probe: healthyProbe('finance') } });
+    const device = pairedDevice(app, {
+      capabilities: serialiseDeviceCapabilities([MOBILE_SESSION_CAPABILITY]),
+    });
+
+    const res = await bootstrapAs(app, device);
+
+    expect(res.body.device.capabilities).toEqual([MOBILE_SESSION_CAPABILITY]);
   });
 });
 

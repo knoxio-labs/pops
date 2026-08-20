@@ -35,6 +35,7 @@
     "ingest:amazon-digital": "tsx scripts/ingest-amazon-digital.ts",
     "ingest:woolworths": "tsx scripts/ingest-woolworths.ts",
     "propose:kinds": "tsx scripts/propose-kinds.ts",
+    "propose:products": "tsx scripts/propose-products.ts",
     "start": "node dist/api/server.js",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",

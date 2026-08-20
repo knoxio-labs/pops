@@ -402,6 +402,21 @@ describe('the documents leg', () => {
     expect(stats).toMatchObject({ badUri: 1 });
     expect(documentStaleAt()).toEqual([null]);
   });
+
+  it('skips a receipt URI this pillar minted for itself, rather than warning on it every night', async () => {
+    // pops://purchases/receipt/<sha256> is written by the upload path, not
+    // addressed to the documents pillar at all — asking documents to
+    // resolve it is the wrong question, not a bad answer.
+    const RECEIPT_URI = 'pops://purchases/receipt/abc123';
+    seed({ documentUri: RECEIPT_URI });
+    const warn = vi.fn();
+
+    const stats = await start({ document: unreachableLookup, logger: { warn } }).runOnce();
+
+    expect(legStats(stats, 'document')).toMatchObject({ checked: 0, badUri: 0 });
+    expect(documentStaleAt()).toEqual([null]);
+    expect(warn).not.toHaveBeenCalled();
+  });
 });
 
 describe('per-leg work-set reporting', () => {

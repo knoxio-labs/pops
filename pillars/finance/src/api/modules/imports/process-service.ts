@@ -26,7 +26,9 @@ import {
   buildAiWarnings,
   makeBuckets,
   type ProcessBuckets,
+  PROGRESS_INTERVAL_ROWS,
   type ProgressBatchItem,
+  yieldToEventLoop,
 } from './processing-helpers.js';
 import { loadKnownTags } from './tag-management.js';
 import { createAiCounters } from './types.js';
@@ -105,16 +107,27 @@ interface ProcessLoopArgs {
 }
 
 /**
- * Pass 1: run the synchronous, non-AI ladder for every row. Rows it resolves
- * land straight in `results`; rows that fall through collect into the
- * returned `pending` list for the batched AI pass. A thrown error (e.g. a DB
- * failure) degrades that one row to `failed` rather than aborting the run.
+ * Pass 1: run the non-AI ladder for every row. Rows it resolves land straight
+ * in `results`; rows that fall through collect into the returned `pending`
+ * list for the batched AI pass. A thrown error (e.g. a DB failure) degrades
+ * that one row to `failed` rather than aborting the run.
+ *
+ * This pass is where a no-AI import spends nearly all of its time, so it is
+ * also where progress has to come from. Reporting only from the bookkeeping
+ * loop that follows leaves the client showing `0/N` for the whole run and then
+ * jumping straight to the result.
+ *
+ * The count reported is rows *settled*, not rows walked: rows deferred to the
+ * AI pass are not done yet, and counting them here would leave the bar full
+ * before the longest part of the run had started.
  */
-function classifyWithoutAiPass(
-  loopArgs: Pick<ProcessLoopArgs, 'db' | 'newTransactions' | 'context' | 'counters'>,
+async function classifyWithoutAiPass(
+  loopArgs: Pick<ProcessLoopArgs, 'db' | 'newTransactions' | 'context' | 'counters'> & {
+    onProgress?: ImportProgressCallback;
+  },
   results: (TransactionProcessResult | undefined)[]
-): PendingAiItem[] {
-  const { db, newTransactions, context, counters } = loopArgs;
+): Promise<PendingAiItem[]> {
+  const { db, newTransactions, context, counters, onProgress } = loopArgs;
   const pending: PendingAiItem[] = [];
   for (let i = 0; i < newTransactions.length; i++) {
     const transaction = newTransactions[i];
@@ -130,6 +143,10 @@ function classifyWithoutAiPass(
       const { failed, errorEntry } = buildFailure(transaction, error);
       results[i] = { failed, batchStatus: 'failed', errorEntry };
     }
+    if (onProgress && (i + 1) % PROGRESS_INTERVAL_ROWS === 0) {
+      onProgress({ processedCount: i + 1 - pending.length });
+      await yieldToEventLoop();
+    }
   }
   return pending;
 }
@@ -140,10 +157,21 @@ async function runProcessLoop(args: ProcessLoopArgs): Promise<{ errors: ErrorEnt
     length: newTransactions.length,
   });
 
-  const pending = classifyWithoutAiPass(args, results);
+  const pending = await classifyWithoutAiPass(args, results);
+  const settledByLadder = newTransactions.length - pending.length;
   if (pending.length > 0) {
-    await resolvePendingAi({ db, pending, context, counters, results });
+    onProgress?.({ currentStep: 'categorizing', processedCount: settledByLadder });
+    await resolvePendingAi({
+      db,
+      pending,
+      context,
+      counters,
+      results,
+      onResolved: (resolvedCount) =>
+        onProgress?.({ processedCount: settledByLadder + resolvedCount }),
+    });
   }
+  onProgress?.({ processedCount: newTransactions.length });
 
   const currentBatch: ProgressBatchItem[] = [];
   const errors: ErrorEntry[] = [];
@@ -162,7 +190,11 @@ async function runProcessLoop(args: ProcessLoopArgs): Promise<{ errors: ErrorEnt
         status: result.batchStatus,
         ...(result.errorEntry ? { error: result.errorEntry.error } : {}),
       });
-      onProgress({ processedCount: i + 1, currentBatch: [...currentBatch] });
+      // Bookkeeping only — every row is already classified by this point, so
+      // this loop runs to completion inside one tick. Re-sending `processedCount`
+      // here would walk the count from 0 back up behind a bar that pass 1 has
+      // already filled, which reads as the import restarting.
+      onProgress({ currentBatch: [...currentBatch] });
     }
   }
 

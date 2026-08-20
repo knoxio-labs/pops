@@ -8,12 +8,14 @@
  * instance is needed.
  */
 import express, { type Express } from 'express';
-import request from 'supertest';
 import { describe, expect, it, vi } from 'vitest';
 
+import { createTestTransport } from '../__tests__/test-http.js';
 import { createInventoryFilesRouter } from './router.js';
 
 import type { PillarSnapshot } from '@pops/pillar-sdk/discovery';
+
+const { requestOn } = createTestTransport();
 
 function documentsSnapshot(baseUrl = 'http://documents-api:3012'): PillarSnapshot {
   return {
@@ -48,7 +50,7 @@ function app(
 describe('GET /inventory/documents/:id/thumbnail', () => {
   it('returns 400 for a non-numeric id', async () => {
     const fetchImpl = vi.fn<typeof fetch>();
-    const res = await request(app(() => Promise.resolve(documentsSnapshot()), fetchImpl)).get(
+    const res = await requestOn(app(() => Promise.resolve(documentsSnapshot()), fetchImpl)).get(
       '/inventory/documents/abc/thumbnail'
     );
     expect(res.status).toBe(400);
@@ -58,7 +60,7 @@ describe('GET /inventory/documents/:id/thumbnail', () => {
 
   it('returns 503 when the documents pillar is not registered', async () => {
     const fetchImpl = vi.fn<typeof fetch>();
-    const res = await request(app(() => Promise.resolve(undefined), fetchImpl)).get(
+    const res = await requestOn(app(() => Promise.resolve(undefined), fetchImpl)).get(
       '/inventory/documents/42/thumbnail'
     );
     expect(res.status).toBe(503);
@@ -68,7 +70,7 @@ describe('GET /inventory/documents/:id/thumbnail', () => {
   it('returns 503 when pillar discovery throws (registry unreachable)', async () => {
     const fetchImpl = vi.fn<typeof fetch>();
     const lookup = () => Promise.reject(new Error('registry unreachable'));
-    const res = await request(app(lookup, fetchImpl)).get('/inventory/documents/42/thumbnail');
+    const res = await requestOn(app(lookup, fetchImpl)).get('/inventory/documents/42/thumbnail');
     expect(res.status).toBe(503);
     expect(res.body.error).toContain('not available');
     expect(fetchImpl).not.toHaveBeenCalled();
@@ -76,7 +78,7 @@ describe('GET /inventory/documents/:id/thumbnail', () => {
 
   it('returns 502 when the documents pillar is unreachable', async () => {
     const fetchImpl = vi.fn<typeof fetch>().mockRejectedValue(new Error('connection refused'));
-    const res = await request(app(() => Promise.resolve(documentsSnapshot()), fetchImpl)).get(
+    const res = await requestOn(app(() => Promise.resolve(documentsSnapshot()), fetchImpl)).get(
       '/inventory/documents/42/thumbnail'
     );
     expect(res.status).toBe(502);
@@ -87,7 +89,7 @@ describe('GET /inventory/documents/:id/thumbnail', () => {
     const fetchImpl = vi
       .fn<typeof fetch>()
       .mockRejectedValue(new DOMException('The operation timed out', 'TimeoutError'));
-    const res = await request(app(() => Promise.resolve(documentsSnapshot()), fetchImpl)).get(
+    const res = await requestOn(app(() => Promise.resolve(documentsSnapshot()), fetchImpl)).get(
       '/inventory/documents/42/thumbnail'
     );
     expect(res.status).toBe(504);
@@ -102,7 +104,7 @@ describe('GET /inventory/documents/:id/thumbnail', () => {
         new Response(bytes, { status: 200, headers: { 'content-type': 'image/webp' } })
       );
 
-    const res = await request(app(() => Promise.resolve(documentsSnapshot()), fetchImpl)).get(
+    const res = await requestOn(app(() => Promise.resolve(documentsSnapshot()), fetchImpl)).get(
       '/inventory/documents/42/thumbnail'
     );
 
@@ -119,7 +121,7 @@ describe('GET /inventory/documents/:id/thumbnail', () => {
     const bytes = Buffer.from('fake-png-data');
     const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(new Response(bytes, { status: 200 }));
 
-    const res = await request(app(() => Promise.resolve(documentsSnapshot()), fetchImpl)).get(
+    const res = await requestOn(app(() => Promise.resolve(documentsSnapshot()), fetchImpl)).get(
       '/inventory/documents/42/thumbnail'
     );
 
@@ -129,7 +131,7 @@ describe('GET /inventory/documents/:id/thumbnail', () => {
 
   it('returns 404 when the document is not in Paperless', async () => {
     const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(new Response(null, { status: 404 }));
-    const res = await request(app(() => Promise.resolve(documentsSnapshot()), fetchImpl)).get(
+    const res = await requestOn(app(() => Promise.resolve(documentsSnapshot()), fetchImpl)).get(
       '/inventory/documents/999/thumbnail'
     );
     expect(res.status).toBe(404);
@@ -138,7 +140,7 @@ describe('GET /inventory/documents/:id/thumbnail', () => {
 
   it('returns 503 when the documents pillar reports Paperless is not configured', async () => {
     const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(new Response(null, { status: 503 }));
-    const res = await request(app(() => Promise.resolve(documentsSnapshot()), fetchImpl)).get(
+    const res = await requestOn(app(() => Promise.resolve(documentsSnapshot()), fetchImpl)).get(
       '/inventory/documents/42/thumbnail'
     );
     expect(res.status).toBe(503);
@@ -147,7 +149,7 @@ describe('GET /inventory/documents/:id/thumbnail', () => {
 
   it('returns 502 on other upstream errors', async () => {
     const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(new Response(null, { status: 500 }));
-    const res = await request(app(() => Promise.resolve(documentsSnapshot()), fetchImpl)).get(
+    const res = await requestOn(app(() => Promise.resolve(documentsSnapshot()), fetchImpl)).get(
       '/inventory/documents/42/thumbnail'
     );
     expect(res.status).toBe(502);

@@ -120,6 +120,13 @@
       "when": 1781913600010,
       "tag": "0065_transaction_type_lowercase",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1781913600011,
+      "tag": "0066_transaction_foreign_charge_columns",
+      "breakpoints": true
     }
   ]
 }

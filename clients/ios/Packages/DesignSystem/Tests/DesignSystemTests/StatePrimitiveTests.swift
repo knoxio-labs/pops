@@ -20,6 +20,35 @@ internal struct StatePrimitiveTests {
         #expect(StateMessage.resolve(input, fallback: "fallback") == "fallback")
     }
 
+    /// `StateMessage.resolve` having a fallback is not the same claim as
+    /// `ErrorStateView` routing its two caller-supplied strings through it,
+    /// and the wiring is the half that can be deleted by accident.
+    ///
+    /// Asserted as copy rather than by rendering the screen with a blank
+    /// title, rendering it with none, and comparing the images: that
+    /// comparison holds on a build system that copied `Colors.xcassets`
+    /// without compiling it whether or not the fallback exists, because both
+    /// canvases are then the same placeholder colour — see
+    /// `HostToolchainColorSupport`. Two strings are two strings on every lane.
+    @MainActor
+    @Test("ErrorStateView falls back for blank copy", arguments: ["", "   ", "\n\t"])
+    func blankCopyFallsBack(blank: String) {
+        let view = ErrorStateView(message: blank, retryTitle: blank) {}
+
+        #expect(view.resolvedMessage == ErrorStateView.fallbackMessage)
+        #expect(view.resolvedRetryTitle == ErrorStateView.fallbackRetryTitle)
+    }
+
+    @MainActor
+    @Test("ErrorStateView keeps the copy it was handed")
+    func suppliedCopyIsKept() {
+        let view = ErrorStateView(
+            message: "Could not reach the server.", retryTitle: "Réessayer", retry: {})
+
+        #expect(view.resolvedMessage == "Could not reach the server.")
+        #expect(view.resolvedRetryTitle == "Réessayer")
+    }
+
     // `View` conformance makes `ErrorStateView` main-actor isolated, so its
     // stored closure can only be built and called from there.
     @MainActor

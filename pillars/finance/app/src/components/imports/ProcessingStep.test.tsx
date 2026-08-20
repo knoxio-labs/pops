@@ -97,6 +97,34 @@ describe('ProcessingStep', () => {
     expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
   });
 
+  it('hides the progress spinner once the run has failed', async () => {
+    // The failed run keeps its last progress state, so the spinner used to sit
+    // above the error panel still claiming the import was being analyzed.
+    mockProcessImport.mockResolvedValue({
+      data: undefined,
+      error: { message: 'Network error' },
+      response: { status: 500 } as Response,
+    });
+    render(renderStep());
+    expect(await screen.findByText('Processing Failed')).toBeInTheDocument();
+    expect(screen.queryByText(/Analyzing \d+ transactions/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/transactions\.\.\./)).not.toBeInTheDocument();
+  });
+
+  it('surfaces the status when the failure carries no message body', async () => {
+    // A proxy-rejected oversized import answers 413 with an HTML page, so there
+    // is no `message` to render; the panel must still say what happened.
+    mockProcessImport.mockResolvedValue({
+      data: undefined,
+      error: '<html>413 Request Entity Too Large</html>',
+      response: { status: 413 } as Response,
+    });
+    render(renderStep());
+    expect(await screen.findByText('Processing Failed')).toBeInTheDocument();
+    expect(screen.getByText(/too large for the server to accept/)).toBeInTheDocument();
+    expect(screen.getByText(/413/)).toBeInTheDocument();
+  });
+
   it('re-issues processImport when Retry is clicked', async () => {
     mockProcessImport.mockResolvedValue({
       data: undefined,

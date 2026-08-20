@@ -11,12 +11,14 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import supertest from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { openAiDb, type OpenedAiDb } from '../../db/index.js';
 import { createAiApiApp } from '../app.js';
 import { closeAiMaintenanceQueues } from '../jobs/queue.js';
+import { createTestTransport } from './test-http.js';
+
+const { requestOn } = createTestTransport();
 
 let tmpDir: string;
 let aiDb: OpenedAiDb;
@@ -40,31 +42,31 @@ afterEach(async () => {
 describe('the /jobs surface with no Redis configured', () => {
   it('answers 503 on every read rather than 404 or an empty healthy queue', async () => {
     for (const path of ['/jobs', '/jobs/stats', '/jobs/queues', '/jobs/dead-letter']) {
-      const res = await supertest(app).get(path);
+      const res = await requestOn(app).get(path);
       expect(res.status, path).toBe(503);
       expect(res.body).toMatchObject({ code: 'ServiceUnavailableError' });
     }
   });
 
   it('answers 503 on every mutation too', async () => {
-    const drain = await supertest(app).post('/jobs/drain').send({});
+    const drain = await requestOn(app).post('/jobs/drain').send({});
     expect(drain.status).toBe(503);
 
-    const retry = await supertest(app).post('/jobs/abc/retry').send({});
+    const retry = await requestOn(app).post('/jobs/abc/retry').send({});
     expect(retry.status).toBe(503);
 
-    const cancel = await supertest(app).post('/jobs/abc/cancel').send({});
+    const cancel = await requestOn(app).post('/jobs/abc/cancel').send({});
     expect(cancel.status).toBe(503);
 
-    const replay = await supertest(app).post('/jobs/dead-letter/abc/replay').send({});
+    const replay = await requestOn(app).post('/jobs/dead-letter/abc/replay').send({});
     expect(replay.status).toBe(503);
   });
 
   it('routes the literal paths ahead of /jobs/:id — /jobs/stats is not a job id', async () => {
     // Both 503 here, so the discriminator is the error the route reached:
     // `/jobs/stats` must not be answered by the single-job read.
-    const stats = await supertest(app).get('/jobs/stats');
-    const single = await supertest(app).get('/jobs/some-job-id');
+    const stats = await requestOn(app).get('/jobs/stats');
+    const single = await requestOn(app).get('/jobs/some-job-id');
 
     expect(stats.status).toBe(503);
     expect(single.status).toBe(503);
@@ -72,7 +74,7 @@ describe('the /jobs surface with no Redis configured', () => {
   });
 
   it('rejects a list window the contract caps, before it ever reaches Redis', async () => {
-    const res = await supertest(app).get('/jobs').query({ limit: '500' });
+    const res = await requestOn(app).get('/jobs').query({ limit: '500' });
 
     expect(res.status).toBe(400);
   });

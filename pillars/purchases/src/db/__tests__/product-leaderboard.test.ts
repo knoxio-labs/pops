@@ -146,7 +146,8 @@ describe('grouping', () => {
 
     expect(entry.product).toEqual({
       basis: 'sku',
-      source: 'amazon',
+      source: null,
+      scheme: 'asin',
       sku: 'B0FCSJTKJ8',
       name: 'Magnetic Dosing Funnel',
     });
@@ -199,6 +200,72 @@ describe('grouping', () => {
     expect(entry.unitCount).toBe(6);
     expect(entry.orderCount).toBe(1);
     expect(entry.lineCount).toBe(1);
+  });
+
+  it('folds one ASIN across the physical and digital Amazon exports into one row', () => {
+    upsertSource(opened.db, {
+      id: 'amazon-digital',
+      label: 'Amazon (digital)',
+      descriptorPattern: 'AMAZON%',
+      settlementWindowDays: 21,
+      autoLinkPolicy: 'review',
+      ingestAdapter: 'amazon-digital-export',
+    });
+    createPurchase(
+      opened.db,
+      order({
+        checksum: 'physical',
+        orderedAt: '2026-01-04T00:00:00Z',
+        items: [line({ name: 'The Way of Kings', sku: { value: 'B0FCSJTKJ8', scheme: 'asin' } })],
+      })
+    );
+    createPurchase(
+      opened.db,
+      order({
+        checksum: 'digital',
+        source: 'amazon-digital',
+        orderedAt: '2026-03-04T00:00:00Z',
+        items: [
+          line({ name: 'The Way of Kings (Kindle)', sku: { value: 'B0FCSJTKJ8', scheme: 'asin' } }),
+        ],
+      })
+    );
+
+    // An ASIN names one product in Amazon's catalogue, and the bundle splits
+    // that catalogue across two exports. Two rows here is the same product
+    // reported as two, each with half its history.
+    const entry = only(rankProductPurchases(opened.db));
+    expect(entry.orderCount).toBe(2);
+    expect(entry.lineCount).toBe(2);
+    // The group is bounded by no one source, and says so rather than
+    // reporting whichever line was read last.
+    expect(entry.product.basis).toBe('sku');
+    expect(entry.product.source).toBeNull();
+  });
+
+  it('keeps a merchant-scoped sku inside its source even where the string is an ASIN', () => {
+    createPurchase(
+      opened.db,
+      order({
+        checksum: 'asin-side',
+        items: [line({ name: 'Funnel', sku: { value: 'B0FCSJTKJ8', scheme: 'asin' } })],
+      })
+    );
+    createPurchase(
+      opened.db,
+      receiptOrder({
+        checksum: 'merchant-side',
+        items: [line({ name: 'Funnel', sku: { value: 'B0FCSJTKJ8', scheme: 'merchant' } })],
+      })
+    );
+
+    // The same characters under two schemes are two identifiers. Merging them
+    // would put a grocer's article number and an Amazon catalogue entry in one
+    // row, which is the direction that cannot be seen once it has happened.
+    const leaderboard = rankProductPurchases(opened.db);
+    expect(leaderboard.products).toHaveLength(2);
+    const sources = leaderboard.products.map((product) => product.product.source).sort();
+    expect(sources).toEqual([null, 'woolworths']);
   });
 
   it('never merges the same sku string across two sources', () => {

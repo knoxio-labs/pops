@@ -1,3 +1,5 @@
+import type { AmountSign } from '../bank-dialect';
+
 export function parseDate(dateStr: string | undefined): string | null {
   if (!dateStr) return null;
   const parts = dateStr.split('/');
@@ -7,12 +9,25 @@ export function parseDate(dateStr: string | undefined): string | null {
   return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
 }
 
-export function parseAmount(amountStr: string | undefined): number | null {
+/**
+ * Read a CSV amount into the ledger's convention, where money out is negative.
+ *
+ * Banks disagree on how they state a purchase, so the caller supplies its
+ * bank's convention rather than this assuming one: `debit-positive` exports
+ * (Amex) state purchases as positive amounts and are flipped, `debit-negative`
+ * exports (ANZ credit card) already sign them and are taken as-is. Flipping
+ * unconditionally turns every purchase on a `debit-negative` statement into
+ * income and every repayment into spending.
+ */
+export function parseAmount(
+  amountStr: string | undefined,
+  sign: AmountSign = 'debit-positive'
+): number | null {
   if (!amountStr) return null;
   const cleaned = amountStr.replaceAll(/[^0-9.-]/g, '');
   const amount = parseFloat(cleaned);
   if (isNaN(amount)) return null;
-  return -amount;
+  return sign === 'debit-negative' ? amount : -amount;
 }
 
 export function extractLocation(townCity: string): string | undefined {

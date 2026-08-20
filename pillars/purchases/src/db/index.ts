@@ -118,6 +118,8 @@ export {
   findPurchaseBySourceOrderId,
 } from './services/purchase-lookups.js';
 
+export { attachDocument, type AttachDocumentInput } from './services/purchase-documents.js';
+
 export {
   createPurchase,
   type CreateChargeAllocationInput,
@@ -150,6 +152,11 @@ export {
   type LinkedCharge,
   type LinkedPurchase,
 } from './services/reconcile-links.js';
+
+export {
+  summariseLinksForTransactions,
+  type TransactionLinkSummary,
+} from './services/reconcile-links-batch.js';
 
 export {
   listReconcileQueue,

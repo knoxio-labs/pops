@@ -176,8 +176,9 @@ export type AnalyticsProductLeaderboardResponses = {
         | {
             basis: 'sku';
             name: string;
+            scheme: 'asin' | 'merchant';
             sku: string;
-            source: string;
+            source: string | null;
           }
         | {
             basis: 'name';
@@ -1027,6 +1028,61 @@ export type PurchaseGetResponses = {
 
 export type PurchaseGetResponse = PurchaseGetResponses[keyof PurchaseGetResponses];
 
+export type PurchaseAttachDocumentData = {
+  /**
+   * Body
+   */
+  body?: {
+    documentUri: string;
+    kind?: 'tax_invoice' | 'receipt' | 'order_confirmation' | 'delivery_photo' | 'other';
+  };
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/purchases/{id}/documents';
+};
+
+export type PurchaseAttachDocumentErrors = {
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+  };
+};
+
+export type PurchaseAttachDocumentError =
+  PurchaseAttachDocumentErrors[keyof PurchaseAttachDocumentErrors];
+
+export type PurchaseAttachDocumentResponses = {
+  /**
+   * 201
+   */
+  201: {
+    document: {
+      createdAt: string;
+      documentStaleAt: string | null;
+      documentUri: string;
+      id: string;
+      kind: 'tax_invoice' | 'receipt' | 'order_confirmation' | 'delivery_photo' | 'other';
+      purchaseId: string;
+      shipmentId: string | null;
+    };
+  };
+};
+
+export type PurchaseAttachDocumentResponse =
+  PurchaseAttachDocumentResponses[keyof PurchaseAttachDocumentResponses];
+
 export type PurchaseListInventoryProposalsData = {
   body?: never;
   path: {
@@ -1576,6 +1632,35 @@ export type ReconcileLinksResponses = {
 };
 
 export type ReconcileLinksResponse = ReconcileLinksResponses[keyof ReconcileLinksResponses];
+
+export type ReconcileLinksBatchData = {
+  /**
+   * Body
+   */
+  body?: {
+    transactionUris: Array<string>;
+  };
+  path?: never;
+  query?: never;
+  url: '/reconcile/links/batch';
+};
+
+export type ReconcileLinksBatchResponses = {
+  /**
+   * 200
+   */
+  200: {
+    transactions: Array<{
+      confirmedChargeCount: number;
+      derivedChargeCount: number;
+      purchaseCount: number;
+      transactionUri: string;
+    }>;
+  };
+};
+
+export type ReconcileLinksBatchResponse =
+  ReconcileLinksBatchResponses[keyof ReconcileLinksBatchResponses];
 
 export type ReconcileQueueData = {
   body?: never;

@@ -190,7 +190,8 @@ describe('GET /analytics/product-leaderboard', () => {
     // merchant-stated identity from a name that happened to match.
     expect(entry.product).toEqual({
       basis: 'sku',
-      source: 'amazon',
+      source: null,
+      scheme: 'asin',
       sku: 'B0FCSJTKJ8',
       name: 'Magnetic Dosing Funnel',
     });

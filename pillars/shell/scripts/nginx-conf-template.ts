@@ -16,6 +16,13 @@ export const NGINX_CONF_HEAD = `server {
     root /usr/share/nginx/html;
     index index.html;
 
+    # Bulk endpoints post the whole batch in one body — a two-year bank
+    # statement reaches ~1.3MB at /finance-api/imports/process — so nginx's
+    # 1m default rejects a normal import with a 413 before it ever reaches the
+    # pillar. Matched to the 20mb the finance API declares on express.json so
+    # one limit governs, and it is the one the application states.
+    client_max_body_size 20m;
+
     # Resolver for variable-form \`proxy_pass\`. Upstreams held in an
     # nginx variable defer DNS resolution to request time (vs. config-
     # load time for literal \`proxy_pass <name>\`), letting nginx boot

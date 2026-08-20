@@ -72,3 +72,16 @@ export function recoverImportSession(): Promise<string> {
   });
   return inFlightRecovery;
 }
+
+/**
+ * The recovery currently running, if any.
+ *
+ * A caller that is about to use the session id can await this instead of
+ * issuing a request that is already known to fail: while a recovery is in
+ * flight the stored session is either dead or still processing, so a request
+ * against it can only come back 404 or 412. Returns `null` when nothing is
+ * being recovered, so the common path stays synchronous.
+ */
+export function pendingImportRecovery(): Promise<string> | null {
+  return inFlightRecovery;
+}

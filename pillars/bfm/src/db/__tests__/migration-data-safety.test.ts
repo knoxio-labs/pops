@@ -1,19 +1,21 @@
 /**
  * What the migration chain does to data that was already stored in bfm.
  *
- * This pillar's journal currently has exactly one entry, `0000_bfm_init` —
- * there is no earlier point to stage "before", so staging through it just
- * reproduces the whole schema and reopening applies nothing. What this test
- * proves today is narrower than the finance/purchases siblings it is modelled
- * on: that `openBfmDb` is idempotent against a database that already has rows
- * in it, that it takes no pre-migration snapshot when nothing is pending, and
- * that the schema's one real foreign key — `refresh_tokens.device_id`, plus
- * its self-reference through `replaced_by` — survives the reopen with
- * `foreign_keys = ON` enforced. It does NOT yet prove anything about a
- * migration rewriting existing data, because none exists. The day a second
- * entry lands in the journal, staging through `0000_bfm_init` starts applying
- * it to the rows seeded here, and this test starts covering that the way its
- * siblings cover theirs.
+ * The rows below are seeded through `0000_bfm_init` and then met by every
+ * later migration on reopen, so this covers what its finance/purchases
+ * siblings cover: that `openBfmDb` is idempotent, that it takes a
+ * pre-migration snapshot while entries are pending and removes it once they
+ * land, that the schema's one real foreign key — `refresh_tokens.device_id`, plus
+ * its self-reference through `replaced_by` — survives with `foreign_keys = ON`
+ * enforced, and that a migration adding a column fills it for the rows that
+ * predate it rather than leaving them at a default nobody chose.
+ *
+ * That last one is the load-bearing case for `0001_device_capabilities`: the
+ * column defaults to the EMPTY grant, so a device paired before it landed
+ * would have been silently locked out of every route it was using. The
+ * backfill is what stops that, and it is asserted against the literal set the
+ * migration writes rather than against the current vocabulary — a migration is
+ * history and must not change when the vocabulary grows.
  */
 import { mkdtempSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -39,7 +41,7 @@ const MIGRATIONS_DIR = join(
   'migrations'
 );
 
-/** The only entry in the journal today — see the header for what that means. */
+/** The baseline every row here is seeded through, before any later migration. */
 const BASELINE_TAG = '0000_bfm_init';
 
 interface SeededDevice {
@@ -162,8 +164,30 @@ describe('reopening a populated bfm database against the current journal', () =>
     expect(count('refresh_tokens')).toBe(3);
   });
 
-  it('takes no pre-migration snapshot when nothing was pending', () => {
+  it('leaves no pre-migration snapshot behind once the pending entries land', () => {
+    // Seeded through the baseline only, so every later entry IS applied on the
+    // reopen and a snapshot is taken — the point here is that a successful run
+    // removes it again rather than accumulating a copy of the database per
+    // deployment. A snapshot still on disk means a migration threw.
     expect(readdirSync(dir).filter((name) => name.includes('.pre-migration-'))).toEqual([]);
+  });
+
+  it('grants the devices that predate the capability column what they had before it', () => {
+    // Written out rather than read from `DEFAULT_DEVICE_CAPABILITIES`: the
+    // migration froze this set on the day it landed, and it must not start
+    // asserting a vocabulary that grew afterwards.
+    const stored = rows<{ id: string; capabilities: string }>(
+      `SELECT id, capabilities FROM devices ORDER BY id`
+    );
+
+    for (const device of stored) {
+      expect(JSON.parse(device.capabilities)).toEqual([
+        'session.read',
+        'finance.transactions.read',
+        'purchases.receipts.write',
+      ]);
+    }
+    expect(stored).toHaveLength(DEVICES.length);
   });
 
   it('keeps every device column byte-identical, quotes and unicode included', () => {

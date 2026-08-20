@@ -14,17 +14,23 @@
  * exist, so a regression to parse-then-check surfaces as `ENOENT` instead
  * of the message about the key.
  */
-import { mkdirSync, mkdtempSync, readdirSync, writeFileSync } from 'node:fs';
+import { readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import {
-  legacyInvoice,
-  pdfWithRuns,
-} from '../../src/ingest/amazon/__tests__/__fixtures__/invoice-pdf.js';
 import { AuthFailureError, INGEST_API_KEY_ENV } from '../backfill.js';
+import {
+  bundleWith,
+  invoiceFor,
+  KNOWN_ORDER,
+  orderNamed,
+  storedFiles,
+  temporaryDirectory,
+  UNKNOWN_ORDER,
+  warnings,
+} from './amazon-bundle.js';
 
 vi.mock('../../src/ingest/amazon/index.js', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../src/ingest/amazon/index.js')>()),
@@ -32,59 +38,10 @@ vi.mock('../../src/ingest/amazon/index.js', async (importOriginal) => ({
 }));
 
 const { parseAmazonOrderHistory } = await import('../../src/ingest/amazon/index.js');
-const { main, planInvoiceDocuments } = await import('../ingest-amazon.js');
+const { main } = await import('../ingest-amazon.js');
+const { planInvoiceDocuments } = await import('../amazon-invoices.js');
 
 const parseMock = vi.mocked(parseAmazonOrderHistory);
-
-const KNOWN_ORDER = '503-1631401-2789435';
-const UNKNOWN_ORDER = '249-4494679-2017412';
-const DOCUMENT = '12484342-INV-AU-2021-26473870';
-
-function temporaryDirectory(prefix: string): string {
-  return mkdtempSync(join(tmpdir(), prefix));
-}
-
-/** A bundle root holding an `Order History.csv` and the given invoices. */
-function bundleWith(invoices: Readonly<Record<string, Buffer>> = {}): string {
-  const root = temporaryDirectory('amazon-cli-');
-  mkdirSync(join(root, 'Your Amazon Orders'), { recursive: true });
-  writeFileSync(join(root, 'Your Amazon Orders', 'Order History.csv'), 'order id,order date\n');
-
-  for (const [relative, bytes] of Object.entries(invoices)) {
-    const path = join(root, 'Additional Data', 'Retail.TransactionalInvoicing.3.1', relative);
-    mkdirSync(join(path, '..'), { recursive: true });
-    writeFileSync(path, bytes);
-  }
-  return root;
-}
-
-function invoiceFor(sourceOrderId: string, documentNumber = DOCUMENT): Buffer {
-  return pdfWithRuns(legacyInvoice(sourceOrderId, documentNumber));
-}
-
-function orderNamed(sourceOrderId: string) {
-  return {
-    source: 'amazon' as const,
-    sourceOrderId,
-    ingestMethod: 'export' as const,
-    orderedAt: '2021-07-23T00:00:00.000Z',
-    currency: 'AUD',
-    totalCents: 7575,
-    checksum: 'checksum',
-  };
-}
-
-/** Everything the CLI printed, as one string. */
-function warnings(): string {
-  return vi.mocked(console.warn).mock.calls.flat().join('\n');
-}
-
-/** Every stored file under a store root, whichever shard it landed in. */
-function storedFiles(root: string): string[] {
-  return readdirSync(root, { recursive: true })
-    .map(String)
-    .filter((entry) => entry.endsWith('.pdf'));
-}
 
 let requests: { url: string; body: unknown }[];
 

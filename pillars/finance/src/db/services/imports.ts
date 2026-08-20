@@ -59,6 +59,13 @@ export interface InsertImportTransactionInput {
   entityId: string | null;
   entityName: string | null;
   location: string | null;
+  country?: string | null;
+  /** Amount charged abroad, in `foreignCurrency`'s own ISO-4217 minor units. */
+  foreignAmountMinor?: number | null;
+  /** ISO-4217 alpha-3 of the charge abroad. */
+  foreignCurrency?: string | null;
+  /** The issuer's foreign-transaction fee in AUD cents — a fee, not a converted total. */
+  fxFeeCents?: number | null;
   rawRow?: string;
   checksum?: string;
   /** How the entity assignment was produced (CF057/#3658) — nullable, see schema doc. */
@@ -174,6 +181,10 @@ export function insertImportTransaction(
       entityId: input.entityId,
       entityName: input.entityName,
       location: input.location,
+      country: input.country ?? null,
+      foreignAmountMinor: input.foreignAmountMinor ?? null,
+      foreignCurrency: input.foreignCurrency ?? null,
+      fxFeeCents: input.fxFeeCents ?? null,
       checksum: input.checksum ?? null,
       rawRow: input.rawRow ?? null,
       lastEditedTime: now,

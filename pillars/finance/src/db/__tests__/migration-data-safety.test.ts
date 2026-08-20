@@ -50,6 +50,7 @@ interface SeededTransaction {
   readonly type: string;
   readonly tags: readonly string[];
   readonly entityId: string | null;
+  readonly notes: string | null;
 }
 
 /**
@@ -66,6 +67,7 @@ const TRANSACTIONS: readonly SeededTransaction[] = [
     type: 'Expense',
     tags: ['groceries', 'weekly-shop'],
     entityId: 'e-woolworths',
+    notes: null,
   },
   {
     id: 't-salary',
@@ -75,6 +77,7 @@ const TRANSACTIONS: readonly SeededTransaction[] = [
     type: 'Income',
     tags: [],
     entityId: null,
+    notes: null,
   },
   {
     id: 't-move',
@@ -84,6 +87,7 @@ const TRANSACTIONS: readonly SeededTransaction[] = [
     type: 'Transfer',
     tags: ['internal'],
     entityId: null,
+    notes: null,
   },
   {
     id: 't-odd-type',
@@ -95,6 +99,30 @@ const TRANSACTIONS: readonly SeededTransaction[] = [
     type: '',
     tags: ['uncategorised'],
     entityId: null,
+    notes: null,
+  },
+  {
+    // 0066 lifts this note into typed columns. The space-separated thousands of
+    // a zero-decimal currency are the shape a naive backfill drops in silence.
+    id: 't-tokyo',
+    description: 'AOMORI GROCER',
+    amount: -12.4,
+    date: '2026-02-01',
+    type: 'Expense',
+    tags: ['travel'],
+    entityId: null,
+    notes: '1 100 JPY, 0.40 AUD fx fee',
+  },
+  {
+    // 0066 must not touch this one — it is the user's own text.
+    id: 't-user-note',
+    description: 'HARDWARE STORE',
+    amount: -80.0,
+    date: '2026-02-02',
+    type: 'Expense',
+    tags: [],
+    entityId: null,
+    notes: 'Warranty expires 2028 — receipt in the drawer',
   },
 ];
 
@@ -130,8 +158,8 @@ function seedThroughBaseline(): void {
     raw
       .prepare(
         `INSERT INTO transactions
-           (id, description, account, amount, date, type, tags, entity_id, checksum, last_edited_time)
-         VALUES (?, ?, 'everyday', ?, ?, ?, ?, ?, ?, '2026-01-20T00:00:00Z')`
+           (id, description, account, amount, date, type, tags, entity_id, notes, checksum, last_edited_time)
+         VALUES (?, ?, 'everyday', ?, ?, ?, ?, ?, ?, ?, '2026-01-20T00:00:00Z')`
       )
       .run(
         row.id,
@@ -141,6 +169,7 @@ function seedThroughBaseline(): void {
         row.type,
         JSON.stringify(row.tags),
         row.entityId,
+        row.notes,
         `checksum-${row.id}`
       );
   }
@@ -302,6 +331,30 @@ describe('applying the rest of the journal to a populated finance database', () 
       expect(row.is_active).toBe(1);
       expect(row.priority).toBe(0);
     }
+  });
+
+  it('lifts an importer-authored fx note into the typed columns and clears it', () => {
+    const stored = rows<{
+      foreign_amount_minor: number | null;
+      foreign_currency: string | null;
+      fx_fee_cents: number | null;
+      notes: string | null;
+    }>(
+      `SELECT foreign_amount_minor, foreign_currency, fx_fee_cents, notes
+       FROM transactions WHERE id = 't-tokyo'`
+    );
+    expect(stored).toEqual([
+      { foreign_amount_minor: 1100, foreign_currency: 'JPY', fx_fee_cents: 40, notes: null },
+    ]);
+  });
+
+  it('leaves a user-authored note byte-identical', () => {
+    const stored = rows<{ notes: string | null }>(
+      `SELECT notes FROM transactions WHERE id = 't-user-note'`
+    );
+    expect(stored).toEqual([
+      { notes: TRANSACTIONS.find((row) => row.id === 't-user-note')?.notes },
+    ]);
   });
 
   it('leaves no broken foreign key anywhere in the database', () => {

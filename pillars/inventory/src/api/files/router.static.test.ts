@@ -8,10 +8,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import express, { type Express } from 'express';
-import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { createTestTransport } from '../__tests__/test-http.js';
 import { createInventoryFilesRouter } from './router.js';
+
+const { requestOn } = createTestTransport();
 
 const ITEM_ID = 'abc123def456789012345678901234ab';
 const JPEG_BYTES = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46]);
@@ -62,7 +64,7 @@ describe('GET /api/inventory/photos/items/:itemId/:filename', () => {
   it('serves an existing photo with content-type, private cache, and etag', async () => {
     writePhoto('photo_001.jpg', JPEG_BYTES);
 
-    const res = await request(app()).get(`/api/inventory/photos/items/${ITEM_ID}/photo_001.jpg`);
+    const res = await requestOn(app()).get(`/api/inventory/photos/items/${ITEM_ID}/photo_001.jpg`);
 
     expect(res.status).toBe(200);
     expect(res.headers['content-type']).toContain('image/jpeg');
@@ -73,11 +75,13 @@ describe('GET /api/inventory/photos/items/:itemId/:filename', () => {
 
   it('returns 304 on a matching If-None-Match', async () => {
     writePhoto('photo_002.jpg', JPEG_BYTES);
-    const first = await request(app()).get(`/api/inventory/photos/items/${ITEM_ID}/photo_002.jpg`);
+    const first = await requestOn(app()).get(
+      `/api/inventory/photos/items/${ITEM_ID}/photo_002.jpg`
+    );
     const etag = first.headers['etag'];
     if (etag === undefined) throw new Error('photo response carried no ETag to revalidate against');
 
-    const res = await request(app())
+    const res = await requestOn(app())
       .get(`/api/inventory/photos/items/${ITEM_ID}/photo_002.jpg`)
       .set('If-None-Match', etag);
 
@@ -85,21 +89,21 @@ describe('GET /api/inventory/photos/items/:itemId/:filename', () => {
   });
 
   it('returns 404 when the photo does not exist', async () => {
-    const res = await request(app()).get(`/api/inventory/photos/items/${ITEM_ID}/photo_404.jpg`);
+    const res = await requestOn(app()).get(`/api/inventory/photos/items/${ITEM_ID}/photo_404.jpg`);
 
     expect(res.status).toBe(404);
     expect(res.body.error).toBe('Photo not found');
   });
 
   it('returns 400 for a filename that does not match the photo convention', async () => {
-    const res = await request(app()).get(`/api/inventory/photos/items/${ITEM_ID}/evil.jpg`);
+    const res = await requestOn(app()).get(`/api/inventory/photos/items/${ITEM_ID}/evil.jpg`);
 
     expect(res.status).toBe(400);
     expect(res.body.error).toContain('Invalid filename');
   });
 
   it('returns 400 for a filename with a non-jpg extension', async () => {
-    const res = await request(app()).get(`/api/inventory/photos/items/${ITEM_ID}/photo_1.png`);
+    const res = await requestOn(app()).get(`/api/inventory/photos/items/${ITEM_ID}/photo_1.png`);
 
     expect(res.status).toBe(400);
     expect(res.body.error).toContain('Invalid filename');
@@ -110,7 +114,9 @@ describe('GET /api/inventory/documents/items/:itemId/:filename', () => {
   it('serves an existing direct-upload document (PDF)', async () => {
     writeDoc('file_001.pdf', PDF_BYTES);
 
-    const res = await request(app()).get(`/api/inventory/documents/items/${ITEM_ID}/file_001.pdf`);
+    const res = await requestOn(app()).get(
+      `/api/inventory/documents/items/${ITEM_ID}/file_001.pdf`
+    );
 
     expect(res.status).toBe(200);
     expect(res.headers['content-type']).toContain('application/pdf');
@@ -119,14 +125,16 @@ describe('GET /api/inventory/documents/items/:itemId/:filename', () => {
   });
 
   it('returns 404 when the document does not exist', async () => {
-    const res = await request(app()).get(`/api/inventory/documents/items/${ITEM_ID}/file_999.pdf`);
+    const res = await requestOn(app()).get(
+      `/api/inventory/documents/items/${ITEM_ID}/file_999.pdf`
+    );
 
     expect(res.status).toBe(404);
     expect(res.body.error).toBe('Document not found');
   });
 
   it('returns 400 for a filename that does not match the upload convention', async () => {
-    const res = await request(app()).get(`/api/inventory/documents/items/${ITEM_ID}/notes.pdf`);
+    const res = await requestOn(app()).get(`/api/inventory/documents/items/${ITEM_ID}/notes.pdf`);
 
     expect(res.status).toBe(400);
     expect(res.body.error).toContain('Invalid filename');

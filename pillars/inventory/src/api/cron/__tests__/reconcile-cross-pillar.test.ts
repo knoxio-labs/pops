@@ -2,8 +2,9 @@
  * Unit tests for the inventory cross-pillar URI reconciliation cron.
  *
  * Covers happy-path, 404, owning-pillar-unavailable, and bad-URI outcomes,
- * plus the timer-based scheduling path that arms the next tick after the
- * current one settles.
+ * the alarm that fires when rows name a finance transaction the writer failed
+ * to derive a URI for, and the timer-based scheduling path that arms the next
+ * tick after the current one settles.
  */
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -26,7 +27,7 @@ import {
   startCrossPillarReconciliationWorker,
 } from '../reconcile-cross-pillar.js';
 
-import type { RegistryRouter, FinanceRouter } from '../reconcile-cross-pillar.js';
+import type { FinanceRouter } from '../reconcile-cross-pillar.js';
 
 let tmpDir: string;
 let inventoryDb: OpenedInventoryDb;
@@ -48,8 +49,8 @@ afterEach(() => {
 
 interface SeededRow {
   id: string;
+  purchaseTransactionId?: string | null;
   purchaseTransactionUri?: string | null;
-  ownerUri?: string | null;
 }
 
 function seedRow(row: SeededRow): void {
@@ -59,39 +60,29 @@ function seedRow(row: SeededRow): void {
       id: row.id,
       itemName: `item-${row.id}`,
       lastEditedTime: FROZEN_NOW.toISOString(),
+      purchaseTransactionId: row.purchaseTransactionId ?? null,
       purchaseTransactionUri: row.purchaseTransactionUri ?? null,
-      ownerUri: row.ownerUri ?? null,
     })
     .run();
 }
 
 function readRow(id: string): {
   purchaseTransactionStaleAt: string | null;
-  ownerStaleAt: string | null;
 } {
   const rows = inventoryDb.db
     .select({
       id: homeInventory.id,
       purchaseTransactionStaleAt: homeInventory.purchaseTransactionStaleAt,
-      ownerStaleAt: homeInventory.ownerStaleAt,
     })
     .from(homeInventory)
     .where(eq(homeInventory.id, id))
     .all();
   const row = rows[0];
   if (!row) throw new Error(`row ${id} not found`);
-  return {
-    purchaseTransactionStaleAt: row.purchaseTransactionStaleAt,
-    ownerStaleAt: row.ownerStaleAt,
-  };
+  return { purchaseTransactionStaleAt: row.purchaseTransactionStaleAt };
 }
 
 interface FakeFinanceCall {
-  result?: CallResult<unknown>;
-  error?: unknown;
-}
-
-interface FakeCoreCall {
   result?: CallResult<unknown>;
   error?: unknown;
 }
@@ -118,28 +109,6 @@ function makeFinanceProxy(byId: Record<string, FakeFinanceCall>): PillarHandle<F
   return fake as unknown as PillarHandle<FinanceRouter>;
 }
 
-function makeRegistryProxy(byUri: Record<string, FakeCoreCall>): PillarHandle<RegistryRouter> {
-  const fake = {
-    callDynamic: vi.fn(
-      async (
-        _routerName: string,
-        _procName: string,
-        input?: unknown
-      ): Promise<CallResult<unknown>> => {
-        const uri = (input as { uri: string } | undefined)?.uri ?? '';
-        const slot = byUri[uri];
-        if (!slot) {
-          return { kind: 'not-found', pillar: 'registry' };
-        }
-        if (slot.error) throw slot.error;
-        if (slot.result) return slot.result;
-        return { kind: 'ok', value: { data: { uri } } };
-      }
-    ),
-  };
-  return fake as unknown as PillarHandle<RegistryRouter>;
-}
-
 describe('parseSoftUri', () => {
   it('parses a well-formed soft URI', () => {
     expect(parseSoftUri('pops://finance/transaction/abc-123')).toEqual({
@@ -157,91 +126,84 @@ describe('parseSoftUri', () => {
   });
 
   it('preserves slashes in the id segment (urn-style)', () => {
-    expect(parseSoftUri('pops://core/user/joe@example.com')).toEqual({
-      pillar: 'core',
-      type: 'user',
-      id: 'joe@example.com',
+    expect(parseSoftUri('pops://finance/transaction/a/b')).toEqual({
+      pillar: 'finance',
+      type: 'transaction',
+      id: 'a/b',
     });
   });
 });
 
 describe('runReconciliation — happy-path', () => {
-  it('clears stale markers when the owning pillar resolves', async () => {
+  it('clears the stale marker when finance resolves', async () => {
     seedRow({
       id: 'row-1',
+      purchaseTransactionId: 'tx-1',
       purchaseTransactionUri: 'pops://finance/transaction/tx-1',
-      ownerUri: 'pops://core/user/joao@example.com',
     });
     crossPillarUrisService.markPurchaseTransactionUriStale(
       inventoryDb.db,
       'pops://finance/transaction/tx-1',
       '2026-06-14T00:00:00.000Z'
     );
-    crossPillarUrisService.markOwnerUriStale(
-      inventoryDb.db,
-      'pops://core/user/joao@example.com',
-      '2026-06-14T00:00:00.000Z'
-    );
 
     const finance = makeFinanceProxy({ 'tx-1': {} });
-    const registry = makeRegistryProxy({ 'pops://core/user/joao@example.com': {} });
     const info = vi.fn();
 
     const counters = await runReconciliation({
       db: inventoryDb.db,
-      proxies: { finance, registry },
+      proxies: { finance },
       logger: { info },
     });
 
-    expect(counters).toEqual({ ok: 2, notFound: 0, unavailable: 0, badUri: 0 });
-    const after = readRow('row-1');
-    expect(after.purchaseTransactionStaleAt).toBeNull();
-    expect(after.ownerStaleAt).toBeNull();
+    expect(counters).toEqual({ ok: 1, notFound: 0, unavailable: 0, badUri: 0 });
+    expect(readRow('row-1').purchaseTransactionStaleAt).toBeNull();
     expect(info).toHaveBeenCalledWith(
       'inventory cross-pillar reconciliation complete',
-      expect.objectContaining({ ok: 2, purchaseTransactionUris: 1, ownerUris: 1 })
+      expect.objectContaining({ ok: 1, purchaseTransactionUris: 1 })
     );
   });
 
-  it("reports each leg's work-set size so an empty leg is visibly empty", async () => {
-    seedRow({ id: 'row-1c', purchaseTransactionUri: 'pops://finance/transaction/tx-1c' });
+  it("reports the leg's work-set size so a total of zero is not ambiguous", async () => {
+    seedRow({
+      id: 'row-1c',
+      purchaseTransactionId: 'tx-1c',
+      purchaseTransactionUri: 'pops://finance/transaction/tx-1c',
+    });
     const info = vi.fn();
 
     await runReconciliation({
       db: inventoryDb.db,
-      proxies: {
-        finance: makeFinanceProxy({ 'tx-1c': {} }),
-        registry: makeRegistryProxy({}),
-      },
+      proxies: { finance: makeFinanceProxy({ 'tx-1c': {} }) },
       logger: { info },
     });
 
     expect(info).toHaveBeenCalledWith(
       'inventory cross-pillar reconciliation complete',
-      expect.objectContaining({ purchaseTransactionUris: 1, ownerUris: 0 })
+      expect.objectContaining({ purchaseTransactionUris: 1 })
     );
   });
 });
 
-describe('runReconciliation — no work', () => {
-  it('says nothing and calls no pillar when both legs are empty', async () => {
+describe('runReconciliation — the leg has no work', () => {
+  it('says nothing and calls nobody when there are no rows at all', async () => {
     const finance = makeFinanceProxy({});
-    const registry = makeRegistryProxy({});
     const info = vi.fn();
+    const warn = vi.fn();
 
     const counters = await runReconciliation({
       db: inventoryDb.db,
-      proxies: { finance, registry },
-      logger: { info },
+      proxies: { finance },
+      logger: { info, warn },
     });
 
     expect(counters).toEqual({ ok: 0, notFound: 0, unavailable: 0, badUri: 0 });
     expect(info).not.toHaveBeenCalled();
+    expect(warn).not.toHaveBeenCalled();
     expect(finance.callDynamic).not.toHaveBeenCalled();
-    expect(registry.callDynamic).not.toHaveBeenCalled();
   });
 
-  it('needs no proxies at all when there is nothing to resolve', async () => {
+  it('needs no proxy at all when there is nothing to resolve', async () => {
     await expect(runReconciliation({ db: inventoryDb.db })).resolves.toEqual({
       ok: 0,
       notFound: 0,
@@ -249,37 +211,84 @@ describe('runReconciliation — no work', () => {
       badUri: 0,
     });
   });
+
+  it('warns instead of staying silent when rows name a transaction with no uri', async () => {
+    seedRow({ id: 'row-drift', purchaseTransactionId: 'tx-drift', purchaseTransactionUri: null });
+    const finance = makeFinanceProxy({});
+    const info = vi.fn();
+    const warn = vi.fn();
+
+    await runReconciliation({
+      db: inventoryDb.db,
+      proxies: { finance },
+      logger: { info, warn },
+    });
+
+    expect(warn).toHaveBeenCalledWith(
+      'inventory cross-pillar reconciliation: rows name a finance transaction with no uri to reconcile',
+      { rows: 1 }
+    );
+    expect(info).not.toHaveBeenCalled();
+  });
+
+  it('warns even while the leg has work, so a partial writer failure is visible', async () => {
+    seedRow({
+      id: 'row-ok',
+      purchaseTransactionId: 'tx-ok',
+      purchaseTransactionUri: 'pops://finance/transaction/tx-ok',
+    });
+    seedRow({
+      id: 'row-drift-2',
+      purchaseTransactionId: 'tx-drift-2',
+      purchaseTransactionUri: null,
+    });
+    const warn = vi.fn();
+
+    await runReconciliation({
+      db: inventoryDb.db,
+      proxies: { finance: makeFinanceProxy({ 'tx-ok': {} }) },
+      logger: { warn },
+    });
+
+    expect(warn).toHaveBeenCalledWith(
+      'inventory cross-pillar reconciliation: rows name a finance transaction with no uri to reconcile',
+      { rows: 1 }
+    );
+  });
+
+  it('does not warn about rows that name no transaction at all', async () => {
+    seedRow({ id: 'row-none' });
+    const warn = vi.fn();
+
+    await runReconciliation({ db: inventoryDb.db, logger: { warn } });
+
+    expect(warn).not.toHaveBeenCalled();
+  });
 });
 
 describe('runReconciliation — 404', () => {
   it('stamps staleAt + preserves the row on not-found', async () => {
     seedRow({
       id: 'row-2',
+      purchaseTransactionId: 'missing',
       purchaseTransactionUri: 'pops://finance/transaction/missing',
-      ownerUri: 'pops://core/user/nobody@example.com',
     });
     const finance = makeFinanceProxy({});
-    const registry = makeRegistryProxy({});
-    const info = vi.fn();
 
     const counters = await runReconciliation({
       db: inventoryDb.db,
-      proxies: { finance, registry },
-      logger: { info },
+      proxies: { finance },
     });
 
-    expect(counters).toEqual({ ok: 0, notFound: 2, unavailable: 0, badUri: 0 });
-    const after = readRow('row-2');
-    expect(after.purchaseTransactionStaleAt).toBe(FROZEN_NOW.toISOString());
-    expect(after.ownerStaleAt).toBe(FROZEN_NOW.toISOString());
-
-    const stillThere = inventoryDb.db.select().from(homeInventory).all();
-    expect(stillThere).toHaveLength(1);
+    expect(counters).toEqual({ ok: 0, notFound: 1, unavailable: 0, badUri: 0 });
+    expect(readRow('row-2').purchaseTransactionStaleAt).toBe(FROZEN_NOW.toISOString());
+    expect(inventoryDb.db.select().from(homeInventory).all()).toHaveLength(1);
   });
 
   it('treats a PillarCallError(not-found) the same as a CallResult not-found', async () => {
     seedRow({
       id: 'row-2b',
+      purchaseTransactionId: 'raise-404',
       purchaseTransactionUri: 'pops://finance/transaction/raise-404',
     });
     const finance: PillarHandle<FinanceRouter> = {
@@ -287,16 +296,11 @@ describe('runReconciliation — 404', () => {
         throw new PillarCallError('finance', { kind: 'not-found', pillar: 'finance' });
       }),
     } as unknown as PillarHandle<FinanceRouter>;
-    const registry = makeRegistryProxy({});
 
-    const counters = await runReconciliation({
-      db: inventoryDb.db,
-      proxies: { finance, registry },
-    });
+    const counters = await runReconciliation({ db: inventoryDb.db, proxies: { finance } });
 
     expect(counters.notFound).toBe(1);
-    const after = readRow('row-2b');
-    expect(after.purchaseTransactionStaleAt).toBe(FROZEN_NOW.toISOString());
+    expect(readRow('row-2b').purchaseTransactionStaleAt).toBe(FROZEN_NOW.toISOString());
   });
 });
 
@@ -304,6 +308,7 @@ describe('runReconciliation — owning-pillar-unavailable', () => {
   it('logs + leaves the row untouched on unavailable', async () => {
     seedRow({
       id: 'row-3',
+      purchaseTransactionId: 'tx-3',
       purchaseTransactionUri: 'pops://finance/transaction/tx-3',
     });
     const finance: PillarHandle<FinanceRouter> = {
@@ -312,18 +317,16 @@ describe('runReconciliation — owning-pillar-unavailable', () => {
         pillar: 'finance',
       })),
     } as unknown as PillarHandle<FinanceRouter>;
-    const registry = makeRegistryProxy({});
     const warn = vi.fn();
 
     const counters = await runReconciliation({
       db: inventoryDb.db,
-      proxies: { finance, registry },
+      proxies: { finance },
       logger: { warn },
     });
 
     expect(counters).toEqual({ ok: 0, notFound: 0, unavailable: 1, badUri: 0 });
-    const after = readRow('row-3');
-    expect(after.purchaseTransactionStaleAt).toBeNull();
+    expect(readRow('row-3').purchaseTransactionStaleAt).toBeNull();
     expect(warn).toHaveBeenCalledWith(
       'inventory cross-pillar reconciliation: owning pillar unavailable',
       expect.objectContaining({ uri: 'pops://finance/transaction/tx-3' })
@@ -333,23 +336,19 @@ describe('runReconciliation — owning-pillar-unavailable', () => {
   it('treats a thrown non-Pillar error as unavailable (retry next tick)', async () => {
     seedRow({
       id: 'row-3b',
-      ownerUri: 'pops://core/user/transient@example.com',
+      purchaseTransactionId: 'transient',
+      purchaseTransactionUri: 'pops://finance/transaction/transient',
     });
-    const finance = makeFinanceProxy({});
-    const registry: PillarHandle<RegistryRouter> = {
+    const finance: PillarHandle<FinanceRouter> = {
       callDynamic: vi.fn(async () => {
         throw new Error('socket hang up');
       }),
-    } as unknown as PillarHandle<RegistryRouter>;
+    } as unknown as PillarHandle<FinanceRouter>;
 
-    const counters = await runReconciliation({
-      db: inventoryDb.db,
-      proxies: { finance, registry },
-    });
+    const counters = await runReconciliation({ db: inventoryDb.db, proxies: { finance } });
 
     expect(counters.unavailable).toBe(1);
-    const after = readRow('row-3b');
-    expect(after.ownerStaleAt).toBeNull();
+    expect(readRow('row-3b').purchaseTransactionStaleAt).toBeNull();
   });
 });
 
@@ -357,23 +356,20 @@ describe('runReconciliation — bad-URI', () => {
   it('records unparseable URIs for ops without touching the row', async () => {
     seedRow({
       id: 'row-4',
+      purchaseTransactionId: 'weird',
       purchaseTransactionUri: 'not-a-valid-uri',
-      ownerUri: 'pops://core/wrong-type/foo',
     });
     const finance = makeFinanceProxy({});
-    const registry = makeRegistryProxy({});
     const warn = vi.fn();
 
     const counters = await runReconciliation({
       db: inventoryDb.db,
-      proxies: { finance, registry },
+      proxies: { finance },
       logger: { warn },
     });
 
-    expect(counters).toEqual({ ok: 0, notFound: 0, unavailable: 0, badUri: 2 });
-    const after = readRow('row-4');
-    expect(after.purchaseTransactionStaleAt).toBeNull();
-    expect(after.ownerStaleAt).toBeNull();
+    expect(counters).toEqual({ ok: 0, notFound: 0, unavailable: 0, badUri: 1 });
+    expect(readRow('row-4').purchaseTransactionStaleAt).toBeNull();
     expect(warn).toHaveBeenCalledWith(
       'inventory cross-pillar reconciliation: bad uri (unparseable / wrong shape)',
       expect.objectContaining({ uri: 'not-a-valid-uri' })
@@ -383,6 +379,7 @@ describe('runReconciliation — bad-URI', () => {
   it('treats a CallResult bad-request from the owning pillar as bad URI', async () => {
     seedRow({
       id: 'row-4b',
+      purchaseTransactionId: 'refused',
       purchaseTransactionUri: 'pops://finance/transaction/refused',
     });
     const finance: PillarHandle<FinanceRouter> = {
@@ -392,12 +389,8 @@ describe('runReconciliation — bad-URI', () => {
         message: 'no such id format',
       })),
     } as unknown as PillarHandle<FinanceRouter>;
-    const registry = makeRegistryProxy({});
 
-    const counters = await runReconciliation({
-      db: inventoryDb.db,
-      proxies: { finance, registry },
-    });
+    const counters = await runReconciliation({ db: inventoryDb.db, proxies: { finance } });
 
     expect(counters.badUri).toBe(1);
   });
@@ -407,15 +400,15 @@ describe('startCrossPillarReconciliationWorker', () => {
   it('runs reconciliation immediately, then reschedules at intervalMs', async () => {
     seedRow({
       id: 'row-5',
+      purchaseTransactionId: 'tx-5',
       purchaseTransactionUri: 'pops://finance/transaction/tx-5',
     });
     const finance = makeFinanceProxy({ 'tx-5': {} });
-    const registry = makeRegistryProxy({});
 
     const handle = startCrossPillarReconciliationWorker({
       db: inventoryDb.db,
       intervalMs: 60_000,
-      proxies: { finance, registry },
+      proxies: { finance },
     });
 
     const financeCalls = vi.mocked(finance.callDynamic);

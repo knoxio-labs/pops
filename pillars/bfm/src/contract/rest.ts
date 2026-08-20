@@ -18,9 +18,12 @@
  *   neither can require presenting one. `rest-device.ts` says what stands in
  *   for a gate, per route.
  * - **`mobile` / `mobileFinance` / `mobilePurchases`** (`/mobile/*`) — the same
- *   bypassed hostname, behind `requireDevice`. Everything a phone calls once it
- *   has paired. Reads, plus ingestion of what the handset captured — never a
- *   mutation of a record a pillar already holds (ADR-046).
+ *   bypassed hostname, behind `requireDevice` and then `requireCapability`.
+ *   Everything a phone calls once it has paired. Every route here declares the
+ *   capability it requires in its `metadata`, and that declaration — not the
+ *   HTTP verb — is what decides whether a given handset may reach it
+ *   (ADR-048). `capabilities.ts` holds the vocabulary and says what a new one
+ *   costs.
  *
  * The two device-facing surfaces are one hostname but not one gate, and the
  * naming keeps them apart on purpose: `/devices/*` is what a caller reaches
@@ -42,12 +45,13 @@
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
 
+import { requires } from './capabilities.js';
 import { bfmDeviceContract } from './rest-device.js';
 import { bfmOperatorContract } from './rest-operator.js';
 import {
   HealthResponseSchema,
   MobileBootstrapResponseSchema,
-  DeviceRevokedErrorSchema,
+  MobileForbiddenErrorSchema,
   MobileInvalidTokenErrorSchema,
   MobilePayloadTooLargeErrorSchema,
   MobileReceiptOutcomeSchema,
@@ -63,23 +67,26 @@ const c = initContract();
 
 /**
  * The three the `/mobile` perimeter answers itself, before any handler runs —
- * the rate limiter and then `requireDevice`, both mounted on the prefix in
- * `app.ts`.
+ * the rate limiter, then `requireDevice`, then `requireCapability`, all
+ * mounted on the prefix in `app.ts`.
  *
- * Declared on every route anyway. The phone switches on all three and they
- * select three different recoveries — back off and retry unchanged, refresh
- * the access token, or return to pairing and wipe the keychain — so they
- * belong in the document the phone's client is generated from. A status the
- * document omits is a status that client has no case for.
+ * Declared on every route anyway. The phone switches on all of them and they
+ * select four different recoveries — back off and retry unchanged, refresh the
+ * access token, return to pairing and wipe the keychain, or stop offering the
+ * feature — so they belong in the document the phone's client is generated
+ * from. A status the document omits is a status that client has no case for.
  */
 const MOBILE_PERIMETER_RESPONSES = {
-  // A literal `code` per status rather than one two-member enum on both. The
-  // code restates the status by design, so sharing a schema would have the
-  // document promise a `401 device_revoked` the guard cannot produce and make
-  // every generated client branch on it. `require-device.ts` pairs them at the
-  // point the response is built, which is the half a schema cannot enforce.
+  // A literal `code` per status rather than one enum across them. The code
+  // restates the status by design, so sharing a schema would have the document
+  // promise a `401 device_revoked` the guard cannot produce and make every
+  // generated client branch on it. The 403 is a union rather than one schema
+  // for the opposite reason: two refusals genuinely share that status and do
+  // not share a shape. `require-device.ts` and `require-capability.ts` pair
+  // status with body at the point the response is built, which is the half a
+  // schema cannot enforce.
   401: MobileInvalidTokenErrorSchema,
-  403: DeviceRevokedErrorSchema,
+  403: MobileForbiddenErrorSchema,
   429: RateLimitErrorSchema,
 } as const;
 
@@ -130,6 +137,7 @@ const mobileFinanceContract = c.router({
       ...MOBILE_UPSTREAM_RESPONSES,
     },
     summary: 'One cursor-paginated page of transaction list rows',
+    metadata: requires('finance.transactions.read'),
   },
   getTransaction: {
     method: 'GET',
@@ -143,6 +151,7 @@ const mobileFinanceContract = c.router({
       ...MOBILE_UPSTREAM_RESPONSES,
     },
     summary: 'The fuller record behind one list row, for the detail screen',
+    metadata: requires('finance.transactions.read'),
   },
 });
 
@@ -150,11 +159,12 @@ const mobileFinanceContract = c.router({
  * The mobile write surface: content the handset captured, handed to the pillar
  * that owns it.
  *
- * Ingestion only, and that is a rule rather than a description of today's one
- * route — `PUT`, `PATCH` and `DELETE` are forbidden under `/mobile`
- * permanently, and `__tests__/mobile-verbs.test.ts` walks this contract to say
- * so (ADR-046). A phone may hand over what its camera saw; it may not edit a
- * record a pillar already holds.
+ * One route today, and the reason it is only one is the capability it declares
+ * rather than the verb it uses. `purchases.receipts.write` buys a receipt
+ * upload and nothing else in that pillar — reading an order is a separate
+ * capability, and destroying one is not on this surface at all (ADR-048).
+ * `__tests__/mobile-capabilities.test.ts` walks this contract and fails on a
+ * mobile route that declares nothing.
  */
 const mobilePurchasesContract = c.router({
   uploadReceipt: {
@@ -174,6 +184,7 @@ const mobilePurchasesContract = c.router({
       ...MOBILE_UPSTREAM_RESPONSES,
     },
     summary: 'Hand a photographed, scanned or pasted receipt to the purchases pillar',
+    metadata: requires('purchases.receipts.write'),
   },
 });
 
@@ -192,6 +203,7 @@ const mobileContract = c.router({
       ...MOBILE_PERIMETER_RESPONSES,
     },
     summary: 'What the app should render, and who the federation says it is talking to',
+    metadata: requires('session.read'),
   },
 });
 

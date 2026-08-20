@@ -68,29 +68,30 @@ The alternative to splitting was to pick one rule for the whole fleet. Installin
 
 Runs immediately after `actions/checkout`. **No third-party import, at any depth.** Each of these owns exactly one guard, so the tier is also the job.
 
-| Guard                                            | Job                                         | Reads                                                         |
-| ------------------------------------------------ | ------------------------------------------- | ------------------------------------------------------------- |
-| `scripts/check-bundle-map-coverage.mjs`          | `quality.yml` → `bundle-map-coverage`       | TSX source, `package.json`                                    |
-| `scripts/check-tailwind-source-coverage.mjs`     | `quality.yml` → `tailwind-source-coverage`  | CSS `@source` globs, source file paths                        |
-| `scripts/check-escape-hatches.mjs`               | `quality.yml` → `escape-hatches`            | TS/TSX source, JSON baseline                                  |
-| `scripts/check-touch-targets.mjs`                | `quality.yml` → `touch-targets`             | TS/TSX source, JSON baseline                                  |
-| `scripts/check-title-icon-consistency.mjs`       | `quality.yml` → `title-icon-consistency`    | Per-app `routes.tsx`, page source                             |
-| `scripts/ci/check-control-characters.mjs`        | `quality.yml` → `control-characters`        | Every tracked file, raw bytes                                 |
-| `scripts/ci/check-design-tokens.mjs`             | `quality.yml` → `design-tokens`             | Frontend TS/TSX/CSS source, class strings                     |
-| `scripts/ci/check-icon-only-buttons.mjs`         | `quality.yml` → `icon-only-buttons`         | TSX source                                                    |
-| `scripts/ci/check-icon-dynamic-import.mjs`       | `quality.yml` → `icon-dynamic-import`       | TS/TSX source, dynamic `import()`/`require()` call sites      |
-| `scripts/ci/check-composite-references.mjs`      | `quality.yml` → `composite-references`      | `tsconfig.build.json`, pillar source via `import-scan.mjs`    |
-| `scripts/ci/check-swift-bounded-yield.mjs`       | `quality.yml` → `swift-bounded-yield`       | `clients/ios` Swift source                                    |
-| `scripts/ci/check-vendored-contracts.mjs`        | `quality.yml` → `vendored-contracts`        | OpenAPI JSON, byte comparison, consumer codegen config source |
-| `scripts/ci/report-contract-consumers.mjs`       | `quality.yml` → `contract-consumers`        | The same, plus `package.json` and a `mise.toml` task name     |
-| `scripts/ci/resolve-report-base.mjs`             | `quality.yml` → `contract-consumers`        | `git merge-base` against a caller-supplied ref name           |
-| `scripts/ci/check-device-signature-fixture.mjs`  | `quality.yml` → `device-signature-fixture`  | JSON fixture, `node:crypto`                                   |
-| `scripts/ci/check-refresh-message-fixture.mjs`   | `quality.yml` → `refresh-message-fixture`   | JSON fixture, `node:crypto`, shared `fixture-copies.mjs`      |
-| `scripts/ci/check-cross-pillar-expectations.mjs` | `quality.yml` → `cross-pillar-expectations` | OpenAPI JSON, TS source                                       |
-| `scripts/ci/check-litestream-sidecar-parity.mjs` | `infra-lint.yml` → `sidecar-parity`         | Litestream filenames, Compose text                            |
-| `scripts/ci/check-migration-fk-pragma.mjs`       | `quality.yml` → `migration-fk-pragma`       | `pillars/<id>/migrations/*.sql` source                        |
-| `scripts/ci/check-receipt-max-parts-drift.mjs`   | `quality.yml` → `receipt-max-parts-drift`   | `bfm`/`purchases` TS source, `clients/ios` Swift source       |
-| `scripts/ci/check-line-budget-headroom.mjs`      | `quality.yml` → `line-budget-headroom`      | `.oxlintrc.json`, `git diff`/`git show` of touched files      |
+| Guard                                               | Job                                            | Reads                                                          |
+| --------------------------------------------------- | ---------------------------------------------- | -------------------------------------------------------------- |
+| `scripts/check-bundle-map-coverage.mjs`             | `quality.yml` → `bundle-map-coverage`          | TSX source, `package.json`                                     |
+| `scripts/check-tailwind-source-coverage.mjs`        | `quality.yml` → `tailwind-source-coverage`     | CSS `@source` globs, source file paths                         |
+| `scripts/check-escape-hatches.mjs`                  | `quality.yml` → `escape-hatches`               | TS/TSX source, JSON baseline                                   |
+| `scripts/check-touch-targets.mjs`                   | `quality.yml` → `touch-targets`                | TS/TSX source, JSON baseline                                   |
+| `scripts/check-title-icon-consistency.mjs`          | `quality.yml` → `title-icon-consistency`       | Per-app `routes.tsx`, page source                              |
+| `scripts/ci/check-control-characters.mjs`           | `quality.yml` → `control-characters`           | Every tracked file, raw bytes                                  |
+| `scripts/ci/check-design-tokens.mjs`                | `quality.yml` → `design-tokens`                | Frontend TS/TSX/CSS source, class strings                      |
+| `scripts/ci/check-icon-only-buttons.mjs`            | `quality.yml` → `icon-only-buttons`            | TSX source                                                     |
+| `scripts/ci/check-icon-dynamic-import.mjs`          | `quality.yml` → `icon-dynamic-import`          | TS/TSX source, dynamic `import()`/`require()` call sites       |
+| `scripts/ci/check-composite-references.mjs`         | `quality.yml` → `composite-references`         | `tsconfig.build.json`, pillar source via `import-scan.mjs`     |
+| `scripts/ci/check-swift-bounded-yield.mjs`          | `quality.yml` → `swift-bounded-yield`          | `clients/ios` Swift source                                     |
+| `scripts/ci/check-vendored-contracts.mjs`           | `quality.yml` → `vendored-contracts`           | OpenAPI JSON, byte comparison, consumer codegen config source  |
+| `scripts/ci/report-contract-consumers.mjs`          | `quality.yml` → `contract-consumers`           | The same, plus `package.json` and a `mise.toml` task name      |
+| `scripts/ci/resolve-report-base.mjs`                | `quality.yml` → `contract-consumers`           | `git merge-base` against a caller-supplied ref name            |
+| `scripts/ci/check-device-signature-fixture.mjs`     | `quality.yml` → `device-signature-fixture`     | JSON fixture, `node:crypto`                                    |
+| `scripts/ci/check-refresh-message-fixture.mjs`      | `quality.yml` → `refresh-message-fixture`      | JSON fixture, `node:crypto`, shared `fixture-copies.mjs`       |
+| `scripts/ci/check-cross-pillar-expectations.mjs`    | `quality.yml` → `cross-pillar-expectations`    | OpenAPI JSON, TS source                                        |
+| `scripts/ci/check-litestream-sidecar-parity.mjs`    | `infra-lint.yml` → `sidecar-parity`            | Litestream filenames, Compose text                             |
+| `scripts/ci/check-migration-fk-pragma.mjs`          | `quality.yml` → `migration-fk-pragma`          | `pillars/<id>/migrations/*.sql` source                         |
+| `scripts/ci/check-receipt-max-parts-drift.mjs`      | `quality.yml` → `receipt-max-parts-drift`      | `bfm`/`purchases` TS source, `clients/ios` Swift source        |
+| `scripts/ci/check-supertest-transport-adoption.mjs` | `quality.yml` → `supertest-transport-adoption` | the nine gated pillars' TS/JS source, and their `package.json` |
+| `scripts/ci/check-line-budget-headroom.mjs`         | `quality.yml` → `line-budget-headroom`         | `.oxlintrc.json`, `git diff`/`git show` of touched files       |
 
 `report-contract-consumers.mjs` reads one TOML key with a hand-rolled matcher and stays in Tier A, which is a stated exception rather than an erosion of the rule above. The rule exists because a matcher that stops seeing a declaration makes a gate report `OK` over a repo it can no longer read. Nothing here is a verdict: that read only turns "see the declaring file" into "run this exact task", the matcher returns `null` for every shape it does not model, and the caller prints the vaguer line. Moving a reporting job to Tier B for a cosmetic upgrade would cost it the install-free property for nothing. A future assertion built on that read is the point at which the job moves.
 

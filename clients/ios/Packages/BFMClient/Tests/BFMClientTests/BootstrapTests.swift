@@ -10,7 +10,8 @@ import Testing
 @Suite("BFMBootstrapService")
 internal struct BootstrapTests {
     private static let healthy = """
-        {"device":{"id":"device-7","name":"Joao's iPhone","lastSeenAt":"2026-08-10T09:15:00Z"},\
+        {"device":{"id":"device-7","name":"Joao's iPhone","lastSeenAt":"2026-08-10T09:15:00Z",\
+        "capabilities":["session.read","finance.transactions.read"]},\
         "registry":{"source":"fresh"},\
         "pillars":[{"id":"finance","reachability":"healthy"}],\
         "features":[{"id":"transactions","reachability":"healthy"}]}
@@ -40,7 +41,8 @@ internal struct BootstrapTests {
     /// federation that was healthy. Caught by the Maestro flow's first run
     /// against a real pillar (POPS-1698).
     private static let healthyWithMilliseconds = """
-        {"device":{"id":"device-7","name":"Joao's iPhone","lastSeenAt":"2026-08-10T09:15:00.123Z"},\
+        {"device":{"id":"device-7","name":"Joao's iPhone","lastSeenAt":"2026-08-10T09:15:00.123Z",\
+        "capabilities":["session.read","finance.transactions.read"]},\
         "registry":{"source":"fresh"},\
         "pillars":[{"id":"finance","reachability":"healthy"}],\
         "features":[{"id":"transactions","reachability":"healthy"}]}
@@ -98,7 +100,7 @@ internal struct BootstrapTests {
     )
     func reachabilityIsCarried(wire: String, expected: FeatureReachability) async throws {
         let json = """
-            {"device":{"id":"d","name":"n","lastSeenAt":"2026-08-10T09:15:00Z"},\
+            {"device":{"id":"d","name":"n","lastSeenAt":"2026-08-10T09:15:00Z","capabilities":[]},\
             "registry":{"source":"fresh"},"pillars":[],\
             "features":[{"id":"transactions","reachability":"\(wire)"}]}
             """
@@ -115,7 +117,7 @@ internal struct BootstrapTests {
     )
     func registrySourceIsCarried(wire: String, expected: RegistrySource) async throws {
         let json = """
-            {"device":{"id":"d","name":"n","lastSeenAt":"2026-08-10T09:15:00Z"},\
+            {"device":{"id":"d","name":"n","lastSeenAt":"2026-08-10T09:15:00Z","capabilities":[]},\
             "registry":{"source":"\(wire)"},"pillars":[],"features":[]}
             """
 
@@ -128,7 +130,7 @@ internal struct BootstrapTests {
     @Test("a BFM answering from no registry at all is still an answer")
     func registryUnavailableIsNotAFailure() async throws {
         let json = """
-            {"device":{"id":"d","name":"n","lastSeenAt":"2026-08-10T09:15:00Z"},\
+            {"device":{"id":"d","name":"n","lastSeenAt":"2026-08-10T09:15:00Z","capabilities":[]},\
             "registry":{"source":"unavailable"},"pillars":[],"features":[]}
             """
 

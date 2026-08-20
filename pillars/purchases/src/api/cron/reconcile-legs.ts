@@ -20,6 +20,7 @@ import {
   markInventoryItemUriStale,
   type PurchasesDb,
 } from '../../db/index.js';
+import { PURCHASES_PILLAR_ID } from '../manifest.js';
 
 export type ReconcileLookupResult =
   | { kind: 'ok' }
@@ -269,6 +270,23 @@ function shapeMatches(parsed: ParsedUri | null, leg: ReconcileLeg): parsed is Pa
 }
 
 /**
+ * A URI this pillar minted for itself, e.g. `pops://purchases/receipt/<sha>`
+ * from the content-addressed receipt store.
+ *
+ * These turn up in the document leg's work set because it walks every
+ * distinct `purchase_documents.document_uri`, not only the ones addressed
+ * to the documents pillar. They are not a cross-pillar reference at all —
+ * this pillar already knows they exist, it wrote them — so asking another
+ * pillar to resolve one is the wrong question, not a bad answer. Excluded
+ * from the walk entirely rather than counted as a bad URI, which is what
+ * `pillar !== expectedPillar` would otherwise do to every one of them,
+ * every night, forever.
+ */
+function isOwnedByThisPillar(uri: string): boolean {
+  return parseSoftUri(uri)?.pillar === PURCHASES_PILLAR_ID;
+}
+
+/**
  * Walk one leg's distinct URIs, sequentially. A URI whose shape does not
  * match the leg is never probed — probing it would ask the wrong pillar a
  * question about someone else's id — so it is counted as a bad URI, logged
@@ -280,7 +298,7 @@ function shapeMatches(parsed: ParsedUri | null, leg: ReconcileLeg): parsed is Pa
 export async function runLeg(ctx: RunLegContext): Promise<ReconcileLegStats> {
   const { db, leg, logger } = ctx;
   const lookup = leg.lookup(ctx.lookups);
-  const uris = leg.listUris(db);
+  const uris = leg.listUris(db).filter((uri) => !isOwnedByThisPillar(uri));
   const stats: ReconcileLegStats = { leg: leg.label, checked: uris.length, ...emptyCounts() };
   for (const uri of uris) {
     const parsed = parseSoftUri(uri);

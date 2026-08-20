@@ -16,9 +16,10 @@ import {
   InvalidIngestPayloadError,
   PurchaseSourceNotFoundError,
 } from '../errors.js';
-import { purchaseDocuments, purchases, purchaseShipments, purchaseTags } from '../schema.js';
+import { purchases, purchaseShipments, purchaseTags } from '../schema.js';
 import { expectRow, nowIso, type PurchasesDb } from './internal.js';
 import { canonicalInstant } from './ordered-at.js';
+import { insertPurchaseDocument } from './purchase-documents.js';
 import { findPurchaseByChecksum, findPurchaseBySourceOrderId } from './purchase-lookups.js';
 import { insertCapture } from './purchase-write-capture.js';
 import { insertCharge } from './purchase-write-charges.js';
@@ -200,14 +201,11 @@ function insertShipment(ctx: IngestContext, input: CreateShipmentInput, position
 }
 
 function insertDocument(ctx: IngestContext, input: CreateDocumentInput): void {
-  ctx.tx
-    .insert(purchaseDocuments)
-    .values({
-      purchaseId: ctx.purchase.id,
-      shipmentId: shipmentIdFor(ctx, input.shipmentRef),
-      documentUri: input.documentUri,
-      kind: input.kind ?? 'other',
-      createdAt: ctx.now,
-    })
-    .run();
+  insertPurchaseDocument(ctx.tx, {
+    purchaseId: ctx.purchase.id,
+    shipmentId: shipmentIdFor(ctx, input.shipmentRef),
+    documentUri: input.documentUri,
+    kind: input.kind,
+    createdAt: ctx.now,
+  });
 }

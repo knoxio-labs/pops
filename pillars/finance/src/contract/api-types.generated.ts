@@ -3790,6 +3790,7 @@ export interface operations {
                 account: string;
                 amount: number;
                 checksum: string;
+                country?: string;
                 date: string;
                 description: string;
                 entity: {
@@ -3808,6 +3809,9 @@ export interface operations {
                     | 'none';
                 };
                 error?: string;
+                foreignAmountMinor?: number;
+                foreignCurrency?: string;
+                fxFeeCents?: number;
                 location?: string;
                 matchedRules?: {
                   confidence: number;
@@ -3854,6 +3858,7 @@ export interface operations {
                 account: string;
                 amount: number;
                 checksum: string;
+                country?: string;
                 date: string;
                 description: string;
                 entity: {
@@ -3872,6 +3877,9 @@ export interface operations {
                     | 'none';
                 };
                 error?: string;
+                foreignAmountMinor?: number;
+                foreignCurrency?: string;
+                fxFeeCents?: number;
                 location?: string;
                 matchedRules?: {
                   confidence: number;
@@ -3918,6 +3926,7 @@ export interface operations {
                 account: string;
                 amount: number;
                 checksum: string;
+                country?: string;
                 date: string;
                 description: string;
                 entity: {
@@ -3936,6 +3945,9 @@ export interface operations {
                     | 'none';
                 };
                 error?: string;
+                foreignAmountMinor?: number;
+                foreignCurrency?: string;
+                fxFeeCents?: number;
                 location?: string;
                 matchedRules?: {
                   confidence: number;
@@ -3982,6 +3994,7 @@ export interface operations {
                 account: string;
                 amount: number;
                 checksum: string;
+                country?: string;
                 date: string;
                 description: string;
                 entity: {
@@ -4000,6 +4013,9 @@ export interface operations {
                     | 'none';
                 };
                 error?: string;
+                foreignAmountMinor?: number;
+                foreignCurrency?: string;
+                fxFeeCents?: number;
                 location?: string;
                 matchedRules?: {
                   confidence: number;
@@ -4256,10 +4272,14 @@ export interface operations {
             account: string;
             amount: number;
             checksum: string;
+            country?: string;
             date: string;
             description: string;
             entityId?: string;
             entityName?: string;
+            foreignAmountMinor?: number;
+            foreignCurrency?: string;
+            fxFeeCents?: number;
             location?: string;
             matchConfidence?: number;
             matchRuleId?: string;
@@ -4451,8 +4471,12 @@ export interface operations {
             account: string;
             amount: number;
             checksum: string;
+            country?: string;
             date: string;
             description: string;
+            foreignAmountMinor?: number;
+            foreignCurrency?: string;
+            fxFeeCents?: number;
             location?: string;
             rawRow: string;
           }[];
@@ -4537,7 +4561,7 @@ export interface operations {
               status: 'processing' | 'success' | 'failed';
             }[];
             /** @enum {string} */
-            currentStep: 'deduplicating' | 'matching';
+            currentStep: 'deduplicating' | 'matching' | 'categorizing';
             errors: {
               description: string;
               error: string;
@@ -4556,6 +4580,7 @@ export interface operations {
                 account: string;
                 amount: number;
                 checksum: string;
+                country?: string;
                 date: string;
                 description: string;
                 entity: {
@@ -4574,6 +4599,9 @@ export interface operations {
                     | 'none';
                 };
                 error?: string;
+                foreignAmountMinor?: number;
+                foreignCurrency?: string;
+                fxFeeCents?: number;
                 location?: string;
                 matchedRules?: {
                   confidence: number;
@@ -4620,6 +4648,7 @@ export interface operations {
                 account: string;
                 amount: number;
                 checksum: string;
+                country?: string;
                 date: string;
                 description: string;
                 entity: {
@@ -4638,6 +4667,9 @@ export interface operations {
                     | 'none';
                 };
                 error?: string;
+                foreignAmountMinor?: number;
+                foreignCurrency?: string;
+                fxFeeCents?: number;
                 location?: string;
                 matchedRules?: {
                   confidence: number;
@@ -4684,6 +4716,7 @@ export interface operations {
                 account: string;
                 amount: number;
                 checksum: string;
+                country?: string;
                 date: string;
                 description: string;
                 entity: {
@@ -4702,6 +4735,9 @@ export interface operations {
                     | 'none';
                 };
                 error?: string;
+                foreignAmountMinor?: number;
+                foreignCurrency?: string;
+                fxFeeCents?: number;
                 location?: string;
                 matchedRules?: {
                   confidence: number;
@@ -4748,6 +4784,7 @@ export interface operations {
                 account: string;
                 amount: number;
                 checksum: string;
+                country?: string;
                 date: string;
                 description: string;
                 entity: {
@@ -4766,6 +4803,9 @@ export interface operations {
                     | 'none';
                 };
                 error?: string;
+                foreignAmountMinor?: number;
+                foreignCurrency?: string;
+                fxFeeCents?: number;
                 location?: string;
                 matchedRules?: {
                   confidence: number;
@@ -4982,6 +5022,7 @@ export interface operations {
                 account: string;
                 amount: number;
                 checksum: string;
+                country?: string;
                 date: string;
                 description: string;
                 entity: {
@@ -5000,6 +5041,9 @@ export interface operations {
                     | 'none';
                 };
                 error?: string;
+                foreignAmountMinor?: number;
+                foreignCurrency?: string;
+                fxFeeCents?: number;
                 location?: string;
                 matchedRules?: {
                   confidence: number;
@@ -5046,6 +5090,7 @@ export interface operations {
                 account: string;
                 amount: number;
                 checksum: string;
+                country?: string;
                 date: string;
                 description: string;
                 entity: {
@@ -5064,6 +5109,9 @@ export interface operations {
                     | 'none';
                 };
                 error?: string;
+                foreignAmountMinor?: number;
+                foreignCurrency?: string;
+                fxFeeCents?: number;
                 location?: string;
                 matchedRules?: {
                   confidence: number;
@@ -5110,6 +5158,7 @@ export interface operations {
                 account: string;
                 amount: number;
                 checksum: string;
+                country?: string;
                 date: string;
                 description: string;
                 entity: {
@@ -5128,6 +5177,9 @@ export interface operations {
                     | 'none';
                 };
                 error?: string;
+                foreignAmountMinor?: number;
+                foreignCurrency?: string;
+                fxFeeCents?: number;
                 location?: string;
                 matchedRules?: {
                   confidence: number;
@@ -5174,6 +5226,7 @@ export interface operations {
                 account: string;
                 amount: number;
                 checksum: string;
+                country?: string;
                 date: string;
                 description: string;
                 entity: {
@@ -5192,6 +5245,9 @@ export interface operations {
                     | 'none';
                 };
                 error?: string;
+                foreignAmountMinor?: number;
+                foreignCurrency?: string;
+                fxFeeCents?: number;
                 location?: string;
                 matchedRules?: {
                   confidence: number;
@@ -7201,6 +7257,9 @@ export interface operations {
               description: string;
               entityId: string | null;
               entityName: string | null;
+              foreignAmountMinor: number | null;
+              foreignCurrency: string | null;
+              fxFeeCents: number | null;
               id: string;
               lastEditedTime: string;
               location: string | null;
@@ -7322,6 +7381,9 @@ export interface operations {
               description: string;
               entityId: string | null;
               entityName: string | null;
+              foreignAmountMinor: number | null;
+              foreignCurrency: string | null;
+              fxFeeCents: number | null;
               id: string;
               lastEditedTime: string;
               location: string | null;
@@ -7454,6 +7516,9 @@ export interface operations {
           description: string;
           entityId: string | null;
           entityName: string | null;
+          foreignAmountMinor: number | null;
+          foreignCurrency: string | null;
+          fxFeeCents: number | null;
           id: string;
           lastEditedTime: string;
           location: string | null;
@@ -7504,6 +7569,9 @@ export interface operations {
               description: string;
               entityId: string | null;
               entityName: string | null;
+              foreignAmountMinor: number | null;
+              foreignCurrency: string | null;
+              fxFeeCents: number | null;
               id: string;
               lastEditedTime: string;
               location: string | null;
@@ -7617,6 +7685,9 @@ export interface operations {
               description: string;
               entityId: string | null;
               entityName: string | null;
+              foreignAmountMinor: number | null;
+              foreignCurrency: string | null;
+              fxFeeCents: number | null;
               id: string;
               lastEditedTime: string;
               location: string | null;
@@ -7711,6 +7782,9 @@ export interface operations {
               description: string;
               entityId: string | null;
               entityName: string | null;
+              foreignAmountMinor: number | null;
+              foreignCurrency: string | null;
+              fxFeeCents: number | null;
               id: string;
               lastEditedTime: string;
               location: string | null;
@@ -7840,6 +7914,9 @@ export interface operations {
               description: string;
               entityId: string | null;
               entityName: string | null;
+              foreignAmountMinor: number | null;
+              foreignCurrency: string | null;
+              fxFeeCents: number | null;
               id: string;
               lastEditedTime: string;
               location: string | null;
@@ -7933,6 +8010,9 @@ export interface operations {
               description: string;
               entityId: string | null;
               entityName: string | null;
+              foreignAmountMinor: number | null;
+              foreignCurrency: string | null;
+              fxFeeCents: number | null;
               id: string;
               lastEditedTime: string;
               location: string | null;

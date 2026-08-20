@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Label, Select as UiSelect } from '@pops/ui';
 
 import { useImportStore } from '../../store/importStore';
+import { NoDetectionNotice } from './column-map/NoDetectionNotice';
 import { autoDetectColumns, isEmptyColumnMap, type ColumnMap } from './column-map/parsers';
 import { PreviewTable } from './column-map/PreviewTable';
 import { validateAllRows } from './column-map/validation';
@@ -192,6 +193,7 @@ export function ColumnMapStep() {
           Map CSV columns to transaction fields. Showing first 10 rows.
         </p>
       </div>
+      <NoDetectionNotice show={isEmptyColumnMap(s.localColumnMap)} />
       <ColumnMapFields
         headers={s.headers}
         localColumnMap={s.localColumnMap}

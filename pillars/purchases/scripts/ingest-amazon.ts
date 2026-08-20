@@ -5,7 +5,7 @@
  * megabyte directory the user downloads and unzips, and the upload surface
  * that would accept it belongs with the receipt drop-zone (POPS-240).
  *
- *   POPS_INTERNAL_API_KEY=<key> pnpm ingest:amazon -- "<bundle-root>" [--dry-run]
+ *   POPS_INTERNAL_API_KEY=<key> pnpm ingest:amazon -- "<bundle-root>" [flags]
  *
  * `<bundle-root>` is the directory CONTAINING `Your Amazon Orders/`, not
  * that folder itself. Amazon names it `Your Orders`, so the path usually
@@ -16,14 +16,16 @@
  * `--dry-run` needs no key; it parses and prints without making a request.
  *
  * The bundle's tax invoices are read here too, and ride on the orders this run
- * creates. They cannot reach an order that already exists: documents travel in
- * the create request and `POST /purchases` refuses a second one at the
- * checksum, so a re-run against an ingested database attaches nothing.
+ * creates. They cannot reach an order that already exists that way: documents
+ * travel in the create request and `POST /purchases` refuses a second one at
+ * the checksum. `--attach-existing` is the second pass that does reach them,
+ * posting each invoice to `POST /purchases/{id}/documents`; running it again
+ * is a no-op, because an invoice already on an order comes back as a 409.
  *
  * `--dry-run` reports what the bundle holds and which invoices name an order
  * it parsed, without storing a byte or making a request.
  */
-import { readFileSync, rmSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import {
@@ -36,7 +38,14 @@ import {
   summariseRejections,
   type MatchedInvoice,
 } from '../src/ingest/amazon/index.js';
-import { receiptSha256, receiptUri, storeReceiptBytes } from '../src/ingest/receipt/store.js';
+import {
+  attachToExistingOrders,
+  createInvoiceWriter,
+  planInvoiceDocuments,
+  plannedDocuments,
+  type AttachExistingOutcome,
+  type InvoiceWriteOutcome,
+} from './amazon-invoices.js';
 import {
   createIngestClient,
   isCliEntrypoint,
@@ -48,10 +57,7 @@ import {
   upsertSource,
 } from './backfill.js';
 
-import type {
-  CreateDocumentInput,
-  CreatePurchaseInput,
-} from '../src/db/services/purchase-input.js';
+import type { CreatePurchaseInput } from '../src/db/services/purchase-input.js';
 import type { IngestClient } from './backfill.js';
 
 const ORDER_HISTORY_PATH = join('Your Amazon Orders', 'Order History.csv');
@@ -75,135 +81,10 @@ function readRefundDetails(bundlePath: string): string | undefined {
   }
 }
 
-/** An invoice's URI, and the bytes that URI has to resolve to. */
-export interface PlannedDocument {
-  readonly document: CreateDocumentInput;
-  readonly bytes: Buffer;
-}
-
-/**
- * Name each matched invoice without writing a byte.
- *
- * The store is content-addressed, so a file's URI is a function of its bytes
- * and can be minted before anyone decides to keep it. That is what lets the
- * writing wait until a request is actually about to be made: an order that
- * already exists is refused at the checksum, and its invoices should leave
- * nothing behind on the volume.
- *
- * A URI is planned at most once per order. Two byte-identical files hash to
- * one path, and `uq_purchase_documents` would reject the order outright
- * rather than ignore the repeat.
- */
-export function planInvoiceDocuments(
-  matched: readonly MatchedInvoice[]
-): ReadonlyMap<string, readonly PlannedDocument[]> {
-  const byOrderId = new Map<string, PlannedDocument[]>();
-  const seenUris = new Set<string>();
-
-  for (const invoice of matched) {
-    const uri = receiptUri(receiptSha256(invoice.bytes));
-    const key = `${invoice.sourceOrderId} ${uri}`;
-    if (seenUris.has(key)) continue;
-    seenUris.add(key);
-
-    const planned = byOrderId.get(invoice.sourceOrderId) ?? [];
-    planned.push({
-      document: { documentUri: uri, kind: invoice.documentKind },
-      bytes: invoice.bytes,
-    });
-    byOrderId.set(invoice.sourceOrderId, planned);
-  }
-
-  return byOrderId;
-}
-
-/** The plan as the request bodies want it: URIs only, no bytes. */
-export function plannedDocuments(
-  plan: ReadonlyMap<string, readonly PlannedDocument[]>
-): ReadonlyMap<string, readonly CreateDocumentInput[]> {
-  return new Map(
-    [...plan].map(([sourceOrderId, planned]) => [sourceOrderId, planned.map((one) => one.document)])
-  );
-}
-
-export interface InvoiceWriteOutcome {
-  /** Documents on orders this run created, and so on rows that exist. */
-  readonly attached: number;
-  /** Files this run wrote and then removed, having created no row for them. */
-  readonly discarded: number;
-}
-
-export interface InvoiceWriter {
-  /** Put an order's invoices on the volume, before the row that names them. */
-  readonly write: (purchase: CreatePurchaseInput) => void;
-  /** Record that the order was created, so its bytes stay. */
-  readonly keep: (purchase: CreatePurchaseInput) => void;
-  /** Remove what this run wrote for orders it did not create. */
-  readonly settle: () => InvoiceWriteOutcome;
-}
-
-/**
- * The evidence half of the write, ordered so neither side is left dangling.
- *
- * Bytes go down before the request that references them, because a row
- * pointing at a file that is not there cannot be repaired — `POST /purchases`
- * is create-only, so a re-run is a 409 and the reference stays broken. The
- * cost of that ordering is a file written for an order that turns out to
- * already exist, which is why every file this run created is removed again
- * unless some created order references it.
- *
- * The bytes land in this pillar's own content-addressed store, not the
- * documents pillar: `documents` is a read-only bridge over Paperless-ngx with
- * no write route at all, and blocking 325 invoices on building one is the
- * wrong order. ADR-042 wants them under `pops://documents/...` eventually, and
- * the migration that moves every stored file there moves these with the rest.
- *
- * **The store is a local directory.** It resolves beside this pillar's SQLite
- * file, or to `PURCHASES_RECEIPT_DIR`. Run against a remote `PURCHASES_BASE_URL`
- * from a machine that cannot see the server's volume and the URIs will resolve
- * to bytes that are not there — the write succeeds and the evidence is on the
- * wrong host. Run this where the volume is mounted.
- */
-export function createInvoiceWriter(
-  plan: ReadonlyMap<string, readonly PlannedDocument[]>
-): InvoiceWriter {
-  const writtenPaths = new Map<string, string>();
-  const keptUris = new Set<string>();
-  let attached = 0;
-
-  const plannedFor = (purchase: CreatePurchaseInput): readonly PlannedDocument[] =>
-    plan.get(purchase.sourceOrderId ?? '') ?? [];
-
-  return {
-    write(purchase) {
-      for (const { bytes } of plannedFor(purchase)) {
-        const stored = storeReceiptBytes(bytes, 'application/pdf');
-        // Only what this run put there is this run's to take away: a file
-        // that was already on the volume belongs to an earlier ingest or to
-        // the drop-zone, and removing it would delete their evidence.
-        if (!stored.alreadyPresent) writtenPaths.set(stored.uri, stored.path);
-      }
-    },
-    keep(purchase) {
-      const planned = plannedFor(purchase);
-      for (const { document } of planned) keptUris.add(document.documentUri);
-      attached += planned.length;
-    },
-    settle() {
-      let discarded = 0;
-      for (const [uri, path] of writtenPaths) {
-        if (keptUris.has(uri)) continue;
-        rmSync(path, { force: true });
-        discarded += 1;
-      }
-      return { attached, discarded };
-    },
-  };
-}
-
 export async function main(argv: readonly string[] = process.argv.slice(2)): Promise<void> {
   const bundlePath = readBundlePath(argv, 'ingest:amazon');
   const dryRun = argv.includes('--dry-run');
+  const attachExisting = argv.includes('--attach-existing');
 
   // Resolved before the bundle is read: a multi-hundred-megabyte DSAR parse
   // is real wall-clock time, and a missing key should fail before any of it
@@ -238,8 +119,9 @@ export async function main(argv: readonly string[] = process.argv.slice(2)): Pro
   const scanned = readAmazonInvoiceBundle(bundlePath);
   const { matched, rejected } = matchAmazonInvoices(scanned, knownOrderIds);
   // What the bundle holds, not what was written: an invoice reaches the
-  // database only if the order it names is created in this run, which nothing
-  // knows yet. The outcome is reported after the requests, below.
+  // database only if the order it names is created in this run or named by
+  // the second pass, neither of which has happened yet. The outcome is
+  // reported after the requests, below.
   console.warn(
     `found ${String(scanned.length)} invoice PDF(s); ${String(matched.length)} name ` +
       `${String(new Set(matched.map((invoice) => invoice.sourceOrderId)).size)} of the ` +
@@ -272,11 +154,12 @@ export async function main(argv: readonly string[] = process.argv.slice(2)): Pro
     ingestAdapter: 'amazon-dsar-export',
   });
 
-  await postWithInvoices(client, orders, matched);
+  await postWithInvoices(client, orders, matched, attachExisting);
 }
 
 /**
- * Post the orders carrying their invoices, and settle the volume either way.
+ * Post the orders carrying their invoices, then place the rest if asked, and
+ * settle the volume either way.
  *
  * The settle is in a `finally` because the run can end through a throw:
  * `postPurchases` stops on a 401/403 rather than repeating the same failure
@@ -286,21 +169,70 @@ export async function main(argv: readonly string[] = process.argv.slice(2)): Pro
 async function postWithInvoices(
   client: IngestClient,
   orders: readonly CreatePurchaseInput[],
-  matched: readonly MatchedInvoice[]
+  matched: readonly MatchedInvoice[],
+  attachExisting: boolean
 ): Promise<void> {
   const plan = planInvoiceDocuments(matched);
   const writer = createInvoiceWriter(plan);
+  const created = new Set<string>();
 
   try {
     reportOutcome(
       await postPurchases(client, attachInvoiceDocuments(orders, plannedDocuments(plan)), {
         beforeRequest: writer.write,
-        afterCreated: writer.keep,
+        afterCreated: (purchase) => {
+          writer.keep(purchase);
+          if (purchase.sourceOrderId != null) created.add(purchase.sourceOrderId);
+        },
       })
     );
+
+    if (attachExisting) {
+      reportAttachExisting(
+        await attachToExistingOrders(client, {
+          source: AMAZON_SOURCE_ID,
+          plan,
+          created,
+          writer,
+        })
+      );
+    }
   } finally {
-    reportInvoiceWrites(writer.settle(), matched.length);
+    reportInvoiceWrites(writer.settle(), matched.length, attachExisting);
   }
+}
+
+/**
+ * What the second pass did.
+ *
+ * A repeat is printed as its own count rather than folded into the successes,
+ * because "already there" and "just written" are what tell an operator whether
+ * this run changed anything.
+ *
+ * An order in neither the run nor the database fails the run and is named in
+ * full. Its invoices reached no row, so `settle` takes their bytes back off
+ * the volume — evidence dropped, one line each, and a non-zero exit so an
+ * unattended run does not read as a success.
+ */
+function reportAttachExisting({
+  matchedOrders,
+  unknownOrders,
+  attach,
+}: AttachExistingOutcome): void {
+  console.warn(
+    `--attach-existing: ${String(attach.attached)} invoice(s) attached to ` +
+      `${String(matchedOrders)} order(s) that were already in the database, ` +
+      `${String(attach.alreadyAttached)} already carried theirs`
+  );
+  if (unknownOrders.length > 0) {
+    console.warn(
+      `${String(unknownOrders.length)} matched order(s) are in neither this run nor the ` +
+        `database, and their invoices were dropped:`
+    );
+    for (const sourceOrderId of unknownOrders) console.warn(`  ${sourceOrderId}`);
+  }
+  for (const failure of attach.failures.slice(0, 10)) console.error(`  ${failure}`);
+  if (attach.failures.length > 0 || unknownOrders.length > 0) process.exitCode = 1;
 }
 
 /**
@@ -311,16 +243,20 @@ async function postWithInvoices(
  * Saying so is the point: the alternative is an operator reading the counts
  * above as evidence that landed.
  */
-function reportInvoiceWrites({ attached, discarded }: InvoiceWriteOutcome, matched: number): void {
+function reportInvoiceWrites(
+  { attached, discarded }: InvoiceWriteOutcome,
+  matched: number,
+  attachExisting: boolean
+): void {
   console.warn(
     `attached ${String(attached)} invoice(s) to the order(s) this run created` +
       (discarded > 0 ? `, discarding ${String(discarded)} stored file(s) it did not` : '')
   );
-  if (attached === 0 && matched > 0) {
+  if (attached === 0 && matched > 0 && !attachExisting) {
     console.warn(
       `none of the ${String(matched)} matched invoice(s) were attached: this run created ` +
-        'none of the orders they name, and this pillar has no route that attaches a ' +
-        'document to an order it did not just create'
+        'none of the orders they name. Re-run with --attach-existing to put them on the ' +
+        'orders that are already in the database'
     );
   }
 }

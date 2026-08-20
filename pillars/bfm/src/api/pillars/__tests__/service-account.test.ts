@@ -11,6 +11,7 @@ import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { MOBILE_CAPABILITY_SCOPES } from '../../../contract/capabilities.js';
 import {
   BFM_SERVICE_ACCOUNT_NAME,
   BFM_SERVICE_ACCOUNT_SCOPES,
@@ -131,5 +132,47 @@ describe('the granted scopes', () => {
       expect(scope).not.toContain('*');
       expect(scope).not.toBe('');
     }
+  });
+});
+
+/**
+ * The two axes meeting (ADR-048).
+ *
+ * A capability says what a handset may ask bfm for; a scope says what bfm may
+ * ask a sibling for. Granting the first without the second produces a device
+ * that is allowed to make a call bfm is then refused — a 403 from a pillar,
+ * arriving at the phone as an upstream failure, for a configuration mistake
+ * nothing else in the tree would have caught.
+ */
+describe('every capability has the downstream scope it leans on', () => {
+  it('names a scope bfm actually holds, for every capability that needs one', () => {
+    const unbacked = Object.entries(MOBILE_CAPABILITY_SCOPES)
+      .filter((entry): entry is [string, string] => entry[1] !== null)
+      .filter(([, scope]) => !BFM_SERVICE_ACCOUNT_SCOPES.includes(scope))
+      .map(([capability]) => capability);
+
+    expect(unbacked).toEqual([]);
+  });
+
+  it('recognises an unbacked capability when it sees one', () => {
+    // The degenerate case, planted. Without it this reads as green on the day
+    // the map is empty or the filter stops matching anything.
+    const planted: Record<string, string | null> = {
+      'session.read': null,
+      'media.watchlist.write': 'media.watchlist',
+    };
+
+    const unbacked = Object.entries(planted)
+      .filter((entry): entry is [string, string] => entry[1] !== null)
+      .filter(([, scope]) => !BFM_SERVICE_ACCOUNT_SCOPES.includes(scope))
+      .map(([capability]) => capability);
+
+    expect(unbacked).toEqual(['media.watchlist.write']);
+  });
+
+  it('says explicitly which capabilities need no scope at all', () => {
+    // `null` is an answer, not an omission: bootstrap calls no pillar's domain
+    // surface, so there is no grant that could authorise or refuse it.
+    expect(MOBILE_CAPABILITY_SCOPES['session.read']).toBeNull();
   });
 });
