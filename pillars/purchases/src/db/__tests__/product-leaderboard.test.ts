@@ -243,6 +243,61 @@ describe('grouping', () => {
     expect(entry.product.source).toBeNull();
   });
 
+  it('scopes a cross-source ASIN group by the instants its bounds name, not their text', () => {
+    // The cross-source fold and the canonical column were built against each
+    // other's absence: this group spans two sources and narrows through the
+    // window every scoped read shares, so it is where a bound that sorts
+    // differently from the instant it names would show up as a row missing
+    // half its history rather than as an error.
+    //
+    // Read as text every value here disagrees with the instant it names.
+    // `2026-01-02T00:00:00+10:00` is the EARLIER of the two orders and sorts
+    // after the later one; the bound is written with a third spelling again.
+    upsertSource(opened.db, {
+      id: 'amazon-digital',
+      label: 'Amazon (digital)',
+      descriptorPattern: 'AMAZON%',
+      settlementWindowDays: 21,
+      autoLinkPolicy: 'review',
+      ingestAdapter: 'amazon-digital-export',
+    });
+    createPurchase(
+      opened.db,
+      order({
+        checksum: 'physical',
+        orderedAt: '2026-01-02T00:00:00+10:00',
+        items: [line({ name: 'The Way of Kings', sku: { value: 'B0FCSJTKJ8', scheme: 'asin' } })],
+      })
+    );
+    createPurchase(
+      opened.db,
+      order({
+        checksum: 'digital',
+        source: 'amazon-digital',
+        orderedAt: '2026-01-01T20:00:00Z',
+        items: [
+          line({ name: 'The Way of Kings (Kindle)', sku: { value: 'B0FCSJTKJ8', scheme: 'asin' } }),
+        ],
+      })
+    );
+
+    const spanning = only(rankProductPurchases(opened.db, { from: '2026-01-01T10:00:00+10:00' }));
+    expect(spanning.orderCount).toBe(2);
+    expect(spanning.product.source).toBeNull();
+    // Both ends read back in the one form the column holds, ordered by the
+    // instant rather than by the spelling that arrived.
+    expect(spanning.firstPurchasedAt).toBe('2026-01-01T14:00:00.000Z');
+    expect(spanning.lastPurchasedAt).toBe('2026-01-01T20:00:00.000Z');
+
+    // A bound between the two keeps only the later order. As text
+    // `2026-01-01T16:00:00Z` precedes `2026-01-02T00:00:00+10:00`, so an
+    // uncanonicalised column would hold the earlier order in scope here and
+    // report the group as still spanning both.
+    const tightened = only(rankProductPurchases(opened.db, { from: '2026-01-01T16:00:00Z' }));
+    expect(tightened.orderCount).toBe(1);
+    expect(tightened.firstPurchasedAt).toBe('2026-01-01T20:00:00.000Z');
+  });
+
   it('keeps a merchant-scoped sku inside its source even where the string is an ASIN', () => {
     createPurchase(
       opened.db,
