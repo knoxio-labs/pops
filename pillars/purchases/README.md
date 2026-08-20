@@ -309,8 +309,30 @@ Two things this still does not buy, both real:
 
 `ai.tools` stays empty, and that is a different decision rather than the same one twice. That slot hosts tool _definitions_ for the orchestrator's own tool-router to project; purchases' assistant reach is the MCP module above. Finance, inventory, media and cerebrum all declare `ai.tools: []` and all ship MCP tools.
 
+## The list row carries two things the order row does not
+
+`GET /purchases` answers `PurchaseListRowSchema` — every field of the order,
+plus `itemCount` and `receiptUri`. Both are aggregates rather than columns, and
+they travel on the page because the alternative is a request per visible row:
+a consumer building a scrollable list would otherwise fetch the page and then
+fetch every order in it to count its lines and find its receipt. `receiptUri`
+is the order's first receipt-kind document by `(createdAt, id)`, the same
+ordering `GET /purchases/:id` returns documents in, so a row and the detail
+behind it name the same receipt. Both aggregates are scoped to the ids on the
+page, not to the filter — see `listPurchaseRows` in
+`src/db/services/purchase-reads.ts`.
+
+**Nothing serves the bytes `receiptUri` names (POPS-2475).** The file is on
+disk, content-addressed, and reachable by no route: a consumer can key a cache
+on the URI and recognise two rows as the same receipt, and cannot render it.
+
 ## What is deliberately absent
 
+- **A keyset anchor on `GET /purchases`** (POPS-2476). It pages by
+  `limit`/`offset`, so a list walked while an order is ingested at the head
+  re-serves a row and skips another. finance grew `(beforeDate, beforeId)` for
+  exactly this; bfm's mobile purchases cursor carries an offset until this
+  does.
 - **Gmail IMAP ingest** (POPS-242). The ongoing feed, once the export/upload paths proved the reconciliation model — they have: `src/ingest/` carries `amazon/`, `amazon-digital/`, `woolworths/` and `receipt/` today. Email is the one source still unwritten.
 - **The merchant lens** (POPS-241). Its backend has been there since POPS-1752 (`GET /analytics/merchant-spend` above); the view is a separate slice. The reconciliation queue, the other half of that ticket, now exists at `/purchases` — see [`app/README.md`](app/README.md) for what its two decisions do and do not persist.
 

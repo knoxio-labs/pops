@@ -24,6 +24,12 @@ import type {
   MobileFinanceListTransactionsData,
   MobileFinanceListTransactionsErrors,
   MobileFinanceListTransactionsResponses,
+  MobilePurchasesGetPurchaseData,
+  MobilePurchasesGetPurchaseErrors,
+  MobilePurchasesGetPurchaseResponses,
+  MobilePurchasesListPurchasesData,
+  MobilePurchasesListPurchasesErrors,
+  MobilePurchasesListPurchasesResponses,
   MobilePurchasesUploadReceiptData,
   MobilePurchasesUploadReceiptErrors,
   MobilePurchasesUploadReceiptResponses,
@@ -156,6 +162,22 @@ export const mobileFinanceGetTransaction = <ThrowOnError extends boolean = false
   >({ url: '/mobile/finance/transactions/{id}', ...options });
 
 /**
+ * One cursor-paginated page of purchase list rows
+ */
+export const mobilePurchasesListPurchases = <ThrowOnError extends boolean = false>(
+  options?: Options<MobilePurchasesListPurchasesData, ThrowOnError>
+): RequestResult<
+  MobilePurchasesListPurchasesResponses,
+  MobilePurchasesListPurchasesErrors,
+  ThrowOnError
+> =>
+  (options?.client ?? client).get<
+    MobilePurchasesListPurchasesResponses,
+    MobilePurchasesListPurchasesErrors,
+    ThrowOnError
+  >({ url: '/mobile/purchases', ...options });
+
+/**
  * Hand a photographed, scanned or pasted receipt to the purchases pillar
  */
 export const mobilePurchasesUploadReceipt = <ThrowOnError extends boolean = false>(
@@ -177,6 +199,22 @@ export const mobilePurchasesUploadReceipt = <ThrowOnError extends boolean = fals
       ...options?.headers,
     },
   });
+
+/**
+ * The fuller record behind one list row, with its lines
+ */
+export const mobilePurchasesGetPurchase = <ThrowOnError extends boolean = false>(
+  options: Options<MobilePurchasesGetPurchaseData, ThrowOnError>
+): RequestResult<
+  MobilePurchasesGetPurchaseResponses,
+  MobilePurchasesGetPurchaseErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).get<
+    MobilePurchasesGetPurchaseResponses,
+    MobilePurchasesGetPurchaseErrors,
+    ThrowOnError
+  >({ url: '/mobile/purchases/{id}', ...options });
 
 /**
  * List paired devices, revoked ones included. Never returns a token or a key

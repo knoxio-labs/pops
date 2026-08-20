@@ -1744,6 +1744,11 @@
                             "enum": ["email", "export", "upload", "manual"],
                             "type": "string"
                           },
+                          "itemCount": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
                           "merchantEntityId": {
                             "nullable": true,
                             "type": "string"
@@ -1762,6 +1767,11 @@
                           },
                           "rawRef": {
                             "nullable": true,
+                            "type": "string"
+                          },
+                          "receiptUri": {
+                            "nullable": true,
+                            "pattern": "^pops:\\/\\/[a-z0-9-]+\\/[a-z0-9-]+\\/[^/\\s]+$",
                             "type": "string"
                           },
                           "settlementMode": {
@@ -1836,7 +1846,9 @@
                           "checksum",
                           "status",
                           "createdAt",
-                          "updatedAt"
+                          "updatedAt",
+                          "itemCount",
+                          "receiptUri"
                         ],
                         "type": "object"
                       },

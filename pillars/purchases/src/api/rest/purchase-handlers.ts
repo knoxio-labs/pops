@@ -13,7 +13,7 @@ import {
   getPurchase,
   listInventoryProposals,
   listItemsByTag,
-  listPurchases,
+  listPurchaseRows,
 } from '../../db/index.js';
 import { tryMapServiceError } from './error-mapping.js';
 import { resolvePurchaseScope } from './purchase-scope.js';
@@ -86,12 +86,21 @@ export function makePurchaseHandlers(db: PurchasesDb, onIngest: () => void = () 
       const scope = resolvePurchaseScope(query);
       if (!scope.ok) return { status: 400 as const, body: scope.body };
 
-      const items = listPurchases(db, {
+      const rows = listPurchaseRows(db, {
         ...scope.scope,
         limit: query.limit,
         offset: query.offset,
       });
-      return { status: 200 as const, body: { items: [...items] } };
+      return {
+        status: 200 as const,
+        body: {
+          items: rows.map((row) => ({
+            ...row.purchase,
+            itemCount: row.itemCount,
+            receiptUri: row.receiptUri,
+          })),
+        },
+      };
     },
 
     get: async ({ params }: { params: { id: string } }) => {

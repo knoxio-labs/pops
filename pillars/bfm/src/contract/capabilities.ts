@@ -40,6 +40,13 @@ export const MOBILE_CAPABILITIES = [
   /** Reach the bootstrap payload: who the federation says it is talking to. */
   'session.read',
   'finance.transactions.read',
+  /**
+   * Read an order and the page it sits on. Deliberately NOT implied by
+   * {@link MOBILE_CAPABILITIES}' receipt-write entry: handing a phone the
+   * ability to photograph a till slip is not the same as handing it a
+   * scrollable history of everything the household has bought.
+   */
+  'purchases.read',
   'purchases.receipts.write',
 ] as const;
 
@@ -65,6 +72,7 @@ export const MOBILE_SESSION_CAPABILITY: MobileCapability = 'session.read';
 export const MOBILE_CAPABILITY_SCOPES: Readonly<Record<MobileCapability, string | null>> = {
   'session.read': null,
   'finance.transactions.read': 'finance.transactions',
+  'purchases.read': 'purchases.purchase',
   'purchases.receipts.write': 'purchases.receipt',
 };
 
