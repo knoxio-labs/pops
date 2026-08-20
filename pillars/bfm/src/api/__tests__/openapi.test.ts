@@ -133,6 +133,8 @@ describe('GET /openapi', () => {
       '/mobile/finance/transactions/{id}',
       '/mobile/purchases',
       '/mobile/purchases/receipts',
+      '/mobile/purchases/receipts/{sha256}',
+      '/mobile/purchases/receipts/{sha256}/thumbnail',
       '/mobile/purchases/{id}',
     ]);
   });

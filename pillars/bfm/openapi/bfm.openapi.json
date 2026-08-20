@@ -838,6 +838,7 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "upstream_unsupported_media",
                         "not_found"
                       ],
                       "type": "string"
@@ -873,6 +874,7 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "upstream_unsupported_media",
                         "not_found"
                       ],
                       "type": "string"
@@ -1095,6 +1097,7 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "upstream_unsupported_media",
                         "not_found"
                       ],
                       "type": "string"
@@ -1157,6 +1160,7 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "upstream_unsupported_media",
                         "not_found"
                       ],
                       "type": "string"
@@ -1192,6 +1196,7 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "upstream_unsupported_media",
                         "not_found"
                       ],
                       "type": "string"
@@ -1433,6 +1438,7 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "upstream_unsupported_media",
                         "not_found"
                       ],
                       "type": "string"
@@ -1468,6 +1474,7 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "upstream_unsupported_media",
                         "not_found"
                       ],
                       "type": "string"
@@ -1942,6 +1949,7 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "upstream_unsupported_media",
                         "not_found"
                       ],
                       "type": "string"
@@ -1977,6 +1985,7 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "upstream_unsupported_media",
                         "not_found"
                       ],
                       "type": "string"
@@ -2000,6 +2009,574 @@
           }
         },
         "summary": "Hand a photographed, scanned or pasted receipt to the purchases pillar",
+        "tags": ["mobilePurchases"]
+      }
+    },
+    "/mobile/purchases/receipts/{sha256}": {
+      "get": {
+        "operationId": "mobilePurchases.getReceipt",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sha256",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "byteLength": {
+                      "maximum": 9007199254740991,
+                      "minimum": -9007199254740991,
+                      "type": "integer"
+                    },
+                    "dataBase64": {
+                      "type": "string"
+                    },
+                    "mediaType": {
+                      "type": "string"
+                    },
+                    "sha256": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["sha256", "mediaType", "byteLength", "dataBase64"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "enum": ["invalid_cursor", "invalid_request"],
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["code", "message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "enum": ["invalid_token"],
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["code", "message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "401"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "code": {
+                          "enum": ["device_revoked"],
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code", "message"],
+                      "type": "object"
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "capability": {
+                          "type": "string"
+                        },
+                        "code": {
+                          "enum": ["capability_not_granted"],
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code", "message", "capability"],
+                      "type": "object"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "403"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "upstream_unavailable",
+                        "upstream_degraded",
+                        "upstream_contract_mismatch",
+                        "upstream_misconfigured",
+                        "upstream_invalid_request",
+                        "upstream_conflict",
+                        "upstream_unsupported_media",
+                        "not_found"
+                      ],
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "pillar": {
+                      "type": "string"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["code", "pillar", "retryable", "message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "enum": ["rate_limited"],
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    }
+                  },
+                  "required": ["code", "message", "retryAfterSeconds"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "429"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "upstream_unavailable",
+                        "upstream_degraded",
+                        "upstream_contract_mismatch",
+                        "upstream_misconfigured",
+                        "upstream_invalid_request",
+                        "upstream_conflict",
+                        "upstream_unsupported_media",
+                        "not_found"
+                      ],
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "pillar": {
+                      "type": "string"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["code", "pillar", "retryable", "message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "502"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "upstream_unavailable",
+                        "upstream_degraded",
+                        "upstream_contract_mismatch",
+                        "upstream_misconfigured",
+                        "upstream_invalid_request",
+                        "upstream_conflict",
+                        "upstream_unsupported_media",
+                        "not_found"
+                      ],
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "pillar": {
+                      "type": "string"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["code", "pillar", "retryable", "message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "503"
+          }
+        },
+        "summary": "The receipt itself, full size, for a detail screen",
+        "tags": ["mobilePurchases"]
+      }
+    },
+    "/mobile/purchases/receipts/{sha256}/thumbnail": {
+      "get": {
+        "operationId": "mobilePurchases.getReceiptThumbnail",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sha256",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "byteLength": {
+                      "maximum": 9007199254740991,
+                      "minimum": -9007199254740991,
+                      "type": "integer"
+                    },
+                    "dataBase64": {
+                      "type": "string"
+                    },
+                    "mediaType": {
+                      "type": "string"
+                    },
+                    "sha256": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["sha256", "mediaType", "byteLength", "dataBase64"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "enum": ["invalid_cursor", "invalid_request"],
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["code", "message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "enum": ["invalid_token"],
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["code", "message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "401"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "code": {
+                          "enum": ["device_revoked"],
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code", "message"],
+                      "type": "object"
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "capability": {
+                          "type": "string"
+                        },
+                        "code": {
+                          "enum": ["capability_not_granted"],
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code", "message", "capability"],
+                      "type": "object"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "403"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "upstream_unavailable",
+                        "upstream_degraded",
+                        "upstream_contract_mismatch",
+                        "upstream_misconfigured",
+                        "upstream_invalid_request",
+                        "upstream_conflict",
+                        "upstream_unsupported_media",
+                        "not_found"
+                      ],
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "pillar": {
+                      "type": "string"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["code", "pillar", "retryable", "message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "upstream_unavailable",
+                        "upstream_degraded",
+                        "upstream_contract_mismatch",
+                        "upstream_misconfigured",
+                        "upstream_invalid_request",
+                        "upstream_conflict",
+                        "upstream_unsupported_media",
+                        "not_found"
+                      ],
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "pillar": {
+                      "type": "string"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["code", "pillar", "retryable", "message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "415"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "enum": ["rate_limited"],
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    }
+                  },
+                  "required": ["code", "message", "retryAfterSeconds"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "429"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "upstream_unavailable",
+                        "upstream_degraded",
+                        "upstream_contract_mismatch",
+                        "upstream_misconfigured",
+                        "upstream_invalid_request",
+                        "upstream_conflict",
+                        "upstream_unsupported_media",
+                        "not_found"
+                      ],
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "pillar": {
+                      "type": "string"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["code", "pillar", "retryable", "message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "502"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "upstream_unavailable",
+                        "upstream_degraded",
+                        "upstream_contract_mismatch",
+                        "upstream_misconfigured",
+                        "upstream_invalid_request",
+                        "upstream_conflict",
+                        "upstream_unsupported_media",
+                        "not_found"
+                      ],
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "pillar": {
+                      "type": "string"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["code", "pillar", "retryable", "message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "503"
+          }
+        },
+        "summary": "The list-sized image behind a row’s receiptUri",
         "tags": ["mobilePurchases"]
       }
     },
@@ -2233,6 +2810,7 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "upstream_unsupported_media",
                         "not_found"
                       ],
                       "type": "string"
@@ -2295,6 +2873,7 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "upstream_unsupported_media",
                         "not_found"
                       ],
                       "type": "string"
@@ -2330,6 +2909,7 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "upstream_unsupported_media",
                         "not_found"
                       ],
                       "type": "string"

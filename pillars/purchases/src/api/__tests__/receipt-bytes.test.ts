@@ -55,7 +55,10 @@ async function receiptPhotograph(): Promise<Buffer> {
  * not the whole image — and it is the one that separates "no thumbnail is
  * possible" from "the pillar fell over".
  */
-const UNDECODABLE_JPEG = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(64, 7)]);
+const UNDECODABLE_JPEG = Buffer.concat([
+  Buffer.from([0xff, 0xd8, 0xff, 0xe0]),
+  Buffer.alloc(64, 7),
+]);
 
 const PDF = Buffer.from('%PDF-1.7\n1 0 obj\n<<>>\nendobj\ntrailer\n%%EOF\n');
 
@@ -113,9 +116,9 @@ describe('GET /receipts/:sha256', () => {
     // document table instead of the store would 404 exactly the receipts a
     // human has to look at.
     const stored = storeReceiptBytes(await receiptPhotograph(), 'image/jpeg', receiptDir);
-    const rows = opened.raw
-      .prepare('SELECT COUNT(*) AS n FROM purchase_documents')
-      .get() as { n: number };
+    const rows = opened.raw.prepare('SELECT COUNT(*) AS n FROM purchase_documents').get() as {
+      n: number;
+    };
     expect(rows.n).toBe(0);
 
     const response = await requestOn(app).get(`/receipts/${stored.sha256}`);
@@ -222,9 +225,7 @@ describe('GET /receipts/:sha256/thumbnail', () => {
 
     const response = await requestOn(app).get(`/receipts/${stored.sha256}/thumbnail`);
 
-    expect(response.body.byteLength).toBe(
-      Buffer.from(response.body.dataBase64, 'base64').length
-    );
+    expect(response.body.byteLength).toBe(Buffer.from(response.body.dataBase64, 'base64').length);
     expect(response.body.byteLength).not.toBe(photograph.length);
   });
 
@@ -271,7 +272,11 @@ describe('GET /receipts/:sha256/thumbnail', () => {
   });
 
   it('says a pasted body is not a photograph either', async () => {
-    const stored = storeReceiptBytes(Buffer.from('Total $9.99\n', 'utf8'), 'text/plain', receiptDir);
+    const stored = storeReceiptBytes(
+      Buffer.from('Total $9.99\n', 'utf8'),
+      'text/plain',
+      receiptDir
+    );
 
     const response = await requestOn(app).get(`/receipts/${stored.sha256}/thumbnail`);
 

@@ -23,13 +23,20 @@ import type { GatewayFailure } from '../pillars/gateway.js';
 /** The statuses the mobile transaction routes declare for an upstream fault. */
 export type UpstreamErrorStatus = 404 | 502 | 503;
 
+/**
+ * Everything {@link classify} can produce, which is one status wider than most
+ * routes declare: only a route that asked a producer for a particular
+ * representation can meaningfully answer 415.
+ */
+type ClassifiedStatus = UpstreamErrorStatus | 415;
+
 export interface UpstreamErrorResponse {
   readonly status: UpstreamErrorStatus;
   readonly body: MobileUpstreamError;
 }
 
 interface Classification {
-  readonly status: UpstreamErrorStatus;
+  readonly status: ClassifiedStatus;
   readonly code: MobileUpstreamError['code'];
   readonly summary: string;
 }
@@ -73,8 +80,18 @@ function classify(failure: GatewayFailure): Classification {
         code: 'upstream_conflict',
         summary: `${target} reported a conflict on a read`,
       };
+    case 'unsupported-media':
+      return {
+        status: 415,
+        code: 'upstream_unsupported_media',
+        summary: `${target} cannot represent that record in the form this route asked for`,
+      };
     case 'not-found':
-      return { status: 404, code: 'not_found', summary: 'No such transaction' };
+      // Deliberately not "no such transaction". Three pillars' worth of
+      // routes reach this arm now, and a receipt that is not on disk is not a
+      // missing transaction — naming the wrong noun in a crash report sends
+      // whoever reads it to the wrong pillar.
+      return { status: 404, code: 'not_found', summary: `${target} has no such record` };
   }
 }
 
@@ -107,12 +124,69 @@ function describe(summary: string, failure: GatewayFailure): string {
 export function toUpstreamErrorResponse(failure: GatewayFailure): UpstreamErrorResponse {
   const { status, code, summary } = classify(failure);
 
+  // A route that did not ask for a representation cannot receive a refusal to
+  // produce one; a producer answering 415 to it is a contract fault, and folds
+  // the way the collection mapper below folds a 404. The narrowed return type
+  // is what stops a 415 reaching a route whose OpenAPI document — and
+  // therefore the generated Swift client — has no case for it.
+  if (status === 415) return contractFault(failure, summary);
+
   return {
     status,
     body: {
       code,
       pillar: failure.pillar,
       retryable: isRetryable(status),
+      message: describe(summary, failure),
+    },
+  };
+}
+
+/**
+ * The answer for a producer response that is well-formed HTTP and impossible
+ * for the route that received it. Always a 502: nothing the phone does changes
+ * it, and it is bfm or the producer that has to change.
+ */
+function contractFault(failure: GatewayFailure, summary: string): UpstreamErrorResponse {
+  return {
+    status: 502,
+    body: {
+      code: 'upstream_contract_mismatch',
+      pillar: failure.pillar,
+      retryable: false,
+      message: describe(summary, failure),
+    },
+  };
+}
+
+/** The statuses a route that fetches stored bytes declares for an upstream fault. */
+export type ReceiptBytesErrorStatus = UpstreamErrorStatus | 415;
+
+export interface ReceiptBytesErrorResponse {
+  readonly status: ReceiptBytesErrorStatus;
+  readonly body: MobileUpstreamError;
+}
+
+/**
+ * The mapping for a route that asked a producer for one representation of one
+ * resource, and so can meaningfully be told "not in that form".
+ *
+ * The only mapper that lets a 415 through. Everywhere else it is a contract
+ * fault, because everywhere else bfm never asked for a representation.
+ */
+export function toReceiptBytesErrorResponse(failure: GatewayFailure): ReceiptBytesErrorResponse {
+  const { status, code, summary } = classify(failure);
+  if (status !== 415) return toUpstreamErrorResponse(failure);
+
+  return {
+    status,
+    body: {
+      code,
+      pillar: failure.pillar,
+      // Settled, not transient. This is the whole reason the kind survives to
+      // here: the app draws a placeholder once instead of asking again for a
+      // picture that does not exist.
+      retryable: false,
       message: describe(summary, failure),
     },
   };

@@ -47,6 +47,18 @@ export const MOBILE_CAPABILITIES = [
    * scrollable history of everything the household has bought.
    */
   'purchases.read',
+  /**
+   * Fetch the stored bytes behind a receipt's `pops://` URI — the photograph
+   * itself, or the thumbnail a list row draws.
+   *
+   * Its own entry rather than part of {@link MOBILE_CAPABILITIES}' order-read
+   * entry, because the two disclose different things. A list of orders says
+   * what was bought and for how much; the photograph is the paper, and it
+   * carries whatever else was on it — a card's last four digits, a loyalty
+   * number, a pharmacy line item. Reading the summary and being handed the
+   * original are worth being able to grant apart.
+   */
+  'purchases.receipts.read',
   'purchases.receipts.write',
 ] as const;
 
@@ -73,6 +85,16 @@ export const MOBILE_CAPABILITY_SCOPES: Readonly<Record<MobileCapability, string 
   'session.read': null,
   'finance.transactions.read': 'finance.transactions',
   'purchases.read': 'purchases.purchase',
+  /**
+   * The same prefix the upload leans on, because both are purchases' own
+   * `receipt.*` module — the bytes are that module's artifact, written by its
+   * store and named by its hash. Worth stating plainly: bfm's account already
+   * carried this prefix for the upload, so no grant widens when this
+   * capability lands. The separation between photographing a receipt and
+   * reading one back is drawn at the CAPABILITY, above, which is the axis
+   * that is per-device; the scope is per-module and always was.
+   */
+  'purchases.receipts.read': 'purchases.receipt',
   'purchases.receipts.write': 'purchases.receipt',
 };
 

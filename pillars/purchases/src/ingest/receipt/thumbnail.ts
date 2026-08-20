@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 /**
  * A receipt small enough for a list row.
  *
@@ -41,7 +42,6 @@
  */
 import { renameSync, writeFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
-import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 
 import sharp from 'sharp';

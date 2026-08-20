@@ -265,6 +265,29 @@ export const EXPECTATIONS = [
     usedBy: 'pillars/bfm/src/api/purchases/client.ts',
   },
   {
+    consumer: 'bfm',
+    producer: 'purchases',
+    operationId: 'receipt.read',
+    path: '/receipts/{sha256}',
+    method: 'get',
+    // The hash is the whole request. It is the content address purchases put
+    // in the `pops://` URI, so a renamed path param here is a phone that can
+    // name a receipt and never fetch it.
+    query: [],
+    pathParams: ['sha256'],
+    usedBy: 'pillars/bfm/src/api/purchases/client.ts',
+  },
+  {
+    consumer: 'bfm',
+    producer: 'purchases',
+    operationId: 'receipt.thumbnail',
+    path: '/receipts/{sha256}/thumbnail',
+    method: 'get',
+    query: [],
+    pathParams: ['sha256'],
+    usedBy: 'pillars/bfm/src/api/purchases/client.ts',
+  },
+  {
     consumer: 'finance',
     producer: 'contacts',
     operationId: 'entities.list',
