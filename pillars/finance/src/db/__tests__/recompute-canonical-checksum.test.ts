@@ -23,6 +23,13 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { buildImportDedupKeyFromStoredRow } from '../../contract/import-dedup.js';
 import { registerFinanceSqlFunctions } from '../open-finance-db.js';
 
+/**
+ * Pinned by hand to the shape `transactions` had before 0059 ran — the UNIQUE
+ * checksum index this migration has to drop is the whole point of the setup.
+ * The current-schema suites derive their table from the journal
+ * (`migrated-db.ts`); this one must NOT, because a migration test whose input
+ * already carries the migration's output proves nothing.
+ */
 const PRE_MIGRATION_DDL = `
 CREATE TABLE transactions (
   id text PRIMARY KEY NOT NULL,

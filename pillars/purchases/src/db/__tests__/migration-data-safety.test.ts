@@ -26,7 +26,12 @@ import type { OpenedPurchasesDb } from '../index.js';
 /** The last entry before `0002_purchase_surcharge` adds `surcharge_cents`. */
 const BEFORE_ADDED_COLUMN = '0001_purchase_tags';
 
-const ORDERED_AT = '2026-02-02T01:41:21Z';
+/**
+ * Seeded in the form the column now holds. One entry in the chain rewrites
+ * `ordered_at` to that form, and what it rewrites is pinned by its own suite
+ * — the point here is that nothing else moves.
+ */
+const ORDERED_AT = '2026-02-02T01:41:21.000Z';
 
 interface SeededItem {
   readonly id: string;

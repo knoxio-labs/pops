@@ -211,6 +211,23 @@ export interface paths {
     patch: operations['purchase.patchItem'];
     trace?: never;
   };
+  '/purchases/{id}/items/{itemId}/inventory-item': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Create an offer's inventory asset and record the accept */
+    post: operations['purchase.createInventoryItem'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/purchases/{id}/items/{itemId}/inventory-proposal': {
     parameters: {
       query?: never;
@@ -1774,6 +1791,84 @@ export interface operations {
         content: {
           'application/json': {
             code?: string;
+            message: string;
+          };
+        };
+      };
+    };
+  };
+  'purchase.createInventoryItem': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+        itemId: string;
+      };
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          unitId?: string;
+        };
+      };
+    };
+    responses: {
+      /** @description 201 */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            inventoryItemUri: string;
+            unit: {
+              createdAt: string;
+              id: string;
+              inventoryDeclinedAt: string | null;
+              inventoryItemStaleAt: string | null;
+              inventoryItemUri: string | null;
+              itemId: string;
+              serialNumber: string | null;
+            };
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+          };
+        };
+      };
+      /** @description 502 */
+      502: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            inventoryItemUri: string | null;
             message: string;
           };
         };

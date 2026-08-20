@@ -611,7 +611,7 @@ export type PurchaseCreateData = {
       allocatedShippingCents?: number;
       gstApplicable?: boolean | null;
       imageUrl?: string | null;
-      kind?: 'consumable' | 'durable' | 'digital' | 'service';
+      kind?: 'consumable' | 'durable' | 'digital' | 'service' | null;
       lineTotalCents: number;
       merchantCategory?: string | null;
       merchantCondition?: string | null;
@@ -1125,7 +1125,7 @@ export type PurchasePatchItemData = {
    * Body
    */
   body?: {
-    kind?: 'consumable' | 'durable' | 'digital' | 'service';
+    kind?: 'consumable' | 'durable' | 'digital' | 'service' | null;
     tags?: Array<string>;
   };
   path: {
@@ -1208,6 +1208,70 @@ export type PurchasePatchItemResponses = {
 
 export type PurchasePatchItemResponse =
   PurchasePatchItemResponses[keyof PurchasePatchItemResponses];
+
+export type PurchaseCreateInventoryItemData = {
+  /**
+   * Body
+   */
+  body?: {
+    unitId?: string;
+  };
+  path: {
+    id: string;
+    itemId: string;
+  };
+  query?: never;
+  url: '/purchases/{id}/items/{itemId}/inventory-item';
+};
+
+export type PurchaseCreateInventoryItemErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+  };
+  /**
+   * 502
+   */
+  502: {
+    code?: string;
+    inventoryItemUri: string | null;
+    message: string;
+  };
+};
+
+export type PurchaseCreateInventoryItemError =
+  PurchaseCreateInventoryItemErrors[keyof PurchaseCreateInventoryItemErrors];
+
+export type PurchaseCreateInventoryItemResponses = {
+  /**
+   * 201
+   */
+  201: {
+    inventoryItemUri: string;
+    unit: {
+      createdAt: string;
+      id: string;
+      inventoryDeclinedAt: string | null;
+      inventoryItemStaleAt: string | null;
+      inventoryItemUri: string | null;
+      itemId: string;
+      serialNumber: string | null;
+    };
+  };
+};
+
+export type PurchaseCreateInventoryItemResponse =
+  PurchaseCreateInventoryItemResponses[keyof PurchaseCreateInventoryItemResponses];
 
 export type PurchaseDecideInventoryProposalData = {
   /**

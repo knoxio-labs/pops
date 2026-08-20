@@ -16,6 +16,13 @@ import { fileURLToPath } from 'node:url';
 import Database from 'better-sqlite3';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+/**
+ * Pinned by hand to the shape `transactions` had before 0065 ran, so the rows
+ * seeded into it can still carry the capitalised `type` values the migration
+ * rewrites. The current-schema suites derive their table from the journal
+ * (`migrated-db.ts`); this one must NOT, because a migration test whose input
+ * already carries the migration's output proves nothing.
+ */
 const PRE_MIGRATION_DDL = `
 CREATE TABLE transactions (
   id text PRIMARY KEY NOT NULL,

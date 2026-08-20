@@ -1,10 +1,13 @@
 /**
  * The wire shape of an inventory fan-out proposal and of the answer to one.
  *
- * A proposal is an *offer*, not a record: purchases writes nothing into
- * inventory and never will from here. The surface holding the human's
- * consent creates the asset on that pillar and then tells purchases which
- * URI came back.
+ * A proposal is an *offer*, not a record, and an offer becomes an asset one
+ * of two ways. A caller that created the inventory row itself reports the
+ * URI it got back ({@link InventoryProposalDecisionSchema}). A caller that
+ * has not asks purchases to create it, naming nothing but the slot
+ * ({@link InventoryAssetRequestSchema}) — the one place this pillar writes
+ * into another pillar's data, and the only one where an accept and the asset
+ * it names cannot drift apart.
  *
  * Field names follow inventory's where a counterpart exists, but three do
  * not survive a copy into that pillar's `POST /items` and a caller should
@@ -17,7 +20,9 @@
  */
 import { z } from 'zod';
 
+import { ErrorBodySchema } from './rest-schemas.js';
 import { IsoTimestampSchema, PopsUriSchema } from './schemas/purchase.js';
+import { popsUri, popsUriPattern } from './schemas/scalars.js';
 
 /**
  * Where an accepted asset lives: `pops://inventory/item/<id>`.
@@ -29,12 +34,16 @@ import { IsoTimestampSchema, PopsUriSchema } from './schemas/purchase.js';
  * cannot be retracted — so an accept naming a finance transaction would be
  * a permanent wrong answer accepted without complaint.
  */
-const InventoryItemUriSchema = z
+export const INVENTORY_ITEM_URI = popsUriPattern('inventory', 'item');
+
+export const InventoryItemUriSchema = z
   .string()
-  .regex(
-    /^pops:\/\/inventory\/item\/[^/\s]+$/u,
-    'expected an inventory item URI, e.g. pops://inventory/item/<id>'
-  );
+  .regex(INVENTORY_ITEM_URI, 'expected an inventory item URI, e.g. pops://inventory/item/<id>');
+
+/** The URI for one inventory row, in the shape {@link InventoryItemUriSchema} admits. */
+export function inventoryItemUri(id: string): string {
+  return popsUri('inventory', 'item', id);
+}
 
 export const InventoryProposalSchema = z.object({
   purchaseId: z.string(),
@@ -94,3 +103,43 @@ export const InventoryProposalDecisionSchema = z.discriminatedUnion('decision', 
     unitId: z.string().optional(),
   }),
 ]);
+
+/**
+ * An accept that asks purchases to create the asset.
+ *
+ * It names a slot and nothing else. Every field of the row comes from the
+ * proposal the projection just computed, so the asset cannot describe
+ * something other than the line the human answered — a body carrying an
+ * item name or a price would let the two disagree with no way to tell which
+ * was right afterwards.
+ *
+ * `unitId` addresses the slot exactly as it does on
+ * {@link InventoryProposalDecisionSchema}: present answers the proposal
+ * carrying that unit, absent answers a proposal whose `unitId` was null.
+ */
+export const InventoryAssetRequestSchema = z.object({
+  unitId: z.string().optional(),
+});
+
+/**
+ * A create that did not end with an asset recorded against the slot.
+ *
+ * `inventoryItemUri` is what separates the two shapes of failure, and the
+ * reason this is not a bare error body. It is null while nothing this
+ * pillar can name was created — inventory refused the credential, was
+ * unreachable, or rejected the payload — and carries the URI in the one
+ * case where a row *does* exist and the accept did not land: a slot
+ * answered by someone else between the projection and the write.
+ *
+ * That case has no mechanical repair, which is exactly why it is reported
+ * rather than retried. A decision cannot be retracted, so the accept cannot
+ * be recorded afterwards, and repeating the request would mint a second
+ * asset for one physical thing. The URI is the only trace of a row nothing
+ * references, and a person decides what happens to it.
+ *
+ * `code` names which failure this is, so a consumer branches on a value
+ * rather than on the presence of a field it might forget to read.
+ */
+export const InventoryAssetFailureSchema = ErrorBodySchema.extend({
+  inventoryItemUri: InventoryItemUriSchema.nullable(),
+});

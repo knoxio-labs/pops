@@ -22,6 +22,13 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { registerFinanceSqlFunctions } from '../open-finance-db.js';
 
+/**
+ * Pinned by hand to the shape `transactions` had before 0066 ran — without the
+ * typed foreign-charge columns this migration adds and backfills. The
+ * current-schema suites derive their table from the journal
+ * (`migrated-db.ts`); this one must NOT, because a migration test whose input
+ * already carries the migration's output proves nothing.
+ */
 const PRE_MIGRATION_DDL = `
 CREATE TABLE transactions (
   id text PRIMARY KEY NOT NULL,

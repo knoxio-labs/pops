@@ -19,6 +19,13 @@ import { openFinanceDb } from '../open-finance-db.js';
 
 import type { OpenedFinanceDb } from '../open-finance-db.js';
 
+/**
+ * Pinned by hand to the shape `transactions` had before 0064 ran — a float
+ * `amount` column, which is exactly what this migration replaces. The
+ * current-schema suites derive their table from the journal
+ * (`migrated-db.ts`); this one must NOT, because a migration test whose input
+ * already carries the migration's output proves nothing.
+ */
 const PRE_MIGRATION_DDL = `
 CREATE TABLE transactions (
   id text PRIMARY KEY NOT NULL,

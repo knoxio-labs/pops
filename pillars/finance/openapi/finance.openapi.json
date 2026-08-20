@@ -171,7 +171,7 @@
                     "type": "string"
                   },
                   "period": {
-                    "enum": ["Monthly", "Yearly"],
+                    "enum": ["Monthly", "Yearly", null],
                     "nullable": true,
                     "type": "string"
                   }
@@ -622,7 +622,7 @@
                     "type": "string"
                   },
                   "period": {
-                    "enum": ["Monthly", "Yearly"],
+                    "enum": ["Monthly", "Yearly", null],
                     "nullable": true,
                     "type": "string"
                   }
@@ -881,7 +881,8 @@
                               "reversal",
                               "loan",
                               "rebate",
-                              "tax"
+                              "tax",
+                              null
                             ],
                             "nullable": true,
                             "type": "string"
@@ -1058,7 +1059,8 @@
                       "reversal",
                       "loan",
                       "rebate",
-                      "tax"
+                      "tax",
+                      null
                     ],
                     "nullable": true,
                     "type": "string"
@@ -1137,7 +1139,8 @@
                             "reversal",
                             "loan",
                             "rebate",
-                            "tax"
+                            "tax",
+                            null
                           ],
                           "nullable": true,
                           "type": "string"
@@ -1453,7 +1456,8 @@
                                         "reversal",
                                         "loan",
                                         "rebate",
-                                        "tax"
+                                        "tax",
+                                        null
                                       ],
                                       "nullable": true,
                                       "type": "string"
@@ -1524,7 +1528,8 @@
                                         "reversal",
                                         "loan",
                                         "rebate",
-                                        "tax"
+                                        "tax",
+                                        null
                                       ],
                                       "nullable": true,
                                       "type": "string"
@@ -1664,7 +1669,8 @@
                               "reversal",
                               "loan",
                               "rebate",
-                              "tax"
+                              "tax",
+                              null
                             ],
                             "nullable": true,
                             "type": "string"
@@ -1870,7 +1876,8 @@
                             "reversal",
                             "loan",
                             "rebate",
-                            "tax"
+                            "tax",
+                            null
                           ],
                           "nullable": true,
                           "type": "string"
@@ -1895,7 +1902,7 @@
                       "type": "object"
                     },
                     "status": {
-                      "enum": ["matched", "uncertain"],
+                      "enum": ["matched", "uncertain", null],
                       "nullable": true,
                       "type": "string"
                     }
@@ -2233,7 +2240,8 @@
                                               "reversal",
                                               "loan",
                                               "rebate",
-                                              "tax"
+                                              "tax",
+                                              null
                                             ],
                                             "nullable": true,
                                             "type": "string"
@@ -2304,7 +2312,8 @@
                                               "reversal",
                                               "loan",
                                               "rebate",
-                                              "tax"
+                                              "tax",
+                                              null
                                             ],
                                             "nullable": true,
                                             "type": "string"
@@ -2450,7 +2459,8 @@
                               "reversal",
                               "loan",
                               "rebate",
-                              "tax"
+                              "tax",
+                              null
                             ],
                             "nullable": true,
                             "type": "string"
@@ -2649,7 +2659,8 @@
                                         "reversal",
                                         "loan",
                                         "rebate",
-                                        "tax"
+                                        "tax",
+                                        null
                                       ],
                                       "nullable": true,
                                       "type": "string"
@@ -2720,7 +2731,8 @@
                                         "reversal",
                                         "loan",
                                         "rebate",
-                                        "tax"
+                                        "tax",
+                                        null
                                       ],
                                       "nullable": true,
                                       "type": "string"
@@ -2857,7 +2869,8 @@
                                               "reversal",
                                               "loan",
                                               "rebate",
-                                              "tax"
+                                              "tax",
+                                              null
                                             ],
                                             "nullable": true,
                                             "type": "string"
@@ -2928,7 +2941,8 @@
                                               "reversal",
                                               "loan",
                                               "rebate",
-                                              "tax"
+                                              "tax",
+                                              null
                                             ],
                                             "nullable": true,
                                             "type": "string"
@@ -3053,7 +3067,7 @@
                                 "type": "string"
                               },
                               "status": {
-                                "enum": ["matched", "uncertain"],
+                                "enum": ["matched", "uncertain", null],
                                 "nullable": true,
                                 "type": "string"
                               }
@@ -3076,7 +3090,7 @@
                                 "type": "string"
                               },
                               "status": {
-                                "enum": ["matched", "uncertain"],
+                                "enum": ["matched", "uncertain", null],
                                 "nullable": true,
                                 "type": "string"
                               }
@@ -3460,7 +3474,8 @@
                           "reversal",
                           "loan",
                           "rebate",
-                          "tax"
+                          "tax",
+                          null
                         ],
                         "nullable": true,
                         "type": "string"
@@ -3546,7 +3561,8 @@
                                           "reversal",
                                           "loan",
                                           "rebate",
-                                          "tax"
+                                          "tax",
+                                          null
                                         ],
                                         "nullable": true,
                                         "type": "string"
@@ -3617,7 +3633,8 @@
                                           "reversal",
                                           "loan",
                                           "rebate",
-                                          "tax"
+                                          "tax",
+                                          null
                                         ],
                                         "nullable": true,
                                         "type": "string"
@@ -3723,7 +3740,8 @@
                                       "reversal",
                                       "loan",
                                       "rebate",
-                                      "tax"
+                                      "tax",
+                                      null
                                     ],
                                     "nullable": true,
                                     "type": "string"
@@ -3773,7 +3791,8 @@
                                       "reversal",
                                       "loan",
                                       "rebate",
-                                      "tax"
+                                      "tax",
+                                      null
                                     ],
                                     "nullable": true,
                                     "type": "string"
@@ -3906,7 +3925,8 @@
                               "reversal",
                               "loan",
                               "rebate",
-                              "tax"
+                              "tax",
+                              null
                             ],
                             "nullable": true,
                             "type": "string"
@@ -4086,7 +4106,8 @@
                                         "reversal",
                                         "loan",
                                         "rebate",
-                                        "tax"
+                                        "tax",
+                                        null
                                       ],
                                       "nullable": true,
                                       "type": "string"
@@ -4157,7 +4178,8 @@
                                         "reversal",
                                         "loan",
                                         "rebate",
-                                        "tax"
+                                        "tax",
+                                        null
                                       ],
                                       "nullable": true,
                                       "type": "string"
@@ -4302,7 +4324,8 @@
                           "reversal",
                           "loan",
                           "rebate",
-                          "tax"
+                          "tax",
+                          null
                         ],
                         "nullable": true,
                         "type": "string"
@@ -4483,7 +4506,8 @@
                                         "reversal",
                                         "loan",
                                         "rebate",
-                                        "tax"
+                                        "tax",
+                                        null
                                       ],
                                       "nullable": true,
                                       "type": "string"
@@ -4554,7 +4578,8 @@
                                         "reversal",
                                         "loan",
                                         "rebate",
-                                        "tax"
+                                        "tax",
+                                        null
                                       ],
                                       "nullable": true,
                                       "type": "string"
@@ -4662,7 +4687,8 @@
                           "reversal",
                           "loan",
                           "rebate",
-                          "tax"
+                          "tax",
+                          null
                         ],
                         "nullable": true,
                         "type": "string"
@@ -4765,7 +4791,8 @@
                                           "reversal",
                                           "loan",
                                           "rebate",
-                                          "tax"
+                                          "tax",
+                                          null
                                         ],
                                         "nullable": true,
                                         "type": "string"
@@ -4836,7 +4863,8 @@
                                           "reversal",
                                           "loan",
                                           "rebate",
-                                          "tax"
+                                          "tax",
+                                          null
                                         ],
                                         "nullable": true,
                                         "type": "string"
@@ -4964,7 +4992,8 @@
                               "reversal",
                               "loan",
                               "rebate",
-                              "tax"
+                              "tax",
+                              null
                             ],
                             "nullable": true,
                             "type": "string"
@@ -5444,7 +5473,8 @@
                             "reversal",
                             "loan",
                             "rebate",
-                            "tax"
+                            "tax",
+                            null
                           ],
                           "nullable": true,
                           "type": "string"
@@ -5615,7 +5645,8 @@
                       "reversal",
                       "loan",
                       "rebate",
-                      "tax"
+                      "tax",
+                      null
                     ],
                     "nullable": true,
                     "type": "string"
@@ -5693,7 +5724,8 @@
                             "reversal",
                             "loan",
                             "rebate",
-                            "tax"
+                            "tax",
+                            null
                           ],
                           "nullable": true,
                           "type": "string"
@@ -6359,7 +6391,8 @@
                                         "reversal",
                                         "loan",
                                         "rebate",
-                                        "tax"
+                                        "tax",
+                                        null
                                       ],
                                       "nullable": true,
                                       "type": "string"
@@ -6430,7 +6463,8 @@
                                         "reversal",
                                         "loan",
                                         "rebate",
-                                        "tax"
+                                        "tax",
+                                        null
                                       ],
                                       "nullable": true,
                                       "type": "string"
@@ -7627,7 +7661,8 @@
                                           "reversal",
                                           "loan",
                                           "rebate",
-                                          "tax"
+                                          "tax",
+                                          null
                                         ],
                                         "nullable": true,
                                         "type": "string"
@@ -7698,7 +7733,8 @@
                                           "reversal",
                                           "loan",
                                           "rebate",
-                                          "tax"
+                                          "tax",
+                                          null
                                         ],
                                         "nullable": true,
                                         "type": "string"
@@ -9729,7 +9765,8 @@
                                               "reversal",
                                               "loan",
                                               "rebate",
-                                              "tax"
+                                              "tax",
+                                              null
                                             ],
                                             "nullable": true,
                                             "type": "string"
@@ -9800,7 +9837,8 @@
                                               "reversal",
                                               "loan",
                                               "rebate",
-                                              "tax"
+                                              "tax",
+                                              null
                                             ],
                                             "nullable": true,
                                             "type": "string"
@@ -15714,7 +15752,8 @@
                       "ai",
                       "learned",
                       "manual",
-                      "none"
+                      "none",
+                      null
                     ],
                     "nullable": true,
                     "type": "string"
@@ -16135,7 +16174,8 @@
                             "ai",
                             "learned",
                             "manual",
-                            "none"
+                            "none",
+                            null
                           ],
                           "nullable": true,
                           "type": "string"
@@ -17126,7 +17166,7 @@
                     "type": "string"
                   },
                   "priority": {
-                    "enum": ["Needing", "Soon", "One Day", "Dreaming"],
+                    "enum": ["Needing", "Soon", "One Day", "Dreaming", null],
                     "nullable": true,
                     "type": "string"
                   },
@@ -17588,7 +17628,7 @@
                     "type": "string"
                   },
                   "priority": {
-                    "enum": ["Needing", "Soon", "One Day", "Dreaming"],
+                    "enum": ["Needing", "Soon", "One Day", "Dreaming", null],
                     "nullable": true,
                     "type": "string"
                   },

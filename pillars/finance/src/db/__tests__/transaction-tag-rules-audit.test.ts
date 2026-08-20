@@ -4,66 +4,20 @@
  * `(descriptionPattern, matchType)`, and active rules whose pattern matches
  * none of the transactions currently in the table.
  */
-import Database from 'better-sqlite3';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import {
   findDuplicateTransactionTagRules,
   findUnreachableTransactionTagRules,
 } from '../services/transaction-tag-rules-audit.js';
+import { freshMigratedFinanceDb } from './migrated-db.js';
 
-import type { FinanceDb } from '../services/internal.js';
+import type { MigratedFinanceDb } from './migrated-db.js';
 
-const DDL = `
-CREATE TABLE transaction_tag_rules (
-  id text PRIMARY KEY NOT NULL,
-  description_pattern text NOT NULL,
-  match_type text DEFAULT 'exact' NOT NULL,
-  entity_id text,
-  tags text DEFAULT '[]' NOT NULL,
-  is_active integer DEFAULT 1 NOT NULL,
-  confidence real DEFAULT 0.5 NOT NULL,
-  priority integer DEFAULT 0 NOT NULL,
-  times_applied integer DEFAULT 0 NOT NULL,
-  created_at text DEFAULT (datetime('now')) NOT NULL,
-  last_used_at text
-);
-CREATE TABLE transactions (
-  id text PRIMARY KEY NOT NULL,
-  description text NOT NULL,
-  account text NOT NULL,
-  amount real NOT NULL,
-  date text NOT NULL,
-  type text NOT NULL,
-  tags text NOT NULL DEFAULT '[]',
-  entity_id text,
-  entity_name text,
-  location text,
-  country text,
-  related_transaction_id text,
-  notes text,
-  foreign_amount_minor integer,
-  foreign_currency text,
-  fx_fee_cents integer,
-  checksum text,
-  raw_row text,
-  last_edited_time text NOT NULL,
-  match_type text,
-  match_rule_id text,
-  match_confidence real
-);
-`;
-
-interface TestHarness {
-  db: FinanceDb;
-  raw: Database.Database;
-}
+type TestHarness = MigratedFinanceDb;
 
 function freshDb(): TestHarness {
-  const raw = new Database(':memory:');
-  raw.exec(DDL);
-  return { db: drizzle(raw), raw };
+  return freshMigratedFinanceDb();
 }
 
 function seedRule(
@@ -95,8 +49,8 @@ function seedRule(
 function seedTransaction(harness: TestHarness, description: string): void {
   harness.raw
     .prepare(
-      `INSERT INTO transactions (id, description, account, amount, date, type, last_edited_time)
-       VALUES (?, ?, 'amex', -10, '2026-01-01', 'Expense', '2026-01-01T00:00:00.000Z')`
+      `INSERT INTO transactions (id, description, account, amount_cents, date, type, last_edited_time)
+       VALUES (?, ?, 'amex', -1000, '2026-01-01', 'purchase', '2026-01-01T00:00:00.000Z')`
     )
     .run(crypto.randomUUID(), description);
 }

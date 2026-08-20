@@ -72,6 +72,28 @@ async function fetchSummaries(
   return pages.flatMap((page) => page.transactions);
 }
 
+/** What the column knows: the answers it has, and whether it got one at all. */
+export interface PurchaseLinkSummaries {
+  /**
+   * Keyed on transaction id. A transaction no order explains is absent, not
+   * zeroed — and so is every transaction when `unavailable` is true, which is
+   * why the two are not the same reading.
+   */
+  byTransactionId: Map<string, TransactionLinkSummary>;
+  /**
+   * The last lookup failed, so an empty map is not an answer about anything.
+   *
+   * Any failure counts, not only the unreachable-pillar ones
+   * `isUnavailableError` picks out. That predicate exists to word the detail
+   * panel's message, where the reader is asking about one transaction and the
+   * blame matters. Here the reader is reading a whole column of blanks, and a
+   * refusal the producer meant — a malformed URI in the batch, which it
+   * answers by rejecting the request entire — blanks exactly as many rows as
+   * an outage does.
+   */
+  unavailable: boolean;
+}
+
 /**
  * Which of the given transactions an order explains, keyed on transaction id,
  * in one round trip per 500 of them.
@@ -96,10 +118,18 @@ async function fetchSummaries(
  * decoration on a page that is fully useful without it, so a refusal draws no
  * indicators rather than failing the page; the reader who wants to know why
  * opens the row, where the panel says which side failed and offers the retry.
+ * What a refusal must not do is pass for an answer, so it is reported out of
+ * here rather than collapsed into the same empty map a fully unlinked page
+ * produces.
+ *
+ * The failure is carried alongside whatever data survived rather than instead
+ * of it: React Query keeps the previous answer when a refetch fails, and those
+ * indicators are stale rather than wrong. The reader is told the column may be
+ * incomplete either way.
  */
 export function usePurchaseLinkSummaries(
   transactions: readonly { id: string }[] | undefined
-): Map<string, TransactionLinkSummary> {
+): PurchaseLinkSummaries {
   const transactionIds = useMemo(
     () => (transactions ?? []).map((transaction) => transaction.id),
     [transactions]
@@ -112,11 +142,16 @@ export function usePurchaseLinkSummaries(
     queryFn: async () => fetchSummaries(transactionIds),
   });
 
-  return useMemo(
+  const byTransactionId = useMemo(
     () =>
       new Map(
         (query.data ?? []).map((summary) => [transactionIdOf(summary.transactionUri), summary])
       ),
     [query.data]
+  );
+
+  return useMemo(
+    () => ({ byTransactionId, unavailable: query.isError }),
+    [byTransactionId, query.isError]
   );
 }

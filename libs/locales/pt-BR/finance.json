@@ -71,6 +71,8 @@
   "transactions.purchaseLink.partlyConfirmedHint": "Parte do que esta transação pagou foi confirmada manualmente e parte foi correspondida automaticamente.",
   "transactions.purchaseLink.orders": "{{count}} pedidos",
   "transactions.purchaseLink.open": "Mostrar o que esta transação comprou",
+  "transactions.purchaseLink.unavailable": "Indisponível",
+  "transactions.purchaseLink.unavailableHint": "Não foi possível obter resposta de Compras, então esta coluna pode estar incompleta — uma célula vazia aqui não significa que a transação não tem pedido.",
 
   "budgets.failedToLoad": "Falha ao carregar orçamentos",
   "budgets.totalCount": "{{count}} orçamentos no total",

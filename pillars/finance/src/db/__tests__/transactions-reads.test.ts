@@ -1,50 +1,18 @@
 /**
  * Tests for {@link getLastImportInfo} — the import-staleness signal backing
- * the `/health` `import` fields. Against an in-memory SQLite seeded with the
- * canonical `transactions` DDL, same pattern as `transactions.test.ts`.
+ * the `/health` `import` fields. Against an in-memory SQLite carrying the
+ * migrated finance schema, same pattern as `transactions.test.ts`.
  */
-import Database from 'better-sqlite3';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { transactions } from '../schema/transactions.js';
 import { getLastImportInfo } from '../services/transactions-reads.js';
+import { freshMigratedFinanceDb } from './migrated-db.js';
 
 import type { FinanceDb } from '../services/internal.js';
 
-const TRANSACTIONS_DDL = `
-CREATE TABLE transactions (
-  id text PRIMARY KEY NOT NULL,
-  notion_id text,
-  description text NOT NULL,
-  account text NOT NULL,
-  amount_cents integer NOT NULL,
-  date text NOT NULL,
-  type text NOT NULL,
-  tags text NOT NULL DEFAULT '[]',
-  entity_id text,
-  entity_name text,
-  location text,
-  country text,
-  related_transaction_id text,
-  notes text,
-  foreign_amount_minor integer,
-  foreign_currency text,
-  fx_fee_cents integer,
-  checksum text,
-  raw_row text,
-  last_edited_time text NOT NULL,
-  match_type text,
-  match_rule_id text,
-  match_confidence real
-);
-`;
-
 function freshDb(): FinanceDb {
-  const raw = new Database(':memory:');
-  raw.pragma('foreign_keys = ON');
-  raw.exec(TRANSACTIONS_DDL);
-  return drizzle(raw);
+  return freshMigratedFinanceDb().db;
 }
 
 function insertTransaction(db: FinanceDb, id: string, lastEditedTime: string): void {

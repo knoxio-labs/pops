@@ -4173,7 +4173,8 @@
                               "sauce",
                               "dressing",
                               "drink",
-                              "condiment"
+                              "condiment",
+                              null
                             ],
                             "nullable": true,
                             "type": "string"
@@ -4723,7 +4724,7 @@
                                         "type": "string"
                                       },
                                       "suggestedKind": {
-                                        "enum": ["ingredient", "recipe", "prep_state"],
+                                        "enum": ["ingredient", "recipe", "prep_state", null],
                                         "nullable": true,
                                         "type": "string"
                                       }
@@ -9283,7 +9284,7 @@
                             "type": "string"
                           },
                           "suggestedKind": {
-                            "enum": ["ingredient", "recipe", "prep_state"],
+                            "enum": ["ingredient", "recipe", "prep_state", null],
                             "nullable": true,
                             "type": "string"
                           }
@@ -10300,7 +10301,7 @@
                             "type": "integer"
                           },
                           "temperatureUnit": {
-                            "enum": ["c", "f", "gas"],
+                            "enum": ["c", "f", "gas", null],
                             "nullable": true,
                             "type": "string"
                           },
@@ -11521,7 +11522,8 @@
                               "sauce",
                               "dressing",
                               "drink",
-                              "condiment"
+                              "condiment",
+                              null
                             ],
                             "nullable": true,
                             "type": "string"
