@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Button, PageHeader, formatDate } from '@pops/ui';
+import { PageHeader, formatDate } from '@pops/ui';
 
 import { AbsentDrillDown } from './merchant-lens/AbsentDrillDown.js';
 import { AttributionLegend } from './merchant-lens/AttributionLegend.js';
@@ -12,6 +12,7 @@ import {
   useMerchantLensModel,
   type MerchantLensModel,
 } from './merchant-lens/useMerchantLensModel.js';
+import { RetryableError } from './RetryableError.js';
 
 import type { ReactElement } from 'react';
 
@@ -59,13 +60,12 @@ function MerchantLensBody({ model }: { model: MerchantLensModel }): ReactElement
 
   if (model.state === 'failed') {
     return (
-      <div role="alert" className="border-destructive/50 bg-destructive/10 rounded-md border p-4">
-        <p className="mb-2 text-sm font-medium">{t('merchants.error.title')}</p>
-        <p className="text-muted-foreground mb-3 text-xs">{model.failure.message}</p>
-        <Button size="sm" variant="outline" onClick={model.refetch}>
-          {t('merchants.error.retry')}
-        </Button>
-      </div>
+      <RetryableError
+        title={t('merchants.error.title')}
+        message={model.failure.message}
+        retryLabel={t('merchants.error.retry')}
+        onRetry={model.refetch}
+      />
     );
   }
 
