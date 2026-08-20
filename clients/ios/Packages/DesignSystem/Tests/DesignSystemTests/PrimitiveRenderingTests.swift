@@ -90,11 +90,19 @@ internal struct PrimitiveRenderingTests {
     /// it drew the same as the outline it would be a parameter nobody could
     /// see.
     ///
-    /// It runs on the host lane too: the prominent variant also spans the
-    /// available width, which is a difference in shape rather than in colour.
+    /// Gated, and the reason is worth stating because the shape difference
+    /// makes it look as though it should not need to be: the prominent
+    /// variant does span the available width, but `render` above lays every
+    /// view over `popsBackground`, and where the catalogue did not compile
+    /// that fill, the button's own fill, its border and its label all resolve
+    /// to the same placeholder. A uniformly filled canvas is a uniformly
+    /// filled canvas whatever shape was drawn into it, so the width buys
+    /// nothing there. What survives an uncompiled catalogue on this suite is
+    /// a comparison with no background behind it, or one whose difference is
+    /// an image's own colour — `photoDrawsItsBytes` below is the second kind.
     @Test(
         "a prominent PopsButton does not draw like a standard one",
-        .comparisonSurvivesAnUncompiledCatalog)
+        .requiresCompiledColorCatalog)
     func prominentButtonIsDistinct() throws {
         let standard = try #require(Self.render(PopsButton("Pair") {}, in: .light))
         let prominent = try #require(
