@@ -447,6 +447,39 @@ describe('generate-nginx-conf', () => {
     });
   });
 
+  describe('request body limit', () => {
+    // nginx defaults client_max_body_size to 1m. The finance import posts the
+    // whole batch in one body — a two-year statement is ~1.3MB — so the default
+    // 413s a normal import before it reaches the pillar. The limit therefore has
+    // to be present in EVERY render path, not just the committed static file:
+    // production serves the dynamic render, and a cold boot with an unreachable
+    // registry serves the empty-upstream fallback.
+    const LIMIT = 'client_max_body_size 20m;';
+
+    it('is present in the static render', () => {
+      expect(renderNginxConf()).toContain(LIMIT);
+    });
+
+    it('is present in the committed nginx.conf', async () => {
+      const committed = await readFile(COMMITTED_CONF_PATH, 'utf8');
+      expect(committed).toContain(LIMIT);
+    });
+
+    it('is present in the dynamic render', async () => {
+      const transport = makeTransport(
+        PILLARS.map((id) => ({
+          pillarId: id,
+          baseUrl: `http://${PILLAR_UPSTREAMS[id].host}:${PILLAR_UPSTREAMS[id].port}`,
+        }))
+      );
+      expect(await renderNginxConfDynamic('http://registry-api:3001', transport)).toContain(LIMIT);
+    });
+
+    it('is present in the empty-registry boot fallback', () => {
+      expect(renderNginxConfFromUpstreams([])).toContain(LIMIT);
+    });
+  });
+
   describe('renderNginxConfDynamic', () => {
     it('emits a config that mirrors the static output when the registry advertises every known pillar', async () => {
       const transport = makeTransport(
