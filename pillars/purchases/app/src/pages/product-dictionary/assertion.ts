@@ -62,7 +62,9 @@ export function forgettingEndsNamedProduct(
   product: DictionaryProduct,
   alias: DictionaryAlias
 ): boolean {
-  return productIsNamed(product) && product.aliases.length === 1 && product.aliases[0]?.id === alias.id;
+  return (
+    productIsNamed(product) && product.aliases.length === 1 && product.aliases[0]?.id === alias.id
+  );
 }
 
 /**

@@ -605,7 +605,9 @@ describe('ProductDictionaryPage — the last wording of a product somebody named
         id: 'product-unnamed',
         label: 'MLK 2L',
         labelConfirmedAt: null,
-        aliases: [buildAlias({ id: 'alias-only', printedName: 'MLK 2L', normalisedName: 'mlk 2l' })],
+        aliases: [
+          buildAlias({ id: 'alias-only', printedName: 'MLK 2L', normalisedName: 'mlk 2l' }),
+        ],
       }),
     ]);
     renderDictionary();

@@ -97,37 +97,13 @@ export function AliasRow({
             {t('products.action.split')}
           </Button>
         )}
-        {forgetEndsNamedProduct ? (
-          <ArmedAction
-            arm={{
-              text: t('products.action.forgetWording'),
-              accessible: t('products.action.forgetWordingNamed', { wording }),
-            }}
-            confirm={{
-              text: t('products.action.forgetWordingConfirm'),
-              accessible: t('products.action.forgetWordingConfirmNamed', {
-                wording,
-                label: currentProductLabel,
-              }),
-            }}
-            cancel={{
-              text: t('products.action.forgetWordingCancel'),
-              accessible: t('products.action.forgetWordingCancelNamed', { wording }),
-            }}
-            isPending={isPending}
-            onConfirm={() => onEdit({ kind: 'forgetWordingWithProduct', aliasId: alias.id })}
-          />
-        ) : (
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={isPending}
-            aria-label={t('products.action.forgetWordingNamed', { wording })}
-            onClick={() => onEdit({ kind: 'forgetWording', aliasId: alias.id })}
-          >
-            {t('products.action.forgetWording')}
-          </Button>
-        )}
+        <ForgetWordingControl
+          alias={alias}
+          productLabel={currentProductLabel}
+          endsNamedProduct={forgetEndsNamedProduct}
+          isPending={isPending}
+          onEdit={onEdit}
+        />
 
         <MergeControl
           alias={alias}
@@ -137,6 +113,75 @@ export function AliasRow({
         />
       </div>
     </li>
+  );
+}
+
+interface ForgetWordingControlProps {
+  alias: DictionaryAlias;
+  productLabel: string;
+  /** True where this wording is the last one holding a named product up. */
+  endsNamedProduct: boolean;
+  isPending: boolean;
+  onEdit: (edit: DictionaryEdit) => void;
+}
+
+/**
+ * Forgetting one wording, which is one click until it is not recoverable.
+ *
+ * The recoverable case is the ordinary one: the next pass re-mints the entry
+ * from the lines that print it, and re-mints the product too where the product
+ * was only ever wearing that wording. What no pass rebuilds is a name a human
+ * typed, and the last wording reaching such a product is holding it up — the
+ * product is deleted in the same write that forgets the wording. There the
+ * control asks twice, exactly as forgetting the product does, and the second
+ * button names the product it takes rather than asking whether the reader
+ * means it.
+ */
+function ForgetWordingControl({
+  alias,
+  productLabel,
+  endsNamedProduct,
+  isPending,
+  onEdit,
+}: ForgetWordingControlProps): ReactElement {
+  const { t } = useTranslation('purchases');
+  const wording = alias.printedName;
+  const arm = {
+    text: t('products.action.forgetWording'),
+    accessible: t('products.action.forgetWordingNamed', { wording }),
+  };
+
+  if (!endsNamedProduct) {
+    return (
+      <Button
+        size="sm"
+        variant="outline"
+        disabled={isPending}
+        aria-label={arm.accessible}
+        onClick={() => onEdit({ kind: 'forgetWording', aliasId: alias.id })}
+      >
+        {arm.text}
+      </Button>
+    );
+  }
+
+  return (
+    <ArmedAction
+      arm={arm}
+      confirm={{
+        text: t('products.action.forgetWordingConfirm'),
+        accessible: t('products.action.forgetWordingConfirmNamed', {
+          wording,
+          label: productLabel,
+        }),
+      }}
+      cancel={{
+        text: t('products.action.forgetWordingCancel'),
+        accessible: t('products.action.forgetWordingCancelNamed', { wording }),
+      }}
+      isPending={isPending}
+      onConfirm={() => onEdit({ kind: 'forgetWordingWithProduct', aliasId: alias.id })}
+    />
   );
 }
 
