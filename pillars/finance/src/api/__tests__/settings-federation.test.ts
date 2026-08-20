@@ -2,7 +2,7 @@
  * Integration tests for finance's federated `/settings/*` surface.
  *
  * Boots the production `createFinanceApiApp` factory against a per-test temp
- * `finance.db` and drives the RU+reset surface over real HTTP via supertest:
+ * `finance.db` and drives the RU+reset surface over real HTTP via the shared test transport:
  * the `0056_settings_baseline.sql` migration creates the table, `listEffective`
  * resolves manifest defaults, update persists to finance's OWN database, reset
  * re-applies the default, and a free-form `set-many` addressing an undeclared
@@ -13,13 +13,13 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { financeKeyDefaults } from '../../contract/settings/key-defaults.js';
 import { openFinanceDb, type OpenedFinanceDb } from '../../db/index.js';
 import { createFinanceApiApp } from '../app.js';
 import { makeContactsFake } from './contacts-fake.js';
+import { requestOn } from './test-utils.js';
 
 let tmpDir: string;
 let financeDb: OpenedFinanceDb;
@@ -45,7 +45,7 @@ afterEach(() => {
 
 describe('finance federated /settings', () => {
   it('lists every declared key resolved to its manifest default', async () => {
-    const res = await request(app()).get('/settings');
+    const res = await requestOn(app(), (agent) => agent.get('/settings'));
     expect(res.status).toBe(200);
     const byKey = new Map<string, string>(
       (res.body.data as { key: string; value: string }[]).map((row) => [row.key, row.value])
@@ -56,38 +56,48 @@ describe('finance federated /settings', () => {
   });
 
   it('round-trips an update through finance.db and resets to the default', async () => {
-    const put = await request(app()).put('/settings/finance.defaultLimit').send({ value: '99' });
+    const put = await requestOn(app(), (agent) =>
+      agent.put('/settings/finance.defaultLimit').send({ value: '99' })
+    );
     expect(put.status).toBe(200);
     expect(put.body.data).toEqual({ key: 'finance.defaultLimit', value: '99' });
 
-    const afterSet = await request(app()).get('/settings/finance.defaultLimit');
+    const afterSet = await requestOn(app(), (agent) => agent.get('/settings/finance.defaultLimit'));
     expect(afterSet.body.data).toEqual({ key: 'finance.defaultLimit', value: '99' });
 
-    const reset = await request(app()).post('/settings/finance.defaultLimit/reset');
+    const reset = await requestOn(app(), (agent) =>
+      agent.post('/settings/finance.defaultLimit/reset')
+    );
     expect(reset.status).toBe(200);
     expect(reset.body.data).toEqual({ key: 'finance.defaultLimit', value: '50' });
 
-    const afterReset = await request(app()).get('/settings/finance.defaultLimit');
+    const afterReset = await requestOn(app(), (agent) =>
+      agent.get('/settings/finance.defaultLimit')
+    );
     expect(afterReset.body.data).toBeNull();
   });
 
   it('reset with no keys restores every declared key to its default', async () => {
-    await request(app()).put('/settings/finance.aiCategorizer.maxTokens').send({ value: '500' });
-    const reset = await request(app()).post('/settings/reset').send({});
+    await requestOn(app(), (agent) =>
+      agent.put('/settings/finance.aiCategorizer.maxTokens').send({ value: '500' })
+    );
+    const reset = await requestOn(app(), (agent) => agent.post('/settings/reset').send({}));
     expect(reset.status).toBe(200);
     expect([...reset.body.reset].toSorted()).toEqual([...financeKeyDefaults.keys].toSorted());
     expect(reset.body.settings['finance.aiCategorizer.maxTokens']).toBe('200');
   });
 
   it('rejects a set-many addressing an undeclared key with a 400', async () => {
-    const res = await request(app())
-      .post('/settings/set-many')
-      .send({ entries: [{ key: 'finance.notAThing', value: 'x' }] });
+    const res = await requestOn(app(), (agent) =>
+      agent.post('/settings/set-many').send({ entries: [{ key: 'finance.notAThing', value: 'x' }] })
+    );
     expect(res.status).toBe(400);
   });
 
   it('rejects a single-key write outside the declared enum with a 400', async () => {
-    const res = await request(app()).put('/settings/totally.unknown').send({ value: 'x' });
+    const res = await requestOn(app(), (agent) =>
+      agent.put('/settings/totally.unknown').send({ value: 'x' })
+    );
     expect(res.status).toBe(400);
   });
 });
