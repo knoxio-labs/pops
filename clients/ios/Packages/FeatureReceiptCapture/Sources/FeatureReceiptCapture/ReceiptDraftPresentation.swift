@@ -19,7 +19,7 @@ internal struct ReceiptDraftPresentation: Sendable {
         return ReceiptDraft(
             merchant: ReceiptDraftValue(extracted: extracted.merchantName),
             address: ReceiptDraftValue(extracted: extracted.address),
-            date: ReceiptDraftValue(extracted: date(extracted)),
+            date: ReceiptDraftValue(extracted: ReceiptPrintedDate.oneLine(extracted)),
             lines: lines(extracted.lines),
             adjustments: adjustments(extracted),
             total: ReceiptDraftValue(extracted: extracted.total),
@@ -53,15 +53,6 @@ internal struct ReceiptDraftPresentation: Sendable {
 }
 
 extension ReceiptDraftPresentation {
-    /// Date and time as one value, as the receipt printed them. Same rule the
-    /// read-only reading follows, and for the same reason: neither is parsed,
-    /// because both are transcriptions.
-    private func date(_ extracted: ExtractedReceipt) -> String? {
-        [extracted.purchasedOn, extracted.purchasedAt]
-            .compactMap { $0 }
-            .joined(separator: " ")
-    }
-
     /// One row per printed line, in printed order, identified by position —
     /// a receipt can print the same item twice, and two rows sharing an
     /// identity is a row that disappears under `ForEach`.

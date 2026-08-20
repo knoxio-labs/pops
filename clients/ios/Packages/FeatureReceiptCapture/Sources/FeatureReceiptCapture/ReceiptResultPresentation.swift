@@ -116,16 +116,8 @@ extension ReceiptResultPresentation {
         .compactMap { $0 }
     }
 
-    /// The date and time as one line, when the receipt states either. Neither
-    /// is reformatted through a `DateFormatter` — both arrive already in the
-    /// shape the receipt printed them, and re-parsing a string this model
-    /// only ever transcribes would risk showing something the paper never
-    /// said.
     private func date(_ extracted: ExtractedReceipt) -> String? {
-        [extracted.purchasedOn, extracted.purchasedAt]
-            .compactMap { $0 }
-            .joined(separator: " ")
-            .ifNotEmpty
+        ReceiptPrintedDate.oneLine(extracted)
     }
 
     private func amounts(_ amounts: [String]) -> String? {
@@ -171,6 +163,25 @@ extension ReceiptResultPresentation {
             return ReceiptResultContent.Field(
                 id: "gate-failure-\(index)", label: label, value: value.ifNotEmpty ?? label)
         }
+    }
+}
+
+/// The date and time the receipt printed, as one line.
+///
+/// Shared by the reading and the form rather than written out in each, so the
+/// value a reader checks against the paper and the value they edit are the
+/// same string. Two copies of this join is how a form comes to show a date the
+/// screen before it did not.
+///
+/// Neither half is reformatted through a `DateFormatter`: both arrive in the
+/// shape the receipt printed them, and re-parsing a string the model only ever
+/// transcribes would risk showing something the paper never said.
+internal enum ReceiptPrintedDate {
+    internal static func oneLine(_ extracted: ExtractedReceipt) -> String? {
+        [extracted.purchasedOn, extracted.purchasedAt]
+            .compactMap { $0 }
+            .joined(separator: " ")
+            .ifNotEmpty
     }
 }
 
