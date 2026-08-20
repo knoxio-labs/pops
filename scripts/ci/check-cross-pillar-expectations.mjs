@@ -231,6 +231,28 @@ export const EXPECTATIONS = [
     usedBy: 'pillars/bfm/src/api/purchases/client.ts',
   },
   {
+    consumer: 'bfm',
+    producer: 'purchases',
+    operationId: 'purchase.list',
+    path: '/purchases',
+    method: 'get',
+    // Only the two paging parameters. bfm asks for one row past the page and
+    // walks with an offset, because purchases exposes no keyset anchor; the
+    // filters beside these are the operator surface's, not the phone's.
+    query: ['limit', 'offset'],
+    usedBy: 'pillars/bfm/src/api/purchases/client.ts',
+  },
+  {
+    consumer: 'bfm',
+    producer: 'purchases',
+    operationId: 'purchase.get',
+    path: '/purchases/{id}',
+    method: 'get',
+    query: [],
+    pathParams: ['id'],
+    usedBy: 'pillars/bfm/src/api/purchases/client.ts',
+  },
+  {
     consumer: 'finance',
     producer: 'contacts',
     operationId: 'entities.list',
