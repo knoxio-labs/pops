@@ -66,8 +66,14 @@ interface RenameFormProps {
 }
 
 /**
- * The rename, which is only ever a relabelling: the wordings that resolve to
+ * The rename, which leaves every wording alone: the aliases that resolve to
  * the product are untouched, so nothing about which lines group here changes.
+ *
+ * It is not only a relabelling, though. Typing a name records that a human
+ * named the product, which puts the product beyond the proposal pass's reach
+ * — the pass will no longer retire the wordings that reach it, so it cannot
+ * be orphaned and swept away with a name nothing could reconstruct. Renaming
+ * again restates the name; forgetting the product is the only way back.
  *
  * An empty name is refused rather than sent. The contract trims and requires
  * one character, so a blank submission would be a 400 the reader caused by

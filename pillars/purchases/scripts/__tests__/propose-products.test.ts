@@ -16,6 +16,7 @@ import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { openTempDb } from '../../src/db/__tests__/helpers.js';
@@ -24,6 +25,7 @@ import {
   deletePurchase,
   listProducts,
   openPurchasesDb,
+  purchaseProducts,
   renameProduct,
   updateAlias,
   upsertSource,
@@ -111,7 +113,7 @@ describe('the preview, which is the default', () => {
     expect(printedNames()).toEqual(['CHK BRST 1KG', 'MILK 2L']);
   });
 
-  it('names a renamed product the retire would take with it', () => {
+  it('keeps a renamed product, and reports no deletion where the loss used to be', () => {
     createPurchase(opened.db, order('shop', ['CHK BRST 1KG']));
     const gone = createPurchase(opened.db, order('other', ['MILK 2L']));
     runProposalPass(opened.db, { write: true });
@@ -124,8 +126,37 @@ describe('the preview, which is the default', () => {
 
     const report = runProposalPass(opened.db, { write: false });
 
-    // The label a human wrote is the one loss re-running the pass cannot put
-    // back, and the retire line above it says only `MILK 2L`.
+    // A name is the one thing here re-running the pass cannot put back, so
+    // the wording reaching it is held back and the product is never orphaned
+    // — where the `MILK 2L` entry alone would otherwise have retired.
+    expect(report.outcome.retired).toBe(0);
+    expect(report.deletedProducts).toEqual([]);
+    expect(printedNames()).toEqual(['CHK BRST 1KG', 'MILK 2L']);
+    expect(describePassReport(report, { path: '/data/purchases.db', write: false })).not.toContain(
+      'Full-cream milk 2L'
+    );
+  });
+
+  it('names a deleted product the retire lines do not spell', () => {
+    createPurchase(opened.db, order('shop', ['CHK BRST 1KG']));
+    const gone = createPurchase(opened.db, order('other', ['MILK 2L']));
+    runProposalPass(opened.db, { write: true });
+    const milk = listProducts(opened.db).find(({ aliases }) =>
+      aliases.some((alias) => alias.printedName === 'MILK 2L')
+    );
+    if (milk === undefined) throw new Error('the pass minted no entry for the milk');
+    // The label is edited behind the writer's back, so no naming marker is
+    // recorded: the state the report exists to catch, and the one the pass
+    // is meant never to produce on its own.
+    opened.db
+      .update(purchaseProducts)
+      .set({ label: 'Full-cream milk 2L' })
+      .where(eq(purchaseProducts.id, milk.product.id))
+      .run();
+    deletePurchase(opened.db, gone);
+
+    const report = runProposalPass(opened.db, { write: false });
+
     expect(report.deletedProducts).toEqual(['Full-cream milk 2L']);
     expect(describePassReport(report, { path: '/data/purchases.db', write: false })).toContain(
       'delete product "Full-cream milk 2L"'

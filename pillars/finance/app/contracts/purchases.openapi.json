@@ -1148,9 +1148,14 @@
                           },
                           "label": {
                             "type": "string"
+                          },
+                          "labelConfirmedAt": {
+                            "nullable": true,
+                            "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+                            "type": "string"
                           }
                         },
-                        "required": ["id", "label", "createdAt", "aliases"],
+                        "required": ["id", "label", "labelConfirmedAt", "createdAt", "aliases"],
                         "type": "object"
                       },
                       "type": "array"
@@ -1585,9 +1590,14 @@
                     },
                     "label": {
                       "type": "string"
+                    },
+                    "labelConfirmedAt": {
+                      "nullable": true,
+                      "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+                      "type": "string"
                     }
                   },
-                  "required": ["id", "label", "createdAt", "aliases"],
+                  "required": ["id", "label", "labelConfirmedAt", "createdAt", "aliases"],
                   "type": "object"
                 }
               }

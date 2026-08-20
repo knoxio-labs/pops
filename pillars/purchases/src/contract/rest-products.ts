@@ -61,6 +61,13 @@ export const ProductSchema = z.object({
    * proposal wears a till's abbreviation until somebody types the real name.
    */
   label: z.string(),
+  /**
+   * When a human named it. Null means the label is still the wording that
+   * minted the product, and the pass may retire that wording and delete the
+   * product with it; non-null means the product outlives its wordings going
+   * out of print.
+   */
+  labelConfirmedAt: IsoTimestampSchema.nullable(),
   createdAt: IsoTimestampSchema,
   /**
    * Every wording that resolves to this product, normalised name ascending.

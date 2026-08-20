@@ -47,6 +47,17 @@ export const purchaseProducts = sqliteTable('purchase_products', {
    * abbreviation until somebody types the real name.
    */
   label: text('label').notNull(),
+  /**
+   * When a human named it, and NULL while the label is still the till's.
+   *
+   * The alias marker cannot stand in for this one. `confirmedAt` says *this
+   * wording is that product*, which is a claim about the wording; typing a
+   * name is a claim about the product, and the two are made separately. A
+   * product carrying this marker is out of the proposal pass's reach the same
+   * way a confirmed wording is: the pass does not retire the wordings that
+   * reach it, so the name outlives the printing that prompted it.
+   */
+  labelConfirmedAt: text('label_confirmed_at'),
   createdAt: text('created_at')
     .notNull()
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
