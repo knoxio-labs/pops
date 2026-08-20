@@ -18,10 +18,13 @@
  * - swap `'127.0.0.1'` for the wildcard in `server.listen(0, …)` and the
  *   bound-address assertion fails;
  * - replace the header dispatch with a module-global "most recently bound
- *   app" and the concurrency test fails: three in-flight requests all come
- *   back from whichever app was bound last. The sequential interleaving test
- *   above it survives that swap — every call there awaits before the next
- *   begins, so the global happens to be right — which is why both exist;
+ *   app" — set on every `requestOn` call, not only on first registration —
+ *   and two tests fail: the concurrency one, where three in-flight requests
+ *   all come back from whichever app was bound last, and the last one in the
+ *   file, because a global has no registration to refuse. The sequential
+ *   interleaving test survives that swap — every call there awaits before the
+ *   next begins, so the global happens to be right — which is why both
+ *   interleaving tests exist;
  * - drop `.set(APP_HEADER, id)` from any single verb in the returned table and
  *   the verb test fails on that verb with the transport's own 500.
  *
