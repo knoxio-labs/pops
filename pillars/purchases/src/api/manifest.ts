@@ -37,6 +37,7 @@ const PURCHASES_NAV: NavConfigDescriptor = {
     { path: '', label: 'Reconcile', labelKey: 'purchases.reconcile', icon: 'receipt' },
     { path: '/merchants', label: 'Merchants', labelKey: 'purchases.merchants', icon: 'building-2' },
     { path: '/receipts', label: 'Receipts', labelKey: 'purchases.receipts', icon: 'file-text' },
+    { path: '/products', label: 'Products', labelKey: 'purchases.products', icon: 'package' },
   ],
 };
 
@@ -54,6 +55,7 @@ const PURCHASES_PAGES: readonly PageDescriptor[] = [
   { path: '', index: true, bundleSlot: 'purchases-reconcile' },
   { path: 'merchants', bundleSlot: 'purchases-merchants' },
   { path: 'receipts', bundleSlot: 'purchases-receipts' },
+  { path: 'products', bundleSlot: 'purchases-products' },
 ];
 
 /**

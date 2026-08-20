@@ -45,6 +45,7 @@ describe('buildPurchasesManifest', () => {
       { path: '', index: true, bundleSlot: 'purchases-reconcile' },
       { path: 'merchants', bundleSlot: 'purchases-merchants' },
       { path: 'receipts', bundleSlot: 'purchases-receipts' },
+      { path: 'products', bundleSlot: 'purchases-products' },
     ]);
   });
 

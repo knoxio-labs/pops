@@ -1,0 +1,169 @@
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+
+import { Button, TextInput } from '@pops/ui';
+
+import type { FormEvent, ReactElement } from 'react';
+
+import type { DictionaryEdit, DictionaryProduct } from './types.js';
+
+interface ProductLabelEditorProps {
+  product: DictionaryProduct;
+  isPending: boolean;
+  onEdit: (edit: DictionaryEdit) => void;
+}
+
+/**
+ * The product's name, and the two writes that act on the product itself.
+ *
+ * A proposal wears whichever till abbreviation minted it until somebody types
+ * the real name, so renaming is the ordinary first correction rather than a
+ * rare one, and it is offered inline.
+ */
+export function ProductLabelEditor({
+  product,
+  isPending,
+  onEdit,
+}: ProductLabelEditorProps): ReactElement {
+  const { t } = useTranslation('purchases');
+  const [draftLabel, setDraftLabel] = useState<string | null>(null);
+
+  if (draftLabel !== null) {
+    return (
+      <RenameForm
+        product={product}
+        draftLabel={draftLabel}
+        isPending={isPending}
+        onDraft={setDraftLabel}
+        onEdit={onEdit}
+      />
+    );
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <h3 className="text-base font-medium">{product.label}</h3>
+      <Button
+        size="sm"
+        variant="outline"
+        disabled={isPending}
+        aria-label={t('products.action.renameNamed', { label: product.label })}
+        onClick={() => setDraftLabel(product.label)}
+      >
+        {t('products.action.rename')}
+      </Button>
+      <ForgetProductButtons product={product} isPending={isPending} onEdit={onEdit} />
+    </div>
+  );
+}
+
+interface RenameFormProps {
+  product: DictionaryProduct;
+  draftLabel: string;
+  isPending: boolean;
+  onDraft: (label: string | null) => void;
+  onEdit: (edit: DictionaryEdit) => void;
+}
+
+/**
+ * The rename, which is only ever a relabelling: the wordings that resolve to
+ * the product are untouched, so nothing about which lines group here changes.
+ *
+ * An empty name is refused rather than sent. The contract trims and requires
+ * one character, so a blank submission would be a 400 the reader caused by
+ * pressing a button that looked available.
+ */
+function RenameForm({
+  product,
+  draftLabel,
+  isPending,
+  onDraft,
+  onEdit,
+}: RenameFormProps): ReactElement {
+  const { t } = useTranslation('purchases');
+
+  function submit(event: FormEvent): void {
+    event.preventDefault();
+    const label = draftLabel.trim();
+    if (label === '') return;
+    onEdit({ kind: 'rename', productId: product.id, label });
+    onDraft(null);
+  }
+
+  return (
+    <form onSubmit={submit} className="flex flex-wrap items-end gap-2">
+      <TextInput
+        aria-label={t('products.action.renameLabel', { label: product.label })}
+        containerClassName="max-w-sm"
+        value={draftLabel}
+        onChange={(event) => onDraft(event.target.value)}
+      />
+      <Button size="sm" type="submit" disabled={isPending || draftLabel.trim() === ''}>
+        {t('products.action.renameSave')}
+      </Button>
+      <Button size="sm" variant="outline" type="button" onClick={() => onDraft(null)}>
+        {t('products.action.renameCancel')}
+      </Button>
+    </form>
+  );
+}
+
+interface ForgetProductButtonsProps {
+  product: DictionaryProduct;
+  isPending: boolean;
+  onEdit: (edit: DictionaryEdit) => void;
+}
+
+/**
+ * Forgetting a product asks twice.
+ *
+ * Every other correction on this page is recoverable — the pass re-mints a
+ * forgotten wording, a split undoes a merge — but this one takes every wording
+ * with it, assertions included, and re-running the pass afterwards restores
+ * the proposals without the decisions. A misclick that discards somebody's
+ * work silently is what the second click is for.
+ */
+function ForgetProductButtons({
+  product,
+  isPending,
+  onEdit,
+}: ForgetProductButtonsProps): ReactElement {
+  const { t } = useTranslation('purchases');
+  const [armed, setArmed] = useState(false);
+
+  if (!armed) {
+    return (
+      <Button
+        size="sm"
+        variant="outline"
+        disabled={isPending}
+        aria-label={t('products.action.forgetProductNamed', { label: product.label })}
+        onClick={() => setArmed(true)}
+      >
+        {t('products.action.forgetProduct')}
+      </Button>
+    );
+  }
+
+  return (
+    <>
+      <Button
+        size="sm"
+        variant="destructive"
+        disabled={isPending}
+        aria-label={t('products.action.forgetProductConfirmNamed', { label: product.label })}
+        onClick={() => onEdit({ kind: 'forgetProduct', productId: product.id })}
+      >
+        {t('products.action.forgetProductConfirm')}
+      </Button>
+      <Button
+        size="sm"
+        variant="outline"
+        aria-label={t('products.action.forgetProductCancelNamed', { label: product.label })}
+        onClick={() => setArmed(false)}
+      >
+        {t('products.action.forgetProductCancel')}
+      </Button>
+    </>
+  );
+}

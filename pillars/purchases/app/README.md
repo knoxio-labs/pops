@@ -216,6 +216,82 @@ wrapper is the one kept because it is the only mechanism that reaches every
 outcome (`created`, `duplicate`, `needs-review`, `unreadable` never had a
 role of their own; only `uploading` and `refused` did).
 
+## The product dictionary
+
+`/purchases/products` is the correction loop for what the pillar has learned
+about product identity. Two of the three shipped adapters state no product
+identifier at all, so for their lines a printed wording is the only evidence of
+identity there is; `purchase_products` and `purchase_product_aliases` are where
+that evidence is written down, and this page is where a person reads it and
+takes it back.
+
+**The undo paths are the point, not a footnote.** An entry can be wrong — two
+products a merchant prints identically cannot be told apart, which the pillar
+states as a limitation rather than a bug — so a dictionary whose corrections
+are unreachable does not improve, it drifts. Every write the contract offers is
+on the page, each beside the thing it undoes:
+
+| the mistake          | the control                                               |
+| -------------------- | --------------------------------------------------------- |
+| a wrong merge        | **Give it its own product** — `productId: null`           |
+| a wrong confirmation | **Retract** — `confirmed: false`                          |
+| a wrong entry        | **Forget this wording** — the lines fall back to the name |
+| a wrong product      | **Forget this product** — takes every wording with it     |
+
+**A correction reaches every order already stored, and the page says so.**
+Nothing here is written to a line: a product's grouping is resolved fresh on
+every read, so pointing two wordings at one product changes what the
+product-grain aggregate reports about the past as well as the future — order
+counts, cadence and unit-price history are recomputed under the new grouping
+the next time anything reads them. Nothing is backfilled because nothing needs
+to be. The one thing a correction does **not** revisit is a line's item kind:
+that pass writes its decision onto the line and only ever reads unclassified
+ones, so a regrouping made afterwards does not re-open a kind already decided.
+
+**Provenance is shown wherever an entry is.** `confirmedAt` is the whole
+boundary between a pass and a person, so every wording says which it is, and a
+product reads asserted only where **every** wording reaching it was asserted —
+the rule `GET /analytics/product-leaderboard` uses one layer down. A product
+still holding one proposal reads _part asserted_ and lands on the unfinished
+side of the filter, because half a merge presented as a fact is the error the
+table was built to prevent.
+
+**Filtering is done over the loaded set, not sent to the server.** `GET
+/products` carries no `limit` on purpose — a truncated dictionary is
+indistinguishable from one whose missing wordings simply have no entry — so the
+read is the whole table, and `product-dictionary/assertion.ts` mirrors
+`listProducts`'s own rule against it. That keeps the source picker offering
+every source rather than only the ones that survived its last answer, and keeps
+the badge and the filter derived from one rule instead of two that can
+disagree.
+
+**Not a keyboard inbox.** The reconcile queue is one listbox because its rows
+are a keystroke each and hold nothing to click. A correction here picks a target
+out of the whole dictionary, so rows carry controls and the list is an ordinary
+one. Each control names the wording or product it acts on in its accessible
+name — the visible label is just the verb — because a hundred buttons called
+"Assert" are indistinguishable to anyone navigating by control.
+
+**Forgetting a product asks twice.** Every other correction is recoverable: the
+pass re-mints a forgotten wording, a split undoes a merge. This one takes the
+assertions with it, and re-running the pass restores the proposals without the
+decisions.
+
+**A rename is not protection.** `confirmedAt` marks the wording, not the
+product, so a product every wording of which is still a proposal is deleted
+along with its last one — the name somebody typed goes with it. The page says
+that on every proposed entry rather than letting a rename read as a decision
+the pass will respect.
+
+### Running the pass
+
+The panel at the top runs `POST /products/proposals` and reports its whole
+`ProposalOutcome` — lines read, distinct wordings, entries minted, entries
+retired, entries left alone. `retired` is reported rather than folded into a
+success message: a run takes back the unasserted entries no line prints any
+more, which can include a proposal the reader was about to act on. Nothing runs
+the pass on a schedule; it runs when the button is pressed.
+
 ## Layout
 
 ```
@@ -224,6 +300,7 @@ src/
   manifest.ts                      ModuleManifest (id='purchases')
   routes.tsx                       route table + navConfig
   facts.tsx                        one labelled value, saying what its absence means
+  pages/RetryableError.tsx         a read that failed, and the retry it earns
   purchases-api/                   generated Hey API client (do not hand-edit)
   purchases-api-helpers.ts         unwrap() for the generated {data,error} results
   purchases-api-runtime-config.ts  client baseUrl ('/purchases-api')
@@ -280,6 +357,18 @@ src/
       OutcomePanel.tsx             one panel per outcome, kept apart
       OutcomeParts.tsx             the panel frame, a labelled reading, the stored uris
       ExtractedReading.tsx         what the model read, verbatim
+    ProductDictionaryPage.tsx      /purchases/products — the learned dictionary
+    product-dictionary/
+      types.ts                     view types aliased off the generated client
+      assertion.ts                 who owns an entry, and the filter rule it shares
+      useProductDictionary.ts      GET /products, whole and unfiltered
+      useProposalPass.ts           POST /products/proposals, and what it changed
+      useDictionaryEdits.ts        the corrections, and the refetch each one needs
+      DictionaryFilters.tsx        source, and which side of the assertion split
+      ProposalPassPanel.tsx        running the pass, and reading its outcome
+      ProductEntry.tsx             one product, its provenance, its wordings
+      ProductLabelEditor.tsx       rename, and the two-step forget
+      AliasRow.tsx                 one wording, and every way of correcting it
 ```
 
 The generated client under `src/purchases-api/` is produced from
