@@ -208,6 +208,11 @@ async function postWithInvoices(
  * A repeat is printed as its own count rather than folded into the successes,
  * because "already there" and "just written" are what tell an operator whether
  * this run changed anything.
+ *
+ * An order in neither the run nor the database fails the run and is named in
+ * full. Its invoices reached no row, so `settle` takes their bytes back off
+ * the volume — evidence dropped, one line each, and a non-zero exit so an
+ * unattended run does not read as a success.
  */
 function reportAttachExisting({
   matchedOrders,
@@ -222,11 +227,12 @@ function reportAttachExisting({
   if (unknownOrders.length > 0) {
     console.warn(
       `${String(unknownOrders.length)} matched order(s) are in neither this run nor the ` +
-        `database: ${unknownOrders.slice(0, 10).join(', ')}`
+        `database, and their invoices were dropped:`
     );
+    for (const sourceOrderId of unknownOrders) console.warn(`  ${sourceOrderId}`);
   }
   for (const failure of attach.failures.slice(0, 10)) console.error(`  ${failure}`);
-  if (attach.failures.length > 0) process.exitCode = 1;
+  if (attach.failures.length > 0 || unknownOrders.length > 0) process.exitCode = 1;
 }
 
 /**

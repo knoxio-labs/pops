@@ -247,7 +247,7 @@ function insertDocument(ctx: IngestContext, input: CreateDocumentInput): void {
     purchaseId: ctx.purchase.id,
     shipmentId: shipmentIdFor(ctx, input.shipmentRef),
     documentUri: input.documentUri,
-    kind: input.kind ?? 'other',
+    kind: input.kind,
     createdAt: ctx.now,
   });
 }

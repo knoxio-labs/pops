@@ -197,10 +197,7 @@ export const CreateDocumentBodySchema = z.object({
  * that belongs to one delivery rather than the whole order can only be
  * attached at ingest today.
  */
-export const AttachDocumentBodySchema = z.object({
-  documentUri: PopsUriSchema,
-  kind: DocumentKindSchema.optional(),
-});
+export const AttachDocumentBodySchema = CreateDocumentBodySchema.omit({ shipmentRef: true });
 
 export const CreatePurchaseBodySchema = z.object({
   source: z.string().trim().min(1),

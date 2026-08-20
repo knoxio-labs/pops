@@ -21,21 +21,28 @@ import { expectRow, nowIso, type PurchasesDb } from './internal.js';
 import type { DocumentKind } from '../../contract/constants.js';
 import type { PurchaseDocumentRow } from '../schema.js';
 
-/** The values a `purchase_documents` row is built from, with nothing defaulted. */
+/**
+ * The values a `purchase_documents` row is built from. Only `kind` is
+ * defaulted, and only here.
+ */
 export interface PurchaseDocumentValues {
   readonly purchaseId: string;
   readonly shipmentId: string | null;
   readonly documentUri: string;
-  readonly kind: DocumentKind;
+  readonly kind?: DocumentKind | undefined;
   readonly createdAt: string;
 }
 
-/** The one insert into `purchase_documents`. */
+/** The one insert into `purchase_documents`, and the one place `kind` defaults. */
 export function insertPurchaseDocument(
   tx: PurchasesDb,
   values: PurchaseDocumentValues
 ): PurchaseDocumentRow {
-  const rows = tx.insert(purchaseDocuments).values(values).returning().all();
+  const rows = tx
+    .insert(purchaseDocuments)
+    .values({ ...values, kind: values.kind ?? 'other' })
+    .returning()
+    .all();
   return expectRow(rows, 'insertPurchaseDocument');
 }
 
@@ -55,9 +62,10 @@ export interface AttachDocumentInput {
  *   that URI. A backfill re-run is expected to land here for every document
  *   it attached last time, which is what makes running it twice a no-op.
  *
- * The read and the write are in one transaction, so the pre-check cannot be
- * overtaken between deciding and inserting. `uq_purchase_documents` is still
- * the guarantee — this only decides which error describes the collision.
+ * `uq_purchase_documents` is the guarantee, not the pre-check. Two callers on
+ * separate connections can both read no row and only one of them can write:
+ * the loser fails on the write, not here. The pre-check decides which error
+ * describes the collision in the sequential case a backfill re-run is.
  */
 export function attachDocument(
   db: PurchasesDb,
@@ -92,7 +100,7 @@ export function attachDocument(
       purchaseId,
       shipmentId: null,
       documentUri: input.documentUri,
-      kind: input.kind ?? 'other',
+      kind: input.kind,
       createdAt: nowIso(),
     });
   });

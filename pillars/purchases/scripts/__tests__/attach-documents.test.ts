@@ -79,6 +79,16 @@ it('leaves out an order the merchant never named', async () => {
   expect([...ids]).toEqual([['order-1', 'named']]);
 });
 
+it('refuses to walk forever when the index answers the same full page again', async () => {
+  // A server or proxy that ignores `offset` answers page one forever. The
+  // walk only ends on a short page, so without this it never ends at all.
+  const repeated = fullPage('a');
+  stubPages([repeated, repeated, repeated]);
+
+  await expect(fetchPurchaseIdsBySourceOrderId(CLIENT, 'amazon')).rejects.toThrow(/offset/u);
+  expect(urls).toHaveLength(2);
+});
+
 it('refuses to return a partial map when a page cannot be read', async () => {
   // A partial map is indistinguishable from a bundle naming orders that are
   // not in the database, and the run would report the evidence as

@@ -46,15 +46,18 @@ const OrderPageSchema = z.object({
  * Orders carrying no `sourceOrderId` are left out: they cannot be named by an
  * export bundle, which is the only thing this map is used to answer.
  *
- * @throws When a page cannot be read. A partial map would look like a bundle
- *   naming orders that are not in the database, and the run would report the
- *   evidence as unattachable rather than as unread.
+ * @throws When a page cannot be read, or when a full page repeats rows the
+ *   walk has already seen — a server or proxy ignoring `offset` answers the
+ *   same page forever, which would otherwise loop without bound. A partial
+ *   map would look like a bundle naming orders that are not in the database,
+ *   and the run would report the evidence as unattachable rather than unread.
  */
 export async function fetchPurchaseIdsBySourceOrderId(
   client: IngestClient,
   source: string
 ): Promise<ReadonlyMap<string, string>> {
   const ids = new Map<string, string>();
+  const seenRows = new Set<string>();
 
   for (let offset = 0; ; offset += ORDER_PAGE_SIZE) {
     const query = new URLSearchParams({
@@ -71,10 +74,22 @@ export async function fetchPurchaseIdsBySourceOrderId(
     }
 
     const { items } = OrderPageSchema.parse(await response.json());
+    let fresh = 0;
     for (const { id, sourceOrderId } of items) {
+      if (seenRows.has(id)) continue;
+      seenRows.add(id);
+      fresh += 1;
       if (sourceOrderId !== null) ids.set(sourceOrderId, id);
     }
     if (items.length < ORDER_PAGE_SIZE) return ids;
+    // Row ids rather than the map: a full page of orders the merchant never
+    // named adds nothing to the map and is still honest paging.
+    if (fresh === 0) {
+      throw new Error(
+        `the ${source} order index returned a full page of orders already seen at ` +
+          `offset ${String(offset)}; it is not honouring offset and the walk cannot finish`
+      );
+    }
   }
 }
 

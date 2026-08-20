@@ -172,6 +172,31 @@ it('names an order whose invoice matched but which is in neither the run nor the
   expect(attachRequests()).toEqual([]);
   expect(warnings()).toContain(KNOWN_ORDER);
   expect(warnings()).toContain('in neither this run nor the database');
+  // Their bytes come back off the volume, so the run dropped evidence and
+  // an unattended one must not read as a success.
+  expect(process.exitCode).toBe(1);
+});
+
+it('names every dropped order, not the first ten, and fails the run', async () => {
+  // The operator's next move is a ticket per order, so a list truncated at
+  // ten is a list they cannot act on. The live bundle names 250 orders.
+  const dropped = Array.from(
+    { length: 12 },
+    (_, index) => `503-1631401-27894${String(index).padStart(2, '0')}`
+  );
+  parseMock.mockReturnValue({ orders: dropped.map(orderNamed), anomalies: [] });
+  stubPillar([]);
+
+  await main([
+    bundleWith(
+      Object.fromEntries(dropped.map((order, index) => [`${String(index)}.pdf`, invoiceFor(order)]))
+    ),
+    '--attach-existing',
+  ]);
+
+  const printed = warnings();
+  for (const order of dropped) expect(printed).toContain(order);
+  expect(process.exitCode).toBe(1);
 });
 
 it('fails the run when an attach is refused', async () => {
