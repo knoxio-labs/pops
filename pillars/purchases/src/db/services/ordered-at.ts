@@ -40,6 +40,7 @@
 import { gte, lte } from 'drizzle-orm';
 
 import { IsoTimestampSchema } from '../../contract/schemas/purchase.js';
+import { parseUtcOffsetMinutes } from '../../ingest/local-time.js';
 import { purchases } from '../schema.js';
 
 import type { SQL } from 'drizzle-orm';
@@ -67,6 +68,36 @@ export function canonicalInstant(value: string): string | null {
   if (!IsoTimestampSchema.safeParse(value).success) return null;
   const parsed = new Date(value);
   return Number.isFinite(parsed.getTime()) ? parsed.toISOString() : null;
+}
+
+/**
+ * Minutes ahead of UTC that a timestamp was WRITTEN at, or null when it
+ * names no place.
+ *
+ * The other half of {@link canonicalInstant}. Canonicalising is what makes a
+ * text comparison on this column a chronological one, and the offset is
+ * precisely what it discards to get there — so a caller who wrote
+ * `2026-08-21T09:00:00+10:00` has said both when the order happened and
+ * where, and only the first survives the write. Read here so the second can
+ * be stored beside it, because the calendar day a person would put on that
+ * order is the 21st and the canonical instant alone answers the 20th.
+ *
+ * `Z` is null and NOT zero. Zero is a claim about a place — Greenwich — and
+ * a caller spelling UTC has made no such claim; they stated an instant. The
+ * distinction reaches a phone: null leaves the reader naming the only day
+ * the value supports, while a stored zero would assert the UTC day is the
+ * local one and stop any later backfill from telling the two apart.
+ *
+ * Shape-checked before it is read, so a value the contract would refuse
+ * cannot yield an offset here, and the token itself goes through the one
+ * parser the capture leg uses — which carries the ±14:00 bound the column
+ * CHECKs. ISO-8601 admits `+18:00`; no zone does, and storing it would fail
+ * the constraint and take the whole ingest down with it.
+ */
+export function spelledOffsetMinutes(value: string): number | null {
+  if (!IsoTimestampSchema.safeParse(value).success) return null;
+  const token = value.slice(-6);
+  return /^[+-]\d{2}:\d{2}$/u.test(token) ? parseUtcOffsetMinutes(token) : null;
 }
 
 /**

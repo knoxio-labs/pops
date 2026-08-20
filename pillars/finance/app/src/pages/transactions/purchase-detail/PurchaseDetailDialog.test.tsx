@@ -88,6 +88,9 @@ function entry(id: string, charges: LinkedCharge[], totalCents = 4128): LinkedPu
       merchantEntityId: null,
       merchantEntityName: 'Amazon',
       orderedAt: '2026-03-04T00:00:00.000Z',
+      // An export states an instant and no place, so there is no offset to
+      // record. Null rather than 0, which would claim Greenwich.
+      orderedAtOffsetMinutes: null,
       paymentHint: null,
       rawRef: null,
       settlementMode: 'card',

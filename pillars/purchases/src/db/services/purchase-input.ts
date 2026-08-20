@@ -142,6 +142,14 @@ export interface CreatePurchaseInput {
   readonly sourceOrderId?: string | null;
   readonly ingestMethod: IngestMethod;
   readonly orderedAt: string;
+  /**
+   * Minutes ahead of UTC where the order was placed, at `orderedAt`.
+   *
+   * Supplied by the adapters that resolve a printed wall clock and so know
+   * the offset they resolved it against. Omitted by the ones whose source
+   * states an instant, which never knew one.
+   */
+  readonly orderedAtOffsetMinutes?: number | null;
   readonly currency: string;
   readonly subtotalCents?: number;
   readonly shippingCents?: number;

@@ -24,6 +24,7 @@ import {
   findPurchaseAtInstantForAmount,
   listPurchases,
   listSolvableCharges,
+  spelledOffsetMinutes,
   UnreadableOrderedAtBoundError,
 } from '../index.js';
 import { openTempDb, seedWoolworthsSource } from './helpers.js';
@@ -142,6 +143,75 @@ describe('writing an order', () => {
     });
 
     expect(found?.checksum).toBe('first');
+  });
+});
+
+/**
+ * Canonicalising is what makes a text comparison on this column a
+ * chronological one, and the offset is what it spends to get there. A
+ * caller writing `2026-08-21T09:00:00+10:00` has stated both when the order
+ * happened and where; only the first survives the rewrite, and the calendar
+ * day a person would put on that order is not recoverable from what is
+ * left. So the offset is read off the caller's spelling and kept beside the
+ * instant, before the spelling is gone.
+ */
+describe('the offset a caller spelled, which canonicalising discards', () => {
+  function storedOffset(id: string): number | null {
+    const row = opened.raw
+      .prepare(`SELECT ordered_at_offset_minutes AS offset FROM purchases WHERE id = ?`)
+      .get(id) as { offset: number | null };
+    return row.offset;
+  }
+
+  it('reads a positive offset off the spelling', () => {
+    expect(spelledOffsetMinutes('2026-08-21T09:00:00+10:00')).toBe(600);
+  });
+
+  it('reads a negative one', () => {
+    expect(spelledOffsetMinutes('2026-08-20T19:00:00-07:00')).toBe(-420);
+  });
+
+  it('reads a half-hour zone, which whole-hour arithmetic would round away', () => {
+    expect(spelledOffsetMinutes('2026-08-21T09:00:00+05:30')).toBe(330);
+  });
+
+  it('answers null for a UTC spelling rather than claiming Greenwich', () => {
+    // Zero is a place. A caller writing `Z` stated an instant and named no
+    // place at all, and storing 0 would assert the UTC day IS the local one
+    // — indistinguishable, later, from an order genuinely placed in London.
+    expect(spelledOffsetMinutes('2026-08-20T23:00:00.000Z')).toBeNull();
+  });
+
+  it('answers null for an offset no zone has ever been on', () => {
+    // ISO-8601 admits it; the column's CHECK does not. Reading it would
+    // turn one odd timestamp into a constraint failure that loses the
+    // entire ingest.
+    expect(spelledOffsetMinutes('2026-08-21T09:00:00+18:00')).toBeNull();
+  });
+
+  it('keeps the offset of an order whose instant it just rewrote', () => {
+    const id = createPurchase(opened.db, order('sydney', '2026-08-21T09:00:00+10:00'));
+
+    expect(storedOrderedAt(id)).toBe('2026-08-20T23:00:00.000Z');
+    expect(storedOffset(id)).toBe(600);
+  });
+
+  it('stores no offset for an order stated as an instant', () => {
+    const id = createPurchase(opened.db, order('utc-only', '2026-08-20T23:00:00.000Z'));
+
+    expect(storedOffset(id)).toBeNull();
+  });
+
+  it('prefers an offset the adapter resolved over the one the spelling implies', () => {
+    // The receipt leg resolves a zone from photograph evidence and hands
+    // the offset over explicitly. That answer knows about DST; a suffix
+    // only repeats whatever the caller typed.
+    const id = createPurchase(opened.db, {
+      ...order('explicit', '2026-08-20T23:00:00.000Z'),
+      orderedAtOffsetMinutes: 600,
+    });
+
+    expect(storedOffset(id)).toBe(600);
   });
 });
 

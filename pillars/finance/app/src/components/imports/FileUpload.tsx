@@ -43,6 +43,7 @@ function useDragHandlers(handleFiles: (files: File[]) => void) {
 }
 
 interface SelectionLimits {
+  acceptedTypes: string;
   maxSizeMB: number;
   maxTotalSizeMB: number;
   initialFiles: File[];
@@ -50,6 +51,7 @@ interface SelectionLimits {
 }
 
 function useFileSelection({
+  acceptedTypes,
   maxSizeMB,
   maxTotalSizeMB,
   initialFiles,
@@ -67,6 +69,7 @@ function useFileSelection({
       const result = acceptFiles({
         incoming,
         existing: selectedFiles,
+        acceptedTypes,
         maxSizeBytes: maxSizeMB * 1024 * 1024,
         maxSizeMB,
         maxTotalSizeBytes: maxTotalSizeMB * 1024 * 1024,
@@ -76,7 +79,7 @@ function useFileSelection({
       setErrors(result.errors);
       onFilesSelect(result.accepted);
     },
-    [selectedFiles, maxSizeMB, maxTotalSizeMB, onFilesSelect]
+    [selectedFiles, acceptedTypes, maxSizeMB, maxTotalSizeMB, onFilesSelect]
   );
 
   const handleRemove = useCallback(
@@ -93,7 +96,7 @@ function useFileSelection({
 }
 
 /**
- * Drag-and-drop upload for one or more CSV files.
+ * Drag-and-drop upload for one or more files of the accepted types.
  */
 export function FileUpload({
   onFilesSelect,
@@ -103,6 +106,7 @@ export function FileUpload({
   initialFiles = NO_FILES,
 }: FileUploadProps) {
   const { errors, selectedFiles, handleFiles, handleRemove } = useFileSelection({
+    acceptedTypes,
     maxSizeMB,
     maxTotalSizeMB,
     initialFiles,

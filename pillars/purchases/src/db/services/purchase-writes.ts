@@ -18,7 +18,7 @@ import {
 } from '../errors.js';
 import { purchases, purchaseShipments, purchaseTags } from '../schema.js';
 import { expectRow, nowIso, type PurchasesDb } from './internal.js';
-import { canonicalInstant } from './ordered-at.js';
+import { canonicalInstant, spelledOffsetMinutes } from './ordered-at.js';
 import { insertPurchaseDocument } from './purchase-documents.js';
 import { findPurchaseByChecksum, findPurchaseBySourceOrderId } from './purchase-lookups.js';
 import { insertCapture } from './purchase-write-capture.js';
@@ -140,6 +140,7 @@ function insertOrder(tx: PurchasesDb, input: CreatePurchaseInput, now: string): 
       sourceOrderId: input.sourceOrderId ?? null,
       ingestMethod: input.ingestMethod,
       orderedAt,
+      orderedAtOffsetMinutes: input.orderedAtOffsetMinutes ?? spelledOffsetMinutes(input.orderedAt),
       currency: input.currency,
       ...componentCents(input),
       totalCents: input.totalCents,

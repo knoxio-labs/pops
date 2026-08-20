@@ -9,8 +9,23 @@ describe('readTransactionDetails', () => {
       pos: '066',
       transaction: '3184',
       occurredAt: '2026-07-24T10:39:00.000Z',
+      utcOffsetMinutes: 600,
       localDate: '24072026',
     });
+  });
+
+  it('carries the offset the wall clock was resolved against, per season', () => {
+    // Without it, `occurredAt` alone dates a 09:00 shop to the day before:
+    // Sydney mornings before 10:00 are the previous day in UTC. The offset
+    // is what a reader recovers the printed date from, and it is +10:00 in
+    // July and +11:00 in January — the same DST rule the instant follows.
+    const winterMorning = readTransactionDetails('POS 1 TRANS 1 09:00 24/07/2026');
+    const summerMorning = readTransactionDetails('POS 1 TRANS 1 09:00 24/01/2026');
+
+    expect(winterMorning?.occurredAt).toBe('2026-07-23T23:00:00.000Z');
+    expect(winterMorning?.utcOffsetMinutes).toBe(600);
+    expect(summerMorning?.occurredAt).toBe('2026-01-23T22:00:00.000Z');
+    expect(summerMorning?.utcOffsetMinutes).toBe(660);
   });
 
   it('applies standard time in winter and daylight time in summer', () => {

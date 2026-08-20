@@ -216,3 +216,18 @@ export function instantFromLocalParts(
   if (corrected === null) return null;
   return new Date(naive - corrected * 60_000).toISOString();
 }
+
+/**
+ * Minutes `timeZone` was ahead of UTC at `instant`, or null when the string
+ * names no moment.
+ *
+ * The fact {@link instantFromLocalParts} works out and then throws away.
+ * Its answer is UTC-spelled, so the offset it resolved against is the only
+ * evidence left of WHERE the reading was taken — and without it a consumer
+ * can name the reading's calendar day in Greenwich and nowhere else.
+ */
+export function utcOffsetMinutesAt(instant: string, timeZone = storeTimeZone()): number | null {
+  const at = new Date(instant);
+  if (Number.isNaN(at.getTime())) return null;
+  return zoneOffsetMinutes(at, timeZone);
+}

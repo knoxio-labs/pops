@@ -27,7 +27,11 @@
 import { createHash } from 'node:crypto';
 
 import { allocateProRata } from '../allocation.js';
-import { instantFromLocalParts, instantFromLocalPartsAtOffset } from '../local-time.js';
+import {
+  instantFromLocalParts,
+  instantFromLocalPartsAtOffset,
+  utcOffsetMinutesAt,
+} from '../local-time.js';
 import { parseAmountCents } from '../money.js';
 import { RECEIPT_SOURCE_ID } from '../source-ids.js';
 import { resolveCapture } from './capture.js';
@@ -170,6 +174,23 @@ function occurredAt(extracted: ExtractedReceipt, reference: TimeReference): stri
 }
 
 /**
+ * The offset the order's own time reference was on at `instant`.
+ *
+ * Recorded even when the reference is the configured default rather than
+ * anything the receipt or the client established — the case
+ * {@link TIMEZONE_UNCERTAIN} already marks. It is the same assumption
+ * `orderedAt` was resolved under, so instant and offset together reproduce
+ * the wall clock the paper printed, which is the thing the reader is
+ * holding. Storing nothing instead would leave a consumer to name the day
+ * in UTC and disagree with the receipt outright.
+ */
+function offsetAt(instant: string, reference: TimeReference): number | null {
+  return reference.kind === 'offset'
+    ? reference.offsetMinutes
+    : utcOffsetMinutesAt(instant, reference.zone);
+}
+
+/**
  * Content hash over what was mapped, plus the file it came from.
  *
  * The file hash alone would be enough for dedup, and is not enough for
@@ -262,6 +283,7 @@ export function receiptToPurchase(
     sourceOrderId: key,
     ingestMethod: 'upload',
     orderedAt,
+    orderedAtOffsetMinutes: offsetAt(orderedAt, capture.timeReference),
     currency: extracted.currency ?? DEFAULT_CURRENCY,
     subtotalCents: gate.lineTotalCents,
     // Zero when the price already contained it: the receipt states the tax

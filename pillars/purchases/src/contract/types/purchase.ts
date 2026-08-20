@@ -29,6 +29,15 @@ export interface Purchase {
   ingestMethod: IngestMethod;
   /** ISO-8601. The date the linker matches against, not the ingest date. */
   orderedAt: string;
+  /**
+   * Minutes ahead of UTC where the order was placed, at {@link orderedAt}.
+   *
+   * What makes the merchant-local calendar day recoverable: `orderedAt` is
+   * UTC-spelled, so a 9am Sydney shop reads as `23:00Z` the day before and a
+   * consumer deriving the day from it alone dates the shop a day early.
+   * Null when the source never stated one.
+   */
+  orderedAtOffsetMinutes: number | null;
   /** ISO 4217 the order was PRICED in — not necessarily what it settled in. */
   currency: string;
   subtotalCents: number;

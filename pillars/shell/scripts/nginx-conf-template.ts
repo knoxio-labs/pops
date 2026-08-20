@@ -42,6 +42,20 @@ export const NGINX_CONF_HEAD = `server {
         expires 1y;
         add_header Cache-Control "public, immutable";
     }
+
+    # nginx's bundled mime.types maps .js but not .mjs, so an emitted .mjs
+    # asset is served as the octet-stream default_type. Browsers enforce a
+    # JavaScript MIME type on module scripts and on workers, so such an
+    # asset is refused and a module worker never starts. Vite emits .mjs
+    # whenever a dependency ships one as an asset (the PDF reader's worker
+    # is the first), and a regex location is needed because it must beat
+    # the /assets/ prefix above; the caching directives are repeated for
+    # that reason, not by oversight.
+    location ~ \\.mjs$ {
+        default_type application/javascript;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
 `;
 
 /**

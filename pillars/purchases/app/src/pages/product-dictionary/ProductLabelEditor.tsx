@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 
 import { Button, TextInput } from '@pops/ui';
 
+import { ArmedAction } from './ArmedAction.js';
+
 import type { FormEvent, ReactElement } from 'react';
 
 import type { DictionaryEdit, DictionaryProduct } from './types.js';
@@ -123,11 +125,15 @@ interface ForgetProductButtonsProps {
 /**
  * Forgetting a product asks twice.
  *
- * Every other correction on this page is recoverable — the pass re-mints a
+ * Most corrections on this page are recoverable — the pass re-mints a
  * forgotten wording, a split undoes a merge — but this one takes every wording
  * with it, assertions included, and re-running the pass afterwards restores
  * the proposals without the decisions. A misclick that discards somebody's
  * work silently is what the second click is for.
+ *
+ * The same second click guards the one wording-level correction that reaches
+ * this far: see `AliasRow`, where forgetting the last wording of a named
+ * product deletes the product too.
  */
 function ForgetProductButtons({
   product,
@@ -135,41 +141,23 @@ function ForgetProductButtons({
   onEdit,
 }: ForgetProductButtonsProps): ReactElement {
   const { t } = useTranslation('purchases');
-  const [armed, setArmed] = useState(false);
-
-  if (!armed) {
-    return (
-      <Button
-        size="sm"
-        variant="outline"
-        disabled={isPending}
-        aria-label={t('products.action.forgetProductNamed', { label: product.label })}
-        onClick={() => setArmed(true)}
-      >
-        {t('products.action.forgetProduct')}
-      </Button>
-    );
-  }
 
   return (
-    <>
-      <Button
-        size="sm"
-        variant="destructive"
-        disabled={isPending}
-        aria-label={t('products.action.forgetProductConfirmNamed', { label: product.label })}
-        onClick={() => onEdit({ kind: 'forgetProduct', productId: product.id })}
-      >
-        {t('products.action.forgetProductConfirm')}
-      </Button>
-      <Button
-        size="sm"
-        variant="outline"
-        aria-label={t('products.action.forgetProductCancelNamed', { label: product.label })}
-        onClick={() => setArmed(false)}
-      >
-        {t('products.action.forgetProductCancel')}
-      </Button>
-    </>
+    <ArmedAction
+      arm={{
+        text: t('products.action.forgetProduct'),
+        accessible: t('products.action.forgetProductNamed', { label: product.label }),
+      }}
+      confirm={{
+        text: t('products.action.forgetProductConfirm'),
+        accessible: t('products.action.forgetProductConfirmNamed', { label: product.label }),
+      }}
+      cancel={{
+        text: t('products.action.forgetProductCancel'),
+        accessible: t('products.action.forgetProductCancelNamed', { label: product.label }),
+      }}
+      isPending={isPending}
+      onConfirm={() => onEdit({ kind: 'forgetProduct', productId: product.id })}
+    />
   );
 }

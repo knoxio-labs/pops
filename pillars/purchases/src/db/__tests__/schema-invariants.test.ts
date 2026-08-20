@@ -97,6 +97,25 @@ describe('purchases constraints', () => {
     }).toThrow(/CHECK constraint failed/i);
   });
 
+  it('rejects an offset no zone has ever been on', () => {
+    // ±14:00 is the widest any zone has used. A larger figure is a garbled
+    // field rather than a place, and it moves the order's rendered day —
+    // the failure mode this column exists to close, arriving through the
+    // column itself.
+    expect(() => {
+      insertOrderRaw({ orderedAtOffsetMinutes: 900 });
+    }).toThrow(/CHECK constraint failed/i);
+    expect(() => {
+      insertOrderRaw({ orderedAtOffsetMinutes: -900 });
+    }).toThrow(/CHECK constraint failed/i);
+  });
+
+  it('accepts no offset at all, which is every row written before the column existed', () => {
+    expect(() => {
+      insertOrderRaw({ orderedAtOffsetMinutes: null });
+    }).not.toThrow();
+  });
+
   it('accepts a total that disagrees with its component columns', () => {
     // Deliberate: real merchant exports disagree with their own subtotals,
     // and rejecting those at ingest would lose valid orders.

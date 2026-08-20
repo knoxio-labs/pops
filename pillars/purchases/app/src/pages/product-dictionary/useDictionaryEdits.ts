@@ -26,8 +26,8 @@ export interface DictionaryEdits {
 }
 
 /**
- * The five verbs the dictionary's write surface has, mapped from what the
- * reader is doing to the route that does it.
+ * Every correction the dictionary offers, mapped from what the reader is
+ * doing to the route that does it.
  *
  * A merge and a split are the same route with a different body, and so are an
  * assertion and its retraction: `productId: null` mints the wording a product
@@ -60,7 +60,10 @@ async function applyEdit(edit: DictionaryEdit): Promise<DictionaryEditKind> {
         })
       );
       break;
+    // One route, two corrections: the second one empties a named product, so
+    // the server deletes that product in the same write.
     case 'forgetWording':
+    case 'forgetWordingWithProduct':
       unwrap(await productDeleteAlias({ path: { aliasId: edit.aliasId } }));
       break;
     case 'rename':

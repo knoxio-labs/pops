@@ -18,6 +18,7 @@ import {
   IsoTimestampSchema,
   NonNegativeCentsSchema,
   PopsUriSchema,
+  UtcOffsetMinutesSchema,
 } from './scalars.js';
 
 export {
@@ -27,6 +28,7 @@ export {
   IsoTimestampSchema,
   NonNegativeCentsSchema,
   PopsUriSchema,
+  UtcOffsetMinutesSchema,
 } from './scalars.js';
 export {
   ItemKindClassificationSchema,
@@ -53,6 +55,21 @@ export const PurchaseSchema = z.object({
   sourceOrderId: z.string().nullable(),
   ingestMethod: IngestMethodSchema,
   orderedAt: IsoTimestampSchema,
+  /**
+   * Minutes ahead of UTC where the order was placed, at {@link orderedAt}.
+   *
+   * `orderedAt` is published in UTC, which is the right spelling for a
+   * comparison and the wrong one for a calendar day: a 9am Sydney shop is
+   * `23:00Z` the day before, so a consumer deriving the day from the
+   * instant alone dates it a day early. This is the fact that makes the
+   * merchant-local day recoverable, and consumers rendering a day are
+   * expected to apply it.
+   *
+   * Null when the source stated an instant rather than a printed wall clock
+   * and so never knew an offset, and on rows written before the column
+   * existed. A consumer that gets null has no honest answer but the UTC day.
+   */
+  orderedAtOffsetMinutes: UtcOffsetMinutesSchema.nullable(),
   currency: CurrencySchema,
   subtotalCents: NonNegativeCentsSchema,
   /** A fee the merchant added: a card surcharge, a small-order fee. */

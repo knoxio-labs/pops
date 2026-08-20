@@ -558,6 +558,7 @@ export type PurchaseListResponses = {
       merchantEntityId: string | null;
       merchantEntityName: string | null;
       orderedAt: string;
+      orderedAtOffsetMinutes: number | null;
       paymentHint: string | null;
       rawRef: string | null;
       receiptUri: string | null;
@@ -636,6 +637,7 @@ export type PurchaseCreateData = {
     merchantEntityId?: string | null;
     merchantEntityName?: string | null;
     orderedAt: string;
+    orderedAtOffsetMinutes?: number | null;
     paymentHint?: string | null;
     rawRef?: string | null;
     settlementMode?: 'card' | 'cash' | 'unknown';
@@ -795,6 +797,7 @@ export type PurchaseCreateResponses = {
       merchantEntityId: string | null;
       merchantEntityName: string | null;
       orderedAt: string;
+      orderedAtOffsetMinutes: number | null;
       paymentHint: string | null;
       rawRef: string | null;
       settlementMode: 'card' | 'cash' | 'unknown';
@@ -999,6 +1002,7 @@ export type PurchaseGetResponses = {
       merchantEntityId: string | null;
       merchantEntityName: string | null;
       orderedAt: string;
+      orderedAtOffsetMinutes: number | null;
       paymentHint: string | null;
       rawRef: string | null;
       settlementMode: 'card' | 'cash' | 'unknown';
@@ -1514,6 +1518,7 @@ export type ReceiptUploadResponses = {
             merchantEntityId: string | null;
             merchantEntityName: string | null;
             orderedAt: string;
+            orderedAtOffsetMinutes: number | null;
             paymentHint: string | null;
             rawRef: string | null;
             settlementMode: 'card' | 'cash' | 'unknown';
@@ -1784,6 +1789,7 @@ export type ReconcileLinksResponses = {
         merchantEntityId: string | null;
         merchantEntityName: string | null;
         orderedAt: string;
+        orderedAtOffsetMinutes: number | null;
         paymentHint: string | null;
         rawRef: string | null;
         settlementMode: 'card' | 'cash' | 'unknown';

@@ -348,11 +348,15 @@ export const MobilePurchaseSchema = z.object({
    * The calendar day the order is dated, `YYYY-MM-DD`.
    *
    * A DAY, not an instant, because that is what a row renders and what the
-   * reader means by "when". `purchases` stores an instant with an offset, and
-   * the day is computed here from THAT offset — the local day where the order
-   * happened — rather than left to a client that would resolve it in whatever
-   * zone the handset is currently standing in. A phone that flies to another
-   * timezone must not re-date a purchase it already showed.
+   * reader means by "when". `purchases` stores the instant in UTC and the
+   * offset it was placed at separately, and the day is computed here from
+   * the pair — the local day where the order happened — rather than left to
+   * a client that would resolve it in whatever zone the handset is currently
+   * standing in. A phone that flies to another timezone must not re-date a
+   * purchase it already showed.
+   *
+   * Falls back to the day in UTC for an order whose offset that pillar never
+   * recorded, which is every row written before it had a column for one.
    */
   orderedOn: z.string(),
   /** How many lines the order has. `0` is normal for a receipt read as a total alone. */

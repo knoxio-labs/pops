@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest';
 
 import {
   aliasIsAsserted,
+  forgettingEndsNamedProduct,
   matchesDictionaryFilters,
   productAssertion,
+  productIsNamed,
   sourcesOf,
 } from '../assertion';
 
@@ -22,15 +24,21 @@ function alias(overrides: Partial<DictionaryAlias> = {}): DictionaryAlias {
   };
 }
 
-function product(aliases: DictionaryAlias[]): DictionaryProduct {
+function product(
+  aliases: DictionaryAlias[],
+  overrides: Partial<DictionaryProduct> = {}
+): DictionaryProduct {
   return {
     id: 'product-1',
     label: 'Chicken breast 1kg',
     labelConfirmedAt: null,
     createdAt: '2026-05-01T00:00:00.000Z',
     aliases,
+    ...overrides,
   };
 }
+
+const NAMED = { labelConfirmedAt: '2026-05-04T00:00:00.000Z' } as const;
 
 const asserted = alias({ id: 'alias-asserted', confirmedAt: '2026-05-02T00:00:00.000Z' });
 const proposal = alias({ id: 'alias-proposed', confirmedAt: null });
@@ -65,6 +73,51 @@ describe('productAssertion', () => {
   // no wording reaches "asserted" — a claim about evidence that does not exist.
   it('does not read an empty wording list as asserted', () => {
     expect(productAssertion([])).toBe('proposed');
+  });
+});
+
+describe('productIsNamed', () => {
+  it('reads labelConfirmedAt as the boundary between a till abbreviation and a name', () => {
+    expect(productIsNamed(product([proposal]))).toBe(false);
+    expect(productIsNamed(product([proposal], NAMED))).toBe(true);
+  });
+});
+
+describe('forgettingEndsNamedProduct', () => {
+  const only = alias({ id: 'only' });
+
+  // The whole point: this click deletes the product too, and no pass can put
+  // a typed name back.
+  it('is true for the last wording reaching a product somebody named', () => {
+    expect(forgettingEndsNamedProduct(product([only], NAMED), only)).toBe(true);
+  });
+
+  // The product survives, so nothing unrecoverable happens and the correction
+  // stays the one click every other recoverable correction is.
+  it('is false while another wording still reaches the named product', () => {
+    const shared = product([only, alias({ id: 'second' })], NAMED);
+    expect(forgettingEndsNamedProduct(shared, only)).toBe(false);
+  });
+
+  // An unnamed product wears the wording that minted it, so the next pass
+  // re-mints an identical product from the lines that print it.
+  it('is false for the only wording of a product nobody named', () => {
+    expect(forgettingEndsNamedProduct(product([only]), only)).toBe(false);
+  });
+
+  // Asserting a wording says the wording is that product; it says nothing
+  // about who chose the name, which is the thing that cannot be rebuilt.
+  it('does not mistake an asserted wording for a named product', () => {
+    const confirmed = alias({ id: 'only', confirmedAt: '2026-05-02T00:00:00.000Z' });
+    expect(forgettingEndsNamedProduct(product([confirmed]), confirmed)).toBe(false);
+  });
+
+  // A stale row handed a wording from a different product must not arm a
+  // control that would then delete neither of the things it named.
+  it('is false for a wording the product does not hold', () => {
+    expect(forgettingEndsNamedProduct(product([only], NAMED), alias({ id: 'elsewhere' }))).toBe(
+      false
+    );
   });
 });
 

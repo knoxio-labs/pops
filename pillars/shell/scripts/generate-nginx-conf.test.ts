@@ -299,6 +299,34 @@ describe('generate-nginx-conf', () => {
     });
   });
 
+  /**
+   * nginx 1.31's bundled mime.types has no `.mjs` entry, so without a rule of
+   * our own such an asset leaves nginx as the octet-stream default_type and a
+   * browser refuses to run it as a module script or a worker. Verified against
+   * the real image: `docker run nginx:1.31.3-alpine grep mjs /etc/nginx/mime.types`
+   * matches nothing, and the served Content-Type was application/octet-stream
+   * before this rule existed.
+   */
+  describe('.mjs assets', () => {
+    const rendered = renderNginxConf();
+
+    it('is served with a JavaScript MIME type', () => {
+      expect(rendered).toMatch(/location ~ \\\.mjs\$ \{[^}]*default_type application\/javascript;/);
+    });
+
+    it('is matched by a regex location, which outranks the /assets/ prefix', () => {
+      expect(rendered.indexOf('location /assets/ {')).toBeGreaterThan(-1);
+      expect(rendered).toContain('location ~ \\.mjs$ {');
+    });
+
+    it('keeps the immutable caching the /assets/ prefix would otherwise have given it', () => {
+      const block = rendered.slice(rendered.indexOf('location ~ \\.mjs$ {'));
+      const body = block.slice(0, block.indexOf('}'));
+      expect(body).toContain('expires 1y;');
+      expect(body).toContain('add_header Cache-Control "public, immutable";');
+    });
+  });
+
   describe('determinism', () => {
     it('renderNginxConf() is pure — two calls produce identical output', () => {
       expect(renderNginxConf()).toBe(renderNginxConf());
