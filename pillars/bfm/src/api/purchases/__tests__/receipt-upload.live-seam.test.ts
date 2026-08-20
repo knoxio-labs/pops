@@ -282,6 +282,11 @@ function post(bfmBaseUrl: string, token: string, partsText: string): Promise<Res
   });
 }
 
+/** A GET on bfm's mobile surface, authenticated as the paired device. */
+function getMobile(bfmBaseUrl: string, token: string, path: string): Promise<Response> {
+  return fetch(`${bfmBaseUrl}${path}`, { headers: { authorization: `Bearer ${token}` } });
+}
+
 describe('bfm -> purchases receipt upload live seam', () => {
   let tempDir: string;
   let vision: FakeVisionServer;
@@ -308,12 +313,12 @@ describe('bfm -> purchases receipt upload live seam', () => {
       },
     });
 
-    // The exact grant `pillars/service-account.ts` documents for production —
-    // `purchases.receipt` and nothing under `purchases.purchase` — so a
-    // scope this suite is not entitled to would fail here the same way it
-    // would fail a deployed bfm.
+    // The exact grant `pillars/service-account.ts` documents for production,
+    // mirrored rather than widened: a scope this suite is not entitled to
+    // would fail here the same way it would fail a deployed bfm.
     const bfmApiKey = await mintServiceAccount(registryProcess.baseUrl, 'bfm-live-seam', [
       'finance.transactions',
+      'purchases.purchase',
       'purchases.receipt',
     ]);
     wrongScopeApiKey = await mintServiceAccount(
@@ -423,6 +428,88 @@ describe('bfm -> purchases receipt upload live seam', () => {
     expect(vision.receivedBodies.at(-1)).toContain(
       'Live Seam Cafe\\nFlat White  $4.50\\nTotal       $4.50'
     );
+  });
+
+  /**
+   * The read leg, driven against the order the upload above actually created.
+   *
+   * This is the case a stubbed handle cannot reach: the list and detail routes
+   * resolve `purchase.list` and `purchase.get` against purchases' real OpenAPI
+   * document, and both need the `purchases.purchase` scope — a grant the
+   * upload's own `purchases.receipt` does not cover. A regression in either
+   * arrives here as a 403 or a contract mismatch, and nowhere else.
+   */
+  it('lists the purchase the upload just created, with the row a list draws', async () => {
+    const response = await getMobile(bfmProcess.baseUrl, deviceToken, '/mobile/purchases');
+
+    expect(response.status).toBe(200);
+    const page = (await response.json()) as {
+      data: {
+        id: string;
+        merchantName: string | null;
+        totalCents: number;
+        orderedOn: string;
+        itemCount: number;
+        status: string;
+        receiptUri: string | null;
+      }[];
+      nextCursor: string | null;
+    };
+
+    const created = page.data.find((row) => row.merchantName === 'Live Seam Cafe');
+    if (created === undefined) {
+      throw new Error(`the created purchase is not in the page: ${JSON.stringify(page)}`);
+    }
+    expect(created.totalCents).toBe(450);
+    expect(created.itemCount).toBe(1);
+    // The two aggregates purchases computes for the row. A receipt upload
+    // stores its parts as receipt-kind documents, so this one has a URI —
+    // and it arriving null would mean the producer stopped joining them.
+    expect(created.receiptUri).toMatch(/^pops:\/\/purchases\/receipt\//u);
+    // A day, not an instant. `2026-…-…` with no time component at all.
+    expect(created.orderedOn).toMatch(/^\d{4}-\d{2}-\d{2}$/u);
+
+    const listCalls = purchasesProxy.requests.filter((entry) => entry.url.includes('/purchases?'));
+    expect(listCalls.at(-1)?.status).toBe(200);
+  });
+
+  it('opens that purchase, with its lines', async () => {
+    const page = (await (
+      await getMobile(bfmProcess.baseUrl, deviceToken, '/mobile/purchases')
+    ).json()) as { data: { id: string; merchantName: string | null; itemCount: number }[] };
+    const created = page.data.find((row) => row.merchantName === 'Live Seam Cafe');
+    if (created === undefined) throw new Error('the created purchase is not in the page');
+
+    const response = await getMobile(
+      bfmProcess.baseUrl,
+      deviceToken,
+      `/mobile/purchases/${created.id}`
+    );
+
+    expect(response.status).toBe(200);
+    const detail = (await response.json()) as {
+      id: string;
+      items: { name: string; quantity: number; lineTotalCents: number }[];
+      orderedAt: string;
+      orderedOn: string;
+      totalCents: number;
+    };
+    expect(detail.id).toBe(created.id);
+    expect(detail.items).toHaveLength(created.itemCount);
+    expect(detail.totalCents).toBe(450);
+    // Both, and they agree: the day is derived from the instant's own offset.
+    expect(detail.orderedAt.startsWith(detail.orderedOn)).toBe(true);
+  });
+
+  it('answers 404 for an order purchases does not hold, rather than an outage', async () => {
+    const response = await getMobile(
+      bfmProcess.baseUrl,
+      deviceToken,
+      '/mobile/purchases/not-a-real-order'
+    );
+
+    expect(response.status).toBe(404);
+    expect(((await response.json()) as { code: string }).code).toBe('not_found');
   });
 
   it('a needs-review refusal crosses the seam intact, reshaped to the mobile contract', async () => {

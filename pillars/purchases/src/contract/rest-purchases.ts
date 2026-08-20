@@ -23,7 +23,7 @@ import {
   PurchaseDocumentSchema,
   PurchaseItemSchema,
   PurchaseItemUnitSchema,
-  PurchaseSchema,
+  PurchaseListRowSchema,
 } from './schemas/purchase.js';
 
 const c = initContract();
@@ -48,7 +48,7 @@ export const purchasesPurchaseContract = c.router({
     path: '/purchases',
     query: ListPurchasesQuerySchema,
     responses: {
-      200: z.object({ items: z.array(PurchaseSchema) }),
+      200: z.object({ items: z.array(PurchaseListRowSchema) }),
       // Two merchant parameters at once. Declared, because the alternative a
       // caller cannot detect is a 200 computed from whichever one won.
       400: ErrorBodySchema,

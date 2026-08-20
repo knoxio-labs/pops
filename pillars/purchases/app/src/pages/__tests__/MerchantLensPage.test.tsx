@@ -101,6 +101,8 @@ function purchaseOrder(overrides: Partial<MerchantOrder> = {}): MerchantOrder {
     id: 'purchase-1',
     checksum: 'amazon:249-1512883-0105415',
     createdAt: '2026-02-03T00:00:00Z',
+    itemCount: 2,
+    receiptUri: null,
     currency: 'AUD',
     discountCents: 0,
     ingestMethod: 'export',

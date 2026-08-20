@@ -552,11 +552,13 @@ export type PurchaseListResponses = {
       discountCents: number;
       id: string;
       ingestMethod: 'email' | 'export' | 'upload' | 'manual';
+      itemCount: number;
       merchantEntityId: string | null;
       merchantEntityName: string | null;
       orderedAt: string;
       paymentHint: string | null;
       rawRef: string | null;
+      receiptUri: string | null;
       settlementMode: 'card' | 'cash' | 'unknown';
       shippingCents: number;
       source: string;
