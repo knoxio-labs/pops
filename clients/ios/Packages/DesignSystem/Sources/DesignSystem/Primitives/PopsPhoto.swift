@@ -1,10 +1,7 @@
+import CoreGraphics
+import Foundation
+import ImageIO
 import SwiftUI
-
-#if canImport(UIKit)
-    import UIKit
-#elseif canImport(AppKit)
-    import AppKit
-#endif
 
 /// A photograph the app is holding as bytes, drawn as a plate: rounded,
 /// bordered, filling whatever frame the caller gives it.
@@ -21,14 +18,23 @@ import SwiftUI
 /// `UIImage(data:)` in a feature module — a platform type in a place that
 /// compiles for two platforms.
 ///
+/// ## ImageIO rather than `UIImage`/`NSImage`
+///
+/// This package builds for iOS and for the host toolchain, and the obvious
+/// decode is `UIImage(data:)` on one and `NSImage(data:)` on the other behind
+/// a `#if canImport`. ImageIO is on both, so there is no conditional at all —
+/// and the thumbnail path below applies the file's own orientation transform
+/// and downsamples in one step, which the platform initialisers would each
+/// need separate help with.
+///
 /// ## The decode is synchronous, and that is a bounded claim
 ///
-/// `body` decodes on every evaluation. That is affordable here and only here:
-/// the app's photographs are receipt pages, which `ReceiptPageBudget` caps in
-/// both edge length and JPEG quality before they are ever held, and a screen
-/// shows a handful of them. A future surface drawing a scrolling list of these
-/// wants a decoded, cached image handed in instead — that is a different
-/// initialiser, not a bigger `body`.
+/// `body` decodes on every evaluation, at a bounded pixel count rather than at
+/// the file's own. That is affordable here: the app's photographs are receipt
+/// pages, which are capped in edge length and JPEG quality before they are
+/// ever held, and a screen shows a handful of them. A surface drawing a
+/// scrolling list of these wants a decoded image handed in and cached instead
+/// — that is a different initialiser, not a bigger `body`.
 public struct PopsPhoto: View {
     private let data: Data?
     private let placeholderSymbol: String
@@ -77,15 +83,38 @@ public struct PopsPhoto: View {
         decode(data) != nil
     }
 
+    /// The longest edge the decoded bitmap is allowed to have.
+    ///
+    /// A decode budget rather than a layout metric, which is why it is not on
+    /// a scale in `Tokens/`: it bounds how much memory a plate costs, and the
+    /// frame the caller gives the plate decides how big it looks. Generous
+    /// enough that a page still reads at the largest Dynamic Type sizes on a
+    /// modern screen, and far below a camera's own output.
+    private nonisolated static let maximumDecodedEdge = 1_024
+
     private nonisolated static func decode(_ data: Data?) -> Image? {
-        guard let data, !data.isEmpty else { return nil }
-        #if canImport(UIKit)
-            return UIImage(data: data).map(Image.init(uiImage:))
-        #elseif canImport(AppKit)
-            return NSImage(data: data).map(Image.init(nsImage:))
-        #else
-            return nil
-        #endif
+        guard let data, !data.isEmpty,
+            let source = CGImageSourceCreateWithData(data as CFData, nil)
+        else { return nil }
+
+        // `WithTransform` applies the file's own orientation, so a photograph
+        // taken sideways is drawn upright without this having to read and map
+        // the EXIF tag itself. `FromImageAlways` because a file carrying an
+        // embedded thumbnail would otherwise be drawn at whatever size that
+        // thumbnail happens to be.
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceThumbnailMaxPixelSize: maximumDecodedEdge,
+        ]
+        guard
+            let image = CGImageSourceCreateThumbnailAtIndex(
+                source, 0, options as CFDictionary)
+        else { return nil }
+
+        // `decorative` because the caller labels the plate. An `Image` given a
+        // label here would announce itself underneath whatever the caller said.
+        return Image(decorative: image, scale: 1)
     }
 }
 

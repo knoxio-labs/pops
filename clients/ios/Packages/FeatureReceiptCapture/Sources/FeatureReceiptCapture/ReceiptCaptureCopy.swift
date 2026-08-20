@@ -170,7 +170,6 @@ internal enum ReceiptResultCopy {
         internal static let discounts = "Discounts"
         internal static let surcharges = "Surcharges"
         internal static let shipping = "Shipping"
-        internal static let lines = "Items"
         internal static let unreadableNotes = "Could not be read"
     }
 
