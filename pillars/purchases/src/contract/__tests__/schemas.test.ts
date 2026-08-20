@@ -144,6 +144,23 @@ describe('IsoTimestampSchema', () => {
       expect(IsoTimestampSchema.safeParse(value).success).toBe(false);
     }
   );
+
+  it('rejects a day that overflows its month rather than rolling it into the next one', () => {
+    // 2026-02-30 has the right shape and names nothing. `Date` parsing
+    // rolls it forward to 2026-03-02 instead of erroring, which would land
+    // the order in the wrong month with nothing recording the move.
+    expect(IsoTimestampSchema.safeParse('2026-02-30T00:00:00Z').success).toBe(false);
+  });
+
+  it('accepts a real leap day', () => {
+    // 2026-02-30 is properly rejected — 2028-02-29 must not be caught in
+    // the same net, since 2028 is a leap year and the 29th is real.
+    expect(IsoTimestampSchema.safeParse('2028-02-29T00:00:00Z').success).toBe(true);
+  });
+
+  it('rejects 29 February in a non-leap year', () => {
+    expect(IsoTimestampSchema.safeParse('2026-02-29T00:00:00Z').success).toBe(false);
+  });
 });
 
 describe('PopsUriSchema', () => {

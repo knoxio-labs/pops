@@ -275,6 +275,16 @@ describe('POST /purchases', () => {
       .send({ ...minimalOrder, source: 'ebay' });
     expect(res.status).toBe(400);
   });
+
+  it('rejects an orderedAt that overflows its month rather than storing it two days into the next one', async () => {
+    // 2026-02-30 has no 30th. `Date` parsing rolls it to 2026-03-02 instead
+    // of erroring, which would land the order in March with nothing
+    // recording that the date was ever adjusted.
+    const res = await requestOn(app)
+      .post('/purchases')
+      .send({ ...minimalOrder, orderedAt: '2026-02-30T00:00:00Z' });
+    expect(res.status).toBe(400);
+  });
 });
 
 describe('GET /purchases', () => {
@@ -292,6 +302,11 @@ describe('GET /purchases', () => {
 
   it('rejects a status outside the vocabulary', async () => {
     const res = await requestOn(app).get('/purchases?statuses=probably_fine');
+    expect(res.status).toBe(400);
+  });
+
+  it('rejects an impossible from bound rather than reading it as a February window over March', async () => {
+    const res = await requestOn(app).get('/purchases?from=2026-02-30T00:00:00Z');
     expect(res.status).toBe(400);
   });
 });
