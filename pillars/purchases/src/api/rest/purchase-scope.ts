@@ -7,11 +7,21 @@
  * the query twice would be two chances to disagree, and the disagreement
  * would show up as a drill-down whose row count does not match the headline
  * it was opened from.
+ *
+ * A window bound is read here too, and a bound naming no instant is refused
+ * with the request rather than carried into a predicate. `IsoTimestampSchema`
+ * closes the shape and the calendar range, so an impossible date is already a
+ * `400` from the contract; what it does not close is the offset range, so
+ * `+99:00` still reaches a handler. Compared as text against a canonical
+ * column such a bound would answer `200` over a window nobody asked for,
+ * which is the one thing a filter must never do. `POST /search` refuses the
+ * same values, so the two hold one rule about which timestamps are legal.
  */
 import {
   MERCHANT_FILTER_PARAMETERS,
   resolveMerchantFilter,
 } from '../../contract/merchant-filter.js';
+import { canonicalInstant } from '../../db/index.js';
 
 import type { z } from 'zod';
 
@@ -25,7 +35,31 @@ export type PurchaseScopeResolution =
   | { readonly ok: true; readonly scope: PurchaseScopeFilter }
   | { readonly ok: false; readonly body: ErrorBody };
 
+type BoundReading =
+  | { readonly ok: true; readonly bound: string | undefined }
+  | { readonly ok: false; readonly body: ErrorBody };
+
+function readBound(parameter: 'from' | 'to', value: string | undefined): BoundReading {
+  if (value === undefined) return { ok: true, bound: undefined };
+  const bound = canonicalInstant(value);
+  if (bound === null) {
+    return {
+      ok: false,
+      body: {
+        message: `Scope parameter '${parameter}' value '${value}' names no instant`,
+        code: 'UNREADABLE_TIMESTAMP',
+      },
+    };
+  }
+  return { ok: true, bound };
+}
+
 export function resolvePurchaseScope(query: PurchaseScopeQuery): PurchaseScopeResolution {
+  const from = readBound('from', query.from);
+  if (!from.ok) return { ok: false, body: from.body };
+  const to = readBound('to', query.to);
+  if (!to.ok) return { ok: false, body: to.body };
+
   const merchant = resolveMerchantFilter(query);
   if (!merchant.ok) {
     return {
@@ -44,8 +78,8 @@ export function resolvePurchaseScope(query: PurchaseScopeQuery): PurchaseScopeRe
     scope: {
       sources: query.sources,
       statuses: query.statuses,
-      from: query.from,
-      to: query.to,
+      from: from.bound,
+      to: to.bound,
       currency: query.currency,
       merchant: merchant.merchant,
     },

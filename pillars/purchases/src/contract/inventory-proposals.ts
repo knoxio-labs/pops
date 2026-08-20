@@ -13,10 +13,11 @@
  * not survive a copy into that pillar's `POST /items` and a caller should
  * not assume they will. `purchasePriceCents` is integer cents against a
  * float `purchasePrice`, because purchases mints no float anywhere.
- * `serialNumber` has no column there. `purchaseTransactionUri` — the whole
- * point of the reverse link — is not in inventory's create body either,
- * which takes a bare `purchaseTransactionId` and leaves
- * `home_inventory.purchase_transaction_uri` with no REST writer at all.
+ * `serialNumber` has no column there. `purchaseTransactionUri` is not in
+ * inventory's create body either, which takes a bare
+ * `purchaseTransactionId` — though that pillar now derives
+ * `home_inventory.purchase_transaction_uri` from the id, so a caller that
+ * sends the id keeps the reverse link rather than losing it.
  */
 import { z } from 'zod';
 

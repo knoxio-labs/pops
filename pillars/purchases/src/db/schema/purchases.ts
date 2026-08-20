@@ -43,7 +43,16 @@ export const purchases = sqliteTable(
     /** The merchant's own order identifier. One per order, hence the unique below. */
     sourceOrderId: text('source_order_id'),
     ingestMethod: text('ingest_method', { enum: INGEST_METHODS }).notNull(),
-    /** ISO-8601. Matched against `transaction.date`, NOT against when the row was observed. */
+    /**
+     * ISO-8601. Matched against `transaction.date`, NOT against when the row
+     * was observed.
+     *
+     * Held in exactly one spelling — `YYYY-MM-DDTHH:MM:SS.sssZ` — because
+     * the column is TEXT and every window, ordering and equality on it is
+     * lexicographic. The write path is what enforces that; see
+     * `../services/ordered-at.ts` for why it is enforced there rather than
+     * wrapped around each read.
+     */
     orderedAt: text('ordered_at').notNull(),
     /**
      * Minutes ahead of UTC where the order was placed, at {@link orderedAt}.

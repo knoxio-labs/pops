@@ -178,6 +178,36 @@ describe('what the proposal pass learns', () => {
     expect(listProducts(opened.db)[0]?.product.label).toBe('Chk Brst 1kg');
   });
 
+  it('does not let an order whose date it cannot read own the printed name', () => {
+    // Migration 0010 left a timestamp SQLite could not read exactly as it
+    // was, and the write path refuses one, so this row exists only by being
+    // forced in. As text `whenever` follows every real date, which would
+    // hand the label to the one line whose date says nothing.
+    createPurchase(
+      opened.db,
+      order({
+        checksum: 'undated',
+        orderedAt: '2026-01-01T00:00:00Z',
+        items: [line({ name: 'CHK BRST 1KG' })],
+      })
+    );
+    createPurchase(
+      opened.db,
+      order({
+        checksum: 'newest-readable',
+        orderedAt: '2026-06-01T00:00:00Z',
+        items: [line({ name: 'Chk Brst 1kg' })],
+      })
+    );
+    opened.raw
+      .prepare(`UPDATE purchases SET ordered_at = 'whenever' WHERE checksum = 'undated'`)
+      .run();
+
+    proposeProducts(opened.db);
+
+    expect(listProducts(opened.db)[0]?.product.label).toBe('Chk Brst 1kg');
+  });
+
   it('skips a line whose name normalises to nothing, rather than bucketing them together', () => {
     createPurchase(
       opened.db,

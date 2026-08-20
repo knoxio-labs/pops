@@ -16,25 +16,19 @@ import {
   InvalidIngestPayloadError,
   PurchaseSourceNotFoundError,
 } from '../errors.js';
-import {
-  purchaseCharges,
-  purchaseItemAllocations,
-  purchases,
-  purchaseShipments,
-  purchaseTags,
-} from '../schema.js';
+import { purchases, purchaseShipments, purchaseTags } from '../schema.js';
 import { expectRow, nowIso, type PurchasesDb } from './internal.js';
+import { canonicalInstant, spelledOffsetMinutes } from './ordered-at.js';
 import { insertPurchaseDocument } from './purchase-documents.js';
 import { findPurchaseByChecksum, findPurchaseBySourceOrderId } from './purchase-lookups.js';
 import { insertCapture } from './purchase-write-capture.js';
+import { insertCharge } from './purchase-write-charges.js';
 import { componentCents, shipmentIdFor, type IngestContext } from './purchase-write-context.js';
 import { insertItem } from './purchase-write-items.js';
-import { assertAllocationsFit, resolveOrderAmount } from './purchase-write-validation.js';
 import { getSource } from './sources.js';
 
 import type { PurchaseRow } from '../schema.js';
 import type {
-  CreateChargeInput,
   CreateDocumentInput,
   CreatePurchaseInput,
   CreateShipmentInput,
@@ -124,15 +118,29 @@ function assertNotAlreadyImported(tx: PurchasesDb, input: CreatePurchaseInput): 
   }
 }
 
+/**
+ * Write the order row, with `orderedAt` in the one form the column is
+ * compared in.
+ *
+ * The single place that value enters the table, which is what makes
+ * canonicalising here enough — see `ordered-at.ts` for why the column may
+ * hold only one spelling of an instant. A timestamp naming no instant is
+ * refused rather than stored: it would sort somewhere, and wherever that is
+ * would be a lie about when the order happened.
+ */
 function insertOrder(tx: PurchasesDb, input: CreatePurchaseInput, now: string): PurchaseRow {
+  const orderedAt = canonicalInstant(input.orderedAt);
+  if (orderedAt === null) {
+    throw new InvalidIngestPayloadError(`orderedAt '${input.orderedAt}' names no instant`);
+  }
   const rows = tx
     .insert(purchases)
     .values({
       source: input.source,
       sourceOrderId: input.sourceOrderId ?? null,
       ingestMethod: input.ingestMethod,
-      orderedAt: input.orderedAt,
-      orderedAtOffsetMinutes: input.orderedAtOffsetMinutes ?? null,
+      orderedAt,
+      orderedAtOffsetMinutes: input.orderedAtOffsetMinutes ?? spelledOffsetMinutes(input.orderedAt),
       currency: input.currency,
       ...componentCents(input),
       totalCents: input.totalCents,
@@ -191,56 +199,6 @@ function insertShipment(ctx: IngestContext, input: CreateShipmentInput, position
     .returning()
     .all();
   ctx.shipmentIds.set(input.ref, expectRow(rows, 'createPurchase.shipment').id);
-}
-
-function insertCharge(ctx: IngestContext, input: CreateChargeInput, position: number): void {
-  const orderAmountCents = resolveOrderAmount(ctx, input);
-  const rows = ctx.tx
-    .insert(purchaseCharges)
-    .values({
-      purchaseId: ctx.purchase.id,
-      shipmentId: shipmentIdFor(ctx, input.shipmentRef),
-      sourceChargeRef: input.sourceChargeRef ?? null,
-      position,
-      amountCents: input.amountCents,
-      currency: input.currency ?? ctx.purchase.currency,
-      orderAmountCents,
-      chargedAt: input.chargedAt ?? null,
-      role: input.role ?? 'capture',
-      paymentHint: input.paymentHint ?? ctx.purchase.paymentHint,
-      origin: input.origin ?? 'merchant',
-      createdAt: ctx.now,
-      updatedAt: ctx.now,
-    })
-    .returning()
-    .all();
-  insertAllocations(ctx, expectRow(rows, 'createPurchase.charge').id, input);
-}
-
-function insertAllocations(ctx: IngestContext, chargeId: string, input: CreateChargeInput): void {
-  assertAllocationsFit(input);
-  const seen = new Set<string>();
-  for (const allocation of input.allocations ?? []) {
-    // Checked before the write so the (charge_id, item_id) unique index
-    // doesn't fire first and report a 409 against stored data, when the
-    // truth is that one charge allocates to the same line twice.
-    if (seen.has(allocation.itemRef)) {
-      throw new InvalidIngestPayloadError(
-        `charge allocates to item ref '${allocation.itemRef}' more than once`
-      );
-    }
-    seen.add(allocation.itemRef);
-    const itemId = ctx.itemIds.get(allocation.itemRef);
-    if (itemId === undefined) {
-      throw new InvalidIngestPayloadError(
-        `charge references unknown item ref '${allocation.itemRef}'`
-      );
-    }
-    ctx.tx
-      .insert(purchaseItemAllocations)
-      .values({ chargeId, itemId, amountCents: allocation.amountCents, createdAt: ctx.now })
-      .run();
-  }
 }
 
 function insertDocument(ctx: IngestContext, input: CreateDocumentInput): void {

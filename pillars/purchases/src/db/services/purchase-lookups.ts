@@ -13,6 +13,7 @@
 import { and, eq } from 'drizzle-orm';
 
 import { purchases } from '../schema.js';
+import { canonicalInstant } from './ordered-at.js';
 
 import type { PurchaseRow } from '../schema.js';
 import type { PurchasesDb } from './internal.js';
@@ -60,6 +61,14 @@ export function findPurchaseBySourceOrderId(
  * turn a rare false positive — two different shops at the same stated
  * minute for the same amount — from a visible 409 into a write that fails
  * and loses a real purchase.
+ *
+ * The stated timestamp is normalised to the stored form before it is
+ * matched. Comparing the caller's spelling against the column's would miss
+ * the re-upload this exists to catch whenever the two differ, which is the
+ * whole reason the column has one spelling. A timestamp naming no instant
+ * is matched as it was written: the only row it can equal is one migration
+ * `0010` could not read either, and that row is the same shop. The write
+ * that follows refuses such a timestamp regardless.
  */
 export interface ShopMoment {
   readonly source: string;
@@ -79,7 +88,7 @@ export function findPurchaseAtInstantForAmount(
     .where(
       and(
         eq(purchases.source, source),
-        eq(purchases.orderedAt, orderedAt),
+        eq(purchases.orderedAt, canonicalInstant(orderedAt) ?? orderedAt),
         eq(purchases.totalCents, totalCents),
         // Cents are a number without one. 3000 is $30.00 and ¥3000, and a
         // traveller can hold both — refusing the second as a duplicate of

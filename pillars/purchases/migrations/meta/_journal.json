@@ -73,9 +73,16 @@
       "breakpoints": true
     },
     {
-      "idx": 11,
+      "idx": 10,
       "version": "6",
       "when": 1787300000000,
+      "tag": "0010_canonical_ordered_at",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1787400000000,
       "tag": "0011_ordered_at_offset",
       "breakpoints": true
     }

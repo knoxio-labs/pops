@@ -2,20 +2,18 @@
  * Where an order sits in time, for the folds that decide which of a group's
  * orders is its newest or its oldest.
  *
- * `purchases.ordered_at` is stored verbatim and `IsoTimestampSchema` admits
- * an offset, so `2026-01-02T00:00:00+10:00` happens six hours *before*
- * `2026-01-01T20:00:00Z` and sorts *after* it as text. Any fold that ranks
- * the raw string picks the wrong order.
+ * `purchases.ordered_at` now holds one spelling of an instant, so ranking
+ * the raw string would in fact agree with ranking the instant — for every
+ * row the current writer wrote. The rows it did not are why this parses
+ * anyway: a value the canonicalising migration could not read was left as it
+ * was, and a fold reading that as text would place it wherever its first
+ * character happened to fall.
  *
- * One helper rather than one per fold. The product leaderboard and the
- * merchant roll-up both answer "which order came later", and two
- * implementations of that would agree only by inspection — the first
- * correction to either would leave the other behind.
- *
- * The SQL side of the same hazard is not fixed here: the date window a scope
- * filter builds still compares the stored text, so an order can rank
- * correctly inside a group it should never have been in. That is a decision
- * about how the column is written rather than how it is read.
+ * One helper rather than one per fold. The product leaderboard, the
+ * merchant roll-up, the dictionary's printed name and search's recency
+ * ordering all answer "which order came later", and five implementations of
+ * that would agree only by inspection — the first correction to any of them
+ * would leave the rest behind.
  */
 
 /** An order's position in time, with a deterministic tie-break. */
@@ -62,4 +60,26 @@ export function isOlder(candidate: OrderRank, incumbent: OrderRank): boolean {
   if (!hasInstant(incumbent)) return true;
   if (candidate.instant !== incumbent.instant) return candidate.instant < incumbent.instant;
   return candidate.tieBreaker < incumbent.tieBreaker;
+}
+
+function compareText(a: string, b: string): number {
+  if (a === b) return 0;
+  return a < b ? -1 : 1;
+}
+
+/**
+ * Newest first, for a sort rather than a fold.
+ *
+ * A comparator cannot borrow {@link isNewer}: that answers false both ways
+ * for an unreadable timestamp, which is the right answer for "is this one
+ * the newest" and no answer at all for a sort, so such a row would land
+ * wherever the scan left it. Here it sorts last — after every order whose
+ * instant is known, and among its own kind by the tie-break — so the one
+ * row nothing is known about cannot take the top of a list ordered by
+ * recency.
+ */
+export function byNewestFirst(a: OrderRank, b: OrderRank): number {
+  if (hasInstant(a) !== hasInstant(b)) return hasInstant(a) ? -1 : 1;
+  if (hasInstant(a) && a.instant !== b.instant) return b.instant - a.instant;
+  return compareText(a.tieBreaker, b.tieBreaker);
 }
