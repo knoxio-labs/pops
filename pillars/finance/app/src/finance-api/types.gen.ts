@@ -3024,7 +3024,7 @@ export type ImportsGetImportProgressResponses = {
       error?: string;
       status: 'processing' | 'success' | 'failed';
     }>;
-    currentStep: 'deduplicating' | 'matching';
+    currentStep: 'deduplicating' | 'matching' | 'categorizing';
     errors: Array<{
       description: string;
       error: string;

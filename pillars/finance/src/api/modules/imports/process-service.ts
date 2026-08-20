@@ -26,7 +26,9 @@ import {
   buildAiWarnings,
   makeBuckets,
   type ProcessBuckets,
+  PROGRESS_INTERVAL_ROWS,
   type ProgressBatchItem,
+  yieldToEventLoop,
 } from './processing-helpers.js';
 import { loadKnownTags } from './tag-management.js';
 import { createAiCounters } from './types.js';
@@ -105,29 +107,6 @@ interface ProcessLoopArgs {
 }
 
 /**
- * Rows classified between progress emissions.
- *
- * Each emission costs one event-loop turn, so per-row would trade the whole
- * run's throughput for resolution nobody can see; at this size a 3231-row
- * import yields ~130 times, which is imperceptible against the classification
- * itself but frequent enough that the bar visibly moves.
- */
-const PROGRESS_INTERVAL_ROWS = 25;
-
-/**
- * Hand the event loop back so pending HTTP work runs.
- *
- * The classification ladder is synchronous and the pillar is a single Node
- * process, so a long uninterrupted run starves the very `/imports/progress`
- * polls that are meant to observe it — updating the store more often changes
- * nothing on its own, because no poll can be answered until the loop ends.
- * `setImmediate` yields the macrotask queue, where those requests sit.
- */
-function yieldToEventLoop(): Promise<void> {
-  return new Promise((resolve) => setImmediate(resolve));
-}
-
-/**
  * Pass 1: run the non-AI ladder for every row. Rows it resolves land straight
  * in `results`; rows that fall through collect into the returned `pending`
  * list for the batched AI pass. A thrown error (e.g. a DB failure) degrades
@@ -137,6 +116,10 @@ function yieldToEventLoop(): Promise<void> {
  * also where progress has to come from. Reporting only from the bookkeeping
  * loop that follows leaves the client showing `0/N` for the whole run and then
  * jumping straight to the result.
+ *
+ * The count reported is rows *settled*, not rows walked: rows deferred to the
+ * AI pass are not done yet, and counting them here would leave the bar full
+ * before the longest part of the run had started.
  */
 async function classifyWithoutAiPass(
   loopArgs: Pick<ProcessLoopArgs, 'db' | 'newTransactions' | 'context' | 'counters'> & {
@@ -161,7 +144,7 @@ async function classifyWithoutAiPass(
       results[i] = { failed, batchStatus: 'failed', errorEntry };
     }
     if (onProgress && (i + 1) % PROGRESS_INTERVAL_ROWS === 0) {
-      onProgress({ processedCount: i + 1 });
+      onProgress({ processedCount: i + 1 - pending.length });
       await yieldToEventLoop();
     }
   }
@@ -175,8 +158,18 @@ async function runProcessLoop(args: ProcessLoopArgs): Promise<{ errors: ErrorEnt
   });
 
   const pending = await classifyWithoutAiPass(args, results);
+  const settledByLadder = newTransactions.length - pending.length;
   if (pending.length > 0) {
-    await resolvePendingAi({ db, pending, context, counters, results });
+    onProgress?.({ currentStep: 'categorizing', processedCount: settledByLadder });
+    await resolvePendingAi({
+      db,
+      pending,
+      context,
+      counters,
+      results,
+      onResolved: (resolvedCount) =>
+        onProgress?.({ processedCount: settledByLadder + resolvedCount }),
+    });
   }
   onProgress?.({ processedCount: newTransactions.length });
 

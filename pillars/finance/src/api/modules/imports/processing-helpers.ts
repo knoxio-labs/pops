@@ -14,6 +14,29 @@ export interface ProgressBatchItem {
   error?: string;
 }
 
+/**
+ * Rows settled between progress emissions.
+ *
+ * Each emission costs one event-loop turn, so per-row would trade the whole
+ * run's throughput for resolution nobody can see; at this size a 3231-row
+ * import yields ~130 times, which is imperceptible against the classification
+ * itself but frequent enough that the bar visibly moves.
+ */
+export const PROGRESS_INTERVAL_ROWS = 25;
+
+/**
+ * Hand the event loop back so pending HTTP work runs.
+ *
+ * The pillar is a single Node process, so a run that never yields starves the
+ * very `/imports/progress` polls meant to observe it — writing to the progress
+ * store more often changes nothing on its own, because no poll can be answered
+ * until the loop ends. `setImmediate` yields the macrotask queue, where those
+ * requests sit.
+ */
+export function yieldToEventLoop(): Promise<void> {
+  return new Promise((resolve) => setImmediate(resolve));
+}
+
 export function appendBatchItem(currentBatch: ProgressBatchItem[], item: ProgressBatchItem): void {
   currentBatch.push(item);
   if (currentBatch.length > 5) currentBatch.shift();

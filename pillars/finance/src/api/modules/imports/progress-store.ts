@@ -14,7 +14,7 @@ import type { ProcessImportOutput } from './types.js';
 export interface ImportProgress {
   sessionId: string;
   status: 'processing' | 'completed' | 'failed';
-  currentStep: 'deduplicating' | 'matching';
+  currentStep: 'deduplicating' | 'matching' | 'categorizing';
   totalTransactions: number;
   processedCount: number;
   currentBatch: Array<{

@@ -4549,7 +4549,7 @@ export interface operations {
               status: 'processing' | 'success' | 'failed';
             }[];
             /** @enum {string} */
-            currentStep: 'deduplicating' | 'matching';
+            currentStep: 'deduplicating' | 'matching' | 'categorizing';
             errors: {
               description: string;
               error: string;
