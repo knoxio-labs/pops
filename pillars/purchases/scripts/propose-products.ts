@@ -22,9 +22,11 @@
  * before that happens. `propose:kinds` defaults the other way because it only
  * ever fills a NULL and can destroy nothing.
  *
- * `confirmedAt` marks a wording, not the product it points at. A product
- * whose last unconfirmed wording is retired is deleted with it, label and
- * all, which is why the preview names the products going too.
+ * The pass will not delete a product a human named — it holds back the
+ * wordings reaching one, so nothing orphans it. The preview still names every
+ * product a run would delete, because a run that names one whose label no
+ * retired wording spells is a run that found a hole in that guarantee, and
+ * that is exactly what an operator needs to see before committing it.
  */
 import { resolvePurchasesSqlitePath } from '../src/api/purchases-sqlite-path.js';
 import {
@@ -197,9 +199,10 @@ function wordings(entries: readonly DictionaryEntry[]): readonly string[] {
  * The deleted products the retire lines do not already name.
  *
  * A product this pass minted carries its wording as its label, so naming it
- * again says nothing. A product a human renamed carries a label no line
- * prints, and losing it is the one thing here that re-running the pass cannot
- * put back — so that is the one the report has to say out loud.
+ * again says nothing. Anything else is a label no retired wording spells,
+ * which the pass is meant never to be able to delete — so the report says it
+ * out loud rather than folding it into a count, and an empty list here is the
+ * check that the naming marker is doing its job.
  */
 function unnamedDeletions(report: PassReport): readonly string[] {
   const named = new Set(report.retired.map((entry) => entry.printedName));

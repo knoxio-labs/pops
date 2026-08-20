@@ -17,8 +17,17 @@
  * that line may only have been deleted and re-ingested), it is not repointed,
  * and it is not relabelled. That is the whole content of the `confirmedAt`
  * marker: null means this pass owns the row, non-null means it does not.
+ *
+ * **So is a product a human named.** `confirmedAt` marks a wording, and
+ * typing a name is a claim about the product instead, so the product carries
+ * its own marker — `labelConfirmedAt`. The pass holds back the wordings that
+ * reach such a product even while they are still proposals, because retiring
+ * the last of them would orphan the product and the orphan sweep would take
+ * the name with it. That is the one loss here no re-run can undo: a retired
+ * wording is re-minted the moment a line prints it again, where a name only
+ * ever existed because somebody typed it.
  */
-import { eq, inArray } from 'drizzle-orm';
+import { eq, inArray, isNotNull } from 'drizzle-orm';
 
 import { purchaseItems, purchaseProductAliases, purchaseProducts, purchases } from '../schema.js';
 import { expectRow } from './internal.js';
@@ -159,15 +168,25 @@ function observeWordings(lines: readonly ScannedLine[]): Map<string, ObservedWor
   return observed;
 }
 
-/** The unconfirmed entries no line prints any more, deleted. Returns their ids. */
+/**
+ * The unconfirmed entries no line prints any more, deleted. Returns their ids.
+ *
+ * An entry reaching a product a human named is held back too, even though the
+ * wording itself is still only a proposal. Retiring it would orphan that
+ * product and the sweep that follows would delete it, taking a name nothing
+ * can reconstruct — the pass re-mints a product wearing the printed wording,
+ * not what a person called it.
+ */
 function retireUnobserved(
   db: PurchasesDb,
   existing: readonly PurchaseProductAliasRow[],
   observed: ReadonlyMap<string, ObservedWording>
 ): ReadonlySet<string> {
+  const named = namedProductIds(db);
   const stale = existing.filter(
     (alias) =>
       alias.confirmedAt === null &&
+      !named.has(alias.productId) &&
       !observed.has(productLookupKey(alias.scopeKey, alias.normalisedName))
   );
   if (stale.length === 0) return new Set();
@@ -182,6 +201,18 @@ function retireUnobserved(
     .run();
   deleteOrphanedProducts(db);
   return new Set(stale.map((alias) => alias.id));
+}
+
+/** The products a human has named, which no retirement may orphan. */
+function namedProductIds(db: PurchasesDb): ReadonlySet<string> {
+  return new Set(
+    db
+      .select({ id: purchaseProducts.id })
+      .from(purchaseProducts)
+      .where(isNotNull(purchaseProducts.labelConfirmedAt))
+      .all()
+      .map((row) => row.id)
+  );
 }
 
 function mintProposal(db: PurchasesDb, wording: ObservedWording): void {

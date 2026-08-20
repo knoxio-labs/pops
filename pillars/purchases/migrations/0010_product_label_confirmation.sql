@@ -1,0 +1,13 @@
+-- A product's own marker for "a human named this", separate from the alias's.
+--
+-- `purchase_product_aliases.confirmed_at` asserts that one printed wording is
+-- one product. Renaming a product asserts something else — what the thing is
+-- called — and leaving that unmarked cost data: the pass retired the product's
+-- last unconfirmed wording once a till stopped printing it, the now-orphaned
+-- product row went with it, and the name went too. Re-running could not put it
+-- back, because the pass re-mints the product wearing the printed wording.
+--
+-- NULL on every existing row, which is correct rather than lossy: a rename
+-- left no trace to backfill from, and a label equal to a wording some line
+-- still prints is exactly what the pass would mint anyway.
+ALTER TABLE `purchase_products` ADD `label_confirmed_at` text;

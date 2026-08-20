@@ -762,6 +762,7 @@ export interface operations {
               createdAt: string;
               id: string;
               label: string;
+              labelConfirmedAt: string | null;
             }[];
           };
         };
@@ -982,6 +983,7 @@ export interface operations {
             createdAt: string;
             id: string;
             label: string;
+            labelConfirmedAt: string | null;
           };
         };
       };

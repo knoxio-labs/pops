@@ -8,10 +8,11 @@
  * sources that name many shops, and against a sku a merchant asserted — and
  * the ones that check a human's correction is honoured in both directions.
  *
- * The second family is the proposal pass overreaching. `confirmedAt` is the
- * only thing separating "a pass owns this row" from "a human does", so every
- * verb the pass has is tested against a confirmed entry as well as an
- * unconfirmed one.
+ * The second family is the proposal pass overreaching. Two markers separate
+ * "a pass owns this" from "a human does" — `confirmedAt` on a wording and
+ * `labelConfirmedAt` on a product a human named — so every verb the pass has
+ * is tested against an entry each one covers as well as against a bare
+ * proposal.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -414,7 +415,7 @@ describe('what a human asserts, and how it is undone', () => {
     ).not.toContain(emptied);
   });
 
-  it('renames a product without disturbing the wordings that resolve to it', () => {
+  it('renames a product, recording the naming on it and not on its wordings', () => {
     const target = productIdFor('CHK BRST 1KG');
     const before = aliasFor('CHK BRST 1KG');
 
@@ -424,7 +425,11 @@ describe('what a human asserts, and how it is undone', () => {
       label: 'Chicken breast, 1kg',
       name: 'CHK BRST 1KG',
     });
+    // The wording is untouched, marker included: naming the product asserts
+    // what the thing is called, not that this spelling of it is that thing.
+    // What the rename does assert is recorded on the product itself.
     expect(aliasFor('CHK BRST 1KG')).toEqual(before);
+    expect(getProduct(opened.db, target)?.product.labelConfirmedAt).not.toBeNull();
   });
 });
 
@@ -493,6 +498,50 @@ describe('what the proposal pass may not touch', () => {
       'CHK BRST 1KG',
       'MILK 2L',
     ]);
+  });
+
+  it('keeps a product a human named when the wording that prompted it stops being printed', () => {
+    const purchaseId = createPurchase(
+      opened.db,
+      order({ checksum: 'shop', items: [line({ name: 'CHK BRST 1KG' })] })
+    );
+    proposeProducts(opened.db);
+    renameProduct(opened.db, productIdFor('CHK BRST 1KG'), 'Chicken breast, 1kg');
+    deletePurchase(opened.db, purchaseId);
+
+    proposeProducts(opened.db);
+
+    // Typing a name is a person asserting one, and no re-run can put it back:
+    // the pass would re-mint the product wearing the till's wording instead.
+    expect(listProducts(opened.db).map((entry) => entry.product.label)).toEqual([
+      'Chicken breast, 1kg',
+    ]);
+  });
+
+  it('resolves a re-ingested line to the named product rather than a re-minted one', () => {
+    const purchaseId = createPurchase(
+      opened.db,
+      order({ checksum: 'shop', items: [line({ name: 'CHK BRST 1KG' })] })
+    );
+    proposeProducts(opened.db);
+    const target = productIdFor('CHK BRST 1KG');
+    renameProduct(opened.db, target, 'Chicken breast, 1kg');
+
+    // The realistic trigger: a line is deleted and re-ingested, with a pass
+    // running in the gap while nothing prints the wording.
+    deletePurchase(opened.db, purchaseId);
+    proposeProducts(opened.db);
+    createPurchase(
+      opened.db,
+      order({ checksum: 'again', items: [line({ name: 'CHK BRST 1KG' })] })
+    );
+    proposeProducts(opened.db);
+
+    expect(resolve('CHK BRST 1KG').identity).toMatchObject({
+      productId: target,
+      label: 'Chicken breast, 1kg',
+    });
+    expect(listProducts(opened.db)).toHaveLength(1);
   });
 
   it('does not repoint or relabel an asserted entry', () => {
