@@ -16,7 +16,6 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { openTempDb } from '../../db/__tests__/helpers.js';
@@ -25,12 +24,15 @@ import { dms } from '../../ingest/receipt/__tests__/exif-fixtures.js';
 import { jpegWithExif, jpegWithTiff } from '../../ingest/receipt/__tests__/image-fixtures.js';
 import { createPurchasesApiApp } from '../app.js';
 import { __resetPillarRegistryCache } from '../pillars/registry.js';
+import { createTestTransport } from './test-http.js';
 
 import type { Express } from 'express';
 
 import type { OpenedPurchasesDb, PurchaseCaptureRow } from '../../db/index.js';
 import type { ReceiptVision } from '../../ingest/receipt/vision.js';
 import type { MerchantResolver } from '../contacts/merchant.js';
+
+const { requestOn } = createTestTransport();
 
 const READING = {
   merchantName: 'Bunnings Warehouse',
@@ -96,7 +98,7 @@ afterEach(() => {
   __resetPillarRegistryCache();
 });
 
-const post = (app: Express, body: object) => request(app).post('/receipts').send(body);
+const post = (app: Express, body: object) => requestOn(app).post('/receipts').send(body);
 
 const captureRows = (): PurchaseCaptureRow[] => opened.db.select().from(purchaseCapture).all();
 

@@ -8,17 +8,19 @@
  * asks this pillar to write into inventory: the URI arrives from the caller,
  * which is what the boundary is.
  */
-import request from 'supertest';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 
 import { amazonOrder, openTempDb, seedAmazonSource } from '../../db/__tests__/helpers.js';
 import { createPurchase, getPurchase } from '../../db/index.js';
 import { createPurchasesApiApp } from '../app.js';
 import { __resetPillarRegistryCache } from '../pillars/registry.js';
+import { createTestTransport } from './test-http.js';
 
 import type { Express } from 'express';
 
 import type { OpenedPurchasesDb } from '../../db/index.js';
+
+const { requestOn } = createTestTransport();
 
 let opened: OpenedPurchasesDb;
 let cleanup: () => void;
@@ -63,13 +65,13 @@ afterEach(() => {
 });
 
 function decide(body: object) {
-  return request(app)
+  return requestOn(app)
     .post(`/purchases/${purchaseId}/items/${itemId}/inventory-proposal`)
     .send(body);
 }
 
 it('offers every undecided unit of a durable line', async () => {
-  const res = await request(app).get(`/purchases/${purchaseId}/inventory-proposals`).expect(200);
+  const res = await requestOn(app).get(`/purchases/${purchaseId}/inventory-proposals`).expect(200);
 
   expect(res.body.proposals).toHaveLength(2);
   expect(res.body.proposals[0]).toMatchObject({
@@ -91,7 +93,7 @@ it('records an accept against the URI the caller supplies, and stops offering th
     inventoryDeclinedAt: null,
   });
 
-  const res = await request(app).get(`/purchases/${purchaseId}/inventory-proposals`).expect(200);
+  const res = await requestOn(app).get(`/purchases/${purchaseId}/inventory-proposals`).expect(200);
   expect(res.body.proposals).toHaveLength(1);
 });
 
@@ -113,7 +115,7 @@ it('refuses a third answer to a two-unit line rather than minting a third asset'
 });
 
 it('refuses an answer routed through the wrong order', async () => {
-  const res = await request(app)
+  const res = await requestOn(app)
     .post(`/purchases/no-such-order/items/${itemId}/inventory-proposal`)
     .send({ decision: 'declined' })
     .expect(404);

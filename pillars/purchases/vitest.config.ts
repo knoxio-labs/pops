@@ -28,6 +28,65 @@ export default defineConfig({
      * turned out to be. If a single block is genuinely slow, bound that
      * block where a reader can see the measurement, as `merchant-spend`
      * does for building its corpus.
+     *
+     * Addendum. The fix above removed the suite's OWN contention; it did not
+     * remove the residual failures a genuinely oversubscribed developer box
+     * still produces (a dozen sibling worktrees compiling and testing at
+     * once). One measured baseline exists for that residual, from
+     * `scripts/flake-hunt.mjs` on a 14-CPU box at a 1-minute load average
+     * between 34 and 220: 1 red run in 12 on the tree before the fix above,
+     * 4 in 52 on the tree after it — no distinguishable difference at those
+     * sample sizes, and roughly a 1-in-13 failure rate either way. Every
+     * figure below is against that ~1-in-13 baseline; there is no other.
+     *
+     * Those reds were not one event. Most were a supertest request missing
+     * the 5s default. One was `expected 200 "OK", got 400 "Bad Request"` on
+     * a bare `GET /purchases`, which no handler on that path can return —
+     * not a descheduled request, which cannot invent a status, but a
+     * connection outliving the ephemeral server it belonged to and landing
+     * on whatever bound the same port next.
+     *
+     * Both signatures share a cause the suite was paying for on every call.
+     * Handed a bare Express app, supertest binds a fresh `http.Server` on an
+     * OS-assigned port for each request and tears it down after, and
+     * superagent dials it on a fresh connection because it defaults to
+     * `agent: false` — two ephemeral ports per request, hundreds of
+     * bind/connect/close cycles a run. finance and bfm reached the same
+     * diagnosis on the same symptom before this pillar did; the netstat
+     * evidence is in `pillars/finance/src/api/__tests__/test-utils.ts`, and
+     * `pillars/bfm/src/api/__tests__/test-http.ts` names the invented-status
+     * variant verbatim. Every API test file here now goes through the third
+     * copy of that primitive, `src/api/__tests__/test-http.ts`: one
+     * pre-listened `127.0.0.1` server per file and one pooled keep-alive
+     * connection, instead of a listener and a connection per request.
+     *
+     * The justification for that is mechanical, not statistical, and the
+     * distinction matters. Against a ~1-in-13 baseline, a session's worth of
+     * consecutive green runs is worth nothing: seven of them would happen
+     * 58% of the time with no change at all. So the claim made here is only
+     * the one that can be checked deterministically —
+     * `src/api/__tests__/test-http.test.ts` asserts that a sequence of
+     * requests shares one listening port, one client connection and the
+     * loopback bind, and its header says how to watch each assertion fail.
+     * Whether that removes the last red on an arbitrarily loaded box is not
+     * claimed and was not measured.
+     *
+     * It certainly does not make the suite immune to one. The same session,
+     * at a load average of 27-30 on 14 CPUs, hit `Hook timed out in 30000ms`
+     * on `merchant-spend`'s and `accounting-properties`'s corpus-building
+     * `beforeAll` — an already-bounded, already-measured 30s timeout, missed
+     * anyway — and `two-process.test.ts`'s real child process not answering
+     * its health check in time. Those are a different layer (a real
+     * subprocess boot, not a supertest request) and are tracked separately
+     * rather than re-litigated here.
+     *
+     * So the decision on the residual is the third of the levers that were
+     * open: a box running far more than it has cores for is a property of
+     * the box, not of this suite, and is recorded here so the next person
+     * does not re-investigate it. The transport was fixed because its cost
+     * was real and removable, not because it disposes of that. Neither of
+     * the other two levers was taken — no timeout was raised anywhere, and
+     * no file stopped asserting wall clock.
      */
     environment: 'node',
     exclude: [...configDefaults.exclude, 'app/**'],

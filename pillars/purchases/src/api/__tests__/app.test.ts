@@ -4,7 +4,6 @@
  * where the wire schema's rejections (float cents, bad currency) actually
  * fire.
  */
-import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { openTempDb, seedAmazonSource } from '../../db/__tests__/helpers.js';
@@ -15,10 +14,13 @@ import {
   TEST_JSON_BODY_LIMIT_BYTES_ENV,
 } from '../app.js';
 import { __resetPillarRegistryCache } from '../pillars/registry.js';
+import { createTestTransport } from './test-http.js';
 
 import type { Express } from 'express';
 
 import type { OpenedPurchasesDb } from '../../db/index.js';
+
+const { requestOn } = createTestTransport();
 
 let opened: OpenedPurchasesDb;
 let cleanup: () => void;
@@ -91,25 +93,25 @@ afterEach(() => {
 
 describe('probes', () => {
   it('reports health with the build version', async () => {
-    const res = await request(app).get('/health');
+    const res = await requestOn(app).get('/health');
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({ ok: true, pillar: 'purchases', version: '1.2.3' });
   });
 
   it('fails health when the DB handle is gone rather than reporting a bogus 200', async () => {
     opened.raw.close();
-    const res = await request(app).get('/health');
+    const res = await requestOn(app).get('/health');
     expect(res.status).toBe(500);
   });
 
   it('lists itself in /pillars', async () => {
-    const res = await request(app).get('/pillars');
+    const res = await requestOn(app).get('/pillars');
     expect(res.status).toBe(200);
     expect(res.body.pillars[0]).toEqual({ id: 'purchases', baseUrl: 'http://localhost:3013' });
   });
 
   it('serves the committed OpenAPI projection at 3.0.x', async () => {
-    const res = await request(app).get('/openapi');
+    const res = await requestOn(app).get('/openapi');
     expect(res.status).toBe(200);
     expect(String(res.body.openapi)).toMatch(/^3\.0\./);
     expect(res.body.paths).toHaveProperty('/purchases');
@@ -118,7 +120,7 @@ describe('probes', () => {
 
 describe('POST /purchases', () => {
   it('returns the whole order graph on create', async () => {
-    const res = await request(app).post('/purchases').send(fullOrder);
+    const res = await requestOn(app).post('/purchases').send(fullOrder);
 
     expect(res.status).toBe(201);
     expect(res.body.shipments).toHaveLength(1);
@@ -130,7 +132,7 @@ describe('POST /purchases', () => {
   });
 
   it('reports the accounting split, with the charge awaiting its transaction', async () => {
-    const res = await request(app).post('/purchases').send(fullOrder);
+    const res = await requestOn(app).post('/purchases').send(fullOrder);
     expect(res.body.accounting).toEqual({
       totalCents: 5678,
       matchedCents: 0,
@@ -142,7 +144,7 @@ describe('POST /purchases', () => {
   });
 
   it('projects tags with their confirmation marker and computes landed cost', async () => {
-    const res = await request(app).post('/purchases').send(fullOrder);
+    const res = await requestOn(app).post('/purchases').send(fullOrder);
     const tamper = res.body.items.find(
       (i: { item: { sku: { value: string } | null } }) => i.item.sku?.value === 'B0DSVZQ8P5'
     );
@@ -159,7 +161,7 @@ describe('POST /purchases', () => {
     // reading against. The schema used to `.trim()` it, which made the
     // stored value quietly different from the submitted one.
     const padded = '  0.202 kg NET @ $2.90/kg  ';
-    const res = await request(app)
+    const res = await requestOn(app)
       .post('/purchases')
       .send({
         ...minimalOrder,
@@ -176,12 +178,12 @@ describe('POST /purchases', () => {
     expect(res.status).toBe(201);
     expect(res.body.items[0].notes).toEqual([padded]);
 
-    const stored = await request(app).get(`/purchases/${String(res.body.purchase.id)}`);
+    const stored = await requestOn(app).get(`/purchases/${String(res.body.purchase.id)}`);
     expect(stored.body.items[0].notes).toEqual([padded]);
   });
 
   it('rejects a blank note rather than trimming it into an empty string', async () => {
-    const res = await request(app)
+    const res = await requestOn(app)
       .post('/purchases')
       .send({
         ...minimalOrder,
@@ -193,22 +195,22 @@ describe('POST /purchases', () => {
   });
 
   it('rejects fractional cents rather than rounding them', async () => {
-    const res = await request(app)
+    const res = await requestOn(app)
       .post('/purchases')
       .send({ ...minimalOrder, totalCents: 56.78 });
     expect(res.status).toBe(400);
   });
 
   it('rejects a lowercase currency rather than admitting a second spelling of AUD', async () => {
-    const res = await request(app)
+    const res = await requestOn(app)
       .post('/purchases')
       .send({ ...minimalOrder, currency: 'aud' });
     expect(res.status).toBe(400);
   });
 
   it('answers 409 on a duplicate checksum so an adapter can treat it as a skip', async () => {
-    await request(app).post('/purchases').send(minimalOrder);
-    const res = await request(app).post('/purchases').send(minimalOrder);
+    await requestOn(app).post('/purchases').send(minimalOrder);
+    const res = await requestOn(app).post('/purchases').send(minimalOrder);
     expect(res.status).toBe(409);
     expect(res.body.code).toBe('DUPLICATE_PURCHASE');
   });
@@ -218,8 +220,8 @@ describe('POST /purchases', () => {
     // same import. Asserting only the status would have hidden that this
     // used to come back as CONFLICT_UNIQUE, which an adapter branching on
     // DUPLICATE_PURCHASE to skip would treat as a hard failure.
-    await request(app).post('/purchases').send(minimalOrder);
-    const res = await request(app)
+    await requestOn(app).post('/purchases').send(minimalOrder);
+    const res = await requestOn(app)
       .post('/purchases')
       .send({ ...minimalOrder, checksum: 'different-recipe' });
     expect(res.status).toBe(409);
@@ -229,9 +231,9 @@ describe('POST /purchases', () => {
   });
 
   it('answers the same way whichever identity matched', async () => {
-    await request(app).post('/purchases').send(minimalOrder);
-    const byChecksum = await request(app).post('/purchases').send(minimalOrder);
-    const byOrderId = await request(app)
+    await requestOn(app).post('/purchases').send(minimalOrder);
+    const byChecksum = await requestOn(app).post('/purchases').send(minimalOrder);
+    const byOrderId = await requestOn(app)
       .post('/purchases')
       .send({ ...minimalOrder, checksum: 'another-recipe' });
 
@@ -240,8 +242,8 @@ describe('POST /purchases', () => {
   });
 
   it('still allows a distinct order from the same source', async () => {
-    await request(app).post('/purchases').send(minimalOrder);
-    const res = await request(app)
+    await requestOn(app).post('/purchases').send(minimalOrder);
+    const res = await requestOn(app)
       .post('/purchases')
       .send({ ...minimalOrder, checksum: 'other', sourceOrderId: 'a-different-order' });
     expect(res.status).toBe(201);
@@ -253,14 +255,14 @@ describe('POST /purchases', () => {
     const bare = { ...minimalOrder, sourceOrderId: null };
     expect(
       (
-        await request(app)
+        await requestOn(app)
           .post('/purchases')
           .send({ ...bare, checksum: 'n1' })
       ).status
     ).toBe(201);
     expect(
       (
-        await request(app)
+        await requestOn(app)
           .post('/purchases')
           .send({ ...bare, checksum: 'n2' })
       ).status
@@ -268,7 +270,7 @@ describe('POST /purchases', () => {
   });
 
   it('answers 400, not 404, for an unregistered source', async () => {
-    const res = await request(app)
+    const res = await requestOn(app)
       .post('/purchases')
       .send({ ...minimalOrder, source: 'ebay' });
     expect(res.status).toBe(400);
@@ -277,27 +279,27 @@ describe('POST /purchases', () => {
 
 describe('GET /purchases', () => {
   it('404s an unknown id', async () => {
-    const res = await request(app).get('/purchases/nope');
+    const res = await requestOn(app).get('/purchases/nope');
     expect(res.status).toBe(404);
   });
 
   it('accepts a repeated status filter', async () => {
-    await request(app).post('/purchases').send(minimalOrder);
-    const res = await request(app).get('/purchases?statuses=awaiting_settlement&statuses=linked');
+    await requestOn(app).post('/purchases').send(minimalOrder);
+    const res = await requestOn(app).get('/purchases?statuses=awaiting_settlement&statuses=linked');
     expect(res.status).toBe(200);
     expect(res.body.items).toHaveLength(1);
   });
 
   it('rejects a status outside the vocabulary', async () => {
-    const res = await request(app).get('/purchases?statuses=probably_fine');
+    const res = await requestOn(app).get('/purchases?statuses=probably_fine');
     expect(res.status).toBe(400);
   });
 });
 
 describe('GET /items', () => {
   it("finds lines by tag across orders, each with that tag's marker", async () => {
-    await request(app).post('/purchases').send(fullOrder);
-    const res = await request(app).get('/items?tag=coffee');
+    await requestOn(app).post('/purchases').send(fullOrder);
+    const res = await requestOn(app).get('/items?tag=coffee');
     expect(res.status).toBe(200);
     expect(res.body.items).toHaveLength(1);
     // The identifier arrives with the namespace that says how far it
@@ -309,21 +311,21 @@ describe('GET /items', () => {
   });
 
   it('requires a tag', async () => {
-    const res = await request(app).get('/items');
+    const res = await requestOn(app).get('/items');
     expect(res.status).toBe(400);
   });
 
   it('rejects a tag that is not a lower-case slug rather than finding nothing', async () => {
     // `Coffee` and `coffee` being two tags is the drift finance already has
     // in `tag_vocabulary`. A 400 says so; an empty list would not.
-    const res = await request(app).get('/items?tag=Coffee');
+    const res = await requestOn(app).get('/items?tag=Coffee');
     expect(res.status).toBe(400);
   });
 });
 
 describe('PATCH /purchases/:id/items/:itemId', () => {
   async function seedLine(): Promise<{ purchaseId: string; itemId: string }> {
-    const created = await request(app).post('/purchases').send(fullOrder);
+    const created = await requestOn(app).post('/purchases').send(fullOrder);
     return {
       purchaseId: String(created.body.purchase.id),
       // The funnel: no kind, no tags — the state every ingested line is in.
@@ -333,7 +335,7 @@ describe('PATCH /purchases/:id/items/:itemId', () => {
 
   it('confirms a kind and returns the line with its marker set', async () => {
     const { purchaseId, itemId } = await seedLine();
-    const res = await request(app)
+    const res = await requestOn(app)
       .patch(`/purchases/${purchaseId}/items/${itemId}`)
       .send({ kind: 'durable' });
 
@@ -344,9 +346,11 @@ describe('PATCH /purchases/:id/items/:itemId', () => {
 
   it('retracts a confirmation to unclassified', async () => {
     const { purchaseId, itemId } = await seedLine();
-    await request(app).patch(`/purchases/${purchaseId}/items/${itemId}`).send({ kind: 'durable' });
+    await requestOn(app)
+      .patch(`/purchases/${purchaseId}/items/${itemId}`)
+      .send({ kind: 'durable' });
 
-    const res = await request(app)
+    const res = await requestOn(app)
       .patch(`/purchases/${purchaseId}/items/${itemId}`)
       .send({ kind: null });
     expect(res.status).toBe(200);
@@ -355,7 +359,7 @@ describe('PATCH /purchases/:id/items/:itemId', () => {
 
   it('rejects a kind outside the closed vocabulary', async () => {
     const { purchaseId, itemId } = await seedLine();
-    const res = await request(app)
+    const res = await requestOn(app)
       .patch(`/purchases/${purchaseId}/items/${itemId}`)
       .send({ kind: 'vibes' });
     expect(res.status).toBe(400);
@@ -363,13 +367,13 @@ describe('PATCH /purchases/:id/items/:itemId', () => {
 
   it('rejects a body that states nothing', async () => {
     const { purchaseId, itemId } = await seedLine();
-    const res = await request(app).patch(`/purchases/${purchaseId}/items/${itemId}`).send({});
+    const res = await requestOn(app).patch(`/purchases/${purchaseId}/items/${itemId}`).send({});
     expect(res.status).toBe(400);
   });
 
   it('404s for a line that is not on that order', async () => {
     const { purchaseId } = await seedLine();
-    const res = await request(app)
+    const res = await requestOn(app)
       .patch(`/purchases/${purchaseId}/items/no-such-item`)
       .send({ kind: 'durable' });
     expect(res.status).toBe(404);
@@ -377,7 +381,7 @@ describe('PATCH /purchases/:id/items/:itemId', () => {
 
   it('404s for an order that does not exist', async () => {
     const { itemId } = await seedLine();
-    const res = await request(app)
+    const res = await requestOn(app)
       .patch(`/purchases/no-such-order/items/${itemId}`)
       .send({ kind: 'durable' });
     expect(res.status).toBe(404);
@@ -388,11 +392,11 @@ describe('PATCH /purchases/:id/items/:itemId', () => {
     // merchant stated. A classification write that touched any of them
     // would move the residual, which is the figure ADR-042 protects.
     const { purchaseId, itemId } = await seedLine();
-    const before = await request(app).get(`/purchases/${purchaseId}`);
-    await request(app)
+    const before = await requestOn(app).get(`/purchases/${purchaseId}`);
+    await requestOn(app)
       .patch(`/purchases/${purchaseId}/items/${itemId}`)
       .send({ kind: 'consumable', tags: ['snack'] });
-    const after = await request(app).get(`/purchases/${purchaseId}`);
+    const after = await requestOn(app).get(`/purchases/${purchaseId}`);
 
     expect(after.body.accounting).toEqual(before.body.accounting);
     expect(after.body.charges).toEqual(before.body.charges);
@@ -404,10 +408,10 @@ describe('PATCH /purchases/:id/items/:itemId', () => {
 
 describe('sources', () => {
   it('upserts idempotently so a deployment seed can re-run', async () => {
-    const first = await request(app)
+    const first = await requestOn(app)
       .put('/sources/bunnings')
       .send({ label: 'Bunnings', autoLinkPolicy: 'review' });
-    const second = await request(app)
+    const second = await requestOn(app)
       .put('/sources/bunnings')
       .send({ label: 'Bunnings Warehouse', autoLinkPolicy: 'auto' });
 
@@ -415,18 +419,18 @@ describe('sources', () => {
     expect(second.body.label).toBe('Bunnings Warehouse');
     expect(second.body.autoLinkPolicy).toBe('auto');
 
-    const list = await request(app).get('/sources');
+    const list = await requestOn(app).get('/sources');
     expect(list.body.items.filter((s: { id: string }) => s.id === 'bunnings')).toHaveLength(1);
   });
 
   it('refuses to delete a source that still has orders', async () => {
-    await request(app).post('/purchases').send(minimalOrder);
-    const res = await request(app).delete('/sources/amazon');
+    await requestOn(app).post('/purchases').send(minimalOrder);
+    const res = await requestOn(app).delete('/sources/amazon');
     expect(res.status).toBe(409);
   });
 
   it('rejects a settlement window of zero days', async () => {
-    const res = await request(app)
+    const res = await requestOn(app)
       .put('/sources/bunnings')
       .send({ label: 'Bunnings', settlementWindowDays: 0 });
     expect(res.status).toBe(400);
@@ -435,15 +439,15 @@ describe('sources', () => {
 
 describe('DELETE /purchases/:id', () => {
   it('removes the order and reports ok', async () => {
-    const created = await request(app).post('/purchases').send(fullOrder);
-    const res = await request(app).delete(`/purchases/${String(created.body.purchase.id)}`);
+    const created = await requestOn(app).post('/purchases').send(fullOrder);
+    const res = await requestOn(app).delete(`/purchases/${String(created.body.purchase.id)}`);
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ ok: true });
-    expect((await request(app).get('/purchases')).body.items).toHaveLength(0);
+    expect((await requestOn(app).get('/purchases')).body.items).toHaveLength(0);
   });
 
   it('404s an id that was never there', async () => {
-    const res = await request(app).delete('/purchases/nope');
+    const res = await requestOn(app).delete('/purchases/nope');
     expect(res.status).toBe(404);
     expect(res.body.code).toBe('NOT_FOUND');
   });
@@ -451,7 +455,7 @@ describe('DELETE /purchases/:id', () => {
 
 describe('GET /items limit', () => {
   it('honours an explicit limit', async () => {
-    await request(app)
+    await requestOn(app)
       .post('/purchases')
       .send({
         ...minimalOrder,
@@ -462,24 +466,24 @@ describe('GET /items limit', () => {
           tags: ['bulk'],
         })),
       });
-    expect((await request(app).get('/items?tag=bulk&limit=2')).body.items).toHaveLength(2);
-    expect((await request(app).get('/items?tag=bulk')).body.items).toHaveLength(5);
+    expect((await requestOn(app).get('/items?tag=bulk&limit=2')).body.items).toHaveLength(2);
+    expect((await requestOn(app).get('/items?tag=bulk')).body.items).toHaveLength(5);
   });
 
   it('rejects a limit above the cap rather than silently truncating', async () => {
-    expect((await request(app).get('/items?tag=bulk&limit=9999')).status).toBe(400);
+    expect((await requestOn(app).get('/items?tag=bulk&limit=9999')).status).toBe(400);
   });
 });
 
 describe('GET /sources/:id', () => {
   it('returns a registered source', async () => {
-    const res = await request(app).get('/sources/amazon');
+    const res = await requestOn(app).get('/sources/amazon');
     expect(res.status).toBe(200);
     expect(res.body.descriptorPattern).toBe('AMAZON%');
   });
 
   it('404s an unregistered slug', async () => {
-    const res = await request(app).get('/sources/ebay');
+    const res = await requestOn(app).get('/sources/ebay');
     expect(res.status).toBe(404);
     expect(res.body.code).toBe('NOT_FOUND');
   });
@@ -487,18 +491,18 @@ describe('GET /sources/:id', () => {
 
 describe('DELETE /sources/:id', () => {
   it('deletes a source nothing references', async () => {
-    await request(app).put('/sources/bunnings').send({ label: 'Bunnings' });
-    expect((await request(app).delete('/sources/bunnings')).status).toBe(200);
+    await requestOn(app).put('/sources/bunnings').send({ label: 'Bunnings' });
+    expect((await requestOn(app).delete('/sources/bunnings')).status).toBe(200);
   });
 
   it('404s an unregistered slug', async () => {
-    expect((await request(app).delete('/sources/ebay')).status).toBe(404);
+    expect((await requestOn(app).delete('/sources/ebay')).status).toBe(404);
   });
 });
 
 describe('payload rejections', () => {
   it('rejects a charge allocation naming an item the payload never defined', async () => {
-    const res = await request(app)
+    const res = await requestOn(app)
       .post('/purchases')
       .send({
         ...minimalOrder,
@@ -520,7 +524,7 @@ describe('payload rejections', () => {
   });
 
   it('rejects two lines claiming the same ref', async () => {
-    const res = await request(app)
+    const res = await requestOn(app)
       .post('/purchases')
       .send({
         ...minimalOrder,
@@ -539,7 +543,7 @@ describe('payload rejections', () => {
     // The silent-corruption case: line 0 has no ref so it registers under
     // '0'; line 1 declares ref '0'. Overwriting would attach line 1's
     // charge money to line 0, and the order would still balance.
-    const res = await request(app)
+    const res = await requestOn(app)
       .post('/purchases')
       .send({
         ...minimalOrder,
@@ -555,14 +559,14 @@ describe('payload rejections', () => {
   });
 
   it('rejects a shipment status outside the vocabulary', async () => {
-    const res = await request(app)
+    const res = await requestOn(app)
       .post('/purchases')
       .send({ ...minimalOrder, checksum: 'bad-status', shipments: [{ ref: 'b', status: 'lost' }] });
     expect(res.status).toBe(400);
   });
 
   it('rejects a negative quantity', async () => {
-    const res = await request(app)
+    const res = await requestOn(app)
       .post('/purchases')
       .send({
         ...minimalOrder,
@@ -573,7 +577,7 @@ describe('payload rejections', () => {
   });
 
   it('rejects an unknown document kind', async () => {
-    const res = await request(app)
+    const res = await requestOn(app)
       .post('/purchases')
       .send({
         ...minimalOrder,
@@ -640,7 +644,7 @@ describe('the body-limit override, wired through the real middleware', () => {
       selfBaseUrl: 'http://localhost:3013',
     });
 
-    const res = await request(overridden)
+    const res = await requestOn(overridden)
       .post('/purchases')
       .send({ ...minimalOrder, checksum: 'x'.repeat(4000) });
 
@@ -650,22 +654,22 @@ describe('the body-limit override, wired through the real middleware', () => {
 
 describe('source handler edge paths', () => {
   it('rejects an upsert with an empty label rather than storing a blank source', async () => {
-    const res = await request(app).put('/sources/bunnings').send({ label: '   ' });
+    const res = await requestOn(app).put('/sources/bunnings').send({ label: '   ' });
     expect(res.status).toBe(400);
   });
 
   it('rejects an unknown auto-link policy', async () => {
-    const res = await request(app)
+    const res = await requestOn(app)
       .put('/sources/bunnings')
       .send({ label: 'Bunnings', autoLinkPolicy: 'sometimes' });
     expect(res.status).toBe(400);
   });
 
   it('clears a descriptor pattern when the caller passes null', async () => {
-    await request(app)
+    await requestOn(app)
       .put('/sources/bunnings')
       .send({ label: 'Bunnings', descriptorPattern: 'BUNNINGS%' });
-    const res = await request(app)
+    const res = await requestOn(app)
       .put('/sources/bunnings')
       .send({ label: 'Bunnings', descriptorPattern: null });
     expect(res.status).toBe(200);
@@ -673,7 +677,7 @@ describe('source handler edge paths', () => {
   });
 
   it('reports an empty list before any source beyond the seed exists', async () => {
-    const res = await request(app).get('/sources');
+    const res = await requestOn(app).get('/sources');
     expect(res.body.items.map((s: { id: string }) => s.id)).toEqual(['amazon']);
   });
 });
@@ -681,7 +685,7 @@ describe('source handler edge paths', () => {
 describe('purchase handler edge paths', () => {
   it('paginates the index deterministically', async () => {
     for (const n of [1, 2, 3]) {
-      await request(app)
+      await requestOn(app)
         .post('/purchases')
         .send({
           ...minimalOrder,
@@ -690,31 +694,31 @@ describe('purchase handler edge paths', () => {
           orderedAt: `2026-0${String(n)}-01T00:00:00Z`,
         });
     }
-    const page1 = await request(app).get('/purchases?limit=2&offset=0');
-    const page2 = await request(app).get('/purchases?limit=2&offset=2');
+    const page1 = await requestOn(app).get('/purchases?limit=2&offset=0');
+    const page2 = await requestOn(app).get('/purchases?limit=2&offset=2');
 
     expect(page1.body.items.map((p: { checksum: string }) => p.checksum)).toEqual(['p3', 'p2']);
     expect(page2.body.items.map((p: { checksum: string }) => p.checksum)).toEqual(['p1']);
   });
 
   it('filters by source', async () => {
-    await request(app).post('/purchases').send(minimalOrder);
-    expect((await request(app).get('/purchases?sources=amazon')).body.items).toHaveLength(1);
-    expect((await request(app).get('/purchases?sources=ebay')).body.items).toHaveLength(0);
+    await requestOn(app).post('/purchases').send(minimalOrder);
+    expect((await requestOn(app).get('/purchases?sources=amazon')).body.items).toHaveLength(1);
+    expect((await requestOn(app).get('/purchases?sources=ebay')).body.items).toHaveLength(0);
   });
 
   it('bounds an orderedAt range inclusively', async () => {
-    await request(app).post('/purchases').send(minimalOrder);
-    const inside = await request(app).get(
+    await requestOn(app).post('/purchases').send(minimalOrder);
+    const inside = await requestOn(app).get(
       '/purchases?from=2026-02-02T01:41:21Z&to=2026-02-02T01:41:21Z'
     );
-    const outside = await request(app).get('/purchases?from=2026-03-01T00:00:00Z');
+    const outside = await requestOn(app).get('/purchases?from=2026-03-01T00:00:00Z');
     expect(inside.body.items).toHaveLength(1);
     expect(outside.body.items).toHaveLength(0);
   });
 
   it('rejects a non-ISO range bound rather than silently matching nothing', async () => {
-    expect((await request(app).get('/purchases?from=last%20tuesday')).status).toBe(400);
+    expect((await requestOn(app).get('/purchases?from=last%20tuesday')).status).toBe(400);
   });
 
   describe('the merchant filter a roll-up row opens', () => {
@@ -725,7 +729,7 @@ describe('purchase handler edge paths', () => {
         { merchantEntityId: null, merchantEntityName: null },
       ];
       for (const [index, merchant] of merchants.entries()) {
-        await request(app)
+        await requestOn(app)
           .post('/purchases')
           .send({
             ...minimalOrder,
@@ -742,7 +746,7 @@ describe('purchase handler edge paths', () => {
 
     it('opens an entity group without the label group that shares its name', async () => {
       await seedMerchants();
-      const res = await request(app).get('/purchases?merchantEntityId=ent-woolies');
+      const res = await requestOn(app).get('/purchases?merchantEntityId=ent-woolies');
 
       expect(res.status).toBe(200);
       expect(checksums(res.body)).toEqual(['merchant-0']);
@@ -750,7 +754,7 @@ describe('purchase handler edge paths', () => {
 
     it('opens a label group without the entity group that shares its name', async () => {
       await seedMerchants();
-      const res = await request(app).get('/purchases?merchantEntityName=Woolworths');
+      const res = await requestOn(app).get('/purchases?merchantEntityName=Woolworths');
 
       expect(res.status).toBe(200);
       expect(checksums(res.body)).toEqual(['merchant-1']);
@@ -758,7 +762,7 @@ describe('purchase handler edge paths', () => {
 
     it('opens the unattributed bucket', async () => {
       await seedMerchants();
-      const res = await request(app).get('/purchases?merchantUnattributed=true');
+      const res = await requestOn(app).get('/purchases?merchantUnattributed=true');
 
       expect(res.status).toBe(200);
       expect(checksums(res.body)).toEqual(['merchant-2']);
@@ -769,7 +773,7 @@ describe('purchase handler edge paths', () => {
     // rather than a request to exclude the bucket.
     it('treats merchantUnattributed=false as no merchant filter at all', async () => {
       await seedMerchants();
-      const res = await request(app).get(
+      const res = await requestOn(app).get(
         '/purchases?merchantUnattributed=false&merchantEntityName=Woolworths'
       );
 
@@ -779,7 +783,7 @@ describe('purchase handler edge paths', () => {
 
     it('refuses two merchant parameters rather than answering one of them', async () => {
       await seedMerchants();
-      const res = await request(app).get(
+      const res = await requestOn(app).get(
         '/purchases?merchantEntityId=ent-woolies&merchantEntityName=Woolworths'
       );
 
@@ -791,7 +795,7 @@ describe('purchase handler edge paths', () => {
 
     it('refuses the same combination on the roll-up the row came from', async () => {
       await seedMerchants();
-      const res = await request(app).get(
+      const res = await requestOn(app).get(
         '/analytics/merchant-spend?merchantEntityName=Woolworths&merchantUnattributed=true'
       );
 
@@ -801,10 +805,10 @@ describe('purchase handler edge paths', () => {
 
     it('scopes a roll-up to one merchant, so a row and its orders agree', async () => {
       await seedMerchants();
-      const rollup = await request(app).get(
+      const rollup = await requestOn(app).get(
         '/analytics/merchant-spend?merchantEntityName=Woolworths&currency=AUD'
       );
-      const orders = await request(app).get(
+      const orders = await requestOn(app).get(
         '/purchases?merchantEntityName=Woolworths&currency=AUD'
       );
 
@@ -813,7 +817,7 @@ describe('purchase handler edge paths', () => {
     });
 
     it('rejects a currency that is not an ISO code rather than matching nothing', async () => {
-      expect((await request(app).get('/purchases?currency=dollars')).status).toBe(400);
+      expect((await requestOn(app).get('/purchases?currency=dollars')).status).toBe(400);
     });
 
     // The leaderboard takes the roll-up's whole scope vocabulary, so a
@@ -823,7 +827,7 @@ describe('purchase handler edge paths', () => {
     async function seedSameSkuAtTwoMerchants(): Promise<void> {
       const merchants = ['Woolworths', 'Coles'];
       for (const [index, merchantEntityName] of merchants.entries()) {
-        await request(app)
+        await requestOn(app)
           .post('/purchases')
           .send({
             ...minimalOrder,
@@ -845,10 +849,10 @@ describe('purchase handler edge paths', () => {
 
     it('scopes the leaderboard to one merchant rather than counting both', async () => {
       await seedSameSkuAtTwoMerchants();
-      const scoped = await request(app).get(
+      const scoped = await requestOn(app).get(
         '/analytics/product-leaderboard?merchantEntityName=Woolworths'
       );
-      const unscoped = await request(app).get('/analytics/product-leaderboard');
+      const unscoped = await requestOn(app).get('/analytics/product-leaderboard');
 
       expect(unscoped.body.products).toHaveLength(1);
       expect(unscoped.body.products[0].orderCount).toBe(2);
@@ -858,7 +862,7 @@ describe('purchase handler edge paths', () => {
 
     it('refuses two merchant parameters on the leaderboard as well', async () => {
       await seedSameSkuAtTwoMerchants();
-      const res = await request(app).get(
+      const res = await requestOn(app).get(
         '/analytics/product-leaderboard?merchantEntityId=ent-woolies&merchantEntityName=Woolworths'
       );
 
@@ -868,7 +872,7 @@ describe('purchase handler edge paths', () => {
   });
 
   it('rejects a malformed pops:// document uri', async () => {
-    const res = await request(app)
+    const res = await requestOn(app)
       .post('/purchases')
       .send({
         ...minimalOrder,
@@ -880,7 +884,7 @@ describe('purchase handler edge paths', () => {
   });
 
   it('rejects a non-ISO orderedAt', async () => {
-    const res = await request(app)
+    const res = await requestOn(app)
       .post('/purchases')
       .send({ ...minimalOrder, checksum: 'bad-date', orderedAt: '2 Feb 2026' });
     expect(res.status).toBe(400);

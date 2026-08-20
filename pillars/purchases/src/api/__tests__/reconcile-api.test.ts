@@ -5,7 +5,6 @@
  * of the solver's verdict, so most of what is worth asserting here is that
  * the derivation says the same thing the sweep just decided.
  */
-import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { openTempDb, seedAmazonSource } from '../../db/__tests__/helpers.js';
@@ -14,11 +13,14 @@ import { runSweep } from '../../reconcile/sweep.js';
 import { createPurchasesApiApp } from '../app.js';
 import { FINANCE_UNAVAILABLE, financeReturning } from '../finance/__tests__/fixtures.js';
 import { __resetPillarRegistryCache } from '../pillars/registry.js';
+import { createTestTransport } from './test-http.js';
 
 import type { Express } from 'express';
 
 import type { OpenedPurchasesDb } from '../../db/index.js';
 import type { FinanceClient } from '../finance/client.js';
+
+const { requestOn } = createTestTransport();
 
 let opened: OpenedPurchasesDb;
 let cleanup: () => void;
@@ -64,7 +66,7 @@ afterEach(() => {
 
 describe('the queue', () => {
   it('is empty before anything is ingested', async () => {
-    const res = await request(app).get('/reconcile/queue').expect(200);
+    const res = await requestOn(app).get('/reconcile/queue').expect(200);
     expect(res.body.items).toEqual([]);
   });
 
@@ -72,7 +74,7 @@ describe('the queue', () => {
     order(4128, 'a');
     await runSweep({ db: opened.db, finance: financeReturning(), defaultWindowDays: 21 });
 
-    const res = await request(app).get('/reconcile/queue').expect(200);
+    const res = await requestOn(app).get('/reconcile/queue').expect(200);
     expect(res.body.items).toHaveLength(1);
     expect(res.body.items[0].proposed).toEqual([]);
     // Unexplained, not contested — the delta is the whole charge.
@@ -87,7 +89,7 @@ describe('the queue', () => {
       defaultWindowDays: 21,
     });
 
-    const res = await request(app).get('/reconcile/queue').expect(200);
+    const res = await requestOn(app).get('/reconcile/queue').expect(200);
     expect(res.body.items[0].proposed).toHaveLength(1);
     expect(res.body.items[0].proposed[0].linkType).toBe('exact');
     expect(res.body.items[0].deltaCents).toBe(0);
@@ -101,7 +103,7 @@ describe('the queue', () => {
       defaultWindowDays: 21,
     });
 
-    const res = await request(app).get('/reconcile/queue').expect(200);
+    const res = await requestOn(app).get('/reconcile/queue').expect(200);
     expect(res.body.items[0].proposed[0].linkType).toBe('partial');
     expect(res.body.items[0].deltaCents).toBe(-2000);
   });
@@ -115,8 +117,8 @@ describe('the queue', () => {
       defaultWindowDays: 21,
     });
 
-    const proposed = await request(app).get('/reconcile/queue?kind=proposed').expect(200);
-    const unexplained = await request(app).get('/reconcile/queue?kind=unexplained').expect(200);
+    const proposed = await requestOn(app).get('/reconcile/queue?kind=proposed').expect(200);
+    const unexplained = await requestOn(app).get('/reconcile/queue?kind=unexplained').expect(200);
 
     expect(proposed.body.items).toHaveLength(1);
     expect(unexplained.body.items).toHaveLength(1);
@@ -132,15 +134,15 @@ describe('the queue', () => {
       finance: financeReturning({ id: 't1', amountCents: 4128, date: '2026-03-06' }),
       defaultWindowDays: 21,
     });
-    const before = await request(app).get('/reconcile/queue').expect(200);
+    const before = await requestOn(app).get('/reconcile/queue').expect(200);
     const { chargeId } = before.body.items[0];
 
-    await request(app)
+    await requestOn(app)
       .post('/reconcile/confirm')
       .send({ chargeId, transactionUri: TXN })
       .expect(200);
 
-    const after = await request(app).get('/reconcile/queue').expect(200);
+    const after = await requestOn(app).get('/reconcile/queue').expect(200);
     expect(after.body.items).toEqual([]);
   });
 
@@ -148,8 +150,8 @@ describe('the queue', () => {
     order(4128, 'a');
     await runSweep({ db: opened.db, finance: financeReturning(), defaultWindowDays: 21 });
 
-    const mine = await request(app).get('/reconcile/queue?source=amazon').expect(200);
-    const other = await request(app).get('/reconcile/queue?source=woolworths').expect(200);
+    const mine = await requestOn(app).get('/reconcile/queue?source=amazon').expect(200);
+    const other = await requestOn(app).get('/reconcile/queue?source=woolworths').expect(200);
     expect(mine.body.items).toHaveLength(1);
     expect(other.body.items).toEqual([]);
   });
@@ -160,8 +162,8 @@ describe('the queue', () => {
     order(3000, 'c');
     await runSweep({ db: opened.db, finance: financeReturning(), defaultWindowDays: 21 });
 
-    const first = await request(app).get('/reconcile/queue?limit=2').expect(200);
-    const second = await request(app).get('/reconcile/queue?limit=2&offset=2').expect(200);
+    const first = await requestOn(app).get('/reconcile/queue?limit=2').expect(200);
+    const second = await requestOn(app).get('/reconcile/queue?limit=2&offset=2').expect(200);
 
     expect(first.body.items).toHaveLength(2);
     expect(second.body.items).toHaveLength(1);
@@ -176,7 +178,7 @@ describe('the queue', () => {
     // shop and ~6,000 a year from one merchant. If those asked questions
     // the queue becomes unusable and gets abandoned — taking the orders
     // that DO need a decision with it (ADR-042, POPS-239).
-    await request(app)
+    await requestOn(app)
       .put('/sources/woolworths')
       .send({ label: 'Woolworths', descriptorPattern: 'WOOLWORTHS%', autoLinkPolicy: 'auto' })
       .expect(200);
@@ -191,14 +193,14 @@ describe('the queue', () => {
     });
     await runSweep({ db: opened.db, finance: financeReturning(), defaultWindowDays: 21 });
 
-    const queue = await request(app).get('/reconcile/queue').expect(200);
+    const queue = await requestOn(app).get('/reconcile/queue').expect(200);
     expect(queue.body.items).toEqual([]);
   });
 
   it('still surfaces an auto-link source when explicitly asked', async () => {
     // Not hidden, just not interrupting — the merchant lens wants this
     // bucket even though the daily queue does not.
-    await request(app)
+    await requestOn(app)
       .put('/sources/woolworths')
       .send({ label: 'Woolworths', descriptorPattern: 'WOOLWORTHS%', autoLinkPolicy: 'auto' })
       .expect(200);
@@ -213,7 +215,7 @@ describe('the queue', () => {
     });
     await runSweep({ db: opened.db, finance: financeReturning(), defaultWindowDays: 21 });
 
-    const queue = await request(app).get('/reconcile/queue?includeAuto=true').expect(200);
+    const queue = await requestOn(app).get('/reconcile/queue?includeAuto=true').expect(200);
     expect(queue.body.items).toHaveLength(1);
     expect(queue.body.items[0].source).toBe('woolworths');
   });
@@ -222,7 +224,7 @@ describe('the queue', () => {
     // z.coerce.boolean() uses JS truthiness, so 'false' would arrive as
     // true and there would be no way to switch the flag back off — failing
     // in the direction that puts 6,000 grocery charges into the queue.
-    await request(app)
+    await requestOn(app)
       .put('/sources/woolworths')
       .send({ label: 'Woolworths', descriptorPattern: 'WOOLWORTHS%', autoLinkPolicy: 'auto' })
       .expect(200);
@@ -237,15 +239,15 @@ describe('the queue', () => {
     });
     await runSweep({ db: opened.db, finance: financeReturning(), defaultWindowDays: 21 });
 
-    const off = await request(app).get('/reconcile/queue?includeAuto=false').expect(200);
+    const off = await requestOn(app).get('/reconcile/queue?includeAuto=false').expect(200);
     expect(off.body.items).toEqual([]);
 
-    const on = await request(app).get('/reconcile/queue?includeAuto=true').expect(200);
+    const on = await requestOn(app).get('/reconcile/queue?includeAuto=true').expect(200);
     expect(on.body.items).toHaveLength(1);
   });
 
   it('keeps a review-policy source in the queue alongside an auto one', async () => {
-    await request(app)
+    await requestOn(app)
       .put('/sources/woolworths')
       .send({ label: 'Woolworths', descriptorPattern: 'WOOLWORTHS%', autoLinkPolicy: 'auto' })
       .expect(200);
@@ -261,7 +263,7 @@ describe('the queue', () => {
     order(4128, 'amazon-1');
     await runSweep({ db: opened.db, finance: financeReturning(), defaultWindowDays: 21 });
 
-    const queue = await request(app).get('/reconcile/queue').expect(200);
+    const queue = await requestOn(app).get('/reconcile/queue').expect(200);
     expect(queue.body.items).toHaveLength(1);
     expect(queue.body.items[0].source).toBe('amazon');
   });
@@ -279,7 +281,7 @@ describe('the queue', () => {
     });
     await runSweep({ db: opened.db, finance: financeReturning(), defaultWindowDays: 21 });
 
-    const res = await request(app).get('/reconcile/queue').expect(200);
+    const res = await requestOn(app).get('/reconcile/queue').expect(200);
     expect(res.body.items).toEqual([]);
   });
 });
@@ -292,13 +294,13 @@ describe('decisions', () => {
       finance: financeReturning({ id: 't1', amountCents: 4128, date: '2026-03-06' }),
       defaultWindowDays: 21,
     });
-    const res = await request(app).get('/reconcile/queue').expect(200);
+    const res = await requestOn(app).get('/reconcile/queue').expect(200);
     return res.body.items[0].chargeId as string;
   }
 
   it('pins a confirmed link against re-derivation', async () => {
     const chargeId = await seedProposal();
-    await request(app)
+    await requestOn(app)
       .post('/reconcile/confirm')
       .send({ chargeId, transactionUri: TXN })
       .expect(200);
@@ -306,16 +308,16 @@ describe('decisions', () => {
     // A sweep where the transaction has vanished entirely.
     await runSweep({ db: opened.db, finance: financeReturning(), defaultWindowDays: 21 });
 
-    const detail = await request(app).get('/purchases').expect(200);
+    const detail = await requestOn(app).get('/purchases').expect(200);
     const purchaseId = detail.body.items[0].id;
-    const full = await request(app).get(`/purchases/${purchaseId}`).expect(200);
+    const full = await requestOn(app).get(`/purchases/${purchaseId}`).expect(200);
     expect(full.body.accounting.matchedCents).toBe(4128);
   });
 
   it('names the rule a confirm learned', async () => {
     const chargeId = await seedProposal();
 
-    const res = await request(app)
+    const res = await requestOn(app)
       .post('/reconcile/confirm')
       .send({ chargeId, transactionUri: TXN })
       .expect(200);
@@ -328,26 +330,26 @@ describe('decisions', () => {
   it('keeps a rejected pairing out of every later sweep', async () => {
     const chargeId = await seedProposal();
 
-    await request(app)
+    await requestOn(app)
       .post('/reconcile/reject')
       .send({ chargeId, transactionUri: TXN })
       .expect(200);
     // The same finance window the proposal came from. An unlink here would
     // hand back the identical proposal.
-    await request(app).post('/reconcile/sweep').send({}).expect(200);
+    await requestOn(app).post('/reconcile/sweep').send({}).expect(200);
 
-    const res = await request(app).get('/reconcile/queue').expect(200);
+    const res = await requestOn(app).get('/reconcile/queue').expect(200);
     expect(res.body.items[0].proposed).toEqual([]);
   });
 
   it('404s a reject for a link that is already gone', async () => {
     const chargeId = await seedProposal();
-    await request(app)
+    await requestOn(app)
       .post('/reconcile/reject')
       .send({ chargeId, transactionUri: TXN })
       .expect(200);
 
-    await request(app)
+    await requestOn(app)
       .post('/reconcile/reject')
       .send({ chargeId, transactionUri: TXN })
       .expect(404);
@@ -355,12 +357,12 @@ describe('decisions', () => {
 
   it('removes a link on unlink', async () => {
     const chargeId = await seedProposal();
-    await request(app)
+    await requestOn(app)
       .post('/reconcile/unlink')
       .send({ chargeId, transactionUri: TXN })
       .expect(200);
 
-    const res = await request(app).get('/reconcile/queue').expect(200);
+    const res = await requestOn(app).get('/reconcile/queue').expect(200);
     expect(res.body.items[0].proposed).toEqual([]);
   });
 
@@ -368,12 +370,12 @@ describe('decisions', () => {
     // The queue is a snapshot; a sweep may have re-derived since it was
     // read. Reporting success would be a lie the user discovers later.
     const chargeId = await seedProposal();
-    await request(app)
+    await requestOn(app)
       .post('/reconcile/unlink')
       .send({ chargeId, transactionUri: TXN })
       .expect(200);
 
-    await request(app)
+    await requestOn(app)
       .post('/reconcile/confirm')
       .send({ chargeId, transactionUri: TXN })
       .expect(404);
@@ -383,7 +385,7 @@ describe('decisions', () => {
 describe('the explicit sweep', () => {
   it('reports what it did', async () => {
     order(4128, 'a');
-    const res = await request(app).post('/reconcile/sweep').send({}).expect(200);
+    const res = await requestOn(app).post('/reconcile/sweep').send({}).expect(200);
 
     expect(res.body.kind).toBe('swept');
     expect(res.body.derivedChargesMinted).toBe(1);
@@ -394,7 +396,7 @@ describe('the explicit sweep', () => {
     // reconciliation.
     order(4128, 'a');
     const unavailableApp = build(FINANCE_UNAVAILABLE);
-    const res = await request(unavailableApp).post('/reconcile/sweep').send({}).expect(200);
+    const res = await requestOn(unavailableApp).post('/reconcile/sweep').send({}).expect(200);
 
     expect(res.body.kind).toBe('skipped');
     expect(res.body.reason).toBe('unavailable');
@@ -407,6 +409,6 @@ describe('the explicit sweep', () => {
       version: '1.2.3',
       selfBaseUrl: 'http://localhost:3013',
     });
-    await request(noRunner).post('/reconcile/sweep').send({}).expect(503);
+    await requestOn(noRunner).post('/reconcile/sweep').send({}).expect(503);
   });
 });

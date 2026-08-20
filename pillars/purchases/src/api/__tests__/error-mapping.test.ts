@@ -9,7 +9,6 @@
  */
 import { RequestValidationError } from '@ts-rest/express';
 import express from 'express';
-import request from 'supertest';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -24,6 +23,9 @@ import {
   isUniqueConstraintError,
 } from '../shared/sqlite-errors.js';
 import { PASSED_THROUGH_STATUS, passThroughErrorReporter } from './helpers.js';
+import { createTestTransport } from './test-http.js';
+
+const { requestOn } = createTestTransport();
 
 function sqliteError(code: string): Error {
   return Object.assign(new Error(`${code}: constraint failed`), { code });
@@ -84,7 +86,7 @@ describe('createRequestValidationErrorHandler', () => {
     });
     app.use(createRequestValidationErrorHandler());
 
-    const res = await request(app).get('/boom');
+    const res = await requestOn(app).get('/boom');
 
     expect(res.status).toBe(400);
     expect(res.body).toEqual({
@@ -101,7 +103,7 @@ describe('createRequestValidationErrorHandler', () => {
     app.use(createRequestValidationErrorHandler());
     app.use(passThroughErrorReporter);
 
-    const res = await request(app).get('/boom');
+    const res = await requestOn(app).get('/boom');
 
     expect(res.status).toBe(PASSED_THROUGH_STATUS);
     expect(res.body).toEqual({ passedThrough: 'unrelated failure' });

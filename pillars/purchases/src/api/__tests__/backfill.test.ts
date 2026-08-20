@@ -13,7 +13,6 @@
  * constraints and the CHECKs are all downstream of it, and a payload can
  * satisfy every zod rule and still be rejected on INSERT.
  */
-import request from 'supertest';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -28,11 +27,14 @@ import { runSweep } from '../../reconcile/sweep.js';
 import { createPurchasesApiApp } from '../app.js';
 import { financeReturning } from '../finance/__tests__/fixtures.js';
 import { __resetPillarRegistryCache } from '../pillars/registry.js';
+import { createTestTransport } from './test-http.js';
 
 import type { Express } from 'express';
 
 import type { TempDb, TempDbTemplate } from '../../db/__tests__/helpers.js';
 import type { OpenedPurchasesDb } from '../../db/index.js';
+
+const { requestOn } = createTestTransport();
 
 let opened: OpenedPurchasesDb;
 let cleanup: () => void;
@@ -88,7 +90,7 @@ const { orders } = parseAmazonOrderHistory(ORDER_HISTORY_CSV);
 async function postAll(target: Express): Promise<number[]> {
   const statuses: number[] = [];
   for (const order of orders) {
-    const response = await request(target).post('/purchases').send(order);
+    const response = await requestOn(target).post('/purchases').send(order);
     statuses.push(response.status);
   }
   return statuses;
@@ -134,11 +136,11 @@ describe('the parser output is acceptable to the real API', () => {
   });
 
   it('round-trips each order through GET with its lines and deliveries intact', async () => {
-    const list = await request(app).get('/purchases').expect(200);
+    const list = await requestOn(app).get('/purchases').expect(200);
     expect(list.body.items).toHaveLength(orders.length);
 
     for (const summary of list.body.items) {
-      const detail = await request(app).get(`/purchases/${summary.id}`).expect(200);
+      const detail = await requestOn(app).get(`/purchases/${summary.id}`).expect(200);
       const source = orders.find((o) => o.sourceOrderId === detail.body.purchase.sourceOrderId);
       expect(source).toBeDefined();
       expect(detail.body.items).toHaveLength(source?.items?.length ?? 0);
@@ -154,7 +156,7 @@ describe('the parser output is acceptable to the real API', () => {
     const second = await postAll(app);
 
     expect(second).toEqual(orders.map(() => 409));
-    const list = await request(app).get('/purchases').expect(200);
+    const list = await requestOn(app).get('/purchases').expect(200);
     expect(list.body.items).toHaveLength(orders.length);
   });
 });
@@ -178,7 +180,7 @@ describe('the ingest trigger', () => {
 
     const [order] = orders;
     if (order === undefined) throw new Error('fixture has no orders');
-    await request(triggered).post('/purchases').send(order).expect(201);
+    await requestOn(triggered).post('/purchases').send(order).expect(201);
 
     expect(fired).toHaveBeenCalledTimes(1);
   });
@@ -192,8 +194,8 @@ describe('the ingest trigger', () => {
 
     const [order] = orders;
     if (order === undefined) throw new Error('fixture has no orders');
-    await request(triggered).post('/purchases').send(order).expect(201);
-    await request(triggered).post('/purchases').send(order).expect(409);
+    await requestOn(triggered).post('/purchases').send(order).expect(201);
+    await requestOn(triggered).post('/purchases').send(order).expect(409);
 
     expect(fired).toHaveBeenCalledTimes(1);
   });
@@ -207,9 +209,9 @@ describe('the ingest trigger', () => {
 
     const [order] = orders;
     if (order === undefined) throw new Error('fixture has no orders');
-    await request(triggered).post('/purchases').send(order).expect(201);
+    await requestOn(triggered).post('/purchases').send(order).expect(201);
 
-    const list = await request(triggered).get('/purchases').expect(200);
+    const list = await requestOn(triggered).get('/purchases').expect(200);
     expect(list.body.items).toHaveLength(1);
   });
 });
@@ -218,9 +220,9 @@ describe('a backfilled order reconciles', () => {
   useBackfilledDb();
 
   it('starts fully unexplained, because the export states no charges', async () => {
-    const list = await request(app).get('/purchases').expect(200);
+    const list = await requestOn(app).get('/purchases').expect(200);
     const first = list.body.items[0];
-    const detail = await request(app).get(`/purchases/${first.id}`).expect(200);
+    const detail = await requestOn(app).get(`/purchases/${first.id}`).expect(200);
 
     // The state a first backfill really lands in: nothing is wrong, there
     // is simply no statement yet. Worth pinning, because it looks alarming.
@@ -229,11 +231,11 @@ describe('a backfilled order reconciles', () => {
   });
 
   it('moves an order from unexplained to matched once its transaction exists', async () => {
-    const list = await request(app).get('/purchases').expect(200);
+    const list = await requestOn(app).get('/purchases').expect(200);
     const target = list.body.items.find((p: { totalCents: number }) => p.totalCents > 0);
     expect(target).toBeDefined();
 
-    const before = await request(app).get(`/purchases/${target.id}`).expect(200);
+    const before = await requestOn(app).get(`/purchases/${target.id}`).expect(200);
     expect(before.body.accounting.residualCents).toBe(before.body.purchase.totalCents);
 
     const swept = await runSweep({
@@ -247,7 +249,7 @@ describe('a backfilled order reconciles', () => {
     });
     expect(swept.kind).toBe('swept');
 
-    const after = await request(app).get(`/purchases/${target.id}`).expect(200);
+    const after = await requestOn(app).get(`/purchases/${target.id}`).expect(200);
     expect(after.body.accounting.matchedCents).toBe(target.totalCents);
     expect(after.body.accounting.residualCents).toBe(0);
     // The identity the whole accounting split rests on, over real data.
@@ -259,7 +261,7 @@ describe('a backfilled order reconciles', () => {
   });
 
   it('leaves every other order untouched by that one match', async () => {
-    const list = await request(app).get('/purchases').expect(200);
+    const list = await requestOn(app).get('/purchases').expect(200);
     const target = list.body.items.find((p: { totalCents: number }) => p.totalCents > 0);
 
     await runSweep({
@@ -276,7 +278,7 @@ describe('a backfilled order reconciles', () => {
     // claimed it, spend would be double-counted against real money.
     const claims: string[] = [];
     for (const summary of list.body.items) {
-      const detail = await request(app).get(`/purchases/${summary.id}`).expect(200);
+      const detail = await requestOn(app).get(`/purchases/${summary.id}`).expect(200);
       for (const charge of detail.body.charges) {
         for (const link of charge.links ?? []) claims.push(link.transactionUri);
       }

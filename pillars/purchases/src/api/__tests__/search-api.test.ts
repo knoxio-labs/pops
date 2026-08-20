@@ -9,7 +9,6 @@
  * pillar serves. A manifest advertising a procedure the app does not host
  * is how federated search fans out to a 404.
  */
-import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { ErrorBodySchema } from '../../contract/rest-schemas.js';
@@ -19,10 +18,13 @@ import { createPurchase, upsertSource } from '../../db/index.js';
 import { createPurchasesApiApp } from '../app.js';
 import { buildPurchasesManifest } from '../manifest.js';
 import { __resetPillarRegistryCache } from '../pillars/registry.js';
+import { createTestTransport } from './test-http.js';
 
 import type { Express } from 'express';
 
 import type { OpenedPurchasesDb } from '../../db/index.js';
+
+const { requestOn } = createTestTransport();
 
 let opened: OpenedPurchasesDb;
 let cleanup: () => void;
@@ -72,7 +74,7 @@ describe('POST /search', () => {
   it('answers the envelope the orchestrator federates with', async () => {
     seedCoffeeOrder();
 
-    const res = await request(app)
+    const res = await requestOn(app)
       .post('/search')
       .send({ query: { text: 'dosing funnel' }, context: { app: null, page: null } });
 
@@ -84,7 +86,7 @@ describe('POST /search', () => {
   it('accepts the envelope without a context, which is the shape MCP sends', async () => {
     seedCoffeeOrder();
 
-    const res = await request(app)
+    const res = await requestOn(app)
       .post('/search')
       .send({ query: { text: 'amazon' } });
 
@@ -94,7 +96,7 @@ describe('POST /search', () => {
   it('returns hits carrying every field the federator reads', async () => {
     seedCoffeeOrder();
 
-    const res = await request(app)
+    const res = await requestOn(app)
       .post('/search')
       .send({ query: { text: 'dosing funnel' } });
 
@@ -109,7 +111,7 @@ describe('POST /search', () => {
   it('survives serialisation with the order id still on the line-item hit', async () => {
     const purchaseId = seedCoffeeOrder();
 
-    const res = await request(app)
+    const res = await requestOn(app)
       .post('/search')
       .send({ query: { text: 'dosing' } });
     const itemHit = res.body.hits.find((hit: { uri: string }) => hit.uri.includes('purchase-item'));
@@ -120,7 +122,7 @@ describe('POST /search', () => {
   it('returns an empty list, not a 400, for a query that matches nothing', async () => {
     seedCoffeeOrder();
 
-    const res = await request(app)
+    const res = await requestOn(app)
       .post('/search')
       .send({ query: { text: 'kayak' } });
 
@@ -129,7 +131,7 @@ describe('POST /search', () => {
   });
 
   it('rejects an envelope with no query rather than searching for nothing', async () => {
-    const res = await request(app).post('/search').send({});
+    const res = await requestOn(app).post('/search').send({});
     expect(res.status).toBe(400);
   });
 });
@@ -180,7 +182,7 @@ describe('POST /search with filters', () => {
     const amazon = seedCoffeeOrder();
     const woolworths = seedWoolworthsOrder();
 
-    const res = await request(app)
+    const res = await requestOn(app)
       .post('/search')
       .send({
         query: {
@@ -202,7 +204,7 @@ describe('POST /search with filters', () => {
     const amazon = seedCoffeeOrder();
     const woolworths = seedWoolworthsOrder();
 
-    const res = await request(app)
+    const res = await requestOn(app)
       .post('/search')
       .send({
         query: {
@@ -223,7 +225,7 @@ describe('POST /search with filters', () => {
   it('scopes to the requested status', async () => {
     seedCoffeeOrder();
 
-    const res = await request(app)
+    const res = await requestOn(app)
       .post('/search')
       .send({
         query: {
@@ -241,10 +243,10 @@ describe('POST /search with filters', () => {
   it('treats an empty filter list as no filter at all', async () => {
     seedCoffeeOrder();
 
-    const filtered = await request(app)
+    const filtered = await requestOn(app)
       .post('/search')
       .send({ query: { text: 'dosing funnel', filters: [] } });
-    const unfiltered = await request(app)
+    const unfiltered = await requestOn(app)
       .post('/search')
       .send({ query: { text: 'dosing funnel' } });
 
@@ -255,7 +257,7 @@ describe('POST /search with filters', () => {
   it('rejects a field it cannot narrow on rather than ignoring it', async () => {
     seedCoffeeOrder();
 
-    const res = await request(app)
+    const res = await requestOn(app)
       .post('/search')
       .send({
         query: {
@@ -275,7 +277,7 @@ describe('POST /search with filters', () => {
   it('rejects an operator it cannot apply', async () => {
     seedCoffeeOrder();
 
-    const res = await request(app)
+    const res = await requestOn(app)
       .post('/search')
       .send({
         query: {
@@ -291,7 +293,7 @@ describe('POST /search with filters', () => {
   it('rejects a supported field paired with an operator it does not take, naming both', async () => {
     seedCoffeeOrder();
 
-    const res = await request(app)
+    const res = await requestOn(app)
       .post('/search')
       .send({
         query: {
@@ -309,7 +311,7 @@ describe('POST /search with filters', () => {
   it('rejects a value the field cannot hold, naming it', async () => {
     seedCoffeeOrder();
 
-    const res = await request(app)
+    const res = await requestOn(app)
       .post('/search')
       .send({
         query: {
