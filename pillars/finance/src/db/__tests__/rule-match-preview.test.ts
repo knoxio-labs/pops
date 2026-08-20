@@ -16,6 +16,7 @@ import { freshMigratedFinanceDb } from './migrated-db.js';
 
 import type Database from 'better-sqlite3';
 
+import type { FinanceDb } from '../services/internal.js';
 import type { TransactionCorrectionMatchType } from '../services/transaction-corrections-types.js';
 import type { MigratedFinanceDb } from './migrated-db.js';
 
