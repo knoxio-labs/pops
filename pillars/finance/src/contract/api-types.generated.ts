@@ -3809,6 +3809,9 @@ export interface operations {
                     | 'none';
                 };
                 error?: string;
+                foreignAmountMinor?: number;
+                foreignCurrency?: string;
+                fxFeeCents?: number;
                 location?: string;
                 matchedRules?: {
                   confidence: number;
@@ -3820,7 +3823,6 @@ export interface operations {
                   priority: number;
                   ruleId: string;
                 }[];
-                notes?: string;
                 rawRow: string;
                 ruleProvenance?: {
                   confidence: number;
@@ -3875,6 +3877,9 @@ export interface operations {
                     | 'none';
                 };
                 error?: string;
+                foreignAmountMinor?: number;
+                foreignCurrency?: string;
+                fxFeeCents?: number;
                 location?: string;
                 matchedRules?: {
                   confidence: number;
@@ -3886,7 +3891,6 @@ export interface operations {
                   priority: number;
                   ruleId: string;
                 }[];
-                notes?: string;
                 rawRow: string;
                 ruleProvenance?: {
                   confidence: number;
@@ -3941,6 +3945,9 @@ export interface operations {
                     | 'none';
                 };
                 error?: string;
+                foreignAmountMinor?: number;
+                foreignCurrency?: string;
+                fxFeeCents?: number;
                 location?: string;
                 matchedRules?: {
                   confidence: number;
@@ -3952,7 +3959,6 @@ export interface operations {
                   priority: number;
                   ruleId: string;
                 }[];
-                notes?: string;
                 rawRow: string;
                 ruleProvenance?: {
                   confidence: number;
@@ -4007,6 +4013,9 @@ export interface operations {
                     | 'none';
                 };
                 error?: string;
+                foreignAmountMinor?: number;
+                foreignCurrency?: string;
+                fxFeeCents?: number;
                 location?: string;
                 matchedRules?: {
                   confidence: number;
@@ -4018,7 +4027,6 @@ export interface operations {
                   priority: number;
                   ruleId: string;
                 }[];
-                notes?: string;
                 rawRow: string;
                 ruleProvenance?: {
                   confidence: number;
@@ -4269,6 +4277,9 @@ export interface operations {
             description: string;
             entityId?: string;
             entityName?: string;
+            foreignAmountMinor?: number;
+            foreignCurrency?: string;
+            fxFeeCents?: number;
             location?: string;
             matchConfidence?: number;
             matchRuleId?: string;
@@ -4282,7 +4293,6 @@ export interface operations {
               | 'learned'
               | 'manual'
               | 'none';
-            notes?: string;
             rawRow: string;
             suggestedTags?: {
               isNew?: boolean;
@@ -4464,8 +4474,10 @@ export interface operations {
             country?: string;
             date: string;
             description: string;
+            foreignAmountMinor?: number;
+            foreignCurrency?: string;
+            fxFeeCents?: number;
             location?: string;
-            notes?: string;
             rawRow: string;
           }[];
         };
@@ -4587,6 +4599,9 @@ export interface operations {
                     | 'none';
                 };
                 error?: string;
+                foreignAmountMinor?: number;
+                foreignCurrency?: string;
+                fxFeeCents?: number;
                 location?: string;
                 matchedRules?: {
                   confidence: number;
@@ -4598,7 +4613,6 @@ export interface operations {
                   priority: number;
                   ruleId: string;
                 }[];
-                notes?: string;
                 rawRow: string;
                 ruleProvenance?: {
                   confidence: number;
@@ -4653,6 +4667,9 @@ export interface operations {
                     | 'none';
                 };
                 error?: string;
+                foreignAmountMinor?: number;
+                foreignCurrency?: string;
+                fxFeeCents?: number;
                 location?: string;
                 matchedRules?: {
                   confidence: number;
@@ -4664,7 +4681,6 @@ export interface operations {
                   priority: number;
                   ruleId: string;
                 }[];
-                notes?: string;
                 rawRow: string;
                 ruleProvenance?: {
                   confidence: number;
@@ -4719,6 +4735,9 @@ export interface operations {
                     | 'none';
                 };
                 error?: string;
+                foreignAmountMinor?: number;
+                foreignCurrency?: string;
+                fxFeeCents?: number;
                 location?: string;
                 matchedRules?: {
                   confidence: number;
@@ -4730,7 +4749,6 @@ export interface operations {
                   priority: number;
                   ruleId: string;
                 }[];
-                notes?: string;
                 rawRow: string;
                 ruleProvenance?: {
                   confidence: number;
@@ -4785,6 +4803,9 @@ export interface operations {
                     | 'none';
                 };
                 error?: string;
+                foreignAmountMinor?: number;
+                foreignCurrency?: string;
+                fxFeeCents?: number;
                 location?: string;
                 matchedRules?: {
                   confidence: number;
@@ -4796,7 +4817,6 @@ export interface operations {
                   priority: number;
                   ruleId: string;
                 }[];
-                notes?: string;
                 rawRow: string;
                 ruleProvenance?: {
                   confidence: number;
@@ -5021,6 +5041,9 @@ export interface operations {
                     | 'none';
                 };
                 error?: string;
+                foreignAmountMinor?: number;
+                foreignCurrency?: string;
+                fxFeeCents?: number;
                 location?: string;
                 matchedRules?: {
                   confidence: number;
@@ -5032,7 +5055,6 @@ export interface operations {
                   priority: number;
                   ruleId: string;
                 }[];
-                notes?: string;
                 rawRow: string;
                 ruleProvenance?: {
                   confidence: number;
@@ -5087,6 +5109,9 @@ export interface operations {
                     | 'none';
                 };
                 error?: string;
+                foreignAmountMinor?: number;
+                foreignCurrency?: string;
+                fxFeeCents?: number;
                 location?: string;
                 matchedRules?: {
                   confidence: number;
@@ -5098,7 +5123,6 @@ export interface operations {
                   priority: number;
                   ruleId: string;
                 }[];
-                notes?: string;
                 rawRow: string;
                 ruleProvenance?: {
                   confidence: number;
@@ -5153,6 +5177,9 @@ export interface operations {
                     | 'none';
                 };
                 error?: string;
+                foreignAmountMinor?: number;
+                foreignCurrency?: string;
+                fxFeeCents?: number;
                 location?: string;
                 matchedRules?: {
                   confidence: number;
@@ -5164,7 +5191,6 @@ export interface operations {
                   priority: number;
                   ruleId: string;
                 }[];
-                notes?: string;
                 rawRow: string;
                 ruleProvenance?: {
                   confidence: number;
@@ -5219,6 +5245,9 @@ export interface operations {
                     | 'none';
                 };
                 error?: string;
+                foreignAmountMinor?: number;
+                foreignCurrency?: string;
+                fxFeeCents?: number;
                 location?: string;
                 matchedRules?: {
                   confidence: number;
@@ -5230,7 +5259,6 @@ export interface operations {
                   priority: number;
                   ruleId: string;
                 }[];
-                notes?: string;
                 rawRow: string;
                 ruleProvenance?: {
                   confidence: number;
@@ -7229,6 +7257,9 @@ export interface operations {
               description: string;
               entityId: string | null;
               entityName: string | null;
+              foreignAmountMinor: number | null;
+              foreignCurrency: string | null;
+              fxFeeCents: number | null;
               id: string;
               lastEditedTime: string;
               location: string | null;
@@ -7350,6 +7381,9 @@ export interface operations {
               description: string;
               entityId: string | null;
               entityName: string | null;
+              foreignAmountMinor: number | null;
+              foreignCurrency: string | null;
+              fxFeeCents: number | null;
               id: string;
               lastEditedTime: string;
               location: string | null;
@@ -7482,6 +7516,9 @@ export interface operations {
           description: string;
           entityId: string | null;
           entityName: string | null;
+          foreignAmountMinor: number | null;
+          foreignCurrency: string | null;
+          fxFeeCents: number | null;
           id: string;
           lastEditedTime: string;
           location: string | null;
@@ -7532,6 +7569,9 @@ export interface operations {
               description: string;
               entityId: string | null;
               entityName: string | null;
+              foreignAmountMinor: number | null;
+              foreignCurrency: string | null;
+              fxFeeCents: number | null;
               id: string;
               lastEditedTime: string;
               location: string | null;
@@ -7645,6 +7685,9 @@ export interface operations {
               description: string;
               entityId: string | null;
               entityName: string | null;
+              foreignAmountMinor: number | null;
+              foreignCurrency: string | null;
+              fxFeeCents: number | null;
               id: string;
               lastEditedTime: string;
               location: string | null;
@@ -7739,6 +7782,9 @@ export interface operations {
               description: string;
               entityId: string | null;
               entityName: string | null;
+              foreignAmountMinor: number | null;
+              foreignCurrency: string | null;
+              fxFeeCents: number | null;
               id: string;
               lastEditedTime: string;
               location: string | null;
@@ -7868,6 +7914,9 @@ export interface operations {
               description: string;
               entityId: string | null;
               entityName: string | null;
+              foreignAmountMinor: number | null;
+              foreignCurrency: string | null;
+              fxFeeCents: number | null;
               id: string;
               lastEditedTime: string;
               location: string | null;
@@ -7961,6 +8010,9 @@ export interface operations {
               description: string;
               entityId: string | null;
               entityName: string | null;
+              foreignAmountMinor: number | null;
+              foreignCurrency: string | null;
+              fxFeeCents: number | null;
               id: string;
               lastEditedTime: string;
               location: string | null;

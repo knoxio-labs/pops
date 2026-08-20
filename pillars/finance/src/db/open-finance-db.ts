@@ -21,6 +21,7 @@ import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import { withPreMigrationBackup } from '@pops/pillar-sdk/db';
 
 import { buildImportDedupKeyFromStoredRow } from '../contract/import-dedup.js';
+import { anzForeignChargeNoteField } from './anz-fx-note.js';
 
 import type { FinanceDb } from './services/internal.js';
 
@@ -83,6 +84,12 @@ export interface OpenedFinanceDb {
  * stored row from SQL — it MUST be registered before {@link migrate} runs, and
  * derives the identical key the browser parser hashes so an existing row and a
  * re-import of the same charge collide.
+ *
+ * `finance_anz_fx_note(notes, field)` reads one field back out of a legacy ANZ
+ * foreign-charge note (see `anz-fx-note.ts`), returning NULL for any note it did
+ * not write. Migration `0066_transaction_foreign_charge_columns` backfills the
+ * typed columns through it and refuses to run when a candidate note comes back
+ * NULL, so the two must be registered together.
  */
 export function registerFinanceSqlFunctions(raw: Database.Database): void {
   raw.function(
@@ -98,6 +105,7 @@ export function registerFinanceSqlFunctions(raw: Database.Database): void {
       return createHash('sha256').update(key).digest('hex');
     }
   );
+  raw.function('finance_anz_fx_note', { deterministic: true }, anzForeignChargeNoteField);
 }
 
 export function openFinanceDb(path: string): OpenedFinanceDb {

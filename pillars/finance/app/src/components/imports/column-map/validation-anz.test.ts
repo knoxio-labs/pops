@@ -60,7 +60,9 @@ describe('ANZ credit card — derived fields', () => {
       description: 'GITHUB INC.',
       location: 'Github.com',
       country: 'US',
-      notes: '100.00 USD, 5.03 AUD fx fee',
+      foreignAmountMinor: 10_000,
+      foreignCurrency: 'USD',
+      fxFeeCents: 503,
     });
   });
 

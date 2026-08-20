@@ -94,7 +94,7 @@ describe('parseAnzDescription', () => {
         description: 'GITHUB INC.',
         location: 'Github.com',
         country: 'US',
-        notes: '100.00 USD, 5.03 AUD fx fee',
+        foreignCharge: { amountMinor: 10_000, currency: 'USD', feeCents: 503 },
       });
     });
 
@@ -106,7 +106,8 @@ describe('parseAnzDescription', () => {
         description: 'AOMORI GROCER',
         location: 'Aomori',
         country: 'JP',
-        notes: '1 100 JPY, 0.40 AUD fx fee',
+        // JPY has no minor unit, so 1 100 is 1100 — not 110000.
+        foreignCharge: { amountMinor: 1100, currency: 'JPY', feeCents: 40 },
       });
     });
 
@@ -115,7 +116,7 @@ describe('parseAnzDescription', () => {
         'SOME MERCHANT LTD         WEYBRIDGE  SU  10.00  GBP 0.34 AUD'
       );
       expect(parsed.location).toBe('Weybridge Su');
-      expect(parsed.notes).toBe('10.00 GBP, 0.34 AUD fx fee');
+      expect(parsed.foreignCharge).toEqual({ amountMinor: 1000, currency: 'GBP', feeCents: 34 });
     });
 
     it('rejects a phone number sitting in the location slot of a foreign charge', () => {
@@ -129,14 +130,30 @@ describe('parseAnzDescription', () => {
       expect(parsed).toMatchObject({
         description: 'BKG*BOOKING.COM HOTEL',
         country: 'JP',
-        notes: '35 340 JPY, 13.40 AUD fx fee',
+        foreignCharge: { amountMinor: 35_340, currency: 'JPY', feeCents: 1340 },
       });
+    });
+
+    it('scales from the currency, not from how many decimals ANZ printed', () => {
+      // Reading the scale off the string would make this $1.00 instead of $100.
+      const parsed = parseAnzDescription('ROUND MERCHANT            NEW YORK  100  USD 3.00 AUD');
+      expect(parsed.foreignCharge).toEqual({ amountMinor: 10_000, currency: 'USD', feeCents: 300 });
+    });
+
+    it('recovers no charge from a currency whose minor-unit scale is unknown', () => {
+      // Guessing a power of ten is worse than leaving the columns null: the
+      // statement line itself still survives on the transaction's rawRow.
+      const parsed = parseAnzDescription(
+        'ODD MERCHANT              SOMEWHERE  10.00  ZZZ 0.34 AUD'
+      );
+      expect(parsed.foreignCharge).toBeUndefined();
+      expect(parsed.location).toBe('Somewhere');
     });
 
     it('leaves country unset for a currency spanning many countries', () => {
       const parsed = parseAnzDescription('EU MERCHANT               DUBLIN 4  14.99  EUR 0.75 AUD');
       expect(parsed.country).toBeUndefined();
-      expect(parsed.notes).toBe('14.99 EUR, 0.75 AUD fx fee');
+      expect(parsed.foreignCharge).toEqual({ amountMinor: 1499, currency: 'EUR', feeCents: 75 });
     });
   });
 

@@ -23,8 +23,15 @@ export const ParsedTransactionSchema = z.object({
   location: z.string().optional(),
   /** ISO-3166-1 alpha-2, set by parsers that can tell a charge was foreign. */
   country: z.string().optional(),
-  /** Parser-derived detail the columns cannot hold yet, e.g. an ANZ foreign amount and fx fee. */
-  notes: z.string().optional(),
+  /** Amount charged abroad, in `foreignCurrency`'s own ISO-4217 minor units. */
+  foreignAmountMinor: z.number().int().optional(),
+  /** ISO-4217 alpha-3 of the charge abroad, uppercase. */
+  foreignCurrency: z
+    .string()
+    .regex(/^[A-Z]{3}$/, 'Currency must be an ISO-4217 alpha-3 code')
+    .optional(),
+  /** The issuer's foreign-transaction fee in AUD cents — a fee, not a converted total. */
+  fxFeeCents: z.number().int().optional(),
   rawRow: z.string(),
   checksum: z.string(),
 });

@@ -47,6 +47,40 @@ const FX_TRAILER =
 const NON_PLACE_DETAIL = /^[\d\s+()-]+$/;
 
 /**
+ * ISO-4217 minor-unit exponents. A currency absent here has no known scale, so
+ * its charge yields no structured foreign amount at all rather than a figure
+ * that is silently off by a power of ten — the raw statement line survives on
+ * the transaction's `rawRow` either way.
+ */
+const CURRENCY_MINOR_EXPONENT: Readonly<Record<string, number>> = {
+  AUD: 2,
+  BRL: 2,
+  CAD: 2,
+  CHF: 2,
+  CNY: 2,
+  DKK: 2,
+  EUR: 2,
+  GBP: 2,
+  HKD: 2,
+  IDR: 2,
+  INR: 2,
+  JPY: 0,
+  KRW: 0,
+  NZD: 2,
+  SGD: 2,
+  THB: 2,
+  USD: 2,
+  VND: 0,
+  VUV: 0,
+};
+
+/** The currency ANZ settles a foreign charge — and its fee — in. */
+const SETTLEMENT_CURRENCY = 'AUD';
+
+/** Amount as ANZ writes it: space- or comma-grouped thousands, optional fraction. */
+const AMOUNT_TEXT = /^(\d[\d, ]*?)(?:\.(\d+))?$/;
+
+/**
  * Currency → ISO-3166-1 alpha-2, for the currencies this account has actually
  * seen. Deliberately omits EUR: it spans nineteen countries, and guessing one
  * from the charge would invent data the statement never carried.
@@ -70,6 +104,23 @@ const CURRENCY_COUNTRY: Readonly<Record<string, string>> = {
   INR: 'IN',
 };
 
+/** What an overseas charge cost abroad, and what ANZ charged to convert it. */
+export interface AnzForeignCharge {
+  /**
+   * Amount charged abroad, in the currency's own ISO-4217 minor units. Rendering
+   * it needs {@link AnzForeignCharge.currency}: `1100` is ¥1,100 for JPY (no
+   * minor unit) but $11.00 for USD.
+   */
+  amountMinor: number;
+  /** ISO-4217 alpha-3, as printed on the statement. */
+  currency: string;
+  /**
+   * ANZ's foreign-transaction fee in AUD cents. A FEE — around 3% of the charge —
+   * not the converted AUD total, which the statement never states separately.
+   */
+  feeCents: number;
+}
+
 /** Fields recovered from one ANZ description column. */
 export interface AnzDescription {
   /** Merchant name, internal padding collapsed. Never empty. */
@@ -78,8 +129,8 @@ export interface AnzDescription {
   location?: string;
   /** ISO-3166-1 alpha-2, only for foreign charges whose currency maps to exactly one country. */
   country?: string;
-  /** Foreign amount and AUD fee for overseas charges, e.g. `100.00 USD, 5.03 AUD fx fee`. */
-  notes?: string;
+  /** Set only for an overseas charge whose currency has a known minor-unit scale. */
+  foreignCharge?: AnzForeignCharge;
 }
 
 function collapse(value: string): string {
@@ -100,8 +151,40 @@ function titleCasePlace(value: string): string {
     .join(' ');
 }
 
-function describeForeignCharge(amount: string, currency: string, fee: string): string {
-  return `${collapse(amount)} ${currency}, ${fee} AUD fx fee`;
+/**
+ * Convert a printed amount to `currency`'s minor units.
+ *
+ * The exponent comes from the currency, never from how many decimals ANZ
+ * happened to print: a fraction shorter than the exponent is padded (`5.4` AUD
+ * is 540 cents), and one longer than it is rejected rather than rounded away.
+ * Reading the scale off the string instead would make an undecorated `1 100`
+ * JPY indistinguishable from 11.00 of a two-decimal currency.
+ */
+function toMinorUnits(text: string, currency: string): number | undefined {
+  const exponent = CURRENCY_MINOR_EXPONENT[currency];
+  if (exponent === undefined) return undefined;
+  const match = AMOUNT_TEXT.exec(text.trim());
+  if (!match) return undefined;
+  const whole = (match[1] ?? '').replace(/[, ]/g, '');
+  const fraction = match[2] ?? '';
+  if (!/^\d+$/.test(whole) || fraction.length > exponent) return undefined;
+  const value = Number(`${whole}${fraction.padEnd(exponent, '0')}`);
+  return Number.isSafeInteger(value) ? value : undefined;
+}
+
+/**
+ * Build the structured foreign charge from the trailer's three printed fields,
+ * or nothing when either figure cannot be scaled without guessing.
+ */
+export function foreignChargeFromParts(
+  amount: string,
+  currency: string,
+  fee: string
+): AnzForeignCharge | undefined {
+  const amountMinor = toMinorUnits(collapse(amount), currency);
+  const feeCents = toMinorUnits(collapse(fee), SETTLEMENT_CURRENCY);
+  if (amountMinor === undefined || feeCents === undefined) return undefined;
+  return { amountMinor, currency, feeCents };
 }
 
 /**
@@ -122,7 +205,7 @@ function parseDetail(detail: string): Omit<AnzDescription, 'description'> {
     return {
       location: asLocation(place ?? ''),
       country: CURRENCY_COUNTRY[currency ?? ''],
-      notes: describeForeignCharge(amount ?? '', currency ?? '', fee ?? ''),
+      foreignCharge: foreignChargeFromParts(amount ?? '', currency ?? '', fee ?? ''),
     };
   }
   return { location: asLocation(detail) };
