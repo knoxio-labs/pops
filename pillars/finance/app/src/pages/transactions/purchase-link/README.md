@@ -53,11 +53,41 @@ settled in.
 
 ## What a refusal looks like
 
-Nothing on the page. The column is decoration on a page that is fully useful
-without it, so a purchases outage draws no indicators rather than failing the
-page: `retry: false`, and no error surface of its own. The reader who wants to
-know why opens the row, where the panel names which side failed and offers the
+Nothing on the rows, and one line on the heading.
+
+The column is decoration on a page that is fully useful without it, so a
+purchases outage draws no indicators rather than failing the page:
+`retry: false`, and no error surface of its own. The reader who wants to know
+why opens the row, where the panel names which side failed and offers the
 retry.
+
+Silence alone would not do, though, because silence is also the answer for a
+transaction no order explains — which is most of a statement. An outage and a
+page nothing was bought on would render as the same empty column. So the
+heading says so: `PurchaseLinkHeader` adds a muted "Unavailable" beside the
+column name, carrying the full caveat as its `title` and as screen-reader-only
+text, and `usePurchaseLinkSummaries` returns `unavailable` alongside the map so
+the heading can know.
+
+Three things that shape is chosen against:
+
+- **A per-row marker.** True once about the whole column, drawn on thousands of
+  rows.
+- **A page-level error.** A sibling pillar being down is not this page being
+  broken, and the other columns are unaffected.
+- **Dropping the column.** It moves every other column sideways, and says
+  nothing about why.
+
+Any failure raises it, not only the unreachable-pillar ones `isUnavailableError`
+picks out. That predicate is for wording the detail panel, where the reader is
+asking about one transaction and the blame matters; a batch the producer refuses
+outright over one malformed URI blanks exactly as many rows as an outage does.
+An in-flight lookup raises nothing — it has not failed yet, and a warning during
+the ordinary loading moment is a warning nobody reads.
+
+A failed refetch keeps whatever answer React Query still holds and raises the
+caveat over it. Those indicators are stale rather than wrong, and the wording is
+"may be incomplete" for that reason.
 
 The rejection is not contained here, though. The shell installs a global
 `QueryCache({ onError })` and every failed query in the app reaches it,
@@ -67,7 +97,3 @@ a transport failure's message with wording of its own, and the shell's
 being unreachable is not the reader's connection. That is a rule living in
 another file, so a change to either side can start toasting this column's
 failures without anything here changing.
-
-Absence is also all a refusal renders, which makes an outage look the same as
-"no order explains any of these". Telling those two apart is not built
-(POPS-2429).

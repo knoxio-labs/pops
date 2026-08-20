@@ -11,7 +11,7 @@ import { RowActions, type RowActionHandlers } from './RowActions';
 import type { ColumnDef } from '@tanstack/react-table';
 import type { TFunction } from 'i18next';
 
-import type { TransactionLinkSummary } from './purchase-link/types';
+import type { PurchaseLinkSummaries } from './purchase-link/usePurchaseLinkSummaries';
 import type { Transaction } from './types';
 
 export type { Transaction } from './types';
@@ -19,8 +19,11 @@ export type { Transaction } from './types';
 interface BuildColumnsBase {
   t: TFunction<'finance'>;
   availableTags: string[];
-  /** Keyed on transaction id. A transaction no order explains is absent, not zeroed. */
-  purchaseLinks: Map<string, TransactionLinkSummary>;
+  /**
+   * The purchase column's answers, plus whether asking for them worked. The
+   * pair travels together because an empty map means nothing without it.
+   */
+  purchaseLinks: PurchaseLinkSummaries;
   onTagSave: (
     id: string,
     entityId: string | null,
@@ -123,7 +126,6 @@ function buildInteractiveColumns(args: BuildColumnsArgs): ColumnDef<Transaction>
   const { t } = args;
   return [
     buildPurchaseLinkColumn({
-      t,
       summaries: args.purchaseLinks,
       onShowPurchase: args.onShowPurchase,
     }),
