@@ -646,14 +646,19 @@
                                   "name": {
                                     "type": "string"
                                   },
+                                  "scheme": {
+                                    "enum": ["asin", "merchant"],
+                                    "type": "string"
+                                  },
                                   "sku": {
                                     "type": "string"
                                   },
                                   "source": {
+                                    "nullable": true,
                                     "type": "string"
                                   }
                                 },
-                                "required": ["basis", "source", "sku", "name"],
+                                "required": ["basis", "source", "scheme", "sku", "name"],
                                 "type": "object"
                               },
                               {

@@ -176,8 +176,9 @@ export type AnalyticsProductLeaderboardResponses = {
         | {
             basis: 'sku';
             name: string;
+            scheme: 'asin' | 'merchant';
             sku: string;
-            source: string;
+            source: string | null;
           }
         | {
             basis: 'name';

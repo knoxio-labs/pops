@@ -308,7 +308,21 @@ describe('ProductIdentitySchema — the basis a group was formed on', () => {
 
   it('accepts each variant in the shape the fold produces', () => {
     const variants = [
-      { basis: 'sku', source: 'amazon', sku: 'B0FCSJTKJ8', name: 'Magnetic Dosing Funnel' },
+      {
+        basis: 'sku',
+        source: 'woolworths',
+        scheme: 'merchant',
+        sku: '6015322',
+        name: 'Barware Set/4',
+      },
+      // A cross-source scheme reports no source, because none bounds it.
+      {
+        basis: 'sku',
+        source: null,
+        scheme: 'asin',
+        sku: 'B0FCSJTKJ8',
+        name: 'Magnetic Dosing Funnel',
+      },
       {
         basis: 'name',
         source: 'woolworths',
@@ -328,7 +342,20 @@ describe('ProductIdentitySchema — the basis a group was formed on', () => {
     // A sku group without the identifier it claims to be keyed on is the
     // whole failure the basis exists to prevent: a name match presented as
     // a merchant-stated identity.
-    ['a sku group without its sku', { basis: 'sku', source: 'amazon', sku: null, name: 'Funnel' }],
+    [
+      'a sku group without its sku',
+      { basis: 'sku', source: 'amazon', scheme: 'asin', sku: null, name: 'Funnel' },
+    ],
+    // The scheme is half the identifier. A bare string beside a null source
+    // names nothing, and a consumer that showed it would be showing noise.
+    [
+      'a sku group without the scheme its identifier lives in',
+      { basis: 'sku', source: 'amazon', sku: 'B0FCSJTKJ8', name: 'Funnel' },
+    ],
+    [
+      'a sku group under a scheme the vocabulary does not name',
+      { basis: 'sku', source: null, scheme: 'ean', sku: '9300605100480', name: 'Funnel' },
+    ],
     [
       'a name group carrying a sku',
       {

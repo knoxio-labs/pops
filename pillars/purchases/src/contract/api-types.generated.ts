@@ -609,8 +609,10 @@ export interface operations {
                     /** @enum {string} */
                     basis: 'sku';
                     name: string;
+                    /** @enum {string} */
+                    scheme: 'asin' | 'merchant';
                     sku: string;
-                    source: string;
+                    source: string | null;
                   }
                 | {
                     /** @enum {string} */
