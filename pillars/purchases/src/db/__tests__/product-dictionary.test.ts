@@ -105,7 +105,15 @@ function productIdFor(printedName: string): string {
 /** How a line whose product identity is being asserted resolves right now. */
 function resolve(name: string, source = 'woolworths', merchantEntityName = 'Woolworths') {
   return identifyProduct(
-    { id: 'probe', source, sku: null, name, merchantEntityId: null, merchantEntityName },
+    {
+      id: 'probe',
+      source,
+      sku: null,
+      skuScheme: null,
+      name,
+      merchantEntityId: null,
+      merchantEntityName,
+    },
     loadProductDictionary(opened.db)
   );
 }
@@ -119,7 +127,7 @@ describe('what the proposal pass learns', () => {
         items: [
           line({ name: 'CHK BRST 1KG' }),
           line({ name: 'chk  brst   1kg' }),
-          line({ name: 'MILK 2L', sku: '6015322' }),
+          line({ name: 'MILK 2L', sku: { value: '6015322', scheme: 'merchant' } }),
         ],
       })
     );
@@ -232,6 +240,7 @@ describe('what the dictionary refuses to merge on its own', () => {
         id: 'probe',
         source: 'woolworths',
         sku: '6015322',
+        skuScheme: 'merchant',
         name: 'Full Cream Milk 2L',
         merchantEntityId: null,
         merchantEntityName: 'Woolworths',

@@ -25,6 +25,7 @@ import { expectRow } from './internal.js';
 import { deleteOrphanedProducts } from './product-dictionary-writes.js';
 import { normalisedName, productLookupKey, productScopeKey } from './product-identity.js';
 
+import type { SkuScheme } from '../../contract/constants.js';
 import type { PurchaseProductAliasRow } from '../schema.js';
 import type { PurchasesDb } from './internal.js';
 
@@ -55,6 +56,7 @@ interface ScannedLine {
   readonly id: string;
   readonly name: string;
   readonly sku: string | null;
+  readonly skuScheme: SkuScheme | null;
   readonly source: string;
   readonly orderedAt: string;
   readonly merchantEntityId: string | null;
@@ -99,6 +101,7 @@ function scanLines(db: PurchasesDb): readonly ScannedLine[] {
       id: purchaseItems.id,
       name: purchaseItems.name,
       sku: purchaseItems.sku,
+      skuScheme: purchaseItems.skuScheme,
       source: purchases.source,
       orderedAt: purchases.orderedAt,
       merchantEntityId: purchases.merchantEntityId,
