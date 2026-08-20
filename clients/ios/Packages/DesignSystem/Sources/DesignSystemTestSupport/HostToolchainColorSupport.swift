@@ -38,3 +38,25 @@ extension Trait where Self == ConditionTrait {
         )
     }
 }
+
+/// The other answer to the question `.requiresCompiledColorCatalog` asks, and
+/// the reason a rendering comparison can be asked to give one.
+///
+/// Some comparisons between two rasterised screens do not depend on a colour
+/// at all — `ReceiptCaptureRenderingTests.problemsAreDrawn` compares a screen
+/// against the same screen carrying one extra sentence, and the sentence
+/// changes the layout whether or not the palette resolved. Such a test is
+/// right not to disable itself on an uncompiled-catalogue host: it has a real
+/// answer there. Silence would say the same thing as forgetting, though, so
+/// this says it out loud instead.
+///
+/// It gates nothing and runs nothing. Its whole job is to be visible — in the
+/// source to a reviewer, and to `RenderComparisonTraitScanner`, which demands
+/// one trait or the other on any test that compares two renders.
+public struct ComparisonSurvivesAnUncompiledCatalog: TestTrait, SuiteTrait {}
+
+extension Trait where Self == ComparisonSurvivesAnUncompiledCatalog {
+    /// This comparison holds even where `Colors.xcassets` was copied without
+    /// being compiled — see ``ComparisonSurvivesAnUncompiledCatalog``.
+    public static var comparisonSurvivesAnUncompiledCatalog: Self { .init() }
+}

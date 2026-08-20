@@ -25,6 +25,8 @@ internal struct RenderComparisonTraitDisciplineTests {
     private static let ownFiles: Set<String> = [
         "RenderComparisonTraitScanner.swift",
         "RenderComparisonTraitScannerTests.swift",
+        "RenderComparisonTraitExemptionTests.swift",
+        "RenderComparisonTraitFixtures.swift",
         "RenderComparisonTraitDisciplineTests.swift",
     ]
 
@@ -52,16 +54,17 @@ internal struct RenderComparisonTraitDisciplineTests {
         }.map { $0.appending(path: "Tests") }
     }
 
-    /// The actual guard: every `Packages/*/Tests` file that compares
-    /// rendered output more than once mentions `.requiresCompiledColorCatalog`
-    /// somewhere in it.
+    /// The actual guard: in every `Packages/*/Tests` file, each test that
+    /// compares rendered output declares whether that comparison needs the
+    /// colour catalogue compiled — `.requiresCompiledColorCatalog` — or holds
+    /// without it — `.comparisonSurvivesAnUncompiledCatalog`.
     ///
     /// This is the check `CompiledColorCatalogFloorTests` is not: that suite
     /// proves the trait behaves correctly where declared; this proves it was
-    /// declared somewhere in a file that plainly needed it, including one
+    /// declared on a comparison that plainly needed an answer, including one
     /// nobody has written yet — see `RenderComparisonTraitScannerTests` for
-    /// the planted violation this scan is proven to catch.
-    @Test("every file that compares rendered output declares .requiresCompiledColorCatalog")
+    /// the planted violations this scan is proven to catch.
+    @Test("every test that compares rendered output declares which lane it can answer on")
     func everyPackageTestTreeIsClean() throws {
         let packages = TokenDisciplineScan.packagesRoot
         let roots = try Self.moduleTestRoots(under: packages)

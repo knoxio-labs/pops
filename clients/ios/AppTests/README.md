@@ -26,6 +26,17 @@ A third case arrives on its own: code under `App/` is in no package, so a test o
 
 The rule is worth holding to because the lanes do not cost the same. `mise run test:packages` compiles for the host and finishes in seconds; this one builds an app, boots a simulator, installs and injects. A suite that did not have to be here is a tax on every run from then on, paid to test the same thing more slowly.
 
+## Mounting a view here buys a view-controller hierarchy, not an accessibility tree
+
+`ContentViewTabSwitcherTests` mounts a `UIHostingController` in a real `UIWindow` and reads the `UITabBarController` SwiftUI built for a `TabView`. That works, and it is tempting to read it as "this target can mount SwiftUI and inspect what UIKit made of it". It cannot, in general — and the thing it most obviously cannot do is check that an `accessibilityIdentifier` reached the rendered tree.
+
+Probed here, on a booted simulator, in this target: a `UIWindow(windowScene:)` given a real frame, made key and visible and laid out, holds a `_UIHostingView` of the right type at the right size whose `subviews` and `accessibilityElements` are **both empty** — and stay empty after `drawHierarchy(in:afterScreenUpdates:)` and after six tenths of a second of run loop. The same walk over a `UIViewController` holding a plain `UILabel` and `UIButton` finds both by identifier immediately, so the emptiness is SwiftUI's rather than the walk's.
+
+The difference is what is being asserted on. `TabView` is bridged to a real `UITabBarController` **child view controller**, and mounting does build those. A SwiftUI leaf has no UIKit object behind it at all: the content is drawn into a display list, and accessibility elements are built on demand for an attached accessibility client, which no unit-test process has. So:
+
+- **view-controller-shaped questions** — is there a tab bar, how many tabs, which is selected — are answerable here, and `ContentViewTabSwitcherTests` is the pattern;
+- **accessibility-identifier questions** are not, in any test process. They are answered by the Maestro flows in [`../.maestro`](../.maestro), which drive a real accessibility client, and held in the meantime by source-shaped wiring suites — `ReceiptResultAccessibilityWiringTests` is the worked example, including what such a suite can and cannot see.
+
 ## What is here
 
 - **`AppBundleTests`** — everything between a build setting in `project.yml` and the value the running app reads back. The per-configuration BFM base URL, whether the key survived into the built `Info.plist` at all, and the camera purpose string whose absence is a crash rather than a build failure. [`Packages/BFMClient`](../Packages/BFMClient) can only test the pure resolver underneath.

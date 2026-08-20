@@ -99,7 +99,9 @@ internal struct TransactionRowRenderingTests {
     /// does not compile it at all rather than skipping it, so it cannot report
     /// a pass it never made.
     #if os(iOS)
-        @Test("a row still renders at the largest accessibility text size")
+        @Test(
+            "a row still renders at the largest accessibility text size",
+            .requiresCompiledColorCatalog)
         func rowSurvivesAccessibilityTextSizes() throws {
             let stock = try #require(Self.render(Self.row(Self.transaction())))
             let huge = try #require(

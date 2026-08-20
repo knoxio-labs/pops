@@ -54,7 +54,13 @@ internal struct PrimitiveRenderingTests {
             ErrorStateView(message: "Could not reach the server.") {}, named: "ErrorStateView")
     }
 
-    @Test("ErrorStateView renders a caller-supplied retryTitle")
+    /// A different retry title is a different-width button, and a button
+    /// changes width whether or not its label had a colour to be drawn in —
+    /// which is why this one runs on the host lane rather than disabling
+    /// itself there.
+    @Test(
+        "ErrorStateView renders a caller-supplied retryTitle",
+        .comparisonSurvivesAnUncompiledCatalog)
     func errorStateCustomRetryTitle() throws {
         let stock = ErrorStateView(message: "boom") {}
         let custom = ErrorStateView(message: "boom", retryTitle: "Réessayer") {}
