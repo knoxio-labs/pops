@@ -26,6 +26,8 @@ interface ProgressDisplayProps {
   isProcessing: boolean;
   progress: ProgressLike | undefined;
   parsedCount: number;
+  /** True once the run has failed; the display renders nothing. */
+  failed?: boolean;
 }
 
 function computePct(isProcessing: boolean, progress: ProgressLike | undefined): number | undefined {
@@ -68,7 +70,16 @@ function computeMessage(
   return `Analyzing ${parsedCount} transactions...`;
 }
 
-export function ProgressDisplay({ isProcessing, progress, parsedCount }: ProgressDisplayProps) {
+export function ProgressDisplay({
+  isProcessing,
+  progress,
+  parsedCount,
+  failed = false,
+}: ProgressDisplayProps) {
+  // A failed run keeps its last progress state, so rendering anyway leaves a
+  // live spinner claiming the import is still being analyzed directly above the
+  // panel saying it failed.
+  if (failed) return null;
   return (
     <LoadingProgressStep
       title="Processing"
