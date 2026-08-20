@@ -2,16 +2,23 @@
  * Supertest-backed REST client + shared deps builder for the cerebrum-api
  * integration tests. Non-2xx responses throw `HttpError` carrying the parsed
  * `{ status, body }` so tests assert on `.rejects.toMatchObject({ status })`.
+ *
+ * Requests go over `test-http.ts`'s shared, pre-listened server rather than
+ * over `supertest.agent(app)`, whose pooling is a cookie jar and not a
+ * connection — it binds a throwaway listener and dials a fresh socket per
+ * call just as bare `supertest(app)` does. That header explains what the
+ * churn costs under contention; this is the choke point through which the
+ * pillar's suites inherit the fix.
  */
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import supertest from 'supertest';
-
 import { buildReflexService } from '../modules/reflex/instance.js';
 import { TemplateRegistry } from '../modules/templates/registry.js';
+import { createTestTransport } from './test-http.js';
 
 import type { Express } from 'express';
+import type supertest from 'supertest';
 
 import type {
   DebriefMediaTypeWire,
@@ -554,8 +561,10 @@ type DebriefListPendingResponse = {
   pagination: { limit: number; offset: number; total: number };
 };
 
+const transport = createTestTransport();
+
 export function makeClient(app: Express) {
-  const r = supertest.agent(app);
+  const r = transport.requestOn(app);
   return {
     templates: {
       list: () => send<{ templates: TemplateSummaryWire[] }>(r.get('/templates')),

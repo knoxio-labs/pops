@@ -1,3 +1,6 @@
+import { createTestTransport } from './test-http.js';
+
+import type { Express } from 'express';
 /**
  * Supertest-backed REST client for the media integration tests.
  *
@@ -5,10 +8,14 @@
  * `client.movies.list()`) so per-test bodies stay readable — only the
  * transport changed. Non-2xx responses throw `HttpError` with the parsed
  * `{ status, body }` so tests assert on `.rejects.toMatchObject({ status })`.
+ *
+ * Requests go over `test-http.ts`'s shared, pre-listened server rather than
+ * over `supertest(app)`, which binds a throwaway listener and dials a fresh
+ * connection for every call. That header explains what the churn costs under
+ * contention; this is the choke point through which the whole pillar's
+ * suites inherit the fix.
  */
-import supertest from 'supertest';
-
-import type { Express } from 'express';
+import type supertest from 'supertest';
 
 import type { SyncJob, SyncLogEntry } from '../../db/index.js';
 import type { PlexSchedulerStatus as SchedulerStatus } from '../cron/plex-scheduler.js';
@@ -65,8 +72,10 @@ export interface WatchlistQuery {
   offset?: number;
 }
 
+const transport = createTestTransport();
+
 export function makeClient(app: Express) {
-  const r = supertest(app);
+  const r = transport.requestOn(app);
   return {
     movies: {
       list: (query: MovieQuery = {}) =>
