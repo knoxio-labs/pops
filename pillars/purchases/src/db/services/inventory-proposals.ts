@@ -68,10 +68,10 @@ const SETTLING_ROLES: readonly SettlementRole[] = SETTLEMENT_ROLES.filter(
  *   `purchasePriceCents`     inventory's `purchasePrice` is a float dollar
  *                            amount; purchases mints no float anywhere, so
  *                            dividing by 100 is the caller's step
- *   `purchaseTransactionUri` inventory's create body takes a bare
- *                            `purchaseTransactionId` and has no writer for
- *                            `home_inventory.purchase_transaction_uri` at
- *                            all, so this key is dropped on the floor there
+ *   `purchaseTransactionUri` inventory's create body has no URI field, so
+ *                            this key is dropped on the floor there — send
+ *                            the bare id instead, which that pillar derives
+ *                            `home_inventory.purchase_transaction_uri` from
  *   `serialNumber`           inventory holds no such column
  *
  * The last two are carried anyway because they are the strongest facts
