@@ -9,11 +9,12 @@
  *
  * **Ordering within a group is by the instant, not the string.** Every
  * "first" and "last" here — the two dates, the label the group wears, the
- * two ends of the unit-price history — is decided by the parsed `orderedAt`,
- * so an order stamped `2026-01-02T00:00:00+10:00` correctly precedes one
- * stamped `2026-01-01T20:00:00Z`. Sorting those two as text puts them the
- * wrong way round, and a row whose endpoints disagree with its own cadence
- * is worse than either answer alone.
+ * merchant it is attributed to, the two ends of the unit-price history — is
+ * decided through {@link isNewer}, so an order stamped
+ * `2026-01-02T00:00:00+10:00` correctly precedes one stamped
+ * `2026-01-01T20:00:00Z`. Sorting those two as text puts them the wrong way
+ * round, and a row whose endpoints disagree with its own cadence is worse
+ * than either answer alone.
  */
 import { landedCostCents } from './accounting.js';
 import { summariseIntervals } from './interval-stats.js';
@@ -25,6 +26,7 @@ import {
   type LabelledMerchant,
   type MerchantIdentity,
 } from './merchant-identity.js';
+import { isNewer, isOlder, orderRank, type OrderRank } from './order-rank.js';
 
 import type { ProductIdentity } from './product-identity.js';
 import type { ScopedLine } from './product-leaderboard-lines.js';
@@ -44,7 +46,13 @@ import type { ScopedLine } from './product-leaderboard-lines.js';
  */
 export type ProductCadence =
   | {
-      /** One distinct order holds this product, so no gap exists to measure. */
+      /**
+       * Fewer than two of this product's orders carry an instant to measure
+       * between, so no gap exists. Usually one order; also a group whose
+       * other orders carry a `ordered_at` that does not parse, which is why
+       * this can appear beside an `orderCount` above 1 rather than
+       * asserting a gap over a timestamp nothing could read.
+       */
       readonly basis: 'single-purchase';
     }
   | {
@@ -146,35 +154,13 @@ export interface ProductPurchases {
   readonly merchants: readonly MerchantIdentity[];
 }
 
-/**
- * Where a line sits in its group's history.
- *
- * The instant rather than the timestamp text, so two orders stamped in
- * different offsets order by when they happened. The line id breaks the
- * remaining ties, which is what keeps "the latest line" from depending on
- * the order the query happened to return rows in.
- */
-interface LineRank {
-  readonly instant: number;
-  readonly itemId: string;
-}
-
-/** A parsed `ordered_at`. False for a stored timestamp that does not parse. */
-function isInstant(instant: number): boolean {
-  return Number.isFinite(instant);
-}
-
-export function rankLine(line: ScopedLine): LineRank {
-  return { instant: Date.parse(line.orderedAt), itemId: line.itemId };
-}
-
-function isLater(candidate: LineRank, incumbent: LineRank): boolean {
-  if (candidate.instant !== incumbent.instant) return candidate.instant > incumbent.instant;
-  return candidate.itemId > incumbent.itemId;
+/** Where a line sits in its group's history: its order's instant, the line id breaking ties. */
+export function rankLine(line: ScopedLine): OrderRank {
+  return orderRank(line.orderedAt, line.itemId);
 }
 
 export interface RankedLine {
-  readonly rank: LineRank;
+  readonly rank: OrderRank;
   readonly line: ScopedLine;
 }
 
@@ -230,10 +216,13 @@ export function startBucket(ranked: RankedLine, identity: ProductIdentity): Prod
 /**
  * Fold one line in, whether or not it opened the bucket.
  *
- * Every running figure is accumulated here and none is seeded in
+ * Every counting figure is accumulated here and none is seeded in
  * {@link startBucket}, so the first line into a group takes exactly the same
- * path as the tenth — the shape of bug where an opening line is counted
- * once in one figure and twice in another cannot arise.
+ * path as the tenth — the shape of bug where an opening line is counted once
+ * in one figure and twice in another cannot arise. The four figures
+ * {@link startBucket} does seed are the ones that choose rather than count —
+ * both ends and both price extremes — and folding the opening line into them
+ * a second time here reaches the same answer.
  */
 export function accumulate(bucket: ProductBucket, ranked: RankedLine, measured: boolean): void {
   const { line, rank } = ranked;
@@ -252,8 +241,8 @@ export function accumulate(bucket: ProductBucket, ranked: RankedLine, measured: 
   else bucket.ordinaryLineCount += 1;
   if (measured) bucket.measuredLineCount += 1;
 
-  if (isLater(rank, bucket.latest.rank)) bucket.latest = ranked;
-  if (isLater(bucket.earliest.rank, rank)) bucket.earliest = ranked;
+  if (isNewer(rank, bucket.latest.rank)) bucket.latest = ranked;
+  if (isOlder(rank, bucket.earliest.rank)) bucket.earliest = ranked;
 }
 
 export function noteMerchant(bucket: ProductBucket, line: ScopedLine): void {
@@ -283,7 +272,9 @@ function label(bucket: ProductBucket): ProductIdentity {
 }
 
 export function present(bucket: ProductBucket): ProductPurchases {
-  const intervals = summariseIntervals([...bucket.orders.values()].filter(isInstant));
+  const intervals = summariseIntervals(
+    [...bucket.orders.values()].filter((instant) => Number.isFinite(instant))
+  );
 
   return {
     product: label(bucket),

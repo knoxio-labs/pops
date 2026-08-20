@@ -1,0 +1,65 @@
+/**
+ * Where an order sits in time, for the folds that decide which of a group's
+ * orders is its newest or its oldest.
+ *
+ * `purchases.ordered_at` is stored verbatim and `IsoTimestampSchema` admits
+ * an offset, so `2026-01-02T00:00:00+10:00` happens six hours *before*
+ * `2026-01-01T20:00:00Z` and sorts *after* it as text. Any fold that ranks
+ * the raw string picks the wrong order.
+ *
+ * One helper rather than one per fold. The product leaderboard and the
+ * merchant roll-up both answer "which order came later", and two
+ * implementations of that would agree only by inspection — the first
+ * correction to either would leave the other behind.
+ *
+ * The SQL side of the same hazard is not fixed here: the date window a scope
+ * filter builds still compares the stored text, so an order can rank
+ * correctly inside a group it should never have been in. That is a decision
+ * about how the column is written rather than how it is read.
+ */
+
+/** An order's position in time, with a deterministic tie-break. */
+export interface OrderRank {
+  /** Epoch milliseconds. NaN where the stored timestamp does not parse. */
+  readonly instant: number;
+  /**
+   * Separates two orders on the same instant, so which one a fold calls
+   * later does not depend on the order the query returned rows in.
+   */
+  readonly tieBreaker: string;
+}
+
+export function orderRank(orderedAt: string, tieBreaker: string): OrderRank {
+  return { instant: Date.parse(orderedAt), tieBreaker };
+}
+
+/** Whether the stored timestamp behind this rank parsed to an instant. */
+export function hasInstant(rank: OrderRank): boolean {
+  return Number.isFinite(rank.instant);
+}
+
+/**
+ * Whether `candidate` happened after `incumbent`.
+ *
+ * An unparseable timestamp loses this comparison and {@link isOlder} both,
+ * so such an order becomes neither end of a group while any order with a
+ * readable instant is present. Sorting it last instead would hand it the
+ * newest end outright, and sorting it first the oldest; it belongs at
+ * neither, because nothing is known about where it belongs. A group whose
+ * every order is unparseable keeps whichever line opened it, which is the
+ * only answer left.
+ */
+export function isNewer(candidate: OrderRank, incumbent: OrderRank): boolean {
+  if (!hasInstant(candidate)) return false;
+  if (!hasInstant(incumbent)) return true;
+  if (candidate.instant !== incumbent.instant) return candidate.instant > incumbent.instant;
+  return candidate.tieBreaker > incumbent.tieBreaker;
+}
+
+/** Whether `candidate` happened before `incumbent`. The mirror of {@link isNewer}. */
+export function isOlder(candidate: OrderRank, incumbent: OrderRank): boolean {
+  if (!hasInstant(candidate)) return false;
+  if (!hasInstant(incumbent)) return true;
+  if (candidate.instant !== incumbent.instant) return candidate.instant < incumbent.instant;
+  return candidate.tieBreaker < incumbent.tieBreaker;
+}

@@ -30,14 +30,17 @@
  * prose that merely mentions a weight (`Sand Washed 20kg` is a product
  * name). `ea` is here because a till prices loose produce by the each.
  */
-export const MEASURE_NOTE_PATTERN = /^[\d.,]+\s*(kg|g|ml|l|ea)\b.*@/iu;
+const MEASURE_NOTE_PATTERN = /^[\d.,]+\s*(kg|g|ml|l|ea)\b.*@/iu;
 
 /**
  * Whether a note prices its line by measure rather than by count.
  *
- * Best-effort in one direction only: a note this misses leaves a caveat
- * unstated, never a figure overstated, because nothing derives a price from
- * the answer — it only qualifies one.
+ * Best-effort, and wrong in both directions: a wording this pattern has not
+ * met is read as a count, and `1 ea @ $5.00` — a genuine per-each price — is
+ * read as a measure. Neither moves a figure. Nothing derives a price from
+ * this answer; it only says whether the unit prices in a series are
+ * comparable, so a miss leaves a caveat unstated and a false positive states
+ * one that was not needed.
  */
 export function isMeasureNote(note: string): boolean {
   return MEASURE_NOTE_PATTERN.test(note);

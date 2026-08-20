@@ -79,20 +79,6 @@ export interface GroupedRows {
 const QUANTITY_RE = /^qty\s+(\d+)\s*@\s*\$?([\d,]+\.?\d*)\s*each/iu;
 
 /**
- * `0.202 kg NET @ $2.90/kg` — the same trick for anything weighed.
- *
- * Fruit, vegetables and the deli counter all price by weight, and the row
- * that carries the money is the weight line rather than the product line.
- * It is not a quantity: 0.202 is not a count of anything, and forcing it
- * into one gives a bag of oranges a quantity of zero. The weight is kept
- * verbatim as provenance and the line counts as one item.
- *
- * The shape lives in `../measure-notes.ts` because the note this row
- * becomes is read back by the product-grain aggregate, which has to know
- * that such a line's unit price is a weight rather than a price.
- */
-
-/**
  * Rows that modify the product above them rather than naming a new one.
  * Kept verbatim on the item instead of being parsed: a promotion's wording
  * is evidence, and inventing a structured discount from it would be a
@@ -192,6 +178,8 @@ class Grouper {
 
   /**
    * A weight line: keep the money and the wording, leave the count alone.
+   * 0.202 is not a count of anything, and forcing it into one gives a bag
+   * of oranges a quantity of zero.
    */
   applyMeasure(row: ReceiptRow, description: string): void {
     if (this.open === null) {

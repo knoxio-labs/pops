@@ -966,6 +966,78 @@ describe('ordering within a group', () => {
       longestIntervalSeconds: 6 * 3600,
     });
   });
+
+  it('attributes the group to the merchant name the later order stated', () => {
+    for (const [checksum, orderedAt, merchantEntityName] of [
+      ['earlier-in-fact', '2026-01-02T00:00:00+10:00', 'Amazon AU'],
+      ['later-in-fact', '2026-01-01T20:00:00Z', 'Amazon Australia'],
+    ] as const) {
+      createPurchase(
+        opened.db,
+        order({
+          checksum,
+          orderedAt,
+          merchantEntityId: 'ent-1',
+          merchantEntityName,
+          items: [line({ name: 'Filter Papers', sku: { value: 'B00FILTER', scheme: 'merchant' } })],
+        })
+      );
+    }
+
+    expect(only(rankProductPurchases(opened.db)).merchants).toEqual([
+      { resolution: 'entity', entityId: 'ent-1', name: 'Amazon Australia' },
+    ]);
+  });
+
+  /**
+   * `ordered_at` is a text column and nothing between the API schema and the
+   * insert re-checks it, so a row whose timestamp does not parse is
+   * reachable — and it arrives first here, which is the case that used to
+   * pin both ends of the group to it permanently: an unreadable instant
+   * loses every comparison it is offered, including the ones that would have
+   * displaced it.
+   */
+  it('lets the orders it can read decide the ends, not the one it cannot', () => {
+    for (const [checksum, orderedAt, unitPriceCents] of [
+      ['unreadable', 'whenever', 500],
+      ['first-readable', '2026-03-01T00:00:00Z', 600],
+      ['last-readable', '2026-03-08T00:00:00Z', 700],
+    ] as const) {
+      createPurchase(
+        opened.db,
+        order({
+          checksum,
+          orderedAt,
+          items: [
+            line({
+              name: `Filter Papers ${checksum}`,
+              sku: { value: 'B00FILTER', scheme: 'merchant' },
+              unitPriceCents,
+            }),
+          ],
+        })
+      );
+    }
+
+    const entry = only(rankProductPurchases(opened.db));
+
+    expect(entry.firstPurchasedAt).toBe('2026-03-01T00:00:00Z');
+    expect(entry.lastPurchasedAt).toBe('2026-03-08T00:00:00Z');
+    expect(entry.unitPrice.firstCents).toBe(600);
+    expect(entry.unitPrice.lastCents).toBe(700);
+    expect(entry.product.name).toBe('Filter Papers last-readable');
+    // Still three orders: the unreadable one was bought, and dropping it
+    // from the count would understate the repeat purchase this route exists
+    // to report. Only the gap between the two readable ones is measurable.
+    expect(entry.orderCount).toBe(3);
+    expect(entry.cadence).toEqual({
+      basis: 'intervals',
+      medianIntervalSeconds: 7 * 86400,
+      meanIntervalSeconds: 7 * 86400,
+      shortestIntervalSeconds: 7 * 86400,
+      longestIntervalSeconds: 7 * 86400,
+    });
+  });
 });
 
 describe('unit price history', () => {
