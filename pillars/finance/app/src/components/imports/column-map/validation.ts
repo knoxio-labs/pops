@@ -5,7 +5,7 @@ import { buildImportDedupKey, extractReferenceValue } from '@pops/finance';
 import { bankDialect, type BankDialect } from '../bank-dialect';
 import { extractLocation, parseAmount, parseDate, type ColumnMap } from './parsers';
 
-import type { ParsedTransaction } from '@pops/finance';
+import type { AnzForeignCharge, ParsedTransaction } from '@pops/finance';
 
 import type { BankType } from '../../../store/import-store-types';
 
@@ -25,7 +25,7 @@ interface DescriptiveFields {
   description: string;
   location?: string;
   country?: string;
-  notes?: string;
+  foreignCharge?: AnzForeignCharge;
 }
 
 /**
@@ -60,7 +60,7 @@ function validateRow(
   const amountStr = row[columnMap.amount];
   const parsedAmount = parseAmount(amountStr, dialect.amountSign);
   if (parsedAmount === null) return { error: `Row ${rowNum}: Invalid amount "${amountStr}"` };
-  const { description, location, country, notes } = describeRow(row, columnMap, dialect);
+  const { description, location, country, foreignCharge } = describeRow(row, columnMap, dialect);
   const rawRow = JSON.stringify(row);
   // Keyed on the description AS EXPORTED, never the parsed one. A bank-specific
   // parse strips the detail field, and for a bank with no reference column that
@@ -81,7 +81,9 @@ function validateRow(
       account,
       location,
       country,
-      notes,
+      foreignAmountMinor: foreignCharge?.amountMinor,
+      foreignCurrency: foreignCharge?.currency,
+      fxFeeCents: foreignCharge?.feeCents,
       rawRow,
       checksum: crypto.SHA256(dedupKey).toString(),
     },

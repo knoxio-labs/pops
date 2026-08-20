@@ -1,5 +1,7 @@
 import { parseAnzDescription } from '@pops/finance';
 
+import type { AnzForeignCharge } from '@pops/finance';
+
 import type { BankType } from '../../store/import-store-types';
 
 /**
@@ -40,7 +42,8 @@ export interface DerivedFields {
   description: string;
   location?: string;
   country?: string;
-  notes?: string;
+  /** Set only for an overseas charge the bank's parser could scale to minor units. */
+  foreignCharge?: AnzForeignCharge;
 }
 
 export interface BankDialect {
