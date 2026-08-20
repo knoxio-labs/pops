@@ -32,15 +32,26 @@ public struct ErrorStateView: View {
         self.retry = retry
     }
 
+    /// The copy this screen actually shows, after a blank or whitespace-only
+    /// caller value has fallen back. Named rather than resolved inline in
+    /// `body` so the fallback can be asserted as a value: proving it by
+    /// rasterising the screen twice and comparing the images only works where
+    /// the colour catalogue compiled, and passes for free where it did not —
+    /// two placeholder-coloured canvases are equal whatever the button says.
+    var resolvedMessage: String {
+        StateMessage.resolve(message, fallback: Self.fallbackMessage)
+    }
+
+    /// The retry button's label, after the same fallback — see
+    /// ``resolvedMessage``.
+    var resolvedRetryTitle: String {
+        StateMessage.resolve(retryTitle, fallback: Self.fallbackRetryTitle)
+    }
+
     public var body: some View {
-        StateView(
-            message: StateMessage.resolve(message, fallback: Self.fallbackMessage),
-            messageColor: .popsDestructive
-        ) {
-            PopsButton(
-                StateMessage.resolve(retryTitle, fallback: Self.fallbackRetryTitle), action: retry
-            )
-            .accessibilityIdentifierIfPresent(retryAccessibilityIdentifier)
+        StateView(message: resolvedMessage, messageColor: .popsDestructive) {
+            PopsButton(resolvedRetryTitle, action: retry)
+                .accessibilityIdentifierIfPresent(retryAccessibilityIdentifier)
         }
     }
 }

@@ -74,16 +74,12 @@ internal struct PrimitiveRenderingTests {
         )
     }
 
-    @Test("ErrorStateView falls back to the English retry title when the caller passes blank")
-    func errorStateBlankRetryTitleFallsBack() throws {
-        let blank = ErrorStateView(message: "boom", retryTitle: "   ") {}
-        let stock = ErrorStateView(message: "boom") {}
-
-        let blankRender = try #require(Self.render(blank, in: .light))
-        let stockRender = try #require(Self.render(stock, in: .light))
-
-        #expect(blankRender == stockRender)
-    }
+    // The blank-retryTitle fallback used to be proved here, by rendering the
+    // screen with a blank title and with none and asserting the two images
+    // matched. Equality between two renders is satisfied by two blank
+    // canvases, so that assertion passed on the host lane whether or not the
+    // fallback existed. It is `StatePrimitiveTests.blankCopyFallsBack` now,
+    // asserted as copy, which needs no palette at all.
 
     @Test("PopsButton", .requiresCompiledColorCatalog)
     func button() throws {

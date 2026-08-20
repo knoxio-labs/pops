@@ -42,6 +42,12 @@ Every `#Preview` renders through `ColorSchemePreview`, which stacks its content 
 
 Xcode's canvas is the only place a human sees a preview, and nothing automated opens it. `PrimitiveRenderingTests` rasterises the same views with `ImageRenderer` instead: it renders each one twice in light to establish the render is deterministic, then asserts light and dark differ.
 
+## What a rendering comparison has to declare
+
+Some build systems copy `Resources/Colors.xcassets` without compiling it — no `actool`, no `Assets.car` — and on such a lane every `Color.pops*` resolves to the same missing-asset placeholder, so any two screens rasterise to the same bare canvas. `HostToolchainColorSupport` detects that, and every test in this tree that compares two rendered images says which side of it that comparison falls on: `.requiresCompiledColorCatalog` to disable itself where the palette did not compile, or `.comparisonSurvivesAnUncompiledCatalog` to record that it holds anyway because what differs is layout rather than colour. `RenderComparisonTraitScanner` enforces that across every package's `Tests/`, this one included.
+
+An equality between two renders gets the same demand and only one of the two answers. Blankness is exactly what satisfies an equality, so such a comparison can never truthfully claim to survive an uncompiled catalogue: declaring the opt-out on one is itself a violation, and the trait the rule forces is the one that stops the test running where it would have passed vacuously. That covers a determinism check too — the same view rendered twice — which is why each rendering suite keeps its "it rasterises at all" claim as a separate, ungated test.
+
 ## Building and testing it
 
 `swift build` and `swift test` compile for the **host**, not for iOS — which is why `Package.swift` lists `.macOS` alongside `.iOS`. The module ships in an iOS app and nothing else. An iOS-only regression is therefore not caught here; it is caught by building the app (`mise run build` in `clients/ios`), and running these tests against the iOS SDK is part of the iOS CI job (POPS-1376).
