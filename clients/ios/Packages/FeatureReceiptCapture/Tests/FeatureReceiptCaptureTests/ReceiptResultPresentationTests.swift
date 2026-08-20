@@ -10,8 +10,11 @@ import Testing
 internal struct ReceiptResultPresentationTests {
     private static let presentation = ReceiptResultPresentation()
 
+    /// One claim about the whole reading rather than one per group: each
+    /// group being internally right while the order between them went wrong
+    /// is exactly the regression a per-group assertion cannot see.
     @Test("every field the extraction sent draws, in receipt order")
-    func needsReviewDrawsEveryField() throws {
+    func needsReviewDrawsEveryField() {
         let extracted = ExtractedReceipt.fake(
             discounts: ["2.00"],
             surcharges: ["1.50"],
@@ -30,7 +33,7 @@ internal struct ReceiptResultPresentationTests {
             return
         }
         #expect(
-            content.extractedFields.map(\.label) == [
+            content.orderedFields.map(\.label) == [
                 ReceiptResultCopy.FieldLabel.merchant,
                 ReceiptResultCopy.FieldLabel.address,
                 ReceiptResultCopy.FieldLabel.date,
@@ -39,13 +42,52 @@ internal struct ReceiptResultPresentationTests {
                 ReceiptResultCopy.FieldLabel.discounts,
                 ReceiptResultCopy.FieldLabel.surcharges,
                 ReceiptResultCopy.FieldLabel.shipping,
-                ReceiptResultCopy.FieldLabel.lines,
                 ReceiptResultCopy.FieldLabel.unreadableNotes,
             ])
-        let lines = try #require(
-            content.extractedFields.first { $0.label == ReceiptResultCopy.FieldLabel.lines })
-        #expect(lines.value.contains("Milk"))
-        #expect(lines.value.contains("Bread"))
+    }
+
+    /// The figure the whole reading is checked against is not one of the
+    /// adjustments beside it. Drawing it as a fourth row of tax and shipping
+    /// is how a reader loses which number is which.
+    @Test("the stated total is held apart from what adjusts it")
+    func totalIsNotAnAdjustment() throws {
+        let extracted = ExtractedReceipt.fake(
+            total: "42.50", tax: "3.86", discounts: ["2.00"], surcharges: ["1.50"],
+            shipping: "5.00")
+        let result = Self.presentation.content(
+            .needsReview(receiptCount: 1, failures: [.fake()], extracted: extracted))
+
+        guard case .needsReview(let content) = result else {
+            Issue.record("expected needsReview")
+            return
+        }
+        let total = try #require(content.total)
+        #expect(total.value == "42.50")
+        #expect(!content.adjustments.contains { $0.label == ReceiptResultCopy.FieldLabel.total })
+        #expect(
+            content.adjustments.map(\.label) == [
+                ReceiptResultCopy.FieldLabel.tax,
+                ReceiptResultCopy.FieldLabel.discounts,
+                ReceiptResultCopy.FieldLabel.surcharges,
+                ReceiptResultCopy.FieldLabel.shipping,
+            ])
+    }
+
+    /// Three different kinds of fact, drawn at three weights — so the screen
+    /// has to know which is which rather than holding an interchangeable
+    /// list.
+    @Test("who and when are held apart from each other")
+    func identityIsNamedRatherThanListed() throws {
+        let result = Self.presentation.content(
+            .needsReview(receiptCount: 1, failures: [.fake()], extracted: .fake()))
+
+        guard case .needsReview(let content) = result else {
+            Issue.record("expected needsReview")
+            return
+        }
+        #expect(try #require(content.identity.merchant).value == "Test Grocer")
+        #expect(try #require(content.identity.address).value == "1 Test Street")
+        #expect(try #require(content.identity.date).value == "2026-08-01 14:32")
     }
 
     /// A field the receipt never stated is dropped, not drawn as a dash — a
@@ -62,7 +104,10 @@ internal struct ReceiptResultPresentationTests {
             Issue.record("expected needsReview")
             return
         }
-        #expect(content.extractedFields.map(\.label) == [ReceiptResultCopy.FieldLabel.total])
+        #expect(content.orderedFields.map(\.label) == [ReceiptResultCopy.FieldLabel.total])
+        #expect(content.identity.isEmpty)
+        #expect(content.lines.isEmpty)
+        #expect(content.notes == nil)
         #expect(content.photoCount == nil)
     }
 
@@ -76,8 +121,7 @@ internal struct ReceiptResultPresentationTests {
             Issue.record("expected needsReview")
             return
         }
-        #expect(
-            !content.extractedFields.map(\.label).contains(ReceiptResultCopy.FieldLabel.merchant))
+        #expect(content.identity.merchant == nil)
     }
 
     /// A value that is *not* whitespace-only still has its surrounding
@@ -92,8 +136,7 @@ internal struct ReceiptResultPresentationTests {
             Issue.record("expected needsReview")
             return
         }
-        let merchant = try #require(
-            content.extractedFields.first { $0.label == ReceiptResultCopy.FieldLabel.merchant })
+        let merchant = try #require(content.identity.merchant)
         #expect(merchant.value == "Test Grocer")
     }
 

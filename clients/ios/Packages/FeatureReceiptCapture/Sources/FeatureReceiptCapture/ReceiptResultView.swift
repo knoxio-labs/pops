@@ -9,6 +9,16 @@ import SwiftUI
 ///
 /// The screen draws no navigation chrome of its own: whoever embeds it — the
 /// capture flow — owns where it sits and what the bar says.
+///
+/// ## The paper is above every state, including the ones that failed
+///
+/// ``ReceiptPagesView`` sits over all four states rather than inside the
+/// outcomes. While the call is in flight it is what makes the wait look like
+/// something happening to a specific receipt rather than a spinner on an
+/// empty screen; on `unreadable` it is the evidence — a reader told the photo
+/// could not be read wants to see the photo. Only a state with no submission
+/// behind it would draw without it, and there is no such state: this screen
+/// is constructed from parts.
 public struct ReceiptResultView: View {
     @State private var model: ReceiptResultViewModel
 
@@ -19,16 +29,27 @@ public struct ReceiptResultView: View {
     }
 
     public var body: some View {
-        content
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color.popsBackground)
-            .task { await model.submit() }
+        ScrollView {
+            VStack(alignment: .leading, spacing: PopsSpacing.lg) {
+                ReceiptPagesView(parts: model.parts)
+                content
+            }
+            .padding(PopsSpacing.lg)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.popsBackground)
+        .task { await model.submit() }
     }
 
     /// `internal` rather than `private` so a test can render one state at a
     /// time without going through `body`'s `.task` — the same reason
     /// `ReceiptCapturePrompt` was split out as its own type instead of a
     /// private computed property.
+    ///
+    /// The scrolling is `body`'s now rather than each state's: a `ScrollView`
+    /// per outcome would have meant the pages above scrolled separately from
+    /// the reading below them, which on a long `needsReview` is two things
+    /// moving when the reader meant one.
     @ViewBuilder internal var content: some View {
         switch model.state {
         case .submitting:
@@ -43,18 +64,7 @@ public struct ReceiptResultView: View {
                 Task { await model.submit() }
             }
         case .outcome(let outcome):
-            outcomeCard(presentation.content(outcome))
-        }
-    }
-
-    /// A `ScrollView` unconditionally, and not because the content is long.
-    /// At the accessibility text sizes it is, and a screen that only becomes
-    /// scrollable when it overflows is one that clips for exactly the
-    /// readers who cannot afford it.
-    private func outcomeCard(_ content: ReceiptResultContent) -> some View {
-        ScrollView {
-            ReceiptResultCard(content: content)
-                .padding(PopsSpacing.lg)
+            ReceiptResultCard(content: presentation.content(outcome))
         }
     }
 }

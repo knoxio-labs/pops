@@ -10,6 +10,15 @@ import SwiftUI
 /// ``ReceiptCaptureViewModel``'s, which is what makes those answers assertable
 /// without a camera.
 ///
+/// ## One frame, two contents
+///
+/// Whichever state it is in, this screen is content that scrolls with a bar
+/// of actions pinned under it. That is the shape the whole tab is built on:
+/// the content changes — a first-run prompt, an outcome, and later a list of
+/// purchases and a form — and the bar stays where a thumb already is. This
+/// package's README carries the sketch, because the screens landing next to
+/// these have to inherit one surface rather than invent three.
+///
 /// ## No navigation chrome, on purpose
 ///
 /// The two screens in this flow are one screen replacing the other, not a push.
@@ -87,12 +96,41 @@ public struct ReceiptCaptureView: View {
 extension ReceiptCaptureView {
     /// A `ScrollView` unconditionally, not only when the content overflows. At
     /// the accessibility Dynamic Type sizes the refusal copy plus a problem is
-    /// taller than a phone, and a fixed layout there puts the button off-screen
-    /// with no way to reach it.
+    /// taller than a phone, and a fixed layout there puts the action off-screen
+    /// with no way to reach it — which the bar below fixes from the other end,
+    /// by never scrolling at all.
     private var prompt: some View {
         ScrollView {
             ReceiptCapturePrompt(model: model)
                 .padding(PopsSpacing.lg)
+        }
+        .safeAreaInset(edge: .bottom) { promptActions }
+    }
+
+    /// The camera, or the one refusal that can be undone, or nothing.
+    ///
+    /// Nothing is a real answer and not an omission: a device with no camera
+    /// and a device under a Screen Time policy have no action to offer, and a
+    /// disabled button in a bar is an invitation to keep pressing something
+    /// that will never work.
+    @ViewBuilder private var promptActions: some View {
+        if let refusal = CameraRefusal.refusing(model.cameraAccess) {
+            if refusal.offersSettings, let settings = SystemSettings.url {
+                PopsActionBar {
+                    Link(ReceiptCaptureCopy.openSettings, destination: settings)
+                        .font(.popsHeadline)
+                        .foregroundStyle(Color.popsAccent)
+                        .frame(maxWidth: .infinity)
+                        .accessibilityIdentifier(ReceiptCaptureAccessibility.openSettings)
+                }
+            }
+        } else {
+            PopsActionBar {
+                PopsButton(ReceiptCaptureCopy.captureButton, prominence: .prominent) {
+                    Task { await model.startCapture() }
+                }
+                .accessibilityIdentifier(ReceiptCaptureAccessibility.captureButton)
+            }
         }
     }
 
@@ -105,13 +143,16 @@ extension ReceiptCaptureView {
     /// it SwiftUI would reuse the first one's model, and the second receipt
     /// would show the first one's outcome having never been sent.
     private func reading(_ submission: ReceiptSubmission) -> some View {
-        VStack(spacing: PopsSpacing.zero) {
-            ReceiptResultView(model: model.result(for: submission))
-                .id(submission.id)
-            PopsButton(ReceiptCaptureCopy.captureAnother) { model.captureAnother() }
-                .accessibilityIdentifier(ReceiptCaptureAccessibility.captureAnotherButton)
-                .padding(PopsSpacing.lg)
-        }
+        ReceiptResultView(model: model.result(for: submission))
+            .id(submission.id)
+            .safeAreaInset(edge: .bottom) {
+                PopsActionBar {
+                    PopsButton(ReceiptCaptureCopy.captureAnother, prominence: .prominent) {
+                        model.captureAnother()
+                    }
+                    .accessibilityIdentifier(ReceiptCaptureAccessibility.captureAnotherButton)
+                }
+            }
     }
 
     @ViewBuilder private var scanner: some View {
@@ -128,14 +169,4 @@ extension ReceiptCaptureView {
             EmptyView()
         #endif
     }
-}
-
-#Preview("Receipt capture — light") {
-    ReceiptCaptureView(model: ReceiptCaptureViewModel(dependencies: .unbound))
-        .preferredColorScheme(.light)
-}
-
-#Preview("Receipt capture — dark") {
-    ReceiptCaptureView(model: ReceiptCaptureViewModel(dependencies: .unbound))
-        .preferredColorScheme(.dark)
 }

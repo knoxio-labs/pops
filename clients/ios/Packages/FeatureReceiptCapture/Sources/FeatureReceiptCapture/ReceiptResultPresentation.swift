@@ -34,13 +34,16 @@ extension ReceiptResultPresentation {
             heading: ReceiptResultCopy.createdHeading,
             message: alreadyStored
                 ? ReceiptResultCopy.createdAlreadyStoredMessage : ReceiptResultCopy.createdMessage,
+            merchantName: purchase.merchantName?.ifNotEmpty,
+            total: purchase.total.formatted(),
+            itemCount: ReceiptResultCopy.itemCountLabel(purchase.itemCount),
+            purchasedOn: purchasedOn(purchase.orderedAt),
+            reference: ReceiptResultCopy.purchaseReference(purchase.id),
             summary: ReceiptResultCopy.purchaseSummary(
                 merchantName: purchase.merchantName,
                 itemCount: purchase.itemCount,
                 total: purchase.total.formatted()
-            ),
-            purchasedOn: purchasedOn(purchase.orderedAt),
-            reference: ReceiptResultCopy.purchaseReference(purchase.id)
+            )
         )
     }
 
@@ -64,7 +67,12 @@ extension ReceiptResultPresentation {
             heading: ReceiptResultCopy.needsReviewHeading,
             message: ReceiptResultCopy.needsReviewMessage(for: failures.map(\.kind)),
             photoCount: photoCount(receiptCount),
-            extractedFields: fields(extracted),
+            identity: identity(extracted),
+            lines: lines(extracted.lines),
+            total: field(ReceiptResultCopy.FieldLabel.total, extracted.total),
+            adjustments: adjustments(extracted),
+            notes: field(
+                ReceiptResultCopy.FieldLabel.unreadableNotes, amounts(extracted.unreadableNotes)),
             failureLines: failureLines(failures)
         )
     }
@@ -85,30 +93,27 @@ extension ReceiptResultPresentation {
         receiptCount <= 0 ? nil : ReceiptResultCopy.photoCount(receiptCount)
     }
 
-    /// Every field the extraction can fill in, in receipt order — merchant
-    /// down to items — dropping whatever the receipt did not state.
-    private func fields(_ extracted: ExtractedReceipt) -> [ReceiptResultContent.Field] {
-        var fields: [ReceiptResultContent.Field] = [
-            field(ReceiptResultCopy.FieldLabel.merchant, extracted.merchantName),
-            field(ReceiptResultCopy.FieldLabel.address, extracted.address),
-            field(ReceiptResultCopy.FieldLabel.date, date(extracted)),
-            field(ReceiptResultCopy.FieldLabel.total, extracted.total),
+    /// Who and when, as printed at the top of the paper, dropping whatever
+    /// the receipt did not state.
+    private func identity(_ extracted: ExtractedReceipt) -> ReceiptResultContent.Identity {
+        ReceiptResultContent.Identity(
+            merchant: field(ReceiptResultCopy.FieldLabel.merchant, extracted.merchantName),
+            address: field(ReceiptResultCopy.FieldLabel.address, extracted.address),
+            date: field(ReceiptResultCopy.FieldLabel.date, date(extracted))
+        )
+    }
+
+    /// What moves the line items to the stated total. The total itself is not
+    /// here: it is the figure this group is checked *against*, and drawing it
+    /// as a fourth adjustment is how a reader loses which number is which.
+    private func adjustments(_ extracted: ExtractedReceipt) -> [ReceiptResultContent.Field] {
+        [
             field(ReceiptResultCopy.FieldLabel.tax, extracted.tax),
             field(ReceiptResultCopy.FieldLabel.discounts, amounts(extracted.discounts)),
             field(ReceiptResultCopy.FieldLabel.surcharges, amounts(extracted.surcharges)),
             field(ReceiptResultCopy.FieldLabel.shipping, extracted.shipping),
         ]
         .compactMap { $0 }
-        if let lines = lines(extracted.lines) {
-            fields.append(
-                ReceiptResultContent.Field(label: ReceiptResultCopy.FieldLabel.lines, value: lines))
-        }
-        if let notes = amounts(extracted.unreadableNotes) {
-            fields.append(
-                ReceiptResultContent.Field(
-                    label: ReceiptResultCopy.FieldLabel.unreadableNotes, value: notes))
-        }
-        return fields
     }
 
     /// The date and time as one line, when the receipt states either. Neither
@@ -127,20 +132,20 @@ extension ReceiptResultPresentation {
         amounts.isEmpty ? nil : amounts.joined(separator: ", ")
     }
 
-    private func lines(_ lines: [ExtractedReceiptLine]) -> String? {
-        guard !lines.isEmpty else { return nil }
-        return lines.map(line(_:)).joined(separator: "\n")
-    }
-
-    private func line(_ line: ExtractedReceiptLine) -> String {
-        var text = "\(line.description) — \(line.amount)"
-        if let quantity = line.quantity {
-            text += " (×\(quantity))"
+    /// One row per printed line, in printed order.
+    ///
+    /// Identified by position rather than by description: a receipt can print
+    /// the same item twice, and two rows sharing an identity is a row that
+    /// disappears under `ForEach`.
+    private func lines(_ lines: [ExtractedReceiptLine]) -> [ReceiptResultContent.LineItem] {
+        lines.enumerated().map { index, line in
+            ReceiptResultContent.LineItem(
+                id: "line-\(index)",
+                description: line.description,
+                amount: line.amount,
+                note: ReceiptResultCopy.lineNote(quantity: line.quantity, unitNote: line.unitNote)
+            )
         }
-        if let unitNote = line.unitNote {
-            text += " \(unitNote)"
-        }
-        return text
     }
 
     /// A field, or nothing at all. Whitespace counts as nothing, for the same
