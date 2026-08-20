@@ -262,11 +262,11 @@ export function isCliEntrypoint(
  * shape every failure in these scripts should have, config errors included.
  *
  * A run stopped by {@link AuthFailureError} reports what it had already done
- * first. Both CLIs report through `reportOutcome(await postPurchases(...))`,
+ * first. An ingest CLI reports through `reportOutcome(await postPurchases(...))`,
  * so a throw skips that call and the counts and failure lines collected
  * before the stop would otherwise be lost with it.
  */
-export async function runCli(main: () => Promise<void>): Promise<void> {
+export async function runCli(main: () => Promise<void> | void): Promise<void> {
   try {
     await main();
   } catch (error) {
