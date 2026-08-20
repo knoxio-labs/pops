@@ -34,13 +34,13 @@ That is a module-boundary decision, not an oversight. This package renders whate
 
 ## The one colour that does not come from the catalogue
 
-`PopsActionBar` draws on `.regularMaterial`, and that is the single deliberate exception. A material is what makes content visibly pass *behind* a pinned bar; a flat fill in `popsBackground` cannot, and reads as the screen ending there. The hairline above it is `popsSeparator`, because that is a rule rather than a surface.
+`PopsActionBar` draws on `.regularMaterial`, and that is the single deliberate exception. A material is what makes content visibly pass _behind_ a pinned bar; a flat fill in `popsBackground` cannot, and reads as the screen ending there. The hairline above it is `popsSeparator`, because that is a rule rather than a surface.
 
 Nothing else may reach for a system material or a system colour, and `TokenDisciplineScanner` still refuses the latter everywhere.
 
 ## The one inverted contrast pair
 
-Every foreground token is measured against `popsBackground` and `popsSurface`. `PopsButton`'s prominent variant is the reverse — `popsBackground` drawn *on* `popsAccent` — and `ContrastTests.filledAccentIsReadable` measures exactly that pair. It is a test of its own rather than another row in the matrix, because the matrix is a cross product: adding `popsAccent` as a surface would also demand that `popsWarning` and `popsDestructive` read on it, which nothing draws and nothing should.
+Every foreground token is measured against `popsBackground` and `popsSurface`. `PopsButton`'s prominent variant is the reverse — `popsBackground` drawn _on_ `popsAccent` — and `ContrastTests.filledAccentIsReadable` measures exactly that pair. It is a test of its own rather than another row in the matrix, because the matrix is a cross product: adding `popsAccent` as a surface would also demand that `popsWarning` and `popsDestructive` read on it, which nothing draws and nothing should.
 
 That pair is the whole reason a filled control can exist here at all. Before it there was no foreground guaranteed to read on the accent, so there was no honest filled button and the app had one button weight for everything.
 
