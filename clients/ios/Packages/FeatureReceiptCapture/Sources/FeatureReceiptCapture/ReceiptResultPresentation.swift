@@ -62,7 +62,7 @@ extension ReceiptResultPresentation {
     ) -> ReceiptResultContent.NeedsReviewContent {
         ReceiptResultContent.NeedsReviewContent(
             heading: ReceiptResultCopy.needsReviewHeading,
-            message: ReceiptResultCopy.needsReviewMessage,
+            message: ReceiptResultCopy.needsReviewMessage(for: failures.map(\.kind)),
             photoCount: photoCount(receiptCount),
             extractedFields: fields(extracted),
             failureLines: failureLines(failures)
