@@ -116,6 +116,8 @@ export {
   findPurchaseBySourceOrderId,
 } from './services/purchase-lookups.js';
 
+export { attachDocument, type AttachDocumentInput } from './services/purchase-documents.js';
+
 export {
   createPurchase,
   type CreateChargeAllocationInput,

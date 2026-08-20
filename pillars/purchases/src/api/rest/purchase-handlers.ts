@@ -5,6 +5,7 @@
  * handle without leaking it through Express.
  */
 import {
+  attachDocument,
   confirmItemClassification,
   createPurchase,
   decideInventoryProposal,
@@ -26,6 +27,7 @@ import type { z } from 'zod';
 
 import type { InventoryProposalDecisionSchema } from '../../contract/inventory-proposals.js';
 import type {
+  AttachDocumentBodySchema,
   CreatePurchaseBodySchema,
   ListItemsByTagQuerySchema,
   ListPurchasesQuerySchema,
@@ -36,6 +38,7 @@ import type { PurchasesDb } from '../../db/index.js';
 type ListQuery = z.infer<typeof ListPurchasesQuerySchema>;
 type TagQuery = z.infer<typeof ListItemsByTagQuerySchema>;
 type CreateBody = z.infer<typeof CreatePurchaseBodySchema>;
+type AttachDocumentBody = z.infer<typeof AttachDocumentBodySchema>;
 type PatchItemBody = z.infer<typeof PatchItemBodySchema>;
 type ProposalDecisionBody = z.infer<typeof InventoryProposalDecisionSchema>;
 
@@ -129,6 +132,23 @@ export function makePurchaseHandlers(db: PurchasesDb, onIngest: () => void = () 
         });
       }
       return { status: 201 as const, body: toPurchaseDetailBody(detail) };
+    },
+
+    attachDocument: async ({
+      params,
+      body,
+    }: {
+      params: { id: string };
+      body: AttachDocumentBody;
+    }) => {
+      try {
+        return { status: 201 as const, body: { document: attachDocument(db, params.id, body) } };
+      } catch (err) {
+        const mapped = tryMapServiceError(err);
+        if (mapped?.status === 409) return { status: 409 as const, body: mapped.body };
+        if (mapped?.status === 404) return { status: 404 as const, body: mapped.body };
+        throw err as Error;
+      }
     },
 
     delete: async ({ params }: { params: { id: string } }) => {

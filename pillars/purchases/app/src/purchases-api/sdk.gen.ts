@@ -26,6 +26,9 @@ import type {
   ProductUpdateAliasData,
   ProductUpdateAliasErrors,
   ProductUpdateAliasResponses,
+  PurchaseAttachDocumentData,
+  PurchaseAttachDocumentErrors,
+  PurchaseAttachDocumentResponses,
   PurchaseCreateData,
   PurchaseCreateErrors,
   PurchaseCreateResponses,
@@ -286,6 +289,25 @@ export const purchaseGet = <ThrowOnError extends boolean = false>(
   (options.client ?? client).get<PurchaseGetResponses, PurchaseGetErrors, ThrowOnError>({
     url: '/purchases/{id}',
     ...options,
+  });
+
+/**
+ * Attach a document to an existing order
+ */
+export const purchaseAttachDocument = <ThrowOnError extends boolean = false>(
+  options: Options<PurchaseAttachDocumentData, ThrowOnError>
+): RequestResult<PurchaseAttachDocumentResponses, PurchaseAttachDocumentErrors, ThrowOnError> =>
+  (options.client ?? client).post<
+    PurchaseAttachDocumentResponses,
+    PurchaseAttachDocumentErrors,
+    ThrowOnError
+  >({
+    url: '/purchases/{id}/documents',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
   });
 
 /**

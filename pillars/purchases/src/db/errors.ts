@@ -16,6 +16,28 @@ export class PurchaseNotFoundError extends Error {
   }
 }
 
+/**
+ * An attach named a document the order already carries.
+ *
+ * Distinct from {@link DuplicatePurchaseError} because the caller is
+ * attaching evidence to an order it did not create, and the two say different
+ * things about what to do next: a duplicate order means skip the order, this
+ * means the document is already where it was meant to go. A backfill re-run
+ * lands here for everything it attached last time, which is what makes
+ * running it twice a no-op rather than a second row.
+ */
+export class DocumentAlreadyAttachedError extends Error {
+  readonly purchaseId: string;
+  readonly documentUri: string;
+
+  constructor(purchaseId: string, documentUri: string) {
+    super(`Purchase ${purchaseId} already carries document ${documentUri}`);
+    this.name = 'DocumentAlreadyAttachedError';
+    this.purchaseId = purchaseId;
+    this.documentUri = documentUri;
+  }
+}
+
 export class PurchaseSourceNotFoundError extends Error {
   readonly sourceId: string;
 

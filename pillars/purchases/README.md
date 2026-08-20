@@ -202,6 +202,14 @@ An order with **no charge and no link** (`awaiting_settlement`) is normal and pe
 
 A **cash** order (`settlementMode='cash'`) is terminal on arrival — `createPurchase` writes it straight to `settled_cash`. No transaction will ever exist for it, so it must never enter the reconcile queue, while still counting in every spend figure.
 
+## Evidence that arrives after the order
+
+An order's documents travel in its create request, and for a photographed receipt that is the whole story. For an export bundle it is not: the Amazon DSAR bundle's 325 tax invoices sit in a different folder than its order history, they carry no order id in their filenames, and the history is what gets ingested first. By the time the invoices are read the orders are already here, and `POST /purchases` refuses each of them at the checksum — so the create path can never place them.
+
+`POST /purchases/:id/documents` is the way in. One document, addressed by the order's own id, which is the only handle an already-ingested order answers to. `uq_purchase_documents(purchase_id, document_uri)` makes a repeat a `409` rather than a second row, so a backfill can be re-run without checking first: `pnpm ingest:amazon -- "<bundle>" --attach-existing` resolves each merchant order id against `GET /purchases?sources=amazon` and posts what is missing, and a second run reports every invoice as already carried. The route carries no shipment, because the adapter-local `shipmentRef` a create call uses resolves against deliveries defined in the same payload and there are none here — a document belonging to one delivery rather than the whole order can still only be attached at ingest (POPS-2418).
+
+Keep it small. [ADR-042](../../docs/architecture/adr-042-purchase-documents-and-transaction-reconciliation.md) and POPS-1528 migrate purchase evidence to the `documents` pillar, and this route migrates with it.
+
 ## The inventory fan-out
 
 A durable line suggests an asset. `GET /purchases/:id/inventory-proposals` is that suggestion and nothing more: **purchases writes nothing into `inventory` and this route does not create anything**. Unattended fan-out fills that pillar with cables, batteries and light globes inside a month, at which point the user stops trusting it — which is why `ITEM_KINDS` calls both fan-out directions proposals.

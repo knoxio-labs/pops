@@ -160,6 +160,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/purchases/{id}/documents': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Attach a document to an existing order */
+    post: operations['purchase.attachDocument'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/purchases/{id}/inventory-proposals': {
     parameters: {
       query?: never;
@@ -1541,6 +1558,72 @@ export interface operations {
       };
       /** @description 404 */
       404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+          };
+        };
+      };
+    };
+  };
+  'purchase.attachDocument': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          documentUri: string;
+          /** @enum {string} */
+          kind?: 'tax_invoice' | 'receipt' | 'order_confirmation' | 'delivery_photo' | 'other';
+        };
+      };
+    };
+    responses: {
+      /** @description 201 */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            document: {
+              createdAt: string;
+              documentStaleAt: string | null;
+              documentUri: string;
+              id: string;
+              /** @enum {string} */
+              kind: 'tax_invoice' | 'receipt' | 'order_confirmation' | 'delivery_photo' | 'other';
+              purchaseId: string;
+              shipmentId: string | null;
+            };
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
         headers: {
           [name: string]: unknown;
         };
