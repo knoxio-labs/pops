@@ -105,16 +105,46 @@ interface ProcessLoopArgs {
 }
 
 /**
- * Pass 1: run the synchronous, non-AI ladder for every row. Rows it resolves
- * land straight in `results`; rows that fall through collect into the
- * returned `pending` list for the batched AI pass. A thrown error (e.g. a DB
- * failure) degrades that one row to `failed` rather than aborting the run.
+ * Rows classified between progress emissions.
+ *
+ * Each emission costs one event-loop turn, so per-row would trade the whole
+ * run's throughput for resolution nobody can see; at this size a 3231-row
+ * import yields ~130 times, which is imperceptible against the classification
+ * itself but frequent enough that the bar visibly moves.
  */
-function classifyWithoutAiPass(
-  loopArgs: Pick<ProcessLoopArgs, 'db' | 'newTransactions' | 'context' | 'counters'>,
+const PROGRESS_INTERVAL_ROWS = 25;
+
+/**
+ * Hand the event loop back so pending HTTP work runs.
+ *
+ * The classification ladder is synchronous and the pillar is a single Node
+ * process, so a long uninterrupted run starves the very `/imports/progress`
+ * polls that are meant to observe it — updating the store more often changes
+ * nothing on its own, because no poll can be answered until the loop ends.
+ * `setImmediate` yields the macrotask queue, where those requests sit.
+ */
+function yieldToEventLoop(): Promise<void> {
+  return new Promise((resolve) => setImmediate(resolve));
+}
+
+/**
+ * Pass 1: run the non-AI ladder for every row. Rows it resolves land straight
+ * in `results`; rows that fall through collect into the returned `pending`
+ * list for the batched AI pass. A thrown error (e.g. a DB failure) degrades
+ * that one row to `failed` rather than aborting the run.
+ *
+ * This pass is where a no-AI import spends nearly all of its time, so it is
+ * also where progress has to come from. Reporting only from the bookkeeping
+ * loop that follows leaves the client showing `0/N` for the whole run and then
+ * jumping straight to the result.
+ */
+async function classifyWithoutAiPass(
+  loopArgs: Pick<ProcessLoopArgs, 'db' | 'newTransactions' | 'context' | 'counters'> & {
+    onProgress?: ImportProgressCallback;
+  },
   results: (TransactionProcessResult | undefined)[]
-): PendingAiItem[] {
-  const { db, newTransactions, context, counters } = loopArgs;
+): Promise<PendingAiItem[]> {
+  const { db, newTransactions, context, counters, onProgress } = loopArgs;
   const pending: PendingAiItem[] = [];
   for (let i = 0; i < newTransactions.length; i++) {
     const transaction = newTransactions[i];
@@ -130,6 +160,10 @@ function classifyWithoutAiPass(
       const { failed, errorEntry } = buildFailure(transaction, error);
       results[i] = { failed, batchStatus: 'failed', errorEntry };
     }
+    if (onProgress && (i + 1) % PROGRESS_INTERVAL_ROWS === 0) {
+      onProgress({ processedCount: i + 1 });
+      await yieldToEventLoop();
+    }
   }
   return pending;
 }
@@ -140,10 +174,11 @@ async function runProcessLoop(args: ProcessLoopArgs): Promise<{ errors: ErrorEnt
     length: newTransactions.length,
   });
 
-  const pending = classifyWithoutAiPass(args, results);
+  const pending = await classifyWithoutAiPass(args, results);
   if (pending.length > 0) {
     await resolvePendingAi({ db, pending, context, counters, results });
   }
+  onProgress?.({ processedCount: newTransactions.length });
 
   const currentBatch: ProgressBatchItem[] = [];
   const errors: ErrorEntry[] = [];
@@ -162,7 +197,11 @@ async function runProcessLoop(args: ProcessLoopArgs): Promise<{ errors: ErrorEnt
         status: result.batchStatus,
         ...(result.errorEntry ? { error: result.errorEntry.error } : {}),
       });
-      onProgress({ processedCount: i + 1, currentBatch: [...currentBatch] });
+      // Bookkeeping only — every row is already classified by this point, so
+      // this loop runs to completion inside one tick. Re-sending `processedCount`
+      // here would walk the count from 0 back up behind a bar that pass 1 has
+      // already filled, which reads as the import restarting.
+      onProgress({ currentBatch: [...currentBatch] });
     }
   }
 
