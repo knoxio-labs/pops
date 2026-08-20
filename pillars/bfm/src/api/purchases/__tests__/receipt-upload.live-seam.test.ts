@@ -130,13 +130,21 @@ const PURCHASES_TEST_JSON_BODY_LIMIT_BYTES = 4096;
 /** Well above `MIN_ACCESS_TOKEN_SECRET_LENGTH`; the value itself is arbitrary. */
 const BFM_ACCESS_TOKEN_SECRET = 'live-seam-bfm-purchases-access-token-signing-secret-32plus';
 
-/** A reading whose lines sum exactly to the stated total — admissible as fact. */
+/**
+ * A reading whose lines sum exactly to the stated total — admissible as fact.
+ *
+ * The wall clock is deliberately a Sydney morning. 08:15 at +10:00 is
+ * 22:15 UTC on the *previous* day, so the day the receipt names and the day
+ * its stored instant falls on genuinely differ — which is the only way this
+ * seam can show that the offset survived the trip. A mid-UTC-day reading
+ * agrees with itself no matter how badly the day is derived.
+ */
 const GOOD_READING = JSON.stringify({
   merchantName: 'Live Seam Cafe',
   address: null,
   timeZone: null,
   purchasedOn: '2026-08-13',
-  purchasedAt: '10:15',
+  purchasedAt: '08:15',
   currency: 'AUD',
   total: '$4.50',
   tax: null,
@@ -497,8 +505,19 @@ describe('bfm -> purchases receipt upload live seam', () => {
     expect(detail.id).toBe(created.id);
     expect(detail.items).toHaveLength(created.itemCount);
     expect(detail.totalCents).toBe(450);
-    // Both, and they agree: the day is derived from the instant's own offset.
-    expect(detail.orderedAt.startsWith(detail.orderedOn)).toBe(true);
+
+    // The receipt printed 08:15 on the 13th, in Sydney. purchases stores
+    // that as 22:15 UTC on the 12th and records the +10:00 it resolved it
+    // against; bfm puts the two back together to name the 13th.
+    expect(detail.orderedAt).toBe('2026-08-12T22:15:00.000Z');
+    expect(detail.orderedOn).toBe('2026-08-13');
+
+    // Stated as its own expectation because it is the whole point: the day
+    // and the instant name DIFFERENT dates, so `orderedOn` cannot be the
+    // instant's leading ten characters. An assertion that the two agree is
+    // vacuous while every stored value ends in `Z` — it passed throughout
+    // the period the phone was dating a morning shop to the day before.
+    expect(detail.orderedAt.startsWith(detail.orderedOn)).toBe(false);
   });
 
   it('answers 404 for an order purchases does not hold, rather than an outage', async () => {

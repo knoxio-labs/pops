@@ -216,6 +216,7 @@ export function mapReceipt(activityDetailsId: string, page: ReceiptPage): Mapped
       sourceOrderId,
       ingestMethod: 'export',
       orderedAt: stamp.occurredAt,
+      orderedAtOffsetMinutes: stamp.utcOffsetMinutes,
       currency: CURRENCY,
       ...totals,
       merchantEntityName: store.merchantName,

@@ -132,6 +132,7 @@ function insertOrder(tx: PurchasesDb, input: CreatePurchaseInput, now: string): 
       sourceOrderId: input.sourceOrderId ?? null,
       ingestMethod: input.ingestMethod,
       orderedAt: input.orderedAt,
+      orderedAtOffsetMinutes: input.orderedAtOffsetMinutes ?? null,
       currency: input.currency,
       ...componentCents(input),
       totalCents: input.totalCents,

@@ -46,6 +46,28 @@ export const purchases = sqliteTable(
     /** ISO-8601. Matched against `transaction.date`, NOT against when the row was observed. */
     orderedAt: text('ordered_at').notNull(),
     /**
+     * Minutes ahead of UTC where the order was placed, at {@link orderedAt}.
+     *
+     * `orderedAt` is spelled in UTC so that a text comparison is a
+     * chronological one, and that spelling destroys the only evidence of
+     * WHERE the order happened. Without this column the merchant-local
+     * calendar day is unrecoverable: a 9am Sydney receipt is stored as
+     * `23:00Z` the day before, and a reader with the instant alone can only
+     * name the day in Greenwich and date the shop a day early.
+     *
+     * A signed offset rather than an IANA zone, because the ingest paths
+     * cannot always honestly supply a zone — a camera's EXIF and a client's
+     * `capturedAt` state an offset and name no place, and `purchase_capture`
+     * records the same fact in the same shape for the same reason. Bounded
+     * ±14:00, the widest any zone has used.
+     *
+     * Nullable, and null is not a defect: an adapter whose source states an
+     * instant rather than a printed wall clock — Amazon's exports — never
+     * knew an offset to record, and a row written before this column existed
+     * cannot have one invented for it from the instant it kept.
+     */
+    orderedAtOffsetMinutes: integer('ordered_at_offset_minutes'),
+    /**
      * ISO 4217 currency the order was priced in. NOT necessarily the
      * currency it settled in — an AliExpress order priced in USD settles as
      * AUD on the card. The link table carries both sides.

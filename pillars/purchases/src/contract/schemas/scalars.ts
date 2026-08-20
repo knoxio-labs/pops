@@ -79,6 +79,29 @@ export const IsoTimestampSchema = z
   });
 
 /**
+ * The widest offset any zone has ever been on, either side of UTC.
+ *
+ * The bound the `purchases` and `purchase_capture` columns CHECK, and the
+ * one `src/ingest/local-time.ts` applies. A larger figure is a garbled
+ * field rather than a place, and applying it moves an order across a day
+ * boundary.
+ */
+const MAX_UTC_OFFSET_MINUTES = 14 * 60;
+
+/**
+ * Minutes ahead of UTC somewhere, as whole minutes.
+ *
+ * Whole minutes because no zone has ever used a finer resolution, and a
+ * fractional value is a unit mistake — seconds or milliseconds arriving
+ * where minutes were meant — which would place an order in the wrong
+ * century rather than merely the wrong place.
+ */
+export const UtcOffsetMinutesSchema = z
+  .int()
+  .min(-MAX_UTC_OFFSET_MINUTES)
+  .max(MAX_UTC_OFFSET_MINUTES);
+
+/**
  * A soft cross-pillar reference: `pops://<pillar>/<type>/<id>`.
  *
  * These are resolved by a nightly cron and never at read time, so a

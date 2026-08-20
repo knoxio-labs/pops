@@ -7,7 +7,7 @@
  * the POS/transaction pair it carries, which is what identifies the
  * purchase.
  */
-import { instantFromLocalParts } from '../local-time.js';
+import { instantFromLocalParts, utcOffsetMinutesAt } from '../local-time.js';
 
 /** `POS 066 TRANS 3184 20:39 24/07/2026` */
 const TRANSACTION_DETAILS_RE =
@@ -18,6 +18,14 @@ export interface TransactionStamp {
   readonly transaction: string;
   /** ISO-8601 instant, offset resolved for the store's zone. */
   readonly occurredAt: string;
+  /**
+   * Minutes the store's zone was ahead of UTC at {@link occurredAt}.
+   *
+   * The footer prints a wall clock and `occurredAt` is spelled in UTC, so
+   * this is what lets a reader recover the day the receipt actually names —
+   * a 09:12 shop is `23:12Z` the day before.
+   */
+  readonly utcOffsetMinutes: number | null;
   /** `DDMMYYYY`, as the receipt prints it — part of the natural key. */
   readonly localDate: string;
 }
@@ -49,6 +57,7 @@ export function readTransactionDetails(raw: string | null | undefined): Transact
     pos,
     transaction,
     occurredAt,
+    utcOffsetMinutes: utcOffsetMinutesAt(occurredAt),
     localDate: `${day.padStart(2, '0')}${month.padStart(2, '0')}${year}`,
   };
 }

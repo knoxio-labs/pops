@@ -1055,6 +1055,7 @@ export interface operations {
               merchantEntityId: string | null;
               merchantEntityName: string | null;
               orderedAt: string;
+              orderedAtOffsetMinutes: number | null;
               paymentHint: string | null;
               rawRef: string | null;
               receiptUri: string | null;
@@ -1159,6 +1160,7 @@ export interface operations {
           merchantEntityId?: string | null;
           merchantEntityName?: string | null;
           orderedAt: string;
+          orderedAtOffsetMinutes?: number | null;
           paymentHint?: string | null;
           rawRef?: string | null;
           /** @enum {string} */
@@ -1308,6 +1310,7 @@ export interface operations {
               merchantEntityId: string | null;
               merchantEntityName: string | null;
               orderedAt: string;
+              orderedAtOffsetMinutes: number | null;
               paymentHint: string | null;
               rawRef: string | null;
               /** @enum {string} */
@@ -1501,6 +1504,7 @@ export interface operations {
               merchantEntityId: string | null;
               merchantEntityName: string | null;
               orderedAt: string;
+              orderedAtOffsetMinutes: number | null;
               paymentHint: string | null;
               rawRef: string | null;
               /** @enum {string} */
@@ -2125,6 +2129,7 @@ export interface operations {
                     merchantEntityId: string | null;
                     merchantEntityName: string | null;
                     orderedAt: string;
+                    orderedAtOffsetMinutes: number | null;
                     paymentHint: string | null;
                     rawRef: string | null;
                     /** @enum {string} */
@@ -2360,6 +2365,7 @@ export interface operations {
                 merchantEntityId: string | null;
                 merchantEntityName: string | null;
                 orderedAt: string;
+                orderedAtOffsetMinutes: number | null;
                 paymentHint: string | null;
                 rawRef: string | null;
                 /** @enum {string} */

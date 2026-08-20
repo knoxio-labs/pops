@@ -9,9 +9,14 @@
  *   - **The row is complete.** A list row that has to be topped up with a
  *     second request per order is a list that ships slow or without
  *     thumbnails, so `itemCount` and `receiptUri` must arrive on the page.
- *   - **The day is a day.** `orderedOn` is derived from the order's own UTC
- *     offset, so a purchase made at 9pm in Perth stays on its own date no
- *     matter where the phone is standing when it renders.
+ *   - **The day is the day the receipt printed.** `orderedOn` is derived
+ *     from the instant AND the offset purchases recorded beside it, so a
+ *     purchase made at 9am in Sydney stays on its own date no matter where
+ *     the phone is standing when it renders. The offset has to come as its
+ *     own field: `orderedAt` is canonicalised to UTC, and for a long while
+ *     this suite claimed to defend a day derived from an offset that no
+ *     stored value carried. Every fixture was mid-UTC-day, so none of them
+ *     could tell the two answers apart.
  *   - **The money.** Integer cents, mirrored from purchases. A scale slip
  *     shows $84.20 as $8,420 and nothing anywhere throws.
  *   - **The degradation.** purchases being down must never render as an empty
@@ -174,11 +179,19 @@ describe('one page of orders', () => {
 });
 
 describe('the date a row shows', () => {
+  // The first three state no `orderedAtOffsetMinutes` and spell the offset
+  // into `orderedAt` instead. That is the older producer, and its suffix is
+  // then the best evidence there is — so it is still honoured rather than
+  // being read as a row with no offset at all.
   it('is the day at the order’s own offset, not at UTC', async () => {
     // 21:30 on the 13th in Perth is 13:30 UTC on the same day; the interesting
     // case is the evening one below. This pins the ordinary one first.
     const { app, token } = openWithRows([
-      purchasesRow({ id: 'pur-1', orderedAt: '2026-08-13T21:30:00+08:00' }),
+      purchasesRow({
+        id: 'pur-1',
+        orderedAt: '2026-08-13T21:30:00+08:00',
+        orderedAtOffsetMinutes: null,
+      }),
     ]);
 
     const res = await list(app, token);
@@ -191,7 +204,11 @@ describe('the date a row shows', () => {
     // `toISOString().slice(0, 10)` on the instant would be right here and
     // wrong on the case below, so both are pinned.
     const { app, token } = openWithRows([
-      purchasesRow({ id: 'pur-1', orderedAt: '2026-08-13T23:30:00+11:00' }),
+      purchasesRow({
+        id: 'pur-1',
+        orderedAt: '2026-08-13T23:30:00+11:00',
+        orderedAtOffsetMinutes: null,
+      }),
     ]);
 
     const res = await list(app, token);
@@ -203,12 +220,104 @@ describe('the date a row shows', () => {
     // 23:30 on the 13th at -05:00 is 04:30 UTC on the 14th. The reader was
     // standing in a shop on the 13th, and that is the date the row shows.
     const { app, token } = openWithRows([
-      purchasesRow({ id: 'pur-1', orderedAt: '2026-08-13T23:30:00-05:00' }),
+      purchasesRow({
+        id: 'pur-1',
+        orderedAt: '2026-08-13T23:30:00-05:00',
+        orderedAtOffsetMinutes: null,
+      }),
     ]);
 
     const res = await list(app, token);
 
     expect(res.body.data[0].orderedOn).toBe('2026-08-13');
+  });
+
+  /**
+   * The three above spell the offset into `orderedAt`. Production never
+   * does: purchases canonicalises that column to UTC so a text comparison
+   * over it is a chronological one, so every stored value ends in `Z` and
+   * carries no offset at all. The cases below are the shapes that actually
+   * arrive, and until the producer sent the offset as its own field there
+   * was nothing for the day to be derived FROM.
+   */
+  it('dates a morning Sydney shop to the day the receipt printed', async () => {
+    // The reported defect, as a row. 09:00 on the 21st in Sydney is
+    // 23:00 UTC on the 20th — the instant alone answers the 20th, and the
+    // paper in the reader's hand says the 21st.
+    const { app, token } = openWithRows([
+      purchasesRow({
+        id: 'pur-1',
+        orderedAt: '2026-08-20T23:00:00.000Z',
+        orderedAtOffsetMinutes: 600,
+      }),
+    ]);
+
+    const res = await list(app, token);
+
+    expect(res.body.data[0].orderedOn).toBe('2026-08-21');
+  });
+
+  it('dates an evening shop west of UTC to the day the receipt printed', async () => {
+    // The mirror. 22:30 on the 20th in Los Angeles is 05:30 UTC on the
+    // 21st, so the instant alone runs a day FORWARD rather than back. A fix
+    // that only subtracted would pass the Sydney case and fail this one.
+    const { app, token } = openWithRows([
+      purchasesRow({
+        id: 'pur-1',
+        orderedAt: '2026-08-21T05:30:00.000Z',
+        orderedAtOffsetMinutes: -420,
+      }),
+    ]);
+
+    const res = await list(app, token);
+
+    expect(res.body.data[0].orderedOn).toBe('2026-08-20');
+  });
+
+  it('crosses a month boundary with the offset, not around it', async () => {
+    // 00:30 on 1 September in Sydney at +10:00 is 14:30 UTC on 31 August.
+    // The day, the month and the ordering of the two differ at once.
+    const { app, token } = openWithRows([
+      purchasesRow({
+        id: 'pur-1',
+        orderedAt: '2026-08-31T14:30:00.000Z',
+        orderedAtOffsetMinutes: 600,
+      }),
+    ]);
+
+    const res = await list(app, token);
+
+    expect(res.body.data[0].orderedOn).toBe('2026-09-01');
+  });
+
+  it('falls back to the day in UTC for a row whose offset was never recorded', async () => {
+    // An Amazon export states an instant and never knew an offset, and so
+    // does every row written before purchases had a column for one. There
+    // is no local day to name, and the UTC one is not a guess.
+    const { app, token } = openWithRows([
+      purchasesRow({
+        id: 'pur-1',
+        orderedAt: '2026-08-20T23:00:00.000Z',
+        orderedAtOffsetMinutes: null,
+      }),
+    ]);
+
+    const res = await list(app, token);
+
+    expect(res.body.data[0].orderedOn).toBe('2026-08-20');
+  });
+
+  it('renders a row from a producer too old to send the field at all', async () => {
+    // Absent is not null on the wire, and bfm must not answer a `502` to a
+    // handset because the producer rolled a minute later than it did.
+    const row = purchasesRow({ id: 'pur-1', orderedAt: '2026-08-20T23:00:00.000Z' });
+    delete row.orderedAtOffsetMinutes;
+    const { app, token } = openWithRows([row]);
+
+    const res = await list(app, token);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data[0].orderedOn).toBe('2026-08-20');
   });
 });
 
@@ -345,6 +454,41 @@ describe('one order', () => {
 
     expect(res.body.orderedAt).toBe('2026-08-13T23:30:00+11:00');
     expect(res.body.orderedOn).toBe('2026-08-13');
+  });
+
+  it('dates the detail of a morning Sydney shop the way the list row does', async () => {
+    // The same defect on the other route. The two derive `orderedOn`
+    // independently from the same pair, and a fix applied to one of them
+    // shows a list row and the screen behind it on different days.
+    const { app, token } = openWithRows([purchasesRow({ id: 'pur-1' })], {
+      'pur-1': purchasesDetail({
+        id: 'pur-1',
+        orderedAt: '2026-08-20T23:00:00.000Z',
+        orderedAtOffsetMinutes: 600,
+      }),
+    });
+
+    const res = await one(app, token, 'pur-1');
+
+    expect(res.body.orderedAt).toBe('2026-08-20T23:00:00.000Z');
+    expect(res.body.orderedOn).toBe('2026-08-21');
+    // The instant and the day name different dates on purpose. Asserting
+    // that they AGREE is vacuous once every stored value ends in `Z`.
+    expect(res.body.orderedAt.startsWith(res.body.orderedOn)).toBe(false);
+  });
+
+  it('falls back to the UTC day on the detail route too', async () => {
+    const { app, token } = openWithRows([purchasesRow({ id: 'pur-1' })], {
+      'pur-1': purchasesDetail({
+        id: 'pur-1',
+        orderedAt: '2026-08-20T23:00:00.000Z',
+        orderedAtOffsetMinutes: null,
+      }),
+    });
+
+    const res = await one(app, token, 'pur-1');
+
+    expect(res.body.orderedOn).toBe('2026-08-20');
   });
 
   it('answers 404 for an order purchases does not hold', async () => {

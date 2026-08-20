@@ -292,6 +292,76 @@ describe('a receipt that does not say when it happened', () => {
   });
 });
 
+/**
+ * The offset the wall clock was resolved against, kept rather than thrown
+ * away.
+ *
+ * `orderedAt` is spelled in UTC, so it is the only surviving evidence of
+ * where the shop was — and without it a consumer rendering a calendar day
+ * can name the day in Greenwich and nowhere else. Every case here is a
+ * morning or an evening whose local day and UTC day genuinely differ,
+ * because a mid-UTC-day receipt agrees with itself no matter how badly the
+ * day is derived.
+ */
+describe('the offset an order was placed at', () => {
+  /** The wall clock the pair reproduces, in `yyyy-mm-dd hh:mm`. */
+  const localClockOf = (purchase: { orderedAt: string; orderedAtOffsetMinutes?: number | null }) =>
+    new Date(Date.parse(purchase.orderedAt) + (purchase.orderedAtOffsetMinutes ?? 0) * 60_000)
+      .toISOString()
+      .slice(0, 16)
+      .replace('T', ' ');
+
+  it('records +10:00 for a winter Sydney morning, and reproduces the printed clock', () => {
+    // 09:00 on 21 August in Sydney is 23:00 UTC on the 20th. The instant
+    // alone says the 20th; the receipt in the reader's hand says the 21st.
+    const purchase = mapped({ purchasedOn: '2026-08-21', purchasedAt: '09:00' });
+
+    expect(purchase.orderedAt).toBe('2026-08-20T23:00:00.000Z');
+    expect(purchase.orderedAtOffsetMinutes).toBe(600);
+    expect(localClockOf(purchase)).toBe('2026-08-21 09:00');
+  });
+
+  it('records +11:00 for a summer one, following the same DST rule the instant does', () => {
+    const purchase = mapped({ purchasedOn: '2026-01-21', purchasedAt: '09:00' });
+
+    expect(purchase.orderedAt).toBe('2026-01-20T22:00:00.000Z');
+    expect(purchase.orderedAtOffsetMinutes).toBe(660);
+    expect(localClockOf(purchase)).toBe('2026-01-21 09:00');
+  });
+
+  it('records a negative offset for a shop west of UTC', () => {
+    // The mirror case: 22:30 local runs the instant FORWARD a day, so a
+    // consumer that only ever subtracts gets this one wrong in the other
+    // direction.
+    const purchase = mapped({
+      purchasedOn: '2026-08-20',
+      purchasedAt: '22:30',
+      timeZone: 'America/Los_Angeles',
+    });
+
+    expect(purchase.orderedAt).toBe('2026-08-21T05:30:00.000Z');
+    expect(purchase.orderedAtOffsetMinutes).toBe(-420);
+    expect(localClockOf(purchase)).toBe('2026-08-20 22:30');
+  });
+
+  it('records the configured default’s offset when nothing established a zone', () => {
+    // Tagged `timezone-uncertain`, and the offset is still recorded: it is
+    // the same assumption `orderedAt` was resolved under, so the pair still
+    // reproduces the printed clock. Recording nothing would leave a reader
+    // naming the day in UTC and disagreeing with the paper outright.
+    const purchase = mapped({
+      purchasedOn: '2026-08-21',
+      purchasedAt: '09:00',
+      timeZone: null,
+      address: null,
+    });
+
+    expect(purchase.tags).toContain('timezone-uncertain');
+    expect(purchase.orderedAtOffsetMinutes).toBe(600);
+    expect(localClockOf(purchase)).toBe('2026-08-21 09:00');
+  });
+});
+
 describe('what the device and the photograph said', () => {
   const withCapture = (
     over: Partial<ExtractedReceipt>,
