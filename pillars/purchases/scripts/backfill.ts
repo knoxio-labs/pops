@@ -266,7 +266,7 @@ export function isCliEntrypoint(
  * so a throw skips that call and the counts and failure lines collected
  * before the stop would otherwise be lost with it.
  */
-export async function runCli(main: () => Promise<void>): Promise<void> {
+export async function runCli(main: () => Promise<void> | void): Promise<void> {
   try {
     await main();
   } catch (error) {
