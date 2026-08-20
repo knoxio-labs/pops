@@ -317,8 +317,8 @@ describe('which matches survive to the response', () => {
     const dates = searchPurchases(opened.db, 'vevor').map((hit) => hit.data['orderedAt']);
 
     expect(dates).toHaveLength(25);
-    expect(dates[0]).toBe('2026-01-01T00:40:00Z');
-    expect(dates.at(-1)).toBe('2026-01-01T00:16:00Z');
+    expect(dates[0]).toBe('2026-01-01T00:40:00.000Z');
+    expect(dates.at(-1)).toBe('2026-01-01T00:16:00.000Z');
   });
 });
 

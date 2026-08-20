@@ -25,6 +25,7 @@ import {
   purchaseTags,
 } from '../schema.js';
 import { expectRow, nowIso, type PurchasesDb } from './internal.js';
+import { canonicalInstant } from './ordered-at.js';
 import { findPurchaseByChecksum, findPurchaseBySourceOrderId } from './purchase-lookups.js';
 import { insertCapture } from './purchase-write-capture.js';
 import { componentCents, shipmentIdFor, type IngestContext } from './purchase-write-context.js';
@@ -124,14 +125,28 @@ function assertNotAlreadyImported(tx: PurchasesDb, input: CreatePurchaseInput): 
   }
 }
 
+/**
+ * Write the order row, with `orderedAt` in the one form the column is
+ * compared in.
+ *
+ * The single place that value enters the table, which is what makes
+ * canonicalising here enough — see `ordered-at.ts` for why the column may
+ * hold only one spelling of an instant. A timestamp naming no instant is
+ * refused rather than stored: it would sort somewhere, and wherever that is
+ * would be a lie about when the order happened.
+ */
 function insertOrder(tx: PurchasesDb, input: CreatePurchaseInput, now: string): PurchaseRow {
+  const orderedAt = canonicalInstant(input.orderedAt);
+  if (orderedAt === null) {
+    throw new InvalidIngestPayloadError(`orderedAt '${input.orderedAt}' names no instant`);
+  }
   const rows = tx
     .insert(purchases)
     .values({
       source: input.source,
       sourceOrderId: input.sourceOrderId ?? null,
       ingestMethod: input.ingestMethod,
-      orderedAt: input.orderedAt,
+      orderedAt,
       currency: input.currency,
       ...componentCents(input),
       totalCents: input.totalCents,

@@ -222,6 +222,30 @@ describe('POST /search with filters', () => {
     expect(ids).not.toContain(woolworths);
   });
 
+  it('takes the offset bound `GET /purchases` takes, and reaches the same orders', async () => {
+    // Both routes narrow on `orderedAt` and one pillar cannot hold two rules
+    // about which timestamps are legal. `+11:00` is the offset a Sydney
+    // caller writes, and it used to be a 200 on the index and a 400 here.
+    const amazon = seedCoffeeOrder();
+    seedWoolworthsOrder();
+    const bound = '2026-01-01T11:00:00+11:00';
+
+    const searched = await requestOn(app)
+      .post('/search')
+      .send({
+        query: {
+          text: 'dosing funnel',
+          filters: [{ field: 'orderedAt', operator: 'gte', value: bound }],
+        },
+      });
+    const listed = await requestOn(app).get('/purchases').query({ from: bound });
+
+    expect(searched.status).toBe(200);
+    expect(listed.status).toBe(200);
+    expect(owningPurchaseIds(searched.body.hits)).toEqual([amazon]);
+    expect(listed.body.items.map((row: { id: string }) => row.id)).toEqual([amazon]);
+  });
+
   it('scopes to the requested status', async () => {
     seedCoffeeOrder();
 

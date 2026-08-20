@@ -6,7 +6,7 @@
  * every consumer wants and re-deriving it per caller is how the residual
  * ends up computed three different ways.
  */
-import { and, asc, desc, eq, gte, inArray, isNull, lte } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull } from 'drizzle-orm';
 
 import {
   purchaseDocuments,
@@ -21,6 +21,7 @@ import {
 import { computeAccounting, landedCostCents, type PurchaseAccounting } from './accounting.js';
 import { groupBy } from './group-by.js';
 import { nowIso, type PurchasesDb } from './internal.js';
+import { orderedAtWindow } from './ordered-at.js';
 import { selectChargeDetails, type PurchaseChargeDetail } from './purchase-read-charges.js';
 
 import type { SQL } from 'drizzle-orm';
@@ -45,9 +46,13 @@ import type {
 export interface PurchaseScopeFilter {
   readonly sources?: readonly string[];
   readonly statuses?: readonly PurchaseStatus[];
-  /** Inclusive lower bound on `orderedAt` (ISO-8601). */
+  /**
+   * Inclusive lower bound on `orderedAt`, in any ISO-8601 form with a
+   * timezone. Normalised to the stored form before it becomes a predicate,
+   * so an offset bound names the window it reads as.
+   */
   readonly from?: string;
-  /** Inclusive upper bound on `orderedAt` (ISO-8601). */
+  /** Inclusive upper bound on `orderedAt`. Normalised like {@link from}. */
   readonly to?: string;
   /** The order's own currency, which the merchant roll-up also groups on. */
   readonly currency?: string;
@@ -122,8 +127,7 @@ export function purchaseFilterConditions(filter: PurchaseScopeFilter): readonly 
     ...(filter.statuses && filter.statuses.length > 0
       ? [inArray(purchases.status, [...filter.statuses])]
       : []),
-    ...(filter.from === undefined ? [] : [gte(purchases.orderedAt, filter.from)]),
-    ...(filter.to === undefined ? [] : [lte(purchases.orderedAt, filter.to)]),
+    ...orderedAtWindow(filter),
     ...(filter.currency === undefined ? [] : [eq(purchases.currency, filter.currency)]),
     ...(filter.merchant === undefined ? [] : merchantConditions(filter.merchant)),
   ];

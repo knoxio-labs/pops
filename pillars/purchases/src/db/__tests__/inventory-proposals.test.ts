@@ -83,7 +83,7 @@ describe('what makes a proposal', () => {
       slot: 0,
       itemName: 'Cordless Drill',
       serialNumber: null,
-      purchaseDate: '2026-02-02T01:41:21Z',
+      purchaseDate: '2026-02-02T01:41:21.000Z',
       purchasePriceCents: 19900,
       purchasedFromName: 'Bunnings Warehouse',
       purchaseTransactionUri: null,
