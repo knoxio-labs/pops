@@ -47,6 +47,57 @@ internal enum ReceiptCaptureCopy {
     }
 }
 
+/// What kind of thing went wrong, grouped from the eight
+/// ``ReceiptGateFailureKind`` cases down to the three actions a reader can
+/// actually take: retake the photo, check the maths, or look at the detail
+/// below because neither of those is quite it.
+///
+/// The needs-review headline used to assume every refusal was a sum
+/// mismatch. It is not — a receipt that read as damaged has nothing wrong
+/// with its arithmetic, and telling the reader otherwise sends them to
+/// check the one thing that was fine.
+internal enum ReceiptFailureCategory: Hashable {
+    /// Legibility problems: the model could not read enough of the receipt
+    /// to answer for it. A retake is the fix, so the message says so.
+    case unreadable
+    /// The one kind this screen used to claim for all eight: the receipt's
+    /// own components do not sum to its own printed total.
+    case arithmetic
+    /// Everything else the gate can refuse for — a negative line, an
+    /// ambiguous tax reading, or a reason this build has no name for — none
+    /// of which is a legibility problem or an arithmetic one.
+    case other
+
+    internal init(_ kind: ReceiptGateFailureKind) {
+        switch kind {
+        case .unreadableTotal, .unreadableLine, .noLines, .damaged:
+            self = .unreadable
+        case .sumMismatch:
+            self = .arithmetic
+        case .negativeLine, .ambiguousTax, .unrecognised:
+            self = .other
+        }
+    }
+
+    internal var message: String {
+        switch self {
+        case .unreadable:
+            return
+                "Parts of this receipt could not be read, so nothing was recorded. "
+                + "Retake the photo — flatter and better-lit usually fixes this."
+        case .arithmetic:
+            return
+                "The numbers on this receipt don't add up to its printed total, "
+                + "so nothing was recorded. Enter it manually, or retake the photo "
+                + "and try again."
+        case .other:
+            return
+                "Something on this receipt didn't check out, so nothing was recorded. "
+                + "Check the details below, then enter it manually or retake the photo."
+        }
+    }
+}
+
 /// Every word the result screen shows.
 ///
 /// Kept apart from ``ReceiptCaptureCopy`` because the two describe different
@@ -98,10 +149,28 @@ internal enum ReceiptResultCopy {
     // MARK: needs review
 
     internal static let needsReviewHeading = "Needs a closer look"
-    internal static let needsReviewMessage =
-        "The numbers on this receipt don't add up to its printed total, "
-        + "so nothing was recorded. Enter it manually, or retake the photo "
-        + "and try again."
+
+    /// The headline sentence, derived from the failure kinds the gate
+    /// actually reported rather than assuming one cause for all eight.
+    ///
+    /// Each ``ReceiptFailureCategory`` present contributes its own honest
+    /// claim; more than one category present is said outright rather than
+    /// collapsed into whichever one sorts first — a sum-mismatch-and-damaged
+    /// receipt is not "just" either problem.
+    internal static func needsReviewMessage(for failures: [ReceiptGateFailureKind]) -> String {
+        let categories = Set(failures.map(ReceiptFailureCategory.init))
+        if let onlyCategory = categories.first, categories.count == 1 {
+            return onlyCategory.message
+        }
+        if categories.isEmpty {
+            return
+                "This receipt needs a closer look before it can be recorded. "
+                + "Check the details below, then enter it manually or retake the photo."
+        }
+        return
+            "This receipt has more than one problem, so nothing was recorded. "
+            + "Check the details below, then enter it manually or retake the photo."
+    }
     internal static let needsReviewWhatWeRead = "What was read"
     internal static let needsReviewWhatFailed = "Why it needs review"
 
