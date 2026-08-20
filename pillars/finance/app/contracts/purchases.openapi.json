@@ -4305,7 +4305,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "inventoryItemUri": {
-                      "pattern": "^pops:\\/\\/inventory\\/item\\/[^/\\s]+$",
+                      "pattern": "^pops:\\/\\/inventory\\/item\\/([^/\\s]+)$",
                       "type": "string"
                     },
                     "unit": {
@@ -4411,7 +4411,7 @@
                     },
                     "inventoryItemUri": {
                       "nullable": true,
-                      "pattern": "^pops:\\/\\/inventory\\/item\\/[^/\\s]+$",
+                      "pattern": "^pops:\\/\\/inventory\\/item\\/([^/\\s]+)$",
                       "type": "string"
                     },
                     "message": {
@@ -4464,7 +4464,7 @@
                         "type": "string"
                       },
                       "inventoryItemUri": {
-                        "pattern": "^pops:\\/\\/inventory\\/item\\/[^/\\s]+$",
+                        "pattern": "^pops:\\/\\/inventory\\/item\\/([^/\\s]+)$",
                         "type": "string"
                       },
                       "unitId": {
@@ -5795,7 +5795,7 @@
             "name": "transactionUri",
             "required": true,
             "schema": {
-              "pattern": "^pops:\\/\\/finance\\/transaction\\/[^/\\s]+$",
+              "pattern": "^pops:\\/\\/finance\\/transaction\\/([^/\\s]+)$",
               "type": "string"
             }
           }
@@ -6096,7 +6096,7 @@
                       "type": "array"
                     },
                     "transactionUri": {
-                      "pattern": "^pops:\\/\\/finance\\/transaction\\/[^/\\s]+$",
+                      "pattern": "^pops:\\/\\/finance\\/transaction\\/([^/\\s]+)$",
                       "type": "string"
                     }
                   },

@@ -8,7 +8,7 @@
  * thing — and the fold that would hurt most is `unreadable`, the one case
  * where an asset may exist with no URI to complete the pair.
  */
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { fakePillarHandle } from '@pops/pillar-sdk/testing';
 
@@ -31,6 +31,17 @@ const OFFER: InventoryProposal = {
   purchaseTransactionUri: 'pops://finance/transaction/t-9',
   kindConfirmed: true,
 };
+
+const previousZone = process.env['PURCHASES_TIME_ZONE'];
+
+beforeEach(() => {
+  process.env['PURCHASES_TIME_ZONE'] = 'Australia/Sydney';
+});
+
+afterEach(() => {
+  if (previousZone === undefined) delete process.env['PURCHASES_TIME_ZONE'];
+  else process.env['PURCHASES_TIME_ZONE'] = previousZone;
+});
 
 function creatorAnswering(answer: CallResult<unknown>, seen: unknown[] = []) {
   return createInventoryAssetCreator(
@@ -61,10 +72,12 @@ it("sends the body inventory declares, not this pillar's own row shape", async (
   expect(seen).toEqual([
     {
       itemName: 'Cordless Drill',
-      purchaseDate: '2026-02-02T23:41:21.000Z',
+      purchaseDate: '2026-02-03',
       purchasePrice: 199,
       purchasedFromName: 'Bunnings Warehouse',
       purchaseTransactionId: 't-9',
+      inUse: false,
+      deductible: false,
       notes: 'Created from purchases order p-1, line i-1.',
     },
   ]);
@@ -113,6 +126,22 @@ describe('everything else keeps its remedy', () => {
       kind: 'unreadable',
       reason: 'no-item-id',
     });
+  });
+
+  it('logs what inventory actually answered, since that is the only lead to the row', async () => {
+    // The kind and the reason reach the caller; the answer itself does not
+    // survive `classify`, and it is the only thing naming a row that may
+    // exist with nothing anywhere pointing at it.
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      await creatorAnswering({ kind: 'ok', value: { data: { identifier: 'inv-8' } } }).create(
+        OFFER
+      );
+
+      expect(JSON.stringify(logged.mock.calls)).toContain('inv-8');
+    } finally {
+      logged.mockRestore();
+    }
   });
 
   it('survives a transport that throws instead of answering', async () => {

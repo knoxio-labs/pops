@@ -22,6 +22,7 @@ import { z } from 'zod';
 
 import { ErrorBodySchema } from './rest-schemas.js';
 import { IsoTimestampSchema, PopsUriSchema } from './schemas/purchase.js';
+import { popsUri, popsUriPattern } from './schemas/scalars.js';
 
 /**
  * Where an accepted asset lives: `pops://inventory/item/<id>`.
@@ -33,12 +34,16 @@ import { IsoTimestampSchema, PopsUriSchema } from './schemas/purchase.js';
  * cannot be retracted — so an accept naming a finance transaction would be
  * a permanent wrong answer accepted without complaint.
  */
+export const INVENTORY_ITEM_URI = popsUriPattern('inventory', 'item');
+
 export const InventoryItemUriSchema = z
   .string()
-  .regex(
-    /^pops:\/\/inventory\/item\/[^/\s]+$/u,
-    'expected an inventory item URI, e.g. pops://inventory/item/<id>'
-  );
+  .regex(INVENTORY_ITEM_URI, 'expected an inventory item URI, e.g. pops://inventory/item/<id>');
+
+/** The URI for one inventory row, in the shape {@link InventoryItemUriSchema} admits. */
+export function inventoryItemUri(id: string): string {
+  return popsUri('inventory', 'item', id);
+}
 
 export const InventoryProposalSchema = z.object({
   purchaseId: z.string(),

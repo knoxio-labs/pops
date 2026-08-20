@@ -13,13 +13,18 @@
  *
  * A decision therefore cannot be recorded for an asset that does not exist
  * — the failure the fan-out is arranged against, since the nightly soft-URI
- * cron would find the reference unresolvable and stamp it stale. The
- * inverse is possible only when another caller answers the same slot while
- * step 2 is in flight, and step 3 refuses to overwrite a decision. That
+ * cron would find the reference unresolvable and stamp it stale.
+ *
+ * The inverse is possible, and step 1 narrows it rather than removing it.
+ * Step 2 is a network call, so anything answering the same slot while it is
+ * in flight — a decline through the other route, or a second request to
+ * this one, which creates its own asset first — reaches step 3 before this
+ * request does, and step 3 refuses to overwrite a decision. This request's
  * asset is then real and unreferenced, which the response says in those
- * words and hands back the URI for — a decision cannot be retracted, so
- * there is no mechanical repair, and the alternative to naming it is a row
- * appearing in inventory that nothing explains.
+ * words and hands back the URI for: a decision cannot be retracted and
+ * inventory has no create keyed on the line, so there is nothing to repair
+ * it with, and the alternative to naming it is a row appearing in inventory
+ * that nothing explains.
  */
 import {
   decideInventoryProposal,
@@ -94,6 +99,23 @@ function nothingRecorded(result: Exclude<InventoryAssetCreateResult, { kind: 'cr
 }
 
 /**
+ * A row exists in inventory and this pillar is about to stop pointing at it.
+ *
+ * Logged wherever that becomes true, and separately from the response,
+ * because the response only reaches whoever made the request. A script that
+ * drops a `502` — or a write that fails in a way this route does not answer
+ * at all, and leaves as a `500` — would otherwise leave the single trace of
+ * that row nowhere on this side: the row itself says which order it came
+ * from, but nothing here would say it exists.
+ */
+function logOrphan(inventoryItemUri: string, reason: string): void {
+  console.error('[purchases-api] inventory asset created but its accept was not recorded', {
+    inventoryItemUri,
+    reason,
+  });
+}
+
+/**
  * The one failure that leaves an asset behind, named and with its URI.
  *
  * It happens when the slot is answered between the projection and the
@@ -103,17 +125,9 @@ function nothingRecorded(result: Exclude<InventoryAssetCreateResult, { kind: 'cr
  * caused this. The URI is here because it is the only trace of a row
  * purchases holds no reference to, and a person has to decide what happens
  * to it.
- *
- * It is logged as well as returned, because the response only reaches
- * whoever made the request. A script that drops a `502` would otherwise
- * leave the single trace of that row nowhere at all — the row itself says
- * which order it came from, but nothing on this side would say it exists.
  */
 function assetOrphaned(inventoryItemUri: string, reason: string) {
-  console.error('[purchases-api] inventory asset created but its accept was not recorded', {
-    inventoryItemUri,
-    reason,
-  });
+  logOrphan(inventoryItemUri, reason);
   return badGateway(
     `Inventory created ${inventoryItemUri}, but the accept could not be recorded (${reason}). ` +
       'That asset exists and purchases holds no reference to it: delete it in inventory, or ' +
@@ -154,7 +168,8 @@ export function makeInventoryItemHandlers(
         if (err instanceof InventoryProposalConflictError) {
           return assetOrphaned(created.inventoryItemUri, err.message);
         }
-        throw err as Error;
+        logOrphan(created.inventoryItemUri, err instanceof Error ? err.message : String(err));
+        throw err;
       }
       if (unit === undefined) {
         return assetOrphaned(created.inventoryItemUri, 'the line is no longer answerable');

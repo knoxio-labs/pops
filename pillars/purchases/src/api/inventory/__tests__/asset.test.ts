@@ -7,14 +7,10 @@
  * produce an ordinary-looking asset describing something other than what
  * was bought.
  */
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import {
-  financeTransactionId,
-  inventoryItemUri,
-  provenanceNote,
-  toInventoryItemCreateBody,
-} from '../asset.js';
+import { inventoryItemUri } from '../../../contract/inventory-proposals.js';
+import { financeTransactionId, provenanceNote, toInventoryItemCreateBody } from '../asset.js';
 
 import type { InventoryProposal } from '../../../db/index.js';
 
@@ -34,6 +30,19 @@ function offer(overrides: Partial<InventoryProposal> = {}): InventoryProposal {
     ...overrides,
   };
 }
+
+const previousZone = process.env['PURCHASES_TIME_ZONE'];
+
+beforeEach(() => {
+  // Pinned rather than inherited: the day a purchase falls on is the thing
+  // under test, and a runner with its own zone set would assert nothing.
+  process.env['PURCHASES_TIME_ZONE'] = 'Australia/Sydney';
+});
+
+afterEach(() => {
+  if (previousZone === undefined) delete process.env['PURCHASES_TIME_ZONE'];
+  else process.env['PURCHASES_TIME_ZONE'] = previousZone;
+});
 
 describe('the price crosses as dollars', () => {
   it('divides integer cents into the float amount inventory stores', () => {
@@ -88,13 +97,47 @@ describe('the row says where it came from', () => {
   });
 });
 
-describe('the fields that cross unchanged', () => {
-  it('sends the purchase instant as purchases holds it', () => {
-    // Truncating to a calendar date would move the purchase to the previous
-    // day for anything bought after mid-afternoon in Sydney.
-    expect(toInventoryItemCreateBody(offer()).purchaseDate).toBe('2026-02-02T23:41:21.000Z');
+describe('the purchase date crosses as a calendar day', () => {
+  it('truncates the instant, because the column is a date input on the other side', () => {
+    // An instant blanks inventory's `<input type="date">`, which then writes
+    // null back on the next save of any field on the row — the fan-out
+    // deleting the one fact it exists to carry.
+    expect(toInventoryItemCreateBody(offer()).purchaseDate).toMatch(/^\d{4}-\d{2}-\d{2}$/u);
   });
 
+  it('reads the day where the shops are, not in UTC', () => {
+    // 23:41 UTC on the 2nd is already the morning of the 3rd in Sydney.
+    // Truncating in UTC would file the purchase on the wrong day for
+    // everything bought after mid-afternoon.
+    expect(toInventoryItemCreateBody(offer()).purchaseDate).toBe('2026-02-03');
+  });
+
+  it('keeps the day for a purchase that does not cross midnight either way', () => {
+    expect(
+      toInventoryItemCreateBody(offer({ purchaseDate: '2026-02-02T01:41:21.000Z' })).purchaseDate
+    ).toBe('2026-02-02');
+  });
+
+  it('sends null rather than a guess when the stored value is not an instant', () => {
+    expect(
+      toInventoryItemCreateBody(offer({ purchaseDate: 'not-a-date' })).purchaseDate
+    ).toBeNull();
+  });
+});
+
+describe('the fields inventory would otherwise default for us', () => {
+  it('states the review flags rather than inheriting the other pillar’s defaults', () => {
+    // `false` is not "unreviewed" — inventory's create body cannot say that
+    // — but it is the value purchases can defend, and stating it means a
+    // change to inventory's default cannot silently restamp these assets.
+    expect(toInventoryItemCreateBody(offer())).toMatchObject({
+      inUse: false,
+      deductible: false,
+    });
+  });
+});
+
+describe('the fields that cross unchanged', () => {
   it('sends the line name and the merchant label', () => {
     expect(toInventoryItemCreateBody(offer())).toMatchObject({
       itemName: 'Cordless Drill',

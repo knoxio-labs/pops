@@ -1,6 +1,11 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { instantFromLocalParts, isKnownTimeZone, storeTimeZone } from '../local-time.js';
+import {
+  calendarDateInZone,
+  instantFromLocalParts,
+  isKnownTimeZone,
+  storeTimeZone,
+} from '../local-time.js';
 
 const ZONE_VAR = 'PURCHASES_TIME_ZONE';
 
@@ -108,5 +113,34 @@ describe('instantFromLocalParts', () => {
         'Australia/Sydney'
       )
     ).toBe('2026-10-03T15:00:00.000Z');
+  });
+});
+
+describe('calendarDateInZone', () => {
+  it('reads the local day, not the UTC one', () => {
+    // The whole point: 23:41 UTC on the 2nd is the morning of the 3rd in
+    // Sydney, and a consumer storing a day rather than a moment gets the
+    // wrong one for every evening purchase if this is derived in UTC.
+    expect(calendarDateInZone('2026-02-02T23:41:21.000Z', 'Australia/Sydney')).toBe('2026-02-03');
+  });
+
+  it('reads it the other way for a zone behind UTC', () => {
+    expect(calendarDateInZone('2026-02-02T01:41:21.000Z', 'America/Chicago')).toBe('2026-02-01');
+  });
+
+  it('pads the month and the day to two digits', () => {
+    // `yyyy-mm-dd` is what an `<input type="date">` accepts; `2026-2-3` is
+    // sanitised to the empty string by the DOM rather than rejected.
+    expect(calendarDateInZone('2026-02-03T04:00:00.000Z', 'Australia/Sydney')).toBe('2026-02-03');
+  });
+
+  it('follows the zone override when no zone is named', () => {
+    process.env[ZONE_VAR] = 'America/Chicago';
+    expect(calendarDateInZone('2026-02-02T01:41:21.000Z')).toBe('2026-02-01');
+  });
+
+  it('answers null rather than guessing at something that is not an instant', () => {
+    expect(calendarDateInZone('not-a-date')).toBeNull();
+    expect(calendarDateInZone('')).toBeNull();
   });
 });

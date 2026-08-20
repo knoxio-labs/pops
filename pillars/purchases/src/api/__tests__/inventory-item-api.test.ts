@@ -256,6 +256,71 @@ describe('a create that fails is visible, never recorded', () => {
     }
   });
 
+  it('logs the orphan when the write fails for a reason this route does not answer', async () => {
+    // The conflict branch is not the only way to reach step 3 with an asset
+    // already created. A write that fails some other way — the database
+    // busy, the disk full — leaves as a 500, and if the URI were logged
+    // only on the conflict branch it would exist nowhere on this side.
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const app = appWith({
+      create: async () => {
+        opened.raw.close();
+        return Promise.resolve({
+          kind: 'created',
+          inventoryItemUri: 'pops://inventory/item/inv-lost',
+        });
+      },
+    });
+
+    try {
+      await accept(app).expect(500);
+
+      expect(logged).toHaveBeenCalledWith(
+        expect.stringContaining('accept was not recorded'),
+        expect.objectContaining({ inventoryItemUri: 'pops://inventory/item/inv-lost' })
+      );
+    } finally {
+      logged.mockRestore();
+    }
+  });
+
+  it('two accepts in flight together each mint an asset, and only one is recorded', async () => {
+    // The limit of the ordering, asserted rather than argued. Step 1 reads
+    // this pillar's tables and step 2 is a network call, so two requests
+    // that pass step 1 before either finishes step 2 both create. The
+    // ordering removes the inverse failure — a decision recorded for an
+    // asset that does not exist — and narrows this one; it does not close
+    // it, and nothing in the docs may claim it does.
+    const released: Array<() => void> = [];
+    const inventory = fakeInventory();
+    const gated: InventoryAssetCreator & { readonly calls: unknown[] } = {
+      calls: inventory.calls,
+      create: async (proposal) => {
+        await new Promise<void>((resolve) => released.push(resolve));
+        return inventory.create(proposal);
+      },
+    };
+    const app = appWith(gated);
+
+    // `Promise.all` is what dispatches them: a supertest `Test` issues its
+    // request when something subscribes, so building two and awaiting them
+    // in turn would serialise the very thing under test.
+    const both = Promise.all([accept(app), accept(app)]);
+    await vi.waitFor(() => expect(released).toHaveLength(2));
+    for (const release of released) release();
+    const [first, second] = await both;
+
+    const statuses = [first.status, second.status].sort((a, b) => a - b);
+    expect(statuses).toEqual([201, 502]);
+    expect(gated.calls).toHaveLength(2);
+
+    const orphaned = first.status === 502 ? first : second;
+    expect(orphaned.body).toMatchObject({ code: 'ACCEPT_NOT_RECORDED' });
+    expect(orphaned.body.inventoryItemUri).toMatch(/^pops:\/\/inventory\/item\/inv-\d+$/u);
+    expect(listDistinctInventoryItemUris(opened.db)).toHaveLength(1);
+    expect(listDistinctInventoryItemUris(opened.db)).not.toContain(orphaned.body.inventoryItemUri);
+  });
+
   it('does not record an orphaned asset against the slot someone else answered', async () => {
     // The decision that won stands, and the asset stays unreferenced: a
     // fan-out that quietly relinked the unit would record the human's

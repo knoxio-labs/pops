@@ -30,6 +30,7 @@ import {
   PurchaseChargeSchema,
   PurchaseSchema,
 } from './schemas/purchase.js';
+import { popsUriPattern } from './schemas/scalars.js';
 
 const c = initContract();
 
@@ -89,10 +90,12 @@ export const ReconcileQueueQuerySchema = z.object({
  * no link and returns an empty list, which reads as "no order bought this"
  * rather than "you asked the wrong question".
  */
+export const FINANCE_TRANSACTION_URI = popsUriPattern('finance', 'transaction');
+
 const FinanceTransactionUriSchema = z
   .string()
   .regex(
-    /^pops:\/\/finance\/transaction\/[^/\s]+$/u,
+    FINANCE_TRANSACTION_URI,
     'expected a finance transaction URI, e.g. pops://finance/transaction/<id>'
   );
 

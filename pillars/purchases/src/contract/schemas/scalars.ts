@@ -48,3 +48,23 @@ export const PopsUriSchema = z
     /^pops:\/\/[a-z0-9-]+\/[a-z0-9-]+\/[^/\s]+$/u,
     'expected a pops:// URI, e.g. pops://finance/transaction/<id>'
   );
+
+/**
+ * One `pops://<pillar>/<type>/<id>` shape, matched and built from the same
+ * place.
+ *
+ * Every narrower URI in this pillar — a finance transaction on the way in,
+ * an inventory item on the way out — is the generic shape with two segments
+ * pinned. Written out per site, the validator and the builder for the same
+ * shape drift apart without anything failing: a URI that passes one and not
+ * the other is stored, and the column it lands in is only ever resolved by
+ * a nightly cron that reports the mismatch as a broken link months later.
+ */
+export function popsUriPattern(pillar: string, type: string): RegExp {
+  return new RegExp(`^pops://${pillar}/${type}/([^/\\s]+)$`, 'u');
+}
+
+/** The URI addressing one row on another pillar. Mirror of {@link popsUriPattern}. */
+export function popsUri(pillar: string, type: string, id: string): string {
+  return `pops://${pillar}/${type}/${id}`;
+}

@@ -4,10 +4,21 @@
  * Every other outbound call this pillar makes reads. This one creates an
  * inventory item, on a human's explicit accept, because the alternative —
  * the accepting surface creating the row and then telling purchases about
- * it — cannot see whether the slot is still unanswered, and so cannot stop
- * a second accept minting a second asset for one physical thing. That
- * check lives in this pillar's own tables, so the create has to sit
- * between the check and the write.
+ * it — cannot look at the slot at all before it creates, so an accept of an
+ * already-answered slot mints its duplicate every time and the surface's
+ * only remedy is to delete a row it just wrote in another pillar. Here the
+ * check is in this pillar's own tables and immediately precedes the create.
+ *
+ * That narrows the duplicate window; it does not close it. The create is a
+ * network call, so two accepts of the same slot in flight together both see
+ * it offered and both create — one records, one is answered
+ * `ACCEPT_NOT_RECORDED` with the URI of the asset nothing references. There
+ * is no repair on this side: a decision cannot be retracted, and inventory
+ * offers no create keyed on where a row came from, so nothing here can ask
+ * for "the asset for this line, if it exists". The food pillar's write into
+ * lists (`pillars/food/src/api/modules/recipes/send-to-list/lists-client.ts`)
+ * is the same shape with that key available, and its `items.upsertByRef` is
+ * what makes a retry safe there.
  *
  * **This widens what purchases can do to inventory, and the grant cannot
  * say so.** Scopes match by dot prefix, so the `inventory.items` this
@@ -27,6 +38,7 @@
  */
 import { isOk, pillar, type CallResult, type PillarHandle } from '@pops/pillar-sdk/server';
 
+import { inventoryItemUri } from '../../contract/inventory-proposals.js';
 import {
   credentialled,
   credentialRejectedMessage,
@@ -35,7 +47,6 @@ import {
 } from '../pillars/outbound.js';
 import {
   InventoryItemCreatedSchema,
-  inventoryItemUri,
   toInventoryItemCreateBody,
   type InventoryItemCreateBody,
 } from './asset.js';
@@ -98,6 +109,37 @@ function classify(result: CallResult<unknown>): InventoryAssetCreateResult {
   }
 }
 
+/** Enough of an answer to recognise the row it describes, short enough for a log line. */
+const ANSWER_LOG_CHARS = 500;
+
+function summarise(value: unknown): string {
+  try {
+    return JSON.stringify(value)?.slice(0, ANSWER_LOG_CHARS) ?? String(value);
+  } catch {
+    return String(value);
+  }
+}
+
+/**
+ * Say so on the server for the two outcomes a caller alone cannot resolve.
+ *
+ * A refusal needs an operator, and no response reaches one. `unreadable`
+ * needs more: inventory said it created something and did not say what, so
+ * the row may exist with nothing anywhere naming it — the answer itself is
+ * the only lead an operator has, and it is discarded by the time the
+ * outcome is a `kind` and a `reason`.
+ */
+function reportOutcome(outcome: InventoryAssetCreateResult, result: CallResult<unknown>): void {
+  if (outcome.kind === 'unauthorized') {
+    console.error(credentialRejectedMessage(INVENTORY_PILLAR_ID, 'items.create'));
+  }
+  if (outcome.kind === 'unreadable') {
+    console.error('[purchases-api] inventory created an asset it did not name', {
+      answer: summarise(isOk(result) ? result.value : result),
+    });
+  }
+}
+
 /**
  * Live creator over the inventory pillar.
  *
@@ -128,9 +170,7 @@ export function createInventoryAssetCreator(
       }
 
       const outcome = classify(result);
-      if (outcome.kind === 'unauthorized') {
-        console.error(credentialRejectedMessage(INVENTORY_PILLAR_ID, 'items.create'));
-      }
+      reportOutcome(outcome, result);
       return outcome;
     },
   };

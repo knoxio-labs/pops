@@ -180,9 +180,7 @@ export const EXPECTATIONS = [
     method: 'post',
     // The whole payload is a body, which this guard does not model. What it
     // can pin is that the operation still exists as a POST on the collection
-    // — the leg that turns an accepted fan-out proposal into an asset, and
-    // the only call in the fleet that writes into a pillar the caller does
-    // not own.
+    // — the leg that turns an accepted fan-out proposal into an asset.
     query: [],
     usedBy: 'pillars/purchases/src/api/inventory/client.ts',
   },
