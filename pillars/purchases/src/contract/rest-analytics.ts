@@ -177,20 +177,23 @@ export const ProductIdentitySchema = z.discriminatedUnion('basis', [
   }),
   z.object({
     basis: z.literal('product'),
+    /**
+     * The source that printed {@link name}. Not a bound on the group: a
+     * product a human merged across merchants holds lines from several, and
+     * the row's own `merchants` is the complete list.
+     */
     source: z.string(),
     sku: z.null(),
     /** As the merchant printed it, for display beside the product's own name. */
     name: z.string(),
-    /** The wording that matched the dictionary entry. */
-    normalisedName: z.string(),
     /** The product this wording resolves to — the grouping key. */
     productId: z.string(),
     /** The product's own name, which a human may have written. */
     label: z.string(),
     /**
-     * Whether a human asserted this wording is that product. False means a
-     * pass proposed the entry, which is exactly as strong a claim as a
-     * `name` group: one wording, one product, nothing merged.
+     * Whether a human asserted every wording this group holds. False means
+     * at least one of them is a pass's proposal, which is exactly as strong
+     * a claim as a `name` group: one wording, one product, nothing merged.
      */
     confirmed: z.boolean(),
   }),

@@ -63,37 +63,48 @@ export interface UpdateAliasInput {
 /**
  * Repoint and/or confirm one wording.
  *
- * Both halves in one call because the ordinary correction is both at once —
- * "that is the same thing as this, and I mean it" — and splitting them across
- * two requests leaves a merge sitting unconfirmed in between, where the next
- * proposal pass would be entitled to retire it.
+ * Both halves in one call because the ordinary correction is both at once:
+ * "that is the same thing as this, and I mean it".
+ *
+ * They stay separately statable, though, and a merge left unconfirmed is
+ * exactly as durable as any other proposal — which is to say the pass may
+ * retire it once no line prints that wording any more. Nothing here prevents
+ * that state, and it is not a trap: while the wording is still printed the
+ * merge holds, and once nothing prints it the entry reaches no line either
+ * way. A caller that wants the merge to outlive the wording confirms it.
  */
 export function updateAlias(
   db: PurchasesDb,
   aliasId: string,
   input: UpdateAliasInput
 ): PurchaseProductAliasRow {
-  const alias = db
-    .select()
-    .from(purchaseProductAliases)
-    .where(eq(purchaseProductAliases.id, aliasId))
-    .all()[0];
-  if (alias === undefined) throw new ProductDictionaryNotFoundError('alias', aliasId);
-
-  const productId = resolveTarget(db, alias, input);
-  const confirmedAt = resolveConfirmation(alias, input);
-
-  const updated = expectRow(
-    db
-      .update(purchaseProductAliases)
-      .set({ productId, confirmedAt })
+  return db.transaction((tx) => {
+    const alias = tx
+      .select()
+      .from(purchaseProductAliases)
       .where(eq(purchaseProductAliases.id, aliasId))
-      .returning()
-      .all(),
-    'updateAlias'
-  );
-  deleteOrphanedProducts(db);
-  return updated;
+      .all()[0];
+    if (alias === undefined) throw new ProductDictionaryNotFoundError('alias', aliasId);
+
+    // One transaction: a split mints the product before the wording is moved
+    // onto it, so a failure between the two would leave a label nothing
+    // resolves to, and the orphan sweep that follows the move would already
+    // have run.
+    const productId = resolveTarget(tx, alias, input);
+    const confirmedAt = resolveConfirmation(alias, input);
+
+    const updated = expectRow(
+      tx
+        .update(purchaseProductAliases)
+        .set({ productId, confirmedAt })
+        .where(eq(purchaseProductAliases.id, aliasId))
+        .returning()
+        .all(),
+      'updateAlias'
+    );
+    deleteOrphanedProducts(tx);
+    return updated;
+  });
 }
 
 function resolveTarget(
@@ -146,11 +157,13 @@ export function renameProduct(
 
 /** Forget one wording. Its lines fall back to the on-the-fly grouping. */
 export function deleteAlias(db: PurchasesDb, aliasId: string): boolean {
-  const removed =
-    db.delete(purchaseProductAliases).where(eq(purchaseProductAliases.id, aliasId)).run().changes >
-    0;
-  if (removed) deleteOrphanedProducts(db);
-  return removed;
+  return db.transaction((tx) => {
+    const removed =
+      tx.delete(purchaseProductAliases).where(eq(purchaseProductAliases.id, aliasId)).run()
+        .changes > 0;
+    if (removed) deleteOrphanedProducts(tx);
+    return removed;
+  });
 }
 
 /** Forget a product and every wording that resolved to it. */

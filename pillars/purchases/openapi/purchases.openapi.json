@@ -697,9 +697,6 @@
                                   "name": {
                                     "type": "string"
                                   },
-                                  "normalisedName": {
-                                    "type": "string"
-                                  },
                                   "productId": {
                                     "type": "string"
                                   },
@@ -717,7 +714,6 @@
                                   "source",
                                   "sku",
                                   "name",
-                                  "normalisedName",
                                   "productId",
                                   "label",
                                   "confirmed"

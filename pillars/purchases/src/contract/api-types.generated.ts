@@ -593,7 +593,6 @@ export interface operations {
                     confirmed: boolean;
                     label: string;
                     name: string;
-                    normalisedName: string;
                     productId: string;
                     /** @enum {string|null} */
                     sku: null;

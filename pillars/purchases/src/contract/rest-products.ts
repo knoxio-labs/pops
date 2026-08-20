@@ -74,8 +74,11 @@ export const ListProductsQuerySchema = z.object({
   /** Only products holding at least one wording under this source. */
   source: z.string().optional(),
   /**
-   * `true` keeps products a human has asserted at least one wording of,
-   * `false` the ones nobody has touched. Omitted keeps both.
+   * `true` keeps products every wording of which a human has asserted,
+   * `false` the rest — those still holding a wording nobody has. Complements,
+   * not overlapping filters: a half-merged product, one wording asserted and
+   * one still a proposal, is unfinished work and answers `false`. Omitted
+   * keeps both.
    */
   confirmed: z.enum(['true', 'false']).optional(),
 });

@@ -9,6 +9,7 @@
 import {
   deleteAlias,
   deleteProduct,
+  getProduct,
   listProducts,
   proposeProducts,
   renameProduct,
@@ -37,7 +38,7 @@ function notFound(message: string) {
 function asNotFound(err: unknown) {
   const mapped = tryMapServiceError(err);
   if (mapped?.status === 404) return { status: 404 as const, body: mapped.body };
-  throw err as Error;
+  throw err;
 }
 
 /**
@@ -70,9 +71,9 @@ export function makeProductHandlers(db: PurchasesDb) {
       }
       // Re-read rather than serialise the updated row: the response carries
       // the product's wordings, and a rename does not know them.
-      const listed = listProducts(db).find((entry) => entry.product.id === params.productId);
-      if (listed === undefined) return notFound(`Product '${params.productId}' not found`);
-      return { status: 200 as const, body: serialize(listed) };
+      const renamed = getProduct(db, params.productId);
+      if (renamed === undefined) return notFound(`Product '${params.productId}' not found`);
+      return { status: 200 as const, body: serialize(renamed) };
     },
 
     delete: async ({ params }: { params: { productId: string } }) => {

@@ -135,10 +135,23 @@ describe('the dictionary listing', () => {
 
     const board = await request(app).get('/analytics/product-leaderboard');
     expect(board.body.products).toHaveLength(1);
-    expect(board.body.products[0].product).toMatchObject({ basis: 'product', confirmed: true });
+    // Half the group's lines are in it on a wording the pass proposed and
+    // nobody has asserted, so the row does not claim to be asserted — even
+    // though the wording that was merged is. Whichever line the query
+    // returned first must not decide that.
+    expect(board.body.products[0].product).toMatchObject({ basis: 'product', confirmed: false });
     expect(board.body.coverage).toMatchObject({
       confirmedProductLines: 1,
       proposedProductLines: 1,
+    });
+
+    await request(app).patch(`/products/aliases/${target.id}`).send({ confirmed: true });
+
+    const asserted = await request(app).get('/analytics/product-leaderboard');
+    expect(asserted.body.products[0].product).toMatchObject({ confirmed: true });
+    expect(asserted.body.coverage).toMatchObject({
+      confirmedProductLines: 2,
+      proposedProductLines: 0,
     });
   });
 

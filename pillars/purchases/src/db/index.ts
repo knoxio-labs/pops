@@ -69,6 +69,7 @@ export {
 } from './services/product-identity.js';
 
 export {
+  getProduct,
   listProducts,
   loadProductDictionary,
   type ListProductsFilter,

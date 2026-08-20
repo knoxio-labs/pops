@@ -23,7 +23,7 @@ import { eq, inArray } from 'drizzle-orm';
 import { purchaseItems, purchaseProductAliases, purchaseProducts, purchases } from '../schema.js';
 import { expectRow } from './internal.js';
 import { deleteOrphanedProducts } from './product-dictionary-writes.js';
-import { normalisedName, productLookupKey, productScopeKey } from './product-identity.js';
+import { identifyProduct, productLookupKey, productScopeKey } from './product-identity.js';
 
 import type { SkuScheme } from '../../contract/constants.js';
 import type { PurchaseProductAliasRow } from '../schema.js';
@@ -66,33 +66,41 @@ interface ScannedLine {
 /**
  * Run the pass. Idempotent — running it twice over unchanged lines changes
  * nothing.
+ *
+ * One transaction over the whole run, because the retire happens first: a
+ * failure part-way through minting would otherwise leave the dictionary
+ * holding the deletions and none of the replacements, with nothing recording
+ * what it used to say. The scan is inside it too, so the lines the entries
+ * are derived from cannot change under the pass.
  */
 export function proposeProducts(db: PurchasesDb): ProposalOutcome {
-  const lines = scanLines(db);
-  const observed = observeWordings(lines);
-  const existing = db.select().from(purchaseProductAliases).all();
+  return db.transaction((tx) => {
+    const lines = scanLines(tx);
+    const observed = observeWordings(lines);
+    const existing = tx.select().from(purchaseProductAliases).all();
 
-  const retired = retireUnobserved(db, existing, observed);
-  const held = new Set(
-    existing
-      .filter((alias) => !retired.has(alias.id))
-      .map((alias) => productLookupKey(alias.scopeKey, alias.normalisedName))
-  );
+    const retired = retireUnobserved(tx, existing, observed);
+    const held = new Set(
+      existing
+        .filter((alias) => !retired.has(alias.id))
+        .map((alias) => productLookupKey(alias.scopeKey, alias.normalisedName))
+    );
 
-  let proposed = 0;
-  for (const [key, wording] of observed) {
-    if (held.has(key)) continue;
-    mintProposal(db, wording);
-    proposed += 1;
-  }
+    let proposed = 0;
+    for (const [key, wording] of observed) {
+      if (held.has(key)) continue;
+      mintProposal(tx, wording);
+      proposed += 1;
+    }
 
-  return {
-    scannedLines: lines.length,
-    observedWordings: observed.size,
-    proposed,
-    retired: retired.size,
-    confirmed: existing.filter((alias) => alias.confirmedAt !== null).length,
-  };
+    return {
+      scannedLines: lines.length,
+      observedWordings: observed.size,
+      proposed,
+      retired: retired.size,
+      confirmed: existing.filter((alias) => alias.confirmedAt !== null).length,
+    };
+  });
 }
 
 function scanLines(db: PurchasesDb): readonly ScannedLine[] {
@@ -118,15 +126,18 @@ function scanLines(db: PurchasesDb): readonly ScannedLine[] {
  * rather than with whichever row the query happened to return first, which
  * would make the label depend on read order.
  *
- * A line that states a sku is skipped entirely: the dictionary is never
- * consulted for one, so an entry minted from it could never be reached.
+ * Which lines are eligible is asked of {@link identifyProduct} with no
+ * dictionary, rather than restated here: a line that states a sku, or whose
+ * name normalises to nothing, groups on some other basis, and an entry minted
+ * for it could never be reached. Asking the one function that decides means
+ * the pass cannot drift from the lookup it is minting entries for.
  */
 function observeWordings(lines: readonly ScannedLine[]): Map<string, ObservedWording> {
   const observed = new Map<string, ObservedWording>();
   for (const line of lines) {
-    if ((line.sku?.trim() ?? '') !== '') continue;
-    const normalised = normalisedName(line.name);
-    if (normalised === '') continue;
+    const { identity } = identifyProduct(line);
+    if (identity.basis !== 'name') continue;
+    const normalised = identity.normalisedName;
 
     const scopeKey = productScopeKey(line);
     const key = productLookupKey(scopeKey, normalised);

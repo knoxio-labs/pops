@@ -191,7 +191,6 @@ export type AnalyticsProductLeaderboardResponses = {
             confirmed: boolean;
             label: string;
             name: string;
-            normalisedName: string;
             productId: string;
             sku: null;
             source: string;

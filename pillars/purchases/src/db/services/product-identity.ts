@@ -80,8 +80,10 @@ export interface ProductLine {
  * things at different merchants: an Amazon ASIN and a Woolworths article
  * number that happen to match are not one product. The source is not on its
  * own the scope of a group, though — under a source that covers many
- * merchants the key is confined to one of them, so the merchants a group
- * lists are the merchants it could ever have held.
+ * merchants the key is confined to one of them, so on every basis but
+ * `product` the merchants a group lists are the merchants it could ever have
+ * held. A `product` group is the exception, because pointing two scoped
+ * wordings at one product is exactly the crossing a human is allowed to make.
  */
 export type ProductIdentity =
   | {
@@ -109,12 +111,16 @@ export type ProductIdentity =
        * one wording exactly where a human said so.
        */
       readonly basis: 'product';
+      /**
+       * The source of the line this identity describes. Not a bound on the
+       * group: a product a human merged across merchants holds lines from
+       * several, and an aggregate folding them says so in its own merchant
+       * list rather than here.
+       */
       readonly source: string;
       readonly sku: null;
       /** As the merchant printed it, for display beside the product's own name. */
       readonly name: string;
-      /** The wording that matched the entry. */
-      readonly normalisedName: string;
       /** The product this wording resolves to — the grouping key. */
       readonly productId: string;
       /** The product's own name, which a human may have written. */
@@ -123,6 +129,11 @@ export type ProductIdentity =
        * Whether a human asserted this wording is that product. False means a
        * pass proposed it, which is exactly as strong a claim as a `name`
        * group — one wording, one product, nothing merged.
+       *
+       * Per line, so an aggregate folding a group of lines into one row must
+       * fold this too: a group is asserted only where every wording in it
+       * was, because one unasserted wording is lines the group holds on a
+       * pass's proposal.
        */
       readonly confirmed: boolean;
     }
@@ -219,7 +230,6 @@ export function identifyProduct(
           source: line.source,
           sku: null,
           name: line.name,
-          normalisedName: normalised,
           productId: entry.productId,
           label: entry.label,
           confirmed: entry.confirmed,

@@ -79,8 +79,15 @@ export interface ListProductsFilter {
   /** Only products holding at least one wording under this source. */
   readonly source?: string;
   /**
-   * `true` keeps products a human has asserted at least one wording of;
-   * `false` keeps the ones nobody has touched. Omitted keeps both.
+   * `true` keeps products every wording of which a human has asserted;
+   * `false` keeps the rest — the ones still holding a wording nobody has.
+   * Omitted keeps both.
+   *
+   * The two are complements rather than overlapping filters, so a triage
+   * caller reading `false` sees everything `true` withheld and nothing
+   * twice. A half-merged product — one wording asserted, one still a
+   * proposal — is unfinished work, and belongs on the `false` side with the
+   * rest of it.
    */
   readonly confirmed?: boolean;
 }
@@ -118,6 +125,32 @@ export function listProducts(
     .toSorted(compareProducts);
 }
 
+/**
+ * One product with its wordings, or undefined where no such product exists.
+ *
+ * Separate from {@link listProducts} because a caller holding an id wants one
+ * row: reading the whole dictionary and picking through it would grow with a
+ * table the caller is not asking about, and — since the listing withholds a
+ * product no wording reaches — would report a product that is there as
+ * missing.
+ */
+export function getProduct(db: PurchasesDb, productId: string): ProductWithAliases | undefined {
+  const product = db
+    .select()
+    .from(purchaseProducts)
+    .where(eq(purchaseProducts.id, productId))
+    .all()[0];
+  if (product === undefined) return undefined;
+
+  const aliases = db
+    .select()
+    .from(purchaseProductAliases)
+    .where(eq(purchaseProductAliases.productId, productId))
+    .all()
+    .toSorted((a, b) => (a.normalisedName < b.normalisedName ? -1 : 1));
+  return { product, aliases };
+}
+
 function matchesFilter(
   aliases: readonly PurchaseProductAliasRow[],
   filter: ListProductsFilter
@@ -126,7 +159,8 @@ function matchesFilter(
     filter.source === undefined ? aliases : aliases.filter((a) => a.source === filter.source);
   if (bySource.length === 0) return false;
   if (filter.confirmed === undefined) return true;
-  return bySource.some((alias) => (alias.confirmedAt !== null) === filter.confirmed);
+  const asserted = bySource.every((alias) => alias.confirmedAt !== null);
+  return asserted === filter.confirmed;
 }
 
 /** Label ascending, id breaking ties, so equal data always serialises equally. */

@@ -97,7 +97,7 @@ The same thing bought across N orders: per product, how many distinct orders hol
 **Grouping is the hard part.** A group is formed on one of four bases, and which one travels with the group:
 
 - `sku` — the merchant's own identifier. The only basis a source asserts, and exactly one shipped adapter writes one (`sku: readText(row['ASIN'])` in the Amazon mapper). Within Amazon, repeats group perfectly.
-- `product` — a [dictionary](#the-product-dictionary) entry claimed the printed wording. Carries `confirmed`, because an entry a human asserted is evidence and an entry a pass minted is the `name` proposal with an id attached.
+- `product` — a [dictionary](#the-product-dictionary) entry claimed the printed wording. Carries `confirmed`, because an entry a human asserted is evidence and an entry a pass minted is the `name` proposal with an id attached. A row reads `confirmed` only where **every** wording in the group was asserted: one unasserted wording is lines the group holds on a pass's proposal, and half a merge presented as a fact is the error this whole route is arranged against.
 - `name` — printed names that normalise alike, within one merchant, with no dictionary entry between them. A **proposal**: it merges two products a till abbreviates the same way, and splits one product printed two ways.
 - `unidentified` — no sku and no name that normalises to anything. Groups with nothing, one line per row, because a bucket every nameless line falls into would report a whole shop as one product.
 
@@ -155,6 +155,8 @@ A product left with no wordings is deleted in the same write: a product nothing 
 **`confirmedAt` is the whole boundary between a pass and a person**, the same idiom `purchase_item_tags` and `purchase_items.kindConfirmedAt` carry. Null means the proposal pass owns the row — it may retire the entry once no line prints that wording. Non-null means a human asserted it, and the pass may not retire, repoint or relabel it, even when the line that prompted it has been deleted. The pass runs over **every** line with no scope filter, deliberately: deriving the dictionary from a window would retire entries whose lines merely fell outside it.
 
 **A database that never runs the pass behaves exactly as it did before this existed** — an on-the-fly group per normalised name, resolved fresh on every read. Nothing is backfilled and no ingest path writes here.
+
+**And nothing runs the pass on its own today.** It is an explicit `POST /products/proposals` and nothing else: no schedule, no CLI runner beside `propose:kinds`, and no frontend for the corrections. So on a deployment where nobody calls it the dictionary stays empty and the leaderboard answers exactly as it did before — which is the safe direction to be incomplete in, but it does mean the correction loop is not yet reachable from the UI (POPS-2392) or from the command line (POPS-2393).
 
 ## Other invariants that span files
 

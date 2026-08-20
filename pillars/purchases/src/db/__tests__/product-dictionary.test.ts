@@ -20,6 +20,7 @@ import {
   deleteAlias,
   deleteProduct,
   deletePurchase,
+  getProduct,
   identifyProduct,
   listProducts,
   loadProductDictionary,
@@ -308,6 +309,41 @@ describe('what a human asserts, and how it is undone', () => {
     });
   });
 
+  it('reports the merged row on the newest line and on every wording in it', () => {
+    createPurchase(
+      opened.db,
+      photographed({
+        checksum: 'cafe',
+        orderedAt: '2026-07-07T00:00:00Z',
+        merchantEntityName: 'Kettle Black',
+        items: [line({ name: 'Chicken breast, cooked' })],
+      })
+    );
+    proposeProducts(opened.db);
+    updateAlias(opened.db, aliasFor('Chicken breast, cooked').id, {
+      productId: productIdFor('CHK BRST 1KG'),
+      confirmed: true,
+    });
+
+    const merged = rankProductPurchases(opened.db).products.find(
+      (entry) => entry.product.basis === 'product' && entry.product.label === 'CHK BRST 1KG'
+    );
+
+    // The printed name and the source it was printed under describe the same
+    // line — the newest — rather than one field describing whichever line the
+    // query happened to return first. And the row does not claim to be
+    // asserted while `CHK BRST 1KG` is still a wording only the pass minted.
+    expect(merged?.product).toMatchObject({
+      name: 'Chicken breast, cooked',
+      source: 'receipt',
+      confirmed: false,
+    });
+    expect(merged?.merchants.map((merchant) => merchant.name).toSorted()).toEqual([
+      'Kettle Black',
+      'Woolworths',
+    ]);
+  });
+
   it('splits a wrong merge back out, minting the wording its own product again', () => {
     const target = productIdFor('Chicken Breast 1kg');
     const aliasId = aliasFor('CHK BRST 1KG').id;
@@ -427,6 +463,38 @@ describe('what the proposal pass may not touch', () => {
     expect(resolve('CHK BRST 1KG').identity).toMatchObject({ confirmed: true });
   });
 
+  it('leaves the dictionary as it found it when a run fails part-way', () => {
+    const purchaseId = createPurchase(
+      opened.db,
+      order({
+        checksum: 'shop',
+        items: [line({ name: 'CHK BRST 1KG' }), line({ name: 'MILK 2L' })],
+      })
+    );
+    proposeProducts(opened.db);
+    deletePurchase(opened.db, purchaseId);
+    createPurchase(opened.db, order({ checksum: 'later', items: [line({ name: 'BUTTER 250G' })] }));
+
+    // A run from here retires both entries and then mints one — and the
+    // retire goes first. With the mint refused, a half-applied run would
+    // leave the dictionary holding the deletions and nothing recording what
+    // it used to say, which no re-run can undo.
+    opened.raw.exec(
+      `CREATE TRIGGER refuse_alias_insert BEFORE INSERT ON purchase_product_aliases
+       BEGIN SELECT RAISE(ABORT, 'refused'); END;`
+    );
+    try {
+      expect(() => proposeProducts(opened.db)).toThrow();
+    } finally {
+      opened.raw.exec('DROP TRIGGER refuse_alias_insert;');
+    }
+
+    expect(listProducts(opened.db).map((entry) => entry.product.label)).toEqual([
+      'CHK BRST 1KG',
+      'MILK 2L',
+    ]);
+  });
+
   it('does not repoint or relabel an asserted entry', () => {
     createPurchase(
       opened.db,
@@ -478,5 +546,39 @@ describe('listing the dictionary', () => {
     expect(
       listProducts(opened.db, { confirmed: false }).map((entry) => entry.product.label)
     ).toEqual(['CHK BRST 1KG']);
+  });
+
+  it('answers a half-asserted product on the unasserted side and nowhere else', () => {
+    const target = productIdFor('CHK BRST 1KG');
+
+    updateAlias(opened.db, aliasFor('LATTE').id, { productId: target, confirmed: true });
+
+    // One product, two wordings: `LATTE` asserted, `CHK BRST 1KG` still the
+    // pass's proposal — the ordinary state after a merge. Answering it on
+    // both sides would show one unfinished merge as done *and* as
+    // outstanding, and a triage caller reading either filter would be wrong.
+    expect(listProducts(opened.db, { confirmed: true })).toEqual([]);
+    expect(
+      listProducts(opened.db, { confirmed: false }).map((entry) => entry.product.label)
+    ).toEqual(['CHK BRST 1KG']);
+  });
+
+  it('reads one product by id, including one the listing withholds', () => {
+    const known = productIdFor('LATTE');
+    const [unreached] = opened.db
+      .insert(purchaseProducts)
+      .values({ label: 'Nothing resolves here' })
+      .returning()
+      .all();
+
+    expect(getProduct(opened.db, known)?.aliases.map((alias) => alias.printedName)).toEqual([
+      'LATTE',
+    ]);
+    expect(getProduct(opened.db, 'nope')).toBeUndefined();
+    // The listing withholds a product no wording reaches, so picking one out
+    // of it would report a product that is there as missing.
+    expect(getProduct(opened.db, unreached?.id ?? 'missing')?.product.label).toBe(
+      'Nothing resolves here'
+    );
   });
 });
