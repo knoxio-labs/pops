@@ -57,18 +57,60 @@ function freshDb(): InventoryDb {
 function seed(
   db: InventoryDb,
   id: string,
-  uri: { purchase?: string | null; owner?: string | null } = {}
+  row: { purchase?: string | null; transactionId?: string | null } = {}
 ): void {
   db.insert(homeInventory)
     .values({
       id,
       itemName: `item-${id}`,
       lastEditedTime: '2026-06-15T00:00:00.000Z',
-      purchaseTransactionUri: uri.purchase ?? null,
-      ownerUri: uri.owner ?? null,
+      purchaseTransactionId: row.transactionId ?? null,
+      purchaseTransactionUri: row.purchase ?? null,
     })
     .run();
 }
+
+describe('crossPillarUrisService.purchaseTransactionUriFor', () => {
+  it('produces the same shape the backfill migration wrote', () => {
+    expect(crossPillarUrisService.purchaseTransactionUriFor('tx-1')).toBe(
+      'pops://finance/transaction/tx-1'
+    );
+  });
+
+  it('has no uri for an absent, null or empty id', () => {
+    expect(crossPillarUrisService.purchaseTransactionUriFor(null)).toBeNull();
+    expect(crossPillarUrisService.purchaseTransactionUriFor(undefined)).toBeNull();
+    expect(crossPillarUrisService.purchaseTransactionUriFor('')).toBeNull();
+  });
+});
+
+describe('crossPillarUrisService.countRowsMissingPurchaseTransactionUri', () => {
+  let db: InventoryDb;
+  beforeEach(() => {
+    db = freshDb();
+  });
+
+  it('counts rows that name a transaction but carry no uri for it', () => {
+    seed(db, 'a', { transactionId: 'tx-a' });
+    seed(db, 'b', { transactionId: 'tx-b' });
+    expect(crossPillarUrisService.countRowsMissingPurchaseTransactionUri(db)).toBe(2);
+  });
+
+  it('counts nothing when every named transaction has its derived uri', () => {
+    seed(db, 'a', { transactionId: 'tx-a', purchase: 'pops://finance/transaction/tx-a' });
+    seed(db, 'b');
+    expect(crossPillarUrisService.countRowsMissingPurchaseTransactionUri(db)).toBe(0);
+  });
+
+  it('does not count an empty-string transaction id as a missing reference', () => {
+    seed(db, 'a', { transactionId: '' });
+    expect(crossPillarUrisService.countRowsMissingPurchaseTransactionUri(db)).toBe(0);
+  });
+
+  it('counts nothing on an empty table rather than throwing', () => {
+    expect(crossPillarUrisService.countRowsMissingPurchaseTransactionUri(db)).toBe(0);
+  });
+});
 
 describe('crossPillarUrisService.listDistinct*', () => {
   let db: InventoryDb;
@@ -87,15 +129,6 @@ describe('crossPillarUrisService.listDistinct*', () => {
       'pops://finance/transaction/x',
       'pops://finance/transaction/y',
     ]);
-  });
-
-  it('returns distinct non-null owner URIs', () => {
-    seed(db, 'a', { owner: 'pops://core/user/joao@example.com' });
-    seed(db, 'b', { owner: 'pops://core/user/joao@example.com' });
-    seed(db, 'c');
-
-    const uris = crossPillarUrisService.listDistinctOwnerUris(db);
-    expect(uris).toEqual(['pops://core/user/joao@example.com']);
   });
 });
 
@@ -147,16 +180,5 @@ describe('crossPillarUrisService.markStale / clearStale', () => {
       .from(homeInventory)
       .all();
     expect(stamps[0]?.s).toBeNull();
-  });
-
-  it('stamps + clears owner stale markers symmetrically', () => {
-    seed(db, 'a', { owner: 'pops://core/user/u' });
-    const stamp = '2026-06-15T03:30:00.000Z';
-    expect(crossPillarUrisService.markOwnerUriStale(db, 'pops://core/user/u', stamp)).toBe(1);
-    expect(db.select({ s: homeInventory.ownerStaleAt }).from(homeInventory).all()[0]?.s).toBe(
-      stamp
-    );
-    expect(crossPillarUrisService.clearOwnerUriStale(db, 'pops://core/user/u')).toBe(1);
-    expect(db.select({ s: homeInventory.ownerStaleAt }).from(homeInventory).all()[0]?.s).toBeNull();
   });
 });
