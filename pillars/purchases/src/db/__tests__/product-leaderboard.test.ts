@@ -154,8 +154,8 @@ describe('grouping', () => {
     expect(entry.orderCount).toBe(3);
     expect(entry.lineCount).toBe(3);
     expect(entry.landedCostCents).toBe(3537);
-    expect(entry.firstPurchasedAt).toBe('2026-01-04T00:00:00Z');
-    expect(entry.lastPurchasedAt).toBe('2026-03-04T00:00:00Z');
+    expect(entry.firstPurchasedAt).toBe('2026-01-04T00:00:00.000Z');
+    expect(entry.lastPurchasedAt).toBe('2026-03-04T00:00:00.000Z');
   });
 
   it('counts one order once when it lists the same sku on two lines', () => {
@@ -241,6 +241,61 @@ describe('grouping', () => {
     // reporting whichever line was read last.
     expect(entry.product.basis).toBe('sku');
     expect(entry.product.source).toBeNull();
+  });
+
+  it('scopes a cross-source ASIN group by the instants its bounds name, not their text', () => {
+    // The cross-source fold and the canonical column were built against each
+    // other's absence: this group spans two sources and narrows through the
+    // window every scoped read shares, so it is where a bound that sorts
+    // differently from the instant it names would show up as a row missing
+    // half its history rather than as an error.
+    //
+    // Read as text every value here disagrees with the instant it names.
+    // `2026-01-02T00:00:00+10:00` is the EARLIER of the two orders and sorts
+    // after the later one; the bound is written with a third spelling again.
+    upsertSource(opened.db, {
+      id: 'amazon-digital',
+      label: 'Amazon (digital)',
+      descriptorPattern: 'AMAZON%',
+      settlementWindowDays: 21,
+      autoLinkPolicy: 'review',
+      ingestAdapter: 'amazon-digital-export',
+    });
+    createPurchase(
+      opened.db,
+      order({
+        checksum: 'physical',
+        orderedAt: '2026-01-02T00:00:00+10:00',
+        items: [line({ name: 'The Way of Kings', sku: { value: 'B0FCSJTKJ8', scheme: 'asin' } })],
+      })
+    );
+    createPurchase(
+      opened.db,
+      order({
+        checksum: 'digital',
+        source: 'amazon-digital',
+        orderedAt: '2026-01-01T20:00:00Z',
+        items: [
+          line({ name: 'The Way of Kings (Kindle)', sku: { value: 'B0FCSJTKJ8', scheme: 'asin' } }),
+        ],
+      })
+    );
+
+    const spanning = only(rankProductPurchases(opened.db, { from: '2026-01-01T10:00:00+10:00' }));
+    expect(spanning.orderCount).toBe(2);
+    expect(spanning.product.source).toBeNull();
+    // Both ends read back in the one form the column holds, ordered by the
+    // instant rather than by the spelling that arrived.
+    expect(spanning.firstPurchasedAt).toBe('2026-01-01T14:00:00.000Z');
+    expect(spanning.lastPurchasedAt).toBe('2026-01-01T20:00:00.000Z');
+
+    // A bound between the two keeps only the later order. As text
+    // `2026-01-01T16:00:00Z` precedes `2026-01-02T00:00:00+10:00`, so an
+    // uncanonicalised column would hold the earlier order in scope here and
+    // report the group as still spanning both.
+    const tightened = only(rankProductPurchases(opened.db, { from: '2026-01-01T16:00:00Z' }));
+    expect(tightened.orderCount).toBe(1);
+    expect(tightened.firstPurchasedAt).toBe('2026-01-01T20:00:00.000Z');
   });
 
   it('keeps a merchant-scoped sku inside its source even where the string is an ASIN', () => {
@@ -618,7 +673,7 @@ describe('scope and withholding', () => {
 
     const entry = only(rankProductPurchases(opened.db, { from: '2026-01-01T00:00:00Z' }));
     expect(entry.orderCount).toBe(1);
-    expect(entry.firstPurchasedAt).toBe('2026-02-02T01:41:21Z');
+    expect(entry.firstPurchasedAt).toBe('2026-02-02T01:41:21.000Z');
   });
 
   it('withholds products under minOrderCount while still counting them as covered', () => {
@@ -1016,8 +1071,10 @@ describe('ordering within a group', () => {
 
     const entry = only(rankProductPurchases(opened.db));
 
-    expect(entry.firstPurchasedAt).toBe('2026-01-02T00:00:00+10:00');
-    expect(entry.lastPurchasedAt).toBe('2026-01-01T20:00:00Z');
+    // Both ends read back in the one form the column holds, so the offset
+    // the caller wrote is no longer what the group reports back.
+    expect(entry.firstPurchasedAt).toBe('2026-01-01T14:00:00.000Z');
+    expect(entry.lastPurchasedAt).toBe('2026-01-01T20:00:00.000Z');
   });
 
   it('wears the label and the last price of the line that is genuinely latest', () => {
@@ -1065,16 +1122,19 @@ describe('ordering within a group', () => {
   });
 
   /**
-   * `ordered_at` is a text column and nothing between the API schema and the
-   * insert re-checks it, so a row whose timestamp does not parse is
-   * reachable — and it arrives first here, which is the case that used to
-   * pin both ends of the group to it permanently: an unreadable instant
-   * loses every comparison it is offered, including the ones that would have
-   * displaced it.
+   * A row whose timestamp does not parse is no longer something the write
+   * path will accept, but one written before it canonicalised is still in
+   * the file — the migration that rewrote the column left exactly these
+   * behind, because it could not read them either. Forced in over the
+   * writer's head below, since that is the only way such a row exists.
+   *
+   * It arrives first, which is the case that used to pin both ends of the
+   * group to it permanently: an unreadable instant loses every comparison it
+   * is offered, including the ones that would have displaced it.
    */
   it('lets the orders it can read decide the ends, not the one it cannot', () => {
     for (const [checksum, orderedAt, unitPriceCents] of [
-      ['unreadable', 'whenever', 500],
+      ['unreadable', '2026-03-04T00:00:00Z', 500],
       ['first-readable', '2026-03-01T00:00:00Z', 600],
       ['last-readable', '2026-03-08T00:00:00Z', 700],
     ] as const) {
@@ -1093,11 +1153,14 @@ describe('ordering within a group', () => {
         })
       );
     }
+    opened.raw
+      .prepare(`UPDATE purchases SET ordered_at = 'whenever' WHERE checksum = 'unreadable'`)
+      .run();
 
     const entry = only(rankProductPurchases(opened.db));
 
-    expect(entry.firstPurchasedAt).toBe('2026-03-01T00:00:00Z');
-    expect(entry.lastPurchasedAt).toBe('2026-03-08T00:00:00Z');
+    expect(entry.firstPurchasedAt).toBe('2026-03-01T00:00:00.000Z');
+    expect(entry.lastPurchasedAt).toBe('2026-03-08T00:00:00.000Z');
     expect(entry.unitPrice.firstCents).toBe(600);
     expect(entry.unitPrice.lastCents).toBe(700);
     expect(entry.product.name).toBe('Filter Papers last-readable');

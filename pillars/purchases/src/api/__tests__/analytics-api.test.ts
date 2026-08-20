@@ -185,7 +185,7 @@ describe('GET /analytics/product-leaderboard', () => {
     const [entry] = res.body.products;
     expect(entry.orderCount).toBe(2);
     expect(entry.landedCostCents).toBe(2358);
-    expect(entry.lastPurchasedAt).toBe('2026-02-04T00:00:00Z');
+    expect(entry.lastPurchasedAt).toBe('2026-02-04T00:00:00.000Z');
     // The basis travels with the group. Without it a consumer cannot tell a
     // merchant-stated identity from a name that happened to match.
     expect(entry.product).toEqual({

@@ -5,7 +5,7 @@
  * queries here decide what it can possibly see — a filter applied wrongly
  * is indistinguishable, from the solver's side, from the data not existing.
  */
-import { and, eq, gte, inArray, isNotNull, isNull, lte, ne } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, isNull, ne } from 'drizzle-orm';
 
 import {
   purchaseChargeLinks,
@@ -14,14 +14,18 @@ import {
   purchases,
   purchaseSources,
 } from '../schema.js';
+import { orderedAtWindow } from './ordered-at.js';
 
 import type { ConfirmedLink, RejectedPairing, SolvableCharge } from '../../reconcile/types.js';
 import type { PurchasesDb } from './internal.js';
 
 export interface ReconcileScope {
-  /** Inclusive lower bound on `orderedAt` (ISO-8601). */
+  /**
+   * Inclusive lower bound on `orderedAt`, in any ISO-8601 form with a
+   * timezone. Normalised to the stored form before it becomes a predicate.
+   */
   readonly from?: string;
-  /** Inclusive upper bound on `orderedAt` (ISO-8601). */
+  /** Inclusive upper bound on `orderedAt`. Normalised like {@link from}. */
   readonly to?: string;
   /** Restrict to one source. Omitted sweeps everything. */
   readonly source?: string;
@@ -61,8 +65,7 @@ export function listSolvableCharges(db: PurchasesDb, scope: ReconcileScope = {})
         ne(purchases.settlementMode, 'cash'),
         ne(purchases.status, 'ignored'),
         scope.source === undefined ? undefined : eq(purchases.source, scope.source),
-        scope.from === undefined ? undefined : gte(purchases.orderedAt, scope.from),
-        scope.to === undefined ? undefined : lte(purchases.orderedAt, scope.to)
+        ...orderedAtWindow(scope)
       )
     )
     .all();
@@ -141,8 +144,7 @@ export function listOrdersNeedingDerivedCharge(
         // derived charge for zero would match nothing while adding a row.
         ne(purchases.totalCents, 0),
         scope.source === undefined ? undefined : eq(purchases.source, scope.source),
-        scope.from === undefined ? undefined : gte(purchases.orderedAt, scope.from),
-        scope.to === undefined ? undefined : lte(purchases.orderedAt, scope.to)
+        ...orderedAtWindow(scope)
       )
     )
     .all();

@@ -8,6 +8,8 @@
  * The scale mirrors `pillars/finance/src/api/rest/search-handlers.ts` so two
  * pillars do not disagree about what counts as an exact match.
  */
+import { byNewestFirst, orderRank } from './order-rank.js';
+
 export type SearchMatchType = 'exact' | 'prefix' | 'contains';
 
 export interface PurchaseSearchHit {
@@ -73,24 +75,22 @@ export function byScoreDescending(a: PurchaseSearchHit, b: PurchaseSearchHit): n
   return b.score - a.score;
 }
 
-function compareAscending(a: string, b: string): number {
-  if (a === b) return 0;
-  return a < b ? -1 : 1;
-}
-
 /**
  * Score, then recency, then uri — a total order, because two rows never
  * share a uri. Without that last term a tie at the cap would be settled by
  * the scan again, one step further down.
+ *
+ * Recency is the instant the timestamp names rather than the text of it.
+ * The column holds one spelling, so for every row the writer wrote the two
+ * orderings are the same; a row migration `0010` could not read is why this
+ * asks {@link orderRank} anyway, since a value like `whenever` outranks
+ * every real date as text and would sit at the head of every hit list.
  */
 function byRank(a: ScoredCandidate, b: ScoredCandidate): number {
   const byScore = byScoreDescending(a.hit, b.hit);
   if (byScore !== 0) return byScore;
 
-  const byRecency = compareAscending(b.orderedAt, a.orderedAt);
-  if (byRecency !== 0) return byRecency;
-
-  return compareAscending(a.hit.uri, b.hit.uri);
+  return byNewestFirst(orderRank(a.orderedAt, a.hit.uri), orderRank(b.orderedAt, b.hit.uri));
 }
 
 export function rank(candidates: readonly ScoredCandidate[]): PurchaseSearchHit[] {

@@ -112,6 +112,8 @@ export {
 
 export { type PurchaseChargeDetail } from './services/purchase-read-charges.js';
 
+export { canonicalInstant, UnreadableOrderedAtBoundError } from './services/ordered-at.js';
+
 export {
   findPurchaseByChecksum,
   findPurchaseAtInstantForAmount,

@@ -22,12 +22,14 @@ import { eq, inArray } from 'drizzle-orm';
 
 import { purchaseItems, purchaseProductAliases, purchaseProducts, purchases } from '../schema.js';
 import { expectRow } from './internal.js';
+import { isNewer, orderRank } from './order-rank.js';
 import { deleteOrphanedProducts } from './product-dictionary-writes.js';
 import { identifyProduct, productLookupKey, productScopeKey } from './product-identity.js';
 
 import type { SkuScheme } from '../../contract/constants.js';
 import type { PurchaseProductAliasRow } from '../schema.js';
 import type { PurchasesDb } from './internal.js';
+import type { OrderRank } from './order-rank.js';
 
 /** What one run of the pass changed. */
 export interface ProposalOutcome {
@@ -49,7 +51,7 @@ interface ObservedWording {
   readonly normalised: string;
   /** The newest line's printing of it, which is what a fresh entry is labelled with. */
   printedName: string;
-  rank: string;
+  rank: OrderRank;
 }
 
 interface ScannedLine {
@@ -131,6 +133,12 @@ function scanLines(db: PurchasesDb): readonly ScannedLine[] {
  * name normalises to nothing, groups on some other basis, and an entry minted
  * for it could never be reached. Asking the one function that decides means
  * the pass cannot drift from the lookup it is minting entries for.
+ *
+ * "Newest" is {@link orderRank}'s notion of it, not a text comparison on the
+ * timestamp. The column holds one spelling of an instant, so the two agree
+ * for every row the writer wrote; a row migration `0010` could not read is
+ * why this asks anyway, since as text such a value can outrank every real
+ * date and hand one line's spelling to every entry it touches.
  */
 function observeWordings(lines: readonly ScannedLine[]): Map<string, ObservedWording> {
   const observed = new Map<string, ObservedWording>();
@@ -141,7 +149,7 @@ function observeWordings(lines: readonly ScannedLine[]): Map<string, ObservedWor
 
     const scopeKey = productScopeKey(line);
     const key = productLookupKey(scopeKey, normalised);
-    const rank = `${line.orderedAt} ${line.id}`;
+    const rank = orderRank(line.orderedAt, line.id);
     const held = observed.get(key);
     if (held === undefined) {
       observed.set(key, {
@@ -151,7 +159,7 @@ function observeWordings(lines: readonly ScannedLine[]): Map<string, ObservedWor
         printedName: line.name,
         rank,
       });
-    } else if (rank > held.rank) {
+    } else if (isNewer(rank, held.rank)) {
       held.printedName = line.name;
       held.rank = rank;
     }

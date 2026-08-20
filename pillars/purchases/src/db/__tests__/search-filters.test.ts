@@ -111,7 +111,7 @@ describe('what each supported field reads into', () => {
       { field: 'orderedAt', operator: 'gte', value: '2026-02-01T00:00:00Z' },
     ]);
 
-    expect(scopeOf(result)).toEqual({ from: '2026-02-01T00:00:00Z' });
+    expect(scopeOf(result)).toEqual({ from: '2026-02-01T00:00:00.000Z' });
   });
 
   it('keeps the tightest of two upper bounds', () => {
@@ -120,7 +120,7 @@ describe('what each supported field reads into', () => {
       { field: 'orderedAt', operator: 'lte', value: '2026-01-01T00:00:00Z' },
     ]);
 
-    expect(scopeOf(result)).toEqual({ to: '2026-01-01T00:00:00Z' });
+    expect(scopeOf(result)).toEqual({ to: '2026-01-01T00:00:00.000Z' });
   });
 
   it('combines unlike fields into one scope rather than letting the last one win', () => {
@@ -134,8 +134,8 @@ describe('what each supported field reads into', () => {
     expect(scopeOf(result)).toEqual({
       sources: ['amazon'],
       statuses: ['linked'],
-      from: '2026-01-01T00:00:00Z',
-      to: '2026-01-31T00:00:00Z',
+      from: '2026-01-01T00:00:00.000Z',
+      to: '2026-01-31T00:00:00.000Z',
     });
   });
 });
@@ -168,19 +168,6 @@ describe('a value the field cannot hold', () => {
     expect(refusalOf(result)).toContain('2026-01-31T00:00:00');
   });
 
-  it('refuses an offset timestamp, which text comparison would place hours away', () => {
-    // `2026-01-01T10:00:00+10:00` is midnight UTC, but it sorts after every
-    // `2026-01-01T0…Z` value in the column, so the window it produces is not
-    // the window it reads as.
-    const message = refusalOf(
-      searchFilterScope([
-        { field: 'orderedAt', operator: 'gte', value: '2026-01-01T10:00:00+10:00' },
-      ])
-    );
-
-    expect(message).toContain('UTC');
-  });
-
   it('refuses the whole list, not just the bad filter, so no scope is half-applied', () => {
     const result = searchFilterScope([
       { field: 'source', operator: 'eq', value: 'amazon' },
@@ -188,5 +175,64 @@ describe('a value the field cannot hold', () => {
     ]);
 
     expect(result.ok).toBe(false);
+  });
+
+  it('refuses a date whose fields name no instant', () => {
+    const message = refusalOf(
+      searchFilterScope([{ field: 'orderedAt', operator: 'gte', value: '2026-13-45T00:00:00Z' }])
+    );
+
+    expect(message).toContain('2026-13-45T00:00:00Z');
+  });
+});
+
+describe('a bound written in some other valid ISO-8601 form', () => {
+  it('takes an offset bound to the instant it names, not the text it sorts as', () => {
+    // `2026-01-01T10:00:00+10:00` IS midnight UTC. Left as text it sorts
+    // after every `2026-01-01T0…Z` row in the column, so the window would be
+    // ten hours away from the one the caller asked for. Sydney is UTC+10/+11,
+    // so this is the bound a local caller writes by hand.
+    expect(
+      scopeOf(
+        searchFilterScope([
+          { field: 'orderedAt', operator: 'gte', value: '2026-01-01T10:00:00+10:00' },
+        ])
+      )
+    ).toEqual({ from: '2026-01-01T00:00:00.000Z' });
+  });
+
+  it('gives a second-precision bound the milliseconds the column carries', () => {
+    // `…21Z` unpadded sorts BEFORE `…21.500Z`, because `.` precedes `Z`, so
+    // an `lte` bound written without a fraction would include an instant
+    // half a second after it.
+    expect(
+      scopeOf(
+        searchFilterScope([{ field: 'orderedAt', operator: 'lte', value: '2026-02-02T01:41:21Z' }])
+      )
+    ).toEqual({ to: '2026-02-02T01:41:21.000Z' });
+  });
+
+  it('leaves a bound already in the stored form exactly as it was', () => {
+    expect(
+      scopeOf(
+        searchFilterScope([
+          { field: 'orderedAt', operator: 'gte', value: '2026-01-01T00:00:00.000Z' },
+        ])
+      )
+    ).toEqual({ from: '2026-01-01T00:00:00.000Z' });
+  });
+
+  it('picks the tighter of two bounds by instant, not by spelling', () => {
+    // The offset bound is the LATER instant and the earlier string. A
+    // tightest-bound rule comparing the two as text keeps the wrong one and
+    // widens the window by ten hours.
+    expect(
+      scopeOf(
+        searchFilterScope([
+          { field: 'orderedAt', operator: 'gte', value: '2026-01-01T00:00:00Z' },
+          { field: 'orderedAt', operator: 'gte', value: '2026-01-01T20:00:00+10:00' },
+        ])
+      )
+    ).toEqual({ from: '2026-01-01T10:00:00.000Z' });
   });
 });

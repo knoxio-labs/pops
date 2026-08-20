@@ -20,6 +20,7 @@
  * scope means.
  */
 import { IsoTimestampSchema, PurchaseStatusSchema } from '../../contract/schemas/purchase.js';
+import { canonicalInstant } from './ordered-at.js';
 
 import type { PurchaseStatus } from '../../contract/constants.js';
 import type { SearchFilterField, SearchFilterOperator } from '../../contract/rest-search.js';
@@ -71,19 +72,14 @@ function readStatus(scope: ScopeUnderConstruction, value: string): Refusal {
 }
 
 /**
- * `orderedAt` is a text column, so both the bound comparison below and the
- * SQL `>=`/`<=` it becomes are lexicographic. That matches chronological
- * order only while every value is written the same way, and an offset form
- * is the case where it does not: `2026-01-01T10:00:00+10:00` sorts after
- * every `2026-01-01T0…Z` while naming an instant before them, so the window
- * would be wrong by hours with nothing to say so. Refused rather than
- * converted, because converting the bound cannot fix the same skew in a
- * stored value.
+ * A bound is normalised to the stored form here, before anything compares
+ * it — including the tightest-bound rule below, which is itself a string
+ * comparison between two bounds and so gets the same answer wrong for the
+ * same reason. An offset bound is accepted: it names a real instant, the
+ * column now holds one spelling of every instant (`ordered-at.ts`), so
+ * refusing what `GET /purchases` accepts would only make two routes on one
+ * pillar disagree about which timestamps are legal.
  */
-function isUtc(value: string): boolean {
-  return value.endsWith('Z');
-}
-
 function readBound(
   scope: ScopeUnderConstruction,
   operator: SearchFilterOperator,
@@ -93,16 +89,15 @@ function readBound(
   if (!parsed.success) {
     return `Filter value '${value}' is not an ISO-8601 timestamp with a timezone, e.g. 2026-02-02T01:41:21Z`;
   }
-  if (!isUtc(parsed.data)) {
-    return `Filter value '${value}' must be UTC (ending in 'Z'): orderedAt is compared as text, so an offset would name a different window than it reads as`;
-  }
+  const bound = canonicalInstant(parsed.data);
+  if (bound === null) return `Filter value '${value}' names no instant`;
   // Tightest bound wins, which is what the conjunction of two bounds on one
   // field already says.
-  if (operator === 'gte' && (scope.from === undefined || parsed.data > scope.from)) {
-    scope.from = parsed.data;
+  if (operator === 'gte' && (scope.from === undefined || bound > scope.from)) {
+    scope.from = bound;
   }
-  if (operator === 'lte' && (scope.to === undefined || parsed.data < scope.to)) {
-    scope.to = parsed.data;
+  if (operator === 'lte' && (scope.to === undefined || bound < scope.to)) {
+    scope.to = bound;
   }
   return null;
 }
