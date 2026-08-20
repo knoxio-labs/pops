@@ -72,24 +72,41 @@ export default defineConfig({
        * instead, because it stopped being untested — see the note on that
        * exclusion above.
        *
-       * `branches` sits below the other three because no CI lane ran this
-       * gate for long enough that it rotted unnoticed: three modules
-       * (`src/ingest/receipt/anthropic-vision.ts`, `src/api/ai-telemetry-deps.ts`,
-       * `src/api/anthropic-key.ts`) had drifted to 0%, which is what actually
-       * failed `statements`/`functions`/`lines` too. Covering those three,
-       * plus targeted edge-case tests across a dozen adjacent modules, put
+       * `branches` sat below the other three for a while because no CI lane
+       * ran this gate for long enough that it rotted unnoticed: three
+       * modules (`src/ingest/receipt/anthropic-vision.ts`,
+       * `src/api/ai-telemetry-deps.ts`, `src/api/anthropic-key.ts`) had
+       * drifted to 0%, which is what actually failed `statements`/
+       * `functions`/`lines` too. Covering those three, plus targeted
+       * edge-case tests across a dozen adjacent modules, put
        * `statements`/`functions`/`lines` back above their original marks
-       * (`functions` far enough clear to be raised) but left `branches` at
-       * ~89%, short of the 91% this threshold used to claim. The remaining
-       * gap is real edge-case branches (locale/timezone parsing,
-       * reconciliation error paths, ingest adapters) spread thin across the
-       * ~35 files that still have an uncovered branch rather than
-       * concentrated in a coverable few; closing it is tracked separately
-       * rather than done here as a drive-by.
+       * and briefly brought `branches` to 91%. Closing that gap meant a
+       * dedicated read for `db/services/reconcile-reads.ts` (the solver's
+       * whole view — every scope filter, every eligibility predicate — had
+       * no direct test at all), a unit test for `chargeIdsForPurchases`
+       * (exported, never called or tested), the two branches of both
+       * error-mapping middlewares, and a name tie-break case in
+       * `merchant-spend.ts`.
+       *
+       * `branches` sits at 90 rather than 91 because the pillar's surface
+       * grew faster than that pass covered it: the stage-4 learned-rule
+       * ladder (POPS-1309), the product leaderboard and inventory fan-out
+       * (POPS-244/POPS-245), and the receipt-capture ingest path each
+       * landed with real but partial branch coverage on their edge cases,
+       * diluting the global ratio the same week it was raised to 91. This
+       * is the drifted-above case the note below warns about, not a
+       * convenience lowering: re-measure before raising it back.
+       *
+       * What is still uncovered is real edge-case branches — locale and
+       * timezone parsing, reconciliation error paths, the ingest adapters —
+       * spread thin across the several dozen files that each have one or
+       * two, rather than concentrated anywhere a single test would reach,
+       * plus a handful that look unreachable through the public API and
+       * need a judgement call on excluding them rather than more tests.
        */
       thresholds: {
         statements: 95,
-        branches: 88,
+        branches: 90,
         functions: 93,
         lines: 96,
       },

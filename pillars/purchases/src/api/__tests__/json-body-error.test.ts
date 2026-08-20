@@ -4,14 +4,20 @@
  * `express.json()`'s own 413 is thrown deep inside `body-parser`'s stream
  * reader, so a mock of anything this pillar owns would prove nothing about
  * whether that failure actually reaches `jsonBodyErrorHandler` — only a real
- * oversized request over `supertest` does.
+ * oversized request over `supertest` does. The pass-through case below is
+ * driven the same way, through a real Express app, so the handler is proven
+ * against Express's actual `Response`/`NextFunction` rather than a hand-typed
+ * stand-in for them.
  */
+import express from 'express';
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { openTempDb } from '../../db/__tests__/helpers.js';
 import { JSON_BODY_LIMIT_BYTES, createPurchasesApiApp } from '../app.js';
+import { jsonBodyErrorHandler } from '../middleware/json-body-error.js';
 import { __resetPillarRegistryCache } from '../pillars/registry.js';
+import { PASSED_THROUGH_STATUS, passThroughErrorReporter } from './helpers.js';
 
 import type { Express } from 'express';
 
@@ -67,5 +73,21 @@ describe('a body over the JSON limit', () => {
     expect(res.body).toMatchObject({ code: 'PAYLOAD_TOO_LARGE' });
     expect(typeof res.body.message).toBe('string');
     expect(res.body.message.length).toBeGreaterThan(0);
+  });
+});
+
+describe('an error that is not a body-parser failure', () => {
+  it('is passed through to the next handler unchanged, not answered here', async () => {
+    const unrelated = express();
+    unrelated.get('/boom', (_req, _res, next) => {
+      next(new Error('something unrelated went wrong'));
+    });
+    unrelated.use(jsonBodyErrorHandler);
+    unrelated.use(passThroughErrorReporter);
+
+    const res = await request(unrelated).get('/boom');
+
+    expect(res.status).toBe(PASSED_THROUGH_STATUS);
+    expect(res.body).toEqual({ passedThrough: 'something unrelated went wrong' });
   });
 });

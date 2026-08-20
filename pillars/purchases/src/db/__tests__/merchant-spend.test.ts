@@ -27,9 +27,13 @@ import {
   purchaseChargeLinks,
   purchaseCharges,
   rollUpMerchantSpend,
-  upsertSource,
 } from '../index.js';
-import { ARRANGEMENT_TIMEOUT_MS, openTempDb, seedAmazonSource } from './helpers.js';
+import {
+  ARRANGEMENT_TIMEOUT_MS,
+  openTempDb,
+  seedAmazonSource,
+  seedWoolworthsSource,
+} from './helpers.js';
 
 import type {
   CreateChargeInput,
@@ -46,14 +50,7 @@ let cleanup: () => void;
 
 function seedSources(target: OpenedPurchasesDb): void {
   seedAmazonSource(target);
-  upsertSource(target.db, {
-    id: 'woolworths',
-    label: 'Woolworths',
-    descriptorPattern: 'WOOLWORTHS%',
-    settlementWindowDays: 14,
-    autoLinkPolicy: 'auto',
-    ingestAdapter: 'woolworths-receipt',
-  });
+  seedWoolworthsSource(target);
 }
 
 /**
@@ -858,6 +855,20 @@ describe('ordering is deterministic', () => {
 
     const rollup = rollUpMerchantSpend(opened.db);
     expect(rollup.merchants.map((m) => m.merchant.name)).toEqual(['Big', 'Small', 'Dollarshop']);
+  });
+
+  it('breaks a tie on net spend by name', () => {
+    createPurchase(
+      opened.db,
+      order({ checksum: 'zorro', merchantEntityName: 'Zorro', totalCents: 500 })
+    );
+    createPurchase(
+      opened.db,
+      order({ checksum: 'alpha', merchantEntityName: 'Alpha', totalCents: 500 })
+    );
+
+    const rollup = rollUpMerchantSpend(opened.db);
+    expect(rollup.merchants.map((m) => m.merchant.name)).toEqual(['Alpha', 'Zorro']);
   });
 
   it('produces the same serialisation on a repeated call', () => {
