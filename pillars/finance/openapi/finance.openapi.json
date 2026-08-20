@@ -8533,7 +8533,7 @@
                       "type": "array"
                     },
                     "currentStep": {
-                      "enum": ["deduplicating", "matching"],
+                      "enum": ["deduplicating", "matching", "categorizing"],
                       "type": "string"
                     },
                     "errors": {

@@ -195,7 +195,7 @@ const ProgressBatchItemSchema = z.object({
 export const ImportProgressSchema = z.object({
   sessionId: z.string(),
   status: z.enum(['processing', 'completed', 'failed']),
-  currentStep: z.enum(['deduplicating', 'matching']),
+  currentStep: z.enum(['deduplicating', 'matching', 'categorizing']),
   totalTransactions: z.number(),
   processedCount: z.number(),
   currentBatch: z.array(ProgressBatchItemSchema),
