@@ -641,6 +641,35 @@ jobs:
             node scripts/ci/report-contract-consumers.mjs
           fi
 
+  line-budget-headroom:
+    name: Line-budget headroom
+    # A file that predates two in-flight branches can sit right at its oxlint
+    # `max-lines` cap on one of them and cross it the moment the other lands —
+    # a failure neither PR's own diff explains, landing on whichever merges
+    # second. This projects every linted file the change touches onto the
+    # target branch's CURRENT tip (this branch's own net delta to the file,
+    # applied on top of the target's live count — a cheap stand-in for an
+    # actual merge) and fails before the real oxlint run would, with the file
+    # and margin named. Needs full history for a merge base, so it is its own
+    # job rather than a step riding along with a shallow-checkout gate; Tier A
+    # all the same — node builtins and `.oxlintrc.json` only, no
+    # `pnpm install`. See scripts/ci/check-line-budget-headroom.mjs.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # need a merge base against the target branch
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Gate self-test (proves the guard catches a shared file tipped over its cap)
+        run: node scripts/ci/check-line-budget-headroom.mjs --self-test
+      - name: Project touched files onto the target branch and check headroom
+        env:
+          # Same three-event resolution as `contract-consumers` above.
+          BASE_REF: ${{ github.base_ref || github.event.merge_group.base_ref || 'main' }}
+        run: node scripts/ci/check-line-budget-headroom.mjs --base "$BASE_REF"
+
   device-signature-fixture:
     name: Device signature encoding (iOS ↔ BFM)
     # The iOS app signs refresh requests with a Secure Enclave P-256 key and the
