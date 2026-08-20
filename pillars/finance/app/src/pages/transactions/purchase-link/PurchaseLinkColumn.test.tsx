@@ -316,22 +316,6 @@ describe('when the purchases pillar does not answer', () => {
     await waitFor(() => expect(purchaseHeader()).toHaveTextContent(UNAVAILABLE));
   });
 
-  it('marks the column when one chunk of a split batch fails', async () => {
-    // Past 500 rows the lookup is several requests, and a partial answer is
-    // the worst case here: the rows that did come back look authoritative
-    // while the rest look unlinked.
-    reconcileLinksBatchMock
-      .mockResolvedValueOnce({ data: { transactions: [] } })
-      .mockRejectedValueOnce(new Error('socket hang up'));
-    const many = Array.from({ length: 501 }, (_, index) =>
-      transaction(`tx-${index}`, `ROW ${index}`)
-    );
-
-    renderTable(many);
-
-    await waitFor(() => expect(purchaseHeader()).toHaveTextContent(UNAVAILABLE));
-  });
-
   it('says nothing while the answer is still in flight', async () => {
     // An in-flight lookup has not failed. Warning during the normal loading
     // moment would train the reader to ignore the warning.
@@ -442,7 +426,7 @@ describe('what the query is keyed on', () => {
 });
 
 describe('what the hook reports about the lookup itself', () => {
-  function summaries(transactions = TRANSACTIONS) {
+  function summaries(transactions: readonly { id: string }[] = TRANSACTIONS) {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     return renderHook(() => usePurchaseLinkSummaries(transactions), {
       wrapper: withClient(client),
@@ -473,5 +457,23 @@ describe('what the hook reports about the lookup itself', () => {
     await waitFor(() => expect(result.current.byTransactionId.size).toBe(0));
     expect(result.current.unavailable).toBe(false);
     expect(reconcileLinksBatchMock).not.toHaveBeenCalled();
+  });
+
+  it('is unavailable when one chunk of a split batch fails', async () => {
+    // Past 500 rows the lookup is several requests, and a partial answer is
+    // the worst case here: the rows that did come back look authoritative
+    // while the rest look unlinked. `Promise.all` over the chunks must
+    // reject as a whole, not average the two answers into "some data,
+    // still available" — asserted on the hook directly, since what this
+    // case exercises is the chunking and rejection propagation in
+    // `fetchSummaries`, not anything about how a column draws.
+    reconcileLinksBatchMock
+      .mockResolvedValueOnce({ data: { transactions: [] } })
+      .mockRejectedValueOnce(new Error('socket hang up'));
+    const many = Array.from({ length: 501 }, (_, index) => ({ id: `tx-${index}` }));
+
+    const { result } = summaries(many);
+
+    await waitFor(() => expect(result.current.unavailable).toBe(true));
   });
 });
