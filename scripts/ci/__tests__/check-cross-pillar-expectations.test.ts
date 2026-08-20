@@ -1112,6 +1112,17 @@ describe('checkExpectations', () => {
 });
 
 describe('against the live repo', () => {
+  // One scan, shared. Every assertion below used to call `discoverCallSites`
+  // itself, so the whole repository was walked thirteen times over to produce
+  // thirteen identical results — the bulk of this file's runtime, and enough
+  // wall clock per `it` that what the assertions were really measured against
+  // was how busy the machine happened to be.
+  let liveTree: ReturnType<typeof discoverCallSites>;
+
+  beforeAll(() => {
+    liveTree = discoverCallSites(repoRoot);
+  });
+
   it('EXPECTATIONS is not empty', () => {
     expect(EXPECTATIONS.length).toBeGreaterThan(0);
   });
@@ -1121,11 +1132,11 @@ describe('against the live repo', () => {
   });
 
   it('scans every pillar source without losing its place', () => {
-    expect(discoverCallSites(repoRoot).scanErrors).toEqual([]);
+    expect(liveTree.scanErrors).toEqual([]);
   });
 
   it('finds the purchases -> contacts call site the curated list used to miss', () => {
-    const sites = discoverCallSites(repoRoot).sites;
+    const sites = liveTree.sites;
     expect(sites).toContainEqual(
       expect.objectContaining({
         consumer: 'purchases',
@@ -1136,7 +1147,7 @@ describe('against the live repo', () => {
   });
 
   it('every discovered operation is either pinned by a row, exempted, or known-broken', () => {
-    const { sites } = discoverCallSites(repoRoot);
+    const { sites } = liveTree;
     expect(sites.length).toBeGreaterThan(0);
     expect(
       findCoverageGaps(sites, EXPECTATIONS, UNPINNABLE_CALL_SITES, KNOWN_BROKEN_OPERATIONS)
@@ -1151,13 +1162,13 @@ describe('against the live repo', () => {
   });
 
   it('every call site with a known producer resolves its router type to at least one operation', () => {
-    const { sites } = discoverCallSites(repoRoot);
+    const { sites } = liveTree;
     const unresolvable = sites.filter((s) => s.producer !== null && s.operationIds === null);
     expect(unresolvable).toEqual([]);
   });
 
   it('would report the seam if a row were removed', () => {
-    const { sites } = discoverCallSites(repoRoot);
+    const { sites } = liveTree;
     const without = EXPECTATIONS.filter(
       (e: { consumer: string; producer: string }) =>
         !(e.consumer === 'purchases' && e.producer === 'contacts')
@@ -1177,7 +1188,7 @@ describe('against the live repo', () => {
       // (`entities.list`) on that same seam. Its only cover is the documented
       // KNOWN_BROKEN_OPERATIONS entry; drop that and the operation must surface as
       // unlisted rather than ride on the unrelated users.get row.
-      const { sites } = discoverCallSites(repoRoot);
+      const { sites } = liveTree;
       const report = findCoverageGaps(sites, EXPECTATIONS, UNPINNABLE_CALL_SITES, []);
       expect(report.unlisted).toContainEqual(
         expect.objectContaining({
@@ -1203,7 +1214,7 @@ describe('against the live repo', () => {
   });
 
   it('pins the two seams that used to hand-roll their HTTP', () => {
-    const { sites } = discoverCallSites(repoRoot);
+    const { sites } = liveTree;
     const seams = sites.map((s) => `${s.consumer} -> ${String(s.producer)}`);
     expect(seams).toContain('food -> lists');
     expect(seams).toContain('cerebrum -> finance');
@@ -1212,7 +1223,7 @@ describe('against the live repo', () => {
   });
 
   it('finds direct-fetch calls in the live tree, and every one is sanctioned', () => {
-    const { directFetchSites } = discoverCallSites(repoRoot);
+    const { directFetchSites } = liveTree;
     expect(directFetchSites.length).toBeGreaterThan(0);
     expect(findDirectFetchGaps(directFetchSites, SANCTIONED_DIRECT_FETCH)).toEqual({
       unsanctioned: [],
@@ -1222,7 +1233,7 @@ describe('against the live repo', () => {
   });
 
   it('would report a direct-fetch seam if its sanction were removed', () => {
-    const { directFetchSites } = discoverCallSites(repoRoot);
+    const { directFetchSites } = liveTree;
     const target = 'pillars/registry/src/api/pillars/dispatcher.ts';
     const without = SANCTIONED_DIRECT_FETCH.filter((s: { file: string }) => s.file !== target);
     expect(
@@ -1242,7 +1253,7 @@ describe('against the live repo', () => {
   });
 
   it("discovers bfm's finance calls through PillarGateway.call, not a literal pillar() token", () => {
-    const { sites } = discoverCallSites(repoRoot);
+    const { sites } = liveTree;
     const bfmFinanceSites = sites.filter(
       (s) => s.consumer === 'bfm' && s.file === 'pillars/bfm/src/api/finance/client.ts'
     );
@@ -1251,7 +1262,7 @@ describe('against the live repo', () => {
   });
 
   it('would report an unpinned seam reached only through the gateway wrapper', () => {
-    const { sites } = discoverCallSites(repoRoot);
+    const { sites } = liveTree;
     const planted = {
       consumer: 'bfm',
       producer: 'cerebrum',
@@ -1277,7 +1288,7 @@ describe('against the live repo', () => {
   });
 
   it('finds both call sites in the finance core-entities migration script', () => {
-    const { sites } = discoverCallSites(repoRoot);
+    const { sites } = liveTree;
     const migrationSites = sites.filter(
       (s) => s.file === 'pillars/finance/scripts/migrate-core-entities.ts'
     );
@@ -1298,7 +1309,7 @@ describe('against the live repo', () => {
   });
 
   it('would report an unpinned seam reached only through a pillars/*/scripts call site', () => {
-    const { sites } = discoverCallSites(repoRoot);
+    const { sites } = liveTree;
     const planted = {
       consumer: 'finance',
       producer: 'lists',

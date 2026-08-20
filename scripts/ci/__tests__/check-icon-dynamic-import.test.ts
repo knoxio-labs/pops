@@ -14,19 +14,19 @@
  * pinned expectation, not a copy of something the guard itself reads.
  */
 
-import { execFileSync, spawnSync } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, inject, it } from 'vitest';
 
 import { findViolations } from '../check-icon-dynamic-import.mjs';
+import { passingProofStdout } from './real-tree-proofs.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..', '..');
-const guard = join(repoRoot, 'scripts', 'ci', 'check-icon-dynamic-import.mjs');
 
 describe('a dynamic import()/require() reaching lucide-react is reported', () => {
   it('reports a bare string-literal dynamic import of the whole package', () => {
@@ -228,12 +228,15 @@ describe('the real oxlint config genuinely does not see the dynamic form', () =>
 
 describe('the guard proves itself', () => {
   it('passes its own --self-test', () => {
-    const output = execFileSync(process.execPath, [guard, '--self-test'], { encoding: 'utf-8' });
+    const output = passingProofStdout(
+      inject('realTreeProofs'),
+      'check-icon-dynamic-import:self-test'
+    );
     expect(output).toMatch(/self-test OK/u);
   });
 
   it('passes on the real tree and says how much it looked at', () => {
-    const stdout = execFileSync(process.execPath, [guard], { encoding: 'utf-8' });
+    const stdout = passingProofStdout(inject('realTreeProofs'), 'check-icon-dynamic-import');
     const scanned = Number(/Scanned (\d+) source file/.exec(stdout)?.[1]);
     expect(scanned).toBeGreaterThan(500);
     expect(stdout).toMatch(/OK — no dynamic import/u);

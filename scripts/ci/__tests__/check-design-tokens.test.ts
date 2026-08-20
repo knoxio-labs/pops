@@ -7,18 +7,17 @@
  * walk that silently stops finding files, fails here.
  */
 
-import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, inject, it } from 'vitest';
 
 import { findViolations, isScannable } from '../check-design-tokens.mjs';
+import { passingProofStdout } from './real-tree-proofs.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..', '..');
-const guard = join(repoRoot, 'scripts', 'ci', 'check-design-tokens.mjs');
 
 function texts(source: string): string[] {
   return findViolations('pillars/x/app/src/A.tsx', source).map((v) => v.text);
@@ -170,14 +169,14 @@ describe('the guard as CI runs it', () => {
   // reports nothing and exits 0. The guard carries its own floor; this proves
   // the floor is met by the real tree rather than by a fixture.
   it('passes on the real tree and says how much it looked at', () => {
-    const stdout = execFileSync(process.execPath, [guard], { encoding: 'utf8' });
+    const stdout = passingProofStdout(inject('realTreeProofs'), 'check-design-tokens');
     const scanned = Number(/Scanned (\d+) frontend source file/.exec(stdout)?.[1] ?? '0');
     expect(scanned).toBeGreaterThan(200);
     expect(stdout).toContain('OK —');
   });
 
   it('self-tests clean', () => {
-    const stdout = execFileSync(process.execPath, [guard, '--self-test'], { encoding: 'utf8' });
+    const stdout = passingProofStdout(inject('realTreeProofs'), 'check-design-tokens:self-test');
     expect(stdout).toContain('self-test OK');
   });
 
