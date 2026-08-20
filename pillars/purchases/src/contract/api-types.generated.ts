@@ -27,7 +27,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** Repeat purchases per product, each group carrying the identity basis it was formed on */
+    /** Repeat purchases per product — cadence, unit-price history, and the identity basis each group was formed on */
     get: operations['analytics.productLeaderboard'];
     put?: never;
     post?: never;
@@ -456,6 +456,19 @@ export interface operations {
               to: string | null;
             };
             products: {
+              cadence:
+                | {
+                    /** @enum {string} */
+                    basis: 'single-purchase';
+                  }
+                | {
+                    /** @enum {string} */
+                    basis: 'intervals';
+                    longestIntervalSeconds: number;
+                    meanIntervalSeconds: number;
+                    medianIntervalSeconds: number;
+                    shortestIntervalSeconds: number;
+                  };
               currency: string;
               firstPurchasedAt: string;
               landedCostCents: number;
@@ -513,6 +526,16 @@ export interface operations {
                   };
               refundedCents: number;
               unitCount: number;
+              unitPrice: {
+                firstCents: number;
+                lastCents: number;
+                maxCents: number;
+                measuredLineCount: number;
+                minCents: number;
+                ordinaryLineCount: number;
+                promotionalLineCount: number;
+                unstatedPromotionLineCount: number;
+              };
             }[];
           };
         };

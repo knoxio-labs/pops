@@ -477,6 +477,58 @@
                       "items": {
                         "additionalProperties": false,
                         "properties": {
+                          "cadence": {
+                            "oneOf": [
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "basis": {
+                                    "enum": ["single-purchase"],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["basis"],
+                                "type": "object"
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "basis": {
+                                    "enum": ["intervals"],
+                                    "type": "string"
+                                  },
+                                  "longestIntervalSeconds": {
+                                    "maximum": 9007199254740991,
+                                    "minimum": 0,
+                                    "type": "integer"
+                                  },
+                                  "meanIntervalSeconds": {
+                                    "maximum": 9007199254740991,
+                                    "minimum": 0,
+                                    "type": "integer"
+                                  },
+                                  "medianIntervalSeconds": {
+                                    "maximum": 9007199254740991,
+                                    "minimum": 0,
+                                    "type": "integer"
+                                  },
+                                  "shortestIntervalSeconds": {
+                                    "maximum": 9007199254740991,
+                                    "minimum": 0,
+                                    "type": "integer"
+                                  }
+                                },
+                                "required": [
+                                  "basis",
+                                  "medianIntervalSeconds",
+                                  "meanIntervalSeconds",
+                                  "shortestIntervalSeconds",
+                                  "longestIntervalSeconds"
+                                ],
+                                "type": "object"
+                              }
+                            ]
+                          },
                           "currency": {
                             "pattern": "^[A-Z]{3}$",
                             "type": "string"
@@ -653,6 +705,62 @@
                             "maximum": 9007199254740991,
                             "minimum": 0,
                             "type": "integer"
+                          },
+                          "unitPrice": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "firstCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "lastCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "maxCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "measuredLineCount": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "minCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "ordinaryLineCount": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "promotionalLineCount": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "unstatedPromotionLineCount": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "firstCents",
+                              "lastCents",
+                              "minCents",
+                              "maxCents",
+                              "promotionalLineCount",
+                              "ordinaryLineCount",
+                              "unstatedPromotionLineCount",
+                              "measuredLineCount"
+                            ],
+                            "type": "object"
                           }
                         },
                         "required": [
@@ -665,6 +773,8 @@
                           "lastPurchasedAt",
                           "landedCostCents",
                           "refundedCents",
+                          "cadence",
+                          "unitPrice",
                           "merchants"
                         ],
                         "type": "object"
@@ -700,7 +810,7 @@
             "description": "400"
           }
         },
-        "summary": "Repeat purchases per product, each group carrying the identity basis it was formed on",
+        "summary": "Repeat purchases per product — cadence, unit-price history, and the identity basis each group was formed on",
         "tags": ["analytics"]
       }
     },

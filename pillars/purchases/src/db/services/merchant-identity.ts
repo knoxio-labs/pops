@@ -5,6 +5,7 @@
  * this rule is a second answer to "is a matching label the same merchant" —
  * and the two would disagree the first time one of them was corrected.
  */
+import { isNewer, orderRank, type OrderRank } from './order-rank.js';
 import { tupleKey } from './tuple-key.js';
 
 /**
@@ -42,7 +43,7 @@ export type MerchantIdentity =
  */
 export interface LabelledMerchant {
   readonly identity: MerchantIdentity;
-  readonly labelRank: string;
+  readonly labelRank: OrderRank;
 }
 
 /**
@@ -74,9 +75,13 @@ export function identifyMerchant(
   };
 }
 
-/** Ranks an order's claim to supply a group's label: newest wins, id breaks ties. */
-export function merchantLabelRank(orderedAt: string, purchaseId: string): string {
-  return tupleKey(orderedAt, purchaseId);
+/**
+ * Ranks an order's claim to supply a group's label: newest wins, id breaks
+ * ties. The instant rather than the timestamp text, so an order stamped in
+ * a `+HH:MM` offset does not overtake a later one stamped in `Z`.
+ */
+export function merchantLabelRank(orderedAt: string, purchaseId: string): OrderRank {
+  return orderRank(orderedAt, purchaseId);
 }
 
 /** A stable ordering for merchant identities, so equal data always serialises equally. */
@@ -104,7 +109,9 @@ export function withNewerLabel(
   candidate: LabelledMerchant
 ): LabelledMerchant {
   if (current.identity.resolution !== 'entity' || candidate.identity.name === null) return current;
-  if (current.identity.name !== null && candidate.labelRank <= current.labelRank) return current;
+  if (current.identity.name !== null && !isNewer(candidate.labelRank, current.labelRank)) {
+    return current;
+  }
 
   return {
     identity: { ...current.identity, name: candidate.identity.name },

@@ -66,10 +66,12 @@ export {
 
 export {
   rankProductPurchases,
+  type ProductCadence,
   type ProductIdentityCoverage,
   type ProductLeaderboard,
   type ProductLeaderboardFilter,
   type ProductPurchases,
+  type ProductUnitPrice,
 } from './services/product-leaderboard.js';
 
 export {

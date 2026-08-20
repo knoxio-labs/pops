@@ -186,6 +186,103 @@ export const ProductIdentitySchema = z.discriminatedUnion('basis', [
 ]);
 
 /**
+ * How often a product comes back.
+ *
+ * A union rather than four nullable numbers, for the reason
+ * {@link ProductIdentitySchema} is one: a product bought once has no gap
+ * between purchases, and every number that could stand in for one is read
+ * as a claim — a zero says "bought again immediately", and a null beside
+ * three real figures invites a consumer to render an empty cadence as if it
+ * were a slow one.
+ *
+ * Measured between **distinct orders**, never lines: two bags of the same
+ * coffee in one basket are one purchase, and counting them twice would
+ * report a cadence of zero for a shopper who bought ahead.
+ *
+ * Seconds because timestamps are instants and seconds is the largest unit
+ * that loses nothing about a gap measured in weeks. Rounding to whole days
+ * in the payload would print 6.6 and 7.4 as the same number; how to render
+ * it is the consumer's decision, taken from an exact figure.
+ *
+ * Nothing here is relative to now. "Due for a re-buy" needs a clock, and a
+ * read that consulted one would answer differently to two calls a minute
+ * apart; `lastPurchasedAt` and the median are what a consumer needs to
+ * decide it against its own.
+ */
+export const ProductCadenceSchema = z.discriminatedUnion('basis', [
+  z.object({ basis: z.literal('single-purchase') }),
+  z.object({
+    basis: z.literal('intervals'),
+    /**
+     * The middle gap between consecutive purchases, and the figure to lead
+     * with: a bursty history's mean describes a rhythm that never happened.
+     */
+    medianIntervalSeconds: z.int().min(0),
+    /** The arithmetic mean. Its distance from the median is how bursty the history is. */
+    meanIntervalSeconds: z.int().min(0),
+    shortestIntervalSeconds: z.int().min(0),
+    longestIntervalSeconds: z.int().min(0),
+  }),
+]);
+
+/**
+ * What one unit of this product has cost, each time it was bought.
+ *
+ * `purchase_items.unit_price_cents` — the merchant's price for one — and
+ * deliberately **not** the landed cost. Allocated shipping and adjustment
+ * are shares of an order-level figure spread across that order's lines, so
+ * the same product bought alone and bought inside a twenty-line order
+ * carries wildly different allocations; a per-unit series built on landed
+ * cost moves with the shape of the basket and reports a drift that never
+ * happened.
+ *
+ * Four observations and no verdict. `firstCents` to `lastCents` is the
+ * drift; `minCents` and `maxCents` say whether those two ends represent it.
+ * A single percentage would be the one number a consumer renders, and it
+ * would hide every case where the ends are not representative — a product
+ * whose last purchase happened to be on special reads as a permanent price
+ * cut.
+ *
+ * The counts are what say whether the observations are comparable at all,
+ * and each is a fact off a column rather than an inference.
+ */
+export const ProductUnitPriceSchema = z.object({
+  /** The earliest line's unit price, ordered by the parsed order instant. */
+  firstCents: CentsSchema,
+  /** The latest line's unit price, ordered by the parsed order instant. */
+  lastCents: CentsSchema,
+  minCents: CentsSchema,
+  maxCents: CentsSchema,
+  /** Lines the merchant marked as sold at a promotional price. */
+  promotionalLineCount: z.int().min(0),
+  /** Lines the merchant marked as sold at its ordinary price. */
+  ordinaryLineCount: z.int().min(0),
+  /**
+   * Lines whose merchant stated nothing either way — every line from every
+   * shipped source but the Woolworths receipt. Its own count rather than
+   * folded into the ordinary one, on the three-number rule the merchant
+   * roll-up's residual follows: "not marked as a special" and "nobody said"
+   * are what separate a price series from an unknown one, and a two-way
+   * split would present the second as the first.
+   */
+  unstatedPromotionLineCount: z.int().min(0),
+  /**
+   * Lines priced by measure — `0.202 kg NET @ $2.90/kg`, which fruit, veg
+   * and the deli counter all are. Such a line carries a quantity of 1 and a
+   * unit price equal to what that weight cost, so its "unit price" is a
+   * function of what went on the scale: 0.5 kg of bananas against 1.2 kg
+   * reads as a 140% rise. Where this is non-zero the figures above are
+   * partly weights and the drift is partly a change in how much was bought.
+   *
+   * Recognised from the merchant prose the ingest adapters store verbatim,
+   * which is best-effort in one direction only: a note this misses leaves
+   * the caveat unstated, never a figure overstated, because nothing derives
+   * a price from it.
+   */
+  measuredLineCount: z.int().min(0),
+});
+
+/**
  * One product's purchase history in one currency.
  *
  * `orderCount` is the leaderboard's own figure — distinct orders, so it does
@@ -215,6 +312,10 @@ export const ProductPurchasesSchema = z.object({
    * mistaken for each other.
    */
   refundedCents: NonNegativeCentsSchema,
+  /** How often it comes back. See {@link ProductCadenceSchema}. */
+  cadence: ProductCadenceSchema,
+  /** What one of it has cost each time. See {@link ProductUnitPriceSchema}. */
+  unitPrice: ProductUnitPriceSchema,
   /**
    * Every merchant this product was bought from, in this currency, which is
    * also the group's scope. More than one only under a source that is a
@@ -302,6 +403,6 @@ export const purchasesAnalyticsContract = c.router({
       400: ErrorBodySchema,
     },
     summary:
-      'Repeat purchases per product, each group carrying the identity basis it was formed on',
+      'Repeat purchases per product — cadence, unit-price history, and the identity basis each group was formed on',
   },
 });

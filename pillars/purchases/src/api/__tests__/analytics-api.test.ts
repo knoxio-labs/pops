@@ -195,6 +195,76 @@ describe('GET /analytics/product-leaderboard', () => {
     expect(entry.merchants).toEqual([{ resolution: 'name', entityId: null, name: 'Amazon' }]);
   });
 
+  it('carries the cadence and the unit-price history through serialisation', async () => {
+    for (const [day, unitPriceCents] of [
+      ['01', 900],
+      ['08', 700],
+      ['29', 1100],
+    ] as const) {
+      createPurchase(
+        opened.db,
+        order({
+          checksum: `pods-${day}`,
+          orderedAt: `2026-01-${day}T00:00:00Z`,
+          items: [
+            {
+              name: 'Coffee Pods',
+              sku: { value: 'B00PODS', scheme: 'merchant' },
+              unitPriceCents,
+              lineTotalCents: unitPriceCents,
+              promotionalPrice: unitPriceCents === 700,
+            },
+          ],
+        })
+      );
+    }
+
+    const res = await request(app).get('/analytics/product-leaderboard');
+
+    expect(res.status).toBe(200);
+    const [entry] = res.body.products;
+    expect(entry.cadence).toEqual({
+      basis: 'intervals',
+      medianIntervalSeconds: 14 * 86_400,
+      meanIntervalSeconds: 14 * 86_400,
+      shortestIntervalSeconds: 7 * 86_400,
+      longestIntervalSeconds: 21 * 86_400,
+    });
+    expect(entry.unitPrice).toEqual({
+      firstCents: 900,
+      lastCents: 1100,
+      minCents: 700,
+      maxCents: 1100,
+      promotionalLineCount: 1,
+      ordinaryLineCount: 2,
+      unstatedPromotionLineCount: 0,
+      measuredLineCount: 0,
+    });
+  });
+
+  it('sends no interval figures for a product bought once', async () => {
+    createPurchase(
+      opened.db,
+      order({
+        checksum: 'once',
+        items: [
+          {
+            name: 'Kettle',
+            sku: { value: 'B00KETTLE', scheme: 'merchant' },
+            unitPriceCents: 8900,
+            lineTotalCents: 8900,
+          },
+        ],
+      })
+    );
+
+    const res = await request(app).get('/analytics/product-leaderboard');
+
+    // A zero on the wire is read as "bought again immediately", which is the
+    // opposite of what one purchase means.
+    expect(res.body.products[0].cadence).toEqual({ basis: 'single-purchase' });
+  });
+
   it('states how much of the scope rests on printed names rather than identifiers', async () => {
     createPurchase(
       opened.db,
