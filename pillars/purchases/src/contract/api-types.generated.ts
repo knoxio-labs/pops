@@ -262,6 +262,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/reconcile/links/batch': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Which of these finance transactions an order explains, confirmed or derived */
+    post: operations['reconcile.linksBatch'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/reconcile/queue': {
     parameters: {
       query?: never;
@@ -2178,6 +2195,40 @@ export interface operations {
               };
             }[];
             transactionUri: string;
+          };
+        };
+      };
+    };
+  };
+  'reconcile.linksBatch': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          transactionUris: string[];
+        };
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            transactions: {
+              confirmedChargeCount: number;
+              derivedChargeCount: number;
+              purchaseCount: number;
+              transactionUri: string;
+            }[];
           };
         };
       };

@@ -23,6 +23,7 @@ import {
 export {
   CentsSchema,
   CurrencySchema,
+  FinanceTransactionUriSchema,
   IsoTimestampSchema,
   NonNegativeCentsSchema,
   PopsUriSchema,

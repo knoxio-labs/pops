@@ -64,9 +64,11 @@ query-cache handler that pattern-matches fetch's phrasing into a "check your
 connection" toast across the whole app, which a sibling pillar's outage has not
 earned.
 
-## What this does not do
+## How a reader gets here
 
-There is no indicator on the transactions table itself, so a purchase-backed
-row looks like any other until it is opened. The reverse lookup takes one
-transaction URI, and drawing that column over a 50-row page would mean 50
-cross-pillar requests; a batched lookup is POPS-2360.
+Two ways now. The row's action menu, and the purchase indicator in
+`../purchase-link/`, which marks the rows an order explains so this panel is
+findable without already suspecting it exists. That column reads the batched
+form of the same lookup — `POST /reconcile/links/batch`, one request per 500
+rows rather than one per row — and draws the same confirmed-versus-derived
+distinction this panel does, at the coarser grain a row can carry.

@@ -31,6 +31,7 @@ import {
   ProductLeaderboardSchema,
 } from '../../contract/rest-analytics.js';
 import { ReceiptOutcomeSchema } from '../../contract/rest-receipts.js';
+import { TransactionLinksBatchSchema } from '../../contract/rest-reconcile-batch.js';
 import {
   QueueEntrySchema,
   SweepOutcomeSchema,
@@ -418,6 +419,33 @@ describe('reconcile responses', () => {
       .expect(200);
     expectConforms(TransactionLinksSchema, empty.body, 'GET /reconcile/links (empty)');
     expect(empty.body.purchases).toEqual([]);
+  });
+
+  it('conform for the batched reverse lookup, with a linked and an unlinked member', async () => {
+    // The plural form publishes counts rather than the nested orders, so it
+    // shares none of the singular route's schema and none of its coverage.
+    // Both members are sent in one request because the response's shape only
+    // differs between them by a row's presence, which is exactly the sort of
+    // omission a per-route assertion on a happy path never sees.
+    await requestOn(app).post('/purchases').send(RICH_ORDER);
+    await runSweep({
+      db: opened.db,
+      finance: financeReturning({ id: 'conformance-1', amountCents: 4499, date: '2026-02-03' }),
+      defaultWindowDays: 21,
+    });
+
+    const batched = await requestOn(app)
+      .post('/reconcile/links/batch')
+      .send({
+        transactionUris: [
+          'pops://finance/transaction/conformance-1',
+          'pops://finance/transaction/nothing',
+        ],
+      })
+      .expect(200);
+
+    expectConforms(TransactionLinksBatchSchema, batched.body, 'POST /reconcile/links/batch');
+    expect(batched.body.transactions).toHaveLength(1);
   });
 
   it('conform for both sweep outcomes', async () => {

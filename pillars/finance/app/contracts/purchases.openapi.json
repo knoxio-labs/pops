@@ -5942,6 +5942,87 @@
         "tags": ["reconcile"]
       }
     },
+    "/reconcile/links/batch": {
+      "post": {
+        "operationId": "reconcile.linksBatch",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "transactionUris": {
+                    "items": {
+                      "pattern": "^pops:\\/\\/finance\\/transaction\\/[^/\\s]+$",
+                      "type": "string"
+                    },
+                    "maxItems": 500,
+                    "minItems": 1,
+                    "type": "array"
+                  }
+                },
+                "required": ["transactionUris"],
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "transactions": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "confirmedChargeCount": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "derivedChargeCount": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "purchaseCount": {
+                            "maximum": 9007199254740991,
+                            "minimum": 1,
+                            "type": "integer"
+                          },
+                          "transactionUri": {
+                            "pattern": "^pops:\\/\\/finance\\/transaction\\/[^/\\s]+$",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "transactionUri",
+                          "purchaseCount",
+                          "confirmedChargeCount",
+                          "derivedChargeCount"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": ["transactions"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          }
+        },
+        "summary": "Which of these finance transactions an order explains, confirmed or derived",
+        "tags": ["reconcile"]
+      }
+    },
     "/reconcile/queue": {
       "get": {
         "operationId": "reconcile.queue",

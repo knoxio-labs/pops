@@ -4,6 +4,7 @@ export {
   ChargeOriginSchema,
   CurrencySchema,
   DocumentKindSchema,
+  FinanceTransactionUriSchema,
   IngestMethodSchema,
   IsoTimestampSchema,
   ItemKindClassificationSchema,

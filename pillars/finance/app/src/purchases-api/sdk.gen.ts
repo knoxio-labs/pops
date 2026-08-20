@@ -54,6 +54,8 @@ import type {
   ReconcileConfirmData,
   ReconcileConfirmErrors,
   ReconcileConfirmResponses,
+  ReconcileLinksBatchData,
+  ReconcileLinksBatchResponses,
   ReconcileLinksData,
   ReconcileLinksResponses,
   ReconcileQueueData,
@@ -380,6 +382,21 @@ export const reconcileLinks = <ThrowOnError extends boolean = false>(
   (options.client ?? client).get<ReconcileLinksResponses, unknown, ThrowOnError>({
     url: '/reconcile/links',
     ...options,
+  });
+
+/**
+ * Which of these finance transactions an order explains, confirmed or derived
+ */
+export const reconcileLinksBatch = <ThrowOnError extends boolean = false>(
+  options?: Options<ReconcileLinksBatchData, ThrowOnError>
+): RequestResult<ReconcileLinksBatchResponses, unknown, ThrowOnError> =>
+  (options?.client ?? client).post<ReconcileLinksBatchResponses, unknown, ThrowOnError>({
+    url: '/reconcile/links/batch',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
   });
 
 /**
