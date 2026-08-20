@@ -144,7 +144,9 @@ internal struct TransactionDetailRenderingTests {
     /// measuring the platform rather than the screen. Compiled out on the host
     /// rather than skipped, so it cannot report a pass it never made.
     #if os(iOS)
-        @Test("the record still renders at the largest accessibility text size")
+        @Test(
+            "the record still renders at the largest accessibility text size",
+            .requiresCompiledColorCatalog)
         func survivesAccessibilityTextSizes() throws {
             let stock = try #require(Self.render(Self.card(TransactionDetail.fake())))
             let huge = try #require(

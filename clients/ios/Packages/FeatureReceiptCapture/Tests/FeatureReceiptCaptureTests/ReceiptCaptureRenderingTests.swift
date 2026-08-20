@@ -128,8 +128,13 @@ internal struct ReceiptCaptureRenderingTests {
         #expect(light != dark, "the no-camera screen renders identically in both colour schemes")
     }
 
+    /// A problem is an extra sentence, and an extra sentence moves the
+    /// layout whether or not the copy had a colour to be drawn in — so unlike
+    /// its neighbours this one has a real answer on the uncompiled-catalogue
+    /// lane and says so rather than staying silent about it.
     @Test(
         "every capture problem reaches the screen",
+        .comparisonSurvivesAnUncompiledCatalog,
         arguments: [
             ReceiptCaptureProblem.cameraFailed, .noPages, .unpreparedPages, .tooManyPages(9),
         ])

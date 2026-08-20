@@ -120,7 +120,9 @@ internal struct ReceiptResultRenderingTests {
     /// The size the layout has to survive. iOS only, and the conditional is
     /// the honest kind: macOS has no Dynamic Type.
     #if os(iOS)
-        @Test("a needs-review card still renders at the largest accessibility text size")
+        @Test(
+            "a needs-review card still renders at the largest accessibility text size",
+            .requiresCompiledColorCatalog)
         func survivesAccessibilityTextSizes() throws {
             let outcome = ReceiptOutcome.needsReview(
                 receiptCount: 1, failures: [.fake()], extracted: .fake())
