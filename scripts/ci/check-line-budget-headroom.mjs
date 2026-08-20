@@ -493,29 +493,98 @@ function tryGit(args, cwd) {
 }
 
 /**
- * A file's content at a ref, distinguishing "not there" from "git refused to
- * say" — the two the obvious `try { git show } catch { undefined }` collapses
- * into one, which is how a file the guard cannot read becomes a file with
- * nothing to report (ADR-045, no bare `catch` between finding the subject and
- * reporting on it).
+ * A blob at a ref:path the caller has not yet fetched.
  *
- * @param {string} ref
- * @param {string} path
- * @param {string} cwd
- * @returns {{ kind: 'blob', text: string } | { kind: 'absent' } | { kind: 'error', message: string }}
+ * @typedef {{ ref: string, path: string }} BlobQuery
  */
-function readBlob(ref, path, cwd) {
-  const type = tryGit(['cat-file', '-t', `${ref}:${path}`], cwd);
-  if (type === undefined) return { kind: 'absent' };
-  if (type !== 'blob') return { kind: 'absent' }; // a directory, or a submodule gitlink — no lines to budget.
+
+/**
+ * Many files' content at many refs, distinguishing "not there" from "git
+ * refused to say" — the two the obvious `try { git show } catch { undefined
+ * }` collapses into one, which is how a file the guard cannot read becomes a
+ * file with nothing to report (ADR-045, no bare `catch` between finding the
+ * subject and reporting on it) — answered in one `git cat-file --batch`
+ * round trip rather than a `cat-file -t` plus a `show` per query: this guard
+ * reads the same file at up to three refs (HEAD, the target's tip, and the
+ * merge-base), and a subprocess per ref per file is most of its cost.
+ * `--batch` also removes the old two-call race — a type check that says
+ * "blob" cannot be followed by a separate read that fails, because there is
+ * no separate read.
+ *
+ * @param {BlobQuery[]} queries
+ * @param {string} cwd
+ * @returns {Map<string, { kind: 'blob', text: string } | { kind: 'absent' } | { kind: 'error', message: string }>}
+ *   keyed on `${ref}:${path}`
+ */
+function readBlobsBatch(queries, cwd) {
+  /** @type {Map<string, { kind: 'blob', text: string } | { kind: 'absent' } | { kind: 'error', message: string }>} */
+  const results = new Map();
+  if (queries.length === 0) return results;
+
+  const keyOf = (/** @type {BlobQuery} */ q) => `${q.ref}:${q.path}`;
+  const input = queries.map(keyOf).join('\n') + '\n';
+
+  /** @type {Buffer} */
+  let output;
   try {
-    return { kind: 'blob', text: git(['show', `${ref}:${path}`], cwd) };
+    output = execFileSync('git', ['cat-file', '--batch'], {
+      cwd,
+      input,
+      env: gitEnv(),
+      stdio: ['pipe', 'pipe', 'pipe'],
+      maxBuffer: 256 * 1024 * 1024,
+    });
   } catch (error) {
-    return {
-      kind: 'error',
-      message: error instanceof Error ? error.message.split('\n')[0] : String(error),
-    };
+    // `--batch` itself only fails to start at all (no git, a bad cwd) — a
+    // per-query miss is reported in its output, not a non-zero exit. A spawn
+    // failure here means every query in this batch is unanswerable.
+    const message = error instanceof Error ? error.message.split('\n')[0] : String(error);
+    for (const q of queries) results.set(keyOf(q), { kind: 'error', message });
+    return results;
   }
+
+  const NEWLINE = 0x0a;
+  let offset = 0;
+  for (const q of queries) {
+    const key = keyOf(q);
+    const headerEnd = output.indexOf(NEWLINE, offset);
+    if (headerEnd === -1) {
+      results.set(key, { kind: 'error', message: '`git cat-file --batch` output ended early' });
+      break;
+    }
+    const header = output.toString('utf8', offset, headerEnd);
+    offset = headerEnd + 1;
+
+    // Unresolvable for any reason — no such ref, no such path at that ref,
+    // an ambiguous name — `--batch` reports all of them the same way, which
+    // is the same "not there" this guard already gave an unresolvable
+    // `cat-file -t` before switching to `--batch`.
+    if (header.endsWith(' missing')) {
+      results.set(key, { kind: 'absent' });
+      continue;
+    }
+
+    const [, type, sizeText] = header.split(' ');
+    const size = Number(sizeText);
+    if (!Number.isInteger(size) || size < 0) {
+      results.set(key, {
+        kind: 'error',
+        message: `\`git cat-file --batch\` header did not parse: "${header}"`,
+      });
+      break;
+    }
+    if (type !== 'blob') {
+      // A directory (tree), a submodule (commit), or a tag — no lines to
+      // budget, same as the type check `cat-file -t` used to make on its own.
+      offset += size + 1; // content, then the trailing newline --batch appends
+      results.set(key, { kind: 'absent' });
+      continue;
+    }
+
+    results.set(key, { kind: 'blob', text: output.toString('utf8', offset, offset + size) });
+    offset += size + 1;
+  }
+  return results;
 }
 
 /**
@@ -675,15 +744,29 @@ export function evaluate({ cwd, baseRef, headroom }) {
   /** @type {string[]} */
   const unreadable = [];
 
+  // Every candidate blob this loop could need, fetched in one round trip:
+  // up to three refs (HEAD, the target's tip, the merge-base) per touched
+  // file, whether or not a given file turns out to need all three.
+  const blobs = readBlobsBatch(
+    changed.flatMap((file) => [
+      { ref: 'HEAD', path: file },
+      { ref: resolvedBase, path: file },
+      { ref: mergeBase, path: file },
+    ]),
+    cwd
+  );
+  const blobAt = (/** @type {string} */ ref, /** @type {string} */ file) =>
+    blobs.get(`${ref}:${file}`) ?? { kind: 'error', message: 'not fetched' };
+
   for (const file of changed) {
-    const branchHead = readBlob('HEAD', file, cwd);
+    const branchHead = blobAt('HEAD', file);
     if (branchHead.kind === 'error') {
       unreadable.push(`${file} at HEAD (${branchHead.message})`);
       continue;
     }
     if (branchHead.kind === 'absent') continue; // deleted in a later commit on this branch — nothing to budget.
 
-    const baseHead = readBlob(resolvedBase, file, cwd);
+    const baseHead = blobAt(resolvedBase, file);
     if (baseHead.kind === 'error') {
       unreadable.push(`${file} at ${resolvedBase} (${baseHead.message})`);
       continue;
@@ -708,7 +791,7 @@ export function evaluate({ cwd, baseRef, headroom }) {
       continue;
     }
 
-    const branchBase = readBlob(mergeBase, file, cwd);
+    const branchBase = blobAt(mergeBase, file);
     if (branchBase.kind === 'error') {
       unreadable.push(`${file} at ${mergeBase} (${branchBase.message})`);
       continue;
@@ -967,19 +1050,16 @@ function selfTest() {
     // by either branch. Both later branches fork from this one commit, so a
     // merge-base lookup always finds both shared files already there — the
     // scenario this guard exists for is two branches that each only APPEND
-    // to a file that predates both of them.
-    writeAndCommit(
+    // to a file that predates both of them. Landed as one commit: nothing
+    // observes the state between these three files existing.
+    writeManyAndCommit(
       dir,
-      'shared.ts',
-      `${bodyLines(200)}\n`,
-      'base: shared.ts at exactly 200 lines, shared2.ts at 194'
-    );
-    writeAndCommit(dir, 'shared2.ts', `${bodyLines(194)}\n`, 'base: shared2.ts at 194 lines');
-    writeAndCommit(
-      dir,
-      'unrelated.ts',
-      'const other = 1;\n',
-      'base: a file neither branch will touch'
+      [
+        { file: 'shared.ts', content: `${bodyLines(200)}\n` },
+        { file: 'shared2.ts', content: `${bodyLines(194)}\n` },
+        { file: 'unrelated.ts', content: 'const other = 1;\n' },
+      ],
+      'base: shared.ts at 200 lines, shared2.ts at 194, unrelated.ts untouched'
     );
     exec('git', ['checkout', '-q', '-b', 'feature'], { cwd: dir, env: gitEnv() });
     writeAndCommit(
@@ -1072,27 +1152,23 @@ function selfTest() {
     checks['an unresolvable base ref is fatal, not a silent skip'] =
       noBase.fatal === true && noBase.verdicts.length === 0;
 
-    // A path `git diff --name-only` C-quotes. Quoted, it matches neither the
-    // linted-extension test nor a later `git show`, and drops out unreported.
-    writeAndCommit(
+    // Three awkward-path cases landed as one commit — no `evaluate` call
+    // observes them individually, only the combined result below.
+    //
+    // - café-service.ts: a path `git diff --name-only` C-quotes. Quoted, it
+    //   matches neither the linted-extension test nor a later `git show`,
+    //   and drops out unreported.
+    // - db-test-utils.ts: a file oxlint DOES cap despite ending in
+    //   `test-utils.ts`.
+    // - vite.config.ts: a file oxlint never lints at all — `ignorePatterns`.
+    writeManyAndCommit(
       moved,
-      'café-service.ts',
-      `${bodyLines(260, 'c')}\n`,
-      'feature: an over-budget file whose name git quotes'
-    );
-    // A file oxlint DOES cap despite ending in `test-utils.ts`.
-    writeAndCommit(
-      moved,
-      'db-test-utils.ts',
-      `${bodyLines(260, 'd')}\n`,
-      'feature: over budget, and not the test-utils.ts oxlint exempts'
-    );
-    // A file oxlint never lints at all — `ignorePatterns`.
-    writeAndCommit(
-      moved,
-      'vite.config.ts',
-      `${bodyLines(260, 'v')}\n`,
-      'feature: over budget but ignored by oxlint entirely'
+      [
+        { file: 'café-service.ts', content: `${bodyLines(260, 'c')}\n` },
+        { file: 'db-test-utils.ts', content: `${bodyLines(260, 'd')}\n` },
+        { file: 'vite.config.ts', content: `${bodyLines(260, 'v')}\n` },
+      ],
+      'feature: three awkward-path over-budget files'
     );
 
     const awkward = evaluate({ cwd: moved, baseRef: 'main', headroom: DEFAULT_HEADROOM });
@@ -1129,9 +1205,25 @@ function selfTest() {
 function tmpRepo() {
   const dir = mkdtempSync(join(tmpdir(), 'line-budget-'));
   execFileSync('git', ['init', '--initial-branch=main', '-q'], { cwd: dir, env: gitEnv() });
-  execFileSync('git', ['config', 'user.email', 'test@example.com'], { cwd: dir, env: gitEnv() });
-  execFileSync('git', ['config', 'user.name', 'Test'], { cwd: dir, env: gitEnv() });
   return dir;
+}
+
+/**
+ * Author/committer identity for throwaway self-test repos, supplied as env
+ * vars rather than two `git config` invocations per repo — `git commit`
+ * reads these directly, so this is the same identity for a third of the
+ * subprocess cost.
+ *
+ * @returns {Record<string, string | undefined>}
+ */
+function fixtureGitEnv() {
+  return {
+    ...gitEnv(),
+    GIT_AUTHOR_NAME: 'Test',
+    GIT_AUTHOR_EMAIL: 'test@example.com',
+    GIT_COMMITTER_NAME: 'Test',
+    GIT_COMMITTER_EMAIL: 'test@example.com',
+  };
 }
 
 /**
@@ -1141,9 +1233,27 @@ function tmpRepo() {
  * @param {string} message
  */
 function writeAndCommit(dir, file, content, message) {
-  writeFileSync(join(dir, file), content);
-  execFileSync('git', ['add', file], { cwd: dir, env: gitEnv() });
-  execFileSync('git', ['commit', '-q', '-m', message], { cwd: dir, env: gitEnv() });
+  writeManyAndCommit(dir, [{ file, content }], message);
+}
+
+/**
+ * Writes several files and commits them together in one `add` and one
+ * `commit` — half the subprocess cost of committing them one at a time, and
+ * behaviourally identical for this guard: `evaluate` reads tree state at
+ * named commits, never the history that built them, so fixture setup that
+ * observes no `evaluate` call in between is free to land as one commit.
+ *
+ * @param {string} dir
+ * @param {{ file: string, content: string }[]} files
+ * @param {string} message
+ */
+function writeManyAndCommit(dir, files, message) {
+  for (const { file, content } of files) {
+    writeFileSync(join(dir, file), content);
+  }
+  const env = fixtureGitEnv();
+  execFileSync('git', ['add', ...files.map((f) => f.file)], { cwd: dir, env });
+  execFileSync('git', ['commit', '-q', '-m', message], { cwd: dir, env });
 }
 
 function main() {
