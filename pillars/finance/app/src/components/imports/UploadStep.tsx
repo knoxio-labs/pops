@@ -1,63 +1,36 @@
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Button, RadioInput } from '@pops/ui';
+import { RadioInput } from '@pops/ui';
 
 import { useImportStore } from '../../store/importStore';
-import { bankDialect } from './bank-dialect';
-import { mergeParsedFiles } from './csv-merge';
-import { parseAllFiles } from './csv-parse';
 import { FileUpload } from './FileUpload';
+import { uploadRoute } from './pdf/anz-pdf-import';
+import { PdfStatementFindings } from './pdf/PdfStatementFindings';
+import { BANK_ACCEPTED_TYPES, BANK_OPTIONS, bankTakesPdf } from './upload-step/bank-upload-config';
+import { BankExportHelp, UploadFooter, UploadStepHeader } from './upload-step/UploadStepChrome';
+import { useCsvStage } from './upload-step/useCsvStage';
+import { usePdfStage } from './upload-step/usePdfStage';
 
 import type { BankType } from '../../store/import-store-types';
 
-function UploadFooter({
-  onNext,
-  disabled,
-  isProcessing,
-}: {
-  onNext: () => void;
-  disabled: boolean;
-  isProcessing: boolean;
-}) {
-  return (
-    <div className="flex justify-end gap-3">
-      <Button onClick={onNext} disabled={disabled}>
-        {isProcessing ? 'Processing...' : 'Next'}
-      </Button>
-    </div>
-  );
-}
-
-const BANK_OPTIONS = [
-  { value: 'ANZ', label: 'ANZ', description: 'Everyday, Savings' },
-  { value: 'ANZ Credit Card', label: 'ANZ Credit Card', description: 'Frequent Flyer, Rewards' },
-  { value: 'Amex', label: 'Amex', description: 'American Express' },
-  { value: 'ING', label: 'ING', description: 'Savings, Everyday' },
-  { value: 'Up', label: 'Up', description: 'Everyday, Round Up' },
-] satisfies Array<{ value: BankType; label: string; description: string }>;
-
-const BANK_HELP: Record<BankType, string> = {
-  ANZ: 'Log in to ANZ Internet Banking, open your account, and export transactions as CSV.',
-  'ANZ Credit Card':
-    'Log in to ANZ Internet Banking, open your credit card, and export transactions as CSV. The export has no header row — that is expected.',
-  Amex: 'Log in to your Amex online portal and download your transactions as a CSV export.',
-  ING: 'Log in to ING Banking Online, open your account, and export transactions as CSV.',
-  Up: 'In the Up app, go to your account, tap Export, and choose CSV format.',
-};
+const MIXED_UPLOAD_ERROR =
+  'Select either CSV exports or PDF statements, not both. They are read differently and a period covered by both would import twice.';
 
 function useUploadStep() {
-  const { files, rows, bankType, setFiles, setBankType, setHeaders, setRows, nextStep } =
-    useImportStore();
+  const { files, rows, bankType, setFiles, setBankType, nextStep } = useImportStore();
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const pdf = usePdfStage(setError, setIsProcessing);
+  const runCsv = useCsvStage(files, bankType, setError, setIsProcessing);
 
   const handleFilesSelect = useCallback(
     (selectedFiles: File[]) => {
       setFiles(selectedFiles);
       setError(null);
+      pdf.clear();
     },
-    [setFiles]
+    [setFiles, pdf]
   );
 
   const handleBankChange = useCallback(
@@ -68,35 +41,21 @@ function useUploadStep() {
   );
 
   const handleNext = useCallback(async () => {
-    if (files.length === 0) {
+    const route = uploadRoute(files);
+    if (route === 'empty') {
       // A resumed run has parsed rows but no re-attached File handles; advance
       // without re-parsing instead of demanding a re-upload (which would cascade
       // a downstream reset over the restored work).
-      if (rows.length > 0) {
-        nextStep();
-        return;
-      }
-      setError('Please select at least one file');
+      if (rows.length > 0) nextStep();
+      else setError('Please select at least one file');
       return;
     }
-    setIsProcessing(true);
-    setError(null);
-    const { error: parseError, parsed } = await parseAllFiles(files, bankDialect(bankType));
-    if (parseError) {
-      setIsProcessing(false);
-      setError(parseError);
+    if (route === 'mixed') {
+      setError(MIXED_UPLOAD_ERROR);
       return;
     }
-    const merged = mergeParsedFiles(parsed);
-    setIsProcessing(false);
-    if (!merged.ok) {
-      setError(merged.error ?? 'Unknown error');
-      return;
-    }
-    setHeaders(merged.headers);
-    setRows(merged.rows);
-    nextStep();
-  }, [files, rows, bankType, setHeaders, setRows, nextStep]);
+    await (route === 'pdf' ? pdf.run(files) : runCsv());
+  }, [files, rows, nextStep, pdf, runCsv]);
 
   return {
     files,
@@ -104,6 +63,7 @@ function useUploadStep() {
     bankType,
     isProcessing,
     error,
+    pdfStatement: pdf.statement,
     handleFilesSelect,
     handleBankChange,
     handleNext,
@@ -117,6 +77,7 @@ export function UploadStep() {
     bankType,
     isProcessing,
     error,
+    pdfStatement,
     handleFilesSelect,
     handleBankChange,
     handleNext,
@@ -125,13 +86,7 @@ export function UploadStep() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-semibold mb-2">Upload CSV</h2>
-        <p className="text-sm text-muted-foreground">
-          Select your bank and upload one or more CSV exports to import transactions. Multiple files
-          are merged into a single import when they share the same columns.
-        </p>
-      </div>
+      <UploadStepHeader takesPdf={bankTakesPdf(bankType)} />
 
       <RadioInput
         label="Bank"
@@ -143,11 +98,13 @@ export function UploadStep() {
 
       <FileUpload
         onFilesSelect={handleFilesSelect}
-        acceptedTypes=".csv"
+        acceptedTypes={BANK_ACCEPTED_TYPES[bankType]}
         maxSizeMB={25}
         maxTotalSizeMB={100}
         initialFiles={files}
       />
+
+      {pdfStatement && <PdfStatementFindings statement={pdfStatement} fileCount={files.length} />}
 
       {files.length === 0 && rows.length > 0 && (
         <div className="bg-info/5 border border-info/20 rounded-lg p-4">
@@ -155,12 +112,7 @@ export function UploadStep() {
         </div>
       )}
 
-      <div className="bg-info/5 border border-info/20 rounded-lg p-4">
-        <h3 className="text-sm font-medium text-info mb-2">
-          How to export from {BANK_OPTIONS.find((b) => b.value === bankType)?.label ?? bankType}
-        </h3>
-        <p className="text-xs text-info">{BANK_HELP[bankType]}</p>
-      </div>
+      <BankExportHelp bankType={bankType} />
 
       {error && (
         <div className="p-4 text-sm text-destructive bg-destructive/10 dark:text-destructive/40 rounded-lg">
@@ -172,6 +124,7 @@ export function UploadStep() {
         onNext={handleNext}
         disabled={(files.length === 0 && rows.length === 0) || isProcessing}
         isProcessing={isProcessing}
+        pdfStatement={pdfStatement}
       />
     </div>
   );

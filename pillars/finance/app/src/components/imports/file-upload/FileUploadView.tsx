@@ -2,6 +2,8 @@ import { FileText, Upload, X } from 'lucide-react';
 
 import { Button, Label } from '@pops/ui';
 
+import { describeAcceptedTypes } from './accepted-types';
+
 export interface DragHandlers {
   isDragging: boolean;
   onDragEnter: (e: React.DragEvent) => void;
@@ -20,6 +22,7 @@ interface DropZoneProps extends DragHandlers {
 
 function DropZone(props: DropZoneProps) {
   const { isDragging, hasError, hasFiles, acceptedTypes, maxSizeMB } = props;
+  const kinds = describeAcceptedTypes(acceptedTypes);
   const borderClass = isDragging ? 'border-info bg-info/5' : 'border-border';
   const errorClass = hasError ? 'border-destructive bg-destructive/5' : '';
   const padding = hasFiles ? 'p-6' : 'p-12';
@@ -39,7 +42,7 @@ function DropZone(props: DropZoneProps) {
           className={`w-12 h-12 mb-4 ${hasError ? 'text-destructive' : 'text-muted-foreground'}`}
         />
         <span className="text-sm font-medium text-foreground mb-1">
-          {hasFiles ? 'Add more CSV files' : 'Drop CSV files here or click to browse'}
+          {hasFiles ? `Add more ${kinds} files` : `Drop ${kinds} files here or click to browse`}
         </span>
         <span className="text-xs text-muted-foreground">
           Maximum file size: {maxSizeMB}MB. Files must share the same columns.
@@ -52,7 +55,7 @@ function DropZone(props: DropZoneProps) {
           onChange={props.onFileInput}
           tabIndex={0}
           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-          aria-label="Upload CSV files"
+          aria-label={`Upload ${kinds} files`}
         />
       </Label>
     </div>
