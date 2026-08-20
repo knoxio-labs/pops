@@ -17,13 +17,15 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { openCoreDb, type OpenedCoreDb } from '../../db/index.js';
 import { createCoreApiApp } from '../app.js';
+import { createTestTransport } from './test-http.js';
 
 import type { ManifestPayload } from '@pops/pillar-sdk';
+
+const { requestOn } = createTestTransport();
 
 let tmpDir: string;
 let coreDb: OpenedCoreDb;
@@ -92,7 +94,7 @@ async function register(
   baseUrl: string,
   manifest: ManifestPayload
 ): Promise<RegisterResponse> {
-  const res = await request(app)
+  const res = await requestOn(app)
     .post('/core.registry.register')
     .send({ pillarId, baseUrl, manifest });
   expect(res.status, JSON.stringify(res.body)).toBe(200);
@@ -110,7 +112,7 @@ interface SnapshotEntry {
 }
 
 async function listSnapshot(): Promise<{ pillars: SnapshotEntry[]; fetchedAt: string }> {
-  const res = await request(app).get('/core.registry.list');
+  const res = await requestOn(app).get('/core.registry.list');
   expect(res.status).toBe(200);
   return res.body as { pillars: SnapshotEntry[]; fetchedAt: string };
 }
@@ -197,7 +199,9 @@ describe('register persistence semantics (observed through the snapshot)', () =>
 
   it('drops a deregistered pillar from the snapshot', async () => {
     await register('finance', 'http://finance-api:3004', financeManifest());
-    const res = await request(app).post('/core.registry.deregister').send({ pillarId: 'finance' });
+    const res = await requestOn(app)
+      .post('/core.registry.deregister')
+      .send({ pillarId: 'finance' });
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({ ok: true, removed: true });
     expect((await listSnapshot()).pillars).toEqual([]);

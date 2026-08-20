@@ -36,6 +36,8 @@ export {
   type TaggedItem,
 } from './services/purchase-reads.js';
 
+export { listPurchaseRows, type PurchaseListRow } from './services/purchase-list-rows.js';
+
 export {
   confirmItemClassification,
   type ConfirmItemInput,

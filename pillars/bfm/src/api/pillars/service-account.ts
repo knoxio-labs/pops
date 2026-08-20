@@ -26,13 +26,19 @@ export const BFM_SERVICE_ACCOUNT_NAME = 'bfm';
  * What the account is granted, and nothing more.
  *
  * One entry per sibling module bfm actually calls: the mobile transactions
- * screens read finance's `transactions.*`, and the receipt upload writes to
- * purchases' `receipt.*`. Every later mobile surface widens this list in its
- * own ticket, so it stays a readable record of what bfm calls rather than a
- * wildcard nobody can audit. Scopes match by dot prefix, so
- * `finance.transactions` authorises `finance.transactions.list` but not
- * `finance.budgets.list`, and `purchases.receipt` authorises the upload but
- * nothing under `purchases.purchase`.
+ * screens read finance's `transactions.*`, the receipt upload writes to
+ * purchases' `receipt.*`, and the mobile purchases screens read purchases'
+ * `purchase.*`. Every later mobile surface widens this list in its own ticket,
+ * so it stays a readable record of what bfm calls rather than a wildcard
+ * nobody can audit. Scopes match by dot prefix, so `finance.transactions`
+ * authorises `finance.transactions.list` but not `finance.budgets.list`, and
+ * `purchases.purchase` authorises reading an order but nothing under
+ * `purchases.source`.
+ *
+ * The two entries under `purchases` are two entries on purpose. Reading an
+ * order and handing over a photograph are different authorities, and the
+ * capability model above them (ADR-048) draws the same line — a device may
+ * hold one without the other.
  *
  * Both producers enforce this (ADR-044): each resolves the presented key
  * against the registry and refuses an operation the grant does not cover, so a
@@ -47,6 +53,7 @@ export const BFM_SERVICE_ACCOUNT_NAME = 'bfm';
  */
 export const BFM_SERVICE_ACCOUNT_SCOPES: readonly string[] = [
   'finance.transactions',
+  'purchases.purchase',
   'purchases.receipt',
 ];
 

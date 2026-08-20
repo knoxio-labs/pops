@@ -30,6 +30,10 @@ const PurchaseDetailPage = lazy(() =>
   import('./pages/PurchaseDetailPage').then((m) => ({ default: m.PurchaseDetailPage }))
 );
 
+const ProductDictionaryPage = lazy(() =>
+  import('./pages/ProductDictionaryPage').then((m) => ({ default: m.ProductDictionaryPage }))
+);
+
 /** Local type mirror for compile-time safety (shell owns the canonical types). */
 interface AppNavConfigShape {
   id: string;
@@ -62,6 +66,12 @@ export const navConfig = {
       labelKey: 'purchases.receipts',
       icon: 'FileText',
     },
+    {
+      path: '/products',
+      label: 'Products',
+      labelKey: 'purchases.products',
+      icon: 'Package',
+    },
   ],
 } satisfies AppNavConfigShape;
 
@@ -77,5 +87,6 @@ export const routes: RouteObject[] = [
   { index: true, element: <ReconcileQueuePage /> },
   { path: 'merchants', element: <MerchantLensPage /> },
   { path: 'receipts', element: <ReceiptDropZonePage /> },
+  { path: 'products', element: <ProductDictionaryPage /> },
   { path: ':purchaseId', element: <PurchaseDetailPage /> },
 ];

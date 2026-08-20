@@ -49,7 +49,6 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
@@ -61,6 +60,7 @@ import {
 
 import { openCoreDb, pillarRegistryService, type OpenedCoreDb } from '../../db/index.js';
 import { createCoreApiApp } from '../app.js';
+import { requestAt } from './test-http.js';
 
 import type { AddressInfo } from 'node:net';
 
@@ -318,7 +318,7 @@ describe('external pillar register + callDynamic + deregister', () => {
   it('registers an external pillar, calls both procedure kinds via callDynamic, then deregisters', async () => {
     const { coreApiBaseUrl, coreDb, throwaway } = activeEnv();
 
-    const registration = await request(coreApiBaseUrl).post('/core.registry.register').send({
+    const registration = await requestAt(coreApiBaseUrl).post('/core.registry.register').send({
       pillarId: PILLAR_ID,
       baseUrl: throwaway.baseUrl,
       manifest: echoManifest(),
@@ -335,7 +335,7 @@ describe('external pillar register + callDynamic + deregister', () => {
     expect(persisted?.status).toBe('healthy');
     expect(persisted?.baseUrl).toBe(throwaway.baseUrl);
 
-    const snapshot = await request(coreApiBaseUrl).get('/core.registry.list');
+    const snapshot = await requestAt(coreApiBaseUrl).get('/core.registry.list');
     expect(snapshot.status).toBe(200);
     const snapshotPillars = snapshot.body?.pillars as
       | Array<{ pillarId: string; baseUrl: string }>
@@ -370,7 +370,7 @@ describe('external pillar register + callDynamic + deregister', () => {
       { path: '/echo/store', input: { key: 'k', value: 'v' } },
     ]);
 
-    const dereg = await request(coreApiBaseUrl).post('/core.registry.deregister').send({
+    const dereg = await requestAt(coreApiBaseUrl).post('/core.registry.deregister').send({
       pillarId: PILLAR_ID,
     });
     expect(dereg.status).toBe(200);

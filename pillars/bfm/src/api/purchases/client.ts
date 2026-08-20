@@ -21,10 +21,23 @@
  */
 import { type GatewayOutcome, type PillarGateway, isGatewayOk } from '../pillars/gateway.js';
 import { parseOrMismatch } from '../pillars/parse-response.js';
+import { encodePurchasesCursor, type PurchasesPageCursor } from './list-cursor.js';
+import {
+  PurchasesDetailResponseSchema,
+  PurchasesListResponseSchema,
+  toMobilePurchase,
+  toMobilePurchaseDetail,
+  type PurchasesListRow,
+} from './list-wire.js';
 import { PurchasesReceiptOutcomeSchema, toMobileReceiptOutcome } from './wire.js';
 
 import type { MobileCaptureMetadata } from '../../contract/capture.js';
-import type { MobileReceiptOutcome, MobileReceiptPart } from '../../contract/rest-schemas.js';
+import type {
+  MobilePurchaseDetail,
+  MobilePurchasesPage,
+  MobileReceiptOutcome,
+  MobileReceiptPart,
+} from '../../contract/rest-schemas.js';
 
 /** The purchases pillar id, as registered with the registry. */
 export const PURCHASES_PILLAR_ID = 'purchases';
@@ -44,13 +57,26 @@ export type PurchasesReceiptRouter = {
       capture?: MobileCaptureMetadata;
     }) => Promise<unknown>;
   };
+  purchase: {
+    list: (input: { limit?: number; offset?: number }) => Promise<unknown>;
+    get: (input: { id: string }) => Promise<unknown>;
+  };
 };
+
+export interface ListPurchasesRequest {
+  /** Rows to return. The caller has already clamped this to the contract's cap. */
+  readonly limit: number;
+  /** Where the previous page stopped, or `null` for the first page. */
+  readonly cursor: PurchasesPageCursor | null;
+}
 
 export interface MobilePurchasesClient {
   uploadReceipt(
     parts: readonly MobileReceiptPart[],
     capture?: MobileCaptureMetadata
   ): Promise<GatewayOutcome<MobileReceiptOutcome>>;
+  listPurchases(request: ListPurchasesRequest): Promise<GatewayOutcome<MobilePurchasesPage>>;
+  getPurchase(id: string): Promise<GatewayOutcome<MobilePurchaseDetail>>;
 }
 
 export function createMobilePurchasesClient(gateway: PillarGateway): MobilePurchasesClient {
@@ -79,5 +105,64 @@ export function createMobilePurchasesClient(gateway: PillarGateway): MobilePurch
 
       return { kind: 'ok', value: toMobileReceiptOutcome(answered.value) };
     },
+
+    async listPurchases(request: ListPurchasesRequest) {
+      // One row past the page, exactly as the finance leg does: the extra
+      // row's existence is what proves another page exists, and asking the
+      // producer for a total instead would be a second count query per scroll
+      // tick answering with a number that is stale the moment it is read.
+      const offset = request.cursor?.o ?? 0;
+      const outcome = await gateway.call<PurchasesReceiptRouter, unknown>(
+        PURCHASES_PILLAR_ID,
+        (handle) => handle.purchase.list({ limit: request.limit + 1, offset })
+      );
+
+      const page = parseOrMismatch(
+        PURCHASES_PILLAR_ID,
+        outcome,
+        PurchasesListResponseSchema,
+        'purchase.list'
+      );
+      if (!isGatewayOk(page)) return page;
+
+      return { kind: 'ok', value: toPage(page.value.items, request.limit, offset) };
+    },
+
+    async getPurchase(id: string) {
+      const outcome = await gateway.call<PurchasesReceiptRouter, unknown>(
+        PURCHASES_PILLAR_ID,
+        (handle) => handle.purchase.get({ id })
+      );
+
+      const detail = parseOrMismatch(
+        PURCHASES_PILLAR_ID,
+        outcome,
+        PurchasesDetailResponseSchema,
+        'purchase.get'
+      );
+      if (!isGatewayOk(detail)) return detail;
+
+      return { kind: 'ok', value: toMobilePurchaseDetail(detail.value) };
+    },
+  };
+}
+
+/**
+ * Trim the probe row off the over-fetched page and mint the next cursor.
+ *
+ * The cursor counts rows SERVED, not rows fetched: naming the probe row would
+ * skip it, since the app never saw it.
+ */
+function toPage(
+  rows: readonly PurchasesListRow[],
+  limit: number,
+  offset: number
+): MobilePurchasesPage {
+  const hasMore = rows.length > limit;
+  const served = hasMore ? rows.slice(0, limit) : rows;
+
+  return {
+    data: served.map(toMobilePurchase),
+    nextCursor: hasMore ? encodePurchasesCursor({ o: offset + served.length }) : null,
   };
 }

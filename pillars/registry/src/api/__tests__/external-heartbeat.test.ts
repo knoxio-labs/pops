@@ -16,15 +16,17 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { openCoreDb, pillarRegistryService, type OpenedCoreDb } from '../../db/index.js';
 import { createCoreApiApp } from '../app.js';
 import { registryEventBus, type RegistryEventPayload } from '../modules/registry/event-bus.js';
 import { buildRegistrySnapshot } from '../modules/registry/snapshot.js';
+import { createTestTransport } from './test-http.js';
 
 import type { ManifestPayload } from '@pops/pillar-sdk';
+
+const { requestOn } = createTestTransport();
 
 function recipesManifest(overrides?: Partial<ManifestPayload>): ManifestPayload {
   return {
@@ -50,7 +52,7 @@ function recipesManifest(overrides?: Partial<ManifestPayload>): ManifestPayload 
 }
 
 async function registerRecipes(app: ReturnType<typeof createCoreApiApp>): Promise<void> {
-  const res = await request(app).post('/core.registry.register').send({
+  const res = await requestOn(app).post('/core.registry.register').send({
     pillarId: 'recipes',
     baseUrl: 'http://recipes-api:4010',
     manifest: recipesManifest(),
@@ -95,7 +97,7 @@ describe('POST /core.registry.heartbeat — happy path', () => {
 
     await new Promise((r) => setTimeout(r, 5));
 
-    const res = await request(app).post('/core.registry.heartbeat').send({
+    const res = await requestOn(app).post('/core.registry.heartbeat').send({
       pillarId: 'recipes',
     });
     expect(res.status).toBe(200);
@@ -124,7 +126,7 @@ describe('POST /core.registry.heartbeat — happy path', () => {
     ]);
     capturedEvents = [];
 
-    const res = await request(app).post('/core.registry.heartbeat').send({
+    const res = await requestOn(app).post('/core.registry.heartbeat').send({
       pillarId: 'recipes',
     });
     expect(res.status).toBe(200);
@@ -147,7 +149,7 @@ describe('POST /core.registry.heartbeat — reported capabilities', () => {
     await registerRecipes(app);
     expect(snapshotCapabilities('recipes')).toBeUndefined();
 
-    const res = await request(app)
+    const res = await requestOn(app)
       .post('/core.registry.heartbeat')
       .send({ pillarId: 'recipes', capabilities: { smartImport: true } });
     expect(res.status).toBe(200);
@@ -157,10 +159,10 @@ describe('POST /core.registry.heartbeat — reported capabilities', () => {
 
   it('overwrites the stored snapshot with the freshest reported status', async () => {
     await registerRecipes(app);
-    await request(app)
+    await requestOn(app)
       .post('/core.registry.heartbeat')
       .send({ pillarId: 'recipes', capabilities: { smartImport: true } });
-    await request(app)
+    await requestOn(app)
       .post('/core.registry.heartbeat')
       .send({ pillarId: 'recipes', capabilities: { smartImport: false } });
     expect(snapshotCapabilities('recipes')).toEqual({ smartImport: false });
@@ -168,16 +170,16 @@ describe('POST /core.registry.heartbeat — reported capabilities', () => {
 
   it('leaves a previously reported snapshot untouched when a heartbeat omits capabilities', async () => {
     await registerRecipes(app);
-    await request(app)
+    await requestOn(app)
       .post('/core.registry.heartbeat')
       .send({ pillarId: 'recipes', capabilities: { smartImport: true } });
-    await request(app).post('/core.registry.heartbeat').send({ pillarId: 'recipes' });
+    await requestOn(app).post('/core.registry.heartbeat').send({ pillarId: 'recipes' });
     expect(snapshotCapabilities('recipes')).toEqual({ smartImport: true });
   });
 
   it('400s a malformed capabilities report (non-boolean value)', async () => {
     await registerRecipes(app);
-    const res = await request(app)
+    const res = await requestOn(app)
       .post('/core.registry.heartbeat')
       .send({ pillarId: 'recipes', capabilities: { smartImport: 'yes' } });
     expect(res.status).toBe(400);
@@ -188,7 +190,7 @@ describe('POST /core.registry.heartbeat — reported capabilities', () => {
 
 describe('POST /core.registry.heartbeat — missing pillar', () => {
   it('returns 200 { ok: false, reason: not-registered } when the pillar has never registered', async () => {
-    const res = await request(app).post('/core.registry.heartbeat').send({
+    const res = await requestOn(app).post('/core.registry.heartbeat').send({
       pillarId: 'recipes',
     });
     expect(res.status).toBe(200);
@@ -198,7 +200,7 @@ describe('POST /core.registry.heartbeat — missing pillar', () => {
 
 describe('POST /core.registry.heartbeat — body validation', () => {
   it('returns 400 with structured issues when pillarId is missing', async () => {
-    const res = await request(app).post('/core.registry.heartbeat').send({});
+    const res = await requestOn(app).post('/core.registry.heartbeat').send({});
     expect(res.status).toBe(400);
     const fields = res.body.issues.map((i: { field: string }) => i.field);
     expect(fields).toContain('pillarId');

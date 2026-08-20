@@ -17,14 +17,16 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { openCoreDb, pillarRegistryService, type OpenedCoreDb } from '../../db/index.js';
 import { createCoreApiApp } from '../app.js';
 import { registryEventBus, type RegistryEventPayload } from '../modules/registry/event-bus.js';
+import { createTestTransport } from './test-http.js';
 
 import type { ManifestPayload } from '@pops/pillar-sdk';
+
+const { requestOn } = createTestTransport();
 
 function recipesManifest(overrides?: Partial<ManifestPayload>): ManifestPayload {
   return {
@@ -50,7 +52,7 @@ function recipesManifest(overrides?: Partial<ManifestPayload>): ManifestPayload 
 }
 
 async function registerRecipes(app: ReturnType<typeof createCoreApiApp>): Promise<void> {
-  const res = await request(app).post('/core.registry.register').send({
+  const res = await requestOn(app).post('/core.registry.register').send({
     pillarId: 'recipes',
     baseUrl: 'http://recipes-api:4010',
     manifest: recipesManifest(),
@@ -90,7 +92,7 @@ describe('POST /core.registry.deregister — happy path', () => {
     await registerRecipes(app);
     capturedEvents = [];
 
-    const res = await request(app).post('/core.registry.deregister').send({
+    const res = await requestOn(app).post('/core.registry.deregister').send({
       pillarId: 'recipes',
     });
     expect(res.status).toBe(200);
@@ -109,7 +111,7 @@ describe('POST /core.registry.deregister — happy path', () => {
 
 describe('POST /core.registry.deregister — idempotency', () => {
   it('returns 200 { ok: true, removed: false } and emits NO event for a pillar that never registered', async () => {
-    const res = await request(app).post('/core.registry.deregister').send({
+    const res = await requestOn(app).post('/core.registry.deregister').send({
       pillarId: 'recipes',
     });
     expect(res.status).toBe(200);
@@ -121,13 +123,13 @@ describe('POST /core.registry.deregister — idempotency', () => {
     await registerRecipes(app);
     capturedEvents = [];
 
-    const first = await request(app).post('/core.registry.deregister').send({
+    const first = await requestOn(app).post('/core.registry.deregister').send({
       pillarId: 'recipes',
     });
     expect(first.status).toBe(200);
     expect(first.body).toMatchObject({ ok: true, removed: true });
 
-    const second = await request(app).post('/core.registry.deregister').send({
+    const second = await requestOn(app).post('/core.registry.deregister').send({
       pillarId: 'recipes',
     });
     expect(second.status).toBe(200);
@@ -155,7 +157,7 @@ describe('POST /core.registry.deregister — internal pillar refusal', () => {
     });
     capturedEvents = [];
 
-    const res = await request(app).post('/core.registry.deregister').send({
+    const res = await requestOn(app).post('/core.registry.deregister').send({
       pillarId: 'finance',
     });
     expect(res.status).toBe(403);
@@ -170,7 +172,7 @@ describe('POST /core.registry.deregister — internal pillar refusal', () => {
 
 describe('POST /core.registry.deregister — body validation', () => {
   it('returns 400 when pillarId is missing', async () => {
-    const res = await request(app).post('/core.registry.deregister').send({});
+    const res = await requestOn(app).post('/core.registry.deregister').send({});
     expect(res.status).toBe(400);
     const fields = res.body.issues.map((i: { field: string }) => i.field);
     expect(fields).toContain('pillarId');

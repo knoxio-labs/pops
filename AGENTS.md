@@ -92,7 +92,7 @@ POPS (Personal Operations System) is a self-hosted personal operations platform 
 | `contacts`     | 3010 | contacts                                                    | **Rust** (axum + OpenAPI), `src/entities/`         |
 | `mcp`          | 3011 | MCP gateway                                                 | **binds :3011 in code** (`MCP_PORT ?? 3011`)       |
 | `documents`    | 3012 | paperless-ngx bridge (status/search proxy, thumbnails)      | bridge pillar (ADR-035), owns **no DB**            |
-| `purchases`    | 3013 | purchase documents, line items, transaction links           | data pillar; ADR-042; no frontend yet              |
+| `purchases`    | 3013 | purchase documents, line items, transaction links           | data pillar; ADR-042                               |
 | `bfm`          | 3014 | devices, pairing codes, refresh tokens (Backend-for-Mobile) | data pillar; the only backend the iPhone app dials |
 | `shell`        | 5568 | React SPA host                                              | UI pillar; Vite + nginx, **not** the default 5173  |
 

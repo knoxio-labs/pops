@@ -25,12 +25,14 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { openCoreDb, type OpenedCoreDb } from '../../db/index.js';
 import { createCoreApiApp } from '../app.js';
+import { createTestTransport } from './test-http.js';
 import { makeClient, type ClientHeaders } from './test-utils.js';
+
+const { requestOn } = createTestTransport();
 
 let tmpDir: string;
 let coreDb: OpenedCoreDb;
@@ -233,7 +235,7 @@ describe('settings REST — error mapping', () => {
 
   it('400s a malformed getMany payload (keys not an array)', async () => {
     // Bypass the typed client to send an off-contract body shape.
-    const res = await request(app()).post('/settings/get-many').send({ keys: 'not-an-array' });
+    const res = await requestOn(app()).post('/settings/get-many').send({ keys: 'not-an-array' });
     expect(res.status).toBe(400);
   });
 });

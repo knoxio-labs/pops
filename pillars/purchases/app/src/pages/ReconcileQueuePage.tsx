@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Button, PageHeader } from '@pops/ui';
+import { PageHeader } from '@pops/ui';
 
 import { DecisionBar } from './reconcile/DecisionBar.js';
 import { QueueFilters } from './reconcile/QueueFilters.js';
@@ -10,6 +10,7 @@ import { DEFAULT_QUEUE_FILTERS, type QueueFilterState } from './reconcile/types.
 import { useQueueCursor } from './reconcile/useQueueCursor.js';
 import { useReconcileDecisions } from './reconcile/useReconcileDecisions.js';
 import { QUEUE_PAGE_SIZE, useReconcileQueue } from './reconcile/useReconcileQueue.js';
+import { RetryableError } from './RetryableError.js';
 
 import type { ReactElement } from 'react';
 
@@ -39,7 +40,14 @@ export function ReconcileQueuePage(): ReactElement {
 
       <QueueFilters value={filters} onChange={setFilters} />
 
-      {error !== null && <ErrorState message={error.message} onRetry={refetch} />}
+      {error !== null && (
+        <RetryableError
+          title={t('reconcile.error.title')}
+          message={error.message}
+          retryLabel={t('reconcile.error.retry')}
+          onRetry={refetch}
+        />
+      )}
 
       {error === null && (
         <>
@@ -103,24 +111,5 @@ function QueueBody({
 
   return (
     <QueueList entries={entries} cursor={cursor} isDeciding={isDeciding} onDecide={onDecide} />
-  );
-}
-
-interface ErrorStateProps {
-  message: string;
-  onRetry: () => void;
-}
-
-function ErrorState({ message, onRetry }: ErrorStateProps): ReactElement {
-  const { t } = useTranslation('purchases');
-
-  return (
-    <div role="alert" className="border-destructive/50 bg-destructive/10 rounded-md border p-4">
-      <p className="mb-2 text-sm font-medium">{t('reconcile.error.title')}</p>
-      <p className="text-muted-foreground mb-3 text-xs">{message}</p>
-      <Button size="sm" variant="outline" onClick={onRetry}>
-        {t('reconcile.error.retry')}
-      </Button>
-    </div>
   );
 }

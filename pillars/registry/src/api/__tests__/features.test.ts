@@ -29,7 +29,6 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
@@ -39,9 +38,12 @@ import {
   type OpenedCoreDb,
 } from '../../db/index.js';
 import { createCoreApiApp } from '../app.js';
+import { createTestTransport } from './test-http.js';
 import { makeClient, type ClientHeaders } from './test-utils.js';
 
 import type { FeatureManifestDescriptor, ManifestPayload } from '@pops/pillar-sdk';
+
+const { requestOn } = createTestTransport();
 
 let tmpDir: string;
 let coreDb: OpenedCoreDb;
@@ -331,7 +333,7 @@ describe('features REST — identity gating', () => {
 
   it('400s a malformed setEnabled payload (enabled not a boolean)', async () => {
     registerPillar(manifestWith('demo', [SYSTEM_FLAG]));
-    const res = await request(app())
+    const res = await requestOn(app())
       .put('/features/demo.systemFlag/enabled')
       .send({ enabled: 'yes' });
     expect(res.status).toBe(400);
