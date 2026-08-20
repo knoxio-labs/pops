@@ -16,15 +16,17 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { openCoreDb, pillarRegistryService, type OpenedCoreDb } from '../../db/index.js';
 import { createCoreApiApp } from '../app.js';
 import { registryEventBus, type RegistryEventPayload } from '../modules/registry/event-bus.js';
 import { buildRegistrySnapshot } from '../modules/registry/snapshot.js';
+import { createTestTransport } from './test-http.js';
 
 import type { ManifestPayload } from '@pops/pillar-sdk';
+
+const { requestOn } = createTestTransport();
 
 function recipesManifest(overrides?: Partial<ManifestPayload>): ManifestPayload {
   return {
@@ -77,7 +79,7 @@ afterEach(() => {
 describe('POST /core.registry.register — happy path', () => {
   it('persists the row with origin=external + healthy status and emits a registered event', async () => {
     const manifest = recipesManifest();
-    const res = await request(app).post('/core.registry.register').send({
+    const res = await requestOn(app).post('/core.registry.register').send({
       pillarId: 'recipes',
       baseUrl: 'http://recipes-api:4010',
       manifest,
@@ -118,7 +120,7 @@ describe('POST /core.registry.register — happy path', () => {
       },
       uri: { types: ['home-brew/recipe'] },
     });
-    const res = await request(app).post('/core.registry.register').send({
+    const res = await requestOn(app).post('/core.registry.register').send({
       pillarId: 'home-brew',
       baseUrl: 'http://home-brew-api:4010',
       manifest,
@@ -142,7 +144,7 @@ describe('POST /core.registry.register — happy path', () => {
       },
       uri: { types: ['finance/recipe'] },
     });
-    const res = await request(app).post('/core.registry.register').send({
+    const res = await requestOn(app).post('/core.registry.register').send({
       pillarId: 'finance',
       baseUrl: 'http://finance-api:3004',
       manifest,
@@ -154,7 +156,7 @@ describe('POST /core.registry.register — happy path', () => {
 
 describe('POST /core.registry.register — pillar id validation', () => {
   it('rejects a pillarId that starts with a digit', async () => {
-    const res = await request(app)
+    const res = await requestOn(app)
       .post('/core.registry.register')
       .send({
         pillarId: '1recipes',
@@ -167,7 +169,7 @@ describe('POST /core.registry.register — pillar id validation', () => {
   });
 
   it('rejects a pillarId with uppercase letters', async () => {
-    const res = await request(app)
+    const res = await requestOn(app)
       .post('/core.registry.register')
       .send({
         pillarId: 'Recipes',
@@ -181,7 +183,7 @@ describe('POST /core.registry.register — pillar id validation', () => {
 
 describe('POST /core.registry.register — manifest validation', () => {
   it('returns 400 with structured issues when the manifest is malformed', async () => {
-    const res = await request(app)
+    const res = await requestOn(app)
       .post('/core.registry.register')
       .send({
         pillarId: 'recipes',
@@ -206,7 +208,7 @@ describe('POST /core.registry.register — manifest validation', () => {
   });
 
   it('rejects pillarId / manifest.pillar mismatch with a cross-field issue', async () => {
-    const res = await request(app)
+    const res = await requestOn(app)
       .post('/core.registry.register')
       .send({
         pillarId: 'recipes',
@@ -226,7 +228,7 @@ describe('POST /core.registry.register — manifest validation', () => {
   });
 
   it('rejects a missing manifest field', async () => {
-    const res = await request(app).post('/core.registry.register').send({
+    const res = await requestOn(app).post('/core.registry.register').send({
       pillarId: 'recipes',
       baseUrl: 'http://recipes-api:4010',
     });
@@ -236,7 +238,7 @@ describe('POST /core.registry.register — manifest validation', () => {
   });
 
   it('rejects a non-URL baseUrl', async () => {
-    const res = await request(app).post('/core.registry.register').send({
+    const res = await requestOn(app).post('/core.registry.register').send({
       pillarId: 'recipes',
       baseUrl: 'not-a-url',
       manifest: recipesManifest(),
@@ -249,7 +251,7 @@ describe('POST /core.registry.register — manifest validation', () => {
 
 describe('POST /core.registry.register — duplicate registration', () => {
   it('preserves registeredAt on re-registration and overwrites the row contents', async () => {
-    const first = await request(app).post('/core.registry.register').send({
+    const first = await requestOn(app).post('/core.registry.register').send({
       pillarId: 'recipes',
       baseUrl: 'http://recipes-api:4010',
       manifest: recipesManifest(),
@@ -259,7 +261,7 @@ describe('POST /core.registry.register — duplicate registration', () => {
 
     await new Promise((r) => setTimeout(r, 5));
 
-    const second = await request(app)
+    const second = await requestOn(app)
       .post('/core.registry.register')
       .send({
         pillarId: 'recipes',
@@ -300,7 +302,7 @@ describe('POST /core.registry.register — features slot round-trip', () => {
   ];
 
   it('persists a features slot and surfaces it verbatim in the registry snapshot', async () => {
-    const res = await request(app)
+    const res = await requestOn(app)
       .post('/core.registry.register')
       .send({
         pillarId: 'recipes',
@@ -319,7 +321,7 @@ describe('POST /core.registry.register — features slot round-trip', () => {
   });
 
   it('still registers a pillar whose manifest carries no features slot', async () => {
-    const res = await request(app).post('/core.registry.register').send({
+    const res = await requestOn(app).post('/core.registry.register').send({
       pillarId: 'recipes',
       baseUrl: 'http://recipes-api:4010',
       manifest: recipesManifest(),

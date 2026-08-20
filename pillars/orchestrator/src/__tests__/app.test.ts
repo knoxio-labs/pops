@@ -1,11 +1,13 @@
-import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { createOrchestratorApp } from '../app.js';
 import { __resetPillarRegistryCache, type RegistrySnapshotReader } from '../pillars/registry.js';
+import { createTestTransport } from './test-http.js';
 
 import type { PillarSnapshot } from '@pops/pillar-sdk/discovery';
 import type { ManifestPayload } from '@pops/pillar-sdk/manifest-schema';
+
+const { requestOn } = createTestTransport();
 
 const SELF_BASE_URL = 'http://localhost:3009';
 
@@ -69,7 +71,7 @@ describe('orchestrator app', () => {
 
   describe('GET /health', () => {
     it('returns ok with the orchestrator service identity and build version', async () => {
-      const res = await request(makeApp(emptyReader)).get('/health');
+      const res = await requestOn(makeApp(emptyReader)).get('/health');
 
       expect(res.status).toBe(200);
       expect(res.body).toMatchObject({
@@ -85,7 +87,7 @@ describe('orchestrator app', () => {
 
   describe('GET /pillars — seed fallback (empty registry)', () => {
     it('lists the synthetic orchestrator self-entry first when POPS_PILLARS is unset', async () => {
-      const res = await request(makeApp(emptyReader)).get('/pillars');
+      const res = await requestOn(makeApp(emptyReader)).get('/pillars');
 
       expect(res.status).toBe(200);
       expect(res.body.pillars).toEqual([{ id: 'orchestrator', baseUrl: SELF_BASE_URL }]);
@@ -95,7 +97,7 @@ describe('orchestrator app', () => {
       process.env['POPS_PILLARS'] = 'finance:http://finance-api:3004,food:http://food-api:3005';
       __resetPillarRegistryCache();
 
-      const res = await request(makeApp(emptyReader)).get('/pillars');
+      const res = await requestOn(makeApp(emptyReader)).get('/pillars');
 
       expect(res.status).toBe(200);
       expect(res.body.pillars).toEqual([
@@ -110,7 +112,7 @@ describe('orchestrator app', () => {
         'orchestrator:http://stale:9999,finance:http://finance-api:3004';
       __resetPillarRegistryCache();
 
-      const res = await request(makeApp(emptyReader)).get('/pillars');
+      const res = await requestOn(makeApp(emptyReader)).get('/pillars');
 
       expect(res.status).toBe(200);
       expect(res.body.pillars).toEqual([
@@ -122,7 +124,7 @@ describe('orchestrator app', () => {
 
   describe('GET /pillars — registry-as-truth', () => {
     it('surfaces a registry-registered pillar even when POPS_PILLARS is unset', async () => {
-      const res = await request(
+      const res = await requestOn(
         makeApp(reader(snapshotEntry('media', 'http://media-api:3005')))
       ).get('/pillars');
 
@@ -137,7 +139,7 @@ describe('orchestrator app', () => {
       process.env['POPS_PILLARS'] = 'finance:http://finance-api:3004';
       __resetPillarRegistryCache();
 
-      const res = await request(
+      const res = await requestOn(
         makeApp(reader(snapshotEntry('media', 'http://media-api:3005')))
       ).get('/pillars');
 
@@ -153,7 +155,7 @@ describe('orchestrator app', () => {
       process.env['POPS_PILLARS'] = 'media:http://stale-media:9999';
       __resetPillarRegistryCache();
 
-      const res = await request(
+      const res = await requestOn(
         makeApp(reader(snapshotEntry('media', 'http://media-api:3005')))
       ).get('/pillars');
 

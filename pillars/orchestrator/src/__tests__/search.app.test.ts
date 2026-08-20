@@ -1,10 +1,12 @@
-import request from 'supertest';
 import { describe, expect, it, vi } from 'vitest';
 
 import { createOrchestratorApp } from '../app.js';
+import { createTestTransport } from './test-http.js';
 
 import type { PillarSearchGroup, SearchSource } from '../search/index.js';
 import type { SearchHit } from '../search/types.js';
+
+const { requestOn } = createTestTransport();
 
 const SELF_BASE_URL = 'http://localhost:3009';
 
@@ -43,7 +45,7 @@ describe('POST /search', () => {
       }),
     ]);
 
-    const res = await request(makeApp(source))
+    const res = await requestOn(makeApp(source))
       .post('/search')
       .send({ query: { text: 'drill' } });
 
@@ -67,7 +69,7 @@ describe('POST /search', () => {
       group({ moduleId: 'inventory', hits: [hit('pops:inventory/1', 0.3)] }),
     ];
 
-    const res = await request(makeApp(source))
+    const res = await requestOn(makeApp(source))
       .post('/search')
       .send({ query: { text: 'thing' }, context: { app: 'inventory', page: 'items' } });
 
@@ -88,7 +90,7 @@ describe('POST /search', () => {
       }),
     ];
 
-    const res = await request(makeApp(source))
+    const res = await requestOn(makeApp(source))
       .post('/search')
       .send({ query: { text: 'acme' } });
 
@@ -100,7 +102,7 @@ describe('POST /search', () => {
   it('short-circuits a blank query without touching the source', async () => {
     const source = vi.fn<SearchSource>(async () => []);
 
-    const res = await request(makeApp(source))
+    const res = await requestOn(makeApp(source))
       .post('/search')
       .send({ query: { text: '   ' } });
 
@@ -112,7 +114,7 @@ describe('POST /search', () => {
   it('rejects a structurally invalid body with 400', async () => {
     const source = vi.fn<SearchSource>(async () => []);
 
-    const res = await request(makeApp(source))
+    const res = await requestOn(makeApp(source))
       .post('/search')
       .send({ query: { text: 42 } });
 
@@ -127,7 +129,7 @@ describe('POST /search', () => {
     };
     const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-    const res = await request(makeApp(source))
+    const res = await requestOn(makeApp(source))
       .post('/search')
       .send({ query: { text: 'x' } });
 

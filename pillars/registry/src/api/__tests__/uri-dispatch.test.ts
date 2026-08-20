@@ -14,15 +14,17 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { openCoreDb, pillarRegistryService, type OpenedCoreDb } from '../../db/index.js';
 import { createCoreApiApp } from '../app.js';
 import { __resetInstalledModulesCache } from '../env-modules.js';
 import { __resetPillarRegistryCache } from '../pillars/registry.js';
+import { createTestTransport } from './test-http.js';
 
 import type { ManifestPayload } from '@pops/pillar-sdk';
+
+const { requestOn } = createTestTransport();
 
 function manifestFor(pillarId: string): ManifestPayload {
   return {
@@ -81,7 +83,7 @@ function makeApp(): ReturnType<typeof createCoreApiApp> {
 
 describe('POST /uri/resolve', () => {
   it('returns 400 + malformed for a missing uri field', async () => {
-    const res = await request(makeApp()).post('/uri/resolve').send({});
+    const res = await requestOn(makeApp()).post('/uri/resolve').send({});
     expect(res.status).toBe(400);
     expect(res.body).toEqual({
       kind: 'malformed',
@@ -91,7 +93,7 @@ describe('POST /uri/resolve', () => {
   });
 
   it('returns malformed for a non-pops URI', async () => {
-    const res = await request(makeApp()).post('/uri/resolve').send({ uri: 'http://example.com' });
+    const res = await requestOn(makeApp()).post('/uri/resolve').send({ uri: 'http://example.com' });
     expect(res.status).toBe(200);
     expect(res.body.kind).toBe('malformed');
     expect(res.body.uri).toBe('http://example.com');
@@ -102,13 +104,15 @@ describe('POST /uri/resolve', () => {
     process.env['POPS_OVERLAYS'] = '';
     __resetInstalledModulesCache();
 
-    const res = await request(makeApp()).post('/uri/resolve').send({ uri: 'pops:media/movie/42' });
+    const res = await requestOn(makeApp())
+      .post('/uri/resolve')
+      .send({ uri: 'pops:media/movie/42' });
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ kind: 'module-absent', moduleId: 'media' });
   });
 
   it('returns not-found for an installed module with no in-process uri handler', async () => {
-    const res = await request(makeApp())
+    const res = await requestOn(makeApp())
       .post('/uri/resolve')
       .send({ uri: 'pops:finance/transaction/tx-1' });
     expect(res.status).toBe(200);
@@ -137,7 +141,7 @@ describe('POST /uri/resolve', () => {
       })
     );
     try {
-      const res = await request(makeApp())
+      const res = await requestOn(makeApp())
         .post('/uri/resolve')
         .send({ uri: 'pops:food/recipe/rec-1' });
       expect(res.status).toBe(200);
@@ -172,7 +176,7 @@ describe('POST /uri/resolve — registry-as-truth routing', () => {
       })
     );
     try {
-      const res = await request(makeApp())
+      const res = await requestOn(makeApp())
         .post('/uri/resolve')
         .send({ uri: 'pops:food/recipe/rec-1' });
       expect(res.status).toBe(200);
@@ -203,7 +207,7 @@ describe('POST /uri/resolve — registry-as-truth routing', () => {
       )
     );
     try {
-      await request(makeApp()).post('/uri/resolve').send({ uri: 'pops:food/recipe/x' });
+      await requestOn(makeApp()).post('/uri/resolve').send({ uri: 'pops:food/recipe/x' });
       expect(fetchSpy).toHaveBeenCalledWith(
         'http://food-api:3000/uri/resolve',
         expect.objectContaining({ method: 'POST' })
@@ -228,7 +232,7 @@ describe('POST /uri/resolve — registry-as-truth routing', () => {
       })
     );
     try {
-      const res = await request(makeApp())
+      const res = await requestOn(makeApp())
         .post('/uri/resolve')
         .send({ uri: 'pops:food/recipe/rec-2' });
       expect(res.body).toEqual(remoteBody);
@@ -246,7 +250,7 @@ describe('GET /pillars/health', () => {
   it('reports the self-pillar as healthy without HTTP when POPS_PILLARS is unset', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch');
     try {
-      const res = await request(makeApp()).get('/pillars/health');
+      const res = await requestOn(makeApp()).get('/pillars/health');
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ health: { registry: 'healthy' } });
       expect(fetchSpy).not.toHaveBeenCalled();
@@ -265,7 +269,7 @@ describe('GET /pillars/health', () => {
       })
     );
     try {
-      const res = await request(makeApp()).get('/pillars/health');
+      const res = await requestOn(makeApp()).get('/pillars/health');
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ health: { registry: 'healthy', food: 'healthy' } });
       expect(fetchSpy).toHaveBeenCalledWith(
@@ -282,7 +286,7 @@ describe('GET /pillars/health', () => {
     __resetPillarRegistryCache();
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('boom'));
     try {
-      const res = await request(makeApp()).get('/pillars/health');
+      const res = await requestOn(makeApp()).get('/pillars/health');
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ health: { registry: 'healthy', food: 'unavailable' } });
     } finally {
