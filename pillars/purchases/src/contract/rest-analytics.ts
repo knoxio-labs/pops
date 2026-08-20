@@ -18,12 +18,12 @@ import { z } from 'zod';
 
 import { MERCHANT_RESOLUTIONS, PRODUCT_IDENTITY_BASES } from './constants.js';
 import { ErrorBodySchema, ListPurchasesQuerySchema } from './rest-schemas.js';
+import { PurchaseAccountingSchema } from './schemas/purchase-detail.js';
 import {
   CentsSchema,
   CurrencySchema,
   IsoTimestampSchema,
   NonNegativeCentsSchema,
-  PurchaseAccountingSchema,
 } from './schemas/purchase.js';
 
 const c = initContract();

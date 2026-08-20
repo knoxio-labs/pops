@@ -16,10 +16,9 @@ import {
   OkSchema,
   PatchItemBodySchema,
 } from './rest-schemas.js';
+import { PurchaseDetailSchema, PurchaseItemDetailSchema } from './schemas/purchase-detail.js';
 import {
   IsoTimestampSchema,
-  PurchaseDetailSchema,
-  PurchaseItemDetailSchema,
   PurchaseItemSchema,
   PurchaseItemUnitSchema,
   PurchaseSchema,

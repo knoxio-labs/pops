@@ -25,13 +25,13 @@ import { MerchantIdentitySchema, ProductIdentitySchema } from '../rest-analytics
 // The identity a line's merchant STATED, as against the grouping identity
 // above, which is how the aggregate decided two lines are one product.
 import { ProductIdentitySchema as StatedProductIdentitySchema } from '../schemas/product-identity.js';
+import { PurchaseAccountingSchema } from '../schemas/purchase-detail.js';
 import {
   CentsSchema,
   CurrencySchema,
   IsoTimestampSchema,
   NonNegativeCentsSchema,
   PopsUriSchema,
-  PurchaseAccountingSchema,
 } from '../schemas/purchase.js';
 
 describe('CentsSchema', () => {
