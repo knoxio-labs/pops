@@ -1,6 +1,3 @@
-import { createTestTransport } from './test-http.js';
-
-import type { Express } from 'express';
 /**
  * Supertest-backed REST client for the media integration tests.
  *
@@ -15,6 +12,9 @@ import type { Express } from 'express';
  * contention; this is the choke point through which the whole pillar's
  * suites inherit the fix.
  */
+import { createTestTransport } from './test-http.js';
+
+import type { Express } from 'express';
 import type supertest from 'supertest';
 
 import type { SyncJob, SyncLogEntry } from '../../db/index.js';
@@ -30,6 +30,7 @@ import type {
   WatchHistoryEntry,
 } from '../modules/watch-history-types.js';
 import type { WatchlistEntry } from '../modules/watchlist-types.js';
+import type { BoundAgent } from './test-http.js';
 
 export class HttpError extends Error {
   readonly status: number;
@@ -364,7 +365,7 @@ interface TvShowSearchResultWire {
   year: string | null;
 }
 
-function makeSearchClient(r: ReturnType<typeof supertest>) {
+function makeSearchClient(r: BoundAgent) {
   return {
     movies: (query: { query: string; page?: number }) =>
       send<{
@@ -454,7 +455,7 @@ interface AssembledShelfWire {
   hasMore: boolean;
 }
 
-function makeDiscoveryClient(r: ReturnType<typeof supertest>) {
+function makeDiscoveryClient(r: BoundAgent) {
   return {
     getDismissed: () => send<{ data: number[] }>(r.get('/discovery/dismissed')),
     dismiss: (tmdbId: number) =>
@@ -633,7 +634,7 @@ interface RadarrDiskWire {
   totalSpace: number;
 }
 
-function makeRotationClient(r: ReturnType<typeof supertest>) {
+function makeRotationClient(r: BoundAgent) {
   return {
     addToQueue: (body: Record<string, unknown>) =>
       send<{ message: string }>(r.post('/rotation/candidates').send(body)),
@@ -789,7 +790,7 @@ interface ScoreChangeWire {
 
 type MediaTypeWire = 'movie' | 'tv_show';
 
-function makeComparisonsClient(r: ReturnType<typeof supertest>) {
+function makeComparisonsClient(r: BoundAgent) {
   return {
     listDimensions: () => send<{ data: DimensionWire[] }>(r.get('/comparison-dimensions')),
     createDimension: (body: Record<string, unknown>) =>

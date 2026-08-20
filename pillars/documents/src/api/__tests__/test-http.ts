@@ -1,27 +1,22 @@
 /**
- * A shared, pre-listened supertest transport for the cerebrum API suites.
+ * A shared, pre-listened supertest transport for the documents API suites.
  *
  * Same diagnosis and same fix as `pillars/finance/src/api/__tests__/test-utils.ts`,
  * `pillars/bfm/src/api/__tests__/test-http.ts`,
- * `pillars/purchases/src/api/__tests__/test-http.ts` and
- * `pillars/media/src/api/__tests__/test-http.ts`. Read finance's header first
- * — it carries the netstat evidence — and put a change to the diagnosis in
- * all of them.
+ * `pillars/purchases/src/api/__tests__/test-http.ts`,
+ * `pillars/media/src/api/__tests__/test-http.ts` and
+ * `pillars/cerebrum/src/api/__tests__/test-http.ts`. Read finance's header
+ * first — it carries the netstat evidence — and put a change to the diagnosis
+ * in all of them.
  *
  * Handed a bare Express app, supertest binds a fresh ephemeral server to the
  * `::` wildcard for every single call, and superagent dials it with a fresh
  * connection because it defaults to `agent: false`: two ephemeral ports
  * burned per request. Under real machine contention that churn is what
- * macOS's loopback allocator stalls on, surfacing as a request descheduled
- * past vitest's 5s default — which is how this pillar has seen it.
- *
- * `supertest.agent(app)`, which these suites used before this file existed,
- * does not avoid any of that. Its pooling is a cookie jar, not a connection
- * or a listener: measured here, ten sequential calls through one
- * `supertest.agent` produced ten listening ports and ten client sockets,
- * identical to bare `supertest(app)`. Nothing in this pillar's contract uses
- * cookies — every generated operation types `cookie?: never` — so replacing
- * the agent costs nothing it was providing.
+ * macOS's loopback allocator stalls on, and the way this pillar has seen it
+ * is a mocked-dependency test starving past vitest's 5s default while the
+ * rest of the workspace suite ran in parallel — green in isolation, and with
+ * the whole file set finishing well inside the budget the one test missed.
  *
  * One server per test file instead: pre-listened, bound explicitly to
  * `127.0.0.1` (a `::`-bound server does not own the IPv4 loopback tuple
@@ -29,9 +24,9 @@
  * requests reuses a single connection rather than opening one each time.
  *
  * App identity travels in a header the shared server routes on rather than
- * resting on a "most recently bound app" global, so it survives interleaving
- * rather than resting on every call site happening to await before the next
- * one begins.
+ * resting on a "most recently bound app" global: every suite here builds its
+ * app inside the test body, so identity has to survive interleaving rather
+ * than rest on every call site happening to await before the next one begins.
  *
  * `test-http.test.ts` is the deterministic guard on all of that, and its
  * header says how to watch each assertion fail.
@@ -52,13 +47,13 @@ const APP_HEADER = 'x-pops-test-app';
 
 const keepAliveAgent = new http.Agent({ keepAlive: true });
 
-/** The verbs the cerebrum API suites actually issue. */
+/**
+ * The documents API suites are read-only today, so `get` is the whole
+ * surface. Add a verb here when a suite needs one rather than reaching back
+ * for bare `supertest(app)`.
+ */
 export interface BoundAgent {
   get(url: string): supertest.Test;
-  post(url: string): supertest.Test;
-  put(url: string): supertest.Test;
-  patch(url: string): supertest.Test;
-  delete(url: string): supertest.Test;
 }
 
 export interface TestTransport {
@@ -85,7 +80,7 @@ export function createTestTransport(): TestTransport {
     const app = typeof id === 'string' ? appsById.get(id) : undefined;
     if (app === undefined) {
       res.statusCode = 500;
-      res.end('cerebrum test transport: the request named no registered app');
+      res.end('documents test transport: the request named no registered app');
       return;
     }
     app(req, res);
@@ -95,7 +90,7 @@ export function createTestTransport(): TestTransport {
     await once(server.listen(0, '127.0.0.1'), 'listening');
     const address = boundAddress(server);
     if (address !== '127.0.0.1') {
-      throw new Error(`cerebrum test server must bind 127.0.0.1, got ${address ?? 'null'}`);
+      throw new Error(`documents test server must bind 127.0.0.1, got ${address ?? 'null'}`);
     }
   });
 
@@ -126,14 +121,8 @@ export function createTestTransport(): TestTransport {
   return {
     requestOn(app) {
       const id = idFor(app);
-      const route = (test: supertest.Test): supertest.Test =>
-        test.set(APP_HEADER, id).agent(keepAliveAgent);
       return {
-        get: (url) => route(supertest(server).get(url)),
-        post: (url) => route(supertest(server).post(url)),
-        put: (url) => route(supertest(server).put(url)),
-        patch: (url) => route(supertest(server).patch(url)),
-        delete: (url) => route(supertest(server).delete(url)),
+        get: (url) => supertest(server).get(url).set(APP_HEADER, id).agent(keepAliveAgent),
       };
     },
   };
