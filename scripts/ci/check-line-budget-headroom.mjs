@@ -981,7 +981,7 @@ function selfTest() {
       'const other = 1;\n',
       'base: a file neither branch will touch'
     );
-    exec('git', ['checkout', '-q', '-b', 'feature'], { cwd: dir });
+    exec('git', ['checkout', '-q', '-b', 'feature'], { cwd: dir, env: gitEnv() });
     writeAndCommit(
       dir,
       'shared.ts',
