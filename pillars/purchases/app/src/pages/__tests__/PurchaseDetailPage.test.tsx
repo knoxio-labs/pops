@@ -76,6 +76,9 @@ function detail(overrides: Partial<PurchaseDetail> = {}): PurchaseDetail {
       merchantEntityId: null,
       merchantEntityName: 'Amazon',
       orderedAt: '2026-08-12T09:30:00.000Z',
+      // An export states an instant and no place, so there is no offset to
+      // record. Null rather than 0, which would claim Greenwich.
+      orderedAtOffsetMinutes: null,
       paymentHint: null,
       rawRef: null,
       settlementMode: 'card',
