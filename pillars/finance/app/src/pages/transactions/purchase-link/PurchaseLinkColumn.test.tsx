@@ -346,12 +346,14 @@ describe('the batched request', () => {
   });
 
   it('splits a list past the producer cap rather than sending one refused request', async () => {
+    // Asserted on the hook directly rather than through a 501-row `DataTable`
+    // render: the chunking happens in `fetchSummaries`, triggered by the
+    // query firing, not by anything the table draws.
     reconcileLinksBatchMock.mockResolvedValue({ data: { transactions: [] } });
-    const many = Array.from({ length: 501 }, (_, index) =>
-      transaction(`tx-${index}`, `ROW ${index}`)
-    );
+    const many = Array.from({ length: 501 }, (_, index) => ({ id: `tx-${index}` }));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
-    renderTable(many);
+    renderHook(() => usePurchaseLinkSummaries(many), { wrapper: withClient(client) });
 
     await waitFor(() => expect(reconcileLinksBatchMock).toHaveBeenCalledTimes(2));
     const sizes = reconcileLinksBatchMock.mock.calls.map((call) => {
@@ -395,12 +397,14 @@ describe('what the query is keyed on', () => {
   });
 
   it('is what the query is actually keyed on', async () => {
+    // Only reads `client.getQueryCache()`, which does not need a rendered
+    // table — the hook mounted through `renderHook` is what actually keys
+    // the query.
     reconcileLinksBatchMock.mockResolvedValue({ data: { transactions: [] } });
-    const many = Array.from({ length: 600 }, (_, index) =>
-      transaction(`tx-${index}`, `ROW ${index}`)
-    );
+    const many = Array.from({ length: 600 }, (_, index) => ({ id: `tx-${index}` }));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
-    const client = renderTable(many);
+    renderHook(() => usePurchaseLinkSummaries(many), { wrapper: withClient(client) });
 
     await waitFor(() => expect(reconcileLinksBatchMock).toHaveBeenCalled());
     const [query] = client.getQueryCache().getAll();
