@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Badge } from '@pops/ui';
 
 import { AliasRow } from './AliasRow.js';
-import { productAssertion } from './assertion.js';
+import { forgettingEndsNamedProduct, productAssertion } from './assertion.js';
 import { ProductLabelEditor } from './ProductLabelEditor.js';
 
 import type { ReactElement } from 'react';
@@ -71,7 +71,9 @@ export function ProductEntry({
             alias={alias}
             allProducts={allProducts}
             currentProductId={product.id}
+            currentProductLabel={product.label}
             canSplit={product.aliases.length > 1}
+            forgetEndsNamedProduct={forgettingEndsNamedProduct(product, alias)}
             isPending={isPending}
             onEdit={onEdit}
           />
