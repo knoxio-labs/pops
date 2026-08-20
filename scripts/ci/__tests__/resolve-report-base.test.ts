@@ -16,12 +16,11 @@
  * @see docs/architecture/adr-045-guards-must-prove-they-report.md
  */
 
-import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, inject, it } from 'vitest';
 
 import {
   ConfigParseError,
@@ -30,10 +29,10 @@ import {
   scalarText,
   walkMappings,
 } from '../config-parse.mjs';
+import { passingProofStdout } from './real-tree-proofs.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..', '..');
-const helper = join(repoRoot, 'scripts', 'ci', 'resolve-report-base.mjs');
 const workflowPath = join(repoRoot, '.github', 'workflows', 'quality.yml');
 
 function contractConsumersJob(): Record<string, unknown> {
@@ -60,10 +59,7 @@ function runScriptOf(job: Record<string, unknown>): string {
 
 describe('the helper proves itself', () => {
   it('passes its own --self-test', () => {
-    const output = execFileSync(process.execPath, [helper, '--self-test'], {
-      cwd: repoRoot,
-      encoding: 'utf8',
-    });
+    const output = passingProofStdout(inject('realTreeProofs'), 'resolve-report-base:self-test');
     expect(output).toMatch(/self-test OK/u);
     expect(output).toMatch(/merge_group base \(queued diff/u);
   });

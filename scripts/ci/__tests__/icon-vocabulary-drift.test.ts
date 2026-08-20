@@ -7,22 +7,21 @@
  * lying.
  */
 
-import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, inject, it } from 'vitest';
 
 import {
   parseOxlintBannedNames,
   parseReadmeBannedNames,
   parseTestBannedNames,
 } from '../check-icon-vocabulary-drift.mjs';
+import { passingProofStdout } from './real-tree-proofs.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..', '..');
-const guard = join(repoRoot, 'scripts', 'ci', 'check-icon-vocabulary-drift.mjs');
 
 const README_TABLE = `## Action Icon Standards
 
@@ -121,7 +120,7 @@ describe('the three sources agree on a drift', () => {
 
 describe('the guard proves itself', () => {
   it('passes its own --self-test', () => {
-    const output = execFileSync(process.execPath, [guard, '--self-test'], { encoding: 'utf-8' });
+    const output = passingProofStdout(inject('realTreeProofs'), 'icon-vocabulary-drift:self-test');
     expect(output).toMatch(/self-test OK/u);
   });
 });
