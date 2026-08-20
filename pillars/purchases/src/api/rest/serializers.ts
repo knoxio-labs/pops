@@ -25,10 +25,10 @@ import { productIdentityOf } from '../../db/index.js';
 import type { z } from 'zod';
 
 import type {
-  PurchaseItemDetailSchema,
-  PurchaseItemSchema,
   PurchaseDetailSchema,
-} from '../../contract/schemas/purchase.js';
+  PurchaseItemDetailSchema,
+} from '../../contract/schemas/purchase-detail.js';
+import type { PurchaseItemSchema } from '../../contract/schemas/purchase.js';
 import type { PurchaseDetail, PurchaseItemDetail, PurchaseItemRow } from '../../db/index.js';
 
 export type PurchaseDetailBody = z.infer<typeof PurchaseDetailSchema>;

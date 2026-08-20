@@ -223,6 +223,22 @@ export const purchaseItemUnits = sqliteTable(
     serialNumber: text('serial_number'),
     inventoryItemUri: text('inventory_item_uri'),
     inventoryItemStaleAt: text('inventory_item_stale_at'),
+    /**
+     * When this unit was offered to inventory and turned down.
+     *
+     * The counterpart to {@link inventoryItemUri}, and the reason a
+     * declined proposal does not come back: the two together are what
+     * makes a unit *decided*, and only undecided units are proposed. A
+     * CHECK holds them mutually exclusive, so no reader has to invent a
+     * precedence rule for a unit that claims both.
+     *
+     * A stale link is NOT a decline and does not reopen the proposal. The
+     * nightly cron stamps {@link inventoryItemStaleAt} when inventory
+     * answers a genuine 404 for a URI; that is evidence to show a human,
+     * and re-offering an asset the human deleted on purpose would fight
+     * them.
+     */
+    inventoryDeclinedAt: text('inventory_declined_at'),
     createdAt: text('created_at')
       .notNull()
       .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),

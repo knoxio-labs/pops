@@ -42,10 +42,13 @@ import { SearchHitSchema } from '../../contract/rest-search.js';
 import { purchasesContract } from '../../contract/rest.js';
 import {
   PurchaseDetailSchema,
+  PurchaseItemDetailSchema,
+} from '../../contract/schemas/purchase-detail.js';
+import {
+  PurchaseItemSchema,
   PurchaseSchema,
   PurchaseSourceSchema,
 } from '../../contract/schemas/purchase.js';
-import { PurchaseItemDetailSchema, PurchaseItemSchema } from '../../contract/schemas/purchase.js';
 import { openTempDb, seedAmazonSource } from '../../db/__tests__/helpers.js';
 import { runSweep } from '../../reconcile/sweep.js';
 import { createPurchasesApiApp } from '../app.js';

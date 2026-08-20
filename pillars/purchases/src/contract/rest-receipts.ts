@@ -26,7 +26,8 @@ import { z } from 'zod';
 import { ExtractedReceiptSchema } from '../ingest/receipt/extraction.js';
 import { MEDIA_TYPES } from '../ingest/receipt/vision.js';
 import { ErrorBodySchema } from './rest-schemas.js';
-import { PopsUriSchema, PurchaseDetailSchema } from './schemas/purchase.js';
+import { PurchaseDetailSchema } from './schemas/purchase-detail.js';
+import { PopsUriSchema } from './schemas/purchase.js';
 
 const c = initContract();
 
