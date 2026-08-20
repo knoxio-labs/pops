@@ -1,6 +1,5 @@
 import AppCore
 import DesignSystem
-import Foundation
 import SwiftUI
 import Testing
 
@@ -15,69 +14,7 @@ import Testing
 /// commentary drawn beside it. Both are values rather than renders, for the
 /// reason that suite gives.
 @Suite("Receipt draft hints and arithmetic")
-internal struct ReceiptDraftHintTests {
-    private static let presentation = ReceiptDraftPresentation()
-
-    /// A receipt whose reading is complete and correct, and whose items are
-    /// named the way a till prints them. The Kmart case: nothing is wrong, and
-    /// the reader still wants to change three names.
-    private static func cleanExtraction() -> ExtractedReceipt {
-        ExtractedReceipt(
-            merchantName: "Kmart Broadway",
-            address: "1 Bay Street, Broadway NSW",
-            purchasedOn: "2026-08-20",
-            purchasedAt: "17:42",
-            currency: "AUD",
-            total: "31.00",
-            tax: nil,
-            discounts: [],
-            surcharges: [],
-            shipping: nil,
-            lines: [
-                ExtractedReceiptLine(
-                    description: "ZCHEETOS C&B BALLS", amount: "4.00", quantity: nil,
-                    unitNote: nil),
-                ExtractedReceiptLine(
-                    description: "ZSOFT TCH BLK TRAY", amount: "12.00", quantity: 1,
-                    unitNote: nil),
-                ExtractedReceiptLine(
-                    description: "ZIRONING BOARD", amount: "15.00", quantity: nil,
-                    unitNote: "$15.00 ea"),
-            ],
-            unreadableNotes: []
-        )
-    }
-
-    /// The Salvos case: the reading is fine and the paper simply does not
-    /// name what was bought.
-    private static func unnamedExtraction() -> ExtractedReceipt {
-        ExtractedReceipt(
-            merchantName: "Salvos Stores",
-            address: nil,
-            purchasedOn: nil,
-            purchasedAt: nil,
-            currency: nil,
-            total: "12.00",
-            tax: nil,
-            discounts: [],
-            surcharges: [],
-            shipping: nil,
-            lines: [
-                ExtractedReceiptLine(
-                    description: "", amount: "8.00", quantity: nil, unitNote: nil),
-                ExtractedReceiptLine(
-                    description: "", amount: "4.00", quantity: nil, unitNote: nil),
-            ],
-            unreadableNotes: []
-        )
-    }
-
-    private static func draft(
-        _ extracted: ExtractedReceipt, failures: [ReceiptGateFailure] = []
-    ) -> ReceiptDraft {
-        presentation.draft(extracted: extracted, failures: failures)
-    }
-}
+internal struct ReceiptDraftHintTests {}
 
 // MARK: hints point at fields, and lock nothing
 
@@ -92,7 +29,7 @@ extension ReceiptDraftHintTests {
             detail: "The left edge of the 2nd and 3rd product description lines is distorted",
             deltaCents: nil)
 
-        let draft = Self.draft(Self.cleanExtraction(), failures: [failure])
+        let draft = ReceiptDraft.fake(.tillNamedItems(), failures: [failure])
 
         #expect(draft.hints[.lines] == [failure.detail])
         #expect(draft.hints[.merchant] == nil)
@@ -110,8 +47,8 @@ extension ReceiptDraftHintTests {
             (.ambiguousTax, .adjustments),
         ] as [(ReceiptGateFailureKind, ReceiptDraftField)])
     func kindsAttachToTheirField(kind: ReceiptGateFailureKind, field: ReceiptDraftField) {
-        let draft = Self.draft(
-            Self.cleanExtraction(),
+        let draft = ReceiptDraft.fake(
+            .tillNamedItems(),
             failures: [ReceiptGateFailure(kind: kind, detail: "detail", deltaCents: nil)])
 
         #expect(draft.hints[field] == ["detail"])
@@ -125,8 +62,8 @@ extension ReceiptDraftHintTests {
         "a complaint that names no field stays unattached",
         arguments: [ReceiptGateFailureKind.damaged, .unrecognised("negative-shipping")])
     func unattachedComplaintsStayUnattached(kind: ReceiptGateFailureKind) {
-        let draft = Self.draft(
-            Self.cleanExtraction(),
+        let draft = ReceiptDraft.fake(
+            .tillNamedItems(),
             failures: [
                 ReceiptGateFailure(kind: kind, detail: "the corner is torn", deltaCents: nil)
             ]
@@ -140,8 +77,8 @@ extension ReceiptDraftHintTests {
     /// one the reader gets the kind's sentence, never the wire code.
     @Test("a complaint with no detail falls back to the reader-facing wording")
     func complaintsWithoutDetailUseTheLabel() {
-        let draft = Self.draft(
-            Self.cleanExtraction(),
+        let draft = ReceiptDraft.fake(
+            .tillNamedItems(),
             failures: [ReceiptGateFailure(kind: .noLines, detail: "  ", deltaCents: nil)])
 
         #expect(draft.hints[.lines] == [ReceiptResultCopy.gateFailureLabel(.noLines)])
@@ -152,8 +89,8 @@ extension ReceiptDraftHintTests {
     /// remove.
     @Test("a hinted field is saveable and editable like any other")
     func hintsBlockNothing() {
-        var draft = Self.draft(
-            Self.cleanExtraction(),
+        var draft = ReceiptDraft.fake(
+            .tillNamedItems(),
             failures: [
                 ReceiptGateFailure(kind: .unreadableTotal, detail: "smudged", deltaCents: nil)
             ]
@@ -188,7 +125,7 @@ extension ReceiptDraftHintTests {
     /// numbers not to touch.
     @Test("a reading the gate did not dispute is reported as balancing")
     func aBalancedReadingSaysSo() {
-        let draft = Self.draft(Self.cleanExtraction())
+        let draft = ReceiptDraft.fake(.tillNamedItems())
 
         #expect(draft.reconciliation == .reconciledAsRead)
         #expect(ReceiptDraftReconciliationCopy(draft.reconciliation).tone == .success)
@@ -196,8 +133,8 @@ extension ReceiptDraftHintTests {
 
     @Test("a disputed reading carries the gate's own wording for the gap")
     func aDisputedReadingCarriesTheDelta() {
-        let draft = Self.draft(
-            Self.cleanExtraction(),
+        let draft = ReceiptDraft.fake(
+            .tillNamedItems(),
             failures: [
                 ReceiptGateFailure(kind: .sumMismatch, detail: "out by", deltaCents: -250)
             ])
@@ -211,7 +148,7 @@ extension ReceiptDraftHintTests {
     /// would be this screen vouching for arithmetic nobody has done.
     @Test("a changed figure withdraws the claim rather than restating it")
     func editingAnAmountWithdrawsTheClaim() {
-        var draft = Self.draft(Self.cleanExtraction())
+        var draft = ReceiptDraft.fake(.tillNamedItems())
 
         draft.lines[0].amount.value = "4.50"
 
@@ -223,7 +160,7 @@ extension ReceiptDraftHintTests {
     /// told the sums have changed.
     @Test("renaming an item leaves the arithmetic claim standing")
     func renamingDoesNotWithdrawTheClaim() {
-        var draft = Self.draft(Self.cleanExtraction())
+        var draft = ReceiptDraft.fake(.tillNamedItems())
 
         draft.lines[0].description.value = "Cheetos cheese and bacon balls"
         draft.merchant.value = "Kmart"
@@ -233,7 +170,7 @@ extension ReceiptDraftHintTests {
 
     @Test("changing an adjustment counts as changing a figure")
     func editingAnAdjustmentWithdrawsTheClaim() {
-        var draft = Self.draft(
+        var draft = ReceiptDraft.fake(
             ExtractedReceipt(
                 merchantName: nil, address: nil, purchasedOn: nil, purchasedAt: nil,
                 currency: nil, total: "10.00", tax: "1.00", discounts: [], surcharges: [],

@@ -60,11 +60,6 @@ internal enum ReceiptDraftCopy {
         count == 1 ? "1 item" : "\(count) items"
     }
 
-    /// What an unnamed item is called before the reader names it. Neither a
-    /// blank nor a fabricated name: the paper genuinely did not say, and the
-    /// row still has an amount that has to be checkable.
-    internal static let unnamedItem = "Unnamed item"
-
     // MARK: what the arithmetic is known to do
 
     /// Said when the gate checked the model's reading and it balanced. This

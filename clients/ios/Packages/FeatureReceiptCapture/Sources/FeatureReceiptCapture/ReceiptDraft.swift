@@ -1,4 +1,3 @@
-import AppCore
 import Foundation
 
 /// A reading of a receipt, as something the reader may change.
@@ -199,9 +198,6 @@ internal struct ReceiptDraftValue: Hashable, Sendable {
     internal var isEdited: Bool { value.trimmed != (extracted ?? "") }
 
     internal var isEmpty: Bool { value.trimmed.isEmpty }
-
-    /// The value as it would be saved.
-    internal var saved: String? { value.trimmed.isEmpty ? nil : value.trimmed }
 }
 
 /// One line as the receipt printed it, as something the reader may change.

@@ -1,7 +1,4 @@
 import AppCore
-import DesignSystem
-import Foundation
-import SwiftUI
 import Testing
 
 @testable import FeatureReceiptCapture
@@ -16,76 +13,14 @@ import Testing
 /// differ by an underline, and on a lane where no token resolves they
 /// rasterise to the same canvas.
 @Suite("Receipt draft")
-internal struct ReceiptDraftTests {
-    private static let presentation = ReceiptDraftPresentation()
-
-    /// A receipt whose reading is complete and correct, and whose items are
-    /// named the way a till prints them. The Kmart case: nothing is wrong, and
-    /// the reader still wants to change three names.
-    private static func cleanExtraction() -> ExtractedReceipt {
-        ExtractedReceipt(
-            merchantName: "Kmart Broadway",
-            address: "1 Bay Street, Broadway NSW",
-            purchasedOn: "2026-08-20",
-            purchasedAt: "17:42",
-            currency: "AUD",
-            total: "31.00",
-            tax: nil,
-            discounts: [],
-            surcharges: [],
-            shipping: nil,
-            lines: [
-                ExtractedReceiptLine(
-                    description: "ZCHEETOS C&B BALLS", amount: "4.00", quantity: nil,
-                    unitNote: nil),
-                ExtractedReceiptLine(
-                    description: "ZSOFT TCH BLK TRAY", amount: "12.00", quantity: 1,
-                    unitNote: nil),
-                ExtractedReceiptLine(
-                    description: "ZIRONING BOARD", amount: "15.00", quantity: nil,
-                    unitNote: "$15.00 ea"),
-            ],
-            unreadableNotes: []
-        )
-    }
-
-    /// The Salvos case: the reading is fine and the paper simply does not
-    /// name what was bought.
-    private static func unnamedExtraction() -> ExtractedReceipt {
-        ExtractedReceipt(
-            merchantName: "Salvos Stores",
-            address: nil,
-            purchasedOn: nil,
-            purchasedAt: nil,
-            currency: nil,
-            total: "12.00",
-            tax: nil,
-            discounts: [],
-            surcharges: [],
-            shipping: nil,
-            lines: [
-                ExtractedReceiptLine(
-                    description: "", amount: "8.00", quantity: nil, unitNote: nil),
-                ExtractedReceiptLine(
-                    description: "", amount: "4.00", quantity: nil, unitNote: nil),
-            ],
-            unreadableNotes: []
-        )
-    }
-
-    private static func draft(
-        _ extracted: ExtractedReceipt, failures: [ReceiptGateFailure] = []
-    ) -> ReceiptDraft {
-        presentation.draft(extracted: extracted, failures: failures)
-    }
-}
+internal struct ReceiptDraftTests {}
 
 // MARK: it arrives filled in
 
 extension ReceiptDraftTests {
     @Test("every value the extractor produced is already in the form")
     func extractionPreFillsTheForm() {
-        let draft = Self.draft(Self.cleanExtraction())
+        let draft = ReceiptDraft.fake(.tillNamedItems())
 
         #expect(draft.merchant.value == "Kmart Broadway")
         #expect(draft.address.value == "1 Bay Street, Broadway NSW")
@@ -105,7 +40,7 @@ extension ReceiptDraftTests {
     /// in.
     @Test("a field the extractor read nothing into is present and empty")
     func absentFieldsAreStillFields() {
-        let draft = Self.draft(Self.unnamedExtraction())
+        let draft = ReceiptDraft.fake(.unnamedItems())
 
         #expect(draft.address.isEmpty)
         #expect(!draft.address.wasExtracted)
@@ -119,7 +54,7 @@ extension ReceiptDraftTests {
     /// back into two facts.
     @Test("a line's qualifiers are separate values")
     func qualifiersAreSeparateFields() throws {
-        let draft = Self.draft(Self.cleanExtraction())
+        let draft = ReceiptDraft.fake(.tillNamedItems())
 
         #expect(draft.lines[1].quantity.value == "1")
         #expect(draft.lines[1].unitNote.isEmpty)
@@ -134,7 +69,7 @@ extension ReceiptDraftTests {
             currency: "AUD", total: "42.03", tax: "3.82", discounts: ["1.00", "0.50"],
             surcharges: ["0.03"], shipping: nil, lines: [], unreadableNotes: [])
 
-        let draft = Self.draft(extracted)
+        let draft = ReceiptDraft.fake(extracted)
 
         #expect(draft.adjustments.map(\.kind) == [.tax, .discount, .discount, .surcharge])
         #expect(draft.adjustments.map(\.amount.value) == ["3.82", "1.00", "0.50", "0.03"])
@@ -146,7 +81,7 @@ extension ReceiptDraftTests {
     /// screens have already drifted.
     @Test("a blank draft is the same shape as a pre-filled one")
     func blankDraftIsTheSameForm() {
-        let blank = Self.presentation.blankDraft(currency: "AUD")
+        let blank = ReceiptDraft.blank(currency: "AUD")
 
         #expect(blank.merchant.isEmpty)
         #expect(!blank.merchant.wasExtracted)
@@ -161,7 +96,7 @@ extension ReceiptDraftTests {
 extension ReceiptDraftTests {
     @Test("a pre-filled field takes a change and keeps it")
     func editingAPreFilledFieldSticks() {
-        var draft = Self.draft(Self.cleanExtraction())
+        var draft = ReceiptDraft.fake(.tillNamedItems())
 
         draft.lines[0].description.value = "Cheetos cheese and bacon balls"
 
@@ -174,7 +109,7 @@ extension ReceiptDraftTests {
     /// the one the model read.
     @Test("the extractor's own reading survives the edit")
     func theOriginalReadingIsKept() {
-        var draft = Self.draft(Self.cleanExtraction())
+        var draft = ReceiptDraft.fake(.tillNamedItems())
 
         draft.lines[0].description.value = "Cheetos cheese and bacon balls"
 
@@ -186,7 +121,7 @@ extension ReceiptDraftTests {
     /// through it.
     @Test("trailing whitespace is not an edit")
     func whitespaceIsNotAnEdit() {
-        var draft = Self.draft(Self.cleanExtraction())
+        var draft = ReceiptDraft.fake(.tillNamedItems())
 
         draft.merchant.value = "Kmart Broadway  "
 
@@ -195,7 +130,7 @@ extension ReceiptDraftTests {
 
     @Test("a row the model missed can be added, and knows it was not read")
     func aLineCanBeAdded() throws {
-        var draft = Self.draft(Self.cleanExtraction())
+        var draft = ReceiptDraft.fake(.tillNamedItems())
 
         draft.addLine()
         let added = try #require(draft.lines.last)
@@ -213,7 +148,7 @@ extension ReceiptDraftTests {
 
     @Test("a row the model invented can be removed")
     func aLineCanBeRemoved() {
-        var draft = Self.draft(Self.cleanExtraction())
+        var draft = ReceiptDraft.fake(.tillNamedItems())
         let removed = draft.lines[1].id
 
         draft.removeLine(id: removed)
@@ -226,7 +161,7 @@ extension ReceiptDraftTests {
     /// somebody just created disappears as they type into it.
     @Test("two added rows have two identities")
     func addedLinesAreDistinct() {
-        var draft = Self.presentation.blankDraft(currency: nil)
+        var draft = ReceiptDraft.blank(currency: nil)
 
         draft.addLine()
         draft.addLine()
@@ -239,7 +174,7 @@ extension ReceiptDraftTests {
     /// noticed when somebody adds one.
     @Test("clearing a required field reports it without locking anything else")
     func aClearedRequiredFieldIsReportedNotBlocking() {
-        var draft = Self.draft(Self.cleanExtraction())
+        var draft = ReceiptDraft.fake(.tillNamedItems())
 
         draft.total.value = ""
 
@@ -256,7 +191,7 @@ extension ReceiptDraftTests {
 
     @Test("a line with no amount is reported against that line and no other")
     func aLineMissingItsAmountIsReported() {
-        var draft = Self.draft(Self.cleanExtraction())
+        var draft = ReceiptDraft.fake(.tillNamedItems())
         let emptied = draft.lines[1].id
 
         draft.lines[1].amount.value = ""
@@ -271,7 +206,7 @@ extension ReceiptDraftTests {
     /// correct.
     @Test("a line with an amount and no name is saveable")
     func anUnnamedLineIsFine() {
-        let draft = Self.draft(Self.unnamedExtraction())
+        let draft = ReceiptDraft.fake(.unnamedItems())
 
         #expect(draft.problems.isEmpty)
         #expect(draft.isSaveable)
@@ -279,7 +214,7 @@ extension ReceiptDraftTests {
 
     @Test("a value that was never read and is still empty is not an edit")
     func anUntouchedEmptyFieldIsNotAnEdit() {
-        let draft = Self.presentation.blankDraft(currency: nil)
+        let draft = ReceiptDraft.blank(currency: nil)
 
         #expect(!draft.isEdited)
     }
@@ -289,7 +224,7 @@ extension ReceiptDraftTests {
     /// omitting an amount they were never asked for.
     @Test("an offered row with nothing in it is not reported")
     func aBlankRowIsNotAProblem() {
-        var draft = Self.presentation.blankDraft(currency: nil)
+        var draft = ReceiptDraft.blank(currency: nil)
 
         draft.addLine()
 
@@ -301,7 +236,7 @@ extension ReceiptDraftTests {
     /// is the screen telling somebody off for not having started.
     @Test("an untouched blank form does not open by naming what is missing")
     func aBlankFormDoesNotAccuse() {
-        var draft = Self.presentation.blankDraft(currency: nil)
+        var draft = ReceiptDraft.blank(currency: nil)
 
         #expect(!draft.isSaveable, "it still cannot be saved")
         #expect(!draft.reportsMissingTotal, "and it does not say so in red before anyone types")
@@ -316,7 +251,7 @@ extension ReceiptDraftTests {
     /// deleting a figure the model read.
     @Test("emptying a total that was read is named immediately")
     func anEmptiedExtractedTotalIsNamed() {
-        var draft = Self.draft(Self.cleanExtraction())
+        var draft = ReceiptDraft.fake(.tillNamedItems())
 
         draft.total.value = ""
 
