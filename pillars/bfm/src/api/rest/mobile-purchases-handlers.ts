@@ -14,7 +14,11 @@
  */
 import { isGatewayOk } from '../pillars/gateway.js';
 import { decodePurchasesCursor } from '../purchases/list-cursor.js';
-import { toCollectionUpstreamErrorResponse, toUpstreamErrorResponse } from './upstream-error.js';
+import {
+  toCollectionUpstreamErrorResponse,
+  toReceiptBytesErrorResponse,
+  toUpstreamErrorResponse,
+} from './upstream-error.js';
 
 import type { ServerInferRequest } from '@ts-rest/core';
 
@@ -76,6 +80,27 @@ export function makeMobilePurchasesHandlers(deps: MobilePurchasesHandlerDeps) {
       // purchases means bfm asked for a path that pillar does not serve — a
       // contract fault, not a fact about the upload.
       if (!isGatewayOk(outcome)) return toCollectionUpstreamErrorResponse(outcome);
+
+      return { status: 200 as const, body: outcome.value };
+    },
+
+    getReceipt: async ({ params }: Req['getReceipt']) => {
+      const outcome = await deps.purchases.getReceipt(params.sha256);
+      // The single-resource mapper: a 404 here is a fact about the user's own
+      // data — a receipt whose file is not on the volume — and this route
+      // declares it. Not the bytes mapper: this route asked for the receipt as
+      // it is stored rather than for a rendering of it, so there is no form
+      // for the producer to refuse and a 415 would be a contract fault.
+      if (!isGatewayOk(outcome)) return toUpstreamErrorResponse(outcome);
+
+      return { status: 200 as const, body: outcome.value };
+    },
+
+    getReceiptThumbnail: async ({ params }: Req['getReceiptThumbnail']) => {
+      const outcome = await deps.purchases.getReceiptThumbnail(params.sha256);
+      // The one route that asked for a representation, and so the one that
+      // can be told the record cannot be given in it.
+      if (!isGatewayOk(outcome)) return toReceiptBytesErrorResponse(outcome);
 
       return { status: 200 as const, body: outcome.value };
     },

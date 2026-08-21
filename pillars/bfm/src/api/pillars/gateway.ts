@@ -69,6 +69,18 @@ export type GatewayFailure =
   | (GatewayFailureBase & { readonly kind: 'not-found'; readonly status: 404 })
   | (GatewayFailureBase & { readonly kind: 'conflict'; readonly status: 409 })
   | (GatewayFailureBase & { readonly kind: 'invalid-request'; readonly status: 400 })
+  /**
+   * The producer answered, understood the request, and will not represent the
+   * resource in the form asked for — a receipt that is a PDF rather than a
+   * photograph, asked for as an image.
+   *
+   * Its own kind rather than folded into `invalid-request` because it is the
+   * one producer 4xx that is a fact about the RESOURCE instead of about the
+   * request bfm built. Folded, it would reach the phone as "this pillar built
+   * a bad request", and the app would keep asking for a picture that will
+   * never exist rather than drawing a placeholder once.
+   */
+  | (GatewayFailureBase & { readonly kind: 'unsupported-media'; readonly status: 415 })
   | (GatewayFailureBase & { readonly kind: 'gateway-misconfigured'; readonly status: 502 });
 
 export type GatewaySuccess<TValue> = { readonly kind: 'ok'; readonly value: TValue };
@@ -138,6 +150,17 @@ export function toGatewayFailure(failure: CallFailure): GatewayFailure {
     case 'bad-request':
       return { kind: 'invalid-request', pillar: target, status: 400, detail: failure.message };
     case 'refused':
+      // 415 is pulled out of the fold below because it is the one member of
+      // this bucket that says something about the resource rather than about
+      // the request — see the `unsupported-media` member's own note.
+      if (failure.status === 415) {
+        return {
+          kind: 'unsupported-media',
+          pillar: target,
+          status: 415,
+          detail: withUpstreamStatus(failure.status, failure.message),
+        };
+      }
       // A permanent 4xx the SDK did not otherwise recognise (413 body too
       // large, 422 unprocessable, ...) — see `toGatewayFailure`'s header for
       // why this folds onto the SAME outcome as `bad-request` rather than

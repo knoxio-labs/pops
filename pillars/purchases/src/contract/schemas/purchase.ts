@@ -107,10 +107,10 @@ export const PurchaseListRowSchema = PurchaseSchema.extend({
    *
    * A `pops://` reference rather than bytes: a list row carrying an image
    * inline would make a page of orders a megabyte of base64, and the same
-   * receipt would be re-sent on every page that showed it. No route
-   * dereferences it today, so a consumer can key a cache on it and recognise
-   * two rows as the same receipt, and cannot render one — see the pillar
-   * README.
+   * receipt would be re-sent on every page that showed it. The hash in the URI
+   * is the key a consumer caches on — two rows naming the same receipt are the
+   * same file — and `GET /receipts/:sha256` (or its `/thumbnail`) is what turns
+   * it back into pixels. See `src/ingest/receipt/README.md`.
    */
   receiptUri: PopsUriSchema.nullable(),
 });

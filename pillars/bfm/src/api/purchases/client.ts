@@ -29,12 +29,19 @@ import {
   toMobilePurchaseDetail,
   type PurchasesListRow,
 } from './list-wire.js';
-import { PurchasesReceiptOutcomeSchema, toMobileReceiptOutcome } from './wire.js';
+import {
+  PurchasesReceiptBytesSchema,
+  PurchasesReceiptOutcomeSchema,
+  toMobileReceiptOutcome,
+} from './wire.js';
+
+import type { CallResult, PillarHandle } from '@pops/pillar-sdk/server';
 
 import type { MobileCaptureMetadata } from '../../contract/capture.js';
 import type {
   MobilePurchaseDetail,
   MobilePurchasesPage,
+  MobileReceiptBytes,
   MobileReceiptOutcome,
   MobileReceiptPart,
 } from '../../contract/rest-schemas.js';
@@ -63,6 +70,20 @@ export type PurchasesReceiptRouter = {
   };
 };
 
+/**
+ * The receipt-bytes half of purchases' `receipt.*` router.
+ *
+ * Separate from {@link PurchasesReceiptRouter} only because the upload half
+ * predates it; both name routes on the same producer sub-router and both are
+ * assertions about a peer rather than a compile-time link to one.
+ */
+export type PurchasesReceiptBytesRouter = {
+  receipt: {
+    read: (input: { sha256: string }) => Promise<unknown>;
+    thumbnail: (input: { sha256: string }) => Promise<unknown>;
+  };
+};
+
 export interface ListPurchasesRequest {
   /** Rows to return. The caller has already clamped this to the contract's cap. */
   readonly limit: number;
@@ -77,6 +98,8 @@ export interface MobilePurchasesClient {
   ): Promise<GatewayOutcome<MobileReceiptOutcome>>;
   listPurchases(request: ListPurchasesRequest): Promise<GatewayOutcome<MobilePurchasesPage>>;
   getPurchase(id: string): Promise<GatewayOutcome<MobilePurchaseDetail>>;
+  getReceipt(sha256: string): Promise<GatewayOutcome<MobileReceiptBytes>>;
+  getReceiptThumbnail(sha256: string): Promise<GatewayOutcome<MobileReceiptBytes>>;
 }
 
 export function createMobilePurchasesClient(gateway: PillarGateway): MobilePurchasesClient {
@@ -144,7 +167,48 @@ export function createMobilePurchasesClient(gateway: PillarGateway): MobilePurch
 
       return { kind: 'ok', value: toMobilePurchaseDetail(detail.value) };
     },
+
+    async getReceipt(sha256: string) {
+      return fetchReceiptBytes(gateway, 'receipt.read', (handle) =>
+        handle.receipt.read({ sha256 })
+      );
+    },
+
+    async getReceiptThumbnail(sha256: string) {
+      return fetchReceiptBytes(gateway, 'receipt.thumbnail', (handle) =>
+        handle.receipt.thumbnail({ sha256 })
+      );
+    },
   };
+}
+
+/**
+ * The two byte routes differ only in which one they call.
+ *
+ * The bytes are passed through unchanged rather than re-encoded: `purchases`
+ * named the file for the SHA-256 of what it holds, and a round trip through
+ * decode-and-re-encode would put a representation bfm chose in front of a
+ * client that may well be checking the hash.
+ */
+async function fetchReceiptBytes(
+  gateway: PillarGateway,
+  operation: string,
+  invoke: (handle: PillarHandle<PurchasesReceiptBytesRouter>) => Promise<CallResult<unknown>>
+): Promise<GatewayOutcome<MobileReceiptBytes>> {
+  const outcome = await gateway.call<PurchasesReceiptBytesRouter, unknown>(
+    PURCHASES_PILLAR_ID,
+    invoke
+  );
+
+  const answered = parseOrMismatch(
+    PURCHASES_PILLAR_ID,
+    outcome,
+    PurchasesReceiptBytesSchema,
+    operation
+  );
+  if (!isGatewayOk(answered)) return answered;
+
+  return { kind: 'ok', value: answered.value };
 }
 
 /**

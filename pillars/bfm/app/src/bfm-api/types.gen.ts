@@ -311,6 +311,7 @@ export type MobileFinanceListTransactionsErrors = {
       | 'upstream_misconfigured'
       | 'upstream_invalid_request'
       | 'upstream_conflict'
+      | 'upstream_unsupported_media'
       | 'not_found';
     message: string;
     pillar: string;
@@ -327,6 +328,7 @@ export type MobileFinanceListTransactionsErrors = {
       | 'upstream_misconfigured'
       | 'upstream_invalid_request'
       | 'upstream_conflict'
+      | 'upstream_unsupported_media'
       | 'not_found';
     message: string;
     pillar: string;
@@ -407,6 +409,7 @@ export type MobileFinanceGetTransactionErrors = {
       | 'upstream_misconfigured'
       | 'upstream_invalid_request'
       | 'upstream_conflict'
+      | 'upstream_unsupported_media'
       | 'not_found';
     message: string;
     pillar: string;
@@ -431,6 +434,7 @@ export type MobileFinanceGetTransactionErrors = {
       | 'upstream_misconfigured'
       | 'upstream_invalid_request'
       | 'upstream_conflict'
+      | 'upstream_unsupported_media'
       | 'not_found';
     message: string;
     pillar: string;
@@ -447,6 +451,7 @@ export type MobileFinanceGetTransactionErrors = {
       | 'upstream_misconfigured'
       | 'upstream_invalid_request'
       | 'upstream_conflict'
+      | 'upstream_unsupported_media'
       | 'not_found';
     message: string;
     pillar: string;
@@ -540,6 +545,7 @@ export type MobilePurchasesListPurchasesErrors = {
       | 'upstream_misconfigured'
       | 'upstream_invalid_request'
       | 'upstream_conflict'
+      | 'upstream_unsupported_media'
       | 'not_found';
     message: string;
     pillar: string;
@@ -556,6 +562,7 @@ export type MobilePurchasesListPurchasesErrors = {
       | 'upstream_misconfigured'
       | 'upstream_invalid_request'
       | 'upstream_conflict'
+      | 'upstream_unsupported_media'
       | 'not_found';
     message: string;
     pillar: string;
@@ -672,6 +679,7 @@ export type MobilePurchasesUploadReceiptErrors = {
       | 'upstream_misconfigured'
       | 'upstream_invalid_request'
       | 'upstream_conflict'
+      | 'upstream_unsupported_media'
       | 'not_found';
     message: string;
     pillar: string;
@@ -688,6 +696,7 @@ export type MobilePurchasesUploadReceiptErrors = {
       | 'upstream_misconfigured'
       | 'upstream_invalid_request'
       | 'upstream_conflict'
+      | 'upstream_unsupported_media'
       | 'not_found';
     message: string;
     pillar: string;
@@ -753,6 +762,255 @@ export type MobilePurchasesUploadReceiptResponses = {
 export type MobilePurchasesUploadReceiptResponse =
   MobilePurchasesUploadReceiptResponses[keyof MobilePurchasesUploadReceiptResponses];
 
+export type MobilePurchasesGetReceiptData = {
+  body?: never;
+  path: {
+    sha256: string;
+  };
+  query?: never;
+  url: '/mobile/purchases/receipts/{sha256}';
+};
+
+export type MobilePurchasesGetReceiptErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code: 'invalid_cursor' | 'invalid_request';
+    message: string;
+  };
+  /**
+   * 401
+   */
+  401: {
+    code: 'invalid_token';
+    message: string;
+  };
+  /**
+   * 403
+   */
+  403:
+    | {
+        code: 'device_revoked';
+        message: string;
+      }
+    | {
+        capability: string;
+        code: 'capability_not_granted';
+        message: string;
+      };
+  /**
+   * 404
+   */
+  404: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'upstream_unsupported_media'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+  /**
+   * 429
+   */
+  429: {
+    code: 'rate_limited';
+    message: string;
+    retryAfterSeconds: number;
+  };
+  /**
+   * 502
+   */
+  502: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'upstream_unsupported_media'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+  /**
+   * 503
+   */
+  503: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'upstream_unsupported_media'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+};
+
+export type MobilePurchasesGetReceiptError =
+  MobilePurchasesGetReceiptErrors[keyof MobilePurchasesGetReceiptErrors];
+
+export type MobilePurchasesGetReceiptResponses = {
+  /**
+   * 200
+   */
+  200: {
+    byteLength: number;
+    dataBase64: string;
+    mediaType: string;
+    sha256: string;
+  };
+};
+
+export type MobilePurchasesGetReceiptResponse =
+  MobilePurchasesGetReceiptResponses[keyof MobilePurchasesGetReceiptResponses];
+
+export type MobilePurchasesGetReceiptThumbnailData = {
+  body?: never;
+  path: {
+    sha256: string;
+  };
+  query?: never;
+  url: '/mobile/purchases/receipts/{sha256}/thumbnail';
+};
+
+export type MobilePurchasesGetReceiptThumbnailErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code: 'invalid_cursor' | 'invalid_request';
+    message: string;
+  };
+  /**
+   * 401
+   */
+  401: {
+    code: 'invalid_token';
+    message: string;
+  };
+  /**
+   * 403
+   */
+  403:
+    | {
+        code: 'device_revoked';
+        message: string;
+      }
+    | {
+        capability: string;
+        code: 'capability_not_granted';
+        message: string;
+      };
+  /**
+   * 404
+   */
+  404: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'upstream_unsupported_media'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+  /**
+   * 415
+   */
+  415: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'upstream_unsupported_media'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+  /**
+   * 429
+   */
+  429: {
+    code: 'rate_limited';
+    message: string;
+    retryAfterSeconds: number;
+  };
+  /**
+   * 502
+   */
+  502: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'upstream_unsupported_media'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+  /**
+   * 503
+   */
+  503: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'upstream_unsupported_media'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+};
+
+export type MobilePurchasesGetReceiptThumbnailError =
+  MobilePurchasesGetReceiptThumbnailErrors[keyof MobilePurchasesGetReceiptThumbnailErrors];
+
+export type MobilePurchasesGetReceiptThumbnailResponses = {
+  /**
+   * 200
+   */
+  200: {
+    byteLength: number;
+    dataBase64: string;
+    mediaType: string;
+    sha256: string;
+  };
+};
+
+export type MobilePurchasesGetReceiptThumbnailResponse =
+  MobilePurchasesGetReceiptThumbnailResponses[keyof MobilePurchasesGetReceiptThumbnailResponses];
+
 export type MobilePurchasesGetPurchaseData = {
   body?: never;
   path: {
@@ -801,6 +1059,7 @@ export type MobilePurchasesGetPurchaseErrors = {
       | 'upstream_misconfigured'
       | 'upstream_invalid_request'
       | 'upstream_conflict'
+      | 'upstream_unsupported_media'
       | 'not_found';
     message: string;
     pillar: string;
@@ -825,6 +1084,7 @@ export type MobilePurchasesGetPurchaseErrors = {
       | 'upstream_misconfigured'
       | 'upstream_invalid_request'
       | 'upstream_conflict'
+      | 'upstream_unsupported_media'
       | 'not_found';
     message: string;
     pillar: string;
@@ -841,6 +1101,7 @@ export type MobilePurchasesGetPurchaseErrors = {
       | 'upstream_misconfigured'
       | 'upstream_invalid_request'
       | 'upstream_conflict'
+      | 'upstream_unsupported_media'
       | 'not_found';
     message: string;
     pillar: string;

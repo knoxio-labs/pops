@@ -484,6 +484,35 @@ says evidence belongs in the `documents` pillar instead; that pillar has no
 write surface at all today, so this is where it lives until POPS-1528 moves
 it, and these URIs migrate with everything else.
 
+### Reading one back
+
+`GET /receipts/:sha256` answers the stored bytes; `GET /receipts/:sha256/thumbnail`
+answers the same receipt resized to fit 480px on its longest edge, as JPEG.
+Both are base64 inside the JSON envelope the contract describes, not a raw
+binary body — that keeps them on the contract's `receipt.*` router, which is
+what makes the ADR-044 scope gate cover them (a hand-mounted Express route
+would be ungated), and it keeps one wire representation across the four code
+generators that read this pillar's spec.
+
+`resolveStoredReceipt` walks the writer's own extension map rather than
+consulting `purchase_documents`. The row is not the authority: a
+`needs-review` or `unreadable` upload mints a URI with no document row, and a
+row-based resolver would 404 exactly the receipts a human has been asked to
+look at. Probing candidate extensions also needs no migration and reaches
+every file already on the volume.
+
+The thumbnail is derived on the first request for it and persisted beside the
+original under the same hash, so the second request is a read. Deriving it at
+write time instead would leave the existing corpus without one until something
+walked the filesystem; deriving it per request would pay for a resize on every
+scroll. A receipt that is a PDF, a pasted text body, or bytes that will not
+decode gets a `415` naming which of those it was — settled, so a client draws
+a placeholder once rather than asking again.
+
+Four answers, all specific: `400` for a hash that is not 64 lowercase hex,
+`404 RECEIPT_NOT_STORED` for a well-formed hash with no file behind it, `415`
+as above, and `200` with the bytes. None of them is an empty `200`.
+
 `looksLikeMediaType` checks the first bytes at the edge. "That is not a
 JPEG" is something a user can act on immediately; a model's confusion about
 it is not, and costs a call to discover. The check is deliberately shallow

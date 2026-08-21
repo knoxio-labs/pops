@@ -9,6 +9,8 @@ import {
   looksLikeMediaType,
   receiptUri,
   resolveReceiptStoreRoot,
+  resolveStoredReceipt,
+  storeReceiptBytes,
   storeReceiptPart,
 } from '../store.js';
 import { MEDIA_TYPES } from '../vision.js';
@@ -280,5 +282,68 @@ describe('checking an upload before the model sees it', () => {
     for (const mediaType of MEDIA_TYPES) {
       expect(() => looksLikeMediaType(JPEG.toString('base64'), mediaType)).not.toThrow();
     }
+  });
+});
+
+describe('resolving a stored receipt back from its hash', () => {
+  const resolveRoot = mkdtempSync(join(tmpdir(), 'pops-resolve-'));
+  afterAll(() => rmSync(resolveRoot, { recursive: true, force: true }));
+
+  it('round-trips every media type the writer can name', () => {
+    // The writer picks an extension per media type and the reader has to
+    // arrive back at the same one. A type the writer supports and the reader
+    // does not is a receipt on disk that nothing can reach.
+    const cases = [
+      [JPEG, 'image/jpeg'],
+      [PNG, 'image/png'],
+      [PDF, 'application/pdf'],
+      [EMAIL, 'text/plain'],
+    ] as const;
+
+    for (const [bytes, mediaType] of cases) {
+      const stored = storeReceiptBytes(bytes, mediaType, resolveRoot);
+      const found = resolveStoredReceipt(stored.sha256, resolveRoot);
+
+      expect(found).not.toBeNull();
+      expect(found?.mediaType).toBe(mediaType);
+      expect(found?.path).toBe(stored.path);
+      expect(found?.byteLength).toBe(bytes.length);
+      expect(readFileSync(found?.path ?? '').equals(bytes)).toBe(true);
+    }
+  });
+
+  it('answers nothing for a hash the store never wrote', () => {
+    expect(resolveStoredReceipt('b'.repeat(64), resolveRoot)).toBeNull();
+  });
+
+  it('refuses anything that is not 64 lowercase hex, without touching the disk', () => {
+    // The value arrives from a URL. Uppercase is refused as well as the
+    // obviously hostile forms, because the writer only ever emits lowercase
+    // and accepting both would mean two spellings of one address.
+    const notHashes = [
+      '',
+      'nonsense',
+      'A'.repeat(64),
+      'f'.repeat(63),
+      'f'.repeat(65),
+      '../../../etc/passwd',
+      `${'a'.repeat(62)}/x`,
+      `${'a'.repeat(60)}..%2F`,
+    ];
+
+    for (const value of notHashes) {
+      expect(resolveStoredReceipt(value, resolveRoot)).toBeNull();
+    }
+  });
+
+  it('cannot be pointed at a file outside its own shard', () => {
+    // Written where a traversal would have to land for the attempt to be
+    // worth anything, so a resolver that joined an unvalidated segment would
+    // find it and this would fail.
+    const outside = join(resolveRoot, 'secret.txt');
+    writeFileSync(outside, 'not a receipt');
+
+    expect(resolveStoredReceipt('../secret.txt', resolveRoot)).toBeNull();
+    expect(resolveStoredReceipt('secret', resolveRoot)).toBeNull();
   });
 });

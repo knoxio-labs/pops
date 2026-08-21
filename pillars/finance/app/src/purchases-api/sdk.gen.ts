@@ -54,6 +54,12 @@ import type {
   PurchasePatchItemData,
   PurchasePatchItemErrors,
   PurchasePatchItemResponses,
+  ReceiptReadData,
+  ReceiptReadErrors,
+  ReceiptReadResponses,
+  ReceiptThumbnailData,
+  ReceiptThumbnailErrors,
+  ReceiptThumbnailResponses,
   ReceiptUploadData,
   ReceiptUploadErrors,
   ReceiptUploadResponses,
@@ -402,6 +408,28 @@ export const receiptUpload = <ThrowOnError extends boolean = false>(
       'Content-Type': 'application/json',
       ...options?.headers,
     },
+  });
+
+/**
+ * The bytes a pops://purchases/receipt/<sha256> URI names
+ */
+export const receiptRead = <ThrowOnError extends boolean = false>(
+  options: Options<ReceiptReadData, ThrowOnError>
+): RequestResult<ReceiptReadResponses, ReceiptReadErrors, ThrowOnError> =>
+  (options.client ?? client).get<ReceiptReadResponses, ReceiptReadErrors, ThrowOnError>({
+    url: '/receipts/{sha256}',
+    ...options,
+  });
+
+/**
+ * The same receipt at a size a list row can afford
+ */
+export const receiptThumbnail = <ThrowOnError extends boolean = false>(
+  options: Options<ReceiptThumbnailData, ThrowOnError>
+): RequestResult<ReceiptThumbnailResponses, ReceiptThumbnailErrors, ThrowOnError> =>
+  (options.client ?? client).get<ReceiptThumbnailResponses, ReceiptThumbnailErrors, ThrowOnError>({
+    url: '/receipts/{sha256}/thumbnail',
+    ...options,
   });
 
 /**

@@ -217,6 +217,13 @@ export const MobileUpstreamErrorSchema = z.object({
     'upstream_misconfigured',
     'upstream_invalid_request',
     'upstream_conflict',
+    /**
+     * The producer holds the record and will not give it in the form asked
+     * for — a receipt that is a PDF, asked for as an image. Settled: the app
+     * draws its placeholder and does not ask again. Only routes that request
+     * a particular representation declare the 415 this rides on.
+     */
+    'upstream_unsupported_media',
     'not_found',
   ]),
   /** The pillar that could not serve it, by registered id. Operator-facing. */
@@ -429,6 +436,26 @@ export const MobilePurchasesPageSchema = z.object({
 });
 
 export type MobilePurchasesPage = z.infer<typeof MobilePurchasesPageSchema>;
+
+/**
+ * The bytes behind a list row's `receiptUri`, or behind a detail screen's.
+ *
+ * Base64 in JSON, matching the upload leg in the other direction and matching
+ * what `purchases` serves: one representation of these bytes across the whole
+ * federation, describable in the contract the Swift client is generated from.
+ *
+ * `sha256` is echoed rather than assumed from the request so a client that
+ * pipelined several can match answers to asks without holding the order.
+ */
+export const MobileReceiptBytesSchema = z.object({
+  sha256: z.string(),
+  /** `image/jpeg` for a thumbnail; whatever it was uploaded as for the original. */
+  mediaType: z.string(),
+  byteLength: z.int(),
+  dataBase64: z.string(),
+});
+
+export type MobileReceiptBytes = z.infer<typeof MobileReceiptBytesSchema>;
 
 /**
  * How many parts one receipt may be sent as. Mirrors `purchases`'

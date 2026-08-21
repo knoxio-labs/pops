@@ -129,6 +129,27 @@ export const PurchasesReceiptOutcomeSchema = z.discriminatedUnion('kind', [
 
 export type PurchasesReceiptOutcome = z.infer<typeof PurchasesReceiptOutcomeSchema>;
 
+/**
+ * What `receipt.read` and `receipt.thumbnail` answer.
+ *
+ * Validated like everything else that crosses the seam, and `min(1)` on the
+ * payload is the load-bearing part: a producer that answered a well-formed
+ * envelope with an empty `dataBase64` would reach a handset as an image view
+ * that draws nothing, which reads as a broken photograph rather than as a
+ * broken wire. `byteLength` is NOT cross-checked against the decoded length
+ * here — bfm re-states what the producer said rather than auditing it, and a
+ * disagreement is the producer's bug to fix, not a reason to deny the phone a
+ * picture it could otherwise draw.
+ */
+export const PurchasesReceiptBytesSchema = z.object({
+  sha256: z.string(),
+  mediaType: z.string(),
+  byteLength: z.number().int(),
+  dataBase64: z.string().min(1),
+});
+
+export type PurchasesReceiptBytes = z.infer<typeof PurchasesReceiptBytesSchema>;
+
 /** purchases' receipt outcome → the mobile one. Field-for-field; no arithmetic. */
 export function toMobileReceiptOutcome(outcome: PurchasesReceiptOutcome): MobileReceiptOutcome {
   switch (outcome.kind) {

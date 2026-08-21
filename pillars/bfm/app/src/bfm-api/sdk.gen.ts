@@ -27,6 +27,12 @@ import type {
   MobilePurchasesGetPurchaseData,
   MobilePurchasesGetPurchaseErrors,
   MobilePurchasesGetPurchaseResponses,
+  MobilePurchasesGetReceiptData,
+  MobilePurchasesGetReceiptErrors,
+  MobilePurchasesGetReceiptResponses,
+  MobilePurchasesGetReceiptThumbnailData,
+  MobilePurchasesGetReceiptThumbnailErrors,
+  MobilePurchasesGetReceiptThumbnailResponses,
   MobilePurchasesListPurchasesData,
   MobilePurchasesListPurchasesErrors,
   MobilePurchasesListPurchasesResponses,
@@ -199,6 +205,38 @@ export const mobilePurchasesUploadReceipt = <ThrowOnError extends boolean = fals
       ...options?.headers,
     },
   });
+
+/**
+ * The receipt itself, full size, for a detail screen
+ */
+export const mobilePurchasesGetReceipt = <ThrowOnError extends boolean = false>(
+  options: Options<MobilePurchasesGetReceiptData, ThrowOnError>
+): RequestResult<
+  MobilePurchasesGetReceiptResponses,
+  MobilePurchasesGetReceiptErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).get<
+    MobilePurchasesGetReceiptResponses,
+    MobilePurchasesGetReceiptErrors,
+    ThrowOnError
+  >({ url: '/mobile/purchases/receipts/{sha256}', ...options });
+
+/**
+ * The list-sized image behind a row’s receiptUri
+ */
+export const mobilePurchasesGetReceiptThumbnail = <ThrowOnError extends boolean = false>(
+  options: Options<MobilePurchasesGetReceiptThumbnailData, ThrowOnError>
+): RequestResult<
+  MobilePurchasesGetReceiptThumbnailResponses,
+  MobilePurchasesGetReceiptThumbnailErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).get<
+    MobilePurchasesGetReceiptThumbnailResponses,
+    MobilePurchasesGetReceiptThumbnailErrors,
+    ThrowOnError
+  >({ url: '/mobile/purchases/receipts/{sha256}/thumbnail', ...options });
 
 /**
  * The fuller record behind one list row, with its lines

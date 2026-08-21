@@ -10,6 +10,10 @@
  * Nothing here branches on how the receipt arrived beyond the wording of
  * its refusals. A photograph, a PDF invoice and a pasted order confirmation
  * are stored, keyed, gated and written by the same code.
+ *
+ * The sub-router's two read routes are spread in from
+ * `receipt-bytes-handlers.ts`. They belong to the same router and share
+ * nothing else with the upload — no database, no model, no merchant resolver.
  */
 import { findPurchaseBySourceOrderId } from '../../db/index.js';
 import { firstPhotoCapture, resolveCapture } from '../../ingest/receipt/capture.js';
@@ -24,6 +28,7 @@ import {
 } from '../../ingest/receipt/store.js';
 import { kindOf } from '../../ingest/receipt/vision.js';
 import { createMerchantResolver, type MerchantResolver } from '../contacts/merchant.js';
+import { makeReceiptBytesHandlers } from './receipt-bytes-handlers.js';
 import { persistReceiptPurchase, sameShopAlreadyRecorded } from './receipt-persist.js';
 import { toPurchaseDetailBody } from './serializers.js';
 
@@ -238,5 +243,7 @@ export function makeReceiptHandlers(
         alreadyStored: stored.every((one) => one.alreadyPresent),
       });
     },
+
+    ...makeReceiptBytesHandlers(),
   };
 }

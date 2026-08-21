@@ -2222,6 +2222,9 @@ importers:
       papaparse:
         specifier: ^5.5.4
         version: 5.5.4
+      sharp:
+        specifier: ^0.35.3
+        version: 0.35.3(@types/node@24.13.3)
       zod:
         specifier: ^4.4.3
         version: 4.4.3

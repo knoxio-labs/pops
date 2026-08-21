@@ -56,6 +56,7 @@ import {
   MobilePayloadTooLargeErrorSchema,
   MobilePurchaseDetailSchema,
   MobilePurchasesPageSchema,
+  MobileReceiptBytesSchema,
   MobileReceiptOutcomeSchema,
   MobileReceiptUploadBodySchema,
   MobileRequestErrorSchema,
@@ -224,6 +225,38 @@ const mobilePurchasesContract = c.router({
     },
     summary: 'Hand a photographed, scanned or pasted receipt to the purchases pillar',
     metadata: requires('purchases.receipts.write'),
+  },
+  getReceiptThumbnail: {
+    method: 'GET',
+    path: '/mobile/purchases/receipts/:sha256/thumbnail',
+    pathParams: z.object({ sha256: z.string() }),
+    responses: {
+      200: MobileReceiptBytesSchema,
+      ...MOBILE_REQUEST_RESPONSES,
+      ...MOBILE_PERIMETER_RESPONSES,
+      404: MobileUpstreamErrorSchema,
+      // The receipt is a PDF or a pasted body, or its bytes will not decode.
+      // Settled rather than transient — see `MobileUpstreamErrorSchema`'s
+      // `upstream_unsupported_media`.
+      415: MobileUpstreamErrorSchema,
+      ...MOBILE_UPSTREAM_RESPONSES,
+    },
+    summary: 'The list-sized image behind a row’s receiptUri',
+    metadata: requires('purchases.receipts.read'),
+  },
+  getReceipt: {
+    method: 'GET',
+    path: '/mobile/purchases/receipts/:sha256',
+    pathParams: z.object({ sha256: z.string() }),
+    responses: {
+      200: MobileReceiptBytesSchema,
+      ...MOBILE_REQUEST_RESPONSES,
+      ...MOBILE_PERIMETER_RESPONSES,
+      404: MobileUpstreamErrorSchema,
+      ...MOBILE_UPSTREAM_RESPONSES,
+    },
+    summary: 'The receipt itself, full size, for a detail screen',
+    metadata: requires('purchases.receipts.read'),
   },
 });
 
