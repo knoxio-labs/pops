@@ -93,6 +93,7 @@ Runs immediately after `actions/checkout`. **No third-party import, at any depth
 | `scripts/ci/check-supertest-transport-adoption.mjs` | `quality.yml` → `supertest-transport-adoption` | the nine gated pillars' TS/JS source, and their `package.json` |
 | `scripts/ci/check-line-budget-headroom.mjs`         | `quality.yml` → `line-budget-headroom`         | `.oxlintrc.json`, `git diff`/`git show` of touched files       |
 | `scripts/ci/check-pops-uri-pattern-adoption.mjs`    | `quality.yml` → `pops-uri-pattern-adoption`    | `pillars/purchases/src/**` TS source                           |
+| `scripts/ci/pr-review.mjs`                          | `pr-review.yml` → `review`                     | `git diff`/`git show`, the sticky comment's state block        |
 
 `report-contract-consumers.mjs` reads one TOML key with a hand-rolled matcher and stays in Tier A, which is a stated exception rather than an erosion of the rule above. The rule exists because a matcher that stops seeing a declaration makes a gate report `OK` over a repo it can no longer read. Nothing here is a verdict: that read only turns "see the declaring file" into "run this exact task", the matcher returns `null` for every shape it does not model, and the caller prints the vaguer line. Moving a reporting job to Tier B for a cosmetic upgrade would cost it the install-free property for nothing. A future assertion built on that read is the point at which the job moves.
 
