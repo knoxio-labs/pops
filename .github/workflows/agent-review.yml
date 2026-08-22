@@ -1,10 +1,16 @@
 name: Agent Review
 
-# Federation review gate: a row of deterministic structural guards
-# (load-bearing, blocking) plus an advisory LLM reviewer (degrades to a no-op
-# without ANTHROPIC_API_KEY). The two halves share a job but not authority —
-# the guards decide whether a change may merge, the reviewer only comments, so
-# an unreachable model can never gate a PR.
+# Federation review gate: a row of deterministic structural guards,
+# load-bearing and blocking. Nothing here is advisory.
+#
+# It used to also carry an advisory LLM reviewer as its last step, on the
+# argument that the two halves shared a job but not authority — the guards
+# decide whether a change may merge, the reviewer only comments. That argument
+# was right, and it is why the reviewer now lives in `pr-review.yml` instead: a
+# step that only comments should not be wedged inside a required context whose
+# constraints it does not need and cannot satisfy. It could not be cancelled on
+# a newer push, and it had to carry its draft condition at step level rather
+# than skipping the job. See that file's header.
 #
 # The guards live here rather than in `quality.yml` because each is a Node
 # script reading the source tree — one job, one checkout, nine invariants.
@@ -44,9 +50,10 @@ name: Agent Review
 #
 # The fix is for the job to always run and conclude on its merits. The guards
 # are cheap and a draft PR that violates a federation invariant is better off
-# learning now than at ready-for-review, so they are not gated at all. Only the
-# LLM step carries the draft condition, because it is the one that spends money
-# and posts review comments on a PR nobody has asked to be reviewed yet.
+# learning now than at ready-for-review, so they are not gated at all — and
+# with the advisory reviewer gone there is no longer any step here that wants
+# to be. Nothing in this job may acquire a condition: a step-level `if` is the
+# most that was ever safe, and now not even that is needed.
 #
 # The property to keep: `agent-review`'s conclusion reflects the head it ran on,
 # never the draft state at the time of some earlier push.
@@ -54,19 +61,26 @@ name: Agent Review
 # RUNS ON MERGE GROUPS TOO, for the same reason it runs on drafts: `agent-review`
 # is a required context, and a required context that never reports on the merge
 # group's head holds that entry in the queue until the check-response timeout
-# evicts it. The guards are identical there; only the two PR-shaped inputs move.
+# evicts it. The guards are identical there; only the one PR-shaped input moves.
 # `github.base_ref` is empty outside a pull request, so the isolation litmus
-# reads the merge group's own base instead, and the LLM step — which needs a PR
-# number to comment on and has no one to talk to inside a queue — is now
-# explicitly pull-request-only rather than relying on a null `draft` field.
+# reads the merge group's own base instead.
+#
+# The other PR-shaped input was the LLM step's `--pr` number, and the shape of
+# its condition is worth keeping in mind before adding any step that needs one:
+# outside a pull request `github.event.pull_request` is null, and GitHub coerces
+# both sides of `null == false` to 0 — so a draft test alone is TRUE on a merge
+# group. Such a step must test `github.event_name` as well, which is why
+# `pr-review.yml` carries no `merge_group:` trigger at all rather than a
+# condition that has to get that right.
 
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
   merge_group:
 
+# `pull-requests: write` left with the reviewer. Nothing in this job comments,
+# and a required check that can write to a PR is a wider grant than it needs.
 permissions:
-  pull-requests: write
   contents: read
 
 jobs:
@@ -124,20 +138,3 @@ jobs:
         run: node scripts/ci/check-tests-typechecked.mjs
       - name: Mise setup single-source guard (one pinned jdx/mise-action, and the pin retries its download)
         run: node scripts/ci/check-mise-setup-single-source.mjs
-      # The one step a draft should not reach: it posts review comments and
-      # spends tokens on a PR whose author has not asked for either yet. Skipped
-      # at STEP level, which leaves the job — and therefore the required check —
-      # reporting success either way. `ready_for_review` re-runs the workflow, so
-      # the review still happens the moment the PR is marked ready.
-      #
-      # The event test is not redundant with the draft test. Outside a pull
-      # request `github.event.pull_request` is null, and GitHub coerces both
-      # sides of `null == false` to 0 — so the draft condition alone is TRUE on
-      # a merge group, and this step would run with an empty `--pr`.
-      - name: LLM review (advisory — federation invariants rubric)
-        if: github.event_name == 'pull_request' && github.event.pull_request.draft == false
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
-        run: node scripts/ci/agent-review.mjs --pr ${{ github.event.number }}

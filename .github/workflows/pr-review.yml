@@ -1,0 +1,245 @@
+name: PR Review
+
+# The advisory reviewer, moved out of `agent-review.yml` and rewritten to
+# compound.
+#
+# WHY IT IS ITS OWN WORKFLOW NOW. It used to be the last step of the
+# `agent-review` job, and `agent-review` is a REQUIRED context on `main`. Two
+# things this reviewer needs are impossible inside a required check:
+#
+#   - `cancel-in-progress: true`. A newer push makes an in-flight review
+#     obsolete — it is reviewing code that no longer exists — so cancelling is
+#     strictly better than finishing. But a cancelled run of a required context
+#     is not a satisfied required check, so a required job may never be
+#     cancellable. Every gated workflow in this repo pins
+#     `cancel-in-progress: false` for exactly that reason.
+#   - Skipping on drafts at JOB level. `agent-review.yml`'s header records what
+#     that cost the last time (#3944, #3956): a skipped required check is not an
+#     absent one, and the PR stays permanently blocked. It had to skip the LLM
+#     at STEP level and keep the job reporting either way.
+#
+# Splitting also matches what `agent-review.yml` already said it was: "the
+# guards decide whether a change may merge, the reviewer only comments". With
+# the reviewer gone that job is purely deterministic guards, and this one can be
+# cancelled, debounced and draft-skipped freely because nothing waits on it.
+#
+# NO `merge_group:` TRIGGER, deliberately. A merge group has no pull request to
+# comment on, and this workflow is not a required context, so it has nothing to
+# report there and nothing to hold the queue open by staying silent.
+#
+# THE REVIEW COMPOUNDS. Each run reviews only the commits pushed since the last
+# one, edits ONE sticky comment rather than posting a new one, carries open
+# findings forward, and marks a finding resolved when the code it pointed at is
+# gone. All of that bookkeeping lives in `scripts/ci/pr-review-state.mjs` and is
+# tested; this workflow only sequences it around the model call.
+#
+# TIER A: no `pnpm install`, so both scripts are stdlib-only. Adding an import
+# to either means moving this job across that line in the same commit — see the
+# tier amendment in
+# docs/architecture/adr-045-guards-must-prove-they-report.md, which
+# `scripts/ci/__tests__/guard-job-tiers.test.ts` enforces against this file.
+#
+# Required repo secret (Settings -> Secrets and variables -> Actions):
+#   CLAUDE_CODE_OAUTH_TOKEN - from `claude setup-token` on a machine already
+#                             logged in. It authenticates the Claude Code CLI,
+#                             NOT `api.anthropic.com`, which is why this calls
+#                             the CLI rather than the Messages API the previous
+#                             reviewer used. It is a credential for a personal
+#                             subscription, so this workflow belongs only in
+#                             repositories where every account with push access
+#                             is trusted with it: anyone who can push can add a
+#                             step that exfiltrates it.
+#
+# Optional repo variables:
+#   PR_REVIEW_MODEL    - default "sonnet". Routine review does not need the top
+#                        tier, and the top tier burns the subscription's weekly
+#                        allowance several times faster.
+#   PR_REVIEW_DEBOUNCE - seconds to wait before starting, default 60.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+concurrency:
+  group: pr-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    name: Review
+    runs-on: ubuntu-latest
+    if: ${{ !github.event.pull_request.draft }}
+    steps:
+      - name: Verify the review credential is present
+        env:
+          TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::error::CLAUDE_CODE_OAUTH_TOKEN is not set. Mint one with" \
+                 "\`claude setup-token\` and add it as a repository secret."
+            exit 1
+          fi
+
+      # `cancel-in-progress` only helps once a run has started; a burst of
+      # pushes can still queue several. Waiting and then re-checking the head
+      # collapses the burst into a single review of the final commit.
+      - name: Debounce
+        id: debounce
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EVENT_SHA: ${{ github.event.pull_request.head.sha }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          sleep "${{ vars.PR_REVIEW_DEBOUNCE || 60 }}"
+          current=$(gh api "repos/$REPO/pulls/$PR" --jq .head.sha)
+          if [ "$current" != "$EVENT_SHA" ]; then
+            echo "Head moved $EVENT_SHA -> $current; a newer run owns this PR."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v7
+        if: steps.debounce.outputs.skip == 'false'
+        with:
+          # The incremental range needs the previously reviewed commit to still
+          # be in the local history, which a shallow clone would not have.
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - uses: actions/setup-node@v7
+        if: steps.debounce.outputs.skip == 'false'
+        with:
+          node-version: "24"
+
+      # Same preflight convention as `agent-review.yml`'s guard self-tests, and
+      # for the same reason: every failure mode below this line renders as a
+      # clean review. A reviewer whose state block has stopped parsing posts
+      # "No open findings" forever and nothing goes red.
+      - name: Reviewer self-test (prove the bookkeeping still works)
+        if: steps.debounce.outputs.skip == 'false'
+        run: node scripts/ci/pr-review.mjs --self-test
+
+      - name: Fetch the existing review comment
+        if: steps.debounce.outputs.skip == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/review"
+          # --slurp and --jq are mutually exclusive in gh, so the filtering is a
+          # separate jq call. Slurping is still required: without it gh applies
+          # a filter to each page independently, so on a PR with more than one
+          # page of comments the wrong (older) comment is picked.
+          if gh api --paginate --slurp "repos/$REPO/issues/$PR/comments" \
+               > "$RUNNER_TEMP/comments.json"; then
+            jq '[.[][]] | map(select(.body | contains("pr-review-state")))
+                | last // empty' \
+              < "$RUNNER_TEMP/comments.json" > "$RUNNER_TEMP/found.json"
+          else
+            # Losing state degrades to a full re-review, which is survivable,
+            # but it must never be silent: a swallowed failure here looks
+            # exactly like a first review and reposts the whole backlog.
+            echo "::warning::Could not read existing review comments;" \
+                 "falling back to a full review."
+            : > "$RUNNER_TEMP/found.json"
+          fi
+          if [ -s "$RUNNER_TEMP/found.json" ]; then
+            # Separate jq calls rather than one tab-joined line: the body is
+            # multi-line markdown, so any line-oriented split truncates the
+            # state block.
+            jq -r '.id' < "$RUNNER_TEMP/found.json" > "$RUNNER_TEMP/comment_id"
+            jq -r '.body' < "$RUNNER_TEMP/found.json" > "$RUNNER_TEMP/review/prior.md"
+            echo "Found existing review comment #$(cat "$RUNNER_TEMP/comment_id")"
+          else
+            echo "No existing review comment; this is a first review."
+          fi
+
+      - name: Plan the review
+        if: steps.debounce.outputs.skip == 'false'
+        id: plan
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          # The base recorded on the event can be absent locally if the base
+          # branch moved after the event fired; fetching it by sha is cheap
+          # insurance against `git diff` failing on an unknown revision.
+          git fetch --no-tags origin "$BASE" 2>/dev/null || true
+          node scripts/ci/pr-review.mjs plan \
+            --base "$BASE" \
+            --head "$HEAD" \
+            --comment-file "$RUNNER_TEMP/review/prior.md" \
+            --out-dir "$RUNNER_TEMP/review" \
+            --findings-path "$RUNNER_TEMP/review/findings.json"
+          mode=$(cat "$RUNNER_TEMP/review/mode")
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
+          echo "Review mode: $mode"
+
+      - name: Run the review
+        if: steps.debounce.outputs.skip == 'false' && steps.plan.outputs.mode != 'empty'
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          MODEL: ${{ vars.PR_REVIEW_MODEL || 'sonnet' }}
+        run: |
+          npm install -g @anthropic-ai/claude-code
+          # The findings file is the contract, not stdout: asking for prose and
+          # parsing it back out is where this kind of job usually breaks. A
+          # non-zero exit or an absent file is handled by the publish step,
+          # which keeps prior state rather than wiping the comment.
+          set +e
+          # No --permission-mode acceptEdits: --allowedTools already grants
+          # exactly the tools intended, and blanket auto-approval on top of it
+          # widens the grant beyond what is declared here.
+          claude -p "$(cat "$RUNNER_TEMP/review/prompt.txt")" \
+            --model "$MODEL" \
+            --max-turns 40 \
+            --allowedTools "Read,Grep,Glob,Write" \
+            > "$RUNNER_TEMP/review/model.log" 2>&1
+          status=$?
+          set -e
+          if [ $status -ne 0 ]; then
+            echo "::warning::Reviewer exited $status; see log tail below."
+            tail -30 "$RUNNER_TEMP/review/model.log" || true
+          fi
+          # An absent findings file is survivable — publish keeps prior state —
+          # but it must be visible. Silently keeping state looks identical to a
+          # clean review, which would hide the reviewer having stopped working.
+          if [ ! -f "$RUNNER_TEMP/review/findings.json" ]; then
+            echo "::warning::Reviewer produced no findings file; prior state" \
+                 "will be kept unchanged."
+            tail -30 "$RUNNER_TEMP/review/model.log" || true
+          fi
+
+      - name: Publish the review
+        if: steps.debounce.outputs.skip == 'false' && steps.plan.outputs.mode != 'empty'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          node scripts/ci/pr-review.mjs publish \
+            --head "$HEAD" \
+            --mode "${{ steps.plan.outputs.mode }}" \
+            --findings "$RUNNER_TEMP/review/findings.json" \
+            --comment-file "$RUNNER_TEMP/review/prior.md" \
+            --repo-root . \
+            --out "$RUNNER_TEMP/review/comment.md"
+
+          # Editing one comment rather than appending keeps the PR readable over
+          # a long-lived branch, and keeps the state block unique.
+          if [ -f "$RUNNER_TEMP/comment_id" ]; then
+            gh api -X PATCH \
+              "repos/$REPO/issues/comments/$(cat "$RUNNER_TEMP/comment_id")" \
+              -F body=@"$RUNNER_TEMP/review/comment.md" > /dev/null
+          else
+            gh api -X POST "repos/$REPO/issues/$PR/comments" \
+              -F body=@"$RUNNER_TEMP/review/comment.md" > /dev/null
+          fi

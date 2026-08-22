@@ -42,6 +42,7 @@
     "check:title-icon:self-test": "node scripts/check-title-icon-consistency.mjs --self-test",
     "check:control-characters": "node scripts/ci/check-control-characters.mjs",
     "check:control-characters:self-test": "node scripts/ci/check-control-characters.mjs --self-test",
+    "pr-review:self-test": "node scripts/ci/pr-review.mjs --self-test",
     "ci:fix": "pnpm lint:fix && pnpm format && pnpm typecheck",
     "registry:build": "pnpm --filter @pops/module-registry registry:build",
     "prepare": "husky"
