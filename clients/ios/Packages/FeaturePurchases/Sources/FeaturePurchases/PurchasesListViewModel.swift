@@ -21,6 +21,7 @@ public final class PurchasesListViewModel {
         guard force || !didLoad else { return }
         isLoading = true
         failure = nil
+        defer { isLoading = false }
         do {
             let page = try await repository.purchases(after: nil)
             purchases = page.purchases
@@ -31,6 +32,5 @@ public final class PurchasesListViewModel {
         } catch {
             failure = error as? RepositoryError ?? .transport(String(describing: error))
         }
-        isLoading = false
     }
 }

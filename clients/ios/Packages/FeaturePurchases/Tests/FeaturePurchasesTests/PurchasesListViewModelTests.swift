@@ -28,4 +28,21 @@ internal struct PurchasesListViewModelTests {
         #expect(model.failure == nil)
         #expect(!model.isLoading)
     }
+
+    @Test("stops loading when the request is cancelled")
+    func stopsLoadingWhenCancelled() async {
+        let dependencies = AppDependencies.fake(purchases: CancellingPurchasesRepository())
+        let model = PurchasesListViewModel(dependencies: dependencies)
+
+        await model.load()
+
+        #expect(!model.isLoading)
+        #expect(model.failure == nil)
+    }
+}
+
+private struct CancellingPurchasesRepository: PurchasesRepository {
+    func purchases(after cursor: String?) async throws -> PurchasePage {
+        throw CancellationError()
+    }
 }
