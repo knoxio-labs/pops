@@ -48,10 +48,15 @@ function workflowSource(file: string): string {
   return readFileSync(join(workflowsDir, file), 'utf8');
 }
 
-function jobsOf(file: string): Map<string, Record<string, unknown>> {
+function workflowOf(file: string): Record<string, unknown> {
   const doc = parseYaml(workflowSource(file), file);
-  if (!isMapping(doc) || !isMapping(doc.jobs))
-    throw new ConfigParseError(file, 'no `jobs:` mapping');
+  if (!isMapping(doc)) throw new ConfigParseError(file, 'workflow is not a mapping');
+  return doc;
+}
+
+function jobsOf(file: string): Map<string, Record<string, unknown>> {
+  const doc = workflowOf(file);
+  if (!isMapping(doc.jobs)) throw new ConfigParseError(file, 'no `jobs:` mapping');
   const jobs = new Map<string, Record<string, unknown>>();
   for (const [name, job] of Object.entries(doc.jobs)) {
     if (!isMapping(job)) throw new ConfigParseError(file, `job "${name}" is not a mapping`);
@@ -61,8 +66,8 @@ function jobsOf(file: string): Map<string, Record<string, unknown>> {
 }
 
 function triggersOf(file: string): Record<string, unknown> {
-  const doc = parseYaml(workflowSource(file), file);
-  if (!isMapping(doc) || !isMapping(doc.on)) throw new ConfigParseError(file, 'no `on:` mapping');
+  const doc = workflowOf(file);
+  if (!isMapping(doc.on)) throw new ConfigParseError(file, 'no `on:` mapping');
   return doc.on;
 }
 
@@ -82,6 +87,11 @@ function needsOf(job: Record<string, unknown> | undefined): string[] {
   if (typeof value === 'string') return [value];
   if (Array.isArray(value)) return value.map(String);
   return [];
+}
+
+function stepsOf(job: Record<string, unknown> | undefined): Record<string, unknown>[] {
+  if (!Array.isArray(job?.steps)) return [];
+  return job.steps.filter(isMapping);
 }
 
 describe('the helper proves itself', () => {
@@ -214,6 +224,36 @@ describe('the scope job is wired to the workflow it scopes', () => {
     );
     expect(condition, 'must require an explicit true, so a failed scope job cannot select').toMatch(
       /needs\.scope\.outputs\.selected == 'true'/u
+    );
+  });
+
+  it('runs Maestro only after an iOS change reaches main', () => {
+    const steps = stepsOf(jobsOf('ios-quality.yml').get('quality'));
+    const namedStep = (name: string) => steps.find((step) => step.name === name);
+
+    expect(namedStep('Test + SwiftLint analyzer rules (one shared compile)')?.if).toBe(
+      "github.event_name != 'merge_group'"
+    );
+    expect(namedStep('Compile + SwiftLint analyzer rules')?.if).toBe(
+      "github.event_name == 'merge_group'"
+    );
+
+    for (const name of [
+      'Expose bundled node-gyp on PATH',
+      "Install the BFM's subgraph",
+      'UI flow (Maestro, against a real BFM)',
+    ]) {
+      expect(namedStep(name)?.if).toBe("github.event_name == 'push'");
+    }
+
+    expect(namedStep('Release carries no BFM host')?.if).toBe("github.event_name != 'merge_group'");
+  });
+
+  it('cancels superseded iOS pull-request runs without cancelling merge groups', () => {
+    const concurrency = workflowOf('ios-quality.yml').concurrency;
+    expect(isMapping(concurrency)).toBe(true);
+    expect(isMapping(concurrency) ? concurrency['cancel-in-progress'] : undefined).toBe(
+      "${{ github.event_name == 'pull_request' }}"
     );
   });
 });
