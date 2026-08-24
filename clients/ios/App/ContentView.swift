@@ -1,7 +1,7 @@
 import AppCore
 import DesignSystem
-import FeatureReceiptCapture
 import FeaturePurchases
+import FeatureReceiptCapture
 import FeatureTransactions
 import SwiftUI
 

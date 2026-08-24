@@ -12,10 +12,10 @@ internal struct PurchasesMappingTests {
             StubTransport(
                 status: .ok,
                 json: """
-                {"data":[{"id":"purchase-1","merchantName":"Kmart","orderedOn":"2026-08-20",\
-                "totalCents":1999,"currency":"AUD","itemCount":3,"receiptUri":"pops://purchases/receipt/abc",\
-                "status":"awaiting_settlement"}],"nextCursor":null}
-                """
+                    {"data":[{"id":"purchase-1","merchantName":"Kmart","orderedOn":"2026-08-20",\
+                    "totalCents":1999,"currency":"AUD","itemCount":3,"receiptUri":"pops://purchases/receipt/abc",\
+                    "status":"awaiting_settlement"}],"nextCursor":null}
+                    """
             )
         )
 
@@ -25,7 +25,9 @@ internal struct PurchasesMappingTests {
         #expect(purchase.total == MoneyAmount(minorUnits: 1999, currencyCode: "AUD"))
         #expect(purchase.itemCount == 3)
         #expect(purchase.receiptURI == "pops://purchases/receipt/abc")
-        #expect(purchase.orderedOn == (try TransactionsWire.midnight(year: 2026, month: 8, day: 20)))
+        #expect(
+            purchase.orderedOn == (try TransactionsWire.midnight(year: 2026, month: 8, day: 20))
+        )
     }
 }
 

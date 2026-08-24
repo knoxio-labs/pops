@@ -1,6 +1,6 @@
 import AppCore
-import FeatureReceiptCapture
 import FeaturePurchases
+import FeatureReceiptCapture
 import FeatureTransactions
 
 /// The features this binary can draw, and the order to fall back to before the
