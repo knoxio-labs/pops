@@ -55,6 +55,8 @@ packages:
     path: Packages/FeaturePairing
   FeatureReceiptCapture:
     path: Packages/FeatureReceiptCapture
+  FeaturePurchases:
+    path: Packages/FeaturePurchases
   FeatureTransactions:
     path: Packages/FeatureTransactions
 
@@ -80,6 +82,7 @@ targets:
       - package: DesignSystem
       - package: FeaturePairing
       - package: FeatureReceiptCapture
+      - package: FeaturePurchases
       - package: FeatureTransactions
     # A shared scheme, so `xcodebuild -scheme Pops` resolves on a clean checkout
     # rather than relying on Xcode autocreating one into xcuserdata. This list is
@@ -111,6 +114,7 @@ targets:
         - package: DesignSystem/DesignSystemTests
         - package: FeaturePairing/FeaturePairingTests
         - package: FeatureReceiptCapture/FeatureReceiptCaptureTests
+        - package: FeaturePurchases/FeaturePurchasesTests
         - package: FeatureTransactions/FeatureTransactionsTests
     # The team lives outside the repo; see Config/Signing.xcconfig. Nothing here
     # may set DEVELOPMENT_TEAM — target build settings outrank a target xcconfig,

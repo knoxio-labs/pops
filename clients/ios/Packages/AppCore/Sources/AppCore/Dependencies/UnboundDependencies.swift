@@ -23,3 +23,9 @@ internal struct UnboundReceiptCaptureRepository: ReceiptCaptureRepository {
         throw RepositoryError.dependencyNotBound
     }
 }
+
+internal struct UnboundPurchasesRepository: PurchasesRepository {
+    func purchases(after cursor: String?) async throws -> PurchasePage {
+        throw RepositoryError.dependencyNotBound
+    }
+}

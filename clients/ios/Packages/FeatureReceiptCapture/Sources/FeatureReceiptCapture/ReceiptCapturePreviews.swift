@@ -150,14 +150,15 @@
         answering answer: Result<ReceiptOutcome, RepositoryError>,
         neverAnswers: Bool = false
     ) -> ReceiptResultViewModel {
-        ReceiptResultViewModel(
+        return ReceiptResultViewModel(
             parts: PreviewReceipt.pages(pages),
             dependencies: AppDependencies(
                 transactions: AppDependencies.unbound.transactions,
                 pairing: AppDependencies.unbound.pairing,
                 reachability: AppDependencies.unbound.reachability,
                 receiptCapture: PreviewReceiptCaptureRepository(
-                    answer: answer, neverAnswers: neverAnswers)
+                    answer: answer, neverAnswers: neverAnswers),
+                purchases: AppDependencies.unbound.purchases
             )
         )
     }

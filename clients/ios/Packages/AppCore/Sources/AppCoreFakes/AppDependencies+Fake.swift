@@ -7,10 +7,11 @@ extension AppDependencies {
         transactions: any TransactionsRepository = InMemoryTransactionsRepository(),
         pairing: any DevicePairingService = FakeDevicePairingService(),
         reachability: any ReachabilityWitness = FakeReachabilityWitness(),
-        receiptCapture: any ReceiptCaptureRepository = InMemoryReceiptCaptureRepository()
+        receiptCapture: any ReceiptCaptureRepository = InMemoryReceiptCaptureRepository(),
+        purchases: any PurchasesRepository = InMemoryPurchasesRepository()
     ) -> AppDependencies {
         AppDependencies(
             transactions: transactions, pairing: pairing, reachability: reachability,
-            receiptCapture: receiptCapture)
+            receiptCapture: receiptCapture, purchases: purchases)
     }
 }

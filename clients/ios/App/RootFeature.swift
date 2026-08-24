@@ -1,4 +1,5 @@
 import AppCore
+import FeaturePurchases
 import FeatureReceiptCapture
 import FeatureTransactions
 
@@ -25,6 +26,7 @@ import FeatureTransactions
 internal enum RootFeature {
     internal static let renderable: [MobileFeature] = [
         FeatureTransactions.feature,
+        FeaturePurchases.feature,
         FeatureReceiptCapture.feature,
     ]
 }

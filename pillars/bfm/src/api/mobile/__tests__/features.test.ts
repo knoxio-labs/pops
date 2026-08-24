@@ -43,6 +43,7 @@ describe('deriving features from pillar reachability', () => {
     const derived = deriveFeatures(pillars({ id: 'media', reachability: 'healthy' }));
 
     expect(derived).toContainEqual({ id: 'transactions', reachability: 'unavailable' });
+    expect(derived).toContainEqual({ id: 'purchases', reachability: 'unavailable' });
     expect(derived).toContainEqual({ id: 'receipt-capture', reachability: 'unavailable' });
   });
 
@@ -55,6 +56,7 @@ describe('deriving features from pillar reachability', () => {
     );
 
     expect(derived).toContainEqual({ id: 'transactions', reachability: 'healthy' });
+    expect(derived).toContainEqual({ id: 'purchases', reachability: 'unavailable' });
     expect(derived).toContainEqual({ id: 'receipt-capture', reachability: 'unavailable' });
   });
 
@@ -69,6 +71,7 @@ describe('deriving features from pillar reachability', () => {
       const derived = deriveFeatures(pillars({ id: 'purchases', reachability: 'healthy' }));
 
       expect(derived).toContainEqual({ id: 'receipt-capture', reachability: 'healthy' });
+      expect(derived).toContainEqual({ id: 'purchases', reachability: 'healthy' });
     });
 
     it.each(['degraded', 'unavailable', 'contract-mismatch'] as const)(
@@ -77,6 +80,7 @@ describe('deriving features from pillar reachability', () => {
         const derived = deriveFeatures(pillars({ id: 'purchases', reachability }));
 
         expect(derived).toContainEqual({ id: 'receipt-capture', reachability });
+        expect(derived).toContainEqual({ id: 'purchases', reachability });
       }
     );
 
@@ -84,6 +88,7 @@ describe('deriving features from pillar reachability', () => {
       const derived = deriveFeatures(pillars({ id: 'finance', reachability: 'healthy' }));
 
       expect(derived).toContainEqual({ id: 'receipt-capture', reachability: 'unavailable' });
+      expect(derived).toContainEqual({ id: 'purchases', reachability: 'unavailable' });
     });
 
     it('reports transactions and receipts independently when both pillars are up', () => {
@@ -95,6 +100,7 @@ describe('deriving features from pillar reachability', () => {
       );
 
       expect(derived).toContainEqual({ id: 'transactions', reachability: 'healthy' });
+      expect(derived).toContainEqual({ id: 'purchases', reachability: 'degraded' });
       expect(derived).toContainEqual({ id: 'receipt-capture', reachability: 'degraded' });
     });
   });

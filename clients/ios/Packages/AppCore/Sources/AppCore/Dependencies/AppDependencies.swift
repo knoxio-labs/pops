@@ -9,17 +9,20 @@ public struct AppDependencies: Sendable {
     public let pairing: any DevicePairingService
     public let reachability: any ReachabilityWitness
     public let receiptCapture: any ReceiptCaptureRepository
+    public let purchases: any PurchasesRepository
 
     public init(
         transactions: any TransactionsRepository,
         pairing: any DevicePairingService,
         reachability: any ReachabilityWitness,
-        receiptCapture: any ReceiptCaptureRepository
+        receiptCapture: any ReceiptCaptureRepository,
+        purchases: any PurchasesRepository
     ) {
         self.transactions = transactions
         self.pairing = pairing
         self.reachability = reachability
         self.receiptCapture = receiptCapture
+        self.purchases = purchases
     }
 
     /// What the environment holds until something binds it. Every call fails
@@ -31,7 +34,8 @@ public struct AppDependencies: Sendable {
         transactions: UnboundTransactionsRepository(),
         pairing: UnboundDevicePairingService(),
         reachability: UnboundReachabilityWitness(),
-        receiptCapture: UnboundReceiptCaptureRepository()
+        receiptCapture: UnboundReceiptCaptureRepository(),
+        purchases: UnboundPurchasesRepository()
     )
 }
 
