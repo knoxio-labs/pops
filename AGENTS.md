@@ -167,7 +167,7 @@ BRANCH=feat/name mise worktree:create:deps   # + installs deps (slower)
 BRANCH=feat/name mise worktree:remove
 ```
 
-These wrap the `worktree-branch <branch-name>` script (add `--install-deps` to install). The worktree lands at `../<branch-name>` relative to the repo root — e.g. from `/Users/joao/dev/personal/pops` → `/Users/joao/dev/personal/<branch-name>`. Manual cleanup: `git worktree remove ../<branch-name> && git branch -d <branch-name>`.
+These use Git directly, so they work on a fresh clone without a separately installed helper. The worktree lands at `../<branch-name>` relative to the repo root — e.g. from `/Users/joao/dev/personal/pops` → `/Users/joao/dev/personal/<branch-name>`. `worktree:create:deps` runs `pnpm install` in the new worktree. Manual cleanup: `git worktree remove ../<branch-name> && git branch -d <branch-name>`.
 
 ### Deployment
 
