@@ -125,13 +125,19 @@ internal enum ReceiptCaptureWire {
 
 extension BFMReceiptCaptureRepository {
     internal static func stubbed(
-        _ transport: StubTransport
+        _ transport: StubTransport,
+        now: @escaping @Sendable () -> Date = Date.init,
+        timeZone: @escaping @Sendable () -> TimeZone = { .autoupdatingCurrent },
+        captureLocation: @escaping @Sendable () -> CaptureLocation? = { nil }
     ) throws -> BFMReceiptCaptureRepository {
         BFMReceiptCaptureRepository(
             client: BFMHTTPClient(
                 baseURL: try #require(URL(string: "https://bfm.example")),
                 transport: transport
-            )
+            ),
+            now: now,
+            timeZone: timeZone,
+            captureLocation: captureLocation
         )
     }
 }

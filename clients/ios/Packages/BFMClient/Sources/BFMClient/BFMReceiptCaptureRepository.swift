@@ -1,4 +1,5 @@
 import AppCore
+import CoreLocation
 import Foundation
 import OpenAPIRuntime
 
@@ -15,11 +16,31 @@ import OpenAPIRuntime
 /// one.
 public struct BFMReceiptCaptureRepository: ReceiptCaptureRepository {
     private let client: BFMHTTPClient
+    private let now: @Sendable () -> Date
+    private let timeZone: @Sendable () -> TimeZone
+    private let captureLocation: @Sendable () -> CaptureLocation?
 
     /// - Parameter client: Already carrying whatever authenticates a
     ///   `/mobile/*` call.
     public init(client: BFMHTTPClient) {
+        self.init(
+            client: client,
+            now: Date.init,
+            timeZone: { .autoupdatingCurrent },
+            captureLocation: Self.currentLocation
+        )
+    }
+
+    internal init(
+        client: BFMHTTPClient,
+        now: @escaping @Sendable () -> Date,
+        timeZone: @escaping @Sendable () -> TimeZone,
+        captureLocation: @escaping @Sendable () -> CaptureLocation?
+    ) {
         self.client = client
+        self.now = now
+        self.timeZone = timeZone
+        self.captureLocation = captureLocation
     }
 
     /// Uploads one receipt's parts and reports which of the three outcomes
@@ -28,7 +49,13 @@ public struct BFMReceiptCaptureRepository: ReceiptCaptureRepository {
         let output: UploadReceipt.Output
         do {
             output = try await client.generated.mobilePurchases_uploadReceipt(
-                body: .json(.init(parts: parts.map(Self.wire(from:))))
+                body: .json(
+                    .init(
+                        capture: Self.capture(
+                            now: now(), timeZone: timeZone(), location: captureLocation()),
+                        parts: parts.map(Self.wire(from:))
+                    )
+                )
             )
         } catch let error as ClientError {
             throw BFMRepositoryFailure.failure(error, operation: UploadReceipt.id)
@@ -39,6 +66,37 @@ public struct BFMReceiptCaptureRepository: ReceiptCaptureRepository {
 }
 
 extension BFMReceiptCaptureRepository {
+    private static func capture(
+        now: Date,
+        timeZone: TimeZone,
+        location: CaptureLocation?
+    ) -> UploadReceiptCapture {
+        UploadReceiptCapture(
+            capturedAt: CaptureTimestampFormatter.string(from: now, in: timeZone),
+            location: location.map { UploadReceiptCaptureLocation(latitude: $0.latitude, longitude: $0.longitude) },
+            timeZone: timeZone.identifier
+        )
+    }
+
+    private static func currentLocation() -> CaptureLocation? {
+        #if os(iOS)
+            let locationManager = CLLocationManager()
+            let authorization = locationManager.authorizationStatus
+            guard authorization == .authorizedAlways || authorization == .authorizedWhenInUse,
+                  let location = locationManager.location
+            else {
+                return nil
+            }
+
+            return CaptureLocation(
+                latitude: location.coordinate.latitude,
+                longitude: location.coordinate.longitude
+            )
+        #else
+            nil
+        #endif
+    }
+
     private func outcome(from output: UploadReceipt.Output) throws -> ReceiptOutcome {
         switch output {
         case .ok(let ok):
@@ -185,6 +243,10 @@ extension BFMReceiptCaptureRepository {
 private typealias UploadReceipt = Operations.MobilePurchases_uploadReceipt
 private typealias UploadReceiptPart =
     UploadReceipt.Input.Body.JsonPayload.PartsPayloadPayload
+private typealias UploadReceiptCapture =
+    UploadReceipt.Input.Body.JsonPayload.CapturePayload
+private typealias UploadReceiptCaptureLocation =
+    UploadReceipt.Input.Body.JsonPayload.CapturePayload.LocationPayload
 private typealias UploadReceiptMediaType =
     UploadReceipt.Input.Body.JsonPayload.PartsPayloadPayload.MediaTypePayload
 private typealias CreatedPurchase =
@@ -195,3 +257,23 @@ private typealias NeedsReviewExtracted =
     UploadReceipt.Output.Ok.Body.JsonPayload.Case2Payload.ExtractedPayload
 private typealias NeedsReviewExtractedLine =
     UploadReceipt.Output.Ok.Body.JsonPayload.Case2Payload.ExtractedPayload.LinesPayloadPayload
+
+internal struct CaptureLocation: Sendable {
+    internal let latitude: Double
+    internal let longitude: Double
+}
+
+private enum CaptureTimestampFormatter {
+    private static let formatOptions: ISO8601DateFormatter.Options = [
+        .withInternetDateTime,
+        .withFractionalSeconds,
+        .withColonSeparatorInTimeZone,
+    ]
+
+    static func string(from date: Date, in timeZone: TimeZone) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = formatOptions
+        formatter.timeZone = timeZone
+        return formatter.string(from: date)
+    }
+}

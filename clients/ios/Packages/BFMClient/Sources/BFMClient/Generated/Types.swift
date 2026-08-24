@@ -5872,7 +5872,7 @@ internal enum Operations {
                     /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/capture`.
                     internal struct CapturePayload: Codable, Hashable, Sendable {
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/capture/capturedAt`.
-                        internal var capturedAt: Foundation.Date?
+                        internal var capturedAt: Swift.String?
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/capture/location`.
                         internal struct LocationPayload: Codable, Hashable, Sendable {
                             /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/capture/location/latitude`.
@@ -5922,7 +5922,7 @@ internal enum Operations {
                         ///   - location:
                         ///   - timeZone:
                         internal init(
-                            capturedAt: Foundation.Date? = nil,
+                            capturedAt: Swift.String? = nil,
                             location: Operations.MobilePurchases_uploadReceipt.Input.Body.JsonPayload.CapturePayload.LocationPayload? = nil,
                             timeZone: Swift.String? = nil
                         ) {
@@ -5938,7 +5938,7 @@ internal enum Operations {
                         internal init(from decoder: any Swift.Decoder) throws {
                             let container = try decoder.container(keyedBy: CodingKeys.self)
                             self.capturedAt = try container.decodeIfPresent(
-                                Foundation.Date.self,
+                                Swift.String.self,
                                 forKey: .capturedAt
                             )
                             self.location = try container.decodeIfPresent(

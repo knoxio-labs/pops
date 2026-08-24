@@ -85,6 +85,8 @@ The mapping from wire to domain is the whole of it, and each leg is somewhere a 
 
 Each arm carries what its screen draws: `created` the purchase summary the confirmation is built from, `needs-review` the gate's objections **and** the reading they are about. The one thing no arm carries is a photo reference — the stored parts are addressed by `pops://` URIs into the purchases pillar's own store and no mobile route serves those bytes, so `MobileReceiptOutcomeSchema` publishes `receiptCount` and `ReceiptOutcome` holds a count rather than a pointer this app could only ignore.
 
+A submission also carries the phone's current timestamp with its UTC offset and IANA zone. If the app already has location permission, it adds the last known WGS-84 coordinate without ever requesting permission from the capture flow. The timestamp is an offset-preserving wire string rather than a generated `Date`, because normalising it to `Z` would erase the zone evidence `purchases` uses when the paper does not settle it.
+
 A `needs-review` problem's `code` is an open string on the wire, so a gate that grows a reason does not break a build already on a handset. `ReceiptGateFailureKind` matches that: the named cases are the ones with copy, and anything else becomes `.unrecognised(code)`, which still renders — the producer's own `detail` is the sentence a reviewer reads either way. Refusing the outcome instead would spend the wire's guarantee on nothing and tell somebody to update the app about a receipt that merely needs reviewing.
 
 ## Where the base URL comes from
