@@ -73,28 +73,30 @@ extension BFMReceiptCaptureRepository {
     ) -> UploadReceiptCapture {
         UploadReceiptCapture(
             capturedAt: CaptureTimestampFormatter.string(from: now, in: timeZone),
-            location: location.map { UploadReceiptCaptureLocation(latitude: $0.latitude, longitude: $0.longitude) },
+            location: location.map {
+                UploadReceiptCaptureLocation(latitude: $0.latitude, longitude: $0.longitude)
+            },
             timeZone: timeZone.identifier
         )
     }
 
     private static func currentLocation() -> CaptureLocation? {
-        #if os(iOS)
-            let locationManager = CLLocationManager()
-            let authorization = locationManager.authorizationStatus
-            guard authorization == .authorizedAlways || authorization == .authorizedWhenInUse,
-                  let location = locationManager.location
-            else {
-                return nil
-            }
+#if os(iOS)
+        let locationManager = CLLocationManager()
+        let authorization = locationManager.authorizationStatus
+        guard authorization == .authorizedAlways || authorization == .authorizedWhenInUse,
+              let location = locationManager.location
+        else {
+            return nil
+        }
 
-            return CaptureLocation(
-                latitude: location.coordinate.latitude,
-                longitude: location.coordinate.longitude
-            )
-        #else
-            nil
-        #endif
+        return CaptureLocation(
+            latitude: location.coordinate.latitude,
+            longitude: location.coordinate.longitude
+        )
+#else
+        nil
+#endif
     }
 
     private func outcome(from output: UploadReceipt.Output) throws -> ReceiptOutcome {
