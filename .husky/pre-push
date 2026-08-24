@@ -17,6 +17,20 @@ scripts_decision=$(printf '%s\n' "$output" | sed -n '2p')
 [ -n "$decision" ] || decision=run
 [ -n "$scripts_decision" ] || scripts_decision=run
 
+without_repo_locating_git_env() {
+  env \
+    -u GIT_DIR \
+    -u GIT_WORK_TREE \
+    -u GIT_INDEX_FILE \
+    -u GIT_COMMON_DIR \
+    -u GIT_OBJECT_DIRECTORY \
+    -u GIT_ALTERNATE_OBJECT_DIRECTORIES \
+    -u GIT_PREFIX \
+    -u GIT_QUARANTINE_PATH \
+    -u GIT_NAMESPACE \
+    "$@"
+}
+
 if [ "$decision" = skip ]; then
   echo "pre-push: nothing in this push reaches the pnpm/cargo workspace — typecheck skipped."
 else
@@ -32,7 +46,7 @@ else
     echo "          below fails on a module you did not touch, that is why —"
     echo "          run 'pnpm install --frozen-lockfile' and push again."
   fi
-  pnpm typecheck
+  without_repo_locating_git_env pnpm typecheck
 
   if [ "$scripts_decision" = run ]; then
     # `mise run typecheck` never reaches scripts/ (no mise.toml there for the
@@ -40,8 +54,8 @@ else
     # and pillars/*), but quality.yml's scripts-tests job gates it in CI
     # regardless — run the same two tasks here so a scripts/-touching push
     # can't pass locally and still fail there.
-    mise run test:scripts
-    mise run typecheck:scripts
+    without_repo_locating_git_env mise run test:scripts
+    without_repo_locating_git_env mise run typecheck:scripts
   fi
 fi
 

@@ -441,33 +441,15 @@ run = "docker exec -it pops-redis redis-cli"
 
 [tasks."worktree:create"]
 description = "Create a new git worktree (usage: BRANCH=feat/my-feature mise worktree:create)"
-run = """
-if [ -z "$BRANCH" ]; then
-  echo "Error: BRANCH not set. Usage: BRANCH=feat/my-feature mise worktree:create"
-  exit 1
-fi
-worktree-branch "$BRANCH"
-"""
+run = "node scripts/worktree.mjs create \"$BRANCH\""
 
 [tasks."worktree:create:deps"]
 description = "Create worktree with dependency installation"
-run = """
-if [ -z "$BRANCH" ]; then
-  echo "Error: BRANCH not set. Usage: BRANCH=feat/my-feature mise worktree:create:deps"
-  exit 1
-fi
-worktree-branch "$BRANCH" --install-deps
-"""
+run = "node scripts/worktree.mjs create --install-deps \"$BRANCH\""
 
 [tasks."worktree:remove"]
 description = "Remove a git worktree (usage: BRANCH=feat/my-feature mise worktree:remove)"
-run = """
-if [ -z "$BRANCH" ]; then
-  echo "Error: BRANCH not set. Usage: BRANCH=feat/my-feature mise worktree:remove"
-  exit 1
-fi
-git worktree remove "../$BRANCH" && git branch -d "$BRANCH"
-"""
+run = "node scripts/worktree.mjs remove \"$BRANCH\""
 
 # ============================================================================
 # Utility Tasks
