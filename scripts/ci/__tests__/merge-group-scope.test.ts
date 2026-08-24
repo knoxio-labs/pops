@@ -48,15 +48,10 @@ function workflowSource(file: string): string {
   return readFileSync(join(workflowsDir, file), 'utf8');
 }
 
-function workflowOf(file: string): Record<string, unknown> {
-  const doc = parseYaml(workflowSource(file), file);
-  if (!isMapping(doc)) throw new ConfigParseError(file, 'workflow is not a mapping');
-  return doc;
-}
-
 function jobsOf(file: string): Map<string, Record<string, unknown>> {
-  const doc = workflowOf(file);
-  if (!isMapping(doc.jobs)) throw new ConfigParseError(file, 'no `jobs:` mapping');
+  const doc = parseYaml(workflowSource(file), file);
+  if (!isMapping(doc) || !isMapping(doc.jobs))
+    throw new ConfigParseError(file, 'no `jobs:` mapping');
   const jobs = new Map<string, Record<string, unknown>>();
   for (const [name, job] of Object.entries(doc.jobs)) {
     if (!isMapping(job)) throw new ConfigParseError(file, `job "${name}" is not a mapping`);
@@ -66,8 +61,8 @@ function jobsOf(file: string): Map<string, Record<string, unknown>> {
 }
 
 function triggersOf(file: string): Record<string, unknown> {
-  const doc = workflowOf(file);
-  if (!isMapping(doc.on)) throw new ConfigParseError(file, 'no `on:` mapping');
+  const doc = parseYaml(workflowSource(file), file);
+  if (!isMapping(doc) || !isMapping(doc.on)) throw new ConfigParseError(file, 'no `on:` mapping');
   return doc.on;
 }
 
@@ -247,14 +242,6 @@ describe('the scope job is wired to the workflow it scopes', () => {
     }
 
     expect(namedStep('Release carries no BFM host')?.if).toBe("github.event_name != 'merge_group'");
-  });
-
-  it('cancels superseded iOS pull-request runs without cancelling merge groups', () => {
-    const concurrency = workflowOf('ios-quality.yml').concurrency;
-    expect(isMapping(concurrency)).toBe(true);
-    expect(isMapping(concurrency) ? concurrency['cancel-in-progress'] : undefined).toBe(
-      "${{ github.event_name == 'pull_request' }}"
-    );
   });
 });
 

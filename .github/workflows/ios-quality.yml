@@ -135,13 +135,20 @@ on:
   # nothing compiled, which is the failure the queue exists to prevent.
   merge_group:
 
-# A newer PR commit supersedes its predecessor, so it cancels the old macOS
-# run instead of waiting behind it. Merge-group runs stay uncancelled: a
-# required workflow that loses its registration during GitHub's cancellation
-# race leaves the queue waiting for a check that can no longer report.
+# cancel-in-progress is deliberately OFF. Cancelling the still-running run for
+# a superseded commit and admitting the new push's run is not atomic on
+# GitHub's side, and the two can race: the old run keeps completing normally
+# as if nothing happened, and the new commit's run never gets created at all
+# — not queued, not cancelled, just absent, forever, until an unrelated event
+# forces a fresh trigger. `ci-gate.yml`'s CONVERGENCE comment documents a
+# historical reproduction of exactly that on this workflow. Since this repo
+# is public (no Actions-minutes cost, see the runner note above), letting a
+# superseded run finish costs wall-clock, not budget, and `queue: single`
+# (the default) still caps this group at one pending run, so pushes don't
+# pile up unbounded.
 concurrency:
   group: ios-quality-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  cancel-in-progress: false
 
 permissions:
   contents: read

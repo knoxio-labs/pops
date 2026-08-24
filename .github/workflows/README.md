@@ -27,9 +27,8 @@ verdict converges, and for why it publishes its own check run; the rules the
   filter matches, there is no filter, or the diff can't be determined — is
   logged as pending, never a pass. One cause of "no run, not a confirmed
   exclusion" used to be a concurrency-group race silently losing the run's
-  registration entirely; every gated workflow's merge-queue lane therefore
-  leaves `cancel-in-progress` off. `ios-quality.yml` cancels only superseded
-  pull-request runs; its merge-group runs remain uncancelled — see the
+  registration entirely; every gated workflow's own `concurrency:` block now
+  runs `cancel-in-progress: false` specifically to close that window — see the
   MITIGATION paragraph in `ci-gate.yml`'s own CONVERGENCE comment.
 - A run that is not yet `completed` is pending: it does not fail the gate, but it
   does hold it at `in_progress`. A failure concludes immediately (nothing can
