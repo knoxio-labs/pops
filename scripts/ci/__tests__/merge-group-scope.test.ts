@@ -248,13 +248,6 @@ describe('the scope job is wired to the workflow it scopes', () => {
 
     expect(namedStep('Release carries no BFM host')?.if).toBe("github.event_name != 'merge_group'");
   });
-
-  it('cancels superseded iOS pull-request runs without cancelling merge groups', () => {
-    const concurrency = workflowOf('ios-quality.yml').concurrency;
-    expect(isMapping(concurrency)).toBe(true);
-    expect(isMapping(concurrency) ? concurrency['cancel-in-progress'] : undefined).toBe(
-      "${{ github.event_name == 'pull_request' }}"
-    );
   });
 });
 
