@@ -84,6 +84,11 @@ function needsOf(job: Record<string, unknown> | undefined): string[] {
   return [];
 }
 
+function stepsOf(job: Record<string, unknown> | undefined): Record<string, unknown>[] {
+  if (!Array.isArray(job?.steps)) return [];
+  return job.steps.filter(isMapping);
+}
+
 describe('the helper proves itself', () => {
   // The self-test's 19 cases each build and diff a throwaway git repository, so
   // this one call is ~40 subprocess spawns and lands either side of Vitest's 5s
@@ -215,6 +220,27 @@ describe('the scope job is wired to the workflow it scopes', () => {
     expect(condition, 'must require an explicit true, so a failed scope job cannot select').toMatch(
       /needs\.scope\.outputs\.selected == 'true'/u
     );
+  });
+
+  it('runs the full iOS suite outside the merge queue only', () => {
+    const steps = stepsOf(jobsOf('ios-quality.yml').get('quality'));
+    const namedStep = (name: string) => steps.find((step) => step.name === name);
+
+    expect(namedStep('Test + SwiftLint analyzer rules (one shared compile)')?.if).toBe(
+      "github.event_name != 'merge_group'"
+    );
+    expect(namedStep('Compile + SwiftLint analyzer rules')?.if).toBe(
+      "github.event_name == 'merge_group'"
+    );
+
+    for (const name of [
+      'Release carries no BFM host',
+      'Expose bundled node-gyp on PATH',
+      "Install the BFM's subgraph",
+      'UI flow (Maestro, against a real BFM)',
+    ]) {
+      expect(namedStep(name)?.if).toBe("github.event_name != 'merge_group'");
+    }
   });
 });
 

@@ -191,13 +191,13 @@ by `unit-quality.yml` (which runs the BFM's own typecheck and vitest suite
 against them), and this job's header explains the trade in full.
 
 **What it costs and what it saves**, measured on the 39 completed merge-queue
-entries immediately before the change. Each entry's `ios-quality.yml` run took a
-median of 20 minutes end to end (mean 20.1 minutes, 90th percentile 28 minutes),
-and **33 of the 39 touched no iOS path at all** — so five compiles in six were
-spent on a merge group the job had nothing to say about. The `scope` job that
-now decides between them takes 32 seconds, of which its self-test and its answer
-are one second and the rest is checkout plus a warm-cache `pnpm install`. Half a
-minute to decide whether to spend twenty.
+entries immediately before the scoping change. Each entry's `ios-quality.yml`
+run took a median of 20 minutes end to end (mean 20.1 minutes, 90th percentile
+28 minutes), and **33 of the 39 touched no iOS path at all** — so five compiles
+in six were spent on a merge group the job had nothing to say about. The `scope`
+job that now decides between them takes 32 seconds, of which its self-test and
+its answer are one second and the rest is checkout plus a warm-cache `pnpm
+install`.
 
 **The queue groups entries, and that is the other half of the cost.** With
 `min_entries_to_merge: 1` the queue formed a group per entry, so each PR bought
@@ -205,18 +205,11 @@ its own run of everything. Measured on the 15 merges after the `scope` job
 landed, the queue leg — first merge-group run created to merged — split cleanly
 in two: a median of **2.9 minutes** for the entries `scope` deselected iOS on,
 against **85.8 minutes** for the entries it selected. The spread is not the
-queue. `ios-quality.yml` averages 18.8 minutes there and has peaked at 52; every
-other lane sits at or under 2.6.
-
-The gap between 18.8 and 85.8 is re-queues. **Five of those 15 PRs needed more
-than one attempt** — #4047 took six, #4052 and #4049 five — and every eviction
-re-paid the whole iOS lane. None of them was a semantic conflict: classifying
-each red merge-group run in that window found only flakes, so the queue was
-mostly re-running expensive checks against its own instability. Grouping is the
-lever that helps here, because a flake costs one group's run rather than one run
-per PR: `min_entries_to_merge` is 3, and `min_entries_to_merge_wait_minutes` is
-deliberately left at 5 so a lone PR on the fast path — the 2.9-minute case —
-cannot be made to wait longer than the run it is waiting for.
+queue. That was dominated by the full iOS suite. The selected merge-group lane
+now runs only formatting plus the simulator `build-for-testing` and compiler-log
+analysis; the simulator tests, Release build, and Maestro flow run on the PR and
+again after merge. This keeps merge-order compilation coverage while avoiding a
+second run of tests whose PR result already established their behaviour.
 
 `check_response_timeout_minutes` is 75, raised from 60. A check that does not
 report inside that window evicts its entry, and the worst in-queue
@@ -297,7 +290,7 @@ caller's decision; this file only knows how to sandbox whatever `units` names.
 | `fe-quality.yml`                 | PR/push on `pillars/shell/**`, apps, openapi, FE libs; every merge group | the shell's `Quality Checks` job                                                                                     |
 | `rust-quality.yml`               | PR/push on Cargo files, `deny.toml`, `pillars/contacts/**`, `libs/pops-*`, `scripts/extractability/**`; every merge group | `fmt + clippy + build + test`                                       |
 | `registry-generated-quality.yml` | PR/push on `libs/module-registry/**`, `libs/types/**`; every merge group | `generated.ts` drift                                                                                                |
-| `ios-quality.yml`                | PR/push on `clients/ios/**`, `pillars/bfm/**`, `scripts/ios-e2e/**`, `pnpm-lock.yaml`; every merge group, **scoped by a `scope` job to that same filter** | `macos-latest`; selects the Xcode pinned in `clients/ios/mise.toml`, then `mise run lint` and `mise run -j 1 test ::: lint:analyze` — one step, because both share a single compile — then `mise run verify:release-carries-no-host`, a second full compile in the Release configuration, and the Maestro UI flow against a real BFM. Caches no derived data, deliberately; the header says why |
+| `ios-quality.yml`                | PR/push on `clients/ios/**`, `pillars/bfm/**`, `scripts/ios-e2e/**`, `pnpm-lock.yaml`; every merge group, **scoped by a `scope` job to that same filter** | `macos-latest`; selects the Xcode pinned in `clients/ios/mise.toml`, then runs formatting and compiler-log analysis. PRs and post-merge pushes additionally run the simulator tests, a Release build that verifies no BFM host is embedded, and the Maestro UI flow against a real BFM. Caches no derived data, deliberately; the header says why |
 | `agent-review.yml`               | every PR, drafts included; every merge group                  | nine guard scripts under `scripts/ci/`, each `--self-test`ed first, plus `merge-group-scope.mjs`'s preflight. Deterministic only — the advisory reviewer that used to be its last step is now `pr-review.yml` |
 | `pr-review.yml`                  | every non-draft PR; **no** merge group, **not** required, **not** in `ci-gate.yml`'s gated list | the compounding LLM review: one sticky comment per PR, only the commits pushed since the last run, findings carried forward and resolved from the tree. Debounced and `cancel-in-progress: true`, which is only possible because nothing gates on it |
 | `docker-build.yml`               | PR/push on Dockerfiles, `infra/docker*`, lockfile; every merge group, **scoped by a `scope` job to that same filter** | the FULL image of every `pillars/*/Dockerfile`, each then started on fresh volumes and probed by `scripts/ci/smoke-image.mjs`; `docker compose config --quiet` on both compose files after stubbing 12 secret files |
