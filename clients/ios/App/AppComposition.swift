@@ -78,7 +78,8 @@ internal final class AppComposition {
             transactions: AppDependencies.unbound.transactions,
             pairing: BFMDevicePairingService(credentialStore: credentialStore),
             reachability: AppDependencies.unbound.reachability,
-            receiptCapture: AppDependencies.unbound.receiptCapture
+            receiptCapture: AppDependencies.unbound.receiptCapture,
+            purchases: AppDependencies.unbound.purchases
         )
         shell = AppShellModel(
             session: session,
@@ -98,7 +99,8 @@ internal final class AppComposition {
             transactions: BFMTransactionsRepository(client: authenticated(device)),
             pairing: BFMDevicePairingService(credentialStore: credentialStore),
             reachability: shell,
-            receiptCapture: BFMReceiptCaptureRepository(client: authenticated(device))
+            receiptCapture: BFMReceiptCaptureRepository(client: authenticated(device)),
+            purchases: BFMPurchasesRepository(client: authenticated(device))
         )
         bound = (device, dependencies)
         return dependencies
