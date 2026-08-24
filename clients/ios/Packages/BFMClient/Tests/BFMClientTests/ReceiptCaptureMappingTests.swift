@@ -156,6 +156,40 @@ internal struct ReceiptCaptureMappingTests {
         #expect(sentParts[1]["mediaType"] as? String == "image/png")
     }
 
+    @Test("capture metadata keeps the device offset and permitted location")
+    func sendsCaptureMetadata() async throws {
+        let capturedBody = CapturedBody()
+        let transport = StubTransport { _, body in
+            if let body {
+                await capturedBody.store(try await Data(collecting: body, upTo: Int.max))
+            }
+            return (
+                HTTPResponse(status: .ok, headerFields: [.contentType: "application/json"]),
+                HTTPBody(ReceiptCaptureWire.created())
+            )
+        }
+        let timeZone = try #require(TimeZone(identifier: "Australia/Perth"))
+        let date = try #require(ISO8601DateFormatter().date(from: "2026-08-24T09:15:30Z"))
+
+        _ = try await BFMReceiptCaptureRepository.stubbed(
+            transport,
+            now: { date },
+            timeZone: { timeZone },
+            captureLocation: { CaptureLocation(latitude: -31.9505, longitude: 115.8605) }
+        ).capture([ReceiptPart(mediaType: .jpeg, data: Data([0xFF, 0xD8]))])
+
+        let sent = try #require(await capturedBody.value)
+        let decoded = try #require(
+            try JSONSerialization.jsonObject(with: sent) as? [String: Any])
+        let capture = try #require(decoded["capture"] as? [String: Any])
+        let location = try #require(capture["location"] as? [String: Double])
+
+        #expect(capture["capturedAt"] as? String == "2026-08-24T17:15:30.000+08:00")
+        #expect(capture["timeZone"] as? String == "Australia/Perth")
+        #expect(location["latitude"] == -31.9505)
+        #expect(location["longitude"] == 115.8605)
+    }
+
     /// Every ``ReceiptMediaType`` case against the wire string
     /// `purchases`' vision pipeline actually reads (`pillars/bfm/src/api/purchases/client.ts`
     /// forwards `parts` unchanged, so a wrong pairing here reaches it verbatim).
