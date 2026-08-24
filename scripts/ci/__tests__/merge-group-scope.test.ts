@@ -222,7 +222,7 @@ describe('the scope job is wired to the workflow it scopes', () => {
     );
   });
 
-  it('runs the full iOS suite outside the merge queue only', () => {
+  it('runs Maestro only after an iOS change reaches main', () => {
     const steps = stepsOf(jobsOf('ios-quality.yml').get('quality'));
     const namedStep = (name: string) => steps.find((step) => step.name === name);
 
@@ -234,13 +234,14 @@ describe('the scope job is wired to the workflow it scopes', () => {
     );
 
     for (const name of [
-      'Release carries no BFM host',
       'Expose bundled node-gyp on PATH',
       "Install the BFM's subgraph",
       'UI flow (Maestro, against a real BFM)',
     ]) {
-      expect(namedStep(name)?.if).toBe("github.event_name != 'merge_group'");
+      expect(namedStep(name)?.if).toBe("github.event_name == 'push'");
     }
+
+    expect(namedStep('Release carries no BFM host')?.if).toBe("github.event_name != 'merge_group'");
   });
 });
 

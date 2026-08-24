@@ -68,14 +68,12 @@ name: iOS Quality
 # production having passed `unit-quality.yml`, that trade is worth reopening —
 # the `pnpm list` command above still shows what to point the filter at.
 #
-# THIS JOB ALSO RUNS THE ONLY TEST IN THE REPO THAT TOUCHES AN iOS SCREEN. The
-# last steps boot a real `@pops/bfm` and drive the built app against it with
-# Maestro; `clients/ios/.maestro/README.md` says why Maestro and not XCUITest,
-# and `scripts/ios-e2e/run.mjs` says what the pillar is talking to. It lives
-# here rather than in a workflow of its own because it needs what this job
-# already paid for — one compile of the tree, one booted simulator — and
-# because `ci-gate.yml` already lists "iOS Quality", so a second gated context
-# would be a second thing to wire and a second thing to forget.
+# THIS JOB RUNS THE ONLY TEST IN THE REPO THAT TOUCHES AN iOS SCREEN on pushes
+# to main. The last steps boot a real `@pops/bfm` and drive the built app
+# against it with Maestro; `clients/ios/.maestro/README.md` says why Maestro and
+# not XCUITest, and `scripts/ios-e2e/run.mjs` says what the pillar is talking
+# to. It lives here rather than in a workflow of its own because it needs what
+# this job already paid for — one compile of the tree, one booted simulator.
 #
 # THERE IS NO DerivedData CACHE HERE, AND THAT IS DELIBERATE. It cannot help
 # the step that costs. `build:for-testing` wipes its own private
@@ -367,8 +365,8 @@ jobs:
 
       # The merge queue proves that the combined tree compiles and remains
       # analyzable. Its job is merge-order validation, not repeating the PR's
-      # test suite. Pull requests and pushes to main still run the complete
-      # suite below, including the UI flow.
+      # test suite. Pull requests run the simulator suite; pushes to main also
+      # run the UI flow below.
       #
       # What this replaced: `xcodebuild test` compiled the whole tree against
       # the iOS SDK, and `lint:analyze` then did its own `clean
@@ -429,7 +427,7 @@ jobs:
       # it so. The pillar is a Node process: install its subgraph, build it,
       # run it. `scripts/ios-e2e/run.mjs` does the last two.
       - name: Expose bundled node-gyp on PATH
-        if: github.event_name != 'merge_group'
+        if: github.event_name == 'push'
         # mise-installed node bundles node-gyp under npm but does not put it on
         # PATH, so better-sqlite3 — which the BFM opens its database with —
         # fails its pnpm lifecycle build with `node-gyp: not found` on any
@@ -443,7 +441,7 @@ jobs:
           echo "$gyp_bin" >> "$GITHUB_PATH"
 
       - name: Install the BFM's subgraph
-        if: github.event_name != 'merge_group'
+        if: github.event_name == 'push'
         # Not the whole workspace: this job needs one pillar to run, and
         # `@pops/bfm...` pulls exactly it and what it imports.
         working-directory: .
@@ -454,7 +452,7 @@ jobs:
       # simulator `test` booted. Its own task rebuilds when those are missing,
       # so a reordering degrades into a second compile rather than into a lie.
       - name: UI flow (Maestro, against a real BFM)
-        if: github.event_name != 'merge_group'
+        if: github.event_name == 'push'
         working-directory: .
         run: mise run e2e:ios
 
