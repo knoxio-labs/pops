@@ -30,6 +30,15 @@ export const ComposeVolumeEntrySchema = z.union([
   }),
 ]);
 
+/** One `secrets:` entry in Compose's short or long syntax. */
+export const ComposeSecretEntrySchema = z.union([
+  z.string(),
+  z.object({
+    source: z.string(),
+    target: z.string().optional(),
+  }),
+]);
+
 /**
  * The value shape `ComposeVolumeEntrySchema` accepts, exported as a type so a
  * consumer that only touches one volume entry at a time (never the whole
@@ -42,7 +51,7 @@ export const ComposeVolumeEntrySchema = z.union([
  */
 
 /**
- * A Compose service: `build`, `volumes` and `environment` — every field a
+ * A Compose service: `build`, `volumes`, `secrets` and `environment` — every field a
  * scripts/ci guard has needed out of `infra/docker-compose.yml` so far.
  * Nullable because `some-service:` with no value is valid Compose (typically
  * paired with a YAML anchor elsewhere), not a shape to reject.
@@ -51,6 +60,7 @@ export const ComposeServiceSchema = z
   .object({
     build: z.union([z.string(), z.object({ dockerfile: z.string().optional() })]).optional(),
     volumes: z.array(ComposeVolumeEntrySchema).optional(),
+    secrets: z.array(ComposeSecretEntrySchema).optional(),
     environment: z.record(z.string(), z.unknown()).optional(),
   })
   .nullable();

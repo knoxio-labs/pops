@@ -394,6 +394,7 @@ services:
       - sqlite-data:/data/sqlite
     secrets:
       - pops_purchases_api_key
+      - claude_api_key
     environment:
       NODE_ENV: production
       PORT: '3013'
@@ -412,6 +413,7 @@ services:
       # the pillar. Each of those reports `no-credential` every tick instead
       # of degrading into an indistinguishable `unavailable`.
       POPS_INTERNAL_API_KEY_FILE: /run/secrets/pops_purchases_api_key
+      ANTHROPIC_API_KEY_FILE: /run/secrets/claude_api_key
       # AI telemetry sink + pricing reads for the receipt drop-zone. Read
       # FIRST so it never collides with a self-pointing POPS_API_URL.
       AI_API_URL: http://ai-api:3008
