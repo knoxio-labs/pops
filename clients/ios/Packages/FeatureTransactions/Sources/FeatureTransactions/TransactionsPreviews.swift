@@ -115,7 +115,8 @@
                 transactions: previewRepository(pages: pages, failing: failing),
                 pairing: AppDependencies.unbound.pairing,
                 reachability: AppDependencies.unbound.reachability,
-                receiptCapture: AppDependencies.unbound.receiptCapture
+                receiptCapture: AppDependencies.unbound.receiptCapture,
+                purchases: AppDependencies.unbound.purchases
             ),
             router: Router()
         )
@@ -136,7 +137,8 @@
                     failing: failing, details: details, detailNeverAnswers: detailNeverAnswers),
                 pairing: AppDependencies.unbound.pairing,
                 reachability: AppDependencies.unbound.reachability,
-                receiptCapture: AppDependencies.unbound.receiptCapture
+                receiptCapture: AppDependencies.unbound.receiptCapture,
+                purchases: AppDependencies.unbound.purchases
             )
         )
     }
@@ -160,7 +162,8 @@
                 transactions: previewRepository(),
                 pairing: AppDependencies.unbound.pairing,
                 reachability: AppDependencies.unbound.reachability,
-                receiptCapture: AppDependencies.unbound.receiptCapture
+                receiptCapture: AppDependencies.unbound.receiptCapture,
+                purchases: AppDependencies.unbound.purchases
             ),
             router: Router()
         )

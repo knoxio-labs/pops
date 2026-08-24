@@ -553,7 +553,7 @@ export type MobileFeatureId = z.infer<typeof MobileFeatureIdSchema>;
  * exhaustiveness now. Never used as the wire schema — see
  * `MobileFeatureIdSchema` for why.
  */
-export const MOBILE_FEATURE_IDS = ['transactions', 'receipt-capture'] as const;
+export const MOBILE_FEATURE_IDS = ['transactions', 'purchases', 'receipt-capture'] as const;
 
 export type KnownMobileFeatureId = (typeof MOBILE_FEATURE_IDS)[number];
 

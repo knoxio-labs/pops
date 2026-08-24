@@ -1,5 +1,6 @@
 import AppCore
 import FeatureReceiptCapture
+import FeaturePurchases
 import FeatureTransactions
 
 /// The features this binary can draw, and the order to fall back to before the
@@ -25,6 +26,7 @@ import FeatureTransactions
 internal enum RootFeature {
     internal static let renderable: [MobileFeature] = [
         FeatureTransactions.feature,
+        FeaturePurchases.feature,
         FeatureReceiptCapture.feature,
     ]
 }
