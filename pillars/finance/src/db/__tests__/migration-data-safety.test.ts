@@ -109,7 +109,11 @@ const TRANSACTIONS: readonly SeededTransaction[] = [
     // on the default rather than leave it as-is.
     type: '',
     tags: ['Fees'],
-    migratedTags: ['contains:fee'],
+    // 0067 mapped the flat `Fees` tag to `contains:fee`; 0073 retired that value
+    // in favour of `type = 'fee'` plus a `fee:` value. This descriptor is one the
+    // classifier cannot type, so the tag is kept as the only surviving evidence
+    // and the row is flagged for a human instead (POPS-2632).
+    migratedTags: ['contains:fee', 'flag:needs-review'],
     entityId: null,
     notes: null,
   },

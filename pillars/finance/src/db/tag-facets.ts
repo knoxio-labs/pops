@@ -94,6 +94,12 @@ export const DEFAULT_TAG_FACET_KIND: TagFacetKind = 'open';
  *   forever — and had already been forgotten on 21 of the 38 rows it covered.
  *   `occasion:` now applies to spend and is silent elsewhere, so a missing
  *   occasion on a spend row always means "not yet decided".
+ *
+ * `contains:fee` was retired on the same reasoning (migration 0072,
+ * POPS-2632): `contains:` says what a purchase contained, and since POPS-2610
+ * a fee is not a purchase — it has its own `type` and a `fee:` value naming
+ * which fee it is. The rows the classifier could not type keep the tag and
+ * carry `flag:needs-review`, because there the tag is the only evidence left.
  */
 export const CLOSED_TAG_FACETS = [
   { facet: 'venue', single: true },
