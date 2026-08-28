@@ -128,6 +128,21 @@ export type {
   EntityRepairResult,
 } from './services/entity-orphans.js';
 
+export * as entityVenueDefaultsService from './services/entity-venue-defaults.js';
+
+export { isPerTransactionFacet, PER_TRANSACTION_FACETS } from './services/entity-venue-facets.js';
+
+export type {
+  LiveEntityDefaults,
+  EntityVenueEvidence,
+  EntityDefaultTagsWrite,
+  EntityVenueReview,
+  EntityVenueOverride,
+  EntityVenueReviewReason,
+  EntityVenueDefaultsPlan,
+  VenueCoverage,
+} from './services/entity-venue-defaults.js';
+
 export * as importCommitsService from './services/import-commits.js';
 
 export { searchFilterScope } from './services/search-filters.js';

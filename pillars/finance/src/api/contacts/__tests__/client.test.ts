@@ -183,6 +183,71 @@ describe('createContactsClient.createOrFetchByName — TRANSIENT vs PERMANENT cr
   });
 });
 
+describe('createContactsClient.updateDefaultTags — the one contact write finance makes', () => {
+  function updateReturning(result: CallResult<{ data: ContactEntity; message: string }>): {
+    client: ReturnType<typeof createContactsClient>;
+    update: ReturnType<typeof vi.fn>;
+  } {
+    const list = vi.fn(async () => page([], false));
+    const update = vi.fn(async () => result);
+    return { client: createContactsClient(() => stubHandle({ list, update })), update };
+  }
+
+  it('patches defaultTags and returns the updated contact', async () => {
+    const updated = entity({ id: 'e1', name: 'Stonewall', defaultTags: ['venue:bar'] });
+    const { client, update } = updateReturning(ok({ data: updated, message: 'Entity updated' }));
+
+    await expect(client.updateDefaultTags('e1', ['venue:bar'])).resolves.toEqual(updated);
+    expect(update).toHaveBeenCalledWith({ id: 'e1', defaultTags: ['venue:bar'] });
+  });
+
+  it('never degrades silently — a transient failure throws rather than resolving', async () => {
+    const { client } = updateReturning({ kind: 'unavailable', pillar: 'contacts' });
+
+    await expect(client.updateDefaultTags('e1', ['venue:bar'])).rejects.toThrow(
+      ContactsUnavailableError
+    );
+  });
+
+  it('names the operation in the message so a failed backfill is not read as a pre-create', async () => {
+    const { client } = updateReturning({ kind: 'unavailable', pillar: 'contacts' });
+
+    await expect(client.updateDefaultTags('e1', ['venue:bar'])).rejects.toThrow(
+      'entity defaultTags update'
+    );
+  });
+
+  it('treats a conflict as PERMANENT — a defaultTags patch cannot race a duplicate name', async () => {
+    const { client } = updateReturning(conflict('duplicate name'));
+
+    await expect(client.updateDefaultTags('e1', ['venue:bar'])).rejects.toThrow(
+      ContactsPermanentError
+    );
+  });
+
+  it.each([
+    ['not-found', { kind: 'not-found', pillar: 'contacts' }],
+    ['bad-request', { kind: 'bad-request', pillar: 'contacts', message: 'bad tags' }],
+  ] satisfies [string, CallResult<{ data: ContactEntity; message: string }>][])(
+    'throws ContactsPermanentError for a %s update result',
+    async (_label, result) => {
+      const { client } = updateReturning(result);
+
+      await expect(client.updateDefaultTags('e1', ['venue:bar'])).rejects.toThrow(
+        ContactsPermanentError
+      );
+    }
+  );
+
+  it('throws the TRANSIENT error without calling the handle when no key is held', async () => {
+    const client = createContactsClient(() => null);
+
+    await expect(client.updateDefaultTags('e1', ['venue:bar'])).rejects.toThrow(
+      ContactsUnavailableError
+    );
+  });
+});
+
 describe('createContactsClient — no service-account key (POPS-2021)', () => {
   it('fetchAllEntities degrades to empty without calling the handle', async () => {
     const client = createContactsClient(() => null);

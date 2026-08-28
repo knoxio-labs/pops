@@ -91,6 +91,10 @@ export type ContactsRouter = {
       name: string;
       type: string;
     }) => Promise<{ data: ContactEntity; message: string }>;
+    update: (input: {
+      id: string;
+      defaultTags: string[];
+    }) => Promise<{ data: ContactEntity; message: string }>;
   };
 };
 
@@ -134,6 +138,15 @@ export interface ContactsClient {
    * caller still let the failure propagate and abort.
    */
   createOrFetchByName(name: string, type: string): Promise<CreateOrFetchResult>;
+  /**
+   * Replace a contact's `defaultTags` wholesale (contacts `PATCH /entities/:id`
+   * takes the full array; there is no per-tag verb). Backs the reviewed
+   * `venue:` default backfill (POPS-2609) and sits on no request path — it is
+   * the ONE write finance makes to a contact's attributes, so it never degrades
+   * silently: a failure throws the same TRANSIENT/PERMANENT split
+   * `createOrFetchByName` uses and the caller decides whether to stop.
+   */
+  updateDefaultTags(entityId: string, defaultTags: string[]): Promise<ContactEntity>;
 }
 
 /**
@@ -145,8 +158,8 @@ export interface ContactsClient {
  */
 export class ContactsUnavailableError extends Error {
   override readonly name = 'ContactsUnavailableError';
-  constructor(detail: string) {
-    super(`contacts pillar unavailable during entity pre-create: ${detail}`);
+  constructor(detail: string, operation = 'entity pre-create') {
+    super(`contacts pillar unavailable during ${operation}: ${detail}`);
   }
 }
 
@@ -160,16 +173,17 @@ export class ContactsUnavailableError extends Error {
  */
 export class ContactsPermanentError extends Error {
   override readonly name = 'ContactsPermanentError';
-  constructor(detail: string) {
-    super(`contacts pillar rejected entity pre-create: ${detail}`);
+  constructor(detail: string, operation = 'entity pre-create') {
+    super(`contacts pillar rejected ${operation}: ${detail}`);
   }
 }
 
-/** The non-ok, non-conflict `create` result kinds this classifier sorts. */
-type CreateFailureKind = Exclude<CallResult<unknown>['kind'], 'ok' | 'conflict'>;
+/** The non-ok, non-conflict result kinds this classifier sorts. */
+type ContactsFailureKind = Exclude<CallResult<unknown>['kind'], 'ok' | 'conflict'>;
 
 /**
- * TRANSIENT vs PERMANENT for every non-ok/non-conflict `create` result kind.
+ * TRANSIENT vs PERMANENT for every non-ok/non-conflict write result kind
+ * (`entities.create` and `entities.update` share it).
  *
  * A total switch with no default arm, matching `toGatewayFailure` and
  * `upstream-error.ts`'s `classify`: a kind added to {@link CallResult} that
@@ -179,7 +193,7 @@ type CreateFailureKind = Exclude<CallResult<unknown>['kind'], 'ok' | 'conflict'>
  * refusing the request — so it degrades to the outbox exactly like
  * `unavailable`/`degraded` rather than aborting the commit.
  */
-function classifyCreateFailureKind(kind: CreateFailureKind): 'transient' | 'permanent' {
+function classifyContactsFailureKind(kind: ContactsFailureKind): 'transient' | 'permanent' {
   switch (kind) {
     case 'unavailable':
     case 'degraded':
@@ -193,6 +207,9 @@ function classifyCreateFailureKind(kind: CreateFailureKind): 'transient' | 'perm
       return 'permanent';
   }
 }
+
+/** Operation label carried in the error message of a failed defaults write. */
+const UPDATE_OPERATION = 'entity defaultTags update';
 
 /** Per-page size for the bulk list sweep — matches the contacts list `MAX_LIMIT`. */
 const PAGE_SIZE = 200;
@@ -302,7 +319,7 @@ export function createContactsClient(
         if (raced) return { id: raced.id, name: raced.name, created: false };
         throw new ContactsUnavailableError(`409 for "${name}" but no existing contact found`);
       }
-      if (classifyCreateFailureKind(created.kind) === 'permanent') {
+      if (classifyContactsFailureKind(created.kind) === 'permanent') {
         if (created.kind === UNAUTHORIZED_REASON) {
           console.error(credentialRejectedMessage(CONTACTS_PILLAR_ID, 'entities.create'));
         }
@@ -310,7 +327,40 @@ export function createContactsClient(
       }
       throw new ContactsUnavailableError(created.kind);
     },
+
+    updateDefaultTags(entityId: string, defaultTags: string[]): Promise<ContactEntity> {
+      return patchDefaultTags(handleFactory(), entityId, defaultTags);
+    },
   };
+}
+
+/**
+ * The `updateDefaultTags` body, lifted out of the client factory so the
+ * factory stays a thin table of methods. Never degrades to a silent no-op:
+ * every non-ok result throws, split TRANSIENT/PERMANENT the same way
+ * `createOrFetchByName` splits a failed create.
+ */
+async function patchDefaultTags(
+  handle: PillarHandle<ContactsRouter> | null,
+  entityId: string,
+  defaultTags: string[]
+): Promise<ContactEntity> {
+  if (handle === null) {
+    throw new ContactsUnavailableError(NO_CREDENTIAL_REASON, UPDATE_OPERATION);
+  }
+  const result = await handle.entities.update({ id: entityId, defaultTags });
+  if (isOk(result)) return result.value.data;
+  // A duplicate-name 409 cannot arise from a defaultTags-only patch, so
+  // `conflict` here means contacts refused for a reason retrying will not
+  // fix — classify it with the permanent arm rather than inventing a
+  // create-style re-fetch that has nothing to resolve.
+  if (result.kind === 'conflict' || classifyContactsFailureKind(result.kind) === 'permanent') {
+    if (result.kind === UNAUTHORIZED_REASON) {
+      console.error(credentialRejectedMessage(CONTACTS_PILLAR_ID, 'entities.update'));
+    }
+    throw new ContactsPermanentError(result.kind, UPDATE_OPERATION);
+  }
+  throw new ContactsUnavailableError(result.kind, UPDATE_OPERATION);
 }
 
 /**
