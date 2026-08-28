@@ -500,7 +500,12 @@ describe('tagRules — applyExisting (retroactive apply, #3660)', () => {
     expect(rule.data.lastUsedAt).not.toBeNull();
   });
 
-  it('skips a transaction whose matchType is manual (CF017/#3623)', async () => {
+  // The marker says the user fixed the CLASSIFICATION, not that they curated the
+  // tags — and an additive merge cannot revert a classification. Skipping these
+  // cost POPS-2607's backfill 23 of 106 rows and every one of its Amazon rows
+  // (POPS-2662). The correction-rule counterpart still skips them, correctly:
+  // that one rewrites the classification.
+  it('applies to a transaction whose matchType is manual, without touching its classification', async () => {
     const db = financeDb.db;
     const txn = transactionsService.createTransaction(db, {
       description: 'DARLO BAR SYDNEY',
@@ -514,10 +519,11 @@ describe('tagRules — applyExisting (retroactive apply, #3660)', () => {
     const ruleId = await seedRule();
 
     const result = await client().tagRules.applyExisting(ruleId);
-    expect(result.data).toMatchObject({ matched: 1, updated: 0, skippedManual: 1 });
+    expect(result.data).toMatchObject({ matched: 1, updated: 1, skippedManual: 0 });
 
     const refetched = await client().transactions.get(txn.id);
-    expect(refetched.data.tags).toEqual([]);
+    expect(refetched.data.tags).not.toEqual([]);
+    expect(refetched.data.entityId).toBe('ent-user-picked');
   });
 
   it('a disabled tag rule is a no-op', async () => {
@@ -650,6 +656,95 @@ describe('tagRules — applyExisting (retroactive apply, #3660)', () => {
 
   it('404s applying an unknown rule id', async () => {
     await expect(client().tagRules.applyExisting('nope')).rejects.toMatchObject({ status: 404 });
+  });
+});
+
+describe('tagRules — applyExisting refuses a second value on a single-valued facet', () => {
+  // The endpoint anyone can reach, not just the reviewed one-off backfills.
+  // Merging cannot overwrite, so without this the row keeps BOTH venues and
+  // the axis stops answering "how much at pubs versus restaurants" — which is
+  // the stored violation migrations 0075/0076 exist to clean up, recreated
+  // through the front door.
+  async function seedVenueRule(tags: string[]): Promise<string> {
+    const created = await client().tagRules.apply({
+      changeSet: {
+        source: 'test',
+        ops: [
+          {
+            op: 'add',
+            data: { descriptionPattern: 'LUCKY CAT', matchType: 'contains', tags },
+          },
+        ],
+      },
+      acceptedNewTags: tags,
+    });
+    const id = created.rules[0]?.id;
+    if (!id) throw new Error('rule not created');
+    return id;
+  }
+
+  function seedTxn(tags: string[]): string {
+    return transactionsService.createTransaction(financeDb.db, {
+      description: 'LUCKY CAT DARLINGHURST',
+      account: 'amex',
+      amountCents: -4500,
+      date: '2026-01-01',
+      tags,
+    }).id;
+  }
+
+  it('leaves the venue the row already carries and adds nothing on that facet', async () => {
+    const txnId = seedTxn(['venue:restaurant']);
+    const ruleId = await seedVenueRule(['venue:pub']);
+
+    const result = await client().tagRules.applyExisting(ruleId);
+
+    expect(result.data).toMatchObject({ matched: 1, updated: 0 });
+    const refetched = await client().transactions.get(txnId);
+    expect(refetched.data.tags).toEqual(['venue:restaurant']);
+  });
+
+  it('still merges the rule tags that do not clash', async () => {
+    const txnId = seedTxn(['venue:restaurant']);
+    const ruleId = await seedVenueRule(['venue:pub', 'contains:alcohol']);
+
+    const result = await client().tagRules.applyExisting(ruleId);
+
+    expect(result.data).toMatchObject({ matched: 1, updated: 1 });
+    const refetched = await client().transactions.get(txnId);
+    expect(refetched.data.tags.toSorted()).toEqual(['contains:alcohol', 'venue:restaurant']);
+  });
+
+  it('adds a second contains:, because that facet is multi-valued', async () => {
+    const txnId = seedTxn(['contains:food']);
+    const ruleId = await seedVenueRule(['contains:alcohol']);
+
+    await client().tagRules.applyExisting(ruleId);
+
+    const refetched = await client().transactions.get(txnId);
+    expect(refetched.data.tags.toSorted()).toEqual(['contains:alcohol', 'contains:food']);
+  });
+
+  it('applies the facet to a row that has no value on it yet', async () => {
+    const txnId = seedTxn(['contains:food']);
+    const ruleId = await seedVenueRule(['venue:pub']);
+
+    await client().tagRules.applyExisting(ruleId);
+
+    const refetched = await client().transactions.get(txnId);
+    expect(refetched.data.tags.toSorted()).toEqual(['contains:food', 'venue:pub']);
+  });
+
+  // A rule may itself assert two values on one facet; the first one wins
+  // rather than both landing.
+  it('refuses the second of two clashing values inside one rule', async () => {
+    const txnId = seedTxn([]);
+    const ruleId = await seedVenueRule(['venue:pub', 'venue:restaurant']);
+
+    await client().tagRules.applyExisting(ruleId);
+
+    const refetched = await client().transactions.get(txnId);
+    expect(refetched.data.tags).toEqual(['venue:pub']);
   });
 });
 

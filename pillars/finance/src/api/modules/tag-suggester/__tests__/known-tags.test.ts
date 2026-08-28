@@ -102,12 +102,12 @@ describe('suggestTags — dedup is case-insensitive', () => {
     const suggested = suggestTags(db, {
       description: 'THE LOCAL',
       entityId: MERCHANT,
-      aiTags: ['venue:Bar'],
+      aiTags: ['venue:Pub'],
       knownTags: loadKnownTags(db),
-      entityDefaultTags: new Map([[MERCHANT, ['venue:bar']]]),
+      entityDefaultTags: new Map([[MERCHANT, ['venue:pub']]]),
     });
 
-    expect(suggested).toEqual([{ tag: 'venue:Bar', source: 'ai' }]);
+    expect(suggested).toEqual([{ tag: 'venue:Pub', source: 'ai' }]);
   });
 
   it('collapses two spellings within a single pass', () => {

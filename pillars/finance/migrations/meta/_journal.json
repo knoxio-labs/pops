@@ -183,6 +183,20 @@
       "when": 1781913600019,
       "tag": "0074_fx_capture_source",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1781913600020,
+      "tag": "0075_merge_venue_bar_into_pub",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1781913600021,
+      "tag": "0076_resolve_venue_cardinality",
+      "breakpoints": true
     }
   ]
 }
