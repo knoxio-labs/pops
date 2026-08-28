@@ -1,59 +1,103 @@
 /**
  * Plex HTTP fetch helpers (no business logic).
  *
- *  - `getPath`     — GET against the Plex Media Server (appends the token query param)
- *  - `getAbsolute` — GET an absolute cloud URL (token already in the query)
- *  - `putAbsolute` — PUT an absolute cloud URL (appends the token query param)
+ * Every Plex host — the Media Server, plex.tv and the Discover cloud —
+ * accepts `X-Plex-Token` as a request header, and that is the only way this
+ * module sends it. A token in the query string is recorded by every
+ * intermediary access log, and `fetch` echoes the offending URL back inside
+ * its own `TypeError`, which then travels verbatim into a `PlexApiError` and
+ * out to REST clients. `redactPlexToken` is the second line of defence, for
+ * messages built from upstream response bodies we do not control.
+ *
+ *  - `getAbsolute` — GET an absolute Plex URL
+ *  - `getPath`     — GET a path against a Plex Media Server base URL
+ *  - `putAbsolute` — PUT an absolute Plex URL
  */
 import { PlexApiError } from './types.js';
 
-async function readErrorMessage(response: Response): Promise<string> {
-  let message = `Plex API error: ${response.status} ${response.statusText}`;
+/** Credentials for a Plex request; sent as `X-Plex-*` headers, never in the URL. */
+export interface PlexAuth {
+  token: string;
+  clientId?: string;
+}
+
+export interface PlexRequestOptions {
+  auth?: PlexAuth;
+  /** Prefix for generated error messages, e.g. `'Plex friends API'`. */
+  context?: string;
+}
+
+const DEFAULT_CONTEXT = 'Plex API';
+const TOKEN_IN_QUERY = /X-Plex-Token=[^&\s"'<>]*/gi;
+
+/**
+ * Strip any `X-Plex-Token=…` value out of text bound for an error or a log.
+ *
+ * Exported so callers building their own messages from upstream text can
+ * apply the same guarantee.
+ */
+export function redactPlexToken(text: string): string {
+  return text.replace(TOKEN_IN_QUERY, 'X-Plex-Token=[redacted]');
+}
+
+function buildHeaders(auth: PlexAuth | undefined): Record<string, string> {
+  const headers: Record<string, string> = { Accept: 'application/json' };
+  if (auth === undefined) return headers;
+  headers['X-Plex-Token'] = auth.token;
+  if (auth.clientId !== undefined) headers['X-Plex-Client-Identifier'] = auth.clientId;
+  return headers;
+}
+
+async function readErrorMessage(response: Response, context: string): Promise<string> {
+  let message = `${context} error: ${response.status} ${response.statusText}`;
   try {
     const text = await response.text();
     if (text) message = text;
   } catch {
     // Ignore parse failures — keep the status-line message.
   }
-  return message;
+  return redactPlexToken(message);
 }
 
-async function performFetch(url: string, init: RequestInit): Promise<Response> {
+async function performFetch(url: string, init: RequestInit, context: string): Promise<Response> {
   try {
     return await fetch(url, init);
   } catch (err) {
-    throw new PlexApiError(0, `Network error: ${err instanceof Error ? err.message : String(err)}`);
+    const detail = err instanceof Error ? err.message : String(err);
+    throw new PlexApiError(0, redactPlexToken(`${context} network error: ${detail}`));
   }
 }
 
-/** Generic GET for cloud API endpoints (absolute URLs, token already in query). */
-export async function getAbsolute<T>(absoluteUrl: string): Promise<T> {
-  const response = await performFetch(absoluteUrl, {
-    method: 'GET',
-    headers: { Accept: 'application/json' },
-  });
+/** Generic GET for any Plex endpoint (absolute URL; credentials go in headers). */
+export async function getAbsolute<T>(
+  absoluteUrl: string,
+  options: PlexRequestOptions = {}
+): Promise<T> {
+  const context = options.context ?? DEFAULT_CONTEXT;
+  const response = await performFetch(
+    absoluteUrl,
+    { method: 'GET', headers: buildHeaders(options.auth) },
+    context
+  );
   if (!response.ok) {
-    throw new PlexApiError(response.status, await readErrorMessage(response));
+    throw new PlexApiError(response.status, await readErrorMessage(response, context));
   }
   return (await response.json()) as T;
 }
 
-/** Generic GET for the Plex Media Server API; appends the token query param. */
+/** Generic GET against a Plex Media Server base URL. */
 export async function getPath<T>(baseUrl: string, token: string, path: string): Promise<T> {
-  const separator = path.includes('?') ? '&' : '?';
-  const url = `${baseUrl}${path}${separator}X-Plex-Token=${encodeURIComponent(token)}`;
-  return getAbsolute<T>(url);
+  return getAbsolute<T>(`${baseUrl}${path}`, { auth: { token } });
 }
 
-/** Generic PUT for cloud API endpoints (absolute URLs); appends the token query param. */
+/** Generic PUT for any Plex endpoint (absolute URL; credentials go in headers). */
 export async function putAbsolute(absoluteUrl: string, token: string): Promise<void> {
-  const separator = absoluteUrl.includes('?') ? '&' : '?';
-  const url = `${absoluteUrl}${separator}X-Plex-Token=${encodeURIComponent(token)}`;
-  const response = await performFetch(url, {
-    method: 'PUT',
-    headers: { Accept: 'application/json' },
-  });
+  const response = await performFetch(
+    absoluteUrl,
+    { method: 'PUT', headers: buildHeaders({ token }) },
+    DEFAULT_CONTEXT
+  );
   if (!response.ok) {
-    throw new PlexApiError(response.status, await readErrorMessage(response));
+    throw new PlexApiError(response.status, await readErrorMessage(response, DEFAULT_CONTEXT));
   }
 }
