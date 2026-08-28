@@ -35,7 +35,7 @@ import { tagVocabularyService, type FinanceDb } from '../../../db/index.js';
  */
 import { parseTagFacet, tagFacetKind } from '../../../db/tag-facets.js';
 import { ValidationError } from '../../shared/errors.js';
-import { collectTagsFromTagRuleChangeSet, isTagBearingTagRuleOp } from './commit-temp-resolver.js';
+import { collectTagsFromTagRuleChangeSet } from './commit-temp-resolver.js';
 
 import type { KnownTagSet } from '../../../db/services/tag-vocabulary.js';
 import type { CommitPayload } from './types.js';
@@ -74,10 +74,15 @@ function trimmedTags(tags: readonly string[] | undefined): string[] {
  * rule has no accept/decline UI (batch rule creation), so nothing is declined.
  *
  * A declined tag is dropped from the op's `tags`, not blanked to `''` — it
- * must not reach `transaction_tag_rules` at all (POPS-2643). An op left with
- * no tags is dropped outright rather than written as `tags: []`:
- * `TagRuleDataSchema.tags` is `.min(1)`, so an empty array would 400 the whole
- * commit over a user unticking every box. `disable`/`remove` ops, and an
+ * must not reach `transaction_tag_rules` at all (POPS-2643). `add`'s
+ * `TagRuleDataSchema.tags` is `.min(1)`, so an `add` op declined down to no
+ * tags is dropped outright rather than written as `tags: []`. `edit`'s
+ * `TagRuleUpdateSchema.tags` is optional, and an edit op can carry other field
+ * changes (`isActive`, `priority`, `confidence`, `entityId`) alongside `tags`
+ * in the same `data` — declining every tag on such an op must drop only the
+ * `tags` key, not the op, or a user unticking every tag box would silently
+ * discard the rest of that edit. An edit left with no fields at all once
+ * `tags` is gone is a no-op and is dropped. `disable`/`remove` ops, and an
  * `edit` op that never carried a `tags` array, pass through untouched.
  */
 function filterTagRuleChangeSetEntry(
@@ -90,17 +95,24 @@ function filterTagRuleChangeSetEntry(
   const isKept = (tag: string): boolean => known.has(tag) || accepted.has(tag);
   const ops: CommitPayload['tagRuleChangeSets'][number]['changeSet']['ops'] = [];
   for (const op of entry.changeSet.ops) {
-    if (!isTagBearingTagRuleOp(op) || !op.data.tags) {
-      ops.push(op);
+    if (op.op === 'add') {
+      const keptTags = op.data.tags.filter(isKept);
+      if (keptTags.length === 0) continue;
+      ops.push({ ...op, data: { ...op.data, tags: keptTags } });
       continue;
     }
-    const keptTags = op.data.tags.filter(isKept);
-    if (keptTags.length === 0) continue;
-    if (op.op === 'add') {
-      ops.push({ ...op, data: { ...op.data, tags: keptTags } });
-    } else {
-      ops.push({ ...op, data: { ...op.data, tags: keptTags } });
+    if (op.op === 'edit' && op.data.tags) {
+      const keptTags = op.data.tags.filter(isKept);
+      if (keptTags.length > 0) {
+        ops.push({ ...op, data: { ...op.data, tags: keptTags } });
+        continue;
+      }
+      const { tags: _declinedTags, ...rest } = op.data;
+      if (Object.keys(rest).length === 0) continue;
+      ops.push({ ...op, data: rest });
+      continue;
     }
+    ops.push(op);
   }
 
   if (ops.length === 0) return undefined;

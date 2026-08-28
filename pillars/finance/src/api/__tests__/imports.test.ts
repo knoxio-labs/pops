@@ -1185,6 +1185,55 @@ describe('imports.commitImport — pre-create contacts then write the finance tx
     expect(vocabularyTags()).not.toContain('EditDeclinedOnly');
   });
 
+  it('applies an edit op other-field change even when its tags all decline (POPS-2643)', async () => {
+    const c = client();
+    await c.imports.commitImport({
+      tagRuleChangeSets: [
+        { changeSet: tagRuleChangeSet('EDIT_DECLINE_KEEPS_FIELDS', ['SeedTag']) },
+      ],
+      transactions: [
+        confirmed({
+          description: 'EDIT_DECLINE_KEEPS_FIELDS 1',
+          checksum: 'commit-edit-fields-seed',
+        }),
+      ],
+    });
+    const ruleId = (
+      financeDb.raw
+        .prepare('SELECT id FROM transaction_tag_rules WHERE description_pattern = ?')
+        .get('EDIT_DECLINE_KEEPS_FIELDS') as { id: string }
+    ).id;
+
+    await c.imports.commitImport({
+      tagRuleChangeSets: [
+        {
+          changeSet: {
+            source: 'unit-test',
+            ops: [
+              {
+                op: 'edit',
+                id: ruleId,
+                data: { tags: ['EditDeclinedOnly'], isActive: false, priority: 7 },
+              },
+            ],
+          },
+          acceptedNewTags: [],
+        },
+      ],
+      transactions: [
+        confirmed({ description: 'EDIT_DECLINE_KEEPS_FIELDS 2', checksum: 'commit-edit-fields' }),
+      ],
+    });
+
+    const row = financeDb.raw
+      .prepare('SELECT is_active, priority, tags FROM transaction_tag_rules WHERE id = ?')
+      .get(ruleId) as { is_active: number; priority: number; tags: string };
+    expect(row.is_active).toBe(0);
+    expect(row.priority).toBe(7);
+    expect(JSON.parse(row.tags)).toEqual(['SeedTag']);
+    expect(vocabularyTags()).not.toContain('EditDeclinedOnly');
+  });
+
   it('drops a declined marker from the rule exactly like a declined open tag (POPS-2643)', async () => {
     const c = client();
     await c.imports.commitImport({
