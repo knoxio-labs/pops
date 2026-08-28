@@ -156,18 +156,39 @@ export function reapplyCorrectionToMatched(
     return false;
   }
 
-  const correctionApplied = applyLearnedCorrection(ctx.db, {
+  // Compute the outcome without crediting anything, because whether this rule
+  // applied is not knowable until the outcome is compared with what the row
+  // already carried. A rule that re-derives the entity a previous run already
+  // wrote did not fire — and re-evaluation over a whole ledger runs this path
+  // across every matched row, so crediting the no-ops would add one
+  // `timesApplied` per row per run to every rule, drowning the signal POPS-254
+  // reads to decide which rules earn their place (POPS-2641).
+  const probe = applyLearnedCorrection(ctx.db, {
     transaction: tx,
     minConfidence: ctx.minConfidence,
     knownTags: ctx.knownTags,
     rules: ctx.rules,
     isPreview: ctx.isPreview,
+    recordUsage: false,
     entityDefaultTags: ctx.entityDefaultTags,
   });
-  if (!correctionApplied) {
+  if (!probe || !transactionChanged(tx, probe.processed)) {
     buckets.matched.push(tx);
     return false;
   }
+
+  // It changes something, so it really did apply: run it again for the usage
+  // counters. Only rows that actually move pay the second computation, and the
+  // second run of an idempotent re-evaluation pays it on none of them.
+  const correctionApplied =
+    applyLearnedCorrection(ctx.db, {
+      transaction: tx,
+      minConfidence: ctx.minConfidence,
+      knownTags: ctx.knownTags,
+      rules: ctx.rules,
+      isPreview: ctx.isPreview,
+      entityDefaultTags: ctx.entityDefaultTags,
+    }) ?? probe;
   buckets.matched.push(correctionApplied.processed);
-  return transactionChanged(tx, correctionApplied.processed);
+  return true;
 }

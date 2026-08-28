@@ -37,8 +37,24 @@ export interface ApplyLearnedCorrectionArgs {
    * flag exists for) still counts as usage.
    */
   isPreview?: boolean;
+  /**
+   * Overrides the `!isPreview` telemetry gate for this one call.
+   *
+   * `isPreview` says *what the rules are* — un-persisted, so crediting them
+   * would credit a row that does not exist. This says *whether this particular
+   * application is worth crediting*, which is a different question, and the
+   * re-apply-to-matched path is where they come apart: the rules are real, but
+   * an application that leaves the row exactly as it was did not apply anything
+   * (POPS-2641). Omitted, it defaults to `!isPreview` and nothing changes.
+   */
+  recordUsage?: boolean;
   /** `contactId → defaultTags` from the per-run contacts fetch (entity tag source). */
   entityDefaultTags?: ReadonlyMap<string, string[]>;
+}
+
+/** Whether this call should credit usage — see {@link ApplyLearnedCorrectionArgs.recordUsage}. */
+function shouldRecordUsage(args: ApplyLearnedCorrectionArgs): boolean {
+  return args.recordUsage ?? !args.isPreview;
 }
 
 export interface ApplyLearnedCorrectionResult {
@@ -157,7 +173,7 @@ function handleNoEntityCorrection(
       matchedRules,
       knownTags: args.knownTags,
       status,
-      recordTagRuleUsage: !args.isPreview,
+      recordTagRuleUsage: shouldRecordUsage(args),
     }),
     bucket: status,
   };
@@ -205,7 +221,7 @@ function resolveApplyResult(
       entityId,
       knownTags: args.knownTags,
       entityDefaultTags: args.entityDefaultTags ?? new Map(),
-      recordTagRuleUsage: !args.isPreview,
+      recordTagRuleUsage: shouldRecordUsage(args),
     }),
     bucket: status === 'matched' ? 'matched' : 'uncertain',
   };
@@ -229,7 +245,9 @@ function resolveApplyResult(
  * `rules` array merged with un-persisted pending ChangeSets (`isPreview: true`)
  * must never count as usage of the persisted row. The same gate is threaded
  * into the suggested-tags computation so a matching tag rule's own usage
- * counter is bumped under the identical condition.
+ * counter is bumped under the identical condition. `recordUsage` overrides that
+ * gate for a caller that can only tell whether the application was real after
+ * seeing the result — see its docstring.
  */
 export function applyLearnedCorrection(
   db: FinanceDb,
@@ -251,7 +269,7 @@ export function applyLearnedCorrection(
   const matchedRules = toMatchedRules(allMatchingRules);
   const result = resolveApplyResult(db, args, correction, matchedRules);
 
-  if (result && !args.isPreview) {
+  if (result && shouldRecordUsage(args)) {
     transactionCorrectionsService.incrementTransactionCorrectionUsage(db, correction.id);
   }
 
