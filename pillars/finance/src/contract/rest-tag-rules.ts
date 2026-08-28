@@ -151,17 +151,8 @@ export const financeTagRulesContract = c.router({
     body: z.object({
       changeSet: TagRuleChangeSetSchema,
       feedback: z.string().min(1),
-      signal: TagRuleSignalSchema.optional(),
-      transactions: z.array(PreviewInputTransactionSchema).optional(),
-      maxPreviewItems: MaxPreviewItems,
     }),
-    responses: {
-      200: z.object({
-        message: z.string(),
-        followUpProposal: TagRuleChangeSetProposalSchema.nullable(),
-      }),
-      ...ERR_RESPONSES,
-    },
-    summary: 'Reject a ChangeSet with feedback; optionally returns a revised follow-up proposal',
+    responses: { 200: MessageSchema, ...ERR_RESPONSES },
+    summary: 'Reject a ChangeSet, recording the feedback against the refused ChangeSet',
   },
 });

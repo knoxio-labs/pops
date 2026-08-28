@@ -648,7 +648,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Reject a ChangeSet with feedback; optionally returns a revised follow-up proposal */
+    /** Reject a ChangeSet, recording the feedback against the refused ChangeSet */
     post: operations['tagRules.reject'];
     delete?: never;
     options?: never;
@@ -6666,21 +6666,6 @@ export interface operations {
             source?: string;
           };
           feedback: string;
-          /** @default 200 */
-          maxPreviewItems: number;
-          signal?: {
-            descriptionPattern: string;
-            entityId?: string | null;
-            /** @enum {string} */
-            matchType: 'exact' | 'contains' | 'regex';
-            tags: string[];
-          };
-          transactions?: {
-            description: string;
-            entityId?: string | null;
-            transactionId: string;
-            userTags?: string[];
-          }[];
         };
       };
     };
@@ -6692,83 +6677,6 @@ export interface operations {
         };
         content: {
           'application/json': {
-            followUpProposal: {
-              changeSet: {
-                ops: (
-                  | {
-                      data: {
-                        confidence?: number;
-                        descriptionPattern: string;
-                        entityId?: string | null;
-                        isActive?: boolean;
-                        /**
-                         * @default exact
-                         * @enum {string}
-                         */
-                        matchType: 'exact' | 'contains' | 'regex';
-                        priority?: number;
-                        tags: string[];
-                      };
-                      /** @enum {string} */
-                      op: 'add';
-                    }
-                  | {
-                      data: {
-                        confidence?: number;
-                        entityId?: string | null;
-                        isActive?: boolean;
-                        priority?: number;
-                        tags?: string[];
-                      };
-                      id: string;
-                      /** @enum {string} */
-                      op: 'edit';
-                    }
-                  | {
-                      id: string;
-                      /** @enum {string} */
-                      op: 'disable';
-                    }
-                  | {
-                      id: string;
-                      /** @enum {string} */
-                      op: 'remove';
-                    }
-                )[];
-                reason?: string;
-                source?: string;
-              };
-              preview: {
-                affected: {
-                  after: {
-                    suggestedTags: {
-                      isNew?: boolean;
-                      pattern?: string;
-                      /** @enum {string} */
-                      source: 'tag_rule' | 'rule' | 'ai' | 'entity';
-                      tag: string;
-                    }[];
-                  };
-                  before: {
-                    suggestedTags: {
-                      isNew?: boolean;
-                      pattern?: string;
-                      /** @enum {string} */
-                      source: 'tag_rule' | 'rule' | 'ai' | 'entity';
-                      tag: string;
-                    }[];
-                  };
-                  description: string;
-                  transactionId: string;
-                }[];
-                counts: {
-                  affected: number;
-                  newTagProposals: number;
-                  suggestionChanges: number;
-                };
-              };
-              rationale: string;
-            } | null;
             message: string;
           };
         };

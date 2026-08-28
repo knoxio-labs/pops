@@ -21,6 +21,12 @@ Three separate paths honour the same rule, and it is the invariant to preserve w
 
 Everything downstream treats a tag rule's output as a proposal. Nothing in this module writes a tag onto a transaction without that being the explicit point of the call.
 
+## Rejecting a proposal records, it does not revise
+
+`POST /tag-rules/reject` writes the refused ChangeSet and the reason the user gave to `tag_rule_rejections`, and answers with a message. It does not return a replacement.
+
+It used to. The endpoint re-ran `proposeTagRuleChangeSet` against the same signal and returned the result as a "revised" proposal — deterministic in that signal, so byte-identical to the one just refused apart from a sentence of prose, while the UI announced a revision. Tag rules were given the correction side's API shape (propose / reject / follow-up) without the correction side's AI engine behind it. Whether tag rules get an engine, a deterministic narrowing pass, or nothing at all is POPS-253's call; until then the rejection is stored so that decision has evidence to work from, and nothing claims a capability that does not exist.
+
 ## One normalization, three call sites
 
 The same `normalizeDescription` runs when a pattern is written, when a description is matched, and when a preview is computed. `pattern-match.ts` exists so the preview and retroactive-apply paths cannot drift on what "matches" means; its header and `preview.ts`'s explain why a naive uppercase-only comparison diverges from production.
@@ -29,7 +35,7 @@ The same `normalizeDescription` runs when a pattern is written, when a descripti
 
 | Concern                                  | File                   |
 | ---------------------------------------- | ---------------------- |
-| Propose and atomic apply                 | `service.ts`           |
+| Propose, atomic apply, rejection record  | `service.ts`           |
 | Deterministic suggestion-impact preview  | `preview.ts`           |
 | Catch-up pass over already-imported rows | `retroactive-apply.ts` |
 | Shared match predicate                   | `pattern-match.ts`     |

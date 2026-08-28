@@ -138,13 +138,4 @@ export function RejectPanel({
   );
 }
 
-export function FollowUpNotice({ visible }: { visible: boolean }) {
-  if (!visible) return null;
-  return (
-    <p className="rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
-      Revised proposal based on your feedback. Review and save or dismiss.
-    </p>
-  );
-}
-
 export type { TagRuleLearnSignal };

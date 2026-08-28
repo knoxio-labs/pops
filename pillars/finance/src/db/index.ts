@@ -29,6 +29,14 @@ export * as tagVocabularyService from './services/tag-vocabulary.js';
 
 export { type TagVocabularyRow, type TagVocabularySource } from './services/tag-vocabulary.js';
 
+export * as tagRuleRejectionsService from './services/tag-rule-rejections.js';
+
+export {
+  type TagRuleRejection,
+  type TagRuleRejectionRow,
+  type RecordTagRuleRejectionInput,
+} from './services/tag-rule-rejections.js';
+
 export * as transactionTagRulesService from './services/transaction-tag-rules.js';
 
 export {

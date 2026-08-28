@@ -458,9 +458,7 @@ export function makeClient(app: Express) {
       apply: (body: Record<string, unknown>) =>
         call<{ rules: TagRule[] }>((r) => r.post('/tag-rules/apply').send(body)),
       reject: (body: Record<string, unknown>) =>
-        call<{ message: string; followUpProposal: TagRuleProposal | null }>((r) =>
-          r.post('/tag-rules/reject').send(body)
-        ),
+        call<{ message: string }>((r) => r.post('/tag-rules/reject').send(body)),
     },
     corrections: {
       list: (query: CorrectionListQuery = {}) =>

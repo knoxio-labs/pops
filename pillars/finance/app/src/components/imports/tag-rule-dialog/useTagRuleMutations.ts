@@ -11,7 +11,6 @@ import {
 } from '../../../finance-api/index.js';
 import {
   collectNewTagNames,
-  parseTags,
   type ProposeOutput,
   type RejectOutput,
   type TagRuleProposalDialogProps,
@@ -21,45 +20,14 @@ type ApplyBody = NonNullable<TagRulesApplyData['body']>;
 type RejectBody = NonNullable<TagRulesRejectData['body']>;
 
 interface FormStateForMutations {
-  pattern: string;
-  matchType: 'exact' | 'contains' | 'regex';
-  tagsText: string;
   rejectFeedback: string;
   acceptedNewTags: Set<string>;
-  setFollowUpProposal: React.Dispatch<React.SetStateAction<ProposeOutput | null>>;
-  setRejectOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  setRejectFeedback: React.Dispatch<React.SetStateAction<string>>;
 }
 
 interface MutationsArgs {
   props: TagRuleProposalDialogProps;
   form: FormStateForMutations;
   proposal: ProposeOutput | undefined;
-}
-
-function buildRejectInput(
-  proposal: ProposeOutput,
-  props: TagRuleProposalDialogProps,
-  form: FormStateForMutations,
-  feedback: string
-): RejectBody | null {
-  if (!props.signal) return null;
-  return {
-    changeSet: proposal.changeSet,
-    feedback,
-    signal: {
-      descriptionPattern: form.pattern.trim() || props.signal.descriptionPattern,
-      matchType: form.matchType,
-      entityId: props.signal.entityId,
-      tags: parseTags(form.tagsText.trim() ? form.tagsText : props.signal.tags.join(', ')),
-    },
-    transactions: props.previewTransactions.map((t) => ({
-      transactionId: t.checksum,
-      description: t.description,
-      entityId: t.entityId ?? null,
-    })),
-    maxPreviewItems: 200,
-  };
 }
 
 export function useTagRuleMutations(args: MutationsArgs) {
@@ -72,16 +40,9 @@ export function useTagRuleMutations(args: MutationsArgs) {
   const rejectMutation = useMutation({
     mutationFn: async (vars: RejectBody): Promise<RejectOutput> =>
       unwrap(await tagRulesReject({ body: vars })),
-    onSuccess: (data: RejectOutput) => {
-      if (data.followUpProposal) {
-        form.setFollowUpProposal(data.followUpProposal);
-        form.setRejectOpen(false);
-        form.setRejectFeedback('');
-        toast.message('Proposal revised based on your feedback');
-      } else {
-        toast.message('Proposal dismissed');
-        props.onOpenChange(false);
-      }
+    onSuccess: () => {
+      toast.message('Rejection recorded');
+      props.onOpenChange(false);
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -104,9 +65,8 @@ export function useTagRuleMutations(args: MutationsArgs) {
       toast.error('Please add a short note explaining why you are rejecting this proposal.');
       return;
     }
-    const input = buildRejectInput(proposal, props, form, fb);
-    if (input) rejectMutation.mutate(input);
-  }, [proposal, props, rejectMutation, form]);
+    rejectMutation.mutate({ changeSet: proposal.changeSet, feedback: fb });
+  }, [proposal, rejectMutation, form.rejectFeedback]);
 
   return { applyMutation, rejectMutation, handleApply, handleReject };
 }
