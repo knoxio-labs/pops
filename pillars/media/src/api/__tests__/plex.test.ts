@@ -171,6 +171,30 @@ describe('plex — connection', () => {
     expect((await client().plex.getPlexUrl()).data).toBe(PLEX_URL);
   });
 
+  it('getPlexUrl normalises a schemeless persisted value and a schemeless env fallback', async () => {
+    process.env['PLEX_URL'] = 'env-plex:32400';
+    expect((await client().plex.getPlexUrl()).data).toBe('http://env-plex:32400');
+    plexSettingsService.setSetting(mediaDb.db, 'plex_url', 'plex.test:32400/');
+    expect((await client().plex.getPlexUrl()).data).toBe('http://plex.test:32400/');
+  });
+
+  it('getPlexUrl reports null for an unparseable persisted value', async () => {
+    plexSettingsService.setSetting(mediaDb.db, 'plex_url', ':');
+    expect((await client().plex.getPlexUrl()).data).toBeNull();
+    expect((await client().plex.getSyncStatus()).data.hasUrl).toBe(false);
+  });
+
+  it('a schemeless plex_url written outside setUrl still produces a working client', async () => {
+    plexSettingsService.setSetting(mediaDb.db, 'plex_url', 'plex.test:32400');
+    plexSettingsService.setSetting(mediaDb.db, 'plex_token', 'raw-token');
+    stubLibraries();
+    const { data } = await client().plex.getLibraries();
+    expect(data).toHaveLength(1);
+    expect(requireCall((c) => c.url.includes('/library/sections')).url).toMatch(
+      /^http:\/\/plex\.test:32400\/library\/sections/
+    );
+  });
+
   it('setUrl validates against the live server and persists a normalised URL', async () => {
     plexSettingsService.setSetting(mediaDb.db, 'plex_token', 'raw-token');
     stubLibraries();
