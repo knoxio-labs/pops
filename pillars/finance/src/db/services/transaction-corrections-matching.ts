@@ -64,13 +64,20 @@ export function findAllMatchingTransactionCorrectionsFromDb(
 }
 
 /**
- * Return every active correction whose pattern matches `description`, grouped
- * by `matchType` in `[exact, contains, regex]` order, with each group sorted
- * by `confidence DESC, timesApplied DESC, id ASC`.
+ * Return every active correction at or above `minConfidence` whose pattern
+ * matches `description`, grouped by `matchType` in `[exact, contains, regex]`
+ * order, with each group sorted by `confidence DESC, timesApplied DESC,
+ * id ASC`.
  *
  * Used by callers that need to surface all matches (not just the winning
- * rule) to the user — typically the rule-management UI — and by the
- * tag-suggester's correction pass.
+ * rule) rather than a single classification verdict — today, the
+ * tag-suggester's correction pass. The `minConfidence` floor defaults to
+ * {@link MIN_MATCH_CONFIDENCE}, matching
+ * {@link findAllMatchingTransactionCorrectionsFromDb}: a rule the engine
+ * judges too weak to classify a transaction must not be trusted to tag it
+ * either (POPS-2601). Pass `0` to see sub-floor matches — a surface that
+ * deliberately lists demoted rules, or a test isolating the pattern
+ * predicate.
  *
  * The pattern test runs in JS over a single candidate fetch rather than in
  * SQL. The three per-match-type SQL queries this replaces each had their own
@@ -82,14 +89,20 @@ export function findAllMatchingTransactionCorrectionsFromDb(
  */
 export function findAllMatchingTransactionCorrections(
   db: FinanceDb,
-  description: string
+  description: string,
+  minConfidence: number = MIN_MATCH_CONFIDENCE
 ): TransactionCorrectionRow[] {
   const normalized = normalizeDescription(description);
 
   const matched = db
     .select()
     .from(transactionCorrections)
-    .where(eq(transactionCorrections.isActive, true))
+    .where(
+      and(
+        eq(transactionCorrections.isActive, true),
+        gte(transactionCorrections.confidence, minConfidence)
+      )
+    )
     .orderBy(
       desc(transactionCorrections.confidence),
       desc(transactionCorrections.timesApplied),

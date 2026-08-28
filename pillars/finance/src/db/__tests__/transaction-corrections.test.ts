@@ -18,6 +18,7 @@ import { eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { beforeEach, describe, expect, it } from 'vitest';
 
+import { MIN_MATCH_CONFIDENCE } from '../../contract/corrections-constants.js';
 import { TagsOnlyCorrectionError, TransactionCorrectionNotFoundError } from '../errors.js';
 import { transactionCorrections } from '../schema.js';
 import {
@@ -869,25 +870,61 @@ describe('findAllMatchingTransactionCorrections', () => {
     seedCorrection(harness.raw, {
       descriptionPattern: 'COFFEE',
       matchType: 'exact',
+      confidence: 0.9,
       isActive: 0,
     });
     seedCorrection(harness.raw, {
       descriptionPattern: 'COFFEE',
       matchType: 'contains',
+      confidence: 0.9,
       isActive: 0,
     });
     seedCorrection(harness.raw, {
       descriptionPattern: 'COFFEE',
       matchType: 'regex',
+      confidence: 0.9,
       isActive: 0,
     });
     expect(findAllMatchingTransactionCorrections(harness.db, 'coffee')).toEqual([]);
+  });
+
+  it('excludes sub-floor rules by default and includes them at the floor', () => {
+    seedCorrection(harness.raw, {
+      id: 'at-floor',
+      descriptionPattern: 'COFFEE',
+      matchType: 'exact',
+      confidence: MIN_MATCH_CONFIDENCE,
+    });
+    seedCorrection(harness.raw, {
+      id: 'below-floor',
+      descriptionPattern: 'COFFEE',
+      matchType: 'exact',
+      confidence: MIN_MATCH_CONFIDENCE - 0.01,
+    });
+
+    expect(findAllMatchingTransactionCorrections(harness.db, 'coffee').map((m) => m.id)).toEqual([
+      'at-floor',
+    ]);
+  });
+
+  it('surfaces sub-floor rules when the caller lowers minConfidence', () => {
+    seedCorrection(harness.raw, {
+      id: 'below-floor',
+      descriptionPattern: 'COFFEE',
+      matchType: 'exact',
+      confidence: MIN_MATCH_CONFIDENCE - 0.01,
+    });
+
+    expect(findAllMatchingTransactionCorrections(harness.db, 'coffee', 0).map((m) => m.id)).toEqual(
+      ['below-floor']
+    );
   });
 
   it('silently drops regex rules with invalid patterns', () => {
     seedCorrection(harness.raw, {
       descriptionPattern: '[invalid(',
       matchType: 'regex',
+      confidence: 0.9,
     });
     expect(findAllMatchingTransactionCorrections(harness.db, 'anything')).toEqual([]);
   });
