@@ -539,25 +539,30 @@ async function reportFailure(containerId, image, mountPaths) {
 }
 
 /**
- * Probe every freshness-sensitive path on a running container.
+ * Read the freshness policy the container actually serves at each path.
+ *
+ * Every observation is returned, passing ones included, so the run can print
+ * what it saw: a check whose only output is silence cannot be told apart from
+ * one that never ran.
  *
  * @param {object} args
  * @param {string} args.origin e.g. `http://127.0.0.1:49154`.
  * @param {readonly string[]} args.paths
- * @returns {Promise<{ path: string, cacheControl: string }[]>} The paths that
- *   came back cacheable-by-heuristic; empty when every path revalidates.
+ * @returns {Promise<{ path: string, cacheControl: string, revalidates: boolean }[]>}
  */
-async function findStalePaths({ origin, paths }) {
-  /** @type {{ path: string, cacheControl: string }[]} */
-  const stale = [];
+async function probeFreshness({ origin, paths }) {
+  /** @type {{ path: string, cacheControl: string, revalidates: boolean }[]} */
+  const observed = [];
   for (const path of paths) {
     const response = await fetch(`${origin}${path}`, { signal: AbortSignal.timeout(5_000) });
-    const cacheControl = response.headers.get('cache-control');
-    if (!forcesRevalidation(cacheControl)) {
-      stale.push({ path, cacheControl: cacheControl ?? '<no Cache-Control header>' });
-    }
+    const header = response.headers.get('cache-control');
+    observed.push({
+      path,
+      cacheControl: header ?? '<no Cache-Control header>',
+      revalidates: forcesRevalidation(header),
+    });
   }
-  return stale;
+  return observed;
 }
 
 async function main() {
@@ -650,16 +655,19 @@ async function main() {
       // once try_files and the index module have had their say.
       const probePaths = freshnessProbePaths(baseImage);
       if (probePaths.length > 0) {
+        console.log(`Reading the served freshness policy of ${image}:`);
         const origin = `http://127.0.0.1:${await resolveHostPort(containerId, port)}`;
-        const stale = await findStalePaths({ origin, paths: probePaths });
+        const observed = await probeFreshness({ origin, paths: probePaths });
+        for (const { path, cacheControl } of observed) {
+          console.log(`  ${path} → Cache-Control: ${cacheControl}`);
+        }
+        const stale = observed.filter((o) => !o.revalidates);
         if (stale.length > 0) {
           console.error(
             `FAIL — ${image} serves its entry document without forcing revalidation, ` +
-              'so a deploy leaves browsers on the previous bundle:'
+              `so a deploy leaves browsers on the previous bundle: ` +
+              `${stale.map((o) => o.path).join(', ')}`
           );
-          for (const { path, cacheControl } of stale) {
-            console.error(`  ${path}: Cache-Control: ${cacheControl}`);
-          }
           await reportFailure(containerId, image, mountPaths);
           process.exitCode = 1;
           return;
