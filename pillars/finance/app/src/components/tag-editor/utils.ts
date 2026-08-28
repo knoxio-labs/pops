@@ -24,23 +24,3 @@ export interface TagEditorProps {
 
 /** How many autocomplete suggestions the panel offers at once. */
 export const SUGGESTION_LIMIT = 8;
-
-export function filterTagSuggestions(
-  inputValue: string,
-  availableTags: string[],
-  selectedTags: string[]
-): string[] {
-  if (inputValue === '') {
-    return availableTags.filter((tag) => !selectedTags.includes(tag));
-  }
-  const lower = inputValue.toLowerCase();
-  const startsWith: string[] = [];
-  const contains: string[] = [];
-  for (const tag of availableTags) {
-    if (selectedTags.includes(tag)) continue;
-    const tagLower = tag.toLowerCase();
-    if (tagLower.startsWith(lower)) startsWith.push(tag);
-    else if (tagLower.includes(lower)) contains.push(tag);
-  }
-  return [...startsWith, ...contains];
-}

@@ -3,6 +3,8 @@ import { Link } from 'react-router';
 
 import { Badge, Button, Card, SkeletonGrid } from '@pops/ui';
 
+import { hasTagValue } from '../../lib/tags';
+
 import type { TransactionsListResponse } from '../../finance-api/types.gen.js';
 
 type Transaction = NonNullable<TransactionsListResponse['data']>[number];
@@ -13,7 +15,7 @@ function TransactionRow({ transaction }: { transaction: Transaction }) {
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <p className="font-medium truncate text-base">{transaction.description}</p>
-          {transaction.tags.includes('Online') && (
+          {hasTagValue(transaction.tags, 'channel', 'online') && (
             <Badge
               variant="secondary"
               className="hidden sm:inline-flex text-2xs uppercase tracking-wider px-1.5 py-0"
