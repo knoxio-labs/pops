@@ -225,3 +225,48 @@ describe('0076 — idempotency', () => {
     }).toEqual(afterFirst);
   });
 });
+
+describe('0076 — a drop needs the value it is being resolved against', () => {
+  /**
+   * These are all the same defect from different angles: keyed on the descriptor
+   * alone, the migration reads "FAT COW never means occasion:out" rather than
+   * "on FAT COW, occasion:travel wins" — and a later row from the same merchant
+   * carrying only the losing value would come out of a cardinality fix with an
+   * empty required facet.
+   */
+  it('leaves a FAT COW row that never had occasion:travel beside it', () => {
+    seedTransaction('t1', 'FAT COW HUNTER VALLEY P Burwood', ['occasion:out', 'contains:food']);
+
+    migrate();
+
+    expect(tagsOf('transactions', 't1')).toEqual(['occasion:out', 'contains:food']);
+  });
+
+  it('leaves a PHO MOM row carrying only the losing venue', () => {
+    seedTransaction('t1', 'PHO MOM PTY LTD', ['occasion:out', 'venue:takeaway']);
+
+    migrate();
+
+    expect(tagsOf('transactions', 't1')).toEqual(['occasion:out', 'venue:takeaway']);
+  });
+
+  it('keeps contains:food on an OZTURK row with no contains:fast-food to imply it', () => {
+    seedTransaction('t1', 'OZTURK JR 176752        DARLINGTON', [
+      'contains:food',
+      'venue:takeaway',
+      'venue:restaurant',
+    ]);
+
+    migrate();
+
+    expect(tagsOf('transactions', 't1')).toEqual(['contains:food', 'venue:takeaway']);
+  });
+
+  it('leaves a LUCKY CAT rule that only ever wrote the losing venue', () => {
+    seedRule('r1', 'LUCKY CAT', ['venue:pub', 'contains:alcohol']);
+
+    migrate();
+
+    expect(tagsOf('transaction_tag_rules', 'r1')).toEqual(['venue:pub', 'contains:alcohol']);
+  });
+});

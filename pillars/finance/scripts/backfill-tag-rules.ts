@@ -7,12 +7,23 @@ import { resolveFinanceSqlitePath } from '../src/api/finance-sqlite-path.js';
  * a missing facet, and the ones worth a rule are the ones that repeat. Each
  * rule asserts the full facet set the descriptor justifies rather than one tag,
  * then `applyTagRuleToExistingTransactions` walks the ledger and merges it into
- * every row it matches — additively, skipping any row a human marked `manual`,
- * so the pass never overwrites a hand-fix.
+ * every row it matches — additively, so it only ever adds a value the row was
+ * missing and never overwrites one it already carries. It does not skip rows a
+ * human marked `manual`: that marker records a classification fix, not curated
+ * tags, and skipping on it cost 23 of 106 matched rows here (POPS-2662).
  *
- * Patterns are digit-free on purpose. `normalizeDescription` strips digits
- * before matching, so a pattern naming a store number can never fire
- * (POPS-2622) — `WOOLWORTHS`, not `WOOLWORTHS 1034`.
+ * Additive merging is also the one way this pass can leave a row worse than it
+ * found it: merging `venue:supermarket` onto a row already carrying
+ * `venue:cafe` produces two values on a single-valued facet, which no code on
+ * this path rejects. `findTagRuleConflicts` scans for exactly that before
+ * anything is written, and `--apply` refuses while any exist.
+ *
+ * Patterns are digit-free because the digits carry nothing: for `contains`,
+ * `normalizeDescription` strips them from the pattern as well as from the
+ * descriptor, so `WOOLWORTHS 1034` and `WOOLWORTHS` are the same rule written
+ * two ways. (POPS-2622's dead-pattern trap is `regex` only — there the pattern
+ * is not normalized, so digits in it match a descriptor that no longer has
+ * any. None of these rules are regex.)
  *
  * DRY RUN by default: prints every rule it would create and how many rows each
  * would touch. Pass `--apply` to write. Per the finance-audit remediation
@@ -34,7 +45,8 @@ import {
   applyTagRuleToExistingTransactions,
   type TagRuleRetroactiveResult,
 } from '../src/api/modules/tag-rules/retroactive-apply.js';
-import { openFinanceDb, transactionTagRulesService } from '../src/db/index.js';
+import { openFinanceDb, transactionTagRulesService, transactions } from '../src/db/index.js';
+import { findTagRuleConflicts, type TagRuleConflict } from './tag-rule-conflicts.js';
 
 const LOG = '[backfill-tag-rules]';
 
@@ -155,11 +167,24 @@ const RULES: readonly PlannedRule[] = [
   },
 ];
 
+function reportConflicts(conflicts: readonly TagRuleConflict[]): void {
+  console.warn(`\n${LOG} ${conflicts.length} single-valued-facet conflict(s):`);
+  for (const conflict of conflicts) {
+    console.warn(
+      `  ${conflict.pattern.padEnd(24)} would add ${conflict.incoming} to a row already ` +
+        `carrying ${conflict.existing} — ${conflict.description}`
+    );
+  }
+  console.warn(
+    `${LOG} resolve these (fix the row, or narrow the pattern) before --apply; ` +
+      'the retroactive merge is additive and would leave both values on the row'
+  );
+}
+
 function reportRule(rule: PlannedRule, ruleId: string, result: TagRuleRetroactiveResult): void {
   console.warn(
     `  ${rule.pattern.padEnd(24)} [${rule.tags.join(', ')}] — ` +
       `${result.updated} row(s) to update of ${result.matched} matched` +
-      `${result.skippedManual > 0 ? `, ${result.skippedManual} left alone (manual)` : ''}` +
       `  (rule ${ruleId.slice(0, 8)})`
   );
   console.warn(`  ${' '.repeat(24)} ${rule.why}`);
@@ -172,8 +197,22 @@ function main(): void {
   try {
     console.warn(`${LOG} ${RULES.length} rule(s)${apply ? '' : ' — DRY RUN'}\n`);
 
+    const conflicts = findTagRuleConflicts(
+      RULES,
+      opened.db
+        .select({ description: transactions.description, tags: transactions.tags })
+        .from(transactions)
+        .all()
+    );
+    if (conflicts.length > 0) {
+      reportConflicts(conflicts);
+      if (apply) {
+        process.exitCode = 1;
+        return;
+      }
+    }
+
     let totalUpdated = 0;
-    let totalSkipped = 0;
     for (const rule of RULES) {
       const created = transactionTagRulesService.createTransactionTagRule(opened.db, {
         descriptionPattern: rule.pattern,
@@ -183,13 +222,9 @@ function main(): void {
       const result = applyTagRuleToExistingTransactions(opened.db, created.id, { dryRun: !apply });
       reportRule(rule, created.id, result);
       totalUpdated += result.updated;
-      totalSkipped += result.skippedManual;
     }
 
-    console.warn(
-      `\n${LOG} ${totalUpdated} row(s) ${apply ? 'updated' : 'would be updated'}` +
-        `, ${totalSkipped} left alone as manual`
-    );
+    console.warn(`\n${LOG} ${totalUpdated} row(s) ${apply ? 'updated' : 'would be updated'}`);
     if (!apply) {
       console.warn(
         `${LOG} DRY RUN — the rules above were still created (creation is idempotent); ` +

@@ -32,6 +32,14 @@
 --   OZTURK JR              drop `venue:restaurant`, keep `venue:takeaway`
 --       ...and drop `contains:food`, which `contains:fast-food` already implies.
 --
+-- Each row names the value to drop AND the value that has to be there for the
+-- drop to be a cardinality fix at all. Without that second column the statement
+-- would strip `occasion:out` from any FAT COW row, including one that never had
+-- `occasion:travel` beside it — turning a two-value row into a zero-value one,
+-- which is a required-facet regression wearing a cardinality fix's clothes. No
+-- row in the ledger is in that state today; the recurring merchants here mean
+-- one could be by the time this runs.
+--
 -- Idempotent: each statement deletes a value from a set, so a second run finds
 -- nothing to delete. REQUIRED before running against a real database: take a
 -- snapshot first (finance-audit remediation policy). Rollback = restore the
@@ -39,17 +47,19 @@
 
 CREATE TEMP TABLE _venue_resolution (
 	pattern text NOT NULL,
-	drop_tag text NOT NULL
+	drop_tag text NOT NULL,
+	/** Dropping `drop_tag` is only correct while this value is also on the row. */
+	keep_tag text NOT NULL
 );
 --> statement-breakpoint
-INSERT INTO _venue_resolution (pattern, drop_tag) VALUES
-	('FAT COW', 'occasion:out'),
-	('LUCKY CAT', 'venue:pub'),
-	('LUCKY CAT', 'venue:bar'),
-	('PHO MOM', 'venue:takeaway'),
-	('FISHBO', 'venue:restaurant'),
-	('OZTURK', 'venue:restaurant'),
-	('OZTURK', 'contains:food');
+INSERT INTO _venue_resolution (pattern, drop_tag, keep_tag) VALUES
+	('FAT COW', 'occasion:out', 'occasion:travel'),
+	('LUCKY CAT', 'venue:pub', 'venue:restaurant'),
+	('LUCKY CAT', 'venue:bar', 'venue:restaurant'),
+	('PHO MOM', 'venue:takeaway', 'venue:restaurant'),
+	('FISHBO', 'venue:restaurant', 'venue:takeaway'),
+	('OZTURK', 'venue:restaurant', 'venue:takeaway'),
+	('OZTURK', 'contains:food', 'contains:fast-food');
 --> statement-breakpoint
 UPDATE `transactions`
 SET `tags` = (
@@ -57,12 +67,18 @@ SET `tags` = (
 	 WHERE je.value NOT IN (
 		SELECT r.drop_tag FROM _venue_resolution r
 		 WHERE UPPER(`transactions`.`description`) LIKE '%' || r.pattern || '%'
+		   AND EXISTS (
+			SELECT 1 FROM json_each(`transactions`.`tags`) k WHERE k.value = r.keep_tag
+		   )
 	 )
 )
 WHERE EXISTS (
 	SELECT 1 FROM json_each(`transactions`.`tags`) je
 	  JOIN _venue_resolution r ON r.drop_tag = je.value
 	 WHERE UPPER(`transactions`.`description`) LIKE '%' || r.pattern || '%'
+	   AND EXISTS (
+		SELECT 1 FROM json_each(`transactions`.`tags`) k WHERE k.value = r.keep_tag
+	   )
 );
 --> statement-breakpoint
 UPDATE `transaction_tag_rules`
@@ -71,12 +87,18 @@ SET `tags` = (
 	 WHERE je.value NOT IN (
 		SELECT r.drop_tag FROM _venue_resolution r
 		 WHERE UPPER(`transaction_tag_rules`.`description_pattern`) LIKE '%' || r.pattern || '%'
+		   AND EXISTS (
+			SELECT 1 FROM json_each(`transaction_tag_rules`.`tags`) k WHERE k.value = r.keep_tag
+		   )
 	 )
 )
 WHERE EXISTS (
 	SELECT 1 FROM json_each(`transaction_tag_rules`.`tags`) je
 	  JOIN _venue_resolution r ON r.drop_tag = je.value
 	 WHERE UPPER(`transaction_tag_rules`.`description_pattern`) LIKE '%' || r.pattern || '%'
+	   AND EXISTS (
+		SELECT 1 FROM json_each(`transaction_tag_rules`.`tags`) k WHERE k.value = r.keep_tag
+	   )
 );
 --> statement-breakpoint
 UPDATE `transaction_corrections`
@@ -85,12 +107,18 @@ SET `tags` = (
 	 WHERE je.value NOT IN (
 		SELECT r.drop_tag FROM _venue_resolution r
 		 WHERE UPPER(`transaction_corrections`.`description_pattern`) LIKE '%' || r.pattern || '%'
+		   AND EXISTS (
+			SELECT 1 FROM json_each(`transaction_corrections`.`tags`) k WHERE k.value = r.keep_tag
+		   )
 	 )
 )
 WHERE EXISTS (
 	SELECT 1 FROM json_each(`transaction_corrections`.`tags`) je
 	  JOIN _venue_resolution r ON r.drop_tag = je.value
 	 WHERE UPPER(`transaction_corrections`.`description_pattern`) LIKE '%' || r.pattern || '%'
+	   AND EXISTS (
+		SELECT 1 FROM json_each(`transaction_corrections`.`tags`) k WHERE k.value = r.keep_tag
+	   )
 );
 --> statement-breakpoint
 DROP TABLE _venue_resolution;
