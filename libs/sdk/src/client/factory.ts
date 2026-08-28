@@ -1,3 +1,4 @@
+import { defaultFetch } from '../default-fetch.js';
 import { DiscoveryCache } from './cache.js';
 import {
   HttpDiscoveryTransport,
@@ -50,14 +51,14 @@ function getSharedClient(options: PillarClientOptions): CachedClient {
         transport,
         ttlMs: options.cacheTtlMs ?? DEFAULT_CACHE_TTL_MS,
       }),
-      fetchImpl: options.fetchImpl ?? fetch,
+      fetchImpl: options.fetchImpl ?? defaultFetch,
     };
   }
   if (sharedClient !== null) return sharedClient;
   const transport = new HttpDiscoveryTransport();
   sharedClient = {
     cache: new DiscoveryCache({ transport, ttlMs: DEFAULT_CACHE_TTL_MS }),
-    fetchImpl: fetch,
+    fetchImpl: defaultFetch,
   };
   return sharedClient;
 }
