@@ -49,6 +49,8 @@ interface SeededTransaction {
   readonly date: string;
   readonly type: string;
   readonly tags: readonly string[];
+  /** What 0067 relabels {@link tags} to. */
+  readonly migratedTags: readonly string[];
   readonly entityId: string | null;
   readonly notes: string | null;
 }
@@ -57,6 +59,9 @@ interface SeededTransaction {
  * Rows shaped the way a real import wrote them: floats that do not survive
  * naive scaling (`19.99 * 100` is `1998.9999999999998`), a JSON column, a
  * foreign key into `entities`, and one row of each legacy capitalised `type`.
+ * The tags are drawn from the flat vocabulary that shipped in 0026, because
+ * 0067 aborts on a tag it has no mapping for — an invented one would abort this
+ * chain rather than exercise it.
  */
 const TRANSACTIONS: readonly SeededTransaction[] = [
   {
@@ -65,7 +70,8 @@ const TRANSACTIONS: readonly SeededTransaction[] = [
     amount: -19.99,
     date: '2026-01-02',
     type: 'Expense',
-    tags: ['groceries', 'weekly-shop'],
+    tags: ['Groceries', 'Online'],
+    migratedTags: ['contains:groceries', 'channel:online'],
     entityId: 'e-woolworths',
     notes: null,
   },
@@ -76,6 +82,7 @@ const TRANSACTIONS: readonly SeededTransaction[] = [
     date: '2026-01-15',
     type: 'Income',
     tags: [],
+    migratedTags: [],
     entityId: null,
     notes: null,
   },
@@ -85,7 +92,8 @@ const TRANSACTIONS: readonly SeededTransaction[] = [
     amount: -100.1,
     date: '2026-01-16',
     type: 'Transfer',
-    tags: ['internal'],
+    tags: ['Transfer'],
+    migratedTags: ['occasion:admin'],
     entityId: null,
     notes: null,
   },
@@ -97,7 +105,8 @@ const TRANSACTIONS: readonly SeededTransaction[] = [
     // Neither a legacy display value nor a taxonomy value. 0065 must land it
     // on the default rather than leave it as-is.
     type: '',
-    tags: ['uncategorised'],
+    tags: ['Fees'],
+    migratedTags: ['contains:fee'],
     entityId: null,
     notes: null,
   },
@@ -109,7 +118,8 @@ const TRANSACTIONS: readonly SeededTransaction[] = [
     amount: -12.4,
     date: '2026-02-01',
     type: 'Expense',
-    tags: ['travel'],
+    tags: ['Travel'],
+    migratedTags: ['occasion:travel'],
     entityId: null,
     notes: '1 100 JPY, 0.40 AUD fx fee',
   },
@@ -121,6 +131,7 @@ const TRANSACTIONS: readonly SeededTransaction[] = [
     date: '2026-02-02',
     type: 'Expense',
     tags: [],
+    migratedTags: [],
     entityId: null,
     notes: 'Warranty expires 2028 — receipt in the drawer',
   },
@@ -283,12 +294,12 @@ describe('applying the rest of the journal to a populated finance database', () 
     );
   });
 
-  it('leaves every JSON column parseable and unchanged', () => {
+  it('leaves every JSON column parseable and namespaced', () => {
     const stored = rows<{ id: string; tags: string }>(`SELECT id, tags FROM transactions`);
     for (const row of stored) {
       const seeded = TRANSACTIONS.find((candidate) => candidate.id === row.id);
       expect(() => JSON.parse(row.tags) as unknown).not.toThrow();
-      expect(JSON.parse(row.tags)).toEqual(seeded?.tags);
+      expect(JSON.parse(row.tags)).toEqual(seeded?.migratedTags);
     }
   });
 
