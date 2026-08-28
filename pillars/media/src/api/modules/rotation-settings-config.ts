@@ -46,6 +46,11 @@ export function getRotationSettings(db: MediaDb): RotationSettings {
   return result;
 }
 
+/** True when rotation is switched on in the pillar-owned settings store. */
+export function isRotationEnabled(db: MediaDb): boolean {
+  return rotationSettingsService.get(db, ROTATION_SETTING_KEYS.enabled.key) === 'true';
+}
+
 function encodeBoolean(value: boolean): string {
   return value ? 'true' : '';
 }

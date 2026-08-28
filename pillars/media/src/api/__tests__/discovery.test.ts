@@ -18,7 +18,7 @@ import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { openMediaDb, type OpenedMediaDb } from '../../db/index.js';
+import { moviesService, openMediaDb, type OpenedMediaDb } from '../../db/index.js';
 import { createMediaApiApp } from '../app.js';
 import { TmdbClient } from '../clients/tmdb/client.js';
 import { makeClient } from './test-utils.js';
@@ -389,6 +389,20 @@ describe('discovery — session assembly + shelf paging', () => {
     await expect(
       client().discovery.getShelfPage('no-such-shelf', { limit: 3 })
     ).rejects.toMatchObject({ status: 404 });
+  });
+
+  it('omits the leaving-soon shelf while rotation is disabled, even with leaving movies', async () => {
+    const expiring = await makeMovie('Expiring', { genres: ['Action'] });
+    moviesService.setRotationStatus(mediaDb.db, expiring.id, 'leaving');
+
+    await expect(
+      client().discovery.getShelfPage('leaving-soon', { limit: 3 })
+    ).rejects.toMatchObject({ status: 404 });
+
+    await client().rotation.saveSettings({ enabled: true });
+
+    const page = await client().discovery.getShelfPage('leaving-soon', { limit: 3 });
+    expect(page.items.map((i) => i.title)).toContain('Expiring');
   });
 });
 

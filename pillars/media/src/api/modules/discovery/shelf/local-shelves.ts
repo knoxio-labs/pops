@@ -9,6 +9,7 @@
  * Ported from the monolith `shelf/local-*.ts` family.
  */
 import { type MediaDb, discoveryService } from '../../../../db/index.js';
+import { isRotationEnabled } from '../../rotation-settings-config.js';
 
 import type { DiscoverResult } from '../../../../db/index.js';
 import type { ShelfDefinition, ShelfGenerateArgs, ShelfInstance, ShelfQueryOpts } from './types.js';
@@ -119,7 +120,9 @@ export const franchiseCompletionsShelf = localShelf({
 
 /**
  * Leaving-soon is pinned: it bypasses the minimum-items threshold so even a
- * single expiring movie surfaces. It only generates when something is leaving.
+ * single expiring movie surfaces. It only generates when rotation is enabled
+ * and something is leaving — disabling rotation leaves the `leaving` rows in
+ * place, so the enabled check is what stops a stale shelf from surfacing.
  */
 export const leavingSoonShelf: ShelfDefinition = {
   id: 'leaving-soon',
@@ -127,6 +130,7 @@ export const leavingSoonShelf: ShelfDefinition = {
   category: 'local',
   pinned: true,
   generate({ deps }: ShelfGenerateArgs): ShelfInstance[] {
+    if (!isRotationEnabled(deps.db)) return [];
     if (!discoveryService.hasLeavingMovies(deps.db)) return [];
     return [
       {

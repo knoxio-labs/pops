@@ -26,6 +26,7 @@ import {
   moviesService,
   openMediaDb,
   plexSettingsService,
+  rotationSettingsService,
   type OpenedMediaDb,
 } from '../../db/index.js';
 import { createMediaApiApp } from '../app.js';
@@ -375,6 +376,7 @@ describe('discovery — session assembly with the trending-plex shelf', () => {
       await client().movies.create({ tmdbId: nextId(), title: 'Expiring', genres: ['Action'] })
     ).data;
     moviesService.setRotationStatus(mediaDb.db, leaving.id, 'leaving');
+    rotationSettingsService.set(mediaDb.db, 'rotation_enabled', 'true');
     stubTmdbShelves();
     // No token seeded → getTrendingFromPlex returns null → shelf yields [].
 
