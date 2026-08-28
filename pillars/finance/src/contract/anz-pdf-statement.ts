@@ -39,25 +39,14 @@
  * Nothing is merged, nothing is dropped unnamed.
  */
 import { parseAnzDescription } from './anz-description.js';
+import { ANZ_STATEMENT_ROW } from './anz-statement-line.js';
 import { buildImportDedupKey } from './import-dedup.js';
 
 import type { ParsedTransaction } from './rest-imports-schemas.js';
 
 /**
- * A full transaction row: date processed, date of transaction, card last four,
- * description, amount, an optional `CR` marking money in, and the balance.
- *
- * Foreign-currency and fee supplementary rows carry no card number and so do
- * not match, which is how they are skipped. The description group is lazy so
- * the trailing figures bind to amount and balance even when the description
- * itself ends in a foreign-currency trailer.
- */
-const STATEMENT_ROW =
-  /^(\d{2}\/\d{2}\/\d{4})\s+(\d{2}\/\d{2}\/\d{4})\s+\d{4}\s+(.+?)\s+([\d,]+\.\d{2})(\s+CR)?\s+[\d,]+\.\d{2}$/;
-
-/**
  * A line that opens like a transaction row. Anything matching this but not
- * {@link STATEMENT_ROW} is a shape this parser does not model, and is reported
+ * {@link ANZ_STATEMENT_ROW} is a shape this parser does not model, and is reported
  * rather than skipped — a statement layout that changed must not read as a
  * statement with fewer charges on it.
  */
@@ -106,7 +95,7 @@ function toTransaction(
   line: string,
   options: AnzPdfStatementOptions
 ): ParsedTransaction | undefined {
-  const match = STATEMENT_ROW.exec(line);
+  const match = ANZ_STATEMENT_ROW.exec(line);
   if (!match) return undefined;
   const [, , printedDate, rawDescription = '', printedAmount = '', credit] = match;
   const date = toIsoDate(printedDate ?? '');
