@@ -14,7 +14,7 @@ import { ConflictError, NotFoundError, ValidationError } from '../../shared/erro
 import { PlexClient } from './client.js';
 import { encryptToken } from './crypto.js';
 import { PLEX_KEYS } from './keys.js';
-import { getPlexClientId } from './service.js';
+import { getPlexClientId, getPlexToken } from './service.js';
 import { normalizePlexUrl } from './url.js';
 
 const PINS_URL = 'https://plex.tv/api/v2/pins';
@@ -70,7 +70,7 @@ async function validateConnection(url: string, token: string | null): Promise<vo
 export async function setPlexUrl(db: MediaDb, url: string): Promise<void> {
   const finalUrl = normalizePlexUrl(url);
   if (finalUrl === null) throw new ValidationError('Invalid Plex URL');
-  const token = plexSettingsService.getSetting(db, PLEX_KEYS.token);
+  const token = getPlexToken(db);
   await validateConnection(finalUrl, token);
   plexSettingsService.setSetting(db, PLEX_KEYS.url, finalUrl);
 }

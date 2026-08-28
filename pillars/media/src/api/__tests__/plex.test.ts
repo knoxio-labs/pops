@@ -14,7 +14,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { openMediaDb, plexSettingsService, type OpenedMediaDb } from '../../db/index.js';
 import { createMediaApiApp } from '../app.js';
-import { getPlexToken } from '../clients/plex/index.js';
+import { encryptToken, getPlexToken } from '../clients/plex/index.js';
 import { makeClient } from './test-utils.js';
 
 const PLEX_URL = 'http://plex.test:32400';
@@ -23,7 +23,12 @@ interface RouteResponse {
   status?: number;
   body: unknown;
 }
-type RouteHandler = (init: { method: string; body: unknown }) => RouteResponse;
+type RouteHandler = (init: {
+  method: string;
+  url: string;
+  body: unknown;
+  headers: Record<string, string>;
+}) => RouteResponse;
 interface RouteRule {
   method: string;
   match: string;
@@ -69,7 +74,7 @@ const fetchMock = vi.fn((input: string | URL | Request, init?: RequestInit): Pro
   calls.push({ method, url, body: parsedBody, headers });
   const rule = routes.find((r) => r.method === method && url.includes(r.match));
   if (!rule) return Promise.resolve(jsonResponse({ error: `unmatched ${method} ${url}` }, 404));
-  const res = rule.handler({ method, body: parsedBody });
+  const res = rule.handler({ method, url, body: parsedBody, headers });
   return Promise.resolve(jsonResponse(res.body, res.status ?? 200));
 });
 
@@ -208,6 +213,22 @@ describe('plex — connection', () => {
     route('GET', '/library/sections', () => ({ status: 401, body: { error: 'unauthorised' } }));
     await expect(client().plex.setUrl('plex.test:32400')).rejects.toMatchObject({ status: 409 });
     expect(plexSettingsService.getSetting(mediaDb.db, 'plex_url')).toBeNull();
+  });
+
+  it('setUrl validates with the decrypted token, not the stored ciphertext', async () => {
+    process.env['ENCRYPTION_KEY'] = 'test-encryption-key';
+    const plaintext = 'plaintext-token';
+    plexSettingsService.setSetting(mediaDb.db, 'plex_token', encryptToken(mediaDb.db, plaintext));
+    route('GET', '/library/sections', ({ headers }) =>
+      headers['x-plex-token'] === plaintext
+        ? { body: LIBRARIES }
+        : { status: 401, body: { error: 'unauthorised' } }
+    );
+
+    const res = await client().plex.setUrl('plex.test:32400');
+
+    expect(res.message).toContain('updated');
+    expect(plexSettingsService.getSetting(mediaDb.db, 'plex_url')).toBe(PLEX_URL);
   });
 
   it('setUrl probes /identity (reachability) when no token is stored', async () => {
