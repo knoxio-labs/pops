@@ -5,6 +5,8 @@ import { Skeleton } from '@pops/ui';
 import { GroupRenderer } from './section-renderer/GroupRenderer';
 import { useSectionState } from './section-renderer/useSectionState';
 
+import type { ComponentType } from 'react';
+
 import type { SettingsManifest } from '@pops/types';
 
 interface SectionRendererProps {
@@ -15,6 +17,11 @@ interface SectionRendererProps {
   hasFederatedSettings?: boolean;
   optionsLoaders?: Record<string, () => Promise<{ value: string; label: string }[]>>;
   onTestAction?: (procedure: string) => Promise<void>;
+  /**
+   * Resolved `widget.bundleSlot` -> component, injected by the settings page
+   * so this renderer stays free of any pillar bundle import.
+   */
+  widgets?: Readonly<Record<string, ComponentType>>;
 }
 
 function applyDynamicOptions(
@@ -45,6 +52,7 @@ export function SectionRenderer({
   hasFederatedSettings = false,
   optionsLoaders,
   onTestAction,
+  widgets,
 }: SectionRendererProps) {
   const {
     isLoading,
@@ -93,6 +101,7 @@ export function SectionRenderer({
           dbValues={loadedKeys}
           saveStates={saveStates}
           loadingOptionKeys={loadingOptionKeys}
+          widgets={widgets}
         />
       ))}
     </div>

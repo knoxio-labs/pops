@@ -4,5 +4,6 @@
  * `@pops/pillar-sdk/settings`) can pull from the pillar contract package
  * rather than `@pops/module-registry/settings`.
  */
-export { arrManifest, plexManifest, rotationManifest } from './manifests.js';
+export { arrManifest, rotationManifest } from './manifests.js';
+export { plexManifest } from './plex-manifest.js';
 export { mediaOperationalManifest } from './operational-manifest.js';

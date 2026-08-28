@@ -239,6 +239,9 @@
   "pillars/media/app/src/components/ExpandableListRow.tsx": {
     "button": 1
   },
+  "pillars/media/app/src/components/plex-connect/PlexConnectPanel.tsx": {
+    "a": 1
+  },
   "pillars/media/app/src/pages/comparison-history/UndoToast.tsx": {
     "button": 1
   },

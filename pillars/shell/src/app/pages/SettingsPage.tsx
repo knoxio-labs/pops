@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Select, Skeleton } from '@pops/ui';
 
+import { resolveSettingsWidgets } from '../settings-widget-registry';
 import { SectionNav } from './settings-page/SectionNav';
 import { SettingsEmpty } from './settings-page/SettingsLoading';
 import { useHashSelectedId } from './settings-page/useHashSelectedId';
@@ -17,6 +18,11 @@ function ManifestPanel({
   section: SettingsSection;
   onTestAction: (procedure: string) => Promise<void>;
 }) {
+  const widgets = useMemo(
+    () => resolveSettingsWidgets(section.manifest, section.ownerPillar),
+    [section.manifest, section.ownerPillar]
+  );
+
   return (
     <>
       <h2 className="text-lg font-semibold mb-4">{section.manifest.title}</h2>
@@ -25,6 +31,7 @@ function ManifestPanel({
         ownerPillar={section.ownerPillar}
         hasFederatedSettings={section.hasFederatedSettings}
         onTestAction={onTestAction}
+        widgets={widgets}
       />
     </>
   );

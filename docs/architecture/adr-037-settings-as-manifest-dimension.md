@@ -53,6 +53,17 @@ The change is a code-path consolidation, not a contract reshape: the `SettingsMa
 - **Naming note:** the existing `settings` block on `ManifestPayloadSchema` (a `{ keys: SETTINGS_KEY[] }` list of consumed settings keys) needs disambiguation. The [settings-as-manifest-dimension](../themes/federation/prds/settings-as-manifest-dimension.md) PRD makes the call — likely rename the consumed-keys block to `consumedSettings` so the dimension name `settings` matches the rest of the platform vocabulary.
 - **Trade-off accepted:** consumers cannot statically import a named manifest at the call site. The compile-time error "no exported member `financeManifest`" stops being available; equivalent safety comes from the typed `SettingsManifest` returned by `discoverSettings()` plus the registered-id type guard. Same trade-off the federated search and AI tool surfaces already accepted.
 
+## Addendum — 2026-08-28: widget slots for flows fields cannot express
+
+Some settings are not a value to type. Linking a Plex account is a PIN handshake: request a code, show it, poll plex.tv until the user has entered it at `plex.tv/link`, then persist a token the user never sees. No `SettingsFieldType` describes that, and the shell's `SectionRenderer` renders nothing but fields. The pre-existing workaround was a `password` field for pasting a raw token by hand — a worse flow that also puts the secret through the clipboard.
+
+A `SettingsGroup` may now carry an optional `widget: { bundleSlot }`. This mirrors `ModuleCaptureOverlayConfig.bundleSlot` exactly: the manifest names a kebab-case slot, and the shell's workspace bundle map (`pillars/shell/src/app/bundle-map.tsx`) resolves it to the component the owning pillar exports. `settings-widget-registry.ts` performs the resolution per section, scoped to the pillar that owns it, so one pillar can never claim another's slot.
+
+- **Preserves the dimension:** `widget` is wire-shaped data like every other field of the manifest, so a section discovered over the live registry snapshot carries it unchanged. No new discovery path.
+- **Constrains:** resolution is bundle-map-bound, so only in-repo pillars can bind a slot today. An external pillar's manifest may name one, but nothing resolves it — the group degrades to its fields and the shell logs a structured warning. Closing that gap means the same asset-URL loading path `external-ui.tsx` already uses for pages.
+- **Constrains:** a bound widget is statically imported into the shell bundle, exactly as `IngestForm` is. Slots are for genuinely un-expressible flows, not a general escape hatch from declarative fields.
+- **First consumer:** `media.plex`'s `account` group binds `'plex-connect'` to the media app's `PlexConnectPanel` (POPS-67).
+
 ## Related
 
 - [ADR-026](adr-026-pillar-architecture.md) — pillar ownership model; each pillar owns its contract surface, settings included

@@ -15,6 +15,7 @@ export type {
   SettingsFieldType,
   SettingsGroup,
   SettingsManifest,
+  SettingsWidget,
 } from './settings-manifest.js';
 export type {
   FeatureCredentialStatus,

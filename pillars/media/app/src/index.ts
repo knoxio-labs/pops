@@ -6,6 +6,7 @@
  */
 export { navConfig, routes } from './routes';
 export { manifest } from './manifest';
+export { PlexConnectPanel } from './components/plex-connect/PlexConnectPanel';
 
 // Side-effect: register search result components
 import './components/search/register';
