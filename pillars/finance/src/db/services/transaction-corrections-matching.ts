@@ -65,6 +65,65 @@ export function findAllMatchingTransactionCorrectionsFromDb(
 }
 
 /**
+ * Fetch every active correction at or above `minConfidence`, unordered.
+ *
+ * This is the query {@link findAllMatchingTransactionCorrections} used to run
+ * once per description. A caller matching many descriptions in one run (the
+ * tag-suggester's correction pass, invoked twice per row by the tag-rule
+ * preview) fetches this set once and matches every description against it in
+ * memory with {@link findAllMatchingTransactionCorrectionsFromRows}, instead
+ * of re-issuing the same SELECT per call (POPS-2634).
+ */
+export function listActiveTransactionCorrectionsForMatching(
+  db: FinanceDb,
+  minConfidence: number = MIN_MATCH_CONFIDENCE
+): TransactionCorrectionRow[] {
+  return db
+    .select()
+    .from(transactionCorrections)
+    .where(
+      and(
+        eq(transactionCorrections.isActive, true),
+        gte(transactionCorrections.confidence, minConfidence)
+      )
+    )
+    .all();
+}
+
+/**
+ * Match `description` against an already-fetched active-correction set,
+ * grouped by `matchType` in `[exact, contains, regex]` order, with each group
+ * sorted by `confidence DESC, timesApplied DESC, id ASC`.
+ *
+ * The pure counterpart of {@link findAllMatchingTransactionCorrections}: same
+ * ordering, grouping and pattern predicate, but over rows the caller already
+ * holds rather than a fresh SELECT. `rows` is expected to already be filtered
+ * to active + `minConfidence`-and-above (what
+ * {@link listActiveTransactionCorrectionsForMatching} returns) — this
+ * function does not re-apply that filter.
+ */
+export function findAllMatchingTransactionCorrectionsFromRows(
+  rows: readonly TransactionCorrectionRow[],
+  description: string
+): TransactionCorrectionRow[] {
+  const matchable = describeForMatching(description);
+
+  const matched = rows
+    .toSorted((a, b) => {
+      if (b.confidence !== a.confidence) return b.confidence - a.confidence;
+      if (b.timesApplied !== a.timesApplied) return b.timesApplied - a.timesApplied;
+      if (a.id < b.id) return -1;
+      if (a.id > b.id) return 1;
+      return 0;
+    })
+    .filter((rule) => ruleMatchesDescription(rule, matchable));
+
+  return MATCH_TYPE_GROUP_ORDER.flatMap((matchType) =>
+    matched.filter((rule) => rule.matchType === matchType)
+  );
+}
+
+/**
  * Return every active correction at or above `minConfidence` whose pattern
  * matches `description`, grouped by `matchType` in `[exact, contains, regex]`
  * order, with each group sorted by `confidence DESC, timesApplied DESC,
@@ -87,33 +146,20 @@ export function findAllMatchingTransactionCorrectionsFromDb(
  * (POPS-2600). SQLite's `LIKE` cannot faithfully reproduce the shared
  * predicate's match set without a registered function — the same reasoning
  * {@link previewRuleMatchTransactions} already documents.
+ *
+ * A single call fetches and matches in one shot; a caller matching many
+ * descriptions per run should call
+ * {@link listActiveTransactionCorrectionsForMatching} once and reuse
+ * {@link findAllMatchingTransactionCorrectionsFromRows} instead.
  */
 export function findAllMatchingTransactionCorrections(
   db: FinanceDb,
   description: string,
   minConfidence: number = MIN_MATCH_CONFIDENCE
 ): TransactionCorrectionRow[] {
-  const matchable = describeForMatching(description);
-
-  const matched = db
-    .select()
-    .from(transactionCorrections)
-    .where(
-      and(
-        eq(transactionCorrections.isActive, true),
-        gte(transactionCorrections.confidence, minConfidence)
-      )
-    )
-    .orderBy(
-      desc(transactionCorrections.confidence),
-      desc(transactionCorrections.timesApplied),
-      asc(transactionCorrections.id)
-    )
-    .all()
-    .filter((rule) => ruleMatchesDescription(rule, matchable));
-
-  return MATCH_TYPE_GROUP_ORDER.flatMap((matchType) =>
-    matched.filter((rule) => rule.matchType === matchType)
+  return findAllMatchingTransactionCorrectionsFromRows(
+    listActiveTransactionCorrectionsForMatching(db, minConfidence),
+    description
   );
 }
 

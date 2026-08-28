@@ -38,6 +38,8 @@ export * from './transaction-corrections-types.js';
 export {
   findAllMatchingTransactionCorrections,
   findAllMatchingTransactionCorrectionsFromDb,
+  findAllMatchingTransactionCorrectionsFromRows,
+  listActiveTransactionCorrectionsForMatching,
   previewRuleMatchTransactions,
   type RuleMatchPreviewInput,
   type RuleMatchPreviewResult,
