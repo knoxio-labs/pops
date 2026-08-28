@@ -70,12 +70,19 @@ const NEVER_MATCHES: MatchRulePredicate = () => false;
  * pathological stored pattern into a cost paid once per (charge,
  * transaction) pair instead of once per charge.
  *
- * Interpretation mirrors finance's `patternMatchesNormalizedDescription`
- * (`pillars/finance/src/db/services/transaction-corrections-types.ts`) for
- * the reason the module header gives, down to the regex flags: `i` and not
- * `iu`, because the unicode flag makes an identity escape (`\ `, `\-`) a
- * SyntaxError, and a pattern finance honours would then be silently inert
- * on this side of the seam.
+ * Interpretation mirrors finance's `patternMatchesDescription`
+ * (`pillars/finance/src/contract/pattern-match.ts`) for the reason the
+ * module header gives, down to the regex flags: `i` and not `iu`, because
+ * the unicode flag makes an identity escape (`\ `, `\-`) a SyntaxError, and
+ * a pattern finance honours would then be silently inert on this side of
+ * the seam.
+ *
+ * **The mirror is currently broken for `regex`.** Finance now tests a regex
+ * against the raw description, because normalisation strips digits and a
+ * regex could never see one (POPS-2640); this side still tests the
+ * normalised descriptor, so the two pillars disagree about the same stored
+ * rule. POPS-2651 closes the gap. Only hand-written rows are affected — the
+ * queue's writer stores `exact` exclusively.
  *
  * `contains` and `regex` are honoured even though the queue's writer only
  * ever stores `exact`: the column accepts all three, so a reader that

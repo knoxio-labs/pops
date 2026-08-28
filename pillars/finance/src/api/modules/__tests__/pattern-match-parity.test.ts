@@ -10,7 +10,10 @@
  * correction pass, in the same suggestion run.
  *
  * The reference verdict is the shared predicate itself; each row below asserts
- * every other path agrees with it.
+ * every other path agrees with it. Since POPS-2640 that predicate picks its
+ * subject by match type — `regex` against the raw description, `exact` and
+ * `contains` against the normalised one — so every entry point has to hand it
+ * both forms. Parity is what proves none of them dropped one.
  *
  * The `legacyRow` triples are seeded through raw SQL because the pattern they
  * carry is one the write boundary now rejects or reshapes — they stand in for
@@ -38,11 +41,11 @@ import type Database from 'better-sqlite3';
 import type { PatternMatchType } from '../../../contract/pattern-match.js';
 
 const {
+  describeForMatching,
   findAllMatchingTransactionCorrections,
   findAllMatchingTransactionCorrectionsFromDb,
   listTransactionCorrections,
-  normalizeDescription,
-  patternMatchesNormalizedDescription,
+  patternMatchesDescription,
   previewRuleMatchTransactions,
 } = transactionCorrectionsService;
 
@@ -115,10 +118,22 @@ const TRIPLES: Triple[] = [
     description: 'THE COFFEE SHOP',
   },
   {
-    name: 'regex, anchored past a digit run',
+    name: 'regex, anchored across a digit run',
+    pattern: '^WOOLWORTHS \\d{4} SYDNEY$',
+    matchType: 'regex',
+    description: 'Woolworths 1234 Sydney',
+  },
+  {
+    name: 'regex, anchor that only held against the normalised form',
     pattern: '^WOOLWORTHS SYDNEY$',
     matchType: 'regex',
     description: 'Woolworths 1234 Sydney',
+  },
+  {
+    name: 'regex, diacritic not folded',
+    pattern: 'CAFE',
+    matchType: 'regex',
+    description: 'CAFÉ MOZART',
   },
   {
     name: 'regex, alternation',
@@ -137,6 +152,13 @@ const TRIPLES: Triple[] = [
   {
     name: 'legacy regex with a digit class',
     pattern: '\\d{4}',
+    matchType: 'regex',
+    description: 'CARD 4471 PURCHASE',
+    legacyRow: true,
+  },
+  {
+    name: 'legacy regex with a digit class, no match',
+    pattern: '\\d{5}',
     matchType: 'regex',
     description: 'CARD 4471 PURCHASE',
     legacyRow: true,
@@ -236,10 +258,10 @@ function verdictsFor(t: Triple): Record<string, boolean> {
     });
 
     return {
-      sharedPredicate: patternMatchesNormalizedDescription(
+      sharedPredicate: patternMatchesDescription(
         t.pattern,
         t.matchType,
-        normalizeDescription(t.description)
+        describeForMatching(t.description)
       ),
       classificationPass:
         findAllMatchingTransactionCorrectionsFromDb(db, t.description, 0).length > 0,

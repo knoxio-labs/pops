@@ -15,10 +15,11 @@ export {
   type CorrectionRow,
 } from './corrections-pure.js';
 export {
+  describeForMatching,
   isValidRegexPattern,
   normalizePatternForStorage,
-  patternMatchesNormalizedDescription,
-  regexPatternExpectsDigits,
+  patternMatchesDescription,
+  type MatchableDescription,
   type PatternMatchType,
 } from './pattern-match.js';
 export {

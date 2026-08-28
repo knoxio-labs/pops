@@ -25,6 +25,8 @@ import {
 } from '../../../db/index.js';
 import { parseStoredTags } from '../../../db/tag-facets.js';
 
+import type { MatchableDescription } from '../../../contract/pattern-match.js';
+
 const BATCH_SIZE = 500;
 
 interface BatchTxn {
@@ -57,12 +59,16 @@ interface RuleScope {
   entityId: string | null;
 }
 
-function ruleMatchesTransaction(rule: RuleScope, txn: BatchTxn, normalized: string): boolean {
+function ruleMatchesTransaction(
+  rule: RuleScope,
+  txn: BatchTxn,
+  description: MatchableDescription
+): boolean {
   if (rule.entityId && rule.entityId !== txn.entityId) return false;
-  return transactionCorrectionsService.patternMatchesNormalizedDescription(
+  return transactionCorrectionsService.patternMatchesDescription(
     rule.descriptionPattern,
     rule.matchType,
-    normalized
+    description
   );
 }
 
@@ -103,7 +109,7 @@ export function applyTagRuleToExistingTransactions(
   const ruleTags = parseStoredTags(rule.tags);
   if (!rule.isActive || ruleTags.length === 0) return result;
 
-  const { normalizeDescription } = transactionCorrectionsService;
+  const { describeForMatching } = transactionCorrectionsService;
   const scope: RuleScope = {
     descriptionPattern: rule.descriptionPattern,
     matchType: rule.matchType,
@@ -116,8 +122,8 @@ export function applyTagRuleToExistingTransactions(
     if (batch.length === 0) break;
 
     for (const txn of batch) {
-      const normalized = normalizeDescription(txn.description);
-      if (!ruleMatchesTransaction(scope, txn, normalized)) continue;
+      const matchable = describeForMatching(txn.description);
+      if (!ruleMatchesTransaction(scope, txn, matchable)) continue;
 
       result.matched++;
 

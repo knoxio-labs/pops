@@ -12,8 +12,9 @@ import { MIN_MATCH_CONFIDENCE } from '../../contract/corrections-pure.js';
 import { centsToDollars } from '../../money.js';
 import { transactionCorrections, transactions } from '../schema.js';
 import {
-  normalizeDescription,
-  patternMatchesNormalizedDescription,
+  describeForMatching,
+  patternMatchesDescription,
+  type MatchableDescription,
   type TransactionCorrectionMatchType,
   type TransactionCorrectionRow,
 } from './transaction-corrections-types.js';
@@ -26,11 +27,11 @@ const MATCH_TYPE_GROUP_ORDER: readonly TransactionCorrectionMatchType[] = [
   'regex',
 ];
 
-function ruleMatchesNormalizedDescription(
+function ruleMatchesDescription(
   rule: TransactionCorrectionRow,
-  normalized: string
+  description: MatchableDescription
 ): boolean {
-  return patternMatchesNormalizedDescription(rule.descriptionPattern, rule.matchType, normalized);
+  return patternMatchesDescription(rule.descriptionPattern, rule.matchType, description);
 }
 
 /**
@@ -46,7 +47,7 @@ export function findAllMatchingTransactionCorrectionsFromDb(
   description: string,
   minConfidence: number = MIN_MATCH_CONFIDENCE
 ): TransactionCorrectionRow[] {
-  const normalized = normalizeDescription(description);
+  const matchable = describeForMatching(description);
 
   const candidates = db
     .select()
@@ -60,7 +61,7 @@ export function findAllMatchingTransactionCorrectionsFromDb(
     .orderBy(asc(transactionCorrections.priority), asc(transactionCorrections.id))
     .all();
 
-  return candidates.filter((rule) => ruleMatchesNormalizedDescription(rule, normalized));
+  return candidates.filter((rule) => ruleMatchesDescription(rule, matchable));
 }
 
 /**
@@ -83,16 +84,16 @@ export function findAllMatchingTransactionCorrectionsFromDb(
  * SQL. The three per-match-type SQL queries this replaces each had their own
  * semantics (a raw `LIKE` with no `upper()`, a regex with no `i` flag), so
  * this matcher disagreed with the classification matcher about the same row
- * (POPS-2600). SQLite's `LIKE` cannot faithfully reproduce a
- * post-`normalizeDescription` match set without a registered function — the
- * same reasoning {@link previewRuleMatchTransactions} already documents.
+ * (POPS-2600). SQLite's `LIKE` cannot faithfully reproduce the shared
+ * predicate's match set without a registered function — the same reasoning
+ * {@link previewRuleMatchTransactions} already documents.
  */
 export function findAllMatchingTransactionCorrections(
   db: FinanceDb,
   description: string,
   minConfidence: number = MIN_MATCH_CONFIDENCE
 ): TransactionCorrectionRow[] {
-  const normalized = normalizeDescription(description);
+  const matchable = describeForMatching(description);
 
   const matched = db
     .select()
@@ -109,7 +110,7 @@ export function findAllMatchingTransactionCorrections(
       asc(transactionCorrections.id)
     )
     .all()
-    .filter((rule) => ruleMatchesNormalizedDescription(rule, normalized));
+    .filter((rule) => ruleMatchesDescription(rule, matchable));
 
   return MATCH_TYPE_GROUP_ORDER.flatMap((matchType) =>
     matched.filter((rule) => rule.matchType === matchType)
@@ -147,10 +148,10 @@ export interface RuleMatchPreviewResult {
  * the whole finance DB, plus the true total, so the rule-management impact panel
  * can show what a rule actually hits (not a truncated sample).
  *
- * Matching is done in JS via {@link patternMatchesNormalizedDescription} against
- * each row's normalised description rather than a SQL `LIKE`: the match set is
- * defined post-{@link normalizeDescription} (digit-stripping + Unicode
- * whitespace collapse), which SQLite's `LIKE` cannot faithfully reproduce
+ * Matching is done in JS via {@link patternMatchesDescription} rather than a
+ * SQL `LIKE`: the `exact`/`contains` match set is defined post-normalisation
+ * (digit-stripping + Unicode whitespace collapse) and the `regex` one needs a
+ * regex engine, neither of which SQLite's `LIKE` can faithfully reproduce
  * without a registered function — and none is registered here. A SQL narrowing
  * could silently under-count, which is exactly the failure this endpoint exists
  * to avoid. The scan carries no caller input into SQL, so there is no injection
@@ -175,11 +176,7 @@ export function previewRuleMatchTransactions(
     .all();
 
   const matched = rows.filter((row) =>
-    patternMatchesNormalizedDescription(
-      input.pattern,
-      input.matchType,
-      normalizeDescription(row.description)
-    )
+    patternMatchesDescription(input.pattern, input.matchType, describeForMatching(row.description))
   );
 
   return {

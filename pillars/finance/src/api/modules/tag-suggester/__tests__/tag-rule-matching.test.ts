@@ -2,10 +2,11 @@
  * Regression tests for CF022 (#3628) — tag-rule matching normalization and
  * priority ordering — and CF020 (#3626) — tag-rule usage telemetry.
  *
- * `findMatchingTagRules`'s regex branch used to test the raw description
- * while exact/contains tested the normalized one, so a digit-bearing
- * description could match under exact/contains and silently miss under
- * regex. `priority` was read by no matcher, so the column was decorative.
+ * `findMatchingTagRules` used to decide for itself which representation each
+ * match type tested against, and decided differently from every other match
+ * path (CF022). That decision now belongs to the shared predicate, and the
+ * cross-matcher parity suite is what holds every entry point to it.
+ * `priority` was read by no matcher, so the column was decorative.
  */
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -37,19 +38,38 @@ afterEach(() => {
   rmSync(tmpDir, { recursive: true, force: true });
 });
 
-describe('findMatchingTagRules — regex matches the normalized description', () => {
-  it('fires a digit-anchored regex against a digit-bearing description (CF022)', () => {
+describe('findMatchingTagRules — regex matches the raw description', () => {
+  it('fires a regex that spells out the card-ref digit run (POPS-2640)', () => {
+    transactionTagRulesService.createTransactionTagRule(db, {
+      descriptionPattern: '^WOOLWORTHS \\d{4} SYDNEY$',
+      matchType: 'regex',
+      tags: ['Groceries'],
+    });
+
+    const rows = findMatchingTagRules(db, 'Woolworths 1234 Sydney', null);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.tags).toBe(JSON.stringify(['Groceries']));
+  });
+
+  it('does not fire a regex anchored to the digit-stripped form', () => {
     transactionTagRulesService.createTransactionTagRule(db, {
       descriptionPattern: '^WOOLWORTHS SYDNEY$',
       matchType: 'regex',
       tags: ['Groceries'],
     });
 
-    // Raw description carries a bank-inserted card-ref digit run the anchored
-    // regex would never match; the normalizer strips it before matching.
-    const rows = findMatchingTagRules(db, 'Woolworths 1234 Sydney', null);
-    expect(rows).toHaveLength(1);
-    expect(rows[0]?.tags).toBe(JSON.stringify(['Groceries']));
+    expect(findMatchingTagRules(db, 'Woolworths 1234 Sydney', null)).toHaveLength(0);
+  });
+
+  it('still lets contains cover every store number with one pattern', () => {
+    transactionTagRulesService.createTransactionTagRule(db, {
+      descriptionPattern: 'WOOLWORTHS',
+      matchType: 'contains',
+      tags: ['Groceries'],
+    });
+
+    expect(findMatchingTagRules(db, 'WOOLWORTHS 1034 CANTERB', null)).toHaveLength(1);
+    expect(findMatchingTagRules(db, 'WOOLWORTHS 2201 NEWTOWN', null)).toHaveLength(1);
   });
 });
 

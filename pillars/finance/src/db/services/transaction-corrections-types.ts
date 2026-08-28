@@ -13,15 +13,17 @@ import { InvalidPatternError } from '../errors.js';
 import { parseStoredTags } from '../tag-facets.js';
 
 import type { TransactionType } from '../../contract/corrections-constants.js';
-import type { PatternMatchType } from '../../contract/pattern-match.js';
+import type { MatchableDescription, PatternMatchType } from '../../contract/pattern-match.js';
 import type { transactionCorrections } from '../schema.js';
 
 export {
+  describeForMatching,
   isValidRegexPattern,
   normalizeDescription,
   normalizePatternForStorage,
-  patternMatchesNormalizedDescription,
+  patternMatchesDescription,
 } from '../../contract/pattern-match.js';
+export type { MatchableDescription };
 
 /** Raw drizzle row shape — matches the persisted `transaction_corrections` record. */
 export type TransactionCorrectionRow = typeof transactionCorrections.$inferSelect;
