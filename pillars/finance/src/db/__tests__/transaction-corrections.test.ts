@@ -72,6 +72,13 @@ function freshDb(): TestHarness {
   return { db: drizzle(raw), raw };
 }
 
+/**
+ * `confidence` defaults to 0.5 — mirroring the column default, and BELOW
+ * `MIN_MATCH_CONFIDENCE`. Any test that runs a matcher over a seeded row must
+ * set `confidence` explicitly: on the default, a matcher returns nothing
+ * because the row is sub-floor, so an emptiness assertion passes without
+ * exercising what its name claims (POPS-2601, POPS-2638).
+ */
 function seedCorrection(
   raw: Database.Database,
   overrides: Partial<{
@@ -930,6 +937,11 @@ describe('findAllMatchingTransactionCorrections', () => {
   });
 
   it('returns an empty array when nothing matches', () => {
+    seedCorrection(harness.raw, {
+      descriptionPattern: 'COFFEE',
+      matchType: 'exact',
+      confidence: 0.9,
+    });
     expect(findAllMatchingTransactionCorrections(harness.db, 'restaurant')).toEqual([]);
   });
 });
