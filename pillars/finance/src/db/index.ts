@@ -122,6 +122,8 @@ export type {
 
 export * as entityVenueDefaultsService from './services/entity-venue-defaults.js';
 
+export { isPerTransactionFacet, PER_TRANSACTION_FACETS } from './services/entity-venue-facets.js';
+
 export type {
   LiveEntityDefaults,
   EntityVenueEvidence,

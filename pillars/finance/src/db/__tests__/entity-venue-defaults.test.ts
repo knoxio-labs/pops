@@ -76,7 +76,7 @@ describe('planEntityVenueDefaults — deterministic writes', () => {
         before: [],
         after: ['venue:bar'],
         venueAdded: 'venue:bar',
-        facetsStripped: [],
+        removed: [],
       },
     ]);
     expect(result.review).toEqual([]);
@@ -93,12 +93,13 @@ describe('planEntityVenueDefaults — deterministic writes', () => {
     expect(result.review).toEqual([]);
   });
 
-  it('keeps the other defaults a contact already carries', () => {
+  it('drops a pre-migration flat default while adding the venue', () => {
     txn('cafe', ['venue:cafe']);
 
-    const result = plan([contact('cafe', ['someone:else'])]);
+    const result = plan([contact('cafe', ['Coffee', 'Purchase'])]);
 
-    expect(result.writes[0]?.after).toEqual(['someone:else', 'venue:cafe']);
+    expect(result.writes[0]?.after).toEqual(['venue:cafe']);
+    expect(result.writes[0]?.removed).toEqual(['Coffee', 'Purchase']);
   });
 
   it('writes nothing for a contact that already carries the right venue', () => {
@@ -123,7 +124,16 @@ describe('planEntityVenueDefaults — deterministic writes', () => {
   });
 });
 
-describe('planEntityVenueDefaults — per-transaction facets are stripped', () => {
+describe('planEntityVenueDefaults — everything that is not a venue is stripped', () => {
+  it('leaves a contact carrying only legacy flat tags with no defaults at all', () => {
+    txn('uber', []);
+
+    const result = plan([contact('uber', ['Uber', 'Go out', 'Transport'])]);
+
+    expect(result.writes[0]?.after).toEqual([]);
+    expect(result.writes[0]?.removed).toEqual(['Uber', 'Go out', 'Transport']);
+  });
+
   it('removes an occasion: default and adds the venue in one write', () => {
     txn('stonewall', ['venue:bar']);
 
@@ -136,7 +146,7 @@ describe('planEntityVenueDefaults — per-transaction facets are stripped', () =
         before: ['occasion:out', 'contains:alcohol'],
         after: ['venue:bar'],
         venueAdded: 'venue:bar',
-        facetsStripped: ['occasion:out', 'contains:alcohol'],
+        removed: ['occasion:out', 'contains:alcohol'],
       },
     ]);
   });

@@ -7,7 +7,6 @@
 import {
   describeCounts,
   ENRICH_FACET,
-  isPerTransactionFacet,
   isVenueTag,
   type EntityVenueEvidence,
 } from './entity-venue-facets.js';
@@ -127,9 +126,9 @@ function planDerivedVenue(args: PlanOneArgs, storedVenue: string | undefined): s
 /** Decide one contact's `defaultTags`, recording the outcome on `plan`. */
 export function planOneEntity(args: PlanOneArgs): void {
   const { entity, override, plan } = args;
-  const stripped = entity.defaultTags.filter((tag) => !isPerTransactionFacet(tag));
-  const facetsStripped = entity.defaultTags.filter(isPerTransactionFacet);
-  const storedVenues = stripped.filter(isVenueTag);
+  const stripped = entity.defaultTags.filter(isVenueTag);
+  const removed = entity.defaultTags.filter((tag) => !isVenueTag(tag));
+  const storedVenues = stripped;
 
   let after = stripped;
   let venueAdded: string | undefined;
@@ -160,6 +159,6 @@ export function planOneEntity(args: PlanOneArgs): void {
     before: entity.defaultTags,
     after,
     ...(venueAdded === undefined ? {} : { venueAdded }),
-    facetsStripped,
+    removed,
   });
 }

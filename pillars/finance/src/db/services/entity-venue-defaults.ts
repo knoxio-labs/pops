@@ -22,10 +22,12 @@
  *    `enrich:` tag disqualifies its entity — deliberately conservative, and
  *    the entity is reported so a human can override rather than silently
  *    dropped.
- *  - `occasion:` and `contains:` genuinely vary per transaction for the same
- *    merchant, so they must never be an entity default. Unlike a venue call,
- *    REMOVING one needs no human judgement — it is categorically wrong on a
- *    contact — so the plan strips them.
+ *  - Anything that is not a `venue:` tag is stripped from `defaultTags`.
+ *    `occasion:` and `contains:` genuinely vary per transaction for the same
+ *    merchant, and the pre-migration flat tags ("Alcohol", "Groceries") are
+ *    dead vocabulary; both were being suggested with the entity badge on every
+ *    import. Unlike a venue call, REMOVING one needs no human judgement — it
+ *    is categorically wrong on a contact — so the plan strips it.
  */
 import { NO_EVIDENCE, planOneEntity } from './entity-venue-decision.js';
 import { collectEntityVenueEvidence, isVenueTag, VENUE_FACET } from './entity-venue-facets.js';
@@ -67,8 +69,14 @@ export interface EntityDefaultTagsWrite {
   after: string[];
   /** The venue this write adds, when it adds one. */
   venueAdded?: string;
-  /** Per-transaction facets this write removes from the contact. */
-  facetsStripped: string[];
+  /**
+   * Defaults this write removes. `venue:` is the ONLY merchant-level facet in
+   * the taxonomy, so everything else on a contact is either a per-transaction
+   * facet (`occasion:`/`contains:`, which vary per row for one merchant) or a
+   * pre-migration flat tag ("Alcohol", "Groceries"), and both are suggested
+   * with the entity badge on every future import until removed.
+   */
+  removed: string[];
 }
 
 /** Why an entity was left for a human instead of written. */

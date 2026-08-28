@@ -43,6 +43,7 @@ import { createContactsClient, type ContactsClient } from '../src/api/contacts/c
 import { resolveFinanceSqlitePath } from '../src/api/finance-sqlite-path.js';
 import {
   entityVenueDefaultsService,
+  isPerTransactionFacet,
   openFinanceDb,
   type EntityVenueDefaultsPlan,
   type LiveEntityDefaults,
@@ -73,10 +74,15 @@ function reportPlan(plan: EntityVenueDefaultsPlan): void {
       `contactsWithNoTransactions=${plan.withoutTransactions}`
   );
   for (const write of plan.writes) {
-    const facets =
-      write.facetsStripped.length > 0 ? ` (strips ${write.facetsStripped.join(', ')})` : '';
+    const facets = write.removed.filter(isPerTransactionFacet);
+    const legacy = write.removed.filter((tag) => !isPerTransactionFacet(tag));
+    const strips = [
+      facets.length > 0 ? `per-transaction ${facets.join(', ')}` : '',
+      legacy.length > 0 ? `legacy ${legacy.join(', ')}` : '',
+    ].filter(Boolean);
+    const suffix = strips.length > 0 ? ` (strips ${strips.join('; ')})` : '';
     console.warn(
-      `  ${write.entityName}: [${write.before.join(', ')}] -> [${write.after.join(', ')}]${facets}`
+      `  ${write.entityName}: [${write.before.join(', ')}] -> [${write.after.join(', ')}]${suffix}`
     );
   }
   for (const override of plan.overridden) {
