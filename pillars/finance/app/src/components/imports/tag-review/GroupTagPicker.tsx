@@ -54,7 +54,7 @@ function PickerOption({ tag, onPick }: { tag: string; onPick: (tag: string) => v
   const { label, ariaLabel, title } = describeTag(tag);
   return (
     <button
-      className="w-full min-h-11 text-left px-3 py-1 text-xs hover:bg-accent transition-colors"
+      className="w-full min-h-11 min-w-11 text-left px-3 py-1 text-xs hover:bg-accent transition-colors"
       title={title}
       aria-label={ariaLabel}
       data-tag={tag}
