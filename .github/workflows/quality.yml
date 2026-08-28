@@ -548,11 +548,13 @@ jobs:
     # wire validator before the server registers, so a manifest the validator
     # rejects kills the pillar on boot and restart-loops the container —
     # POPS-2581, 11 restarts in production. ADR-049 closed the shape half of
-    # that; the cross-field rules still fail first at boot. This
-    # guard requires every pillar's ManifestPayload builder to be exercised
-    # against that validator in a test, and reports a pillar that registers a
-    # manifest its builder matcher cannot see. It discovers both sides from
-    # disk, so a new pillar is covered without touching this file. It reads the
+    # that; the cross-field rules still fail first at boot. This guard requires
+    # every TypeScript pillar's ManifestPayload builder to be exercised against
+    # that validator in a test, and reports a pillar that registers a manifest
+    # its builder discovery cannot see. It does NOT cover the Rust `contacts`
+    # pillar, whose hand-written manifest it cannot read at all (POPS-2592) —
+    # the guard's own header says so. It discovers both sides from disk, so a
+    # new TypeScript pillar is covered without touching this file. It reads the
     # source tree directly and pulls in no third-party deps, so it skips
     # `pnpm install`. See scripts/ci/check-manifest-payload-coverage.mjs.
     runs-on: ubuntu-latest
