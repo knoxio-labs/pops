@@ -89,6 +89,7 @@ Runs immediately after `actions/checkout`. **No third-party import, at any depth
 | `scripts/ci/check-cross-pillar-expectations.mjs`    | `quality.yml` → `cross-pillar-expectations`    | OpenAPI JSON, TS source                                        |
 | `scripts/ci/check-litestream-sidecar-parity.mjs`    | `infra-lint.yml` → `sidecar-parity`            | Litestream filenames, Compose text                             |
 | `scripts/ci/check-migration-fk-pragma.mjs`          | `quality.yml` → `migration-fk-pragma`          | `pillars/<id>/migrations/*.sql` source                         |
+| `scripts/ci/check-manifest-payload-coverage.mjs`    | `quality.yml` → `manifest-payload-coverage`    | `pillars/**` TS source, test source                            |
 | `scripts/ci/check-receipt-max-parts-drift.mjs`      | `quality.yml` → `receipt-max-parts-drift`      | `bfm`/`purchases` TS source, `clients/ios` Swift source        |
 | `scripts/ci/check-supertest-transport-adoption.mjs` | `quality.yml` → `supertest-transport-adoption` | the nine gated pillars' TS/JS source, and their `package.json` |
 | `scripts/ci/check-line-budget-headroom.mjs`         | `quality.yml` → `line-budget-headroom`         | `.oxlintrc.json`, `git diff`/`git show` of touched files       |

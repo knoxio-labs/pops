@@ -3,6 +3,8 @@ import { fileURLToPath } from 'node:url';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { validateManifestPayload } from '@pops/pillar-sdk/manifest-schema';
+
 import { buildPurchasesManifest, PURCHASES_PILLAR_ID } from '../manifest.js';
 import { resolvePurchasesSqlitePath } from '../purchases-sqlite-path.js';
 
@@ -302,6 +304,20 @@ describe('buildPurchasesManifest', () => {
 
   it('points the healthcheck at the route app.ts actually serves', () => {
     expect(buildPurchasesManifest('0.1.0').healthcheck).toEqual({ path: '/health' });
+  });
+
+  // POPS-2581: a manifest the wire validator rejects does not degrade the
+  // pillar, it kills it — `bootstrapPillar` throws before the server is
+  // registered and the container restart-loops. ADR-049 closed the shape half
+  // of that, but the validator also enforces cross-field rules no type can
+  // carry: every search adapter's `procedurePath` must name a procedure this
+  // manifest declares, and the contract tag must agree with the version. Those
+  // still fail first at boot unless something runs the real payload through.
+  it('passes the SDK wire validator the registry bootstrap uses', () => {
+    const result = validateManifestPayload(buildPurchasesManifest('0.1.0'));
+
+    expect(result.ok ? [] : result.issues).toEqual([]);
+    expect(result.ok).toBe(true);
   });
 });
 

@@ -13,6 +13,8 @@
  * build time, and the shell's registry walk
  * (`pillars/shell/src/app/installed-modules.ts`) mounts the frontend slots.
  */
+import { z } from 'zod';
+
 import {
   assertBackend,
   assertCapabilities,
@@ -26,6 +28,7 @@ import {
   fail,
   isObject,
 } from './manifest-assertions.js';
+import { I18nKeySchema, KebabIdentifierSchema } from './manifest-primitives.js';
 
 import type { AiToolDescriptor } from './ai-tool.js';
 import type { Capability } from './capability.js';
@@ -82,10 +85,10 @@ export interface ModuleOverlayConfig {
 }
 
 /**
- * Capture-overlay manifest contribution (PRD-246 US-03). Mirrors the
- * wire-format `CaptureOverlayDescriptor` declared on the API-side
- * manifest payload (PRD-246 US-01 / US-02) but stays generic so this
- * package does not depend on React or the pillar SDK.
+ * Capture-overlay manifest contribution (PRD-246 US-03). This is the
+ * wire-format descriptor the API-side manifest payload carries (PRD-246
+ * US-01 / US-02) — `@pops/pillar-sdk` re-exports this schema rather than
+ * restating it (ADR-049). It stays free of React and of the pillar SDK.
  *
  * The shell walks every installed manifest's `frontend.captureOverlay`,
  * sorts by `order` ascending with a lexicographic tiebreak on the
@@ -99,18 +102,22 @@ export interface ModuleOverlayConfig {
  * the key combo is the shell's responsibility at bind time. `label` /
  * `labelKey` follow the same pairing as `NavConfigDescriptor`.
  */
-export interface ModuleCaptureOverlayConfig {
-  /** Bundle-slot identifier the workspace bundle map resolves to a component. */
-  bundleSlot: string;
-  /** Ascending sort key; ties broken alphabetically by pillar id. */
-  order: number;
-  /** Optional keyboard shortcut (e.g. `'cmd+shift+k'`). */
-  hotkey?: string;
-  /** Optional static label. Falls back to `labelKey` for i18n. */
-  label?: string;
-  /** Optional i18n catalog key (e.g. `'cerebrum.captureOverlay.label'`). */
-  labelKey?: string;
-}
+export const ModuleCaptureOverlayConfigSchema = z
+  .object({
+    /** Bundle-slot identifier the workspace bundle map resolves to a component. */
+    bundleSlot: KebabIdentifierSchema,
+    /** Ascending sort key; ties broken alphabetically by pillar id. */
+    order: z.number().int(),
+    /** Optional keyboard shortcut (e.g. `'cmd+shift+k'`). */
+    hotkey: z.string().min(1).optional(),
+    /** Optional static label. Falls back to `labelKey` for i18n. */
+    label: z.string().min(1).optional(),
+    /** Optional i18n catalog key (e.g. `'cerebrum.captureOverlay.label'`). */
+    labelKey: I18nKeySchema.optional(),
+  })
+  .strict();
+
+export type ModuleCaptureOverlayConfig = z.infer<typeof ModuleCaptureOverlayConfigSchema>;
 
 /**
  * Frontend-side manifest fields. Generic over the route and nav config types
