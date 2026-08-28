@@ -1565,6 +1565,149 @@ describe('imports.commitImport — retroactive reclassification', () => {
   });
 });
 
+describe('imports.commitImport — who may add to tag_vocabulary (POPS-2602)', () => {
+  function storedTags(): string[][] {
+    const rows = financeDb.raw.prepare('SELECT tags FROM transactions').all() as { tags: string }[];
+    return rows.map((r) => JSON.parse(r.tags) as string[]);
+  }
+
+  function tagRuleTags(): string[] {
+    const rows = financeDb.raw.prepare('SELECT tags FROM transaction_tag_rules').all() as {
+      tags: string;
+    }[];
+    return rows.flatMap((r) => JSON.parse(r.tags) as string[]);
+  }
+
+  it('admits an open-namespace value typed inline on a transaction', async () => {
+    const c = client();
+    await c.imports.commitImport({
+      transactions: [
+        confirmed({ description: 'FLIGHTS', checksum: 'vocab-open', tags: ['trip:tokyo-2026'] }),
+      ],
+    });
+
+    expect(vocabularyTags()).toContain('trip:tokyo-2026');
+  });
+
+  it('reports an inline open value as known on the next tag-rule preview', async () => {
+    const c = client();
+    await c.imports.commitImport({
+      transactions: [
+        confirmed({ description: 'FLIGHTS', checksum: 'vocab-open-2', tags: ['trip:tokyo-2026'] }),
+      ],
+    });
+
+    const preview = await c.tagRules.preview({
+      changeSet: tagRuleChangeSet('FLIGHTS', ['trip:tokyo-2026']),
+      transactions: [{ transactionId: 't1', description: 'FLIGHTS TO NRT', entityId: null }],
+    });
+
+    expect(preview.affected[0]?.after.suggestedTags[0]).toMatchObject({
+      tag: 'trip:tokyo-2026',
+      isNew: false,
+    });
+  });
+
+  it('rejects a value a closed namespace does not hold, writing nothing at all', async () => {
+    const c = client();
+    await expect(
+      c.imports.commitImport({
+        tagRuleChangeSets: [stagedTagRule('SPEAKEASY', ['venue:speakeasy'], ['venue:speakeasy'])],
+        transactions: [
+          confirmed({
+            description: 'SPEAKEASY',
+            checksum: 'vocab-closed',
+            tags: ['venue:speakeasy'],
+          }),
+        ],
+      })
+    ).rejects.toMatchObject({ status: 400 });
+
+    expect(vocabularyTags()).not.toContain('venue:speakeasy');
+    expect(storedTags()).toEqual([]);
+    expect(tagRuleTags()).not.toContain('venue:speakeasy');
+  });
+
+  it('accepts a closed value the namespace does hold without re-adding it', async () => {
+    const before = vocabularyTags().filter((t) => t === 'venue:bar').length;
+    const c = client();
+    await c.imports.commitImport({
+      transactions: [
+        confirmed({ description: 'THE LOCAL', checksum: 'vocab-closed-ok', tags: ['venue:bar'] }),
+      ],
+    });
+
+    expect(before).toBe(1);
+    expect(vocabularyTags().filter((t) => t === 'venue:bar')).toHaveLength(1);
+  });
+
+  it('carries a marker tag onto the transaction but never into the vocabulary', async () => {
+    const c = client();
+    await c.imports.commitImport({
+      transactions: [
+        confirmed({
+          description: 'NEW MARKETPLACE',
+          checksum: 'vocab-marker',
+          tags: ['enrich:new-marketplace'],
+        }),
+      ],
+    });
+
+    expect(storedTags()).toEqual([['enrich:new-marketplace']]);
+    expect(vocabularyTags()).not.toContain('enrich:new-marketplace');
+  });
+
+  it('treats a value differing only in case as the one already in the vocabulary', async () => {
+    const c = client();
+    await c.imports.commitImport({
+      transactions: [
+        confirmed({ description: 'THE LOCAL', checksum: 'vocab-case', tags: ['Venue:Bar'] }),
+      ],
+    });
+
+    expect(vocabularyTags()).not.toContain('Venue:Bar');
+  });
+
+  it('adds nothing when a later phase of the commit throws', async () => {
+    const c = client();
+    const before = vocabularyTags();
+    await expect(
+      c.imports.commitImport({
+        // The vocabulary phase runs first and admits `trip:rolled-back`; this
+        // remove op then throws inside the same SQLite transaction.
+        changeSets: [{ ops: [{ op: 'remove', id: 'no-such-correction' }] }],
+        transactions: [confirmed({ checksum: 'vocab-rollback', tags: ['trip:rolled-back'] })],
+      })
+    ).rejects.toMatchObject({ status: 404 });
+
+    expect(vocabularyTags()).toEqual(before);
+    expect(storedTags()).toEqual([]);
+  });
+
+  // A tag the user declined is the one committed tag deliberately left out of
+  // the vocabulary, so this fixture carries none — see POPS-2643.
+  it('keeps the vocabulary a superset of every committed transaction and tag-rule tag', async () => {
+    const c = client();
+    await c.imports.commitImport({
+      tagRuleChangeSets: [
+        { changeSet: tagRuleChangeSet('SUPERSET RULE', ['asset:ute', 'venue:cafe']) },
+      ],
+      transactions: [
+        confirmed({
+          description: 'SUPERSET RULE 1',
+          checksum: 'vocab-superset',
+          tags: ['asset:ute', 'venue:cafe', 'hobby:diving'],
+        }),
+      ],
+    });
+
+    const known = new Set(vocabularyTags().map((t) => t.toLowerCase()));
+    const written = [...storedTags().flat(), ...tagRuleTags()];
+    expect(written.length).toBeGreaterThan(0);
+    expect(written.filter((t) => !known.has(t.toLowerCase()))).toEqual([]);
+  });
+});
+
 describe('imports — AI seam', () => {
   it('keeps the categorizer disabled by default (no entity suggestion, zero counters)', async () => {
     const c = client();

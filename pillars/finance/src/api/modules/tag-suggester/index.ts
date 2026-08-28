@@ -11,8 +11,13 @@
  * The rule/correction sources read finance-db tables via the injected
  * `FinanceDb` handle. The entity-default tags come from `entityDefaultTags`, a
  * `contactId → tags` map the caller builds from the contacts pillar.
+ *
+ * Dedup is case-insensitive, on the same normalisation the vocabulary uses: an
+ * AI `Bar` and an entity-default `bar` are one tag, not two rows on the same
+ * transaction (POPS-2602).
  */
 import {
+  tagVocabularyService,
   type FinanceDb,
   transactionCorrectionsService,
   transactionTagRulesService,
@@ -73,6 +78,19 @@ function parseTags(json: string | null | undefined): string[] {
   }
 }
 
+/**
+ * Record a tag as emitted, returning false when an equal tag is already in the
+ * result. Comparison is case-insensitive and shared with the vocabulary, so an
+ * AI `Bar` and an entity-default `bar` collapse to one suggestion instead of
+ * landing on the row twice under two spellings.
+ */
+function remember(seen: Set<string>, tag: string): boolean {
+  const key = tagVocabularyService.normalizeTagForComparison(tag);
+  if (seen.has(key)) return false;
+  seen.add(key);
+  return true;
+}
+
 interface TagPass {
   db: FinanceDb;
   description: string;
@@ -92,8 +110,7 @@ function addCorrectionTags(
   const { db, description, seen, result } = pass;
   if (correctionTags && correctionTags.length > 0) {
     for (const tag of correctionTags) {
-      if (seen.has(tag)) continue;
-      seen.add(tag);
+      if (!remember(seen, tag)) continue;
       result.push({ tag, source: 'rule', pattern: correctionPattern });
     }
     return;
@@ -103,8 +120,7 @@ function addCorrectionTags(
     description
   )) {
     for (const tag of parseTags(correction.tags)) {
-      if (seen.has(tag)) continue;
-      seen.add(tag);
+      if (!remember(seen, tag)) continue;
       result.push({ tag, source: 'rule', pattern: correction.descriptionPattern ?? undefined });
     }
   }
@@ -112,8 +128,7 @@ function addCorrectionTags(
 
 function pushRuleTags(pass: TagPass, tags: string[], pattern: string): void {
   for (const tag of tags) {
-    if (pass.seen.has(tag)) continue;
-    pass.seen.add(tag);
+    if (!remember(pass.seen, tag)) continue;
     pass.result.push({ tag, source: 'rule', pattern });
   }
 }
@@ -138,13 +153,20 @@ interface AddAiTagsArgs {
   aiTags: string[] | undefined;
   aiCategory: string | null | undefined;
   knownTags: string[] | undefined;
+  /**
+   * The whole active vocabulary, which is what `isNew` is answered against.
+   * Deliberately not `knownTags`: that list is the *closed* vocabulary the
+   * model was offered, and testing membership against it reported every open
+   * value — a `trip:` or `asset:` the user had already created — as new
+   * (POPS-2602).
+   */
+  knownTagSet: tagVocabularyService.KnownTagSet;
   seen: Set<string>;
   result: SuggestedTag[];
 }
 
 function addAiTags(args: AddAiTagsArgs): void {
-  const { aiTags, aiCategory, knownTags, seen, result } = args;
-  const knownSet = new Set(knownTags?.map((t) => t.toLowerCase()) ?? []);
+  const { aiTags, aiCategory, knownTags, knownTagSet, seen, result } = args;
   let tags: string[];
   if (aiTags && aiTags.length > 0) {
     tags = aiTags;
@@ -155,9 +177,8 @@ function addAiTags(args: AddAiTagsArgs): void {
     return;
   }
   for (const tag of tags) {
-    if (seen.has(tag)) continue;
-    seen.add(tag);
-    const isNew = !knownSet.has(tag.toLowerCase()) || undefined;
+    if (!remember(seen, tag)) continue;
+    const isNew = !knownTagSet.has(tag) || undefined;
     result.push({ tag, source: 'ai', ...(isNew ? { isNew: true } : {}) });
   }
 }
@@ -168,8 +189,7 @@ function addEntityTags(pass: TagPass): void {
   const tags = entityDefaultTags.get(entityId);
   if (!tags) return;
   for (const tag of tags) {
-    if (seen.has(tag)) continue;
-    seen.add(tag);
+    if (!remember(seen, tag)) continue;
     result.push({ tag, source: 'entity' });
   }
 }
@@ -191,6 +211,7 @@ export function suggestTags(db: FinanceDb, opts: SuggestTagsOptions): SuggestedT
     aiTags: opts.aiTags,
     aiCategory: opts.aiCategory,
     knownTags: opts.knownTags,
+    knownTagSet: tagVocabularyService.loadKnownTagSet(db),
     seen: pass.seen,
     result: pass.result,
   });

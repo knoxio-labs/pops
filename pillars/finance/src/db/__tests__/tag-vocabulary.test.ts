@@ -16,9 +16,13 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { tagVocabulary } from '../schema.js';
 import {
+  createKnownTagSet,
   incrementVocabularyUsage,
+  isKnownTag,
   listVocabularyTags,
   listVocabularyTagsByKind,
+  loadKnownTagSet,
+  normalizeTagForComparison,
   upsertVocabularyTag,
 } from '../services/tag-vocabulary.js';
 
@@ -323,5 +327,67 @@ describe('listVocabularyTagsByKind', () => {
     } finally {
       raw.close();
     }
+  });
+});
+
+describe('createKnownTagSet — the one answer to "is this tag known" (POPS-2602)', () => {
+  it('matches a tag that differs only in case', () => {
+    const known = createKnownTagSet(['venue:Bar']);
+    expect(known.has('venue:bar')).toBe(true);
+    expect(known.has('VENUE:BAR')).toBe(true);
+  });
+
+  it('matches a tag that differs only in surrounding whitespace', () => {
+    expect(createKnownTagSet(['  venue:bar  ']).has('venue:bar')).toBe(true);
+    expect(createKnownTagSet(['venue:bar']).has(' venue:bar\n')).toBe(true);
+  });
+
+  it('never admits an empty or whitespace-only tag, from either side', () => {
+    const known = createKnownTagSet(['', '   ', 'venue:bar']);
+    expect(known.size).toBe(1);
+    expect(known.has('')).toBe(false);
+    expect(known.has('   ')).toBe(false);
+  });
+
+  it('keeps a value that itself contains the separator whole', () => {
+    const known = createKnownTagSet(['project:kitchen:phase-2']);
+    expect(known.has('project:kitchen:phase-2')).toBe(true);
+    expect(known.has('project:kitchen')).toBe(false);
+  });
+
+  it('counts two spellings of one value once', () => {
+    expect(createKnownTagSet(['venue:Bar', 'venue:bar']).size).toBe(1);
+  });
+
+  it('does not treat an unrelated tag as known', () => {
+    expect(createKnownTagSet(['venue:bar']).has('venue:pub')).toBe(false);
+  });
+});
+
+describe('normalizeTagForComparison', () => {
+  it('trims and lower-cases', () => {
+    expect(normalizeTagForComparison('  Venue:Bar ')).toBe('venue:bar');
+  });
+});
+
+describe('loadKnownTagSet / isKnownTag', () => {
+  let harness: TestHarness;
+  beforeEach(() => {
+    harness = freshDb();
+  });
+
+  it('reads the active vocabulary and ignores a deactivated tag', () => {
+    upsertVocabularyTag(harness.db, 'venue:bar', 'seed');
+    upsertVocabularyTag(harness.db, 'venue:pub', 'seed');
+    harness.raw.prepare("UPDATE tag_vocabulary SET is_active = 0 WHERE tag = 'venue:pub'").run();
+
+    const known = loadKnownTagSet(harness.db);
+    expect(known.has('venue:bar')).toBe(true);
+    expect(known.has('venue:pub')).toBe(false);
+    expect(isKnownTag(harness.db, 'VENUE:BAR')).toBe(true);
+  });
+
+  it('is empty for an empty vocabulary', () => {
+    expect(loadKnownTagSet(harness.db).size).toBe(0);
   });
 });
