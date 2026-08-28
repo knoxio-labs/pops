@@ -44,6 +44,8 @@ export interface BuildSuggestedTagsOptions {
    * preview rather than a real classification pass.
    */
   recordTagRuleUsage?: boolean;
+  /** Forwarded to `suggestTags`'s `onTagRulesMatched`. */
+  onTagRulesMatched?: (ruleIds: readonly string[]) => void;
 }
 
 /**
@@ -61,5 +63,6 @@ export function buildSuggestedTags(db: FinanceDb, opts: BuildSuggestedTagsOption
     correctionPattern: opts.correctionPattern,
     entityDefaultTags: opts.entityDefaultTags,
     recordTagRuleUsage: opts.recordTagRuleUsage,
+    onTagRulesMatched: opts.onTagRulesMatched,
   });
 }

@@ -57,6 +57,14 @@ export interface SuggestTagsOptions {
    */
   recordTagRuleUsage?: boolean;
   /**
+   * Called with the ids of the persisted tag rules that matched, before any
+   * usage is credited. For a caller that must defer the credit decision until
+   * it has the outcome (POPS-2641) — it pairs `recordTagRuleUsage: false` with
+   * this and calls `creditTagRuleUsage` itself. Not called for an injected
+   * `tagRules` set: those are not the persisted rows.
+   */
+  onTagRulesMatched?: (ruleIds: readonly string[]) => void;
+  /**
    * Match this in-memory rule set instead of querying `transaction_tag_rules`
    * — the ChangeSet preview's merged set (POPS-2599), which carries rules the
    * table does not hold yet and omits ones a `remove` op would drop. Matching,
@@ -97,6 +105,7 @@ interface TagPass {
   entityId: string | null;
   entityDefaultTags: ReadonlyMap<string, string[]>;
   recordTagRuleUsage: boolean;
+  onTagRulesMatched: ((ruleIds: readonly string[]) => void) | undefined;
   tagRules: readonly InMemoryTagRule[] | undefined;
   seen: Set<string>;
   result: SuggestedTag[];
@@ -133,6 +142,21 @@ function pushRuleTags(pass: TagPass, tags: string[], pattern: string): void {
   }
 }
 
+/**
+ * Credit usage to tag rules by id.
+ *
+ * Exported for the caller that can only tell whether an application counts as
+ * a use *after* it has seen the outcome (POPS-2641): it builds the suggestions
+ * with `recordTagRuleUsage: false`, collects the matched ids through
+ * `onTagRulesMatched`, and credits them here once the outcome is known —
+ * without re-running the match.
+ */
+export function creditTagRuleUsage(db: FinanceDb, ruleIds: readonly string[]): void {
+  for (const id of ruleIds) {
+    transactionTagRulesService.incrementTransactionTagRuleUsage(db, id);
+  }
+}
+
 function addTagRuleTags(pass: TagPass): void {
   const { db, description, entityId, recordTagRuleUsage, tagRules } = pass;
   if (tagRules) {
@@ -141,10 +165,11 @@ function addTagRuleTags(pass: TagPass): void {
     }
     return;
   }
-  for (const rule of findMatchingTagRules(db, description, entityId)) {
-    if (recordTagRuleUsage) {
-      transactionTagRulesService.incrementTransactionTagRuleUsage(db, rule.id);
-    }
+  const matching = findMatchingTagRules(db, description, entityId);
+  const matchedIds = matching.map((rule) => rule.id);
+  pass.onTagRulesMatched?.(matchedIds);
+  if (recordTagRuleUsage) creditTagRuleUsage(db, matchedIds);
+  for (const rule of matching) {
     pushRuleTags(pass, parseTags(rule.tags), rule.descriptionPattern);
   }
 }
@@ -212,6 +237,7 @@ export function suggestTags(db: FinanceDb, opts: SuggestTagsOptions): SuggestedT
     entityId: opts.entityId,
     entityDefaultTags: opts.entityDefaultTags ?? new Map(),
     recordTagRuleUsage: opts.recordTagRuleUsage ?? true,
+    onTagRulesMatched: opts.onTagRulesMatched,
     tagRules: opts.tagRules,
     seen: new Set<string>(),
     result: [],

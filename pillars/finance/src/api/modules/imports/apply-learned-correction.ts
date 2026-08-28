@@ -15,6 +15,7 @@ import {
   parseCorrectionTags,
   resolveCorrectionApplyStatus,
 } from '../corrections/index.js';
+import { creditTagRuleUsage } from '../tag-suggester/index.js';
 import { buildSuggestedTags } from './tag-management.js';
 
 import type { MatchedRule, ParsedTransaction, ProcessedTransaction } from './types.js';
@@ -39,6 +40,19 @@ export interface ApplyLearnedCorrectionArgs {
   isPreview?: boolean;
   /** `contactId → defaultTags` from the per-run contacts fetch (entity tag source). */
   entityDefaultTags?: ReadonlyMap<string, string[]>;
+  /**
+   * Decides, from the outcome, whether this application counts as a use of the
+   * rule. Omitted ⇒ every outcome counts, which is right for an import: the
+   * row had no classification before the rule gave it one.
+   *
+   * Re-evaluation needs the narrower answer. It re-applies rules to rows that
+   * already carry the outcome, so an unchanged row would credit a rule that
+   * did nothing — and a whole-ledger re-tag, which is deliberately a no-op,
+   * would inflate every covered rule's counter by the ledger size (POPS-2641).
+   * The predicate runs after the outcome is built and gates *all* usage
+   * telemetry, the matched tag rules' included; `isPreview` still wins over it.
+   */
+  countsAsUsage?: (result: ApplyLearnedCorrectionResult) => boolean;
 }
 
 export interface ApplyLearnedCorrectionResult {
@@ -58,6 +72,15 @@ function toMatchedRules(rules: CorrectionRow[]): MatchedRule[] {
   }));
 }
 
+/**
+ * `ApplyLearnedCorrectionArgs` plus the sink that collects the tag rules the
+ * suggestion pass matched, so usage can be credited after the outcome is known
+ * without running the match a second time.
+ */
+type ApplyArgs = ApplyLearnedCorrectionArgs & {
+  collectTagRules: (ruleIds: readonly string[]) => void;
+};
+
 interface TypeOnlyMatchArgs {
   db: FinanceDb;
   transaction: ParsedTransaction;
@@ -65,11 +88,11 @@ interface TypeOnlyMatchArgs {
   matchedRules: MatchedRule[];
   knownTags: string[];
   status: CorrectionMatchStatus;
-  recordTagRuleUsage: boolean;
+  collectTagRules: (ruleIds: readonly string[]) => void;
 }
 
 function buildTypeOnlyMatch(args: TypeOnlyMatchArgs): ProcessedTransaction {
-  const { db, transaction, correction, matchedRules, knownTags, status, recordTagRuleUsage } = args;
+  const { db, transaction, correction, matchedRules, knownTags, status, collectTagRules } = args;
   return {
     ...transaction,
     location: correction.location ?? transaction.location,
@@ -91,7 +114,8 @@ function buildTypeOnlyMatch(args: TypeOnlyMatchArgs): ProcessedTransaction {
       aiCategory: null,
       knownTags,
       correctionPattern: correction.descriptionPattern,
-      recordTagRuleUsage,
+      recordTagRuleUsage: false,
+      onTagRulesMatched: collectTagRules,
     }),
   };
 }
@@ -105,7 +129,7 @@ interface EntityMatchArgs {
   entityId: string;
   knownTags: string[];
   entityDefaultTags: ReadonlyMap<string, string[]>;
-  recordTagRuleUsage: boolean;
+  collectTagRules: (ruleIds: readonly string[]) => void;
 }
 
 function buildEntityMatch(args: EntityMatchArgs): ProcessedTransaction {
@@ -136,14 +160,15 @@ function buildEntityMatch(args: EntityMatchArgs): ProcessedTransaction {
       knownTags,
       correctionPattern: correction.descriptionPattern,
       entityDefaultTags: args.entityDefaultTags,
-      recordTagRuleUsage: args.recordTagRuleUsage,
+      recordTagRuleUsage: false,
+      onTagRulesMatched: args.collectTagRules,
     }),
   };
 }
 
 function handleNoEntityCorrection(
   db: FinanceDb,
-  args: ApplyLearnedCorrectionArgs,
+  args: ApplyArgs,
   correction: CorrectionRow,
   matchedRules: MatchedRule[]
 ): ApplyLearnedCorrectionResult | null {
@@ -157,7 +182,7 @@ function handleNoEntityCorrection(
       matchedRules,
       knownTags: args.knownTags,
       status,
-      recordTagRuleUsage: !args.isPreview,
+      collectTagRules: args.collectTagRules,
     }),
     bucket: status,
   };
@@ -165,15 +190,13 @@ function handleNoEntityCorrection(
 
 /**
  * The bucket the winning correction would land a transaction in, or `null` when
- * the rule has nothing to apply — decided from the rule alone, with no DB write
- * and no usage telemetry.
+ * the rule has nothing to apply — decided from the rule alone, with no DB read
+ * beyond the rule itself and no suggestion build.
  *
  * Exists so a caller can find out where a rule would put a row *before*
- * applying it: `applyLearnedCorrection` bumps `timesApplied` as soon as it
- * produces an outcome, so a caller that inspects the outcome and then discards
- * it has already credited a rule that changed nothing. The bucket decision
- * lives here rather than in that caller so it cannot drift from
- * `resolveApplyResult`, which reads it back below.
+ * applying it, and skip the work entirely when the outcome is one it would
+ * discard. The bucket decision lives here rather than in that caller so it
+ * cannot drift from `resolveApplyResult`, which reads it back below.
  */
 export function correctionOutcomeBucket(correction: CorrectionRow): 'matched' | 'uncertain' | null {
   if (!correction.entityId) return resolveCorrectionApplyStatus(correction);
@@ -187,7 +210,7 @@ export function correctionOutcomeBucket(correction: CorrectionRow): 'matched' | 
  */
 function resolveApplyResult(
   db: FinanceDb,
-  args: ApplyLearnedCorrectionArgs,
+  args: ApplyArgs,
   correction: CorrectionRow,
   matchedRules: MatchedRule[]
 ): ApplyLearnedCorrectionResult | null {
@@ -205,7 +228,7 @@ function resolveApplyResult(
       entityId,
       knownTags: args.knownTags,
       entityDefaultTags: args.entityDefaultTags ?? new Map(),
-      recordTagRuleUsage: !args.isPreview,
+      collectTagRules: args.collectTagRules,
     }),
     bucket: status === 'matched' ? 'matched' : 'uncertain',
   };
@@ -223,13 +246,19 @@ function resolveApplyResult(
  * query per call, for one-off callers with no run-level rule set to share.
  *
  * Usage telemetry (`timesApplied`/`lastUsedAt`) is bumped whenever the match is
- * against a real (non-preview) rule set AND the rule actually produced an
- * outcome — gated by `!args.isPreview`, not by whether `rules` was supplied:
- * a fetch-once `rules` array from the real table is still real usage, while a
- * `rules` array merged with un-persisted pending ChangeSets (`isPreview: true`)
- * must never count as usage of the persisted row. The same gate is threaded
- * into the suggested-tags computation so a matching tag rule's own usage
- * counter is bumped under the identical condition.
+ * against a real (non-preview) rule set, the rule actually produced an outcome,
+ * and `countsAsUsage` accepts that outcome. The preview gate is
+ * `!args.isPreview`, not whether `rules` was supplied: a fetch-once `rules`
+ * array from the real table is still real usage, while a `rules` array merged
+ * with un-persisted pending ChangeSets (`isPreview: true`) must never count as
+ * usage of the persisted row.
+ *
+ * Crediting happens after the outcome is built, never during it — that is what
+ * lets `countsAsUsage` see the outcome — so the matching tag rules are credited
+ * here too rather than inside the suggestion pass, and both counters move under
+ * exactly the same condition. The suggestion pass reports which rules it
+ * matched (`onTagRulesMatched`) instead of being asked again, so deferring the
+ * decision costs no extra query.
  */
 export function applyLearnedCorrection(
   db: FinanceDb,
@@ -249,10 +278,17 @@ export function applyLearnedCorrection(
   if (!correction) return null;
 
   const matchedRules = toMatchedRules(allMatchingRules);
-  const result = resolveApplyResult(db, args, correction, matchedRules);
+  const matchedTagRuleIds: string[] = [];
+  const result = resolveApplyResult(
+    db,
+    { ...args, collectTagRules: (ids) => matchedTagRuleIds.push(...ids) },
+    correction,
+    matchedRules
+  );
 
-  if (result && !args.isPreview) {
+  if (result && !args.isPreview && (args.countsAsUsage?.(result) ?? true)) {
     transactionCorrectionsService.incrementTransactionCorrectionUsage(db, correction.id);
+    creditTagRuleUsage(db, matchedTagRuleIds);
   }
 
   return result;
