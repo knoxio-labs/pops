@@ -423,6 +423,34 @@ describe('reevaluate — running twice over the same data is idempotent (POPS-26
     expect(tagRuleTimesApplied('COLES')).toBe(1);
   });
 
+  // The trap in gating on a comparison: `transactionChanged` only looks at the
+  // classification, so a rule that rewrote the tags and nothing else reads as
+  // "no change". Keeping the input row on that basis would silently revert the
+  // rewrite on every run, which is worse than the over-crediting it fixes.
+  it('keeps a tag-only rewrite and credits it, though the classification did not move', async () => {
+    seedRule('r-1');
+    seedTagRule('COLES', ['venue:supermarket']);
+    const contacts = makeContactsFake({ seed: [{ id: 'ent-coles', name: 'Coles' }] });
+    const alreadyRight = matchedTxn('COLES SYDNEY', {
+      entityId: 'ent-coles',
+      entityName: 'Coles',
+      matchType: 'learned',
+      confidence: 0.95,
+    });
+
+    const { nextResult, affectedCount } = await reevaluateImportSessionResult({
+      db,
+      contacts,
+      result: { matched: [alreadyRight], uncertain: [], failed: [], skipped: [] },
+      minConfidence: 0.7,
+    });
+
+    expect(nextResult.matched[0]?.suggestedTags?.map((t) => t.tag)).toEqual(['venue:supermarket']);
+    expect(tagRuleTimesApplied('COLES')).toBe(1);
+    // The entity and bucket are unchanged, so this is not an affected row.
+    expect(affectedCount).toBe(0);
+  });
+
   it('is idempotent for a row already matched to the entity the rule names', async () => {
     seedRule('r-1');
     const alreadyRight = matchedTxn('COLES SYDNEY', {

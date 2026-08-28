@@ -11,7 +11,7 @@ import { type FinanceDb } from '../../../db/index.js';
 import { findAllMatchingCorrectionFromRules, type CorrectionRow } from '../corrections/index.js';
 import { applyLearnedCorrection, correctionOutcomeBucket } from './apply-learned-correction.js';
 import { matchEntity } from './entity-matcher.js';
-import { transactionChanged } from './reevaluate-diff.js';
+import { correctionApplicationChanged, transactionChanged } from './reevaluate-diff.js';
 import { buildSuggestedTags } from './tag-management.js';
 
 import type { EntityMaps } from '../../../db/index.js';
@@ -172,12 +172,21 @@ export function reapplyCorrectionToMatched(
     recordUsage: false,
     entityDefaultTags: ctx.entityDefaultTags,
   });
-  if (!probe || !transactionChanged(tx, probe.processed)) {
+  if (!probe) {
     buckets.matched.push(tx);
     return false;
   }
 
-  // It changes something, so it really did apply: run it again for the usage
+  // The computed row is what gets kept, never the input — a correction that
+  // rewrote only the tags or the location produced real output, and pushing
+  // `tx` here would silently revert it on every run. What the comparison
+  // decides is the usage credit, nothing else.
+  if (!correctionApplicationChanged(tx, probe.processed)) {
+    buckets.matched.push(probe.processed);
+    return false;
+  }
+
+  // It did something, so it really did apply: run it again for the usage
   // counters. Only rows that actually move pay the second computation, and the
   // second run of an idempotent re-evaluation pays it on none of them.
   const correctionApplied =
@@ -190,5 +199,7 @@ export function reapplyCorrectionToMatched(
       entityDefaultTags: ctx.entityDefaultTags,
     }) ?? probe;
   buckets.matched.push(correctionApplied.processed);
-  return true;
+  // `affectedCount` keeps its narrower meaning: a tag-only rewrite is a real
+  // application but not a classification change, so it is not an affected row.
+  return transactionChanged(tx, correctionApplied.processed);
 }
