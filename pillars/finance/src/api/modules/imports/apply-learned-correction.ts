@@ -72,6 +72,15 @@ function toMatchedRules(rules: CorrectionRow[]): MatchedRule[] {
   }));
 }
 
+/**
+ * `ApplyLearnedCorrectionArgs` plus the sink that collects the tag rules the
+ * suggestion pass matched, so usage can be credited after the outcome is known
+ * without running the match a second time.
+ */
+type ApplyArgs = ApplyLearnedCorrectionArgs & {
+  collectTagRules: (ruleIds: readonly string[]) => void;
+};
+
 interface TypeOnlyMatchArgs {
   db: FinanceDb;
   transaction: ParsedTransaction;
@@ -79,10 +88,11 @@ interface TypeOnlyMatchArgs {
   matchedRules: MatchedRule[];
   knownTags: string[];
   status: CorrectionMatchStatus;
+  collectTagRules: (ruleIds: readonly string[]) => void;
 }
 
 function buildTypeOnlyMatch(args: TypeOnlyMatchArgs): ProcessedTransaction {
-  const { db, transaction, correction, matchedRules, knownTags, status } = args;
+  const { db, transaction, correction, matchedRules, knownTags, status, collectTagRules } = args;
   return {
     ...transaction,
     location: correction.location ?? transaction.location,
@@ -105,6 +115,7 @@ function buildTypeOnlyMatch(args: TypeOnlyMatchArgs): ProcessedTransaction {
       knownTags,
       correctionPattern: correction.descriptionPattern,
       recordTagRuleUsage: false,
+      onTagRulesMatched: collectTagRules,
     }),
   };
 }
@@ -118,6 +129,7 @@ interface EntityMatchArgs {
   entityId: string;
   knownTags: string[];
   entityDefaultTags: ReadonlyMap<string, string[]>;
+  collectTagRules: (ruleIds: readonly string[]) => void;
 }
 
 function buildEntityMatch(args: EntityMatchArgs): ProcessedTransaction {
@@ -149,13 +161,14 @@ function buildEntityMatch(args: EntityMatchArgs): ProcessedTransaction {
       correctionPattern: correction.descriptionPattern,
       entityDefaultTags: args.entityDefaultTags,
       recordTagRuleUsage: false,
+      onTagRulesMatched: args.collectTagRules,
     }),
   };
 }
 
 function handleNoEntityCorrection(
   db: FinanceDb,
-  args: ApplyLearnedCorrectionArgs,
+  args: ApplyArgs,
   correction: CorrectionRow,
   matchedRules: MatchedRule[]
 ): ApplyLearnedCorrectionResult | null {
@@ -169,6 +182,7 @@ function handleNoEntityCorrection(
       matchedRules,
       knownTags: args.knownTags,
       status,
+      collectTagRules: args.collectTagRules,
     }),
     bucket: status,
   };
@@ -196,7 +210,7 @@ export function correctionOutcomeBucket(correction: CorrectionRow): 'matched' | 
  */
 function resolveApplyResult(
   db: FinanceDb,
-  args: ApplyLearnedCorrectionArgs,
+  args: ApplyArgs,
   correction: CorrectionRow,
   matchedRules: MatchedRule[]
 ): ApplyLearnedCorrectionResult | null {
@@ -214,6 +228,7 @@ function resolveApplyResult(
       entityId,
       knownTags: args.knownTags,
       entityDefaultTags: args.entityDefaultTags ?? new Map(),
+      collectTagRules: args.collectTagRules,
     }),
     bucket: status === 'matched' ? 'matched' : 'uncertain',
   };
@@ -240,8 +255,10 @@ function resolveApplyResult(
  *
  * Crediting happens after the outcome is built, never during it — that is what
  * lets `countsAsUsage` see the outcome — so the matching tag rules are credited
- * here too (`creditTagRuleUsage`) rather than inside the suggestion pass, and
- * both counters move under exactly the same condition.
+ * here too rather than inside the suggestion pass, and both counters move under
+ * exactly the same condition. The suggestion pass reports which rules it
+ * matched (`onTagRulesMatched`) instead of being asked again, so deferring the
+ * decision costs no extra query.
  */
 export function applyLearnedCorrection(
   db: FinanceDb,
@@ -261,11 +278,17 @@ export function applyLearnedCorrection(
   if (!correction) return null;
 
   const matchedRules = toMatchedRules(allMatchingRules);
-  const result = resolveApplyResult(db, args, correction, matchedRules);
+  const matchedTagRuleIds: string[] = [];
+  const result = resolveApplyResult(
+    db,
+    { ...args, collectTagRules: (ids) => matchedTagRuleIds.push(...ids) },
+    correction,
+    matchedRules
+  );
 
   if (result && !args.isPreview && (args.countsAsUsage?.(result) ?? true)) {
     transactionCorrectionsService.incrementTransactionCorrectionUsage(db, correction.id);
-    creditTagRuleUsage(db, transaction.description, result.processed.entity.entityId ?? null);
+    creditTagRuleUsage(db, matchedTagRuleIds);
   }
 
   return result;
