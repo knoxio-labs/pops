@@ -566,13 +566,10 @@ interface SyncResultWire {
 }
 
 interface PlexFriendWire {
-  id: number;
   uuid: string;
-  title: string;
-  username: string;
-  thumb: string | null;
-  restricted: boolean;
-  home: boolean;
+  username: string | null;
+  displayName: string | null;
+  avatar: string | null;
 }
 
 interface RotationSettingsWire {
