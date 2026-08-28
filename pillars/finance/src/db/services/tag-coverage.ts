@@ -57,12 +57,31 @@ interface FacetExpectation {
   spendOnly: boolean;
 }
 
-const REQUIRED_FACETS = new Set<string>(['venue', 'occasion', 'contains']);
+/**
+ * The facets a spend row is required to carry.
+ *
+ * `venue` is measured but NOT required (POPS-2607). A great deal of spend
+ * happens at no place at all — a toll, a subscription, an online service, a
+ * payment processor — and there is no honest venue value for those. The two
+ * ways to make the axis total were both worse: inventing `venue:online` would
+ * restate what `channel:online` already says, which is the redundancy the
+ * `occasion:admin` retirement had just deleted, and gating `venue` on
+ * `channel` would need `channel` populated first, which it is not. So `venue`
+ * is a partial axis, deliberately, and the count below says how partial.
+ */
+const REQUIRED_FACETS = new Set<string>(['occasion', 'contains']);
+
+/**
+ * The facets that describe money spent ON something, so cannot apply to a
+ * transfer or a fee. Wider than {@link REQUIRED_FACETS}: `venue` is not
+ * required, but where it is absent that is still only meaningful for spend.
+ */
+const SPEND_ONLY_FACETS = new Set<string>(['venue', 'occasion', 'contains']);
 
 const FACET_EXPECTATIONS: readonly FacetExpectation[] = CLOSED_TAG_FACETS.map((closed) => ({
   facet: closed.facet,
   required: REQUIRED_FACETS.has(closed.facet),
-  spendOnly: REQUIRED_FACETS.has(closed.facet),
+  spendOnly: SPEND_ONLY_FACETS.has(closed.facet),
 }));
 
 /** Coverage of one closed facet across the ledger. */

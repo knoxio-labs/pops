@@ -137,6 +137,46 @@ describe('measureTagCoverage — the addressable set', () => {
   });
 });
 
+describe('measureTagCoverage — venue is measured but not required', () => {
+  // A toll, a subscription, an online service: real spend at no place at all.
+  // Requiring a venue there would force inventing a value that restates
+  // `channel:online`, so the axis is deliberately partial (POPS-2607).
+  it('still counts venue coverage, so the partial axis is visible', () => {
+    txn('E-TOLL PAYMENT', ['occasion:admin-free', 'contains:tolls']);
+    txn('PALMS ON OXFORD', ['venue:pub', 'occasion:out', 'contains:alcohol']);
+
+    const venue = facet(measure(), 'venue');
+
+    expect(venue).toMatchObject({ required: false, addressable: 2, covered: 1, missing: 1 });
+  });
+
+  it('does not call a row incomplete for want of a venue', () => {
+    txn('GOOGLE *YOUTUBEPREMIUM', ['occasion:home', 'contains:subscription']);
+
+    const coverage = measure(['occasion:home', 'contains:subscription']);
+
+    expect(tagCoverageService.isCoverageComplete(coverage)).toBe(true);
+  });
+
+  it('keeps a descriptor missing only venue off the rule worklist', () => {
+    txn('CURSOR, AI POWERED IDE', ['occasion:work', 'contains:software']);
+
+    expect(measure().gaps).toEqual([]);
+  });
+
+  it('still lists a descriptor missing a required facet alongside venue', () => {
+    txn('PAYPAL *PYPL PAYIN4', []);
+
+    expect(measure().gaps).toEqual([
+      {
+        description: 'PAYPAL *PYPL PAYIN4',
+        transactions: 1,
+        missingFacets: ['contains', 'occasion'],
+      },
+    ]);
+  });
+});
+
 describe('measureTagCoverage — cardinality', () => {
   it('reports a stored two-venue row as a violation and still counts it covered', () => {
     txn('LUCKY CAT', ['venue:restaurant', 'venue:bar', 'occasion:out']);
