@@ -19,6 +19,7 @@ export { budgets } from './schema/budgets.js';
 export { transactionCorrections } from './schema/corrections.js';
 export { entityPrecreateOutbox } from './schema/entity-precreate-outbox.js';
 export { importCommits } from './schema/import-commits.js';
+export { tagRuleRejections } from './schema/tag-rule-rejections.js';
 export { tagVocabulary } from './schema/tag-vocabulary.js';
 export { settings } from './schema/settings.js';
 export { transactionTagRules } from './schema/transaction-tag-rules.js';

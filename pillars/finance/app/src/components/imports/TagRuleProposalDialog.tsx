@@ -8,13 +8,7 @@ import {
   DialogTitle,
 } from '@pops/ui';
 
-import {
-  FollowUpNotice,
-  FormFields,
-  ImpactPreview,
-  NewTagsPanel,
-  RejectPanel,
-} from './tag-rule-dialog/DialogBody';
+import { FormFields, ImpactPreview, NewTagsPanel, RejectPanel } from './tag-rule-dialog/DialogBody';
 import { useTagRuleProposal } from './tag-rule-dialog/useTagRuleProposal';
 
 import type {
@@ -76,7 +70,6 @@ function DialogContentBody({ state }: BodyProps) {
   const { form, proposal, proposeQuery, newTagNames } = state;
   return (
     <div className="space-y-4 text-sm">
-      <FollowUpNotice visible={Boolean(form.followUpProposal)} />
       <FormFields
         pattern={form.pattern}
         matchType={form.matchType}

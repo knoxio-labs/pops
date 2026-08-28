@@ -2,8 +2,8 @@
  * Integration tests for the `tagRules.*` REST surface: vocabulary listing,
  * deterministic ChangeSet propose/preview (impact diffs, new-tag flagging,
  * userTags short-circuit, match-type semantics), apply (rule persistence +
- * vocabulary upsert, 404 on editing an unknown rule), reject (follow-up
- * proposal only when a signal is supplied), the standalone list/get/update/
+ * vocabulary upsert, 404 on editing an unknown rule), reject (message-only
+ * response, persisted feedback), the standalone list/get/update/
  * disable/delete Tag Rules browser surface (incl. a read-never-mutates
  * telemetry check), and matchPreview (full-DB usage-history preview).
  *
@@ -20,6 +20,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
   openFinanceDb,
+  tagRuleRejectionsService,
   transactions,
   transactionsService,
   type OpenedFinanceDb,
@@ -388,20 +389,46 @@ describe('tagRules — matchPreview', () => {
   });
 });
 
-describe('tagRules — reject', () => {
-  it('returns a follow-up proposal only when a signal is supplied', async () => {
-    const withSignal = await client().tagRules.reject({
-      changeSet: addOp,
-      feedback: 'too broad',
-      signal: { descriptionPattern: 'WOOLWORTHS METRO', matchType: 'contains', tags: [CUSTOM_TAG] },
-      transactions: [],
-    });
-    expect(withSignal.message).toBe('Tag rule ChangeSet rejected');
-    expect(withSignal.followUpProposal).not.toBeNull();
-    expect(withSignal.followUpProposal?.rationale).toContain('too broad');
+describe('tagRules — reject (POPS-2598)', () => {
+  it('answers with a message only — never a follow-up proposal', async () => {
+    const response = await client().tagRules.reject({ changeSet: addOp, feedback: 'too broad' });
+    expect(response.message).toBe('Rejection recorded');
+    expect(Object.keys(response)).toEqual(['message']);
+  });
 
-    const withoutSignal = await client().tagRules.reject({ changeSet: addOp, feedback: 'no' });
-    expect(withoutSignal.followUpProposal).toBeNull();
+  it('persists the rejection with the verbatim feedback and rule shape', async () => {
+    await client().tagRules.reject({ changeSet: addOp, feedback: 'Pattern is far too broad' });
+
+    const rejections = tagRuleRejectionsService.listTagRuleRejections(financeDb.db);
+    expect(rejections).toHaveLength(1);
+    const [rejection] = rejections;
+    expect(rejection?.feedback).toBe('Pattern is far too broad');
+    expect(rejection?.descriptionPattern).toBe('WOOLWORTHS');
+    expect(rejection?.matchType).toBe('contains');
+    expect(rejection?.entityId).toBeNull();
+    expect(rejection?.tags).toEqual([CUSTOM_TAG]);
+    expect(JSON.parse(rejection?.changeSet ?? 'null')).toEqual(addOp);
+  });
+
+  it('records a rejection of a ChangeSet that proposes no pattern of its own', async () => {
+    const created = await client().tagRules.apply({ changeSet: addOp, acceptedNewTags: [] });
+    const ruleId = created.rules[0]?.id ?? '';
+    const disableChangeSet = { source: 'test', ops: [{ op: 'disable', id: ruleId }] };
+
+    await client().tagRules.reject({ changeSet: disableChangeSet, feedback: 'keep it enabled' });
+
+    const [rejection] = tagRuleRejectionsService.listTagRuleRejections(financeDb.db);
+    expect(rejection?.feedback).toBe('keep it enabled');
+    expect(rejection?.descriptionPattern).toBeNull();
+    expect(rejection?.matchType).toBeNull();
+    expect(rejection?.tags).toEqual([]);
+    expect(JSON.parse(rejection?.changeSet ?? 'null')).toEqual(disableChangeSet);
+  });
+
+  it('rejects an empty feedback string', async () => {
+    await expect(
+      client().tagRules.reject({ changeSet: addOp, feedback: '' })
+    ).rejects.toMatchObject({ status: 400 });
   });
 });
 

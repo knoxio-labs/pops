@@ -5,7 +5,10 @@
  * mutations against `transaction_tag_rules`. The propose/preview paths are
  * pure deterministic computations over caller-supplied transactions; apply
  * mutates `transaction_tag_rules` (and upserts accepted vocabulary tags)
- * inside a single db transaction.
+ * inside a single db transaction. `reject` writes the refused ChangeSet and
+ * the user's reason to `tag_rule_rejections` and returns nothing else —
+ * there is no revision engine behind tag rules, so it must not claim one
+ * (POPS-2598).
  *
  * `TransactionTagRuleNotFoundError` (an edit/disable/remove op, or a direct
  * get/update/disable/delete, on an unknown id) maps to 404.
@@ -22,6 +25,7 @@ import { applyTagRuleToExistingTransactions } from '../modules/tag-rules/retroac
 import {
   applyTagRuleChangeSet,
   proposeTagRuleChangeSet,
+  recordTagRuleRejection,
   toTagRule,
 } from '../modules/tag-rules/service.js';
 import { NotFoundError } from '../shared/errors.js';
@@ -178,18 +182,8 @@ export function makeTagRulesHandlers(db: FinanceDb) {
 
     reject: ({ body }: Req['reject']) =>
       runHttp(() => {
-        const followUpProposal = body.signal
-          ? proposeTagRuleChangeSet(db, {
-              signal: body.signal,
-              transactions: body.transactions ?? [],
-              maxPreviewItems: body.maxPreviewItems,
-              rejectionFeedback: body.feedback,
-            })
-          : null;
-        return {
-          status: 200 as const,
-          body: { message: 'Tag rule ChangeSet rejected', followUpProposal },
-        };
+        recordTagRuleRejection(db, { changeSet: body.changeSet, feedback: body.feedback });
+        return { status: 200 as const, body: { message: 'Rejection recorded' } };
       }),
   };
 }

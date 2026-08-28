@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { type ReactElement } from 'react';
+import { toast } from 'sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { elementAt } from '../../test-utils';
@@ -112,12 +113,10 @@ describe('TagRuleProposalDialog', () => {
     mockPropose.mockReset();
     mockApply.mockReset();
     mockReject.mockReset();
+    vi.mocked(toast.message).mockClear();
     mockPropose.mockResolvedValue({ data: baseProposal, error: undefined });
     mockApply.mockResolvedValue({ data: { rules: [] }, error: undefined });
-    mockReject.mockResolvedValue({
-      data: { message: 'Tag rule ChangeSet rejected', followUpProposal: null },
-      error: undefined,
-    });
+    mockReject.mockResolvedValue({ data: { message: 'Rejection recorded' }, error: undefined });
   });
 
   it('issues the propose query and renders the proposal rationale', async () => {
@@ -139,7 +138,7 @@ describe('TagRuleProposalDialog', () => {
     });
   });
 
-  it('calls tagRulesReject with the changeSet, feedback, and signal on confirm', async () => {
+  it('calls tagRulesReject with the rejected changeSet and the feedback on confirm', async () => {
     renderDialog();
     await screen.findByText(/contains:WOOLWORTHS/i);
     fireEvent.click(screen.getByRole('button', { name: /reject/i }));
@@ -151,17 +150,14 @@ describe('TagRuleProposalDialog', () => {
 
     await waitFor(() => expect(mockReject).toHaveBeenCalledOnce());
     const callArg = elementAt(mockReject.mock.calls, 0)[0] as { body: Record<string, unknown> };
-    expect(callArg.body.feedback).toBe('Too broad');
-    expect(callArg.body.signal).toBeDefined();
-    expect(callArg.body.transactions).toBeDefined();
+    expect(callArg.body).toEqual({
+      changeSet: baseProposal?.changeSet,
+      feedback: 'Too broad',
+    });
   });
 
-  it('closes the dialog when rejection returns no followUpProposal', async () => {
+  it('closes the dialog and reports only that the rejection was recorded', async () => {
     const onOpenChange = vi.fn();
-    mockReject.mockResolvedValue({
-      data: { message: 'Tag rule ChangeSet rejected', followUpProposal: null },
-      error: undefined,
-    });
     renderDialog(onOpenChange);
     await screen.findByText(/contains:WOOLWORTHS/i);
 
@@ -170,59 +166,11 @@ describe('TagRuleProposalDialog', () => {
     fireEvent.change(textarea, { target: { value: 'Dismiss it' } });
     fireEvent.click(screen.getByRole('button', { name: /confirm reject/i }));
 
-    await waitFor(() => {
-      expect(onOpenChange).toHaveBeenCalledWith(false);
-    });
-  });
-
-  it('shows revised proposal banner when rejection returns a followUpProposal', async () => {
-    const onOpenChange = vi.fn();
-    const followUpProposal: ProposeData = {
-      ...baseProposal,
-      rationale:
-        'Add new tag rule (exact:WOOLWORTHS) from tag edit signal — revised after rejection: "Use exact match"',
-      changeSet: {
-        ...baseProposal.changeSet,
-        reason: 'Revised tag rule incorporating rejection feedback: Use exact match',
-      },
-    };
-    mockReject.mockResolvedValue({
-      data: { message: 'Tag rule ChangeSet rejected', followUpProposal },
-      error: undefined,
-    });
-    renderDialog(onOpenChange);
-    await screen.findByText(/contains:WOOLWORTHS/i);
-
-    fireEvent.click(screen.getByRole('button', { name: /reject/i }));
-    const textarea = await screen.findByLabelText(/feedback/i);
-    fireEvent.change(textarea, { target: { value: 'Use exact match' } });
-    fireEvent.click(screen.getByRole('button', { name: /confirm reject/i }));
-
-    await waitFor(() => {
-      // The revised-proposal banner must appear.
-      expect(screen.getByText(/revised proposal based on your feedback/i)).toBeDefined();
-    });
-    // The dialog must NOT close.
-    expect(onOpenChange).not.toHaveBeenCalledWith(false);
-  });
-
-  it('does not close the dialog when a follow-up proposal is shown', async () => {
-    const onOpenChange = vi.fn();
-    mockReject.mockResolvedValue({
-      data: { message: 'Tag rule ChangeSet rejected', followUpProposal: baseProposal },
-      error: undefined,
-    });
-    renderDialog(onOpenChange);
-    await screen.findByText(/contains:WOOLWORTHS/i);
-
-    fireEvent.click(screen.getByRole('button', { name: /reject/i }));
-    const textarea = await screen.findByLabelText(/feedback/i);
-    fireEvent.change(textarea, { target: { value: 'Some feedback' } });
-    fireEvent.click(screen.getByRole('button', { name: /confirm reject/i }));
-
-    await waitFor(() =>
-      expect(screen.getByText(/revised proposal based on your feedback/i)).toBeDefined()
-    );
-    expect(onOpenChange).not.toHaveBeenCalledWith(false);
+    await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+    expect(toast.message).toHaveBeenCalledWith('Rejection recorded');
+    // The toast must not claim a revision the endpoint cannot perform (POPS-2598).
+    for (const [text] of vi.mocked(toast.message).mock.calls) {
+      expect(text).not.toMatch(/revis/i);
+    }
   });
 });

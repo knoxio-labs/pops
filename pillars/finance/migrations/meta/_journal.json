@@ -134,6 +134,13 @@
       "when": 1781913600012,
       "tag": "0067_tag_namespace",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1781913600013,
+      "tag": "0068_tag_rule_rejections",
+      "breakpoints": true
     }
   ]
 }

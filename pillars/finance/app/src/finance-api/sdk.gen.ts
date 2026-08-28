@@ -978,7 +978,7 @@ export const tagRulesPropose = <ThrowOnError extends boolean = false>(
   });
 
 /**
- * Reject a ChangeSet with feedback; optionally returns a revised follow-up proposal
+ * Reject a ChangeSet, recording the feedback against the refused ChangeSet
  */
 export const tagRulesReject = <ThrowOnError extends boolean = false>(
   options?: Options<TagRulesRejectData, ThrowOnError>

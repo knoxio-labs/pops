@@ -24,8 +24,6 @@ interface FormState {
   setRejectFeedback: React.Dispatch<React.SetStateAction<string>>;
   acceptedNewTags: Set<string>;
   setAcceptedNewTags: React.Dispatch<React.SetStateAction<Set<string>>>;
-  followUpProposal: ProposeOutput | null;
-  setFollowUpProposal: React.Dispatch<React.SetStateAction<ProposeOutput | null>>;
 }
 
 function useFormState(): FormState {
@@ -35,7 +33,6 @@ function useFormState(): FormState {
   const [rejectOpen, setRejectOpen] = useState(false);
   const [rejectFeedback, setRejectFeedback] = useState('');
   const [acceptedNewTags, setAcceptedNewTags] = useState<Set<string>>(new Set());
-  const [followUpProposal, setFollowUpProposal] = useState<ProposeOutput | null>(null);
   return {
     pattern,
     setPattern,
@@ -49,8 +46,6 @@ function useFormState(): FormState {
     setRejectFeedback,
     acceptedNewTags,
     setAcceptedNewTags,
-    followUpProposal,
-    setFollowUpProposal,
   };
 }
 
@@ -88,7 +83,6 @@ function useResetOnOpen(props: TagRuleProposalDialogProps, form: FormState) {
     setRejectOpen,
     setRejectFeedback,
     setAcceptedNewTags,
-    setFollowUpProposal,
   } = form;
   useEffect(() => {
     if (!props.open || !props.signal) return;
@@ -98,7 +92,6 @@ function useResetOnOpen(props: TagRuleProposalDialogProps, form: FormState) {
     setRejectOpen(false);
     setRejectFeedback('');
     setAcceptedNewTags(new Set());
-    setFollowUpProposal(null);
   }, [
     props.open,
     props.signal,
@@ -108,7 +101,6 @@ function useResetOnOpen(props: TagRuleProposalDialogProps, form: FormState) {
     setRejectOpen,
     setRejectFeedback,
     setAcceptedNewTags,
-    setFollowUpProposal,
   ]);
 }
 
@@ -145,7 +137,7 @@ export function useTagRuleProposal(props: TagRuleProposalDialogProps) {
     staleTime: 0,
     retry: false,
   });
-  const proposal: ProposeOutput | undefined = form.followUpProposal ?? proposeQuery.data;
+  const proposal: ProposeOutput | undefined = proposeQuery.data;
   useResetOnOpen(props, form);
   useSyncAcceptedTags(proposal, form.setAcceptedNewTags);
   const newTagNames = useMemo(() => collectNewTagNames(proposal), [proposal]);

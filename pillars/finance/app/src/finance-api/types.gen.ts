@@ -4790,19 +4790,6 @@ export type TagRulesRejectData = {
       source?: string;
     };
     feedback: string;
-    maxPreviewItems: number;
-    signal?: {
-      descriptionPattern: string;
-      entityId?: string | null;
-      matchType: 'exact' | 'contains' | 'regex';
-      tags: Array<string>;
-    };
-    transactions?: Array<{
-      description: string;
-      entityId?: string | null;
-      transactionId: string;
-      userTags?: Array<string>;
-    }>;
   };
   path?: never;
   query?: never;
@@ -4843,73 +4830,6 @@ export type TagRulesRejectResponses = {
    * 200
    */
   200: {
-    followUpProposal: {
-      changeSet: {
-        ops: Array<
-          | {
-              data: {
-                confidence?: number;
-                descriptionPattern: string;
-                entityId?: string | null;
-                isActive?: boolean;
-                matchType: 'exact' | 'contains' | 'regex';
-                priority?: number;
-                tags: Array<string>;
-              };
-              op: 'add';
-            }
-          | {
-              data: {
-                confidence?: number;
-                entityId?: string | null;
-                isActive?: boolean;
-                priority?: number;
-                tags?: Array<string>;
-              };
-              id: string;
-              op: 'edit';
-            }
-          | {
-              id: string;
-              op: 'disable';
-            }
-          | {
-              id: string;
-              op: 'remove';
-            }
-        >;
-        reason?: string;
-        source?: string;
-      };
-      preview: {
-        affected: Array<{
-          after: {
-            suggestedTags: Array<{
-              isNew?: boolean;
-              pattern?: string;
-              source: 'tag_rule' | 'rule' | 'ai' | 'entity';
-              tag: string;
-            }>;
-          };
-          before: {
-            suggestedTags: Array<{
-              isNew?: boolean;
-              pattern?: string;
-              source: 'tag_rule' | 'rule' | 'ai' | 'entity';
-              tag: string;
-            }>;
-          };
-          description: string;
-          transactionId: string;
-        }>;
-        counts: {
-          affected: number;
-          newTagProposals: number;
-          suggestionChanges: number;
-        };
-      };
-      rationale: string;
-    } | null;
     message: string;
   };
 };
