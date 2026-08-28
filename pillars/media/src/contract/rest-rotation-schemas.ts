@@ -121,13 +121,10 @@ export const SyncSourceResultSchema = z.object({
 export const SourceTypesSchema = z.object({ types: z.array(z.string()) });
 
 export const PlexFriendSchema = z.object({
-  id: z.number(),
   uuid: z.string(),
-  title: z.string(),
-  username: z.string(),
-  thumb: z.string().nullable(),
-  restricted: z.boolean(),
-  home: z.boolean(),
+  username: z.string().nullable(),
+  displayName: z.string().nullable(),
+  avatar: z.string().nullable(),
 });
 
 export const PlexFriendsResultSchema = z.object({

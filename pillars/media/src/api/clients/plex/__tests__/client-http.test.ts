@@ -5,7 +5,13 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { getAbsolute, getPath, putAbsolute, redactPlexToken } from '../client-http.js';
+import {
+  getAbsolute,
+  getPath,
+  postAbsolute,
+  putAbsolute,
+  redactPlexToken,
+} from '../client-http.js';
 import { PlexApiError } from '../types.js';
 
 const TOKEN = 'sUpErSeCrEtToKeN123';
@@ -98,6 +104,38 @@ describe('getAbsolute — credentials', () => {
   });
 });
 
+describe('postAbsolute — credentials and body', () => {
+  it('sends the token as a header, a JSON content type and the serialized body', async () => {
+    await postAbsolute(
+      'https://community.plex.tv/api',
+      { query: '{ me }' },
+      { auth: { token: TOKEN } }
+    );
+    const { url, init } = lastCall();
+    expect(init.method).toBe('POST');
+    expect(init.body).toBe(JSON.stringify({ query: '{ me }' }));
+    expect(headersOf(init)['content-type']).toBe('application/json');
+    expect(headersOf(init)['x-plex-token']).toBe(TOKEN);
+    expect(url).not.toContain(TOKEN);
+  });
+
+  it('raises a PlexApiError carrying the upstream status', async () => {
+    stubFetch(
+      () => new Response('You must provide a token!', { status: 401, statusText: 'Unauthorized' })
+    );
+
+    const err = await postAbsolute(
+      'https://community.plex.tv/api',
+      {},
+      { context: 'Plex friends API' }
+    ).catch((e: unknown) => e);
+
+    expect(err).toBeInstanceOf(PlexApiError);
+    expect((err as PlexApiError).status).toBe(401);
+    expect((err as PlexApiError).message).toContain('You must provide a token!');
+  });
+});
+
 describe('token never reaches an error message', () => {
   it('redacts the token when fetch throws with the URL in its message', async () => {
     stubFetch(() => {
@@ -159,5 +197,24 @@ describe('token never reaches an error message', () => {
     expect(init.method).toBe('PUT');
     expect(headersOf(init)['x-plex-token']).toBe(TOKEN);
     expect(url).not.toContain(TOKEN);
+  });
+
+  it('applies the same guarantees to postAbsolute', async () => {
+    stubFetch(
+      () =>
+        new Response(`upstream rejected ?X-Plex-Token=${TOKEN}`, {
+          status: 500,
+          statusText: 'Server Error',
+        })
+    );
+
+    const err = await postAbsolute(
+      'https://community.plex.tv/api',
+      {},
+      { auth: { token: TOKEN } }
+    ).catch((e: unknown) => e);
+
+    expect((err as PlexApiError).message).not.toContain(TOKEN);
+    expect((err as PlexApiError).message).toContain('[redacted]');
   });
 });
