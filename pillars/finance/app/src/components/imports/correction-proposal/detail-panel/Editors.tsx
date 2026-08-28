@@ -1,5 +1,6 @@
 import { Input, Label, Select } from '@pops/ui';
 
+import { DigitPatternNotice } from '../../../rules/DigitPatternNotice';
 import { EntityField, type EntityOutcome } from './EntityField';
 import { MATCH_TYPE_OPTIONS, parseTxnType, TYPE_OPTIONS } from './TypeOptions';
 
@@ -84,6 +85,7 @@ export function RuleDataEditor(props: {
           options={MATCH_TYPE_OPTIONS}
           disabled={disabled}
         />
+        <DigitPatternNotice pattern={data.descriptionPattern} matchType={data.matchType} />
       </div>
       <OutcomeFields data={data} onChange={onChange} disabled={disabled} />
     </div>

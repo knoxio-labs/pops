@@ -104,3 +104,98 @@ export function patternMatchesNormalizedDescription(
     ? normalizedDescription === normalizedPattern
     : normalizedDescription.includes(normalizedPattern);
 }
+
+function isDigit(char: string | undefined): boolean {
+  return char !== undefined && char >= '0' && char <= '9';
+}
+
+/** Length of the escape sequence starting at `pattern[index]` (a backslash). */
+function escapeLength(pattern: string, index: number): number {
+  const kind = pattern[index + 1];
+  if (kind === 'x') return 4;
+  if (kind === 'c') return 3;
+  if (kind === 'u' || kind === 'p' || kind === 'P') {
+    if (pattern[index + 2] !== '{') return kind === 'u' ? 6 : 2;
+    const close = pattern.indexOf('}', index + 3);
+    return close === -1 ? pattern.length - index : close - index + 1;
+  }
+  return 2;
+}
+
+/** Length of a `{m}` / `{m,}` / `{m,n}` quantifier at `index`, or 0 if it isn't one. */
+function quantifierLength(pattern: string, index: number): number {
+  const close = pattern.indexOf('}', index + 1);
+  if (close === -1) return 0;
+  const body = pattern.slice(index + 1, close);
+  return /^\d+(,\d*)?$/.test(body) ? close - index + 1 : 0;
+}
+
+interface ClassScan {
+  length: number;
+  expectsDigits: boolean;
+}
+
+/** Scan the character class starting at `pattern[index]` (a `[`). */
+function scanCharacterClass(pattern: string, index: number): ClassScan {
+  let cursor = index + 1;
+  const negated = pattern[cursor] === '^';
+  if (negated) cursor += 1;
+
+  let expectsDigits = false;
+  while (cursor < pattern.length && pattern[cursor] !== ']') {
+    if (pattern[cursor] === '\\') {
+      if (pattern[cursor + 1] === 'd') expectsDigits = true;
+      cursor += escapeLength(pattern, cursor);
+      continue;
+    }
+    if (isDigit(pattern[cursor])) expectsDigits = true;
+    cursor += 1;
+  }
+  return {
+    length: cursor >= pattern.length ? pattern.length - index : cursor - index + 1,
+    expectsDigits: expectsDigits && !negated,
+  };
+}
+
+/**
+ * Does `pattern` contain a construct that can only be satisfied by a digit in
+ * the subject — `\d`, a literal digit, or a character class holding either?
+ *
+ * Descriptions reach {@link patternMatchesNormalizedDescription} already
+ * digit-stripped by {@link normalizeDescription}, so such a construct is dead:
+ * a rule whose match depends on it can never fire, silently (POPS-2622). This
+ * is the signal an authoring surface shows next to a zero-match preview; it is
+ * deliberately not an error, because the digit construct may sit in an
+ * alternation branch that does not gate the match.
+ *
+ * Quantifier digits (`A{2,3}`), negated classes (`[^0-9]`, which matches
+ * fine), `\D`, and digits inside `\xHH` / `\uHHHH` / `\p{...}` escapes are not
+ * digit expectations and do not trigger it.
+ */
+export function regexPatternExpectsDigits(pattern: string): boolean {
+  let index = 0;
+  while (index < pattern.length) {
+    const char = pattern[index];
+    if (char === '\\') {
+      if (pattern[index + 1] === 'd') return true;
+      index += escapeLength(pattern, index);
+      continue;
+    }
+    if (char === '[') {
+      const scan = scanCharacterClass(pattern, index);
+      if (scan.expectsDigits) return true;
+      index += scan.length;
+      continue;
+    }
+    if (char === '{') {
+      const quantifier = quantifierLength(pattern, index);
+      if (quantifier > 0) {
+        index += quantifier;
+        continue;
+      }
+    }
+    if (isDigit(char)) return true;
+    index += 1;
+  }
+  return false;
+}
