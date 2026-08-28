@@ -2,7 +2,7 @@
  * Plex Media Server HTTP client.
  *
  * Typed wrapper around the Plex Media Server API (authenticated via the
- * `X-Plex-Token` query param). The connection surface (`getLibraries`,
+ * `X-Plex-Token` header). The connection surface (`getLibraries`,
  * slice 9a) and the sync surface (`getAllItems` / `getItemDetail` /
  * `getEpisodes`, slice 9b) live here; the Plex Discover (cloud) endpoints
  * stay deferred until the rotation/discover domain lands (wave 3).

@@ -30,18 +30,21 @@ interface RouteRule {
   handler: RouteHandler;
 }
 
+interface RecordedCall {
+  method: string;
+  url: string;
+  body: unknown;
+  headers: Record<string, string>;
+}
+
 let routes: RouteRule[];
-let calls: { method: string; url: string; body: unknown }[];
+let calls: RecordedCall[];
 
 function route(method: string, match: string, handler: RouteHandler): void {
   routes.push({ method, match, handler });
 }
 
-function requireCall(predicate: (c: { method: string; url: string; body: unknown }) => boolean): {
-  method: string;
-  url: string;
-  body: unknown;
-} {
+function requireCall(predicate: (c: RecordedCall) => boolean): RecordedCall {
   const call = calls.find(predicate);
   if (!call) throw new Error('expected an upstream Plex call but none matched');
   return call;
@@ -59,7 +62,11 @@ const fetchMock = vi.fn((input: string | URL | Request, init?: RequestInit): Pro
   const url = typeof input === 'string' ? input : input.toString();
   const method = (init?.method ?? 'GET').toUpperCase();
   const parsedBody: unknown = typeof init?.body === 'string' ? JSON.parse(init.body) : undefined;
-  calls.push({ method, url, body: parsedBody });
+  const headers: Record<string, string> = {};
+  for (const [k, v] of Object.entries((init?.headers ?? {}) as Record<string, string>)) {
+    headers[k.toLowerCase()] = v;
+  }
+  calls.push({ method, url, body: parsedBody, headers });
   const rule = routes.find((r) => r.method === method && url.includes(r.match));
   if (!rule) return Promise.resolve(jsonResponse({ error: `unmatched ${method} ${url}` }, 404));
   const res = rule.handler({ method, body: parsedBody });
@@ -136,9 +143,9 @@ describe('plex — connection', () => {
     stubLibraries();
     const res = await client().plex.testConnection();
     expect(res.data).toEqual({ connected: true });
-    expect(requireCall((c) => c.url.includes('/library/sections')).url).toContain(
-      'X-Plex-Token=raw-token'
-    );
+    const call = requireCall((c) => c.url.includes('/library/sections'));
+    expect(call.headers['x-plex-token']).toBe('raw-token');
+    expect(call.url).not.toContain('raw-token');
   });
 
   it('testConnection returns connected:false when the server errors', async () => {

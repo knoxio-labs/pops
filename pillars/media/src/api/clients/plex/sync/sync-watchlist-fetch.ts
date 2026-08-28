@@ -5,7 +5,8 @@
  * client id) rather than a `PlexClient` method because the watchlist lives on
  * the Plex cloud, not the local Media Server.
  */
-import { PlexApiError, type PlexMediaItem } from '../types.js';
+import { getAbsolute } from '../client-http.js';
+import { type PlexMediaItem } from '../types.js';
 
 const PLEX_DISCOVER_BASE = 'https://discover.provider.plex.tv';
 const WATCHLIST_PAGE_SIZE = 50;
@@ -32,27 +33,13 @@ async function fetchPlexWatchlistPage(
 ): Promise<PlexWatchlistResponse> {
   const url =
     `${PLEX_DISCOVER_BASE}/library/sections/watchlist/all` +
-    `?X-Plex-Token=${encodeURIComponent(token)}` +
-    `&X-Plex-Client-Identifier=${encodeURIComponent(clientId)}` +
-    `&X-Plex-Container-Start=${start}` +
+    `?X-Plex-Container-Start=${start}` +
     `&X-Plex-Container-Size=${size}`;
 
-  let response: Response;
-  try {
-    response = await fetch(url, { method: 'GET', headers: { Accept: 'application/json' } });
-  } catch (err) {
-    throw new PlexApiError(
-      0,
-      `Network error fetching Plex watchlist: ${err instanceof Error ? err.message : String(err)}`
-    );
-  }
-  if (!response.ok) {
-    throw new PlexApiError(
-      response.status,
-      `Plex Discover API error: ${response.status} ${response.statusText}`
-    );
-  }
-  return (await response.json()) as PlexWatchlistResponse;
+  return getAbsolute<PlexWatchlistResponse>(url, {
+    auth: { token, clientId },
+    context: 'Plex Discover API',
+  });
 }
 
 function parseGuids(
