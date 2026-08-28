@@ -136,6 +136,18 @@ function vocabularyTags(): string[] {
   return rows.map((r) => r.tag);
 }
 
+function storedTags(): string[][] {
+  const rows = financeDb.raw.prepare('SELECT tags FROM transactions').all() as { tags: string }[];
+  return rows.map((r) => JSON.parse(r.tags) as string[]);
+}
+
+function tagRuleTags(): string[] {
+  const rows = financeDb.raw.prepare('SELECT tags FROM transaction_tag_rules').all() as {
+    tags: string;
+  }[];
+  return rows.flatMap((r) => JSON.parse(r.tags) as string[]);
+}
+
 /** Seed a pre-existing transaction directly (the REST surface has no write path outside `commitImport`). */
 function seedTransaction(overrides: {
   description: string;
@@ -1080,18 +1092,115 @@ describe('imports.commitImport — pre-create contacts then write the finance tx
     ]);
   });
 
-  it('upserts only the new tags the user accepted, never a declined one (POPS-2597)', async () => {
+  it('keeps only the accepted tag on the rule and in the vocabulary, never a declined one (POPS-2597, POPS-2643)', async () => {
     const c = client();
     await c.imports.commitImport({
       tagRuleChangeSets: [stagedTagRule('ACCEPT_DECLINE', ['KeptTag', 'DeclinedTag'], ['KeptTag'])],
       transactions: [confirmed({ description: 'ACCEPT_DECLINE 1', checksum: 'commit-accepted' })],
     });
 
+    expect(tagRuleTags()).toEqual(['KeptTag']);
     expect(vocabularyTags()).toContain('KeptTag');
     expect(vocabularyTags()).not.toContain('DeclinedTag');
   });
 
-  it('upserts every ChangeSet tag when no accept/decline set is supplied', async () => {
+  it('drops an add op down to nothing rather than writing an empty tags array, and still succeeds (POPS-2643)', async () => {
+    const c = client();
+    const res = await c.imports.commitImport({
+      tagRuleChangeSets: [stagedTagRule('ALL_DECLINED', ['DeclinedOne', 'DeclinedTwo'], [])],
+      transactions: [confirmed({ description: 'ALL_DECLINED 1', checksum: 'commit-all-declined' })],
+    });
+
+    expect(res.data.tagRulesApplied).toBe(0);
+    expect(storedTagRules('ALL_DECLINED')).toEqual([]);
+    expect(vocabularyTags()).not.toContain('DeclinedOne');
+    expect(vocabularyTags()).not.toContain('DeclinedTwo');
+  });
+
+  it('filters a declined tag out of an edit op the same way as an add op (POPS-2643)', async () => {
+    const c = client();
+    await c.imports.commitImport({
+      tagRuleChangeSets: [{ changeSet: tagRuleChangeSet('EDIT_ACCEPT_DECLINE', ['SeedTag']) }],
+      transactions: [
+        confirmed({ description: 'EDIT_ACCEPT_DECLINE 1', checksum: 'commit-edit-seed' }),
+      ],
+    });
+    const ruleId = (
+      financeDb.raw
+        .prepare('SELECT id FROM transaction_tag_rules WHERE description_pattern = ?')
+        .get('EDIT_ACCEPT_DECLINE') as { id: string }
+    ).id;
+
+    await c.imports.commitImport({
+      tagRuleChangeSets: [
+        {
+          changeSet: {
+            source: 'unit-test',
+            ops: [{ op: 'edit', id: ruleId, data: { tags: ['EditKeptTag', 'EditDeclinedTag'] } }],
+          },
+          acceptedNewTags: ['EditKeptTag'],
+        },
+      ],
+      transactions: [
+        confirmed({ description: 'EDIT_ACCEPT_DECLINE 2', checksum: 'commit-edit-decline' }),
+      ],
+    });
+
+    expect(tagRuleTags()).toEqual(['EditKeptTag']);
+    expect(vocabularyTags()).toContain('EditKeptTag');
+    expect(vocabularyTags()).not.toContain('EditDeclinedTag');
+  });
+
+  it('leaves an edit op declined down to nothing off the applied ChangeSet, and still succeeds (POPS-2643)', async () => {
+    const c = client();
+    await c.imports.commitImport({
+      tagRuleChangeSets: [{ changeSet: tagRuleChangeSet('EDIT_ALL_DECLINED', ['SeedTag']) }],
+      transactions: [
+        confirmed({ description: 'EDIT_ALL_DECLINED 1', checksum: 'commit-edit-all-seed' }),
+      ],
+    });
+    const ruleId = (
+      financeDb.raw
+        .prepare('SELECT id FROM transaction_tag_rules WHERE description_pattern = ?')
+        .get('EDIT_ALL_DECLINED') as { id: string }
+    ).id;
+
+    const res = await c.imports.commitImport({
+      tagRuleChangeSets: [
+        {
+          changeSet: {
+            source: 'unit-test',
+            ops: [{ op: 'edit', id: ruleId, data: { tags: ['EditDeclinedOnly'] } }],
+          },
+          acceptedNewTags: [],
+        },
+      ],
+      transactions: [
+        confirmed({ description: 'EDIT_ALL_DECLINED 2', checksum: 'commit-edit-all-declined' }),
+      ],
+    });
+
+    expect(res.data.tagRulesApplied).toBe(0);
+    expect(tagRuleTags()).toEqual(['SeedTag']);
+    expect(vocabularyTags()).not.toContain('EditDeclinedOnly');
+  });
+
+  it('drops a declined marker from the rule exactly like a declined open tag (POPS-2643)', async () => {
+    const c = client();
+    await c.imports.commitImport({
+      tagRuleChangeSets: [
+        stagedTagRule('MARKER_DECLINE', ['KeptTag', 'enrich:declined-source'], ['KeptTag']),
+      ],
+      transactions: [
+        confirmed({ description: 'MARKER_DECLINE 1', checksum: 'commit-marker-decline' }),
+      ],
+    });
+
+    expect(tagRuleTags()).toEqual(['KeptTag']);
+    expect(vocabularyTags()).not.toContain('enrich:declined-source');
+  });
+
+  it('upserts every ChangeSet tag onto the rule and the vocabulary when no accept/decline set is supplied (POPS-2643 boundary)', async () => {
     const c = client();
     await c.imports.commitImport({
       tagRuleChangeSets: [
@@ -1102,6 +1211,7 @@ describe('imports.commitImport — pre-create contacts then write the finance tx
       transactions: [confirmed({ description: 'NO_ACCEPT_SET 1', checksum: 'commit-batch-tags' })],
     });
 
+    expect(tagRuleTags()).toEqual(expect.arrayContaining(['BatchTagOne', 'BatchTagTwo']));
     expect(vocabularyTags()).toEqual(expect.arrayContaining(['BatchTagOne', 'BatchTagTwo']));
   });
 
@@ -1640,18 +1750,6 @@ describe('imports.commitImport — who may add to tag_vocabulary (POPS-2602)', (
     expect(second.data).toEqual(first.data);
   });
 
-  function storedTags(): string[][] {
-    const rows = financeDb.raw.prepare('SELECT tags FROM transactions').all() as { tags: string }[];
-    return rows.map((r) => JSON.parse(r.tags) as string[]);
-  }
-
-  function tagRuleTags(): string[] {
-    const rows = financeDb.raw.prepare('SELECT tags FROM transaction_tag_rules').all() as {
-      tags: string;
-    }[];
-    return rows.flatMap((r) => JSON.parse(r.tags) as string[]);
-  }
-
   it('admits an open-namespace value typed inline on a transaction', async () => {
     const c = client();
     await c.imports.commitImport({
@@ -1758,13 +1856,15 @@ describe('imports.commitImport — who may add to tag_vocabulary (POPS-2602)', (
     expect(storedTags()).toEqual([]);
   });
 
-  // A tag the user declined is the one committed tag deliberately left out of
-  // the vocabulary, so this fixture carries none — see POPS-2643.
-  it('keeps the vocabulary a superset of every committed transaction and tag-rule tag', async () => {
+  // POPS-2643 made a declined tag never reach `transaction_tag_rules` at all,
+  // so this assertion needs no carve-out for one: the superset holds over
+  // every tag actually written, including a rule staged with a decline.
+  it('keeps the vocabulary a superset of every committed transaction and tag-rule tag, with no exception for a decline', async () => {
     const c = client();
     await c.imports.commitImport({
       tagRuleChangeSets: [
         { changeSet: tagRuleChangeSet('SUPERSET RULE', ['asset:ute', 'venue:cafe']) },
+        stagedTagRule('SUPERSET DECLINE', ['SupersetKept', 'SupersetDeclined'], ['SupersetKept']),
       ],
       transactions: [
         confirmed({
@@ -1779,6 +1879,7 @@ describe('imports.commitImport — who may add to tag_vocabulary (POPS-2602)', (
     const written = [...storedTags().flat(), ...tagRuleTags()];
     expect(written.length).toBeGreaterThan(0);
     expect(written.filter((t) => !known.has(t.toLowerCase()))).toEqual([]);
+    expect(tagRuleTags()).not.toContain('SupersetDeclined');
   });
 });
 

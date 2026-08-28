@@ -34,9 +34,12 @@
  * `planCommitTagVocabulary` before the transaction opens (and before contacts
  * pre-create, which the transaction does not cover), so a payload naming a
  * value a closed namespace does not hold is refused with a 400 having written
- * nothing at all. The plan is applied as the transaction's first phase, ahead
- * of the transaction writes whose `incrementVocabularyUsage` must find those
- * rows already present.
+ * nothing at all. The same call also filters each staged tag rule's tags down
+ * to what `acceptedNewTags` allows (POPS-2643) — `applyTagRuleChangeSetsPhase`
+ * applies that filtered set, not `payload.tagRuleChangeSets` directly, so a
+ * declined tag reaches neither the rule nor the vocabulary. The upsert plan is
+ * applied as the transaction's first phase, ahead of the transaction writes
+ * whose `incrementVocabularyUsage` must find those rows already present.
  *
  * It runs AFTER the `commitKey` pre-flight below, not before it. The plan
  * validates against the vocabulary as it stands now, so validating a resubmit
@@ -113,11 +116,11 @@ function applyChangeSetsPhase(
 
 function applyTagRuleChangeSetsPhase(
   tx: FinanceDb,
-  payload: CommitPayload,
+  tagRuleChangeSets: CommitPayload['tagRuleChangeSets'],
   tempIdMap: Map<string, string>
 ): number {
   let tagRulesApplied = 0;
-  for (const entry of payload.tagRuleChangeSets) {
+  for (const entry of tagRuleChangeSets) {
     const resolved = resolveTagRuleChangeSetTempIds(entry.changeSet, tempIdMap);
     applyTagRuleChangeSet(tx, resolved);
     tagRulesApplied += resolved.ops.length;
@@ -210,7 +213,7 @@ export async function commitImport(
       enqueueOutboxCandidatesPhase(tx, outboxCandidates);
       applyCommitTagVocabulary(tx, tagPlan);
       const rulesApplied = applyChangeSetsPhase(tx, payload, tempIdMap);
-      const tagRulesApplied = applyTagRuleChangeSetsPhase(tx, payload, tempIdMap);
+      const tagRulesApplied = applyTagRuleChangeSetsPhase(tx, tagPlan.tagRuleChangeSets, tempIdMap);
       const writeResult = writeTransactionsPhase(tx, payload, tempIdMap);
 
       const retroactiveReclassifications = reclassifyExistingTransactions(

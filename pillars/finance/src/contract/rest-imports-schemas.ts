@@ -160,10 +160,13 @@ export const PendingEntitySchema = z.object({
  * new-vocabulary tags the user accepted alongside it.
  *
  * `acceptedNewTags` is the accept/decline outcome of the tag-rule dialog's
- * new-tags panel: when present, exactly those tags are upserted into
- * `tag_vocabulary`, so a tag the user unchecked never lands. When absent — the
- * batch rule-creation flow, which has no accept/decline UI — every tag the
- * ChangeSet carries is upserted (POPS-2597).
+ * new-tags panel: when present, a *new* tag (one not already in the
+ * vocabulary) the user unchecked is filtered out of the ChangeSet before it is
+ * written at all, so it lands on neither `transaction_tag_rules` nor
+ * `tag_vocabulary` (POPS-2643) — an already-known tag is never subject to this
+ * gate and always stays. When absent — the batch rule-creation flow, which has
+ * no accept/decline UI — every tag the ChangeSet carries is kept and, if new,
+ * upserted (POPS-2597).
  */
 export const CommitTagRuleChangeSetSchema = z.object({
   changeSet: TagRuleChangeSetSchema,
