@@ -1,11 +1,12 @@
 /**
  * Facet-completeness measurement over the ledger (POPS-2607).
  *
- * Fixtures model the shapes the migration actually left behind: a row with no
- * occasion, an `enrich:`-blocked row that must be excluded rather than counted
- * as a gap, an `occasion:admin` row that has an occasion but can have no venue,
- * the stored two-venue rows POPS-2606 left for this ticket to clean, and a
- * repeated merchant that wants one rule rather than one decision per row.
+ * Fixtures model the shapes the migration actually left behind: a purchase with
+ * no occasion, an `enrich:`-blocked row that must be excluded rather than
+ * counted as a gap, the non-spend rows (`transfer`, `fee`) that these facets
+ * cannot apply to at all, the stored two-venue rows POPS-2606 left for this
+ * ticket to clean, and a repeated merchant that wants one rule rather than one
+ * decision per row.
  */
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -13,6 +14,7 @@ import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { type TransactionType } from '../../contract/corrections-constants.js';
 import {
   openFinanceDb,
   tagCoverageService,
@@ -25,7 +27,11 @@ import {
 let tmpDir: string;
 let opened: OpenedFinanceDb;
 
-function txnWithRawTags(description: string, tags: string): void {
+function txnWithRawTags(
+  description: string,
+  tags: string,
+  type: TransactionType = 'purchase'
+): void {
   opened.db
     .insert(transactions)
     .values({
@@ -33,15 +39,15 @@ function txnWithRawTags(description: string, tags: string): void {
       account: 'Amex',
       amountCents: -1000,
       date: '2026-01-01',
-      type: 'purchase',
+      type,
       lastEditedTime: '2026-01-01T00:00:00.000Z',
       tags,
     })
     .run();
 }
 
-function txn(description: string, tags: string[]): void {
-  txnWithRawTags(description, JSON.stringify(tags));
+function txn(description: string, tags: string[], type: TransactionType = 'purchase'): void {
+  txnWithRawTags(description, JSON.stringify(tags), type);
 }
 
 function measure(
@@ -92,24 +98,42 @@ describe('measureTagCoverage — the addressable set', () => {
     }
   });
 
-  it('excludes occasion:admin from venue but still expects its other facets', () => {
-    txn('MONTHLY ACCOUNT FEE', ['occasion:admin', 'fee:bank']);
+  it('excludes a fee from the three spend facets while still measuring fee: on it', () => {
+    txn('INTEREST CHARGES', ['fee:interest'], 'fee');
 
     const coverage = measure();
 
-    expect(facet(coverage, 'venue').addressable).toBe(0);
-    expect(facet(coverage, 'venue').adminExcluded).toBe(1);
-    expect(facet(coverage, 'occasion')).toMatchObject({ addressable: 1, covered: 1, missing: 0 });
-    expect(facet(coverage, 'contains')).toMatchObject({ addressable: 1, missing: 1 });
+    for (const name of ['venue', 'occasion', 'contains'] as const) {
+      expect(facet(coverage, name).addressable).toBe(0);
+      expect(facet(coverage, name).nonSpendExcluded).toBe(1);
+    }
+    expect(facet(coverage, 'fee')).toMatchObject({ addressable: 1, covered: 1, missing: 0 });
   });
 
-  it('does not let an enrich: row be double-counted as an admin exclusion', () => {
-    txn('AMAZON MARKETPLACE AU', ['enrich:pending', 'occasion:admin']);
+  it('excludes a transfer — the same dollars are counted where they were spent', () => {
+    txn('PayID Payment Received, Thank you', [], 'transfer');
+
+    const occasion = facet(measure(), 'occasion');
+
+    expect(occasion.addressable).toBe(0);
+    expect(occasion.nonSpendExcluded).toBe(1);
+    expect(occasion.missing).toBe(0);
+  });
+
+  it('addresses a refund and a reversal — both are spend, just signed the other way', () => {
+    txn('REFUND MYER', ['venue:department-store'], 'refund');
+    txn('REVERSAL', ['venue:cafe'], 'reversal');
+
+    expect(facet(measure(), 'occasion')).toMatchObject({ addressable: 2, missing: 2 });
+  });
+
+  it('does not let an enrich: row be double-counted as a non-spend exclusion', () => {
+    txn('AMAZON GIFT CARD', ['enrich:pending'], 'transfer');
 
     const venue = facet(measure(), 'venue');
 
     expect(venue.enrichExcluded).toBe(1);
-    expect(venue.adminExcluded).toBe(0);
+    expect(venue.nonSpendExcluded).toBe(0);
   });
 });
 
@@ -206,6 +230,12 @@ describe('measureTagCoverage — the rule worklist', () => {
 
     expect(measure().gaps).toEqual([]);
   });
+
+  it('omits a non-spend descriptor — a transfer was not spent on anything', () => {
+    for (let i = 0; i < 11; i += 1) txn('PayID Payment Received, Thank you', [], 'transfer');
+
+    expect(measure().gaps).toEqual([]);
+  });
 });
 
 describe('isCoverageComplete', () => {
@@ -244,5 +274,11 @@ describe('isCoverageComplete', () => {
     txn('AMAZON MARKETPLACE AU', ['enrich:pending']);
 
     expect(tagCoverageService.isCoverageComplete(measure(['enrich:pending']))).toBe(true);
+  });
+
+  it('is true for a ledger of nothing but transfers, which these facets cannot describe', () => {
+    txn('PayID Payment Received, Thank you', [], 'transfer');
+
+    expect(tagCoverageService.isCoverageComplete(measure([]))).toBe(true);
   });
 });

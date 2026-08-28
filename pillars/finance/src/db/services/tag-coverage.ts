@@ -10,12 +10,20 @@
  * asserted an occasion — so the gap has to be measured before it can be closed,
  * and re-measured after every future import.
  *
- * This module only counts. It writes nothing, decides nothing, and deliberately
- * holds no opinion about whether a missing facet *should* be filled: it reports
- * the exclusions alongside the counts so both readings of "not applicable"
- * (`occasion:admin` covers it, or absence is meaningful) can be taken off one
- * output while that call is still open.
+ * Applicability is read off `type`, never off a tag. `venue:`, `occasion:` and
+ * `contains:` describe money spent ON something, so they apply exactly to the
+ * spend types and to nothing else — a transfer was not spent on anything, and a
+ * fee was a cost of the account rather than of a category (POPS-2610). The
+ * alternative was an `occasion:admin` tag restating what `type` already says,
+ * which was rejected: `type` is set by the importer from the descriptor on every
+ * future import with nobody in the loop, whereas a tag needs a human to remember
+ * forever — and it was already failing on 21 of the 38 non-spend rows it was
+ * supposed to cover. So on a spend row a missing facet always means "not yet
+ * decided", and on a non-spend row the facet simply does not apply.
+ *
+ * This module only counts. It writes nothing and decides nothing.
  */
+import { isSpendType } from '../../contract/corrections-constants.js';
 import { transactions } from '../schema.js';
 import {
   CLOSED_TAG_FACETS,
@@ -28,30 +36,33 @@ import type { FinanceDb } from './internal.js';
 
 /** Marks a row whose contents the merchant does not determine (Amazon, IKEA). */
 const ENRICH_PREFIX = `enrich${TAG_FACET_SEPARATOR}`;
-/** The occasion that means "not a purchase" — a bank fee, an inbound transfer. */
-const ADMIN_OCCASION = `occasion${TAG_FACET_SEPARATOR}admin`;
 
 /**
  * Which rows a facet is expected on.
  *
  * `enrich:` excludes everywhere: the row is explicitly waiting on an enrichment
  * provider to say what it contains, and asserting a facet over it now would be
- * a guess recorded as a fact. `occasion:admin` excludes `venue:` only — a bank
- * fee happens at no venue, but it does have an occasion, which is precisely the
- * `occasion:admin` that excluded it.
+ * a guess recorded as a fact.
+ *
+ * `spendOnly` carries the applicability rule above. It is true for the three
+ * facets POPS-2607 requires and false for `channel:`/`fee:`, which are measured
+ * over the whole ledger because a fee's kind is precisely what a non-spend row
+ * has to say.
  */
 interface FacetExpectation {
   facet: ClosedTagFacet;
   /** Whether POPS-2607's acceptance criteria require this facet to be present. */
   required: boolean;
-  /** Whether `occasion:admin` rows are outside this facet's addressable set. */
-  excludesAdmin: boolean;
+  /** Whether the facet applies only to rows whose `type` counts as spend. */
+  spendOnly: boolean;
 }
+
+const REQUIRED_FACETS = new Set<string>(['venue', 'occasion', 'contains']);
 
 const FACET_EXPECTATIONS: readonly FacetExpectation[] = CLOSED_TAG_FACETS.map((closed) => ({
   facet: closed.facet,
-  required: closed.facet === 'venue' || closed.facet === 'occasion' || closed.facet === 'contains',
-  excludesAdmin: closed.facet === 'venue',
+  required: REQUIRED_FACETS.has(closed.facet),
+  spendOnly: REQUIRED_FACETS.has(closed.facet),
 }));
 
 /** Coverage of one closed facet across the ledger. */
@@ -67,8 +78,8 @@ export interface FacetCoverage {
   missing: number;
   /** Rows excluded because they carry an `enrich:` marker. */
   enrichExcluded: number;
-  /** Rows excluded because they are `occasion:admin` — `venue:` only. */
-  adminExcluded: number;
+  /** Rows excluded because their `type` is not spend — the facet cannot apply. */
+  nonSpendExcluded: number;
   /**
    * Addressable rows carrying more than one value on a single-valued facet.
    *
@@ -109,6 +120,7 @@ export interface TagCoverage {
 
 interface ScannedRow {
   description: string;
+  type: string;
   tags: string[];
 }
 
@@ -121,14 +133,10 @@ function isEnrichBlocked(tags: string[]): boolean {
   return tags.some((tag) => tag.startsWith(ENRICH_PREFIX));
 }
 
-function isAdmin(tags: string[]): boolean {
-  return tags.includes(ADMIN_OCCASION);
-}
-
-/** Is `facet` expected on a row carrying `tags`, or excluded from its set? */
-function isAddressable(expectation: FacetExpectation, tags: string[]): boolean {
-  if (isEnrichBlocked(tags)) return false;
-  return !(expectation.excludesAdmin && isAdmin(tags));
+/** Is `facet` expected on this row, or outside its addressable set? */
+function isAddressable(expectation: FacetExpectation, row: ScannedRow): boolean {
+  if (isEnrichBlocked(row.tags)) return false;
+  return !(expectation.spendOnly && !isSpendType(row.type));
 }
 
 function measureFacet(
@@ -143,17 +151,18 @@ function measureFacet(
     covered: 0,
     missing: 0,
     enrichExcluded: 0,
-    adminExcluded: 0,
+    nonSpendExcluded: 0,
     cardinalityViolations: 0,
   };
 
-  for (const { tags } of rows) {
+  for (const row of rows) {
+    const { tags } = row;
     if (isEnrichBlocked(tags)) {
       coverage.enrichExcluded += 1;
       continue;
     }
-    if (expectation.excludesAdmin && isAdmin(tags)) {
-      coverage.adminExcluded += 1;
+    if (expectation.spendOnly && !isSpendType(row.type)) {
+      coverage.nonSpendExcluded += 1;
       continue;
     }
     coverage.addressable += 1;
@@ -207,7 +216,7 @@ function buildGaps(rows: ScannedRow[]): DescriptorGap[] {
     entry.transactions += 1;
     for (const expectation of FACET_EXPECTATIONS) {
       if (!expectation.required) continue;
-      if (!isAddressable(expectation, row.tags)) continue;
+      if (!isAddressable(expectation, row)) continue;
       if (valuesOnFacet(row.tags, expectation.facet) === 0) entry.missing.add(expectation.facet);
     }
   }
@@ -233,10 +242,18 @@ function buildGaps(rows: ScannedRow[]): DescriptorGap[] {
  */
 export function measureTagCoverage(db: FinanceDb, activeVocabulary: string[]): TagCoverage {
   const rows: ScannedRow[] = db
-    .select({ description: transactions.description, tags: transactions.tags })
+    .select({
+      description: transactions.description,
+      type: transactions.type,
+      tags: transactions.tags,
+    })
     .from(transactions)
     .all()
-    .map((row) => ({ description: row.description, tags: parseStoredTags(row.tags) }));
+    .map((row) => ({
+      description: row.description,
+      type: row.type,
+      tags: parseStoredTags(row.tags),
+    }));
 
   const singleByFacet = new Map<string, boolean>(
     CLOSED_TAG_FACETS.map((closed) => [closed.facet, closed.single])

@@ -75,6 +75,25 @@ export const DEFAULT_TAG_FACET_KIND: TagFacetKind = 'open';
  * values on a single-valued facet is rejected. It is not a constraint over
  * stored rows: the existing violations are POPS-2607's cleanup, and a
  * migration-time constraint would refuse to open the database until then.
+ *
+ * Two `occasion:` decisions are worth stating, because both look redundant and
+ * neither is (POPS-2607):
+ *
+ * - `occasion:travel` stays, even though `trip:*` also implies travel. The
+ *   implication runs one way only. `trip` is an *open* facet, so a value exists
+ *   only when someone deliberately creates one — derive travel from it and you
+ *   lose the airport coffee, the work flight, and the weekend nobody bothered
+ *   naming, which are exactly the ones that never get a trip. Making a value on
+ *   the closed always-present axis conditional on a sparse open one would cost
+ *   that axis the property it exists for: being exhaustively groupable. A row
+ *   with both keeps `occasion:travel`; "spend eating out" is answered by
+ *   `venue:` and `contains:` regardless of occasion.
+ * - `occasion:admin` was retired (migration 0071). It restated what `type`
+ *   already says, and `type` is set by the importer from the descriptor on every
+ *   import with nobody in the loop, where the tag needed a human to remember
+ *   forever — and had already been forgotten on 21 of the 38 rows it covered.
+ *   `occasion:` now applies to spend and is silent elsewhere, so a missing
+ *   occasion on a spend row always means "not yet decided".
  */
 export const CLOSED_TAG_FACETS = [
   { facet: 'venue', single: true },

@@ -44,7 +44,7 @@ function reportFacets(coverage: TagCoverage): void {
   for (const facet of coverage.facets) {
     const excluded = [
       facet.enrichExcluded > 0 ? `${facet.enrichExcluded} enrich` : '',
-      facet.adminExcluded > 0 ? `${facet.adminExcluded} admin` : '',
+      facet.nonSpendExcluded > 0 ? `${facet.nonSpendExcluded} non-spend` : '',
     ]
       .filter(Boolean)
       .join(', ');
