@@ -1,6 +1,6 @@
 /**
- * End-to-end cover for the foreign-charge columns, from a real ANZ statement
- * line through to the stored row (POPS-2604).
+ * End-to-end cover for the foreign-charge columns, from a real statement row
+ * of each source through to the stored row (POPS-2604).
  *
  * The three columns and `country` were NULL on every row on the live database
  * while `parseAnzDescription` — well covered at its own tier — was filling them
@@ -12,6 +12,7 @@
 import { eq } from 'drizzle-orm';
 import { describe, expect, it, vi } from 'vitest';
 
+import { parseAmexRow } from '../../../../contract/amex-row.js';
 import { parseAnzDescription } from '../../../../contract/anz-description.js';
 import { freshMigratedFinanceDb } from '../../../../db/__tests__/migrated-db.js';
 import { transactions } from '../../../../db/schema.js';
@@ -107,5 +108,82 @@ describe('foreign-charge capture, statement line to stored row', () => {
     expect(row?.foreignAmountMinor).toBeNull();
     expect(row?.foreignCurrency).toBeNull();
     expect(row?.fxFeeCents).toBeNull();
+  });
+});
+
+/** The commit payload the wizard builds for one Amex export row. */
+function payloadForAmexRow(row: Record<string, string>): CommitPayload {
+  const { country, foreignCharge } = parseAmexRow(row);
+  return {
+    entities: [],
+    changeSets: [],
+    tagRuleChangeSets: [],
+    transactions: [
+      {
+        date: '2026-07-25',
+        description: row.Description ?? '',
+        amount: -Number(row.Amount ?? 0),
+        account: 'Amex',
+        country,
+        foreignAmountMinor: foreignCharge?.amountMinor,
+        foreignCurrency: foreignCharge?.currency,
+        fxFeeCents: foreignCharge?.feeCents,
+        rawRow: JSON.stringify(row),
+        checksum: `chk-amex-${row.Description ?? ''}`,
+        transactionType: 'purchase',
+      },
+    ],
+  };
+}
+
+async function commitAmexRow(row: Record<string, string>) {
+  const { db } = freshMigratedFinanceDb();
+  const result = await commitImport(db, noContacts(), payloadForAmexRow(row));
+  expect(result.failedDetails).toEqual([]);
+  expect(result.transactionsImported).toBe(1);
+  return db.select().from(transactions).where(eq(transactions.account, 'Amex')).all()[0];
+}
+
+describe('foreign-charge capture from an Amex export row', () => {
+  it('stores all three columns, with the merchant country rather than the currency country', async () => {
+    // The real export's one foreign charge: a Singapore merchant billing USD.
+    // ANZ would infer `US` from the currency; Amex states where the merchant is.
+    const row = await commitAmexRow({
+      Description: 'NANONOBLE PTE. LTD.     SINGAPORE',
+      Amount: '8.11',
+      'Foreign Spend Amount': '5.50 USD',
+      Commission: '0.27',
+      Country: 'SINGAPORE',
+    });
+
+    expect(row).toMatchObject({
+      country: 'SG',
+      foreignAmountMinor: 550,
+      foreignCurrency: 'USD',
+      fxFeeCents: 27,
+      amountCents: -811,
+    });
+  });
+
+  it('stores the country of a domestic row, so NULL still means uncaptured', async () => {
+    const row = await commitAmexRow({
+      Description: 'ALDI 1234',
+      Amount: '42.50',
+      'Foreign Spend Amount': '',
+      Commission: '',
+      Country: 'AUSTRALIA',
+    });
+
+    expect(row?.country).toBe('AU');
+    expect(row?.foreignAmountMinor).toBeNull();
+    expect(row?.foreignCurrency).toBeNull();
+    expect(row?.fxFeeCents).toBeNull();
+  });
+
+  it("leaves the short export's row entirely uncaptured, country included", async () => {
+    const row = await commitAmexRow({ Description: 'ALDI 1234', Amount: '42.50' });
+
+    expect(row?.country).toBeNull();
+    expect(row?.foreignCurrency).toBeNull();
   });
 });

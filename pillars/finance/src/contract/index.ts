@@ -37,6 +37,7 @@ export {
   type WithheldReason,
   type WithheldTransaction,
 } from './anz-pdf-statement.js';
+export { parseAmexRow, type AmexRowFields } from './amex-row.js';
 export {
   buildImportDedupKey,
   buildImportDedupKeyFromStoredRow,

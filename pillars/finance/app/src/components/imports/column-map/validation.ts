@@ -31,10 +31,15 @@ interface DescriptiveFields {
 /**
  * Resolve the stored description and its companion fields.
  *
- * A bank whose export splits merchant from location across columns needs
- * nothing beyond the mapped columns. A bank that packs them into one — ANZ —
- * declares a `deriveFields` parser, which also recovers the country and the
- * foreign-currency detail that no column holds.
+ * A bank whose export splits merchant from location across mappable columns
+ * needs nothing beyond them. A bank that hides fields the mapper cannot reach
+ * declares a `deriveFields` parser: ANZ packs merchant, location, country and
+ * the foreign-charge detail into one description string, and Amex puts the
+ * country and foreign-charge detail in columns the mapper does not offer.
+ *
+ * The mapped location column still applies when the parser did not produce one,
+ * so declaring a parser to reach the foreign columns does not cost a bank the
+ * location it was already getting from its own column.
  */
 function describeRow(
   row: Record<string, string>,
@@ -42,9 +47,11 @@ function describeRow(
   dialect: BankDialect
 ): DescriptiveFields {
   const raw = row[columnMap.description] ?? '';
-  if (dialect.deriveFields) return dialect.deriveFields(raw);
-  const location = columnMap.location ? row[columnMap.location] : undefined;
-  return { description: raw, location: location ? extractLocation(location) : undefined };
+  const mapped = columnMap.location ? row[columnMap.location] : undefined;
+  const location = mapped ? extractLocation(mapped) : undefined;
+  const derived = dialect.deriveFields?.(raw, row);
+  if (derived) return { ...derived, location: derived.location ?? location };
+  return { description: raw, location };
 }
 
 function validateRow(
