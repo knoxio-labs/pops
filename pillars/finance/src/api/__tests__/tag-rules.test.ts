@@ -634,3 +634,37 @@ describe('tagRules — applyExisting (retroactive apply, #3660)', () => {
     await expect(client().tagRules.applyExisting('nope')).rejects.toMatchObject({ status: 404 });
   });
 });
+
+describe('tagRules — regex patterns (POPS-2600)', () => {
+  it('stores a regex pattern verbatim, unlike a contains pattern', async () => {
+    const pattern = String.raw`^ACME\s+STORE\.\d+$`;
+    const applied = await client().tagRules.apply({
+      changeSet: {
+        ops: [
+          { op: 'add', data: { descriptionPattern: pattern, matchType: 'regex', tags: ['x'] } },
+        ],
+      },
+      acceptedNewTags: [],
+    });
+    expect(applied.rules[0]?.descriptionPattern).toBe(pattern);
+  });
+
+  it('400s an add op whose regex pattern does not compile, writing nothing', async () => {
+    await expect(
+      client().tagRules.apply({
+        changeSet: {
+          ops: [
+            {
+              op: 'add',
+              data: { descriptionPattern: '[unclosed', matchType: 'regex', tags: ['x'] },
+            },
+          ],
+        },
+        acceptedNewTags: [],
+      })
+    ).rejects.toMatchObject({ status: 400 });
+
+    const listed = await client().tagRules.list({});
+    expect(listed.data).toHaveLength(0);
+  });
+});

@@ -5,7 +5,8 @@
  * line cap. Pure-ish data shaping over the finance-owned `transaction_corrections`
  * / `transactions` tables — no HTTP concerns beyond translating the package's
  * `TransactionCorrectionNotFoundError` to the in-tree `NotFoundError` (→ 404)
- * and `TagsOnlyCorrectionError` to `ValidationError` (→ 400, CF061/#3650).
+ * and `TagsOnlyCorrectionError` (CF061/#3650) / `InvalidPatternError`
+ * (POPS-2600) to `ValidationError` (→ 400).
  */
 import { desc } from 'drizzle-orm';
 
@@ -16,6 +17,7 @@ import {
   type TransactionCorrectionRow,
   type TransactionCorrectionTransactionType,
   type TransactionRow,
+  InvalidPatternError,
   TagsOnlyCorrectionError,
   TransactionCorrectionNotFoundError,
   transactionCorrectionsService,
@@ -203,7 +205,7 @@ export function translateCorrectionError(err: unknown, id?: string): never {
   if (err instanceof TransactionCorrectionNotFoundError) {
     throw new NotFoundError('Correction', id ?? err.id);
   }
-  if (err instanceof TagsOnlyCorrectionError) {
+  if (err instanceof TagsOnlyCorrectionError || err instanceof InvalidPatternError) {
     throw new ValidationError(err.message);
   }
   throw err;

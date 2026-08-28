@@ -889,3 +889,140 @@ describe('corrections — applyExisting (retroactive apply, #3660)', () => {
     });
   });
 });
+
+describe('corrections — regex patterns (POPS-2600)', () => {
+  const REGEX_PATTERN = String.raw`\d{4}-\d{2}`;
+
+  async function createRegexCorrection() {
+    return client().corrections.createOrUpdate({
+      descriptionPattern: REGEX_PATTERN,
+      matchType: 'regex',
+      entityId: 'ent-regex',
+      entityName: 'Regex Co',
+    });
+  }
+
+  it('stores a regex pattern verbatim through a create round-trip', async () => {
+    const created = await createRegexCorrection();
+    expect(created.data.descriptionPattern).toBe(REGEX_PATTERN);
+
+    const read = await client().corrections.get(created.data.id);
+    expect(read.data.descriptionPattern).toBe(REGEX_PATTERN);
+  });
+
+  it('stores a regex pattern verbatim through an update round-trip', async () => {
+    const created = await createRegexCorrection();
+    const nextPattern = String.raw`^ACME\s+STORE\.\d+$`;
+
+    const updated = await client().corrections.update(created.data.id, {
+      descriptionPattern: nextPattern,
+    });
+    expect(updated.data.descriptionPattern).toBe(nextPattern);
+
+    const read = await client().corrections.get(created.data.id);
+    expect(read.data.descriptionPattern).toBe(nextPattern);
+  });
+
+  it('still normalizes a contains pattern on write', async () => {
+    const created = await client().corrections.createOrUpdate({
+      descriptionPattern: 'Acme Store 42',
+      matchType: 'contains',
+      entityId: 'ent-acme',
+      entityName: 'Acme',
+    });
+    expect(created.data.descriptionPattern).toBe('ACME STORE');
+  });
+
+  it('400s a createOrUpdate whose regex pattern does not compile', async () => {
+    await expect(
+      client().corrections.createOrUpdate({
+        descriptionPattern: '[unclosed',
+        matchType: 'regex',
+        entityId: 'ent-bad',
+      })
+    ).rejects.toMatchObject({ status: 400 });
+
+    const listed = await client().corrections.list({});
+    expect(listed.data).toHaveLength(0);
+  });
+
+  it('400s an update that would set an uncompilable regex pattern', async () => {
+    const created = await createRegexCorrection();
+
+    await expect(
+      client().corrections.update(created.data.id, { descriptionPattern: '(unbalanced' })
+    ).rejects.toMatchObject({ status: 400 });
+
+    const unchanged = await client().corrections.get(created.data.id);
+    expect(unchanged.data.descriptionPattern).toBe(REGEX_PATTERN);
+  });
+
+  it('400s a matchType flip to regex when the stored pattern would not compile', async () => {
+    // `normalizeDescription` uppercases and strips digits but leaves parens
+    // intact, so an `exact` pattern can be a broken regex.
+    const created = await client().corrections.createOrUpdate({
+      descriptionPattern: 'T(arget',
+      matchType: 'exact',
+      entityId: 'ent-target',
+      entityName: 'Target',
+    });
+    expect(created.data.descriptionPattern).toBe('T(ARGET');
+
+    await expect(
+      client().corrections.update(created.data.id, { matchType: 'regex' })
+    ).rejects.toMatchObject({ status: 400 });
+
+    const unchanged = await client().corrections.get(created.data.id);
+    expect(unchanged.data.matchType).toBe('exact');
+    expect(unchanged.data.descriptionPattern).toBe('T(ARGET');
+  });
+
+  it('allows a matchType flip to regex when the stored pattern does compile', async () => {
+    const created = await client().corrections.createOrUpdate({
+      descriptionPattern: 'Woolworths',
+      matchType: 'exact',
+      entityId: 'ent-woolies',
+      entityName: 'Woolworths',
+    });
+
+    const updated = await client().corrections.update(created.data.id, { matchType: 'regex' });
+    expect(updated.data.matchType).toBe('regex');
+    expect(updated.data.descriptionPattern).toBe('WOOLWORTHS');
+  });
+
+  it('still allows editing a legacy row whose regex was already uncompilable', async () => {
+    // Seeded past the boundary the way a pre-POPS-2600 row would be.
+    financeDb.raw
+      .prepare(
+        `INSERT INTO transaction_corrections (
+          id, description_pattern, match_type, entity_id, is_active, confidence, priority
+        ) VALUES ('legacy-bad', '[unclosed', 'regex', 'ent-legacy', 1, 0.9, 0)`
+      )
+      .run();
+
+    const disabled = await client().corrections.update('legacy-bad', { isActive: false });
+    expect(disabled.data.isActive).toBe(false);
+  });
+
+  it('400s an applyChangeSet add op whose regex pattern does not compile', async () => {
+    await expect(
+      client().corrections.applyChangeSet({
+        changeSet: {
+          ops: [
+            {
+              op: 'add',
+              data: {
+                descriptionPattern: 'a{2,1}(',
+                matchType: 'regex',
+                entityId: 'ent-bad',
+              },
+            },
+          ],
+        },
+      })
+    ).rejects.toMatchObject({ status: 400 });
+
+    const listed = await client().corrections.list({});
+    expect(listed.data).toHaveLength(0);
+  });
+});

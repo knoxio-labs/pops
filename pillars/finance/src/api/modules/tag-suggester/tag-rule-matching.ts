@@ -1,8 +1,17 @@
 /**
  * Tag-rule matching for the tag-suggester. Split from `index.ts` to keep
  * each file under the per-file line cap. Resolves the active
- * `transaction_tag_rules` whose pattern matches a description (exact /
- * contains / regex), scoped to an optional entity.
+ * `transaction_tag_rules` whose pattern matches a description, scoped to an
+ * optional entity.
+ *
+ * The pattern test is `patternMatchesNormalizedDescription` — the one
+ * predicate every match path shares (POPS-2600). It used to be split across
+ * SQL (`=` on the raw pattern, `LIKE '%' || upper(p) || '%'`) and JS, which
+ * meant the live path and the ChangeSet preview could disagree about the same
+ * rule. SQLite's `LIKE` cannot faithfully reproduce a
+ * post-`normalizeDescription` match set without a registered function, so the
+ * whole test now runs in JS over one candidate fetch; `isActive` and the
+ * entity scope stay in SQL, where they are cheap and exact.
  *
  * Every branch matches against the normalized description (`norm`) — the
  * regex branch used to test the raw `description` while exact/contains
@@ -14,7 +23,7 @@
  * When multiple rules contribute the same tag, `addTagRuleTags`'s dedup keeps
  * whichever rule's attribution came first in this order.
  */
-import { and, asc, desc, eq, isNull, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, isNull, or } from 'drizzle-orm';
 
 import {
   type FinanceDb,
@@ -22,10 +31,18 @@ import {
   transactionTagRules,
 } from '../../../db/index.js';
 
+const { normalizeDescription, patternMatchesNormalizedDescription } = transactionCorrectionsService;
+
+const MATCH_TYPE_GROUP_ORDER = ['exact', 'contains', 'regex'] as const;
+
 export interface TagRuleRow {
   id: string;
   tags: string;
   descriptionPattern: string;
+}
+
+interface TagRuleCandidate extends TagRuleRow {
+  matchType: (typeof MATCH_TYPE_GROUP_ORDER)[number];
 }
 
 function buildEntityFilter(entityId: string | null): ReturnType<typeof or> {
@@ -39,57 +56,26 @@ export function findMatchingTagRules(
   description: string,
   entityId: string | null
 ): TagRuleRow[] {
-  const norm = transactionCorrectionsService.normalizeDescription(description);
-  const ef = buildEntityFilter(entityId);
-  const cols = {
-    id: transactionTagRules.id,
-    tags: transactionTagRules.tags,
-    descriptionPattern: transactionTagRules.descriptionPattern,
-  };
-  const base = and(eq(transactionTagRules.isActive, true), ef);
-  const order = [asc(transactionTagRules.priority), desc(transactionTagRules.confidence)];
+  const norm = normalizeDescription(description);
 
-  const exact = db
-    .select(cols)
+  const matched: TagRuleCandidate[] = db
+    .select({
+      id: transactionTagRules.id,
+      tags: transactionTagRules.tags,
+      descriptionPattern: transactionTagRules.descriptionPattern,
+      matchType: transactionTagRules.matchType,
+    })
     .from(transactionTagRules)
-    .where(
-      and(
-        base,
-        eq(transactionTagRules.matchType, 'exact'),
-        eq(transactionTagRules.descriptionPattern, norm)
-      )
-    )
-    .orderBy(...order)
-    .all();
+    .where(and(eq(transactionTagRules.isActive, true), buildEntityFilter(entityId)))
+    .orderBy(asc(transactionTagRules.priority), desc(transactionTagRules.confidence))
+    .all()
+    .filter((rule) =>
+      patternMatchesNormalizedDescription(rule.descriptionPattern, rule.matchType, norm)
+    );
 
-  const contains = db
-    .select(cols)
-    .from(transactionTagRules)
-    .where(
-      and(
-        base,
-        eq(transactionTagRules.matchType, 'contains'),
-        sql`${norm} LIKE '%' || upper(${transactionTagRules.descriptionPattern}) || '%'`
-      )
-    )
-    .orderBy(...order)
-    .all();
-
-  const regexCandidates = db
-    .select(cols)
-    .from(transactionTagRules)
-    .where(and(base, eq(transactionTagRules.matchType, 'regex')))
-    .orderBy(...order)
-    .all();
-
-  const regex = regexCandidates.filter((r) => {
-    try {
-      return new RegExp(r.descriptionPattern, 'i').test(norm);
-    } catch {
-      console.warn(`[tag-rules] invalid regex pattern — skipping rule: ${r.descriptionPattern}`);
-      return false;
-    }
-  });
-
-  return [...exact, ...contains, ...regex];
+  return MATCH_TYPE_GROUP_ORDER.flatMap((matchType) =>
+    matched
+      .filter((rule) => rule.matchType === matchType)
+      .map(({ matchType: _matchType, ...row }) => row)
+  );
 }

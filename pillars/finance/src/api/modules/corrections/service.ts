@@ -25,7 +25,8 @@ import { NotFoundError, ValidationError } from '../../shared/errors.js';
 import type { ChangeSet, ChangeSetOp } from '../../../contract/rest-corrections.js';
 import type { CorrectionRow } from './types.js';
 
-const { isTagsOnlyCorrectionInput, normalizeDescription } = transactionCorrectionsService;
+const { isTagsOnlyCorrectionInput, isValidRegexPattern, normalizePatternForStorage } =
+  transactionCorrectionsService;
 
 /**
  * Reject a ChangeSet `add` whose data carries no `entityId`, no
@@ -58,27 +59,59 @@ function findExistingCorrectionByKey(
     .get();
 }
 
+/** Why an `add` op can never produce a rule that fires, or `null` if it can. */
+function unusableAddOpReason(op: Extract<ChangeSetOp, { op: 'add' }>): string | null {
+  if (isTagsOnlyCorrectionInput(op.data)) {
+    return 'tags-only rules belong in transaction_tag_rules (CF061/#3650)';
+  }
+  if (op.data.matchType === 'regex' && !isValidRegexPattern(op.data.descriptionPattern)) {
+    return 'the regex pattern does not compile, so no matcher could ever fire it (POPS-2600)';
+  }
+  return null;
+}
+
 /**
- * Drop any `add` op whose data is tags-only (CF061/#3650) from a ChangeSet,
+ * Drop any `add` op that could only ever produce a rule that never fires —
+ * tags-only (CF061/#3650) or an uncompilable `regex` pattern (POPS-2600) —
  * logging a warning for each one dropped.
  *
  * Used by the import-commit path (`imports/commit.ts`), which bundles the
  * ChangeSet apply together with entity creation and every transaction insert
- * in one `db.transaction` — letting `applyAddOp` throw on a single stray
- * tags-only op would roll back the entire commit over one inert rule. The
- * standalone `corrections.applyChangeSet` REST endpoint is unaffected: it
- * still rejects a tags-only add via `assertNotTagsOnly` (nothing else is at
- * stake there but the rule set itself).
+ * in one `db.transaction` — letting `applyAddOp` throw on a single stray op
+ * would roll back the entire commit over one inert rule. The correction
+ * detail editor takes a free-text pattern next to a `regex` option and runs
+ * no client-side compile check, so an uncompilable pattern reaching commit is
+ * an ordinary typo, not a malformed payload; losing a whole import to it
+ * would be far worse than losing the rule.
+ *
+ * The standalone `corrections.applyChangeSet` REST endpoint is unaffected: it
+ * still rejects both shapes outright, since nothing is at stake there but the
+ * rule set itself.
  */
-export function dropTagsOnlyAddOps(changeSet: ChangeSet): ChangeSet {
+export function dropUnusableAddOps(changeSet: ChangeSet): ChangeSet {
   const ops = changeSet.ops.filter((op) => {
-    if (op.op !== 'add' || !isTagsOnlyCorrectionInput(op.data)) return true;
+    if (op.op !== 'add') return true;
+    const reason = unusableAddOpReason(op);
+    if (reason === null) return true;
     console.warn(
-      `[Corrections] Dropping tags-only add op (descriptionPattern="${op.data.descriptionPattern}") from a commit ChangeSet — tags-only rules belong in transaction_tag_rules (CF061/#3650)`
+      `[Corrections] Dropping add op (descriptionPattern="${op.data.descriptionPattern}") from a commit ChangeSet — ${reason}`
     );
     return false;
   });
   return { ...changeSet, ops };
+}
+
+/**
+ * Reject a ChangeSet `add` whose `regex` pattern doesn't compile. Every matcher
+ * silently skips an uncompilable pattern, so storing one leaves a rule that
+ * looks active and can never fire (POPS-2600).
+ */
+function assertPatternCompiles(op: Extract<ChangeSetOp, { op: 'add' }>): void {
+  if (op.data.matchType === 'regex' && !isValidRegexPattern(op.data.descriptionPattern)) {
+    throw new ValidationError(
+      `Pattern is not a valid regular expression: ${op.data.descriptionPattern}`
+    );
+  }
 }
 
 /**
@@ -90,8 +123,9 @@ export function dropTagsOnlyAddOps(changeSet: ChangeSet): ChangeSet {
  */
 function applyAddOp(tx: FinanceDb, op: Extract<ChangeSetOp, { op: 'add' }>): void {
   assertNotTagsOnly(op);
+  assertPatternCompiles(op);
 
-  const normalized = normalizeDescription(op.data.descriptionPattern);
+  const normalized = normalizePatternForStorage(op.data.descriptionPattern, op.data.matchType);
   const values = {
     entityId: op.data.entityId ?? null,
     entityName: op.data.entityName ?? null,

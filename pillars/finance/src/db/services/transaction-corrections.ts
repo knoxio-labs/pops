@@ -21,8 +21,9 @@ import { MIN_MATCH_CONFIDENCE } from '../../contract/corrections-pure.js';
 import { TagsOnlyCorrectionError, TransactionCorrectionNotFoundError } from '../errors.js';
 import { transactionCorrections } from '../schema.js';
 import {
+  assertPatchLeavesCompilablePattern,
   isTagsOnlyCorrectionInput,
-  normalizeDescription,
+  storablePattern,
   wouldUpdateLeaveTagsOnly,
   type CreateTransactionCorrectionInput,
   type TransactionCorrectionListQuery,
@@ -168,7 +169,7 @@ export function createOrUpdateTransactionCorrection(
   db: FinanceDb,
   input: CreateTransactionCorrectionInput
 ): TransactionCorrectionRow {
-  const normalized = normalizeDescription(input.descriptionPattern);
+  const normalized = storablePattern(input.descriptionPattern, input.matchType);
 
   const existing = db
     .select()
@@ -186,11 +187,16 @@ export function createOrUpdateTransactionCorrection(
 }
 
 function buildCorrectionUpdates(
-  input: UpdateTransactionCorrectionInput
+  input: UpdateTransactionCorrectionInput,
+  existing: TransactionCorrectionRow
 ): Partial<typeof transactionCorrections.$inferInsert> {
   const updates: Partial<typeof transactionCorrections.$inferInsert> = {};
+  const effectiveMatchType = input.matchType ?? existing.matchType;
+
+  assertPatchLeavesCompilablePattern(input, existing, effectiveMatchType);
+
   if (input.descriptionPattern !== undefined) {
-    updates.descriptionPattern = normalizeDescription(input.descriptionPattern);
+    updates.descriptionPattern = storablePattern(input.descriptionPattern, effectiveMatchType);
   }
   if (input.matchType !== undefined) updates.matchType = input.matchType;
   if (input.entityId !== undefined) updates.entityId = input.entityId;
@@ -220,7 +226,7 @@ export function updateTransactionCorrection(
   input: UpdateTransactionCorrectionInput
 ): TransactionCorrectionRow {
   const existing = getTransactionCorrection(db, id);
-  const updates = buildCorrectionUpdates(input);
+  const updates = buildCorrectionUpdates(input, existing);
 
   if (Object.keys(updates).length === 0) return existing;
 

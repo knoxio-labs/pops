@@ -159,17 +159,16 @@ describe('transactionMatchesSignal', () => {
   });
 
   describe('regex', () => {
-    // These tests mirror the server's `findMatchingCorrectionFromRules`
-    // semantics: `new RegExp(pattern).test(normalizeDescription(desc))` —
-    // no flags, and the description is uppercased + digit-stripped + space-
-    // collapsed BEFORE the regex runs. Client-side preview must match.
-    it('tests against the normalized (uppercased) description, so patterns must be uppercase', () => {
-      // Positive: uppercase pattern matches normalized description.
+    // These tests mirror the server's shared `patternMatchesNormalizedDescription`:
+    // `new RegExp(pattern, 'i').test(normalizeDescription(desc))` — the
+    // description is uppercased + digit-stripped + space-collapsed BEFORE the
+    // regex runs, and the regex itself is case-insensitive because a stored
+    // regex pattern is raw while the description is uppercased (POPS-2600).
+    it('matches case-insensitively against the normalized description', () => {
       expect(transactionMatchesSignal('PayID from John', 'PAYID', 'regex')).toBe(true);
-      // Negative: lowercase pattern does NOT match because normalization
-      // uppercases "PayID from John" to "PAYID FROM JOHN" and the regex
-      // runs without the /i flag (server parity).
-      expect(transactionMatchesSignal('PayID from John', 'payid', 'regex')).toBe(false);
+      // A lowercase literal must still reach an uppercased description — the
+      // `i` flag is the only thing that makes a raw-stored pattern usable.
+      expect(transactionMatchesSignal('PayID from John', 'payid', 'regex')).toBe(true);
     });
 
     it('tests against the digit-stripped description, so \\d+ cannot match digits in the input', () => {

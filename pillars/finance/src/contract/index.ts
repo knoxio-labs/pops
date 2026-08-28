@@ -14,6 +14,12 @@ export {
   type Correction,
   type CorrectionRow,
 } from './corrections-pure.js';
+export {
+  isValidRegexPattern,
+  normalizePatternForStorage,
+  patternMatchesNormalizedDescription,
+  type PatternMatchType,
+} from './pattern-match.js';
 export { type ChangeSet, type ChangeSetOp } from './rest-corrections-schemas.js';
 export {
   parseAnzDescription,

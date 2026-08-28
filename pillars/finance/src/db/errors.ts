@@ -103,3 +103,19 @@ export class TagsOnlyCorrectionError extends Error {
     );
   }
 }
+
+/**
+ * A `regex` rule was written with a pattern that does not compile. Rejected at
+ * the write boundary rather than stored: an uncompilable pattern is silently
+ * skipped by every matcher, so it would sit in the rule table forever looking
+ * active and never firing (POPS-2600).
+ */
+export class InvalidPatternError extends Error {
+  override readonly name = 'InvalidPatternError' as const;
+  readonly pattern: string;
+
+  constructor(pattern: string) {
+    super(`Pattern is not a valid regular expression: ${pattern}`);
+    this.pattern = pattern;
+  }
+}

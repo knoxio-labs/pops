@@ -868,6 +868,54 @@ describe('imports.commitImport — pre-create contacts then write the finance tx
     expect(txn.entity_id).toBe(contact?.id);
   });
 
+  it('degrades a bundled uncompilable regex add op instead of rolling back the whole commit (POPS-2600)', async () => {
+    const contacts = makeContactsFake();
+    const c = client(contacts);
+    const tempId = 'temp:entity:00000000-0000-0000-0000-00000000000e';
+    const res = await c.imports.commitImport({
+      entities: [{ tempId, name: 'RegexCorp' }],
+      changeSets: [
+        {
+          ops: [
+            {
+              op: 'add',
+              data: {
+                descriptionPattern: 'GOOD RULE',
+                matchType: 'contains',
+                transactionType: 'purchase',
+              },
+            },
+            {
+              // The detail editor pairs a free-text pattern with a `regex`
+              // option and validates nothing client-side, so this is a typo a
+              // user can actually commit — not a malformed payload.
+              op: 'add',
+              data: {
+                descriptionPattern: '[unclosed',
+                matchType: 'regex',
+                transactionType: 'purchase',
+              },
+            },
+          ],
+        },
+      ],
+      transactions: [
+        confirmed({ checksum: 'commit-regex', entityId: tempId, entityName: 'RegexCorp' }),
+      ],
+    });
+
+    // The import survives: only the op that could never have fired is dropped.
+    expect(res.data.transactionsImported).toBe(1);
+    expect(res.data.transactionsFailed).toBe(0);
+    expect(res.data.entitiesCreated).toBe(1);
+    expect(res.data.rulesApplied).toEqual({ add: 1, edit: 0, disable: 0, remove: 0 });
+
+    const rules = financeDb.raw
+      .prepare('SELECT description_pattern FROM transaction_corrections')
+      .all() as { description_pattern: string }[];
+    expect(rules.map((r) => r.description_pattern)).toEqual(['GOOD RULE']);
+  });
+
   it('applies pending tag-rule ChangeSets during commit', async () => {
     const c = client();
     const res = await c.imports.commitImport({

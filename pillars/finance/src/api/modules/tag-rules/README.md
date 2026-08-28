@@ -27,17 +27,17 @@ Everything downstream treats a tag rule's output as a proposal. Nothing in this 
 
 It used to. The endpoint re-ran `proposeTagRuleChangeSet` against the same signal and returned the result as a "revised" proposal — deterministic in that signal, so byte-identical to the one just refused apart from a sentence of prose, while the UI announced a revision. Tag rules were given the correction side's API shape (propose / reject / follow-up) without the correction side's AI engine behind it. Whether tag rules get an engine, a deterministic narrowing pass, or nothing at all is POPS-253's call; until then the rejection is stored so that decision has evidence to work from, and nothing claims a capability that does not exist.
 
-## One normalization, three call sites
+## One matcher, every call site
 
-The same `normalizeDescription` runs when a pattern is written, when a description is matched, and when a preview is computed. `pattern-match.ts` exists so the preview and retroactive-apply paths cannot drift on what "matches" means; its header and `preview.ts`'s explain why a naive uppercase-only comparison diverges from production.
+The same `normalizeDescription` runs when a pattern is written, when a description is matched, and when a preview is computed, and the same predicate — `contract/pattern-match.ts`'s `patternMatchesNormalizedDescription` — decides every verdict. This module used to carry its own copy in a local `pattern-match.ts`; six such copies existed across the pillar and the browser app and disagreed on case folding, digit stripping and the regex `i` flag, so a preview could promise a match production would skip (POPS-2600). `preview.ts`'s header explains why a naive uppercase-only comparison diverges from production.
 
 ## Where things live
 
-| Concern                                  | File                   |
-| ---------------------------------------- | ---------------------- |
-| Propose, atomic apply, rejection record  | `service.ts`           |
-| Deterministic suggestion-impact preview  | `preview.ts`           |
-| Catch-up pass over already-imported rows | `retroactive-apply.ts` |
-| Shared match predicate                   | `pattern-match.ts`     |
+| Concern                                  | File                                 |
+| ---------------------------------------- | ------------------------------------ |
+| Propose, atomic apply, rejection record  | `service.ts`                         |
+| Deterministic suggestion-impact preview  | `preview.ts`                         |
+| Catch-up pass over already-imported rows | `retroactive-apply.ts`               |
+| Shared match predicate                   | `../../../contract/pattern-match.ts` |
 
 Each carries a header explaining its own mechanics — including why retroactive apply is idempotent and why a dry run deliberately does not count as rule usage.
