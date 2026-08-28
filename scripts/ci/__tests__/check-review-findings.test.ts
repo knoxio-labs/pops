@@ -116,12 +116,15 @@ describe('evaluateReviewState', () => {
     expect(result.outcome).toBe('fail');
   });
 
-  it('fails, without throwing, on out-of-charset garbage where base64 should be', () => {
+  it('retries, without throwing, on out-of-charset garbage where base64 should be', () => {
+    // The marker itself is unrecognisable here (STATE_RE requires the
+    // payload to look like base64), so this is indistinguishable from no
+    // sticky comment at all — a retry, same as mode 1, not a hard failure.
     const result = evaluateReviewState({
       comments: [{ body: `<!-- ${STATE_MARKER}: !!!not-base64!!! -->` }],
       headSha: HEAD,
     });
-    expect(result.outcome).toBe('fail');
+    expect(result.outcome).toBe('retry');
   });
 
   it('fails, without throwing, on valid base64 whose JSON is not the expected shape', () => {
@@ -161,6 +164,21 @@ describe('evaluateReviewState', () => {
     const result = evaluateReviewState({ comments: reversed, headSha: HEAD });
     expect(result.outcome).toBe('fail');
     expect(result.outcome === 'fail' && result.findings?.map((f) => f.id)).toEqual(['stale-open']);
+  });
+
+  it('is not fooled by a later comment that merely mentions pr-review-state.mjs in prose', () => {
+    // Live incident on POPS-2661's own PR: a dismiss comment referencing
+    // pr-review-state.mjs by name was picked as the sticky comment by an
+    // earlier, substring-based version of findStateComment.
+    const realStickyComment = stateComment({ last_reviewed_sha: HEAD, findings: [] });
+    const proseOnlyComment = {
+      body: 'Dismissing per POPS-2669: see pr-review-state.mjs for the mechanism.',
+    };
+    const result = evaluateReviewState({
+      comments: [realStickyComment, proseOnlyComment],
+      headSha: HEAD,
+    });
+    expect(result.outcome).toBe('pass');
   });
 });
 

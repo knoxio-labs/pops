@@ -174,19 +174,28 @@ export function collectDismissedFindingIds(comments) {
 /**
  * Pick the sticky review comment out of a PR's issue comments.
  *
- * Matches by substring the same way `pr-review.yml`'s own "fetch the existing
- * review comment" step does, so a comment this finds is a comment the
- * reviewer itself would have found and edited. The reviewer maintains exactly
- * one such comment; if more than one is ever present the last wins, which is
- * also that step's own tie-break (`| last // empty`).
+ * Matches the actual `<!-- pr-review-state: ... -->` HTML comment (via
+ * `STATE_RE`), not a bare substring of the word "pr-review-state" — found
+ * live on this PR's own head: a dismiss comment (see "THE ESCAPE HATCH"
+ * above) that merely *talks about* `pr-review-state.mjs` in prose was picked
+ * as the sticky comment by an earlier, looser version of this function
+ * (`body.includes(STATE_MARKER)`, matching `pr-review.yml`'s own "fetch the
+ * existing review comment" step), and decoding it then failed with "no
+ * pr-review-state block" — a self-inflicted false failure, not a real one.
+ * `pr-review.yml`'s bash step has the identical looseness; this function
+ * does not, because a false match here is a spurious FAIL rather than a
+ * spurious full re-review, which is the more expensive of the two mistakes
+ * to make silently.
+ *
+ * The reviewer maintains exactly one comment carrying the real marker; if
+ * more than one is somehow present, the last wins, matching that step's own
+ * tie-break (`| last // empty`).
  *
  * @param {StickyComment[]} comments
  * @returns {StickyComment | undefined}
  */
 export function findStateComment(comments) {
-  const matches = comments.filter(
-    (c) => typeof c.body === 'string' && c.body.includes(STATE_MARKER)
-  );
+  const matches = comments.filter((c) => typeof c.body === 'string' && STATE_RE.test(c.body));
   return matches.length > 0 ? matches[matches.length - 1] : undefined;
 }
 
@@ -468,7 +477,14 @@ export async function selfTest() {
   check('a stale last_reviewed_sha does not pass', staleResult.outcome !== 'pass');
   check('a stale last_reviewed_sha is a retry, not a hard fail', staleResult.outcome === 'retry');
 
-  // Ticket test 6a: base64 that is not valid fails, and does not throw.
+  // Ticket test 6a: base64 that is not valid — out-of-charset garbage where
+  // the payload should be — does not throw. `findStateComment` requires the
+  // capture to look like base64 at all (see its docstring, and the live
+  // POPS-2661-review incident it documents), so this is indistinguishable
+  // from "no sticky comment posted yet" and correctly retries rather than
+  // hard-failing: retrying cannot fix a genuinely absent comment, but it
+  // also cannot be told apart from one that merely looks absent because its
+  // payload is unrecognisable.
   const badBase64 = { body: `<!-- ${STATE_MARKER}: !!!not-base64!!! -->` };
   let badBase64Result;
   let threw = false;
@@ -477,15 +493,20 @@ export async function selfTest() {
   } catch {
     threw = true;
   }
-  check('invalid base64 does not throw', !threw);
-  check('invalid base64 fails (durably, not a retry)', badBase64Result?.outcome === 'fail');
+  check('out-of-charset garbage does not throw', !threw);
+  check(
+    'out-of-charset garbage is not distinguishable from no comment (retry, not pass)',
+    badBase64Result?.outcome === 'retry'
+  );
 
-  // The narrower case: characters that are all individually valid base64
-  // alphabet (so the regex above accepts them, unlike `!!!not-base64!!!`)
-  // but decode to bytes that are not JSON at all.
+  // The narrower, realistic case: characters that are all individually valid
+  // base64 alphabet (so the marker IS recognised, unlike `!!!not-base64!!!`
+  // above) but decode to bytes that are not JSON at all — this is the shape
+  // real corruption would actually take, since `encodeState` only ever
+  // emits the base64 alphabet.
   const shortBase64 = { body: `<!-- ${STATE_MARKER}: QQQ -->` };
   check(
-    'base64 that is charset-valid but decodes to non-JSON fails, not throws',
+    'base64 that is charset-valid but decodes to non-JSON fails durably, not throws',
     evaluateReviewState({ comments: [shortBase64], headSha: HEAD }).outcome === 'fail'
   );
 
@@ -536,6 +557,23 @@ export async function selfTest() {
   check(
     'the later of two sticky comments wins',
     evaluateReviewState({ comments: twoComments, headSha: HEAD }).outcome === 'pass'
+  );
+
+  // Live incident on POPS-2661's own PR: a LATER comment that merely talks
+  // about `pr-review-state.mjs` in prose (a dismiss comment, in the real
+  // case) must not be mistaken for the sticky comment just because it
+  // contains that substring — the real sticky comment, however much
+  // earlier, still wins.
+  const realStickyComment = stateComment({ last_reviewed_sha: HEAD, findings: [] });
+  const proseOnlyComment = {
+    body: 'Dismissing per POPS-2669: see pr-review-state.mjs for the mechanism.',
+  };
+  check(
+    'a later comment merely mentioning pr-review-state.mjs in prose is not mistaken for the sticky one',
+    evaluateReviewState({
+      comments: [realStickyComment, proseOnlyComment],
+      headSha: HEAD,
+    }).outcome === 'pass'
   );
 
   // THE ESCAPE HATCH (POPS-2669): dismissing a finding by id removes it from
@@ -756,7 +794,7 @@ export async function selfTest() {
   let malformedCalls = 0;
   const malformedForever = () => {
     malformedCalls += 1;
-    return Promise.resolve([badBase64]);
+    return Promise.resolve([shortBase64]);
   };
   const malformedTimedOut = await pollForReviewState({
     fetchComments: malformedForever,
