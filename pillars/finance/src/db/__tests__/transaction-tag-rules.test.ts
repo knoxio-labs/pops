@@ -428,8 +428,10 @@ describe('createTransactionTagRule — normalization + upsert (CF022, #3628)', (
     });
 
     expect(second.id).toBe(first.id);
-    expect(second.timesApplied).toBe(1);
-    expect(second.lastUsedAt).not.toBeNull();
+    // Re-creating a rule is not a use of it: the usage counters stay put and
+    // remain readable as evidence (POPS-2597).
+    expect(second.timesApplied).toBe(0);
+    expect(second.lastUsedAt).toBeNull();
     expect(second.confidence).toBeCloseTo(1.0, 5);
     expect(JSON.parse(second.tags)).toEqual(['Shopping', 'Home']);
     expect(listTransactionTagRules(harness.db)).toHaveLength(1);

@@ -97,8 +97,6 @@ function reinforceExistingCorrection(
   db.update(transactionCorrections)
     .set({
       confidence: Math.min(existing.confidence + 0.1, 1.0),
-      timesApplied: existing.timesApplied + 1,
-      lastUsedAt: new Date().toISOString(),
       entityId: input.entityId ?? existing.entityId,
       entityName: input.entityName ?? existing.entityName,
       location: input.location ?? existing.location,
@@ -149,8 +147,7 @@ function insertNewCorrection(
  * Upsert a correction keyed on `(normalized descriptionPattern, matchType)`.
  *
  * On hit, the row is "reinforced" — confidence is bumped by 0.1 (capped at 1.0),
- * `timesApplied` is incremented, `lastUsedAt` is stamped, `isActive` is reset
- * to true, the `entityId` / `entityName` / `location` / `transactionType` /
+ * `isActive` is reset to true, the `entityId` / `entityName` / `location` / `transactionType` /
  * `priority` fields are overlaid with the input only when the input value is
  * non-null (a `null` keeps the existing value), and `tags` is always
  * overwritten by `input.tags ?? []`. The last item is intentional —
@@ -163,6 +160,11 @@ function insertNewCorrection(
  * miss whose input carries no `entityId`, no `transactionType`, and non-empty
  * `tags` — a tags-only row belongs in `transaction_tag_rules`, not here
  * (CF061/#3650).
+ *
+ * Neither branch touches `timesApplied` or `lastUsedAt`: creating or
+ * re-creating a correction is not a use of it. Those two belong exclusively to
+ * {@link incrementTransactionCorrectionUsage}, called from the matcher, so
+ * `timesApplied` stays readable as usage evidence (POPS-2597/POPS-254).
  */
 export function createOrUpdateTransactionCorrection(
   db: FinanceDb,

@@ -103,6 +103,39 @@ function confirmed(overrides: Record<string, unknown> = {}) {
   };
 }
 
+interface StoredTagRule {
+  confidence: number;
+  times_applied: number;
+  last_used_at: string | null;
+}
+
+function tagRuleChangeSet(descriptionPattern: string, tags: string[]) {
+  return {
+    source: 'unit-test',
+    ops: [
+      { op: 'add' as const, data: { descriptionPattern, matchType: 'contains' as const, tags } },
+    ],
+  };
+}
+
+/** A tag rule as the wizard stages it: the ChangeSet plus the new tags the user accepted. */
+function stagedTagRule(descriptionPattern: string, tags: string[], acceptedNewTags: string[]) {
+  return { changeSet: tagRuleChangeSet(descriptionPattern, tags), acceptedNewTags };
+}
+
+function storedTagRules(descriptionPattern: string): StoredTagRule[] {
+  return financeDb.raw
+    .prepare(
+      'SELECT confidence, times_applied, last_used_at FROM transaction_tag_rules WHERE description_pattern = ?'
+    )
+    .all(descriptionPattern) as StoredTagRule[];
+}
+
+function vocabularyTags(): string[] {
+  const rows = financeDb.raw.prepare('SELECT tag FROM tag_vocabulary').all() as { tag: string }[];
+  return rows.map((r) => r.tag);
+}
+
 /** Seed a pre-existing transaction directly (the REST surface has no write path outside `commitImport`). */
 function seedTransaction(overrides: {
   description: string;
@@ -873,17 +906,19 @@ describe('imports.commitImport — pre-create contacts then write the finance tx
     const res = await c.imports.commitImport({
       tagRuleChangeSets: [
         {
-          source: 'unit-test',
-          ops: [
-            {
-              op: 'add',
-              data: {
-                descriptionPattern: 'TAG_RULE_TEST',
-                matchType: 'contains',
-                tags: ['UnitTestTag'],
+          changeSet: {
+            source: 'unit-test',
+            ops: [
+              {
+                op: 'add',
+                data: {
+                  descriptionPattern: 'TAG_RULE_TEST',
+                  matchType: 'contains',
+                  tags: ['UnitTestTag'],
+                },
               },
-            },
-          ],
+            ],
+          },
         },
       ],
       transactions: [
@@ -902,6 +937,57 @@ describe('imports.commitImport — pre-create contacts then write the finance tx
       )
       .get('TAG_RULE_TEST') as { description_pattern: string } | undefined;
     expect(rule?.description_pattern).toBe('TAG_RULE_TEST');
+  });
+
+  it('stages a wizard tag rule as one unused row — confidence 0.95, no usage counters (POPS-2597)', async () => {
+    const c = client();
+    await c.imports.commitImport({
+      tagRuleChangeSets: [stagedTagRule('STAGED_ONCE', ['StagedTag'], ['StagedTag'])],
+      transactions: [confirmed({ description: 'STAGED_ONCE 1', checksum: 'commit-staged-once' })],
+    });
+
+    expect(storedTagRules('STAGED_ONCE')).toEqual([
+      { confidence: 0.95, times_applied: 0, last_used_at: null },
+    ]);
+  });
+
+  it('re-committing the same rule bumps confidence only, never the usage counters (POPS-2597)', async () => {
+    const c = client();
+    for (const checksum of ['commit-restage-a', 'commit-restage-b']) {
+      await c.imports.commitImport({
+        tagRuleChangeSets: [stagedTagRule('RESTAGED', ['StagedTag'], ['StagedTag'])],
+        transactions: [confirmed({ description: 'RESTAGED 1', checksum })],
+      });
+    }
+
+    expect(storedTagRules('RESTAGED')).toEqual([
+      { confidence: 1.0, times_applied: 0, last_used_at: null },
+    ]);
+  });
+
+  it('upserts only the new tags the user accepted, never a declined one (POPS-2597)', async () => {
+    const c = client();
+    await c.imports.commitImport({
+      tagRuleChangeSets: [stagedTagRule('ACCEPT_DECLINE', ['KeptTag', 'DeclinedTag'], ['KeptTag'])],
+      transactions: [confirmed({ description: 'ACCEPT_DECLINE 1', checksum: 'commit-accepted' })],
+    });
+
+    expect(vocabularyTags()).toContain('KeptTag');
+    expect(vocabularyTags()).not.toContain('DeclinedTag');
+  });
+
+  it('upserts every ChangeSet tag when no accept/decline set is supplied', async () => {
+    const c = client();
+    await c.imports.commitImport({
+      tagRuleChangeSets: [
+        {
+          changeSet: tagRuleChangeSet('NO_ACCEPT_SET', ['BatchTagOne', 'BatchTagTwo']),
+        },
+      ],
+      transactions: [confirmed({ description: 'NO_ACCEPT_SET 1', checksum: 'commit-batch-tags' })],
+    });
+
+    expect(vocabularyTags()).toEqual(expect.arrayContaining(['BatchTagOne', 'BatchTagTwo']));
   });
 
   it('rejects an unknown temp id with 400', async () => {

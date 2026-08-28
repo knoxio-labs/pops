@@ -95,6 +95,13 @@ export function useFinalReview() {
       // reset — commit has no server-side checksum dedup, so a resumed copy
       // could otherwise be imported twice.
       clearPersistedImport(true);
+      // Commit is the only write path for staged tag rules and their accepted
+      // vocabulary tags (POPS-2597), so their caches go stale here, not in the
+      // tag-rule dialog.
+      void queryClient.invalidateQueries({ queryKey: ['finance', 'tagRules'] });
+      void queryClient.invalidateQueries({
+        queryKey: ['finance', 'transactions', 'availableTags'],
+      });
     },
     onError: (err: Error) => setCommitError(err.message),
     onSettled: () => queryClient.invalidateQueries({ queryKey: ['finance', 'imports'] }),

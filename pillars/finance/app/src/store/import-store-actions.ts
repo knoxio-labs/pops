@@ -125,6 +125,7 @@ export function buildPendingTagRuleActions(set: StoreSet, get: StoreGet) {
         changeSet: input.changeSet,
         appliedAt: new Date().toISOString(),
         source: input.source,
+        ...(input.acceptedNewTags ? { acceptedNewTags: input.acceptedNewTags } : {}),
       };
       set((prev) => ({ pendingTagRuleChangeSets: [...prev.pendingTagRuleChangeSets, entry] }));
       return entry;

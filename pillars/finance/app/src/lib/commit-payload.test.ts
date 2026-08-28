@@ -120,8 +120,31 @@ describe('buildCommitPayload', () => {
     expect(payload.entities).toEqual([]);
     expect(payload.changeSets).toEqual([]);
     expect(payload.tagRuleChangeSets).toHaveLength(1);
-    expect(payload.tagRuleChangeSets[0]).toEqual(sampleTagRuleChangeSet);
+    expect(payload.tagRuleChangeSets[0]).toEqual({ changeSet: sampleTagRuleChangeSet });
     expect(payload.transactions).toEqual([]);
+  });
+
+  it('carries acceptedNewTags alongside the tag rule ChangeSet', () => {
+    const pcs = makePendingTagRuleChangeSet(sampleTagRuleChangeSet, {
+      acceptedNewTags: ['Groceries'],
+    });
+    const payload = buildCommitPayload([], [], [pcs], []);
+    expect(payload.tagRuleChangeSets[0]).toEqual({
+      changeSet: sampleTagRuleChangeSet,
+      acceptedNewTags: ['Groceries'],
+    });
+  });
+
+  it('omits acceptedNewTags for a staged entry that carries none', () => {
+    const pcs = makePendingTagRuleChangeSet(sampleTagRuleChangeSet);
+    const payload = buildCommitPayload([], [], [pcs], []);
+    expect(elementAt(payload.tagRuleChangeSets, 0)).not.toHaveProperty('acceptedNewTags');
+  });
+
+  it('keeps an empty acceptedNewTags list distinct from an absent one', () => {
+    const pcs = makePendingTagRuleChangeSet(sampleTagRuleChangeSet, { acceptedNewTags: [] });
+    const payload = buildCommitPayload([], [], [pcs], []);
+    expect(elementAt(payload.tagRuleChangeSets, 0).acceptedNewTags).toEqual([]);
   });
 
   it('returns mixed payload with temp entity references in changeSets', () => {

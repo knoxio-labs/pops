@@ -74,7 +74,8 @@ describe('corrections — createOrUpdate, get & list', () => {
     });
     expect(reinforced.data.id).toBe(created.data.id);
     expect(reinforced.data.confidence).toBeCloseTo(0.8, 5);
-    expect(reinforced.data.timesApplied).toBe(1);
+    expect(reinforced.data.timesApplied).toBe(0);
+    expect(reinforced.data.lastUsedAt).toBeNull();
 
     const list = await client().corrections.list();
     expect(list.data).toHaveLength(1);

@@ -4224,49 +4224,52 @@ export interface operations {
           }[];
           /** @default [] */
           tagRuleChangeSets: {
-            ops: (
-              | {
-                  data: {
-                    confidence?: number;
-                    descriptionPattern: string;
-                    entityId?: string | null;
-                    isActive?: boolean;
-                    /**
-                     * @default exact
-                     * @enum {string}
-                     */
-                    matchType: 'exact' | 'contains' | 'regex';
-                    priority?: number;
-                    tags: string[];
-                  };
-                  /** @enum {string} */
-                  op: 'add';
-                }
-              | {
-                  data: {
-                    confidence?: number;
-                    entityId?: string | null;
-                    isActive?: boolean;
-                    priority?: number;
-                    tags?: string[];
-                  };
-                  id: string;
-                  /** @enum {string} */
-                  op: 'edit';
-                }
-              | {
-                  id: string;
-                  /** @enum {string} */
-                  op: 'disable';
-                }
-              | {
-                  id: string;
-                  /** @enum {string} */
-                  op: 'remove';
-                }
-            )[];
-            reason?: string;
-            source?: string;
+            acceptedNewTags?: string[];
+            changeSet: {
+              ops: (
+                | {
+                    data: {
+                      confidence?: number;
+                      descriptionPattern: string;
+                      entityId?: string | null;
+                      isActive?: boolean;
+                      /**
+                       * @default exact
+                       * @enum {string}
+                       */
+                      matchType: 'exact' | 'contains' | 'regex';
+                      priority?: number;
+                      tags: string[];
+                    };
+                    /** @enum {string} */
+                    op: 'add';
+                  }
+                | {
+                    data: {
+                      confidence?: number;
+                      entityId?: string | null;
+                      isActive?: boolean;
+                      priority?: number;
+                      tags?: string[];
+                    };
+                    id: string;
+                    /** @enum {string} */
+                    op: 'edit';
+                  }
+                | {
+                    id: string;
+                    /** @enum {string} */
+                    op: 'disable';
+                  }
+                | {
+                    id: string;
+                    /** @enum {string} */
+                    op: 'remove';
+                  }
+              )[];
+              reason?: string;
+              source?: string;
+            };
           }[];
           transactions: {
             account: string;

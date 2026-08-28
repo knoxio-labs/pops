@@ -82,7 +82,9 @@ export function validateCommitPayload(payload: CommitPayload): void {
 
   const referencedTempIds = new Set<string>();
   for (const cs of payload.changeSets) collectTempIdsFromOps(cs.ops, referencedTempIds);
-  for (const cs of payload.tagRuleChangeSets) collectTempIdsFromOps(cs.ops, referencedTempIds);
+  for (const entry of payload.tagRuleChangeSets) {
+    collectTempIdsFromOps(entry.changeSet.ops, referencedTempIds);
+  }
   for (const txn of payload.transactions) {
     if (txn.entityId?.startsWith(TEMP_ID_PREFIX)) referencedTempIds.add(txn.entityId);
   }

@@ -570,19 +570,20 @@ describe('TagReviewStep — handleTagRuleApplied live re-suggestion (US-03)', ()
     expect(callB?.[1]).not.toContain('Transport');
   });
 
-  it('calls addPendingTagRuleChangeSet with the change set and source', () => {
+  it('calls addPendingTagRuleChangeSet with the change set, source and accepted new tags', () => {
     seedTransactions([txA]);
     renderTagReviewStep();
 
     const changeSet = makeChangeSet();
     act(() => {
-      mockOnAppliedFn!(changeSet, []);
+      mockOnAppliedFn!(changeSet, [], ['Groceries']);
     });
 
     expect(mockAddPendingTagRuleChangeSet).toHaveBeenCalledWith(
       expect.objectContaining({
         changeSet,
         source: expect.stringContaining('tag-review:'),
+        acceptedNewTags: ['Groceries'],
       })
     );
   });
