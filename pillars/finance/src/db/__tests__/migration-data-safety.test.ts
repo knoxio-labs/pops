@@ -93,7 +93,10 @@ const TRANSACTIONS: readonly SeededTransaction[] = [
     date: '2026-01-16',
     type: 'Transfer',
     tags: ['Transfer'],
-    migratedTags: ['occasion:admin'],
+    // 0067 mapped the flat `Transfer` tag to `occasion:admin`; 0071 retired that
+    // value because `type` already says it. The row ends up with no tags at all,
+    // which is the point — the fact lives in the column (POPS-2607).
+    migratedTags: [],
     entityId: null,
     notes: null,
   },

@@ -129,6 +129,15 @@ export type {
   EntityRepairResult,
 } from './services/entity-orphans.js';
 
+export * as tagCoverageService from './services/tag-coverage.js';
+
+export type {
+  TagCoverage,
+  FacetCoverage,
+  DescriptorGap,
+  UnknownTagUsage,
+} from './services/tag-coverage.js';
+
 export * as entityVenueDefaultsService from './services/entity-venue-defaults.js';
 
 export { isPerTransactionFacet, PER_TRANSACTION_FACETS } from './services/entity-venue-facets.js';
