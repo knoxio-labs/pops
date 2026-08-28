@@ -1,4 +1,4 @@
-import type { ChangeSet, ConfirmedTransaction, TagRuleChangeSet } from '@pops/finance';
+import type { ChangeSet, CommitTagRuleChangeSet, ConfirmedTransaction } from '@pops/finance';
 
 import type {
   PendingChangeSet,
@@ -9,7 +9,7 @@ import type {
 export interface CommitPayload {
   entities: PendingEntity[];
   changeSets: ChangeSet[];
-  tagRuleChangeSets: TagRuleChangeSet[];
+  tagRuleChangeSets: CommitTagRuleChangeSet[];
   transactions: ConfirmedTransaction[];
 }
 
@@ -75,7 +75,10 @@ export function buildCommitPayload(
   return {
     entities: [...pendingEntities],
     changeSets: pendingChangeSets.map((pcs) => pcs.changeSet),
-    tagRuleChangeSets: pendingTagRuleChangeSets.map((pcs) => pcs.changeSet),
+    tagRuleChangeSets: pendingTagRuleChangeSets.map((pcs) => ({
+      changeSet: pcs.changeSet,
+      ...(pcs.acceptedNewTags ? { acceptedNewTags: pcs.acceptedNewTags } : {}),
+    })),
     transactions: [...confirmedTransactions],
   };
 }

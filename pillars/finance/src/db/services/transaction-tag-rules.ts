@@ -157,10 +157,14 @@ function findExistingTagRule(
 
 /**
  * Reinforce an existing tag rule hit on the `(normalizedPattern, matchType,
- * entityId)` key: confidence bumped by 0.1 (capped at 1.0), `timesApplied`
- * incremented, `lastUsedAt` stamped, `isActive` reset to true, `tags`
- * overwritten by `input.tags`. `priority` is overlaid only when the input
- * supplies one — mirrors `reinforceExistingCorrection`.
+ * entityId)` key: confidence bumped by 0.1 (capped at 1.0), `isActive` reset
+ * to true, `tags` overwritten by `input.tags`. `priority` is overlaid only
+ * when the input supplies one — mirrors `reinforceExistingCorrection`.
+ *
+ * `timesApplied` and `lastUsedAt` are deliberately untouched: re-creating a
+ * rule is not a use of it. Those two belong exclusively to
+ * {@link incrementTransactionTagRuleUsage}, called from the matcher, so
+ * `timesApplied` stays readable as usage evidence (POPS-2597/POPS-254).
  */
 function reinforceExistingTagRule(
   db: FinanceDb,
@@ -171,8 +175,6 @@ function reinforceExistingTagRule(
     .update(transactionTagRules)
     .set({
       confidence: Math.min(existing.confidence + 0.1, 1.0),
-      timesApplied: existing.timesApplied + 1,
-      lastUsedAt: new Date().toISOString(),
       tags: JSON.stringify(input.tags),
       priority: input.priority ?? existing.priority,
       isActive: true,

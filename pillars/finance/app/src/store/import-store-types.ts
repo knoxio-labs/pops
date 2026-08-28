@@ -40,11 +40,19 @@ export interface PendingTagRuleChangeSet {
   changeSet: TagRuleChangeSet;
   appliedAt: string;
   source: string;
+  /**
+   * New-vocabulary tags the user accepted in the tag-rule dialog. Only those
+   * are upserted into the vocabulary at commit, so a tag the user unchecked
+   * never lands. Absent for flows with no accept/decline step (batch rule
+   * creation), where every tag the ChangeSet carries is upserted.
+   */
+  acceptedNewTags?: string[];
 }
 
 export interface AddPendingTagRuleChangeSetInput {
   changeSet: TagRuleChangeSet;
   source: string;
+  acceptedNewTags?: string[];
 }
 
 export interface ProcessedTransaction extends BaseProcessedTransaction {

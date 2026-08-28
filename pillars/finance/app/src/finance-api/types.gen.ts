@@ -2768,41 +2768,44 @@ export type ImportsCommitImportData = {
       type: 'company' | 'person' | 'government' | 'bank' | 'place' | 'brand' | 'organisation';
     }>;
     tagRuleChangeSets: Array<{
-      ops: Array<
-        | {
-            data: {
-              confidence?: number;
-              descriptionPattern: string;
-              entityId?: string | null;
-              isActive?: boolean;
-              matchType: 'exact' | 'contains' | 'regex';
-              priority?: number;
-              tags: Array<string>;
-            };
-            op: 'add';
-          }
-        | {
-            data: {
-              confidence?: number;
-              entityId?: string | null;
-              isActive?: boolean;
-              priority?: number;
-              tags?: Array<string>;
-            };
-            id: string;
-            op: 'edit';
-          }
-        | {
-            id: string;
-            op: 'disable';
-          }
-        | {
-            id: string;
-            op: 'remove';
-          }
-      >;
-      reason?: string;
-      source?: string;
+      acceptedNewTags?: Array<string>;
+      changeSet: {
+        ops: Array<
+          | {
+              data: {
+                confidence?: number;
+                descriptionPattern: string;
+                entityId?: string | null;
+                isActive?: boolean;
+                matchType: 'exact' | 'contains' | 'regex';
+                priority?: number;
+                tags: Array<string>;
+              };
+              op: 'add';
+            }
+          | {
+              data: {
+                confidence?: number;
+                entityId?: string | null;
+                isActive?: boolean;
+                priority?: number;
+                tags?: Array<string>;
+              };
+              id: string;
+              op: 'edit';
+            }
+          | {
+              id: string;
+              op: 'disable';
+            }
+          | {
+              id: string;
+              op: 'remove';
+            }
+        >;
+        reason?: string;
+        source?: string;
+      };
     }>;
     transactions: Array<{
       account: string;

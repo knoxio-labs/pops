@@ -1,14 +1,9 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { toast } from 'sonner';
 
 import { unwrap } from '../../../finance-api-helpers.js';
-import {
-  tagRulesApply,
-  tagRulesReject,
-  type TagRulesApplyData,
-  type TagRulesRejectData,
-} from '../../../finance-api/index.js';
+import { tagRulesReject, type TagRulesRejectData } from '../../../finance-api/index.js';
 import {
   collectNewTagNames,
   type ProposeOutput,
@@ -16,7 +11,6 @@ import {
   type TagRuleProposalDialogProps,
 } from './types';
 
-type ApplyBody = NonNullable<TagRulesApplyData['body']>;
 type RejectBody = NonNullable<TagRulesRejectData['body']>;
 
 interface FormStateForMutations {
@@ -32,11 +26,6 @@ interface MutationsArgs {
 
 export function useTagRuleMutations(args: MutationsArgs) {
   const { props, form, proposal } = args;
-  const queryClient = useQueryClient();
-  const applyMutation = useMutation({
-    mutationFn: async (vars: ApplyBody) => unwrap(await tagRulesApply({ body: vars })),
-    onError: (e: Error) => toast.error(e.message),
-  });
   const rejectMutation = useMutation({
     mutationFn: async (vars: RejectBody): Promise<RejectOutput> =>
       unwrap(await tagRulesReject({ body: vars })),
@@ -47,16 +36,18 @@ export function useTagRuleMutations(args: MutationsArgs) {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const handleApply = useCallback(async () => {
+  /**
+   * Stage the proposal — no DB write. The rule and its accepted new tags reach
+   * the database once, through `commitImport` on Final Review; writing here too
+   * used to persist the same rule twice, inflating `confidence` and
+   * `timesApplied` on a rule that had never fired (POPS-2597).
+   */
+  const handleApply = useCallback(() => {
     if (!proposal) return;
-    const changeSet = proposal.changeSet;
-    await applyMutation.mutateAsync({ changeSet, acceptedNewTags: [...form.acceptedNewTags] });
-    await queryClient.invalidateQueries({ queryKey: ['finance', 'tagRules'] });
-    await queryClient.invalidateQueries({ queryKey: ['finance', 'transactions', 'availableTags'] });
-    toast.success('Tag rule saved');
-    props.onApplied?.(changeSet, proposal.preview.affected);
+    toast.success('Tag rule staged — saved when you commit the import');
+    props.onApplied?.(proposal.changeSet, proposal.preview.affected, [...form.acceptedNewTags]);
     props.onOpenChange(false);
-  }, [proposal, applyMutation, form.acceptedNewTags, queryClient, props]);
+  }, [proposal, form.acceptedNewTags, props]);
 
   const handleReject = useCallback(() => {
     if (!proposal) return;
@@ -68,7 +59,7 @@ export function useTagRuleMutations(args: MutationsArgs) {
     rejectMutation.mutate({ changeSet: proposal.changeSet, feedback: fb });
   }, [proposal, rejectMutation, form.rejectFeedback]);
 
-  return { applyMutation, rejectMutation, handleApply, handleReject };
+  return { rejectMutation, handleApply, handleReject };
 }
 
 export { collectNewTagNames };

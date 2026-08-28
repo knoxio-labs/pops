@@ -83,6 +83,22 @@ const baseProposal: ProposeData = {
   },
 };
 
+/** Same proposal, but the suggested tag is new to the vocabulary — drives the accept/decline panel. */
+const proposalWithNewTag: ProposeData = {
+  ...baseProposal,
+  preview: {
+    counts: { affected: 1, suggestionChanges: 1, newTagProposals: 1 },
+    affected: [
+      {
+        transactionId: 't1',
+        description: 'WOOLWORTHS 1234',
+        before: { suggestedTags: [] },
+        after: { suggestedTags: [{ tag: 'Groceries', source: 'tag_rule', isNew: true }] },
+      },
+    ],
+  },
+};
+
 function withClient(node: ReactElement): ReactElement {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -127,6 +143,39 @@ describe('TagRuleProposalDialog', () => {
         signal: expect.objectContaining({ descriptionPattern: 'WOOLWORTHS', tags: ['Groceries'] }),
       }),
     });
+  });
+
+  it('stages the rule without writing: no apply call, onApplied gets the accepted new tags', async () => {
+    const onOpenChange = vi.fn();
+    const onApplied = vi.fn();
+    mockPropose.mockResolvedValue({ data: proposalWithNewTag, error: undefined });
+    renderDialog(onOpenChange, onApplied);
+    await screen.findByText(/contains:WOOLWORTHS/i);
+    await screen.findByLabelText(/Groceries/i);
+
+    fireEvent.click(screen.getByRole('button', { name: /save rule/i }));
+
+    await waitFor(() => expect(onApplied).toHaveBeenCalledOnce());
+    expect(mockApply).not.toHaveBeenCalled();
+    const [changeSet, affected, acceptedNewTags] = elementAt(onApplied.mock.calls, 0);
+    expect(changeSet).toEqual(proposalWithNewTag.changeSet);
+    expect(affected).toEqual(proposalWithNewTag.preview.affected);
+    expect(acceptedNewTags).toEqual(['Groceries']);
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it('excludes a new tag the user unchecked from the staged accepted set', async () => {
+    const onApplied = vi.fn();
+    mockPropose.mockResolvedValue({ data: proposalWithNewTag, error: undefined });
+    renderDialog(vi.fn(), onApplied);
+    await screen.findByText(/contains:WOOLWORTHS/i);
+
+    fireEvent.click(await screen.findByLabelText(/Groceries/i));
+    fireEvent.click(screen.getByRole('button', { name: /save rule/i }));
+
+    await waitFor(() => expect(onApplied).toHaveBeenCalledOnce());
+    expect(mockApply).not.toHaveBeenCalled();
+    expect(elementAt(onApplied.mock.calls, 0)[2]).toEqual([]);
   });
 
   it('shows the reject feedback textarea after clicking "Reject…"', async () => {

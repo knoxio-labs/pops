@@ -7843,148 +7843,161 @@
                     "items": {
                       "additionalProperties": false,
                       "properties": {
-                        "ops": {
+                        "acceptedNewTags": {
                           "items": {
-                            "oneOf": [
-                              {
-                                "additionalProperties": false,
-                                "properties": {
-                                  "data": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        "changeSet": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "ops": {
+                              "items": {
+                                "oneOf": [
+                                  {
                                     "additionalProperties": false,
                                     "properties": {
-                                      "confidence": {
-                                        "maximum": 1,
-                                        "minimum": 0,
-                                        "type": "number"
+                                      "data": {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "confidence": {
+                                            "maximum": 1,
+                                            "minimum": 0,
+                                            "type": "number"
+                                          },
+                                          "descriptionPattern": {
+                                            "minLength": 1,
+                                            "type": "string"
+                                          },
+                                          "entityId": {
+                                            "nullable": true,
+                                            "type": "string"
+                                          },
+                                          "isActive": {
+                                            "type": "boolean"
+                                          },
+                                          "matchType": {
+                                            "default": "exact",
+                                            "enum": ["exact", "contains", "regex"],
+                                            "type": "string"
+                                          },
+                                          "priority": {
+                                            "maximum": 9007199254740991,
+                                            "minimum": 0,
+                                            "type": "integer"
+                                          },
+                                          "tags": {
+                                            "items": {
+                                              "type": "string"
+                                            },
+                                            "minItems": 1,
+                                            "type": "array"
+                                          }
+                                        },
+                                        "required": ["descriptionPattern", "matchType", "tags"],
+                                        "type": "object"
                                       },
-                                      "descriptionPattern": {
+                                      "op": {
+                                        "enum": ["add"],
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": ["op", "data"],
+                                    "type": "object"
+                                  },
+                                  {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "data": {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "confidence": {
+                                            "maximum": 1,
+                                            "minimum": 0,
+                                            "type": "number"
+                                          },
+                                          "entityId": {
+                                            "nullable": true,
+                                            "type": "string"
+                                          },
+                                          "isActive": {
+                                            "type": "boolean"
+                                          },
+                                          "priority": {
+                                            "maximum": 9007199254740991,
+                                            "minimum": 0,
+                                            "type": "integer"
+                                          },
+                                          "tags": {
+                                            "items": {
+                                              "type": "string"
+                                            },
+                                            "minItems": 1,
+                                            "type": "array"
+                                          }
+                                        },
+                                        "type": "object"
+                                      },
+                                      "id": {
                                         "minLength": 1,
                                         "type": "string"
                                       },
-                                      "entityId": {
-                                        "nullable": true,
+                                      "op": {
+                                        "enum": ["edit"],
                                         "type": "string"
-                                      },
-                                      "isActive": {
-                                        "type": "boolean"
-                                      },
-                                      "matchType": {
-                                        "default": "exact",
-                                        "enum": ["exact", "contains", "regex"],
-                                        "type": "string"
-                                      },
-                                      "priority": {
-                                        "maximum": 9007199254740991,
-                                        "minimum": 0,
-                                        "type": "integer"
-                                      },
-                                      "tags": {
-                                        "items": {
-                                          "type": "string"
-                                        },
-                                        "minItems": 1,
-                                        "type": "array"
                                       }
                                     },
-                                    "required": ["descriptionPattern", "matchType", "tags"],
+                                    "required": ["op", "id", "data"],
                                     "type": "object"
                                   },
-                                  "op": {
-                                    "enum": ["add"],
-                                    "type": "string"
-                                  }
-                                },
-                                "required": ["op", "data"],
-                                "type": "object"
-                              },
-                              {
-                                "additionalProperties": false,
-                                "properties": {
-                                  "data": {
+                                  {
                                     "additionalProperties": false,
                                     "properties": {
-                                      "confidence": {
-                                        "maximum": 1,
-                                        "minimum": 0,
-                                        "type": "number"
-                                      },
-                                      "entityId": {
-                                        "nullable": true,
+                                      "id": {
+                                        "minLength": 1,
                                         "type": "string"
                                       },
-                                      "isActive": {
-                                        "type": "boolean"
-                                      },
-                                      "priority": {
-                                        "maximum": 9007199254740991,
-                                        "minimum": 0,
-                                        "type": "integer"
-                                      },
-                                      "tags": {
-                                        "items": {
-                                          "type": "string"
-                                        },
-                                        "minItems": 1,
-                                        "type": "array"
+                                      "op": {
+                                        "enum": ["disable"],
+                                        "type": "string"
                                       }
                                     },
+                                    "required": ["op", "id"],
                                     "type": "object"
                                   },
-                                  "id": {
-                                    "minLength": 1,
-                                    "type": "string"
-                                  },
-                                  "op": {
-                                    "enum": ["edit"],
-                                    "type": "string"
+                                  {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "id": {
+                                        "minLength": 1,
+                                        "type": "string"
+                                      },
+                                      "op": {
+                                        "enum": ["remove"],
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": ["op", "id"],
+                                    "type": "object"
                                   }
-                                },
-                                "required": ["op", "id", "data"],
-                                "type": "object"
+                                ]
                               },
-                              {
-                                "additionalProperties": false,
-                                "properties": {
-                                  "id": {
-                                    "minLength": 1,
-                                    "type": "string"
-                                  },
-                                  "op": {
-                                    "enum": ["disable"],
-                                    "type": "string"
-                                  }
-                                },
-                                "required": ["op", "id"],
-                                "type": "object"
-                              },
-                              {
-                                "additionalProperties": false,
-                                "properties": {
-                                  "id": {
-                                    "minLength": 1,
-                                    "type": "string"
-                                  },
-                                  "op": {
-                                    "enum": ["remove"],
-                                    "type": "string"
-                                  }
-                                },
-                                "required": ["op", "id"],
-                                "type": "object"
-                              }
-                            ]
+                              "minItems": 1,
+                              "type": "array"
+                            },
+                            "reason": {
+                              "type": "string"
+                            },
+                            "source": {
+                              "type": "string"
+                            }
                           },
-                          "minItems": 1,
-                          "type": "array"
-                        },
-                        "reason": {
-                          "type": "string"
-                        },
-                        "source": {
-                          "type": "string"
+                          "required": ["ops"],
+                          "type": "object"
                         }
                       },
-                      "required": ["ops"],
+                      "required": ["changeSet"],
                       "type": "object"
                     },
                     "type": "array"

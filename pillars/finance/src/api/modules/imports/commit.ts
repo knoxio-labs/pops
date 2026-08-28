@@ -125,10 +125,12 @@ function applyTagRuleChangeSetsPhase(
   tempIdMap: Map<string, string>
 ): number {
   let tagRulesApplied = 0;
-  for (const cs of payload.tagRuleChangeSets) {
-    const resolved = resolveTagRuleChangeSetTempIds(cs, tempIdMap);
-    for (const tag of collectTagsFromTagRuleChangeSet(resolved)) {
-      tagVocabularyService.upsertVocabularyTag(tx, tag, 'user');
+  for (const entry of payload.tagRuleChangeSets) {
+    const resolved = resolveTagRuleChangeSetTempIds(entry.changeSet, tempIdMap);
+    const vocabularyTags = entry.acceptedNewTags ?? collectTagsFromTagRuleChangeSet(resolved);
+    for (const tag of vocabularyTags) {
+      const trimmed = tag.trim();
+      if (trimmed) tagVocabularyService.upsertVocabularyTag(tx, trimmed, 'user');
     }
     applyTagRuleChangeSet(tx, resolved);
     tagRulesApplied += resolved.ops.length;

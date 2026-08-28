@@ -51,6 +51,7 @@ export {
   type ImportWarning,
   type ProcessImportOutput,
   type CommitResult,
+  type CommitTagRuleChangeSet,
   type SuggestedTag,
   type MatchedRule,
 } from './rest-imports-schemas.js';

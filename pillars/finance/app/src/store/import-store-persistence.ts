@@ -8,7 +8,7 @@ import type { ImportStore } from './import-store-types';
 
 export const IMPORT_PERSIST_KEY = 'pops-finance-import-wizard';
 /** Bump on ANY change to the persisted shape — a version mismatch silently discards the stored copy. */
-export const IMPORT_PERSIST_VERSION = 2;
+export const IMPORT_PERSIST_VERSION = 3;
 export const IMPORT_PERSIST_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
 export type PersistedImportState = Pick<

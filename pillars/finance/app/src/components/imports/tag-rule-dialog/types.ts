@@ -28,9 +28,15 @@ export interface TagRuleProposalDialogProps {
     description: string;
     entityId?: string | null;
   }>;
+  /**
+   * Called when the user accepts the proposal. The dialog itself writes
+   * nothing — the caller stages the ChangeSet and the accepted new-vocabulary
+   * tags for the import commit (POPS-2597).
+   */
   onApplied?: (
     changeSet: ProposeOutput['changeSet'],
-    affected: ProposeOutput['preview']['affected']
+    affected: ProposeOutput['preview']['affected'],
+    acceptedNewTags: string[]
   ) => void;
 }
 

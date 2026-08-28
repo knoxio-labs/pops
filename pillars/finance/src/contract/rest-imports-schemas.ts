@@ -148,10 +148,25 @@ export const PendingEntitySchema = z.object({
   type: z.enum(ENTITY_TYPES).default('company'),
 });
 
+/**
+ * A tag-rule ChangeSet staged in the import wizard, carried to commit with the
+ * new-vocabulary tags the user accepted alongside it.
+ *
+ * `acceptedNewTags` is the accept/decline outcome of the tag-rule dialog's
+ * new-tags panel: when present, exactly those tags are upserted into
+ * `tag_vocabulary`, so a tag the user unchecked never lands. When absent — the
+ * batch rule-creation flow, which has no accept/decline UI — every tag the
+ * ChangeSet carries is upserted (POPS-2597).
+ */
+export const CommitTagRuleChangeSetSchema = z.object({
+  changeSet: TagRuleChangeSetSchema,
+  acceptedNewTags: z.array(z.string()).optional(),
+});
+
 export const CommitPayloadSchema = z.object({
   entities: z.array(PendingEntitySchema).default([]),
   changeSets: z.array(ChangeSetSchema).default([]),
-  tagRuleChangeSets: z.array(TagRuleChangeSetSchema).default([]),
+  tagRuleChangeSets: z.array(CommitTagRuleChangeSetSchema).default([]),
   transactions: z.array(ConfirmedTransactionSchema),
   /**
    * Client-generated idempotency key scoped to a single "Approve & Commit
@@ -224,6 +239,7 @@ export type AiUsageStats = z.infer<typeof AiUsageStatsSchema>;
 export type ProcessImportOutput = z.infer<typeof ProcessImportOutputSchema>;
 export type CreateEntityOutput = z.infer<typeof CreateEntityOutputSchema>;
 export type PendingEntity = z.infer<typeof PendingEntitySchema>;
+export type CommitTagRuleChangeSet = z.infer<typeof CommitTagRuleChangeSetSchema>;
 export type CommitPayload = z.infer<typeof CommitPayloadSchema>;
 export type CommitResult = z.infer<typeof CommitResultSchema>;
 export type FailedTransactionDetail = z.infer<typeof FailedTransactionDetailSchema>;

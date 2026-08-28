@@ -142,6 +142,6 @@ export function useTagRuleProposal(props: TagRuleProposalDialogProps) {
   useSyncAcceptedTags(proposal, form.setAcceptedNewTags);
   const newTagNames = useMemo(() => collectNewTagNames(proposal), [proposal]);
   const mutations = useTagRuleMutations({ props, form, proposal });
-  const busy = mutations.applyMutation.isPending || mutations.rejectMutation.isPending;
+  const busy = mutations.rejectMutation.isPending;
   return { form, proposal, proposeQuery, newTagNames, busy, ...mutations };
 }

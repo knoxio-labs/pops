@@ -267,8 +267,10 @@ describe('createOrUpdateTransactionCorrection — conflict path', () => {
 
     expect(second.id).toBe(first.id);
     expect(second.confidence).toBeCloseTo(0.8, 5);
-    expect(second.timesApplied).toBe(1);
-    expect(second.lastUsedAt).not.toBeNull();
+    // Re-creating a correction is not a use of it: the usage counters stay put
+    // and remain readable as evidence (POPS-2597).
+    expect(second.timesApplied).toBe(0);
+    expect(second.lastUsedAt).toBeNull();
     expect(second.entityName).toBe('Updated');
   });
 

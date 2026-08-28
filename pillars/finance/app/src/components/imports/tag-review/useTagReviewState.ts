@@ -44,7 +44,11 @@ export interface UseTagReviewStateOutput {
     tags: string[]
   ) => void;
   previewTransactions: Array<{ checksum: string; description: string; entityId: string | null }>;
-  handleTagRuleApplied: (changeSet: TagRuleChangeSet, affected: TagRuleImpactItem[]) => void;
+  handleTagRuleApplied: (
+    changeSet: TagRuleChangeSet,
+    affected: TagRuleImpactItem[],
+    acceptedNewTags: string[]
+  ) => void;
 }
 
 interface LocalTagsState {
@@ -105,10 +109,11 @@ function useTagRuleHandler(args: {
     suggestedTagMeta,
   } = args;
   return useCallback(
-    (changeSet: TagRuleChangeSet, affected: TagRuleImpactItem[]) => {
+    (changeSet: TagRuleChangeSet, affected: TagRuleImpactItem[], acceptedNewTags: string[]) => {
       addPendingTagRuleChangeSet({
         changeSet,
         source: `tag-review:${dialogGroupNameRef.current ?? 'unknown'}`,
+        acceptedNewTags,
       });
       if (affected.length === 0) return;
       setLocalTags((prev) => applyAffectedToLocalTags(prev, affected, suggestedTagMeta));
