@@ -4599,7 +4599,6 @@ export type PlexGetSyncStatusResponses = {
   200: {
     data: {
       configured: boolean;
-      connected: boolean;
       hasToken: boolean;
       hasUrl: boolean;
     };

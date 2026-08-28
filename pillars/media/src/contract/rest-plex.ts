@@ -43,7 +43,6 @@ const SyncStatusSchema = z.object({
   configured: z.boolean(),
   hasUrl: z.boolean(),
   hasToken: z.boolean(),
-  connected: z.boolean(),
 });
 
 const SectionIdsSchema = z.object({
