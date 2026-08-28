@@ -67,6 +67,14 @@
  * nothing else, and every dismissal is a plain, timestamped, attributed PR
  * comment, not a silent override. See POPS-2669 for the underlying bug.
  *
+ * ONLY A TRUSTED COMMENTER'S MARKER COUNTS (see
+ * TRUSTED_DISMISSER_ASSOCIATIONS below) — reviewed HIGH on this PR's own
+ * head: an unchecked version let ANY commenter on the PR, not only someone
+ * with push access, waive a genuine finding and reopen the #4289 hole this
+ * gate exists to close, just via a self-service mechanism instead of an
+ * oversight. `collectDismissedFindingIds` never even reads the marker text
+ * out of an untrusted comment's body.
+ *
  * Stdlib only, deliberately: see `pr-review-state.mjs` and the tier amendment
  * in docs/architecture/adr-045-guards-must-prove-they-report.md, enforced by
  * scripts/ci/__tests__/guard-job-tiers.test.ts. `STATE_MARKER` is imported
@@ -126,6 +134,12 @@ export function collectDismissedFindingIds(comments) {
   const dismissed = new Set();
   for (const comment of comments) {
     if (typeof comment.body !== 'string') continue;
+    // A dismiss marker from anyone who is not a trusted collaborator is not
+    // read at all — not "read and logged as untrusted", not "read and
+    // ignored later" — because the only thing that makes this escape hatch
+    // safe rather than a public bypass is that this check never even looks
+    // at what an untrusted commenter wrote here.
+    if (!TRUSTED_DISMISSER_ASSOCIATIONS.has(comment.author_association ?? '')) continue;
     for (const match of comment.body.matchAll(DISMISS_RE)) {
       if (match[1]) dismissed.add(match[1]);
     }
@@ -136,7 +150,23 @@ export function collectDismissedFindingIds(comments) {
 /**
  * @typedef {object} StickyComment
  * @property {string} body
+ * @property {string} [author_association] GitHub's relationship of the
+ *   commenter to this repo (`OWNER`, `MEMBER`, `COLLABORATOR`, `CONTRIBUTOR`,
+ *   `NONE`, …) — present on every comment the REST API returns; used only to
+ *   gate {@link collectDismissedFindingIds}, see TRUSTED_DISMISSER_ASSOCIATIONS.
+ * @property {{ login?: string }} [user]
  */
+
+/**
+ * Repo relationships trusted to dismiss a finding — reviewed HIGH on this
+ * PR's own head (POPS-2661): without this check, ANY commenter, not just
+ * someone with push access, could post the marker and waive a genuine
+ * finding, reopening exactly the #4289 hole this gate exists to close. These
+ * three are GitHub's own categories for "has write access or above"; `NONE`
+ * and `CONTRIBUTOR` (has committed before, but is not a current
+ * collaborator) are deliberately excluded.
+ */
+const TRUSTED_DISMISSER_ASSOCIATIONS = new Set(['OWNER', 'MEMBER', 'COLLABORATOR']);
 
 /**
  * Pick the sticky review comment out of a PR's issue comments.
@@ -515,7 +545,10 @@ export async function selfTest() {
     ],
   });
   const dismissedOnly = evaluateReviewState({
-    comments: [twoOpenFindings, { body: dismissMarkerFor('aaaaaa111111') }],
+    comments: [
+      twoOpenFindings,
+      { body: dismissMarkerFor('aaaaaa111111'), author_association: 'OWNER' },
+    ],
     headSha: HEAD,
   });
   check(
@@ -526,7 +559,7 @@ export async function selfTest() {
           last_reviewed_sha: HEAD,
           findings: [{ id: 'aaaaaa111111', status: 'open', title: 'a stale finding' }],
         }),
-        { body: dismissMarkerFor('aaaaaa111111') },
+        { body: dismissMarkerFor('aaaaaa111111'), author_association: 'OWNER' },
       ],
       headSha: HEAD,
     }).outcome === 'pass'
@@ -549,20 +582,77 @@ export async function selfTest() {
           last_reviewed_sha: HEAD,
           findings: [{ id: 'bbbbbb222222', status: 'open', title: 'a real one' }],
         }),
-        { body: dismissMarkerFor('cccccc333333') },
+        { body: dismissMarkerFor('cccccc333333'), author_association: 'OWNER' },
       ],
       headSha: HEAD,
     }).outcome === 'fail'
   );
   check(
     'dismissMarkerFor output round-trips through collectDismissedFindingIds',
-    collectDismissedFindingIds([{ body: dismissMarkerFor('abc123def456') }]).has('abc123def456')
+    collectDismissedFindingIds([
+      { body: dismissMarkerFor('abc123def456'), author_association: 'OWNER' },
+    ]).has('abc123def456')
   );
   check(
     'garbage where a dismiss id should be is ignored, not matched',
-    !collectDismissedFindingIds([{ body: '<!-- review-findings-gate-dismiss: not-hex! -->' }]).has(
-      'not-hex!'
-    )
+    !collectDismissedFindingIds([
+      { body: '<!-- review-findings-gate-dismiss: not-hex! -->', author_association: 'OWNER' },
+    ]).has('not-hex!')
+  );
+
+  // Reviewed HIGH on this PR's own head: a commenter with no repo
+  // association (or an association short of push access) must never be able
+  // to waive a finding, or the escape hatch is a public bypass.
+  check(
+    'a dismiss marker from an untrusted commenter is not honoured',
+    !collectDismissedFindingIds([
+      { body: dismissMarkerFor('aaaaaa111111'), author_association: 'NONE' },
+    ]).has('aaaaaa111111')
+  );
+  check(
+    'a dismiss marker with no author_association at all is not honoured',
+    !collectDismissedFindingIds([{ body: dismissMarkerFor('aaaaaa111111') }]).has('aaaaaa111111')
+  );
+  check(
+    'a dismiss marker from a past contributor (not a current collaborator) is not honoured',
+    !collectDismissedFindingIds([
+      { body: dismissMarkerFor('aaaaaa111111'), author_association: 'CONTRIBUTOR' },
+    ]).has('aaaaaa111111')
+  );
+  for (const association of ['OWNER', 'MEMBER', 'COLLABORATOR']) {
+    check(
+      `a dismiss marker from a ${association} is honoured`,
+      collectDismissedFindingIds([
+        { body: dismissMarkerFor('aaaaaa111111'), author_association: association },
+      ]).has('aaaaaa111111')
+    );
+  }
+  check(
+    'an untrusted dismissal does not block a trusted one for the same id',
+    evaluateReviewState({
+      comments: [
+        stateComment({
+          last_reviewed_sha: HEAD,
+          findings: [{ id: 'aaaaaa111111', status: 'open', title: 'stale' }],
+        }),
+        { body: dismissMarkerFor('aaaaaa111111'), author_association: 'NONE' },
+        { body: dismissMarkerFor('aaaaaa111111'), author_association: 'OWNER' },
+      ],
+      headSha: HEAD,
+    }).outcome === 'pass'
+  );
+  check(
+    'an untrusted-only dismissal still blocks',
+    evaluateReviewState({
+      comments: [
+        stateComment({
+          last_reviewed_sha: HEAD,
+          findings: [{ id: 'aaaaaa111111', status: 'open', title: 'stale' }],
+        }),
+        { body: dismissMarkerFor('aaaaaa111111'), author_association: 'NONE' },
+      ],
+      headSha: HEAD,
+    }).outcome === 'fail'
   );
 
   // pollForReviewState: a transient retry that clears within budget passes,

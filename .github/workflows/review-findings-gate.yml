@@ -90,7 +90,12 @@ name: Review Findings Gate
 # "THE ESCAPE HATCH" section for the id, the reasoning, and why it is
 # deliberately more effort than fixing a real finding. This workflow makes no
 # change of its own for that: the dismiss marker is read from the same
-# comments this job already fetches to find the sticky review comment.
+# comments this job already fetches to find the sticky review comment. Only a
+# comment from a commenter with push access or above counts (`OWNER`,
+# `MEMBER`, `COLLABORATOR` — GitHub's own `author_association`); an earlier
+# version of this gate skipped that check, and the reviewer caught it on this
+# gate's own PR before merge (any commenter, not just one with write access,
+# could otherwise waive a genuine finding).
 #
 # TIER A: stdlib only. `check-review-findings.mjs` reads JSON (built-in
 # `JSON.parse`) over the GitHub REST API (the `gh` CLI already on every

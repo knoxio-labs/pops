@@ -170,7 +170,7 @@ describe('the escape hatch (POPS-2669)', () => {
           last_reviewed_sha: HEAD,
           findings: [{ id: 'aaaaaa111111', status: 'open', title: 'stale' }],
         }),
-        { body: dismissMarkerFor('aaaaaa111111') },
+        { body: dismissMarkerFor('aaaaaa111111'), author_association: 'OWNER' },
       ],
       headSha: HEAD,
     });
@@ -184,7 +184,7 @@ describe('the escape hatch (POPS-2669)', () => {
           last_reviewed_sha: HEAD,
           findings: [{ id: 'aaaaaa111111', status: 'open', title: 'stale' }],
         }),
-        { body: dismissMarkerFor('aaaaaa111111') },
+        { body: dismissMarkerFor('aaaaaa111111'), author_association: 'OWNER' },
       ],
       headSha: HEAD,
     });
@@ -203,7 +203,7 @@ describe('the escape hatch (POPS-2669)', () => {
             { id: 'bbbbbb222222', status: 'open', title: 'real bug' },
           ],
         }),
-        { body: dismissMarkerFor('aaaaaa111111') },
+        { body: dismissMarkerFor('aaaaaa111111'), author_association: 'OWNER' },
       ],
       headSha: HEAD,
     });
@@ -223,7 +223,7 @@ describe('the escape hatch (POPS-2669)', () => {
           last_reviewed_sha: HEAD,
           findings: [{ id: 'bbbbbb222222', status: 'open', title: 'real bug' }],
         }),
-        { body: dismissMarkerFor('cccccc333333') },
+        { body: dismissMarkerFor('cccccc333333'), author_association: 'OWNER' },
       ],
       headSha: HEAD,
     });
@@ -243,8 +243,11 @@ describe('the escape hatch (POPS-2669)', () => {
             { id: 'bbbbbb222222', status: 'open', title: 'b' },
           ],
         }),
-        { body: `${dismissMarkerFor('aaaaaa111111')}\nreason one` },
-        { body: `${dismissMarkerFor('bbbbbb222222')}\nreason two` },
+        { body: `${dismissMarkerFor('aaaaaa111111')}\nreason one`, author_association: 'MEMBER' },
+        {
+          body: `${dismissMarkerFor('bbbbbb222222')}\nreason two`,
+          author_association: 'COLLABORATOR',
+        },
       ],
       headSha: HEAD,
     });
@@ -252,16 +255,81 @@ describe('the escape hatch (POPS-2669)', () => {
   });
 });
 
+describe('the escape hatch trusts only push-access commenters', () => {
+  it('does not honour a dismissal with no author_association at all', () => {
+    expect(collectDismissedFindingIds([{ body: dismissMarkerFor('aaaaaa111111') }])).toEqual(
+      new Set()
+    );
+  });
+
+  it('does not honour a dismissal from a commenter with no repo association', () => {
+    expect(
+      collectDismissedFindingIds([
+        { body: dismissMarkerFor('aaaaaa111111'), author_association: 'NONE' },
+      ])
+    ).toEqual(new Set());
+  });
+
+  it('does not honour a dismissal from a past contributor who is not a current collaborator', () => {
+    expect(
+      collectDismissedFindingIds([
+        { body: dismissMarkerFor('aaaaaa111111'), author_association: 'CONTRIBUTOR' },
+      ])
+    ).toEqual(new Set());
+  });
+
+  it.each(['OWNER', 'MEMBER', 'COLLABORATOR'])('honours a dismissal from a %s', (association) => {
+    expect(
+      collectDismissedFindingIds([
+        { body: dismissMarkerFor('aaaaaa111111'), author_association: association },
+      ])
+    ).toEqual(new Set(['aaaaaa111111']));
+  });
+
+  it('an untrusted dismissal does not block a trusted one for the same id', () => {
+    const result = evaluateReviewState({
+      comments: [
+        stateComment({
+          last_reviewed_sha: HEAD,
+          findings: [{ id: 'aaaaaa111111', status: 'open', title: 'stale' }],
+        }),
+        { body: dismissMarkerFor('aaaaaa111111'), author_association: 'NONE' },
+        { body: dismissMarkerFor('aaaaaa111111'), author_association: 'OWNER' },
+      ],
+      headSha: HEAD,
+    });
+    expect(result.outcome).toBe('pass');
+  });
+
+  it('an untrusted-only dismissal still blocks the finding', () => {
+    const result = evaluateReviewState({
+      comments: [
+        stateComment({
+          last_reviewed_sha: HEAD,
+          findings: [{ id: 'aaaaaa111111', status: 'open', title: 'stale' }],
+        }),
+        { body: dismissMarkerFor('aaaaaa111111'), author_association: 'NONE' },
+      ],
+      headSha: HEAD,
+    });
+    expect(result.outcome).toBe('fail');
+  });
+});
+
 describe('collectDismissedFindingIds', () => {
   it('round-trips dismissMarkerFor', () => {
-    expect(collectDismissedFindingIds([{ body: dismissMarkerFor('abc123def456') }])).toEqual(
-      new Set(['abc123def456'])
-    );
+    expect(
+      collectDismissedFindingIds([
+        { body: dismissMarkerFor('abc123def456'), author_association: 'OWNER' },
+      ])
+    ).toEqual(new Set(['abc123def456']));
   });
 
   it('ignores a marker whose id is not hex', () => {
     expect(
-      collectDismissedFindingIds([{ body: '<!-- review-findings-gate-dismiss: not-hex! -->' }])
+      collectDismissedFindingIds([
+        { body: '<!-- review-findings-gate-dismiss: not-hex! -->', author_association: 'OWNER' },
+      ])
     ).toEqual(new Set());
   });
 
