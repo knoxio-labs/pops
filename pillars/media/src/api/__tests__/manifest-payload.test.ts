@@ -9,11 +9,15 @@
  * key. `bootstrapPillar` rejected media's own manifest and the pillar
  * crash-looped in production — 11 restarts before it was caught.
  *
- * Nothing failed earlier because the two shapes are mirrored by hand across a
- * package boundary: `@pops/types` is the TypeScript source of truth and the Zod
- * schema is the wire validator, so a field added to one type-checks fine while
- * the other rejects it at runtime. This test closes that loop for media by
- * asserting the real payload parses.
+ * Nothing failed earlier because the two shapes were mirrored by hand across a
+ * package boundary: `@pops/types` held the TypeScript source of truth and the
+ * Zod schema was the wire validator, so a field added to one type-checked fine
+ * while the other rejected it at runtime. ADR-049 removed that mirror — the
+ * shapes are declared once, in Zod, and the types are inferred from them.
+ *
+ * This test stays because the validator enforces more than shape: cross-field
+ * rules and pattern refinements no type can carry still fail first at boot
+ * unless something emits the real payload.
  */
 import { describe, expect, it } from 'vitest';
 

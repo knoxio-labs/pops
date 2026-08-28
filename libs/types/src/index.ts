@@ -10,6 +10,13 @@ export type {
   SearchHit,
   StructuredFilter,
 } from './search.js';
+export {
+  SettingsFieldSchema,
+  SettingsFieldTypeSchema,
+  SettingsGroupSchema,
+  SettingsManifestSchema,
+  SettingsWidgetSchema,
+} from './settings-manifest.js';
 export type {
   SettingsField,
   SettingsFieldType,
@@ -17,9 +24,16 @@ export type {
   SettingsManifest,
   SettingsWidget,
 } from './settings-manifest.js';
+export {
+  FeatureCapabilitySchema,
+  FeatureDescriptorSchema,
+  FeatureScopeSchema,
+} from './feature-manifest.js';
 export type {
+  FeatureCapability,
   FeatureCredentialStatus,
   FeatureDefinition,
+  FeatureDescriptor,
   FeatureManifest,
   FeatureScope,
   FeatureStatus,
@@ -31,7 +45,7 @@ export type { AiToolDescriptor, AiToolHandler, AiToolResult } from './ai-tool.js
 export type { MigrationDescriptor } from './migration.js';
 export type { SearchAdapterDescriptor } from './search-adapter.js';
 export type { IngestSourceDescriptor } from './ingest-source.js';
-export { assertModuleManifest } from './module-manifest.js';
+export { assertModuleManifest, ModuleCaptureOverlayConfigSchema } from './module-manifest.js';
 export type {
   ModuleBackendManifest,
   ModuleCaptureOverlayConfig,
@@ -41,3 +55,12 @@ export type {
   ModuleSurface,
   OverlayComponentLoader,
 } from './module-manifest.js';
+export {
+  AppPathSchema,
+  CamelIdentifierSchema,
+  I18nKeySchema,
+  KebabIdentifierSchema,
+  PillarIdSchema,
+  ProcedurePathSchema,
+  SettingsKeySchema,
+} from './manifest-primitives.js';

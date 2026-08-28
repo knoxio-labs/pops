@@ -542,6 +542,32 @@ jobs:
       - name: No migration file relies on PRAGMA foreign_keys
         run: node scripts/ci/check-migration-fk-pragma.mjs
 
+  manifest-payload-coverage:
+    name: Manifest payload coverage (POPS-2585)
+    # `bootstrapPillar` runs every pillar's manifest through the SDK's strict
+    # wire validator before the server registers, so a manifest the validator
+    # rejects kills the pillar on boot and restart-loops the container —
+    # POPS-2581, 11 restarts in production. ADR-049 closed the shape half of
+    # that; the cross-field rules still fail first at boot. This guard requires
+    # every TypeScript pillar's ManifestPayload builder to be exercised against
+    # that validator in a test, and reports a pillar that registers a manifest
+    # its builder discovery cannot see. It does NOT cover the Rust `contacts`
+    # pillar, whose hand-written manifest it cannot read at all (POPS-2592) —
+    # the guard's own header says so. It discovers both sides from disk, so a
+    # new TypeScript pillar is covered without touching this file. It reads the
+    # source tree directly and pulls in no third-party deps, so it skips
+    # `pnpm install`. See scripts/ci/check-manifest-payload-coverage.mjs.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Gate self-test (proves the guard's stated coverage — see the file header)
+        run: node scripts/ci/check-manifest-payload-coverage.mjs --self-test
+      - name: Every pillar manifest builder is checked against the wire validator
+        run: node scripts/ci/check-manifest-payload-coverage.mjs
+
   vendored-contracts:
     name: Vendored contract drift (ADR-033)
     # A consumer that vendors a producer pillar's OpenAPI snapshot — because the

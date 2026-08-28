@@ -2,7 +2,7 @@
   "name": "@pops/types",
   "version": "0.1.0",
   "private": true,
-  "description": "Dependency-free type vocabulary shared by every pillar: manifest, registry, settings, feature and search descriptors.",
+  "description": "Shared vocabulary for POPS: the Zod schemas that declare every manifest wire shape, the TypeScript types inferred from them, and the registry, settings, feature and search descriptors built on top.",
   "files": [
     "dist/**"
   ],
@@ -23,6 +23,9 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest"
+  },
+  "dependencies": {
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/node": "^24.13.3",
