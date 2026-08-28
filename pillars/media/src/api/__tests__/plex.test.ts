@@ -194,15 +194,19 @@ describe('plex — connection', () => {
 
   it('getSyncStatus reflects configured/url/token presence', async () => {
     const empty = await client().plex.getSyncStatus();
-    expect(empty.data).toEqual({
-      configured: false,
-      hasUrl: false,
-      hasToken: false,
-      connected: false,
-    });
+    expect(empty.data).toEqual({ configured: false, hasUrl: false, hasToken: false });
     seedConnection();
     const configured = await client().plex.getSyncStatus();
-    expect(configured.data).toMatchObject({ configured: true, hasUrl: true, hasToken: true });
+    expect(configured.data).toEqual({ configured: true, hasUrl: true, hasToken: true });
+  });
+
+  it('getSyncStatus carries no liveness field that could contradict testConnection', async () => {
+    seedConnection();
+    stubLibraries();
+    const status = await client().plex.getSyncStatus();
+    expect(Object.keys(status.data)).not.toContain('connected');
+    expect(calls).toHaveLength(0);
+    expect((await client().plex.testConnection()).data.connected).toBe(true);
   });
 });
 

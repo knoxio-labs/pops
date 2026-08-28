@@ -12062,9 +12062,6 @@
                         "configured": {
                           "type": "boolean"
                         },
-                        "connected": {
-                          "type": "boolean"
-                        },
                         "hasToken": {
                           "type": "boolean"
                         },
@@ -12072,7 +12069,7 @@
                           "type": "boolean"
                         }
                       },
-                      "required": ["configured", "hasUrl", "hasToken", "connected"],
+                      "required": ["configured", "hasUrl", "hasToken"],
                       "type": "object"
                     }
                   },

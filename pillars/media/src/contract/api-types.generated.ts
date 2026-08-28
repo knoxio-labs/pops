@@ -7888,7 +7888,6 @@ export interface operations {
           'application/json': {
             data: {
               configured: boolean;
-              connected: boolean;
               hasToken: boolean;
               hasUrl: boolean;
             };

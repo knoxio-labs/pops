@@ -19,7 +19,6 @@ export interface PlexSyncStatus {
   configured: boolean;
   hasUrl: boolean;
   hasToken: boolean;
-  connected: boolean;
 }
 
 export interface PlexSectionIds {
@@ -105,12 +104,14 @@ export async function testConnection(client: PlexClient): Promise<boolean> {
   }
 }
 
-/** Connection-config snapshot. `connected` is a static flag (parity with the monolith). */
+/**
+ * Connection-config snapshot: what is persisted, not whether the server answers.
+ * Liveness comes from `testConnection` / `GET /plex/test-connection`.
+ */
 export function getSyncStatus(db: MediaDb, client: PlexClient | null): PlexSyncStatus {
   return {
     configured: client !== null,
     hasUrl: getPlexUrl(db) !== null,
     hasToken: plexSettingsService.getSetting(db, PLEX_KEYS.token) !== null,
-    connected: false,
   };
 }
