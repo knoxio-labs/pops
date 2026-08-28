@@ -3,8 +3,8 @@
  *
  * Every entry point that answers that question — the corrections matcher, the
  * tag-rule matcher, the rule-match preview, the ChangeSet impact preview, the
- * retroactive apply — routes through {@link patternMatchesNormalizedDescription}
- * here. Four independent implementations used to exist and disagreed on case
+ * retroactive apply — routes through {@link patternMatchesDescription} here.
+ * Four independent implementations used to exist and disagreed on case
  * folding, digit stripping and the regex `i` flag, so the same rule could
  * classify a row and contribute no tags (POPS-2600).
  *
@@ -24,6 +24,9 @@ export type PatternMatchType = 'exact' | 'contains' | 'regex';
  * Idempotent: normalising an already-normalised string is a no-op, which is
  * what lets the matcher normalise a stored (already-normalised) pattern
  * without changing it.
+ *
+ * This is the subject for `exact` and `contains` only. `regex` is matched
+ * against the raw description — see {@link patternMatchesDescription}.
  */
 export function normalizeDescription(description: string): string {
   return description
@@ -68,31 +71,59 @@ function warnOnceInvalidPattern(pattern: string): void {
   console.warn(`[pattern-match] invalid regex pattern — rule can never match: ${pattern}`);
 }
 
+/** A transaction description in both of the forms the matcher needs. */
+export interface MatchableDescription {
+  /** The description exactly as it arrived. A `regex` pattern is tested against this. */
+  readonly raw: string;
+  /** {@link normalizeDescription} of `raw`. `exact` and `contains` are tested against this. */
+  readonly normalized: string;
+}
+
+/** Pair a raw description with its normalised form for {@link patternMatchesDescription}. */
+export function describeForMatching(raw: string): MatchableDescription {
+  return { raw, normalized: normalizeDescription(raw) };
+}
+
 /**
- * Does `pattern`, interpreted per `matchType`, match a pre-normalised
- * description?
+ * Does `pattern`, interpreted per `matchType`, match `description`?
  *
- * `normalizedDescription` MUST be the output of {@link normalizeDescription}.
- * The pattern is normalised the same way it is on write (so a caller may pass
- * either a stored pattern or a raw not-yet-persisted one), except for `regex`,
- * which is used verbatim and always matched case-insensitively — the stored
- * pattern is raw while the description is uppercased, so the `i` flag is what
- * makes a lowercase literal reachable at all.
+ * The match type decides which representation the pattern is tested against,
+ * and this is the only place that decision is made:
+ *
+ * - `exact` and `contains` test `description.normalized`. The pattern is
+ *   normalised the same way it is on write (so a caller may pass either a
+ *   stored pattern or a raw not-yet-persisted one), which is what lets one
+ *   `WOOLWORTHS` pattern cover `WOOLWORTHS 1034 CANTERB` and
+ *   `WOOLWORTHS 2201 NEWTOWN`.
+ * - `regex` tests `description.raw`. Normalisation strips digits, so a regex
+ *   run against it could never see one — `\d{4}` was inert by construction,
+ *   which removed the only reason to choose `regex` over `contains`
+ *   (POPS-2640). An author writing a regex is specifying the match precisely;
+ *   they get the description the bank actually sent.
+ *
+ * Two consequences of `regex` seeing raw text, both deliberate and both tested:
+ *
+ * - The `i` flag is kept. It is now a real choice rather than compensation for
+ *   an uppercased subject, and it is what authors expect of a rule editor.
+ * - Diacritics are **not** folded. `CAFE` does not match `CAFÉ MOZART`;
+ *   `CAF[EÉ]` does. Literal control means literal, and an author who wants
+ *   folding can write the character class. `exact`/`contains` still fold,
+ *   because their pattern is folded on both sides.
  *
  * An uncompilable regex yields `false` (warned once per distinct pattern)
  * rather than throwing, so one malformed row can't poison a whole match pass.
  * New rows are rejected at the API boundary; this guards rows written before
  * that validation existed.
  */
-export function patternMatchesNormalizedDescription(
+export function patternMatchesDescription(
   pattern: string,
   matchType: PatternMatchType,
-  normalizedDescription: string
+  description: MatchableDescription
 ): boolean {
   if (pattern.length === 0) return false;
   if (matchType === 'regex') {
     try {
-      return new RegExp(pattern, 'i').test(normalizedDescription);
+      return new RegExp(pattern, 'i').test(description.raw);
     } catch {
       warnOnceInvalidPattern(pattern);
       return false;
@@ -101,101 +132,6 @@ export function patternMatchesNormalizedDescription(
   const normalizedPattern = normalizeDescription(pattern);
   if (normalizedPattern.length === 0) return false;
   return matchType === 'exact'
-    ? normalizedDescription === normalizedPattern
-    : normalizedDescription.includes(normalizedPattern);
-}
-
-function isDigit(char: string | undefined): boolean {
-  return char !== undefined && char >= '0' && char <= '9';
-}
-
-/** Length of the escape sequence starting at `pattern[index]` (a backslash). */
-function escapeLength(pattern: string, index: number): number {
-  const kind = pattern[index + 1];
-  if (kind === 'x') return 4;
-  if (kind === 'c') return 3;
-  if (kind === 'u' || kind === 'p' || kind === 'P') {
-    if (pattern[index + 2] !== '{') return kind === 'u' ? 6 : 2;
-    const close = pattern.indexOf('}', index + 3);
-    return close === -1 ? pattern.length - index : close - index + 1;
-  }
-  return 2;
-}
-
-/** Length of a `{m}` / `{m,}` / `{m,n}` quantifier at `index`, or 0 if it isn't one. */
-function quantifierLength(pattern: string, index: number): number {
-  const close = pattern.indexOf('}', index + 1);
-  if (close === -1) return 0;
-  const body = pattern.slice(index + 1, close);
-  return /^\d+(,\d*)?$/.test(body) ? close - index + 1 : 0;
-}
-
-interface ClassScan {
-  length: number;
-  expectsDigits: boolean;
-}
-
-/** Scan the character class starting at `pattern[index]` (a `[`). */
-function scanCharacterClass(pattern: string, index: number): ClassScan {
-  let cursor = index + 1;
-  const negated = pattern[cursor] === '^';
-  if (negated) cursor += 1;
-
-  let expectsDigits = false;
-  while (cursor < pattern.length && pattern[cursor] !== ']') {
-    if (pattern[cursor] === '\\') {
-      if (pattern[cursor + 1] === 'd') expectsDigits = true;
-      cursor += escapeLength(pattern, cursor);
-      continue;
-    }
-    if (isDigit(pattern[cursor])) expectsDigits = true;
-    cursor += 1;
-  }
-  return {
-    length: cursor >= pattern.length ? pattern.length - index : cursor - index + 1,
-    expectsDigits: expectsDigits && !negated,
-  };
-}
-
-/**
- * Does `pattern` contain a construct that can only be satisfied by a digit in
- * the subject — `\d`, a literal digit, or a character class holding either?
- *
- * Descriptions reach {@link patternMatchesNormalizedDescription} already
- * digit-stripped by {@link normalizeDescription}, so such a construct is dead:
- * a rule whose match depends on it can never fire, silently (POPS-2622). This
- * is the signal an authoring surface shows next to a zero-match preview; it is
- * deliberately not an error, because the digit construct may sit in an
- * alternation branch that does not gate the match.
- *
- * Quantifier digits (`A{2,3}`), negated classes (`[^0-9]`, which matches
- * fine), `\D`, and digits inside `\xHH` / `\uHHHH` / `\p{...}` escapes are not
- * digit expectations and do not trigger it.
- */
-export function regexPatternExpectsDigits(pattern: string): boolean {
-  let index = 0;
-  while (index < pattern.length) {
-    const char = pattern[index];
-    if (char === '\\') {
-      if (pattern[index + 1] === 'd') return true;
-      index += escapeLength(pattern, index);
-      continue;
-    }
-    if (char === '[') {
-      const scan = scanCharacterClass(pattern, index);
-      if (scan.expectsDigits) return true;
-      index += scan.length;
-      continue;
-    }
-    if (char === '{') {
-      const quantifier = quantifierLength(pattern, index);
-      if (quantifier > 0) {
-        index += quantifier;
-        continue;
-      }
-    }
-    if (isDigit(char)) return true;
-    index += 1;
-  }
-  return false;
+    ? description.normalized === normalizedPattern
+    : description.normalized.includes(normalizedPattern);
 }

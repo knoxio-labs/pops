@@ -159,24 +159,25 @@ describe('transactionMatchesSignal', () => {
   });
 
   describe('regex', () => {
-    // These tests mirror the server's shared `patternMatchesNormalizedDescription`:
-    // `new RegExp(pattern, 'i').test(normalizeDescription(desc))` — the
-    // description is uppercased + digit-stripped + space-collapsed BEFORE the
-    // regex runs, and the regex itself is case-insensitive because a stored
-    // regex pattern is raw while the description is uppercased (POPS-2600).
-    it('matches case-insensitively against the normalized description', () => {
+    // These tests mirror the server's shared `patternMatchesDescription`:
+    // `new RegExp(pattern, 'i').test(rawDescription)` — a regex is tested
+    // against the description exactly as it arrived, undigested (POPS-2640).
+    // The `i` flag is kept because a rule editor's authors expect it.
+    it('matches case-insensitively against the raw description', () => {
       expect(transactionMatchesSignal('PayID from John', 'PAYID', 'regex')).toBe(true);
-      // A lowercase literal must still reach an uppercased description — the
-      // `i` flag is the only thing that makes a raw-stored pattern usable.
       expect(transactionMatchesSignal('PayID from John', 'payid', 'regex')).toBe(true);
     });
 
-    it('tests against the digit-stripped description, so \\d+ cannot match digits in the input', () => {
-      // "TXN42" normalizes to "TXN " (digits stripped), so TXN\d+ cannot
-      // match. Users must write patterns against the normalized form.
-      expect(transactionMatchesSignal('TXN42', 'TXN\\d+', 'regex')).toBe(false);
-      // The same input DOES match a pattern written for the normalized form.
-      expect(transactionMatchesSignal('TXN42', '^TXN\\s*$', 'regex')).toBe(true);
+    it('sees the digits, so \\d+ matches digits in the input', () => {
+      expect(transactionMatchesSignal('TXN42', 'TXN\\d+', 'regex')).toBe(true);
+      // The digit is really there, so a pattern written for the digit-stripped
+      // form no longer matches — the same verdict the server now gives.
+      expect(transactionMatchesSignal('TXN42', '^TXN\\s*$', 'regex')).toBe(false);
+    });
+
+    it('does not fold diacritics the way contains does', () => {
+      expect(transactionMatchesSignal('CAFÉ MOZART', 'CAFE', 'regex')).toBe(false);
+      expect(transactionMatchesSignal('CAFÉ MOZART', 'CAFE', 'contains')).toBe(true);
     });
 
     it('honours anchors in the pattern', () => {

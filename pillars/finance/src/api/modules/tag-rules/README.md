@@ -37,7 +37,7 @@ It used to hardcode `before` to `[]` and materialize only the ChangeSet's `add` 
 
 ## One matcher, every call site
 
-The same `normalizeDescription` runs when a pattern is written, when a description is matched, and when a preview is computed, and the same predicate — `contract/pattern-match.ts`'s `patternMatchesNormalizedDescription` — decides every verdict. This module used to carry its own copy in a local `pattern-match.ts`; six such copies existed across the pillar and the browser app and disagreed on case folding, digit stripping and the regex `i` flag, so a preview could promise a match production would skip (POPS-2600). `preview.ts`'s header explains why a naive uppercase-only comparison diverges from production.
+The same `normalizeDescription` runs when a pattern is written, when a description is matched, and when a preview is computed, and the same predicate — `contract/pattern-match.ts`'s `patternMatchesDescription` — decides every verdict, including which representation a match type is tested against: `regex` against the raw description, `exact` and `contains` against the normalised one (POPS-2640). This module used to carry its own copy in a local `pattern-match.ts`; six such copies existed across the pillar and the browser app and disagreed on case folding, digit stripping and the regex `i` flag, so a preview could promise a match production would skip (POPS-2600). `preview.ts`'s header explains why a naive uppercase-only comparison diverges from production.
 
 ## Where things live
 

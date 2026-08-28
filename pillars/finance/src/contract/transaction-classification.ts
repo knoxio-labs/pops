@@ -17,7 +17,7 @@
  * {@link normalizeDescription}), so the import review UI and the pillar apply
  * the same rules.
  */
-import { normalizeDescription, patternMatchesNormalizedDescription } from './pattern-match.js';
+import { describeForMatching, patternMatchesDescription } from './pattern-match.js';
 
 import type { TransactionType } from './corrections-constants.js';
 
@@ -142,18 +142,16 @@ export interface DerivedClassification {
  * `CHARGE FOR OVERDUE PAYMENT` show up in a fee report.
  */
 export function classifyFromDescription(description: string): DerivedClassification | null {
-  const normalized = normalizeDescription(description);
-  if (normalized.length === 0) return null;
+  const matchable = describeForMatching(description);
+  if (matchable.normalized.length === 0) return null;
 
   for (const { tag, patterns } of FEE_PATTERNS) {
-    const hit = patterns.find((p) =>
-      patternMatchesNormalizedDescription(p, 'contains', normalized)
-    );
+    const hit = patterns.find((p) => patternMatchesDescription(p, 'contains', matchable));
     if (hit) return { type: 'fee', tag, pattern: hit };
   }
 
   const inbound = INBOUND_TRANSFER_PATTERNS.find((p) =>
-    patternMatchesNormalizedDescription(p, 'contains', normalized)
+    patternMatchesDescription(p, 'contains', matchable)
   );
   if (inbound) return { type: 'transfer', pattern: inbound };
 

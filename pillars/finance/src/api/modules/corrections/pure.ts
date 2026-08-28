@@ -8,9 +8,9 @@
  * the pillar's `NotFoundError` so a missing edit/disable/remove target maps to
  * a 404 on the REST surface.
  *
- * `normalizeDescription` and `patternMatchesNormalizedDescription` come from
- * the pillar's own `transactionCorrectionsService` so normalisation and the
- * match verdict are identical to the DB-side matcher (POPS-2600).
+ * `describeForMatching` and `patternMatchesDescription` come from the
+ * pillar's own `transactionCorrectionsService` so normalisation and the match
+ * verdict are identical to the DB-side matcher (POPS-2600).
  */
 import {
   applyChangeSetToRules as applyChangeSetToRulesPure,
@@ -20,19 +20,24 @@ import { transactionCorrectionsService } from '../../../db/index.js';
 import { NotFoundError } from '../../shared/errors.js';
 import { classifyCorrectionMatch } from './types.js';
 
+import type { MatchableDescription } from '../../../contract/pattern-match.js';
 import type { ChangeSet } from '../../../contract/rest-corrections.js';
 import type { CorrectionMatchResult, CorrectionRow } from './types.js';
 
-const { normalizeDescription, patternMatchesNormalizedDescription } = transactionCorrectionsService;
+const { describeForMatching, patternMatchesDescription } = transactionCorrectionsService;
 
 /**
- * Test whether a single rule's pattern matches a normalized description.
+ * Test whether a single rule's pattern matches a description, supplied in both
+ * the raw and normalised forms the matcher picks between by match type.
  *
  * Delegates to the one shared predicate (POPS-2600) rather than carrying its
  * own copy — this used to be a fifth independent implementation.
  */
-export function ruleMatchesDescription(rule: CorrectionRow, normalized: string): boolean {
-  return patternMatchesNormalizedDescription(rule.descriptionPattern, rule.matchType, normalized);
+export function ruleMatchesDescription(
+  rule: CorrectionRow,
+  description: MatchableDescription
+): boolean {
+  return patternMatchesDescription(rule.descriptionPattern, rule.matchType, description);
 }
 
 /**
@@ -51,13 +56,11 @@ export function findAllMatchingCorrectionFromRules(
   rules: CorrectionRow[],
   minConfidence: number = MIN_MATCH_CONFIDENCE
 ): CorrectionRow[] {
-  const normalized = normalizeDescription(description);
+  const matchable = describeForMatching(description);
   return rules
     .filter(
       (rule) =>
-        rule.isActive &&
-        rule.confidence >= minConfidence &&
-        ruleMatchesDescription(rule, normalized)
+        rule.isActive && rule.confidence >= minConfidence && ruleMatchesDescription(rule, matchable)
     )
     .toSorted((a, b) => {
       if (a.priority !== b.priority) return a.priority - b.priority;

@@ -7,8 +7,6 @@ import { Loader2 } from 'lucide-react';
 
 import { formatDate } from '@pops/ui';
 
-import { DigitPatternNotice } from '../../../components/rules/DigitPatternNotice';
-
 import type { TagRule } from '../types';
 import type { TagRuleUsagePreviewMatch } from './useTagRuleUsagePreview';
 
@@ -89,7 +87,6 @@ export function TagRuleUsagePreviewPanel({ rule, preview }: TagRuleUsagePreviewP
           database
         </p>
       </div>
-      <DigitPatternNotice pattern={rule.descriptionPattern} matchType={rule.matchType} />
       <MatchList rule={rule} preview={preview} />
     </div>
   );

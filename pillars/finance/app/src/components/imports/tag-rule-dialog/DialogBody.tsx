@@ -1,7 +1,6 @@
 import { Checkbox, Input, Label, Textarea } from '@pops/ui';
 
 import { describeTag } from '../../../lib/tags';
-import { DigitPatternNotice } from '../../rules/DigitPatternNotice';
 
 import type { ProposeOutput, TagRuleLearnSignal } from './types';
 
@@ -38,7 +37,6 @@ export function FormFields(props: FormFieldsProps) {
           <option value="exact">Exact</option>
           <option value="regex">Regex</option>
         </select>
-        <DigitPatternNotice pattern={props.pattern} matchType={props.matchType} />
       </div>
       <div className="space-y-2">
         <Label htmlFor="tr-tags">Tags (comma-separated)</Label>

@@ -10,8 +10,9 @@ import { eq } from 'drizzle-orm';
 
 import { transactionTagRules, transactions } from '../schema.js';
 import {
+  describeForMatching,
   normalizeDescription,
-  patternMatchesNormalizedDescription,
+  patternMatchesDescription,
 } from './transaction-corrections-types.js';
 
 import type { FinanceDb } from './internal.js';
@@ -105,12 +106,12 @@ export function findUnreachableTransactionTagRules(db: FinanceDb): TransactionTa
   const rows = db.select({ description: transactions.description }).from(transactions).all();
   if (rows.length === 0) return [];
 
-  const normalizedDescriptions = rows.map((row) => normalizeDescription(row.description));
+  const descriptions = rows.map((row) => describeForMatching(row.description));
 
   return rules.filter(
     (rule) =>
-      !normalizedDescriptions.some((description) =>
-        patternMatchesNormalizedDescription(rule.descriptionPattern, rule.matchType, description)
+      !descriptions.some((description) =>
+        patternMatchesDescription(rule.descriptionPattern, rule.matchType, description)
       )
   );
 }
