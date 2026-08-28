@@ -18,21 +18,16 @@
 import { and, count, desc, eq, gte, sql } from 'drizzle-orm';
 
 import { MIN_MATCH_CONFIDENCE } from '../../contract/corrections-pure.js';
-import {
-  InvalidPatternError,
-  TagsOnlyCorrectionError,
-  TransactionCorrectionNotFoundError,
-} from '../errors.js';
+import { TagsOnlyCorrectionError, TransactionCorrectionNotFoundError } from '../errors.js';
 import { transactionCorrections } from '../schema.js';
 import {
+  assertPatchLeavesCompilablePattern,
   isTagsOnlyCorrectionInput,
-  isValidRegexPattern,
-  normalizePatternForStorage,
+  storablePattern,
   wouldUpdateLeaveTagsOnly,
   type CreateTransactionCorrectionInput,
   type TransactionCorrectionListQuery,
   type TransactionCorrectionListResult,
-  type TransactionCorrectionMatchType,
   type TransactionCorrectionRow,
   type UpdateTransactionCorrectionInput,
 } from './transaction-corrections-types.js';
@@ -191,28 +186,15 @@ export function createOrUpdateTransactionCorrection(
   return insertNewCorrection(db, input, normalized);
 }
 
-/**
- * Store-form of a pattern: normalised for `exact`/`contains`, verbatim for
- * `regex` — and rejected outright when a `regex` pattern doesn't compile.
- *
- * Corrections used to normalise unconditionally, which uppercased regex
- * metacharacters (`\d` -> `\D`, `\s` -> `\S`), stripped digits out of
- * quantifiers (`a{2,3}` -> `a{,}`) and deleted the `.` wildcard, so every
- * regex correction was corrupted on write (POPS-2600). Tag rules already
- * guarded this; corrections did not.
- */
-function storablePattern(pattern: string, matchType: TransactionCorrectionMatchType): string {
-  if (matchType === 'regex' && !isValidRegexPattern(pattern)) {
-    throw new InvalidPatternError(pattern);
-  }
-  return normalizePatternForStorage(pattern, matchType);
-}
-
 function buildCorrectionUpdates(
   input: UpdateTransactionCorrectionInput,
-  effectiveMatchType: TransactionCorrectionMatchType
+  existing: TransactionCorrectionRow
 ): Partial<typeof transactionCorrections.$inferInsert> {
   const updates: Partial<typeof transactionCorrections.$inferInsert> = {};
+  const effectiveMatchType = input.matchType ?? existing.matchType;
+
+  assertPatchLeavesCompilablePattern(input, existing, effectiveMatchType);
+
   if (input.descriptionPattern !== undefined) {
     updates.descriptionPattern = storablePattern(input.descriptionPattern, effectiveMatchType);
   }
@@ -244,7 +226,7 @@ export function updateTransactionCorrection(
   input: UpdateTransactionCorrectionInput
 ): TransactionCorrectionRow {
   const existing = getTransactionCorrection(db, id);
-  const updates = buildCorrectionUpdates(input, input.matchType ?? existing.matchType);
+  const updates = buildCorrectionUpdates(input, existing);
 
   if (Object.keys(updates).length === 0) return existing;
 
