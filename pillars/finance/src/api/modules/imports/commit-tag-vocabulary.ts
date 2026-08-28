@@ -35,14 +35,22 @@ import { tagVocabularyService, type FinanceDb } from '../../../db/index.js';
  */
 import { parseTagFacet, tagFacetKind } from '../../../db/tag-facets.js';
 import { ValidationError } from '../../shared/errors.js';
-import { collectTagsFromTagRuleChangeSet } from './commit-temp-resolver.js';
+import { collectTagsFromTagRuleChangeSet, isTagBearingTagRuleOp } from './commit-temp-resolver.js';
 
+import type { KnownTagSet } from '../../../db/services/tag-vocabulary.js';
 import type { CommitPayload } from './types.js';
 
 /** The vocabulary writes a commit has been cleared to make. */
 export interface CommitTagPlan {
   /** Open-kind tags absent from the vocabulary, to insert as `source: 'user'`. */
   readonly toUpsert: readonly string[];
+  /**
+   * `payload.tagRuleChangeSets` with every declined tag already removed from
+   * each op's `tags` (POPS-2643) — what the commit's tag-rule write phase
+   * must apply instead of the raw payload, so a declined tag never reaches
+   * `transaction_tag_rules`.
+   */
+  readonly tagRuleChangeSets: CommitPayload['tagRuleChangeSets'];
 }
 
 function trimmedTags(tags: readonly string[] | undefined): string[] {
@@ -55,27 +63,73 @@ function trimmedTags(tags: readonly string[] | undefined): string[] {
 }
 
 /**
- * The tags the user declined to add to the vocabulary (POPS-2597): every tag on
- * a staged tag rule that supplied an `acceptedNewTags` list and left it out.
+ * Filter one staged tag rule's ops down to the tags accept/decline (POPS-2597)
+ * actually allows onto the rule.
  *
- * A declined tag is still written onto the rule — that is the existing
- * behaviour of the accept/decline checkbox — so it is the one case where a
- * committed tag is deliberately left out of the vocabulary, and the one hole in
- * the superset invariant. POPS-2643 decides whether declining should drop the
- * tag from the rule too or whether the checkbox has nothing left to decide.
+ * `acceptedNewTags` only ever lists *new* tags — the ones the wizard offered a
+ * checkbox for (`isNew: !knownTagSet.has(tag)`, `tag-rules/preview.ts`,
+ * `tag-suggester/index.ts`). A tag already in `known` was never subject to the
+ * checkbox and always stays; a tag that is new stays only if `accepted` names
+ * it. `entry.acceptedNewTags` absent entirely means the flow that staged this
+ * rule has no accept/decline UI (batch rule creation), so nothing is declined.
+ *
+ * A declined tag is dropped from the op's `tags`, not blanked to `''` — it
+ * must not reach `transaction_tag_rules` at all (POPS-2643). `add`'s
+ * `TagRuleDataSchema.tags` is `.min(1)`, so an `add` op declined down to no
+ * tags is dropped outright rather than written as `tags: []`. `edit`'s
+ * `TagRuleUpdateSchema.tags` is optional, and an edit op can carry other field
+ * changes (`isActive`, `priority`, `confidence`, `entityId`) alongside `tags`
+ * in the same `data` — declining every tag on such an op must drop only the
+ * `tags` key, not the op, or a user unticking every tag box would silently
+ * discard the rest of that edit. An edit left with no fields at all once
+ * `tags` is gone is a no-op and is dropped. `disable`/`remove` ops, and an
+ * `edit` op that never carried a `tags` array, pass through untouched.
  */
-function collectDeclinedTags(payload: CommitPayload): Set<string> {
-  const declined = new Set<string>();
-  for (const entry of payload.tagRuleChangeSets) {
-    if (!entry.acceptedNewTags) continue;
-    const accepted = tagVocabularyService.createKnownTagSet(entry.acceptedNewTags);
-    for (const tag of collectTagsFromTagRuleChangeSet(entry.changeSet)) {
-      if (!accepted.has(tag)) {
-        declined.add(tagVocabularyService.normalizeTagForComparison(tag));
-      }
+function filterTagRuleChangeSetEntry(
+  known: KnownTagSet,
+  entry: CommitPayload['tagRuleChangeSets'][number]
+): CommitPayload['tagRuleChangeSets'][number] | undefined {
+  if (!entry.acceptedNewTags) return entry;
+  const accepted = tagVocabularyService.createKnownTagSet(entry.acceptedNewTags);
+
+  const isKept = (tag: string): boolean => known.has(tag) || accepted.has(tag);
+  const ops: CommitPayload['tagRuleChangeSets'][number]['changeSet']['ops'] = [];
+  for (const op of entry.changeSet.ops) {
+    if (!isTagBearingTagRuleOp(op) || !op.data.tags) {
+      ops.push(op);
+      continue;
     }
+    const keptTags = op.data.tags.filter(isKept);
+    if (op.op === 'add') {
+      if (keptTags.length === 0) continue;
+      ops.push({ ...op, data: { ...op.data, tags: keptTags } });
+      continue;
+    }
+    if (keptTags.length > 0) {
+      ops.push({ ...op, data: { ...op.data, tags: keptTags } });
+      continue;
+    }
+    const { tags: _declinedTags, ...rest } = op.data;
+    if (Object.keys(rest).length === 0) continue;
+    ops.push({ ...op, data: rest });
   }
-  return declined;
+
+  if (ops.length === 0) return undefined;
+  return { ...entry, changeSet: { ...entry.changeSet, ops } };
+}
+
+/** {@link filterTagRuleChangeSetEntry} over every staged tag rule, dropping an
+ * entry left with no ops (every op declined down to nothing). */
+function filterAcceptedTagRuleChangeSets(
+  known: KnownTagSet,
+  entries: CommitPayload['tagRuleChangeSets']
+): CommitPayload['tagRuleChangeSets'] {
+  const filtered: CommitPayload['tagRuleChangeSets'][number][] = [];
+  for (const entry of entries) {
+    const kept = filterTagRuleChangeSetEntry(known, entry);
+    if (kept) filtered.push(kept);
+  }
+  return filtered;
 }
 
 function rejectUnknownClosedValue(tag: string, facet: string): never {
@@ -96,12 +150,12 @@ function rejectUnknownClosedValue(tag: string, facet: string): never {
  */
 export function planCommitTagVocabulary(db: FinanceDb, payload: CommitPayload): CommitTagPlan {
   const known = tagVocabularyService.loadKnownTagSet(db);
-  const declined = collectDeclinedTags(payload);
+  const tagRuleChangeSets = filterAcceptedTagRuleChangeSets(known, payload.tagRuleChangeSets);
   const toUpsert = new Map<string, string>();
 
   const committedTags = [
     ...payload.transactions.flatMap((txn) => trimmedTags(txn.tags)),
-    ...payload.tagRuleChangeSets.flatMap((entry) =>
+    ...tagRuleChangeSets.flatMap((entry) =>
       trimmedTags(collectTagsFromTagRuleChangeSet(entry.changeSet))
     ),
   ];
@@ -113,11 +167,10 @@ export function planCommitTagVocabulary(db: FinanceDb, payload: CommitPayload): 
     if (kind === 'closed') rejectUnknownClosedValue(tag, facet ?? '');
     if (kind === 'marker') continue;
     const key = tagVocabularyService.normalizeTagForComparison(tag);
-    if (declined.has(key)) continue;
     if (!toUpsert.has(key)) toUpsert.set(key, tag);
   }
 
-  return { toUpsert: [...toUpsert.values()] };
+  return { toUpsert: [...toUpsert.values()], tagRuleChangeSets };
 }
 
 /** Apply a plan inside the commit's transaction, so a rollback takes it too. */

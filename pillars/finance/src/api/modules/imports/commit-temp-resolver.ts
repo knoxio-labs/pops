@@ -41,15 +41,24 @@ export function resolveTagRuleChangeSetTempIds(
   return { ...cs, ops: cs.ops.map((op) => resolveOpEntityId(op, tempIdMap)) };
 }
 
+type TagBearingTagRuleOp = Extract<TagRuleChangeSet['ops'][number], { op: 'add' | 'edit' }>;
+
 /**
- * Every tag an op writes to `transaction_tag_rules`. Both `add` and `edit`
- * carry a `tags` array the apply path writes straight through
- * (`TagRuleUpdateSchema.tags`), so both are collected: scanning only `add`
- * left an `edit` op as a way past the closed-namespace gate the collected set
- * feeds (POPS-2602). `disable` and `remove` write no tags.
+ * Whether `op` is one of the two op kinds that carry a `tags` array onto
+ * `transaction_tag_rules` (`TagRuleDataSchema.tags` / `TagRuleUpdateSchema.tags`).
+ * `disable` and `remove` write no tags. Shared by every reader that needs to
+ * agree on which ops are in scope for a tag-rule tag decision — scanning only
+ * `add` left an `edit` op as a way past the closed-namespace gate this feeds
+ * (POPS-2602), and past the accept/decline filter it also feeds (POPS-2643).
  */
+export function isTagBearingTagRuleOp(
+  op: TagRuleChangeSet['ops'][number]
+): op is TagBearingTagRuleOp {
+  return op.op === 'add' || op.op === 'edit';
+}
+
 function collectTagsFromOp(op: TagRuleChangeSet['ops'][number], tags: Set<string>): void {
-  if (op.op !== 'add' && op.op !== 'edit') return;
+  if (!isTagBearingTagRuleOp(op)) return;
   if (!op.data.tags) return;
   for (const t of op.data.tags) {
     const s = t.trim();
