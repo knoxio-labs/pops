@@ -632,4 +632,51 @@ describe('SectionRenderer', () => {
       }
     });
   });
+
+  describe('widget slots', () => {
+    const widgetManifest = makeManifest({
+      groups: [
+        {
+          id: 'account',
+          title: 'Account',
+          widget: { bundleSlot: 'plex-connect' },
+          fields: [{ key: 'plex_url', label: 'Plex URL', type: 'url' }],
+        },
+      ],
+    });
+
+    it("mounts the component the group's bundleSlot resolves to, above the fields", () => {
+      render(
+        <SectionRenderer
+          manifest={widgetManifest}
+          widgets={{ 'plex-connect': () => <div data-testid="widget">connect</div> }}
+        />
+      );
+
+      expect(screen.getByTestId('widget')).toBeInTheDocument();
+      expect(screen.getByText('Plex URL')).toBeInTheDocument();
+    });
+
+    it('renders the fields alone when the slot resolves to nothing', () => {
+      render(<SectionRenderer manifest={widgetManifest} widgets={{}} />);
+
+      expect(screen.queryByTestId('widget')).not.toBeInTheDocument();
+      expect(screen.getByText('Plex URL')).toBeInTheDocument();
+    });
+
+    it('does not mount a widget into a group that declares no slot', () => {
+      const plain = makeManifest({
+        groups: [{ id: 'connection', title: 'Connection', fields: [] }],
+      });
+
+      render(
+        <SectionRenderer
+          manifest={plain}
+          widgets={{ 'plex-connect': () => <div data-testid="widget">connect</div> }}
+        />
+      );
+
+      expect(screen.queryByTestId('widget')).not.toBeInTheDocument();
+    });
+  });
 });

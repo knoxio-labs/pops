@@ -935,6 +935,15 @@ export const MODULES = [
         order: 100,
         groups: [
           {
+            id: 'account',
+            title: 'Plex Account',
+            description: 'Link your plex.tv account with a PIN instead of pasting a token.',
+            widget: {
+              bundleSlot: 'plex-connect',
+            },
+            fields: [],
+          },
+          {
             id: 'connection',
             title: 'Connection',
             fields: [

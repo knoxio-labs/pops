@@ -2,6 +2,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@pops
 
 import { FieldInput } from './FieldInput';
 
+import type { ComponentType } from 'react';
+
 import type { SettingsGroup } from '@pops/types';
 
 import type { SaveState } from './types';
@@ -14,6 +16,8 @@ interface GroupRendererProps {
   dbValues: Record<string, string>;
   saveStates: Record<string, SaveState>;
   loadingOptionKeys: Set<string>;
+  /** Slot -> component for groups naming a `widget.bundleSlot`. */
+  widgets?: Readonly<Record<string, ComponentType>>;
 }
 
 export function GroupRenderer({
@@ -24,7 +28,11 @@ export function GroupRenderer({
   dbValues,
   saveStates,
   loadingOptionKeys,
+  widgets,
 }: GroupRendererProps) {
+  const slot = group.widget?.bundleSlot;
+  const Widget = slot === undefined ? undefined : widgets?.[slot];
+
   return (
     <Card>
       <CardHeader>
@@ -32,6 +40,7 @@ export function GroupRenderer({
         {group.description && <CardDescription>{group.description}</CardDescription>}
       </CardHeader>
       <CardContent className="space-y-4">
+        {Widget && <Widget />}
         {group.fields.map((field) => (
           <FieldInput
             key={field.key}

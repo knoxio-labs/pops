@@ -56,7 +56,7 @@ import { manifest as financeManifest } from '@pops/app-finance';
 import { manifest as foodManifest } from '@pops/app-food';
 import { manifest as inventoryManifest } from '@pops/app-inventory';
 import { manifest as listsManifest } from '@pops/app-lists';
-import { manifest as mediaManifest } from '@pops/app-media';
+import { PlexConnectPanel, manifest as mediaManifest } from '@pops/app-media';
 import { manifest as purchasesManifest } from '@pops/app-purchases';
 import { manifest as egoManifest } from '@pops/overlay-ego';
 
@@ -104,6 +104,13 @@ export interface BundleEntry {
   readonly manifest: ModuleManifest;
   readonly navOrder: number;
   readonly captureOverlayBundles?: Readonly<Record<string, CaptureOverlayBundle>>;
+  /**
+   * Kebab-case settings-widget slot -> component, resolved by
+   * `settings-widget-registry` for groups whose manifest names a
+   * `widget.bundleSlot`. Media binds `'plex-connect'` to its
+   * `PlexConnectPanel`.
+   */
+  readonly settingsWidgetBundles?: Readonly<Record<string, ComponentType>>;
   readonly assetsBaseUrl?: string;
 }
 
@@ -121,7 +128,13 @@ const CEREBRUM_INGEST_FORM_BUNDLE: CaptureOverlayBundle = {
 export const WORKSPACE_BUNDLE_MAP: Readonly<Record<string, BundleEntry>> = {
   finance: { manifest: financeManifest, navOrder: 10 },
   purchases: { manifest: purchasesManifest, navOrder: 15 },
-  media: { manifest: mediaManifest, navOrder: 20 },
+  media: {
+    manifest: mediaManifest,
+    navOrder: 20,
+    settingsWidgetBundles: {
+      'plex-connect': PlexConnectPanel,
+    },
+  },
   inventory: { manifest: inventoryManifest, navOrder: 30 },
   food: { manifest: foodManifest, navOrder: 40 },
   lists: { manifest: listsManifest, navOrder: 50 },
