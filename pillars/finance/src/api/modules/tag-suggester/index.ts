@@ -159,6 +159,32 @@ interface AddAiTagsArgs {
 }
 
 /**
+ * Attribute model-supplied tags as `source: 'ai'` suggestions, flagging any
+ * value outside the active vocabulary as `isNew` so the accept/reject gate can
+ * tell a vocabulary value from a coined one.
+ *
+ * Exported because the tag-only pass (POPS-2596) attributes its tags without a
+ * full `suggestTags` walk: those rows resolved deterministically and already
+ * ran the correction/rule passes, and re-running them would bump `timesApplied`
+ * a second time for rules whose tags the row does not even carry. It takes the
+ * vocabulary set rather than reading it so that pass can load it once per run
+ * instead of once per row.
+ */
+export function buildAiSuggestedTags(
+  aiTags: readonly string[],
+  knownTagSet: tagVocabularyService.KnownTagSet
+): SuggestedTag[] {
+  const seen = new Set<string>();
+  const result: SuggestedTag[] = [];
+  for (const tag of aiTags) {
+    if (!remember(seen, tag)) continue;
+    const isNew = !knownTagSet.has(tag) || undefined;
+    result.push({ tag, source: 'ai', ...(isNew ? { isNew: true } : {}) });
+  }
+  return result;
+}
+
+/**
  * The AI pass, and the only pass that answers `isNew`.
  *
  * The vocabulary read happens after the early return, not before it: this pass
@@ -186,11 +212,9 @@ function addAiTags(args: AddAiTagsArgs): void {
   }
   if (tags.length === 0) return;
 
-  const knownTagSet = tagVocabularyService.loadKnownTagSet(db);
-  for (const tag of tags) {
-    if (!remember(seen, tag)) continue;
-    const isNew = !knownTagSet.has(tag) || undefined;
-    result.push({ tag, source: 'ai', ...(isNew ? { isNew: true } : {}) });
+  for (const suggestion of buildAiSuggestedTags(tags, tagVocabularyService.loadKnownTagSet(db))) {
+    if (!remember(seen, suggestion.tag)) continue;
+    result.push(suggestion);
   }
 }
 
