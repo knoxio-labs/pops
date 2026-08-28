@@ -59,12 +59,22 @@ const SETTINGS_FIELD = z
   })
   .strict();
 
+/**
+ * Mirrors `SettingsWidget` from `@pops/types`. `bundleSlot` is documented as
+ * kebab-case there but is validated only as non-empty here: the shell degrades
+ * an unresolvable slot to the group's fields, so a slot this validator cannot
+ * love is a rendering detail, not a reason to reject a whole pillar's
+ * registration.
+ */
+const SETTINGS_WIDGET = z.object({ bundleSlot: z.string().min(1) }).strict();
+
 const SETTINGS_GROUP = z
   .object({
     id: z.string().min(1),
     title: z.string().min(1),
     description: z.string().optional(),
     fields: z.array(SETTINGS_FIELD),
+    widget: SETTINGS_WIDGET.optional(),
   })
   .strict();
 
