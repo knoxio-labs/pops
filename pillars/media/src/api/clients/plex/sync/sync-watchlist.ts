@@ -5,7 +5,7 @@
  */
 import { and, eq, isNotNull } from 'drizzle-orm';
 
-import { type MediaDb, mediaWatchlist } from '../../../../db/index.js';
+import { type MediaDb, mediaWatchlist, watchlistService } from '../../../../db/index.js';
 import { fetchPlexWatchlist } from './sync-watchlist-fetch.js';
 import { type ResolveDeps, resolveMediaItem } from './sync-watchlist-resolve.js';
 
@@ -78,6 +78,7 @@ async function syncSingleWatchlistItem(
   }
 
   db.insert(mediaWatchlist).values({ mediaType, mediaId, source: 'plex', plexRatingKey }).run();
+  watchlistService.clearLeavingOnWatchlist(db, mediaType, mediaId);
   progress.added++;
 }
 

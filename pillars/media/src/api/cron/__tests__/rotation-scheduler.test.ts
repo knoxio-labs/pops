@@ -5,8 +5,8 @@
  * `runOnce` is exercised DIRECTLY (no real timer): upstream Radarr HTTP is
  * mocked at `globalThis.fetch` with a (method, url-substring) route table, so
  * the real client → cycle → log path runs end-to-end. The recursive arm timer
- * is only touched in the toggle tests, driven with `vi.useFakeTimers()` and
- * restored in `afterEach`; `rotationScheduler._reset()` clears the module-level
+ * is only touched in the toggle + cron-arming tests, driven with
+ * `vi.useFakeTimers()` and restored in each test's `finally`; `rotationScheduler._reset()` clears the module-level
  * singleton after every test so no timer leaks between cases.
  */
 import { mkdtempSync, rmSync } from 'node:fs';
@@ -367,5 +367,268 @@ describe('rotation scheduler — REST', () => {
     const stats = await makeClient(app()).rotation.rotationLogStats();
     expect(stats.data.totalRotated).toBe(3);
     expect(stats.data.streak).toBe(1);
+  });
+});
+
+/** Let the immediate `start` tick resolve so `arm()` has published nextRunAt. */
+async function flushImmediateCycle(): Promise<void> {
+  await vi.advanceTimersByTimeAsync(0);
+}
+
+describe('rotationScheduler — cron arming', () => {
+  it('arms the next run at the cron occurrence, not now + interval', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-28T10:00:00Z'));
+    try {
+      rotationScheduler.start({
+        db: opened.db,
+        intervalMs: 60_000,
+        cronExpression: '0 3 * * *',
+      });
+      await flushImmediateCycle();
+
+      const { nextRunAt } = rotationScheduler.status(opened.db);
+      expect(nextRunAt).not.toBeNull();
+      const next = new Date(nextRunAt as string);
+      expect(next.getHours()).toBe(3);
+      expect(next.getMinutes()).toBe(0);
+      expect(next.getTime()).toBeGreaterThan(Date.now() + 60_000);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('runs the cycle when the cron occurrence arrives, then re-arms for the next one', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-28T10:00:00Z'));
+    try {
+      rotationScheduler.start({ db: opened.db, cronExpression: '0 * * * *' });
+      await flushImmediateCycle();
+      const afterStart = rotationLogService.listRotationLog(opened.db, 100, 0).total;
+      const firstArm = rotationScheduler.status(opened.db).nextRunAt;
+
+      await vi.advanceTimersByTimeAsync(60 * 60 * 1000);
+
+      expect(rotationLogService.listRotationLog(opened.db, 100, 0).total).toBeGreaterThan(
+        afterStart
+      );
+      expect(rotationScheduler.status(opened.db).nextRunAt).not.toBe(firstArm);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('treats a blank stored expression as unset instead of every-minute', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-28T10:00:00Z'));
+    try {
+      rotationSettingsService.set(opened.db, 'rotation_cron_expression', '');
+      rotationScheduler.start({ db: opened.db, intervalMs: 60_000 });
+      await flushImmediateCycle();
+
+      expect(rotationScheduler.status(opened.db).cronExpression).toBe('0 3 * * *');
+      const next = new Date(rotationScheduler.status(opened.db).nextRunAt as string);
+      expect(next.getHours()).toBe(3);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('falls back to the interval when the stored expression is unparseable', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-28T10:00:00Z'));
+    try {
+      rotationScheduler.start({
+        db: opened.db,
+        intervalMs: 60_000,
+        cronExpression: 'every third blue moon',
+      });
+      await flushImmediateCycle();
+
+      const { nextRunAt } = rotationScheduler.status(opened.db);
+      expect(new Date(nextRunAt as string).getTime()).toBe(Date.now() + 60_000);
+    } finally {
+      vi.useRealTimers();
+      warn.mockRestore();
+    }
+  });
+
+  it('does not saturate setTimeout on a sparse cron — the cycle waits instead of firing early', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-28T10:00:00Z'));
+    try {
+      rotationScheduler.start({ db: opened.db, cronExpression: '0 3 1 1 *' });
+      await flushImmediateCycle();
+      const afterStart = rotationLogService.listRotationLog(opened.db, 100, 0).total;
+
+      // Past the 24.8-day setTimeout ceiling, but far short of 1 January.
+      await vi.advanceTimersByTimeAsync(40 * 24 * 60 * 60 * 1000);
+
+      expect(rotationLogService.listRotationLog(opened.db, 100, 0).total).toBe(afterStart);
+      expect(new Date(rotationScheduler.status(opened.db).nextRunAt as string).getMonth()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe('rotationScheduler — shutdown drain', () => {
+  /** Hold every Radarr `/diskspace` call open until the returned latch fires. */
+  function gateDiskSpace(): () => void {
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const gated = vi.fn(
+      async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
+        if (input.toString().includes('/diskspace')) await gate;
+        return fetchMock(input, init);
+      }
+    );
+    vi.stubGlobal('fetch', gated);
+    return release;
+  }
+
+  function routeIdleCycle(): void {
+    routeDiskSpace(500);
+    route('GET', '/movie?tmdbId', () => ({ body: [] }));
+    route('GET', '/queue', () => ({ body: { totalRecords: 0, records: [] } }));
+    route('GET', '/movie', () => ({ body: [] }));
+  }
+
+  it('resolves true immediately when no cycle is in flight', async () => {
+    await expect(rotationScheduler.waitForCycleEnd(50)).resolves.toBe(true);
+  });
+
+  it('waits for the in-flight cycle before resolving true', async () => {
+    enableRadarr();
+    routeIdleCycle();
+    const release = gateDiskSpace();
+
+    const cycle = rotationScheduler.runOnce(opened.db);
+    let resolved = false;
+    const drain = rotationScheduler.waitForCycleEnd(5_000).then((v) => {
+      resolved = true;
+      return v;
+    });
+
+    await new Promise((r) => setTimeout(r, 10));
+    expect(resolved).toBe(false);
+    expect(rotationLogService.lastCycleLog(opened.db)).toBeNull();
+
+    release();
+    await expect(drain).resolves.toBe(true);
+    await cycle;
+    expect(rotationLogService.lastCycleLog(opened.db)).not.toBeNull();
+  });
+
+  it('resolves false when the cycle outlives the bound', async () => {
+    enableRadarr();
+    routeIdleCycle();
+    const release = gateDiskSpace();
+
+    const cycle = rotationScheduler.runOnce(opened.db);
+    await expect(rotationScheduler.waitForCycleEnd(10)).resolves.toBe(false);
+
+    release();
+    await cycle;
+  });
+
+  it('stopForShutdown disarms the timer without persisting rotation as disabled', async () => {
+    vi.useFakeTimers();
+    try {
+      rotationScheduler.start({ db: opened.db, cronExpression: '0 3 * * *' });
+      await flushImmediateCycle();
+      expect(rotationSettingsService.get(opened.db, 'rotation_enabled')).toBe('true');
+
+      rotationScheduler.stopForShutdown();
+
+      expect(rotationScheduler.status(opened.db).isRunning).toBe(false);
+      expect(rotationSettingsService.get(opened.db, 'rotation_enabled')).toBe('true');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe('rotationScheduler — disk selection', () => {
+  function routeMultiDisk(): void {
+    route('GET', '/diskspace', () => ({
+      body: [
+        { path: '/', label: 'root', freeSpace: 238 * GB, totalSpace: 487 * GB },
+        { path: '/config', label: 'config', freeSpace: 238 * GB, totalSpace: 487 * GB },
+        { path: '/downloads', label: 'downloads', freeSpace: 1899 * GB, totalSpace: 1967 * GB },
+        { path: '/movies', label: 'media', freeSpace: 314 * GB, totalSpace: 11998 * GB },
+      ],
+    }));
+  }
+
+  it("measures the volume holding the root folder, not Radarr's first disk", async () => {
+    enableRadarr();
+    rotationSettingsService.setMany(opened.db, [
+      { key: 'rotation_target_free_gb', value: '300' },
+      { key: 'rotation_daily_additions', value: '0' },
+    ]);
+    routeMultiDisk();
+    route('GET', '/movie?tmdbId', () => ({ body: [] }));
+    route('GET', '/queue', () => ({ body: { totalRecords: 0, records: [] } }));
+    route('GET', '/movie', () => ({ body: [] }));
+
+    await rotationScheduler.runOnce(opened.db);
+
+    const log = rotationLogService.lastCycleLog(opened.db);
+    expect(log?.skippedReason).toBeNull();
+    expect(log?.freeSpaceGb).toBeCloseTo(314, 5);
+  });
+
+  it('skips the cycle rather than measuring an arbitrary volume when no mount matches', async () => {
+    enableRadarr();
+    process.env['RADARR_ROOT_FOLDER_PATH'] = '/library/movies';
+    route('GET', '/diskspace', () => ({
+      body: [{ path: '/downloads', label: 'downloads', freeSpace: 10 * GB, totalSpace: 100 * GB }],
+    }));
+
+    await rotationScheduler.runOnce(opened.db);
+
+    const log = rotationLogService.lastCycleLog(opened.db);
+    expect(log?.skippedReason).toContain(
+      "No Radarr disk contains the root folder '/library/movies'"
+    );
+    expect(log?.moviesMarkedLeaving).toBe(0);
+  });
+
+  it('skips the cycle when no root folder is configured at all', async () => {
+    enableRadarr();
+    delete process.env['RADARR_ROOT_FOLDER_PATH'];
+    routeMultiDisk();
+
+    await rotationScheduler.runOnce(opened.db);
+
+    expect(rotationLogService.lastCycleLog(opened.db)?.skippedReason).toBe(
+      'Radarr root folder not configured — cannot identify the library volume'
+    );
+  });
+
+  it('still sweeps expired leaving movies before skipping on an unmeasurable volume', async () => {
+    enableRadarr();
+    delete process.env['RADARR_ROOT_FOLDER_PATH'];
+    const movie = moviesService.createMovie(opened.db, { tmdbId: 77, title: 'Past Due' });
+    rotationRemovalQueries.markMoviesAsLeaving(
+      opened.db,
+      [movie.id],
+      new Date(Date.now() - 86_400_000).toISOString()
+    );
+    route('GET', '/movie?tmdbId', () => ({ body: [{ id: 5, tmdbId: 77, title: 'Past Due' }] }));
+    route('DELETE', '/movie/5', () => ({ body: {} }));
+
+    await rotationScheduler.runOnce(opened.db);
+
+    const log = rotationLogService.lastCycleLog(opened.db);
+    expect(log?.moviesRemoved).toBe(1);
+    expect(log?.skippedReason).toBe(
+      'Radarr root folder not configured — cannot identify the library volume'
+    );
+    expect(rotationRemovalQueries.getLeavingMovies(opened.db)).toEqual([]);
   });
 });

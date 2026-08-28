@@ -2,14 +2,18 @@
  * The rotation cycle orchestration (api-layer).
  *
  * One cycle: batch-sync sources → sweep expired `leaving` movies (delete from
- * Radarr) → measure free disk → mark the oldest eligible movies `leaving` to
- * cover the deficit → re-measure disk → add up to the daily cap of candidates
- * when space allows. Returns a {@link RotationCycleResult} the scheduler writes
+ * Radarr) → measure free space on the volume holding the Radarr root folder →
+ * mark the oldest eligible movies `leaving` to cover the deficit → re-measure
+ * that volume → add up to the daily cap of candidates when space allows. Returns a {@link RotationCycleResult} the scheduler writes
  * to the rotation log. Ported from the monolith `rotation-cycle.ts`; repointed
  * onto the env-only Radarr client + the pillar's `rotation_settings` kv table.
  */
 import { type MediaDb, type MovieSizeMap, rotationRemovalQueries } from '../../db/index.js';
-import { getRadarrClient, type RadarrClient } from '../clients/arr/index.js';
+import {
+  getRadarrClient,
+  getRadarrRootFolderPath,
+  type RadarrClient,
+} from '../clients/arr/index.js';
 import { addMoviesFromQueue } from './rotation-addition.js';
 import { getRotationCyclePolicy } from './rotation-cycle-policy.js';
 import {
@@ -24,6 +28,7 @@ import {
   getRadarrDiskSpace,
   getRadarrMovieSizes,
   processExpiredMovies,
+  RotationDiskSelectionError,
 } from './rotation-removal.js';
 import { syncAllSources } from './rotation-sync-all.js';
 
@@ -68,11 +73,53 @@ async function markLeaving(
   return toMark.map((m) => ({ tmdbId: m.tmdbId, title: m.title }));
 }
 
-async function reCheckFreeSpace(client: RadarrClient, fallbackGb: number): Promise<number> {
+async function reCheckFreeSpace(
+  client: RadarrClient,
+  rootFolderPath: string,
+  fallbackGb: number
+): Promise<number> {
   try {
-    return await getRadarrDiskSpace(client);
+    return await getRadarrDiskSpace(client, rootFolderPath);
   } catch {
     return fallbackGb;
+  }
+}
+
+type VolumeMeasurement =
+  | { freeSpaceGb: number; rootFolderPath: string; skippedReason: null }
+  | { freeSpaceGb: null; rootFolderPath: null; skippedReason: string };
+
+/**
+ * Free space on the volume the library lives on, or the reason the cycle
+ * cannot know it. Measuring the wrong volume is worse than not measuring:
+ * deletions would never move the reading, so the target could never be met.
+ */
+async function measureLibraryVolume(
+  client: RadarrClient,
+  rootFolderPath: string | null
+): Promise<VolumeMeasurement> {
+  if (rootFolderPath === null) {
+    return {
+      freeSpaceGb: null,
+      rootFolderPath: null,
+      skippedReason: 'Radarr root folder not configured — cannot identify the library volume',
+    };
+  }
+  try {
+    return {
+      freeSpaceGb: await getRadarrDiskSpace(client, rootFolderPath),
+      rootFolderPath,
+      skippedReason: null,
+    };
+  } catch (err) {
+    return {
+      freeSpaceGb: null,
+      rootFolderPath: null,
+      skippedReason:
+        err instanceof RotationDiskSelectionError
+          ? err.message
+          : 'Radarr unavailable — cannot measure disk space',
+    };
   }
 }
 
@@ -92,20 +139,18 @@ export async function executeRotationCycle(db: MediaDb): Promise<RotationCycleRe
   }
 
   const expired = await processExpiredMovies(db, client);
+  const afterSweep = {
+    moviesRemoved: expired.removed.length,
+    removalsFailed: expired.failed.length,
+    removed: expired.removed,
+    failed: expired.failed,
+  };
 
-  let freeSpaceGb: number;
-  try {
-    freeSpaceGb = await getRadarrDiskSpace(client);
-  } catch {
-    return {
-      ...emptyResult(targetFreeGb),
-      moviesRemoved: expired.removed.length,
-      removalsFailed: expired.failed.length,
-      removed: expired.removed,
-      failed: expired.failed,
-      skippedReason: 'Radarr unavailable — cannot measure disk space',
-    };
+  const measured = await measureLibraryVolume(client, getRadarrRootFolderPath(db));
+  if (measured.freeSpaceGb === null) {
+    return { ...emptyResult(targetFreeGb), ...afterSweep, skippedReason: measured.skippedReason };
   }
+  const { freeSpaceGb, rootFolderPath } = measured;
 
   const movieSizes = await getRadarrMovieSizes(client);
   const marked = await markLeaving(db, client, {
@@ -115,7 +160,7 @@ export async function executeRotationCycle(db: MediaDb): Promise<RotationCycleRe
     movieSizes,
   });
 
-  const postFreeSpaceGb = await reCheckFreeSpace(client, freeSpaceGb);
+  const postFreeSpaceGb = await reCheckFreeSpace(client, rootFolderPath, freeSpaceGb);
   const budget = getAdditionBudget(
     postFreeSpaceGb,
     targetFreeGb,
@@ -126,14 +171,11 @@ export async function executeRotationCycle(db: MediaDb): Promise<RotationCycleRe
 
   return {
     ...emptyResult(targetFreeGb),
+    ...afterSweep,
     moviesMarkedLeaving: marked.length,
-    moviesRemoved: expired.removed.length,
     moviesAdded: additions.added,
-    removalsFailed: expired.failed.length,
     freeSpaceGb,
     marked,
-    removed: expired.removed,
     added: additions.addedMovies,
-    failed: expired.failed,
   };
 }

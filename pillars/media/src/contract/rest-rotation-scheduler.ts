@@ -4,8 +4,9 @@
  * rotation log. Spread into `mediaRotationContract` so operation ids stay
  * `rotation.<route>`.
  *
- * The controller drives a recursive `setTimeout` interval via a module-level
- * singleton (cron-parser is not a workspace dep — see the controller header).
+ * The controller drives a recursive `setTimeout` via a module-level singleton,
+ * armed from the stored cron expression; `intervalMs` is the fallback it uses
+ * when that expression is missing or unparseable.
  */
 import { z } from 'zod';
 

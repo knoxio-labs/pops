@@ -11,7 +11,12 @@ import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { openMediaDb, type OpenedMediaDb } from '../../db/index.js';
+import {
+  moviesService,
+  openMediaDb,
+  rotationRemovalQueries,
+  type OpenedMediaDb,
+} from '../../db/index.js';
 import { createMediaApiApp } from '../app.js';
 import { makeClient } from './test-utils.js';
 
@@ -127,5 +132,45 @@ describe('watchlist — error mapping', () => {
     await expect(client().watchlist.add({ mediaType: 'book', mediaId: 1 })).rejects.toMatchObject({
       status: 400,
     });
+  });
+});
+
+describe('watchlist — rotation side effect', () => {
+  it("clears a movie's leaving status when it is added to the watchlist", async () => {
+    const movie = moviesService.createMovie(mediaDb.db, { tmdbId: 9911, title: 'Reprieved' });
+    rotationRemovalQueries.markMoviesAsLeaving(
+      mediaDb.db,
+      [movie.id],
+      new Date(Date.now() + 7 * 86_400_000).toISOString()
+    );
+    expect(rotationRemovalQueries.getLeavingMovies(mediaDb.db)).toHaveLength(1);
+
+    const added = await client().watchlist.add({ mediaType: 'movie', mediaId: movie.id });
+    expect(added.created).toBe(true);
+
+    expect(rotationRemovalQueries.getLeavingMovies(mediaDb.db)).toEqual([]);
+    const row = mediaDb.raw
+      .prepare(
+        'SELECT rotation_status, rotation_expires_at, rotation_marked_at FROM movies WHERE id = ?'
+      )
+      .get(movie.id);
+    expect(row).toEqual({
+      rotation_status: null,
+      rotation_expires_at: null,
+      rotation_marked_at: null,
+    });
+  });
+
+  it('leaves a marked movie alone when an unrelated tv show is watchlisted', async () => {
+    const movie = moviesService.createMovie(mediaDb.db, { tmdbId: 9912, title: 'Still Going' });
+    rotationRemovalQueries.markMoviesAsLeaving(
+      mediaDb.db,
+      [movie.id],
+      new Date(Date.now() + 7 * 86_400_000).toISOString()
+    );
+
+    await client().watchlist.add({ mediaType: 'tv_show', mediaId: movie.id });
+
+    expect(rotationRemovalQueries.getLeavingMovies(mediaDb.db)).toHaveLength(1);
   });
 });
