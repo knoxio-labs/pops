@@ -33,7 +33,7 @@ export interface SettingsField {
     procedure: string;
     label: string;
   };
-  /** Load options dynamically from a tRPC query procedure. The procedure must return `{ data: Record<string, unknown>[] }`. */
+  /** Load options dynamically from a GET route on the owning pillar's REST contract, resolved at runtime as `pillarId.router.route`. The route must return `{ data: Record<string, unknown>[] }`. */
   optionsLoader?: {
     procedure: string;
     valueKey: string;

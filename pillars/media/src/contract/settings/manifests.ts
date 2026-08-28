@@ -50,7 +50,7 @@ export const arrManifest: SettingsManifest = {
           type: 'select',
           envFallback: 'RADARR_QUALITY_PROFILE_ID',
           optionsLoader: {
-            procedure: 'media.arr.getQualityProfiles',
+            procedure: 'media.arr.getRadarrQualityProfiles',
             valueKey: 'id',
             labelKey: 'name',
           },
@@ -61,7 +61,7 @@ export const arrManifest: SettingsManifest = {
           type: 'select',
           envFallback: 'RADARR_ROOT_FOLDER_PATH',
           optionsLoader: {
-            procedure: 'media.arr.getRootFolders',
+            procedure: 'media.arr.getRadarrRootFolders',
             valueKey: 'path',
             labelKey: 'path',
           },
