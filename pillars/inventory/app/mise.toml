@@ -3,10 +3,10 @@
 # until the pillar is rebuilt (POPS-2631). Build it first rather than trusting
 # whatever `dist` happens to be on disk.
 [tasks.typecheck]
-run = ["mise run -C ../.. build", "tsc --noEmit"]
+run = ["mise run -C .. build", "tsc --noEmit"]
 
 [tasks.test]
-run = ["mise run -C ../.. build", "vitest run"]
+run = ["mise run -C .. build", "vitest run"]
 
 [tasks.lint]
 run = "oxlint src && oxfmt --check ."

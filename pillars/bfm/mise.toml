@@ -9,6 +9,7 @@ depends = ["build"]
 run = ["tsc --noEmit", "tsc --noEmit -p scripts/tsconfig.json"]
 
 [tasks.test]
+depends = ["build"]
 run = "vitest run"
 
 [tasks.lint]
