@@ -67,13 +67,22 @@
  * nothing else, and every dismissal is a plain, timestamped, attributed PR
  * comment, not a silent override. See POPS-2669 for the underlying bug.
  *
- * ONLY A TRUSTED COMMENTER'S MARKER COUNTS (see
- * TRUSTED_DISMISSER_ASSOCIATIONS below) — reviewed HIGH on this PR's own
- * head: an unchecked version let ANY commenter on the PR, not only someone
- * with push access, waive a genuine finding and reopen the #4289 hole this
- * gate exists to close, just via a self-service mechanism instead of an
- * oversight. `collectDismissedFindingIds` never even reads the marker text
- * out of an untrusted comment's body.
+ * ONLY A COMMENTER WITH ACTUAL PUSH ACCESS CAN DISMISS — reviewed twice on
+ * this PR's own head. The first pass checked GitHub's `author_association`
+ * (`OWNER`/`MEMBER`/`COLLABORATOR`) and was itself flagged as insufficient:
+ * `MEMBER` means "belongs to the org", not "has access" (the org's default
+ * repo permission can be none), and `COLLABORATOR` fires for a collaborator
+ * granted Read or Triage, not only Write/Maintain/Admin. So this checks the
+ * real thing — `GET /repos/{repo}/collaborators/{login}/permission` — for
+ * every commenter who posted a dismiss marker, and trusts only
+ * `admin`/`maintain`/`write` (see `hasPushAccess`, in `main`, below). Without
+ * either check, ANY commenter on the PR could waive a genuine finding and
+ * reopen the #4289 hole this gate exists to close, just via a self-service
+ * mechanism instead of an oversight. `evaluateReviewState`/
+ * `collectDismissedFindingIds` stay pure and never make that call themselves
+ * — they trust the `push_access` boolean already resolved onto each comment
+ * by the I/O layer, which is what keeps them fast to test without a real
+ * GitHub token.
  *
  * Stdlib only, deliberately: see `pr-review-state.mjs` and the tier amendment
  * in docs/architecture/adr-045-guards-must-prove-they-report.md, enforced by
@@ -134,12 +143,14 @@ export function collectDismissedFindingIds(comments) {
   const dismissed = new Set();
   for (const comment of comments) {
     if (typeof comment.body !== 'string') continue;
-    // A dismiss marker from anyone who is not a trusted collaborator is not
-    // read at all — not "read and logged as untrusted", not "read and
-    // ignored later" — because the only thing that makes this escape hatch
-    // safe rather than a public bypass is that this check never even looks
-    // at what an untrusted commenter wrote here.
-    if (!TRUSTED_DISMISSER_ASSOCIATIONS.has(comment.author_association ?? '')) continue;
+    // A dismiss marker from a commenter this hasn't been told has push
+    // access is not read at all — not "read and logged as untrusted", not
+    // "read and ignored later" — because the only thing that makes this
+    // escape hatch safe rather than a public bypass is that this check never
+    // even looks at what an untrusted commenter wrote here. Strict `=== true`
+    // so an absent (never-checked) or explicitly-`false` value both count as
+    // untrusted, never a default-trust fallback.
+    if (comment.push_access !== true) continue;
     for (const match of comment.body.matchAll(DISMISS_RE)) {
       if (match[1]) dismissed.add(match[1]);
     }
@@ -150,23 +161,15 @@ export function collectDismissedFindingIds(comments) {
 /**
  * @typedef {object} StickyComment
  * @property {string} body
- * @property {string} [author_association] GitHub's relationship of the
- *   commenter to this repo (`OWNER`, `MEMBER`, `COLLABORATOR`, `CONTRIBUTOR`,
- *   `NONE`, …) — present on every comment the REST API returns; used only to
- *   gate {@link collectDismissedFindingIds}, see TRUSTED_DISMISSER_ASSOCIATIONS.
+ * @property {boolean} [push_access] Whether the commenter has actual
+ *   admin/maintain/write permission on this repo, as resolved by `main`'s I/O
+ *   layer via the GitHub collaborator-permission API — never derived in here
+ *   from `author_association`, which does not reliably imply push access
+ *   (see the file header). Absent (not merely `false`) for a comment nobody
+ *   has checked, which {@link collectDismissedFindingIds} also treats as
+ *   untrusted — the property only ever grants trust when explicitly `true`.
  * @property {{ login?: string }} [user]
  */
-
-/**
- * Repo relationships trusted to dismiss a finding — reviewed HIGH on this
- * PR's own head (POPS-2661): without this check, ANY commenter, not just
- * someone with push access, could post the marker and waive a genuine
- * finding, reopening exactly the #4289 hole this gate exists to close. These
- * three are GitHub's own categories for "has write access or above"; `NONE`
- * and `CONTRIBUTOR` (has committed before, but is not a current
- * collaborator) are deliberately excluded.
- */
-const TRUSTED_DISMISSER_ASSOCIATIONS = new Set(['OWNER', 'MEMBER', 'COLLABORATOR']);
 
 /**
  * Pick the sticky review comment out of a PR's issue comments.
@@ -545,10 +548,7 @@ export async function selfTest() {
     ],
   });
   const dismissedOnly = evaluateReviewState({
-    comments: [
-      twoOpenFindings,
-      { body: dismissMarkerFor('aaaaaa111111'), author_association: 'OWNER' },
-    ],
+    comments: [twoOpenFindings, { body: dismissMarkerFor('aaaaaa111111'), push_access: true }],
     headSha: HEAD,
   });
   check(
@@ -559,7 +559,7 @@ export async function selfTest() {
           last_reviewed_sha: HEAD,
           findings: [{ id: 'aaaaaa111111', status: 'open', title: 'a stale finding' }],
         }),
-        { body: dismissMarkerFor('aaaaaa111111'), author_association: 'OWNER' },
+        { body: dismissMarkerFor('aaaaaa111111'), push_access: true },
       ],
       headSha: HEAD,
     }).outcome === 'pass'
@@ -582,51 +582,45 @@ export async function selfTest() {
           last_reviewed_sha: HEAD,
           findings: [{ id: 'bbbbbb222222', status: 'open', title: 'a real one' }],
         }),
-        { body: dismissMarkerFor('cccccc333333'), author_association: 'OWNER' },
+        { body: dismissMarkerFor('cccccc333333'), push_access: true },
       ],
       headSha: HEAD,
     }).outcome === 'fail'
   );
   check(
     'dismissMarkerFor output round-trips through collectDismissedFindingIds',
-    collectDismissedFindingIds([
-      { body: dismissMarkerFor('abc123def456'), author_association: 'OWNER' },
-    ]).has('abc123def456')
+    collectDismissedFindingIds([{ body: dismissMarkerFor('abc123def456'), push_access: true }]).has(
+      'abc123def456'
+    )
   );
   check(
     'garbage where a dismiss id should be is ignored, not matched',
     !collectDismissedFindingIds([
-      { body: '<!-- review-findings-gate-dismiss: not-hex! -->', author_association: 'OWNER' },
+      { body: '<!-- review-findings-gate-dismiss: not-hex! -->', push_access: true },
     ]).has('not-hex!')
   );
 
-  // Reviewed HIGH on this PR's own head: a commenter with no repo
-  // association (or an association short of push access) must never be able
-  // to waive a finding, or the escape hatch is a public bypass.
+  // Reviewed twice HIGH/MEDIUM on this PR's own head: a commenter this
+  // guard has not been told has real push access must never be able to
+  // waive a finding, or the escape hatch is a public bypass. `push_access`
+  // is what `main`'s I/O layer resolves via the real collaborator-permission
+  // API — never `author_association`, which does not reliably imply it.
   check(
-    'a dismiss marker from an untrusted commenter is not honoured',
+    'a dismiss marker with push_access explicitly false is not honoured',
     !collectDismissedFindingIds([
-      { body: dismissMarkerFor('aaaaaa111111'), author_association: 'NONE' },
+      { body: dismissMarkerFor('aaaaaa111111'), push_access: false },
     ]).has('aaaaaa111111')
   );
   check(
-    'a dismiss marker with no author_association at all is not honoured',
+    'a dismiss marker with no push_access field at all is not honoured',
     !collectDismissedFindingIds([{ body: dismissMarkerFor('aaaaaa111111') }]).has('aaaaaa111111')
   );
   check(
-    'a dismiss marker from a past contributor (not a current collaborator) is not honoured',
-    !collectDismissedFindingIds([
-      { body: dismissMarkerFor('aaaaaa111111'), author_association: 'CONTRIBUTOR' },
-    ]).has('aaaaaa111111')
+    'a dismiss marker is only honoured when push_access is strictly true',
+    collectDismissedFindingIds([{ body: dismissMarkerFor('aaaaaa111111'), push_access: true }]).has(
+      'aaaaaa111111'
+    )
   );
-  for (const association of ['OWNER', 'MEMBER', 'COLLABORATOR']) {
-    check(
-      `a dismiss marker from a ${association} is honoured`,
-      collectDismissedFindingIds([
-        { body: dismissMarkerFor('aaaaaa111111'), author_association: association },
-      ]).has('aaaaaa111111')
-    );
-  }
   check(
     'an untrusted dismissal does not block a trusted one for the same id',
     evaluateReviewState({
@@ -635,8 +629,8 @@ export async function selfTest() {
           last_reviewed_sha: HEAD,
           findings: [{ id: 'aaaaaa111111', status: 'open', title: 'stale' }],
         }),
-        { body: dismissMarkerFor('aaaaaa111111'), author_association: 'NONE' },
-        { body: dismissMarkerFor('aaaaaa111111'), author_association: 'OWNER' },
+        { body: dismissMarkerFor('aaaaaa111111'), push_access: false },
+        { body: dismissMarkerFor('aaaaaa111111'), push_access: true },
       ],
       headSha: HEAD,
     }).outcome === 'pass'
@@ -649,11 +643,22 @@ export async function selfTest() {
           last_reviewed_sha: HEAD,
           findings: [{ id: 'aaaaaa111111', status: 'open', title: 'stale' }],
         }),
-        { body: dismissMarkerFor('aaaaaa111111'), author_association: 'NONE' },
+        { body: dismissMarkerFor('aaaaaa111111'), push_access: false },
       ],
       headSha: HEAD,
     }).outcome === 'fail'
   );
+
+  // The MEDIUM finding reviewed on this PR's own head: `author_association`
+  // values like MEMBER/COLLABORATOR do not reliably mean push access, so the
+  // classification must be against the real permission API's own vocabulary.
+  check('admin permission is push access', isPushPermission('admin'));
+  check('maintain permission is push access', isPushPermission('maintain'));
+  check('write permission is push access', isPushPermission('write'));
+  check('triage permission is not push access', !isPushPermission('triage'));
+  check('read permission is not push access', !isPushPermission('read'));
+  check('none permission is not push access', !isPushPermission('none'));
+  check('a garbage permission string is not push access', !isPushPermission('sudo'));
 
   // pollForReviewState: a transient retry that clears within budget passes,
   // and is proven to have actually retried rather than passing on the first
@@ -776,7 +781,84 @@ async function fetchIssueComments(repo, pr) {
   );
   /** @type {unknown[][]} */
   const pages = JSON.parse(raw);
-  return pages.flat();
+  return annotateWithPushAccess(repo, /** @type {StickyComment[]} */ (pages.flat()));
+}
+
+/** Permission levels the collaborator-permission API reports that mean push access. */
+const PUSH_PERMISSIONS = new Set(['admin', 'maintain', 'write']);
+
+/**
+ * Ask GitHub whether `login` genuinely has push access to `repo`, via the
+ * one API built to answer exactly that (`author_association` does not — see
+ * the file header). Failure of any kind (rate limit, a login GitHub cannot
+ * resolve, a transient network error) resolves to `false`: an unresolved
+ * permission is not a resolved "yes" wearing a different name.
+ *
+ * @param {string} repo
+ * @param {string} login
+ * @returns {boolean}
+ */
+function hasPushAccess(repo, login) {
+  try {
+    const permission = execFileSync(
+      'gh',
+      ['api', `repos/${repo}/collaborators/${login}/permission`, '--jq', '.permission'],
+      { encoding: 'utf8' }
+    ).trim();
+    return isPushPermission(permission);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Does this permission level (as the collaborator-permission API reports it)
+ * mean push access? Split out from {@link hasPushAccess} so the
+ * admin/maintain/write-vs-triage/read/none decision is unit-testable without
+ * a real GitHub call — the network round trip is the part worth trusting to
+ * an integration environment, not this classification.
+ *
+ * @param {string} permission
+ * @returns {boolean}
+ */
+export function isPushPermission(permission) {
+  return PUSH_PERMISSIONS.has(permission);
+}
+
+/**
+ * Resolve `push_access` on every comment that a candidate dismissal could
+ * come from, so the pure functions above never have to make a network call
+ * to answer "is this trusted".
+ *
+ * Only commenters who actually posted something that looks like a dismiss
+ * marker are checked — one API call per unique such login, not per comment
+ * and not for the (usually much larger) set of commenters who never tried to
+ * dismiss anything.
+ *
+ * @param {string} repo
+ * @param {StickyComment[]} comments
+ * @returns {StickyComment[]}
+ */
+function annotateWithPushAccess(repo, comments) {
+  /** @type {Set<string>} */
+  const candidateLogins = new Set();
+  for (const comment of comments) {
+    const login = comment.user?.login;
+    if (login && typeof comment.body === 'string' && comment.body.includes(DISMISS_MARKER)) {
+      candidateLogins.add(login);
+    }
+  }
+  /** @type {Map<string, boolean>} */
+  const pushAccessByLogin = new Map();
+  for (const login of candidateLogins) {
+    pushAccessByLogin.set(login, hasPushAccess(repo, login));
+  }
+  return comments.map((comment) => {
+    const login = comment.user?.login;
+    return login && pushAccessByLogin.has(login)
+      ? { ...comment, push_access: pushAccessByLogin.get(login) }
+      : comment;
+  });
 }
 
 async function main() {

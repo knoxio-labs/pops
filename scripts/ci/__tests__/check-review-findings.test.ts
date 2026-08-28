@@ -20,6 +20,7 @@ import {
   dismissMarkerFor,
   evaluateReviewState,
   findStateComment,
+  isPushPermission,
   pollForReviewState,
 } from '../check-review-findings.mjs';
 import { STATE_MARKER } from '../pr-review-state.mjs';
@@ -170,7 +171,7 @@ describe('the escape hatch (POPS-2669)', () => {
           last_reviewed_sha: HEAD,
           findings: [{ id: 'aaaaaa111111', status: 'open', title: 'stale' }],
         }),
-        { body: dismissMarkerFor('aaaaaa111111'), author_association: 'OWNER' },
+        { body: dismissMarkerFor('aaaaaa111111'), push_access: true },
       ],
       headSha: HEAD,
     });
@@ -184,7 +185,7 @@ describe('the escape hatch (POPS-2669)', () => {
           last_reviewed_sha: HEAD,
           findings: [{ id: 'aaaaaa111111', status: 'open', title: 'stale' }],
         }),
-        { body: dismissMarkerFor('aaaaaa111111'), author_association: 'OWNER' },
+        { body: dismissMarkerFor('aaaaaa111111'), push_access: true },
       ],
       headSha: HEAD,
     });
@@ -203,7 +204,7 @@ describe('the escape hatch (POPS-2669)', () => {
             { id: 'bbbbbb222222', status: 'open', title: 'real bug' },
           ],
         }),
-        { body: dismissMarkerFor('aaaaaa111111'), author_association: 'OWNER' },
+        { body: dismissMarkerFor('aaaaaa111111'), push_access: true },
       ],
       headSha: HEAD,
     });
@@ -223,7 +224,7 @@ describe('the escape hatch (POPS-2669)', () => {
           last_reviewed_sha: HEAD,
           findings: [{ id: 'bbbbbb222222', status: 'open', title: 'real bug' }],
         }),
-        { body: dismissMarkerFor('cccccc333333'), author_association: 'OWNER' },
+        { body: dismissMarkerFor('cccccc333333'), push_access: true },
       ],
       headSha: HEAD,
     });
@@ -243,10 +244,10 @@ describe('the escape hatch (POPS-2669)', () => {
             { id: 'bbbbbb222222', status: 'open', title: 'b' },
           ],
         }),
-        { body: `${dismissMarkerFor('aaaaaa111111')}\nreason one`, author_association: 'MEMBER' },
+        { body: `${dismissMarkerFor('aaaaaa111111')}\nreason one`, push_access: true },
         {
           body: `${dismissMarkerFor('bbbbbb222222')}\nreason two`,
-          author_association: 'COLLABORATOR',
+          push_access: true,
         },
       ],
       headSha: HEAD,
@@ -255,34 +256,27 @@ describe('the escape hatch (POPS-2669)', () => {
   });
 });
 
-describe('the escape hatch trusts only push-access commenters', () => {
-  it('does not honour a dismissal with no author_association at all', () => {
+describe('the escape hatch trusts only resolved push access, not author_association', () => {
+  // author_association was the first version's check and was itself flagged
+  // (MEMBER means "in the org", not "has access"; COLLABORATOR fires for
+  // Read/Triage too) — push_access is what main's I/O layer resolves via the
+  // real collaborator-permission API, and it is the only thing these pure
+  // functions ever look at.
+  it('does not honour a dismissal with no push_access field at all', () => {
     expect(collectDismissedFindingIds([{ body: dismissMarkerFor('aaaaaa111111') }])).toEqual(
       new Set()
     );
   });
 
-  it('does not honour a dismissal from a commenter with no repo association', () => {
+  it('does not honour a dismissal with push_access explicitly false', () => {
     expect(
-      collectDismissedFindingIds([
-        { body: dismissMarkerFor('aaaaaa111111'), author_association: 'NONE' },
-      ])
+      collectDismissedFindingIds([{ body: dismissMarkerFor('aaaaaa111111'), push_access: false }])
     ).toEqual(new Set());
   });
 
-  it('does not honour a dismissal from a past contributor who is not a current collaborator', () => {
+  it('honours a dismissal with push_access true', () => {
     expect(
-      collectDismissedFindingIds([
-        { body: dismissMarkerFor('aaaaaa111111'), author_association: 'CONTRIBUTOR' },
-      ])
-    ).toEqual(new Set());
-  });
-
-  it.each(['OWNER', 'MEMBER', 'COLLABORATOR'])('honours a dismissal from a %s', (association) => {
-    expect(
-      collectDismissedFindingIds([
-        { body: dismissMarkerFor('aaaaaa111111'), author_association: association },
-      ])
+      collectDismissedFindingIds([{ body: dismissMarkerFor('aaaaaa111111'), push_access: true }])
     ).toEqual(new Set(['aaaaaa111111']));
   });
 
@@ -293,8 +287,8 @@ describe('the escape hatch trusts only push-access commenters', () => {
           last_reviewed_sha: HEAD,
           findings: [{ id: 'aaaaaa111111', status: 'open', title: 'stale' }],
         }),
-        { body: dismissMarkerFor('aaaaaa111111'), author_association: 'NONE' },
-        { body: dismissMarkerFor('aaaaaa111111'), author_association: 'OWNER' },
+        { body: dismissMarkerFor('aaaaaa111111'), push_access: false },
+        { body: dismissMarkerFor('aaaaaa111111'), push_access: true },
       ],
       headSha: HEAD,
     });
@@ -308,7 +302,7 @@ describe('the escape hatch trusts only push-access commenters', () => {
           last_reviewed_sha: HEAD,
           findings: [{ id: 'aaaaaa111111', status: 'open', title: 'stale' }],
         }),
-        { body: dismissMarkerFor('aaaaaa111111'), author_association: 'NONE' },
+        { body: dismissMarkerFor('aaaaaa111111'), push_access: false },
       ],
       headSha: HEAD,
     });
@@ -316,19 +310,29 @@ describe('the escape hatch trusts only push-access commenters', () => {
   });
 });
 
+describe('isPushPermission', () => {
+  // Reviewed MEDIUM on this PR's own head: the classification must be
+  // against the real permission API's vocabulary, not author_association.
+  it.each(['admin', 'maintain', 'write'])('%s is push access', (permission) => {
+    expect(isPushPermission(permission)).toBe(true);
+  });
+
+  it.each(['triage', 'read', 'none', 'sudo', ''])('%s is not push access', (permission) => {
+    expect(isPushPermission(permission)).toBe(false);
+  });
+});
+
 describe('collectDismissedFindingIds', () => {
   it('round-trips dismissMarkerFor', () => {
     expect(
-      collectDismissedFindingIds([
-        { body: dismissMarkerFor('abc123def456'), author_association: 'OWNER' },
-      ])
+      collectDismissedFindingIds([{ body: dismissMarkerFor('abc123def456'), push_access: true }])
     ).toEqual(new Set(['abc123def456']));
   });
 
   it('ignores a marker whose id is not hex', () => {
     expect(
       collectDismissedFindingIds([
-        { body: '<!-- review-findings-gate-dismiss: not-hex! -->', author_association: 'OWNER' },
+        { body: '<!-- review-findings-gate-dismiss: not-hex! -->', push_access: true },
       ])
     ).toEqual(new Set());
   });
