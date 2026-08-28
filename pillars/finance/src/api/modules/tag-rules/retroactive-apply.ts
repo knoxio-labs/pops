@@ -4,11 +4,23 @@
  * into that transaction's `tags` column — the catch-up pass a rule created or
  * edited after those transactions were imported never got.
  *
- * Additive only: never removes a tag the transaction already carries, and
- * skips a transaction whose `matchType` is `manual` (CF017/#3623's
- * hand-fix marker) so a user's own correction is never touched. A transaction
- * that already carries every one of the rule's tags is left untouched, which
- * is what makes a second run against the same rule a no-op (idempotent).
+ * Additive only: never removes a tag the transaction already carries, and a
+ * transaction that already carries every one of the rule's tags is left
+ * untouched, which is what makes a second run against the same rule a no-op
+ * (idempotent).
+ *
+ * It does NOT skip a `matchType: 'manual'` row (POPS-2662). That marker is
+ * stamped when a PATCH touches `entityId`/`entityName`/`type`/`location` — it
+ * says the user fixed the *classification*, not that they curated the tags —
+ * and `transactions.ts` already argues the case above `CLASSIFICATION_PATCH_FIELDS`:
+ * additive tag merging "never reverts anything", which is why a tags-only PATCH
+ * does not set the marker in the first place. The correction-rule counterpart
+ * does still skip manual rows, and correctly: it rewrites the classification,
+ * which is exactly what a hand-fix needs protecting from.
+ *
+ * The guard cost 23 of 106 matched rows on POPS-2607's merchant backfill, and
+ * all 15 rows of its Amazon `enrich:` marking — disproportionately the rows a
+ * human had touched, which are the ones most likely to be under-tagged.
  *
  * `dryRun` computes the identical match set without writing anything or
  * bumping the rule's usage telemetry (`timesApplied`/`lastUsedAt`) — a
@@ -87,7 +99,12 @@ export interface TagRuleRetroactiveResult {
   matched: number;
   /** Of `matched`, the ones actually written (or that would be, under `dryRun`). */
   updated: number;
-  /** Of `matched`, skipped because the transaction carries a manual override. */
+  /**
+   * Always 0 since POPS-2662 — a manual classification fix no longer blocks an
+   * additive tag merge. Kept because the field is in the published REST
+   * response; removing it is a contract change with a codegen fan-out, and
+   * belongs in its own edit rather than a data fix.
+   */
   skippedManual: number;
 }
 
@@ -126,11 +143,6 @@ export function applyTagRuleToExistingTransactions(
       if (!ruleMatchesTransaction(scope, txn, matchable)) continue;
 
       result.matched++;
-
-      if (txn.matchType === 'manual') {
-        result.skippedManual++;
-        continue;
-      }
 
       const existingTags = parseStoredTags(txn.tags);
       const missing = ruleTags.filter((t) => !existingTags.includes(t));

@@ -27,11 +27,8 @@ import { resolveFinanceSqlitePath } from '../src/api/finance-sqlite-path.js';
  * rule would assert a guess on every future import:
  *
  * - the transport and toll merchants (`TFNSW OPAL FARE`, `TRANSPORTFORNSW`,
- *   `E-TOLL`, `AMPOL`) — getting somewhere has no occasion of its own, and
- *   `AMPOL`'s own rows already disagree (9 of 22 say `occasion:travel`)
- * - `AMAZON MARKETPLACE` / `AMAZON RETA*` — an `enrich:` merchant whose
- *   contents the merchant does not determine, so these want the marker rather
- *   than a `contains:` guess
+ *   `E-TOLL`, `AMPOL`) — getting somewhere has no occasion of its own, so the
+ *   coverage measurement excludes them instead of a rule guessing one
  */
 import {
   applyTagRuleToExistingTransactions,
@@ -140,6 +137,21 @@ const RULES: readonly PlannedRule[] = [
     pattern: 'TEMPLE & WEBSTER',
     tags: ['contains:household'],
     why: 'homewares retailer; already occasion:home, missing only what it contains',
+  },
+  // The two Amazon descriptors carry no facets at all, while 64 other rows in
+  // the ledger already carry `enrich:amazon`. What is missing is the marker,
+  // not a guess at the contents: the merchant does not determine what was
+  // bought, which is the whole reason the `enrich:` facet exists. Marking them
+  // takes them out of the addressable set rather than filling it with noise.
+  {
+    pattern: 'AMAZON MARKETPLACE',
+    tags: ['enrich:amazon'],
+    why: 'the marker 64 sibling rows already carry; contents come from a receipt, not the descriptor',
+  },
+  {
+    pattern: 'AMAZON RETA',
+    tags: ['enrich:amazon'],
+    why: 'the same merchant under its retail descriptor',
   },
 ];
 

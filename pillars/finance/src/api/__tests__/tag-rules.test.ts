@@ -500,7 +500,12 @@ describe('tagRules — applyExisting (retroactive apply, #3660)', () => {
     expect(rule.data.lastUsedAt).not.toBeNull();
   });
 
-  it('skips a transaction whose matchType is manual (CF017/#3623)', async () => {
+  // The marker says the user fixed the CLASSIFICATION, not that they curated the
+  // tags — and an additive merge cannot revert a classification. Skipping these
+  // cost POPS-2607's backfill 23 of 106 rows and every one of its Amazon rows
+  // (POPS-2662). The correction-rule counterpart still skips them, correctly:
+  // that one rewrites the classification.
+  it('applies to a transaction whose matchType is manual, without touching its classification', async () => {
     const db = financeDb.db;
     const txn = transactionsService.createTransaction(db, {
       description: 'DARLO BAR SYDNEY',
@@ -514,10 +519,11 @@ describe('tagRules — applyExisting (retroactive apply, #3660)', () => {
     const ruleId = await seedRule();
 
     const result = await client().tagRules.applyExisting(ruleId);
-    expect(result.data).toMatchObject({ matched: 1, updated: 0, skippedManual: 1 });
+    expect(result.data).toMatchObject({ matched: 1, updated: 1, skippedManual: 0 });
 
     const refetched = await client().transactions.get(txn.id);
-    expect(refetched.data.tags).toEqual([]);
+    expect(refetched.data.tags).not.toEqual([]);
+    expect(refetched.data.entityId).toBe('ent-user-picked');
   });
 
   it('a disabled tag rule is a no-op', async () => {

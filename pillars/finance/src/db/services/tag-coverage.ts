@@ -38,6 +38,37 @@ import type { FinanceDb } from './internal.js';
 const ENRICH_PREFIX = `enrich${TAG_FACET_SEPARATOR}`;
 
 /**
+ * `contains:` values that mean "getting somewhere", not "a thing consumed".
+ *
+ * Such a row has no occasion of its own — the occasion is whatever you
+ * travelled to, and it is recorded on that transaction, not on the fare
+ * (POPS-2607). Requiring one here would force a guess onto every future import.
+ *
+ * The list is what the ledger says rather than what the words suggest, which is
+ * why `rideshare` and `flight` are absent despite obviously being travel: all
+ * 18 rideshare rows and both flight rows already carry an occasion, while
+ * public-transport (0 of 21), tolls (0 of 12), parking (0 of 10) and fuel
+ * (0 of 1) never do. `charging` is the one that splits, 9 of 22 — it is here
+ * because those nine are a car being charged mid-trip and the rest are it being
+ * charged at home, which is a distinction the descriptor cannot make.
+ *
+ * The exclusion is unconditional: a transit row is out of the occasion metric
+ * whether or not it happens to carry one. Excluding only the rows that lack an
+ * occasion would make the ratio flattering by construction — every row would be
+ * either covered or excluded, and the number would report 100% while saying
+ * nothing. Nothing here forbids an occasion on a transit row; the nine `AMPOL`
+ * rows that carry `occasion:travel` keep it and simply do not figure in the
+ * denominator.
+ */
+const TRANSIT_CONTAINS: readonly string[] = [
+  `contains${TAG_FACET_SEPARATOR}public-transport`,
+  `contains${TAG_FACET_SEPARATOR}tolls`,
+  `contains${TAG_FACET_SEPARATOR}parking`,
+  `contains${TAG_FACET_SEPARATOR}fuel`,
+  `contains${TAG_FACET_SEPARATOR}charging`,
+];
+
+/**
  * Which rows a facet is expected on.
  *
  * `enrich:` excludes everywhere: the row is explicitly waiting on an enrichment
@@ -55,6 +86,8 @@ interface FacetExpectation {
   required: boolean;
   /** Whether the facet applies only to rows whose `type` counts as spend. */
   spendOnly: boolean;
+  /** Whether a {@link TRANSIT_CONTAINS} row is outside this facet's set. */
+  excludesTransit: boolean;
 }
 
 /**
@@ -82,6 +115,7 @@ const FACET_EXPECTATIONS: readonly FacetExpectation[] = CLOSED_TAG_FACETS.map((c
   facet: closed.facet,
   required: REQUIRED_FACETS.has(closed.facet),
   spendOnly: SPEND_ONLY_FACETS.has(closed.facet),
+  excludesTransit: closed.facet === 'occasion',
 }));
 
 /** Coverage of one closed facet across the ledger. */
@@ -99,6 +133,8 @@ export interface FacetCoverage {
   enrichExcluded: number;
   /** Rows excluded because their `type` is not spend — the facet cannot apply. */
   nonSpendExcluded: number;
+  /** Rows excluded as transit — `occasion:` only, see {@link TRANSIT_CONTAINS}. */
+  transitExcluded: number;
   /**
    * Addressable rows carrying more than one value on a single-valued facet.
    *
@@ -152,10 +188,15 @@ function isEnrichBlocked(tags: string[]): boolean {
   return tags.some((tag) => tag.startsWith(ENRICH_PREFIX));
 }
 
+function isTransit(tags: string[]): boolean {
+  return tags.some((tag) => TRANSIT_CONTAINS.includes(tag));
+}
+
 /** Is `facet` expected on this row, or outside its addressable set? */
 function isAddressable(expectation: FacetExpectation, row: ScannedRow): boolean {
   if (isEnrichBlocked(row.tags)) return false;
-  return !(expectation.spendOnly && !isSpendType(row.type));
+  if (expectation.spendOnly && !isSpendType(row.type)) return false;
+  return !(expectation.excludesTransit && isTransit(row.tags));
 }
 
 function measureFacet(
@@ -171,6 +212,7 @@ function measureFacet(
     missing: 0,
     enrichExcluded: 0,
     nonSpendExcluded: 0,
+    transitExcluded: 0,
     cardinalityViolations: 0,
   };
 
@@ -182,6 +224,10 @@ function measureFacet(
     }
     if (expectation.spendOnly && !isSpendType(row.type)) {
       coverage.nonSpendExcluded += 1;
+      continue;
+    }
+    if (expectation.excludesTransit && isTransit(tags)) {
+      coverage.transitExcluded += 1;
       continue;
     }
     coverage.addressable += 1;

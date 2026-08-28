@@ -177,6 +177,58 @@ describe('measureTagCoverage — venue is measured but not required', () => {
   });
 });
 
+describe('measureTagCoverage — transit has no occasion of its own', () => {
+  // The occasion is whatever you travelled to, recorded on that transaction —
+  // not on the fare. Requiring one on a toll would force a guess (POPS-2607).
+  it('excludes a toll and a fare from the occasion denominator', () => {
+    txn('E-TOLL PAYMENT', ['contains:tolls']);
+    txn('TFNSW OPAL FARE', ['contains:public-transport']);
+
+    const occasion = facet(measure(), 'occasion');
+
+    expect(occasion).toMatchObject({ addressable: 0, missing: 0, transitExcluded: 2 });
+  });
+
+  it('still requires contains: on a transit row — the exclusion is occasion-only', () => {
+    txn('E-TOLL PAYMENT', ['contains:tolls']);
+
+    const coverage = measure();
+
+    expect(facet(coverage, 'contains')).toMatchObject({ addressable: 1, covered: 1 });
+    expect(facet(coverage, 'venue').transitExcluded).toBe(0);
+  });
+
+  // Unconditional on purpose: excluding only the transit rows that LACK an
+  // occasion would make the ratio flattering by construction — every row would
+  // be covered or excluded and the number would always read 100%.
+  it('excludes a transit row even when it does carry an occasion', () => {
+    txn('AMPOL', ['contains:charging', 'occasion:travel']);
+
+    expect(facet(measure(), 'occasion')).toMatchObject({
+      transitExcluded: 1,
+      addressable: 0,
+      covered: 0,
+    });
+  });
+
+  it('does not exclude rideshare or flight, which always carry one already', () => {
+    txn('UBER TRIP', ['contains:rideshare']);
+    txn('VIRGIN AUSTRALIA', ['contains:flight']);
+
+    expect(facet(measure(), 'occasion')).toMatchObject({
+      addressable: 2,
+      missing: 2,
+      transitExcluded: 0,
+    });
+  });
+
+  it('keeps a transit descriptor off the rule worklist', () => {
+    txn('TFNSW OPAL FARE', ['contains:public-transport']);
+
+    expect(measure().gaps).toEqual([]);
+  });
+});
+
 describe('measureTagCoverage — cardinality', () => {
   it('reports a stored two-venue row as a violation and still counts it covered', () => {
     txn('LUCKY CAT', ['venue:restaurant', 'venue:bar', 'occasion:out']);
