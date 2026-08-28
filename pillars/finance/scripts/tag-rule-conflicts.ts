@@ -11,10 +11,7 @@
  * Kept out of `backfill-tag-rules.ts` so it can be tested without importing a
  * module whose last line runs the backfill.
  */
-import {
-  normalizeDescription,
-  patternMatchesNormalizedDescription,
-} from '../src/contract/pattern-match.js';
+import { describeForMatching, patternMatchesDescription } from '../src/contract/pattern-match.js';
 import { CLOSED_TAG_FACETS, parseStoredTags, parseTagFacet } from '../src/db/tag-facets.js';
 
 const SINGLE_VALUED_FACETS = new Set<string>(
@@ -70,9 +67,9 @@ function conflictsOnRow(
 
 /**
  * Every (rule, row) pair where merging the rule would leave two values on one
- * single-valued facet. Matching mirrors the retroactive applier exactly —
- * `contains` against the normalized descriptor — because a scan that matched
- * more narrowly than the applier would miss the rows it is there to catch.
+ * single-valued facet. Matching goes through `patternMatchesDescription`, the
+ * same call the retroactive applier makes, because a scan that matched more
+ * narrowly than the applier would miss the rows it is there to catch.
  */
 export function findTagRuleConflicts(
   rules: readonly ScannedRule[],
@@ -84,11 +81,7 @@ export function findTagRuleConflicts(
 
     return rows
       .filter((row) =>
-        patternMatchesNormalizedDescription(
-          rule.pattern,
-          'contains',
-          normalizeDescription(row.description)
-        )
+        patternMatchesDescription(rule.pattern, 'contains', describeForMatching(row.description))
       )
       .flatMap((row) => incoming.flatMap((tag) => conflictsOnRow(rule, tag, row)));
   });
