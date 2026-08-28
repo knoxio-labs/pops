@@ -5,11 +5,12 @@
  * `before` to `[]`, materialized only `add` ops, and computed its totals after
  * truncating the input.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { freshMigratedFinanceDb } from '../../../../db/__tests__/migrated-db.js';
 import {
   tagVocabularyService,
+  transactionCorrectionsService,
   transactionTagRulesService,
   type FinanceDb,
 } from '../../../../db/index.js';
@@ -350,6 +351,42 @@ describe('previewTagRuleChangeSet — parity with the import pipeline', () => {
       expect(result.affected[0]?.before.suggestedTags.map((s) => s.tag)).toEqual(
         live.map((s) => s.tag)
       );
+    });
+  });
+});
+
+describe('previewTagRuleChangeSet — corrections are fetched once per run (POPS-2634)', () => {
+  it('issues a constant number of correction queries, independent of row count', () => {
+    withDb((db) => {
+      transactionTagRulesService.createTransactionTagRule(db, {
+        descriptionPattern: 'WOOLWORTHS',
+        matchType: 'contains',
+        tags: ['Groceries'],
+      });
+
+      const listSpy = vi.spyOn(
+        transactionCorrectionsService,
+        'listActiveTransactionCorrectionsForMatching'
+      );
+      const perCallSpy = vi.spyOn(
+        transactionCorrectionsService,
+        'findAllMatchingTransactionCorrections'
+      );
+
+      const txs = Array.from({ length: 100 }, (_, i) => row(`t${i}`, `WOOLWORTHS METRO ${i}`));
+
+      const result = previewTagRuleChangeSet(db, {
+        changeSet: addOp('WOOLWORTHS METRO', ['Groceries', 'Weekly']),
+        transactions: txs,
+        maxPreviewItems: 100,
+      });
+
+      expect(result.counts.affected).toBe(100);
+      expect(listSpy).toHaveBeenCalledTimes(1);
+      expect(perCallSpy).not.toHaveBeenCalled();
+
+      listSpy.mockRestore();
+      perCallSpy.mockRestore();
     });
   });
 });

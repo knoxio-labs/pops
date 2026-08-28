@@ -19,6 +19,7 @@
 import {
   tagVocabularyService,
   type FinanceDb,
+  type TransactionCorrectionRow,
   transactionCorrectionsService,
   transactionTagRulesService,
 } from '../../../db/index.js';
@@ -75,6 +76,19 @@ export interface SuggestTagsOptions {
    * persisted, and a preview is not a use.
    */
   tagRules?: readonly InMemoryTagRule[];
+  /**
+   * Match this already-fetched active-correction set instead of querying
+   * `transaction_corrections` — the same fetch-once-per-run shape `tagRules`
+   * uses, and the one `applyLearnedCorrection`'s `rules` argument already
+   * established for corrections (CF040/#3664). A caller matching many
+   * descriptions per run (the tag-rule ChangeSet preview, which runs this
+   * pass twice per row) fetches the set once with
+   * `transactionCorrectionsService.listActiveTransactionCorrectionsForMatching`
+   * and threads it through every call instead of re-issuing the same SELECT
+   * per call (POPS-2634). Ignored when `correctionTags` is supplied — that
+   * option already skips matching entirely.
+   */
+  corrections?: readonly TransactionCorrectionRow[];
 }
 
 /**
@@ -98,6 +112,7 @@ interface TagPass {
   recordTagRuleUsage: boolean;
   onTagRulesMatched: ((ruleIds: readonly string[]) => void) | undefined;
   tagRules: readonly InMemoryTagRule[] | undefined;
+  corrections: readonly TransactionCorrectionRow[] | undefined;
   seen: Set<string>;
   result: SuggestedTag[];
 }
@@ -107,7 +122,7 @@ function addCorrectionTags(
   correctionTags: string[] | undefined,
   correctionPattern: string | undefined
 ): void {
-  const { db, description, seen, result } = pass;
+  const { db, description, corrections, seen, result } = pass;
   if (correctionTags && correctionTags.length > 0) {
     for (const tag of correctionTags) {
       if (!remember(seen, tag)) continue;
@@ -115,10 +130,13 @@ function addCorrectionTags(
     }
     return;
   }
-  for (const correction of transactionCorrectionsService.findAllMatchingTransactionCorrections(
-    db,
-    description
-  )) {
+  const matches = corrections
+    ? transactionCorrectionsService.findAllMatchingTransactionCorrectionsFromRows(
+        corrections,
+        description
+      )
+    : transactionCorrectionsService.findAllMatchingTransactionCorrections(db, description);
+  for (const correction of matches) {
     for (const tag of parseStoredTags(correction.tags)) {
       if (!remember(seen, tag)) continue;
       result.push({ tag, source: 'rule', pattern: correction.descriptionPattern ?? undefined });
@@ -254,6 +272,7 @@ export function suggestTags(db: FinanceDb, opts: SuggestTagsOptions): SuggestedT
     recordTagRuleUsage: opts.recordTagRuleUsage ?? true,
     onTagRulesMatched: opts.onTagRulesMatched,
     tagRules: opts.tagRules,
+    corrections: opts.corrections,
     seen: new Set<string>(),
     result: [],
   };

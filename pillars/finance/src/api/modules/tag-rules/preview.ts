@@ -1,4 +1,8 @@
-import { tagVocabularyService, type FinanceDb } from '../../../db/index.js';
+import {
+  tagVocabularyService,
+  transactionCorrectionsService,
+  type FinanceDb,
+} from '../../../db/index.js';
 /**
  * Suggestion-impact preview for a tag-rule ChangeSet — the panel that answers
  * "what will this rule do?" before the user commits to it.
@@ -34,11 +38,20 @@ import { tagVocabularyService, type FinanceDb } from '../../../db/index.js';
  * so this preview and the import wizard cannot disagree about whether a tag is
  * new — and the comparison is case-insensitive, so a tag differing from the
  * stored value only in case is not proposed as new (POPS-2602).
+ *
+ * The correction half of the suggester pass is fetched once here and threaded
+ * through every `suggestOver` call — both the `before` and `after` pass over
+ * every row — the same fetch-once shape `loadPersistedTagRules` already gives
+ * the tag-rule half. Without it, a run over N transactions issued 2N
+ * `findAllMatchingTransactionCorrections` queries: the tag-rule side was
+ * already served from `persisted`/`merged`, but nothing capped the
+ * corrections side the same way (POPS-2634).
  */
 import { suggestTags } from '../tag-suggester/index.js';
 import { loadPersistedTagRules, mergeChangeSetOverRules } from './merged-rules.js';
 
 import type { TagRuleChangeSet } from '../../../contract/rest-tag-rules.js';
+import type { TransactionCorrectionRow } from '../../../db/index.js';
 import type { InMemoryTagRule } from '../tag-suggester/tag-rule-matching.js';
 import type {
   PreviewInputTransaction,
@@ -51,15 +64,23 @@ interface SuggestArgs {
   db: FinanceDb;
   transaction: PreviewInputTransaction;
   rules: readonly InMemoryTagRule[];
+  corrections: readonly TransactionCorrectionRow[];
   knownTags: tagVocabularyService.KnownTagSet;
 }
 
-function suggestOver({ db, transaction, rules, knownTags }: SuggestArgs): TagSuggestion[] {
+function suggestOver({
+  db,
+  transaction,
+  rules,
+  corrections,
+  knownTags,
+}: SuggestArgs): TagSuggestion[] {
   return suggestTags(db, {
     description: transaction.description,
     entityId: transaction.entityId ?? null,
     recordTagRuleUsage: false,
     tagRules: rules,
+    corrections,
   }).map((s) => ({
     tag: s.tag,
     source: s.source,
@@ -126,6 +147,7 @@ export function previewTagRuleChangeSet(
   const knownTags = tagVocabularyService.loadKnownTagSet(db);
   const persisted = loadPersistedTagRules(db);
   const merged = mergeChangeSetOverRules(persisted, args.changeSet);
+  const corrections = transactionCorrectionsService.listActiveTransactionCorrectionsForMatching(db);
 
   const acc: Accumulator = {
     affected: [],
@@ -139,8 +161,8 @@ export function previewTagRuleChangeSet(
   for (const transaction of args.transactions) {
     if (transaction.userTags !== undefined) continue;
 
-    const before = suggestOver({ db, transaction, rules: persisted, knownTags });
-    const after = suggestOver({ db, transaction, rules: merged, knownTags });
+    const before = suggestOver({ db, transaction, rules: persisted, corrections, knownTags });
+    const after = suggestOver({ db, transaction, rules: merged, corrections, knownTags });
     const diff = diffTags(before, after);
     if (diff.added.length === 0 && diff.removed.length === 0) continue;
 
