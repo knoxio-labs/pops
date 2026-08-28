@@ -4,7 +4,9 @@ import { toast } from 'sonner';
 
 /**
  * LeavingSoonShelf — horizontal shelf showing movies scheduled for removal.
- * Used on the Library page above the main grid.
+ * Used on the Library page above the main grid. Renders nothing while rotation
+ * is switched off: disabling rotation leaves the `leaving` rows untouched, so
+ * the shelf would otherwise keep advertising removals that will never happen.
  */
 import { Button, Skeleton } from '@pops/ui';
 
@@ -12,6 +14,7 @@ import { unwrap } from '../media-api-helpers.js';
 import {
   rotationSchedulerCancelLeaving,
   rotationSchedulerLeavingMovies,
+  rotationSchedulerStatus,
 } from '../media-api/index.js';
 import { HorizontalScrollRow } from './HorizontalScrollRow';
 import { LeavingBadge } from './LeavingBadge';
@@ -87,6 +90,11 @@ function LeavingMovieCard({
 
 export function LeavingSoonShelf() {
   const queryClient = useQueryClient();
+  const { data: status } = useQuery<{ isRunning: boolean }>({
+    queryKey: ['media', 'rotation', 'status'],
+    queryFn: async () => (await unwrap(await rotationSchedulerStatus())).data,
+  });
+  const rotationEnabled = status?.isRunning ?? false;
   const {
     data: movies,
     isLoading,
@@ -94,6 +102,7 @@ export function LeavingSoonShelf() {
   } = useQuery<LeavingMovie[]>({
     queryKey: ['media', 'rotation', 'getLeavingMovies'],
     queryFn: async () => (await unwrap(await rotationSchedulerLeavingMovies())).data,
+    enabled: rotationEnabled,
   });
   const cancelMutation = useMutation({
     mutationFn: async (variables: { movieId: number }) =>
@@ -109,6 +118,7 @@ export function LeavingSoonShelf() {
     },
   });
 
+  if (!rotationEnabled) return null;
   if (isLoading) return <LeavingSkeleton />;
   if (!movies || movies.length === 0) return null;
 
