@@ -20,12 +20,12 @@
     "@pops/pillar-sdk": "workspace:*",
     "@pops/types": "workspace:*",
     "@pops/ui": "workspace:*",
-    "@tanstack/react-query": "5.101.4",
-    "i18next": "^26.3.6",
-    "lucide-react": "^1.31.0",
+    "@tanstack/react-query": "5.102.3",
+    "i18next": "^26.4.0",
+    "lucide-react": "^1.34.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "react-i18next": "^17.0.11",
+    "react-i18next": "^17.0.12",
     "react-router": "^8.3.0",
     "recharts": "^3.10.1",
     "sonner": "^2.0.8"
@@ -33,15 +33,15 @@
   "devDependencies": {
     "@hey-api/openapi-ts": "^0.99.0",
     "@pops/locales": "workspace:*",
-    "@testing-library/jest-dom": "^7.0.0",
+    "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.2",
-    "@testing-library/user-event": "^14.6.3",
+    "@testing-library/user-event": "^14.6.6",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",
-    "@types/react-dom": "^19.2.4",
-    "@vitest/coverage-v8": "^4.1.10",
+    "@types/react-dom": "^19.2.5",
+    "@vitest/coverage-v8": "^4.1.11",
     "jsdom": "^30.0.1",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.11"
   }
 }
