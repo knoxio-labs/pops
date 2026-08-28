@@ -327,6 +327,48 @@ describe('generate-nginx-conf', () => {
     });
   });
 
+  /**
+   * index.html names the hashed assets of the build it shipped with, and
+   * /assets/ is `immutable` — so an index.html a browser may reuse without
+   * asking pins that session to the previous deploy's bundle. The behavioural
+   * half of this guard is in `scripts/ci/smoke-image.mjs`, which reads the
+   * header off the running image; these assertions only pin the config that
+   * produces it.
+   */
+  describe('index.html freshness', () => {
+    const rendered = renderNginxConf();
+    const fallback = rendered.slice(rendered.lastIndexOf('    location / {'));
+
+    it('forces revalidation on the location that serves index.html', () => {
+      expect(fallback).toContain('add_header Cache-Control "no-cache, must-revalidate";');
+    });
+
+    it('keeps the SPA fallback, so deep links still reach index.html with that header', () => {
+      expect(fallback).toContain('try_files $uri $uri/ /index.html;');
+    });
+
+    it('sets no `expires`, which would emit a competing max-age', () => {
+      expect(fallback).not.toContain('expires');
+    });
+
+    it('leaves hashed assets immutable — the fix must not disable /assets/ caching', () => {
+      const assets = rendered.slice(rendered.indexOf('    location /assets/ {'));
+      const body = assets.slice(0, assets.indexOf('}'));
+      expect(body).toContain('expires 1y;');
+      expect(body).toContain('add_header Cache-Control "public, immutable";');
+      expect(body).not.toContain('no-cache');
+    });
+
+    it('matches /assets/ and .mjs before the fallback, so they keep their own policy', () => {
+      expect(rendered.indexOf('location /assets/ {')).toBeLessThan(
+        rendered.lastIndexOf('    location / {')
+      );
+      expect(rendered.indexOf('location ~ \\.mjs$ {')).toBeLessThan(
+        rendered.lastIndexOf('    location / {')
+      );
+    });
+  });
+
   describe('determinism', () => {
     it('renderNginxConf() is pure — two calls produce identical output', () => {
       expect(renderNginxConf()).toBe(renderNginxConf());

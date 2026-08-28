@@ -7,7 +7,9 @@ import { describe, expect, it } from 'vitest';
 import {
   collectStreams,
   dataMountsForDockerfile,
+  forcesRevalidation,
   freshVolumeName,
+  freshnessProbePaths,
   mountSlug,
   normalizeVolumeEntry,
   parseExposedPort,
@@ -472,6 +474,48 @@ describe('resolveHealthPath', () => {
 
   it('does not treat a lookalike name as nginx', () => {
     expect(resolveHealthPath('nginxinc-unofficial:1')).toBe('/health');
+  });
+});
+
+describe('freshnessProbePaths', () => {
+  it('probes both entry routes for nginx-served frontends', () => {
+    expect(freshnessProbePaths('nginx:1.31.3-alpine')).toEqual(['/', '/deep/link/smoke-probe']);
+  });
+
+  it('probes a deep path that no build can ship as a real file', () => {
+    const [, deepLink] = freshnessProbePaths('nginx:1.31.3-alpine');
+    expect(deepLink).toMatch(/^\/.+\/.+/u);
+  });
+
+  it('asks nothing of application images, which serve no entry document', () => {
+    expect(freshnessProbePaths('node:24-slim')).toEqual([]);
+  });
+
+  it('does not treat a lookalike name as nginx', () => {
+    expect(freshnessProbePaths('nginxinc-unofficial:1')).toEqual([]);
+  });
+});
+
+describe('forcesRevalidation', () => {
+  it('rejects a missing header — the state that hands the decision to heuristics', () => {
+    expect(forcesRevalidation(null)).toBe(false);
+  });
+
+  it('accepts the directives that require a check-back', () => {
+    expect(forcesRevalidation('no-cache, must-revalidate')).toBe(true);
+    expect(forcesRevalidation('no-store')).toBe(true);
+    expect(forcesRevalidation('public, max-age=0, must-revalidate')).toBe(true);
+  });
+
+  it('rejects a policy that lets a stale entry document be reused', () => {
+    expect(forcesRevalidation('public, immutable')).toBe(false);
+    expect(forcesRevalidation('public, max-age=31536000')).toBe(false);
+    expect(forcesRevalidation('must-revalidate')).toBe(false);
+  });
+
+  it('does not accept a directive that merely contains one as a substring', () => {
+    expect(forcesRevalidation('max-age=3600')).toBe(false);
+    expect(forcesRevalidation('stale-while-revalidate=60')).toBe(false);
   });
 });
 
