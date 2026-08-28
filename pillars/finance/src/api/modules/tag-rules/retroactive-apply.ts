@@ -23,6 +23,7 @@ import {
   transactionTagRulesService,
   transactions,
 } from '../../../db/index.js';
+import { parseStoredTags } from '../../../db/tag-facets.js';
 
 const BATCH_SIZE = 500;
 
@@ -33,8 +34,6 @@ interface BatchTxn {
   tags: string;
   matchType: string | null;
 }
-
-const { parseTagRuleTags: parseTags } = transactionTagRulesService;
 
 function fetchBatch(db: FinanceDb, offset: number): BatchTxn[] {
   return db
@@ -101,7 +100,7 @@ export function applyTagRuleToExistingTransactions(
   const result: TagRuleRetroactiveResult = { dryRun, matched: 0, updated: 0, skippedManual: 0 };
 
   const rule = transactionTagRulesService.getTransactionTagRule(db, ruleId);
-  const ruleTags = parseTags(rule.tags);
+  const ruleTags = parseStoredTags(rule.tags);
   if (!rule.isActive || ruleTags.length === 0) return result;
 
   const { normalizeDescription } = transactionCorrectionsService;
@@ -127,7 +126,7 @@ export function applyTagRuleToExistingTransactions(
         continue;
       }
 
-      const existingTags = parseTags(txn.tags);
+      const existingTags = parseStoredTags(txn.tags);
       const missing = ruleTags.filter((t) => !existingTags.includes(t));
       if (missing.length === 0) continue;
 

@@ -10,6 +10,7 @@
  * a venue on such a merchant would be misleading.
  */
 import { transactions } from '../schema.js';
+import { parseStoredTags } from '../tag-facets.js';
 
 import type { FinanceDb } from './internal.js';
 
@@ -28,16 +29,6 @@ export function isPerTransactionFacet(tag: string): boolean {
 /** True for a tag asserting what kind of place the merchant is. */
 export function isVenueTag(tag: string): boolean {
   return tag.startsWith(VENUE_FACET);
-}
-
-function parseTags(json: string | null | undefined): string[] {
-  if (!json) return [];
-  try {
-    const parsed = JSON.parse(json) as unknown;
-    return Array.isArray(parsed) ? parsed.filter((t): t is string => typeof t === 'string') : [];
-  } catch {
-    return [];
-  }
 }
 
 /** What the ledger says about one entity's venue. */
@@ -74,7 +65,7 @@ export function collectEntityVenueEvidence(db: FinanceDb): Map<string, EntityVen
     }
     evidence.transactionCount += 1;
     let sawEnrich = false;
-    for (const tag of parseTags(row.tags)) {
+    for (const tag of parseStoredTags(row.tags)) {
       if (isVenueTag(tag)) {
         evidence.venueCounts.set(tag, (evidence.venueCounts.get(tag) ?? 0) + 1);
       } else if (tag.startsWith(ENRICH_FACET)) {
@@ -115,7 +106,7 @@ export function measureVenueCoverage(db: FinanceDb): VenueCoverage {
     .select({ entityId: transactions.entityId, tags: transactions.tags })
     .from(transactions)
     .all()) {
-    const tags = parseTags(row.tags);
+    const tags = parseStoredTags(row.tags);
     if (tags.some((tag) => tag.startsWith(ENRICH_FACET))) {
       coverage.enrichExcluded += 1;
       continue;

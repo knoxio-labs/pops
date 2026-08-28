@@ -1,3 +1,4 @@
+import { parseStoredTags } from '../../db/tag-facets.js';
 /**
  * Wire mapper for the transactions domain. The zod schemas now live in
  * the REST contract (`src/contract/rest-transactions.ts`); this file
@@ -100,19 +101,6 @@ export interface UpdateTransactionBody {
   notes?: string | null;
 }
 
-function parseTagsJson(raw: string | null): string[] {
-  if (!raw) return [];
-  try {
-    const parsed = JSON.parse(raw) as unknown;
-    if (Array.isArray(parsed)) {
-      return parsed.filter((item): item is string => typeof item === 'string');
-    }
-    return [];
-  } catch {
-    return [];
-  }
-}
-
 /** Map a SQLite row to the API response shape. */
 export function toTransaction(row: TransactionRow): Transaction {
   return {
@@ -122,7 +110,7 @@ export function toTransaction(row: TransactionRow): Transaction {
     amount: centsToDollars(row.amountCents),
     date: row.date,
     type: row.type,
-    tags: parseTagsJson(row.tags),
+    tags: parseStoredTags(row.tags),
     entityId: row.entityId,
     entityName: row.entityName,
     location: row.location,

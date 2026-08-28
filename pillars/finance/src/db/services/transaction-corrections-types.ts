@@ -10,6 +10,7 @@ import { isValidRegexPattern, normalizePatternForStorage } from '../../contract/
  * definition every match path shares (POPS-2600) — rather than redeclared.
  */
 import { InvalidPatternError } from '../errors.js';
+import { parseStoredTags } from '../tag-facets.js';
 
 import type { TransactionType } from '../../contract/corrections-constants.js';
 import type { PatternMatchType } from '../../contract/pattern-match.js';
@@ -95,18 +96,6 @@ export function isTagsOnlyCorrectionInput(input: {
   tags?: string[];
 }): boolean {
   return !input.entityId && !input.transactionType && (input.tags?.length ?? 0) > 0;
-}
-
-/** Parse a persisted `tags` column back to a `string[]`, tolerating malformed JSON. */
-function parseStoredTags(tagsJson: string): string[] {
-  try {
-    const parsed: unknown = JSON.parse(tagsJson);
-    return Array.isArray(parsed)
-      ? parsed.filter((tag): tag is string => typeof tag === 'string')
-      : [];
-  } catch {
-    return [];
-  }
 }
 
 /**
