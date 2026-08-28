@@ -92,4 +92,36 @@ describe('GroupTagBar', () => {
     expect(props.onAddTag).toHaveBeenCalledWith('bar');
     expect(props.onAddTag).not.toHaveBeenCalledWith('BAR');
   });
+
+  it('reuses the faceted tag when the user types the label the picker shows', () => {
+    const props = renderBar();
+    const input = screen.getByPlaceholderText('+ Add tag…');
+
+    fireEvent.change(input, { target: { value: 'Bar' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    expect(props.onAddTag).toHaveBeenCalledWith('venue:bar');
+    expect(props.onAddTag).not.toHaveBeenCalledWith('Bar');
+  });
+
+  it('creates the typed tag when the vocabulary has no such value', () => {
+    const props = renderBar();
+    const input = screen.getByPlaceholderText('+ Add tag…');
+
+    fireEvent.change(input, { target: { value: 'brand new' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    expect(props.onAddTag).toHaveBeenCalledWith('brand new');
+  });
+
+  it('does not guess an axis when two facets share the typed value', () => {
+    const props = renderBar({ availableTags: ['venue:bar', 'contains:bar'] });
+    const input = screen.getByPlaceholderText('+ Add tag…');
+
+    fireEvent.change(input, { target: { value: 'bar' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    expect(props.onAddTag).toHaveBeenCalledWith('bar');
+    expect(props.onAddTag).not.toHaveBeenCalledWith('venue:bar');
+  });
 });

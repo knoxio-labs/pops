@@ -7,7 +7,7 @@
  * which is exactly what #2162 caught in E2E. Keeping a fast unit check here
  * prevents a regression from slipping past lint refactors in the future.
  */
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { TagEditor } from './TagEditor';
@@ -112,5 +112,31 @@ describe('TagEditor', () => {
         "Add Legacy",
       ]
     `);
+  });
+
+  it('reuses the faceted tag when the user types the label the suggestions show', async () => {
+    const onSave = vi.fn();
+    render(<TagEditor currentTags={[]} availableTags={['venue:bar']} onSave={onSave} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Edit tags/i }));
+    const input = screen.getByPlaceholderText(/Type to add a tag/i);
+    fireEvent.change(input, { target: { value: 'Bar' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith(['venue:bar']));
+  });
+
+  it('creates the typed tag when the vocabulary has no such value', async () => {
+    const onSave = vi.fn();
+    render(<TagEditor currentTags={[]} availableTags={['venue:bar']} onSave={onSave} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Edit tags/i }));
+    const input = screen.getByPlaceholderText(/Type to add a tag/i);
+    fireEvent.change(input, { target: { value: 'brand new' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith(['brand new']));
   });
 });

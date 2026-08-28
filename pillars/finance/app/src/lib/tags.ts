@@ -149,3 +149,26 @@ export function groupTagsByFacet(tags: string[]): TagFacetGroup[] {
 export function orderTagsByFacet(tags: string[]): ParsedTag[] {
   return groupTagsByFacet(tags).flatMap((group) => group.tags);
 }
+
+/**
+ * The vocabulary tag a typed string names.
+ *
+ * Pickers show the value alone, so someone who types what they can see means
+ * the faceted tag behind it — without this, typing `bar` next to a listed
+ * "Bar" mints a second, unfaceted `bar` alongside `venue:bar`.
+ *
+ * The stored string wins; the displayed value is only accepted when exactly
+ * one tag carries it, because two axes sharing a value is genuinely
+ * ambiguous and belongs to the user, not to a guess.
+ */
+export function resolveTypedTag(input: string, availableTags: string[]): string | undefined {
+  const typed = input.trim().toLowerCase();
+  if (typed === '') return undefined;
+  const stored = availableTags.find((tag) => tag.toLowerCase() === typed);
+  if (stored !== undefined) return stored;
+  const byValue = availableTags.filter((tag) => {
+    const parsed = parseTag(tag);
+    return parsed.value.toLowerCase() === typed || formatTagValue(parsed).toLowerCase() === typed;
+  });
+  return byValue.length === 1 ? byValue[0] : undefined;
+}

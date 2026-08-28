@@ -7,6 +7,7 @@ import {
   groupTagsByFacet,
   orderTagsByFacet,
   parseTag,
+  resolveTypedTag,
   tagColorKey,
 } from './tags';
 
@@ -148,5 +149,43 @@ describe('orderTagsByFacet', () => {
   it('keeps every tag', () => {
     const tags = ['venue:bar', 'Legacy', 'occasion:out'];
     expect(orderTagsByFacet(tags)).toHaveLength(tags.length);
+  });
+});
+
+describe('resolveTypedTag', () => {
+  const vocabulary = ['venue:bar', 'contains:party-supplies', 'Legacy'];
+
+  it('resolves the stored string', () => {
+    expect(resolveTypedTag('venue:bar', vocabulary)).toBe('venue:bar');
+  });
+
+  it('resolves what the picker displays, so typing the visible label reuses the tag', () => {
+    expect(resolveTypedTag('bar', vocabulary)).toBe('venue:bar');
+    expect(resolveTypedTag('Bar', vocabulary)).toBe('venue:bar');
+  });
+
+  it('resolves the sentence-cased label of a hyphenated value', () => {
+    expect(resolveTypedTag('Party supplies', vocabulary)).toBe('contains:party-supplies');
+    expect(resolveTypedTag('party-supplies', vocabulary)).toBe('contains:party-supplies');
+  });
+
+  it('resolves an unfaceted tag', () => {
+    expect(resolveTypedTag('legacy', vocabulary)).toBe('Legacy');
+  });
+
+  it('refuses to guess when two axes share a value', () => {
+    expect(resolveTypedTag('bar', ['venue:bar', 'contains:bar'])).toBeUndefined();
+  });
+
+  it('still resolves an ambiguous value when the stored string is typed in full', () => {
+    expect(resolveTypedTag('contains:bar', ['venue:bar', 'contains:bar'])).toBe('contains:bar');
+  });
+
+  it('returns nothing for a value the vocabulary does not carry', () => {
+    expect(resolveTypedTag('brand new', vocabulary)).toBeUndefined();
+  });
+
+  it('returns nothing for blank input', () => {
+    expect(resolveTypedTag('   ', vocabulary)).toBeUndefined();
   });
 });
