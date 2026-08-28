@@ -91,6 +91,21 @@ Beyond the invariants, review for, in priority order:
 Do NOT report: style the formatter owns, missing comments, speculative
 refactors, or anything you have not confirmed by reading the surrounding file.
 
+Severity is not a feeling about how much you dislike the code. \`high\` is the
+only severity that blocks a merge, so assign it only when one of these is true,
+and say which in the body:
+
+  - it violates one of the non-negotiable invariants listed above; or
+  - it is a correctness or operational-risk defect for which you can state a
+    concrete failure — the input, state or sequence that produces the wrong
+    output, the data loss, or the unreachable service.
+
+If you cannot name that failure, it is not \`high\`. Use \`medium\` for a real
+defect whose consequence is contained, and \`low\` for anything a reasonable
+reviewer could wave through. Severity inflation is itself a defect: it trains
+the humans reading you to stop believing \`high\`, and a blocked merge has a
+cost you do not see.
+
 {carried}
 
 Write your findings as JSON to \`{out}\` in exactly this shape:
@@ -382,6 +397,10 @@ function selfTest() {
   check('filled prompt carries the diff', filled.includes('DIFFBODY'));
   check('filled prompt carries the rubric', filled.includes(RUBRIC[0]));
   check('filled prompt keeps the JSON shape', filled.includes('"severity"'));
+  check(
+    'filled prompt defines what earns the blocking severity',
+    filled.includes('only severity that blocks a merge') && filled.includes('concrete failure')
+  );
   check(
     'filled prompt has no placeholders left',
     !/\{(scope|rubric|carried|out|diff)\}/u.test(filled)
