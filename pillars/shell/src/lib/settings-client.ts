@@ -15,6 +15,8 @@
  * to the renderer.
  */
 
+import { pillarApiBase } from './pillar-api-base.js';
+
 /** A single setting entry on the federated wire. */
 export interface SettingEntry {
   readonly key: string;
@@ -38,19 +40,9 @@ export interface SettingsClient {
   reset(keys?: readonly string[]): Promise<SettingsResetResponse>;
 }
 
-const REGISTRY_BASE = '/registry-api';
-
-/**
- * The API base path for a pillar's settings surface. The platform `registry`
- * pillar (formerly `core`) is reached at `/registry-api`; every other pillar is
- * reached at `/<id>-api` through the registry-driven nginx front door (and the
- * dev Vite proxy). The legacy `core` id is still mapped to the registry base
- * for any un-rebuilt caller that has not yet observed the renamed snapshot.
- */
+/** The API base path for a pillar's settings surface. */
 export function settingsBaseFor(ownerPillar: string): string {
-  return ownerPillar === 'registry' || ownerPillar === 'core'
-    ? REGISTRY_BASE
-    : `/${ownerPillar}-api`;
+  return pillarApiBase(ownerPillar);
 }
 
 class SettingsClientError extends Error {
