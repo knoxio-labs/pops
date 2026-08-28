@@ -10,6 +10,7 @@ import { z } from 'zod';
 
 import { ENTITY_TYPES, TRANSACTION_MATCH_TYPES } from '../db/index.js';
 import { MIN_MATCH_CONFIDENCE } from './corrections-constants.js';
+import { FX_CAPTURE_SOURCES } from './fx-capture.js';
 import { TransactionTypeSchema } from './rest-corrections-schemas.js';
 import { ChangeSetSchema } from './rest-corrections.js';
 import { TagRuleChangeSetSchema } from './rest-tag-rules.js';
@@ -32,6 +33,12 @@ export const ParsedTransactionSchema = z.object({
     .optional(),
   /** The issuer's foreign-transaction fee in AUD cents — a fee, not a converted total. */
   fxFeeCents: z.number().int().optional(),
+  /**
+   * Which capture path read this row's foreign charge (POPS-2647). Every parser
+   * states one, including when the answer is that the format carries nothing;
+   * absent only from a client that predates the field.
+   */
+  fxCaptureSource: z.enum(FX_CAPTURE_SOURCES).optional(),
   rawRow: z.string(),
   checksum: z.string(),
 });

@@ -9,6 +9,7 @@
 import { z } from 'zod';
 
 import { TRANSACTION_MATCH_TYPES } from '../db/index.js';
+import { FX_CAPTURE_SOURCES } from './fx-capture.js';
 import { TransactionTypeSchema } from './rest-corrections-schemas.js';
 import { LimitQuery, NonEmptyString, OffsetQuery } from './rest-schemas.js';
 
@@ -33,6 +34,11 @@ export const TransactionSchema = z.object({
   foreignCurrency: z.string().nullable(),
   /** The issuer's foreign-transaction fee in AUD cents — a fee, not a converted total. */
   fxFeeCents: z.number().int().nullable(),
+  /**
+   * Which capture path read this row's foreign charge, or null when no importer
+   * declared one (POPS-2647). Null is not "domestic": it is "nobody looked".
+   */
+  fxCaptureSource: z.enum(FX_CAPTURE_SOURCES).nullable(),
   lastEditedTime: z.string(),
 });
 
@@ -63,6 +69,12 @@ export const TransactionSnapshotSchema = z.object({
   foreignCurrency: z.string().nullable(),
   /** The issuer's foreign-transaction fee in AUD cents — a fee, not a converted total. */
   fxFeeCents: z.number().int().nullable(),
+  /**
+   * Which capture path read this row's foreign charge (POPS-2647). Carried on
+   * the snapshot so an Undo restores the row's provenance too — a restore that
+   * dropped it would turn a captured domestic row into an uncaptured one.
+   */
+  fxCaptureSource: z.enum(FX_CAPTURE_SOURCES).nullable(),
   checksum: z.string().nullable(),
   rawRow: z.string().nullable(),
   lastEditedTime: z.string(),

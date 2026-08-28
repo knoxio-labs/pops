@@ -59,6 +59,7 @@ export {
   type WithheldTransaction,
 } from './anz-pdf-statement.js';
 export { parseAmexRow, type AmexRowFields } from './amex-row.js';
+export { FX_CAPTURE_SOURCES, type FxCaptureSource } from './fx-capture.js';
 export {
   buildImportDedupKey,
   buildImportDedupKeyFromStoredRow,

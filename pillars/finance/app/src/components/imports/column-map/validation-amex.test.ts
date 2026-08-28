@@ -68,4 +68,18 @@ describe('Amex import validation', () => {
     expect(parsed?.foreignCurrency).toBeUndefined();
     expect(parsed?.description).toBe('ALDI 1234');
   });
+
+  it("separates the long export's domestic row from the short export's silence (POPS-2647)", () => {
+    const domestic = parseOne(
+      amexRow({ 'Foreign Spend Amount': '', Commission: '', Country: 'AUSTRALIA' })
+    );
+    const shortExport = parseOne({
+      Date: '25/07/2026',
+      Description: 'ALDI 1234',
+      Amount: '42.50',
+    });
+
+    expect(domestic?.fxCaptureSource).toBe('amex-columns');
+    expect(shortExport?.fxCaptureSource).toBe('unavailable');
+  });
 });

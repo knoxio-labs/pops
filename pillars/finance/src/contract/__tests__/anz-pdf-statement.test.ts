@@ -93,6 +93,16 @@ describe('parseAnzPdfStatementText', () => {
       });
     });
 
+    it('declares the descriptor as the capture source on every row, foreign or not', () => {
+      // A PDF row has no country column either, so without this marker a
+      // domestic one is indistinguishable from an uncaptured one (POPS-2647).
+      const [domestic] = parse().transactions;
+
+      expect(domestic?.foreignCurrency).toBeUndefined();
+      expect(domestic?.fxCaptureSource).toBe('anz-descriptor');
+      expect(parse().transactions[2]?.fxCaptureSource).toBe('anz-descriptor');
+    });
+
     it('leaves a bank narrative that runs through the boundary intact', () => {
       expect(parse().transactions[3]).toMatchObject({
         description: 'PAYMENT RECEIVED THANK YOU',

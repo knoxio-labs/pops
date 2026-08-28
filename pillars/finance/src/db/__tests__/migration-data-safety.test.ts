@@ -366,6 +366,18 @@ describe('applying the rest of the journal to a populated finance database', () 
     ]);
   });
 
+  it('leaves fx_capture_source NULL on a row whose raw_row names no parser', () => {
+    // 0074 marks what 0072 could read and nothing else. These fixtures carry no
+    // `raw_row`, so nobody can say what capture ran on them and NULL is the only
+    // truthful value — `unavailable` is a claim only an importer may make
+    // (POPS-2647).
+    const stored = rows<{ id: string; fx_capture_source: string | null }>(
+      `SELECT id, fx_capture_source FROM transactions ORDER BY id`
+    );
+    expect(stored).toHaveLength(TRANSACTIONS.length);
+    for (const row of stored) expect(row.fx_capture_source).toBeNull();
+  });
+
   it('leaves a user-authored note byte-identical', () => {
     const stored = rows<{ notes: string | null }>(
       `SELECT notes FROM transactions WHERE id = 't-user-note'`

@@ -56,6 +56,7 @@ describe('parseRawRowForeignFields', () => {
         country: 'US',
         foreignCharge: { amountMinor, currency, feeCents },
         unreadable: false,
+        captureSource: 'anz-descriptor',
       });
     });
 
@@ -75,6 +76,7 @@ describe('parseRawRowForeignFields', () => {
         country: undefined,
         foreignCharge: undefined,
         unreadable: false,
+        captureSource: 'anz-descriptor',
       });
     });
 
@@ -104,6 +106,7 @@ describe('parseRawRowForeignFields', () => {
         country: 'SG',
         foreignCharge: { amountMinor: 550, currency: 'USD', feeCents: 27 },
         unreadable: false,
+        captureSource: 'amex-columns',
       });
     });
 
@@ -114,6 +117,7 @@ describe('parseRawRowForeignFields', () => {
         country: 'AU',
         foreignCharge: undefined,
         unreadable: false,
+        captureSource: 'amex-columns',
       });
     });
 
@@ -167,6 +171,7 @@ describe('parseRawRowForeignFields', () => {
         country: 'US',
         foreignCharge: { amountMinor: 10_000, currency: 'USD', feeCents: 503 },
         unreadable: false,
+        captureSource: 'anz-descriptor',
       });
     });
 

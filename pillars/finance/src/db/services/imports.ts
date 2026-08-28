@@ -23,6 +23,7 @@ import { transactions } from '../schema.js';
 
 import type { ContactEntity } from '../../api/contacts/client.js';
 import type { TransactionType } from '../../contract/corrections-constants.js';
+import type { FxCaptureSource } from '../../contract/fx-capture.js';
 import type { TransactionMatchType } from '../match-types.js';
 import type { FinanceDb } from './internal.js';
 
@@ -66,6 +67,8 @@ export interface InsertImportTransactionInput {
   foreignCurrency?: string | null;
   /** The issuer's foreign-transaction fee in AUD cents — a fee, not a converted total. */
   fxFeeCents?: number | null;
+  /** Which capture path read (or could not read) this row's foreign charge — see schema doc. */
+  fxCaptureSource?: FxCaptureSource | null;
   rawRow?: string;
   checksum?: string;
   /** How the entity assignment was produced (CF057/#3658) — nullable, see schema doc. */
@@ -185,6 +188,7 @@ export function insertImportTransaction(
       foreignAmountMinor: input.foreignAmountMinor ?? null,
       foreignCurrency: input.foreignCurrency ?? null,
       fxFeeCents: input.fxFeeCents ?? null,
+      fxCaptureSource: input.fxCaptureSource ?? null,
       checksum: input.checksum ?? null,
       rawRow: input.rawRow ?? null,
       lastEditedTime: now,

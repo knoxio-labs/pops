@@ -110,3 +110,37 @@ describe('ANZ credit card — dedup identity', () => {
     expect(parsedTransactions[0]?.checksum).not.toBe(parsedTransactions[1]?.checksum);
   });
 });
+
+/**
+ * The marker that lets a stored ANZ row say "capture ran and there was nothing
+ * to find" (POPS-2647). Without it a domestic ANZ row is byte-identical to one
+ * imported before the descriptor was ever parsed.
+ */
+describe('ANZ credit card — foreign-charge capture provenance', () => {
+  it('declares the descriptor as the capture source on a domestic row', () => {
+    const { parsedTransactions } = validateAllRows([PURCHASE], columnMap, 'ANZ Credit Card');
+
+    expect(parsedTransactions[0]?.foreignCurrency).toBeUndefined();
+    expect(parsedTransactions[0]?.country).toBeUndefined();
+    expect(parsedTransactions[0]?.fxCaptureSource).toBe('anz-descriptor');
+  });
+
+  it('declares the same source on a foreign row, which found something', () => {
+    const foreign = anzRow(
+      '31/07/2026',
+      '-105.03',
+      'GITHUB  INC.              GITHUB.COM  100.00  USD 5.03 AUD'
+    );
+
+    const { parsedTransactions } = validateAllRows([foreign], columnMap, 'ANZ Credit Card');
+
+    expect(parsedTransactions[0]?.foreignCurrency).toBe('USD');
+    expect(parsedTransactions[0]?.fxCaptureSource).toBe('anz-descriptor');
+  });
+
+  it('declares a bank whose export carries no foreign detail as unavailable', () => {
+    const { parsedTransactions } = validateAllRows([PURCHASE], columnMap, 'ING');
+
+    expect(parsedTransactions[0]?.fxCaptureSource).toBe('unavailable');
+  });
+});

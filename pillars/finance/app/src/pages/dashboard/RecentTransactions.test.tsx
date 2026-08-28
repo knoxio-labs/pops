@@ -20,6 +20,7 @@ function makeTransaction(tags: string[]): Transaction {
     foreignAmountMinor: null,
     foreignCurrency: null,
     fxFeeCents: null,
+    fxCaptureSource: null,
     id: 't1',
     lastEditedTime: '2026-08-01T00:00:00Z',
     location: null,

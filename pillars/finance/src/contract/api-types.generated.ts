@@ -3845,6 +3845,8 @@ export interface operations {
                 error?: string;
                 foreignAmountMinor?: number;
                 foreignCurrency?: string;
+                /** @enum {string} */
+                fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'unavailable';
                 fxFeeCents?: number;
                 location?: string;
                 matchedRules?: {
@@ -3914,6 +3916,8 @@ export interface operations {
                 error?: string;
                 foreignAmountMinor?: number;
                 foreignCurrency?: string;
+                /** @enum {string} */
+                fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'unavailable';
                 fxFeeCents?: number;
                 location?: string;
                 matchedRules?: {
@@ -3983,6 +3987,8 @@ export interface operations {
                 error?: string;
                 foreignAmountMinor?: number;
                 foreignCurrency?: string;
+                /** @enum {string} */
+                fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'unavailable';
                 fxFeeCents?: number;
                 location?: string;
                 matchedRules?: {
@@ -4052,6 +4058,8 @@ export interface operations {
                 error?: string;
                 foreignAmountMinor?: number;
                 foreignCurrency?: string;
+                /** @enum {string} */
+                fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'unavailable';
                 fxFeeCents?: number;
                 location?: string;
                 matchedRules?: {
@@ -4322,6 +4330,8 @@ export interface operations {
             entityName?: string;
             foreignAmountMinor?: number;
             foreignCurrency?: string;
+            /** @enum {string} */
+            fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'unavailable';
             fxFeeCents?: number;
             location?: string;
             matchConfidence?: number;
@@ -4520,6 +4530,8 @@ export interface operations {
             description: string;
             foreignAmountMinor?: number;
             foreignCurrency?: string;
+            /** @enum {string} */
+            fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'unavailable';
             fxFeeCents?: number;
             location?: string;
             rawRow: string;
@@ -4645,6 +4657,8 @@ export interface operations {
                 error?: string;
                 foreignAmountMinor?: number;
                 foreignCurrency?: string;
+                /** @enum {string} */
+                fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'unavailable';
                 fxFeeCents?: number;
                 location?: string;
                 matchedRules?: {
@@ -4714,6 +4728,8 @@ export interface operations {
                 error?: string;
                 foreignAmountMinor?: number;
                 foreignCurrency?: string;
+                /** @enum {string} */
+                fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'unavailable';
                 fxFeeCents?: number;
                 location?: string;
                 matchedRules?: {
@@ -4783,6 +4799,8 @@ export interface operations {
                 error?: string;
                 foreignAmountMinor?: number;
                 foreignCurrency?: string;
+                /** @enum {string} */
+                fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'unavailable';
                 fxFeeCents?: number;
                 location?: string;
                 matchedRules?: {
@@ -4852,6 +4870,8 @@ export interface operations {
                 error?: string;
                 foreignAmountMinor?: number;
                 foreignCurrency?: string;
+                /** @enum {string} */
+                fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'unavailable';
                 fxFeeCents?: number;
                 location?: string;
                 matchedRules?: {
@@ -5093,6 +5113,8 @@ export interface operations {
                 error?: string;
                 foreignAmountMinor?: number;
                 foreignCurrency?: string;
+                /** @enum {string} */
+                fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'unavailable';
                 fxFeeCents?: number;
                 location?: string;
                 matchedRules?: {
@@ -5162,6 +5184,8 @@ export interface operations {
                 error?: string;
                 foreignAmountMinor?: number;
                 foreignCurrency?: string;
+                /** @enum {string} */
+                fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'unavailable';
                 fxFeeCents?: number;
                 location?: string;
                 matchedRules?: {
@@ -5231,6 +5255,8 @@ export interface operations {
                 error?: string;
                 foreignAmountMinor?: number;
                 foreignCurrency?: string;
+                /** @enum {string} */
+                fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'unavailable';
                 fxFeeCents?: number;
                 location?: string;
                 matchedRules?: {
@@ -5300,6 +5326,8 @@ export interface operations {
                 error?: string;
                 foreignAmountMinor?: number;
                 foreignCurrency?: string;
+                /** @enum {string} */
+                fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'unavailable';
                 fxFeeCents?: number;
                 location?: string;
                 matchedRules?: {
@@ -7226,6 +7254,8 @@ export interface operations {
               entityName: string | null;
               foreignAmountMinor: number | null;
               foreignCurrency: string | null;
+              /** @enum {string|null} */
+              fxCaptureSource: 'amex-columns' | 'anz-descriptor' | 'unavailable' | null;
               fxFeeCents: number | null;
               id: string;
               lastEditedTime: string;
@@ -7352,6 +7382,8 @@ export interface operations {
               entityName: string | null;
               foreignAmountMinor: number | null;
               foreignCurrency: string | null;
+              /** @enum {string|null} */
+              fxCaptureSource: 'amex-columns' | 'anz-descriptor' | 'unavailable' | null;
               fxFeeCents: number | null;
               id: string;
               lastEditedTime: string;
@@ -7488,6 +7520,8 @@ export interface operations {
           entityName: string | null;
           foreignAmountMinor: number | null;
           foreignCurrency: string | null;
+          /** @enum {string|null} */
+          fxCaptureSource: 'amex-columns' | 'anz-descriptor' | 'unavailable' | null;
           fxFeeCents: number | null;
           id: string;
           lastEditedTime: string;
@@ -7542,6 +7576,8 @@ export interface operations {
               entityName: string | null;
               foreignAmountMinor: number | null;
               foreignCurrency: string | null;
+              /** @enum {string|null} */
+              fxCaptureSource: 'amex-columns' | 'anz-descriptor' | 'unavailable' | null;
               fxFeeCents: number | null;
               id: string;
               lastEditedTime: string;
@@ -7665,6 +7701,8 @@ export interface operations {
               entityName: string | null;
               foreignAmountMinor: number | null;
               foreignCurrency: string | null;
+              /** @enum {string|null} */
+              fxCaptureSource: 'amex-columns' | 'anz-descriptor' | 'unavailable' | null;
               fxFeeCents: number | null;
               id: string;
               lastEditedTime: string;
@@ -7763,6 +7801,8 @@ export interface operations {
               entityName: string | null;
               foreignAmountMinor: number | null;
               foreignCurrency: string | null;
+              /** @enum {string|null} */
+              fxCaptureSource: 'amex-columns' | 'anz-descriptor' | 'unavailable' | null;
               fxFeeCents: number | null;
               id: string;
               lastEditedTime: string;
@@ -7897,6 +7937,8 @@ export interface operations {
               entityName: string | null;
               foreignAmountMinor: number | null;
               foreignCurrency: string | null;
+              /** @enum {string|null} */
+              fxCaptureSource: 'amex-columns' | 'anz-descriptor' | 'unavailable' | null;
               fxFeeCents: number | null;
               id: string;
               lastEditedTime: string;
@@ -7994,6 +8036,8 @@ export interface operations {
               entityName: string | null;
               foreignAmountMinor: number | null;
               foreignCurrency: string | null;
+              /** @enum {string|null} */
+              fxCaptureSource: 'amex-columns' | 'anz-descriptor' | 'unavailable' | null;
               fxFeeCents: number | null;
               id: string;
               lastEditedTime: string;

@@ -4,8 +4,14 @@
  *
  * Split from `transactions-types.ts`, which is at its per-file line cap.
  */
+import type { FxCaptureSource } from '../../contract/fx-capture.js';
 
-/** Set together or not at all: an overseas charge, or a domestic one. */
+/**
+ * The three amount fields are set together or not at all: an overseas charge,
+ * or a domestic one. `fxCaptureSource` is independent of them — it says whether
+ * anything looked, which is the question their NULLs cannot answer
+ * (POPS-2647).
+ */
 export interface ForeignChargeFields {
   /**
    * Amount charged abroad, in `foreignCurrency`'s own ISO-4217 minor units —
@@ -16,6 +22,8 @@ export interface ForeignChargeFields {
   foreignCurrency: string | null;
   /** The issuer's foreign-transaction FEE in AUD cents, not a converted total. */
   fxFeeCents: number | null;
+  /** Which capture path ran, or null when no importer declared one. */
+  fxCaptureSource: FxCaptureSource | null;
 }
 
 export function foreignChargeFields(source: ForeignChargeFields): ForeignChargeFields {
@@ -23,5 +31,6 @@ export function foreignChargeFields(source: ForeignChargeFields): ForeignChargeF
     foreignAmountMinor: source.foreignAmountMinor,
     foreignCurrency: source.foreignCurrency,
     fxFeeCents: source.fxFeeCents,
+    fxCaptureSource: source.fxCaptureSource,
   };
 }

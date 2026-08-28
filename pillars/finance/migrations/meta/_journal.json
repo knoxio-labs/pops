@@ -176,6 +176,13 @@
       "when": 1781913600018,
       "tag": "0073_retire_contains_fee",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1781913600019,
+      "tag": "0074_fx_capture_source",
+      "breakpoints": true
     }
   ]
 }

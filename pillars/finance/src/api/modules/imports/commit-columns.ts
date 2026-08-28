@@ -8,6 +8,7 @@
 import { resolveCommittedType } from '../../../contract/transaction-classification.js';
 import { dollarsToCents } from '../../../money.js';
 
+import type { FxCaptureSource } from '../../../contract/fx-capture.js';
 import type { importsService } from '../../../db/index.js';
 import type { CommitPayload } from './types.js';
 
@@ -33,16 +34,26 @@ function sanitizeProvenance(txn: ConfirmedRow): SanitizedProvenance {
   return { matchType, matchRuleId, matchConfidence };
 }
 
-/** The parsed row's foreign-charge fields, absent on a domestic charge. */
+/**
+ * The parsed row's foreign-charge fields, absent on a domestic charge, plus the
+ * capture path that produced (or could not produce) them.
+ *
+ * `fxCaptureSource` is the one field here that stays NULL rather than
+ * defaulting: it records who looked, so writing a value for a client that
+ * declared none would be this pillar claiming a capture it did not run
+ * (POPS-2647).
+ */
 function foreignChargeColumns(txn: ConfirmedRow): {
   foreignAmountMinor: number | null;
   foreignCurrency: string | null;
   fxFeeCents: number | null;
+  fxCaptureSource: FxCaptureSource | null;
 } {
   return {
     foreignAmountMinor: txn.foreignAmountMinor ?? null,
     foreignCurrency: txn.foreignCurrency ?? null,
     fxFeeCents: txn.fxFeeCents ?? null,
+    fxCaptureSource: txn.fxCaptureSource ?? null,
   };
 }
 

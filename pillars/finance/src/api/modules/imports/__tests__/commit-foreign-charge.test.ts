@@ -47,6 +47,7 @@ function payloadForStatementLine(line: string, amount: number): CommitPayload {
         foreignAmountMinor: foreignCharge?.amountMinor,
         foreignCurrency: foreignCharge?.currency,
         fxFeeCents: foreignCharge?.feeCents,
+        fxCaptureSource: 'anz-descriptor',
         rawRow: JSON.stringify({ line }),
         checksum: `chk-${line.length}-${amount}`,
         transactionType: 'purchase',
@@ -113,7 +114,7 @@ describe('foreign-charge capture, statement line to stored row', () => {
 
 /** The commit payload the wizard builds for one Amex export row. */
 function payloadForAmexRow(row: Record<string, string>): CommitPayload {
-  const { country, foreignCharge } = parseAmexRow(row);
+  const { country, foreignCharge, fxCaptureSource } = parseAmexRow(row);
   return {
     entities: [],
     changeSets: [],
@@ -128,6 +129,7 @@ function payloadForAmexRow(row: Record<string, string>): CommitPayload {
         foreignAmountMinor: foreignCharge?.amountMinor,
         foreignCurrency: foreignCharge?.currency,
         fxFeeCents: foreignCharge?.feeCents,
+        fxCaptureSource,
         rawRow: JSON.stringify(row),
         checksum: `chk-amex-${row.Description ?? ''}`,
         transactionType: 'purchase',
@@ -185,5 +187,57 @@ describe('foreign-charge capture from an Amex export row', () => {
 
     expect(row?.country).toBeNull();
     expect(row?.foreignCurrency).toBeNull();
+  });
+});
+
+/**
+ * The capture marker (POPS-2647). The columns above say what capture found; a
+ * reader also has to be able to tell that it ran, which on ANZ — a source that
+ * prints no country — nothing else in the row can say.
+ */
+describe('foreign-charge capture provenance', () => {
+  it('marks a domestic ANZ row as captured, so its NULLs mean "nothing to find"', async () => {
+    const row = await commitLine('ALDI STORES - MARRICKV    MARRICKVILLE', -23.22);
+
+    expect(row?.country).toBeNull();
+    expect(row?.foreignCurrency).toBeNull();
+    expect(row?.fxCaptureSource).toBe('anz-descriptor');
+  });
+
+  it('marks an Amex long-export row with the columns it read', async () => {
+    const row = await commitAmexRow({
+      Description: 'ALDI 1234',
+      Amount: '42.50',
+      'Foreign Spend Amount': '',
+      Commission: '',
+      Country: 'AUSTRALIA',
+    });
+
+    expect(row?.fxCaptureSource).toBe('amex-columns');
+  });
+
+  it('marks the short Amex export as unable to answer, not as domestic', async () => {
+    const row = await commitAmexRow({ Description: 'ALDI 1234', Amount: '42.50' });
+
+    expect(row?.country).toBeNull();
+    expect(row?.fxCaptureSource).toBe('unavailable');
+  });
+
+  it('stores NULL when the payload declares nothing, which is what a pre-POPS-2647 client sends', async () => {
+    const { db } = freshMigratedFinanceDb();
+    const payload = payloadForStatementLine('ALDI STORES - MARRICKV    MARRICKVILLE', -23.22);
+    const [txn] = payload.transactions;
+    if (!txn) throw new Error('fixture payload lost its transaction');
+    delete txn.fxCaptureSource;
+
+    const result = await commitImport(db, noContacts(), payload);
+
+    expect(result.failedDetails).toEqual([]);
+    const [row] = db
+      .select()
+      .from(transactions)
+      .where(eq(transactions.account, 'ANZ Credit Card'))
+      .all();
+    expect(row?.fxCaptureSource).toBeNull();
   });
 });

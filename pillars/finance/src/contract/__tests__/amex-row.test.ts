@@ -28,6 +28,7 @@ describe('parseAmexRow', () => {
     expect(parseAmexRow(row())).toEqual({
       country: 'SG',
       foreignCharge: { amountMinor: 550, currency: 'USD', feeCents: 27 },
+      fxCaptureSource: 'amex-columns',
     });
   });
 
@@ -36,6 +37,7 @@ describe('parseAmexRow', () => {
     expect(parseAmexRow(row({ 'Foreign Spend Amount': '1,100 JPY', Country: 'JAPAN' }))).toEqual({
       country: 'JP',
       foreignCharge: { amountMinor: 1100, currency: 'JPY', feeCents: 27 },
+      fxCaptureSource: 'amex-columns',
     });
   });
 
@@ -60,7 +62,32 @@ describe('parseAmexRow', () => {
     expect(parseAmexRow({ Description: 'ALDI', Amount: '42.50' })).toEqual({
       country: undefined,
       foreignCharge: undefined,
+      fxCaptureSource: 'unavailable',
     });
+  });
+
+  it('separates a captured domestic row from a file that cannot say (POPS-2647)', () => {
+    const domestic = parseAmexRow(
+      row({ 'Foreign Spend Amount': '', Commission: '', Country: 'AUSTRALIA' })
+    );
+    const shortExport = parseAmexRow({ Description: 'ALDI', Amount: '42.50' });
+
+    expect(domestic.fxCaptureSource).toBe('amex-columns');
+    expect(shortExport.fxCaptureSource).toBe('unavailable');
+  });
+
+  it('reports the long shape from the columns being present, not from them holding values', () => {
+    const empty = parseAmexRow({
+      Description: 'ALDI',
+      Amount: '42.50',
+      'Foreign Spend Amount': '',
+      Commission: '',
+      Country: '',
+    });
+
+    expect(empty.fxCaptureSource).toBe('amex-columns');
+    expect(empty.foreignCharge).toBeUndefined();
+    expect(empty.country).toBeUndefined();
   });
 
   it('refuses a foreign amount with no commission rather than reporting a free conversion', () => {

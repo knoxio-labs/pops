@@ -5,7 +5,7 @@ import { buildImportDedupKey, extractReferenceValue } from '@pops/finance';
 import { bankDialect, type BankDialect } from '../bank-dialect';
 import { extractLocation, parseAmount, parseDate, type ColumnMap } from './parsers';
 
-import type { AnzForeignCharge, ParsedTransaction } from '@pops/finance';
+import type { AnzForeignCharge, FxCaptureSource, ParsedTransaction } from '@pops/finance';
 
 import type { BankType } from '../../../store/import-store-types';
 
@@ -26,6 +26,8 @@ interface DescriptiveFields {
   location?: string;
   country?: string;
   foreignCharge?: AnzForeignCharge;
+  /** What the bank's export could say about a foreign charge on this row (POPS-2647). */
+  fxCaptureSource: FxCaptureSource;
 }
 
 /**
@@ -50,8 +52,14 @@ function describeRow(
   const mapped = columnMap.location ? row[columnMap.location] : undefined;
   const location = mapped ? extractLocation(mapped) : undefined;
   const derived = dialect.deriveFields?.(raw, row);
-  if (derived) return { ...derived, location: derived.location ?? location };
-  return { description: raw, location };
+  if (derived) {
+    return {
+      ...derived,
+      location: derived.location ?? location,
+      fxCaptureSource: derived.fxCaptureSource ?? dialect.fxCaptureSource,
+    };
+  }
+  return { description: raw, location, fxCaptureSource: dialect.fxCaptureSource };
 }
 
 function validateRow(
@@ -67,7 +75,11 @@ function validateRow(
   const amountStr = row[columnMap.amount];
   const parsedAmount = parseAmount(amountStr, dialect.amountSign);
   if (parsedAmount === null) return { error: `Row ${rowNum}: Invalid amount "${amountStr}"` };
-  const { description, location, country, foreignCharge } = describeRow(row, columnMap, dialect);
+  const { description, location, country, foreignCharge, fxCaptureSource } = describeRow(
+    row,
+    columnMap,
+    dialect
+  );
   const rawRow = JSON.stringify(row);
   // Keyed on the description AS EXPORTED, never the parsed one. A bank-specific
   // parse strips the detail field, and for a bank with no reference column that
@@ -91,6 +103,7 @@ function validateRow(
       foreignAmountMinor: foreignCharge?.amountMinor,
       foreignCurrency: foreignCharge?.currency,
       fxFeeCents: foreignCharge?.feeCents,
+      fxCaptureSource,
       rawRow,
       checksum: crypto.SHA256(dedupKey).toString(),
     },

@@ -32,6 +32,8 @@ import { parseAmexRow } from '../contract/amex-row.js';
 import { parseAnzDescription, type AnzForeignCharge } from '../contract/anz-description.js';
 import { anzPdfStatementLineDescription } from '../contract/anz-statement-line.js';
 
+import type { FxCaptureSource } from '../contract/fx-capture.js';
+
 /** Present on the long Amex export and on nothing else. */
 const AMEX_FOREIGN_SPEND_COLUMN = 'Foreign Spend Amount';
 
@@ -69,6 +71,16 @@ export interface RawRowForeignFields {
    * backfill must abort rather than record the row as domestic.
    */
   unreadable: boolean;
+  /**
+   * Which parser owned this row's shape (POPS-2647), so migration 0074 can mark
+   * a backfilled row as captured rather than leaving a domestic one
+   * indistinguishable from an unvisited one.
+   *
+   * Absent for a row of no recognised shape. That is not `unavailable`: a short
+   * Amex export row and a plain bank CSV row are the same bytes once stored, and
+   * `unavailable` is a claim only an importer that actually ran may make.
+   */
+  captureSource?: FxCaptureSource;
 }
 
 /** A row with nothing to recover and no failed claim to report. */
@@ -111,13 +123,23 @@ function amexCells(row: Record<string, unknown>): Record<string, string> {
 function fromAmexRow(row: Record<string, unknown>): RawRowForeignFields {
   const { country, foreignCharge } = parseAmexRow(amexCells(row));
   const claimsForeign = text(row, AMEX_FOREIGN_SPEND_COLUMN).length > 0;
-  return { country, foreignCharge, unreadable: claimsForeign && foreignCharge === undefined };
+  return {
+    country,
+    foreignCharge,
+    unreadable: claimsForeign && foreignCharge === undefined,
+    captureSource: 'amex-columns',
+  };
 }
 
 function fromAnzDescription(description: string): RawRowForeignFields {
   const { country, foreignCharge } = parseAnzDescription(description);
   const claimsForeign = ANZ_FOREIGN_TRAILER_CLAIM.test(description.replace(/\r/g, '').trimEnd());
-  return { country, foreignCharge, unreadable: claimsForeign && foreignCharge === undefined };
+  return {
+    country,
+    foreignCharge,
+    unreadable: claimsForeign && foreignCharge === undefined,
+    captureSource: 'anz-descriptor',
+  };
 }
 
 function isAnzHeaderlessRow(row: Record<string, unknown>): boolean {
@@ -166,6 +188,8 @@ const FIELD_READERS: Readonly<
    * would be indistinguishable from a row that simply carried nothing.
    */
   unreadable: (fields) => (fields.unreadable ? 1 : 0),
+  /** Which parser owned the row's shape; NULL where no parser did (POPS-2647). */
+  capture_source: (fields) => fields.captureSource ?? null,
 };
 
 /**
