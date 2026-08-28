@@ -610,6 +610,72 @@ describe('ManifestPayloadSchema', () => {
       const result = ManifestPayloadSchema.safeParse(m);
       expect(result.success).toBe(false);
     });
+
+    /**
+     * POPS-2581: `SettingsGroup.widget` landed in `@pops/types` with the Plex
+     * PIN flow (POPS-67) but not in this mirror, and `SETTINGS_GROUP` is
+     * `.strict()` — so media's own manifest failed its own registration and
+     * the pillar crash-looped in production. The shape of the group below is
+     * the one that broke it.
+     */
+    const widgetSettingsDescriptor = () => ({
+      id: 'media.plex',
+      title: 'Plex',
+      icon: 'Film',
+      order: 100,
+      groups: [
+        {
+          id: 'connection',
+          title: 'Connection',
+          widget: { bundleSlot: 'plex-connect' },
+          fields: [{ key: 'plex_url', label: 'Plex URL', type: 'url' as const }],
+        },
+      ],
+    });
+
+    it('accepts a group carrying a widget alongside its fields', () => {
+      const m = {
+        ...validManifest(),
+        settings: { manifests: [widgetSettingsDescriptor()] },
+      };
+      const result = ManifestPayloadSchema.safeParse(m);
+      expect(result.success).toBe(true);
+    });
+
+    it('accepts a group with no widget, as every pre-POPS-67 manifest has', () => {
+      const m = {
+        ...validManifest(),
+        settings: { manifests: [financeSettingsDescriptor()] },
+      };
+      expect(ManifestPayloadSchema.safeParse(m).success).toBe(true);
+    });
+
+    it('rejects an empty bundleSlot', () => {
+      const descriptor = widgetSettingsDescriptor();
+      descriptor.groups[0]!.widget.bundleSlot = '';
+      const m = { ...validManifest(), settings: { manifests: [descriptor] } };
+      const result = ManifestPayloadSchema.safeParse(m);
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects an unknown field inside a widget (strict mode)', () => {
+      const descriptor = widgetSettingsDescriptor();
+      const m = {
+        ...validManifest(),
+        settings: {
+          manifests: [
+            {
+              ...descriptor,
+              groups: [
+                { ...descriptor.groups[0]!, widget: { bundleSlot: 'plex-connect', sneaky: true } },
+              ],
+            },
+          ],
+        },
+      };
+      const result = ManifestPayloadSchema.safeParse(m);
+      expect(result.success).toBe(false);
+    });
   });
 
   describe('consumedSettings rename (PRD-240 US-01)', () => {
