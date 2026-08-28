@@ -20,7 +20,7 @@
  */
 
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -34,6 +34,7 @@ import {
   findValidatedBuilders,
   isTestFile,
   listSourceFiles,
+  looksLikeTest,
   scanPillars,
 } from '../check-manifest-payload-coverage.mjs';
 
@@ -53,19 +54,19 @@ const guard = join(repoRoot, 'scripts', 'ci', 'check-manifest-payload-coverage.m
  * adding its builder here, deliberately.
  */
 const EXPECTED_BUILDERS = [
-  'buildAiManifest',
-  'buildBfmManifest',
-  'buildCerebrumManifest',
-  'buildDocumentsManifest',
-  'buildFinanceManifest',
-  'buildFoodManifest',
-  'buildInventoryManifest',
-  'buildListsManifest',
-  'buildMediaManifest',
-  'buildOrchestratorManifest',
-  'buildPurchasesManifest',
-  'buildRegistryManifest',
-  'buildShellManifest',
+  'ai:buildAiManifest',
+  'bfm:buildBfmManifest',
+  'cerebrum:buildCerebrumManifest',
+  'documents:buildDocumentsManifest',
+  'finance:buildFinanceManifest',
+  'food:buildFoodManifest',
+  'inventory:buildInventoryManifest',
+  'lists:buildListsManifest',
+  'media:buildMediaManifest',
+  'orchestrator:buildOrchestratorManifest',
+  'purchases:buildPurchasesManifest',
+  'registry:buildRegistryManifest',
+  'shell:buildShellManifest',
 ];
 
 function reader(tree: Record<string, string>) {
@@ -155,25 +156,94 @@ describe('findBuilders is blind to declaration syntax', () => {
   });
 });
 
-describe('isTestFile', () => {
+describe('isTestFile — only what a required job runs', () => {
   it.each([
     'pillars/a/src/api/__tests__/manifest.test.ts',
     'pillars/a/src/lib/register.test.ts',
     'pillars/a/src/lib/register.test.tsx',
-    'pillars/a/src/lib/register.spec.ts',
-  ])('treats %s as a test file', (path) => {
+  ])('accepts %s', (path) => {
     expect(isTestFile(path)).toBe(true);
   });
 
-  // A helper in `__tests__` is never collected by vitest, so counting it as a
-  // test would let a fixture stand in for a test that does not exist.
+  // Each rejection below has a premise pinned in "the exclusions are real"
+  // further down, so none of them is an assumption about CI that CI can
+  // silently stop honouring.
   it.each([
+    // Never collected by vitest — a fixture cannot stand in for a test.
     'pillars/a/src/api/__tests__/helpers.ts',
     'pillars/a/src/api/__tests__/fixtures.ts',
+    // Playwright, excluded from vitest by pillars/shell/vite.config.ts.
+    'pillars/shell/e2e/shell-boot.spec.ts',
+    'pillars/a/src/lib/register.spec.ts',
+    // Excluded by bfm/cerebrum/food vitest configs; its only workflow is
+    // advisory and absent from ci-gate.yml's gated array.
+    'pillars/bfm/src/api/__tests__/pair.live-seam.test.ts',
+    // Plain source.
     'pillars/a/src/api/manifest.ts',
     'pillars/a/src/api/testing.ts',
-  ])('treats %s as source', (path) => {
+  ])('rejects %s', (path) => {
     expect(isTestFile(path)).toBe(false);
+  });
+});
+
+describe('looksLikeTest — the broad predicate discovery uses', () => {
+  // Builder discovery must exclude everything test-shaped, including the
+  // suites coverage refuses to accept. Sharing one predicate meant tightening
+  // coverage silently turned an excluded suite into a phantom builder source.
+  it.each([
+    'pillars/bfm/src/api/__tests__/pair.live-seam.test.ts',
+    'pillars/shell/e2e/shell-boot.spec.ts',
+    'pillars/a/src/api/__tests__/helpers.ts',
+    'pillars/a/src/lib/register.test.ts',
+  ])('treats %s as test-shaped, so it cannot mint a builder', (path) => {
+    expect(looksLikeTest(path)).toBe(true);
+  });
+
+  it('does not treat ordinary source as test-shaped', () => {
+    expect(looksLikeTest('pillars/a/src/api/manifest.ts')).toBe(false);
+  });
+
+  it('is strictly broader than isTestFile', () => {
+    const paths = [
+      'pillars/a/src/api/__tests__/m.test.ts',
+      'pillars/a/src/api/__tests__/helpers.ts',
+      'pillars/shell/e2e/b.spec.ts',
+      'pillars/a/src/x.live-seam.test.ts',
+      'pillars/a/src/api/manifest.ts',
+    ];
+    for (const path of paths) {
+      if (isTestFile(path)) expect(looksLikeTest(path)).toBe(true);
+    }
+  });
+});
+
+describe('the exclusions are real, not remembered', () => {
+  // isTestFile rejects three classes on the strength of facts about this repo.
+  // If a fact stops holding, this fails and the rejection gets revisited —
+  // rather than the guard quietly enforcing a rule CI no longer follows.
+  it('every .spec.ts under pillars/ is a Playwright file under e2e/', () => {
+    const specs = scanPillars(repoRoot).files.filter((file) => /\.spec\.tsx?$/u.test(file));
+
+    expect(specs.length).toBeGreaterThan(0);
+    expect(specs.filter((file) => !file.split('/').includes('e2e'))).toEqual([]);
+  });
+
+  it('the shell excludes e2e/ from vitest', () => {
+    const config = readFileSync(join(repoRoot, 'pillars', 'shell', 'vite.config.ts'), 'utf8');
+
+    expect(config).toContain("exclude: ['e2e/**'");
+  });
+
+  it.each(['bfm', 'cerebrum', 'food'])('%s excludes live-seam tests from vitest', (pillar) => {
+    const config = readFileSync(join(repoRoot, 'pillars', pillar, 'vitest.config.ts'), 'utf8');
+
+    expect(config).toContain('*.live-seam.test.ts');
+  });
+
+  it('the live-seam workflow is not in ci-gate.yml’s gated array', () => {
+    const gate = readFileSync(join(repoRoot, '.github', 'workflows', 'ci-gate.yml'), 'utf8');
+
+    expect(gate).not.toContain('live-seam.yml');
   });
 });
 
@@ -221,6 +291,52 @@ describe('findValidatedBuilders', () => {
     const validated = findValidatedBuilders(Object.keys(tree), reader(tree));
     expect(validated.get('inventory')).toEqual(new Set(['buildMediaManifest']));
     expect(validated.get('media')).toBeUndefined();
+  });
+
+  // A bare mention is not coverage. An import line pulling in two builders
+  // used to cover both, and a comment or a describe title used to cover one
+  // that no test ever ran.
+  it('rejects a builder that is only imported, never called', () => {
+    const tree = {
+      'pillars/a/src/api/__tests__/m.test.ts':
+        "import { validateManifestPayload } from '@pops/pillar-sdk';\n" +
+        "import { buildAManifest, buildAAdminManifest } from '../manifest.js';\n" +
+        "validateManifestPayload(buildAManifest('1.0.0'));",
+    };
+    expect(findValidatedBuilders(Object.keys(tree), reader(tree)).get('a')).toEqual(
+      new Set(['buildAManifest'])
+    );
+  });
+
+  it('rejects a builder named only in a comment', () => {
+    const tree = {
+      'pillars/a/src/api/__tests__/m.test.ts':
+        "validateManifestPayload(buildAManifest('1.0.0'));\n// TODO cover buildAAdminManifest",
+    };
+    expect(findValidatedBuilders(Object.keys(tree), reader(tree)).get('a')).toEqual(
+      new Set(['buildAManifest'])
+    );
+  });
+
+  it('rejects a builder named only in a describe title', () => {
+    const tree = {
+      'pillars/a/src/api/__tests__/m.test.ts':
+        "validateManifestPayload(buildAManifest('1.0.0'));\n" +
+        "describe.skip('buildAAdminManifest', () => {});",
+    };
+    expect(findValidatedBuilders(Object.keys(tree), reader(tree)).get('a')).toEqual(
+      new Set(['buildAManifest'])
+    );
+  });
+
+  it('accepts a call split across lines by the formatter', () => {
+    const tree = {
+      'pillars/a/src/api/__tests__/m.test.ts':
+        "validateManifestPayload(\n  buildAManifest ('1.0.0')\n);",
+    };
+    expect(findValidatedBuilders(Object.keys(tree), reader(tree)).get('a')).toEqual(
+      new Set(['buildAManifest'])
+    );
   });
 
   it('ignores a non-test source file that calls the validator in production code', () => {
@@ -299,6 +415,24 @@ describe('listSourceFiles refuses to drop what it cannot classify', () => {
     expect(unclassified).toEqual(['pillars/weather']);
   });
 
+  it('does not report a symlinked asset or a symlinked node_modules', () => {
+    rmSync(sandbox, { recursive: true, force: true });
+    const pillars = join(sandbox, 'pillars');
+    mkdirSync(join(pillars, 'media', 'app', 'public'), { recursive: true });
+    mkdirSync(join(sandbox, 'assets'), { recursive: true });
+    writeFileSync(join(pillars, 'media', 'manifest.ts'), 'const x: ManifestPayload = p;');
+    writeFileSync(join(sandbox, 'assets', 'logo.png'), 'not really a png');
+    symlinkSync(
+      join(sandbox, 'assets', 'logo.png'),
+      join(pillars, 'media', 'app', 'public', 'logo.png')
+    );
+    symlinkSync(join(sandbox, 'assets'), join(pillars, 'media', 'node_modules'));
+
+    // Neither can hide a pillar from the derived sets, so neither is a reason
+    // to red the build. The failure direction that matters is the one below.
+    expect(listSourceFiles(pillars, sandbox).unclassified).toEqual([]);
+  });
+
   it('skips dot-directories, as .gitignore says the scripts/ guards do', () => {
     rmSync(sandbox, { recursive: true, force: true });
     const pillars = join(sandbox, 'pillars');
@@ -314,13 +448,18 @@ describe('listSourceFiles refuses to drop what it cannot classify', () => {
 });
 
 describe('discovery against the real repo', () => {
-  it('finds every manifest builder in the tree, by name', () => {
+  it('finds every manifest builder in the tree, attributed to the right pillar', () => {
     const { files, read } = scanPillars(repoRoot);
-    const found = findBuilders(files, read).map((entry) => entry.builder);
+    const found = findBuilders(files, read).map((entry) => `${entry.pillar}:${entry.builder}`);
 
-    // Exact, not a floor: a discovery regression that drops one builder is
-    // otherwise invisible, and for `buildShellManifest` this is the only
-    // check there is.
+    // Exact, and keyed by pillar rather than by name alone: deduping names
+    // would hide a builder attributed to the wrong pillar or discovered twice,
+    // and coverage is resolved per pillar. A dropped builder is otherwise
+    // invisible, and for `buildShellManifest` this is the only check there is.
+    //
+    // Adding a pillar means adding its `pillar:builder` here. If this fails
+    // for a NEW pillar, add the entry; if it fails for one already listed,
+    // discovery has regressed and the entry is not the thing to change.
     expect([...new Set(found)].toSorted()).toEqual(EXPECTED_BUILDERS.toSorted());
   });
 
@@ -348,12 +487,20 @@ describe('discovery against the real repo', () => {
 
   // The Rust pillar hand-writes a ManifestPayload-shaped value and registers
   // it, and this guard cannot see a line of it. Asserting the blind spot keeps
-  // the file header honest: if contacts ever becomes visible, this test fails
-  // and the header's "WHAT IT CANNOT SEE" section gets revisited. POPS-2592.
-  it('does not see the Rust contacts pillar, as its own header admits', () => {
-    const { files } = scanPillars(repoRoot);
+  // the file header honest: when contacts becomes visible, this fails and the
+  // header's "WHAT IT CANNOT SEE" section gets revisited. POPS-2592.
+  //
+  // The assertion is the blind spot itself — contacts registers a manifest and
+  // appears in NEITHER derived set — not the symptom that it currently ships
+  // no TypeScript. Asserting the symptom would red this suite the day someone
+  // adds an unrelated codegen script to the pillar, reporting a blind spot
+  // that had not in fact been closed.
+  it('is blind to the Rust contacts pillar, in both derived sets, as its header admits', () => {
+    const { files, read } = scanPillars(repoRoot);
 
-    expect(files.filter((file) => file.startsWith('pillars/contacts/'))).toEqual([]);
+    expect(existsSync(join(repoRoot, 'pillars', 'contacts', 'src', 'manifest.rs'))).toBe(true);
+    expect(findRegistrars(files, read)).not.toContain('contacts');
+    expect(findBuilders(files, read).map((entry) => entry.pillar)).not.toContain('contacts');
   });
 });
 

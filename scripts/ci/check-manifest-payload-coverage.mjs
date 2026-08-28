@@ -93,6 +93,9 @@ const PAYLOAD_TYPE = 'ManifestPayload';
 /** A manifest builder's name, wherever it appears. */
 const BUILDER_NAME = /\b(build[A-Za-z0-9_]*Manifest)\b/gu;
 
+/** A manifest builder actually being CALLED — the only thing that covers it. */
+const BUILDER_CALL = /\b(build[A-Za-z0-9_]*Manifest)\s*\(/gu;
+
 /** The SDK entry points a test can reach the wire validator through. */
 const VALIDATOR_SYMBOLS = ['validateManifestPayload', 'ManifestPayloadSchema'];
 
@@ -138,23 +141,69 @@ export function listSourceFiles(dir, root) {
       if (SOURCE_EXTENSIONS.some((ext) => entry.name.endsWith(ext))) files.push(rel(entry.name));
       continue;
     }
-    unclassified.push(rel(entry.name));
+    // Neither file nor directory — a symlink, most likely. Only report the
+    // ones that could be hiding source from BOTH derived sets at once: an
+    // entry named like a source file, or one with no extension at all (which
+    // may be a symlinked directory). A linked `.png` or a linked
+    // `node_modules` cannot hide a pillar, and failing on it would red the
+    // build for a static asset.
+    if (SKIP_DIRS.has(entry.name) || entry.name.startsWith('.')) continue;
+    const couldHideSource =
+      SOURCE_EXTENSIONS.some((ext) => entry.name.endsWith(ext)) || !entry.name.includes('.');
+    if (couldHideSource) unclassified.push(rel(entry.name));
   }
   return { files, unclassified };
 }
 
 /**
- * True for a file vitest actually collects. Living in a `__tests__` directory
- * is NOT enough: a `__tests__/helpers.ts` is never collected, so treating it
- * as a test would let a fixture satisfy a builder's coverage while no test
- * exercised it.
+ * True for anything test-shaped — a `.test.`/`.spec.` file, or any file under
+ * a `__tests__` or `e2e` directory.
+ *
+ * This is the BROAD predicate, and it exists separately from `isTestFile`
+ * because the two questions are different. Builder discovery must exclude
+ * everything test-shaped, or an excluded suite that happens to mention a
+ * builder would mint a phantom builder nothing can cover. Coverage must accept
+ * only the narrow set a required job actually runs. Using one predicate for
+ * both meant tightening coverage silently loosened discovery.
+ *
+ * @param {string} relPath Repo-relative, forward-slashed.
+ * @returns {boolean}
+ */
+export function looksLikeTest(relPath) {
+  const segments = relPath.split('/');
+  if (segments.includes('__tests__') || segments.includes('e2e')) return true;
+  return /\.(?:test|spec)\.[cm]?tsx?$/u.test(segments[segments.length - 1] ?? '');
+}
+
+/**
+ * True for a file a REQUIRED CI job actually runs. This is a filename
+ * convention, not a query against vitest — but every clause below is pinned by
+ * a test that fails if its premise stops holding, so the convention cannot
+ * quietly drift from what CI does:
+ *
+ *   - `.test.ts`/`.tsx` only. Living in a `__tests__` directory is not enough:
+ *     a `__tests__/helpers.ts` is never collected, so counting it would let a
+ *     fixture stand in for a test that does not exist.
+ *   - `.spec.` is NOT accepted. Every `.spec.ts` under `pillars/` is a
+ *     Playwright file under `e2e/`, and `pillars/shell/vite.config.ts`
+ *     excludes `e2e/**` from vitest. Accepting the suffix would buy no real
+ *     coverage and would let a Playwright spec vouch for the shell's builder —
+ *     the one builder with no registrar cross-check behind it.
+ *   - `e2e/` anywhere in the path is excluded, for the same reason.
+ *   - `*.live-seam.test.*` is excluded: bfm, cerebrum and food all exclude it
+ *     from their vitest runs, and its only runner (`live-seam.yml`) states in
+ *     its own header that it is advisory and absent from `ci-gate.yml`'s
+ *     `gated` array. A builder covered only there is not gated at all.
  *
  * @param {string} relPath Repo-relative, forward-slashed.
  * @returns {boolean}
  */
 export function isTestFile(relPath) {
-  const name = relPath.split('/').pop() ?? '';
-  return /\.(?:test|spec)\.[cm]?tsx?$/u.test(name);
+  const segments = relPath.split('/');
+  if (segments.includes('e2e')) return false;
+  const name = segments[segments.length - 1] ?? '';
+  if (/\.live-seam\.test\.[cm]?tsx?$/u.test(name)) return false;
+  return /\.test\.[cm]?tsx?$/u.test(name);
 }
 
 /**
@@ -176,7 +225,7 @@ export function findBuilders(files, read) {
   /** @type {Builder[]} */
   const out = [];
   for (const file of files) {
-    if (isTestFile(file)) continue;
+    if (looksLikeTest(file)) continue;
     const source = read(file);
     if (!source.includes(PAYLOAD_TYPE)) continue;
     for (const builder of new Set([...source.matchAll(BUILDER_NAME)].map((m) => m[1]))) {
@@ -198,7 +247,7 @@ export function findRegistrars(files, read) {
   /** @type {Set<string>} */
   const out = new Set();
   for (const file of files) {
-    if (isTestFile(file)) continue;
+    if (looksLikeTest(file)) continue;
     if (BOOTSTRAP_CALL.test(read(file))) out.add(pillarOf(file));
   }
   return [...out].toSorted((a, b) => a.localeCompare(b));
@@ -208,8 +257,11 @@ export function findRegistrars(files, read) {
  * Builder names each pillar's own tests name alongside the SDK wire validator,
  * keyed by pillar.
  *
- * Both must appear in the SAME file: a suite that imports the validator for
- * one purpose and mentions a builder in an unrelated file proves nothing.
+ * Both must appear in the SAME file, and the builder must appear CALLED —
+ * `buildXManifest(` — not merely named. Accepting a bare mention let an import
+ * line that pulls in two builders cover both, and let a comment or a
+ * `describe` title cover one that no test ever ran.
+ *
  * Keying by pillar matters too — without it a fixture in one pillar named
  * after another pillar's builder would satisfy that builder's coverage, and
  * the guard's own error message ("add a test under pillars/<id>") would be
@@ -228,7 +280,7 @@ export function findValidatedBuilders(files, read) {
     if (!VALIDATOR_SYMBOLS.some((symbol) => source.includes(symbol))) continue;
     const pillar = pillarOf(file);
     const names = out.get(pillar) ?? new Set();
-    for (const match of source.matchAll(BUILDER_NAME)) {
+    for (const match of source.matchAll(BUILDER_CALL)) {
       const name = match[1];
       if (name !== undefined) names.add(name);
     }
@@ -386,6 +438,51 @@ function selfTest() {
     (entry) => entry.builder === 'buildWeatherManifest'
   );
 
+  // A builder that is only imported, never called, is not covered.
+  const importOnlyGaps = findGaps(
+    builders,
+    registrars,
+    findValidatedBuilders(
+      [...files, 'pillars/weather/src/api/__tests__/manifest.test.ts'],
+      reader({
+        ...tree,
+        'pillars/weather/src/api/__tests__/manifest.test.ts':
+          "import { validateManifestPayload } from '@pops/pillar-sdk';\n" +
+          "import { buildWeatherManifest } from '../manifest.js';\n" +
+          'validateManifestPayload(somethingElse);\n',
+      })
+    )
+  );
+  const rejectsImportOnly = importOnlyGaps.uncovered.some(
+    (entry) => entry.builder === 'buildWeatherManifest'
+  );
+
+  // A suite CI does not run is not coverage either.
+  const ungatedGaps = findGaps(
+    builders,
+    registrars,
+    findValidatedBuilders(
+      [...files, 'pillars/weather/src/api/__tests__/m.live-seam.test.ts'],
+      reader({ ...tree, 'pillars/weather/src/api/__tests__/m.live-seam.test.ts': coveredTest })
+    )
+  );
+  const rejectsUngatedSuite = ungatedGaps.uncovered.some(
+    (entry) => entry.builder === 'buildWeatherManifest'
+  );
+
+  // ...and an excluded suite must not become a builder source either.
+  const phantomBuilders = findBuilders(
+    [...files, 'pillars/weather/src/api/__tests__/m.live-seam.test.ts'],
+    reader({
+      ...tree,
+      'pillars/weather/src/api/__tests__/m.live-seam.test.ts':
+        'const p: ManifestPayload = buildPhantomManifest();\n',
+    })
+  );
+  const noPhantomFromExcludedSuite = !phantomBuilders.some(
+    (entry) => entry.builder === 'buildPhantomManifest'
+  );
+
   const renamedTree = {
     'pillars/weather/src/api/manifest.ts':
       'export function assembleManifest(): ManifestPayload {\n  return x;\n}\n',
@@ -410,6 +507,9 @@ function selfTest() {
     catchesTestWithoutValidator &&
     rejectsForeignPillarTest &&
     rejectsUncollectedHelper &&
+    rejectsImportOnly &&
+    rejectsUngatedSuite &&
+    noPhantomFromExcludedSuite &&
     catchesBlindMatcher &&
     ignoresSettingsBuilder;
 
@@ -422,16 +522,20 @@ function selfTest() {
     console.error(`  catches a test that skips the schema:         ${catchesTestWithoutValidator}`);
     console.error(`  rejects coverage from another pillar's test:  ${rejectsForeignPillarTest}`);
     console.error(`  rejects an uncollected __tests__ helper:      ${rejectsUncollectedHelper}`);
+    console.error(`  rejects an imported-but-never-called builder: ${rejectsImportOnly}`);
+    console.error(`  rejects a suite no required job runs:         ${rejectsUngatedSuite}`);
+    console.error(`  no phantom builder from an excluded suite:    ${noPhantomFromExcludedSuite}`);
     console.error(`  catches a renamed (unseen) builder:           ${catchesBlindMatcher}`);
     console.error(`  ignores a SettingsManifest builder:           ${ignoresSettingsBuilder}`);
     return false;
   }
   console.log(
     'self-test OK — over synthetic sources the guard finds a builder whose signature is ' +
-      'wrapped over lines and one exported as a default, reports an untested builder, a test ' +
-      'that never reaches the wire schema, coverage claimed by another pillar, coverage ' +
-      'claimed by an uncollected __tests__ helper, and a registrar whose builder it cannot ' +
-      'see; and passes a clean fixture.'
+      'wrapped over lines and one exported as a default; reports an untested builder, a test ' +
+      'that never reaches the wire schema, coverage claimed by another pillar, by an ' +
+      'uncollected __tests__ helper, by an import with no call, or by a suite no required job ' +
+      'runs, and a registrar whose builder it cannot see; does not mint a builder from an ' +
+      'excluded suite; and passes a clean fixture.'
   );
   return true;
 }
