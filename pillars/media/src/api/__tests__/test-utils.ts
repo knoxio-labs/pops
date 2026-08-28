@@ -319,7 +319,7 @@ export function makeClient(app: Express) {
       disconnect: () => send<{ message: string }>(r.post('/plex/disconnect').send({})),
       getSyncStatus: () =>
         send<{
-          data: { configured: boolean; hasUrl: boolean; hasToken: boolean; connected: boolean };
+          data: { configured: boolean; hasUrl: boolean; hasToken: boolean };
         }>(r.get('/plex/sync-status')),
       getSectionIds: () =>
         send<{ data: { movieSectionId: string | null; tvSectionId: string | null } }>(

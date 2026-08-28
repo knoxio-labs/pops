@@ -1,3 +1,4 @@
+import { defaultFetch } from '../default-fetch.js';
 import {
   createResolverLeg,
   resolveWithFallback,
@@ -107,7 +108,7 @@ export class HttpDiscoveryTransport implements DiscoveryTransport {
 
   constructor(options: HttpDiscoveryTransportOptions = {}) {
     this.registryUrl = options.registryUrl ?? defaultRegistryUrl();
-    this.fetchImpl = options.fetchImpl ?? fetch;
+    this.fetchImpl = options.fetchImpl ?? defaultFetch;
     this.timeoutMs = options.timeoutMs ?? DEFAULT_FETCH_TIMEOUT_MS;
     this.headers = options.headers ?? {};
     this.leg = createResolverLeg(REGISTRY_PATHS.snapshot, LEGACY_REGISTRY_PATHS.snapshot);

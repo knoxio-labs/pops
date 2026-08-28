@@ -14,12 +14,12 @@ import { getEnv } from '../env.js';
 import { PlexClient } from './client.js';
 import { decryptToken } from './crypto.js';
 import { PLEX_KEYS } from './keys.js';
+import { normalizePlexUrl } from './url.js';
 
 export interface PlexSyncStatus {
   configured: boolean;
   hasUrl: boolean;
   hasToken: boolean;
-  connected: boolean;
 }
 
 export interface PlexSectionIds {
@@ -36,9 +36,15 @@ export function getPlexClientId(db: MediaDb): string {
   return newId;
 }
 
-/** Resolve the Plex base URL: persisted value, then `PLEX_URL` env, else `null`. */
+/**
+ * Resolve the Plex base URL: persisted value, then `PLEX_URL` env, else `null`.
+ *
+ * Normalized on read — the row can be written by paths that skip
+ * {@link setPlexUrl}'s validation, and a schemeless value breaks every call.
+ * An unparseable value resolves to `null` rather than a broken client.
+ */
 export function getPlexUrl(db: MediaDb): string | null {
-  return plexSettingsService.getSetting(db, PLEX_KEYS.url) ?? getEnv('PLEX_URL') ?? null;
+  return normalizePlexUrl(plexSettingsService.getSetting(db, PLEX_KEYS.url) ?? getEnv('PLEX_URL'));
 }
 
 /** The persisted Plex username, or `null` when not connected. */
@@ -105,12 +111,14 @@ export async function testConnection(client: PlexClient): Promise<boolean> {
   }
 }
 
-/** Connection-config snapshot. `connected` is a static flag (parity with the monolith). */
+/**
+ * Connection-config snapshot: what is persisted, not whether the server answers.
+ * Liveness comes from `testConnection` / `GET /plex/test-connection`.
+ */
 export function getSyncStatus(db: MediaDb, client: PlexClient | null): PlexSyncStatus {
   return {
     configured: client !== null,
     hasUrl: getPlexUrl(db) !== null,
     hasToken: plexSettingsService.getSetting(db, PLEX_KEYS.token) !== null,
-    connected: false,
   };
 }

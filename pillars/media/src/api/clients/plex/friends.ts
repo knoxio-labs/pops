@@ -12,6 +12,7 @@
  * - The Plex community API requires the user's own token; it cannot
  *   impersonate friends. We access shared/public watchlists only.
  */
+import { getAbsolute } from './client-http.js';
 import { PlexApiError } from './types.js';
 
 export interface PlexFriend {
@@ -44,26 +45,10 @@ interface PlexCommunityWatchlistItem {
 
 /** Fetch the user's Plex friends from the Plex.tv API (requires the user's token). */
 export async function fetchPlexFriends(token: string): Promise<PlexFriend[]> {
-  const url = `https://plex.tv/api/v2/friends?X-Plex-Token=${encodeURIComponent(token)}`;
-
-  let response: Response;
-  try {
-    response = await fetch(url, { method: 'GET', headers: { Accept: 'application/json' } });
-  } catch (err) {
-    throw new PlexApiError(
-      0,
-      `Network error fetching Plex friends: ${err instanceof Error ? err.message : String(err)}`
-    );
-  }
-
-  if (!response.ok) {
-    throw new PlexApiError(
-      response.status,
-      `Plex friends API error: ${response.status} ${response.statusText}`
-    );
-  }
-
-  const raw = (await response.json()) as RawPlexFriend[];
+  const raw = await getAbsolute<RawPlexFriend[]>('https://plex.tv/api/v2/friends', {
+    auth: { token },
+    context: 'Plex friends API',
+  });
   return raw.map((f) => ({
     id: f.id,
     uuid: f.uuid,
@@ -118,31 +103,15 @@ async function fetchFriendWatchlistPage(req: PageRequest): Promise<PlexWatchlist
   const { token, clientId, friendUuid, start, size } = req;
   const url =
     `${PLEX_DISCOVER_BASE}/library/sections/watchlist/all` +
-    `?X-Plex-Token=${encodeURIComponent(token)}` +
-    `&X-Plex-Client-Identifier=${encodeURIComponent(clientId)}` +
-    `&X-Plex-Container-Start=${start}` +
+    `?X-Plex-Container-Start=${start}` +
     `&X-Plex-Container-Size=${size}` +
     `&includeGuids=1` +
     `&uri=server%3A%2F%2F${friendUuid}%2Fcom.plexapp.plugins.library`;
 
-  let response: Response;
-  try {
-    response = await fetch(url, { method: 'GET', headers: { Accept: 'application/json' } });
-  } catch (err) {
-    throw new PlexApiError(
-      0,
-      `Network error fetching friend watchlist: ${err instanceof Error ? err.message : String(err)}`
-    );
-  }
-
-  if (!response.ok) {
-    throw new PlexApiError(
-      response.status,
-      `Plex friend watchlist API error: ${response.status} ${response.statusText}`
-    );
-  }
-
-  return (await response.json()) as PlexWatchlistResponse;
+  return getAbsolute<PlexWatchlistResponse>(url, {
+    auth: { token, clientId },
+    context: 'Plex friend watchlist API',
+  });
 }
 
 /**

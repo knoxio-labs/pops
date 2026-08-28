@@ -23,25 +23,33 @@ interface RouteResponse {
   status?: number;
   body: unknown;
 }
-type RouteHandler = (init: { method: string; url: string; body: unknown }) => RouteResponse;
+type RouteHandler = (init: {
+  method: string;
+  url: string;
+  body: unknown;
+  headers: Record<string, string>;
+}) => RouteResponse;
 interface RouteRule {
   method: string;
   match: string;
   handler: RouteHandler;
 }
 
+interface RecordedCall {
+  method: string;
+  url: string;
+  body: unknown;
+  headers: Record<string, string>;
+}
+
 let routes: RouteRule[];
-let calls: { method: string; url: string; body: unknown }[];
+let calls: RecordedCall[];
 
 function route(method: string, match: string, handler: RouteHandler): void {
   routes.push({ method, match, handler });
 }
 
-function requireCall(predicate: (c: { method: string; url: string; body: unknown }) => boolean): {
-  method: string;
-  url: string;
-  body: unknown;
-} {
+function requireCall(predicate: (c: RecordedCall) => boolean): RecordedCall {
   const call = calls.find(predicate);
   if (!call) throw new Error('expected an upstream Plex call but none matched');
   return call;
@@ -59,10 +67,14 @@ const fetchMock = vi.fn((input: string | URL | Request, init?: RequestInit): Pro
   const url = typeof input === 'string' ? input : input.toString();
   const method = (init?.method ?? 'GET').toUpperCase();
   const parsedBody: unknown = typeof init?.body === 'string' ? JSON.parse(init.body) : undefined;
-  calls.push({ method, url, body: parsedBody });
+  const headers: Record<string, string> = {};
+  for (const [k, v] of Object.entries((init?.headers ?? {}) as Record<string, string>)) {
+    headers[k.toLowerCase()] = v;
+  }
+  calls.push({ method, url, body: parsedBody, headers });
   const rule = routes.find((r) => r.method === method && url.includes(r.match));
   if (!rule) return Promise.resolve(jsonResponse({ error: `unmatched ${method} ${url}` }, 404));
-  const res = rule.handler({ method, url, body: parsedBody });
+  const res = rule.handler({ method, url, body: parsedBody, headers });
   return Promise.resolve(jsonResponse(res.body, res.status ?? 200));
 });
 
@@ -136,9 +148,9 @@ describe('plex — connection', () => {
     stubLibraries();
     const res = await client().plex.testConnection();
     expect(res.data).toEqual({ connected: true });
-    expect(requireCall((c) => c.url.includes('/library/sections')).url).toContain(
-      'X-Plex-Token=raw-token'
-    );
+    const call = requireCall((c) => c.url.includes('/library/sections'));
+    expect(call.headers['x-plex-token']).toBe('raw-token');
+    expect(call.url).not.toContain('raw-token');
   });
 
   it('testConnection returns connected:false when the server errors', async () => {
@@ -164,6 +176,30 @@ describe('plex — connection', () => {
     expect((await client().plex.getPlexUrl()).data).toBe(PLEX_URL);
   });
 
+  it('getPlexUrl normalises a schemeless persisted value and a schemeless env fallback', async () => {
+    process.env['PLEX_URL'] = 'env-plex:32400';
+    expect((await client().plex.getPlexUrl()).data).toBe('http://env-plex:32400');
+    plexSettingsService.setSetting(mediaDb.db, 'plex_url', 'plex.test:32400/');
+    expect((await client().plex.getPlexUrl()).data).toBe('http://plex.test:32400/');
+  });
+
+  it('getPlexUrl reports null for an unparseable persisted value', async () => {
+    plexSettingsService.setSetting(mediaDb.db, 'plex_url', ':');
+    expect((await client().plex.getPlexUrl()).data).toBeNull();
+    expect((await client().plex.getSyncStatus()).data.hasUrl).toBe(false);
+  });
+
+  it('a schemeless plex_url written outside setUrl still produces a working client', async () => {
+    plexSettingsService.setSetting(mediaDb.db, 'plex_url', 'plex.test:32400');
+    plexSettingsService.setSetting(mediaDb.db, 'plex_token', 'raw-token');
+    stubLibraries();
+    const { data } = await client().plex.getLibraries();
+    expect(data).toHaveLength(1);
+    expect(requireCall((c) => c.url.includes('/library/sections')).url).toMatch(
+      /^http:\/\/plex\.test:32400\/library\/sections/
+    );
+  });
+
   it('setUrl validates against the live server and persists a normalised URL', async () => {
     plexSettingsService.setSetting(mediaDb.db, 'plex_token', 'raw-token');
     stubLibraries();
@@ -183,8 +219,8 @@ describe('plex — connection', () => {
     process.env['ENCRYPTION_KEY'] = 'test-encryption-key';
     const plaintext = 'plaintext-token';
     plexSettingsService.setSetting(mediaDb.db, 'plex_token', encryptToken(mediaDb.db, plaintext));
-    route('GET', '/library/sections', ({ url }) =>
-      url.includes(`X-Plex-Token=${plaintext}`)
+    route('GET', '/library/sections', ({ headers }) =>
+      headers['x-plex-token'] === plaintext
         ? { body: LIBRARIES }
         : { status: 401, body: { error: 'unauthorised' } }
     );
@@ -210,15 +246,19 @@ describe('plex — connection', () => {
 
   it('getSyncStatus reflects configured/url/token presence', async () => {
     const empty = await client().plex.getSyncStatus();
-    expect(empty.data).toEqual({
-      configured: false,
-      hasUrl: false,
-      hasToken: false,
-      connected: false,
-    });
+    expect(empty.data).toEqual({ configured: false, hasUrl: false, hasToken: false });
     seedConnection();
     const configured = await client().plex.getSyncStatus();
-    expect(configured.data).toMatchObject({ configured: true, hasUrl: true, hasToken: true });
+    expect(configured.data).toEqual({ configured: true, hasUrl: true, hasToken: true });
+  });
+
+  it('getSyncStatus carries no liveness field that could contradict testConnection', async () => {
+    seedConnection();
+    stubLibraries();
+    const status = await client().plex.getSyncStatus();
+    expect(Object.keys(status.data)).not.toContain('connected');
+    expect(calls).toHaveLength(0);
+    expect((await client().plex.testConnection()).data.connected).toBe(true);
   });
 });
 

@@ -2,9 +2,9 @@
  * Plex Discover (cloud) trending client.
  *
  * Ported from the monolith `media/plex/client-discover.ts` (trending path
- * only). Targets the Plex Discover provider endpoints (absolute cloud URLs
- * with the token in the query string), so it reuses {@link getAbsolute} +
- * {@link mapMediaItem} rather than the Plex Media Server `PlexClient`.
+ * only). Targets the Plex Discover provider endpoints (absolute cloud URLs),
+ * so it reuses {@link getAbsolute} + {@link mapMediaItem} rather than the
+ * Plex Media Server `PlexClient`.
  *
  * Only the trending surface is ported here; the watchlist mutate / user-state /
  * discover-search endpoints stay deferred (separate features).
@@ -23,22 +23,20 @@ async function fetchTrendingViaWatchlist(token: string, limit: number): Promise<
     `?type=1` +
     `&sort=popularityMonth:desc` +
     `&limit=${limit}` +
-    `&includeGuids=1` +
-    `&X-Plex-Token=${token}`;
-  const data = await getAbsolute<{ MediaContainer: { Metadata?: RawPlexMediaItem[] } }>(url);
+    `&includeGuids=1`;
+  const data = await getAbsolute<{ MediaContainer: { Metadata?: RawPlexMediaItem[] } }>(url, {
+    auth: { token },
+  });
   return (data.MediaContainer.Metadata ?? []).map(mapMediaItem);
 }
 
 /** Promoted hubs fallback — pull movie items out of the discover hubs. */
 async function fetchTrendingViaHubs(token: string, limit: number): Promise<PlexMediaItem[]> {
   const hubUrl =
-    `https://discover.provider.plex.tv/hubs/promoted` +
-    `?count=${limit}` +
-    `&includeGuids=1` +
-    `&X-Plex-Token=${token}`;
+    `https://discover.provider.plex.tv/hubs/promoted` + `?count=${limit}` + `&includeGuids=1`;
   const hubData = await getAbsolute<{
     MediaContainer: { Hub?: Array<{ type: string; Metadata?: RawPlexMediaItem[] }> };
-  }>(hubUrl);
+  }>(hubUrl, { auth: { token } });
   const hubs = hubData.MediaContainer.Hub ?? [];
   const movieItems: PlexMediaItem[] = [];
   for (const hub of hubs) {

@@ -53,7 +53,7 @@ interface RouteRule {
 }
 
 let routes: RouteRule[];
-let calls: { method: string; url: string }[];
+let calls: { method: string; url: string; headers: Record<string, string> }[];
 
 function route(method: string, match: string, handler: RouteHandler): void {
   routes.push({ method, match, handler });
@@ -70,7 +70,11 @@ function jsonResponse(body: unknown, status = 200): Response {
 const fetchMock = vi.fn((input: string | URL | Request, init?: RequestInit): Promise<Response> => {
   const url = typeof input === 'string' ? input : input.toString();
   const method = (init?.method ?? 'GET').toUpperCase();
-  calls.push({ method, url });
+  const headers: Record<string, string> = {};
+  for (const [k, v] of Object.entries((init?.headers ?? {}) as Record<string, string>)) {
+    headers[k.toLowerCase()] = v;
+  }
+  calls.push({ method, url, headers });
   const rule = routes.find((r) => r.method === method && url.includes(r.match));
   if (!rule) return Promise.resolve(jsonResponse({ error: `unmatched ${method} ${url}` }, 404));
   const res = rule.handler();
@@ -199,12 +203,14 @@ describe('discovery.trendingPlex — enrichment', () => {
     expect(fresh?.voteAverage).toBe(8.4);
     expect(fresh?.releaseDate).toBe('2021-01-01');
 
-    // Discover provider was actually hit (no live network).
-    expect(
-      calls.some(
-        (c) => c.url.includes('discover.provider.plex.tv') && c.url.includes('raw-discover-token')
-      )
-    ).toBe(true);
+    // Discover provider was actually hit (no live network), authenticated by
+    // header — the token must never appear in the URL.
+    const discoverCalls = calls.filter((c) => c.url.includes('discover.provider.plex.tv'));
+    expect(discoverCalls.length).toBeGreaterThan(0);
+    expect(discoverCalls.some((c) => c.headers['x-plex-token'] === 'raw-discover-token')).toBe(
+      true
+    );
+    expect(discoverCalls.every((c) => !c.url.includes('raw-discover-token'))).toBe(true);
   });
 
   it('drops dismissed, duplicate, and TMDB-less items', async () => {
