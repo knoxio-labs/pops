@@ -188,6 +188,26 @@ describe('applyLearnedCorrection — entity-bearing rule', () => {
     expect(result).toBeNull();
   });
 
+  it('ignores an inactive rule supplied through the in-memory rules override', () => {
+    const result = applyLearnedCorrection(db, {
+      transaction: transaction(),
+      minConfidence: 0.7,
+      knownTags: [],
+      rules: [rule({ isActive: false })],
+    });
+    expect(result).toBeNull();
+  });
+
+  it('ignores a sub-floor rule supplied through the in-memory rules override', () => {
+    const result = applyLearnedCorrection(db, {
+      transaction: transaction(),
+      minConfidence: 0.7,
+      knownTags: [],
+      rules: [rule({ confidence: 0.69 })],
+    });
+    expect(result).toBeNull();
+  });
+
   it('picks the lower priority-number rule when multiple rules match (priority ASC, rank 0 wins)', () => {
     const result = applyLearnedCorrection(db, {
       transaction: transaction(),
