@@ -660,6 +660,55 @@ export async function selfTest() {
   check('none permission is not push access', !isPushPermission('none'));
   check('a garbage permission string is not push access', !isPushPermission('sudo'));
 
+  // annotateWithPushAccess: reviewed MEDIUM on this PR's own head — the
+  // candidate-selection and merge-by-login logic had no test coverage at
+  // all, despite deciding who is allowed to waive a finding.
+  const resolverCalls = [];
+  const fakeResolver = (login) => {
+    resolverCalls.push(login);
+    return login === 'trusted-dev';
+  };
+  const untouchedComment = { body: 'no marker here at all', user: { login: 'never-dismisses' } };
+  const dismissFromTrusted = {
+    body: dismissMarkerFor('aaaaaa111111'),
+    user: { login: 'trusted-dev' },
+  };
+  const dismissFromUntrusted = {
+    body: dismissMarkerFor('bbbbbb222222'),
+    user: { login: 'random-passerby' },
+  };
+  const dismissFromTrustedAgain = {
+    body: dismissMarkerFor('cccccc333333'),
+    user: { login: 'trusted-dev' },
+  };
+  const annotated = annotateWithPushAccess(
+    [untouchedComment, dismissFromTrusted, dismissFromUntrusted, dismissFromTrustedAgain],
+    fakeResolver
+  );
+  check(
+    'a comment with no dismiss marker is never sent to the resolver',
+    !resolverCalls.includes('never-dismisses')
+  );
+  check(
+    'the resolver is called once per unique candidate login, not once per comment',
+    resolverCalls.filter((login) => login === 'trusted-dev').length === 1
+  );
+  check(
+    'a trusted login is annotated push_access: true',
+    annotated[1]?.push_access === true && annotated[3]?.push_access === true
+  );
+  check('an untrusted login is annotated push_access: false', annotated[2]?.push_access === false);
+  check(
+    'a comment with no dismiss marker is left otherwise unannotated',
+    !('push_access' in annotated[0])
+  );
+  const noLoginComment = { body: dismissMarkerFor('dddddd444444') };
+  const withMissingLogin = annotateWithPushAccess([noLoginComment], fakeResolver);
+  check(
+    'a comment with no user.login at all does not crash and is not trusted',
+    withMissingLogin[0]?.push_access !== true
+  );
+
   // pollForReviewState: a transient retry that clears within budget passes,
   // and is proven to have actually retried rather than passing on the first
   // look.
@@ -781,7 +830,9 @@ async function fetchIssueComments(repo, pr) {
   );
   /** @type {unknown[][]} */
   const pages = JSON.parse(raw);
-  return annotateWithPushAccess(repo, /** @type {StickyComment[]} */ (pages.flat()));
+  return annotateWithPushAccess(/** @type {StickyComment[]} */ (pages.flat()), (login) =>
+    hasPushAccess(repo, login)
+  );
 }
 
 /** Permission levels the collaborator-permission API reports that mean push access. */
@@ -831,15 +882,23 @@ export function isPushPermission(permission) {
  * to answer "is this trusted".
  *
  * Only commenters who actually posted something that looks like a dismiss
- * marker are checked — one API call per unique such login, not per comment
- * and not for the (usually much larger) set of commenters who never tried to
- * dismiss anything.
+ * marker are checked — one call to `resolvePushAccess` per unique such
+ * login, not per comment and not for the (usually much larger) set of
+ * commenters who never tried to dismiss anything, and never twice for the
+ * same login even if they posted several dismiss comments.
  *
- * @param {string} repo
+ * `resolvePushAccess` is injected — reviewed MEDIUM on this PR's own head:
+ * this candidate-selection and merge-by-login logic is exactly what decides
+ * who is allowed to waive a review finding, so it needs the same test
+ * coverage as `isPushPermission` and `collectDismissedFindingIds`, and it
+ * cannot get that while it also makes a real GitHub call. Only `main` wires
+ * the real `hasPushAccess`; every test below supplies a fake.
+ *
  * @param {StickyComment[]} comments
+ * @param {(login: string) => boolean} resolvePushAccess
  * @returns {StickyComment[]}
  */
-function annotateWithPushAccess(repo, comments) {
+export function annotateWithPushAccess(comments, resolvePushAccess) {
   /** @type {Set<string>} */
   const candidateLogins = new Set();
   for (const comment of comments) {
@@ -851,7 +910,7 @@ function annotateWithPushAccess(repo, comments) {
   /** @type {Map<string, boolean>} */
   const pushAccessByLogin = new Map();
   for (const login of candidateLogins) {
-    pushAccessByLogin.set(login, hasPushAccess(repo, login));
+    pushAccessByLogin.set(login, resolvePushAccess(login));
   }
   return comments.map((comment) => {
     const login = comment.user?.login;

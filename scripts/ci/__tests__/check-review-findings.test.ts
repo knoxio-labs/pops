@@ -15,6 +15,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  annotateWithPushAccess,
   collectDismissedFindingIds,
   decodeState,
   dismissMarkerFor,
@@ -307,6 +308,70 @@ describe('the escape hatch trusts only resolved push access, not author_associat
       headSha: HEAD,
     });
     expect(result.outcome).toBe('fail');
+  });
+});
+
+describe('annotateWithPushAccess', () => {
+  // Reviewed MEDIUM on this PR's own head: the candidate-selection and
+  // merge-by-login logic decides who is allowed to waive a finding and had
+  // no coverage of its own.
+  it('annotates a candidate comment with what the resolver returns', () => {
+    const resolver = vi.fn((login: string) => login === 'trusted-dev');
+    const annotated = annotateWithPushAccess(
+      [{ body: dismissMarkerFor('aaaaaa111111'), user: { login: 'trusted-dev' } }],
+      resolver
+    );
+    expect(annotated[0]?.push_access).toBe(true);
+  });
+
+  it('does not call the resolver for a comment with no dismiss marker', () => {
+    const resolver = vi.fn(() => true);
+    annotateWithPushAccess(
+      [{ body: 'just chatting, no marker here', user: { login: 'anyone' } }],
+      resolver
+    );
+    expect(resolver).not.toHaveBeenCalled();
+  });
+
+  it('leaves a comment with no dismiss marker unannotated', () => {
+    const annotated = annotateWithPushAccess(
+      [{ body: 'just chatting, no marker here', user: { login: 'anyone' } }],
+      () => true
+    );
+    expect(annotated[0]).not.toHaveProperty('push_access');
+  });
+
+  it('calls the resolver once per unique login, not once per comment', () => {
+    const resolver = vi.fn(() => true);
+    annotateWithPushAccess(
+      [
+        { body: dismissMarkerFor('aaaaaa111111'), user: { login: 'same-dev' } },
+        { body: dismissMarkerFor('bbbbbb222222'), user: { login: 'same-dev' } },
+      ],
+      resolver
+    );
+    expect(resolver).toHaveBeenCalledTimes(1);
+    expect(resolver).toHaveBeenCalledWith('same-dev');
+  });
+
+  it('resolves different logins independently', () => {
+    const annotated = annotateWithPushAccess(
+      [
+        { body: dismissMarkerFor('aaaaaa111111'), user: { login: 'trusted-dev' } },
+        { body: dismissMarkerFor('bbbbbb222222'), user: { login: 'random-passerby' } },
+      ],
+      (login) => login === 'trusted-dev'
+    );
+    expect(annotated[0]?.push_access).toBe(true);
+    expect(annotated[1]?.push_access).toBe(false);
+  });
+
+  it('does not crash and does not grant trust to a comment with no user.login', () => {
+    const annotated = annotateWithPushAccess(
+      [{ body: dismissMarkerFor('aaaaaa111111') }],
+      () => true
+    );
+    expect(annotated[0]?.push_access).not.toBe(true);
   });
 });
 
