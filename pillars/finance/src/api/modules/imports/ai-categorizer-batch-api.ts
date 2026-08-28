@@ -95,18 +95,20 @@ export async function callBatchApi(opts: BatchApiCallOptions): Promise<ApiCallRe
 }
 
 /**
- * Parse a batched reply into one {@link AiCacheEntry} per input, aligned by
- * array position. Throws `AiCategorizationError('…','PARSE_ERROR')` only when
- * the reply holds no parseable JSON array at all — a single malformed *entry*
- * (not an object, or short of the requested count) degrades just that row to
- * `null` rather than failing every row in the chunk (mirrors the tolerate-
- * prose principle of #3591 at batch granularity).
+ * Parse a reply that should hold a JSON array of `expectedCount` objects into
+ * exactly that many slots.
+ *
+ * Throws `AiCategorizationError('…','PARSE_ERROR')` only when the reply holds
+ * no parseable JSON array at all — a single malformed *entry* (not an object,
+ * or short of the requested count) degrades just that slot to `null` rather
+ * than failing every row in the chunk (mirrors the tolerate-prose principle of
+ * #3591 at batch granularity). Shared with the tag-only batch (POPS-2596),
+ * which asks for the same array-of-N shape with different fields in it.
  */
-export function parseBatchEntries(
+export function parseJsonArrayReply(
   text: string,
-  expectedCount: number,
-  knownTags: readonly string[] = []
-): (AiCacheEntry | null)[] {
+  expectedCount: number
+): (Record<string, unknown> | null)[] {
   const jsonSlice = extractJsonFromReply(text);
   if (jsonSlice === null) {
     throw new AiCategorizationError(
@@ -134,8 +136,19 @@ export function parseBatchEntries(
   return Array.from({ length: expectedCount }, (_, i) => {
     const item: unknown = parsed[i];
     if (item === null || typeof item !== 'object' || Array.isArray(item)) return null;
-    return entryFromParsed(item as RawCategorizerEntry, knownTags);
+    return item as Record<string, unknown>;
   });
+}
+
+/** Parse a batched categorization reply into one {@link AiCacheEntry} per input, aligned by array position. */
+export function parseBatchEntries(
+  text: string,
+  expectedCount: number,
+  knownTags: readonly string[] = []
+): (AiCacheEntry | null)[] {
+  return parseJsonArrayReply(text, expectedCount).map((item) =>
+    item === null ? null : entryFromParsed(item as RawCategorizerEntry, knownTags)
+  );
 }
 
 export async function callBatchApiOrThrow(opts: BatchApiCallOptions): Promise<ApiCallResponse> {

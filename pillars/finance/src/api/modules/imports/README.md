@@ -25,6 +25,14 @@ Stages 2–6 live in `entity-matcher.ts`, whose helpers document their own norma
 
 AI is best-effort: no configuration or provider failure ever fails an import, the row just becomes `uncertain`.
 
+## Tag-only pass
+
+The ladder above answers "who is this merchant"; it does not answer "what was this". A row the matcher resolves perfectly gets tags only from a correction rule, a tag rule or the entity's `defaultTags` — all of which exist only because a human made them — so the better the match, the less tag help the row got (POPS-2596). `ai-tags-resolver.ts` closes that: after the AI pass, rows that resolved **deterministically**, carry **no** suggested tags and have a **spend** type are batched into one tag-only call per `FINANCE_AI_CATEGORIZER_BATCH_SIZE`, with the merchant given and only the closed-facet classification asked for.
+
+It is gated on `FINANCE_AI_CATEGORIZER_TAGS_FOR_MATCHED` (default off) **in addition to** `FINANCE_AI_CATEGORIZER_ENABLED`, because unlike the fallback it spends on the common path. The narrowness is load-bearing: a row that already has rule or entity tags is never topped up, a row the AI itself resolved is never re-asked, and the batch is keyed on `(entityId, normalizeDescription(description))` so twelve Woolworths rows cost one entry. Every failure — open breaker, rate limit, malformed reply — leaves the row exactly as the ladder left it; nothing is re-bucketed and no `AI_API_ERROR` warning is raised, because no row was lost.
+
+The rows this addresses are the ones `measureTagCoverage` (POPS-2607) counts as missing a required facet, which is why the spend-type condition matches its applicability rule rather than being a second opinion about it.
+
 ## Where things live
 
 | Concern                                                     | File                                            |
@@ -33,6 +41,8 @@ AI is best-effort: no configuration or provider failure ever fails an import, th
 | Per-row ladder walk and bucketing                           | `process-transaction.ts`                        |
 | Stages 2–6 matching and normalization                       | `entity-matcher.ts`                             |
 | Batching, chunking, and the rate-limit circuit breaker      | `ai-batch-resolver.ts`, `ai-circuit-breaker.ts` |
+| Tag-only classification of already-matched rows             | `ai-tags-resolver.ts`, `ai-tags-only-api.ts`    |
+| Model, key, token budgets and cost estimate                 | `ai-categorizer-config.ts`                      |
 | Prompt construction and the field allowlist                 | `ai-categorizer*.ts`                            |
 | Transactional write, rollback semantics, commit idempotency | `commit.ts`                                     |
 

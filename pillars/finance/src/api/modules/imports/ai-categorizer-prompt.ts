@@ -19,6 +19,14 @@ export const PROMPT_VERSION_CATEGORIZE = 'categorize-v2.0';
 /** Versioned telemetry tag for the batched categorizer prompt (CF096/#3671). */
 export const PROMPT_VERSION_CATEGORIZE_BATCH = 'categorize-batch-v2.0';
 
+/**
+ * Versioned telemetry tag for the tag-only prompt (POPS-2596) — the shape that
+ * classifies a row whose merchant is already known. Kept separate from the
+ * categorize versions so this path's cost and its accept/reject quality are
+ * readable on their own rather than folded into entity categorization.
+ */
+export const PROMPT_VERSION_TAGS_ONLY = 'tags-v1.0';
+
 const PROMPT_FIELD_MAX_CHARS = 200;
 
 /**
@@ -48,6 +56,17 @@ export function buildTransactionData(input: CategorizerInput): string {
     lines.push(`Date: ${sanitizePromptField(input.date)}`);
   }
   return lines.join('\n');
+}
+
+/**
+ * The transaction block for a row whose merchant is already resolved: the
+ * entity is *given*, so the model classifies rather than identifies. The
+ * merchant name is sanitized at this boundary like every other interpolated
+ * field — it reaches here from the contacts pillar, which is not a source the
+ * prompt gets to trust unconditionally.
+ */
+export function buildMatchedTransactionData(entityName: string, input: CategorizerInput): string {
+  return `Merchant: ${sanitizePromptField(entityName)}\n${buildTransactionData(input)}`;
 }
 
 export const ENTITY_NAME_RULES = `entityName rules:

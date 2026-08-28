@@ -9,7 +9,9 @@
  * (CP025/#3656): the deterministic ladder (`classifyWithoutAi`) resolves each
  * row synchronously, and every row that falls through to the AI stage is
  * deferred to `resolvePendingAi`, which folds them into shared batched Claude
- * calls instead of one round-trip per row.
+ * calls instead of one round-trip per row. A third, separately gated pass
+ * (`resolveTagsForMatched`, POPS-2596) then classifies the rows the ladder DID
+ * resolve but left with no suggested tags.
  */
 import {
   type FinanceDb,
@@ -18,6 +20,8 @@ import {
 } from '../../../db/index.js';
 import { type ContactsClient } from '../../contacts/client.js';
 import { type PendingAiItem, resolvePendingAi } from './ai-batch-resolver.js';
+import { AiCircuitBreaker } from './ai-circuit-breaker.js';
+import { resolveTagsForMatched } from './ai-tags-resolver.js';
 import { buildFailure } from './process-transaction-helpers.js';
 import { classifyWithoutAi, type TransactionProcessResult } from './process-transaction.js';
 import {
@@ -159,6 +163,10 @@ async function runProcessLoop(args: ProcessLoopArgs): Promise<{ errors: ErrorEnt
 
   const pending = await classifyWithoutAiPass(args, results);
   const settledByLadder = newTransactions.length - pending.length;
+  // One breaker for both AI passes: a provider that rate-limited the entity
+  // pass has not recovered by the time the tag pass starts, and giving that
+  // pass its own breaker would pay a second full retry ladder to learn it.
+  const breaker = new AiCircuitBreaker();
   if (pending.length > 0) {
     onProgress?.({ currentStep: 'categorizing', processedCount: settledByLadder });
     await resolvePendingAi({
@@ -167,10 +175,12 @@ async function runProcessLoop(args: ProcessLoopArgs): Promise<{ errors: ErrorEnt
       context,
       counters,
       results,
+      breaker,
       onResolved: (resolvedCount) =>
         onProgress?.({ processedCount: settledByLadder + resolvedCount }),
     });
   }
+  await resolveTagsForMatched({ db, context, counters, results, breaker });
   onProgress?.({ processedCount: newTransactions.length });
 
   const currentBatch: ProgressBatchItem[] = [];

@@ -3,6 +3,11 @@
  * Claude to suggest a merchant entity + tags. Reached only after the
  * deterministic ladder (corrections → transfer → entity match) misses.
  *
+ * Its tag-only sibling (`tagsOnlyBatchWithAi`, POPS-2596) inverts that
+ * condition: it runs for rows the ladder *did* resolve but which carry no
+ * suggested tags, where the entity is given and only the classification is
+ * asked for.
+ *
  * Differences from the monolith categorizer (deliberate for the pillar):
  *   - config from env, not core-settings (`FINANCE_AI_CATEGORIZER_MODEL`,
  *     `FINANCE_AI_CATEGORIZER_MAX_TOKENS`, `ANTHROPIC_API_KEY`/`CLAUDE_API_KEY`);
@@ -15,11 +20,28 @@
  * any account/card/reference columns are never included. The telemetry
  * `contextId` is an opaque import-batch key, never the description.
  */
-import Anthropic from '@anthropic-ai/sdk';
-
 import { buildEntryFromText, callApiOrThrow } from './ai-categorizer-api.js';
 import { callBatchApiOrThrow, parseBatchEntries } from './ai-categorizer-batch-api.js';
+import {
+  computeCostUsd,
+  createCategorizerClient,
+  getApiKey,
+  getBatchMaxTokens,
+  getMaxTokens,
+  getModel,
+  getTagsOnlyMaxTokens,
+  isAiCategorizerEnabled,
+} from './ai-categorizer-config.js';
 import { AiCategorizationError } from './ai-categorizer-error.js';
+import { callTagsOnlyApiOrThrow, parseTagsOnlyEntries } from './ai-tags-only-api.js';
+
+export {
+  CATEGORIZER_DEFAULT_MODEL,
+  DEFAULT_CATEGORIZER_BATCH_SIZE,
+  getCategorizerBatchSize,
+  isAiCategorizerEnabled,
+  isTagsForMatchedEnabled,
+} from './ai-categorizer-config.js';
 
 export {
   toCategorizerInput,
@@ -30,59 +52,33 @@ export {
   type CategorizerInput,
 } from './ai-categorizer-types.js';
 
-import type { AiBatchCallResult, AiCallResult, CategorizerInput } from './ai-categorizer-types.js';
+export type { TagsOnlyEntry, TagsOnlyInput } from './ai-tags-only-api.js';
 
-/** Default categorizer model, overridable via `FINANCE_AI_CATEGORIZER_MODEL`. */
-export const CATEGORIZER_DEFAULT_MODEL = 'claude-haiku-4-5-20251001';
-const DEFAULT_MODEL = CATEGORIZER_DEFAULT_MODEL;
-const DEFAULT_MAX_TOKENS = 200;
-// Claude Haiku pricing (USD per 1M tokens) for the cost estimate.
-const INPUT_COST_PER_M = 1.0;
-const OUTPUT_COST_PER_M = 5.0;
-/** Client-side request timeout (ms) — the SDK default (10min) is far too long for a single-row/batch categorization call (CF078/#3670). */
-const CLIENT_TIMEOUT_MS = 30_000;
+import type {
+  AiBatchCallResult,
+  AiCallResult,
+  AiCallUsage,
+  CategorizerInput,
+} from './ai-categorizer-types.js';
+import type { TagsOnlyBatchResult, TagsOnlyInput } from './ai-tags-only-api.js';
 
-/** Default rows per batched categorization call, overridable via `FINANCE_AI_CATEGORIZER_BATCH_SIZE` (CP025/#3656). */
-export const DEFAULT_CATEGORIZER_BATCH_SIZE = 10;
-/** Token budget per row in a batch reply, before the `FINANCE_AI_CATEGORIZER_BATCH_MAX_TOKENS` override. */
-const BATCH_TOKENS_PER_ROW = 150;
-
-/** True only when the categorizer is explicitly enabled via env. Default: disabled. */
-export function isAiCategorizerEnabled(): boolean {
-  return process.env['FINANCE_AI_CATEGORIZER_ENABLED'] === 'true';
+function usageFrom(inputTokens: number, outputTokens: number): AiCallUsage {
+  return { inputTokens, outputTokens, costUsd: computeCostUsd(inputTokens, outputTokens) };
 }
 
-function getModel(): string {
-  return process.env['FINANCE_AI_CATEGORIZER_MODEL'] ?? DEFAULT_MODEL;
+/** The API key, or an `AiCategorizationError` the callers already degrade to an uncertain row. */
+function requireApiKey(): string {
+  const apiKey = getApiKey();
+  if (!apiKey) {
+    throw new AiCategorizationError('ANTHROPIC_API_KEY not configured', 'NO_API_KEY');
+  }
+  return apiKey;
 }
 
-function getMaxTokens(): number {
-  const raw = process.env['FINANCE_AI_CATEGORIZER_MAX_TOKENS'];
-  const parsed = raw !== undefined && raw !== '' ? Number(raw) : Number.NaN;
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : DEFAULT_MAX_TOKENS;
-}
-
-function getApiKey(): string {
-  return process.env['ANTHROPIC_API_KEY'] ?? process.env['CLAUDE_API_KEY'] ?? '';
-}
-
-/** How many pending rows to fold into one categorization call (CP025/#3656). */
-export function getCategorizerBatchSize(): number {
-  const raw = process.env['FINANCE_AI_CATEGORIZER_BATCH_SIZE'];
-  const parsed = raw !== undefined && raw !== '' ? Number(raw) : Number.NaN;
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : DEFAULT_CATEGORIZER_BATCH_SIZE;
-}
-
-function getBatchMaxTokens(rowCount: number): number {
-  const raw = process.env['FINANCE_AI_CATEGORIZER_BATCH_MAX_TOKENS'];
-  const parsed = raw !== undefined && raw !== '' ? Number(raw) : Number.NaN;
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : BATCH_TOKENS_PER_ROW * rowCount;
-}
-
-function computeCostUsd(inputTokens: number, outputTokens: number): number {
-  return (
-    (inputTokens / 1_000_000) * INPUT_COST_PER_M + (outputTokens / 1_000_000) * OUTPUT_COST_PER_M
-  );
+function contextIdOf(importBatchId: string | undefined): { contextId?: string } {
+  return importBatchId !== undefined && importBatchId !== ''
+    ? { contextId: `import_batch:${importBatchId}` }
+    : {};
 }
 
 /**
@@ -100,35 +96,22 @@ export async function categorizeWithAi(
 ): Promise<AiCallResult> {
   if (!isAiCategorizerEnabled()) return { result: null };
 
-  const apiKey = getApiKey();
-  if (!apiKey) {
-    throw new AiCategorizationError('ANTHROPIC_API_KEY not configured', 'NO_API_KEY');
-  }
-
-  const client = new Anthropic({ apiKey, maxRetries: 0, timeout: CLIENT_TIMEOUT_MS });
   const response = await callApiOrThrow({
-    client,
+    client: createCategorizerClient(requireApiKey()),
     input,
     sanitizedDescription: input.description.trim().slice(0, 100),
     model: getModel(),
     maxTokens: getMaxTokens(),
     knownTags,
     knownEntityNames,
-    ...(importBatchId !== undefined && importBatchId !== ''
-      ? { contextId: `import_batch:${importBatchId}` }
-      : {}),
+    ...contextIdOf(importBatchId),
   });
 
   if (!response.text) return { result: null };
 
-  const entry = buildEntryFromText(response.text, knownTags);
   return {
-    result: entry,
-    usage: {
-      inputTokens: response.inputTokens,
-      outputTokens: response.outputTokens,
-      costUsd: computeCostUsd(response.inputTokens, response.outputTokens),
-    },
+    result: buildEntryFromText(response.text, knownTags),
+    usage: usageFrom(response.inputTokens, response.outputTokens),
   };
 }
 
@@ -138,7 +121,7 @@ export async function categorizeWithAi(
  * per row, cutting both wall-clock time and the fixed per-call prompt
  * boilerplate under a large import. Same env gating/PII allowlist as the
  * single-row categorizer; the caller (the import batch resolver) is
- * responsible for chunking `inputs` to {@link getCategorizerBatchSize} and for
+ * responsible for chunking `inputs` to `getCategorizerBatchSize` and for
  * tripping its shared circuit breaker on a `RATE_LIMITED` throw (CP026).
  */
 export async function categorizeBatchWithAi(
@@ -150,33 +133,55 @@ export async function categorizeBatchWithAi(
   if (inputs.length === 0) return { results: [] };
   if (!isAiCategorizerEnabled()) return { results: inputs.map(() => null) };
 
-  const apiKey = getApiKey();
-  if (!apiKey) {
-    throw new AiCategorizationError('ANTHROPIC_API_KEY not configured', 'NO_API_KEY');
-  }
-
-  const client = new Anthropic({ apiKey, maxRetries: 0, timeout: CLIENT_TIMEOUT_MS });
   const response = await callBatchApiOrThrow({
-    client,
+    client: createCategorizerClient(requireApiKey()),
     inputs,
     model: getModel(),
     maxTokens: getBatchMaxTokens(inputs.length),
     knownTags,
     knownEntityNames,
-    ...(importBatchId !== undefined && importBatchId !== ''
-      ? { contextId: `import_batch:${importBatchId}` }
-      : {}),
+    ...contextIdOf(importBatchId),
   });
 
   if (!response.text) return { results: inputs.map(() => null) };
 
-  const results = parseBatchEntries(response.text, inputs.length, knownTags);
   return {
-    results,
-    usage: {
-      inputTokens: response.inputTokens,
-      outputTokens: response.outputTokens,
-      costUsd: computeCostUsd(response.inputTokens, response.outputTokens),
-    },
+    results: parseBatchEntries(response.text, inputs.length, knownTags),
+    usage: usageFrom(response.inputTokens, response.outputTokens),
+  };
+}
+
+/**
+ * Classify rows whose merchant is already known (POPS-2596) — one call for up
+ * to `inputs.length` distinct descriptors, with the entity **given** in the
+ * prompt rather than asked for.
+ *
+ * Gated on `isAiCategorizerEnabled` alone here; the narrower
+ * `FINANCE_AI_CATEGORIZER_TAGS_FOR_MATCHED` gate belongs to the caller
+ * (`ai-tags-resolver.ts`), which is also where the trigger predicate and the
+ * shared circuit breaker live.
+ */
+export async function tagsOnlyBatchWithAi(
+  inputs: TagsOnlyInput[],
+  importBatchId: string | undefined,
+  knownTags: string[]
+): Promise<TagsOnlyBatchResult> {
+  if (inputs.length === 0) return { results: [] };
+  if (!isAiCategorizerEnabled()) return { results: inputs.map(() => null) };
+
+  const response = await callTagsOnlyApiOrThrow({
+    client: createCategorizerClient(requireApiKey()),
+    inputs,
+    model: getModel(),
+    maxTokens: getTagsOnlyMaxTokens(inputs.length),
+    knownTags,
+    ...contextIdOf(importBatchId),
+  });
+
+  if (!response.text) return { results: inputs.map(() => null) };
+
+  return {
+    results: parseTagsOnlyEntries(response.text, inputs.length, knownTags),
+    usage: usageFrom(response.inputTokens, response.outputTokens),
   };
 }
