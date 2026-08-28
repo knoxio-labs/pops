@@ -2,9 +2,10 @@
  * Integration tests for the `arr.*` REST surface (Radarr + Sonarr) via
  * supertest. The upstream *arr HTTP layer is mocked at `globalThis.fetch`
  * with a route table keyed on (method, url substring) so the assertions
- * exercise the real client → handler → contract path. Config is ENV-ONLY,
- * so each test sets `RADARR_*` / `SONARR_*` env vars (or clears them to
- * exercise the unconfigured branch).
+ * exercise the real client → handler → contract path. Config resolves stored
+ * settings over env defaults, so each test sets `RADARR_*` / `SONARR_*` env
+ * vars (or clears them to exercise the unconfigured branch); the settings
+ * group additionally drives the federated `/settings/*` writes the UI makes.
  */
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -16,6 +17,7 @@ import { openMediaDb, type OpenedMediaDb } from '../../db/index.js';
 import { moviesService } from '../../db/index.js';
 import { createMediaApiApp } from '../app.js';
 import { clearStatusCache } from '../clients/arr/index.js';
+import { createTestTransport } from './test-http.js';
 import { makeClient } from './test-utils.js';
 
 const RADARR_URL = 'http://radarr.test:7878';
@@ -74,6 +76,8 @@ const fetchMock = vi.fn((input: string | URL | Request, init?: RequestInit): Pro
   return Promise.resolve(jsonResponse(res.body, res.status ?? 200));
 });
 
+const { requestOn } = createTestTransport();
+
 let tmpDir: string;
 let mediaDb: OpenedMediaDb;
 let tmdbSeq = 50_000;
@@ -108,10 +112,16 @@ afterEach(() => {
   delete process.env['RADARR_ROOT_FOLDER_PATH'];
 });
 
+function app() {
+  return createMediaApiApp({
+    mediaDb,
+    version: '0.0.1-test',
+    selfBaseUrl: 'http://localhost:3003',
+  });
+}
+
 function client() {
-  return makeClient(
-    createMediaApiApp({ mediaDb, version: '0.0.1-test', selfBaseUrl: 'http://localhost:3003' })
-  );
+  return makeClient(app());
 }
 
 function nextTmdb(): number {
@@ -124,7 +134,7 @@ function nextTvdb(): number {
   return tvdbSeq;
 }
 
-describe('arr — config & settings (env-only)', () => {
+describe('arr — config & settings', () => {
   it('reports configured when env vars are set', async () => {
     const cfg = await client().arr.config();
     expect(cfg.data).toEqual({ radarrConfigured: true, sonarrConfigured: true });
@@ -146,6 +156,37 @@ describe('arr — config & settings (env-only)', () => {
     delete process.env['SONARR_API_KEY'];
     const cfg = await client().arr.config();
     expect(cfg.data).toEqual({ radarrConfigured: false, sonarrConfigured: false });
+  });
+
+  it('a settings write redirects the upstream call away from the env default', async () => {
+    const storedUrl = 'http://radarr.stored:7878';
+    await requestOn(app()).put('/settings/radarr_url').send({ value: storedUrl }).expect(200);
+
+    expect((await client().arr.settings()).data.radarrUrl).toBe(storedUrl);
+
+    route('GET', '/qualityprofile', () => ({ body: [{ id: 1, name: 'HD' }] }));
+    await client().arr.radarrQualityProfiles();
+    expect(requireCall((c) => c.url.includes('/qualityprofile')).url.startsWith(storedUrl)).toBe(
+      true
+    );
+  });
+
+  it('a settings write configures Radarr with no env at all', async () => {
+    delete process.env['RADARR_URL'];
+    delete process.env['RADARR_API_KEY'];
+    expect((await client().arr.config()).data.radarrConfigured).toBe(false);
+
+    await requestOn(app())
+      .post('/settings/set-many')
+      .send({
+        entries: [
+          { key: 'radarr_url', value: 'http://radarr.stored:7878' },
+          { key: 'radarr_api_key', value: 'stored-radarr-key' },
+        ],
+      })
+      .expect(200);
+
+    expect((await client().arr.config()).data.radarrConfigured).toBe(true);
   });
 });
 

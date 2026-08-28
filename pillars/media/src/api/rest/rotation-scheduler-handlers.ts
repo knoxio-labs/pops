@@ -19,9 +19,11 @@ import type { mediaRotationContract } from '../../contract/rest-rotation.js';
 
 type Req = ServerInferRequest<typeof mediaRotationContract>;
 
-async function readDiskSpace(): Promise<{ available: boolean; disks: RadarrDiskSpace[] }> {
+async function readDiskSpace(
+  db: MediaDb
+): Promise<{ available: boolean; disks: RadarrDiskSpace[] }> {
   try {
-    const client = getRadarrClient();
+    const client = getRadarrClient(db);
     if (!client) return { available: false, disks: [] };
     return { available: true, disks: await client.getDiskSpace() };
   } catch {
@@ -101,7 +103,7 @@ export function makeRotationSchedulerHandlers(db: MediaDb) {
       })),
 
     schedulerDiskSpace: () =>
-      runHttp(async () => ({ status: 200 as const, body: { data: await readDiskSpace() } })),
+      runHttp(async () => ({ status: 200 as const, body: { data: await readDiskSpace(db) } })),
 
     listRotationLog: ({ query }: Req['listRotationLog']) =>
       runHttp(() => ({

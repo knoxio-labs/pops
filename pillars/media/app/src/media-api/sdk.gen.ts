@@ -456,7 +456,7 @@ export type Options<
 };
 
 /**
- * Env-derived configuration state for Radarr + Sonarr
+ * Configuration state for Radarr + Sonarr
  */
 export const arrConfig = <ThrowOnError extends boolean = false>(
   options?: Options<ArrConfigData, ThrowOnError>
@@ -618,7 +618,7 @@ export const arrTestRadarr = <ThrowOnError extends boolean = false>(
   });
 
 /**
- * Test the env-configured Radarr connection
+ * Test the resolved Radarr connection
  */
 export const arrTestRadarrSaved = <ThrowOnError extends boolean = false>(
   options?: Options<ArrTestRadarrSavedData, ThrowOnError>
@@ -633,7 +633,7 @@ export const arrTestRadarrSaved = <ThrowOnError extends boolean = false>(
   });
 
 /**
- * Read-only env-derived arr settings (URLs + presence flags; no key values)
+ * Read-only arr settings (URLs + presence flags; no key values)
  */
 export const arrSettings = <ThrowOnError extends boolean = false>(
   options?: Options<ArrSettingsData, ThrowOnError>
@@ -851,7 +851,7 @@ export const arrTestSonarr = <ThrowOnError extends boolean = false>(
   });
 
 /**
- * Test the env-configured Sonarr connection
+ * Test the resolved Sonarr connection
  */
 export const arrTestSonarrSaved = <ThrowOnError extends boolean = false>(
   options?: Options<ArrTestSonarrSavedData, ThrowOnError>

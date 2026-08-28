@@ -1,8 +1,9 @@
+import { getRadarrClient, getSonarrClient } from './config.js';
+
 /**
  * Combined Radarr + Sonarr download queue with a 30-second module cache.
  */
-import { getRadarrClient, getSonarrClient } from './config.js';
-
+import type { MediaDb } from '../../../db/index.js';
 import type { DownloadQueueItem, RadarrQueueRecord, SonarrQueueRecord } from './types.js';
 
 const QUEUE_CACHE_TTL_MS = 30 * 1000;
@@ -45,13 +46,13 @@ function mapSonarrRecord(record: SonarrQueueRecord): DownloadQueueItem {
 }
 
 /** Get combined download queue from Radarr + Sonarr with 30s cache. */
-export async function getDownloadQueue(): Promise<DownloadQueueItem[]> {
+export async function getDownloadQueue(db: MediaDb): Promise<DownloadQueueItem[]> {
   if (queueCache && queueCache.expiresAt > Date.now()) {
     return queueCache.items;
   }
 
-  const radarrClient = getRadarrClient();
-  const sonarrClient = getSonarrClient();
+  const radarrClient = getRadarrClient(db);
+  const sonarrClient = getSonarrClient(db);
 
   const [radarrQueue, sonarrQueue] = await Promise.all([
     radarrClient ? radarrClient.getQueue().catch(() => null) : null,

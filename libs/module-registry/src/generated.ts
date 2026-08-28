@@ -1008,12 +1008,14 @@ export const MODULES = [
                 key: 'radarr_url',
                 label: 'Radarr URL',
                 type: 'url',
+                envFallback: 'RADARR_URL',
               },
               {
                 key: 'radarr_api_key',
                 label: 'Radarr API Key',
                 type: 'password',
                 sensitive: true,
+                envFallback: 'RADARR_API_KEY',
                 testAction: {
                   procedure: 'media.arr.testRadarrSaved',
                   label: 'Test Radarr',
@@ -1030,12 +1032,14 @@ export const MODULES = [
                 key: 'sonarr_url',
                 label: 'Sonarr URL',
                 type: 'url',
+                envFallback: 'SONARR_URL',
               },
               {
                 key: 'sonarr_api_key',
                 label: 'Sonarr API Key',
                 type: 'password',
                 sensitive: true,
+                envFallback: 'SONARR_API_KEY',
                 testAction: {
                   procedure: 'media.arr.testSonarrSaved',
                   label: 'Test Sonarr',
@@ -1053,6 +1057,7 @@ export const MODULES = [
                 key: 'rotation_quality_profile_id',
                 label: 'Quality Profile',
                 type: 'select',
+                envFallback: 'RADARR_QUALITY_PROFILE_ID',
                 optionsLoader: {
                   procedure: 'media.arr.getQualityProfiles',
                   valueKey: 'id',
@@ -1063,6 +1068,7 @@ export const MODULES = [
                 key: 'rotation_root_folder_path',
                 label: 'Root Folder',
                 type: 'select',
+                envFallback: 'RADARR_ROOT_FOLDER_PATH',
                 optionsLoader: {
                   procedure: 'media.arr.getRootFolders',
                   valueKey: 'path',

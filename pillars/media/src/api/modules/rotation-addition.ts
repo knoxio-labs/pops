@@ -86,7 +86,7 @@ export async function addMoviesFromQueue(db: MediaDb, budget: number): Promise<A
     };
   }
 
-  const client = getRadarrClient();
+  const client = getRadarrClient(db);
   if (!client) {
     return {
       added: 0,
@@ -95,12 +95,12 @@ export async function addMoviesFromQueue(db: MediaDb, budget: number): Promise<A
     };
   }
 
-  const defaults = getRotationDefaults();
+  const defaults = getRotationDefaults(db);
   if (!defaults) {
     return {
       added: 0,
       addedMovies: [],
-      skippedReason: 'RADARR_QUALITY_PROFILE_ID or RADARR_ROOT_FOLDER_PATH not configured',
+      skippedReason: 'Radarr quality profile or root folder not configured',
     };
   }
 

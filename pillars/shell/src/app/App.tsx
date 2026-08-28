@@ -1,6 +1,7 @@
 /**
  * Root App component with all providers
  */
+import { browserSdkOptions } from '@/lib/browser-discovery-transport';
 import { isNetworkError } from '@/lib/network-error';
 import { useThemeStore } from '@/store/themeStore';
 import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -68,7 +69,7 @@ export function App({ bootRegistry }: AppProps) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <PillarSdkProvider>
+      <PillarSdkProvider options={browserSdkOptions}>
         <BootRegistryProvider value={bootRegistry}>
           <PillarStatusProvider>
             <TooltipProvider>
