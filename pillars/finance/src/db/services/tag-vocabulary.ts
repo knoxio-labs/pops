@@ -98,3 +98,65 @@ export function incrementVocabularyUsage(db: FinanceDb, tags: readonly string[])
     .where(inArray(tagVocabulary.tag, distinct))
     .run();
 }
+
+/**
+ * The comparison form of a tag: trimmed and lower-cased.
+ *
+ * Membership in the vocabulary is a question about the value, not about how it
+ * was typed — `venue:Bar` and `venue:bar` are the same value. Exported so a
+ * caller that has to key its own map by tag agrees with {@link KnownTagSet}
+ * rather than inventing a second normalisation.
+ */
+export function normalizeTagForComparison(tag: string): string {
+  return tag.trim().toLowerCase();
+}
+
+/**
+ * The set of tags the vocabulary confers standing on, answering the single
+ * question "is this tag known".
+ *
+ * Exists so the readers that ask it cannot drift apart: before POPS-2602 the
+ * suggester tested `isNew` against the closed vocabulary alone while the
+ * tag-rule preview tested it against the whole active one, so the same tag was
+ * new on one screen and not on the other.
+ */
+export interface KnownTagSet {
+  /** True when `tag` is in the active vocabulary, compared case-insensitively. */
+  has(tag: string): boolean;
+  /** How many distinct tags the set holds. */
+  readonly size: number;
+}
+
+/**
+ * Build a {@link KnownTagSet} over an in-memory tag list.
+ *
+ * A blank or whitespace-only entry is dropped rather than admitted: it is not a
+ * tag, and admitting it would make `has('')` true and so report an empty tag as
+ * already known.
+ */
+export function createKnownTagSet(tags: Iterable<string>): KnownTagSet {
+  const normalized = new Set<string>();
+  for (const tag of tags) {
+    const key = normalizeTagForComparison(tag);
+    if (key !== '') normalized.add(key);
+  }
+  return {
+    has: (tag) => {
+      const key = normalizeTagForComparison(tag);
+      return key !== '' && normalized.has(key);
+    },
+    get size() {
+      return normalized.size;
+    },
+  };
+}
+
+/** The active vocabulary as a {@link KnownTagSet}. */
+export function loadKnownTagSet(db: FinanceDb): KnownTagSet {
+  return createKnownTagSet(listVocabularyTags(db));
+}
+
+/** Whether one tag is in the active vocabulary. Prefer {@link loadKnownTagSet} in a loop. */
+export function isKnownTag(db: FinanceDb, tag: string): boolean {
+  return loadKnownTagSet(db).has(tag);
+}

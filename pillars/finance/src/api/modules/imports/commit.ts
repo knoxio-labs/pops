@@ -30,6 +30,14 @@
  * so the correction/tag-rule ChangeSet applies nest as savepoints rather than
  * opening independent transactions.
  *
+ * Which tags a commit may add to `tag_vocabulary` is decided by
+ * `planCommitTagVocabulary` BEFORE the transaction (and before contacts
+ * pre-create, which the transaction does not cover), so a payload naming a
+ * value a closed namespace does not hold is refused with a 400 having written
+ * nothing at all. The plan is applied as the transaction's first phase, ahead
+ * of the transaction writes whose `incrementVocabularyUsage` must find those
+ * rows already present.
+ *
  * `payload.commitKey` (issues #3640/#3642), when supplied, makes a resubmit
  * of the same commit a no-op: a pre-flight check returns the first call's
  * recorded result immediately (before contacts pre-create runs again), and
@@ -55,11 +63,8 @@ import {
   preCreatePendingContacts,
 } from './commit-contacts-precreate.js';
 import { pairTransfersPhase } from './commit-pair-transfers.js';
-import {
-  collectTagsFromTagRuleChangeSet,
-  resolveChangeSetTempIds,
-  resolveTagRuleChangeSetTempIds,
-} from './commit-temp-resolver.js';
+import { applyCommitTagVocabulary, planCommitTagVocabulary } from './commit-tag-vocabulary.js';
+import { resolveChangeSetTempIds, resolveTagRuleChangeSetTempIds } from './commit-temp-resolver.js';
 import {
   assertPersistableEntityId,
   COMMIT_TEMP_ENTITY_PREFIX,
@@ -107,11 +112,6 @@ function applyTagRuleChangeSetsPhase(
   let tagRulesApplied = 0;
   for (const entry of payload.tagRuleChangeSets) {
     const resolved = resolveTagRuleChangeSetTempIds(entry.changeSet, tempIdMap);
-    const vocabularyTags = entry.acceptedNewTags ?? collectTagsFromTagRuleChangeSet(resolved);
-    for (const tag of vocabularyTags) {
-      const trimmed = tag.trim();
-      if (trimmed) tagVocabularyService.upsertVocabularyTag(tx, trimmed, 'user');
-    }
     applyTagRuleChangeSet(tx, resolved);
     tagRulesApplied += resolved.ops.length;
   }
@@ -184,6 +184,7 @@ export async function commitImport(
   payload: CommitPayload
 ): Promise<CommitResult> {
   validateCommitPayload(payload);
+  const tagPlan = planCommitTagVocabulary(db, payload);
 
   const { commitKey } = payload;
   if (commitKey) {
@@ -199,6 +200,7 @@ export async function commitImport(
   try {
     return db.transaction((tx) => {
       enqueueOutboxCandidatesPhase(tx, outboxCandidates);
+      applyCommitTagVocabulary(tx, tagPlan);
       const rulesApplied = applyChangeSetsPhase(tx, payload, tempIdMap);
       const tagRulesApplied = applyTagRuleChangeSetsPhase(tx, payload, tempIdMap);
       const writeResult = writeTransactionsPhase(tx, payload, tempIdMap);

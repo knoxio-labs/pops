@@ -29,6 +29,11 @@ import { tagVocabularyService, type FinanceDb } from '../../../db/index.js';
  * are the failure `previewRuleMatchTransactions` was written to avoid, and
  * silently capping "affects N transactions" at the page size is the same
  * failure with a different rule kind.
+ *
+ * `isNew` is answered by `loadKnownTagSet`, the same helper the suggester uses,
+ * so this preview and the import wizard cannot disagree about whether a tag is
+ * new — and the comparison is case-insensitive, so a tag differing from the
+ * stored value only in case is not proposed as new (POPS-2602).
  */
 import { suggestTags } from '../tag-suggester/index.js';
 import { loadPersistedTagRules, mergeChangeSetOverRules } from './merged-rules.js';
@@ -46,10 +51,10 @@ interface SuggestArgs {
   db: FinanceDb;
   transaction: PreviewInputTransaction;
   rules: readonly InMemoryTagRule[];
-  vocabulary: Set<string>;
+  knownTags: tagVocabularyService.KnownTagSet;
 }
 
-function suggestOver({ db, transaction, rules, vocabulary }: SuggestArgs): TagSuggestion[] {
+function suggestOver({ db, transaction, rules, knownTags }: SuggestArgs): TagSuggestion[] {
   return suggestTags(db, {
     description: transaction.description,
     entityId: transaction.entityId ?? null,
@@ -59,7 +64,7 @@ function suggestOver({ db, transaction, rules, vocabulary }: SuggestArgs): TagSu
     tag: s.tag,
     source: s.source,
     ...(s.pattern === undefined ? {} : { pattern: s.pattern }),
-    isNew: !vocabulary.has(s.tag.toLowerCase()),
+    isNew: !knownTags.has(s.tag),
   }));
 }
 
@@ -118,9 +123,7 @@ export function previewTagRuleChangeSet(
     maxPreviewItems: number;
   }
 ): TagRulePreview {
-  const vocabulary = new Set(
-    tagVocabularyService.listVocabularyTags(db).map((t) => t.toLowerCase())
-  );
+  const knownTags = tagVocabularyService.loadKnownTagSet(db);
   const persisted = loadPersistedTagRules(db);
   const merged = mergeChangeSetOverRules(persisted, args.changeSet);
 
@@ -136,8 +139,8 @@ export function previewTagRuleChangeSet(
   for (const transaction of args.transactions) {
     if (transaction.userTags !== undefined) continue;
 
-    const before = suggestOver({ db, transaction, rules: persisted, vocabulary });
-    const after = suggestOver({ db, transaction, rules: merged, vocabulary });
+    const before = suggestOver({ db, transaction, rules: persisted, knownTags });
+    const after = suggestOver({ db, transaction, rules: merged, knownTags });
     const diff = diffTags(before, after);
     if (diff.added.length === 0 && diff.removed.length === 0) continue;
 
