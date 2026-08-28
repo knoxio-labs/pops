@@ -18,6 +18,7 @@
  * a rule narrowing its own tag list as adding nothing.
  */
 import { transactionCorrectionsService, transactionTagRulesService } from '../../../db/index.js';
+import { parseStoredTags } from '../../../db/tag-facets.js';
 
 import type {
   TagRuleChangeSet,
@@ -38,7 +39,7 @@ export function loadPersistedTagRules(db: FinanceDb): InMemoryTagRule[] {
     descriptionPattern: row.descriptionPattern,
     matchType: row.matchType,
     entityId: row.entityId,
-    tags: transactionTagRulesService.parseTagRuleTags(row.tags),
+    tags: parseStoredTags(row.tags),
     isActive: row.isActive,
     confidence: row.confidence,
     priority: row.priority,

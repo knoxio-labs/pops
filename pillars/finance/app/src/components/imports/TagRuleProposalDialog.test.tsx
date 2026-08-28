@@ -83,7 +83,7 @@ const baseProposal: ProposeData = {
         transactionId: 't1',
         description: 'WOOLWORTHS 1234',
         before: { suggestedTags: [] },
-        after: { suggestedTags: [{ tag: 'Groceries', source: 'tag_rule', isNew: false }] },
+        after: { suggestedTags: [{ tag: 'Groceries', source: 'rule', isNew: false }] },
       },
     ],
     newTags: [],

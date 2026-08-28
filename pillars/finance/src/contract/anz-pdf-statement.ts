@@ -116,6 +116,7 @@ function toTransaction(
     foreignAmountMinor: foreignCharge?.amountMinor,
     foreignCurrency: foreignCharge?.currency,
     fxFeeCents: foreignCharge?.feeCents,
+    fxCaptureSource: 'anz-descriptor',
     rawRow: JSON.stringify({ source: 'anz-pdf-statement', line }),
     checksum: options.hashDedupKey(dedupKey),
   };

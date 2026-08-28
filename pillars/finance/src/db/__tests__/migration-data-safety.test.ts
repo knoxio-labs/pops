@@ -109,7 +109,11 @@ const TRANSACTIONS: readonly SeededTransaction[] = [
     // on the default rather than leave it as-is.
     type: '',
     tags: ['Fees'],
-    migratedTags: ['contains:fee'],
+    // 0067 mapped the flat `Fees` tag to `contains:fee`; 0073 retired that value
+    // in favour of `type = 'fee'` plus a `fee:` value. This descriptor is one the
+    // classifier cannot type, so the tag is kept as the only surviving evidence
+    // and the row is flagged for a human instead (POPS-2632).
+    migratedTags: ['contains:fee', 'flag:needs-review'],
     entityId: null,
     notes: null,
   },
@@ -360,6 +364,18 @@ describe('applying the rest of the journal to a populated finance database', () 
     expect(stored).toEqual([
       { foreign_amount_minor: 1100, foreign_currency: 'JPY', fx_fee_cents: 40, notes: null },
     ]);
+  });
+
+  it('leaves fx_capture_source NULL on a row whose raw_row names no parser', () => {
+    // 0074 marks what 0072 could read and nothing else. These fixtures carry no
+    // `raw_row`, so nobody can say what capture ran on them and NULL is the only
+    // truthful value — `unavailable` is a claim only an importer may make
+    // (POPS-2647).
+    const stored = rows<{ id: string; fx_capture_source: string | null }>(
+      `SELECT id, fx_capture_source FROM transactions ORDER BY id`
+    );
+    expect(stored).toHaveLength(TRANSACTIONS.length);
+    for (const row of stored) expect(row.fx_capture_source).toBeNull();
   });
 
   it('leaves a user-authored note byte-identical', () => {

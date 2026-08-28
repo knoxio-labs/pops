@@ -461,8 +461,8 @@ describe('TagReviewStep — Save tag rule wiring (US-02 / US-03)', () => {
             before: { suggestedTags: [] },
             after: {
               suggestedTags: [
-                { tag: 'Groceries', source: 'tag_rule' as const },
-                { tag: 'Food', source: 'tag_rule' as const },
+                { tag: 'Groceries', source: 'rule' as const },
+                { tag: 'Food', source: 'rule' as const },
               ],
             },
           },
@@ -594,7 +594,7 @@ describe('TagReviewStep — handleTagRuleApplied live re-suggestion (US-03)', ()
         transactionId: checksum,
         description: 'SUPERMARKET TX',
         before: { suggestedTags: [] },
-        after: { suggestedTags: tags.map((tag) => ({ tag, source: 'tag_rule' as const })) },
+        after: { suggestedTags: tags.map((tag) => ({ tag, source: 'rule' as const })) },
       },
     ];
   }

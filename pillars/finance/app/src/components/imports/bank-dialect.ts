@@ -1,6 +1,6 @@
 import { parseAmexRow, parseAnzDescription } from '@pops/finance';
 
-import type { AnzForeignCharge } from '@pops/finance';
+import type { AnzForeignCharge, FxCaptureSource } from '@pops/finance';
 
 import type { BankType } from '../../store/import-store-types';
 
@@ -44,6 +44,11 @@ export interface DerivedFields {
   country?: string;
   /** Set only for an overseas charge the bank's parser could scale to minor units. */
   foreignCharge?: AnzForeignCharge;
+  /**
+   * Overrides the dialect's {@link BankDialect.fxCaptureSource} for this row,
+   * for a bank whose exports differ in what they carry (POPS-2647).
+   */
+  fxCaptureSource?: FxCaptureSource;
 }
 
 export interface BankDialect {
@@ -61,6 +66,13 @@ export interface BankDialect {
    * the description string, Amex puts them in columns the mapper does not offer.
    */
   deriveFields?: (description: string, row: Record<string, string>) => DerivedFields;
+  /**
+   * What this bank's export can say about a foreign charge (POPS-2647). Every
+   * dialect declares one, including `unavailable`, so a stored row records that
+   * capture ran and found nothing rather than leaving a reader unable to tell
+   * that from never having looked. A parser may narrow it per row.
+   */
+  fxCaptureSource: FxCaptureSource;
 }
 
 /**
@@ -74,21 +86,31 @@ const ANZ_CREDIT_CARD: BankDialect = {
   columns: HEADERLESS_ANZ_COLUMNS,
   amountSign: 'debit-negative',
   deriveFields: parseAnzDescription,
+  fxCaptureSource: 'anz-descriptor',
 };
 
-const DEFAULT_DIALECT: BankDialect = { hasHeader: true, amountSign: 'debit-positive' };
+/**
+ * A plain export whose columns hold each field separately. Nothing in it names
+ * a country or a foreign amount, which is what `unavailable` states.
+ */
+const DEFAULT_DIALECT: BankDialect = {
+  hasHeader: true,
+  amountSign: 'debit-positive',
+  fxCaptureSource: 'unavailable',
+};
 
 /**
  * Amex ships a header row and signs purchases positive like the default, but
  * its long export carries the merchant country and the foreign-charge detail in
  * columns the mapper does not offer — so those are read from the row here. Its
- * short export has none of those columns, which this reads as a domestic row
- * with no country, the only honest reading available.
+ * short export has none of those columns, so the parser narrows the row to
+ * `unavailable`: nothing to read is not the same statement as nothing to find.
  */
 const AMEX: BankDialect = {
   hasHeader: true,
   amountSign: 'debit-positive',
   deriveFields: (description, row) => ({ description, ...parseAmexRow(row) }),
+  fxCaptureSource: 'unavailable',
 };
 
 const DIALECTS: Readonly<Record<BankType, BankDialect>> = {

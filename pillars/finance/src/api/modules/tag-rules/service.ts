@@ -16,6 +16,7 @@ import {
   type TagRuleRejection,
   type TransactionTagRuleRow,
 } from '../../../db/index.js';
+import { parseStoredTags } from '../../../db/tag-facets.js';
 import { previewTagRuleChangeSet } from './preview.js';
 
 import type { TagRuleChangeSet, TagRuleChangeSetOp } from '../../../contract/rest-tag-rules.js';
@@ -42,7 +43,7 @@ export function toTagRule(row: TransactionTagRuleRow): TagRule {
     descriptionPattern: row.descriptionPattern,
     matchType: row.matchType,
     entityId: row.entityId,
-    tags: transactionTagRulesService.parseTagRuleTags(row.tags),
+    tags: parseStoredTags(row.tags),
     isActive: row.isActive,
     confidence: row.confidence,
     priority: row.priority,

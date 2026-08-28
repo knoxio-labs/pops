@@ -2494,6 +2494,7 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
         error?: string;
         foreignAmountMinor?: number;
         foreignCurrency?: string;
+        fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'unavailable';
         fxFeeCents?: number;
         location?: string;
         matchedRules?: Array<{
@@ -2556,6 +2557,7 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
         error?: string;
         foreignAmountMinor?: number;
         foreignCurrency?: string;
+        fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'unavailable';
         fxFeeCents?: number;
         location?: string;
         matchedRules?: Array<{
@@ -2618,6 +2620,7 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
         error?: string;
         foreignAmountMinor?: number;
         foreignCurrency?: string;
+        fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'unavailable';
         fxFeeCents?: number;
         location?: string;
         matchedRules?: Array<{
@@ -2680,6 +2683,7 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
         error?: string;
         foreignAmountMinor?: number;
         foreignCurrency?: string;
+        fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'unavailable';
         fxFeeCents?: number;
         location?: string;
         matchedRules?: Array<{
@@ -2858,6 +2862,7 @@ export type ImportsCommitImportData = {
       entityName?: string;
       foreignAmountMinor?: number;
       foreignCurrency?: string;
+      fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'unavailable';
       fxFeeCents?: number;
       location?: string;
       matchConfidence?: number;
@@ -3015,6 +3020,7 @@ export type ImportsProcessImportData = {
       description: string;
       foreignAmountMinor?: number;
       foreignCurrency?: string;
+      fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'unavailable';
       fxFeeCents?: number;
       location?: string;
       rawRow: string;
@@ -3155,6 +3161,7 @@ export type ImportsGetImportProgressResponses = {
         error?: string;
         foreignAmountMinor?: number;
         foreignCurrency?: string;
+        fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'unavailable';
         fxFeeCents?: number;
         location?: string;
         matchedRules?: Array<{
@@ -3217,6 +3224,7 @@ export type ImportsGetImportProgressResponses = {
         error?: string;
         foreignAmountMinor?: number;
         foreignCurrency?: string;
+        fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'unavailable';
         fxFeeCents?: number;
         location?: string;
         matchedRules?: Array<{
@@ -3279,6 +3287,7 @@ export type ImportsGetImportProgressResponses = {
         error?: string;
         foreignAmountMinor?: number;
         foreignCurrency?: string;
+        fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'unavailable';
         fxFeeCents?: number;
         location?: string;
         matchedRules?: Array<{
@@ -3341,6 +3350,7 @@ export type ImportsGetImportProgressResponses = {
         error?: string;
         foreignAmountMinor?: number;
         foreignCurrency?: string;
+        fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'unavailable';
         fxFeeCents?: number;
         location?: string;
         matchedRules?: Array<{
@@ -3553,6 +3563,7 @@ export type ImportsReevaluateWithPendingRulesResponses = {
         error?: string;
         foreignAmountMinor?: number;
         foreignCurrency?: string;
+        fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'unavailable';
         fxFeeCents?: number;
         location?: string;
         matchedRules?: Array<{
@@ -3615,6 +3626,7 @@ export type ImportsReevaluateWithPendingRulesResponses = {
         error?: string;
         foreignAmountMinor?: number;
         foreignCurrency?: string;
+        fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'unavailable';
         fxFeeCents?: number;
         location?: string;
         matchedRules?: Array<{
@@ -3677,6 +3689,7 @@ export type ImportsReevaluateWithPendingRulesResponses = {
         error?: string;
         foreignAmountMinor?: number;
         foreignCurrency?: string;
+        fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'unavailable';
         fxFeeCents?: number;
         location?: string;
         matchedRules?: Array<{
@@ -3739,6 +3752,7 @@ export type ImportsReevaluateWithPendingRulesResponses = {
         error?: string;
         foreignAmountMinor?: number;
         foreignCurrency?: string;
+        fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'unavailable';
         fxFeeCents?: number;
         location?: string;
         matchedRules?: Array<{
@@ -4648,7 +4662,7 @@ export type TagRulesPreviewResponses = {
         suggestedTags: Array<{
           isNew?: boolean;
           pattern?: string;
-          source: 'tag_rule' | 'rule' | 'ai' | 'entity';
+          source: 'rule' | 'ai' | 'entity';
           tag: string;
         }>;
       };
@@ -4656,7 +4670,7 @@ export type TagRulesPreviewResponses = {
         suggestedTags: Array<{
           isNew?: boolean;
           pattern?: string;
-          source: 'tag_rule' | 'rule' | 'ai' | 'entity';
+          source: 'rule' | 'ai' | 'entity';
           tag: string;
         }>;
       };
@@ -4776,7 +4790,7 @@ export type TagRulesProposeResponses = {
           suggestedTags: Array<{
             isNew?: boolean;
             pattern?: string;
-            source: 'tag_rule' | 'rule' | 'ai' | 'entity';
+            source: 'rule' | 'ai' | 'entity';
             tag: string;
           }>;
         };
@@ -4784,7 +4798,7 @@ export type TagRulesProposeResponses = {
           suggestedTags: Array<{
             isNew?: boolean;
             pattern?: string;
-            source: 'tag_rule' | 'rule' | 'ai' | 'entity';
+            source: 'rule' | 'ai' | 'entity';
             tag: string;
           }>;
         };
@@ -5292,6 +5306,7 @@ export type TransactionsListResponses = {
       entityName: string | null;
       foreignAmountMinor: number | null;
       foreignCurrency: string | null;
+      fxCaptureSource: 'amex-columns' | 'anz-descriptor' | 'unavailable' | null;
       fxFeeCents: number | null;
       id: string;
       lastEditedTime: string;
@@ -5399,6 +5414,7 @@ export type TransactionsCreateResponses = {
       entityName: string | null;
       foreignAmountMinor: number | null;
       foreignCurrency: string | null;
+      fxCaptureSource: 'amex-columns' | 'anz-descriptor' | 'unavailable' | null;
       fxFeeCents: number | null;
       id: string;
       lastEditedTime: string;
@@ -5484,6 +5500,7 @@ export type TransactionsRestoreData = {
     entityName: string | null;
     foreignAmountMinor: number | null;
     foreignCurrency: string | null;
+    fxCaptureSource: 'amex-columns' | 'anz-descriptor' | 'unavailable' | null;
     fxFeeCents: number | null;
     id: string;
     lastEditedTime: string;
@@ -5565,6 +5582,7 @@ export type TransactionsRestoreResponses = {
       entityName: string | null;
       foreignAmountMinor: number | null;
       foreignCurrency: string | null;
+      fxCaptureSource: 'amex-columns' | 'anz-descriptor' | 'unavailable' | null;
       fxFeeCents: number | null;
       id: string;
       lastEditedTime: string;
@@ -5677,6 +5695,7 @@ export type TransactionsDeleteResponses = {
       entityName: string | null;
       foreignAmountMinor: number | null;
       foreignCurrency: string | null;
+      fxCaptureSource: 'amex-columns' | 'anz-descriptor' | 'unavailable' | null;
       fxFeeCents: number | null;
       id: string;
       lastEditedTime: string;
@@ -5768,6 +5787,7 @@ export type TransactionsGetResponses = {
       entityName: string | null;
       foreignAmountMinor: number | null;
       foreignCurrency: string | null;
+      fxCaptureSource: 'amex-columns' | 'anz-descriptor' | 'unavailable' | null;
       fxFeeCents: number | null;
       id: string;
       lastEditedTime: string;
@@ -5869,6 +5889,7 @@ export type TransactionsUpdateResponses = {
       entityName: string | null;
       foreignAmountMinor: number | null;
       foreignCurrency: string | null;
+      fxCaptureSource: 'amex-columns' | 'anz-descriptor' | 'unavailable' | null;
       fxFeeCents: number | null;
       id: string;
       lastEditedTime: string;
@@ -5953,6 +5974,7 @@ export type TransactionsUnlinkTransferResponses = {
       entityName: string | null;
       foreignAmountMinor: number | null;
       foreignCurrency: string | null;
+      fxCaptureSource: 'amex-columns' | 'anz-descriptor' | 'unavailable' | null;
       fxFeeCents: number | null;
       id: string;
       lastEditedTime: string;

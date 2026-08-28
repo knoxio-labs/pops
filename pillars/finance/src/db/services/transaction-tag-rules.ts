@@ -37,16 +37,6 @@ export type TransactionTagRuleRow = typeof transactionTagRules.$inferSelect;
 /** Match strategy for the rule's description pattern. */
 export type TagRuleMatchType = 'exact' | 'contains' | 'regex';
 
-/** Parse a rule row's JSON-encoded `tags` column into a `string[]`. */
-export function parseTagRuleTags(raw: string): string[] {
-  try {
-    const parsed = JSON.parse(raw) as unknown;
-    return Array.isArray(parsed) ? parsed.filter((t): t is string => typeof t === 'string') : [];
-  } catch {
-    return [];
-  }
-}
-
 /** Mutable subset accepted on create. `tags` is the parsed `string[]` form. */
 export interface CreateTransactionTagRuleInput {
   descriptionPattern: string;

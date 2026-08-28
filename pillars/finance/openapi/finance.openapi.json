@@ -6697,6 +6697,10 @@
                                 "pattern": "^[A-Z]{3}$",
                                 "type": "string"
                               },
+                              "fxCaptureSource": {
+                                "enum": ["amex-columns", "anz-descriptor", "unavailable"],
+                                "type": "string"
+                              },
                               "fxFeeCents": {
                                 "maximum": 9007199254740991,
                                 "minimum": -9007199254740991,
@@ -6911,6 +6915,10 @@
                               },
                               "foreignCurrency": {
                                 "pattern": "^[A-Z]{3}$",
+                                "type": "string"
+                              },
+                              "fxCaptureSource": {
+                                "enum": ["amex-columns", "anz-descriptor", "unavailable"],
                                 "type": "string"
                               },
                               "fxFeeCents": {
@@ -7129,6 +7137,10 @@
                                 "pattern": "^[A-Z]{3}$",
                                 "type": "string"
                               },
+                              "fxCaptureSource": {
+                                "enum": ["amex-columns", "anz-descriptor", "unavailable"],
+                                "type": "string"
+                              },
                               "fxFeeCents": {
                                 "maximum": 9007199254740991,
                                 "minimum": -9007199254740991,
@@ -7343,6 +7355,10 @@
                               },
                               "foreignCurrency": {
                                 "pattern": "^[A-Z]{3}$",
+                                "type": "string"
+                              },
+                              "fxCaptureSource": {
+                                "enum": ["amex-columns", "anz-descriptor", "unavailable"],
                                 "type": "string"
                               },
                               "fxFeeCents": {
@@ -8082,6 +8098,10 @@
                           "pattern": "^[A-Z]{3}$",
                           "type": "string"
                         },
+                        "fxCaptureSource": {
+                          "enum": ["amex-columns", "anz-descriptor", "unavailable"],
+                          "type": "string"
+                        },
                         "fxFeeCents": {
                           "maximum": 9007199254740991,
                           "minimum": -9007199254740991,
@@ -8521,6 +8541,10 @@
                           "pattern": "^[A-Z]{3}$",
                           "type": "string"
                         },
+                        "fxCaptureSource": {
+                          "enum": ["amex-columns", "anz-descriptor", "unavailable"],
+                          "type": "string"
+                        },
                         "fxFeeCents": {
                           "maximum": 9007199254740991,
                           "minimum": -9007199254740991,
@@ -8814,6 +8838,10 @@
                                 "pattern": "^[A-Z]{3}$",
                                 "type": "string"
                               },
+                              "fxCaptureSource": {
+                                "enum": ["amex-columns", "anz-descriptor", "unavailable"],
+                                "type": "string"
+                              },
                               "fxFeeCents": {
                                 "maximum": 9007199254740991,
                                 "minimum": -9007199254740991,
@@ -9028,6 +9056,10 @@
                               },
                               "foreignCurrency": {
                                 "pattern": "^[A-Z]{3}$",
+                                "type": "string"
+                              },
+                              "fxCaptureSource": {
+                                "enum": ["amex-columns", "anz-descriptor", "unavailable"],
                                 "type": "string"
                               },
                               "fxFeeCents": {
@@ -9246,6 +9278,10 @@
                                 "pattern": "^[A-Z]{3}$",
                                 "type": "string"
                               },
+                              "fxCaptureSource": {
+                                "enum": ["amex-columns", "anz-descriptor", "unavailable"],
+                                "type": "string"
+                              },
                               "fxFeeCents": {
                                 "maximum": 9007199254740991,
                                 "minimum": -9007199254740991,
@@ -9460,6 +9496,10 @@
                               },
                               "foreignCurrency": {
                                 "pattern": "^[A-Z]{3}$",
+                                "type": "string"
+                              },
+                              "fxCaptureSource": {
+                                "enum": ["amex-columns", "anz-descriptor", "unavailable"],
                                 "type": "string"
                               },
                               "fxFeeCents": {
@@ -10097,6 +10137,10 @@
                                 "pattern": "^[A-Z]{3}$",
                                 "type": "string"
                               },
+                              "fxCaptureSource": {
+                                "enum": ["amex-columns", "anz-descriptor", "unavailable"],
+                                "type": "string"
+                              },
                               "fxFeeCents": {
                                 "maximum": 9007199254740991,
                                 "minimum": -9007199254740991,
@@ -10311,6 +10355,10 @@
                               },
                               "foreignCurrency": {
                                 "pattern": "^[A-Z]{3}$",
+                                "type": "string"
+                              },
+                              "fxCaptureSource": {
+                                "enum": ["amex-columns", "anz-descriptor", "unavailable"],
                                 "type": "string"
                               },
                               "fxFeeCents": {
@@ -10529,6 +10577,10 @@
                                 "pattern": "^[A-Z]{3}$",
                                 "type": "string"
                               },
+                              "fxCaptureSource": {
+                                "enum": ["amex-columns", "anz-descriptor", "unavailable"],
+                                "type": "string"
+                              },
                               "fxFeeCents": {
                                 "maximum": 9007199254740991,
                                 "minimum": -9007199254740991,
@@ -10743,6 +10795,10 @@
                               },
                               "foreignCurrency": {
                                 "pattern": "^[A-Z]{3}$",
+                                "type": "string"
+                              },
+                              "fxCaptureSource": {
+                                "enum": ["amex-columns", "anz-descriptor", "unavailable"],
                                 "type": "string"
                               },
                               "fxFeeCents": {
@@ -13145,7 +13201,7 @@
                                       "type": "string"
                                     },
                                     "source": {
-                                      "enum": ["tag_rule", "rule", "ai", "entity"],
+                                      "enum": ["rule", "ai", "entity"],
                                       "type": "string"
                                     },
                                     "tag": {
@@ -13175,7 +13231,7 @@
                                       "type": "string"
                                     },
                                     "source": {
-                                      "enum": ["tag_rule", "rule", "ai", "entity"],
+                                      "enum": ["rule", "ai", "entity"],
                                       "type": "string"
                                     },
                                     "tag": {
@@ -13565,7 +13621,7 @@
                                           "type": "string"
                                         },
                                         "source": {
-                                          "enum": ["tag_rule", "rule", "ai", "entity"],
+                                          "enum": ["rule", "ai", "entity"],
                                           "type": "string"
                                         },
                                         "tag": {
@@ -13595,7 +13651,7 @@
                                           "type": "string"
                                         },
                                         "source": {
-                                          "enum": ["tag_rule", "rule", "ai", "entity"],
+                                          "enum": ["rule", "ai", "entity"],
                                           "type": "string"
                                         },
                                         "tag": {
@@ -14907,6 +14963,11 @@
                             "nullable": true,
                             "type": "string"
                           },
+                          "fxCaptureSource": {
+                            "enum": ["amex-columns", "anz-descriptor", "unavailable", null],
+                            "nullable": true,
+                            "type": "string"
+                          },
                           "fxFeeCents": {
                             "maximum": 9007199254740991,
                             "minimum": -9007199254740991,
@@ -14969,6 +15030,7 @@
                           "foreignAmountMinor",
                           "foreignCurrency",
                           "fxFeeCents",
+                          "fxCaptureSource",
                           "lastEditedTime"
                         ],
                         "type": "object"
@@ -15202,6 +15264,11 @@
                           "nullable": true,
                           "type": "string"
                         },
+                        "fxCaptureSource": {
+                          "enum": ["amex-columns", "anz-descriptor", "unavailable", null],
+                          "nullable": true,
+                          "type": "string"
+                        },
                         "fxFeeCents": {
                           "maximum": 9007199254740991,
                           "minimum": -9007199254740991,
@@ -15264,6 +15331,7 @@
                         "foreignAmountMinor",
                         "foreignCurrency",
                         "fxFeeCents",
+                        "fxCaptureSource",
                         "lastEditedTime"
                       ],
                       "type": "object"
@@ -15489,6 +15557,11 @@
                     "nullable": true,
                     "type": "string"
                   },
+                  "fxCaptureSource": {
+                    "enum": ["amex-columns", "anz-descriptor", "unavailable", null],
+                    "nullable": true,
+                    "type": "string"
+                  },
                   "fxFeeCents": {
                     "maximum": 9007199254740991,
                     "minimum": -9007199254740991,
@@ -15583,6 +15656,7 @@
                   "foreignAmountMinor",
                   "foreignCurrency",
                   "fxFeeCents",
+                  "fxCaptureSource",
                   "checksum",
                   "rawRow",
                   "lastEditedTime",
@@ -15637,6 +15711,11 @@
                           "type": "integer"
                         },
                         "foreignCurrency": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "fxCaptureSource": {
+                          "enum": ["amex-columns", "anz-descriptor", "unavailable", null],
                           "nullable": true,
                           "type": "string"
                         },
@@ -15702,6 +15781,7 @@
                         "foreignAmountMinor",
                         "foreignCurrency",
                         "fxFeeCents",
+                        "fxCaptureSource",
                         "lastEditedTime"
                       ],
                       "type": "object"
@@ -15930,6 +16010,11 @@
                           "nullable": true,
                           "type": "string"
                         },
+                        "fxCaptureSource": {
+                          "enum": ["amex-columns", "anz-descriptor", "unavailable", null],
+                          "nullable": true,
+                          "type": "string"
+                        },
                         "fxFeeCents": {
                           "maximum": 9007199254740991,
                           "minimum": -9007199254740991,
@@ -16024,6 +16109,7 @@
                         "foreignAmountMinor",
                         "foreignCurrency",
                         "fxFeeCents",
+                        "fxCaptureSource",
                         "checksum",
                         "rawRow",
                         "lastEditedTime",
@@ -16170,6 +16256,11 @@
                           "nullable": true,
                           "type": "string"
                         },
+                        "fxCaptureSource": {
+                          "enum": ["amex-columns", "anz-descriptor", "unavailable", null],
+                          "nullable": true,
+                          "type": "string"
+                        },
                         "fxFeeCents": {
                           "maximum": 9007199254740991,
                           "minimum": -9007199254740991,
@@ -16232,6 +16323,7 @@
                         "foreignAmountMinor",
                         "foreignCurrency",
                         "fxFeeCents",
+                        "fxCaptureSource",
                         "lastEditedTime"
                       ],
                       "type": "object"
@@ -16445,6 +16537,11 @@
                           "nullable": true,
                           "type": "string"
                         },
+                        "fxCaptureSource": {
+                          "enum": ["amex-columns", "anz-descriptor", "unavailable", null],
+                          "nullable": true,
+                          "type": "string"
+                        },
                         "fxFeeCents": {
                           "maximum": 9007199254740991,
                           "minimum": -9007199254740991,
@@ -16507,6 +16604,7 @@
                         "foreignAmountMinor",
                         "foreignCurrency",
                         "fxFeeCents",
+                        "fxCaptureSource",
                         "lastEditedTime"
                       ],
                       "type": "object"
@@ -16665,6 +16763,11 @@
                           "nullable": true,
                           "type": "string"
                         },
+                        "fxCaptureSource": {
+                          "enum": ["amex-columns", "anz-descriptor", "unavailable", null],
+                          "nullable": true,
+                          "type": "string"
+                        },
                         "fxFeeCents": {
                           "maximum": 9007199254740991,
                           "minimum": -9007199254740991,
@@ -16727,6 +16830,7 @@
                         "foreignAmountMinor",
                         "foreignCurrency",
                         "fxFeeCents",
+                        "fxCaptureSource",
                         "lastEditedTime"
                       ],
                       "type": "object"

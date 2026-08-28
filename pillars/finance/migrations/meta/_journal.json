@@ -169,6 +169,20 @@
       "when": 1781913600017,
       "tag": "0072_backfill_foreign_charge_from_raw_row",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1781913600018,
+      "tag": "0073_retire_contains_fee",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1781913600019,
+      "tag": "0074_fx_capture_source",
+      "breakpoints": true
     }
   ]
 }

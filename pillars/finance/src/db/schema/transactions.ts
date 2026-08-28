@@ -1,6 +1,7 @@
 import { index, integer, real, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
 import { TRANSACTION_TYPES } from '../../contract/corrections-constants.js';
+import { FX_CAPTURE_SOURCES } from '../../contract/fx-capture.js';
 import { TRANSACTION_MATCH_TYPES } from '../match-types.js';
 
 export const transactions = sqliteTable(
@@ -37,6 +38,19 @@ export const transactions = sqliteTable(
      * not the converted AUD total, which the statement never states separately.
      */
     fxFeeCents: integer('fx_fee_cents'),
+    /**
+     * Which foreign-charge capture path ran on this row (POPS-2647), so the
+     * three columns above and `country` can be read as "captured, and there was
+     * nothing to find" rather than "nobody looked". See
+     * `src/contract/fx-capture.ts` for what each value promises.
+     *
+     * NULL means nobody declared anything — not "domestic". A row imported
+     * before this column existed whose `raw_row` no parser recognises keeps it,
+     * because the short Amex export and a plain bank CSV are indistinguishable
+     * once stored. It is deliberately not a member of the union: `unavailable`
+     * is a statement, and only an importer that ran may make it.
+     */
+    fxCaptureSource: text('fx_capture_source', { enum: FX_CAPTURE_SOURCES }),
     checksum: text('checksum'),
     rawRow: text('raw_row'),
     lastEditedTime: text('last_edited_time').notNull(),

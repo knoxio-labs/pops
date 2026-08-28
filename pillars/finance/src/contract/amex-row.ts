@@ -20,6 +20,8 @@
  */
 import { foreignChargeFromParts, type AnzForeignCharge } from './anz-description.js';
 
+import type { FxCaptureSource } from './fx-capture.js';
+
 /** Long-form column names. Absent from the short export, which is not an error. */
 const FOREIGN_SPEND_COLUMN = 'Foreign Spend Amount';
 const COMMISSION_COLUMN = 'Commission';
@@ -71,10 +73,27 @@ export interface AmexRowFields {
   country?: string;
   /** Set only for a charge that states both a foreign amount and its commission. */
   foreignCharge?: AnzForeignCharge;
+  /**
+   * Which shape this row turned out to be (POPS-2647). The two Amex exports
+   * are told apart per row rather than per bank, because the wizard is given a
+   * file and not a declaration of which portal export it came from.
+   */
+  fxCaptureSource: FxCaptureSource;
 }
 
 function cell(row: Record<string, string>, column: string): string {
   return (row[column] ?? '').trim();
+}
+
+/**
+ * Whether this row came from the long export, and so whether its empty foreign
+ * columns mean "domestic" or "this file cannot say" (POPS-2647).
+ *
+ * Presence of the columns, not of values in them: a domestic long-export row
+ * has all three empty and is still a captured row.
+ */
+function hasForeignColumns(row: Record<string, string>): boolean {
+  return FOREIGN_SPEND_COLUMN in row || COMMISSION_COLUMN in row || COUNTRY_COLUMN in row;
 }
 
 /**
@@ -107,5 +126,6 @@ export function parseAmexRow(row: Record<string, string>): AmexRowFields {
   return {
     country: COUNTRY_ALPHA2[cell(row, COUNTRY_COLUMN).toUpperCase()],
     foreignCharge: foreignCharge(row),
+    fxCaptureSource: hasForeignColumns(row) ? 'amex-columns' : 'unavailable',
   };
 }

@@ -22,6 +22,7 @@ import {
   transactionCorrectionsService,
   transactionTagRulesService,
 } from '../../../db/index.js';
+import { parseStoredTags } from '../../../db/tag-facets.js';
 import { findMatchingTagRules, matchTagRules } from './tag-rule-matching.js';
 
 import type { InMemoryTagRule } from './tag-rule-matching.js';
@@ -76,16 +77,6 @@ export interface SuggestTagsOptions {
   tagRules?: readonly InMemoryTagRule[];
 }
 
-function parseTags(json: string | null | undefined): string[] {
-  if (!json) return [];
-  try {
-    const parsed = JSON.parse(json) as unknown;
-    return Array.isArray(parsed) ? parsed.filter((t): t is string => typeof t === 'string') : [];
-  } catch {
-    return [];
-  }
-}
-
 /**
  * Record a tag as emitted, returning false when an equal tag is already in the
  * result. Comparison is case-insensitive and shared with the vocabulary, so an
@@ -128,7 +119,7 @@ function addCorrectionTags(
     db,
     description
   )) {
-    for (const tag of parseTags(correction.tags)) {
+    for (const tag of parseStoredTags(correction.tags)) {
       if (!remember(seen, tag)) continue;
       result.push({ tag, source: 'rule', pattern: correction.descriptionPattern ?? undefined });
     }
@@ -170,7 +161,7 @@ function addTagRuleTags(pass: TagPass): void {
   pass.onTagRulesMatched?.(matchedIds);
   if (recordTagRuleUsage) creditTagRuleUsage(db, matchedIds);
   for (const rule of matching) {
-    pushRuleTags(pass, parseTags(rule.tags), rule.descriptionPattern);
+    pushRuleTags(pass, parseStoredTags(rule.tags), rule.descriptionPattern);
   }
 }
 

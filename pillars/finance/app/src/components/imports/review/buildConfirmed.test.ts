@@ -178,6 +178,7 @@ const PARSED_KEYS = {
   foreignAmountMinor: true,
   foreignCurrency: true,
   fxFeeCents: true,
+  fxCaptureSource: true,
   rawRow: true,
   checksum: true,
 } satisfies Record<keyof ParsedTransaction, true>;
@@ -190,6 +191,7 @@ describe('buildConfirmedTransactions parsed-field passthrough', () => {
       foreignAmountMinor: 10_000,
       foreignCurrency: 'USD',
       fxFeeCents: 503,
+      fxCaptureSource: 'anz-descriptor',
     });
 
     const [confirmed] = buildConfirmedTransactions([row]);
@@ -206,5 +208,14 @@ describe('buildConfirmedTransactions parsed-field passthrough', () => {
     expect(confirmed?.foreignAmountMinor).toBeUndefined();
     expect(confirmed?.foreignCurrency).toBeUndefined();
     expect(confirmed?.fxFeeCents).toBeUndefined();
+  });
+
+  it('carries the capture source of a domestic row, which is the whole point of it', () => {
+    const [confirmed] = buildConfirmedTransactions([
+      matched({ fxCaptureSource: 'anz-descriptor' }),
+    ]);
+
+    expect(confirmed?.foreignCurrency).toBeUndefined();
+    expect(confirmed?.fxCaptureSource).toBe('anz-descriptor');
   });
 });

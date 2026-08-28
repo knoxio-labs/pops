@@ -19,7 +19,7 @@
 import { desc } from 'drizzle-orm';
 
 import { tagRuleRejections } from '../schema.js';
-import { parseTagRuleTags } from './transaction-tag-rules.js';
+import { parseStoredTags } from '../tag-facets.js';
 
 import type { FinanceDb } from './internal.js';
 import type { TagRuleMatchType } from './transaction-tag-rules.js';
@@ -64,7 +64,7 @@ function toTagRuleRejection(row: TagRuleRejectionRow): TagRuleRejection {
     descriptionPattern: row.descriptionPattern,
     matchType: row.matchType,
     entityId: row.entityId,
-    tags: parseTagRuleTags(row.tags),
+    tags: parseStoredTags(row.tags),
     feedback: row.feedback,
     changeSet: row.changeSet,
     createdAt: row.createdAt,
