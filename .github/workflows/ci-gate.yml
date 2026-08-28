@@ -270,6 +270,8 @@ jobs:
                 "infra/docker*/**",
                 "infra/docker-compose*.yml",
                 "**/Dockerfile",
+                "pillars/*/nginx.conf",
+                "pillars/*/nginx/**",
                 "pnpm-lock.yaml",
                 "pnpm-workspace.yaml",
                 "tsconfig.base.json",

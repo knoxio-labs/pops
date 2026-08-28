@@ -39,8 +39,9 @@
  * Usage:
  *   node scripts/ci/smoke-image.mjs <dockerfile> <image-ref>
  *
- * Exit 0 = the image answered its health route and every data mount is
- * writable. Exit 1 = one of those was not true. Exit 2 = usage error.
+ * Exit 0 = the image answered its health route, every data mount is
+ * writable, and (for the nginx-served frontends) its entry document forces
+ * revalidation. Exit 1 = one of those was not true. Exit 2 = usage error.
  */
 
 import { execFile } from 'node:child_process';
@@ -284,6 +285,42 @@ export function resolveHealthPath(baseImage) {
 }
 
 /**
+ * Paths whose response must forbid heuristic caching, by runtime base image.
+ *
+ * Only the nginx-served frontends (`shell`, `docs`) have the exposure: their
+ * entry document names the hashed assets of the build it shipped with, and
+ * `/assets/` is served `immutable`. A document with no freshness directive
+ * of its own leaves browsers on heuristic caching (commonly a tenth of its
+ * age), so a watchtower roll can leave a session running the previous bundle
+ * against the new pillar APIs, with nothing in the UI saying so.
+ *
+ * Both entry routes are probed because they reach the file differently: `/`
+ * through the index module, and a deep link through the SPA fallback's
+ * internal redirect. A config that covers only one of them is the bug.
+ *
+ * @param {string} baseImage Runtime stage base image.
+ * @returns {readonly string[]} Paths to probe; empty for non-nginx images.
+ */
+export function freshnessProbePaths(baseImage) {
+  return /^nginx(:|$)/u.test(baseImage) ? ['/', '/deep/link/smoke-probe'] : [];
+}
+
+/**
+ * Whether a `Cache-Control` value forces the browser to check back before
+ * reusing the response.
+ *
+ * `null` (no header at all) is the failure this guards: it is the state that
+ * hands the decision to heuristic caching. `max-age=0` is accepted alongside
+ * `no-cache`/`no-store` because it expresses the same contract.
+ *
+ * @param {string | null} cacheControl Response header value, or null.
+ * @returns {boolean}
+ */
+export function forcesRevalidation(cacheControl) {
+  return cacheControl !== null && /\b(no-cache|no-store|max-age=0)\b/iu.test(cacheControl);
+}
+
+/**
  * A volume name no previous run can have used.
  *
  * The pillar id is in there for a human reading `docker volume ls` after a
@@ -501,6 +538,33 @@ async function reportFailure(containerId, image, mountPaths) {
   );
 }
 
+/**
+ * Read the freshness policy the container actually serves at each path.
+ *
+ * Every observation is returned, passing ones included, so the run can print
+ * what it saw: a check whose only output is silence cannot be told apart from
+ * one that never ran.
+ *
+ * @param {object} args
+ * @param {string} args.origin e.g. `http://127.0.0.1:49154`.
+ * @param {readonly string[]} args.paths
+ * @returns {Promise<{ path: string, cacheControl: string, revalidates: boolean }[]>}
+ */
+async function probeFreshness({ origin, paths }) {
+  /** @type {{ path: string, cacheControl: string, revalidates: boolean }[]} */
+  const observed = [];
+  for (const path of paths) {
+    const response = await fetch(`${origin}${path}`, { signal: AbortSignal.timeout(5_000) });
+    const header = response.headers.get('cache-control');
+    observed.push({
+      path,
+      cacheControl: header ?? '<no Cache-Control header>',
+      revalidates: forcesRevalidation(header),
+    });
+  }
+  return observed;
+}
+
 async function main() {
   const [dockerfilePath, image] = process.argv.slice(2);
   if (dockerfilePath === undefined || image === undefined) {
@@ -582,6 +646,32 @@ async function main() {
         await reportFailure(containerId, image, mountPaths);
         process.exitCode = 1;
         return;
+      }
+
+      // A static frontend that serves its entry document without a
+      // freshness directive strands browsers on the previous deploy's
+      // bundle. Asserted against the running image rather than by reading
+      // the conf, because what matters is the header nginx actually emits
+      // once try_files and the index module have had their say.
+      const probePaths = freshnessProbePaths(baseImage);
+      if (probePaths.length > 0) {
+        console.log(`Reading the served freshness policy of ${image}:`);
+        const origin = `http://127.0.0.1:${await resolveHostPort(containerId, port)}`;
+        const observed = await probeFreshness({ origin, paths: probePaths });
+        for (const { path, cacheControl } of observed) {
+          console.log(`  ${path} → Cache-Control: ${cacheControl}`);
+        }
+        const stale = observed.filter((o) => !o.revalidates);
+        if (stale.length > 0) {
+          console.error(
+            `FAIL — ${image} serves its entry document without forcing revalidation, ` +
+              `so a deploy leaves browsers on the previous bundle: ` +
+              `${stale.map((o) => o.path).join(', ')}`
+          );
+          await reportFailure(containerId, image, mountPaths);
+          process.exitCode = 1;
+          return;
+        }
       }
 
       const writeSummary =

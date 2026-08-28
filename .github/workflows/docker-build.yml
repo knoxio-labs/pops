@@ -6,6 +6,8 @@ on:
       - "infra/docker*/**"
       - "infra/docker-compose*.yml"
       - "**/Dockerfile"
+      - "pillars/*/nginx.conf"
+      - "pillars/*/nginx/**"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
       - "tsconfig.base.json"
@@ -18,6 +20,8 @@ on:
       - "infra/docker*/**"
       - "infra/docker-compose*.yml"
       - "**/Dockerfile"
+      - "pillars/*/nginx.conf"
+      - "pillars/*/nginx/**"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
       - "tsconfig.base.json"
@@ -45,6 +49,12 @@ on:
 # PRs entirely. Per-pillar full images are also validated by the
 # `*-quality.yml` workflows — this job re-validates every Dockerfile +
 # compose surface in one place, gated on changes. (Theme 13 PRD-220.)
+#
+# The nginx configs the static images ship are in the trigger set for the
+# mirror-image reason: the smoke asserts a served header, so the file that
+# decides that header must rerun the smoke. Without it an edit dropping the
+# entry document's freshness directive — the one that strands browsers on the
+# previous deploy's bundle — reaches main with the guard never having run.
 #
 # `scripts/ci/smoke-image.mjs` is in the trigger set because it IS the gate:
 # a change to the harness that stops it asserting anything must run the
@@ -84,6 +94,8 @@ jobs:
           filters: |
             docker:
               - '**/Dockerfile'
+              - 'pillars/*/nginx.conf'
+              - 'pillars/*/nginx/**'
               - 'infra/docker*/**'
               - 'infra/docker-compose.yml'
               - 'pnpm-lock.yaml'
