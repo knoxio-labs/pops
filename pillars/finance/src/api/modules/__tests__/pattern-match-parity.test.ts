@@ -238,7 +238,8 @@ function verdictsFor(t: Triple): Record<string, boolean> {
       ),
       classificationPass:
         findAllMatchingTransactionCorrectionsFromDb(db, t.description, 0).length > 0,
-      suggesterCorrectionPass: findAllMatchingTransactionCorrections(db, t.description).length > 0,
+      suggesterCorrectionPass:
+        findAllMatchingTransactionCorrections(db, t.description, 0).length > 0,
       inMemoryCorrectionMatch:
         findAllMatchingCorrectionFromRules(
           t.description,

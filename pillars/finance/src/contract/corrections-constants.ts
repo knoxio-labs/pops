@@ -9,8 +9,10 @@
 /**
  * Confidence floor below which a correction rule is never eligible to match:
  * every matcher (`findAllMatchingCorrectionFromRules`,
- * `findAllMatchingTransactionCorrectionsFromDb`, the live-import call site)
- * filters out rules with `confidence < MIN_MATCH_CONFIDENCE`. Also the schema
+ * `findAllMatchingTransactionCorrectionsFromDb`,
+ * `findAllMatchingTransactionCorrections`, the live-import call site)
+ * filters out rules with `confidence < MIN_MATCH_CONFIDENCE` — when
+ * classifying a transaction and equally when contributing its tags. Also the schema
  * default and the create/update validation floor, so a rule can never be
  * persisted below the threshold that would make it structurally inert.
  */
