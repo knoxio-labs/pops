@@ -109,7 +109,12 @@ function PendingPinCode({ code }: { code: string }) {
       </div>
       <div className="flex items-center gap-3">
         <Button variant="outline" size="sm" asChild>
-          <a href={PLEX_LINK_URL} target="_blank" rel="noreferrer noopener">
+          <a
+            href={PLEX_LINK_URL}
+            target="_blank"
+            rel="noreferrer noopener"
+            className="min-h-11 min-w-11"
+          >
             <ExternalLink className="h-4 w-4 mr-1.5" />
             Open plex.tv/link
           </a>
