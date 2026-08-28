@@ -4,8 +4,9 @@
  * interfaces back the deterministic preview/propose computation.
  */
 import type { TagRuleChangeSet } from '../../../contract/rest-tag-rules.js';
+import type { TagSuggestionSource } from '../tag-suggester/index.js';
 
-export type TagSuggestionSource = 'tag_rule' | 'rule' | 'ai' | 'entity';
+export type { TagSuggestionSource };
 
 export interface TagSuggestion {
   tag: string;

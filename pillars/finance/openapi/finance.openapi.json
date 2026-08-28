@@ -13145,7 +13145,7 @@
                                       "type": "string"
                                     },
                                     "source": {
-                                      "enum": ["tag_rule", "rule", "ai", "entity"],
+                                      "enum": ["rule", "ai", "entity"],
                                       "type": "string"
                                     },
                                     "tag": {
@@ -13175,7 +13175,7 @@
                                       "type": "string"
                                     },
                                     "source": {
-                                      "enum": ["tag_rule", "rule", "ai", "entity"],
+                                      "enum": ["rule", "ai", "entity"],
                                       "type": "string"
                                     },
                                     "tag": {
@@ -13565,7 +13565,7 @@
                                           "type": "string"
                                         },
                                         "source": {
-                                          "enum": ["tag_rule", "rule", "ai", "entity"],
+                                          "enum": ["rule", "ai", "entity"],
                                           "type": "string"
                                         },
                                         "tag": {
@@ -13595,7 +13595,7 @@
                                           "type": "string"
                                         },
                                         "source": {
-                                          "enum": ["tag_rule", "rule", "ai", "entity"],
+                                          "enum": ["rule", "ai", "entity"],
                                           "type": "string"
                                         },
                                         "tag": {

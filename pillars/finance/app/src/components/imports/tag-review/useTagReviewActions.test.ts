@@ -36,7 +36,7 @@ function impact(transactionId: string, tags: string[]): TagRuleImpactItem {
     transactionId,
     description: `TXN ${transactionId}`,
     before: { suggestedTags: [] },
-    after: { suggestedTags: tags.map((tag) => ({ tag, source: 'tag_rule' as const })) },
+    after: { suggestedTags: tags.map((tag) => ({ tag, source: 'rule' as const })) },
   };
 }
 

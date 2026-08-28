@@ -4648,7 +4648,7 @@ export type TagRulesPreviewResponses = {
         suggestedTags: Array<{
           isNew?: boolean;
           pattern?: string;
-          source: 'tag_rule' | 'rule' | 'ai' | 'entity';
+          source: 'rule' | 'ai' | 'entity';
           tag: string;
         }>;
       };
@@ -4656,7 +4656,7 @@ export type TagRulesPreviewResponses = {
         suggestedTags: Array<{
           isNew?: boolean;
           pattern?: string;
-          source: 'tag_rule' | 'rule' | 'ai' | 'entity';
+          source: 'rule' | 'ai' | 'entity';
           tag: string;
         }>;
       };
@@ -4776,7 +4776,7 @@ export type TagRulesProposeResponses = {
           suggestedTags: Array<{
             isNew?: boolean;
             pattern?: string;
-            source: 'tag_rule' | 'rule' | 'ai' | 'entity';
+            source: 'rule' | 'ai' | 'entity';
             tag: string;
           }>;
         };
@@ -4784,7 +4784,7 @@ export type TagRulesProposeResponses = {
           suggestedTags: Array<{
             isNew?: boolean;
             pattern?: string;
-            source: 'tag_rule' | 'rule' | 'ai' | 'entity';
+            source: 'rule' | 'ai' | 'entity';
             tag: string;
           }>;
         };

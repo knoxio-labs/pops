@@ -6441,7 +6441,7 @@ export interface operations {
                   isNew?: boolean;
                   pattern?: string;
                   /** @enum {string} */
-                  source: 'tag_rule' | 'rule' | 'ai' | 'entity';
+                  source: 'rule' | 'ai' | 'entity';
                   tag: string;
                 }[];
               };
@@ -6450,7 +6450,7 @@ export interface operations {
                   isNew?: boolean;
                   pattern?: string;
                   /** @enum {string} */
-                  source: 'tag_rule' | 'rule' | 'ai' | 'entity';
+                  source: 'rule' | 'ai' | 'entity';
                   tag: string;
                 }[];
               };
@@ -6598,7 +6598,7 @@ export interface operations {
                     isNew?: boolean;
                     pattern?: string;
                     /** @enum {string} */
-                    source: 'tag_rule' | 'rule' | 'ai' | 'entity';
+                    source: 'rule' | 'ai' | 'entity';
                     tag: string;
                   }[];
                 };
@@ -6607,7 +6607,7 @@ export interface operations {
                     isNew?: boolean;
                     pattern?: string;
                     /** @enum {string} */
-                    source: 'tag_rule' | 'rule' | 'ai' | 'entity';
+                    source: 'rule' | 'ai' | 'entity';
                     tag: string;
                   }[];
                 };

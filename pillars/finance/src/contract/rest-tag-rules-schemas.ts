@@ -68,7 +68,7 @@ export const PreviewInputTransactionSchema = z.object({
 
 const TagSuggestionSchema = z.object({
   tag: z.string(),
-  source: z.enum(['tag_rule', 'rule', 'ai', 'entity']),
+  source: z.enum(['rule', 'ai', 'entity']),
   pattern: z.string().optional(),
   isNew: z.boolean().optional(),
 });

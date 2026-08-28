@@ -40,7 +40,7 @@ export function applyAffectedToSuggested(
     const checksum = item.transactionId;
     const ruleSuggestedTags = item.after.suggestedTags.map((s) => ({
       tag: s.tag,
-      source: (s.source === 'tag_rule' ? 'rule' : s.source) as SuggestedTag['source'],
+      source: s.source,
       pattern: s.pattern,
     }));
     const ruleSuggestedTagSet = new Set(ruleSuggestedTags.map((s) => s.tag));
