@@ -15,6 +15,8 @@ import { TagRuleProposalDialog } from './TagRuleProposalDialog';
  * Features:
  * - All groups expanded by default (including those with no suggestions)
  * - Group-level bulk tag application (merge semantics — never replaces individual edits)
+ * - "Accept All Suggestions" merges every outstanding suggestion into the rows
+ *   that lack it, and is disabled once no row is missing one
  * - Per-transaction tag editing via TagEditor
  * - Source badges on suggested tags: 🤖 AI, 📋 Rule, 🏪 Entity
  * - Rule pattern shown via tooltip on badge hover
@@ -22,12 +24,18 @@ import { TagRuleProposalDialog } from './TagRuleProposalDialog';
  */
 export function TagReviewStep() {
   const state = useTagReviewState();
-  const { confirmedCount, handleAcceptAll, prevStep, handleContinue } = state;
+  const { confirmedCount, handleAcceptAll, unappliedSuggestionCount, prevStep, handleContinue } =
+    state;
   return (
     <div className="space-y-6">
       <TagReviewHeader />
       {confirmedCount > 0 && (
-        <Button variant="outline" size="sm" onClick={handleAcceptAll}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleAcceptAll}
+          disabled={unappliedSuggestionCount === 0}
+        >
           Accept All Suggestions
         </Button>
       )}

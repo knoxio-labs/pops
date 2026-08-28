@@ -146,14 +146,26 @@ vi.mock('../TagEditor', async () => {
       onSave: (tags: string[]) => void;
       currentTags: string[];
     }) =>
-      React.createElement(
-        'button',
-        {
-          'data-testid': 'tag-editor-trigger-edit',
-          onClick: () => onSave([...currentTags, 'EditedByUser']),
-        },
-        'Simulate Edit'
-      ),
+      React.createElement('div', null, [
+        React.createElement(
+          'button',
+          {
+            key: 'edit',
+            'data-testid': 'tag-editor-trigger-edit',
+            onClick: () => onSave([...currentTags, 'EditedByUser']),
+          },
+          'Simulate Edit'
+        ),
+        React.createElement(
+          'button',
+          {
+            key: 'clear',
+            'data-testid': 'tag-editor-trigger-clear',
+            onClick: () => onSave([]),
+          },
+          'Simulate Clear'
+        ),
+      ]),
   };
 });
 
@@ -162,6 +174,7 @@ vi.mock('../../lib/utils', () => ({
 }));
 
 // Import must follow the vi.mock calls above so the mocks are registered first.
+import { elementAt } from '../../test-utils';
 import { TagReviewStep } from './TagReviewStep';
 
 import type { ConfirmedTransaction, TagRuleChangeSet, TagRuleImpactItem } from '@pops/finance';
@@ -456,6 +469,30 @@ describe('TagReviewStep — Accept All Suggestions', () => {
     expect(
       screen.queryByRole('button', { name: /Accept All Suggestions/i })
     ).not.toBeInTheDocument();
+  });
+
+  it('is disabled when every row already carries its suggestions', () => {
+    seedTransactions([woolworthsTx1, netflixTx]);
+    renderTagReviewStep();
+    expect(screen.getByRole('button', { name: /Accept All Suggestions/i })).toBeDisabled();
+  });
+
+  it('does not discard a manual edit, and re-adds the suggestions alongside it', () => {
+    seedTransactions([woolworthsTx1]);
+    renderTagReviewStep();
+
+    fireEvent.click(elementAt(screen.getAllByTestId('tag-editor-trigger-clear'), 0));
+    const acceptAll = screen.getByRole('button', { name: /Accept All Suggestions/i });
+    expect(acceptAll).not.toBeDisabled();
+
+    fireEvent.click(elementAt(screen.getAllByTestId('tag-editor-trigger-edit'), 0));
+    fireEvent.click(acceptAll);
+
+    fireEvent.click(screen.getByRole('button', { name: /Continue to final review/i }));
+    expect(mockUpdateTransactionTags).toHaveBeenCalledWith(
+      woolworthsTx1.checksum,
+      expect.arrayContaining(['EditedByUser', 'Groceries'])
+    );
   });
 });
 
