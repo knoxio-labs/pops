@@ -27,6 +27,8 @@ export interface TagRuleProposalDialogProps {
     checksum: string;
     description: string;
     entityId?: string | null;
+    /** Present only for a hand-edited row — see `PreviewTransaction`. */
+    userTags?: string[];
   }>;
   /**
    * Called when the user accepts the proposal. The dialog itself writes
@@ -47,13 +49,13 @@ export function parseTags(raw: string): string[] {
     .filter(Boolean);
 }
 
+/**
+ * The vocabulary tags this ChangeSet would introduce, over the whole import.
+ *
+ * Read off `preview.newTags` rather than walked out of `preview.affected`:
+ * that list is capped at the panel's page size, so a large import would leave
+ * the user unable to accept a tag the rule is about to create.
+ */
 export function collectNewTagNames(proposal: ProposeOutput | undefined): string[] {
-  if (!proposal) return [];
-  const names = new Set<string>();
-  for (const row of proposal.preview.affected) {
-    for (const s of row.after.suggestedTags) {
-      if (s.isNew) names.add(s.tag);
-    }
-  }
-  return [...names].toSorted((a, b) => a.localeCompare(b));
+  return proposal?.preview.newTags ?? [];
 }

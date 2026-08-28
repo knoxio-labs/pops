@@ -173,14 +173,32 @@ describe('tagRules — propose & preview', () => {
     await client().tagRules.apply({ changeSet: addOp, acceptedNewTags: [CUSTOM_TAG] });
 
     const preview = await client().tagRules.preview({
-      changeSet: addOp,
-      transactions: [{ transactionId: 't1', description: 'WOOLWORTHS 1234', entityId: null }],
+      changeSet: {
+        ops: [
+          {
+            op: 'add',
+            data: { descriptionPattern: 'COLES', matchType: 'contains', tags: [CUSTOM_TAG] },
+          },
+        ],
+      },
+      transactions: [{ transactionId: 't2', description: 'COLES 5678', entityId: null }],
     });
     expect(preview.affected[0]?.after.suggestedTags[0]).toMatchObject({
       tag: CUSTOM_TAG,
       isNew: false,
     });
     expect(preview.counts.newTagProposals).toBe(0);
+    expect(preview.newTags).toEqual([]);
+  });
+
+  it('reports zero impact for a ChangeSet that is already persisted', async () => {
+    await client().tagRules.apply({ changeSet: addOp, acceptedNewTags: [CUSTOM_TAG] });
+
+    const preview = await client().tagRules.preview({
+      changeSet: addOp,
+      transactions: [{ transactionId: 't1', description: 'WOOLWORTHS 1234', entityId: null }],
+    });
+    expect(preview.counts.affected).toBe(0);
   });
 });
 

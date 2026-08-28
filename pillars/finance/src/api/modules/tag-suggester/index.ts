@@ -17,7 +17,9 @@ import {
   transactionCorrectionsService,
   transactionTagRulesService,
 } from '../../../db/index.js';
-import { findMatchingTagRules } from './tag-rule-matching.js';
+import { findMatchingTagRules, matchTagRules } from './tag-rule-matching.js';
+
+import type { InMemoryTagRule } from './tag-rule-matching.js';
 
 export type TagSuggestionSource = 'rule' | 'ai' | 'entity';
 
@@ -49,6 +51,16 @@ export interface SuggestTagsOptions {
    * never counts as usage of the persisted rule.
    */
   recordTagRuleUsage?: boolean;
+  /**
+   * Match this in-memory rule set instead of querying `transaction_tag_rules`
+   * — the ChangeSet preview's merged set (POPS-2599), which carries rules the
+   * table does not hold yet and omits ones a `remove` op would drop. Matching,
+   * ordering and dedup are the live path's; only the source of the rules
+   * differs, which is what keeps a preview from drifting from the import
+   * pipeline. Injected rules never bump usage telemetry: some of them are not
+   * persisted, and a preview is not a use.
+   */
+  tagRules?: readonly InMemoryTagRule[];
 }
 
 function parseTags(json: string | null | undefined): string[] {
@@ -67,6 +79,7 @@ interface TagPass {
   entityId: string | null;
   entityDefaultTags: ReadonlyMap<string, string[]>;
   recordTagRuleUsage: boolean;
+  tagRules: readonly InMemoryTagRule[] | undefined;
   seen: Set<string>;
   result: SuggestedTag[];
 }
@@ -97,17 +110,27 @@ function addCorrectionTags(
   }
 }
 
+function pushRuleTags(pass: TagPass, tags: string[], pattern: string): void {
+  for (const tag of tags) {
+    if (pass.seen.has(tag)) continue;
+    pass.seen.add(tag);
+    pass.result.push({ tag, source: 'rule', pattern });
+  }
+}
+
 function addTagRuleTags(pass: TagPass): void {
-  const { db, description, entityId, recordTagRuleUsage, seen, result } = pass;
+  const { db, description, entityId, recordTagRuleUsage, tagRules } = pass;
+  if (tagRules) {
+    for (const rule of matchTagRules(tagRules, description, entityId)) {
+      pushRuleTags(pass, rule.tags, rule.descriptionPattern);
+    }
+    return;
+  }
   for (const rule of findMatchingTagRules(db, description, entityId)) {
     if (recordTagRuleUsage) {
       transactionTagRulesService.incrementTransactionTagRuleUsage(db, rule.id);
     }
-    for (const tag of parseTags(rule.tags)) {
-      if (seen.has(tag)) continue;
-      seen.add(tag);
-      result.push({ tag, source: 'rule', pattern: rule.descriptionPattern });
-    }
+    pushRuleTags(pass, parseTags(rule.tags), rule.descriptionPattern);
   }
 }
 
@@ -158,6 +181,7 @@ export function suggestTags(db: FinanceDb, opts: SuggestTagsOptions): SuggestedT
     entityId: opts.entityId,
     entityDefaultTags: opts.entityDefaultTags ?? new Map(),
     recordTagRuleUsage: opts.recordTagRuleUsage ?? true,
+    tagRules: opts.tagRules,
     seen: new Set<string>(),
     result: [],
   };

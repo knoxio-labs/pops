@@ -5,6 +5,7 @@ import { unwrap } from '../../../finance-api-helpers.js';
 import { transactionsAvailableTags } from '../../../finance-api/index.js';
 import { useImportStore } from '../../../store/importStore';
 import { groupByEntity } from './tagReviewUtils';
+import { type PreviewTransaction, usePreviewTransactions } from './usePreviewTransactions';
 import {
   applyAffectedToLocalTags,
   applyAffectedToSuggested,
@@ -43,13 +44,15 @@ export interface UseTagReviewStateOutput {
     transaction: ConfirmedTransaction,
     tags: string[]
   ) => void;
-  previewTransactions: Array<{ checksum: string; description: string; entityId: string | null }>;
+  previewTransactions: PreviewTransaction[];
   handleTagRuleApplied: (
     changeSet: TagRuleChangeSet,
     affected: TagRuleImpactItem[],
     acceptedNewTags: string[]
   ) => void;
 }
+
+export type { PreviewTransaction };
 
 interface LocalTagsState {
   localTags: Record<string, string[]>;
@@ -129,18 +132,6 @@ function useTagRuleHandler(args: {
   );
 }
 
-function usePreviewTransactions(confirmedTransactions: ConfirmedTransaction[]) {
-  return useMemo(
-    () =>
-      confirmedTransactions.map((t) => ({
-        checksum: t.checksum,
-        description: t.description,
-        entityId: t.entityId ?? null,
-      })),
-    [confirmedTransactions]
-  );
-}
-
 export function useTagReviewState(): UseTagReviewStateOutput {
   const store = useImportStore();
   const {
@@ -179,7 +170,11 @@ export function useTagReviewState(): UseTagReviewStateOutput {
     suggestedTagMeta,
   });
 
-  const previewTransactions = usePreviewTransactions(confirmedTransactions);
+  const previewTransactions = usePreviewTransactions({
+    confirmedTransactions,
+    localTags,
+    suggestedTagMeta,
+  });
 
   return {
     confirmedTransactions,

@@ -49,6 +49,9 @@ function useFormState(): FormState {
   };
 }
 
+/** Rows of per-transaction detail the impact panel asks for; the totals are uncapped. */
+const PREVIEW_ITEM_CAP = 50;
+
 interface ProposeInputArgs {
   signal: TagRuleProposalDialogProps['signal'];
   previewTransactions: TagRuleProposalDialogProps['previewTransactions'];
@@ -66,12 +69,15 @@ function buildProposeInput(args: ProposeInputArgs) {
   if (!descriptionPattern) return null;
   return {
     signal: { descriptionPattern, matchType, entityId: signal.entityId, tags },
-    transactions: previewTransactions.slice(0, 50).map((t) => ({
+    // Every confirmed row is sent so the impact totals cover the whole import;
+    // `maxPreviewItems` caps only the per-row list the panel renders.
+    transactions: previewTransactions.map((t) => ({
       transactionId: t.checksum,
       description: t.description,
       entityId: t.entityId ?? null,
+      ...(t.userTags === undefined ? {} : { userTags: t.userTags }),
     })),
-    maxPreviewItems: 50,
+    maxPreviewItems: PREVIEW_ITEM_CAP,
   };
 }
 

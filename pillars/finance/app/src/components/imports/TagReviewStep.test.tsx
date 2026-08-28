@@ -379,6 +379,59 @@ describe('TagReviewStep — Save tag rule wiring (US-02 / US-03)', () => {
     );
   });
 
+  it('marks only hand-edited rows with userTags in previewTransactions (POPS-2599)', async () => {
+    const handEdited = makeTransaction({
+      description: 'WOOLWORTHS ONLINE',
+      amount: -55,
+      entityName: 'Woolworths',
+      entityId: 'woolworths-id',
+      tags: ['Groceries', 'Weekly'],
+      suggestedTags: [{ tag: 'Groceries', source: 'rule', pattern: 'woolworths' }],
+    });
+    seedTransactions([woolworthsTx1, handEdited]);
+    renderTagReviewStep();
+
+    fireEvent.click(screen.getByLabelText('Save tag rule for WOOLWORTHS METRO'));
+    await waitFor(() => {
+      expect(screen.getByTestId('dialog')).toBeInTheDocument();
+    });
+
+    const rows = mockDialogCapture.previewTransactions as Array<{
+      description: string;
+      userTags?: string[];
+    }>;
+    // Untouched: its tags still equal its suggestions, so a rule may change it.
+    expect(rows.find((r) => r.description === 'WOOLWORTHS METRO')).not.toHaveProperty('userTags');
+    expect(rows.find((r) => r.description === 'WOOLWORTHS ONLINE')?.userTags).toEqual([
+      'Groceries',
+      'Weekly',
+    ]);
+  });
+
+  it('marks a row edited down to no tags as user-decided (POPS-2599)', async () => {
+    const cleared = makeTransaction({
+      description: 'WOOLWORTHS ONLINE',
+      amount: -55,
+      entityName: 'Woolworths',
+      entityId: 'woolworths-id',
+      tags: [],
+      suggestedTags: [{ tag: 'Groceries', source: 'rule', pattern: 'woolworths' }],
+    });
+    seedTransactions([woolworthsTx1, cleared]);
+    renderTagReviewStep();
+
+    fireEvent.click(screen.getByLabelText('Save tag rule for WOOLWORTHS METRO'));
+    await waitFor(() => {
+      expect(screen.getByTestId('dialog')).toBeInTheDocument();
+    });
+
+    const rows = mockDialogCapture.previewTransactions as Array<{
+      description: string;
+      userTags?: string[];
+    }>;
+    expect(rows.find((r) => r.description === 'WOOLWORTHS ONLINE')?.userTags).toEqual([]);
+  });
+
   it('approving from transaction-scope dialog propagates tags via handleTagRuleApplied', () => {
     const CHECKSUM = woolworthsTx1.checksum;
     seedTransactions([woolworthsTx1]);

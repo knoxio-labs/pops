@@ -6460,8 +6460,10 @@ export interface operations {
             counts: {
               affected: number;
               newTagProposals: number;
+              removed: number;
               suggestionChanges: number;
             };
+            newTags: string[];
           };
         };
       };
@@ -6615,8 +6617,10 @@ export interface operations {
               counts: {
                 affected: number;
                 newTagProposals: number;
+                removed: number;
                 suggestionChanges: number;
               };
+              newTags: string[];
             };
             rationale: string;
           };

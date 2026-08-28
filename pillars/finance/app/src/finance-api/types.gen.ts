@@ -4666,8 +4666,10 @@ export type TagRulesPreviewResponses = {
     counts: {
       affected: number;
       newTagProposals: number;
+      removed: number;
       suggestionChanges: number;
     };
+    newTags: Array<string>;
   };
 };
 
@@ -4792,8 +4794,10 @@ export type TagRulesProposeResponses = {
       counts: {
         affected: number;
         newTagProposals: number;
+        removed: number;
         suggestionChanges: number;
       };
+      newTags: Array<string>;
     };
     rationale: string;
   };

@@ -223,13 +223,19 @@ interface TagSuggestion {
 }
 
 interface TagRulePreview {
-  counts: { affected: number; suggestionChanges: number; newTagProposals: number };
+  counts: {
+    affected: number;
+    suggestionChanges: number;
+    removed: number;
+    newTagProposals: number;
+  };
   affected: {
     transactionId: string;
     description: string;
     before: { suggestedTags: TagSuggestion[] };
     after: { suggestedTags: TagSuggestion[] };
   }[];
+  newTags: string[];
 }
 
 interface TagRuleProposal {

@@ -43,6 +43,7 @@ export {
   type TagRuleChangeSet,
   type TagRuleChangeSetOp,
   type TagRuleImpactItem,
+  type TagRuleUpdate,
 } from './rest-tag-rules-schemas.js';
 
 const c = initContract();

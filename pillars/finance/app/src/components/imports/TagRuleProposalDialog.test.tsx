@@ -21,8 +21,14 @@ type ProposeData = {
   changeSet: { source?: string; reason?: string; ops: Array<Record<string, unknown>> };
   rationale: string;
   preview: {
-    counts: { affected: number; suggestionChanges: number; newTagProposals: number };
+    counts: {
+      affected: number;
+      suggestionChanges: number;
+      removed: number;
+      newTagProposals: number;
+    };
     affected: unknown[];
+    newTags: string[];
   };
 } | null;
 
@@ -71,7 +77,7 @@ const baseProposal: ProposeData = {
   },
   rationale: 'Add new tag rule (contains:WOOLWORTHS) from tag edit signal',
   preview: {
-    counts: { affected: 1, suggestionChanges: 1, newTagProposals: 0 },
+    counts: { affected: 1, suggestionChanges: 1, removed: 0, newTagProposals: 0 },
     affected: [
       {
         transactionId: 't1',
@@ -80,6 +86,7 @@ const baseProposal: ProposeData = {
         after: { suggestedTags: [{ tag: 'Groceries', source: 'tag_rule', isNew: false }] },
       },
     ],
+    newTags: [],
   },
 };
 
@@ -87,17 +94,23 @@ const baseProposal: ProposeData = {
 const proposalWithNewTag: ProposeData = {
   ...baseProposal,
   preview: {
-    counts: { affected: 1, suggestionChanges: 1, newTagProposals: 1 },
+    counts: { affected: 1, suggestionChanges: 1, removed: 0, newTagProposals: 1 },
     affected: [
       {
         transactionId: 't1',
         description: 'WOOLWORTHS 1234',
         before: { suggestedTags: [] },
-        after: { suggestedTags: [{ tag: 'Groceries', source: 'tag_rule', isNew: true }] },
+        after: { suggestedTags: [{ tag: 'Groceries', source: 'rule', isNew: true }] },
       },
     ],
+    newTags: ['Groceries'],
   },
 };
+
+function proposalWith(preview: Partial<NonNullable<ProposeData>['preview']>): ProposeData {
+  const base = baseProposal as NonNullable<ProposeData>;
+  return { ...base, preview: { ...base.preview, ...preview } };
+}
 
 function withClient(node: ReactElement): ReactElement {
   const queryClient = new QueryClient({
@@ -143,6 +156,54 @@ describe('TagRuleProposalDialog', () => {
         signal: expect.objectContaining({ descriptionPattern: 'WOOLWORTHS', tags: ['Groceries'] }),
       }),
     });
+  });
+
+  it('reports the uncapped totals, not the length of the rendered list', async () => {
+    mockPropose.mockResolvedValue({
+      data: proposalWith({
+        counts: { affected: 120, suggestionChanges: 145, removed: 25, newTagProposals: 0 },
+      }),
+      error: undefined,
+    });
+    renderDialog();
+
+    const summary = await screen.findByTestId('impact-summary');
+    expect(summary).toHaveTextContent('120 rows');
+    expect(summary).toHaveTextContent('145 tag changes');
+    expect(summary).toHaveTextContent('25 removed');
+  });
+
+  it('says how many affected rows are not listed when the detail is truncated', async () => {
+    mockPropose.mockResolvedValue({
+      data: proposalWith({
+        counts: { affected: 120, suggestionChanges: 120, removed: 0, newTagProposals: 0 },
+      }),
+      error: undefined,
+    });
+    renderDialog();
+
+    // One row of detail against a total of 120 — the rest must be admitted to.
+    expect(await screen.findByTestId('impact-unlisted')).toHaveTextContent('+119 more not listed');
+  });
+
+  it('omits the truncation notice when every affected row is listed', async () => {
+    renderDialog();
+
+    await screen.findByTestId('impact-summary');
+    expect(screen.queryByTestId('impact-unlisted')).not.toBeInTheDocument();
+  });
+
+  it('offers a new vocabulary tag whose only row fell past the detail cap', async () => {
+    mockPropose.mockResolvedValue({
+      data: proposalWith({
+        counts: { affected: 120, suggestionChanges: 120, removed: 0, newTagProposals: 4 },
+        newTags: ['Weekly'],
+      }),
+      error: undefined,
+    });
+    renderDialog();
+
+    expect(await screen.findByText('Weekly')).toBeInTheDocument();
   });
 
   it('stages the rule without writing: no apply call, onApplied gets the accepted new tags', async () => {
