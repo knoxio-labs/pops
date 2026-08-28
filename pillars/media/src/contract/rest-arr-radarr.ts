@@ -33,13 +33,13 @@ export const radarrRoutes = {
     method: 'GET',
     path: '/arr/config',
     responses: { 200: z.object({ data: ArrConfigSchema }) },
-    summary: 'Env-derived configuration state for Radarr + Sonarr',
+    summary: 'Configuration state for Radarr + Sonarr',
   },
   settings: {
     method: 'GET',
     path: '/arr/settings',
     responses: { 200: z.object({ data: ArrSettingsSchema }) },
-    summary: 'Read-only env-derived arr settings (URLs + presence flags; no key values)',
+    summary: 'Read-only arr settings (URLs + presence flags; no key values)',
   },
   queue: {
     method: 'GET',

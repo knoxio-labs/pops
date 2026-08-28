@@ -14,6 +14,6 @@ import { makeSonarrHandlers } from './arr-sonarr-handlers.js';
 export function makeArrHandlers(db: MediaDb) {
   return {
     ...makeRadarrHandlers(db),
-    ...makeSonarrHandlers(),
+    ...makeSonarrHandlers(db),
   };
 }

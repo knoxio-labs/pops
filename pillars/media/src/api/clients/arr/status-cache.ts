@@ -1,3 +1,5 @@
+import { getRadarrClient, getSonarrClient } from './config.js';
+
 /**
  * Cached movie/show status lookups against Radarr/Sonarr.
  *
@@ -5,8 +7,7 @@
  * cache on connection failure, or a clear "not configured" / "unavailable"
  * status so the FE can render a stable badge.
  */
-import { getRadarrClient, getSonarrClient } from './config.js';
-
+import type { MediaDb } from '../../../db/index.js';
 import type { ArrStatusResult } from './types.js';
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
@@ -20,13 +21,13 @@ const movieStatusCache = new Map<number, CacheEntry>();
 const showStatusCache = new Map<number, CacheEntry>();
 
 /** Get movie status from Radarr with caching. Returns stale cache on connection failure. */
-export async function getMovieStatus(tmdbId: number): Promise<ArrStatusResult> {
+export async function getMovieStatus(db: MediaDb, tmdbId: number): Promise<ArrStatusResult> {
   const cached = movieStatusCache.get(tmdbId);
   if (cached && cached.expiresAt > Date.now()) {
     return cached.result;
   }
 
-  const client = getRadarrClient();
+  const client = getRadarrClient(db);
   if (!client) {
     return { status: 'not_found', label: 'Radarr not configured' };
   }
@@ -46,13 +47,13 @@ export async function getMovieStatus(tmdbId: number): Promise<ArrStatusResult> {
 }
 
 /** Get TV show status from Sonarr with caching. Returns stale cache on connection failure. */
-export async function getShowStatus(tvdbId: number): Promise<ArrStatusResult> {
+export async function getShowStatus(db: MediaDb, tvdbId: number): Promise<ArrStatusResult> {
   const cached = showStatusCache.get(tvdbId);
   if (cached && cached.expiresAt > Date.now()) {
     return cached.result;
   }
 
-  const client = getSonarrClient();
+  const client = getSonarrClient(db);
   if (!client) {
     return { status: 'not_found', label: 'Sonarr not configured' };
   }

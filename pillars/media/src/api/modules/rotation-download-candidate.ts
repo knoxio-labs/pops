@@ -88,13 +88,13 @@ export async function downloadCandidate(
 ): Promise<DownloadCandidateResult> {
   const candidate = rotationCandidateSyncService.getPendingCandidate(db, candidateId);
 
-  const client = getRadarrClient();
+  const client = getRadarrClient(db);
   if (!client) throw new ConflictError('Radarr is not configured');
 
-  const defaults = getRotationDefaults();
+  const defaults = getRotationDefaults(db);
   if (!defaults) {
     throw new ConflictError(
-      'Radarr rotation defaults not configured (RADARR_QUALITY_PROFILE_ID / RADARR_ROOT_FOLDER_PATH)'
+      'Radarr download defaults not configured (quality profile / root folder)'
     );
   }
 

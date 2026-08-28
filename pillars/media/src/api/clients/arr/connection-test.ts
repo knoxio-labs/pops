@@ -10,6 +10,7 @@ import { SonarrClient } from './sonarr-client.js';
  */
 import { ArrApiError } from './types.js';
 
+import type { MediaDb } from '../../../db/index.js';
 import type { ArrTestResult } from './types.js';
 
 /** Convert any error to a human readable message. */
@@ -68,9 +69,9 @@ export async function testSonarr(url: string, apiKey: string): Promise<TestOutco
   return testClient('sonarr', url, apiKey, ' — check the URL');
 }
 
-/** Test the ENV-configured Radarr creds. */
-export async function testRadarrSaved(): Promise<TestOutcome> {
-  const s = getArrSettings();
+/** Test the stored (or env-default) Radarr creds. */
+export async function testRadarrSaved(db: MediaDb): Promise<TestOutcome> {
+  const s = getArrSettings(db);
   if (!s.radarrUrl || !s.radarrApiKey) {
     return {
       data: { configured: false, connected: false, error: 'Radarr URL or API key not configured' },
@@ -79,9 +80,9 @@ export async function testRadarrSaved(): Promise<TestOutcome> {
   return testClient('radarr', s.radarrUrl, s.radarrApiKey, '');
 }
 
-/** Test the ENV-configured Sonarr creds. */
-export async function testSonarrSaved(): Promise<TestOutcome> {
-  const s = getArrSettings();
+/** Test the stored (or env-default) Sonarr creds. */
+export async function testSonarrSaved(db: MediaDb): Promise<TestOutcome> {
+  const s = getArrSettings(db);
   if (!s.sonarrUrl || !s.sonarrApiKey) {
     return {
       data: { configured: false, connected: false, error: 'Sonarr URL or API key not configured' },

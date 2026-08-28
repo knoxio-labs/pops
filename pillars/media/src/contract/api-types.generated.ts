@@ -10,7 +10,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** Env-derived configuration state for Radarr + Sonarr */
+    /** Configuration state for Radarr + Sonarr */
     get: operations['arr.config'];
     put?: never;
     post?: never;
@@ -214,7 +214,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** Read-only env-derived arr settings (URLs + presence flags; no key values) */
+    /** Read-only arr settings (URLs + presence flags; no key values) */
     get: operations['arr.settings'];
     put?: never;
     post?: never;

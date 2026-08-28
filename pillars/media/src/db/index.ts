@@ -47,6 +47,8 @@ export * as shelfImpressionsService from './services/shelf-impressions.js';
 
 export * as plexSettingsService from './services/plex-settings.js';
 
+export * as settingsService from './services/settings-adapter.js';
+
 export type {
   AddToQueueInput,
   CandidateListRow,

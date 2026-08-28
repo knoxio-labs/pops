@@ -1,13 +1,3 @@
-/**
- * Handlers for the Sonarr routes of the `arr.*` sub-router
- * (series/season/episode + calendar). Thin wrappers over the env-configured
- * Sonarr client in `../clients/arr`; unconfigured services raise
- * `ConflictError` (409) via `requireSonarr`. The connection-test routes
- * swallow failures and report them in the `200` body (`connected:false`).
- *
- * These handlers do not touch the media db (only Radarr's
- * `downloadAndProtect` writes a library entry), so the factory takes no deps.
- */
 import {
   addSeries,
   checkSeries,
@@ -27,27 +17,42 @@ import {
 import { requireSonarr, type ArrReq } from './arr-handlers-shared.js';
 import { runHttp } from './error-mapping.js';
 
-export function makeSonarrHandlers() {
+/**
+ * Handlers for the Sonarr routes of the `arr.*` sub-router
+ * (series/season/episode + calendar). Thin wrappers over the Sonarr client
+ * in `../clients/arr`; unconfigured services raise `ConflictError` (409) via
+ * `requireSonarr`. The connection-test routes swallow failures and report
+ * them in the `200` body (`connected:false`).
+ *
+ * The db is only read for the stored Sonarr connection settings; these
+ * handlers write nothing to it.
+ */
+import type { MediaDb } from '../../db/index.js';
+
+export function makeSonarrHandlers(db: MediaDb) {
   return {
     getSonarrQualityProfiles: () =>
       runHttp(async () => ({
         status: 200 as const,
-        body: { data: await getSonarrQualityProfiles() },
+        body: { data: await getSonarrQualityProfiles(db) },
       })),
 
     getSonarrRootFolders: () =>
-      runHttp(async () => ({ status: 200 as const, body: { data: await getSonarrRootFolders() } })),
+      runHttp(async () => ({
+        status: 200 as const,
+        body: { data: await getSonarrRootFolders(db) },
+      })),
 
     getSonarrLanguageProfiles: () =>
       runHttp(async () => ({
         status: 200 as const,
-        body: { data: await getSonarrLanguageProfiles() },
+        body: { data: await getSonarrLanguageProfiles(db) },
       })),
 
     getCalendar: ({ query }: ArrReq['getCalendar']) =>
       runHttp(async () => ({
         status: 200 as const,
-        body: { data: await getSonarrCalendar(query.start, query.end) },
+        body: { data: await getSonarrCalendar(db, query.start, query.end) },
       })),
 
     testSonarr: ({ body }: ArrReq['testSonarr']) =>
@@ -57,12 +62,12 @@ export function makeSonarrHandlers() {
       })),
 
     testSonarrSaved: () =>
-      runHttp(async () => ({ status: 200 as const, body: await testSonarrSaved() })),
+      runHttp(async () => ({ status: 200 as const, body: await testSonarrSaved(db) })),
 
     updateEpisodeMonitoring: ({ body }: ArrReq['updateEpisodeMonitoring']) =>
       runHttp(async () => {
-        requireSonarr();
-        await updateEpisodeMonitoring(body.episodeIds, body.monitored);
+        requireSonarr(db);
+        await updateEpisodeMonitoring(db, body.episodeIds, body.monitored);
         return {
           status: 200 as const,
           body: {
@@ -73,44 +78,44 @@ export function makeSonarrHandlers() {
 
     addSeries: ({ body }: ArrReq['addSeries']) =>
       runHttp(async () => {
-        requireSonarr();
-        return { status: 201 as const, body: { data: await addSeries(body) } };
+        requireSonarr(db);
+        return { status: 201 as const, body: { data: await addSeries(db, body) } };
       }),
 
     checkSeries: ({ params }: ArrReq['checkSeries']) =>
       runHttp(async () => ({
         status: 200 as const,
-        body: { data: await checkSeries(params.tvdbId) },
+        body: { data: await checkSeries(db, params.tvdbId) },
       })),
 
     getShowStatus: ({ params }: ArrReq['getShowStatus']) =>
       runHttp(async () => ({
         status: 200 as const,
-        body: { data: await getShowStatus(params.tvdbId) },
+        body: { data: await getShowStatus(db, params.tvdbId) },
       })),
 
     getSeriesEpisodes: ({ params, query }: ArrReq['getSeriesEpisodes']) =>
       runHttp(async () => {
-        requireSonarr();
+        requireSonarr(db);
         return {
           status: 200 as const,
-          body: { data: await getSeriesEpisodes(params.sonarrId, query.seasonNumber) },
+          body: { data: await getSeriesEpisodes(db, params.sonarrId, query.seasonNumber) },
         };
       }),
 
     updateSeriesMonitoring: ({ params, body }: ArrReq['updateSeriesMonitoring']) =>
       runHttp(async () => {
-        requireSonarr();
+        requireSonarr(db);
         return {
           status: 200 as const,
-          body: { data: await updateSeriesMonitoring(params.sonarrId, body.monitored) },
+          body: { data: await updateSeriesMonitoring(db, params.sonarrId, body.monitored) },
         };
       }),
 
     updateSeasonMonitoring: ({ params, body }: ArrReq['updateSeasonMonitoring']) =>
       runHttp(async () => {
-        requireSonarr();
-        await updateSeasonMonitoring(params.sonarrId, params.seasonNumber, body.monitored);
+        requireSonarr(db);
+        await updateSeasonMonitoring(db, params.sonarrId, params.seasonNumber, body.monitored);
         return {
           status: 200 as const,
           body: { message: `Season ${params.seasonNumber} monitoring set to ${body.monitored}` },
@@ -119,10 +124,10 @@ export function makeSonarrHandlers() {
 
     triggerSeriesSearch: ({ params, body }: ArrReq['triggerSeriesSearch']) =>
       runHttp(async () => {
-        requireSonarr();
+        requireSonarr(db);
         return {
           status: 200 as const,
-          body: { data: await triggerSeriesSearch(params.sonarrId, body?.seasonNumber) },
+          body: { data: await triggerSeriesSearch(db, params.sonarrId, body?.seasonNumber) },
         };
       }),
   };

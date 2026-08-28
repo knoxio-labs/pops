@@ -42,7 +42,7 @@
             "description": "200"
           }
         },
-        "summary": "Env-derived configuration state for Radarr + Sonarr",
+        "summary": "Configuration state for Radarr + Sonarr",
         "tags": ["arr"]
       }
     },
@@ -1460,7 +1460,7 @@
             "description": "200"
           }
         },
-        "summary": "Read-only env-derived arr settings (URLs + presence flags; no key values)",
+        "summary": "Read-only arr settings (URLs + presence flags; no key values)",
         "tags": ["arr"]
       }
     },

@@ -86,7 +86,7 @@ export async function executeRotationCycle(db: MediaDb): Promise<RotationCycleRe
 
   await syncAllSources(db);
 
-  const client = getRadarrClient();
+  const client = getRadarrClient(db);
   if (!client) {
     return { ...emptyResult(targetFreeGb), skippedReason: 'Radarr not configured' };
   }
