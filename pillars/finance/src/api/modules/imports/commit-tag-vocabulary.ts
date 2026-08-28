@@ -35,7 +35,7 @@ import { tagVocabularyService, type FinanceDb } from '../../../db/index.js';
  */
 import { parseTagFacet, tagFacetKind } from '../../../db/tag-facets.js';
 import { ValidationError } from '../../shared/errors.js';
-import { collectTagsFromTagRuleChangeSet } from './commit-temp-resolver.js';
+import { collectTagsFromTagRuleChangeSet, isTagBearingTagRuleOp } from './commit-temp-resolver.js';
 
 import type { KnownTagSet } from '../../../db/services/tag-vocabulary.js';
 import type { CommitPayload } from './types.js';
@@ -95,24 +95,23 @@ function filterTagRuleChangeSetEntry(
   const isKept = (tag: string): boolean => known.has(tag) || accepted.has(tag);
   const ops: CommitPayload['tagRuleChangeSets'][number]['changeSet']['ops'] = [];
   for (const op of entry.changeSet.ops) {
+    if (!isTagBearingTagRuleOp(op) || !op.data.tags) {
+      ops.push(op);
+      continue;
+    }
+    const keptTags = op.data.tags.filter(isKept);
     if (op.op === 'add') {
-      const keptTags = op.data.tags.filter(isKept);
       if (keptTags.length === 0) continue;
       ops.push({ ...op, data: { ...op.data, tags: keptTags } });
       continue;
     }
-    if (op.op === 'edit' && op.data.tags) {
-      const keptTags = op.data.tags.filter(isKept);
-      if (keptTags.length > 0) {
-        ops.push({ ...op, data: { ...op.data, tags: keptTags } });
-        continue;
-      }
-      const { tags: _declinedTags, ...rest } = op.data;
-      if (Object.keys(rest).length === 0) continue;
-      ops.push({ ...op, data: rest });
+    if (keptTags.length > 0) {
+      ops.push({ ...op, data: { ...op.data, tags: keptTags } });
       continue;
     }
-    ops.push(op);
+    const { tags: _declinedTags, ...rest } = op.data;
+    if (Object.keys(rest).length === 0) continue;
+    ops.push({ ...op, data: rest });
   }
 
   if (ops.length === 0) return undefined;
