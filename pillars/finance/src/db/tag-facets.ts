@@ -120,3 +120,23 @@ export function isClosedTagFacet(facet: string | null): facet is ClosedTagFacet 
 export function formatTag(facet: string, value: string): string {
   return `${facet}${TAG_FACET_SEPARATOR}${value}`;
 }
+
+/**
+ * Parse a JSON-encoded `tags` column back into a `string[]`, tolerating a
+ * malformed or non-array payload by returning nothing.
+ *
+ * Reading has to be total: a row whose `tags` cannot be parsed is a row that
+ * still has to be counted and listed, and throwing here would take an audit
+ * down on the single row it most needs to report.
+ */
+export function parseStoredTags(tagsJson: string | null | undefined): string[] {
+  if (!tagsJson) return [];
+  try {
+    const parsed: unknown = JSON.parse(tagsJson);
+    return Array.isArray(parsed)
+      ? parsed.filter((tag): tag is string => typeof tag === 'string')
+      : [];
+  } catch {
+    return [];
+  }
+}

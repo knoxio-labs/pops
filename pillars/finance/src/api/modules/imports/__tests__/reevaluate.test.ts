@@ -16,6 +16,7 @@ import {
   openFinanceDb,
   transactionCorrections,
   transactionCorrectionsService,
+  transactionTagRules,
   type FinanceDb,
   type OpenedFinanceDb,
 } from '../../../../db/index.js';
@@ -49,6 +50,19 @@ function seedRule(id: string): void {
       entityId: 'ent-coles',
       entityName: 'Coles',
       tags: '[]',
+      isActive: true,
+      confidence: 0.95,
+      priority: 0,
+    })
+    .run();
+}
+
+function seedTagRule(pattern: string, tags: string[]): void {
+  db.insert(transactionTagRules)
+    .values({
+      descriptionPattern: pattern,
+      matchType: 'contains',
+      tags: JSON.stringify(tags),
       isActive: true,
       confidence: 0.95,
       priority: 0,
@@ -312,5 +326,119 @@ describe('reevaluateImportSessionWithRules — pending preview never counts as u
 
     expect(affectedCount).toBe(1);
     expect(timesApplied('r-1')).toBe(0);
+  });
+});
+
+/**
+ * POPS-2607 re-tags the whole ledger by re-running re-evaluation rather than
+ * editing rows, on the premise that the result is reproducible. That premise is
+ * load-bearing — an operator reviews the diff of one run, not each row — and
+ * nothing asserted it, so a rule that flip-flopped or a tag pass that appended
+ * on every run would have been discovered by the re-tag itself.
+ */
+describe('reevaluate — running twice over the same data is idempotent (POPS-2607)', () => {
+  it('leaves the second run with nothing to affect and an identical result', async () => {
+    seedRule('r-1');
+    const contacts = makeContactsFake({ seed: [{ id: 'ent-coles', name: 'Coles' }] });
+    const result = emptyResult([uncertainTxn('COLES SYDNEY 1'), uncertainTxn('COLES SYDNEY 2')]);
+
+    const first = await reevaluateImportSessionResult({
+      db,
+      contacts,
+      result,
+      minConfidence: 0.7,
+    });
+    const second = await reevaluateImportSessionResult({
+      db,
+      contacts,
+      result: first.nextResult,
+      minConfidence: 0.7,
+    });
+
+    expect(first.affectedCount).toBe(2);
+    expect(second.affectedCount).toBe(0);
+    expect(second.nextResult).toEqual(first.nextResult);
+  });
+
+  it('does not append the same suggested tag again on the second run', async () => {
+    seedTagRule('COLES', ['venue:supermarket', 'contains:groceries']);
+    const contacts = makeContactsFake({ seed: [{ id: 'ent-coles', name: 'Coles' }] });
+
+    const first = await reevaluateImportSessionResult({
+      db,
+      contacts,
+      result: emptyResult([uncertainTxn('COLES SYDNEY')]),
+      minConfidence: 0.7,
+    });
+    const second = await reevaluateImportSessionResult({
+      db,
+      contacts,
+      result: first.nextResult,
+      minConfidence: 0.7,
+    });
+
+    const tagsOf = (output: ProcessImportOutput): string[] =>
+      (output.matched[0]?.suggestedTags ?? []).map((s) => s.tag);
+
+    expect(tagsOf(first.nextResult)).toEqual(['venue:supermarket', 'contains:groceries']);
+    expect(tagsOf(second.nextResult)).toEqual(tagsOf(first.nextResult));
+  });
+
+  it('is idempotent for a row already matched to the entity the rule names', async () => {
+    seedRule('r-1');
+    const alreadyRight = matchedTxn('COLES SYDNEY', {
+      entityId: 'ent-coles',
+      entityName: 'Coles',
+      matchType: 'learned',
+      confidence: 0.95,
+    });
+    const input: ProcessImportOutput = {
+      matched: [alreadyRight],
+      uncertain: [],
+      failed: [],
+      skipped: [],
+    };
+
+    const first = await reevaluateImportSessionResult({
+      db,
+      contacts: makeContactsFake(),
+      result: input,
+      minConfidence: 0.7,
+    });
+    const second = await reevaluateImportSessionResult({
+      db,
+      contacts: makeContactsFake(),
+      result: first.nextResult,
+      minConfidence: 0.7,
+    });
+
+    expect(first.affectedCount).toBe(0);
+    expect(second.nextResult).toEqual(first.nextResult);
+  });
+
+  // The one facet that is NOT idempotent, pinned here so the fix is visible when
+  // it lands: a second run changes nothing and still credits the rule again, so
+  // a whole-ledger re-tag inflates every counter by the ledger size (POPS-2641).
+  it('still re-credits usage telemetry on a run that changes nothing (POPS-2641)', async () => {
+    seedRule('r-1');
+    const contacts = makeContactsFake({ seed: [{ id: 'ent-coles', name: 'Coles' }] });
+
+    const first = await reevaluateImportSessionResult({
+      db,
+      contacts,
+      result: emptyResult([uncertainTxn('COLES SYDNEY')]),
+      minConfidence: 0.7,
+    });
+    expect(timesApplied('r-1')).toBe(1);
+
+    const second = await reevaluateImportSessionResult({
+      db,
+      contacts,
+      result: first.nextResult,
+      minConfidence: 0.7,
+    });
+
+    expect(second.affectedCount).toBe(0);
+    expect(timesApplied('r-1')).toBe(2);
   });
 });
