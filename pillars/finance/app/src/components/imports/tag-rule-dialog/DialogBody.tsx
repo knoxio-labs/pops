@@ -1,5 +1,7 @@
 import { Checkbox, Input, Label, Textarea } from '@pops/ui';
 
+import { describeTag } from '../../../lib/tags';
+
 import type { ProposeOutput, TagRuleLearnSignal } from './types';
 
 interface FormFieldsProps {
@@ -93,7 +95,11 @@ export function NewTagsPanel({
       <p className="text-xs font-medium">New vocabulary tags — accept before saving</p>
       <div className="space-y-2">
         {newTagNames.map((tag) => (
-          <label key={tag} className="flex items-center gap-2 text-xs">
+          <label
+            key={tag}
+            className="flex items-center gap-2 text-xs"
+            title={describeTag(tag).title}
+          >
             <Checkbox
               checked={acceptedNewTags.has(tag)}
               onCheckedChange={(v) =>
@@ -105,7 +111,7 @@ export function NewTagsPanel({
                 })
               }
             />
-            <span>{tag}</span>
+            <span>{describeTag(tag).ariaLabel}</span>
             <span className="text-muted-foreground">(new)</span>
           </label>
         ))}

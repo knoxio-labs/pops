@@ -1,5 +1,7 @@
 import { Ban, Pencil, Plus, Trash2 } from 'lucide-react';
 
+import { describeTag } from '../../../lib/tags';
+
 export type ChangeSetOp =
   | { op: 'add'; data: { descriptionPattern: string; [k: string]: unknown } }
   | { op: 'edit'; id: string; data: { entityName?: string | null; [k: string]: unknown } }
@@ -52,7 +54,9 @@ export function opDisplayLabel(op: ChangeSetOp): string {
 export function tagRuleOpDisplayLabel(op: TagRuleChangeSetOp): string {
   switch (op.op) {
     case 'add': {
-      const tags = op.data.tags?.length ? ` → ${op.data.tags.join(', ')}` : '';
+      const tags = op.data.tags?.length
+        ? ` → ${op.data.tags.map((tag) => describeTag(tag).ariaLabel).join(', ')}`
+        : '';
       return `${op.data.descriptionPattern}${tags}`;
     }
     case 'edit':

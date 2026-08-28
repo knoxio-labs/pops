@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { filterTagSuggestions, type TagEditorProps } from './utils';
+import { orderTagsByFacet, resolveTypedTag } from '../../lib/tags';
+import { filterTagSuggestions, SUGGESTION_LIMIT, type TagEditorProps } from './utils';
 
 export interface PanelHandlers {
   tags: string[];
   inputValue: string;
+  /** Suggestions in display order, already capped at `SUGGESTION_LIMIT`. */
   filtered: string[];
   isSaving: boolean;
   isSuggesting: boolean;
@@ -29,28 +31,45 @@ interface CoreState {
 interface KeyDownDeps {
   state: CoreState;
   filtered: string[];
+  availableTags: string[];
   onAddTag: (tag: string) => void;
   onRemoveTag: (tag: string) => void;
   onCancel: () => void;
 }
 
+function completeFirstSuggestion({ filtered, onAddTag }: KeyDownDeps): void {
+  const first = filtered[0];
+  if (first) onAddTag(first);
+}
+
+/**
+ * Suggestions show the value alone, so typing what is on screen must reuse
+ * the faceted tag behind it rather than mint a bare duplicate.
+ */
+function addTypedTag({ state, availableTags, onAddTag }: KeyDownDeps): void {
+  onAddTag(resolveTypedTag(state.inputValue, availableTags) ?? state.inputValue);
+}
+
+function removeLastTag({ state, onRemoveTag }: KeyDownDeps): void {
+  const last = state.tags.at(-1);
+  if (last) onRemoveTag(last);
+}
+
 function makeKeyDownHandler(deps: KeyDownDeps) {
-  const { state, filtered, onAddTag, onRemoveTag, onCancel } = deps;
+  const { state, filtered, onCancel } = deps;
   return (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Tab' && filtered.length > 0) {
       e.preventDefault();
-      const first = filtered[0];
-      if (first) onAddTag(first);
+      completeFirstSuggestion(deps);
       return;
     }
     if ((e.key === 'Enter' || e.key === ',') && state.inputValue.trim()) {
       e.preventDefault();
-      onAddTag(state.inputValue);
+      addTypedTag(deps);
       return;
     }
     if (e.key === 'Backspace' && !state.inputValue && state.tags.length > 0) {
-      const last = state.tags[state.tags.length - 1];
-      if (last) onRemoveTag(last);
+      removeLastTag(deps);
       return;
     }
     if (e.key === 'Escape') onCancel();
@@ -128,7 +147,11 @@ function useTagActions({ s, currentTags, onSave, onSuggest }: ActionsArgs) {
 export function useTagEditorState(props: TagEditorProps) {
   const { currentTags, onSave, onSuggest, availableTags = [] } = props;
   const s = useCoreState(currentTags);
-  const filtered = filterTagSuggestions(s.inputValue, availableTags, s.tags);
+  // Relevance picks the shortlist, then facet grouping fixes its order, so
+  // what Tab completes is always what the panel shows first.
+  const filtered = orderTagsByFacet(
+    filterTagSuggestions(s.inputValue, availableTags, s.tags).slice(0, SUGGESTION_LIMIT)
+  ).map((parsed) => parsed.raw);
   const { addTag, removeTag, handleCancel, handleSave, handleSuggest } = useTagActions({
     s,
     currentTags,
@@ -158,6 +181,7 @@ export function useTagEditorState(props: TagEditorProps) {
         inputRef: s.inputRef,
       },
       filtered,
+      availableTags,
       onAddTag: addTag,
       onRemoveTag: removeTag,
       onCancel: handleCancel,

@@ -22,6 +22,9 @@ export interface TagEditorProps {
   tagMeta?: Map<string, TagMetaEntry>;
 }
 
+/** How many autocomplete suggestions the panel offers at once. */
+export const SUGGESTION_LIMIT = 8;
+
 export function filterTagSuggestions(
   inputValue: string,
   availableTags: string[],

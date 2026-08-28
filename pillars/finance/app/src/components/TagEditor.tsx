@@ -1,19 +1,13 @@
 import { forwardRef } from 'react';
 
-import {
-  Badge,
-  Button,
-  type ButtonProps,
-  hashToColor,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@pops/ui';
+import { Badge, Button, type ButtonProps, Popover, PopoverContent, PopoverTrigger } from '@pops/ui';
 
+import { orderTagsByFacet } from '../lib/tags';
 import { cn } from '../lib/utils';
 import { TagEditorPanel } from './tag-editor/TagEditorPanel';
 import { type PanelHandlers, useTagEditorState } from './tag-editor/useTagEditorState';
 import { type TagEditorProps, type TagMetaEntry, type TagSource } from './tag-editor/utils';
+import { TagBadge } from './tags/TagChip';
 
 export type { PanelHandlers, TagEditorProps, TagMetaEntry, TagSource };
 
@@ -57,21 +51,22 @@ const TriggerContent = forwardRef<HTMLButtonElement, TriggerProps>(
       {tags.length === 0 ? (
         <span className="text-muted-foreground text-xs">—</span>
       ) : (
-        tags.slice(0, 3).map((tag) => {
-          const meta = tagMeta?.get(tag);
-          return (
-            <Badge
-              key={tag}
-              variant="outline"
-              className="text-2xs uppercase tracking-wider font-bold py-0 px-1.5"
-              style={hashToColor(tag)}
-              title={tooltipFor(meta)}
-            >
-              {meta ? `${SOURCE_ICONS[meta.source]} ` : ''}
-              {tag}
-            </Badge>
-          );
-        })
+        orderTagsByFacet(tags)
+          .slice(0, 3)
+          .map((parsed) => {
+            const meta = tagMeta?.get(parsed.raw);
+            return (
+              <TagBadge
+                key={parsed.raw}
+                tag={parsed.raw}
+                variant="outline"
+                colored
+                className="text-2xs uppercase tracking-wider font-bold py-0 px-1.5"
+                context={tooltipFor(meta)}
+                prefix={meta ? `${SOURCE_ICONS[meta.source]} ` : undefined}
+              />
+            );
+          })
       )}
       {tags.length > 3 && (
         <Badge variant="secondary" className="text-2xs py-0 px-1.5 font-normal opacity-70">

@@ -2,8 +2,10 @@ import { BookmarkPlus, ChevronDown, ChevronRight } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
-import { Badge, Button, ButtonPrimitive } from '@pops/ui';
+import { Button, ButtonPrimitive } from '@pops/ui';
 
+import { describeTag } from '../../../lib/tags';
+import { TagBadgeRow } from '../../tags/TagChip';
 import { GroupTagBar } from './GroupTagBar';
 import { unionTags } from './tagReviewUtils';
 import { TransactionTagRow } from './TransactionTagRow';
@@ -120,7 +122,9 @@ function GroupHeader(props: HeaderProps) {
             size="xs"
             onClick={props.onApplySuggestions}
             className="whitespace-nowrap"
-            title={`Apply suggestions: ${suggestedUnion.join(', ')}`}
+            title={`Apply suggestions: ${suggestedUnion
+              .map((tag) => describeTag(tag).ariaLabel)
+              .join(', ')}`}
           >
             Apply suggestions
           </ButtonPrimitive>
@@ -147,18 +151,12 @@ function GroupHeader(props: HeaderProps) {
 function CurrentTagsPreview({ currentUnion }: { currentUnion: string[] }) {
   if (currentUnion.length === 0) return null;
   return (
-    <div className="hidden sm:flex gap-1 flex-wrap max-w-48">
-      {currentUnion.slice(0, 3).map((tag) => (
-        <Badge key={tag} variant="secondary" className="text-xs">
-          {tag}
-        </Badge>
-      ))}
-      {currentUnion.length > 3 && (
-        <Badge variant="secondary" className="text-xs">
-          +{currentUnion.length - 3}
-        </Badge>
-      )}
-    </div>
+    <TagBadgeRow
+      tags={currentUnion}
+      limit={3}
+      className="hidden sm:flex gap-1 flex-wrap max-w-48"
+      badgeClassName="text-xs"
+    />
   );
 }
 

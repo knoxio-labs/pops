@@ -1,8 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { ButtonPrimitive, Chip, hashToColor } from '@pops/ui';
+import { ButtonPrimitive } from '@pops/ui';
 
+import { orderTagsByFacet, resolveTypedTag } from '../../../lib/tags';
 import { cn } from '../../../lib/utils';
+import { TagChip } from '../../tags/TagChip';
+import { PickerInput } from './GroupTagPicker';
+
+/** How many vocabulary matches the picker dropdown offers at once. */
+const PICKER_LIMIT = 10;
 
 export interface GroupTagBarProps {
   stagedTags: string[];
@@ -44,104 +50,7 @@ function useClickOutside(
 }
 
 function StagedTagPill({ tag, onRemove }: { tag: string; onRemove: () => void }) {
-  return (
-    <Chip removable onRemove={onRemove} style={hashToColor(tag)} className="border">
-      {tag}
-    </Chip>
-  );
-}
-
-interface PickerInputProps {
-  inputValue: string;
-  filtered: string[];
-  showPicker: boolean;
-  onAddTag: (tag: string) => void;
-  setInputValue: (v: string) => void;
-  setShowPicker: (v: boolean) => void;
-}
-
-function handlePickerKeyDown(e: React.KeyboardEvent, props: PickerInputProps): void {
-  const { inputValue, filtered, onAddTag, setInputValue, setShowPicker } = props;
-  if (e.key === 'Tab' && filtered.length > 0) {
-    e.preventDefault();
-    const first = filtered[0];
-    if (first) onAddTag(first);
-    setShowPicker(false);
-    setInputValue('');
-    return;
-  }
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    const exactMatch = filtered.find((t) => t.toLowerCase() === inputValue.toLowerCase());
-    if (exactMatch) {
-      onAddTag(exactMatch);
-    } else if (inputValue.trim()) {
-      onAddTag(inputValue.trim());
-      setInputValue('');
-    }
-    setShowPicker(false);
-    setInputValue('');
-    return;
-  }
-  if (e.key === 'Escape') {
-    setShowPicker(false);
-    setInputValue('');
-  }
-}
-
-function PickerDropdown({
-  filtered,
-  onPick,
-}: {
-  filtered: string[];
-  onPick: (tag: string) => void;
-}) {
-  return (
-    <div className="absolute top-full left-0 mt-1 z-10 bg-popover border rounded-md shadow-md py-1 min-w-32 max-h-40 overflow-y-auto">
-      {filtered.slice(0, 10).map((tag) => (
-        <button
-          key={tag}
-          className="w-full min-h-11 text-left px-3 py-1 text-xs hover:bg-accent transition-colors"
-          onMouseDown={(e) => {
-            e.preventDefault();
-            onPick(tag);
-          }}
-        >
-          {tag}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function PickerInput(
-  props: PickerInputProps & { containerRef: React.RefObject<HTMLDivElement | null> }
-) {
-  const { containerRef, inputValue, setInputValue, setShowPicker, showPicker, filtered, onAddTag } =
-    props;
-  const handlePick = (tag: string) => {
-    onAddTag(tag);
-    setShowPicker(false);
-    setInputValue('');
-  };
-  return (
-    <div ref={containerRef} className="relative">
-      <input
-        value={inputValue}
-        onChange={(e) => {
-          setInputValue(e.target.value);
-          setShowPicker(true);
-        }}
-        onFocus={() => setShowPicker(true)}
-        onKeyDown={(e) => handlePickerKeyDown(e, props)}
-        placeholder="+ Add tag…"
-        className="text-xs border border-dashed border-border rounded-full px-2 py-0.5 bg-background focus:outline-none focus:ring-1 focus:ring-ring w-24"
-      />
-      {showPicker && filtered.length > 0 && (
-        <PickerDropdown filtered={filtered} onPick={handlePick} />
-      )}
-    </div>
-  );
+  return <TagChip tag={tag} removable onRemove={onRemove} className="border" />;
 }
 
 export function GroupTagBar({
@@ -154,7 +63,11 @@ export function GroupTagBar({
   const [inputValue, setInputValue] = useState('');
   const [showPicker, setShowPicker] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const filtered = filterAvailableTags(inputValue, availableTags, stagedTags);
+  const ranked = filterAvailableTags(inputValue, availableTags, stagedTags);
+  // Relevance picks the shortlist, then facet grouping fixes its order, so
+  // what Tab completes is always what the dropdown shows first.
+  const filtered = orderTagsByFacet(ranked.slice(0, PICKER_LIMIT)).map((parsed) => parsed.raw);
+  const exactMatch = resolveTypedTag(inputValue, availableTags);
 
   useClickOutside(containerRef, showPicker, () => {
     setShowPicker(false);
@@ -174,6 +87,7 @@ export function GroupTagBar({
         showPicker={showPicker}
         setShowPicker={setShowPicker}
         filtered={filtered}
+        exactMatch={exactMatch}
         onAddTag={onAddTag}
       />
       <ButtonPrimitive
