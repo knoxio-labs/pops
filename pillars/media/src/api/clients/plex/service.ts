@@ -14,6 +14,7 @@ import { getEnv } from '../env.js';
 import { PlexClient } from './client.js';
 import { decryptToken } from './crypto.js';
 import { PLEX_KEYS } from './keys.js';
+import { normalizePlexUrl } from './url.js';
 
 export interface PlexSyncStatus {
   configured: boolean;
@@ -36,9 +37,15 @@ export function getPlexClientId(db: MediaDb): string {
   return newId;
 }
 
-/** Resolve the Plex base URL: persisted value, then `PLEX_URL` env, else `null`. */
+/**
+ * Resolve the Plex base URL: persisted value, then `PLEX_URL` env, else `null`.
+ *
+ * Normalized on read — the row can be written by paths that skip
+ * {@link setPlexUrl}'s validation, and a schemeless value breaks every call.
+ * An unparseable value resolves to `null` rather than a broken client.
+ */
 export function getPlexUrl(db: MediaDb): string | null {
-  return plexSettingsService.getSetting(db, PLEX_KEYS.url) ?? getEnv('PLEX_URL') ?? null;
+  return normalizePlexUrl(plexSettingsService.getSetting(db, PLEX_KEYS.url) ?? getEnv('PLEX_URL'));
 }
 
 /** The persisted Plex username, or `null` when not connected. */

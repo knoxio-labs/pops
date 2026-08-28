@@ -15,6 +15,7 @@ import { PlexClient } from './client.js';
 import { encryptToken } from './crypto.js';
 import { PLEX_KEYS } from './keys.js';
 import { getPlexClientId } from './service.js';
+import { normalizePlexUrl } from './url.js';
 
 const PINS_URL = 'https://plex.tv/api/v2/pins';
 const PROBE_TIMEOUT_MS = 5000;
@@ -37,19 +38,6 @@ interface PlexPinResponse {
   authToken?: string | null;
   expiresAt?: string | null;
   username?: string | null;
-}
-
-function normalizeUrl(input: string): string {
-  let final = input.trim();
-  if (!final.startsWith('http://') && !final.startsWith('https://')) {
-    final = `http://${final}`;
-  }
-  try {
-    new URL(final);
-  } catch {
-    throw new ValidationError('Invalid Plex URL');
-  }
-  return final;
 }
 
 async function probeReachability(url: string): Promise<void> {
@@ -80,7 +68,8 @@ async function validateConnection(url: string, token: string | null): Promise<vo
 
 /** Validate + persist the Plex base URL. Reuses the stored token if present. */
 export async function setPlexUrl(db: MediaDb, url: string): Promise<void> {
-  const finalUrl = normalizeUrl(url);
+  const finalUrl = normalizePlexUrl(url);
+  if (finalUrl === null) throw new ValidationError('Invalid Plex URL');
   const token = plexSettingsService.getSetting(db, PLEX_KEYS.token);
   await validateConnection(finalUrl, token);
   plexSettingsService.setSetting(db, PLEX_KEYS.url, finalUrl);
