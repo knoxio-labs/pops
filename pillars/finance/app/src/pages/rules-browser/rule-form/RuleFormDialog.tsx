@@ -28,6 +28,7 @@ import {
   TextInput,
 } from '@pops/ui';
 
+import { DigitPatternNotice } from '../../../components/rules/DigitPatternNotice';
 import { RulePreviewPanel, type RulePreviewPanelProps } from './RulePreviewPanel';
 import { MATCH_TYPE_OPTIONS, type RuleFormValues } from './types';
 
@@ -102,6 +103,7 @@ function PatternAndType({
   form: UseFormReturn<RuleFormValues>;
   entities: EntityOption[];
 }) {
+  const [pattern, matchType] = form.watch(['descriptionPattern', 'matchType']);
   return (
     <>
       <TextInput
@@ -118,6 +120,7 @@ function PatternAndType({
         />
         <PriorityField form={form} />
       </div>
+      <DigitPatternNotice pattern={pattern} matchType={matchType} />
       <EntityField form={form} entities={entities} />
     </>
   );

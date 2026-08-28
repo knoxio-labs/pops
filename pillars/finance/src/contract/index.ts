@@ -18,6 +18,7 @@ export {
   isValidRegexPattern,
   normalizePatternForStorage,
   patternMatchesNormalizedDescription,
+  regexPatternExpectsDigits,
   type PatternMatchType,
 } from './pattern-match.js';
 export { type ChangeSet, type ChangeSetOp } from './rest-corrections-schemas.js';
