@@ -71,7 +71,7 @@ export const radarrRoutes = {
     path: '/arr/radarr/test-saved',
     body: z.object({}).optional(),
     responses: { 200: TestResult },
-    summary: 'Test the env-configured Radarr connection',
+    summary: 'Test the resolved Radarr connection',
   },
   downloadAndProtect: {
     method: 'POST',

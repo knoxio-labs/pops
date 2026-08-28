@@ -618,7 +618,7 @@ export const arrTestRadarr = <ThrowOnError extends boolean = false>(
   });
 
 /**
- * Test the env-configured Radarr connection
+ * Test the resolved Radarr connection
  */
 export const arrTestRadarrSaved = <ThrowOnError extends boolean = false>(
   options?: Options<ArrTestRadarrSavedData, ThrowOnError>
@@ -851,7 +851,7 @@ export const arrTestSonarr = <ThrowOnError extends boolean = false>(
   });
 
 /**
- * Test the env-configured Sonarr connection
+ * Test the resolved Sonarr connection
  */
 export const arrTestSonarrSaved = <ThrowOnError extends boolean = false>(
   options?: Options<ArrTestSonarrSavedData, ThrowOnError>

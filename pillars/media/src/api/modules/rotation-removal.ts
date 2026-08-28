@@ -1,7 +1,7 @@
 /**
  * Radarr-backed removal helpers for the rotation cycle (api-layer).
  *
- * Wraps the env-configured Radarr client: free disk space, per-movie sizes,
+ * Wraps the resolved Radarr client: free disk space, per-movie sizes,
  * the active download set, and the expiry sweep that deletes `leaving` movies
  * (with files) once their window elapses and clears their POPS rotation flags.
  * Ported from the monolith `removal-selection.ts` (the Radarr parts). The pure

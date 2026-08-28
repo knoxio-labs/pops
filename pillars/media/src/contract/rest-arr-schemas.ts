@@ -31,7 +31,7 @@ export const ArrConfigSchema = z.object({
   sonarrConfigured: z.boolean(),
 });
 
-/** Env-derived, read-only settings projection (no key values are returned). */
+/** Read-only projection of the resolved settings (no key values are returned). */
 export const ArrSettingsSchema = z.object({
   radarrUrl: z.string(),
   radarrConfigured: z.boolean(),

@@ -64,7 +64,7 @@ export const sonarrRoutes = {
     path: '/arr/sonarr/test-saved',
     body: z.object({}).optional(),
     responses: { 200: TestResult },
-    summary: 'Test the env-configured Sonarr connection',
+    summary: 'Test the resolved Sonarr connection',
   },
   updateEpisodeMonitoring: {
     method: 'PATCH',

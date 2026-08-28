@@ -5,8 +5,8 @@ import { SonarrClient } from './sonarr-client.js';
  * Connection tests for Radarr/Sonarr.
  *
  * `testRadarr`/`testSonarr` test creds supplied in the request body.
- * `testRadarrSaved`/`testSonarrSaved` test the ENV-configured creds (the
- * monolith tested the persisted settings; env is now the source of truth).
+ * `testRadarrSaved`/`testSonarrSaved` test the resolved creds — the stored
+ * settings, else the env defaults (`config.ts`).
  */
 import { ArrApiError } from './types.js';
 

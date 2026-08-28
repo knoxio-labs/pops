@@ -199,7 +199,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Test the env-configured Radarr connection */
+    /** Test the resolved Radarr connection */
     post: operations['arr.testRadarrSaved'];
     delete?: never;
     options?: never;
@@ -454,7 +454,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Test the env-configured Sonarr connection */
+    /** Test the resolved Sonarr connection */
     post: operations['arr.testSonarrSaved'];
     delete?: never;
     options?: never;

@@ -1,9 +1,10 @@
 /**
- * Barrel for the Radarr/Sonarr (*arr) clients + env-only service helpers.
+ * Barrel for the Radarr/Sonarr (*arr) clients + service helpers.
  *
- * The arr handlers import the env-configured client factories, the cached
- * status/queue/calendar helpers, and the connection tests from here. Config
- * is ENV-ONLY — see `config.ts`.
+ * The arr handlers import the client factories, the cached
+ * status/queue/calendar helpers, and the connection tests from here. Every
+ * factory takes the `MediaDb` handle because config resolves stored settings
+ * over env defaults — see `config.ts`.
  */
 import { clearQueueCache } from './queue.js';
 import { clearCalendarCache } from './sonarr-ops.js';

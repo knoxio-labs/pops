@@ -6,8 +6,8 @@ import { sqliteTable, text } from 'drizzle-orm/sqlite-core';
  *
  * The cron expression, target free space, leaving-window, daily additions,
  * average movie size, protected-window, and enabled flag are tunable from the
- * UI, so unlike the env-only ARR credentials they need a writable store. The
- * media pillar cannot reach `core/settings`, so they live here. Mirrors the
+ * UI, so they need a writable store. The media pillar cannot reach
+ * `core/settings`, so they live here. Mirrors the
  * `plex_settings` precedent: values are opaque strings the rotation settings
  * service encodes/decodes (numbers stringified, booleans as 'true'/'').
  */

@@ -1412,7 +1412,7 @@
             "description": "200"
           }
         },
-        "summary": "Test the env-configured Radarr connection",
+        "summary": "Test the resolved Radarr connection",
         "tags": ["arr"]
       }
     },
@@ -3418,7 +3418,7 @@
             "description": "200"
           }
         },
-        "summary": "Test the env-configured Sonarr connection",
+        "summary": "Test the resolved Sonarr connection",
         "tags": ["arr"]
       }
     },
