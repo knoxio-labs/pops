@@ -153,20 +153,28 @@ interface AddAiTagsArgs {
   aiTags: string[] | undefined;
   aiCategory: string | null | undefined;
   knownTags: string[] | undefined;
-  /**
-   * The whole active vocabulary, which is what `isNew` is answered against.
-   * Deliberately not `knownTags`: that list is the *closed* vocabulary the
-   * model was offered, and testing membership against it reported every open
-   * value — a `trip:` or `asset:` the user had already created — as new
-   * (POPS-2602).
-   */
-  knownTagSet: tagVocabularyService.KnownTagSet;
+  db: FinanceDb;
   seen: Set<string>;
   result: SuggestedTag[];
 }
 
+/**
+ * The AI pass, and the only pass that answers `isNew`.
+ *
+ * The vocabulary read happens after the early return, not before it: this pass
+ * contributes nothing to a row the model did not classify, and reading the
+ * table to then discard it made every deterministic row — and both sides of
+ * every `previewTagRuleChangeSet` diff — pay for a set nothing consumed.
+ *
+ * It is read here rather than threaded from the caller because the answer must
+ * come from the whole active vocabulary, and the once-per-batch list the caller
+ * carries (`knownTags`) is the *closed* vocabulary the prompt was built from —
+ * testing membership against that reported every open value the user had
+ * already created as new (POPS-2602). What remains is one indexed read per
+ * AI-classified row, on a path already waiting on a model call.
+ */
 function addAiTags(args: AddAiTagsArgs): void {
-  const { aiTags, aiCategory, knownTags, knownTagSet, seen, result } = args;
+  const { aiTags, aiCategory, knownTags, db, seen, result } = args;
   let tags: string[];
   if (aiTags && aiTags.length > 0) {
     tags = aiTags;
@@ -176,6 +184,9 @@ function addAiTags(args: AddAiTagsArgs): void {
   } else {
     return;
   }
+  if (tags.length === 0) return;
+
+  const knownTagSet = tagVocabularyService.loadKnownTagSet(db);
   for (const tag of tags) {
     if (!remember(seen, tag)) continue;
     const isNew = !knownTagSet.has(tag) || undefined;
@@ -211,7 +222,7 @@ export function suggestTags(db: FinanceDb, opts: SuggestTagsOptions): SuggestedT
     aiTags: opts.aiTags,
     aiCategory: opts.aiCategory,
     knownTags: opts.knownTags,
-    knownTagSet: tagVocabularyService.loadKnownTagSet(db),
+    db,
     seen: pass.seen,
     result: pass.result,
   });

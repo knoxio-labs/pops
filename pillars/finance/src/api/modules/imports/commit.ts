@@ -31,12 +31,19 @@
  * opening independent transactions.
  *
  * Which tags a commit may add to `tag_vocabulary` is decided by
- * `planCommitTagVocabulary` BEFORE the transaction (and before contacts
+ * `planCommitTagVocabulary` before the transaction opens (and before contacts
  * pre-create, which the transaction does not cover), so a payload naming a
  * value a closed namespace does not hold is refused with a 400 having written
  * nothing at all. The plan is applied as the transaction's first phase, ahead
  * of the transaction writes whose `incrementVocabularyUsage` must find those
  * rows already present.
+ *
+ * It runs AFTER the `commitKey` pre-flight below, not before it. The plan
+ * validates against the vocabulary as it stands now, so validating a resubmit
+ * would let a vocabulary that has moved on since — a tag deactivated, a
+ * namespace tightened — turn an already-succeeded commit into a 400 on replay.
+ * A recorded result is returned on its own terms; nothing about the payload is
+ * re-judged (POPS-2602).
  *
  * `payload.commitKey` (issues #3640/#3642), when supplied, makes a resubmit
  * of the same commit a no-op: a pre-flight check returns the first call's
@@ -184,13 +191,14 @@ export async function commitImport(
   payload: CommitPayload
 ): Promise<CommitResult> {
   validateCommitPayload(payload);
-  const tagPlan = planCommitTagVocabulary(db, payload);
 
   const { commitKey } = payload;
   if (commitKey) {
     const alreadyCommitted = readCommittedResult(db, commitKey);
     if (alreadyCommitted) return alreadyCommitted;
   }
+
+  const tagPlan = planCommitTagVocabulary(db, payload);
 
   const { tempIdMap, entitiesCreated, outboxCandidates } = await preCreatePendingContacts(
     contacts,
