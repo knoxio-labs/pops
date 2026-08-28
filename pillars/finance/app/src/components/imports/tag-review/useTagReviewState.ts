@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { unwrap } from '../../../finance-api-helpers.js';
 import { transactionsAvailableTags } from '../../../finance-api/index.js';
@@ -30,6 +30,8 @@ export interface UseTagReviewStateOutput {
   suggestedTagMeta: Record<string, SuggestedTag[]>;
   updateTag: (checksum: string, tags: string[]) => void;
   handleAcceptAll: () => void;
+  /** Rows an accept-all would change; zero means the control is inert. */
+  unappliedSuggestionCount: number;
   handleApplyGroupTags: (group: ConfirmedGroup, tags: string[]) => void;
   handleContinue: () => void;
   prevStep: () => void;
@@ -50,20 +52,17 @@ interface LocalTagsState {
   setLocalTags: React.Dispatch<React.SetStateAction<Record<string, string[]>>>;
   suggestedTagMeta: Record<string, SuggestedTag[]>;
   setSuggestedTagMeta: React.Dispatch<React.SetStateAction<Record<string, SuggestedTag[]>>>;
-  editedChecksumsRef: React.MutableRefObject<Set<string>>;
 }
 
 function useLocalTagsSync(confirmedTransactions: ConfirmedTransaction[]): LocalTagsState {
   const [localTags, setLocalTags] = useState<Record<string, string[]>>(() =>
     Object.fromEntries(confirmedTransactions.map((t) => [t.checksum, t.tags ?? []]))
   );
-  const editedChecksumsRef = useRef<Set<string>>(new Set());
   const [suggestedTagMeta, setSuggestedTagMeta] = useState<Record<string, SuggestedTag[]>>(() =>
     Object.fromEntries(confirmedTransactions.map((t) => [t.checksum, t.suggestedTags ?? []]))
   );
 
   useEffect(() => {
-    editedChecksumsRef.current = new Set();
     setLocalTags((prev) => {
       const next = { ...prev };
       for (const t of confirmedTransactions) next[t.checksum] ??= t.tags ?? [];
@@ -76,7 +75,7 @@ function useLocalTagsSync(confirmedTransactions: ConfirmedTransaction[]): LocalT
     );
   }, [confirmedTransactions]);
 
-  return { localTags, setLocalTags, suggestedTagMeta, setSuggestedTagMeta, editedChecksumsRef };
+  return { localTags, setLocalTags, suggestedTagMeta, setSuggestedTagMeta };
 }
 
 function useAvailableTags(localTags: Record<string, string[]>): string[] {
@@ -96,14 +95,14 @@ function useTagRuleHandler(args: {
   dialogGroupNameRef: React.MutableRefObject<string | null>;
   setLocalTags: React.Dispatch<React.SetStateAction<Record<string, string[]>>>;
   setSuggestedTagMeta: React.Dispatch<React.SetStateAction<Record<string, SuggestedTag[]>>>;
-  editedChecksumsRef: React.MutableRefObject<Set<string>>;
+  suggestedTagMeta: Record<string, SuggestedTag[]>;
 }) {
   const {
     addPendingTagRuleChangeSet,
     dialogGroupNameRef,
     setLocalTags,
     setSuggestedTagMeta,
-    editedChecksumsRef,
+    suggestedTagMeta,
   } = args;
   return useCallback(
     (changeSet: TagRuleChangeSet, affected: TagRuleImpactItem[]) => {
@@ -112,7 +111,7 @@ function useTagRuleHandler(args: {
         source: `tag-review:${dialogGroupNameRef.current ?? 'unknown'}`,
       });
       if (affected.length === 0) return;
-      setLocalTags((prev) => applyAffectedToLocalTags(prev, affected, editedChecksumsRef.current));
+      setLocalTags((prev) => applyAffectedToLocalTags(prev, affected, suggestedTagMeta));
       setSuggestedTagMeta((prev) => applyAffectedToSuggested(prev, affected));
     },
     [
@@ -120,8 +119,20 @@ function useTagRuleHandler(args: {
       dialogGroupNameRef,
       setLocalTags,
       setSuggestedTagMeta,
-      editedChecksumsRef,
+      suggestedTagMeta,
     ]
+  );
+}
+
+function usePreviewTransactions(confirmedTransactions: ConfirmedTransaction[]) {
+  return useMemo(
+    () =>
+      confirmedTransactions.map((t) => ({
+        checksum: t.checksum,
+        description: t.description,
+        entityId: t.entityId ?? null,
+      })),
+    [confirmedTransactions]
   );
 }
 
@@ -135,17 +146,19 @@ export function useTagReviewState(): UseTagReviewStateOutput {
     addPendingTagRuleChangeSet,
   } = store;
 
-  const { localTags, setLocalTags, suggestedTagMeta, setSuggestedTagMeta, editedChecksumsRef } =
+  const { localTags, setLocalTags, suggestedTagMeta, setSuggestedTagMeta } =
     useLocalTagsSync(confirmedTransactions);
 
   const groups = useMemo(() => groupByEntity(confirmedTransactions), [confirmedTransactions]);
   const availableTags = useAvailableTags(localTags);
 
-  const { updateTag, handleAcceptAll, handleApplyGroupTags } = useTagActions({
-    setLocalTags,
-    editedChecksumsRef,
-    confirmedTransactions,
-  });
+  const { updateTag, handleAcceptAll, handleApplyGroupTags, unappliedSuggestionCount } =
+    useTagActions({
+      localTags,
+      setLocalTags,
+      suggestedTagMeta,
+      confirmedTransactions,
+    });
 
   const handleContinue = useCallback(() => {
     for (const [checksum, tags] of Object.entries(localTags)) updateTransactionTags(checksum, tags);
@@ -158,18 +171,10 @@ export function useTagReviewState(): UseTagReviewStateOutput {
     dialogGroupNameRef: dialog.dialogGroupNameRef,
     setLocalTags,
     setSuggestedTagMeta,
-    editedChecksumsRef,
+    suggestedTagMeta,
   });
 
-  const previewTransactions = useMemo(
-    () =>
-      confirmedTransactions.map((t) => ({
-        checksum: t.checksum,
-        description: t.description,
-        entityId: t.entityId ?? null,
-      })),
-    [confirmedTransactions]
-  );
+  const previewTransactions = usePreviewTransactions(confirmedTransactions);
 
   return {
     confirmedTransactions,
@@ -179,6 +184,7 @@ export function useTagReviewState(): UseTagReviewStateOutput {
     suggestedTagMeta,
     updateTag,
     handleAcceptAll,
+    unappliedSuggestionCount,
     handleApplyGroupTags,
     handleContinue,
     prevStep,
