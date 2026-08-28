@@ -34,9 +34,11 @@
  * because we waited — so it fails immediately without spending the poll
  * budget.
  *
- * An open finding (mode: findings present, `status === 'open'`) also fails
- * immediately: there is nothing to wait for, the review is current and it
- * found something.
+ * An open finding also fails immediately: there is nothing to wait for, the
+ * review is current and it found something. "Open" here is fail-closed on the
+ * status value — anything not the literal string `'resolved'` counts, the
+ * same convention `pr-review-state.mjs`'s own writer uses, so a status this
+ * guard does not yet recognise blocks rather than silently passing.
  *
  * Two sticky-looking comments should not happen — the reviewer edits one
  * rather than posting a new one — but if it does, the LAST one wins, matching
@@ -213,7 +215,13 @@ export function evaluateReviewState({ comments, headSha }) {
     };
   }
 
-  const open = decoded.state.findings.filter((f) => f.status === 'open');
+  // Fail-closed on the status value itself, matching how `pr-review-state.mjs`
+  // writes it: that module treats anything not exactly `'resolved'` as open
+  // (`f.status === 'resolved' ? 'resolved' : 'open'`). Filtering here on the
+  // literal `'open'` instead would silently pass a typo, a future status this
+  // guard does not yet know about, or corrupted-but-still-string-valued data —
+  // exactly the fail-open this guard exists to refuse (POPS-2661 review).
+  const open = decoded.state.findings.filter((f) => f.status !== 'resolved');
   if (open.length > 0) {
     return {
       outcome: 'fail',
@@ -318,6 +326,20 @@ export async function selfTest() {
     headSha: HEAD,
   });
   check('all-resolved findings pass', resolvedResult.outcome === 'pass');
+
+  // Fail-closed on the status value: a typo, a future status this guard does
+  // not know about, or anything else that is not the literal `'resolved'`
+  // blocks, exactly like `pr-review-state.mjs`'s own writer treats it as open.
+  const unknownStatusResult = evaluateReviewState({
+    comments: [
+      stateComment({ last_reviewed_sha: HEAD, findings: [{ id: 'f1', status: 'flagged' }] }),
+    ],
+    headSha: HEAD,
+  });
+  check(
+    'an unrecognised status value blocks rather than silently passing',
+    unknownStatusResult.outcome === 'fail'
+  );
 
   // Ticket test 3: empty findings passes.
   const emptyResult = evaluateReviewState({

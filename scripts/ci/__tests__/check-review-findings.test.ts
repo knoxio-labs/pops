@@ -60,6 +60,19 @@ describe('evaluateReviewState', () => {
     expect(result.outcome).toBe('pass');
   });
 
+  it('fails closed on a status value that is neither open nor resolved', () => {
+    // pr-review-state.mjs's own writer treats anything not exactly 'resolved'
+    // as open; this guard must agree, so a typo or a future status it does
+    // not yet know about blocks rather than silently passing.
+    const result = evaluateReviewState({
+      comments: [
+        stateComment({ last_reviewed_sha: HEAD, findings: [{ id: 'f1', status: 'flagged' }] }),
+      ],
+      headSha: HEAD,
+    });
+    expect(result.outcome).toBe('fail');
+  });
+
   it('passes on an empty findings array', () => {
     const result = evaluateReviewState({
       comments: [stateComment({ last_reviewed_sha: HEAD, findings: [] })],
